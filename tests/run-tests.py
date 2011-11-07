@@ -870,13 +870,20 @@ def runone(options, test):
         os.path.join(HGTMP, os.path.basename(test)).replace('\\', '/')
 
     replacements = [
-        (re.escape(testtmp), '$TESTTMP'),
         (r':%s\b' % options.port, ':$HGPORT'),
         (r':%s\b' % (options.port + 1), ':$HGPORT1'),
         (r':%s\b' % (options.port + 2), ':$HGPORT2'),
         ]
     if os.name == 'nt':
         replacements.append((r'\r\n', '\n'))
+        replacements.append(
+            (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
+                     c in '/\\' and r'[/\\]' or
+                     c.isdigit() and c or
+                     '\\' + c
+                     for c in testtmp), '$TESTTMP'))
+    else:
+        replacements.append((re.escape(testtmp), '$TESTTMP'))
 
     os.mkdir(testtmp)
     ret, out = runner(testpath, testtmp, options, replacements)
