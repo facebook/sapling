@@ -212,6 +212,9 @@ def has_ssl():
 def has_windows():
     return os.name == 'nt'
 
+def has_system_sh():
+    return os.name != 'nt'
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
@@ -240,6 +243,7 @@ checks = {
     "svn15": (has_svn15, "subversion client and admin tools >= 1.5"),
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
+    "system-sh": (has_system_sh, "system() uses sh"),
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
     "windows": (has_windows, "Windows"),

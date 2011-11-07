@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" system-sh || exit 80
+
 commit hooks can see env vars
 
   $ hg init a

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" system-sh || exit 80
+
   $ HGFOO=BAR; export HGFOO
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

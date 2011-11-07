@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" system-sh || exit 80
+
 Corrupt an hg repo with a pull started during an aborted commit
 Create two repos, so that one of them can pull from the other one.
 
