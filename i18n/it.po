@@ -5291,12 +5291,15 @@ msgstr "&Salta le modifiche rimanenti a questo file"
 msgid "Record remaining changes to this &file"
 msgstr "Registra le modifiche rimanenti a questo &file"
 
+#, fuzzy
 msgid "&Done, skip remaining changes and files"
 msgstr "&Fatto, salta le modifiche e i file rimanenti"
 
+#, fuzzy
 msgid "Record &all changes to all remaining files"
 msgstr "Registra &tutte le modifiche a tutti i file rimanenti"
 
+#, fuzzy
 msgid "&Quit, recording no changes"
 msgstr "&Esce, non registrando alcuna modifica"
 
