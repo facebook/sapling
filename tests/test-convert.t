@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=">> $HGRCPATH

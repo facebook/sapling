@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
   $ hg init
   $ echo a > a
   $ hg ci -Am0

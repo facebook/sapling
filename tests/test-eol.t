@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
 Test EOL extension
 
   $ cat >> $HGRCPATH <<EOF

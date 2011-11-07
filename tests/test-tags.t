@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
 Helper functions:
 
   $ cacheexists() {
