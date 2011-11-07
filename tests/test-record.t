@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
 Set up a repo
 
   $ echo "[ui]" >> $HGRCPATH

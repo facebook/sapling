@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
 Setup
 
   $ echo "[color]" >> $HGRCPATH
@@ -74,7 +76,7 @@ diffstat
 
 record
 
-  $ chmod 0755 a
+  $ chmod +x a
   $ hg record --color=always -m moda a <<EOF
   > y
   > y

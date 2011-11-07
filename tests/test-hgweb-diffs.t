@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
 setting up repo
 
   $ hg init test
@@ -10,7 +12,7 @@ setting up repo
 
 change permissions for git diffs
 
-  $ chmod 755 a
+  $ chmod +x a
   $ hg ci -Amb
 
 set up hgweb

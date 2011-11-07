@@ -1,3 +1,4 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

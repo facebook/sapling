@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
 Create extension that can disable exec checks:
 
   $ cat > noexec.py <<EOF

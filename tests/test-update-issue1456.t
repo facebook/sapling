@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
   $ rm -rf a
   $ hg init a
   $ cd a

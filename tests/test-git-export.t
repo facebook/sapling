@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
   $ hg init
   $ echo start > start
   $ hg ci -Amstart

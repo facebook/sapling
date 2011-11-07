@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" execbit || exit 80
+
   $ checkundo()
   > {
   >     if [ -f .hg/store/undo ]; then

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
+  $ "$TESTDIR/hghave" symlink execbit || exit 80
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "purge=" >> $HGRCPATH
