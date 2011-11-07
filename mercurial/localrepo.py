@@ -758,10 +758,16 @@ class localrepository(repo.repository):
             util.copyfile(bkname, self.join('journal.bookmarks'))
         else:
             self.opener.write('journal.bookmarks', '')
+        phasesname = self.sjoin('phaseroots')
+        if os.path.exists(phasesname):
+            util.copyfile(phasesname, self.sjoin('journal.phaseroots'))
+        else:
+            self.sopener.write('journal.phaseroots', '')
 
         return (self.sjoin('journal'), self.join('journal.dirstate'),
                 self.join('journal.branch'), self.join('journal.desc'),
-                self.join('journal.bookmarks'))
+                self.join('journal.bookmarks'),
+                self.sjoin('journal.phaseroots'))
 
     def recover(self):
         lock = self.lock()
@@ -826,6 +832,9 @@ class localrepository(repo.repository):
         if os.path.exists(self.join('undo.bookmarks')):
             util.rename(self.join('undo.bookmarks'),
                         self.join('bookmarks'))
+        if os.path.exists(self.sjoin('undo.phaseroots')):
+            util.rename(self.sjoin('undo.phaseroots'),
+                        self.sjoin('phaseroots'))
         self.invalidate()
 
         parentgone = (parents[0] not in self.changelog.nodemap or

@@ -77,6 +77,7 @@ new directories are setgid
   00660 ./.hg/store/data/foo.i
   00660 ./.hg/store/fncache
   00660 ./.hg/store/undo
+  00660 ./.hg/store/undo.phaseroots
   00660 ./.hg/undo.bookmarks
   00660 ./.hg/undo.branch
   00660 ./.hg/undo.desc
@@ -118,6 +119,7 @@ group can still write everything
   00660 ../push/.hg/store/data/foo.i
   00660 ../push/.hg/store/fncache
   00660 ../push/.hg/store/undo
+  00660 ../push/.hg/store/undo.phaseroots
   00660 ../push/.hg/undo.bookmarks
   00660 ../push/.hg/undo.branch
   00660 ../push/.hg/undo.desc

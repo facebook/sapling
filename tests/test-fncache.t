@@ -80,6 +80,7 @@ Non store repo:
   .hg/undo.branch
   .hg/undo.desc
   .hg/undo.dirstate
+  .hg/undo.phaseroots
   $ cd ..
 
 Non fncache repo:
@@ -103,6 +104,7 @@ Non fncache repo:
   .hg/store/data/tst.d.hg
   .hg/store/data/tst.d.hg/_foo.i
   .hg/store/undo
+  .hg/store/undo.phaseroots
   .hg/undo.bookmarks
   .hg/undo.branch
   .hg/undo.desc
