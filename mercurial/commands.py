@@ -2189,7 +2189,7 @@ def debugstate(ui, repo, nodates=None, datesort=None):
         if ent[1] & 020000:
             mode = 'lnk'
         else:
-            mode = '%3o' % (ent[1] & 0777)
+            mode = '%3o' % (ent[1] & 0777 & ~util.umask)
         ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))

@@ -26,7 +26,7 @@ testpid = win32.testpid
 unlink = win32.unlink
 
 nulldev = 'NUL:'
-umask = 002
+umask = 0022
 
 # wrap osutil.posixfile to provide friendlier exceptions
 def posixfile(name, mode='r', buffering=-1):
