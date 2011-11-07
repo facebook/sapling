@@ -87,7 +87,7 @@ def Popen4(cmd, wd, timeout):
 SKIPPED_STATUS = 80
 SKIPPED_PREFIX = 'skipped: '
 FAILED_PREFIX  = 'hghave check failed: '
-PYTHON = sys.executable
+PYTHON = sys.executable.replace('\\', '/')
 IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = 'JYTHONPATH'
@@ -865,7 +865,7 @@ def runone(options, test):
 
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
-        os.path.join(HGTMP, os.path.basename(test))
+        os.path.join(HGTMP, os.path.basename(test)).replace('\\', '/')
 
     os.mkdir(testtmp)
     ret, out = runner(testpath, testtmp, options, [
