@@ -16,6 +16,11 @@ Multi-line command:
   $ foo
   bar
 
+Return codes before inline python:
+
+  $ false
+  [1]
+
 Doctest commands:
 
   >>> print 'foo'
@@ -28,7 +33,7 @@ Doctest commands:
   y
   z
   >>> print
-  <BLANKLINE>
+  
 
 Regular expressions:
 

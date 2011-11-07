@@ -563,8 +563,11 @@ def tsttest(test, wd, options, replacements):
     # up script results with our source. These markers include input
     # line number and the last return code
     salt = "SALT" + str(time.time())
-    def addsalt(line):
-        script.append('echo %s %s $?\n' % (salt, line))
+    def addsalt(line, inpython):
+        if inpython:
+            script.append('%s %d 0\n' % (salt, line))
+        else:
+            script.append('echo %s %s $?\n' % (salt, line))
 
     # After we run the shell script, we re-unify the script output
     # with non-active parts of the source, with synchronization by our
@@ -589,13 +592,17 @@ def tsttest(test, wd, options, replacements):
         if not l.endswith('\n'):
             l += '\n'
         if l.startswith('  >>> '): # python inlines
+            after.setdefault(pos, []).append(l)
+            prepos = pos
+            pos = n
             if not inpython:
                 # we've just entered a Python block, add the header
                 inpython = True
-                addsalt(n)
+                addsalt(prepos, False) # make sure we report the exit code
                 script.append('%s -m heredoctest <<EOF\n' % PYTHON)
-                prepos = pos
-                pos = n
+            addsalt(n, True)
+            script.append(l[2:])
+        if l.startswith('  ... '): # python inlines
             after.setdefault(prepos, []).append(l)
             script.append(l[2:])
         elif l.startswith('  $ '): # commands
@@ -605,18 +612,14 @@ def tsttest(test, wd, options, replacements):
             after.setdefault(pos, []).append(l)
             prepos = pos
             pos = n
-            addsalt(n)
+            addsalt(n, False)
             script.append(l[4:])
         elif l.startswith('  > '): # continuations
             after.setdefault(prepos, []).append(l)
             script.append(l[4:])
         elif l.startswith('  '): # results
-            if inpython:
-                script.append(l[2:])
-                after.setdefault(prepos, []).append(l)
-            else:
-                # queue up a list of expected results
-                expected.setdefault(pos, []).append(l[2:])
+            # queue up a list of expected results
+            expected.setdefault(pos, []).append(l[2:])
         else:
             if inpython:
                 script.append("EOF\n")
@@ -626,7 +629,7 @@ def tsttest(test, wd, options, replacements):
 
     if inpython:
         script.append("EOF\n")
-    addsalt(n + 1)
+    addsalt(n + 1, False)
 
     # Write out the script and execute it
     fd, name = tempfile.mkstemp(suffix='hg-tst')
