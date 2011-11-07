@@ -5,7 +5,7 @@ Preparing the subrepository 'sub'
   $ hg init sub
   $ echo sub > sub/sub
   $ hg add -R sub
-  adding sub/sub
+  adding sub/sub (glob)
   $ hg commit -R sub -m "sub import"
 
 Preparing the 'main' repo which depends on the subrepo 'sub'
@@ -17,8 +17,8 @@ Preparing the 'main' repo which depends on the subrepo 'sub'
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R main
-  adding main/.hgsub
-  adding main/main
+  adding main/.hgsub (glob)
+  adding main/main (glob)
   $ hg commit -R main -m "main import"
   committing subrepository sub
 

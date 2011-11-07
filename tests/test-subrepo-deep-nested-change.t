@@ -3,7 +3,7 @@ Preparing the subrepository 'sub2'
   $ hg init sub2
   $ echo sub2 > sub2/sub2
   $ hg add -R sub2
-  adding sub2/sub2
+  adding sub2/sub2 (glob)
   $ hg commit -R sub2 -m "sub2 import"
 
 Preparing the 'sub1' repo which depends on the subrepo 'sub2'
@@ -15,8 +15,8 @@ Preparing the 'sub1' repo which depends on the subrepo 'sub2'
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R sub1
-  adding sub1/.hgsub
-  adding sub1/sub1
+  adding sub1/.hgsub (glob)
+  adding sub1/sub1 (glob)
   $ hg commit -R sub1 -m "sub1 import"
   committing subrepository sub2
 
@@ -30,8 +30,8 @@ Preparing the 'main' repo which depends on the subrepo 'sub1'
   cloning subrepo sub2 from $TESTTMP/sub2
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg add -R main
-  adding main/.hgsub
-  adding main/main
+  adding main/.hgsub (glob)
+  adding main/main (glob)
   $ hg commit -R main -m "main import"
   committing subrepository sub1
 
@@ -51,7 +51,7 @@ Clone main
   $ hg clone main cloned
   updating to branch default
   cloning subrepo sub1 from $TESTTMP/sub1
-  cloning subrepo sub1/sub2 from $TESTTMP/sub2
+  cloning subrepo sub1/sub2 from $TESTTMP/sub2 (glob)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Checking cloned repo ids
@@ -79,7 +79,7 @@ Modifying deeply nested 'sub2'
   $ echo modified > cloned/sub1/sub2/sub2
   $ hg commit --subrepos -m "deep nested modif should trigger a commit" -R cloned
   committing subrepository sub1
-  committing subrepository sub1/sub2
+  committing subrepository sub1/sub2 (glob)
 
 Checking modified node ids
 

@@ -71,7 +71,7 @@ rename --after a single file when src and tgt already tracked
 rename --after a single file to a nonexistant target filename
 
   $ hg rename --after d1/a dummy
-  d1/a: not recording move - dummy does not exist
+  d1/a: not recording move - dummy does not exist (glob)
 
 move a single file to an existing directory
 
@@ -121,10 +121,10 @@ rename --after a file using a relative path
 rename directory d1 as d3
 
   $ hg rename d1/ d3
-  moving d1/a to d3/a
-  moving d1/b to d3/b
-  moving d1/ba to d3/ba
-  moving d1/d11/a1 to d3/d11/a1
+  moving d1/a to d3/a (glob)
+  moving d1/b to d3/b (glob)
+  moving d1/ba to d3/ba (glob)
+  moving d1/d11/a1 to d3/d11/a1 (glob)
   $ hg status -C
   A d3/a
     d1/a
@@ -146,10 +146,10 @@ rename --after directory d1 as d3
 
   $ mv d1 d3
   $ hg rename --after d1 d3
-  moving d1/a to d3/a
-  moving d1/b to d3/b
-  moving d1/ba to d3/ba
-  moving d1/d11/a1 to d3/d11/a1
+  moving d1/a to d3/a (glob)
+  moving d1/b to d3/b (glob)
+  moving d1/ba to d3/ba (glob)
+  moving d1/d11/a1 to d3/d11/a1 (glob)
   $ hg status -C
   A d3/a
     d1/a
@@ -170,7 +170,7 @@ rename --after directory d1 as d3
 move a directory using a relative path
 
   $ (cd d2; mkdir d3; hg rename ../d1/d11 d3)
-  moving ../d1/d11/a1 to d3/d11/a1
+  moving ../d1/d11/a1 to d3/d11/a1 (glob)
   $ hg status -C
   A d2/d3/d11/a1
     d1/d11/a1
@@ -182,7 +182,7 @@ move a directory using a relative path
 move --after a directory using a relative path
 
   $ (cd d2; mkdir d3; mv ../d1/d11 d3; hg rename --after ../d1/d11 d3)
-  moving ../d1/d11/a1 to d3/d11/a1
+  moving ../d1/d11/a1 to d3/d11/a1 (glob)
   $ hg status -C
   A d2/d3/d11/a1
     d1/d11/a1
@@ -194,7 +194,7 @@ move --after a directory using a relative path
 move directory d1/d11 to an existing directory d2 (removes empty d1)
 
   $ hg rename d1/d11/ d2
-  moving d1/d11/a1 to d2/d11/a1
+  moving d1/d11/a1 to d2/d11/a1 (glob)
   $ hg status -C
   A d2/d11/a1
     d1/d11/a1
@@ -207,11 +207,11 @@ move directories d1 and d2 to a new directory d3
 
   $ mkdir d3
   $ hg rename d1 d2 d3
-  moving d1/a to d3/d1/a
-  moving d1/b to d3/d1/b
-  moving d1/ba to d3/d1/ba
-  moving d1/d11/a1 to d3/d1/d11/a1
-  moving d2/b to d3/d2/b
+  moving d1/a to d3/d1/a (glob)
+  moving d1/b to d3/d1/b (glob)
+  moving d1/ba to d3/d1/ba (glob)
+  moving d1/d11/a1 to d3/d1/d11/a1 (glob)
+  moving d2/b to d3/d2/b (glob)
   $ hg status -C
   A d3/d1/a
     d1/a
@@ -237,11 +237,11 @@ move --after directories d1 and d2 to a new directory d3
   $ mkdir d3
   $ mv d1 d2 d3
   $ hg rename --after d1 d2 d3
-  moving d1/a to d3/d1/a
-  moving d1/b to d3/d1/b
-  moving d1/ba to d3/d1/ba
-  moving d1/d11/a1 to d3/d1/d11/a1
-  moving d2/b to d3/d2/b
+  moving d1/a to d3/d1/a (glob)
+  moving d1/b to d3/d1/b (glob)
+  moving d1/ba to d3/d1/ba (glob)
+  moving d1/d11/a1 to d3/d1/d11/a1 (glob)
+  moving d2/b to d3/d2/b (glob)
   $ hg status -C
   A d3/d1/a
     d1/a
@@ -267,7 +267,7 @@ overwrite existing files (d2/b)
 
   $ hg rename d1/* d2
   d2/b: not overwriting - file exists
-  moving d1/d11/a1 to d2/d11/a1
+  moving d1/d11/a1 to d2/d11/a1 (glob)
   $ hg status -C
   A d2/a
     d1/a
@@ -308,10 +308,10 @@ move every file under d1 to d2/d21 (glob)
 
   $ mkdir d2/d21
   $ hg rename 'glob:d1/**' d2/d21
-  moving d1/a to d2/d21/a
-  moving d1/b to d2/d21/b
-  moving d1/ba to d2/d21/ba
-  moving d1/d11/a1 to d2/d21/a1
+  moving d1/a to d2/d21/a (glob)
+  moving d1/b to d2/d21/b (glob)
+  moving d1/ba to d2/d21/ba (glob)
+  moving d1/d11/a1 to d2/d21/a1 (glob)
   $ hg status -C
   A d2/d21/a
     d1/a
@@ -334,10 +334,10 @@ move --after some files under d1 to d2/d21 (glob)
   $ mkdir d2/d21
   $ mv d1/a d1/d11/a1 d2/d21
   $ hg rename --after 'glob:d1/**' d2/d21
-  moving d1/a to d2/d21/a
-  d1/b: not recording move - d2/d21/b does not exist
-  d1/ba: not recording move - d2/d21/ba does not exist
-  moving d1/d11/a1 to d2/d21/a1
+  moving d1/a to d2/d21/a (glob)
+  d1/b: not recording move - d2/d21/b does not exist (glob)
+  d1/ba: not recording move - d2/d21/ba does not exist (glob)
+  moving d1/d11/a1 to d2/d21/a1 (glob)
   $ hg status -C
   A d2/d21/a
     d1/a
@@ -353,8 +353,8 @@ move every file under d1 starting with an 'a' to d2/d21 (regexp)
 
   $ mkdir d2/d21
   $ hg rename 're:d1/([^a][^/]*/)*a.*' d2/d21
-  moving d1/a to d2/d21/a
-  moving d1/d11/a1 to d2/d21/a1
+  moving d1/a to d2/d21/a (glob)
+  moving d1/d11/a1 to d2/d21/a1 (glob)
   $ hg status -C
   A d2/d21/a
     d1/a
@@ -415,7 +415,7 @@ do not copy more than one source file to the same destination file
 
   $ mkdir d3
   $ hg rename d1/* d2/* d3
-  moving d1/d11/a1 to d3/d11/a1
+  moving d1/d11/a1 to d3/d11/a1 (glob)
   d3/b: not overwriting - d2/b collides with d1/b
   $ hg status -C
   A d3/a
@@ -441,7 +441,7 @@ move a whole subtree with "hg rename ."
   moving a to ../d3/d1/a
   moving b to ../d3/d1/b
   moving ba to ../d3/d1/ba
-  moving d11/a1 to ../d3/d1/d11/a1
+  moving d11/a1 to ../d3/d1/d11/a1 (glob)
   $ hg status -C
   A d3/d1/a
     d1/a
@@ -467,7 +467,7 @@ move a whole subtree with "hg rename --after ."
   moving a to ../d3/a
   moving b to ../d3/b
   moving ba to ../d3/ba
-  moving d11/a1 to ../d3/d11/a1
+  moving d11/a1 to ../d3/d11/a1 (glob)
   $ hg status -C
   A d3/a
     d1/a
@@ -488,9 +488,9 @@ move a whole subtree with "hg rename --after ."
 move the parent tree with "hg rename .."
 
   $ (cd d1/d11; hg rename .. ../../d3)
-  moving ../a to ../../d3/a
-  moving ../b to ../../d3/b
-  moving ../ba to ../../d3/ba
+  moving ../a to ../../d3/a (glob)
+  moving ../b to ../../d3/b (glob)
+  moving ../ba to ../../d3/ba (glob)
   moving a1 to ../../d3/d11/a1
   $ hg status -C
   A d3/a
@@ -513,9 +513,9 @@ skip removed files
 
   $ hg remove d1/b
   $ hg rename d1 d3
-  moving d1/a to d3/a
-  moving d1/ba to d3/ba
-  moving d1/d11/a1 to d3/d11/a1
+  moving d1/a to d3/a (glob)
+  moving d1/ba to d3/ba (glob)
+  moving d1/d11/a1 to d3/d11/a1 (glob)
   $ hg status -C
   A d3/a
     d1/a
@@ -589,7 +589,7 @@ overwriting with renames (issue1959)
 check illegal path components
 
   $ hg rename d1/d11/a1 .hg/foo
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component: .hg/foo (glob)
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ../foo
@@ -599,7 +599,7 @@ check illegal path components
 
   $ mv d1/d11/a1 .hg/foo
   $ hg rename --after d1/d11/a1 .hg/foo
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component: .hg/foo (glob)
   [255]
   $ hg status -C
   ! d1/d11/a1
@@ -608,17 +608,17 @@ check illegal path components
   $ rm .hg/foo
 
   $ hg rename d1/d11/a1 .hg
-  abort: path contains illegal component: .hg/a1
+  abort: path contains illegal component: .hg/a1 (glob)
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ..
-  abort: ../a1 not under root
+  abort: ../a1 not under root (glob)
   [255]
   $ hg status -C
 
   $ mv d1/d11/a1 .hg
   $ hg rename --after d1/d11/a1 .hg
-  abort: path contains illegal component: .hg/a1
+  abort: path contains illegal component: .hg/a1 (glob)
   [255]
   $ hg status -C
   ! d1/d11/a1
@@ -627,7 +627,7 @@ check illegal path components
   $ rm .hg/a1
 
   $ (cd d1/d11; hg rename ../../d2/b ../../.hg/foo)
-  abort: path contains illegal component: .hg/foo
+  abort: path contains illegal component: .hg/foo (glob)
   [255]
   $ hg status -C
   $ (cd d1/d11; hg rename ../../d2/b ../../../foo)

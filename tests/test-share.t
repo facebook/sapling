@@ -27,14 +27,14 @@ share shouldn't have a store dir
 Some sed versions appends newline, some don't, and some just fails
 
   $ cat .hg/sharedpath; echo
-  $TESTTMP/repo1/.hg
+  $TESTTMP/repo1/.hg (glob)
 
 trailing newline on .hg/sharedpath is ok
   $ hg tip -q
   0:d3873e73d99e
   $ echo '' >> .hg/sharedpath
   $ cat .hg/sharedpath
-  $TESTTMP/repo1/.hg
+  $TESTTMP/repo1/.hg (glob)
   $ hg tip -q
   0:d3873e73d99e
 

@@ -81,7 +81,7 @@ Issue1527: repeated addremove causes util.Abort
   $ hg addremove -s80
   removing d/a
   adding d/b
-  recording removal of d/a as rename to d/b (100% similar)
+  recording removal of d/a as rename to d/b (100% similar) (glob)
   $ hg debugstate
   r   0          0 1970-01-01 00:00:00 d/a
   a   0         -1 unset               d/b
@@ -91,10 +91,10 @@ Issue1527: repeated addremove causes util.Abort
 no copies found here (since the target isn't in d
 
   $ hg addremove -s80 d
-  removing d/b
+  removing d/b (glob)
 
 copies here
 
   $ hg addremove -s80
   adding c
-  recording removal of d/a as rename to c (100% similar)
+  recording removal of d/a as rename to c (100% similar) (glob)

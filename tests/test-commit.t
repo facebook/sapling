@@ -45,7 +45,7 @@ commit added file that has been deleted
   $ mkdir dir
   $ echo boo > dir/file
   $ hg add
-  adding dir/file
+  adding dir/file (glob)
   $ hg -v commit -m commit-9 dir
   dir/file
   committed changeset 2:d2a76177cb42
@@ -115,8 +115,8 @@ partial subdir commit test
   $ mkdir bar
   $ echo bar > bar/bar
   $ hg add
-  adding bar/bar
-  adding foo/foo
+  adding bar/bar (glob)
+  adding foo/foo (glob)
   $ hg ci -m commit-subdir-1 foo
   $ hg ci -m commit-subdir-2 bar
 

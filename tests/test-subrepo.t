@@ -49,7 +49,7 @@ Revert currently ignores subrepos by default
 
   $ hg revert -a
   $ hg revert -R s -a -C
-  reverting s/a
+  reverting s/a (glob)
 
 Issue2022: update -C
 
@@ -92,7 +92,7 @@ add sub sub
   update: (current)
   $ hg ci -m2
   committing subrepository s
-  committing subrepository s/ss
+  committing subrepository s/ss (glob)
   $ hg sum
   parent: 2:df30734270ae tip
    2
@@ -147,7 +147,7 @@ new branch for merge tests
   $ hg init t
   $ echo t > t/t
   $ hg -R t add t
-  adding t/t
+  adding t/t (glob)
 
 5
 
@@ -265,9 +265,9 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  cloning subrepo s from $TESTTMP/sub/t/s
-  cloning subrepo s/ss from $TESTTMP/sub/t/s/ss
-  cloning subrepo t from $TESTTMP/sub/t/t
+  cloning subrepo s from $TESTTMP/sub/t/s (glob)
+  cloning subrepo s/ss from $TESTTMP/sub/t/s/ss (glob)
+  cloning subrepo t from $TESTTMP/sub/t/t (glob)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd tc
   $ hg debugsub
@@ -284,14 +284,14 @@ push
   $ hg ci -m11
   committing subrepository t
   $ hg push
-  pushing to $TESTTMP/sub/t
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
+  pushing to $TESTTMP/sub/t (glob)
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s
+  pushing subrepo s to $TESTTMP/sub/t/s (glob)
   searching for changes
   no changes found
-  pushing subrepo t to $TESTTMP/sub/t/t
+  pushing subrepo t to $TESTTMP/sub/t/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -309,27 +309,27 @@ push -f
   $ hg ci -m12
   committing subrepository s
   $ hg push
-  pushing to $TESTTMP/sub/t
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
+  pushing to $TESTTMP/sub/t (glob)
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s
+  pushing subrepo s to $TESTTMP/sub/t/s (glob)
   searching for changes
   abort: push creates new remote head 12a213df6fa9!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg push -f
-  pushing to $TESTTMP/sub/t
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss
+  pushing to $TESTTMP/sub/t (glob)
+  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s
+  pushing subrepo s to $TESTTMP/sub/t/s (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  pushing subrepo t to $TESTTMP/sub/t/t
+  pushing subrepo t to $TESTTMP/sub/t/t (glob)
   searching for changes
   no changes found
   searching for changes
@@ -351,7 +351,7 @@ pull
 
   $ cd ../tc
   $ hg pull
-  pulling from $TESTTMP/sub/t
+  pulling from $TESTTMP/sub/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -362,7 +362,7 @@ pull
 should pull t
 
   $ hg up
-  pulling subrepo t from $TESTTMP/sub/t/t
+  pulling subrepo t from $TESTTMP/sub/t/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -507,15 +507,15 @@ test subrepo delete from .hgsubstate
   $ echo test > testdelete/nested/foo
   $ echo test > testdelete/nested2/foo
   $ hg -R testdelete/nested add
-  adding testdelete/nested/foo
+  adding testdelete/nested/foo (glob)
   $ hg -R testdelete/nested2 add
-  adding testdelete/nested2/foo
+  adding testdelete/nested2/foo (glob)
   $ hg -R testdelete/nested ci -m test
   $ hg -R testdelete/nested2 ci -m test
   $ echo nested = nested > testdelete/.hgsub
   $ echo nested2 = nested2 >> testdelete/.hgsub
   $ hg -R testdelete add
-  adding testdelete/.hgsub
+  adding testdelete/.hgsub (glob)
   $ hg -R testdelete ci -m "nested 1 & 2 added"
   committing subrepository nested
   committing subrepository nested2
@@ -534,19 +534,19 @@ test repository cloning
   $ hg init nested_absolute
   $ echo test > nested_absolute/foo
   $ hg -R nested_absolute add
-  adding nested_absolute/foo
+  adding nested_absolute/foo (glob)
   $ hg -R nested_absolute ci -mtest
   $ cd mercurial
   $ hg init nested_relative
   $ echo test2 > nested_relative/foo2
   $ hg -R nested_relative add
-  adding nested_relative/foo2
+  adding nested_relative/foo2 (glob)
   $ hg -R nested_relative ci -mtest2
   $ hg init main
   $ echo "nested_relative = ../nested_relative" > main/.hgsub
   $ echo "nested_absolute = `pwd`/nested_absolute" >> main/.hgsub
   $ hg -R main add
-  adding main/.hgsub
+  adding main/.hgsub (glob)
   $ hg -R main ci -m "add subrepos"
   committing subrepository nested_absolute
   committing subrepository nested_relative
@@ -575,7 +575,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   committing subrepository s
   $ hg clone repo repo2
   updating to branch default
-  cloning subrepo s from $TESTTMP/sub/repo/s
+  cloning subrepo s from $TESTTMP/sub/repo/s (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R repo2 pull -u
   $ echo 1 > repo2/s/a
@@ -609,10 +609,10 @@ Prepare a repo with subrepo
   $ echo sub/repo = sub/repo > .hgsub
   $ hg add .hgsub
   $ hg ci -mtest
-  committing subrepository sub/repo
+  committing subrepository sub/repo (glob)
   $ echo test >> sub/repo/foo
   $ hg ci -mtest
-  committing subrepository sub/repo
+  committing subrepository sub/repo (glob)
   $ cd ..
 
 Create repo without default path, pull top repo, and see what happens on update
@@ -627,7 +627,7 @@ Create repo without default path, pull top repo, and see what happens on update
   added 2 changesets with 3 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hg -R issue1852b update
-  abort: default path for subrepository sub/repo not found
+  abort: default path for subrepository sub/repo not found (glob)
   [255]
 
 Pull -u now doesn't help
@@ -646,14 +646,14 @@ Try the same, but with pull -u
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  cloning subrepo sub/repo from issue1852a/sub/repo
+  cloning subrepo sub/repo from issue1852a/sub/repo (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Try to push from the other side
 
   $ hg -R issue1852a push `pwd`/issue1852c
   pushing to $TESTTMP/sub/issue1852c
-  pushing subrepo sub/repo to $TESTTMP/sub/issue1852c/sub/repo
+  pushing subrepo sub/repo to $TESTTMP/sub/issue1852c/sub/repo (glob)
   searching for changes
   no changes found
   searching for changes

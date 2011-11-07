@@ -251,7 +251,7 @@ F onto G - rebase onto a descendant:
 C onto A - rebase onto an ancestor:
 
   $ hg rebase -d 0 -s 2
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
   $ hg tglog
   @  7: 'D'
   |
@@ -473,7 +473,7 @@ rebase on ancestor with revset
   $ hg clone -q -u . ah ah5
   $ cd ah5
   $ hg rebase -r '6::' -d 2
-  saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-backup.hg
+  saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-backup.hg (glob)
   $ hg tglog
   @  8: 'I'
   |

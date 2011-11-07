@@ -7,29 +7,29 @@
   $ echo 'dupe = ../b' >> .hg/hgrc
   $ echo 'expand = $SOMETHING/bar' >> .hg/hgrc
   $ hg in dupe
-  comparing with $TESTTMP/b
+  comparing with $TESTTMP/b (glob)
   no changes found
   [1]
   $ cd ..
   $ hg -R a in dupe
-  comparing with $TESTTMP/b
+  comparing with $TESTTMP/b (glob)
   no changes found
   [1]
   $ cd a
   $ hg paths
-  dupe = $TESTTMP/b
-  expand = $TESTTMP/a/$SOMETHING/bar
+  dupe = $TESTTMP/b (glob)
+  expand = $TESTTMP/a/$SOMETHING/bar (glob)
   $ SOMETHING=foo hg paths
-  dupe = $TESTTMP/b
-  expand = $TESTTMP/a/foo/bar
+  dupe = $TESTTMP/b (glob)
+  expand = $TESTTMP/a/foo/bar (glob)
   $ SOMETHING=/foo hg paths
-  dupe = $TESTTMP/b
+  dupe = $TESTTMP/b (glob)
   expand = /foo/bar
   $ hg paths -q
   dupe
   expand
   $ hg paths dupe
-  $TESTTMP/b
+  $TESTTMP/b (glob)
   $ hg paths -q dupe
   $ hg paths unknown
   not found!

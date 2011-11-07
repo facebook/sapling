@@ -41,7 +41,7 @@ Test basic functionality of url#rev syntax
   
   $ cat clone/.hg/hgrc
   [paths]
-  default = $TESTTMP/repo#foo
+  default = $TESTTMP/repo#foo (glob)
 
 Changing original repo:
 

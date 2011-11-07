@@ -14,7 +14,7 @@ Testing a.i/b:
   $ mkdir a.i
   $ echo "some other text" > a.i/b
   $ hg add
-  adding a.i/b
+  adding a.i/b (glob)
   $ hg ci -m second
   $ cat .hg/store/fncache | sort
   data/a.i
@@ -25,7 +25,7 @@ Testing a.i.hg/c:
   $ mkdir a.i.hg
   $ echo "yet another text" > a.i.hg/c
   $ hg add
-  adding a.i.hg/c
+  adding a.i.hg/c (glob)
   $ hg ci -m third
   $ cat .hg/store/fncache | sort
   data/a.i

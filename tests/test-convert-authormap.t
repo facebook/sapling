@@ -27,7 +27,7 @@ Explicit --authors
   sorting...
   converting...
   0 foo
-  Writing author map file $TESTTMP/new/.hg/authormap
+  Writing author map file $TESTTMP/new/.hg/authormap (glob)
   $ cat new/.hg/authormap
   user name=Long User Name
   $ hg -Rnew log
@@ -44,7 +44,7 @@ Implicit .hg/authormap
   $ hg init new
   $ mv authormap.txt new/.hg/authormap
   $ hg convert orig new
-  Ignoring bad line in author map file $TESTTMP/new/.hg/authormap: this line is ignored
+  Ignoring bad line in author map file $TESTTMP/new/.hg/authormap: this line is ignored (glob)
   scanning source...
   sorting...
   converting...

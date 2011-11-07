@@ -530,20 +530,22 @@ def rematch(el, l):
         return False
 
 def globmatch(el, l):
-    # The only supported special characters are * and ?. Escaping is
-    # supported.
+    # The only supported special characters are * and ? plus / which also
+    # matches \ on windows. Escaping of these caracters is supported.
     i, n = 0, len(el)
     res = ''
     while i < n:
         c = el[i]
         i += 1
-        if c == '\\' and el[i] in '*?\\':
+        if c == '\\' and el[i] in '*?\\/':
             res += el[i - 1:i + 1]
             i += 1
         elif c == '*':
             res += '.*'
         elif c == '?':
             res += '.'
+        elif c == '/' and os.name == 'nt':
+            res += '[/\\\\]'
         else:
             res += re.escape(c)
     return rematch(res, l)

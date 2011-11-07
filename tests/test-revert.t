@@ -216,11 +216,11 @@ Issue332: confusing message when reverting directory
   $ echo foo > newdir/newfile
   $ hg add newdir/newfile
   $ hg revert b newdir
-  reverting b/b
-  forgetting newdir/newfile
+  reverting b/b (glob)
+  forgetting newdir/newfile (glob)
   $ echo foobar > b/b
   $ hg revert .
-  reverting b/b
+  reverting b/b (glob)
 
 
 reverting a rename target should revert the source
@@ -261,8 +261,8 @@ should revert ignored* and undelete *removed
 
   $ hg revert -a --no-backup
   reverting ignored
-  reverting ignoreddir/file
-  undeleting ignoreddir/removed
+  reverting ignoreddir/file (glob)
+  undeleting ignoreddir/removed (glob)
   undeleting removed
   $ hg st -mardi
 

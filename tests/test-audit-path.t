@@ -5,7 +5,7 @@
 should fail
 
   $ hg add .hg/00changelog.i
-  abort: path contains illegal component: .hg/00changelog.i
+  abort: path contains illegal component: .hg/00changelog.i (glob)
   [255]
 
   $ mkdir a
@@ -18,7 +18,7 @@ should fail
 should fail
 
   $ hg add b/b
-  abort: path 'b/b' traverses symbolic link 'b'
+  abort: path 'b/b' traverses symbolic link 'b' (glob)
   [255]
 
 should succeed
@@ -28,7 +28,7 @@ should succeed
 should still fail - maybe
 
   $ hg add b/b
-  abort: path 'b/b' traverses symbolic link 'b'
+  abort: path 'b/b' traverses symbolic link 'b' (glob)
   [255]
 
 unbundle tampered bundle

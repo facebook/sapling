@@ -11,8 +11,8 @@
   $ hg co -C 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv a b
-  moving a/a to b/a
-  moving a/b to b/b
+  moving a/a to b/a (glob)
+  moving a/b to b/b (glob)
   $ hg ci -m "1 mv a/ b/"
 
   $ hg co -C 0
@@ -75,7 +75,7 @@
   ? b/d
   $ hg ci -m "3 merge 2+1"
   $ hg debugrename b/c
-  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
+  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
 
   $ hg co -C 1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -111,7 +111,7 @@
   $ hg ci -m "4 merge 1+2"
   created new head
   $ hg debugrename b/c
-  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
+  b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
 
 
 Second scenario with two repos:
@@ -122,7 +122,7 @@ Second scenario with two repos:
   $ mkdir a
   $ echo foo > a/f
   $ hg add a
-  adding a/f
+  adding a/f (glob)
   $ hg ci -m "a/f == foo"
   $ cd ..
 
@@ -131,7 +131,7 @@ Second scenario with two repos:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd r2
   $ hg mv a b
-  moving a/f to b/f
+  moving a/f to b/f (glob)
   $ echo foo1 > b/f
   $ hg ci -m" a -> b, b/f == foo1"
   $ cd ..
@@ -140,7 +140,7 @@ Second scenario with two repos:
   $ mkdir a/aa
   $ echo bar > a/aa/g
   $ hg add a/aa
-  adding a/aa/g
+  adding a/aa/g (glob)
   $ hg ci -m "a/aa/g"
   $ hg pull ../r2
   pulling from ../r2

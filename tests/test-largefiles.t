@@ -185,8 +185,8 @@ Corner cases for adding largefiles.
   $ echo large6 > sub2/large6
   $ echo large7 > sub2/large7
   $ hg add --large sub2
-  adding sub2/large6 as a largefile
-  adding sub2/large7 as a largefile
+  adding sub2/large6 as a largefile (glob)
+  adding sub2/large7 as a largefile (glob)
   $ hg st
   M large3
   A large5
@@ -350,7 +350,7 @@ revisions (this was a very bad bug that took a lot of work to fix).
   added 1 changesets with 2 changes to 2 files (+1 heads)
   getting changed largefiles
   1 largefiles updated, 0 removed
-  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg
+  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
   nothing to rebase
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
@@ -385,7 +385,7 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ hg rebase
   getting changed largefiles
   1 largefiles updated, 0 removed
-  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-backup.hg
+  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
   $ hg log
   changeset:   9:598410d3eb9a
   tag:         tip
@@ -555,8 +555,8 @@ Now "update check" is happy.
 # XXX we don't really want to report that we're reverting the standin;
 # that's just an implementation detail. But I don't see an obvious fix. ;-(
   $ hg revert sub
-  reverting .hglf/sub/large4
-  reverting sub/normal4
+  reverting .hglf/sub/large4 (glob)
+  reverting sub/normal4 (glob)
   $ hg status
   M normal3
   A sub2/large8
@@ -568,8 +568,8 @@ Now "update check" is happy.
   $ cat sub/large4
   large4-modified
   $ hg revert -a --no-backup
-  undeleting .hglf/sub2/large6
-  forgetting .hglf/sub2/large8
+  undeleting .hglf/sub2/large6 (glob)
+  forgetting .hglf/sub2/large8 (glob)
   reverting normal3
   $ hg status
   ? sub/large4.orig
@@ -583,11 +583,11 @@ Now "update check" is happy.
 
 revert some files to an older revision
   $ hg revert --no-backup -r 8 sub2
-  reverting .hglf/sub2/large6
+  reverting .hglf/sub2/large6 (glob)
   $ cat sub2/large6
   large6
   $ hg revert --no-backup sub2
-  reverting .hglf/sub2/large6
+  reverting .hglf/sub2/large6 (glob)
   $ hg status
 
 "verify --large" actually verifies largefiles

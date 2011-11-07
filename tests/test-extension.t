@@ -473,7 +473,7 @@ Broken disabled extension and command:
   > cmdtable = None
   > EOF
   $ hg --config extensions.path=./path.py help foo > /dev/null
-  warning: error finding commands in $TESTTMP/hgext/forest.py
+  warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
   hg: unknown command 'foo'
-  warning: error finding commands in $TESTTMP/hgext/forest.py
+  warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
   [255]

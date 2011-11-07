@@ -196,8 +196,8 @@ dir, options none
 
   $ rm test/bar
   $ remove test
-  removing test/bar
-  removing test/foo
+  removing test/bar (glob)
+  removing test/foo (glob)
   exit code: 0
   R test/bar
   R test/foo
@@ -208,8 +208,8 @@ dir, options -f
 
   $ rm test/bar
   $ remove -f test
-  removing test/bar
-  removing test/foo
+  removing test/bar (glob)
+  removing test/foo (glob)
   exit code: 0
   R test/bar
   R test/foo
@@ -220,8 +220,8 @@ dir, options -A
 
   $ rm test/bar
   $ remove -A test
-  not removing test/foo: file still exists (use -f to force removal)
-  removing test/bar
+  not removing test/foo: file still exists (use -f to force removal) (glob)
+  removing test/bar (glob)
   exit code: 1
   R test/bar
   ./foo
@@ -232,8 +232,8 @@ dir, options -Af
 
   $ rm test/bar
   $ remove -Af test
-  removing test/bar
-  removing test/foo
+  removing test/bar (glob)
+  removing test/foo (glob)
   exit code: 0
   R test/bar
   R test/foo
@@ -250,7 +250,7 @@ test remove dropping empty trees (issue1861)
   adding issue1861/b/c/y
   adding issue1861/x
   $ hg rm issue1861/b
-  removing issue1861/b/c/y
+  removing issue1861/b/c/y (glob)
   $ hg ci -m remove
   $ ls issue1861
   x

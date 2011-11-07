@@ -88,33 +88,33 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ rm -r t
 
   $ hg locate 't/**'
-  t/b
-  t/e.h
-  t/x
+  t/b (glob)
+  t/e.h (glob)
+  t/x (glob)
 
   $ mkdir otherdir
   $ cd otherdir
 
   $ hg locate b
-  ../b
-  ../t/b
+  ../b (glob)
+  ../t/b (glob)
   $ hg locate '*.h'
-  ../t.h
-  ../t/e.h
+  ../t.h (glob)
+  ../t/e.h (glob)
   $ hg locate path:t/x
-  ../t/x
+  ../t/x (glob)
   $ hg locate 're:.*\.h$'
-  ../t.h
-  ../t/e.h
+  ../t.h (glob)
+  ../t/e.h (glob)
   $ hg locate -r 0 b
-  ../b
-  ../t/b
+  ../b (glob)
+  ../t/b (glob)
   $ hg locate -r 0 '*.h'
-  ../t.h
-  ../t/e.h
+  ../t.h (glob)
+  ../t/e.h (glob)
   $ hg locate -r 0 path:t/x
-  ../t/x
+  ../t/x (glob)
   $ hg locate -r 0 're:.*\.h$'
-  ../t.h
-  ../t/e.h
+  ../t.h (glob)
+  ../t/e.h (glob)
 

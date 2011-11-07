@@ -173,7 +173,7 @@ pull (minimal config)
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset 0647d048b600 in $TESTTMP/b
+  changeset 0647d048b600 in $TESTTMP/b (glob)
   details: $TESTTMP/b?cmd=changeset;node=0647d048b600
   description: b
   

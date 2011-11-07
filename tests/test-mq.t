@@ -137,7 +137,7 @@ qinit -c should create both files if they don't exist
   guards
   $ cat .hg/patches/series
   $ hg qinit -c
-  abort: repository $TESTTMP/d/.hg/patches already exists!
+  abort: repository $TESTTMP/d/.hg/patches already exists! (glob)
   [255]
   $ cd ..
 
@@ -156,8 +156,8 @@ qinit -c should create both files if they don't exist
   $ echo status >> .hg/patches/.hgignore
   $ echo bleh >> .hg/patches/.hgignore
   $ hg qinit -c
-  adding .hg/patches/A
-  adding .hg/patches/B
+  adding .hg/patches/A (glob)
+  adding .hg/patches/B (glob)
   $ hg -R .hg/patches status
   A .hgignore
   A A
@@ -1193,7 +1193,7 @@ repo with unversioned patch dir
 
   $ cd qclonesource
   $ hg qinit -c
-  adding .hg/patches/patch1
+  adding .hg/patches/patch1 (glob)
   $ hg qci -m checkpoint
   $ qlog
   main repo:

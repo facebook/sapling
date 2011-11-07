@@ -283,7 +283,7 @@ Rebasing across null as ancestor
   
 
   $ hg rebase -d 5 -s 7
-  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-backup.hg
+  saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-backup.hg (glob)
   $ hg tglog
   @  8: 'D'
   |

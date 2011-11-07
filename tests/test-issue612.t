@@ -7,7 +7,7 @@ http://mercurial.selenic.com/bts/issue612
   adding src/a.c
 
   $ hg mv src source
-  moving src/a.c to source/a.c
+  moving src/a.c to source/a.c (glob)
 
   $ hg ci -Ammove
 

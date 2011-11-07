@@ -7,7 +7,7 @@ http://mercurial.selenic.com/bts/issue1089
   adding a/b
 
   $ hg rm a
-  removing a/b
+  removing a/b (glob)
   $ hg ci -m m a
 
   $ mkdir a b
@@ -16,7 +16,7 @@ http://mercurial.selenic.com/bts/issue1089
   adding a/b
 
   $ hg rm a
-  removing a/b
+  removing a/b (glob)
   $ cd b
 
 Relative delete:

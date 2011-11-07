@@ -83,7 +83,7 @@ add some changesets to rename/remove/merge
   $ hg commit -q -m"remove large, normal3"
   $ hg merge
   merging sub/maybelarge.dat and stuff/maybelarge.dat to stuff/maybelarge.dat
-  warning: $TESTTMP/bigfile-repo/stuff/maybelarge.dat looks like a binary file.
+  warning: $TESTTMP/bigfile-repo/stuff/maybelarge.dat looks like a binary file. (glob)
   merging stuff/maybelarge.dat failed!
   merging sub/normal2 and stuff/normal2 to stuff/normal2
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved
@@ -170,7 +170,7 @@ lfconvert with rename, merge, and remove
   $ hg share -q -U bigfile-repo shared
   $ printf 'bogus' > shared/.hg/sharedpath
   $ hg lfconvert shared foo
-  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus!
+  abort: .hg/sharedpath points to nonexistent directory $TESTTMP/bogus! (glob)
   [255]
   $ hg lfconvert bigfile-repo largefiles-repo
   initializing destination largefiles-repo

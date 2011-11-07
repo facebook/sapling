@@ -265,10 +265,10 @@ only show up in the test output, not in real usage):
   archiving (foo) [====================================>] 3/3
   archiving (foo) [====================================>] 3/3
                                                               
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [================================>] 1/1
-  archiving (foo/bar) [================================>] 1/1
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
                                                               \r (esc)
   $ find ../archive | sort
   ../archive
@@ -305,10 +305,10 @@ Test archiving to zip file (unzip output is unstable):
   archiving (foo) [====================================>] 3/3
   archiving (foo) [====================================>] 3/3
                                                               
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [================================>] 1/1
-  archiving (foo/bar) [================================>] 1/1
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
                                                               \r (esc)
 
 Test archiving a revision that references a subrepo that is not yet
@@ -336,10 +336,10 @@ cloned:
   archiving (foo) [====================================>] 3/3
   archiving (foo) [====================================>] 3/3
                                                               
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [                                 ] 0/1
-  archiving (foo/bar) [================================>] 1/1
-  archiving (foo/bar) [================================>] 1/1
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [                                 ] 0/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
+  archiving (foo/bar) [================================>] 1/1 (glob)
                                                               
   cloning subrepo foo from $TESTTMP/repo/foo
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar

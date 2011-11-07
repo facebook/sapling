@@ -385,7 +385,7 @@ Disable warning:
   WARNING: f4.bat already has CRLF line endings
   and does not need EOL conversion by the win32text plugin.
   Before your next commit, please reconsider your encode/decode settings in 
-  Mercurial.ini or $TESTTMP/t/.hg/hgrc.
+  Mercurial.ini or $TESTTMP/t/.hg/hgrc. (glob)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat bin
   hello\x00\r (esc)
