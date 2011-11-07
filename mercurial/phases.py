@@ -8,7 +8,8 @@
 # GNU General Public License version 2 or any later version.
 
 import errno
-from node import nullid, bin, hex
+from node import nullid, bin, hex, short
+from i18n import _
 
 allphases = range(2)
 trackedphases = allphases[1:]
@@ -40,6 +41,22 @@ def writeroots(repo):
         repo._dirtyphases = False
     finally:
         f.close()
+
+def filterunknown(repo, phaseroots=None):
+    """remove unknown nodes from the phase boundary
+
+    no data is lost as unknown node only old data for their descentants
+    """
+    if phaseroots is None:
+        phaseroots = repo._phaseroots
+    for phase, nodes in enumerate(phaseroots):
+        missing = [node for node in nodes if node not in repo]
+        if missing:
+            for mnode in missing:
+                msg = _('Removing unknown node %(n)s from %(p)i-phase boundary')
+                repo.ui.debug(msg, {'n': short(mnode), 'p': phase})
+            nodes.symmetric_difference_update(missing)
+            repo._dirtyphases = True
 
 def moveboundary(repo, target_phase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.

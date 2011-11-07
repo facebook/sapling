@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import changegroup, bookmarks
+from mercurial import changegroup, bookmarks, phases
 from mercurial.node import short
 from mercurial.i18n import _
 import os
@@ -145,7 +145,9 @@ def strip(ui, repo, node, backup="all"):
         for m in updatebm:
             bm[m] = repo['.'].node()
         bookmarks.write(repo)
-
+        # remove potential unknown phase
+        # XXX using to_strip data would be faster
+        phases.filterunknown(repo)
     except:
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")

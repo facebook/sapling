@@ -174,7 +174,9 @@ class localrepository(repo.repository):
     @filecache('phaseroots')
     def _phaseroots(self):
         self._dirtyphases = False
-        return phases.readroots(self)
+        phaseroots = phases.readroots(self)
+        phases.filterunknown(self, phaseroots)
+        return phaseroots
 
     @propertycache
     def _phaserev(self):
