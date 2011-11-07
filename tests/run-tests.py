@@ -554,7 +554,8 @@ def linematch(el, l):
     if (el and
         (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
          el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
-         el.endswith(" (esc)\n") and el.decode('string-escape') == l)):
+         el.endswith(" (esc)\n") and
+             el[:-7].decode('string-escape') + '\n' == l)):
         return True
     return False
 
