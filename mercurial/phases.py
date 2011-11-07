@@ -37,5 +37,30 @@ def writeroots(repo):
         for phase, roots in enumerate(repo._phaseroots):
             for h in roots:
                 f.write('%i %s\n' % (phase, hex(h)))
+        repo._dirtyphases = False
     finally:
         f.close()
+
+def moveboundary(repo, target_phase, nodes):
+    """Add nodes to a phase changing other nodes phases if necessary.
+
+    Simplify boundary to contains phase roots only."""
+
+    # move roots of lower states
+    for phase in xrange(target_phase + 1, len(allphases)):
+        # filter nodes that are not in a compatible phase already
+        # XXX rev phase cache might have been invalidated by a previous loop
+        # XXX we need to be smarter here
+        nodes = [n for n in nodes if repo[n].phase() >= phase]
+        if not nodes:
+            break # no roots to move anymore
+        roots = repo._phaseroots[phase]
+        olds = roots.copy()
+        ctxs = list(repo.set('roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
+        roots.clear()
+        roots.update(ctx.node() for ctx in ctxs)
+        if olds != roots:
+            # invalidate cache (we probably could be smarter here
+            if '_phaserev' in vars(repo):
+                del repo._phaserev
+            repo._dirtyphases = True

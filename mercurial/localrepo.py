@@ -36,6 +36,7 @@ class localrepository(repo.repository):
         self.wopener = scmutil.opener(self.root)
         self.baseui = baseui
         self.ui = baseui.copy()
+        self._dirtyphases = False
 
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
@@ -172,6 +173,7 @@ class localrepository(repo.repository):
 
     @filecache('phaseroots')
     def _phaseroots(self):
+        self._dirtyphases = False
         return phases.readroots(self)
 
     @propertycache
@@ -910,6 +912,8 @@ class localrepository(repo.repository):
 
         def unlock():
             self.store.write()
+            if self._dirtyphases:
+                phases.writeroots(self)
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
