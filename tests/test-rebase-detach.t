@@ -305,9 +305,61 @@ Rebasing across null as ancestor
   
   $ cd ..
 
-Ensure --continue restores a correct state (issue3046):
-  $ hg clone -q a a6
+Verify that target is not selected as external rev (issue3085)
+
+  $ hg clone -q -U a a6
   $ cd a6
+  $ hg up -q 6
+
+  $ echo "I" >> E
+  $ hg ci -m "I"
+  $ hg merge 7
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m "Merge"
+  $ echo "J" >> F
+  $ hg ci -m "J"
+
+  $ hg rebase -s 8 -d 7 --collapse --detach --config ui.merge=internal:other
+  remote changed E which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  @  8: 'Collapsed revision
+  |  * I
+  |  * Merge
+  |  * J'
+  o  7: 'H'
+  |
+  | o  6: 'G'
+  |/|
+  o |  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+
+  $ hg parents
+  changeset:   8:9472f4b1d736
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     Collapsed revision
+  
+
+  $ cd ..
+
+Ensure --continue restores a correct state (issue3046):
+  $ hg clone -q a a7
+  $ cd a7
   $ hg up -q 3
   $ echo 'H2' > H
   $ hg ci -A -m 'H2'
@@ -320,7 +372,7 @@ Ensure --continue restores a correct state (issue3046):
   [255]
   $ hg resolve --all -t internal:local
   $ hg rebase -c
-  saved backup bundle to $TESTTMP/a6/.hg/strip-backup/6215fafa5447-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg
   $ hg tglog
   @  8: 'H2'
   |

@@ -215,6 +215,7 @@ def rebase(ui, repo, **opts):
                 originalwd, target, state = result
                 if collapsef:
                     targetancestors = set(repo.changelog.ancestors(target))
+                    targetancestors.add(target)
                     external = checkexternal(repo, state, targetancestors)
 
         if keepbranchesf:
