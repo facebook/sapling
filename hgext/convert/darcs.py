@@ -24,7 +24,7 @@ except ImportError:
             try:
                 from elementtree.ElementTree import ElementTree, XMLParser
             except ImportError:
-                ElementTree = None
+                pass
 
 class darcs_source(converter_source, commandline):
     def __init__(self, ui, path, rev=None):
@@ -42,7 +42,7 @@ class darcs_source(converter_source, commandline):
             raise util.Abort(_('darcs version 2.1 or newer needed (found %r)') %
                              version)
 
-        if ElementTree is None:
+        if "ElementTree" not in globals():
             raise util.Abort(_("Python ElementTree module is not available"))
 
         self.path = os.path.realpath(path)
