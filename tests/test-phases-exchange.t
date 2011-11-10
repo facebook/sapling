@@ -30,6 +30,12 @@
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  $ hgph
+  3 1 a-D
+  2 1 a-C
+  1 0 a-B
+  0 0 a-A
+
   $ cd ../beta
   $ hgph
   1 0 a-B
@@ -55,4 +61,22 @@
   1 0 a-B
   0 0 a-A
 
+pull did not updated ../alpha state.
+push from alpha to beta should update phase even if nothing is transfered
+
+  $ cd ../alpha
+  $ hgph # not updated by remote pull
+  3 1 a-D
+  2 1 a-C
+  1 0 a-B
+  0 0 a-A
+  $ hg push ../beta
+  pushing to ../beta
+  searching for changes
+  no changes found
+  $ hgph
+  3 0 a-D
+  2 0 a-C
+  1 0 a-B
+  0 0 a-A
 

@@ -1554,24 +1554,32 @@ class localrepository(repo.repository):
         if not unbundle:
             lock = remote.lock()
         try:
-            cg, remote_heads = discovery.prepush(self, remote, force, revs,
-                                                 newbranch)
-            ret = remote_heads
-            if cg is not None:
-                if unbundle:
-                    # local repo finds heads on server, finds out what
-                    # revs it must push. once revs transferred, if server
-                    # finds it has different heads (someone else won
-                    # commit/push race), server aborts.
-                    if force:
-                        remote_heads = ['force']
-                    # ssh: return remote's addchangegroup()
-                    # http: return remote's addchangegroup() or 0 for error
-                    ret = remote.unbundle(cg, remote_heads, 'push')
-                else:
-                    # we return an integer indicating remote head count change
-                    ret = remote.addchangegroup(cg, 'push', self.url(),
-                                                lock=lock)
+            # get local lock as we might write phase data
+            locallock = self.lock()
+            try:
+                cg, remote_heads, fut = discovery.prepush(self, remote, force,
+                                                           revs, newbranch)
+                ret = remote_heads
+                if cg is not None:
+                    if unbundle:
+                        # local repo finds heads on server, finds out what
+                        # revs it must push. once revs transferred, if server
+                        # finds it has different heads (someone else won
+                        # commit/push race), server aborts.
+                        if force:
+                            remote_heads = ['force']
+                        # ssh: return remote's addchangegroup()
+                        # http: return remote's addchangegroup() or 0 for error
+                        ret = remote.unbundle(cg, remote_heads, 'push')
+                    else:
+                        # we return an integer indicating remote head count change
+                        ret = remote.addchangegroup(cg, 'push', self.url(),
+                                                    lock=lock)
+                # if we don't push, the common data is already useful
+                # everything exchange is public for now
+                phases.advanceboundary(self, 0, fut)
+            finally:
+                locallock.release()
         finally:
             if lock is not None:
                 lock.release()

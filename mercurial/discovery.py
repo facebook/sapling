@@ -67,14 +67,18 @@ def prepush(repo, remote, force, revs, newbranch):
     on circumstances:
 
     If we are not going to push anything, return a tuple (None,
-    outgoing) where outgoing is 0 if there are no outgoing
+    outgoing, common) where outgoing is 0 if there are no outgoing
     changesets and 1 if there are, but we refuse to push them
-    (e.g. would create new remote heads).
+    (e.g. would create new remote heads). The third element "common"
+    is the list of heads of the common set between local and remote.
 
-    Otherwise, return a tuple (changegroup, remoteheads), where
-    changegroup is a readable file-like object whose read() returns
-    successive changegroup chunks ready to be sent over the wire and
-    remoteheads is the list of remote heads.'''
+    Otherwise, return a tuple (changegroup, remoteheads, futureheads),
+    where changegroup is a readable file-like object whose read()
+    returns successive changegroup chunks ready to be sent over the
+    wire, remoteheads is the list of remote heads and futureheads is
+    the list of heads of the common set between local and remote to
+    be after push completion.
+    '''
     commoninc = findcommonincoming(repo, remote, force=force)
     common, revs = findcommonoutgoing(repo, remote, onlyheads=revs,
                                       commoninc=commoninc, force=force)
@@ -85,7 +89,7 @@ def prepush(repo, remote, force, revs, newbranch):
 
     if not outg:
         repo.ui.status(_("no changes found\n"))
-        return None, 1
+        return None, 1, common
 
     if not force and remoteheads != [nullid]:
         if remote.capable('branchmap'):
@@ -189,4 +193,10 @@ def prepush(repo, remote, force, revs, newbranch):
         cg = repo._changegroup(outg, 'push')
     else:
         cg = repo.getbundle('push', heads=revs, common=common)
-    return cg, remoteheads
+    # no need to compute outg ancestor. All node in outg have either:
+    # - parents in outg
+    # - parents in common
+    # - nullid parent
+    rset = repo.set('heads(%ln + %ln)', common, outg)
+    futureheads = [ctx.node() for ctx in rset]
+    return cg, remoteheads, futureheads
