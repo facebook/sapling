@@ -1520,6 +1520,7 @@ class localrepository(repo.repository):
                     cg = remote.changegroupsubset(fetch, heads, 'pull')
                 result = self.addchangegroup(cg, 'pull', remote.url(),
                                              lock=lock)
+            phases.advanceboundary(self, 0, common)
         finally:
             lock.release()
 

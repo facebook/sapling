@@ -80,3 +80,33 @@ push from alpha to beta should update phase even if nothing is transfered
   1 0 a-B
   0 0 a-A
 
+update must update phase of common changeset too
+
+  $ hg pull ../beta # getting b-A
+  pulling from ../beta
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
+  $ cd ../beta
+  $ hgph # not updated by remote pull
+  4 0 a-D
+  3 0 a-C
+  2 1 b-A
+  1 0 a-B
+  0 0 a-A
+  $ hg pull ../alpha
+  pulling from ../alpha
+  searching for changes
+  no changes found
+  $ hgph
+  4 0 a-D
+  3 0 a-C
+  2 0 b-A
+  1 0 a-B
+  0 0 a-A
+
+
