@@ -958,3 +958,39 @@ diff lines looking like headers
   $ diff want have
   $ cd ..
 
+import a unified diff with no lines of context (diff -U0)
+
+  $ hg init diffzero
+  $ cd diffzero
+  $ cat > f << EOF
+  > c2
+  > c4
+  > c5
+  > EOF
+  $ hg commit -Am0
+  adding f
+
+  $ hg import --no-commit - << EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > # Node ID f4974ab632f3dee767567b0576c0ec9a4508575c
+  > # Parent  8679a12a975b819fae5f7ad3853a2886d143d794
+  > 1
+  > diff -r 8679a12a975b -r f4974ab632f3 f
+  > --- a/f	Thu Jan 01 00:00:00 1970 +0000
+  > +++ b/f	Thu Jan 01 00:00:00 1970 +0000
+  > @@ -0,0 +1,1 @@
+  > +c1
+  > @@ -1,0 +3,1 @@
+  > +c3
+  > @@ -3,1 +4,0 @@
+  > -c5
+  > EOF
+  applying patch from stdin
+
+  $ cat f
+  c1
+  c2
+  c3
+  c4
