@@ -61,9 +61,10 @@ def filterunknown(repo, phaseroots=None):
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
-    Simplify boundary to contains phase roots only."""
+    This function move boundary *forward* this means that all nodes are set
+    in the target phase or kept in a *lower* phase.
 
-    # move roots of lower states
+    Simplify boundary to contains phase roots only."""
     for phase in xrange(targetphase + 1, len(allphases)):
         # filter nodes that are not in a compatible phase already
         # XXX rev phase cache might have been invalidated by a previous loop
@@ -81,3 +82,21 @@ def advanceboundary(repo, targetphase, nodes):
             if '_phaserev' in vars(repo):
                 del repo._phaserev
             repo._dirtyphases = True
+
+def retractboundary(repo, targetphase, nodes):
+    """Set nodes back to a phase changing other nodes phases if necessary.
+
+    This function move boundary *backward* this means that all nodes are set
+    in the target phase or kept in a *higher* phase.
+
+    Simplify boundary to contains phase roots only."""
+    currentroots = repo._phaseroots[targetphase]
+    newroots = [n for n in nodes if repo[n].phase() < targetphase]
+    if newroots:
+        currentroots.update(newroots)
+        ctxs = repo.set('roots(%ln::)', currentroots)
+        currentroots.intersection_update(ctx.node() for ctx in ctxs)
+        if '_phaserev' in vars(repo):
+            del repo._phaserev
+        repo._dirtyphases = True
+
