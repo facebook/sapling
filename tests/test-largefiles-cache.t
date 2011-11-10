@@ -22,7 +22,7 @@ Discard all cached largefiles in USERCACHE
 
   $ rm -rf ${USERCACHE}
 
-Create mirror repo, and pull from source without largefile: 
+Create mirror repo, and pull from source without largefile:
 "pull" is used instead of "clone" for suppression of (1) updating to
 tip (= cahcing largefile from source repo), and (2) recording source
 repo as "default" path in .hg/hgrc.
