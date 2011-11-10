@@ -89,23 +89,65 @@ invalid diff.unified
   abort: diff context lines count must be an integer, not 'foo'
   [255]
 
-test off-by-one error with diff -p
+0 lines of context hunk header matches gnu diff hunk header
 
-  $ hg init diffp
-  $ cd diffp
-  $ echo a > a
-  $ hg ci -Ama
-  adding a
-  $ rm a
-  $ echo b > a
-  $ echo a >> a
-  $ echo c >> a
-  $ hg diff -U0 -p --nodates
-  diff -r cb9a9f314b8b a
-  --- a/a
-  +++ b/a
-  @@ -1,0 +1,1 @@
-  +b
-  @@ -2,0 +3,1 @@ a
-  +c
+  $ hg init diffzero
+  $ cd diffzero
+  $ cat > f1 << EOF
+  > c2
+  > c4
+  > c5
+  > EOF
+  $ hg commit -Am0
+  adding f1
 
+  $ cat > f2 << EOF
+  > c1
+  > c2
+  > c3
+  > c4
+  > EOF
+  $ diff -U0 f1 f2
+  --- f1	* (glob)
+  +++ f2	* (glob)
+  @@ -0,0 +1 @@
+  +c1
+  @@ -1,0 +3 @@
+  +c3
+  @@ -3 +4,0 @@
+  -c5
+  [1]
+
+  $ mv f2 f1
+  $ hg diff -U0 --nodates
+  diff -r 55d8ff78db23 f1
+  --- a/f1
+  +++ b/f1
+  @@ -0,0 +1,1 @@
+  +c1
+  @@ -1,0 +3,1 @@
+  +c3
+  @@ -3,1 +4,0 @@
+  -c5
+
+  $ hg diff -U0 --nodates --git
+  diff --git a/f1 b/f1
+  --- a/f1
+  +++ b/f1
+  @@ -0,0 +1,1 @@
+  +c1
+  @@ -1,0 +3,1 @@
+  +c3
+  @@ -3,1 +4,0 @@
+  -c5
+
+  $ hg diff -U0 --nodates -p
+  diff -r 55d8ff78db23 f1
+  --- a/f1
+  +++ b/f1
+  @@ -0,0 +1,1 @@
+  +c1
+  @@ -1,0 +3,1 @@ c2
+  +c3
+  @@ -3,1 +4,0 @@ c4
+  -c5

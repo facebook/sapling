@@ -149,3 +149,45 @@ directory replace
   644   second/something
   644   third/dummy
   $ cd ..
+
+divergent nested renames (issue3089)
+
+  $ mkdir test-divergent-renames
+  $ cd test-divergent-renames
+  $ bzr init -q source
+  $ cd source
+  $ mkdir -p a/c
+  $ echo a > a/fa
+  $ echo c > a/c/fc
+  $ bzr add -q a
+  $ bzr commit -q -m 'Initial layout'
+  $ bzr mv a b
+  a => b
+  $ mkdir a
+  $ bzr add a
+  adding a
+  $ bzr mv b/c a/c
+  b/c => a/c
+  $ bzr status
+  added:
+    a/
+  renamed:
+    a/ => b/
+    a/c/ => a/c/
+  $ bzr commit -q -m 'Divergent renames'
+  $ cd ..
+  $ hg convert source source-hg
+  initializing destination source-hg repository
+  scanning source...
+  sorting...
+  converting...
+  1 Initial layout
+  0 Divergent renames
+  $ hg -R source-hg st -C --change 1
+  A b/fa
+    a/fa
+  R a/fa
+  $ hg -R source-hg manifest -r 1
+  a/c/fc
+  b/fa
+  $ cd ..

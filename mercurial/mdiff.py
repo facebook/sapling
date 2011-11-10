@@ -183,8 +183,14 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
             # the file more than once.
             lastfunc[0] = astart
 
-        yield "@@ -%d,%d +%d,%d @@%s\n" % (astart + 1, alen,
-                                           bstart + 1, blen, func)
+        # zero-length hunk ranges report their start line as one less
+        if alen:
+            astart += 1
+        if blen:
+            bstart += 1
+
+        yield "@@ -%d,%d +%d,%d @@%s\n" % (astart, alen,
+                                           bstart, blen, func)
         for x in delta:
             yield x
         for x in xrange(a2, aend):

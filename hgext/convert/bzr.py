@@ -173,8 +173,14 @@ class bzr_source(converter_source):
         revid = current._revision_id
         changes = []
         renames = {}
+        seen = set()
+        # Process the entries by reverse lexicographic name order to
+        # handle nested renames correctly, most specific first.
+        curchanges = sorted(current.iter_changes(origin),
+                            key=lambda c: c[1][0] or c[1][1],
+                            reverse=True)
         for (fileid, paths, changed_content, versioned, parent, name,
-            kind, executable) in current.iter_changes(origin):
+            kind, executable) in curchanges:
 
             if paths[0] == u'' or paths[1] == u'':
                 # ignore changes to tree root
@@ -188,7 +194,8 @@ class bzr_source(converter_source):
                     # so it can be removed.
                     changes.append((self.recode(paths[0]), revid))
 
-                if None not in paths and paths[0] != paths[1]:
+                if kind[0] == 'directory' and None not in paths:
+                    renaming = paths[0] != paths[1]
                     # neither an add nor an delete - a move
                     # rename all directory contents manually
                     subdir = origin.inventory.path2id(paths[0])
@@ -198,6 +205,16 @@ class bzr_source(converter_source):
                         if entry.kind == 'directory':
                             continue
                         frompath = self.recode(paths[0] + '/' + name)
+                        if frompath in seen:
+                            # Already handled by a more specific change entry
+                            # This is important when you have:
+                            # a => b
+                            # a/c => a/c
+                            # Here a/c must not be renamed into b/c
+                            continue
+                        seen.add(frompath)
+                        if not renaming:
+                            continue
                         topath = self.recode(paths[1] + '/' + name)
                         # register the files as changed
                         changes.append((frompath, revid))
@@ -215,6 +232,7 @@ class bzr_source(converter_source):
 
             # we got unicode paths, need to convert them
             path, topath = [self.recode(part) for part in paths]
+            seen.add(path or topath)
 
             if topath is None:
                 # file deleted

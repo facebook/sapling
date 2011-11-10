@@ -723,11 +723,10 @@ class patchfile(object):
 
         # fast case first, no offsets, no fuzz
         old = h.old()
-        # patch starts counting at 1 unless we are adding the file
-        if h.starta == 0:
-            start = 0
-        else:
-            start = h.starta + self.offset - 1
+        start = h.starta + self.offset
+        # zero length hunk ranges already have their start decremented
+        if h.lena:
+            start -= 1
         orig_start = start
         # if there's skew we want to emit the "(offset %d lines)" even
         # when the hunk cleanly applies at start + skew, so skip the
