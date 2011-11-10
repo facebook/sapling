@@ -7,4 +7,4 @@
   $ hg ci -m 'first'
 
   $ hglog
-  0 0 first
+  0 1 first

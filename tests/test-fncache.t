@@ -74,6 +74,7 @@ Non store repo:
   .hg/data/tst.d.hg/foo.i
   .hg/dirstate
   .hg/last-message.txt
+  .hg/phaseroots
   .hg/requires
   .hg/undo
   .hg/undo.bookmarks
@@ -103,6 +104,7 @@ Non fncache repo:
   .hg/store/data
   .hg/store/data/tst.d.hg
   .hg/store/data/tst.d.hg/_foo.i
+  .hg/store/phaseroots
   .hg/store/undo
   .hg/store/undo.phaseroots
   .hg/undo.bookmarks

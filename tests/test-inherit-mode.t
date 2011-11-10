@@ -76,6 +76,7 @@ new directories are setgid
   00660 ./.hg/store/data/dir/bar.i
   00660 ./.hg/store/data/foo.i
   00660 ./.hg/store/fncache
+  00660 ./.hg/store/phaseroots
   00660 ./.hg/store/undo
   00660 ./.hg/store/undo.phaseroots
   00660 ./.hg/undo.bookmarks

@@ -1243,6 +1243,8 @@ class localrepository(repo.repository):
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
+            # ensure the new commit is 1-phase
+            phases.retractboundary(self, 1, [n])
             tr.close()
 
             if self._branchcache:
