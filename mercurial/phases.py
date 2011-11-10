@@ -58,13 +58,13 @@ def filterunknown(repo, phaseroots=None):
             nodes.symmetric_difference_update(missing)
             repo._dirtyphases = True
 
-def moveboundary(repo, target_phase, nodes):
+def moveboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
     Simplify boundary to contains phase roots only."""
 
     # move roots of lower states
-    for phase in xrange(target_phase + 1, len(allphases)):
+    for phase in xrange(targetphase + 1, len(allphases)):
         # filter nodes that are not in a compatible phase already
         # XXX rev phase cache might have been invalidated by a previous loop
         # XXX we need to be smarter here
