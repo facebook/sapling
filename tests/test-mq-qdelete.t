@@ -188,7 +188,9 @@ more complex state 'both known and unknown patches
   $ echo > .hg/patches/series # remove 4.diff and 5.diff from series to confuse mq
   $ echo hup >>  base
   $ hg qnew -f -d '1 0' -m 6 6.diff
+  $ echo pup > base
   $ hg qfinish -a
+  warning: uncommitted changes in the working directory
   revision 2b1c98802260 refers to unknown patches: 5.diff
   revision 33a6861311c0 refers to unknown patches: 4.diff
 

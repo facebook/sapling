@@ -2915,6 +2915,9 @@ def finish(ui, repo, *revrange, **opts):
         return 0
 
     revs = scmutil.revrange(repo, revrange)
+    if repo['.'].rev() in revs and repo[None].files():
+        ui.warn(_('warning: uncommitted changes in the working directory\n'))
+
     q.finish(repo, revs)
     q.savedirty()
     return 0
