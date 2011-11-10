@@ -1978,6 +1978,9 @@ class localrepository(repo.repository):
                           node=hex(cl.node(clstart)), source=srctype,
                           url=url, pending=p)
 
+            added = [cl.node(r) for r in xrange(clstart, clend)]
+            if srctype != 'strip':
+                phases.advanceboundary(self, 0, added)
             # make changelog see real files again
             cl.finalize(trp)
 
@@ -1994,9 +1997,8 @@ class localrepository(repo.repository):
             self.hook("changegroup", node=hex(cl.node(clstart)),
                       source=srctype, url=url)
 
-            for i in xrange(clstart, clend):
-                self.hook("incoming", node=hex(cl.node(i)),
-                          source=srctype, url=url)
+            for n in added:
+                self.hook("incoming", node=hex(n), source=srctype, url=url)
 
         # never return 0 here:
         if dh < 0:
