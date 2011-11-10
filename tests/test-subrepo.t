@@ -885,8 +885,8 @@ Test that removing .hgsub removes .hgsubstate:
   
 Test behavior of add for explicit path in subrepo:
   $ cd ..
-  $ hg init addtests
-  $ cd addtests
+  $ hg init explicit
+  $ cd explicit
   $ echo s = s > .hgsub
   $ hg add .hgsub
   $ hg init s
@@ -1004,4 +1004,14 @@ Adding with a pattern with -S also adds matches in subrepos
   $ hg ci -Am6
   adding fn16
   committing subrepository s
-  $ cd ..
+
+Test behavior of forget for explicit path in subrepo:
+Forgetting an explicit path in a subrepo currently gives a file untracked warn
+  $ echo c19 > s/f19
+  $ hg add s/f19
+  $ hg st -S
+  A s/f19
+  $ hg forget s/f19
+  not removing s/f19: file is already untracked
+  [1]
+  $ rm s/f19
