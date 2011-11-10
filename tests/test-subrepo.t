@@ -1006,12 +1006,12 @@ Adding with a pattern with -S also adds matches in subrepos
   committing subrepository s
 
 Test behavior of forget for explicit path in subrepo:
-Forgetting an explicit path in a subrepo currently gives a file untracked warn
+Forgetting an explicit path in a subrepo untracks the file
   $ echo c19 > s/f19
   $ hg add s/f19
   $ hg st -S
   A s/f19
   $ hg forget s/f19
-  not removing s/f19: file is already untracked
-  [1]
+  $ hg st -S
+  ? s/f19
   $ rm s/f19

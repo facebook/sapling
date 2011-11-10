@@ -95,6 +95,9 @@ Interaction with Mercurial Commands
     elements. Git and Subversion subrepositories are currently
     silently ignored.
 
+:forget: forget currently only handles exact file matches in subrepos.
+    Git and Subversion subrepositories are currently silently ignored.
+
 :incoming: incoming does not recurse in subrepos unless -S/--subrepos
     is specified. Git and Subversion subrepositories are currently
     silently ignored.

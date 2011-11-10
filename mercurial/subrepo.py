@@ -360,6 +360,9 @@ class abstractsubrepo(object):
         '''
         pass
 
+    def forget(self, files):
+        pass
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -552,6 +555,10 @@ class hgsubrepo(abstractsubrepo):
     def walk(self, match):
         ctx = self._repo[None]
         return ctx.walk(match)
+
+    def forget(self, files):
+        ctx = self._repo[None]
+        ctx.forget(files)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
