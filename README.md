@@ -123,11 +123,6 @@ If you have the bookmarks extension enabled, Hg-Git will use it. It
 will push your bookmarks up to the Git server as branches and will
 pull Git branches down and set them up as bookmarks.
 
-This is actually pretty cool, since you can use this extension to
-transfer your Hg bookmarks via the Git protocol, rather than having to
-scp them, as the Hg transfer protocol does not currently support
-transferring bookmarks.
-
 Installing
 ==========
 
