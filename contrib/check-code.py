@@ -302,7 +302,7 @@ def getblame(f):
     return lines
 
 def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
-              blame=False, debug=False):
+              blame=False, debug=False, lineno=True):
     """checks style and portability of a given file
 
     :f: filepath
@@ -385,7 +385,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                         bl, bu, br = blamecache[n]
                         if bl == l:
                             bd = '%s@%s' % (bu, br)
-                errors.append((f, n + 1, l, msg, bd))
+                errors.append((f, lineno and n + 1, l, msg, bd))
                 result = False
 
         errors.sort()
@@ -408,8 +408,11 @@ if __name__ == "__main__":
                       help="use annotate to generate blame info")
     parser.add_option("", "--debug", action="store_true",
                       help="show debug information")
+    parser.add_option("", "--nolineno", action="store_false",
+                      dest='lineno', help="don't show line numbers")
 
-    parser.set_defaults(per_file=15, warnings=False, blame=False, debug=False)
+    parser.set_defaults(per_file=15, warnings=False, blame=False, debug=False,
+                        lineno=True)
     (options, args) = parser.parse_args()
 
     if len(args) == 0:
@@ -420,6 +423,7 @@ if __name__ == "__main__":
     for f in check:
         ret = 0
         if not checkfile(f, maxerr=options.per_file, warnings=options.warnings,
-                         blame=options.blame, debug=options.debug):
+                         blame=options.blame, debug=options.debug,
+                         lineno=options.lineno):
             ret = 1
     sys.exit(ret)

@@ -132,3 +132,11 @@
    object comparison with literal
   [1]
 
+  $ cat > warning.py <<EOF
+  > except:
+  > EOF
+  $ "$check_code" warning.py --warning --nolineno
+  warning.py:0:
+   > except:
+   warning: naked except clause
+  [1]
