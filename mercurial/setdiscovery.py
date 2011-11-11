@@ -128,7 +128,7 @@ def findcommonheads(ui, local, remote,
         return (srvheadhashes, False, srvheadhashes,)
 
     if sample and util.all(yesno):
-        ui.note("all local heads known remotely\n")
+        ui.note(_("all local heads known remotely\n"))
         ownheadhashes = dag.externalizeall(ownheads)
         return (ownheadhashes, True, srvheadhashes,)
 
@@ -158,7 +158,7 @@ def findcommonheads(ui, local, remote,
             break
 
         if full:
-            ui.note("sampling from both directions\n")
+            ui.note(_("sampling from both directions\n"))
             sample = _takefullsample(dag, undecided, size=fullsamplesize)
         elif common:
             # use cheapish initial sample
