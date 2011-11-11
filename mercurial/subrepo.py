@@ -807,6 +807,12 @@ class gitsubrepo(abstractsubrepo):
     def _gitisbare(self):
         return self._gitcommand(['config', '--bool', 'core.bare']) == 'true'
 
+    def _gitupdatestat(self):
+        """This must be run before git diff-index.
+        diff-index only looks at changes to file stat;
+        this command looks at file contents and updates the stat."""
+        self._gitcommand(['update-index', '-q', '--refresh'])
+
     def _gitbranchmap(self):
         '''returns 2 things:
         a map from git branch to revision
@@ -876,6 +882,7 @@ class gitsubrepo(abstractsubrepo):
             # different version checked out
             return True
         # check for staged changes or modified files; ignore untracked files
+        self._gitupdatestat()
         out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
         return code == 1
 
@@ -983,6 +990,7 @@ class gitsubrepo(abstractsubrepo):
         source, revision, kind = state
         self._fetch(source, revision)
         base = self._gitcommand(['merge-base', revision, self._state[1]])
+        self._gitupdatestat()
         out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
 
         def mergefunc():
@@ -1090,6 +1098,7 @@ class gitsubrepo(abstractsubrepo):
             # if the repo is missing, return no results
             return [], [], [], [], [], [], []
         modified, added, removed = [], [], []
+        self._gitupdatestat()
         if rev2:
             command = ['diff-tree', rev1, rev2]
         else:

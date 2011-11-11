@@ -361,6 +361,15 @@ Don't crash if the .hgsubstate entry is missing
   $ hg update -qC nosubstate
   $ ls s
 
+issue3109: false positives in git diff-index
+
+  $ hg update -q
+  $ touch -t 200001010000 s/g
+  $ hg status --subrepos
+  $ touch -t 200001010000 s/g
+  $ hg sum | grep commit
+  commit: (clean)
+
 Check hg update --clean
   $ cd $TESTTMP/ta
   $ echo  > s/g
