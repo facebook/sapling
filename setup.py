@@ -78,7 +78,8 @@ if convert2to3:
             raise SystemExit("--c2to3 is only compatible with python3.")
         raise
     sys.path.append('contrib')
-
+elif sys.version_info[0] >= 3:
+    raise SystemExit("setup.py with python3 needs --c2to3 (experimental)")
 
 scripts = ['hg']
 if os.name == 'nt':
