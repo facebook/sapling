@@ -225,3 +225,33 @@ View graph:
   |/
   o  test@rev: 0
   
+Graft again onto another branch should preserve the original source
+  $ hg up -q 0
+  $ echo 'g'>g
+  $ hg add g
+  $ hg ci -m 7
+  created new head
+  $ hg graft 7
+  grafting revision 7
+
+  $ hg log -r 7 --template '{rev}:{node}\n'
+  7:d2e44c99fd3f31c176ea4efb9eca9f6306c81756
+  $ hg log -r 2 --template '{rev}:{node}\n'
+  2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4
+
+  $ hg log --debug -r tip
+  changeset:   13:39bb1d13572759bd1e6fc874fed1b12ece047a18
+  tag:         tip
+  parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    13:0780e055d8f4cd12eadd5a2719481648f336f7a9
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      b
+  files-:      a
+  extra:       branch=default
+  extra:       source=5c095ad7e90f871700f02dd1fa5012cb4498a2d4
+  description:
+  2
+  
+  

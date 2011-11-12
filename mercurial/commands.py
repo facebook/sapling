@@ -2590,7 +2590,10 @@ def graft(ui, repo, *revs, **opts):
             cont = False
 
         # commit
-        extra = {'source': ctx.hex()}
+        source = ctx.extra().get('source')
+        if not source:
+            source = ctx.hex()
+        extra = {'source': source}
         user = ctx.user()
         if opts.get('user'):
             user = opts['user']
