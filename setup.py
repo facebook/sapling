@@ -44,7 +44,7 @@ except:
     pass
 
 if isironpython:
-    print "warning: IronPython detected (no bz2 support)"
+    sys.stderr.write("warning: IronPython detected (no bz2 support)\n")
 else:
     try:
         import bz2
