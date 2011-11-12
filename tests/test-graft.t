@@ -200,30 +200,30 @@ Compare with original:
 
 View graph:
 
-  $ hg --config extensions.graphlog= log -G --template '{author}@rev: {desc}\n'
-  @  test@rev: 3
+  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}: {desc}\n'
+  @  test@11: 3
   |
-  o  test@rev: 4
+  o  test@10: 4
   |
-  o  test@rev: 5
+  o  test@9: 5
   |
-  o  bar@rev: 1
+  o  bar@8: 1
   |
-  o  foo@rev: 2
+  o  foo@7: 2
   |
-  | o    test@rev: 6
+  | o    test@6: 6
   | |\
-  | | o  test@rev: 5
+  | | o  test@5: 5
   | | |
-  | o |  test@rev: 4
+  | o |  test@4: 4
   | |/
-  | o  baz@rev: 3
+  | o  baz@3: 3
   | |
-  | o  test@rev: 2
+  | o  test@2: 2
   | |
-  | o  bar@rev: 1
+  | o  bar@1: 1
   |/
-  o  test@rev: 0
+  o  test@0: 0
   
 Graft again onto another branch should preserve the original source
   $ hg up -q 0
