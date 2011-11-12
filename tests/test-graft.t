@@ -255,3 +255,25 @@ Graft again onto another branch should preserve the original source
   2
   
   
+Disallow grafting an already grafted cset onto its original branch
+  $ hg up -q 6
+  $ hg graft 7
+  skipping already grafted revision 7 (was grafted from 2)
+  [255]
+
+Disallow grafting already grafted csets with the same origin onto each other
+  $ hg up -q 13
+  $ hg graft 2
+  skipping already grafted revision 2
+  [255]
+  $ hg graft 7
+  skipping already grafted revision 7 (same origin 2)
+  [255]
+
+  $ hg up -q 7
+  $ hg graft 2
+  skipping already grafted revision 2
+  [255]
+  $ hg graft tip
+  skipping already grafted revision 13 (same origin 2)
+  [255]

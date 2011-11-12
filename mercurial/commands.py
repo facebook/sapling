@@ -2547,15 +2547,32 @@ def graft(ui, repo, *revs, **opts):
     if not revs:
         return -1
 
+    # analyze revs for earlier grafts
+    ids = {}
+    for ctx in repo.set("%ld", revs):
+        ids[ctx.hex()] = ctx.rev()
+        n = ctx.extra().get('source')
+        if n:
+            ids[n] = ctx.rev()
+
     # check ancestors for earlier grafts
     ui.debug('scanning for duplicate grafts\n')
     for ctx in repo.set("::. - ::%ld", revs):
         n = ctx.extra().get('source')
-        if n and n in repo:
+        if n in ids:
             r = repo[n].rev()
             if r in revs:
                 ui.warn(_('skipping already grafted revision %s\n') % r)
                 revs.remove(r)
+            elif ids[n] in revs:
+                ui.warn(_('skipping already grafted revision %s '
+                            '(same origin %d)\n') % (ids[n], r))
+                revs.remove(ids[n])
+        elif ctx.hex() in ids:
+            r = ids[ctx.hex()]
+            ui.warn(_('skipping already grafted revision %s '
+                            '(was grafted from %d)\n') % (r, ctx.rev()))
+            revs.remove(r)
     if not revs:
         return -1
 
