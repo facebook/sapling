@@ -72,7 +72,7 @@ def wsclean(opts, text, blank=True):
         text = re.sub('[ \t\r]+', ' ', text)
         text = text.replace(' \n', '\n')
     if blank and opts.ignoreblanklines:
-        text = re.sub('\n+', '', text)
+        text = re.sub('\n+', '\n', text).strip('\n')
     return text
 
 def diffline(revs, a, b, opts):
