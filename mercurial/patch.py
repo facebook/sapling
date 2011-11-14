@@ -566,8 +566,8 @@ class repobackend(abstractbackend):
         return self.changed | self.removed
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
-unidesc = re.compile('@@ -(\d+)(,(\d+))? \+(\d+)(,(\d+))? @@')
-contextdesc = re.compile('(---|\*\*\*) (\d+)(,(\d+))? (---|\*\*\*)')
+unidesc = re.compile('@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@')
+contextdesc = re.compile('(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)')
 eolmodes = ['strict', 'crlf', 'lf', 'auto']
 
 class patchfile(object):
@@ -830,7 +830,7 @@ class hunk(object):
         m = unidesc.match(self.desc)
         if not m:
             raise PatchError(_("bad hunk #%d") % self.number)
-        self.starta, foo, self.lena, self.startb, foo2, self.lenb = m.groups()
+        self.starta, self.lena, self.startb, self.lenb = m.groups()
         if self.lena is None:
             self.lena = 1
         else:
@@ -857,7 +857,7 @@ class hunk(object):
         m = contextdesc.match(self.desc)
         if not m:
             raise PatchError(_("bad hunk #%d") % self.number)
-        foo, self.starta, foo2, aend, foo3 = m.groups()
+        self.starta, aend = m.groups()
         self.starta = int(self.starta)
         if aend is None:
             aend = self.starta
@@ -890,7 +890,7 @@ class hunk(object):
         m = contextdesc.match(l)
         if not m:
             raise PatchError(_("bad hunk #%d") % self.number)
-        foo, self.startb, foo2, bend, foo3 = m.groups()
+        self.startb, bend = m.groups()
         self.startb = int(self.startb)
         if bend is None:
             bend = self.startb
