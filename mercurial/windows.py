@@ -131,6 +131,8 @@ def localpath(path):
 def normpath(path):
     return pconvert(os.path.normpath(path))
 
+normcase = os.path.normcase
+
 def realpath(path):
     '''
     Returns the true, canonical file system path equivalent to the given

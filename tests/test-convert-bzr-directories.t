@@ -165,15 +165,15 @@ divergent nested renames (issue3089)
   a => b
   $ mkdir a
   $ bzr add a
-  adding a
+  add(ed|ing) a (re)
   $ bzr mv b/c a/c
   b/c => a/c
   $ bzr status
   added:
     a/
   renamed:
-    a/ => b/
-    a/c/ => a/c/
+    a/? => b/? (re)
+    a/c/? => a/c/? (re)
   $ bzr commit -q -m 'Divergent renames'
   $ cd ..
   $ hg convert source source-hg
