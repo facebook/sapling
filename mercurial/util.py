@@ -1708,7 +1708,8 @@ class url(object):
             # letters to paths with drive letters.
             if hasdriveletter(self._hostport):
                 path = self._hostport + '/' + self.path
-            elif self.host is not None and self.path:
+            elif (self.host is not None and self.path
+                  and not hasdriveletter(path)):
                 path = '/' + path
             return path
         return self._origpath
