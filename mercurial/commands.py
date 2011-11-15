@@ -2446,7 +2446,7 @@ def forget(ui, repo, *pats, **opts):
             submatch = matchmod.narrowmatcher(subpath, m)
             for fsub in sub.walk(submatch):
                 if submatch.exact(fsub):
-                    subforget[os.path.join(subpath, fsub)] = (fsub, sub)
+                    subforget[subpath + '/' + fsub] = (fsub, sub)
         except error.LookupError:
             ui.status(_("skipping missing subrepository: %s\n") % subpath)
 
