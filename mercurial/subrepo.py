@@ -223,7 +223,7 @@ def _abssource(repo, push=False, abort=True):
         source.path = posixpath.normpath(source.path)
         parent = _abssource(repo._subparent, push, abort=False)
         if parent:
-            parent = util.url(parent)
+            parent = util.url(util.pconvert(parent))
             parent.path = posixpath.join(parent.path or '', source.path)
             parent.path = posixpath.normpath(parent.path)
             return str(parent)
