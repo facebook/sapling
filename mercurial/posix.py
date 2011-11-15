@@ -164,6 +164,10 @@ def samedevice(fpath1, fpath2):
     st2 = os.lstat(fpath2)
     return st1.st_dev == st2.st_dev
 
+# os.path.normcase is a no-op, which doesn't help us on non-native filesystems
+def normcase(path):
+    return path.lower()
+
 if sys.platform == 'darwin':
     import fcntl # only needed on darwin, missing on jython
     def realpath(path):
