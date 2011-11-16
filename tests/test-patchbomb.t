@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" system-sh || exit 80
+
   $ fixheaders()
   > {
   >     sed -e 's/\(Message-Id:.*@\).*/\1/'  \

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" system-sh || exit 80
+
 test merge-tools configuration - mostly exercising filemerge.py
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test
