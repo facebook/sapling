@@ -372,7 +372,7 @@ Ensure --continue restores a correct state (issue3046):
   [255]
   $ hg resolve --all -t internal:local
   $ hg rebase -c
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)
   $ hg tglog
   @  8: 'H2'
   |
