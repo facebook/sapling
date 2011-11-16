@@ -818,6 +818,7 @@ We have to simulate that here by setting $HOME and removing write permissions
   getting changed largefiles
   1 largefiles updated, 0 removed
   $ cd ..
+  $ chmod -R u+w alice/pubrepo
   $ HOME="$ORIGHOME"
 
 Symlink to a large largefile should behave the same as a symlink to a normal file
