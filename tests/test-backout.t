@@ -48,8 +48,8 @@ backout of backout is as if nothing happened
   $ hg backout -d '3 0' --merge tip --tool=true
   removing a
   changeset 3:7f6d0f120113 backs out changeset 2:de31bdc76c0d
-  $ cat a 2>/dev/null || echo cat: a: No such file or directory
-  cat: a: No such file or directory
+  $ test -f a
+  [1]
 
 across branch
 
