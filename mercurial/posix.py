@@ -258,7 +258,7 @@ def findexe(command):
 
     def findexisting(executable):
         'Will return executable if existing file'
-        if os.path.exists(executable):
+        if os.path.isfile(executable) and os.access(executable, os.X_OK):
             return executable
         return None
 
@@ -268,9 +268,7 @@ def findexe(command):
     for path in os.environ.get('PATH', '').split(os.pathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:
-            st = os.stat(executable)
-            if (st.st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)):
-                return executable
+            return executable
     return None
 
 def setsignalhandler():
