@@ -1,6 +1,6 @@
 import sys, os, subprocess
 
-if subprocess.call(['%s/hghave' % os.environ['TESTDIR'], 'cacheable']):
+if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'], 'cacheable']):
     sys.exit(80)
 
 from mercurial import util, scmutil, extensions
