@@ -128,10 +128,10 @@ def setcurrent(repo, mark):
 
 def updatecurrentbookmark(repo, oldnode, curbranch):
     try:
-        update(repo, oldnode, repo.branchtags()[curbranch])
+        return update(repo, oldnode, repo.branchtags()[curbranch])
     except KeyError:
         if curbranch == "default": # no default branch!
-            update(repo, oldnode, repo.lookup("tip"))
+            return update(repo, oldnode, repo.lookup("tip"))
         else:
             raise util.Abort(_("branch %s not found") % curbranch)
 
@@ -147,6 +147,7 @@ def update(repo, parents, node):
             update = True
     if update:
         repo._writebookmarks(marks)
+    return update
 
 def listbookmarks(repo):
     # We may try to list bookmarks on a repo type that does not
