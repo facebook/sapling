@@ -274,7 +274,7 @@ Test patterns:
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk 'glob:j*'
   $ hg debugwalk NOEXIST
-  NOEXIST: No such file or directory
+  NOEXIST: * (glob)
 
   $ mkfifo fifo
   $ hg debugwalk fifo

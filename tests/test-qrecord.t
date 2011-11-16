@@ -107,7 +107,7 @@ help (bad mq)
 
   $ echo "mq=nonexistant" >> $HGRCPATH
   $ hg help qrecord
-  *** failed to import extension mq from nonexistant: [Errno 2] No such file or directory
+  *** failed to import extension mq from nonexistant: [Errno 2] * (glob)
   hg qrecord [OPTION]... PATCH [FILE]...
   
   interactively record a new patch

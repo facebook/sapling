@@ -134,7 +134,7 @@ hg status:
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status --color=always modified added removed deleted unknown never-existed ignored
-  never-existed: No such file or directory
+  never-existed: * (glob)
   \x1b[0;32;1mA added\x1b[0m (esc)
   \x1b[0;31;1mR removed\x1b[0m (esc)
   \x1b[0;36;1;4m! deleted\x1b[0m (esc)

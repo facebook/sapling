@@ -77,7 +77,7 @@ Interactive merge:
 
   $ status
   --- status ---
-  file2: No such file or directory
+  file2: * (glob)
   C file1
   --- file1 ---
   1
@@ -133,7 +133,7 @@ Interactive merge with not enough input:
 
   $ status
   --- status ---
-  file2: No such file or directory
+  file2: * (glob)
   C file1
   --- file1 ---
   1

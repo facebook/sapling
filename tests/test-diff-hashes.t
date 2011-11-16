@@ -2,8 +2,8 @@
   $ cd a
 
   $ hg diff inexistent1 inexistent2
-  inexistent1: No such file or directory
-  inexistent2: No such file or directory
+  inexistent1: * (glob)
+  inexistent2: * (glob)
 
   $ echo bar > foo
   $ hg add foo

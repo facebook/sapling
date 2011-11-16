@@ -73,7 +73,7 @@ commit added file that has been deleted
   $ cd ..
 
   $ hg commit -m commit-14 does-not-exist
-  abort: does-not-exist: No such file or directory
+  abort: does-not-exist: * (glob)
   [255]
   $ ln -s foo baz
   $ hg commit -m commit-15 baz

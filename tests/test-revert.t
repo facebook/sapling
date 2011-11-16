@@ -82,7 +82,7 @@ should show b deleted
 should not find b
 
   $ hg status b
-  b: No such file or directory
+  b: * (glob)
 
 should show a c e
 

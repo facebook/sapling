@@ -43,7 +43,7 @@ Default operation:
 Invalid dest '' must abort:
 
   $ hg clone . ''
-  abort: No such file or directory
+  abort: * (glob)
   [255]
 
 No update, with debug option:
@@ -107,7 +107,7 @@ Use --pull:
 Invalid dest '' with --pull must abort (issue2528):
 
   $ hg clone --pull a ''
-  abort: No such file or directory
+  abort: * (glob)
   [255]
 
 Clone to '.':

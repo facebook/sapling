@@ -123,7 +123,7 @@ plain headers
   A series
   A uncommitted.patch
   % qnew missing
-  abort: missing: No such file or directory
+  abort: missing: * (glob)
   % qnew -m
   foo bar
   
@@ -190,7 +190,7 @@ hg headers
   A series
   A uncommitted.patch
   % qnew missing
-  abort: missing: No such file or directory
+  abort: missing: * (glob)
   % qnew -m
   # HG changeset patch
   # Parent 

@@ -127,7 +127,7 @@ hg status:
 hg status modified added removed deleted unknown never-existed ignored:
 
   $ hg status modified added removed deleted unknown never-existed ignored
-  never-existed: No such file or directory
+  never-existed: * (glob)
   A added
   R removed
   ! deleted

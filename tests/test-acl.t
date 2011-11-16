@@ -868,10 +868,10 @@ file specified by acl.config does not exist
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
-  error: pretxnchangegroup.acl hook raised an exception: [Errno 2] No such file or directory: '../acl.config'
+  error: pretxnchangegroup.acl hook raised an exception: [Errno 2] *: '../acl.config' (glob)
   transaction abort!
   rollback completed
-  abort: No such file or directory: ../acl.config
+  abort: *: ../acl.config (glob)
   no rollback information available
   0:6675d58eff77
   
