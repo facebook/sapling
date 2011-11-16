@@ -3510,6 +3510,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 try:
                     p1 = repo[p1]
                     p2 = repo[p2]
+                    # Without any options, consider p2 only if the
+                    # patch is being applied on top of the recorded
+                    # first parent.
+                    if p1 != parents[0]:
+                        p1 = parents[0]
+                        p2 = repo[nullid]
                 except error.RepoError:
                     p1, p2 = parents
             else:
@@ -3517,9 +3523,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
             n = None
             if update:
-                if opts.get('exact') and p1 != parents[0]:
+                if p1 != parents[0]:
                     hg.clean(repo, p1.node())
-                if p1 != parents[0] and p2 != parents[1]:
+                if p2 != parents[1]:
                     repo.dirstate.setparents(p1.node(), p2.node())
 
                 if opts.get('exact') or opts.get('import_branch'):
@@ -3533,7 +3539,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     if message:
                         msgs.append(message)
                 else:
-                    if opts.get('exact'):
+                    if opts.get('exact') or p2:
+                        # If you got here, you either use --force and know what
+                        # you are doing or used --exact or a merge patch while
+                        # being updated to its first parent.
                         m = None
                     else:
                         m = scmutil.matchfiles(repo, files or [])
