@@ -233,7 +233,7 @@ override commit message
   > msg.set_payload('email commit message\n' + patch)
   > msg['Subject'] = 'email patch'
   > msg['From'] = 'email patcher'
-  > sys.stdout.write(msg.as_string())
+  > file(sys.argv[2], 'wb').write(msg.as_string())
   > EOF
 
 
@@ -246,7 +246,7 @@ plain diff in email, subject, message body
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg.py diffed-tip.patch > msg.patch
+  $ python mkmsg.py diffed-tip.patch msg.patch
   $ hg --cwd b import ../msg.patch
   applying ../msg.patch
   $ hg --cwd b tip | grep email
@@ -308,7 +308,8 @@ hg export in email, should use patch header
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg.py exported-tip.patch | hg --cwd b import -
+  $ python mkmsg.py exported-tip.patch msg.patch
+  $ cat msg.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip | grep second
   summary:     second change
@@ -325,7 +326,7 @@ The '---' tests the gitsendmail handling without proper mail headers
   > msg.set_payload('email patch\n\nnext line\n---\n' + patch)
   > msg['Subject'] = '[PATCH] email patch'
   > msg['From'] = 'email patcher'
-  > sys.stdout.write(msg.as_string())
+  > file(sys.argv[2], 'wb').write(msg.as_string())
   > EOF
 
 
@@ -338,7 +339,8 @@ plain diff in email, [PATCH] subject, message body with subject
   added 1 changesets with 2 changes to 2 files
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ python mkmsg2.py diffed-tip.patch | hg --cwd b import -
+  $ python mkmsg2.py diffed-tip.patch msg.patch
+  $ cat msg.patch | hg --cwd b import -
   applying patch from stdin
   $ hg --cwd b tip --template '{desc}\n'
   email patch

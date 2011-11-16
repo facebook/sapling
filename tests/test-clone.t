@@ -10,7 +10,7 @@ Prepare repo a:
 
 Create a non-inlined filelog:
 
-  $ python -c 'for x in range(10000): print x' >> data1
+  $ python -c 'file("data1", "wb").write("".join("%s\n" % x for x in range(10000)))'
   $ for j in 0 1 2 3 4 5 6 7 8 9; do
   >   cat data1 >> b
   >   hg commit -m test
