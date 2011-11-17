@@ -139,6 +139,7 @@ def hook(ui, repo, name, throw=False, **args):
             stderrno = sys.__stderr__.fileno()
             # temporarily redirect stdout to stderr, if possible
             if stdoutno >= 0 and stderrno >= 0:
+                sys.__stdout__.flush()
                 oldstdout = os.dup(stdoutno)
                 os.dup2(stderrno, stdoutno)
         except AttributeError:

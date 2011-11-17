@@ -2570,15 +2570,32 @@ def graft(ui, repo, *revs, **opts):
     if not revs:
         return -1
 
+    # analyze revs for earlier grafts
+    ids = {}
+    for ctx in repo.set("%ld", revs):
+        ids[ctx.hex()] = ctx.rev()
+        n = ctx.extra().get('source')
+        if n:
+            ids[n] = ctx.rev()
+
     # check ancestors for earlier grafts
     ui.debug('scanning for duplicate grafts\n')
     for ctx in repo.set("::. - ::%ld", revs):
         n = ctx.extra().get('source')
-        if n and n in repo:
+        if n in ids:
             r = repo[n].rev()
             if r in revs:
                 ui.warn(_('skipping already grafted revision %s\n') % r)
                 revs.remove(r)
+            elif ids[n] in revs:
+                ui.warn(_('skipping already grafted revision %s '
+                            '(same origin %d)\n') % (ids[n], r))
+                revs.remove(ids[n])
+        elif ctx.hex() in ids:
+            r = ids[ctx.hex()]
+            ui.warn(_('skipping already grafted revision %s '
+                            '(was grafted from %d)\n') % (r, ctx.rev()))
+            revs.remove(r)
     if not revs:
         return -1
 
@@ -2613,7 +2630,10 @@ def graft(ui, repo, *revs, **opts):
             cont = False
 
         # commit
-        extra = {'source': ctx.hex()}
+        source = ctx.extra().get('source')
+        if not source:
+            source = ctx.hex()
+        extra = {'source': source}
         user = ctx.user()
         if opts.get('user'):
             user = opts['user']
@@ -3513,6 +3533,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 try:
                     p1 = repo[p1]
                     p2 = repo[p2]
+                    # Without any options, consider p2 only if the
+                    # patch is being applied on top of the recorded
+                    # first parent.
+                    if p1 != parents[0]:
+                        p1 = parents[0]
+                        p2 = repo[nullid]
                 except error.RepoError:
                     p1, p2 = parents
             else:
@@ -3520,9 +3546,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
             n = None
             if update:
-                if opts.get('exact') and p1 != parents[0]:
+                if p1 != parents[0]:
                     hg.clean(repo, p1.node())
-                if p1 != parents[0] and p2 != parents[1]:
+                if p2 != parents[1]:
                     repo.dirstate.setparents(p1.node(), p2.node())
 
                 if opts.get('exact') or opts.get('import_branch'):
@@ -3536,7 +3562,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     if message:
                         msgs.append(message)
                 else:
-                    if opts.get('exact'):
+                    if opts.get('exact') or p2:
+                        # If you got here, you either use --force and know what
+                        # you are doing or used --exact or a merge patch while
+                        # being updated to its first parent.
                         m = None
                     else:
                         m = scmutil.matchfiles(repo, files or [])

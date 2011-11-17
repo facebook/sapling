@@ -442,3 +442,16 @@ Only new line noticed:
 New line not noticed when space change ignored:
 
   $ hg ndiff --ignore-blank-lines --ignore-all-space
+
+Do not ignore all newlines, only blank lines
+
+  $ printf 'hello \nworld\ngoodbye world\n' > foo
+  $ hg ndiff --ignore-blank-lines
+  diff -r 540c40a65b78 foo
+  --- a/foo
+  +++ b/foo
+  @@ -1,2 +1,3 @@
+  -hello world
+  +hello 
+  +world
+   goodbye world

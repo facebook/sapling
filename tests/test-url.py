@@ -223,6 +223,14 @@ def test_url():
     >>> u.localpath()
     'f:oo/bar/baz'
 
+    >>> u = url('file://localhost/f:oo/bar/baz')
+    >>> u
+    <url scheme: 'file', host: 'localhost', path: 'f:oo/bar/baz'>
+    >>> str(u)
+    'file://localhost/f:oo/bar/baz'
+    >>> u.localpath()
+    'f:oo/bar/baz'
+
     >>> u = url('file:foo/bar/baz')
     >>> u
     <url scheme: 'file', path: 'foo/bar/baz'>

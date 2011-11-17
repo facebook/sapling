@@ -16,7 +16,7 @@ hide platform-specific details from the core.
 from i18n import _
 import error, osutil, encoding
 import errno, re, shutil, sys, tempfile, traceback
-import os, time, calendar, textwrap, signal
+import os, time, datetime, calendar, textwrap, signal
 import imp, socket, urllib
 
 if os.name == 'nt':
@@ -900,16 +900,14 @@ def filechunkiter(f, size=65536, limit=None):
         yield s
 
 def makedate():
-    lt = time.localtime()
-    if lt[8] == 1 and time.daylight:
-        tz = time.altzone
-    else:
-        tz = time.timezone
-    t = time.mktime(lt)
-    if t < 0:
+    ct = time.time()
+    if ct < 0:
         hint = _("check your clock")
-        raise Abort(_("negative timestamp: %d") % t, hint=hint)
-    return t, tz
+        raise Abort(_("negative timestamp: %d") % ct, hint=hint)
+    delta = (datetime.datetime.utcfromtimestamp(ct) -
+             datetime.datetime.fromtimestamp(ct))
+    tz = delta.days * 86400 + delta.seconds
+    return ct, tz
 
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
@@ -1708,7 +1706,8 @@ class url(object):
             # letters to paths with drive letters.
             if hasdriveletter(self._hostport):
                 path = self._hostport + '/' + self.path
-            elif self.host is not None and self.path:
+            elif (self.host is not None and self.path
+                  and not hasdriveletter(path)):
                 path = '/' + path
             return path
         return self._origpath

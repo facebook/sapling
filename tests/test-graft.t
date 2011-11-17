@@ -200,28 +200,80 @@ Compare with original:
 
 View graph:
 
-  $ hg --config extensions.graphlog= log -G --template '{author}@rev: {desc}\n'
-  @  test@rev: 3
+  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}: {desc}\n'
+  @  test@11: 3
   |
-  o  test@rev: 4
+  o  test@10: 4
   |
-  o  test@rev: 5
+  o  test@9: 5
   |
-  o  bar@rev: 1
+  o  bar@8: 1
   |
-  o  foo@rev: 2
+  o  foo@7: 2
   |
-  | o    test@rev: 6
+  | o    test@6: 6
   | |\
-  | | o  test@rev: 5
+  | | o  test@5: 5
   | | |
-  | o |  test@rev: 4
+  | o |  test@4: 4
   | |/
-  | o  baz@rev: 3
+  | o  baz@3: 3
   | |
-  | o  test@rev: 2
+  | o  test@2: 2
   | |
-  | o  bar@rev: 1
+  | o  bar@1: 1
   |/
-  o  test@rev: 0
+  o  test@0: 0
   
+Graft again onto another branch should preserve the original source
+  $ hg up -q 0
+  $ echo 'g'>g
+  $ hg add g
+  $ hg ci -m 7
+  created new head
+  $ hg graft 7
+  grafting revision 7
+
+  $ hg log -r 7 --template '{rev}:{node}\n'
+  7:d2e44c99fd3f31c176ea4efb9eca9f6306c81756
+  $ hg log -r 2 --template '{rev}:{node}\n'
+  2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4
+
+  $ hg log --debug -r tip
+  changeset:   13:39bb1d13572759bd1e6fc874fed1b12ece047a18
+  tag:         tip
+  parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    13:0780e055d8f4cd12eadd5a2719481648f336f7a9
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      b
+  files-:      a
+  extra:       branch=default
+  extra:       source=5c095ad7e90f871700f02dd1fa5012cb4498a2d4
+  description:
+  2
+  
+  
+Disallow grafting an already grafted cset onto its original branch
+  $ hg up -q 6
+  $ hg graft 7
+  skipping already grafted revision 7 (was grafted from 2)
+  [255]
+
+Disallow grafting already grafted csets with the same origin onto each other
+  $ hg up -q 13
+  $ hg graft 2
+  skipping already grafted revision 2
+  [255]
+  $ hg graft 7
+  skipping already grafted revision 7 (same origin 2)
+  [255]
+
+  $ hg up -q 7
+  $ hg graft 2
+  skipping already grafted revision 2
+  [255]
+  $ hg graft tip
+  skipping already grafted revision 13 (same origin 2)
+  [255]
