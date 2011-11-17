@@ -66,7 +66,7 @@ running from a devel copy, not a temp installation
   $ PATH="$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
   warning: conflicts during merge.
-  merging f failed!
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

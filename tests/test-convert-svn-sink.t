@@ -416,7 +416,7 @@ Branchy history
   $ hg --cwd b merge
   merging b
   warning: conflicts during merge.
-  merging b failed!
+  merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
   2 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

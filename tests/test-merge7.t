@@ -45,7 +45,7 @@ now pull and merge from test-a
   $ hg merge
   merging test.txt
   warning: conflicts during merge.
-  merging test.txt failed!
+  merging test.txt incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -90,7 +90,7 @@ pull and merge from test-a again
   merging test.txt
   my test.txt@50c3a7e29886+ other test.txt@40d11a4173a8 ancestor test.txt@96b70246a118
   warning: conflicts during merge.
-  merging test.txt failed!
+  merging test.txt incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

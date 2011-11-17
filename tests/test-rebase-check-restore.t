@@ -63,7 +63,7 @@ Rebasing B onto E - check keep:
   $ hg rebase -s 1 -d 4 --keep
   merging A
   warning: conflicts during merge.
-  merging A failed!
+  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
@@ -115,7 +115,7 @@ Rebase F onto E - check keepbranches:
   $ hg rebase -s 5 -d 4 --keepbranches
   merging A
   warning: conflicts during merge.
-  merging A failed!
+  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 

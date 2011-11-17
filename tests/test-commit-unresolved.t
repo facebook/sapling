@@ -29,7 +29,7 @@ Merging a conflict araises
   $ hg merge
   merging A
   warning: conflicts during merge.
-  merging A failed!
+  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

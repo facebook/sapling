@@ -49,7 +49,7 @@ Conflicting rebase:
   $ hg rebase -s 3 -d 2
   merging common
   warning: conflicts during merge.
-  merging common failed!
+  merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
@@ -117,7 +117,7 @@ Rebase and abort without generating new changesets:
   $ hg rebase -b 4 -d 2
   merging c
   warning: conflicts during merge.
-  merging c failed!
+  merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 

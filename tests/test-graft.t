@@ -151,7 +151,7 @@ Graft out of order, skipping a merge and a duplicate
   merging e
   my e@77eb504366ab+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts during merge.
-  merging e failed!
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
     searching for copies back to rev 1
     unmatched files in local:
      c

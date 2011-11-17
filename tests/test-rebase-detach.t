@@ -367,7 +367,7 @@ Ensure --continue restores a correct state (issue3046):
   $ hg rebase -s 8 -d 7 --detach --config ui.merge=internal:fail
   merging H
   warning: conflicts during merge.
-  merging H failed!
+  merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
   $ hg resolve --all -t internal:local

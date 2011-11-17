@@ -245,7 +245,7 @@ merge tests
   merging t
   my t@20a0db6fbf6c+ other t@7af322bc1198 ancestor t@6747d179aa9a
   warning: conflicts during merge.
-  merging t failed!
+  merging t incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -63,7 +63,7 @@ Local merge with bad merge tool:
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: conflicts during merge.
-  merging zzz2_merge_bad failed!
+  merging zzz2_merge_bad incomplete! (edit conflicts, then use 'hg resolve --mark')
   2 files updated, 1 files merged, 3 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -88,7 +88,7 @@ Local merge with conflicts:
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: conflicts during merge.
-  merging zzz2_merge_bad failed!
+  merging zzz2_merge_bad incomplete! (edit conflicts, then use 'hg resolve --mark')
   3 files updated, 1 files merged, 2 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -97,7 +97,7 @@ Local merge with conflicts:
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: conflicts during merge.
-  merging zzz2_merge_bad failed!
+  merging zzz2_merge_bad incomplete! (edit conflicts, then use 'hg resolve --mark')
   2 files updated, 1 files merged, 3 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]

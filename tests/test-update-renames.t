@@ -21,7 +21,7 @@ Update with local changes across a file rename
   $ hg up
   merging a and b to b
   warning: conflicts during merge.
-  merging b failed!
+  merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]

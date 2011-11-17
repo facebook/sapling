@@ -262,7 +262,11 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         _matcheol(repo.wjoin(fd), back)
 
     if r:
-        ui.warn(_("merging %s failed!\n") % fd)
+        if tool == "internal:merge":
+            ui.warn(_("merging %s incomplete! "
+                      "(edit conflicts, then use 'hg resolve --mark')\n") % fd)
+        else:
+            ui.warn(_("merging %s failed!\n") % fd)
     else:
         os.unlink(back)
 
