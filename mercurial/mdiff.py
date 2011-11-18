@@ -112,10 +112,6 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None, refine=False):
     """
     if opts is None:
         opts = defaultopts
-    if lines1 is None:
-        lines1 = splitnewlines(text1)
-    if lines2 is None:
-        lines2 = splitnewlines(text2)
     if opts.ignorews or opts.ignorewsamount:
         text1 = wsclean(opts, text1, False)
         text2 = wsclean(opts, text2, False)
@@ -130,17 +126,19 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None, refine=False):
         else:
             s = [0, 0, 0, 0]
         s = [s[1], s1[0], s[3], s1[2]]
-        old = lines1[s[0]:s[1]]
-        new = lines2[s[2]:s[3]]
 
         # bdiff sometimes gives huge matches past eof, this check eats them,
         # and deals with the special first match case described above
-        if old or new:
+        if s[0] != s[1] or s[2] != s[3]:
             type = '!'
             if opts.ignoreblanklines:
-                cold = wsclean(opts, "".join(old))
-                cnew = wsclean(opts, "".join(new))
-                if cold == cnew:
+                if lines1 is None:
+                    lines1 = splitnewlines(text1)
+                if lines2 is None:
+                    lines2 = splitnewlines(text2)
+                old = wsclean(opts, "".join(lines1[s[0]:s[1]]))
+                new = wsclean(opts, "".join(lines2[s[2]:s[3]]))
+                if old == new:
                     type = '~'
             yield s, type
         yield s1, '='
