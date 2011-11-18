@@ -210,7 +210,7 @@ class hgbuild(build):
                     ('build_ext', build.has_ext_modules),
                    ] + build.sub_commands
 
-class hgbuildmo(Command):
+class hgbuildmo(build):
 
     description = "build translations (.mo files)"
 
@@ -239,12 +239,6 @@ class hgbuildmo(Command):
                 cmd.append('-c')
             self.mkpath(join('mercurial', modir))
             self.make_file([pofile], mobuildfile, spawn, (cmd,))
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
 
 
 class hgdist(Distribution):
