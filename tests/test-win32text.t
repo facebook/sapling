@@ -112,7 +112,7 @@ and now for something completely different
   abort: pretxncommit.crlf hook failed
   [255]
   $ hg revert -a
-  forgetting d/f2
+  forgetting d/f2 (glob)
   $ rm d/f2
 
   $ hg rem f
@@ -177,10 +177,10 @@ and now for something completely different
 
   $ for x in a b c d; do echo content > dupe/$x; done
   $ hg -R dupe add
-  adding dupe/a
-  adding dupe/b
-  adding dupe/c
-  adding dupe/d
+  adding dupe/a (glob)
+  adding dupe/b (glob)
+  adding dupe/c (glob)
+  adding dupe/d (glob)
   $ python unix2dos.py dupe/b dupe/c dupe/d
   $ hg -R dupe ci -m a dupe/a
   $ hg -R dupe ci -m b/c dupe/[bc]

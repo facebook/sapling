@@ -123,11 +123,11 @@ Issue683: peculiarity with hg revert of an removed then added file
   ? a.orig
 
   $ hg add c && echo "unexpected addition of missing file"
-  c: No such file or directory
+  c: * (glob)
   [1]
   $ echo c > c
   $ hg add d c && echo "unexpected addition of missing file"
-  d: No such file or directory
+  d: * (glob)
   [1]
   $ hg st
   M a

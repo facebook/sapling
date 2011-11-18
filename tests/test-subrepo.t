@@ -949,8 +949,8 @@ Adding without a path or pattern with -S also adds files in subrepos
   ? s/f9
   $ hg add -S
   adding f8
-  adding s/f10
-  adding s/f9
+  adding s/f10 (glob)
+  adding s/f9 (glob)
   $ hg st -S
   A f8
   A s/f10
@@ -993,7 +993,7 @@ Adding with a pattern with -S also adds matches in subrepos
   ? s/fn18
   $ hg add -S 'glob:**fm*'
   adding fm15
-  adding s/fm17
+  adding s/fm17 (glob)
   $ hg st -S
   A fm15
   A s/fm17

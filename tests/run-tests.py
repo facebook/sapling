@@ -508,7 +508,7 @@ def pytest(test, wd, options, replacements):
     return run(cmd, wd, options, replacements)
 
 def shtest(test, wd, options, replacements):
-    cmd = '"%s"' % test
+    cmd = '%s "%s"' % (options.shell, test)
     vlog("# Running", cmd)
     return run(cmd, wd, options, replacements)
 

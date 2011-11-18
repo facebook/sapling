@@ -1,6 +1,6 @@
   $ hg init
 
-  $ python -c 'print "confuse str.splitlines\nembedded\rnewline"' > a
+  $ python -c 'file("a", "wb").write("confuse str.splitlines\nembedded\rnewline\n")'
   $ hg ci -Ama -d '1 0'
   adding a
 

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
   $ hg init a
   $ cd a
   $ echo foo > b

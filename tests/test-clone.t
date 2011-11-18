@@ -10,7 +10,7 @@ Prepare repo a:
 
 Create a non-inlined filelog:
 
-  $ python -c 'for x in range(10000): print x' >> data1
+  $ python -c 'file("data1", "wb").write("".join("%s\n" % x for x in range(10000)))'
   $ for j in 0 1 2 3 4 5 6 7 8 9; do
   >   cat data1 >> b
   >   hg commit -m test
@@ -43,7 +43,7 @@ Default operation:
 Invalid dest '' must abort:
 
   $ hg clone . ''
-  abort: No such file or directory
+  abort: * (glob)
   [255]
 
 No update, with debug option:
@@ -85,7 +85,7 @@ Check that path aliases are expanded:
 
   $ hg clone -q -U --config 'paths.foobar=a#0' foobar f
   $ hg -R f showconfig paths.default
-  $TESTTMP/a#0
+  $TESTTMP/a#0 (glob)
 
 Use --pull:
 
@@ -107,7 +107,7 @@ Use --pull:
 Invalid dest '' with --pull must abort (issue2528):
 
   $ hg clone --pull a ''
-  abort: No such file or directory
+  abort: * (glob)
   [255]
 
 Clone to '.':
