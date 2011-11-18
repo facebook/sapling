@@ -1527,10 +1527,10 @@ def b85diff(to, tn):
 class GitDiffRequired(Exception):
     pass
 
-def diffopts(ui, opts=None, untrusted=False):
+def diffopts(ui, opts=None, untrusted=False, section='diff'):
     def get(key, name=None, getter=ui.configbool):
         return ((opts and opts.get(key)) or
-                getter('diff', name or key, None, untrusted=untrusted))
+                getter(section, name or key, None, untrusted=untrusted))
     return mdiff.diffopts(
         text=opts and opts.get('text'),
         git=get('git'),

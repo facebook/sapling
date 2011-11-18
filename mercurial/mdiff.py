@@ -75,11 +75,38 @@ def wsclean(opts, text, blank=True):
         text = re.sub('\n+', '\n', text).strip('\n')
     return text
 
-def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
+def splitblock(base1, lines1, base2, lines2, opts):
+    # The input lines matches except for interwoven blank lines. We
+    # transform it into a sequence of matching blocks and blank blocks.
+    lines1 = [(wsclean(opts, l) and 1 or 0) for l in lines1]
+    lines2 = [(wsclean(opts, l) and 1 or 0) for l in lines2]
+    s1, e1 = 0, len(lines1)
+    s2, e2 = 0, len(lines2)
+    while s1 < e1 or s2 < e2:
+        i1, i2, btype = s1, s2, '='
+        if (i1 >= e1 or lines1[i1] == 0
+            or i2 >= e2 or lines2[i2] == 0):
+            # Consume the block of blank lines
+            btype = '~'
+            while i1 < e1 and lines1[i1] == 0:
+                i1 += 1
+            while i2 < e2 and lines2[i2] == 0:
+                i2 += 1
+        else:
+            # Consume the matching lines
+            while i1 < e1 and lines1[i1] == 1 and lines2[i2] == 1:
+                i1 += 1
+                i2 += 1
+        yield [base1 + s1, base1 + i1, base2 + s2, base2 + i2], btype
+        s1 = i1
+        s2 = i2
+
+def allblocks(text1, text2, opts=None, lines1=None, lines2=None, refine=False):
     """Return (block, type) tuples, where block is an mdiff.blocks
     line entry. type is '=' for blocks matching exactly one another
     (bdiff blocks), '!' for non-matching blocks and '~' for blocks
-    matching only after having filtered blank lines.
+    matching only after having filtered blank lines. If refine is True,
+    then '~' blocks are refined and are only made of blank lines.
     line1 and line2 are text1 and text2 split with splitnewlines() if
     they are already available.
     """

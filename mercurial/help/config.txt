@@ -227,6 +227,24 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
    processed before shell aliases and will thus not be passed to
    aliases.
 
+
+``annotate``
+""""""""
+
+Settings used when displaying file annotations. All values are
+Booleans and default to False. See ``diff`` section for related
+options for the diff command.
+
+``ignorews``
+    Ignore white space when comparing lines.
+
+``ignorewsamount``
+    Ignore changes in the amount of white space.
+
+``ignoreblanklines``
+    Ignore changes whose lines are all blank.
+
+
 ``auth``
 """"""""
 
@@ -364,8 +382,9 @@ to the aliases of the commands defined.
 ``diff``
 """"""""
 
-Settings used when displaying diffs. Everything except for ``unified`` is a
-Boolean and defaults to False.
+Settings used when displaying diffs. Everything except for ``unified``
+is a Boolean and defaults to False. See ``annotate`` section for
+related options for the annotate command.
 
 ``git``
     Use git extended diff format.

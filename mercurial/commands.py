@@ -106,15 +106,19 @@ diffopts = [
     ('', 'nodates', None, _('omit dates from diff headers'))
 ]
 
-diffopts2 = [
-    ('p', 'show-function', None, _('show which function each change is in')),
-    ('', 'reverse', None, _('produce a diff that undoes the changes')),
+diffwsopts = [
     ('w', 'ignore-all-space', None,
      _('ignore white space when comparing lines')),
     ('b', 'ignore-space-change', None,
      _('ignore changes in the amount of white space')),
     ('B', 'ignore-blank-lines', None,
      _('ignore changes whose lines are all blank')),
+    ]
+
+diffopts2 = [
+    ('p', 'show-function', None, _('show which function each change is in')),
+    ('', 'reverse', None, _('produce a diff that undoes the changes')),
+    ] + diffwsopts + [
     ('U', 'unified', '',
      _('number of lines of context to show'), _('NUM')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
@@ -215,7 +219,7 @@ def addremove(ui, repo, *pats, **opts):
     ('n', 'number', None, _('list the revision number (default)')),
     ('c', 'changeset', None, _('list the changeset')),
     ('l', 'line-number', None, _('show line number at the first appearance'))
-    ] + walkopts,
+    ] + diffwsopts + walkopts,
     _('[-r REV] [-f] [-a] [-u] [-d] [-n] [-c] [-l] FILE...'))
 def annotate(ui, repo, *pats, **opts):
     """show changeset information by line for each file
@@ -270,13 +274,15 @@ def annotate(ui, repo, *pats, **opts):
     m = scmutil.match(ctx, pats, opts)
     m.bad = bad
     follow = not opts.get('no_follow')
+    diffopts = patch.diffopts(ui, opts, section='annotate')
     for abs in ctx.walk(m):
         fctx = ctx[abs]
         if not opts.get('text') and util.binary(fctx.data()):
             ui.write(_("%s: binary file\n") % ((pats and m.rel(abs)) or abs))
             continue
 
-        lines = fctx.annotate(follow=follow, linenumber=linenumber)
+        lines = fctx.annotate(follow=follow, linenumber=linenumber,
+                              diffopts=diffopts)
         pieces = []
 
         for f, sep in funcmap:
