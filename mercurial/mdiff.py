@@ -75,12 +75,13 @@ def wsclean(opts, text, blank=True):
         text = re.sub('\n+', '\n', text).strip('\n')
     return text
 
-def diffblocks(text1, text2, opts=None, lines1=None, lines2=None):
-    """Return changed blocks between text1 and text2, the blocks in-between
-    those emitted by bdiff.blocks. Take in account the whitespace normalization
-    rules defined by opts.
-    line1 and line2 are text1 and text2 split with splitnewlines() if they are
-    already available.
+def allblocks(text1, text2, opts=None, lines1=None, lines2=None):
+    """Return (block, type) tuples, where block is an mdiff.blocks
+    line entry. type is '=' for blocks matching exactly one another
+    (bdiff blocks), '!' for non-matching blocks and '~' for blocks
+    matching only after having filtered blank lines.
+    line1 and line2 are text1 and text2 split with splitnewlines() if
+    they are already available.
     """
     if opts is None:
         opts = defaultopts
@@ -107,13 +108,15 @@ def diffblocks(text1, text2, opts=None, lines1=None, lines2=None):
 
         # bdiff sometimes gives huge matches past eof, this check eats them,
         # and deals with the special first match case described above
-        if not old and not new:
-            continue
-
-        if opts.ignoreblanklines:
-            if wsclean(opts, "".join(old)) == wsclean(opts, "".join(new)):
-                continue
-        yield s
+        if old or new:
+            type = '!'
+            if opts.ignoreblanklines:
+                cold = wsclean(opts, "".join(old))
+                cnew = wsclean(opts, "".join(new))
+                if cold == cnew:
+                    type = '~'
+            yield s, type
+        yield s1, '='
 
 def diffline(revs, a, b, opts):
     parts = ['diff']
@@ -241,7 +244,9 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
     # them into diff output.
     #
     hunk = None
-    for s in diffblocks(t1, t2, opts, l1, l2):
+    for s, stype in allblocks(t1, t2, opts, l1, l2):
+        if stype != '!':
+            continue
         delta = []
         a1, a2, b1, b2 = s
         old = l1[a1:a2]
