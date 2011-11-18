@@ -50,3 +50,17 @@ showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\nx\n\nz\n")
 showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n")
 
 print "done"
+
+def testfixws(a, b, allws):
+    c = bdiff.fixws(a, allws)
+    if c != b:
+        print "*** fixws", repr(a), repr(b), allws
+        print "got:"
+        print repr(c)
+
+testfixws(" \ta\r b\t\n", "ab\n", 1)
+testfixws(" \ta\r b\t\n", " a b\n", 0)
+testfixws("", "", 1)
+testfixws("", "", 0)
+
+print "done"

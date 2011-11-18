@@ -425,11 +425,55 @@ nomem:
 	return result ? result : PyErr_NoMemory();
 }
 
+/*
+ * If allws != 0, remove all whitespace (' ', \t and \r). Otherwise,
+ * reduce whitespace sequences to a single space and trim remaining whitespace
+ * from end of lines.
+ */
+static PyObject *fixws(PyObject *self, PyObject *args)
+{
+	PyObject *s, *result = NULL;
+	char allws, c;
+	const char *r;
+	int i, rlen, wlen = 0;
+	char *w;
+
+	if (!PyArg_ParseTuple(args, "Sb:fixws", &s, &allws))
+		return NULL;
+	r = PyBytes_AsString(s);
+	rlen = PyBytes_Size(s);
+
+	w = (char *)malloc(rlen);
+	if (!w)
+		goto nomem;
+
+	for (i = 0; i != rlen; i++) {
+		c = r[i];
+		if (c == ' ' || c == '\t' || c == '\r') {
+			if (!allws && (wlen == 0 || w[wlen - 1] != ' '))
+				w[wlen++] = ' ';
+		} else if (c == '\n' && !allws
+			  && wlen > 0 && w[wlen - 1] == ' ') {
+			w[wlen - 1] = '\n';
+		} else {
+			w[wlen++] = c;
+		}
+	}
+
+	result = PyBytes_FromStringAndSize(w, wlen);
+
+nomem:
+	free(w);
+	return result ? result : PyErr_NoMemory();
+}
+
+
 static char mdiff_doc[] = "Efficient binary diff.";
 
 static PyMethodDef methods[] = {
 	{"bdiff", bdiff, METH_VARARGS, "calculate a binary diff\n"},
 	{"blocks", blocks, METH_VARARGS, "find a list of matching lines\n"},
+	{"fixws", fixws, METH_VARARGS, "normalize diff whitespaces\n"},
 	{NULL, NULL}
 };
 

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import struct, difflib
+import struct, difflib, re
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
@@ -78,3 +78,10 @@ def blocks(a, b):
     d = _normalizeblocks(an, bn, d)
     return [(i, i + n, j, j + n) for (i, j, n) in d]
 
+def fixws(text, allws):
+    if allws:
+        text = re.sub('[ \t\r]+', '', text)
+    else:
+        text = re.sub('[ \t\r]+', ' ', text)
+        text = text.replace(' \n', '\n')
+    return text
