@@ -1,5 +1,8 @@
   $ "$TESTDIR/hghave" icasefs || exit 80
 
+  $ hg debugfs | grep 'case-sensitive:'
+  case-sensitive: no
+
 test file addition with bad case
 
   $ hg init repo1
@@ -56,4 +59,16 @@ used to fail under case insensitive fs
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg up -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+no clobbering of untracked files with wrong casing
+
+  $ hg up -r null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo gold > a
+  $ hg up
+  abort: untracked file in working directory differs from file in requested revision: 'a'
+  [255]
+  $ cat a
+  gold
+
   $ cd ..
