@@ -121,6 +121,8 @@ def hasfunction(cc, funcname):
 try:
     import py2exe
     py2exeloaded = True
+    # import py2exe's patched Distribution class
+    from distutils.core import Distribution
 except ImportError:
     py2exeloaded = False
 
