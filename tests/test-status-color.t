@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" tic || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "color=" >> $HGRCPATH
   $ echo "[color]" >> $HGRCPATH
