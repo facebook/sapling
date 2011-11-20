@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
   $ hg init a
   $ mkdir a/d1
   $ mkdir a/d1/d2
