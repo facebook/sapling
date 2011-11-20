@@ -434,7 +434,10 @@ def follow(repo, subset, x):
     p = repo['.'].rev()
     if l:
         x = getstring(l[0], _("follow expected a filename"))
-        s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
+        if x in repo['.']:
+            s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
+        else:
+            return []
     else:
         s = set(repo.changelog.ancestors(p))
 

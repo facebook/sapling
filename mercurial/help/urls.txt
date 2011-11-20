@@ -1,7 +1,7 @@
 Valid URLs are of the form::
 
   local/filesystem/path[#revision]
-  file://localhost/filesystem/path[#revision]
+  file://local/filesystem/path[#revision]
   http://[user[:pass]@]host[:port]/[path][#revision]
   https://[user[:pass]@]host[:port]/[path][#revision]
   ssh://[user@]host[:port]/[path][#revision]
