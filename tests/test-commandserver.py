@@ -128,7 +128,7 @@ def cwd(server):
     """ check that --cwd doesn't persist between requests """
     readchannel(server)
     os.mkdir('foo')
-    f = open('foo/bar', 'w')
+    f = open('foo/bar', 'wb')
     f.write('a')
     f.close()
     runcommand(server, ['--cwd', 'foo', 'st', 'bar'])
@@ -145,7 +145,7 @@ def localhgrc(server):
 
     # but not for this repo
     runcommand(server, ['init', 'foo'])
-    runcommand(server, ['-R', 'foo', 'showconfig'])
+    runcommand(server, ['-R', 'foo', 'showconfig', 'ui', 'defaults'])
     shutil.rmtree('foo')
 
 def hook(**args):
@@ -160,7 +160,10 @@ def hookoutput(server):
 
 def outsidechanges(server):
     readchannel(server)
-    os.system('echo a >> a && hg ci -Am2')
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    os.system('hg ci -Am2')
     runcommand(server, ['tip'])
 
 def bookmarks(server):
