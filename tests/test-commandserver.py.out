@@ -1,6 +1,17 @@
+
+testing hellomessage:
+
 o, 'capabilities: getencoding runcommand\nencoding: ***'
+ runcommand id
 000000000000 tip
 abort: unknown command unknowncommand
+
+testing unknowncommand:
+
+
+testing checkruncommand:
+
+ runcommand 
 Mercurial Distributed SCM
 
 basic commands:
@@ -24,44 +35,86 @@ basic commands:
  update     update working directory (or switch revisions)
 
 use "hg help" for the full list of commands or "hg -v" for details
+ runcommand id --quiet
 000000000000
+ runcommand id
 000000000000 tip
+ runcommand id --config ui.quiet=True
 000000000000
+ runcommand id
 000000000000 tip
+
+testing inputeof:
+
 server exit code = 1
+
+testing serverinput:
+
+ runcommand import -
 applying patch from stdin
+ runcommand log
 changeset:   0:eff892de26ec
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     1
 
+
+testing cwd:
+
+ runcommand --cwd foo st bar
 ? bar
+ runcommand st foo/bar
 ? foo/bar
+
+testing localhgrc:
+
+ runcommand showconfig
 bundle.mainreporoot=$TESTTMP
 defaults.backout=-d "0 0"
 defaults.commit=-d "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
 ui.foo=bar
+ runcommand init foo
+ runcommand -R foo showconfig
 bundle.mainreporoot=$TESTTMP/foo
 defaults.backout=-d "0 0"
 defaults.commit=-d "0 0"
 defaults.tag=-d "0 0"
 ui.slash=True
+
+testing hookoutput:
+
+ runcommand --config hooks.pre-identify=python:test-commandserver.hook id
 hook talking
 now try to read something: 'some input'
 eff892de26ec tip
+
+testing outsidechanges:
+
+ runcommand tip
 changeset:   1:d3a0a68be6de
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     2
 
+
+testing bookmarks:
+
+ runcommand bookmarks
 no bookmarks set
+ runcommand bookmarks
    bm1                       1:d3a0a68be6de
    bm2                       1:d3a0a68be6de
+ runcommand bookmarks
  * bm1                       1:d3a0a68be6de
    bm2                       1:d3a0a68be6de
 
+testing tagscache:
+
+ runcommand id -t -r 0
+
+ runcommand id -t -r 0
 foo
