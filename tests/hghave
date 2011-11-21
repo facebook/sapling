@@ -221,6 +221,9 @@ def has_serve():
 def has_tic():
     return matchoutput('test -x "`which tic`"', '')
 
+def has_msys():
+    return os.getenv('MSYSTEM')
+
 checks = {
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
@@ -255,6 +258,7 @@ checks = {
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
     "windows": (has_windows, "Windows"),
+    "msys": (has_msys, "Windows with MSYS"),
 }
 
 def list_features():

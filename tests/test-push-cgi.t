@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate web paths as if they were file paths
+
 This is a test of the push wire protocol over CGI-based hgweb.
 
 initialize repository

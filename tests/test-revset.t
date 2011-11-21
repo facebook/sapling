@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate /a/b/c/ as if it was a real file path
+
   $ HGENCODING=utf-8
   $ export HGENCODING
 

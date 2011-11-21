@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate /foo/bar as if it was a real file path
+
   $ hg init a
   $ hg clone a b
   updating to branch default
