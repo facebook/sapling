@@ -45,7 +45,7 @@ def has_bzr114():
 
 def has_cvs():
     re = r'Concurrent Versions System.*?server'
-    return matchoutput('cvs --version 2>&1', re)
+    return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
 def has_darcs():
     return matchoutput('darcs --version', r'2\.[2-9]', True)
