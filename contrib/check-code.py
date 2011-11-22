@@ -420,8 +420,8 @@ if __name__ == "__main__":
     else:
         check = args
 
+    ret = 0
     for f in check:
-        ret = 0
         if not checkfile(f, maxerr=options.per_file, warnings=options.warnings,
                          blame=options.blame, debug=options.debug,
                          lineno=options.lineno):
