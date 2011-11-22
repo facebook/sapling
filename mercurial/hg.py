@@ -356,10 +356,13 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         if destrepo.local():
             fp = destrepo.opener("hgrc", "w", text=True)
             fp.write("[paths]\n")
-            fp.write("default = %s\n" % abspath)
+            u = util.url(abspath)
+            u.passwd = None
+            defaulturl = str(u)
+            fp.write("default = %s\n" % defaulturl)
             fp.close()
 
-            destrepo.ui.setconfig('paths', 'default', abspath)
+            destrepo.ui.setconfig('paths', 'default', defaulturl)
 
             if update:
                 if update is not True:

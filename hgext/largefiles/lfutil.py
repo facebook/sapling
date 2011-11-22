@@ -156,7 +156,7 @@ def openlfdirstate(ui, repo):
             hash = readstandin(repo, lfile)
             lfdirstate.normallookup(lfile)
             try:
-                if hash == hashfile(lfile):
+                if hash == hashfile(repo.wjoin(lfile)):
                     lfdirstate.normal(lfile)
             except OSError, err:
                 if err.errno != errno.ENOENT:

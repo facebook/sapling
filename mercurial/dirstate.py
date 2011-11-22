@@ -68,7 +68,7 @@ class dirstate(object):
     def _foldmap(self):
         f = {}
         for name in self._map:
-            f[os.path.normcase(name)] = name
+            f[util.normcase(name)] = name
         return f
 
     @propertycache
