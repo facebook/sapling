@@ -235,7 +235,7 @@ test bundle and description:
 
 utf-8 patch:
   $ python -c 'fp = open("utf", "wb"); fp.write("h\xC3\xB6mma!\n"); fp.close();'
-  $ hg commit -A -d '4 0' -m 'charset=utf-8; content-transfer-encoding: base64'
+  $ hg commit -A -d '4 0' -m 'utf-8 content'
   adding description
   adding utf
 
@@ -244,13 +244,13 @@ no mime encoding for email --test:
   This patch series consists of 1 patches.
   
   
-  Displaying [PATCH] charset=utf-8; content-transfer-encoding: base64 ...
+  Displaying [PATCH] utf-8 content ...
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 8bit
-  Subject: [PATCH] charset=utf-8; content-transfer-encoding: base64
-  X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  Message-Id: <c3c9e37db9f4fe4882cd.240@*> (glob)
+  Subject: [PATCH] utf-8 content
+  X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
+  Message-Id: <909a00e13e9d78b575ae.240@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:04:00 +0000
   From: quux
@@ -260,18 +260,18 @@ no mime encoding for email --test:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+  # Node ID 909a00e13e9d78b575aeee23dddbada46d5a143f
   # Parent  ff2c9fa2018b15fa74b33363bda9527323e2a99f
-  charset=utf-8; content-transfer-encoding: base64
+  utf-8 content
   
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 description
+  diff -r ff2c9fa2018b -r 909a00e13e9d description
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/description	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,3 @@
   +a multiline
   +
   +description
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 utf
+  diff -r ff2c9fa2018b -r 909a00e13e9d utf
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/utf	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,1 @@
@@ -283,50 +283,49 @@ mime encoded mbox (base64):
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] charset=utf-8; content-transfer-encoding: base64 ...
+  Writing [PATCH] utf-8 content ...
 
   $ cat mbox
   From quux Thu Jan 01 00:04:01 1970
   Content-Type: text/plain; charset="utf-8"
   MIME-Version: 1.0
   Content-Transfer-Encoding: base64
-  Subject: [PATCH] charset=utf-8; content-transfer-encoding: base64
-  X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  Message-Id: <c3c9e37db9f4fe4882cd.240@*> (glob)
+  Subject: [PATCH] utf-8 content
+  X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
+  Message-Id: <909a00e13e9d78b575ae.240@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:04:00 +0000
   From: quux
   To: foo
   Cc: bar
   
-  IyBIRyBjaGFuZ2VzZXQgcGF0Y2gKIyBVc2VyIHRlc3QKIyBEYXRlIDQgMAojIE5vZGUgSUQgYzNj
-  OWUzN2RiOWY0ZmU0ODgyY2RhMzliYWY0MmZlZDZiYWQ4YjE1YQojIFBhcmVudCAgZmYyYzlmYTIw
-  MThiMTVmYTc0YjMzMzYzYmRhOTUyNzMyM2UyYTk5ZgpjaGFyc2V0PXV0Zi04OyBjb250ZW50LXRy
-  YW5zZmVyLWVuY29kaW5nOiBiYXNlNjQKCmRpZmYgLXIgZmYyYzlmYTIwMThiIC1yIGMzYzllMzdk
-  YjlmNCBkZXNjcmlwdGlvbgotLS0gL2Rldi9udWxsCVRodSBKYW4gMDEgMDA6MDA6MDAgMTk3MCAr
-  MDAwMAorKysgYi9kZXNjcmlwdGlvbglUaHUgSmFuIDAxIDAwOjAwOjA0IDE5NzAgKzAwMDAKQEAg
-  LTAsMCArMSwzIEBACithIG11bHRpbGluZQorCitkZXNjcmlwdGlvbgpkaWZmIC1yIGZmMmM5ZmEy
-  MDE4YiAtciBjM2M5ZTM3ZGI5ZjQgdXRmCi0tLSAvZGV2L251bGwJVGh1IEphbiAwMSAwMDowMDow
-  MCAxOTcwICswMDAwCisrKyBiL3V0ZglUaHUgSmFuIDAxIDAwOjAwOjA0IDE5NzAgKzAwMDAKQEAg
-  LTAsMCArMSwxIEBACitow7ZtbWEhCg==
+  IyBIRyBjaGFuZ2VzZXQgcGF0Y2gKIyBVc2VyIHRlc3QKIyBEYXRlIDQgMAojIE5vZGUgSUQgOTA5
+  YTAwZTEzZTlkNzhiNTc1YWVlZTIzZGRkYmFkYTQ2ZDVhMTQzZgojIFBhcmVudCAgZmYyYzlmYTIw
+  MThiMTVmYTc0YjMzMzYzYmRhOTUyNzMyM2UyYTk5Zgp1dGYtOCBjb250ZW50CgpkaWZmIC1yIGZm
+  MmM5ZmEyMDE4YiAtciA5MDlhMDBlMTNlOWQgZGVzY3JpcHRpb24KLS0tIC9kZXYvbnVsbAlUaHUg
+  SmFuIDAxIDAwOjAwOjAwIDE5NzAgKzAwMDAKKysrIGIvZGVzY3JpcHRpb24JVGh1IEphbiAwMSAw
+  MDowMDowNCAxOTcwICswMDAwCkBAIC0wLDAgKzEsMyBAQAorYSBtdWx0aWxpbmUKKworZGVzY3Jp
+  cHRpb24KZGlmZiAtciBmZjJjOWZhMjAxOGIgLXIgOTA5YTAwZTEzZTlkIHV0ZgotLS0gL2Rldi9u
+  dWxsCVRodSBKYW4gMDEgMDA6MDA6MDAgMTk3MCArMDAwMAorKysgYi91dGYJVGh1IEphbiAwMSAw
+  MDowMDowNCAxOTcwICswMDAwCkBAIC0wLDAgKzEsMSBAQAoraMO2bW1hIQo=
   
   
   $ python -c 'print open("mbox").read().split("\n\n")[1].decode("base64")'
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+  # Node ID 909a00e13e9d78b575aeee23dddbada46d5a143f
   # Parent  ff2c9fa2018b15fa74b33363bda9527323e2a99f
-  charset=utf-8; content-transfer-encoding: base64
+  utf-8 content
   
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 description
+  diff -r ff2c9fa2018b -r 909a00e13e9d description
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/description	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,3 @@
   +a multiline
   +
   +description
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 utf
+  diff -r ff2c9fa2018b -r 909a00e13e9d utf
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/utf	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,1 @@
@@ -335,22 +334,22 @@ mime encoded mbox (base64):
   $ rm mbox
 
 mime encoded mbox (quoted-printable):
-  $ python -c 'fp = open("qp", "wb"); fp.write("%s\nfoo\n\nbar\n" % ("x" * 1024)); fp.close();'
-  $ hg commit -A -d '4 0' -m 'charset=utf-8; content-transfer-encoding: quoted-printable'
-  adding qp
+  $ python -c 'fp = open("long", "wb"); fp.write("%s\nfoo\n\nbar\n" % ("x" * 1024)); fp.close();'
+  $ hg commit -A -d '4 0' -m 'long line'
+  adding long
 
 no mime encoding for email --test:
   $ hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -n
   This patch series consists of 1 patches.
   
   
-  Displaying [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable ...
+  Displaying [PATCH] long line ...
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
-  Subject: [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.240@*> (glob)
+  Subject: [PATCH] long line
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.240@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:04:00 +0000
   From: quux
@@ -360,13 +359,13 @@ no mime encoding for email --test:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -392,15 +391,15 @@ mime encoded mbox (quoted-printable):
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable ...
+  Writing [PATCH] long line ...
   $ cat mbox
   From quux Thu Jan 01 00:04:01 1970
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
-  Subject: [PATCH] charset=utf-8; content-transfer-encoding: quoted-printable
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.240@*> (glob)
+  Subject: [PATCH] long line
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.240@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:04:00 +0000
   From: quux
@@ -410,13 +409,13 @@ mime encoded mbox (quoted-printable):
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -442,7 +441,7 @@ mime encoded mbox (quoted-printable):
 
 iso-8859-1 patch:
   $ python -c 'fp = open("isolatin", "wb"); fp.write("h\xF6mma!\n"); fp.close();'
-  $ hg commit -A -d '5 0' -m 'charset=us-ascii; content-transfer-encoding: 8bit'
+  $ hg commit -A -d '5 0' -m 'isolatin 8-bit encoding'
   adding isolatin
 
 fake ascii mbox:
@@ -450,15 +449,15 @@ fake ascii mbox:
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] charset=us-ascii; content-transfer-encoding: 8bit ...
+  Writing [PATCH] isolatin 8-bit encoding ...
   $ cat mbox
   From quux Thu Jan 01 00:05:01 1970
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 8bit
-  Subject: [PATCH] charset=us-ascii; content-transfer-encoding: 8bit
-  X-Mercurial-Node: 22d0f96be12f5945fd67d101af58f7bc8263c835
-  Message-Id: <22d0f96be12f5945fd67.300@*> (glob)
+  Subject: [PATCH] isolatin 8-bit encoding
+  X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
+  Message-Id: <240fb913fc1b7ff15ddb.300@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:05:00 +0000
   From: quux
@@ -468,11 +467,11 @@ fake ascii mbox:
   # HG changeset patch
   # User test
   # Date 5 0
-  # Node ID 22d0f96be12f5945fd67d101af58f7bc8263c835
-  # Parent  c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  charset=us-ascii; content-transfer-encoding: 8bit
+  # Node ID 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
+  # Parent  a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  isolatin 8-bit encoding
   
-  diff -r c655633f8c87 -r 22d0f96be12f isolatin
+  diff -r a2ea8fc83dd8 -r 240fb913fc1b isolatin
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
@@ -684,8 +683,8 @@ test inline for single patch (quoted-printable):
   Content-Type: multipart/mixed; boundary="===*" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.60@*> (glob)
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.60@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:01:00 +0000
   From: quux
@@ -701,13 +700,13 @@ test inline for single patch (quoted-printable):
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -819,13 +818,12 @@ test inline for multiple patches:
   +b
   
   --===*-- (glob)
-  Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-printable ...
+  Displaying [PATCH 3 of 3] long line ...
   Content-Type: multipart/mixed; boundary="===*" (glob)
   MIME-Version: 1.0
-  Subject: [PATCH 3 of 3] charset=utf-8;
-   content-transfer-encoding: quoted-printable
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.63@*> (glob)
+  Subject: [PATCH 3 of 3] long line
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.63@*> (glob)
   In-Reply-To: <patchbomb.60@*> (glob)
   References: <patchbomb.60@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -843,13 +841,13 @@ test inline for multiple patches:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -927,8 +925,8 @@ test attach for single patch (quoted-printable):
   Content-Type: multipart/mixed; boundary="===*" (glob)
   MIME-Version: 1.0
   Subject: [PATCH] test
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.60@*> (glob)
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.60@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:01:00 +0000
   From: quux
@@ -953,13 +951,13 @@ test attach for single patch (quoted-printable):
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -1089,13 +1087,12 @@ test attach for multiple patches:
   +b
   
   --===*-- (glob)
-  Displaying [PATCH 3 of 3] charset=utf-8; content-transfer-encoding: quoted-printable ...
+  Displaying [PATCH 3 of 3] long line ...
   Content-Type: multipart/mixed; boundary="===*" (glob)
   MIME-Version: 1.0
-  Subject: [PATCH 3 of 3] charset=utf-8;
-   content-transfer-encoding: quoted-printable
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.63@*> (glob)
+  Subject: [PATCH 3 of 3] long line
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.63@*> (glob)
   In-Reply-To: <patchbomb.60@*> (glob)
   References: <patchbomb.60@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -1122,13 +1119,13 @@ test attach for multiple patches:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -1543,8 +1540,8 @@ test inreplyto:
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH] Added tag two, two.diff for changeset ff2c9fa2018b
-  X-Mercurial-Node: e317db6a6f288748d1f6cb064f3810fcba66b1b6
-  Message-Id: <e317db6a6f288748d1f6.60@*> (glob)
+  X-Mercurial-Node: 7aead2484924c445ad8ce2613df91f52f9e502ed
+  Message-Id: <7aead2484924c445ad8c.60@*> (glob)
   In-Reply-To: <baz>
   References: <baz>
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -1556,11 +1553,11 @@ test inreplyto:
   # HG changeset patch
   # User test
   # Date 0 0
-  # Node ID e317db6a6f288748d1f6cb064f3810fcba66b1b6
-  # Parent  eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
+  # Node ID 7aead2484924c445ad8ce2613df91f52f9e502ed
+  # Parent  045ca29b1ea20e4940411e695e20e521f2f0f98e
   Added tag two, two.diff for changeset ff2c9fa2018b
   
-  diff -r eae5fcf795ee -r e317db6a6f28 .hgtags
+  diff -r 045ca29b1ea2 -r 7aead2484924 .hgtags
   --- a/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -2,3 +2,5 @@
@@ -2077,13 +2074,13 @@ test outgoing:
   @@ -0,0 +1,1 @@
   +c
   
-  Displaying [PATCH 2 of 8] charset=utf-8; content-transfer-encoding: base64 ...
+  Displaying [PATCH 2 of 8] utf-8 content ...
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 8bit
-  Subject: [PATCH 2 of 8] charset=utf-8; content-transfer-encoding: base64
-  X-Mercurial-Node: c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  Message-Id: <c3c9e37db9f4fe4882cd.315532862@*> (glob)
+  Subject: [PATCH 2 of 8] utf-8 content
+  X-Mercurial-Node: 909a00e13e9d78b575aeee23dddbada46d5a143f
+  Message-Id: <909a00e13e9d78b575ae.315532862@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2094,31 +2091,30 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
+  # Node ID 909a00e13e9d78b575aeee23dddbada46d5a143f
   # Parent  ff2c9fa2018b15fa74b33363bda9527323e2a99f
-  charset=utf-8; content-transfer-encoding: base64
+  utf-8 content
   
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 description
+  diff -r ff2c9fa2018b -r 909a00e13e9d description
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/description	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,3 @@
   +a multiline
   +
   +description
-  diff -r ff2c9fa2018b -r c3c9e37db9f4 utf
+  diff -r ff2c9fa2018b -r 909a00e13e9d utf
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/utf	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,1 @@
   +h\xc3\xb6mma! (esc)
   
-  Displaying [PATCH 3 of 8] charset=utf-8; content-transfer-encoding: quoted-printable ...
+  Displaying [PATCH 3 of 8] long line ...
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
-  Subject: [PATCH 3 of 8] charset=utf-8;
-   content-transfer-encoding: quoted-printable
-  X-Mercurial-Node: c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  Message-Id: <c655633f8c87700bb38c.315532863@*> (glob)
+  Subject: [PATCH 3 of 8] long line
+  X-Mercurial-Node: a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  Message-Id: <a2ea8fc83dd8b93cfd86.315532863@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2129,13 +2125,13 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 4 0
-  # Node ID c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  # Parent  c3c9e37db9f4fe4882cda39baf42fed6bad8b15a
-  charset=3Dutf-8; content-transfer-encoding: quoted-printable
+  # Node ID a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  # Parent  909a00e13e9d78b575aeee23dddbada46d5a143f
+  long line
   
-  diff -r c3c9e37db9f4 -r c655633f8c87 qp
+  diff -r 909a00e13e9d -r a2ea8fc83dd8 long
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/qp	Thu Jan 01 00:00:04 1970 +0000
+  +++ b/long	Thu Jan 01 00:00:04 1970 +0000
   @@ -0,0 +1,4 @@
   +xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx=
@@ -2155,13 +2151,13 @@ test outgoing:
   +
   +bar
   
-  Displaying [PATCH 4 of 8] charset=us-ascii; content-transfer-encoding: 8bit ...
+  Displaying [PATCH 4 of 8] isolatin 8-bit encoding ...
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 8bit
-  Subject: [PATCH 4 of 8] charset=us-ascii; content-transfer-encoding: 8bit
-  X-Mercurial-Node: 22d0f96be12f5945fd67d101af58f7bc8263c835
-  Message-Id: <22d0f96be12f5945fd67.315532864@*> (glob)
+  Subject: [PATCH 4 of 8] isolatin 8-bit encoding
+  X-Mercurial-Node: 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
+  Message-Id: <240fb913fc1b7ff15ddb.315532864@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2172,11 +2168,11 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 5 0
-  # Node ID 22d0f96be12f5945fd67d101af58f7bc8263c835
-  # Parent  c655633f8c87700bb38cc6a59a2753bdc5a6c376
-  charset=us-ascii; content-transfer-encoding: 8bit
+  # Node ID 240fb913fc1b7ff15ddb9f33e73d82bf5277c720
+  # Parent  a2ea8fc83dd8b93cfd86ac97b28287204ab806e1
+  isolatin 8-bit encoding
   
-  diff -r c655633f8c87 -r 22d0f96be12f isolatin
+  diff -r a2ea8fc83dd8 -r 240fb913fc1b isolatin
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/isolatin	Thu Jan 01 00:00:05 1970 +0000
   @@ -0,0 +1,1 @@
@@ -2187,8 +2183,8 @@ test outgoing:
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 5 of 8] Added tag zero, zero.foo for changeset 8580ff50825a
-  X-Mercurial-Node: dd9c2b4b8a8a0934d5523c15f2c119b362360903
-  Message-Id: <dd9c2b4b8a8a0934d552.315532865@*> (glob)
+  X-Mercurial-Node: 5d5ef15dfe5e7bd3a4ee154b5fff76c7945ec433
+  Message-Id: <5d5ef15dfe5e7bd3a4ee.315532865@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2199,11 +2195,11 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 0 0
-  # Node ID dd9c2b4b8a8a0934d5523c15f2c119b362360903
-  # Parent  22d0f96be12f5945fd67d101af58f7bc8263c835
+  # Node ID 5d5ef15dfe5e7bd3a4ee154b5fff76c7945ec433
+  # Parent  240fb913fc1b7ff15ddb9f33e73d82bf5277c720
   Added tag zero, zero.foo for changeset 8580ff50825a
   
-  diff -r 22d0f96be12f -r dd9c2b4b8a8a .hgtags
+  diff -r 240fb913fc1b -r 5d5ef15dfe5e .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,2 @@
@@ -2215,8 +2211,8 @@ test outgoing:
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 6 of 8] Added tag one, one.patch for changeset 97d72e5f12c7
-  X-Mercurial-Node: eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
-  Message-Id: <eae5fcf795eee29d0e45.315532866@*> (glob)
+  X-Mercurial-Node: 045ca29b1ea20e4940411e695e20e521f2f0f98e
+  Message-Id: <045ca29b1ea20e494041.315532866@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2227,11 +2223,11 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 0 0
-  # Node ID eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
-  # Parent  dd9c2b4b8a8a0934d5523c15f2c119b362360903
+  # Node ID 045ca29b1ea20e4940411e695e20e521f2f0f98e
+  # Parent  5d5ef15dfe5e7bd3a4ee154b5fff76c7945ec433
   Added tag one, one.patch for changeset 97d72e5f12c7
   
-  diff -r dd9c2b4b8a8a -r eae5fcf795ee .hgtags
+  diff -r 5d5ef15dfe5e -r 045ca29b1ea2 .hgtags
   --- a/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,2 +1,4 @@
@@ -2245,8 +2241,8 @@ test outgoing:
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
   Subject: [PATCH 7 of 8] Added tag two, two.diff for changeset ff2c9fa2018b
-  X-Mercurial-Node: e317db6a6f288748d1f6cb064f3810fcba66b1b6
-  Message-Id: <e317db6a6f288748d1f6.315532867@*> (glob)
+  X-Mercurial-Node: 7aead2484924c445ad8ce2613df91f52f9e502ed
+  Message-Id: <7aead2484924c445ad8c.315532867@*> (glob)
   In-Reply-To: <patchbomb.315532860@*> (glob)
   References: <patchbomb.315532860@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
@@ -2257,11 +2253,11 @@ test outgoing:
   # HG changeset patch
   # User test
   # Date 0 0
-  # Node ID e317db6a6f288748d1f6cb064f3810fcba66b1b6
-  # Parent  eae5fcf795eee29d0e45ffc9f519a91cd79fc9ff
+  # Node ID 7aead2484924c445ad8ce2613df91f52f9e502ed
+  # Parent  045ca29b1ea20e4940411e695e20e521f2f0f98e
   Added tag two, two.diff for changeset ff2c9fa2018b
   
-  diff -r eae5fcf795ee -r e317db6a6f28 .hgtags
+  diff -r 045ca29b1ea2 -r 7aead2484924 .hgtags
   --- a/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   +++ b/.hgtags	Thu Jan 01 00:00:00 1970 +0000
   @@ -2,3 +2,5 @@
