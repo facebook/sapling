@@ -165,8 +165,11 @@ class SubversionRepo(object):
     This wrapper uses Subvertpy, an alternate set of bindings for Subversion
     that's more pythonic and sucks less. See earlier in this file for version
     requirements.
+
+    Note that password stores do not work, the parameter is only here
+    to ensure that the API is the same as for the SWIG wrapper.
     """
-    def __init__(self, url='', username='', password='', head=None):
+    def __init__(self, url='', username='', password='', head=None, password_stores=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]

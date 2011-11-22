@@ -21,6 +21,7 @@ from mercurial import util as hgutil
 from mercurial import httprepo
 import mercurial.repo
 
+import re
 import util
 import wrappers
 import svnwrap
@@ -107,6 +108,14 @@ class svnremoterepo(mercurial.repo.repository):
             raise hgutil.Abort('no Subversion URL specified')
         self.path = path
         self.capabilities = set(['lookup', 'subversion'])
+        pws = self.ui.config('hgsubversion', 'password_stores', None)
+        if pws is not None:
+            # Split pws at comas and strip neighbouring whitespace (whitespace
+            # at the beginning and end of pws has already been removed by the
+            # config parser).
+            self.password_stores = re.split(r'\s*,\s*', pws)
+        else:
+            self.password_stores = None
 
     @propertycache
     def svnauth(self):
@@ -127,7 +136,7 @@ class svnremoterepo(mercurial.repo.repository):
     @propertycache
     def svn(self):
         try:
-            return svnwrap.SubversionRepo(*self.svnauth)
+            return svnwrap.SubversionRepo(*self.svnauth, password_stores=self.password_stores)
         except svnwrap.SubversionConnectionException, e:
             self.ui.traceback()
             raise hgutil.Abort(e)

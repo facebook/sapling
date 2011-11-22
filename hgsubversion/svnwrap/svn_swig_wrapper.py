@@ -103,7 +103,7 @@ def user_pass_prompt(realm, default_username, ms, pool): # pragma: no cover
     creds.password = getpass.getpass('Password for %s: ' % creds.username)
     return creds
 
-def _create_auth_baton(pool):
+def _create_auth_baton(pool, password_stores):
     """Create a Subversion authentication baton. """
     # Give the client context baton a suite of authentication
     # providers.h
@@ -124,7 +124,9 @@ def _create_auth_baton(pool):
                           None)
     if getprovider:
         # Available in svn >= 1.6
-        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
+        if password_stores is None:
+            password_stores = ('gnome_keyring', 'keychain', 'kwallet', 'windows')
+        for name in password_stores:
             for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
                 p = getprovider(name, type, pool)
                 if p:
@@ -158,14 +160,14 @@ class SubversionRepo(object):
 
     It uses the SWIG Python bindings, see above for requirements.
     """
-    def __init__(self, url='', username='', password='', head=None):
+    def __init__(self, url='', username='', password='', head=None, password_stores=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
         self.password = parsed[1]
         self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
-        self.auth_baton = _create_auth_baton(self.auth_baton_pool)
+        self.auth_baton = _create_auth_baton(self.auth_baton_pool, password_stores)
         # self.init_ra_and_client() assumes that a pool already exists
         self.pool = core.Pool()
 
