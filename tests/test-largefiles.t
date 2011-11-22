@@ -254,13 +254,12 @@ dir after a purge.
 
 Clone a largefiles repo.
 
-  $ cd ..
-  $ hg clone a b
+  $ hg clone . ../b
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
-  $ cd b
+  $ cd ../b
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   7:daea875e9014  add/edit more largefiles
   6:4355d653f84f  edit files yet again
