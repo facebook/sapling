@@ -158,7 +158,7 @@ def openlfdirstate(ui, repo):
             try:
                 if hash == hashfile(lfile):
                     lfdirstate.normal(lfile)
-            except IOError, err:
+            except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
 
