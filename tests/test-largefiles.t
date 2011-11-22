@@ -791,8 +791,6 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   [255]
   $ cd ..
 
-  $ cd ..
-
 Clone a local repository owned by another user
 We have to simulate that here by setting $HOME and removing write permissions
   $ ORIGHOME="$HOME"
