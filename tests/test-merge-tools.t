@@ -103,6 +103,32 @@ simplest hgrc using false for merge:
   M f
   ? f.orig
 
+unexecutable file in $PATH shouldn't be found:
+
+  $ touch false
+  $ hg up -qC 1
+  $ PATH="`pwd`:$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
+  merging f
+  warning: conflicts during merge.
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ rm false
+
+executable directory in $PATH shouldn't be found:
+
+  $ mkdir false
+  $ hg up -qC 1
+  $ PATH="`pwd`:$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
+  merging f
+  warning: conflicts during merge.
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ rmdir false
+
 true with higher .priority gets precedence:
 
   $ echo "true.priority=1" >> .hg/hgrc
