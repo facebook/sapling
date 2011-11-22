@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, sys, errno, stat, getpass, pwd, grp, tempfile
+import os, sys, errno, stat, getpass, pwd, grp, tempfile, unicodedata
 
 posixfile = open
 nulldev = '/dev/null'
@@ -170,6 +170,24 @@ def normcase(path):
 
 if sys.platform == 'darwin':
     import fcntl # only needed on darwin, missing on jython
+
+    def normcase(path):
+        try:
+            u = path.decode('utf-8')
+        except UnicodeDecodeError:
+            # percent-encode any characters that don't round-trip
+            p2 = path.decode('utf-8', 'replace').encode('utf-8')
+            s = ""
+            for a, b in zip(path, p2):
+                if a != b:
+                    s += "%%%02X" % ord(a)
+                else:
+                    s += a
+            u = s.decode('utf-8')
+
+        # Decompose then lowercase (HFS+ technote specifies lower)
+        return unicodedata.normalize('NFD', u).lower().encode('utf-8')
+
     def realpath(path):
         '''
         Returns the true, canonical file system path equivalent to the given
