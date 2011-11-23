@@ -131,14 +131,9 @@ def validateconfig(ui):
                                'but not in PATH') % method)
 
 def mimetextpatch(s, subtype='plain', display=False):
-    '''If patch in utf-8 transfer-encode it.'''
-
-    enc = None
-    for line in s.splitlines():
-        if len(line) > 950:
-            s = quopri.encodestring(s)
-            enc = "quoted-printable"
-            break
+    '''Return MIME message suitable for a patch.
+    Charset will be detected as utf-8 or (possibly fake) us-ascii.
+    Transfer encodings will be used if necessary.'''
 
     cs = 'us-ascii'
     if not display:
@@ -152,7 +147,20 @@ def mimetextpatch(s, subtype='plain', display=False):
                 # We'll go with us-ascii as a fallback.
                 pass
 
-    msg = email.MIMEText.MIMEText(s, subtype, cs)
+    return mimetextqp(s, subtype, cs)
+
+def mimetextqp(body, subtype, charset):
+    '''Return MIME message.
+    Qouted-printable transfer encoding will be used if necessary.
+    '''
+    enc = None
+    for line in body.splitlines():
+        if len(line) > 950:
+            body = quopri.encodestring(body)
+            enc = "quoted-printable"
+            break
+
+    msg = email.MIMEText.MIMEText(body, subtype, charset)
     if enc:
         del msg['Content-Transfer-Encoding']
         msg['Content-Transfer-Encoding'] = enc
@@ -244,4 +252,4 @@ def mimeencode(ui, s, charsets=None, display=False):
     cs = 'us-ascii'
     if not display:
         s, cs = _encode(ui, s, charsets)
-    return email.MIMEText.MIMEText(s, 'plain', cs)
+    return mimetextqp(s, 'plain', cs)
