@@ -161,20 +161,20 @@
   Write the introductory message for the patch series.
   
   
-  writing [                                             ] 0/3
-  writing [                                             ] 0/3
+  sending [                                             ] 0/3
+  sending [                                             ] 0/3
                                                               
                                                               
-  writing [==============>                              ] 1/3
-  writing [==============>                              ] 1/3
+  sending [==============>                              ] 1/3
+  sending [==============>                              ] 1/3
                                                               
                                                               
-  writing [=============================>               ] 2/3
-  writing [=============================>               ] 2/3
+  sending [=============================>               ] 2/3
+  sending [=============================>               ] 2/3
                                                               \r (esc)
-  Writing [PATCH 0 of 2] test ...
-  Writing [PATCH 1 of 2] a ...
-  Writing [PATCH 2 of 2] b ...
+  Sending [PATCH 0 of 2] test ...
+  Sending [PATCH 1 of 2] a ...
+  Sending [PATCH 2 of 2] b ...
   
 
   $ cd ..
@@ -279,14 +279,14 @@ no mime encoding for email --test:
   
 
 mime encoded mbox (base64):
-  $ hg email --date '1970-1-1 0:4' -f quux -t foo -c bar -r tip -m mbox
+  $ hg email --date '1970-1-1 0:4' -f 'Q <quux>' -t foo -c bar -r tip -m mbox
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] utf-8 content ...
+  Sending [PATCH] utf-8 content ...
 
   $ cat mbox
-  From quux Thu Jan 01 00:04:01 1970
+  From quux ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="utf-8"
   MIME-Version: 1.0
   Content-Transfer-Encoding: base64
@@ -295,7 +295,7 @@ mime encoded mbox (base64):
   Message-Id: <909a00e13e9d78b575ae.240@*> (glob)
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:04:00 +0000
-  From: quux
+  From: Q <quux>
   To: foo
   Cc: bar
   
@@ -391,9 +391,9 @@ mime encoded mbox (quoted-printable):
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] long line ...
+  Sending [PATCH] long line ...
   $ cat mbox
-  From quux Thu Jan 01 00:04:01 1970
+  From quux ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: quoted-printable
@@ -449,9 +449,9 @@ fake ascii mbox:
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] isolatin 8-bit encoding ...
+  Sending [PATCH] isolatin 8-bit encoding ...
   $ cat mbox
-  From quux Thu Jan 01 00:05:01 1970
+  From quux ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 8bit
@@ -1944,9 +1944,9 @@ test multi-address parsing:
   This patch series consists of 1 patches.
   
   
-  Writing [PATCH] test ...
+  Sending [PATCH] test ...
   $ cat < tmp.mbox
-  From quux Tue Jan 01 00:01:01 1980
+  From quux ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -1984,10 +1984,10 @@ test multi-byte domain parsing:
   
   Cc: 
   
-  Writing [PATCH] test ...
+  Sending [PATCH] test ...
 
   $ cat tmp.mbox
-  From quux Tue Jan 01 00:01:01 1980
+  From quux ... ... .. ..:..:.. .... (re)
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit

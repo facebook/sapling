@@ -533,14 +533,13 @@ def patchbomb(ui, repo, *revs, **opts):
             if fp is not ui:
                 fp.close()
         elif mbox:
-            ui.status(_('Writing '), subj, ' ...\n')
-            ui.progress(_('writing'), i, item=subj, total=len(msgs))
-            fp = open(mbox, 'In-Reply-To' in m and 'ab+' or 'wb+')
+            ui.status(_('Sending '), subj, ' ...\n')
+            ui.progress(_('sending'), i, item=subj, total=len(msgs))
+            fp = open(mbox, i > 0 and 'ab+' or 'wb+')
             generator = email.Generator.Generator(fp, mangle_from_=True)
             # Should be time.asctime(), but Windows prints 2-characters day
             # of month instead of one. Make them print the same thing.
-            date = time.strftime('%a %b %d %H:%M:%S %Y',
-                                 time.localtime(start_time[0]))
+            date = time.strftime('%a %b %d %H:%M:%S %Y', time.localtime())
             fp.write('From %s %s\n' % (sender_addr, date))
             generator.flatten(m, 0)
             fp.write('\n\n')
@@ -555,7 +554,7 @@ def patchbomb(ui, repo, *revs, **opts):
             fp = cStringIO.StringIO()
             generator = email.Generator.Generator(fp, mangle_from_=False)
             generator.flatten(m, 0)
-            sendmail(sender, to + bcc + cc, fp.getvalue())
+            sendmail(sender_addr, to + bcc + cc, fp.getvalue())
 
     ui.progress(_('writing'), None)
     ui.progress(_('sending'), None)
