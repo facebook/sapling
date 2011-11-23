@@ -114,8 +114,8 @@ def connect(ui, mbox=None):
         return _smtp(ui)
     return lambda s, r, m: _sendmail(ui, s, r, m)
 
-def sendmail(ui, sender, recipients, msg):
-    send = connect(ui)
+def sendmail(ui, sender, recipients, msg, mbox=None):
+    send = connect(ui, mbox=mbox)
     return send(sender, recipients, msg)
 
 def validateconfig(ui):

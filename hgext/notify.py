@@ -105,6 +105,9 @@ notify.diffstat
 notify.merge
   If True, send notifications for merge changesets. Default: True.
 
+notify.mbox
+  If set, append mails to this mbox file instead of sending. Default: None.
+
 If set, the following entries will also be used to customize the notifications:
 
 email.from
@@ -156,6 +159,7 @@ class notifier(object):
         self.stripcount = int(self.ui.config('notify', 'strip', 0))
         self.root = self.strip(self.repo.root)
         self.domain = self.ui.config('notify', 'domain')
+        self.mbox = self.ui.config('notify', 'mbox')
         self.test = self.ui.configbool('notify', 'test', True)
         self.charsets = mail._charsets(self.ui)
         self.subs = self.subscribers()
@@ -288,7 +292,7 @@ class notifier(object):
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
                            (len(self.subs), count))
             mail.sendmail(self.ui, util.email(msg['From']),
-                          self.subs, msgtext)
+                          self.subs, msgtext, mbox=self.mbox)
 
     def diff(self, ctx, ref=None):
 

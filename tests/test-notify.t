@@ -113,6 +113,9 @@
   notify.merge
     If True, send notifications for merge changesets. Default: True.
   
+  notify.mbox
+    If set, append mails to this mbox file instead of sending. Default: None.
+  
   If set, the following entries will also be used to customize the
   notifications:
   
@@ -350,7 +353,7 @@ test merge
   description: merge
   (run 'hg update' to get a working copy)
 
-truncate multi-byte subject
+non-ascii content and truncation of multi-byte subject
 
   $ cat <<EOF >> $HGRCPATH
   > [notify]
@@ -395,3 +398,54 @@ truncate multi-byte subject
    a
   +a
   (run 'hg update' to get a working copy)
+
+long lines
+
+  $ cat <<EOF >> $HGRCPATH
+  > [notify]
+  > maxsubject = 67
+  > test = False
+  > mbox = mbox
+  > EOF
+  $ python -c 'print "no" * 500' >> a/a
+  $ hg --cwd a commit -A -m "long line"
+  $ hg --traceback --cwd b pull ../a
+  pulling from ../a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  notify: sending 2 subscribers 1 changes
+  (run 'hg update' to get a working copy)
+  $ python -c 'import sys,re; print re.sub("\n\t", " ", file("b/mbox").read()),'
+  From test@test.com ... ... .. ..:..:.. .... (re)
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  X-Test: foo
+  Date: * (glob)
+  Subject: long line
+  From: test@test.com
+  X-Hg-Notification: changeset e0be44cf638b
+  Message-Id: <hg.e0be44cf638b.*.*@*> (glob)
+  To: baz@test.com, foo@bar
+  
+  changeset e0be44cf638b in b
+  description: long line
+  diffstat:
+  
+   a |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  diffs (8 lines):
+  
+  diff -r 7ea05ad269dc -r e0be44cf638b a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,4 @@
+   a
+   a
+   a
+  +nononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononononono
+  
