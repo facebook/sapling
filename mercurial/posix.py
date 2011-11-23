@@ -176,13 +176,15 @@ if sys.platform == 'darwin':
             u = path.decode('utf-8')
         except UnicodeDecodeError:
             # percent-encode any characters that don't round-trip
-            p2 = path.decode('utf-8', 'replace').encode('utf-8')
+            p2 = path.decode('utf-8', 'ignore').encode('utf-8')
             s = ""
-            for a, b in zip(path, p2):
-                if a != b:
-                    s += "%%%02X" % ord(a)
+            pos = 0
+            for c in path:
+                if p2[pos:pos + 1] == c:
+                    s += c
+                    pos += 1
                 else:
-                    s += a
+                    s += "%%%02X" % ord(c)
             u = s.decode('utf-8')
 
         # Decompose then lowercase (HFS+ technote specifies lower)
