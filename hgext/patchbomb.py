@@ -45,7 +45,7 @@ directly from the commandline. See the [email] and [smtp] sections in
 hgrc(5) for details.
 '''
 
-import os, errno, socket, tempfile, cStringIO, time
+import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
 from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
@@ -532,25 +532,14 @@ def patchbomb(ui, repo, *revs, **opts):
                     raise
             if fp is not ui:
                 fp.close()
-        elif mbox:
-            ui.status(_('Sending '), subj, ' ...\n')
-            ui.progress(_('sending'), i, item=subj, total=len(msgs))
-            fp = open(mbox, i > 0 and 'ab+' or 'wb+')
-            generator = email.Generator.Generator(fp, mangle_from_=True)
-            # Should be time.asctime(), but Windows prints 2-characters day
-            # of month instead of one. Make them print the same thing.
-            date = time.strftime('%a %b %d %H:%M:%S %Y', time.localtime())
-            fp.write('From %s %s\n' % (sender_addr, date))
-            generator.flatten(m, 0)
-            fp.write('\n\n')
-            fp.close()
         else:
             if not sendmail:
-                sendmail = mail.connect(ui)
+                sendmail = mail.connect(ui, mbox=mbox)
             ui.status(_('Sending '), subj, ' ...\n')
             ui.progress(_('sending'), i, item=subj, total=len(msgs))
-            # Exim does not remove the Bcc field
-            del m['Bcc']
+            if not mbox:
+                # Exim does not remove the Bcc field
+                del m['Bcc']
             fp = cStringIO.StringIO()
             generator = email.Generator.Generator(fp, mangle_from_=False)
             generator.flatten(m, 0)

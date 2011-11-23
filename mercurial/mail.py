@@ -7,7 +7,7 @@
 
 from i18n import _
 import util, encoding
-import os, smtplib, socket, quopri
+import os, smtplib, socket, quopri, time
 import email.Header, email.MIMEText, email.Utils
 
 _oldheaderinit = email.Header.Header.__init__
@@ -93,9 +93,23 @@ def _sendmail(ui, sender, recipients, msg):
             os.path.basename(program.split(None, 1)[0]),
             util.explainexit(ret)[0]))
 
-def connect(ui):
+def _mbox(mbox, sender, recipients, msg):
+    '''write mails to mbox'''
+    fp = open(mbox, 'ab+')
+    # Should be time.asctime(), but Windows prints 2-characters day
+    # of month instead of one. Make them print the same thing.
+    date = time.strftime('%a %b %d %H:%M:%S %Y', time.localtime())
+    fp.write('From %s %s\n' % (sender, date))
+    fp.write(msg)
+    fp.write('\n\n')
+    fp.close()
+
+def connect(ui, mbox=None):
     '''make a mail connection. return a function to send mail.
     call as sendmail(sender, list-of-recipients, msg).'''
+    if mbox:
+        open(mbox, 'wb').close()
+        return lambda s, r, m: _mbox(mbox, s, r, m)
     if ui.config('email', 'method', 'smtp') == 'smtp':
         return _smtp(ui)
     return lambda s, r, m: _sendmail(ui, s, r, m)
