@@ -99,6 +99,8 @@ class filemapper(object):
             if newpre == '.':
                 return suf
             if suf:
+                if newpre.endswith('/'):
+                    return newpre + suf
                 return newpre + '/' + suf
             return newpre
         return name
