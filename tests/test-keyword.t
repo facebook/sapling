@@ -309,8 +309,10 @@ record
 
 record chunk
 
-  $ python -c \
-  > 'l=open("a").readlines();l.insert(1,"foo\n");l.append("bar\n");open("a","w").writelines(l);'
+  >>> lines = open('a').readlines()
+  >>> lines.insert(1, 'foo\n')
+  >>> lines.append('bar\n')
+  >>> open('a', 'w').writelines(lines)
   $ hg record -d '1 10' -m rectest a<<EOF
   > y
   > y
@@ -809,8 +811,9 @@ Clone to test incoming
   
 Imported patch should not be rejected
 
-  $ python -c \
-  > 'import re; s=re.sub("(Id.*)","\\1 rejecttest",open("a").read()); open("a","wb").write(s);'
+  >>> import re
+  >>> text = re.sub(r'(Id.*)', r'\1 rejecttest', open('a').read())
+  >>> open('a', 'wb').write(text)
   $ hg --debug commit -m'rejects?' -d '3 0' -u 'User Name <user@example.com>'
   a
   overwriting a expanding keywords
