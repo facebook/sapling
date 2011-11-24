@@ -263,9 +263,9 @@ hg status -C --change 1 added modified copied removed deleted:
     modified
   R removed
 
-hg status -A --change 1:
+hg status -A --change 1 and revset:
 
-  $ hg status -A --change 1
+  $ hg status -A --change '1|1'
   M modified
   A added
   A copied

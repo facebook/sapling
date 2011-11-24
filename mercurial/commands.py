@@ -5174,7 +5174,7 @@ def status(ui, repo, *pats, **opts):
         msg = _('cannot specify --rev and --change at the same time')
         raise util.Abort(msg)
     elif change:
-        node2 = repo.lookup(change)
+        node2 = scmutil.revsingle(repo, change, None).node()
         node1 = repo[node2].p1().node()
     else:
         node1, node2 = scmutil.revpair(repo, revs)
