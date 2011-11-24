@@ -212,6 +212,8 @@ def copyfromcache(repo, hash, filename):
     if path is None:
         return False
     util.makedirs(os.path.dirname(repo.wjoin(filename)))
+    # The write may fail before the file is fully written, but we
+    # don't use atomic writes in the working copy.
     shutil.copy(path, repo.wjoin(filename))
     return True
 
