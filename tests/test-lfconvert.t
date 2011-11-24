@@ -5,7 +5,8 @@
   > graphlog =
   > [largefiles]
   > minsize = 0.5
-  > patterns = **.dat
+  > patterns = **.other
+  >     **.dat
   > EOF
 
 "lfconvert" works
