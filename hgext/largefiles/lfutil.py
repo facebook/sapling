@@ -228,8 +228,11 @@ def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
-        shutil.copyfile(file, storepath(repo, hash))
-        os.chmod(storepath(repo, hash), os.stat(file).st_mode)
+        dst = util.atomictempfile(storepath(repo, hash))
+        for chunk in util.filechunkiter(open(file)):
+            dst.write(chunk)
+        dst.close()
+        util.copymode(file, storepath(repo, hash))
         linktousercache(repo, hash)
 
 def linktousercache(repo, hash):
