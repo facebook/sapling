@@ -393,17 +393,8 @@ def readhash(filename):
 
 def writehash(hash, filename, executable):
     util.makedirs(os.path.dirname(filename))
-    if os.path.exists(filename):
-        os.unlink(filename)
-    wfile = open(filename, 'wb')
-
-    try:
-        wfile.write(hash)
-        wfile.write('\n')
-    finally:
-        wfile.close()
-    if os.path.exists(filename):
-        os.chmod(filename, getmode(executable))
+    util.writefile(filename, hash + '\n')
+    os.chmod(filename, getmode(executable))
 
 def getexecutable(filename):
     mode = os.stat(filename).st_mode
