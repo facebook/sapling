@@ -77,8 +77,11 @@ def link(src, dest):
     try:
         util.oslink(src, dest)
     except OSError:
-        # if hardlinks fail, fallback on copy
-        shutil.copyfile(src, dest)
+        # if hardlinks fail, fallback on atomic copy
+        dst = util.atomictempfile(dest)
+        for chunk in util.filechunkiter(open(src)):
+            dst.write(chunk)
+        dst.close()
         os.chmod(dest, os.stat(src).st_mode)
 
 def usercachepath(ui, hash):
