@@ -619,11 +619,13 @@ def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             f = lfutil.splitstandin(f)
 
             def getdatafn():
+                fd = None
                 try:
                     fd = open(path, 'rb')
                     return fd.read()
                 finally:
-                    fd.close()
+                    if fd:
+                        fd.close()
 
             getdata = getdatafn
         write(f, 'x' in ff and 0755 or 0644, 'l' in ff, getdata)
