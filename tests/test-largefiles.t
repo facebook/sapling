@@ -259,12 +259,6 @@ Clone a largefiles repo.
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
-  $ hg debugstate --nodates
-  n 644         41 .hglf/sub/large4
-  n   0         -1 .hglf/sub2/large6
-  n   0         -1 .hglf/sub2/large7
-  n 644          9 normal3
-  n 644          9 sub/normal4
   $ cd ../b
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   7:daea875e9014  add/edit more largefiles
