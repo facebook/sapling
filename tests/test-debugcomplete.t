@@ -247,7 +247,7 @@ Show all commands + options
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
   help: extension, command
-  identify: rev, num, id, branch, tags, bookmarks
+  identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure
   import: strip, base, edit, force, no-commit, bypass, exact, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, style, template, ssh, remotecmd, insecure, subrepos
   locate: rev, print0, fullpath, include, exclude

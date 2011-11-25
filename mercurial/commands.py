@@ -3263,10 +3263,11 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
     ('i', 'id', None, _('show global revision id')),
     ('b', 'branch', None, _('show branch')),
     ('t', 'tags', None, _('show tags')),
-    ('B', 'bookmarks', None, _('show bookmarks'))],
+    ('B', 'bookmarks', None, _('show bookmarks')),
+    ] + remoteopts,
     _('[-nibtB] [-r REV] [SOURCE]'))
 def identify(ui, repo, source=None, rev=None,
-             num=None, id=None, branch=None, tags=None, bookmarks=None):
+             num=None, id=None, branch=None, tags=None, bookmarks=None, **opts):
     """identify the working copy or specified revision
 
     Print a summary identifying the repository state at REV using one or
@@ -3310,7 +3311,7 @@ def identify(ui, repo, source=None, rev=None,
 
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
-        repo = hg.peer(ui, {}, source)
+        repo = hg.peer(ui, opts, source)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
 
     if not repo.local():
