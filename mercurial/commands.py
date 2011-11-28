@@ -5575,8 +5575,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
         for fname in fnames:
             f = url.open(ui, fname)
             gen = changegroup.readbundle(f, fname)
-            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname,
-                                           lock=lock)
+            modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
         bookmarks.updatecurrentbookmark(repo, wc.node(), wc.branch())
     finally:
         lock.release()

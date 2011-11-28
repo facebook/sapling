@@ -142,8 +142,8 @@ class sshserver(object):
 
         self.sendresponse("")
         cg = changegroup.unbundle10(self.fin, "UN")
-        r = self.repo.addchangegroup(cg, 'serve', self._client(),
-                                     lock=self.lock)
+        r = self.repo.addchangegroup(cg, 'serve', self._client())
+        self.lock.release()
         return str(r)
 
     def _client(self):

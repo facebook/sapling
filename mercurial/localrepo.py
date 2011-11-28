@@ -1527,8 +1527,7 @@ class localrepository(repo.repository):
                                            "changegroupsubset."))
                 else:
                     cg = remote.changegroupsubset(fetch, heads, 'pull')
-                result = self.addchangegroup(cg, 'pull', remote.url(),
-                                             lock=lock)
+                result = self.addchangegroup(cg, 'pull', remote.url())
             phases.advanceboundary(self, 0, common)
         finally:
             lock.release()
@@ -1583,8 +1582,7 @@ class localrepository(repo.repository):
                         ret = remote.unbundle(cg, remote_heads, 'push')
                     else:
                         # we return an integer indicating remote head count change
-                        ret = remote.addchangegroup(cg, 'push', self.url(),
-                                                    lock=lock)
+                        ret = remote.addchangegroup(cg, 'push', self.url())
                 # if we don't push, the common data is already useful
                 # everything exchange is public for now
                 phases.advanceboundary(self, 0, fut)
@@ -1849,12 +1847,10 @@ class localrepository(repo.repository):
 
         return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
-    def addchangegroup(self, source, srctype, url, emptyok=False, lock=None):
+    def addchangegroup(self, source, srctype, url, emptyok=False):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
         the URL of the repo where this changegroup is coming from.
-        If lock is not None, the function takes ownership of the lock
-        and releases it after the changegroup is added.
 
         Return an integer summarizing the change to this repo:
         - nothing changed or no source: 0
@@ -2019,8 +2015,6 @@ class localrepository(repo.repository):
 
         finally:
             tr.release()
-            if lock:
-                lock.release()
         # never return 0 here:
         if dh < 0:
             return dh - 1
