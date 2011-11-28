@@ -35,6 +35,7 @@ class lock(object):
         self.timeout = timeout
         self.releasefn = releasefn
         self.desc = desc
+        self.postreleasehooks  = []
         self.lock()
 
     def __del__(self):
@@ -119,6 +120,10 @@ class lock(object):
             return locker
 
     def release(self):
+        """release the lock and execute callback function if any
+
+        If the lock have been aquired multiple time, the actual release is
+        delayed to the last relase call."""
         if self.held > 1:
             self.held -= 1
         elif self.held == 1:
@@ -129,6 +134,8 @@ class lock(object):
                 util.unlink(self.f)
             except OSError:
                 pass
+            for callback in self.postreleasehooks:
+                callback()
 
 def release(*locks):
     for lock in locks:

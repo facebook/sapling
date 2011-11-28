@@ -912,6 +912,15 @@ class localrepository(repo.repository):
             acquirefn()
         return l
 
+    def _postrelease(self, callback):
+        """add a callback to the current repository lock.
+
+        The callback will be executed on lock release."""
+        l = self._lockref and self._lockref()
+        assert l is not None
+        assert l.held
+        l.postreleasehooks.append(callback)
+
     def lock(self, wait=True):
         '''Lock the repository store (.hg/store) and return a weak reference
         to the lock. Use this before modifying the store (e.g. committing or
