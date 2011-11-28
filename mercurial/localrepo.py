@@ -2003,21 +2003,24 @@ class localrepository(repo.repository):
             cl.finalize(trp)
 
             tr.close()
+
+            def postaddchangegroup():
+                if changesets > 0:
+                    # forcefully update the on-disk branch cache
+                    self.ui.debug("updating the branch cache\n")
+                    self.updatebranchcache()
+                    self.hook("changegroup", node=hex(cl.node(clstart)),
+                              source=srctype, url=url)
+
+                    for n in added:
+                        self.hook("incoming", node=hex(n), source=srctype,
+                                  url=url)
+            self._postrelease(postaddchangegroup)
+
         finally:
             tr.release()
             if lock:
                 lock.release()
-
-        if changesets > 0:
-            # forcefully update the on-disk branch cache
-            self.ui.debug("updating the branch cache\n")
-            self.updatebranchcache()
-            self.hook("changegroup", node=hex(cl.node(clstart)),
-                      source=srctype, url=url)
-
-            for n in added:
-                self.hook("incoming", node=hex(n), source=srctype, url=url)
-
         # never return 0 here:
         if dh < 0:
             return dh - 1
