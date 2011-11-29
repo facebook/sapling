@@ -1639,7 +1639,7 @@ def difflabel(func, *args, **kw):
                 if line.startswith('@'):
                     head = False
             else:
-                if line and not line[0] in ' +-@':
+                if line and not line[0] in ' +-@\\':
                     head = True
             stripline = line
             if not head and line and line[0] in '+-':
