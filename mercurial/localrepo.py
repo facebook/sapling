@@ -2000,8 +2000,8 @@ class localrepository(repo.repository):
 
             tr.close()
 
-            def postaddchangegroup():
-                if changesets > 0:
+            if changesets > 0:
+                def runhooks():
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")
                     self.updatebranchcache()
@@ -2011,7 +2011,7 @@ class localrepository(repo.repository):
                     for n in added:
                         self.hook("incoming", node=hex(n), source=srctype,
                                   url=url)
-            self._postrelease(postaddchangegroup)
+                self._postrelease(runhooks)
 
         finally:
             tr.release()
