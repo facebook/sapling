@@ -71,9 +71,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             lfiles = set()
             normalfiles = set()
             if not pats:
-                pats = ui.config(lfutil.longname, 'patterns', default=())
-                if pats:
-                    pats = pats.split(' ')
+                pats = ui.configlist(lfutil.longname, 'patterns', default=[])
             if pats:
                 matcher = match_.match(rsrc.root, '', list(pats))
             else:
