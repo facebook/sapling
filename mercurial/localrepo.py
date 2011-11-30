@@ -912,7 +912,7 @@ class localrepository(repo.repository):
             acquirefn()
         return l
 
-    def _postrelease(self, callback):
+    def _afterlock(self, callback):
         """add a callback to the current repository lock.
 
         The callback will be executed on lock release."""
@@ -2011,7 +2011,7 @@ class localrepository(repo.repository):
                     for n in added:
                         self.hook("incoming", node=hex(n), source=srctype,
                                   url=url)
-                self._postrelease(runhooks)
+                self._afterlock(runhooks)
 
         finally:
             tr.release()
