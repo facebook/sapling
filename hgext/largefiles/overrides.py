@@ -373,7 +373,8 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
                 origcopyfile = util.copyfile
                 copiedfiles = []
                 def override_copyfile(src, dest):
-                    if lfutil.shortname in src and lfutil.shortname in dest:
+                    if (lfutil.shortname in src and
+                        dest.startswith(repo.wjoin(lfutil.shortname))):
                         destlfile = dest.replace(lfutil.shortname, '')
                         if not opts['force'] and os.path.exists(destlfile):
                             raise IOError('',
@@ -388,18 +389,19 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
 
             lfdirstate = lfutil.openlfdirstate(ui, repo)
             for (src, dest) in copiedfiles:
-                if lfutil.shortname in src and lfutil.shortname in dest:
-                    srclfile = src.replace(lfutil.shortname, '')
-                    destlfile = dest.replace(lfutil.shortname, '')
+                if (lfutil.shortname in src and
+                    dest.startswith(repo.wjoin(lfutil.shortname))):
+                    srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
+                    destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
                     destlfiledir = os.path.dirname(destlfile) or '.'
                     if not os.path.isdir(destlfiledir):
                         os.makedirs(destlfiledir)
                     if rename:
-                        os.rename(srclfile, destlfile)
-                        lfdirstate.remove(repo.wjoin(srclfile))
+                        os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
+                        lfdirstate.remove(srclfile)
                     else:
                         util.copyfile(srclfile, destlfile)
-                    lfdirstate.add(repo.wjoin(destlfile))
+                    lfdirstate.add(destlfile)
             lfdirstate.write()
         except util.Abort, e:
             if str(e) != 'no files to copy':
