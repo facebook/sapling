@@ -35,7 +35,7 @@ class lock(object):
         self.timeout = timeout
         self.releasefn = releasefn
         self.desc = desc
-        self.postreleasehooks  = []
+        self.postrelease  = []
         self.lock()
 
     def __del__(self):
@@ -134,11 +134,10 @@ class lock(object):
                 util.unlink(self.f)
             except OSError:
                 pass
-            for callback in self.postreleasehooks:
+            for callback in self.postrelease:
                 callback()
 
 def release(*locks):
     for lock in locks:
         if lock is not None:
             lock.release()
-

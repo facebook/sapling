@@ -918,7 +918,7 @@ class localrepository(repo.repository):
         The callback will be executed on lock release."""
         l = self._lockref and self._lockref()
         if l:
-            l.postreleasehooks.append(callback)
+            l.postrelease.append(callback)
 
     def lock(self, wait=True):
         '''Lock the repository store (.hg/store) and return a weak reference
