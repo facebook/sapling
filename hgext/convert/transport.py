@@ -86,7 +86,7 @@ class SvnRaTransport(object):
             self.client.config = svn_config
             try:
                 self.ra = svn.client.open_ra_session(
-                    self.svn_url.encode('utf8'),
+                    self.svn_url,
                     self.client, self.pool)
             except SubversionException, (inst, num):
                 if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,

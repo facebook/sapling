@@ -50,10 +50,21 @@ def revsplit(rev):
         mod = '/' + parts[1]
     return parts[0][4:], mod, int(revnum)
 
+def quote(s):
+    # As of svn 1.7, many svn calls expect "canonical" paths. In
+    # theory, we should call svn.core.*canonicalize() on all paths
+    # before passing them to the API.  Instead, we assume the base url
+    # is canonical and copy the behaviour of svn URL encoding function
+    # so we can extend it safely with new components. The "safe"
+    # characters were taken from the "svn_uri__char_validity" table in
+    # libsvn_subr/path.c.
+    return urllib.quote(s, "!$&'()*+,-./:=@_~")
+
 def geturl(path):
     try:
         return svn.client.url_from_path(svn.core.svn_path_canonicalize(path))
     except SubversionException:
+        # svn.client.url_from_path() fails with local repositories
         pass
     if os.path.isdir(path):
         path = os.path.normpath(os.path.abspath(path))
@@ -62,8 +73,8 @@ def geturl(path):
         # Module URL is later compared with the repository URL returned
         # by svn API, which is UTF-8.
         path = encoding.tolocal(path)
-        return 'file://%s' % urllib.quote(path)
-    return path
+        path = 'file://%s' % quote(path)
+    return svn.core.svn_path_canonicalize(path)
 
 def optrev(number):
     optrev = svn.core.svn_opt_revision_t()
@@ -306,7 +317,7 @@ class svn_source(converter_source):
 
     def exists(self, path, optrev):
         try:
-            svn.client.ls(self.url.rstrip('/') + '/' + urllib.quote(path),
+            svn.client.ls(self.url.rstrip('/') + '/' + quote(path),
                                  optrev, False, self.ctx)
             return True
         except SubversionException:
@@ -358,7 +369,7 @@ class svn_source(converter_source):
         # Check if branches bring a few more heads to the list
         if branches:
             rpath = self.url.strip('/')
-            branchnames = svn.client.ls(rpath + '/' + urllib.quote(branches),
+            branchnames = svn.client.ls(rpath + '/' + quote(branches),
                                         rev, False, self.ctx)
             for branch in branchnames.keys():
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
@@ -394,7 +405,7 @@ class svn_source(converter_source):
         else:
             # Perform a full checkout on roots
             uuid, module, revnum = revsplit(rev)
-            entries = svn.client.ls(self.baseurl + urllib.quote(module),
+            entries = svn.client.ls(self.baseurl + quote(module),
                                     optrev(revnum), True, self.ctx)
             files = [n for n, e in entries.iteritems()
                      if e.kind == svn.core.svn_node_file]
@@ -595,7 +606,7 @@ class svn_source(converter_source):
         """Reparent the svn transport and return the previous parent."""
         if self.prevmodule == module:
             return module
-        svnurl = self.baseurl + urllib.quote(module)
+        svnurl = self.baseurl + quote(module)
         prevmodule = self.prevmodule
         if prevmodule is None:
             prevmodule = ''
@@ -866,7 +877,7 @@ class svn_source(converter_source):
         """Enumerate all files in path at revnum, recursively."""
         path = path.strip('/')
         pool = Pool()
-        rpath = '/'.join([self.baseurl, urllib.quote(path)]).strip('/')
+        rpath = '/'.join([self.baseurl, quote(path)]).strip('/')
         entries = svn.client.ls(rpath, optrev(revnum), True, self.ctx, pool)
         if path:
             path += '/'
