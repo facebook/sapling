@@ -395,3 +395,11 @@ invalid global arguments for normal commands, aliases, and shell aliases
   use "hg help" for the full list of commands or "hg -v" for details
   [255]
 
+This should show id:
+
+  $ hg --config alias.log='id' log
+  000000000000 tip
+
+This shouldn't:
+
+  $ hg --config alias.log='id' history
