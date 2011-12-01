@@ -820,7 +820,6 @@ class localrepository(repo.repository):
                         % self.dirstate.branch())
 
             self.dirstate.invalidate()
-            self.destroyed()
             parents = tuple([p.rev() for p in self.parents()])
             if len(parents) > 1:
                 ui.status(_('working directory now based on '
@@ -828,6 +827,7 @@ class localrepository(repo.repository):
             else:
                 ui.status(_('working directory now based on '
                             'revision %d\n') % parents)
+        self.destroyed()
         return 0
 
     def invalidatecaches(self):
