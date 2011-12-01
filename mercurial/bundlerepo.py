@@ -266,6 +266,10 @@ class bundlerepository(localrepo.localrepository):
     def getcwd(self):
         return os.getcwd() # always outside the repo
 
+    def _writebranchcache(self, branches, tip, tiprev):
+        # don't overwrite the disk cache with bundle-augmented data
+        pass
+
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new bundle repository'))

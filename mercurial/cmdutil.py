@@ -23,7 +23,14 @@ def findpossible(cmd, table, strict=False):
     """
     choice = {}
     debugchoice = {}
-    for e in table.keys():
+
+    if cmd in table:
+        # short-circuit exact matches, "log" alias beats "^log|history"
+        keys = [cmd]
+    else:
+        keys = table.keys()
+
+    for e in keys:
         aliases = parsealiases(e)
         found = None
         if cmd in aliases:
