@@ -1116,6 +1116,12 @@ class svn_sink(converter_sink, commandline):
         return u"svn:%s@%s" % (self.uuid, rev)
 
     def putcommit(self, files, copies, parents, commit, source, revmap):
+        for parent in parents:
+            try:
+                return self.revid(self.childmap[parent])
+            except KeyError:
+                pass
+
         # Apply changes to working copy
         for f, v in files:
             try:
@@ -1128,11 +1134,6 @@ class svn_sink(converter_sink, commandline):
                     self.copies.append([copies[f], f])
         files = [f[0] for f in files]
 
-        for parent in parents:
-            try:
-                return self.revid(self.childmap[parent])
-            except KeyError:
-                pass
         entries = set(self.delete)
         files = frozenset(files)
         entries.update(self.add_dirs(files.difference(entries)))
