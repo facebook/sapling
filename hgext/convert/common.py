@@ -11,6 +11,8 @@ import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
 
+propertycache = util.propertycache
+
 def encodeargs(args):
     def encodearg(s):
         lines = base64.encodestring(s)
@@ -321,14 +323,12 @@ class commandline(object):
         self.checkexit(status, ''.join(output))
         return output
 
-    def getargmax(self):
-        if '_argmax' in self.__dict__:
-            return self._argmax
-
+    @propertycache
+    def argmax(self):
         # POSIX requires at least 4096 bytes for ARG_MAX
-        self._argmax = 4096
+        argmax = 4096
         try:
-            self._argmax = os.sysconf("SC_ARG_MAX")
+            argmax = os.sysconf("SC_ARG_MAX")
         except:
             pass
 
@@ -339,13 +339,11 @@ class commandline(object):
 
         # Since ARG_MAX is for command line _and_ environment, lower our limit
         # (and make happy Windows shells while doing this).
-
-        self._argmax = self._argmax / 2 - 1
-        return self._argmax
+        return argmax / 2 - 1
 
     def limit_arglist(self, arglist, cmd, closestdin, *args, **kwargs):
         cmdlen = len(self._cmdline(cmd, closestdin, *args, **kwargs))
-        limit = self.getargmax() - cmdlen
+        limit = self.argmax - cmdlen
         bytes = 0
         fl = []
         for fn in arglist:
