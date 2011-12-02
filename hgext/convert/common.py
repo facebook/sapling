@@ -384,7 +384,7 @@ class mapfile(dict):
             return
         for i, line in enumerate(fp):
             try:
-                key, value = line.splitlines()[0].rsplit(' ', 1)
+                key, value = line.splitlines()[0].rstrip().rsplit(' ', 1)
             except ValueError:
                 raise util.Abort(
                     _('syntax error in %s(%d): key/value pair expected')

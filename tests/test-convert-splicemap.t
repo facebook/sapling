@@ -49,7 +49,7 @@ test invalid splicemap
 splice repo2 on repo1
 
   $ cat > splicemap <<EOF
-  > $CHILDID1 $PARENTID1
+  > $CHILDID1 $PARENTID1 
   > $CHILDID2 $PARENTID2,$CHILDID1
   > EOF
   $ hg clone repo1 target1
