@@ -768,7 +768,18 @@ Test that renaming a largefile results in correct output for status
   $ hg st
   A sub2/large6-renamed
   R sub2/large6
-  $ cd ../..
+  $ cd ..
+
+Test --normal flag
+
+  $ dd if=/dev/urandom bs=2k count=11k > new-largefile 2> /dev/null
+  $ hg add --normal --large new-largefile
+  abort: --normal cannot be used with --large
+  [255]
+  $ hg add --normal new-largefile
+  new-largefile: up to 69 MB of RAM may be required to manage this file
+  (use 'hg revert new-largefile' to cancel the pending addition)
+  $ cd ..
 
 vanilla clients not locked out from largefiles servers on vanilla repos
   $ mkdir r1

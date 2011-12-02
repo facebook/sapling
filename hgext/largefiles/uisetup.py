@@ -23,6 +23,7 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'add',
                                    overrides.override_add)
     addopt = [('', 'large', None, _('add as largefile')),
+              ('', 'normal', None, _('add as normal file')),
               ('', 'lfsize', '', _('add all files above this size '
                                    '(in megabytes) as largefiles '
                                    '(default: 10)'))]

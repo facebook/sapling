@@ -179,6 +179,11 @@ def remove_largefiles(ui, repo, *pats, **opts):
 # matcher which matches only the normal files and runs the original
 # version of add.
 def override_add(orig, ui, repo, *pats, **opts):
+    normal = opts.pop('normal')
+    if normal:
+        if opts.get('large'):
+            raise util.Abort(_('--normal cannot be used with --large'))
+        return orig(ui, repo, *pats, **opts)
     bad = add_largefiles(ui, repo, *pats, **opts)
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
