@@ -37,8 +37,7 @@ create subversion repo
   Adding         src/alpha
   Transmitting file data ..
   Committed revision 1.
-  $ svn up
-  At revision 1.
+  $ svn up -q
   $ echo "externals -r1 $SVNREPO/externals" > extdef
   $ svn propset -F extdef svn:externals src
   property 'svn:externals' set on 'src'
@@ -105,13 +104,13 @@ change file in svn and hg, commit
   branch: default
   commit: 1 modified, 1 subrepos
   update: (current)
-  $ hg commit --subrepos -m 'Message!'
+  $ hg commit --subrepos -m 'Message!' | grep -v Updating
   committing subrepository s
   Sending*s/alpha (glob)
   Transmitting file data .
   Committed revision 3.
   
-  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Fetching external item into '*s/externals'* (glob)
   External at revision 1.
   
   At revision 3.
@@ -129,12 +128,7 @@ bringing any changes.
   $ svn mkdir "$SVNREPO/unrelated" -m 'create unrelated'
   
   Committed revision 4.
-  $ svn up s
-  
-  Fetching external item into 's/externals'
-  External at revision 1.
-  
-  At revision 4.
+  $ svn up -q s
   $ hg sum
   parent: 2:* tip (glob)
    Message!
@@ -151,19 +145,12 @@ should be empty despite change to s/a
 add a commit from svn
 
   $ cd "$WCROOT"/src
-  $ svn up
-  U    alpha
-  
-  Fetching external item into 'externals'
-  A    externals/other
-  Updated external to revision 1.
-  
-  Updated to revision 4.
+  $ svn up -q
   $ echo xyz >> alpha
   $ svn propset svn:mime-type 'text/xml' alpha
   property 'svn:mime-type' set on 'alpha'
   $ svn ci -m 'amend a from svn'
-  Sending        src/alpha
+  Sending        *alpha (glob)
   Transmitting file data .
   Committed revision 5.
   $ cd ../../sub/t
@@ -171,10 +158,9 @@ add a commit from svn
 this commit from hg will fail
 
   $ echo zzz >> s/alpha
-  $ hg ci --subrepos -m 'amend alpha from hg'
+  $ (hg ci --subrepos -m 'amend alpha from hg' 2>&1; echo "[$?]") | grep -vi 'out of date'
   committing subrepository s
-  abort: svn: Commit failed (details follow):
-  svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
+  abort: svn:*Commit failed (details follow): (glob)
   [255]
   $ svn revert -q s/alpha
 
@@ -182,10 +168,9 @@ this commit fails because of meta changes
 
   $ svn propset svn:mime-type 'text/html' s/alpha
   property 'svn:mime-type' set on 's/alpha'
-  $ hg ci --subrepos -m 'amend alpha from hg'
+  $ (hg ci --subrepos -m 'amend alpha from hg' 2>&1; echo "[$?]") | grep -vi 'out of date'
   committing subrepository s
-  abort: svn: Commit failed (details follow):
-  svn: (Out of date)?.*/src/alpha.*(is out of date)? (re)
+  abort: svn:*Commit failed (details follow): (glob)
   [255]
   $ svn revert -q s/alpha
 
@@ -228,7 +213,7 @@ clone
   A    tc/s/alpha
    U   tc/s
   
-  Fetching external item into 'tc/s/externals'
+  Fetching external item into 'tc/s/externals'* (glob)
   A    tc/s/externals/other
   Checked out external at revision 1.
   
@@ -236,7 +221,7 @@ clone
   A    tc/subdir/s/alpha
    U   tc/subdir/s
   
-  Fetching external item into 'tc/subdir/s/externals'
+  Fetching external item into 'tc/subdir/s/externals'* (glob)
   A    tc/subdir/s/externals/other
   Checked out external at revision 1.
   
@@ -272,18 +257,18 @@ Check hg update --clean
   $ echo c1 > f1
   $ echo c1 > f2
   $ svn add f1 -q
-  $ svn status
-  ? *    a (glob)
-  X *    externals (glob)
-  ? *    f2 (glob)
-  M *    alpha (glob)
-  A *    f1 (glob)
+  $ svn status | sort
   
-  Performing status on external item at 'externals'
+  ? *    a (glob)
+  ? *    f2 (glob)
+  A *    f1 (glob)
+  M *    alpha (glob)
+  Performing status on external item at 'externals'* (glob)
+  X *    externals (glob)
   $ cd ../..
   $ hg -R t update -C
   
-  Fetching external item into 't/s/externals'
+  Fetching external item into 't/s/externals'* (glob)
   Checked out external at revision 1.
   
   Checked out revision 3.
@@ -295,7 +280,7 @@ Check hg update --clean
   ? *    f1 (glob)
   ? *    f2 (glob)
   
-  Performing status on external item at 'externals'
+  Performing status on external item at 'externals'* (glob)
 
 Sticky subrepositories, no changes
   $ cd $TESTTMP/sub/t
@@ -306,9 +291,9 @@ Sticky subrepositories, no changes
   3
   $ cd ..
   $ hg update 1
-  U    $TESTTMP/sub/t/s/alpha
+  U    *s/alpha (glob)
   
-  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Fetching external item into '*s/externals'* (glob)
   Checked out external at revision 1.
   
   Checked out revision 2.
@@ -344,9 +329,9 @@ Sticky subrepositorys, file changes
   2M
   $ cd ..
   $ hg update --clean tip
-  U    $TESTTMP/sub/t/s/alpha
+  U    *s/alpha (glob)
   
-  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Fetching external item into '*s/externals'* (glob)
   Checked out external at revision 1.
   
   Checked out revision 3.
@@ -360,14 +345,7 @@ Sticky subrepository, revision updates
   3
   $ cd ..
   $ cd s
-  $ svn update -r 1
-  U    alpha
-   U   .
-  
-  Fetching external item into 'externals'
-  Updated external to revision 1.
-  
-  Updated to revision 1.
+  $ svn update -qr 1
   $ cd ..
   $ hg update 1
    subrepository sources for s differ (in checked out version)
@@ -404,11 +382,11 @@ Sticky subrepository, file changes and revision updates
   $ cd ..
 
 Sticky repository, update --clean
-  $ hg update --clean tip
-  U    $TESTTMP/sub/t/s/alpha
-   U   $TESTTMP/sub/t/s
+  $ hg update --clean tip | grep -v s/externals/other
+  U    *s/alpha (glob)
+   U   *s (glob)
   
-  Fetching external item into '$TESTTMP/sub/t/s/externals'
+  Fetching external item into '*s/externals'* (glob)
   Checked out external at revision 1.
   
   Checked out revision 3.
@@ -422,13 +400,7 @@ Sticky repository, update --clean
 
 Test subrepo already at intended revision:
   $ cd s
-  $ svn update -r 2
-  U    alpha
-  
-  Fetching external item into 'externals'
-  Updated external to revision 1.
-  
-  Updated to revision 2.
+  $ svn update -qr 2
   $ cd ..
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -449,8 +421,8 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   A         dir
   A         dir/epsilon.py
   $ svn ci -m 'Add dir/epsilon.py'
-  Adding         src/dir
-  Adding         src/dir/epsilon.py
+  Adding         *dir (glob)
+  Adding         *dir/epsilon.py (glob)
   Transmitting file data .
   Committed revision 6.
   $ cd ../..
@@ -466,22 +438,15 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   adding a
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ svn up -r6 s
-  A    s/dir
-  A    s/dir/epsilon.py
-  
-  Fetching external item into 's/externals'
-  Updated external to revision 1.
-  
-  Updated to revision 6.
+  $ svn up -qr6 s
   $ hg ci -m updatesub
   committing subrepository s
   created new head
   $ echo pyc > s/dir/epsilon.pyc
   $ hg up 1
-  D    $TESTTMP/rebaserepo/s/dir
+  D    *s/dir (glob)
   
-  Fetching external item into '$TESTTMP/rebaserepo/s/externals'
+  Fetching external item into '*s/externals'* (glob)
   Checked out external at revision 1.
   
   Checked out revision 5.
@@ -510,7 +475,7 @@ test having obstructions when switching branches on checkout:
 Switching back to the head where we have another path mapped to the
 same subrepo should work if the subrepo is clean.
   $ hg co other
-  A    $TESTTMP/rebaserepo/obstruct/other
+  A    *obstruct/other (glob)
   Checked out revision 1.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -523,7 +488,7 @@ This is surprising, but is also correct based on the current code:
 Point to a Subversion branch which has since been deleted and recreated
 First, create that condition in the repository.
 
-  $ hg ci --subrepos -m cleanup
+  $ hg ci --subrepos -m cleanup | grep -v Updating
   committing subrepository obstruct
   Sending        obstruct/other
   Transmitting file data .
@@ -550,9 +515,7 @@ First, create that condition in the repository.
   $ svn copy -m "recreate branch" $SVNREPO/trunk $SVNREPO/branch
   
   Committed revision 12.
-  $ svn up
-  D    somethingold
-  Updated to revision 12.
+  $ svn up -q
   $ echo "something new" > somethingnew
   $ svn add somethingnew
   A         somethingnew
@@ -569,16 +532,13 @@ First, create that condition in the repository.
   $ hg ci -m addsub
   committing subrepository recreated
   $ cd recreated
-  $ svn up
-  D    somethingold
-  A    somethingnew
-  Updated to revision 13.
+  $ svn up -q
   $ cd ..
   $ hg ci -m updatesub
   committing subrepository recreated
   $ hg up -r-2
-  D    $TESTTMP/rebaserepo/recreated/somethingnew
-  A    $TESTTMP/rebaserepo/recreated/somethingold
+  D    *recreated/somethingnew (glob)
+  A    *recreated/somethingold (glob)
   Checked out revision 10.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ test -f recreated/somethingold
