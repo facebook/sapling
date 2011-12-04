@@ -1629,6 +1629,8 @@ class url(object):
         'path'
         >>> str(url('file:///tmp/foo/bar'))
         'file:///tmp/foo/bar'
+        >>> str(url('file:///c:/tmp/foo/bar'))
+        'file:///c%3A/tmp/foo/bar'
         >>> print url(r'bundle:foo\bar')
         bundle:foo\bar
         """
@@ -1643,8 +1645,11 @@ class url(object):
         s = self.scheme + ':'
         if self.user or self.passwd or self.host:
             s += '//'
-        elif self.scheme and (not self.path or self.path.startswith('/')):
+        elif self.scheme and (not self.path or self.path.startswith('/')
+                              or hasdriveletter(self.path)):
             s += '//'
+            if hasdriveletter(self.path):
+                s += '/'
         if self.user:
             s += urllib.quote(self.user, safe=self._safechars)
         if self.passwd:
@@ -1716,7 +1721,7 @@ def hasscheme(path):
     return bool(url(path).scheme)
 
 def hasdriveletter(path):
-    return path[1:2] == ':' and path[0:1].isalpha()
+    return path and path[1:2] == ':' and path[0:1].isalpha()
 
 def urllocalpath(path):
     return url(path, parsequery=False, parsefragment=False).localpath()
