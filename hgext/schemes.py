@@ -72,9 +72,10 @@ class ShortRepository(object):
         return hg._peerlookup(url).instance(ui, url, create)
 
 def hasdriveletter(orig, path):
-    for scheme in schemes:
-        if path.startswith(scheme + ':'):
-            return False
+    if path:
+        for scheme in schemes:
+            if path.startswith(scheme + ':'):
+                return False
     return orig(path)
 
 schemes = {
