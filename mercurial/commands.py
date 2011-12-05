@@ -819,6 +819,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
 def branch(ui, repo, label=None, **opts):
     """set or show the current branch name
 
+    .. note::
+       Branch names are permanent and global. Use :hg:`bookmark` to create a
+       light-weight bookmark instead. See :hg:`help glossary` for more
+       information about named branches and bookmarks.
+
     With no argument, show the current branch name. With one argument,
     set the working directory branch name (the branch will not exist
     in the repository until the next commit). Standard practice
@@ -834,11 +839,6 @@ def branch(ui, repo, label=None, **opts):
 
     Use the command :hg:`update` to switch to an existing branch. Use
     :hg:`commit --close-branch` to mark this branch as closed.
-
-    .. note::
-       Branch names are permanent. Use :hg:`bookmark` to create a
-       light-weight bookmark instead. See :hg:`help glossary` for more
-       information about named branches and bookmarks.
 
     Returns 0 on success.
     """
