@@ -50,16 +50,6 @@ repository path
 Files
 -----
 
-``.hgignore``
-    This file contains regular expressions (one per line) that
-    describe file names that should be ignored by **hg**. For details,
-    see |hgignore(5)|_.
-
-``.hgtags``
-    This file contains changeset hash values and text tag names (one
-    of each separated by spaces) that correspond to tagged versions of
-    the repository contents.
-
 ``/etc/mercurial/hgrc``, ``$HOME/.hgrc``, ``.hg/hgrc``
     This file contains defaults and configuration. Values in
     ``.hg/hgrc`` override those in ``$HOME/.hgrc``, and these override
@@ -67,6 +57,34 @@ Files
     See |hgrc(5)|_ for details of the contents and format of these
     files.
 
+``.hgignore``
+    This file contains regular expressions (one per line) that
+    describe file names that should be ignored by **hg**. For details,
+    see |hgignore(5)|_.
+
+``.hgsub``
+    This file defines the locations of all subrepositories, and
+    tells where the subrepository checkouts came from. For details, see
+    :hg:`help subrepos`.
+
+``.hgsubstate``
+    This file is where Mercurial stores all nested repository states. *NB: This
+    file should not be edited manually.*
+
+``.hgtags``
+    This file contains changeset hash values and text tag names (one
+    of each separated by spaces) that correspond to tagged versions of
+    the repository contents. The file content is encoded using UTF-8.
+
+``.hg/last-message.txt``
+    This file is used by :hg:`commit` to store a backup of the commit message
+    in case the commit fails.
+
+``.hg/localtags``
+    This file can be used to define local tags which are not shared among
+    repositories. The file format is the same as for ``.hgtags``, but it is
+    encoded using the local system encoding.
+    
 Some commands (e.g. revert) produce backup files ending in ``.orig``,
 if the ``.orig`` file already exists and is not tracked by Mercurial,
 it will be overwritten.
