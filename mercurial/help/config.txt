@@ -229,7 +229,7 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
 
 ``annotate``
-""""""""
+""""""""""""
 
 Settings used when displaying file annotations. All values are
 Booleans and default to False. See ``diff`` section for related
