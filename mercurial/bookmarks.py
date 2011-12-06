@@ -155,7 +155,9 @@ def listbookmarks(repo):
 
     d = {}
     for k, v in marks.iteritems():
-        d[k] = hex(v)
+        # don't expose local divergent bookmarks
+        if '@' not in k and not k.endswith('@'):
+            d[k] = hex(v)
     return d
 
 def pushbookmark(repo, key, old, new):
@@ -192,8 +194,14 @@ def updatefromremote(ui, repo, remote):
                     changed = True
                     ui.status(_("updating bookmark %s\n") % k)
                 else:
-                    ui.warn(_("not updating divergent"
-                                   " bookmark %s\n") % k)
+                    for x in range(1, 100):
+                        n = '%s@%d' % (k, x)
+                        if n not in repo._bookmarks:
+                            break
+                    repo._bookmarks[n] = cr.node()
+                    changed = True
+                    ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
+
     if changed:
         write(repo)
 
