@@ -635,10 +635,7 @@ def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in ctx.substate:
             sub = ctx.sub(subpath)
-            try:
-                sub.archive(repo.ui, archiver, prefix)
-            except TypeError:
-                sub.archive(archiver, prefix)
+            sub.archive(repo.ui, archiver, prefix)
 
     archiver.done()
 

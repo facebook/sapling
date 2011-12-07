@@ -88,12 +88,8 @@ def reposetup(ui, repo):
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
             if not self.lfstatus:
-                try:
-                    return super(lfiles_repo, self).status(node1, node2, match,
-                        listignored, listclean, listunknown, listsubrepos)
-                except TypeError:
-                    return super(lfiles_repo, self).status(node1, node2, match,
-                        listignored, listclean, listunknown)
+                return super(lfiles_repo, self).status(node1, node2, match,
+                    listignored, listclean, listunknown, listsubrepos)
             else:
                 # some calls in this function rely on the old version of status
                 self.lfstatus = False
@@ -140,12 +136,8 @@ def reposetup(ui, repo):
 
                 # Get ignored files here even if we weren't asked for them; we
                 # must use the result here for filtering later
-                try:
-                    result = super(lfiles_repo, self).status(node1, node2, m,
-                        True, clean, unknown, listsubrepos)
-                except TypeError:
-                    result = super(lfiles_repo, self).status(node1, node2, m,
-                        True, clean, unknown)
+                result = super(lfiles_repo, self).status(node1, node2, m,
+                    True, clean, unknown, listsubrepos)
                 if working:
                     # hold the wlock while we read largefiles and
                     # update the lfdirstate
