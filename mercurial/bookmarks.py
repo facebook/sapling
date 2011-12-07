@@ -177,7 +177,7 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
-def updatefromremote(ui, repo, remote):
+def updatefromremote(ui, repo, remote, path):
     ui.debug("checking for updated bookmarks\n")
     rb = remote.listkeys('bookmarks')
     changed = False
@@ -194,10 +194,17 @@ def updatefromremote(ui, repo, remote):
                     changed = True
                     ui.status(_("updating bookmark %s\n") % k)
                 else:
+                    # find a unique @ suffix
                     for x in range(1, 100):
                         n = '%s@%d' % (k, x)
                         if n not in repo._bookmarks:
                             break
+                    # try to use an @pathalias suffix
+                    # if an @pathalias already exists, we overwrite (update) it
+                    for p, u in ui.configitems("paths"):
+                        if path == u:
+                            n = '%s@%s' % (k, p)
+
                     repo._bookmarks[n] = cr.node()
                     changed = True
                     ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
