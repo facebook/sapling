@@ -4043,7 +4043,7 @@ def merge(ui, repo, node=None, **opts):
                                  % branch,
                                  hint=_("run 'hg heads' to see all heads"))
             msg = _('there is nothing to merge')
-            if parent != repo.lookup(repo[None].branch()):
+            if parent != repo.lookup(branch):
                 msg = _('%s - use "hg update" instead') % msg
             raise util.Abort(msg)
 
