@@ -108,7 +108,8 @@ Contents of b should be "this is file b1"
   $ echo This is file b22 > b
 merge fails
   $ hg merge 2
-  abort: outstanding uncommitted changes (use 'hg status' to list changes)
+  abort: outstanding uncommitted changes
+  (use 'hg status' to list changes)
   [255]
 merge expected!
   $ hg merge -f 2
@@ -144,7 +145,8 @@ merge expected!
   $ echo This is file b33 > b
 merge of b should fail
   $ hg merge 2
-  abort: outstanding uncommitted changes (use 'hg status' to list changes)
+  abort: outstanding uncommitted changes
+  (use 'hg status' to list changes)
   [255]
 merge of b expected
   $ hg merge -f 2

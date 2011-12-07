@@ -4042,10 +4042,10 @@ def merge(ui, repo, node=None, **opts):
                                    "please merge with an explicit rev")
                                  % branch,
                                  hint=_("run 'hg heads' to see all heads"))
-            msg = _('there is nothing to merge')
+            msg, hint = _('nothing to merge'), None
             if parent != repo.lookup(branch):
-                msg = _('%s - use "hg update" instead') % msg
-            raise util.Abort(msg)
+                hint = _("use 'hg update' instead")
+            raise util.Abort(msg, hint=hint)
 
         if parent not in bheads:
             raise util.Abort(_('working directory not at a head revision'),

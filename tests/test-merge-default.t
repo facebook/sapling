@@ -66,7 +66,7 @@ Should succeed - 2 heads:
 Should fail because at tip:
 
   $ hg merge
-  abort: there is nothing to merge
+  abort: nothing to merge
   [255]
 
   $ hg up 0
@@ -75,7 +75,8 @@ Should fail because at tip:
 Should fail because there is only one head:
 
   $ hg merge
-  abort: there is nothing to merge - use "hg update" instead
+  abort: nothing to merge
+  (use 'hg update' instead)
   [255]
 
   $ hg up 3

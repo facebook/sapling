@@ -519,11 +519,12 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
                                    " has no effect"))
             elif pa == p1:
                 if p1.branch() == p2.branch():
-                    raise util.Abort(_("nothing to merge (use 'hg update'"
-                                       " or check 'hg heads')"))
+                    raise util.Abort(_("nothing to merge"),
+                                     hint=_("use 'hg update' "
+                                            "or check 'hg heads'"))
             if not force and (wc.files() or wc.deleted()):
-                raise util.Abort(_("outstanding uncommitted changes "
-                                   "(use 'hg status' to list changes)"))
+                raise util.Abort(_("outstanding uncommitted changes"),
+                                 hint=_("use 'hg status' to list changes"))
             for s in wc.substate:
                 if wc.sub(s).dirty():
                     raise util.Abort(_("outstanding uncommitted changes in "

@@ -19,7 +19,8 @@ Local deleted a file, remote removed
 Should fail, since there are deleted files:
 
   $ hg merge
-  abort: outstanding uncommitted changes (use 'hg status' to list changes)
+  abort: outstanding uncommitted changes
+  (use 'hg status' to list changes)
   [255]
 
 Should succeed with --force:
