@@ -127,17 +127,25 @@ def reposetup(ui, repo):
                         return lfutil.standin(file)
                     return file
 
+                # Create a function that we can use to override what is
+                # normally the ignore matcher.  We've already checked
+                # for ignored files on the first dirstate walk, and
+                # unecessarily re-checking here causes a huge performance
+                # hit because lfdirstate only knows about largefiles
+                def _ignoreoverride(self):
+                    return False
+
                 m = copy.copy(match)
                 m._files = [tostandin(f) for f in m._files]
 
-                # get ignored, clean, and unknown but remove them
-                # later if they were not asked for
+                # Get ignored files here even if we weren't asked for them; we
+                # must use the result here for filtering later
                 try:
                     result = super(lfiles_repo, self).status(node1, node2, m,
-                        True, True, True, listsubrepos)
+                        True, clean, unknown, listsubrepos)
                 except TypeError:
                     result = super(lfiles_repo, self).status(node1, node2, m,
-                        True, True, True)
+                        True, clean, unknown)
                 if working:
                     # hold the wlock while we read largefiles and
                     # update the lfdirstate
@@ -148,12 +156,25 @@ def reposetup(ui, repo):
                         # The status of these files was already computed using
                         # super's status.
                         lfdirstate = lfutil.openlfdirstate(ui, self)
+                        # Override lfdirstate's ignore matcher to not do
+                        # anything
+                        orig_ignore = lfdirstate._ignore
+                        lfdirstate._ignore = _ignoreoverride
+
                         match._files = [f for f in match._files if f in
                             lfdirstate]
-                        s = lfdirstate.status(match, [], listignored,
-                                listclean, listunknown)
+                        # Don't waste time getting the ignored and unknown
+                        # files again; we already have them
+                        s = lfdirstate.status(match, [], False,
+                                listclean, False)
                         (unsure, modified, added, removed, missing, unknown,
                                 ignored, clean) = s
+                        # Replace the list of ignored and unknown files with
+                        # the previously caclulated lists, and strip out the
+                        # largefiles
+                        lfiles = set(lfdirstate._map)
+                        ignored = set(result[5]).difference(lfiles)
+                        unknown = set(result[4]).difference(lfiles)
                         if parentworking:
                             for lfile in unsure:
                                 if ctx1[lfutil.standin(lfile)].data().strip() \
@@ -177,6 +198,8 @@ def reposetup(ui, repo):
                                         clean.append(lfile)
                                 else:
                                     added.append(lfile)
+                        # Replace the original ignore function
+                        lfdirstate._ignore = orig_ignore
                     finally:
                         wlock.release()
 
@@ -192,12 +215,13 @@ def reposetup(ui, repo):
                     lfiles = (modified, added, removed, missing, [], [], clean)
                     result = list(result)
                     # Unknown files
+                    unknown = set(unknown).difference(ignored)
                     result[4] = [f for f in unknown
                                  if (repo.dirstate[f] == '?' and
                                      not lfutil.isstandin(f))]
-                    # Ignored files must be ignored by both the dirstate and
-                    # lfdirstate
-                    result[5] = set(ignored).intersection(set(result[5]))
+                    # Ignored files were calculated earlier by the dirstate,
+                    # and we already stripped out the largefiles from the list
+                    result[5] = ignored
                     # combine normal files and largefiles
                     normals = [[fn for fn in filelist
                                 if not lfutil.isstandin(fn)]
