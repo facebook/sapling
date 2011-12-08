@@ -17,6 +17,7 @@
 
   $ hg branch branch1
   marked working directory as branch branch1
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m 'branch1'
 
   $ echo b > b
@@ -27,6 +28,7 @@
 
   $ hg branch branch2
   marked working directory as branch branch2
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m 'branch2'
 
   $ echo c > C
@@ -37,6 +39,7 @@
 
   $ hg branch -f branch2
   marked working directory as branch branch2
+  (branches are permanent and global, did you want a bookmark?)
   $ echo d > d
   $ hg ci -Am D
   adding d
@@ -51,6 +54,7 @@
 
   $ hg branch branch3
   marked working directory as branch branch3
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m 'branch3'
 
   $ echo f > f

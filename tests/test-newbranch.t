@@ -9,11 +9,13 @@
   $ hg ci -m "initial"
   $ hg branch foo
   marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
   $ hg branch
   foo
   $ hg ci -m "add branch name"
   $ hg branch bar
   marked working directory as branch bar
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m "change branch name"
 
 Branch shadowing:
@@ -25,6 +27,7 @@ Branch shadowing:
 
   $ hg branch -f default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
 
   $ hg ci -m "clear branch name"
   created new head
@@ -186,6 +189,7 @@ Update with no arguments: tipmost revision of the current branch:
 
   $ hg branch foobar
   marked working directory as branch foobar
+  (branches are permanent and global, did you want a bookmark?)
 
   $ hg up
   abort: branch foobar not found
@@ -195,6 +199,7 @@ Fastforward merge:
 
   $ hg branch ff
   marked working directory as branch ff
+  (branches are permanent and global, did you want a bookmark?)
 
   $ echo ff > ff
   $ hg ci -Am'fast forward'
@@ -256,6 +261,7 @@ Test merging, add 3 default heads and one test head:
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
   $ echo e >> e
   $ hg ci -Ame
   adding e

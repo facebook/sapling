@@ -41,6 +41,7 @@ Two changesets this time so we rollback to a real changeset
 Test issue 902 (current branch is preserved)
   $ hg branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
   $ hg rollback
   repository tip rolled back to revision 0 (undo commit)
   working directory now based on revision 0
@@ -56,6 +57,7 @@ Test rollback of hg before issue 902 was fixed
   $ hg commit -m "test3"
   $ hg branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
   $ rm .hg/undo.branch
   $ hg rollback
   repository tip rolled back to revision 0 (undo commit)

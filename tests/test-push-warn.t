@@ -393,6 +393,7 @@ Check prepush logic with merged branches:
   $ hg init j
   $ hg -R j branch a
   marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
   $ echo init > j/foo
   $ hg -R j ci -Am init
   adding foo
@@ -403,6 +404,7 @@ Check prepush logic with merged branches:
   $ hg -R j ci -m a1
   $ hg -R k branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > k/foo
   $ hg -R k ci -m b
   $ hg -R k up 0
@@ -466,11 +468,13 @@ Check prepush with new branch head on former topo non-head:
   $ cd n
   $ hg branch A
   marked working directory as branch A
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a >a
   $ hg ci -Ama
   adding a
   $ hg branch B
   marked working directory as branch B
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b >b
   $ hg ci -Amb
   adding b
@@ -543,11 +547,13 @@ Check prepush with new branch head on former topo head:
   $ cd o
   $ hg branch A
   marked working directory as branch A
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a >a
   $ hg ci -Ama
   adding a
   $ hg branch B
   marked working directory as branch B
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b >b
   $ hg ci -Amb
   adding b
@@ -629,6 +635,7 @@ but child is on different branch:
   $ cd p
   $ hg branch A
   marked working directory as branch A
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a0 >a
   $ hg ci -Ama0
   adding a
@@ -638,6 +645,7 @@ but child is on different branch:
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch B
   marked working directory as branch B
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b0 >b
   $ hg ci -Amb0
   adding b
@@ -652,6 +660,7 @@ but child is on different branch:
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch -f B
   marked working directory as branch B
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a3 >a
   $ hg ci -ma3
   created new head
@@ -659,6 +668,7 @@ but child is on different branch:
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch -f A
   marked working directory as branch A
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b3 >b
   $ hg ci -mb3
   created new head

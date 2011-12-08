@@ -20,6 +20,7 @@
   $ hg add a
   $ hg branch a
   marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -m "Adding a branch"
   $ heads
   1: Adding a branch (a)
@@ -36,6 +37,7 @@
   $ hg add b
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -m "Adding b branch"
   $ heads
   2: Adding b branch (b)
@@ -117,6 +119,7 @@
   $ hg add c
   $ hg branch c
   marked working directory as branch c
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -m "Adding c branch"
   $ heads
   7: Adding c branch (c)
@@ -287,6 +290,7 @@ Init: no msg
 
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 1 > b
   $ hg ci -Am "b2: Initial root for branch b"
   adding b
@@ -298,6 +302,7 @@ Case NN: msg
   $ hg up -q null
   $ hg branch -f b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 1 > bb
   $ hg ci -Am "b4 (NN): new topo root for branch b"
   adding bb
@@ -312,6 +317,7 @@ Case BN: msg
 
   $ hg branch -f default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 1 > aa
   $ hg ci -Am "a6 (BN): new branch root"
   adding aa
@@ -331,6 +337,7 @@ Case BB: msg
   $ hg merge -q 3
   $ hg branch -f default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m "a8 (BB): weird new branch root"
   created new head
 

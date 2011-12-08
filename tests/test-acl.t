@@ -1360,6 +1360,7 @@ Branch acl tests setup
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch foobar
   marked working directory as branch foobar
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -m 'create foobar'
   $ echo 'foo contents' > abc.txt
   $ hg add abc.txt

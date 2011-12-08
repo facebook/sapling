@@ -5,6 +5,7 @@
   adding foo
   $ hg branch branchA
   marked working directory as branch branchA
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a1 > foo
   $ hg ci -ma1 # 1
 
@@ -32,6 +33,7 @@ Create branch B:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch branchB
   marked working directory as branch branchB
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b1 > foo
   $ hg ci -mb1 # 3
 
@@ -139,6 +141,7 @@ Make changes on new branch on tt
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch branchC
   marked working directory as branch branchC
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b1 > bar 
   $ hg ci -Am "commit on branchC on tt"
   adding bar

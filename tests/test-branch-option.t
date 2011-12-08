@@ -4,6 +4,7 @@ test branch selection options
   $ cd branch
   $ hg branch a
   marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a > foo
   $ hg ci -d '0 0' -Ama
   adding foo
@@ -13,6 +14,7 @@ test branch selection options
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch c
   marked working directory as branch c
+  (branches are permanent and global, did you want a bookmark?)
   $ echo c > foo
   $ hg ci -d '0 0' -mc
   $ hg tag -l z
@@ -29,18 +31,21 @@ test branch selection options
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > foo
   $ hg ci -d '0 0' -mb
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --encoding utf-8 branch æ
   marked working directory as branch \xc3\xa6 (esc)
+  (branches are permanent and global, did you want a bookmark?)
   $ echo ae1 > foo
   $ hg ci -d '0 0' -mae1
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --encoding utf-8 branch -f æ
   marked working directory as branch \xc3\xa6 (esc)
+  (branches are permanent and global, did you want a bookmark?)
   $ echo ae2 > foo
   $ hg ci -d '0 0' -mae2
   created new head
@@ -48,6 +53,7 @@ test branch selection options
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch -f b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b2 > foo
   $ hg ci -d '0 0' -mb2
   created new head

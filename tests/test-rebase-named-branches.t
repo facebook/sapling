@@ -28,6 +28,7 @@ Rebasing descendant onto ancestor across different named branches
 
   $ hg branch dev
   marked working directory as branch dev
+  (branches are permanent and global, did you want a bookmark?)
 
   $ echo x > x
 

@@ -1922,6 +1922,7 @@ test outgoing:
 
   $ hg branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
 
   $ echo d > d
   $ hg add d

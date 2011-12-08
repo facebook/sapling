@@ -36,6 +36,7 @@
 
   $ hg branch 'notdefault'
   marked working directory as branch notdefault
+  (branches are permanent and global, did you want a bookmark?)
   $ echo F >> A
   $ hg ci -m F
 

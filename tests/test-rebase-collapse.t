@@ -452,12 +452,14 @@ Interactions between collapse and keepbranches
 
   $ hg branch '1'
   marked working directory as branch 1
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 'b' > b
   $ hg ci -Am 'B'
   adding b
 
   $ hg branch '2'
   marked working directory as branch 2
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 'c' > c
   $ hg ci -Am 'C'
   adding c

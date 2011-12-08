@@ -324,6 +324,7 @@ create bundle with two heads
   $ echo y > tobundle/y
   $ hg -R tobundle branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
   $ hg -R tobundle add tobundle/y
   $ hg -R tobundle commit -m'y'
   $ hg -R tobundle bundle tobundle.hg

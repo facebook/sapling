@@ -76,6 +76,7 @@ qpush warning branchheads
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo c > c
   $ hg ci -Amc
   adding c
@@ -125,6 +126,7 @@ Testing applied patches, push and --force
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch branch
   marked working directory as branch branch
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > b
   $ hg ci -Am addb
   adding b

@@ -8,10 +8,12 @@
   $ hg add a
   $ hg branch a
   marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '1 0' -m "Adding a branch"
 
   $ hg branch q
   marked working directory as branch q
+  (branches are permanent and global, did you want a bookmark?)
   $ echo 'aa' >a
   $ hg branch -C
   reset working directory to branch a
@@ -23,6 +25,7 @@
   $ hg add b
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '2 0' -m "Adding b branch"
 
   $ echo 'bh1' >bh1
@@ -39,6 +42,7 @@
   $ hg add c
   $ hg branch c
   marked working directory as branch c
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '5 0' -m "Adding c branch"
 
   $ hg branch tip
@@ -55,6 +59,7 @@
   $ hg add d
   $ hg branch 'a branch name much longer than the default justification used by branches'
   marked working directory as branch a branch name much longer than the default justification used by branches
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '6 0' -m "Adding d branch"
 
   $ hg branches

@@ -84,6 +84,7 @@ Should fail because there is only one head:
   $ echo f >> a
   $ hg branch foobranch
   marked working directory as branch foobranch
+  (branches are permanent and global, did you want a bookmark?)
   $ hg commit -mf
 
 Should fail because merge with other branch:

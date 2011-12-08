@@ -1000,6 +1000,7 @@ Test restricted mode with transplant -b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch foo
   marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
   $ mv a a.bak
   $ echo foobranch > a
   $ cat a.bak >> a

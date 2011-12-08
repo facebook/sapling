@@ -31,6 +31,7 @@ Should not issue new head warning:
   $ echo crap > a
   $ hg branch testing
   marked working directory as branch testing
+  (branches are permanent and global, did you want a bookmark?)
 
 Should not issue warning:
 
