@@ -54,13 +54,13 @@
 # - keyword template maps в keywords - придумать лучший перевод
 # - вычитка, исправление опечаток, стилистика многих предложений
 # - протестировать сообщения об ошибках (я не видел большинство из них в работе)
-
-
+# - строки с пользовательским вводом (вида &Local). Пока не знаю, как они обрабатываются.
+# - числительные - сейчас всегда множественное число
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-07 22:44+0400\n"
+"POT-Creation-Date: 2011-12-08 20:14+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -3521,8 +3521,8 @@ msgid ""
 "    x*    = ignore"
 msgstr ""
 "    [keyword]\n"
-"    # подставлять ключевые слова во всех файлах на python, кроме "
-"    #совпадающих с шаблоном \"x*\"\n"
+"    # подставлять ключевые слова во всех файлах на python, кроме     "
+"#совпадающих с шаблоном \"x*\"\n"
 "    **.py =\n"
 "    x*    = ignore"
 
@@ -3532,8 +3532,8 @@ msgid ""
 "    svn = True"
 msgstr ""
 "    [keywordset]\n"
-"    # предпочитать svn- а не cvs-подобные подстановки (keywordmaps) по"
-"    #умолчанию\n"
+"    # предпочитать svn- а не cvs-подобные подстановки (keywordmaps) по    "
+"#умолчанию\n"
 "    svn = True"
 
 msgid ""
@@ -4175,105 +4175,108 @@ msgstr "нет файлов для копирования"
 
 #, python-format
 msgid "unknown archive type '%s'"
-msgstr ""
+msgstr "неизвестный тип архива '%s'"
 
 msgid "cannot give prefix when archiving to files"
-msgstr ""
+msgstr "нельзя задавать префикс при архивировании в файлы"
 
 #, python-format
 msgid "not removing %s: file is already untracked\n"
 msgstr "%s не удален, он и так не отслеживается\n"
 
 msgid "largefiles: No remote repo\n"
-msgstr ""
+msgstr "largefiles: Нет удаленного репозитория\n"
 
 msgid "largefiles to upload:\n"
-msgstr ""
+msgstr "больших файлов для отправки:\n"
 
 #, python-format
 msgid "largefiles: %d to upload\n"
-msgstr ""
+msgstr "largefiles: %d для загрузки\n"
 
 msgid "addremove cannot be run on a repo with largefiles"
 msgstr ""
+"нельзя запускать addremove в репозитории с большими файлами (largefiles)"
 
 #, python-format
 msgid "largefiles: failed to put %s (%s) into store: %s"
-msgstr ""
+msgstr "largefiles: не удалось поместить %s (%s) в хранилище: %s"
 
 #, python-format
 msgid "requested largefile %s not present in cache"
-msgstr ""
+msgstr "требуемый большой файл %s отсутствует в кеше"
 
 msgid "putlfile failed:"
-msgstr ""
+msgstr "не удалось выполнить putlfile:"
 
 msgid "putlfile failed (unexpected response):"
-msgstr ""
+msgstr "не удалось выполнить putlfile (непредвиденный ответ):"
 
 msgid "unexpected response:"
-msgstr ""
+msgstr "непредвиденный ответ:"
 
 #, python-format
 msgid "remotestore: could not put %s to remote store %s"
-msgstr ""
+msgstr "remotestore: не могу поместить %s в удаленное хранилище %s"
 
 #, python-format
 msgid "remotestore: put %s to remote store %s"
-msgstr ""
+msgstr "remotestore: %s передается в удаленное хранилище %s "
 
 #, python-format
 msgid "remotestore: could not open file %s: %s"
-msgstr ""
+msgstr "remotestore: не могу открыть файл %s: %s"
 
 #, python-format
 msgid "remotestore: largefile %s is invalid"
-msgstr ""
+msgstr "remotestore: большой файл %s поврежден (invalid)"
 
 #, python-format
 msgid "remotestore: largefile %s is missing"
-msgstr ""
+msgstr "remotestore: большой файл %s отстутствует"
 
-#, fuzzy, python-format
+#, python-format
 msgid "changeset %s: %s: contents differ\n"
-msgstr "Набор изменений %d:%s: %s\n"
+msgstr "Набор изменений %s: %s: содержимое различно\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "changeset %s: %s missing\n"
-msgstr "Набор изменений %d:%s: %s\n"
+msgstr "Набор изменений %s: %s отсутствует\n"
 
 #, python-format
 msgid ""
 "largefiles: repo method %r appears to have already been wrapped by another "
 "extension: largefiles may behave incorrectly\n"
 msgstr ""
+"largefiles: метод %r похоже уже обрабатывается другим расширением: "
+"largefiles может работать некорректно.\n"
 
 #, python-format
 msgid "file \"%s\" is a largefile standin"
-msgstr ""
+msgstr "файл \"%s\" подменяет большой файл"
 
 msgid "add as largefile"
-msgstr ""
+msgstr "добавить как большой файл"
 
 msgid ""
 "add all files above this size (in megabytes) as largefiles (default: 10)"
 msgstr ""
+"добавить все файлы больше этого размера (в Мб) как большие (по умолчанию: 10)"
 
 msgid "verify largefiles"
-msgstr ""
+msgstr "проверить большие файлы"
 
 msgid "verify all revisions of largefiles not just current"
-msgstr ""
+msgstr "проверить все ревизии больших файлов, а не только текущую"
 
 msgid "verify largefile contents not just existence"
-msgstr ""
+msgstr "проверить содержимое большого файла, а не только его наличие"
 
-#, fuzzy
 msgid "display outgoing largefiles"
-msgstr "отображать с использование файла-карты шаблонов"
+msgstr "показать исходящие большие файлы"
 
 msgid "manage a stack of patches"
-msgstr ""
+msgstr "управление очередью патчей"
 
 msgid ""
 "This extension lets you work with a stack of patches in a Mercurial\n"
@@ -18350,7 +18353,7 @@ msgstr "Возможные следующие формы URL::"
 
 msgid ""
 "  local/filesystem/path[#revision]\n"
-"  file://localhost/filesystem/path[#revision]\n"
+"  file://local/filesystem/path[#revision]\n"
 "  http://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  https://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  ssh://[user@]host[:port]/[path][#revision]"
