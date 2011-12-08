@@ -144,12 +144,14 @@ test fetch with named branches
   adding a
   $ hg -R nbase branch a
   marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a > nbase/a
   $ hg -R nbase ci -m a
   $ hg -R nbase up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R nbase branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > nbase/b
   $ hg -R nbase ci -Am b
   adding b
@@ -318,6 +320,7 @@ pull in change on different branch than dirstate
   $ hg -R n1 ci -m next
   $ hg -R n2 branch topic
   marked working directory as branch topic
+  (branches are permanent and global, did you want a bookmark?)
   $ hg -R n2 fetch -m merge n1
   abort: working dir not at branch tip (use "hg update" to check out branch tip)
   [255]
@@ -336,11 +339,13 @@ test fetch with inactive branches
   adding a
   $ hg --cwd ib1 branch second
   marked working directory as branch second
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > ib1/b
   $ hg --cwd ib1 ci -Am onsecond
   adding b
   $ hg --cwd ib1 branch -f default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
   $ echo c > ib1/c
   $ hg --cwd ib1 ci -Am newdefault
   adding c

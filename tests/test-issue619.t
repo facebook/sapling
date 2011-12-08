@@ -8,6 +8,7 @@ http://mercurial.selenic.com/bts/issue619
   $ echo b > b
   $ hg branch b
   marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Amb
   adding b
 

@@ -11,6 +11,7 @@ Initialize remote repo with branches:
 
   $ hg branch br
   marked working directory as branch br
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Amb
 
   $ echo c > c

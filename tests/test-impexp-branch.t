@@ -19,6 +19,7 @@
   $ hg commit -m "No branch."
   $ hg branch abranch
   marked working directory as branch abranch
+  (branches are permanent and global, did you want a bookmark?)
   $ echo "Rev  2" >rev
   $ hg commit -m "With branch."
 

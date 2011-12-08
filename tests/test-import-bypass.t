@@ -18,6 +18,7 @@ Test --bypass with other options
   $ echo a >> a
   $ hg branch foo
   marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Am changea
   $ hg export . > ../test.diff
   $ hg up null

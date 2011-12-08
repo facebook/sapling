@@ -68,6 +68,7 @@ hg update -C 8
 hg branch some-branch
   $ hg branch some-branch
   marked working directory as branch some-branch
+  (branches are permanent and global, did you want a bookmark?)
 hg commit
   $ hgcommit -m 'started some-branch'
 hg commit --close-branch

@@ -7,6 +7,7 @@
   $ hg init a
   $ hg --encoding utf-8 -R a branch æ
   marked working directory as branch \xc3\xa6 (esc)
+  (branches are permanent and global, did you want a bookmark?)
   $ echo foo > a/foo
   $ hg -R a ci -Am foo
   adding foo

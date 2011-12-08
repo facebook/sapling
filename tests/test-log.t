@@ -629,6 +629,7 @@ log -r tip --stat
   adding a
   $ hg branch test
   marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > b
   $ hg ci -A -m "commit on test"
   adding b

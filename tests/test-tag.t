@@ -207,6 +207,7 @@ tag and branch using same name
 
   $ hg branch tag-and-branch-same-name
   marked working directory as branch tag-and-branch-same-name
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m"discouraged"
   $ hg tag tag-and-branch-same-name
   warning: tag tag-and-branch-same-name conflicts with existing branch name
@@ -278,6 +279,7 @@ tagging on an uncommitted merge (issue2542)
   $ hg co -q 0
   $ hg branch b1
   marked working directory as branch b1
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m2
   $ hg up default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

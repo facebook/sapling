@@ -407,6 +407,7 @@ shouldn't need merging
   adding a
   $ hg branch br
   marked working directory as branch br
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a >> a
   $ hg ci -m1
   $ hg up default
@@ -457,6 +458,7 @@ shouldn't need merging
   committing subrepository s
   $ hg branch br
   marked working directory as branch br
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > b
   $ hg -R s up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

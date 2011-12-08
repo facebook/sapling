@@ -862,6 +862,8 @@ def branch(ui, repo, label=None, **opts):
                                  hint=_("use 'hg update' to switch to it"))
         repo.dirstate.setbranch(label)
         ui.status(_('marked working directory as branch %s\n') % label)
+        ui.status(_('(branches are permanent and global, '
+                    'did you want a bookmark?)\n'))
     else:
         ui.write("%s\n" % repo.dirstate.branch())
 

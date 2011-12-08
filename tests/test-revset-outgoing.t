@@ -21,6 +21,7 @@
 
   $ hg branch stable
   marked working directory as branch stable
+  (branches are permanent and global, did you want a bookmark?)
   $ echo bar >> a
   $ hg ci -qm2
 

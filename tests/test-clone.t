@@ -132,6 +132,7 @@ Adding some more history to repo a:
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg branch stable
   marked working directory as branch stable
+  (branches are permanent and global, did you want a bookmark?)
   $ echo some text >a
   $ hg ci -m "starting branch stable"
   $ hg tag ref2

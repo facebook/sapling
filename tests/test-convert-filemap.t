@@ -299,6 +299,7 @@ test branch closing revision pruning if branch is pruned
   $ cd branchpruning
   $ hg branch foo
   marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -307,12 +308,14 @@ test branch closing revision pruning if branch is pruned
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch empty
   marked working directory as branch empty
+  (branches are permanent and global, did you want a bookmark?)
   $ hg ci -m emptybranch
   $ hg ci --close-branch -m closeempty
   $ hg up 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch default
   marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
   $ echo b > b
   $ hg ci -Am addb
   adding b

@@ -31,6 +31,7 @@ add initial changesets
 commit bug fixes on bug fix branch
   $ hg branch fixes
   marked working directory as branch fixes
+  (branches are permanent and global, did you want a bookmark?)
   $ echo fix1 > bugfix
   $ echo fix1 >> file1
   $ hg ci -Am"fix 1"
@@ -52,6 +53,7 @@ transplant bug fixes onto release branch
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg branch release
   marked working directory as branch release
+  (branches are permanent and global, did you want a bookmark?)
   $ hg transplant 2 3
   applying [0-9a-f]{12} (re)
   [0-9a-f]{12} transplanted to [0-9a-f]{12} (re)

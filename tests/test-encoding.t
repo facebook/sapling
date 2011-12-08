@@ -42,6 +42,7 @@ these should work
   $ HGENCODING=latin-1 hg tag `cat latin-1-tag`
   $ HGENCODING=latin-1 hg branch `cat latin-1-tag`
   marked working directory as branch \xe9 (esc)
+  (branches are permanent and global, did you want a bookmark?)
   $ HGENCODING=latin-1 hg ci -m 'latin1 branch'
   $ rm .hg/branch
 

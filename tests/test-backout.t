@@ -225,11 +225,13 @@ named branches
   adding default
   $ hg branch branch1
   marked working directory as branch branch1
+  (branches are permanent and global, did you want a bookmark?)
   $ echo branch1 > file1
   $ hg ci -d '1 0' -Am file1
   adding file1
   $ hg branch branch2
   marked working directory as branch branch2
+  (branches are permanent and global, did you want a bookmark?)
   $ echo branch2 > file2
   $ hg ci -d '2 0' -Am file2
   adding file2
