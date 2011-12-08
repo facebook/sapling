@@ -275,6 +275,19 @@ Test remote paths with spaces (issue2983):
   $ hg id --ssh "python $TESTDIR/dummyssh" "ssh://user@dummy/a repo"
   3fb238f49e8c
 
+Test hg-ssh:
+
+  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP/a repo\"" "ssh://user@dummy/a repo"
+  3fb238f49e8c
+  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
+  remote: Illegal repository '$TESTTMP/a repo'
+  abort: no suitable response from remote hg!
+  [255]
+  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
+  remote: Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
+  abort: no suitable response from remote hg!
+  [255]
+
   $ cat dummylog
   Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
   Got arguments 1:user@dummy 2:hg -R /$TESTTMP/nonexistent serve --stdio
