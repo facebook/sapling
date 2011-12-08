@@ -98,8 +98,8 @@ subrepo paths with ssh urls
   no changes found
 
   $ cat dummylog
-  Got arguments 1:user@dummy 2:'hg' -R 'cloned' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'sub' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R '$TESTTMP/cloned' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R '$TESTTMP/sub' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R cloned serve --stdio
+  Got arguments 1:user@dummy 2:hg -R sub serve --stdio
+  Got arguments 1:user@dummy 2:hg -R $TESTTMP/cloned serve --stdio
+  Got arguments 1:user@dummy 2:hg -R $TESTTMP/sub serve --stdio
   $ rm $BINDIR/ssh

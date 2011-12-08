@@ -275,27 +275,27 @@ Test remote paths with spaces (issue2983):
   3fb238f49e8c
 
   $ cat dummylog
-  Got arguments 1:user@dummy 2:'hg' -R 'nonexistent' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R '/$TESTTMP/nonexistent' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'local' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R '$TESTTMP/local' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R nonexistent serve --stdio
+  Got arguments 1:user@dummy 2:hg -R /$TESTTMP/nonexistent serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R local serve --stdio
+  Got arguments 1:user@dummy 2:hg -R $TESTTMP/local serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_NODE=a28a9d1a809cab7d4e2fde4bee738a9ede948b60 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1 
-  Got arguments 1:user@dummy 2:'hg' -R 'remote' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' init 'a repo'
-  Got arguments 1:user@dummy 2:'hg' -R 'a repo' serve --stdio
-  Got arguments 1:user@dummy 2:'hg' -R 'a repo' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+  Got arguments 1:user@dummy 2:hg init 'a repo'
+  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
+  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio

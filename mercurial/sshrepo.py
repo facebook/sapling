@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import re
 from i18n import _
 import util, error, wireproto
 
@@ -20,6 +21,8 @@ class remotelock(object):
 
 def _serverquote(s):
     '''quote a string for the remote shell ... which we assume is sh'''
+    if re.match(r'[a-zA-Z0-9._\-/]*$', s):
+        return s
     return "'%s'" % s.replace("'", "'\\''")
 
 class sshrepository(wireproto.wirerepository):
