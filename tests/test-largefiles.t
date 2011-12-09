@@ -645,6 +645,23 @@ been very problematic).
   $ cat sub2/large7
   large7
 
+Test status after merging with a branch that introduces a new largefile:
+
+  $ echo large > large
+  $ hg add --large large
+  $ hg commit -m 'add largefile'
+  $ hg update -q ".^"
+  $ echo change >> normal3
+  $ hg commit -m 'some change'
+  created new head
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ hg status
+  M large
+
 Test that a normal file and a largefile with the same name and path cannot
 coexist.
 
