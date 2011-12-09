@@ -199,16 +199,16 @@ merge tests
   $ hg merge 6 --debug # test change
     searching for copies back to rev 2
   resolving manifests
-   overwrite None partial False
-   ancestor 1f14a2e2d3ec local f0d2028bf86d+ remote 1831e14459c4
+   overwrite: False, partial: False
+   ancestor: 1f14a2e2d3ec, local: f0d2028bf86d+, remote: 1831e14459c4
    .hgsubstate: versions differ -> m
   updating: .hgsubstate 1/1 files (100.00%)
   subrepo merge f0d2028bf86d+ 1831e14459c4 1f14a2e2d3ec
     subrepo t: other changed, get t:6747d179aa9a688023c4b0cad32e4c92bb7f34ad:hg
   getting subrepo t
   resolving manifests
-   overwrite True partial False
-   ancestor 60ca1237c194+ local 60ca1237c194+ remote 6747d179aa9a
+   overwrite: True, partial: False
+   ancestor: 60ca1237c194+, local: 60ca1237c194+, remote: 6747d179aa9a
    t: remote is newer -> g
   updating: t 1/1 files (100.00%)
   getting t
@@ -227,8 +227,8 @@ merge tests
   $ HGMERGE=internal:merge hg merge --debug 7 # test conflict
     searching for copies back to rev 2
   resolving manifests
-   overwrite None partial False
-   ancestor 1831e14459c4 local e45c8b14af55+ remote f94576341bcf
+   overwrite: False, partial: False
+   ancestor: 1831e14459c4, local: e45c8b14af55+, remote: f94576341bcf
    .hgsubstate: versions differ -> m
   updating: .hgsubstate 1/1 files (100.00%)
   subrepo merge e45c8b14af55+ f94576341bcf 1831e14459c4
@@ -236,8 +236,8 @@ merge tests
   merging subrepo t
     searching for copies back to rev 2
   resolving manifests
-   overwrite None partial False
-   ancestor 6747d179aa9a local 20a0db6fbf6c+ remote 7af322bc1198
+   overwrite: False, partial: False
+   ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
    t: versions differ -> m
   preserving t for resolve of t
   updating: t 1/1 files (100.00%)

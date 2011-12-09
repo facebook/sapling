@@ -39,8 +39,8 @@
     file a/c -> b/c
     file a/d -> b/d
   resolving manifests
-   overwrite None partial False
-   ancestor f9b20c0d4c51 local ce36d17b18fb+ remote 397f8b00a740
+   overwrite: False, partial: False
+   ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
    a/d: remote renamed directory to b/d -> d
    a/c: remote renamed directory to b/c -> d
    a/b: other deleted -> r
@@ -94,8 +94,8 @@
     dir a/ -> b/
     file a/c -> b/c
   resolving manifests
-   overwrite None partial False
-   ancestor f9b20c0d4c51 local 397f8b00a740+ remote ce36d17b18fb
+   overwrite: False, partial: False
+   ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb
    None: local renamed directory to b/c -> d
   updating:None 1/1 files (100.00%)
   getting a/c to b/c

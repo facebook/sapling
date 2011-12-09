@@ -35,8 +35,8 @@
     checking for directory renames
    a2: divergent renames -> dr
   resolving manifests
-   overwrite None partial False
-   ancestor af1939970a1c local 044f8520aeeb+ remote 85c198ef2f6c
+   overwrite: False, partial: False
+   ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
    a: remote moved to b -> m
    b2: remote created -> g
   preserving a for resolve of b

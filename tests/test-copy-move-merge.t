@@ -29,8 +29,8 @@
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor b8bf91eeebbc local add3f11052fa+ remote 17c05bb7fcb6
+   overwrite: False, partial: False
+   ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
    a: remote moved to c -> m
    a: remote moved to b -> m
   preserving a for resolve of b

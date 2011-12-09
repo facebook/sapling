@@ -19,8 +19,8 @@
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor c334dc3be0da local 521a1e40188f+ remote 3574f3e69b1c
+   overwrite: False, partial: False
+   ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    conflicting flags for a
   (n)one, e(x)ec or sym(l)ink? n
    a: update permissions -> e
@@ -47,8 +47,8 @@ Symlink is local parent, executable is other:
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor c334dc3be0da local 3574f3e69b1c+ remote 521a1e40188f
+   overwrite: False, partial: False
+   ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    conflicting flags for a
   (n)one, e(x)ec or sym(l)ink? n
    a: remote is newer -> g

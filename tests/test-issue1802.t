@@ -55,8 +55,8 @@ Simulate a Windows merge:
     unmatched files in local:
      b
   resolving manifests
-   overwrite None partial False
-   ancestor a03b0deabf2b local d6fa54f68ae1+ remote 2d8bcf2dda39
+   overwrite: False, partial: False
+   ancestor: a03b0deabf2b, local: d6fa54f68ae1+, remote: 2d8bcf2dda39
    a: update permissions -> e
   updating: a 1/1 files (100.00%)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

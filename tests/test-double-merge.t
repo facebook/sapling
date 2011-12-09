@@ -33,8 +33,8 @@ we get conflicts that shouldn't be there
      bar -> foo *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor e6dc8efe11cc local 6a0df1dad128+ remote 484bf6903104
+   overwrite: False, partial: False
+   ancestor: e6dc8efe11cc, local: 6a0df1dad128+, remote: 484bf6903104
    foo: versions differ -> m
    foo: remote copied to bar -> m
   preserving foo for resolve of bar

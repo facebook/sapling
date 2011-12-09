@@ -29,8 +29,8 @@ revision.
     unmatched files in local:
      bar
   resolving manifests
-   overwrite None partial False
-   ancestor bbd179dfa0a7 local 71766447bdbb+ remote 4d9e78aaceee
+   overwrite: False, partial: False
+   ancestor: bbd179dfa0a7, local: 71766447bdbb+, remote: 4d9e78aaceee
    foo: remote is newer -> g
   updating: foo 1/1 files (100.00%)
   getting foo

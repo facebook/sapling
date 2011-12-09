@@ -180,8 +180,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             act("divergent renames", "dr", of, fl)
 
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(" overwrite %s partial %s\n" % (overwrite, bool(partial)))
-    repo.ui.debug(" ancestor %s local %s remote %s\n" % (pa, p1, p2))
+    repo.ui.debug(" overwrite: %s, partial: %s\n"
+                  % (bool(overwrite), bool(partial)))
+    repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, p1, p2))
 
     m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())

@@ -101,8 +101,8 @@ Graft out of order, skipping a merge and a duplicate
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite False partial False
-   ancestor 68795b066622 local d2e44c99fd3f+ remote 5d205f8b35b6
+   overwrite: False, partial: False
+   ancestor: 68795b066622, local: d2e44c99fd3f+, remote: 5d205f8b35b6
    b: local copied/moved to a -> m
   preserving b for resolve of b
   updating: b 1/1 files (100.00%)
@@ -122,8 +122,8 @@ Graft out of order, skipping a merge and a duplicate
     unmatched files in local:
      a.orig
   resolving manifests
-   overwrite False partial False
-   ancestor 4c60f11aa304 local 6f5ea6ac8b70+ remote 97f8bfe72746
+   overwrite: False, partial: False
+   ancestor: 4c60f11aa304, local: 6f5ea6ac8b70+, remote: 97f8bfe72746
    e: remote is newer -> g
   updating: e 1/1 files (100.00%)
   getting e
@@ -139,8 +139,8 @@ Graft out of order, skipping a merge and a duplicate
     unmatched files in local:
      a.orig
   resolving manifests
-   overwrite False partial False
-   ancestor 4c60f11aa304 local 77eb504366ab+ remote 9c233e8e184d
+   overwrite: False, partial: False
+   ancestor: 4c60f11aa304, local: 77eb504366ab+, remote: 9c233e8e184d
    e: versions differ -> m
    d: remote is newer -> g
   preserving e for resolve of e

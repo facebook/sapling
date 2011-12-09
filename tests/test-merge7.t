@@ -81,8 +81,8 @@ pull and merge from test-a again
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 96b70246a118 local 50c3a7e29886+ remote 40d11a4173a8
+   overwrite: False, partial: False
+   ancestor: 96b70246a118, local: 50c3a7e29886+, remote: 40d11a4173a8
    test.txt: versions differ -> m
   preserving test.txt for resolve of test.txt
   updating: test.txt 1/1 files (100.00%)

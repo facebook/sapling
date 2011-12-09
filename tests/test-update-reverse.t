@@ -66,8 +66,8 @@
 
   $ hg update --debug -C 1
   resolving manifests
-   overwrite True partial False
-   ancestor 91ebc10ed028+ local 91ebc10ed028+ remote 71a760306caf
+   overwrite: True, partial: False
+   ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
    side2: other deleted -> r
    side1: other deleted -> r
    main: remote created -> g

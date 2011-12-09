@@ -84,8 +84,8 @@ $4 = expected result
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local e300d1c794ec+ remote 4ce40f5aca24
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
    rev: versions differ -> m
    a: remote copied to b -> m
   preserving a for resolve of b
@@ -119,8 +119,8 @@ $4 = expected result
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 86a2aa42fc76+ remote f4db7e329e71
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 86a2aa42fc76+, remote: f4db7e329e71
    a: remote is newer -> g
    b: local copied/moved to a -> m
    rev: versions differ -> m
@@ -157,8 +157,8 @@ $4 = expected result
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local e300d1c794ec+ remote bdb19105162a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: e300d1c794ec+, remote: bdb19105162a
    rev: versions differ -> m
    a: remote moved to b -> m
   preserving a for resolve of b
@@ -192,8 +192,8 @@ $4 = expected result
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 02963e448370+ remote f4db7e329e71
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
    b: local copied/moved to a -> m
    rev: versions differ -> m
   preserving b for resolve of b
@@ -226,8 +226,8 @@ $4 = expected result
      b -> a 
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 94b33a1b7f2d+ remote 4ce40f5aca24
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: 4ce40f5aca24
    rev: versions differ -> m
    b: remote created -> g
   preserving rev for resolve of rev
@@ -256,8 +256,8 @@ $4 = expected result
      b -> a 
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 86a2aa42fc76+ remote 97c705ade336
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
    rev: versions differ -> m
   preserving rev for resolve of rev
   updating: rev 1/1 files (100.00%)
@@ -283,8 +283,8 @@ $4 = expected result
      b -> a 
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 94b33a1b7f2d+ remote bdb19105162a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: bdb19105162a
    a: other deleted -> r
    rev: versions differ -> m
    b: remote created -> g
@@ -315,8 +315,8 @@ $4 = expected result
      b -> a 
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 02963e448370+ remote 97c705ade336
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
    rev: versions differ -> m
   preserving rev for resolve of rev
   updating: rev 1/1 files (100.00%)
@@ -336,8 +336,8 @@ $4 = expected result
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 62e7bf090eba+ remote 49b6d8032493
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    b: versions differ -> m
    rev: versions differ -> m
   preserving b for resolve of b
@@ -375,8 +375,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     checking for directory renames
    a: divergent renames -> dr
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 02963e448370+ remote fe905ef2c33e
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
    rev: versions differ -> m
    c: remote created -> g
   preserving rev for resolve of rev
@@ -404,8 +404,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 86a2aa42fc76+ remote af30c7647fc7
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
    b: versions differ -> m
    rev: versions differ -> m
   preserving b for resolve of b
@@ -432,8 +432,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 59318016310c+ remote bdb19105162a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    a: other deleted -> r
    b: versions differ -> m
    rev: versions differ -> m
@@ -462,8 +462,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 86a2aa42fc76+ remote 8dbce441892a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    a: remote is newer -> g
    b: versions differ -> m
    rev: versions differ -> m
@@ -493,8 +493,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 59318016310c+ remote bdb19105162a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    a: other deleted -> r
    b: versions differ -> m
    rev: versions differ -> m
@@ -523,8 +523,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 86a2aa42fc76+ remote 8dbce441892a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    a: remote is newer -> g
    b: versions differ -> m
    rev: versions differ -> m
@@ -554,8 +554,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 0b76e65c8289+ remote 4ce40f5aca24
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    b: versions differ -> m
    rev: versions differ -> m
   preserving b for resolve of b
@@ -582,8 +582,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 02963e448370+ remote 8dbce441892a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
    b: versions differ -> m
    rev: versions differ -> m
   remote changed a which local deleted
@@ -615,8 +615,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 0b76e65c8289+ remote bdb19105162a
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
    local changed a which remote deleted
   use (c)hanged version or (d)elete? c
    a: prompt keep -> a
@@ -652,8 +652,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local e300d1c794ec+ remote 49b6d8032493
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: e300d1c794ec+, remote: 49b6d8032493
    rev: versions differ -> m
    a: remote moved to b -> m
   preserving a for resolve of b
@@ -686,8 +686,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 62e7bf090eba+ remote f4db7e329e71
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
    b: local copied/moved to a -> m
    rev: versions differ -> m
   preserving b for resolve of b
@@ -724,8 +724,8 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
      b -> a *
     checking for directory renames
   resolving manifests
-   overwrite None partial False
-   ancestor 924404dff337 local 02963e448370+ remote 2b958612230f
+   overwrite: False, partial: False
+   ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
    b: local copied/moved to a -> m
    rev: versions differ -> m
    c: remote created -> g
