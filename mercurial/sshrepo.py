@@ -21,7 +21,7 @@ class remotelock(object):
 
 def _serverquote(s):
     '''quote a string for the remote shell ... which we assume is sh'''
-    if re.match(r'[a-zA-Z0-9._\-/]*$', s):
+    if re.match('[a-zA-Z0-9@%_+=:,./-]*$', s):
         return s
     return "'%s'" % s.replace("'", "'\\''")
 
