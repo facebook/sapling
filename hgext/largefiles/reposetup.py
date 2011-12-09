@@ -166,7 +166,11 @@ def reposetup(ui, repo):
                         unknown = set(result[4]).difference(lfiles)
                         if parentworking:
                             for lfile in unsure:
-                                if ctx1[lfutil.standin(lfile)].data().strip() \
+                                standin = lfutil.standin(lfile)
+                                if standin not in ctx1:
+                                    # from second parent
+                                    modified.append(lfile)
+                                elif ctx1[standin].data().strip() \
                                         != lfutil.hashfile(self.wjoin(lfile)):
                                     modified.append(lfile)
                                 else:
