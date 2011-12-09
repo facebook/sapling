@@ -248,9 +248,11 @@ def annotate(ui, repo, *pats, **opts):
     if not pats:
         raise util.Abort(_('at least one filename or pattern is required'))
 
+    hexfn = ui.debugflag and hex or short
+
     opmap = [('user', ' ', lambda x: ui.shortuser(x[0].user())),
              ('number', ' ', lambda x: str(x[0].rev())),
-             ('changeset', ' ', lambda x: short(x[0].node())),
+             ('changeset', ' ', lambda x: hexfn(x[0].node())),
              ('date', ' ', getdate),
              ('file', ' ', lambda x: x[0].path()),
              ('line_number', ':', lambda x: str(x[1])),
