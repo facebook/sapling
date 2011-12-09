@@ -9,7 +9,7 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httprepo, localrepo, sshrepo, sshserver, wireproto
+    httprepo, localrepo, merge, sshrepo, sshserver, wireproto
 from mercurial.i18n import _
 from mercurial.hgweb import hgweb_mod, protocol
 
@@ -62,6 +62,10 @@ def uisetup(ui):
                                    overrides.override_update)
     entry = extensions.wrapcommand(commands.table, 'pull',
                                    overrides.override_pull)
+    entry = extensions.wrapfunction(merge, '_checkunknown',
+                                    overrides.override_checkunknown)
+    entry = extensions.wrapfunction(merge, 'manifestmerge',
+                                    overrides.override_manifestmerge)
     entry = extensions.wrapfunction(filemerge, 'filemerge',
                                     overrides.override_filemerge)
     entry = extensions.wrapfunction(cmdutil, 'copy',
