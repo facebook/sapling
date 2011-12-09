@@ -10,7 +10,6 @@
 import copy
 import types
 import os
-import re
 
 from mercurial import context, error, manifest, match as match_, node, util
 from mercurial.i18n import _
@@ -54,12 +53,11 @@ def reposetup(ui, repo):
                                 self).__contains__(filename):
                             return True
                         return super(lfiles_manifestdict,
-                            self).__contains__(lfutil.shortname+'/' + filename)
+                            self).__contains__(lfutil.standin(filename))
                 class lfiles_ctx(ctx.__class__):
                     def files(self):
                         filenames = super(lfiles_ctx, self).files()
-                        return [re.sub('^\\'+lfutil.shortname+'/', '',
-                                       filename) for filename in filenames]
+                        return [lfutil.splitstandin(f) or f for f in filenames]
                     def manifest(self):
                         man1 = super(lfiles_ctx, self).manifest()
                         man1.__class__ = lfiles_manifestdict
@@ -72,8 +70,7 @@ def reposetup(ui, repo):
                             # Adding a null character will cause Mercurial to
                             # identify this as a binary file.
                             result = super(lfiles_ctx, self).filectx(
-                                lfutil.shortname + '/' + path, fileid,
-                                filelog)
+                                lfutil.standin(path), fileid, filelog)
                             olddata = result.data
                             result.data = lambda: olddata() + '\0'
                         return result
