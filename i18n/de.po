@@ -8139,22 +8139,21 @@ msgstr "Überspringe fehlendes Unterarchiv: %s\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
-"HG: Bitte gib eine Versions-Meldung ein. Zeilen beginnend mit 'HG:' werden "
-"entfernt."
+"HG: Bitte gib eine Versions-Meldung ein. Zeilen beginnend mit 'HG:' werden"
 
 msgid "HG: Leave message empty to abort commit."
-msgstr "HG: Leere Versionsmeldung wird das Übernehmen abbrechen."
+msgstr "HG: entfernt. Leere Versionsmeldung wird das Übernehmen abbrechen."
 
 #, python-format
 msgid "HG: user: %s"
 msgstr "HG: Benutzer: %s"
 
 msgid "HG: branch merge"
-msgstr ""
+msgstr "HG: Zweigzusammenführung"
 
 #, python-format
 msgid "HG: branch '%s'"
-msgstr ""
+msgstr "HG: Zweig '%s'"
 
 #, python-format
 msgid "HG: subrepo %s"
@@ -8162,7 +8161,7 @@ msgstr "HG: Unterarchiv %s"
 
 #, python-format
 msgid "HG: added %s"
-msgstr ""
+msgstr "HG: Hinzugefügt %s"
 
 #, python-format
 msgid "HG: changed %s"
@@ -8170,7 +8169,7 @@ msgstr "HG: Geändert %s"
 
 #, python-format
 msgid "HG: removed %s"
-msgstr "HG: entfernt %s"
+msgstr "HG: Entfernt %s"
 
 msgid "HG: no files changed"
 msgstr "HG: Keine Dateiänderungen"
@@ -18147,7 +18146,7 @@ msgid ""
 " local changed %s which remote deleted\n"
 "use (c)hanged version or (d)elete?"
 msgstr ""
-" Lokales Archiv ändert %s, aber lokales löscht.\n"
+" Lokales Archiv ändert %s, aber entferntes löscht.\n"
 "Nutze (c) geänderte Version oder (d) lösche?"
 
 msgid "&Changed"
