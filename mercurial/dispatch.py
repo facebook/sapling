@@ -259,7 +259,6 @@ class cmdalias(object):
                 return 1
             self.fn = fn
             self.badalias = True
-
             return
 
         if self.definition.startswith('!'):
