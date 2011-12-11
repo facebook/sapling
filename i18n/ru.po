@@ -25,7 +25,8 @@
 # diff           дифф, различия
 # hash           хэш
 # glob           глоб, glob
-# commit comment комментарий к коммиту (?)
+# commit comment комментарий к коммиту (???)
+# commit message комментарий к коммиту (???)
 # update         обновить
 # binary         бинарный
 # backout        
@@ -41,7 +42,7 @@
 # undo           отменить
 # track          отслеживать
 # bundle         бандл
-# committer      автор
+# committer      автор (???)
 # alias          псевдоним
 # whitespace     пробельный символ
 # match          совпадать (о шаблоне)
@@ -49,18 +50,51 @@
 # graft          перенести (изменения)
 # id             идентификатор
 # store          хранилище
-# ========= TODO ==========
+# guard (в mq)   страж (необходимо пояснение) ??? предохранитель
+# positive/negative guard положительный/отрицательный страж ??? (может разрешающий/запрещающий?)
+# apply patch    наложить патч
+# fuzz (patch)   несоответствие контекстов (в патче и целевом файле) (не уверен)
+# series (mq)    последовательность
+# pop (о стеке)  вытолкнуть (может писать извлечь из стека/поместить в стек)?
+# push (о стеке) протолкнуть
+# save entry     запись сохранения
+# status         состояние
+# versioned      находящийся под контролем версий, версионируемый
+# queue repository (сейчас репозитрий очереди) ??? 
+# nested         вложенный
+# deprecated     устаревший
+# strip          срезать
+# backup         резервная копия
+# finish (mq, qfinish) финализировать???
+# fold (patch)     подшить ??? вообще свернуть
+#
+#
+# === TODO ===
+#
 # Эти вещи требуют доработки
+#
 # - keyword template maps в keywords - придумать лучший перевод
 # - вычитка, исправление опечаток, стилистика многих предложений
-# - протестировать сообщения об ошибках (я не видел большинство из них в работе)
+# - протестировать сообщения об ошибках (я не видел многих из них в работе)
 # - строки с пользовательским вводом (вида &Local). Пока не знаю, как они обрабатываются.
 # - числительные - сейчас всегда множественное число
+# - придумать перевод для терминов с ???
+# - пометить как-то строки, которые не требуют перевода или не будут переводиться,
+#   чтобы можно легко понять, сколько еще осталось сделать.
+# - в какой форме д.б. глаголы сообщений о текущем действии:
+#   1 л ед.ч. - загружаю обновления, 
+#   1 л мн.ч - загружаем обновления,
+#   3 л - загружаются обновления ?
+#   Сюда же относятся сообщения cannot do smth: не могу сделать что-то или что-то невозможно?
+#   Cейчас последний вариант.
+# - внести определения согласованных терминов в hg glossary
+#
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-08 20:14+0400\n"
+"POT-Creation-Date: 2011-12-11 18:02+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -830,7 +864,7 @@ msgid "bugzilla notify command %s"
 msgstr ""
 
 msgid "done\n"
-msgstr ""
+msgstr "завершено\n"
 
 #, python-format
 msgid "looking up user %s\n"
@@ -2798,7 +2832,7 @@ msgstr "подтянуть, обновиться и слить одной ком
 
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr ""
-"подтягивает изменения из удаленного репозитория, проводит\n"
+"подтягивает изменения из удаленного репозитория, проводит слияние\n"
 "при необходимости."
 
 msgid ""
@@ -4276,43 +4310,59 @@ msgid "display outgoing largefiles"
 msgstr "показать исходящие большие файлы"
 
 msgid "manage a stack of patches"
-msgstr "управление очередью патчей"
+msgstr "управление стеком патчей"
 
 msgid ""
 "This extension lets you work with a stack of patches in a Mercurial\n"
 "repository. It manages two stacks of patches - all known patches, and\n"
 "applied patches (subset of known patches)."
 msgstr ""
+"Это расширение позволяет вам работать со стеком патчей в репозитории\n"
+"Mercurial. Оно управляет двумя стеками патчей: всеми известными патчами\n"
+"и наложенными патчами (подмножество известных)."
 
 msgid ""
 "Known patches are represented as patch files in the .hg/patches\n"
 "directory. Applied patches are both patch files and changesets."
 msgstr ""
+"Известные патчи представлены в виде файлов в директории .hg/patches.\n"
+"Наложенные патчи одновременно представлены в файлах и наборах изменений."
 
 msgid "Common tasks (use :hg:`help command` for more details)::"
-msgstr ""
+msgstr "Типичные задачи ( см. также :hg:`help команда`)::"
 
 msgid ""
 "  create new patch                          qnew\n"
 "  import existing patch                     qimport"
 msgstr ""
+"  создать новый патч                             qnew\n"
+"  импортировать существующий патч                qimport"
 
 msgid ""
 "  print patch series                        qseries\n"
 "  print applied patches                     qapplied"
 msgstr ""
+"  напечатать последовательность патчей           qseries\n"
+"  напечатать наложенные патчи                    qapplied"
 
 msgid ""
 "  add known patch to applied stack          qpush\n"
 "  remove patch from applied stack           qpop\n"
 "  refresh contents of top applied patch     qrefresh"
 msgstr ""
+"  добавить известный патч в стек наложенных      qpush\n"
+"  удалить патч из стека наложенных               qpop\n"
+"  обновить содержимое верхнего наложенного патча qrefresh"
 
 msgid ""
 "By default, mq will automatically use git patches when required to\n"
 "avoid losing file mode changes, copy records, binary files or empty\n"
 "files creations or deletions. This behaviour can be configured with::"
 msgstr ""
+"По умолчанию mq автоматически использует патчи в формате git, когда\n"
+"это необходимо чтобы предотвратить потерю изменений прав доступа к\n"
+"файлам, записей о копировании, создание или удаление пустых или\n"
+"бинарных файлов. Это поведение может быть настроено с помощью::"
 
 msgid ""
 "  [mq]\n"
@@ -4325,497 +4375,522 @@ msgid ""
 "'no', mq will override the [diff] section and always generate git or\n"
 "regular patches, possibly losing data in the second case."
 msgstr ""
+"Если установлено в 'keep', mq будет использовать настройки из секции\n"
+"[diff], сохраняя существующие патчи в формате git до выполнение qrefresh.\n"
+"Если установлено в 'yes' или 'no', mq переопределит настройк секции [diff]\n"
+"и будет всегда создавать патчи соответственно в формате git или в обычном\n"
+"формате, с возможной потерей данных в последнем случае."
 
 msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
 "create other, independent patch queues with the :hg:`qqueue` command.\n"
 msgstr ""
+"По умолчанию будет создана очередь патчей с именем \"patches\". Вы\n"
+"можете создавать другие независимые очереди патчей с помощью команды\n"
+":hg:`qqueue`.\n"
 
 msgid "print first line of patch header"
-msgstr ""
+msgstr "печатать первую строку заголовка патча"
 
 #, python-format
 msgid "malformated mq status line: %s\n"
-msgstr ""
+msgstr "неверный формат строки состояния mq: %s\n"
 
 #, python-format
 msgid "mq.git option can be auto/keep/yes/no got %s"
-msgstr ""
+msgstr "параметр mq.git может иметь значения auto/keep/yes/no, задано %s"
 
 #, python-format
 msgid "%s appears more than once in %s"
-msgstr ""
+msgstr "%s встречается более одного раза в %s"
 
 msgid "guard cannot be an empty string"
-msgstr ""
+msgstr "страж (guard) не может быть пустой строкой"
 
 #, python-format
 msgid "guard %r starts with invalid character: %r"
-msgstr ""
+msgstr "страж (guard) %r начинается с недопустимого символа: %r"
 
 #, python-format
 msgid "invalid character in guard %r: %r"
-msgstr ""
+msgstr "недопустимый символ в страже (guard) %r: %r"
 
 #, python-format
 msgid "guard %r too short"
-msgstr ""
+msgstr "страж (guard) %r слишком короткий"
 
 #, python-format
 msgid "guard %r starts with invalid char"
-msgstr ""
+msgstr "страж (guard) %r начинается с недопустимого символа"
 
 #, python-format
 msgid "allowing %s - no guards in effect\n"
-msgstr ""
+msgstr "%s разрешен - страж (guard) не задействуется\n"
 
 #, python-format
 msgid "allowing %s - no matching negative guards\n"
-msgstr ""
+msgstr "%s разрешен - нет подходящих запрещающих стражей (guards)\n"
 
 #, python-format
 msgid "allowing %s - guarded by %s\n"
-msgstr ""
+msgstr "%s разрешен - защищен %s\n"
 
 #, python-format
 msgid "skipping %s - guarded by %s\n"
-msgstr ""
+msgstr "%s пропускается - защищен %s\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
-msgstr ""
+msgstr "%s пропускается - нет подходящих стражей (guards)\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
-msgstr ""
+msgstr "ошибка при удалении страховки (undo): %s\n"
 
 #, python-format
 msgid "apply failed for patch %s"
-msgstr ""
+msgstr "не удалось наложить патч %s"
 
-#, python-format
+#, fuzzy, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "патч не сработал, сливаем %s\n"
 
 #, python-format
 msgid "update returned %d"
-msgstr ""
+msgstr "update вернул %d"
 
 msgid "repo commit failed"
-msgstr ""
+msgstr "ошибка при коммите репозитория"
 
 #, python-format
 msgid "unable to read %s"
-msgstr ""
+msgstr "не удается прочитать %s"
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr ""
+msgstr "патч %s не существует\n"
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr ""
+msgstr "патч %s не наложен\n"
 
 msgid "patch failed, unable to continue (try -v)\n"
-msgstr ""
+msgstr "не удалось наложить патч, продолжение невозможно (попробуйте -v)\n"
 
 #, python-format
 msgid "applying %s\n"
-msgstr "применяю %s\n"
+msgstr "накладывается %s\n"
 
 #, python-format
 msgid "unable to read %s\n"
-msgstr ""
+msgstr "невозможно прочитать %s\n"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr ""
+msgstr "патч %s пуст\n"
 
 msgid "repository commit failed"
-msgstr ""
+msgstr "ошибка при коммите репозитория"
 
 msgid "patch failed, rejects left in working dir\n"
 msgstr ""
+"не удалось наложить патч, отклоненные файлы сохранены в рабочем каталоге\n"
 
 msgid "fuzz found when applying patch, stopping\n"
-msgstr ""
+msgstr "обнаружено несоответствие контекстов (fuzz), останов\n"
 
 #, python-format
 msgid "revision %s refers to unknown patches: %s\n"
-msgstr ""
+msgstr "ревизия %s ссылается на неизвестные патчи: %s\n"
 
 #, python-format
 msgid "unknown patches: %s\n"
-msgstr ""
+msgstr "неизвестные патчи: %s\n"
 
 #, python-format
 msgid "revision %d is not managed"
-msgstr ""
+msgstr "ревизия %d не контролируется"
 
-#, python-format
+#, fuzzy, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr ""
+msgstr "невозможно удалить ревизию %d поверх наложенных патчей"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr ""
+msgstr "патч %s финализирован без комментария к набору изменений\n"
 
 msgid "qdelete requires at least one revision or patch name"
-msgstr ""
+msgstr "qdelete требует указания как минимум одной ревизии или имени патча"
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr ""
+msgstr "не могу удалить наложенный патч %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr ""
+msgstr "патч %s отсутствует в файле последовательностей"
 
 msgid "no patches applied"
-msgstr ""
+msgstr "нет наложенных патчей"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "ревизия рабочего каталога не оконечная ревизия mq (qtip)"
 
 #, python-format
 msgid "uncommitted changes in subrepository %s"
-msgstr ""
+msgstr "незакоммиченные изменений в подрепозитории %s"
 
 msgid "local changes found, refresh first"
-msgstr ""
+msgstr "найдены локальные изменения, необходмо сначала обновиться"
 
 msgid "local changes found"
-msgstr ""
+msgstr "найдены локальные изменения"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr ""
+msgstr "\"%s\" не может быть использовано в качестве имени патча"
 
 #, python-format
 msgid "patch name cannot begin with \"%s\""
-msgstr ""
+msgstr "имя патча не может начинаться с \"%s\""
 
 #, python-format
 msgid "\"%s\" cannot be used in the name of a patch"
-msgstr ""
+msgstr "\"%s\" не может использоваться в имени патча"
 
 #, python-format
 msgid "\"%s\" already exists as a directory"
-msgstr ""
+msgstr "\"%s\" уже существует в виде директории"
 
 #, python-format
 msgid "patch \"%s\" already exists"
-msgstr ""
+msgstr "патч \"%s\" уже существует"
 
 msgid "cannot manage merge changesets"
-msgstr ""
+msgstr "не могу работать с ревизией слияния"
 
 #, python-format
 msgid "cannot write patch \"%s\": %s"
-msgstr ""
+msgstr "невозможно записать патч \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
-msgstr ""
+msgstr "ошибка при удалении (unlinking) %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr ""
+msgstr "имя патча \"%s\" неоднозначно:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr ""
+msgstr "патч %s не в последовательности (series)"
 
 msgid "(working directory not at a head)\n"
-msgstr ""
+msgstr "(ревизия рабочего каталога не является головной)\n"
 
 msgid "no patches in series\n"
-msgstr ""
+msgstr "нет патчей в последовательности\n"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
-msgstr ""
+msgstr "qpush: %s уже наверху\n"
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
-msgstr ""
+msgstr "не могу протолкнуть в предыдущий патч: %s"
 
 #, python-format
 msgid "guarded by %s"
-msgstr ""
+msgstr "защищен %s"
 
 msgid "no matching guards"
-msgstr ""
+msgstr "нет подходящих стражей (guards)"
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
-msgstr ""
+msgstr "не могу протолкнуть '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
-msgstr ""
+msgstr "все патчи в настоящее время наложены\n"
 
 msgid "patch series already fully applied\n"
-msgstr ""
+msgstr "последовательность патчей уже полностью наложена\n"
 
 msgid "cannot use --exact and --move together"
-msgstr ""
+msgstr "нельзя использовать --exact и --move одновременно"
 
 msgid "cannot push --exact with applied patches"
-msgstr ""
+msgstr "нельзя использовать push --exact с наложенными патчами"
 
 #, python-format
 msgid "%s does not have a parent recorded"
-msgstr ""
+msgstr "%s не имеет записанного родителя"
 
 msgid "please specify the patch to move"
-msgstr ""
+msgstr "пожалуйста укажите патч для перемещения"
 
 msgid "cleaning up working directory..."
-msgstr ""
+msgstr "очистка рабочего каталога..."
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
-msgstr ""
+msgstr "ошибка при наложении, пожалуйста исправьте и обновите %s\n"
 
 #, python-format
 msgid "now at: %s\n"
-msgstr ""
+msgstr "теперь на: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr ""
+msgstr "патч %s не наложен"
 
 msgid "no patches applied\n"
-msgstr ""
+msgstr "нет наложенных патчей\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
-msgstr ""
+msgstr "qpop: %s уже наверху\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: принудительное обновление dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "пытаемся вытолкнуть (pop) неизвестный узел %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
-msgstr ""
+msgstr "выталкивание удалит ревизию, не контролируемую этой очередью патчей"
 
 msgid "deletions found between repo revs"
-msgstr ""
+msgstr "обнаружены удаления между ревизиями репозитория"
 
 #, python-format
 msgid "popping %s\n"
-msgstr ""
+msgstr "выталкивается %s\n"
 
 msgid "patch queue now empty\n"
-msgstr ""
+msgstr "очередь патчей теперь пуста\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "не могу обновить ревизию с дочерними ревизиями"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
 "recover)\n"
 msgstr ""
+"обновление прервано в то время как патч был вытолкнут! (используйте\n"
+"revert --all, qpush для восстановления)\n"
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "директория очереди патчей уже существует"
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr ""
+msgstr "патч %s не в файле последовательностей (series)"
 
 msgid "No saved patch data found\n"
-msgstr ""
+msgstr "Не найдено сохраненных данных патча\n"
 
 #, python-format
 msgid "restoring status: %s\n"
-msgstr ""
+msgstr "состояние восстановления: %s\n"
 
 msgid "save entry has children, leaving it alone\n"
-msgstr ""
+msgstr "запись сохранения (save entry) имеет потомков, не трогаем ее\n"
 
 #, python-format
 msgid "removing save entry %s\n"
-msgstr ""
+msgstr "удаление записи сохранения (save entry) %s\n"
 
 #, python-format
 msgid "saved queue repository parents: %s %s\n"
-msgstr ""
+msgstr "родители сохраненной очереди в репозитории: %s %s\n"
 
 msgid "updating queue directory\n"
-msgstr ""
+msgstr "обновление директории очереди\n"
 
 msgid "Unable to load queue repository\n"
-msgstr ""
+msgstr "Невозможно загрузить репозиторий очереди\n"
 
 msgid "save: no patches applied, exiting\n"
-msgstr ""
+msgstr "save: нет наложенных патчей, выход\n"
 
 msgid "status is already saved\n"
-msgstr ""
+msgstr "состояние уже сохранено\n"
 
 msgid "hg patches saved state"
-msgstr ""
+msgstr "статус сохранения патчей"
 
 msgid "repo commit failed\n"
-msgstr ""
+msgstr "не удалось закоммитить репозиторий\n"
 
 #, python-format
 msgid "patch %s is already in the series file"
-msgstr ""
+msgstr "патч %s уже в файле последовательностей (series)"
 
 msgid "option \"-r\" not valid when importing files"
-msgstr ""
+msgstr "опция \"-r\" недопустима при импорте файлов"
 
 msgid "option \"-n\" not valid when importing multiple patches"
-msgstr ""
+msgstr "опция \"-n\" недопустима при импорте нескольких патчей"
 
 #, python-format
 msgid "revision %d is the root of more than one branch"
-msgstr ""
+msgstr "ревизия %d является корнем более чем одной ветви"
 
 #, python-format
 msgid "revision %d is already managed"
-msgstr ""
+msgstr "ревизия %d уже контролируется"
 
 #, python-format
 msgid "revision %d is not the parent of the queue"
-msgstr ""
+msgstr "ревизия %d не является родительской ревизией очереди"
 
 #, python-format
 msgid "revision %d has unmanaged children"
-msgstr ""
+msgstr "ревизия %d имеет неконтролируемые дочерние ревизии"
 
 #, python-format
 msgid "cannot import merge revision %d"
-msgstr ""
+msgstr "невозможно импортировать ревизию слияния %d"
 
 #, python-format
 msgid "revision %d is not the parent of %d"
-msgstr ""
+msgstr "ревизия %d не родительская ревизия %d"
 
 msgid "-e is incompatible with import from -"
-msgstr ""
+msgstr "-e несовместим с импортом из -"
 
 #, python-format
 msgid "patch %s does not exist"
-msgstr ""
+msgstr "патч %s не существует"
 
 #, python-format
 msgid "renaming %s to %s\n"
-msgstr ""
+msgstr "переименовывается %s в %s\n"
 
 msgid "need --name to import a patch from -"
-msgstr ""
+msgstr "необходимо указать --name чтобы импортировать патч из -"
 
 #, python-format
 msgid "unable to read file %s"
-msgstr ""
+msgstr "невозможно прочитать файл %s"
 
 #, python-format
 msgid "adding %s to series file\n"
-msgstr ""
+msgstr "%s добавляется в файл последовательностей (series)\n"
 
 msgid "keep patch file"
-msgstr ""
+msgstr "сохранить файл патча"
 
 msgid "stop managing a revision (DEPRECATED)"
-msgstr ""
+msgstr "перестать контролировать ревизию (УСТАРЕЛО)"
 
 msgid "hg qdelete [-k] [PATCH]..."
-msgstr ""
+msgstr "hg qdelete [-k] [ПАТЧ]..."
 
 msgid "remove patches from queue"
-msgstr ""
+msgstr "удалить патчи из очереди"
 
 msgid ""
 "    The patches must not be applied, and at least one patch is required. "
 "With\n"
 "    -k/--keep, the patch files are preserved in the patch directory."
 msgstr ""
+"    Патчи не должны быть наложенными, и требуется по крайней мере один патч.\n"
+"    С -k/--keep патчи сохраняются в каталоге патчей."
 
 msgid ""
 "    To stop managing a patch and move it into permanent history,\n"
 "    use the :hg:`qfinish` command."
 msgstr ""
+"    Чтобы прекратить отслеживать патч и переместить его в репозиторий,\n"
+"    используйте команду :hg:`qfinish`."
 
 msgid "show only the last patch"
-msgstr ""
+msgstr "показать только последний патч"
 
 msgid "hg qapplied [-1] [-s] [PATCH]"
-msgstr ""
+msgstr "hg qapplied [-1] [-s] [ПАТЧ]"
 
 msgid "print the patches already applied"
-msgstr ""
+msgstr "напечатать уже наложенные патчи"
 
 msgid "    Returns 0 on success."
-msgstr ""
+msgstr "    В случае успеха возвращает 0."
 
 msgid "only one patch applied\n"
-msgstr ""
+msgstr "применен только один патч\n"
 
 msgid "show only the first patch"
-msgstr ""
+msgstr "показать только первый патч"
 
 msgid "hg qunapplied [-1] [-s] [PATCH]"
-msgstr ""
+msgstr "hg qunapplied [-1] [-s] [ПАТЧ]"
 
 msgid "print the patches not yet applied"
-msgstr ""
+msgstr "напечатать еще не наложенные патчи"
 
 msgid "all patches applied\n"
-msgstr ""
+msgstr "все патчи наложены\n"
 
 msgid "import file in patch directory"
-msgstr ""
+msgstr "импортировать файл в каталог патчей"
 
 msgid "NAME"
 msgstr "ИМЯ"
 
 msgid "name of patch file"
-msgstr ""
+msgstr "имя файла патча"
 
 msgid "overwrite existing files"
-msgstr ""
+msgstr "перезапиывать судествующий файлы"
 
 msgid "place existing revisions under mq control"
-msgstr ""
+msgstr "поместить существующие ревизии под управление mq"
 
 msgid "use git extended diff format"
 msgstr "использовать расширенный формат git для diff'ов"
 
 msgid "qpush after importing"
-msgstr ""
+msgstr "выполнить qpush после импортирования"
 
 msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
-msgstr ""
+msgstr "hg qimport [-e] [-n ИМЯ] [-f] [-g] [-P] [-r РЕВ]... ФАЙЛ..."
 
 msgid "import a patch"
-msgstr ""
+msgstr "импортировать патч"
 
 msgid ""
 "    The patch is inserted into the series after the last applied\n"
 "    patch. If no patches have been applied, qimport prepends the patch\n"
 "    to the series."
 msgstr ""
+"    Патч помещается в последовательность после последнего наложенного "
+"патча.\n"
+"    Если наложенных патчей нет, qimport добавляет файл в начало\n"
+"    последовательности."
 
 msgid ""
 "    The patch will have the same name as its source file unless you\n"
 "    give it a new one with -n/--name."
 msgstr ""
+"    Патч будет иметь такое же имя, как и файл, из которого он был создан,\n"
+"    если только вы не укажите новое имя с помощью -n/--name."
 
 msgid ""
 "    You can register an existing patch inside the patch directory with\n"
 "    the -e/--existing flag."
 msgstr ""
+"    Вы можете зарегистрировать патч, уже находящийся в каталоге патчей,\n"
+"    с помощью флага -e/--existing."
 
 msgid ""
 "    With -f/--force, an existing patch of the same name will be\n"
 "    overwritten."
 msgstr ""
+"    Если указан -f/--force, существующий патч с таким же именем будет\n"
+"    перезаписан."
 
 msgid ""
 "    An existing changeset may be placed under mq control with -r/--rev\n"
@@ -4825,15 +4900,25 @@ msgid ""
 "    important for preserving rename/copy information and permission\n"
 "    changes. Use :hg:`qfinish` to remove changesets from mq control."
 msgstr ""
+"    Существующий набор изменений может быть помещен под контроль mq\n"
+"    с помощью -r/--rev (т.е. qimport --rev tip -n patch поместит\n"
+"    оконечную ревизию под контроль mq). С -g/--git патчи, импортированные\n"
+"    с --rev, будут использовать формат git. О том, почему это важно\n"
+"    для сохранения информации о копировании/переимовании и правах доступа,\n"
+"    см. соответсвующий раздел справки о различиях (diffs). Используйте\n"
+"    :hg:`qfinish` чтобы изъять наборы изменений из-под контроля mq."
 
 msgid ""
 "    To import a patch from standard input, pass - as the patch file.\n"
 "    When importing from standard input, a patch name must be specified\n"
 "    using the --name flag."
 msgstr ""
+"    Чтобы импортировать патч из стандартного ввода, передайте - в\n"
+"    качестве имени файла патча. При импорте из стандартного ввода имя\n"
+"    патча должно быть задано с помощью флага --name."
 
 msgid "    To import an existing patch while renaming it::"
-msgstr ""
+msgstr "    Импортировать существующий патч с переименованием::"
 
 msgid "      hg qimport -e existing-patch -n new-name"
 msgstr ""
@@ -4842,15 +4927,17 @@ msgid ""
 "    Returns 0 if import succeeded.\n"
 "    "
 msgstr ""
+"    Возвращает 0, если импорт завершен успешно.\n"
+"    "
 
 msgid "create queue repository"
-msgstr ""
+msgstr "создать репозитрой очереди"
 
 msgid "hg qinit [-c]"
 msgstr ""
 
 msgid "init a new queue repository (DEPRECATED)"
-msgstr ""
+msgstr "инициализирует новый репозиторий очереди (УСТАРЕЛО)"
 
 msgid ""
 "    The queue repository is unversioned by default. If\n"
@@ -4859,17 +4946,25 @@ msgid ""
 "    an unversioned patch repository into a versioned one). You can use\n"
 "    qcommit to commit changes to this queue repository."
 msgstr ""
+"    По умолчанию репозитроий очереди не помещается под контроль версий.\n"
+"    Если указан -c/--create-repo, qinit создаст отдельный вложенный\n"
+"    репозиторий для патчей (можно также запустить qinit -c позже, чтобы\n"
+"    преобразовать неверсионируемый репозиторий патчей в версионируемый.\n"
+"    Вы можете использовать qcommit чтобы зафиксировать изменения в этом\n"
+"    репозитории очереди."
 
 msgid ""
 "    This command is deprecated. Without -c, it's implied by other relevant\n"
 "    commands. With -c, use :hg:`init --mq` instead."
 msgstr ""
+"    Эта команда устарела. Без -c она неявно подразумевается другими\n"
+"    командами mq. С -c, используйте вместо нее :hg:`init --mq`."
 
 msgid "use pull protocol to copy metadata"
 msgstr "использовать протокол затягивания для копирования метаданных"
 
 msgid "do not update the new working directories"
-msgstr ""
+msgstr "не обновлять новые рабочие каталоги"
 
 msgid "use uncompressed transfer (fast over LAN)"
 msgstr "не использовать сжатие при передачи (быстрее в локальной сети)"
@@ -4878,13 +4973,13 @@ msgid "REPO"
 msgstr "РЕПОЗИТОРИЙ"
 
 msgid "location of source patch repository"
-msgstr ""
+msgstr "расположение исходного репозитория патчей"
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "hg qclone [ПАРАМЕТР]... ИСТОЧНИК [НАЗН]"
 
 msgid "clone main and patch repository at same time"
-msgstr ""
+msgstr "клонировать основной репозиторий вместе с репозиторием патчей"
 
 msgid ""
 "    If source is local, destination will have no patches applied. If\n"
@@ -4893,96 +4988,108 @@ msgid ""
 "    applied in destination. If you clone remote repository, be sure\n"
 "    before that it has no patches applied."
 msgstr ""
+"    Если источник локален, репозиторий назначения не будет иметь\n"
+"    наложенных патчей. Если источник является удаленным, эта команда\n"
+"    не может проверить, наложены ли патчи в репозитории-источнике,\n"
+"    и поэтому не может гарантировать, что в репозитории назначения\n"
+"    эти патчи не наложены. Если вы клонируете удаленный репозиторий,\n"
+"    сперва убедитесь, что в нем нет наложенных патчей."
 
 msgid ""
 "    Source patch repository is looked for in <src>/.hg/patches by\n"
 "    default. Use -p <url> to change."
 msgstr ""
+"    В репозитоии-источнике патчи ищутся по умолчанию в    <источник>/.hg/"
+"patches. Используйте -p <url> чтобы задать другой путь."
 
 msgid ""
 "    The patch directory must be a nested Mercurial repository, as\n"
 "    would be created by :hg:`init --mq`."
 msgstr ""
+"    Каталог патчей должен быть вложенным репозиторием Mercurial,\n"
+"    подобным созданному с помощью :hg:`init --mq`."
 
 msgid ""
 "    Return 0 on success.\n"
 "    "
 msgstr ""
+"    В случае успеха возвращает 0.\n"
+"    "
 
 msgid "versioned patch repository not found (see init --mq)"
-msgstr ""
+msgstr "версионируемый репозиторий патчей не найден (см. init --mq)"
 
 msgid "cloning main repository\n"
-msgstr ""
+msgstr "клонирование основного репозитория\n"
 
 msgid "cloning patch repository\n"
-msgstr ""
+msgstr "клонирование репозитория патчей\n"
 
 msgid "stripping applied patches from destination repository\n"
-msgstr ""
+msgstr "срезаются примененные патчи из репозитория назначения\n"
 
 msgid "updating destination repository\n"
-msgstr ""
+msgstr "обновление репозитория назначения\n"
 
 msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qcommit [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "commit changes in the queue repository (DEPRECATED)"
-msgstr ""
+msgstr "зафиксировать изменения в репозитории очереди (УСТАРЕЛО)"
 
 msgid "    This command is deprecated; use :hg:`commit --mq` instead."
-msgstr ""
+msgstr "    Эта команда устарела; используйте :hg:`commit --mq`."
 
 msgid "print patches not in series"
-msgstr ""
+msgstr "напечатать патчи, не входящие в последовательность"
 
 msgid "hg qseries [-ms]"
 msgstr ""
 
 msgid "print the entire series file"
-msgstr ""
+msgstr "напечатать весь файл последовательностей"
 
 msgid "hg qtop [-s]"
 msgstr ""
 
 msgid "print the name of the current patch"
-msgstr ""
+msgstr "напечатать имя текущего патча"
 
 msgid "hg qnext [-s]"
 msgstr ""
 
 msgid "print the name of the next patch"
-msgstr ""
+msgstr "напечатать имя следующего патча"
 
 msgid "hg qprev [-s]"
 msgstr ""
 
 msgid "print the name of the previous patch"
-msgstr ""
+msgstr "напечатать имя предыдущего патча"
 
 msgid "import uncommitted changes (DEPRECATED)"
-msgstr ""
+msgstr "импортировать незафиксированные изменения (УСТАРЕЛО)"
 
 msgid "add \"From: <current user>\" to patch"
-msgstr ""
+msgstr "добавть \"From: <текущий пользователь>\" к патчу"
 
 msgid "USER"
 msgstr "ПОЛЬЗОВАТЕЛЬ"
 
 msgid "add \"From: <USER>\" to patch"
-msgstr ""
+msgstr "добавить \"From: <ПОЛЬЗОВАТЕЛЬ>\" к патчу"
 
 msgid "add \"Date: <current date>\" to patch"
-msgstr ""
+msgstr "добавить \"Date: <текущая дата>\" к патчу"
 
 msgid "add \"Date: <DATE>\" to patch"
-msgstr ""
+msgstr "добавить \"Date: <ДАТА>\" к патчу"
 
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
-msgstr ""
+msgstr "hg qnew [-e] [-m ТЕКСТ] [-l ФАЙЛ] ПАТЧ [ФАЙЛ]..."
 
 msgid "create a new patch"
-msgstr ""
+msgstr "создать новый патч"
 
 msgid ""
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
@@ -4992,18 +5099,31 @@ msgid ""
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications."
 msgstr ""
+"    qnew создает новый патч поверх текущего наложенного патча (если таковой\n"
+"    имеется). Этот патч будет инициализирован незафиксированными\n"
+"    изменениями в рабочем каталоге. Вы можете также использовать -I/--"
+"include,\n"
+"    -X/--exclude и/или список список файлов после имени патча, чтобы\n"
+"    добавить в патч только изменения в соответствующих файлах, считая\n"
+"    остальные незафиксированными изменениями."
 
 msgid ""
 "    -u/--user and -d/--date can be used to set the (given) user and\n"
 "    date, respectively. -U/--currentuser and -D/--currentdate set user\n"
 "    to current user and date to current date."
 msgstr ""
+"    Можно использовать -u/--user и -d/--date, чтобы установить (указанного)\n"
+"    пользователя и дату соответственно. -U/--currentuser и -D/--currentdate\n"
+"    устанавливают пользователя в текущего пользователя и дату в текущую дату."
 
 msgid ""
 "    -e/--edit, -m/--message or -l/--logfile set the patch header as\n"
 "    well as the commit message. If none is specified, the header is\n"
 "    empty and the commit message is '[mq]: PATCH'."
 msgstr ""
+"    -e/--edit, -m/--message или -l/--logfile задают заголовок патча    "
+"аналогично сообщению фиксации. Если ни один из них не задан,\n"
+"    заголовок остается пустым, а сообщение фиксации будет '[mq]: ПАТЧ'."
 
 msgid ""
 "    Use the -g/--git option to keep the patch in the git extended diff\n"
@@ -5011,43 +5131,55 @@ msgid ""
 "    is important for preserving permission changes and copy/rename\n"
 "    information."
 msgstr ""
+"    Используйте параметр -g/--git, чтобы сохранить патч в расширенном\n"
+"    формате git. О том, почему это важно для сохранения информации о \n"
+"    копировании/переимовании и правах доступа, см. соответсвующий раздел\n"
+"    справки о различиях (diffs)."
 
 msgid ""
 "    Returns 0 on successful creation of a new patch.\n"
 "    "
 msgstr ""
+"    При успешном создании патча возвращает 0.\n"
+"    "
 
 msgid "refresh only files already in the patch and specified files"
-msgstr ""
+msgstr "обновить только файлы, уже включенные в патч, и указанные файлы"
 
 msgid "add/update author field in patch with current user"
-msgstr ""
+msgstr "добавть/обновить поле патча author, используя текущего пользователя"
 
 msgid "add/update author field in patch with given user"
-msgstr ""
+msgstr "добавть/обновить поле патча author, используя заданного пользователя"
 
 msgid "add/update date field in patch with current date"
-msgstr ""
+msgstr "добавть/обновить поле патча date, используя текущую дату"
 
 msgid "add/update date field in patch with given date"
-msgstr ""
+msgstr "добавть/обновить поле патча date, используя заданную дату"
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
-msgstr ""
+msgstr "hg qrefresh [-I] [-X] [-e] [-m ТЕКСТ] [-l ФАЙЛ] [-s] [ФАЙЛ]..."
 
 msgid "update the current patch"
-msgstr ""
+msgstr "обновить текущий патч"
 
 msgid ""
 "    If any file patterns are provided, the refreshed patch will\n"
 "    contain only the modifications that match those patterns; the\n"
 "    remaining modifications will remain in the working directory."
 msgstr ""
+"    Если заданы только шаблоны файлов, обновленный патч будет\n"
+"    содержать только изменения, совпадающие с этими шаблонами;\n"
+"    остальные изменения останутся в рабочем каталоге."
 
 msgid ""
 "    If -s/--short is specified, files currently included in the patch\n"
 "    will be refreshed just like matched files and remain in the patch."
 msgstr ""
+"    Если указан -s/--short, файлы, входящие на данный момент в патч,\n"
+"    будут обновлены так же, как совпавшие с шаблоном файлы, и будут\n"
+"    оставлены в составе патча."
 
 msgid ""
 "    If -e/--edit is specified, Mercurial will start your configured editor "
@@ -5056,6 +5188,10 @@ msgid ""
 "of\n"
 "    your message in ``.hg/last-message.txt``."
 msgstr ""
+"    Если задан -e/--edit, Mercurial запустит настроенный вами редактор,\n"
+"    чтобы вы могли ввести сообщение фиксации. Если qrefresh завершится\n"
+"    аварийно, вы найдете резервную копию вашего сообщения в\n"
+"    ``.hg/last-message.txt``."
 
 msgid ""
 "    hg add/remove/copy/rename work as usual, though you might want to\n"
@@ -5063,15 +5199,21 @@ msgid ""
 "    and renames. See the diffs help topic for more information on the\n"
 "    git diff format."
 msgstr ""
+"    Команды add/remove/copy/rename работают как обычно, хотя вам, возможно,\n"
+"    захочется использовать патчи в стиле git (-g/--git или [diff] git=1)\n"
+"    для отслеживания копирований и переименований. См. раздел "
+"соответствующий\n"
+"    раздел справки (diffs) для дополнительной информации о формате различий\n"
+"    в стиле git."
 
 msgid "option \"-e\" incompatible with \"-m\" or \"-l\""
-msgstr ""
+msgstr "параметр \"-e\" несовместим с \"-m\" или \"-l\""
 
 msgid "hg qdiff [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qdiff [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "diff of the current patch and subsequent modifications"
-msgstr ""
+msgstr "различия между текущим патчем и последующими модификациями"
 
 msgid ""
 "    Shows a diff which includes the current patch as well as any\n"
@@ -5079,6 +5221,9 @@ msgid ""
 "    last refresh (thus showing what the current patch would become\n"
 "    after a qrefresh)."
 msgstr ""
+"    Показывает различия, которые включают текущий патч, а также все\n"
+"    изменения, сделанные в рабочем каталоге после последнего qrefresh\n"
+"    (показывая таким образом, чем станет этот патч после qrefresh)"
 
 msgid ""
 "    Use :hg:`diff` if you only want to see the changes made since the\n"
@@ -5086,18 +5231,22 @@ msgid ""
 "    made by the current patch without including changes made since the\n"
 "    qrefresh."
 msgstr ""
+"    Используйте :hg:`diff`, если вы хотите посмотреть только изменения,\n"
+"    сделанные после последнего qrefresh, или :hg:`export qtip`, если\n"
+"    вы хотите посмотреть изменения, сделанные текущим патчем, не включая\n"
+"    изменения после последнего qrefresh."
 
 msgid "edit patch header"
-msgstr ""
+msgstr "редактировать заголовок патча"
 
 msgid "keep folded patch files"
-msgstr ""
+msgstr "оставить подшитые файлы патчей"
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
-msgstr ""
+msgstr "hg qfold [-e] [-k] [-m ТЕКСТ] [-l ФАЙЛ] ПАТЧ..."
 
 msgid "fold the named patches into the current patch"
-msgstr ""
+msgstr "подшить перечисленные патчи к текущему патчу"
 
 msgid ""
 "    Patches must not yet be applied. Each patch will be successively\n"
@@ -5107,47 +5256,56 @@ msgid ""
 "    deleted. With -k/--keep, the folded patch files will not be\n"
 "    removed afterwards."
 msgstr ""
+"    Патчи не должны быть наложены. Каждый патч будет последовательно наложен\n"
+"    на текущий патч в заданном порядке. Если патчи успешно наложились,\n"
+"    текущий патч будет обновлен (refreshed) с новым совокупным патчем,\n"
+"    а подшитые патчи будут удалены. С -k/--keep, подшитые файлы патчей\n"
+"    не будут после этого удалены."
 
 msgid ""
 "    The header for each folded patch will be concatenated with the\n"
 "    current patch header, separated by a line of ``* * *``."
 msgstr ""
+"    Заголовок каждого подшитого патча будет объединен с заголовком\n"
+"    текущего патча, отделенным строкой ``* * *``."
 
 msgid "qfold requires at least one patch name"
-msgstr ""
+msgstr "qfold требует указать хотя бы одно имя патча"
 
 #, python-format
 msgid "Skipping already folded patch %s\n"
-msgstr ""
+msgstr "Пропускается уже подшитый патч %s\n"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
-msgstr ""
+msgstr "qfold не может подшить уже наложенный патч %s"
 
 #, python-format
 msgid "error folding patch %s"
-msgstr ""
+msgstr "ошибка при подшивке патча %s"
 
 msgid "overwrite any local changes"
-msgstr ""
+msgstr "перезаписывать все локальные изменения"
 
 msgid "hg qgoto [OPTION]... PATCH"
-msgstr ""
+msgstr "hg qgoto [ПАРАМЕТР]... ПАТЧ"
 
 msgid "push or pop patches until named patch is at top of stack"
 msgstr ""
+"вталкивать или выталкивать патчи, пока указанный патч не окажется на вершине "
+"стека"
 
 msgid "list all patches and guards"
-msgstr ""
+msgstr "перечислить все патчи и стражей (guards)"
 
 msgid "drop all guards"
-msgstr ""
+msgstr "удалить всех стражей"
 
 msgid "hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"
-msgstr ""
+msgstr "hg qguard [-l] [-n] [ПАТЧ] [-- [+СТРАЖ]... [-СТРАЖ]...]"
 
 msgid "set or print guards for a patch"
-msgstr ""
+msgstr "установать или напечатать стражей для патча"
 
 msgid ""
 "    Guards control whether a patch can be pushed. A patch with no\n"
@@ -5157,186 +5315,211 @@ msgid ""
 "command\n"
 "    has activated it."
 msgstr ""
+"    Стражи (guards) контролируют, можно ли протолкнуть (в стек) данный патч.\n"
+"    Патч без стражей проталкивается всегда. Патч с положительным стражем\n"
+"    (\"+foo\") проталкивается только если он был активирован командой\n"
+"    :hg:`qselect`. Патч с отрицательным стражем (\"-foo\") никогда не\n"
+"    проталкивается, если он был активирован командой :hg:`qselect`."
 
 msgid ""
 "    With no arguments, print the currently active guards.\n"
 "    With arguments, set guards for the named patch."
 msgstr ""
+"    Без аргументов печатает активных в данный момент стражей.\n"
+"    С аргументами устанавливает стражей для заданного патча."
 
 msgid ""
 "    .. note::\n"
 "       Specifying negative guards now requires '--'."
 msgstr ""
+"    .. note::\n"
+"       задание отрицательного стража теперь требует '--'."
 
 msgid "    To set guards on another patch::"
-msgstr ""
+msgstr "    Установить стражей для другого патча::"
 
 msgid "      hg qguard other.patch -- +2.6.17 -stable"
-msgstr ""
+msgstr "      hg qguard другой.patch -- +2.6.17 -stable"
 
 msgid "cannot mix -l/--list with options or arguments"
-msgstr ""
+msgstr "нельзя указывать -l/--list с другими параметрами или аргументами"
 
 msgid "no patch to work with"
-msgstr ""
+msgstr "нет патча для работы"
 
 #, python-format
 msgid "no patch named %s"
-msgstr ""
+msgstr "нет патча с именем %s"
 
 msgid "hg qheader [PATCH]"
-msgstr ""
+msgstr "hg qheader [ПАТЧ]"
 
 msgid "print the header of the topmost or specified patch"
-msgstr ""
+msgstr "напечатать заголовок верхнего или указанного патча"
 
 msgid "apply on top of local changes"
-msgstr ""
+msgstr "наложить поверх локальных изменений"
 
 msgid "apply the target patch to its recorded parent"
-msgstr ""
+msgstr "наложить целевой патч на его записанного родителя"
 
 msgid "list patch name in commit text"
-msgstr ""
+msgstr "включить имя патча в сообщение фиксации"
 
 msgid "apply all patches"
-msgstr ""
+msgstr "наложить все патчи"
 
 msgid "merge from another queue (DEPRECATED)"
-msgstr ""
+msgstr "слить из другой очереди (УСТАРЕЛО)"
 
 msgid "merge queue name (DEPRECATED)"
-msgstr ""
+msgstr "имя очереди слияния (УСТАРЕЛО)"
 
+#, fuzzy
 msgid "reorder patch series and apply only the patch"
-msgstr ""
+msgstr "переупорядочить последовательность патчей и наложить только патч"
 
 msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qpush [-f] [-l] [-a] [--move] [ПАТЧ | ИНДЕКС]"
 
+# MAYBE: поместить (добавить) следующий патч в стек 
 msgid "push the next patch onto the stack"
-msgstr ""
+msgstr "протолкнуть следующий патч в стек"
 
 msgid ""
 "    When -f/--force is applied, all local changes in patched files\n"
 "    will be lost."
 msgstr ""
+"    С -f/--force все локальные изменения в файлах, на которые накладывается\n"
+"    патч, будут утеряны."
 
 msgid "no saved queues found, please use -n\n"
-msgstr ""
+msgstr "не найдено сохраненных очередей, пожалуйста используйте -n\n"
 
 #, python-format
 msgid "merging with queue at: %s\n"
-msgstr ""
+msgstr "слияние с очередью: %s\n"
 
 msgid "pop all patches"
-msgstr ""
+msgstr "вытолкнуть все патчи"
 
 msgid "queue name to pop (DEPRECATED)"
-msgstr ""
+msgstr "имя очереди для выталкивания (УСТАРЕЛО)"
 
 msgid "forget any local changes to patched files"
 msgstr ""
+"затереть все локальный изменения в файлах, на которые накладывается патч"
 
 msgid "hg qpop [-a] [-f] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qapplied [-1] [-s] [ПАТЧ | ИНДЕКС]"
 
 msgid "pop the current patch off the stack"
-msgstr ""
+msgstr "вытолкнуть текущий патч из стека"
 
 msgid ""
 "    By default, pops off the top of the patch stack. If given a patch\n"
 "    name, keeps popping off patches until the named patch is at the\n"
 "    top of the stack."
 msgstr ""
+"    По умолчанию, выталкивает вершину стека патчей. Если указано имя\n"
+"    патча, продолжает выталкивать патчи до тех пор, пока указанный патч\n"
+"    не окажется на вершине."
 
 #, python-format
 msgid "using patch queue: %s\n"
-msgstr ""
+msgstr "используется очередь патчей: %s\n"
 
 msgid "hg qrename PATCH1 [PATCH2]"
-msgstr ""
+msgstr "hg qrename ПАТЧ1 [ПАТЧ2]"
 
 msgid "rename a patch"
-msgstr ""
+msgstr "переименовать патч"
 
 msgid ""
 "    With one argument, renames the current patch to PATCH1.\n"
 "    With two arguments, renames PATCH1 to PATCH2."
 msgstr ""
+"    С одним аргументом переименовывает текущий патч в ПАТЧ1.\n"
+"    С двумя аргументами переименовывает ПАТЧ1 в ПАТЧ2."
 
 msgid "delete save entry"
-msgstr ""
+msgstr "удалить запись сохранения"
 
 msgid "update queue working directory"
-msgstr ""
+msgstr "обновить рабочий каталог очереди"
 
 msgid "hg qrestore [-d] [-u] REV"
-msgstr ""
+msgstr "hg qrestore [-d] [-u] РЕВ"
 
 msgid "restore the queue state saved by a revision (DEPRECATED)"
-msgstr ""
+msgstr "восстановить состояние очереди, сохраненное в ревизии (УСТАРЕЛО)"
 
 msgid "    This command is deprecated, use :hg:`rebase` instead."
-msgstr ""
+msgstr "    Эта команда устарела, используйте :hg:`rebase`."
 
 msgid "copy patch directory"
-msgstr ""
+msgstr "копировать каталог патчей"
 
 msgid "copy directory name"
-msgstr ""
+msgstr "копировать имя каталога"
 
 msgid "clear queue status file"
-msgstr ""
+msgstr "очистить файл состояния очереди"
 
 msgid "force copy"
-msgstr ""
+msgstr "копировать принудительно"
 
 msgid "hg qsave [-m TEXT] [-l FILE] [-c] [-n NAME] [-e] [-f]"
-msgstr ""
+msgstr "hg qsave [-m ТЕКСТ] [-l ФАЙЛ] [-c] [-n ИМЯ] [-e] [-f]"
 
 msgid "save current queue state (DEPRECATED)"
-msgstr ""
+msgstr "сохранить текущее состояние очереди (УСТАРЕЛО)"
 
 #, python-format
 msgid "destination %s exists and is not a directory"
-msgstr ""
+msgstr "цель %s существует и не является каталогом"
 
 #, python-format
 msgid "destination %s exists, use -f to force"
-msgstr ""
+msgstr "цель %s существует, используйте -f для принудительного сохранения"
 
 #, python-format
 msgid "copy %s to %s\n"
-msgstr ""
+msgstr "копирование %s в %s\n"
 
 msgid ""
 "strip specified revision (optional, can specify revisions without this "
 "option)"
 msgstr ""
+"срезать указанную ревизию (необязательный, можно задать ревизии и без "
+"этого параметра"
 
 msgid "force removal of changesets, discard uncommitted changes (no backup)"
 msgstr ""
+"принудительно изъять наборы изменений, отбросить незафиксированные изменения "
+"(без резервной копии)."
 
 msgid ""
 "bundle only changesets with local revision number greater than REV which are "
 "not descendants of REV (DEPRECATED)"
 msgstr ""
+"добавить в бандл только наборы изменений с локальными номерами ревизий "
+"большими,чем рев, и не являющимися потомками РЕВизии (УСТАРЕЛО)"
 
 msgid "no backups"
-msgstr ""
+msgstr "без резервного копирования"
 
 msgid "no backups (DEPRECATED)"
-msgstr ""
+msgstr "без резервного копирования (УСТАРЕЛО)"
 
 msgid "do not modify working copy during strip"
-msgstr ""
+msgstr "не изменять рабочую копию во во время операции strip"
 
 msgid "hg strip [-k] [-f] [-n] REV..."
-msgstr ""
+msgstr "hg strip [-k] [-f] [-n] РЕВ..."
 
 msgid "strip changesets and all their descendants from the repository"
-msgstr ""
+msgstr "срезать наборы изменений и всех их потомков из репозитория"
 
 msgid ""
 "    The strip command removes the specified changesets and all their\n"
@@ -5344,6 +5527,10 @@ msgid ""
 "    operation is aborted unless the --force flag is supplied, in which\n"
 "    case changes will be discarded."
 msgstr ""
+"    Команда strip удаляет указанные наборы изменений и всех их потомков.\n"
+"    Если рабочий каталог имеет незафиксированные изменения, оперaция\n"
+"    отменяется, если только не указан флаг --force, в случае чего\n"
+"    изменения будут отброшены."
 
 msgid ""
 "    If a parent of the working directory is stripped, then the working\n"
@@ -5351,6 +5538,9 @@ msgid ""
 "    available ancestor of the stripped parent after the operation\n"
 "    completes."
 msgstr ""
+"    Если операция strip выполняется над родителем рабочего каталога,\n"
+"    он будет автоматически обновлен на наиболее позднего доступного\n"
+"    предка срезанного родителя после завершения операции."
 
 msgid ""
 "    Any stripped changesets are stored in ``.hg/strip-backup`` as a\n"
@@ -5360,32 +5550,41 @@ msgid ""
 "    the local revision numbers will in general be different after the\n"
 "    restore."
 msgstr ""
+"    Все срезанные наборы изменений сохраняются в ``.hg/strip-backup``\n"
+"    в виде бандла (см. :hg:`help bundle` и :hg:`help unbundle`). Они\n"
+"    могут быть восстановлены с помощью :hg:`unbundle .hg/strip-backup/"
+"bundle`,\n"
+"    где bundle - имя файла бандла, созданного strip. Обратите внимание, что\n"
+"    локальные номера ревизий в общем случае будут олтичаться после\n"
+"    восстановления."
 
 msgid ""
 "    Use the --no-backup option to discard the backup bundle once the\n"
 "    operation completes."
 msgstr ""
+"    Используйте параметр --no-backup чтобы удалить бандл резервного\n"
+"    восстановления после завершения операции."
 
 msgid "empty revision set"
-msgstr ""
+msgstr "пустой набор ревизий"
 
 msgid "disable all guards"
-msgstr ""
+msgstr "отключить всех стражей"
 
 msgid "list all guards in series file"
-msgstr ""
+msgstr "перечислить всех стражей в файле последовательностей"
 
 msgid "pop to before first guarded applied patch"
-msgstr ""
+msgstr "вытолкнуть из стека до первого защищенного стражем наложенного патча"
 
 msgid "pop, then reapply patches"
-msgstr ""
+msgstr "вытолкнуть, затем снова наложить патчи"
 
 msgid "hg qselect [OPTION]... [GUARD]..."
-msgstr ""
+msgstr "hg qselect [ПАРАМЕТР]... [СТРАЖ]..."
 
 msgid "set or print guarded patches to push"
-msgstr ""
+msgstr "задать или напечатать защищенные патчи для помещения в стек"
 
 msgid ""
 "    Use the :hg:`qguard` command to set or print guards on patch, then use\n"
@@ -5394,30 +5593,51 @@ msgid ""
 "    selected guard, but will not be pushed if any negative guards\n"
 "    match the current guard. For example::"
 msgstr ""
+"    Используйте команду :hg:`qguard` чтобы задать или напечатать стражей\n"
+"    патча, после этого используйте qselect чтобы указать mq, каких стражей\n"
+"    использовать. Патч будет помещен в стек, если у него стражей или\n"
+"    любой из положительных стражей совпадает с выбранным на данный момент\n"
+"    стражем, но не будет помещен в стек, если совпадет любой отрицательный\n"
+"    страж."
 
+# BUG: line breaks not preserved in Russian
 msgid ""
 "        qguard foo.patch -- -stable    (negative guard)\n"
 "        qguard bar.patch    +stable    (positive guard)\n"
 "        qselect stable"
 msgstr ""
+"        qguard foo.patch -- -stable    (отрицательный страж)\n"
+"        qguard bar.patch    +stable    (положительный страж)\n"
+"        qselect stable"
 
 msgid ""
 "    This activates the \"stable\" guard. mq will skip foo.patch (because\n"
 "    it has a negative match) but push bar.patch (because it has a\n"
 "    positive match)."
 msgstr ""
+"    Это активирует страж \"stable\". mq пропустит foo.patch\n"
+"    (совпадает отрицательный страж), но поместит в стек bar.patch \n"
+"    (совпадает положительный страж)"
 
 msgid ""
 "    With no arguments, prints the currently active guards.\n"
 "    With one argument, sets the active guard."
 msgstr ""
+"    Без аргументов печатает активных в данный момент стражей.\n"
+"    С одним аргументом задает активного стража."
 
+# MAYBE BUG: а не наоборот?
 msgid ""
 "    Use -n/--none to deactivate guards (no other arguments needed).\n"
 "    When no guards are active, patches with positive guards are\n"
 "    skipped and patches with negative guards are pushed."
 msgstr ""
+"    Используйте -n/--none чтобы деактивировать стражей (не требуется\n"
+"    дополнительных аргументов). Если активных стражей нет, патчи с\n"
+"    положительными стражами пропускаются, а патчи с отрицательными\n"
+"    стражами помещаются в стек"
 
+#, fuzzy
 msgid ""
 "    qselect can change the guards on applied patches. It does not pop\n"
 "    guarded patches by default. Use --pop to pop back to the last\n"
@@ -5425,55 +5645,66 @@ msgid ""
 "    --pop) to push back to the current patch afterwards, but skip\n"
 "    guarded patches."
 msgstr ""
+"    qselect может менять стражей на наложенных патчах. По умолчанию\n"
+"    он не выталкивает патчи из стека. Используйте --pop чтобы вытолкнуть\n"
+"    до последнего наложенного патча без стражей. Используйте --reapply\n"
+"    (который подразумевает --pop) чтобы втолкнуть после этого все патчи\n"
+"    вплоть до текущего, пропуская при этом патчи со стражами."
 
 msgid ""
 "    Use -s/--series to print a list of all guards in the series file\n"
 "    (no other arguments needed). Use -v for more information."
 msgstr ""
+"    Используйте -s/--series чтобы напечатать список всех стражей в файле\n"
+"    последовательностей (других аргументов не требуется). Чтобы вывести\n"
+"    дополнительную информацию, используйте -v."
 
 msgid "guards deactivated\n"
-msgstr ""
+msgstr "стражы деактивированы\n"
 
 #, python-format
 msgid "number of unguarded, unapplied patches has changed from %d to %d\n"
-msgstr ""
+msgstr "количество незащенных неналоженных патчей изменилось c %d на %d\n"
 
 #, python-format
 msgid "number of guarded, applied patches has changed from %d to %d\n"
-msgstr ""
+msgstr "количество незащенных наложенных патчей изменилось c %d на %d\n"
 
 msgid "guards in series file:\n"
-msgstr ""
+msgstr "стражей в файле последовательностей:\n"
 
 msgid "no guards in series file\n"
-msgstr ""
+msgstr "нет стражей в файле последовательностей\n"
 
 msgid "active guards:\n"
-msgstr ""
+msgstr "активные стражи:\n"
 
 msgid "no active guards\n"
-msgstr ""
+msgstr "нет активных стражей\n"
 
 msgid "popping guarded patches\n"
-msgstr ""
+msgstr "выталкиваются защищенные патчи\n"
 
 msgid "reapplying unguarded patches\n"
-msgstr ""
+msgstr "заново накладываются незащищинные патчи\n"
 
 msgid "finish all applied changesets"
-msgstr ""
+msgstr "финализировать все наложенные патчи"
 
 msgid "hg qfinish [-a] [REV]..."
-msgstr ""
+msgstr "hg qfinish [-a] [РЕВ]..."
 
 msgid "move applied patches into repository history"
-msgstr ""
+msgstr "переместить наложенные патчи в историю хранилища"
 
 msgid ""
 "    Finishes the specified revisions (corresponding to applied\n"
 "    patches) by moving them out of mq control into regular repository\n"
 "    history."
 msgstr ""
+"    Финализирует указанные ревизии (соответствующие наложенным патчам)\n"
+"    путем перемещения их из-под контроля mq в историю обычного\n"
+"    хранилища."
 
 msgid ""
 "    Accepts a revision range or the -a/--applied option. If --applied\n"
@@ -5481,48 +5712,56 @@ msgid ""
 "    control. Otherwise, the given revisions must be at the base of the\n"
 "    stack of applied patches."
 msgstr ""
+"    Принимает диапазон ревизий или параметр -a/--applied. Если указан\n"
+"    --applied, все наложенные ревизии mq изымаются из-под контроля mq.\n"
+"    В противном случае указанные ревизии должны быть в основании стека\n"
+"    примененных патчей."
 
 msgid ""
 "    This can be especially useful if your changes have been applied to\n"
 "    an upstream repository, or if you are about to push your changes\n"
 "    to upstream."
 msgstr ""
+"    Это может быть особенно полезным, если ваши изменения были наложены\n"
+"    в вышестоящем (upstream) хранилище, или вы как раз собиратесь\n "
+"    протолкнуть туда ваши изменения."
 
 msgid "no revisions specified"
-msgstr ""
+msgstr "ревизии не заданы"
 
-#, fuzzy
 msgid "warning: uncommitted changes in the working directory\n"
-msgstr "показать измененные файлы в рабочем каталоге"
+msgstr "внимание: незафиксированные изменения в рабочем каталоге\n"
 
 msgid "list all available queues"
-msgstr ""
+msgstr "перечислить все доступные очереди"
 
 msgid "print name of active queue"
-msgstr ""
+msgstr "напечатать имя активной очереди"
 
 msgid "create new queue"
-msgstr ""
+msgstr "создать новую очередь"
 
 msgid "rename active queue"
-msgstr ""
+msgstr "переименовать активную очередь"
 
 msgid "delete reference to queue"
-msgstr ""
+msgstr "удалить ссылку на очередь"
 
 msgid "delete queue, and remove patch dir"
-msgstr ""
+msgstr "удалить очередь и удалить каталог патчей"
 
 msgid "[OPTION] [QUEUE]"
-msgstr ""
+msgstr "[ПАРАМЕТР] [ОЧЕРЕДЬ]"
 
 msgid "manage multiple patch queues"
-msgstr ""
+msgstr "управление несколькими очередями патчей"
 
 msgid ""
 "    Supports switching between different patch queues, as well as creating\n"
 "    new patch queues and deleting existing ones."
 msgstr ""
+"    Поддерживает переключение между различными очередями патчей, а также\n"
+"    создание новых очередей и удаление существующих."
 
 msgid ""
 "    Omitting a queue name or specifying -l/--list will show you the "
@@ -5533,6 +5772,10 @@ msgid ""
 "print\n"
 "    only the name of the active queue."
 msgstr ""
+"    Если имя очереди опущено или указан -l/--list, показывает\n"
+"    зарегистрированные очереди - по умолчанию зарегистрирована очередь\n"
+"    \"normal\". Активная в настоящий момент очередь будет помечена\n"
+"    \"(активна)\". С флагом --active напечатает только имя активной очереди."
 
 msgid ""
 "    To create a new queue, use -c/--create. The queue is automatically made\n"
@@ -5540,90 +5783,98 @@ msgid ""
 "    currently active queue in the repository. Then the queue will only be\n"
 "    created and switching will fail."
 msgstr ""
+"    Чтобы создать новую очередь, используйте -c/--create. Очередь\n"
+"    автоматически делается активной, за исключением случая, когда в\n"
+"    хранилище есть наложенные патчи из текущей активной очереди. Тогда\n"
+"    очередь будет только создана, а переключение завершится ошибкой."
 
 msgid ""
 "    To delete an existing queue, use --delete. You cannot delete the "
 "currently\n"
 "    active queue."
 msgstr ""
+"    Чтобы удалить существующую очередь, используйте --delete. Нельзя\n"
+"    удалить текущую активную очередь."
 
 msgid "patches applied - cannot set new queue active"
-msgstr ""
+msgstr "патчи наложены - невозможно сделать новую очередь активной"
 
 msgid "cannot delete queue that does not exist"
-msgstr ""
+msgstr "невозможно удалить несуществующую очередь"
 
 msgid "cannot delete currently active queue"
-msgstr ""
+msgstr "невозможно удалить текущую активную очередь"
 
 msgid " (active)\n"
-msgstr ""
+msgstr " (активна)\n"
 
 msgid "invalid queue name, may not contain the characters \":\\/.\""
-msgstr ""
+msgstr "неверное имя очереди, символы \":\\/.\" недопустимы"
 
 #, python-format
 msgid "queue \"%s\" already exists"
-msgstr ""
+msgstr "очередь \"%s\" уже существует"
 
 #, python-format
 msgid "can't rename \"%s\" to its current name"
-msgstr ""
+msgstr "не могу переименовать \"%s\" в ее текущее имя"
 
 #, python-format
 msgid "non-queue directory \"%s\" already exists"
-msgstr ""
+msgstr "каталог, не содержащий очереди, \"%s\" уже существует"
 
 msgid "use --create to create a new queue"
-msgstr ""
+msgstr "используйте --create чтобы создать новую очередь"
 
 msgid "cannot commit over an applied mq patch"
-msgstr ""
+msgstr "немогу зафиксировать поверх наложенного патч mq"
 
 msgid "source has mq patches applied"
-msgstr ""
+msgstr "источник имеет наложенные патчи mq"
 
 #, python-format
 msgid "mq status file refers to unknown node %s\n"
-msgstr ""
+msgstr "файл состояния mq ссылается на наизвестный узел %s\n"
 
 #, python-format
 msgid "Tag %s overrides mq patch of the same name\n"
-msgstr ""
+msgstr "Метка %s подменяет патч mq с таким же именем\n"
 
 msgid "cannot import over an applied patch"
-msgstr ""
+msgstr "невозможно импортировать поверх наложенного патча"
 
 msgid "only a local queue repository may be initialized"
-msgstr ""
+msgstr "можно инициализировать только локальное хранилище очереди"
 
 msgid "there is no Mercurial repository here (.hg not found)"
 msgstr "здесь нет репозитория Mercurial (.hg не найден)"
 
 msgid "no queue repository"
-msgstr ""
+msgstr "нет хранилища очереди"
 
 #, python-format
 msgid "%d applied"
-msgstr ""
+msgstr "%d наложено"
 
 #, python-format
 msgid "%d unapplied"
-msgstr ""
+msgstr "%d неналожено"
 
 msgid "mq:     (empty queue)\n"
-msgstr ""
+msgstr "mq:     (очередь пуста)\n"
 
 msgid ""
 "``mq()``\n"
 "    Changesets managed by MQ."
 msgstr ""
+"``mq()``\n"
+"    Наборы изменений, контролируемые MQ."
 
 msgid "mq takes no arguments"
 msgstr "mq не требует аргументов"
 
 msgid "operate on patch repository"
-msgstr "работать с репозиторием патчей mq"
+msgstr "работать с хранилищем патчей mq"
 
 msgid "hooks for sending email push notifications"
 msgstr ""
@@ -5735,13 +5986,12 @@ msgid ""
 "  with this value."
 msgstr ""
 
-#, fuzzy
 msgid ""
 "notify.style\n"
 "  Style file to use when formatting emails."
 msgstr ""
 "bugzilla.style\n"
-"  Файл стиля для форматирования комментариев."
+"  файл стиля, используемого для форматирования комментариев."
 
 #, fuzzy
 msgid ""
@@ -5749,7 +5999,7 @@ msgid ""
 "  Template to use when formatting emails."
 msgstr ""
 "bugzilla.style\n"
-"  Файл стиля для форматирования комментариев."
+"  файл стиля для форматирования комментариев."
 
 msgid ""
 "notify.incoming\n"
