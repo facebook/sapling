@@ -239,11 +239,14 @@ class wirerepository(repo.repository):
                      old=encoding.fromlocal(old),
                      new=encoding.fromlocal(new)), f
         d = f.value
+        d, output = d.split('\n', 1)
         try:
             d = bool(int(d))
         except ValueError:
             raise error.ResponseError(
                 _('push failed (unexpected response):'), d)
+        for l in output.splitlines(True):
+            self.ui.status(_('remote: '), l)
         yield d
 
     @batchable
