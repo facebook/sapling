@@ -880,6 +880,12 @@ _hg_cmd_qdiff() {
   '*:pattern:_hg_files'
 }
 
+_hg_cmd_qfinish() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--all -a)'{-a,--all}'[finish all patches]' \
+  '*:patch:_hg_qapplied'
+}
+
 _hg_cmd_qfold() {
   _arguments -s -w : $_hg_global_opts $_h_commit_opts \
   '(--keep,-k)'{-k,--keep}'[keep folded patch files]' \
