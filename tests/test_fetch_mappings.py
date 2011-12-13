@@ -12,8 +12,8 @@ from mercurial import util as hgutil
 
 from hgsubversion import maps
 from hgsubversion import svncommands
-from hgsubversion import verify
 from hgsubversion import util
+from hgsubversion import verify
 
 class MapTests(test_util.TestBase):
     @property

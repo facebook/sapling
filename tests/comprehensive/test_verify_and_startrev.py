@@ -42,7 +42,10 @@ def _do_case(self, name, stupid, layout):
     assert len(self.repo) > 0
     for i in repo:
         ctx = repo[i]
-        self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node()), 0)
+        self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node(),
+                                       stupid=True), 0)
+        self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node(),
+                                       stupid=False), 0)
 
     # check a startrev clone
     if layout == 'single' and name not in _skipshallow:
@@ -59,7 +62,18 @@ def _do_case(self, name, stupid, layout):
 
         repo.ui.pushbuffer()
         self.assertEqual(0, verify.verify(repo.ui, shallowrepo,
-                                          rev=shallowtip.node()))
+                                          rev=shallowtip.node(),
+                                          stupid=True))
+        self.assertEqual(0, verify.verify(repo.ui, shallowrepo,
+                                          rev=shallowtip.node(),
+                                          stupid=False))
+
+        stupidui = ui.ui(repo.ui)
+        stupidui.config('hgsubversion', 'stupid', True)
+        self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),
+                                       stupid=True), 0)
+        self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),
+                                       stupid=False), 0)
 
         # viewing diff's of lists of files is easier on the eyes
         self.assertMultiLineEqual('\n'.join(fulltip), '\n'.join(shallowtip),
