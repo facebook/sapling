@@ -32,6 +32,9 @@ def formatrev(rev):
         return '\t(working copy)'
     return '\t(revision %d)' % rev
 
+def configpath(ui, name):
+    path = ui.config('hgsubversion', name)
+    return path and hgutil.expandpath(path)
 
 def filterdiff(diff, oldrev, newrev):
     diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
