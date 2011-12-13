@@ -112,7 +112,7 @@
 # restricted     ограниченный
 # graft          перенести (изменения)
 # id             идентификатор
-# guard (в mq)   страж (необходимо пояснение) ??? предохранитель
+# guard (в mq)   страж (необходимо пояснение) ??? предохранитель (thg: стражник)
 # positive/negative guard положительный/отрицательный страж ??? (может разрешающий/запрещающий?)
 # apply patch    наложить патч
 # fuzz (patch)   несоответствие контекстов (в патче и целевом файле) ???
@@ -125,7 +125,7 @@
 # nested         вложенный
 # deprecated     устаревший
 # backup         резервная копия
-# finish (mq, qfinish) финализировать???
+# finish (mq, qfinish) финализировать??? -- «завершить» // comment by Andrei Polushin
 # fold (patch)     подшить ??? вообще свернуть
 #
 #
@@ -143,10 +143,10 @@
 #   чтобы можно легко понять, сколько еще осталось сделать.
 # - в какой форме д.б. глаголы сообщений о текущем действии:
 #   1 л ед.ч. - загружаю обновления, 
-#   1 л мн.ч - загружаем обновления,
+#   1 л мн.ч - загружаем обновления, -- Так! // comment by Andrei Polushin
 #   3 л - загружаются обновления ?
 #   Сюда же относятся сообщения cannot do smth: не могу сделать что-то или что-то невозможно?
-#   Cейчас последний вариант.
+#   Cейчас последний вариант. -- А лучше «не удаётся» // comment by Andrei Polushin
 # - внести определения согласованных терминов в hg glossary
 #
 #
@@ -2888,11 +2888,11 @@ msgid "hg %s [OPTION]... [FILE]..."
 msgstr "hg %s [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "pull, update and merge in one command"
-msgstr "подтянуть, обновиться и слить одной командой"
+msgstr "затянуть, обновиться и слить одной командой"
 
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr ""
-"подтягивает изменения из отдалённого хранилища, проводит слияние\n"
+"затягивает изменения из отдалённого хранилища, проводит слияние\n"
 "при необходимости."
 
 msgid ""
@@ -2908,7 +2908,7 @@ msgid ""
 "    Otherwise, the working directory is updated to include the new\n"
 "    changes."
 msgstr ""
-"    Если подтянутые изменения создают новую голову, она автоматически\n"
+"    Если затянутые изменения создают новую голову, она автоматически\n"
 "    сливается, и результат слияния фиксируется. В противном случае,\n"
 "    рабочий каталог обновляется, чтобы отразить новые изменения."
 
@@ -2918,7 +2918,7 @@ msgid ""
 "    parent, with local changes as the second. To switch the merge\n"
 "    order, use --switch-parent."
 msgstr ""
-"    Во время слияния подтянутые изменения считаются \"приоритетными\".\n"
+"    Во время слияния затянутые изменения считаются \"приоритетными\".\n"
 "    Головная ревизия новых изменений используется в качестве первого\n"
 "    родителя, вторым являются локальные изменения. Чтобы изменить\n"
 "    этот порядок, используйте --switch-parent."
@@ -2956,7 +2956,7 @@ msgstr ""
 
 #, python-format
 msgid "pulling from %s\n"
-msgstr "получение изменений из %s\n"
+msgstr "затягиваем из %s\n"
 
 msgid ""
 "Other repository doesn't support revision lookup, so a rev cannot be "
@@ -2986,7 +2986,7 @@ msgid "new changeset %d:%s merges remote changes with local\n"
 msgstr "новый набор изменений %d:%s сливает отдалённые изменения с локальными\n"
 
 msgid "a specific revision you would like to pull"
-msgstr "конкретная ревизия, которую вы хотите подтянуть"
+msgstr "конкретная ревизия, которую вы хотите затянуть"
 
 msgid "edit commit message"
 msgstr "редактировать сообщение фиксации"
@@ -3979,7 +3979,7 @@ msgid ""
 "that network access may be required to update to changesets you have\n"
 "not previously updated to."
 msgstr ""
-"Когда вы подтягиваете набор изменений, который затрагивает большие\n"
+"Когда вы затягиваете набор изменений, который затрагивает большие\n"
 "файлы, из отдалённого хранилища, Mercurial ведет себя как обычно.\n"
 "Однако, когда вы обновляетесь на такую ревизию, все большие файлы,\n"
 "нужные для этой ревизии, загружаются и кешируются (если они не были\n"
@@ -5743,10 +5743,10 @@ msgid "no active guards\n"
 msgstr "нет активных стражей\n"
 
 msgid "popping guarded patches\n"
-msgstr "выталкиваются защищенные патчи\n"
+msgstr "выталкиваем защищенные патчи\n"
 
 msgid "reapplying unguarded patches\n"
-msgstr "заново накладываются незащищённые патчи\n"
+msgstr "заново накладываем незащищённые патчи\n"
 
 msgid "finish all applied changesets"
 msgstr "финализировать все наложенные патчи"
@@ -6455,10 +6455,10 @@ msgstr ""
 
 #, python-format
 msgid "comparing with %s\n"
-msgstr "сравниваю с %s\n"
+msgstr "сравниваем с %s\n"
 
 msgid "no changes found\n"
-msgstr "изменений не найдено\n"
+msgstr "изменения не найдены\n"
 
 msgid "specify at least one changeset with -r or -o"
 msgstr ""
@@ -8948,7 +8948,7 @@ msgid ""
 "    ``.hg/hgrc`` file, as the default to be used for future pulls."
 msgstr ""
 "    Адрес источника добавляется в файл ``.hg/hgrc`` нового хранилища,\n"
-"    и используется по умолчанию для последующих pull'ов и push'ей."
+"    и используется по умолчанию для последующих затягиваний."
 
 msgid ""
 "    Only local paths and ``ssh://`` URLs are supported as\n"
@@ -10539,7 +10539,7 @@ msgid "compare bookmarks"
 msgstr "сравнить закладки"
 
 msgid "a specific branch you would like to pull"
-msgstr "конкретная ветка, которую вы хотите подтянуть"
+msgstr "конкретная ветка, которую вы хотите затянуть"
 
 msgid "[-p] [-n] [-M] [-f] [-r REV]... [--bundle FILENAME] [SOURCE]"
 msgstr "[-p] [-n] [-M] [-f] [-r РЕВ]... [--bundle ФАЙЛ] [ИСТОЧНИК]"
@@ -11105,7 +11105,7 @@ msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(используйте 'hg update' чтобы получить рабочую копию)\n"
 
 msgid "update to new branch head if changesets were pulled"
-msgstr "обновиться до новой головы ветки, если наборы изменений были подтянуты"
+msgstr "обновиться до новой головы ветки, если наборы изменений были затянуты"
 
 msgid "run even when remote repository is unrelated"
 msgstr "работать даже на несвязанном хранилище"
@@ -11114,13 +11114,13 @@ msgid "BOOKMARK"
 msgstr "ЗАКЛАДКА"
 
 msgid "bookmark to pull"
-msgstr "подтянуть закладку"
+msgstr "закладка, которую следует затянуть"
 
 msgid "[-u] [-f] [-r REV]... [-e CMD] [--remotecmd CMD] [SOURCE]"
 msgstr "[-u] [-f] [-r РЕВ]... [-e КОМ-ДА] [--remotecmd КОМ-ДА] [ИСТОЧНИК]"
 
 msgid "pull changes from the specified source"
-msgstr "подтянуть изменения из указанного источника"
+msgstr "затянуть изменения из указанного источника"
 
 msgid "    Pull changes from a remote repository to a local one."
 msgstr "    Скачивает изменения из отдалённого хранилища в локальное."
@@ -11215,7 +11215,7 @@ msgstr ""
 "    По умолчанию push не даст создать новые \"головы\" в отдалённом\n"
 "    хранилище, потому что в этом случае было бы не ясно, какую\n"
 "    голову использовать. В такой ситуации рекомендуется\n"
-"    подтянуть (pull) и слить (merge) изменения перед push'ем."
+"    затянуть и слить изменения перед проталкиванием."
 
 msgid ""
 "    Use --new-branch if you want to allow push to create a new named\n"
@@ -11252,12 +11252,13 @@ msgid ""
 "    Returns 0 if push was successful, 1 if nothing to push.\n"
 "    "
 msgstr ""
-"    Возвращает 0 в случае успехе, 1 если нет изменений для push'а.\n"
+"    Возвращает 0 в случае успешного проталкивания, 1 если нечего\n"
+"    проталкивать.\n"
 "    "
 
 #, python-format
 msgid "pushing to %s\n"
-msgstr "проталкиваю в %s\n"
+msgstr "проталкиваем в %s\n"
 
 #, python-format
 msgid "exporting bookmark %s\n"
@@ -12269,7 +12270,7 @@ msgid ""
 "    and cannot be renamed or assigned to a different changeset."
 msgstr ""
 "    Если вы только что сделали фиксацию, эта фиксация и будет tip'ом.\n"
-"    Если вы только что подтянули изменения из другого хранилища,\n"
+"    Если вы только что затянули изменения из другого хранилища,\n"
 "    tip этого хранилища станет текущим tip'ом. Метка \"tip\"\n"
 "    является служебной и не может быть переименована или назначена\n"
 "    другой ревизии."
@@ -15498,7 +15499,7 @@ msgid ""
 "Note that this will allow anybody to push anything to the server and\n"
 "that this should not be used for public servers."
 msgstr ""
-"Обратите внимание, что это позволит кому угодно push'ить что угодно\n"
+"Обратите внимание, что это позволит кому угодно проталкивать что угодно\n"
 "на сервер, поэтому так нельзя делать на публичных серверах."
 
 msgid "The full set of options is:"
@@ -17123,7 +17124,7 @@ msgid ""
 "    only updates the repository, it does not update the files in the\n"
 "    working directory. See :hg:`help pull`."
 msgstr ""
-"Подтянуть (Pull)\n"
+"Затянуть (Pull)\n"
 "    Операция, при которой наборы изменений из отдалённого хранилища,\n"
 "    отсутствующие в локальном, передаются в локальное хранилище.\n"
 "    Обратите внимание, что эта операция без дополнительных аргументов\n"
@@ -17138,7 +17139,7 @@ msgid ""
 "    locally to the remote repository. Uncommitted changes are not\n"
 "    sent. See :hg:`help push`."
 msgstr ""
-"Протолкнуть (Pull)\n"
+"Протолкнуть (Push)\n"
 "    Операция, при которой наборы изменения из локального хранилища,\n"
 "    отсутствующие в отдалённом, пересылаются в отдалённое хранилище.\n"
 "    Обратите внимание, что это передает только наборы изменений,\n"
@@ -18510,9 +18511,9 @@ msgid ""
 "    case."
 msgstr ""
 ":pull: pull не обрабатывает подхранилища рекурсивно, т.к. до\n"
-"    выполнения :hg:`update` не ясно, что подтягивать. Перечисление и\n"
+"    выполнения :hg:`update` не ясно, что затягивать. Перечисление и\n"
 "    передача изменений во всех подхранилищах, на которые ссылаются\n"
-"    подтянутые ревизии родительского хранилища в лучшем случае\n"
+"    затянутые ревизии родительского хранилища в лучшем случае\n"
 "    дорого, либо вообще невозможно в случае с Subversion."
 
 #, fuzzy
@@ -18548,7 +18549,7 @@ msgid ""
 msgstr ""
 ":update: update восстанавливает подхранилища до состояния,\n"
 "    в котором они были зафиксированы в целевой ревизии. Если\n"
-"    записанная ревизия недоступна, Mercurial сначала подтянет\n"
+"    записанная ревизия недоступна, Mercurial сначала затянет\n"
 "    ее до обновления. Это значит, что обновление может потребовать\n"
 "    доступа к сети при использовании подхранилищ."
 
@@ -20019,7 +20020,7 @@ msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
 msgstr ""
 
 msgid "searching for changes\n"
-msgstr ""
+msgstr "ищем изменения\n"
 
 msgid "all local heads known remotely\n"
 msgstr ""
