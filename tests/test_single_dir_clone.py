@@ -44,6 +44,15 @@ class TestSingleDir(test_util.TestBase):
         self.assertEqual(repo.branchtags().keys(), ['default', ])
         self.assertEqual(repo['default'].manifest().keys(), oldmanifest)
 
+    def test_clone_subdir_is_file_prefix(self, stupid=False):
+        FIXTURE = 'subdir_is_file_prefix.svndump'
+        repo = self._load_fixture_and_fetch(FIXTURE,
+                                            stupid=stupid,
+                                            layout='single',
+                                            subdir=test_util.subdir[FIXTURE])
+        self.assertEqual(repo.branchtags().keys(), ['default'])
+        self.assertEqual(repo['tip'].manifest().keys(), ['flaf.txt'])
+
     def test_externals_single(self):
         repo = self._load_fixture_and_fetch('externals.svndump',
                                             stupid=False,

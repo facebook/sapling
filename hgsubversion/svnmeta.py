@@ -292,7 +292,9 @@ class SVNMeta(object):
             return ''
         if path and path[0] == '/':
             path = path[1:]
-        if path and path.startswith(self.subdir):
+        if path == self.subdir:
+            return ''
+        if path and path.startswith(self.subdir + '/'):
             path = path[len(self.subdir):]
         if path and path[0] == '/':
             path = path[1:]

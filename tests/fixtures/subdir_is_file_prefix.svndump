@@ -1,0 +1,72 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 924a052a-5e5a-4a8e-a677-da5565bec340
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2011-03-04T12:33:29.342045Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 123
+Content-length: 123
+
+K 7
+svn:log
+V 22
+Create directory flaf.
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2011-03-04T12:34:00.349950Z
+PROPS-END
+
+Node-path: flaf
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 138
+Content-length: 138
+
+K 7
+svn:log
+V 37
+Create the file flaf.txt within flaf.
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2011-03-04T12:45:01.701033Z
+PROPS-END
+
+Node-path: flaf/flaf.txt
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 15
+Text-content-md5: 8c0059c8f7998e8003836b8e8fcb74d7
+Text-content-sha1: b7d680bc5411f46395c4ef267001e1a307d7b0d5
+Content-length: 25
+
+PROPS-END
+Goodbye world.
+
+

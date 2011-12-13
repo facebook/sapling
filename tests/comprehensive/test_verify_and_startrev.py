@@ -23,6 +23,14 @@ _skipshallow = set([
     'emptyrepo.svndump',
 ])
 
+_skipall = set([
+    'project_root_not_repo_root.svndump',
+])
+
+_skipstandard = set([
+    'subdir_is_file_prefix.svndump',
+])
+
 def _do_case(self, name, stupid, layout):
     subdir = test_util.subdir.get(name, '')
     repo, svnpath = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
@@ -65,13 +73,13 @@ def buildmethod(case, name, stupid, layout):
 attrs = {'_do_case': _do_case}
 fixtures = [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]
 for case in fixtures:
-    # this fixture results in an empty repository, don't use it
-    if case == 'project_root_not_repo_root.svndump':
+    if case in _skipall:
         continue
     bname = 'test_' + case[:-len('.svndump')]
-    attrs[bname] = buildmethod(case, bname, False, 'standard')
-    name = bname + '_stupid'
-    attrs[name] = buildmethod(case, name, True, 'standard')
+    if case not in _skipstandard:
+        attrs[bname] = buildmethod(case, bname, False, 'standard')
+        name = bname + '_stupid'
+        attrs[name] = buildmethod(case, name, True, 'standard')
     name = bname + '_single'
     attrs[name] = buildmethod(case, name, False, 'single')
     # Disabled because the "stupid and real are the same" tests
