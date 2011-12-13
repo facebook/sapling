@@ -43,8 +43,9 @@ def verify(ui, repo, args=None, **opts):
     srev, branch, branchpath = meta.get_source_rev(ctx=ctx)
 
     branchpath = branchpath[len(svn.subdir.lstrip('/')):]
+    branchurl = ('%s/%s' % (url, branchpath)).strip('/')
 
-    ui.write('verifying %s against r%i\n' % (ctx, srev))
+    ui.write('verifying %s against %s@%i\n' % (ctx, branchurl, srev))
 
     svnfiles = set()
     result = 0
