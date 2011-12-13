@@ -45,6 +45,8 @@ def buildmethod(case, name, layout):
 attrs = {'_do_case': _do_case,
          }
 for case in (f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')):
+    if case == 'corrupt.svndump':
+        continue
     name = 'test_' + case[:-len('.svndump')]
     # Automatic layout branchtag collision exposes a minor defect
     # here, but since it isn't a regression we suppress the test case.

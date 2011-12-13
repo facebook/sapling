@@ -1,0 +1,103 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 00000000-0000-0000-0000-000000000000
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2010-11-30T15:10:25.898546Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 100
+Content-length: 100
+
+K 7
+svn:log
+V 0
+
+K 10
+svn:author
+V 6
+danchr
+K 8
+svn:date
+V 27
+2010-11-30T15:16:01.077550Z
+PROPS-END
+
+Node-path: empty-file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 0
+Text-content-md5: d41d8cd98f00b204e9800998ecf8427e
+Text-content-sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: executable-file
+Node-kind: file
+Node-action: add
+Prop-content-length: 36
+Text-content-length: 11
+Text-content-md5: 01839ba8c81c3b2c7486607e0c683e62
+Text-content-sha1: 5e70f8a25fe8ad4ad971bfd3388c258b019268d4
+Content-length: 47
+
+K 14
+svn:executable
+V 1
+*
+PROPS-END
+Executable
+
+
+Node-path: regular-file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 10
+Text-content-md5: 2e01b7f4ab0c18c05a3059eb2e2420d9
+Text-content-sha1: 6e530e985be313a43dc9734251656be8f0c94ab8
+Content-length: 20
+
+PROPS-END
+Contents.
+
+
+Node-path: another-regular-file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 10
+Text-content-md5: 2e01b7f4ab0c18c05a3059eb2e2420d9
+Text-content-sha1: 6e530e985be313a43dc9734251656be8f0c94ab8
+Content-length: 20
+
+PROPS-END
+Contents.
+
+
+Node-path: symlink
+Node-kind: file
+Node-action: add
+Prop-content-length: 33
+Text-content-length: 6
+Text-content-md5: 654580f41818cd6f51408c7cbd313728
+Text-content-sha1: 130b8faaf3e1acc1b95f77ac835e9c8b6eee5c96
+Content-length: 39
+
+K 11
+svn:special
+V 1
+*
+PROPS-END
+link A
+

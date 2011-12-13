@@ -260,12 +260,45 @@ class UtilityTests(test_util.TestBase):
         output = re.sub(r'file://\S+', 'file://', output)
         self.assertMultiLineEqual("""\
 verifying d51f46a715a1 against file://
-difference in file binary2
-unexpected files:
-  binary1
-missing files:
-  binary3
+difference in: binary2
+unexpected file: binary1
+missing file: binary3
 """, output)
+
+    def test_svnverify_corruption(self):
+        SUCCESS = 0
+        FAILURE = 1
+
+        repo, repo_path = self.load_and_fetch('correct.svndump', layout='single',
+                                              subdir='')
+
+        ui = self.ui()
+
+        self.assertEqual(SUCCESS, svncommands.verify(ui, self.repo, rev='tip'))
+
+        corrupt_source = test_util.fileurl(self.load_svndump('corrupt.svndump'))
+
+        repo.ui.setconfig('paths', 'default', corrupt_source)
+
+        ui.pushbuffer()
+        code = svncommands.verify(ui, repo, rev='tip')
+        actual = ui.popbuffer()
+
+        actual = actual.replace(corrupt_source, '$REPO')
+        actual = set(actual.splitlines())
+
+        expected = set([
+            'verifying 78e965230a13 against $REPO@1',
+            'missing file: missing-file',
+            'wrong flags for: executable-file',
+            'wrong flags for: symlink',
+            'wrong flags for: regular-file',
+            'difference in: another-regular-file',
+            'difference in: regular-file',
+            'unexpected file: empty-file',
+        ])
+
+        self.assertEqual((FAILURE, expected), (code, actual))
 
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),

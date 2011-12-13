@@ -21,6 +21,8 @@ _skipshallow = set([
     'binaryfiles.svndump',
     'binaryfiles-broken.svndump',
     'emptyrepo.svndump',
+    'correct.svndump',
+    'corrupt.svndump',
 ])
 
 _skipall = set([
@@ -29,6 +31,8 @@ _skipall = set([
 
 _skipstandard = set([
     'subdir_is_file_prefix.svndump',
+    'correct.svndump',
+    'corrupt.svndump',
 ])
 
 def _do_case(self, name, stupid, layout):

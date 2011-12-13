@@ -66,24 +66,21 @@ def verify(ui, repo, args=None, **opts):
         except error.LookupError:
             result = 1
             continue
-        dmatch = fctx.data() == data
-        mmatch = fctx.flags() == mode
-        if not (dmatch and mmatch):
-            ui.write('difference in file %s\n' % fn)
+        if not fctx.data() == data:
+            ui.write('difference in: %s\n' % fn)
+            result = 1
+        if not fctx.flags() == mode:
+            ui.write('wrong flags for: %s\n' % fn)
             result = 1
 
     hgfiles = set(ctx) - util.ignoredfiles
     if hgfiles != svnfiles:
         unexpected = hgfiles - svnfiles
-        if unexpected:
-            ui.write('unexpected files:\n')
-            for f in sorted(unexpected):
-                ui.write('  %s\n' % f)
+        for f in sorted(unexpected):
+            ui.write('unexpected file: %s\n' % f)
         missing = svnfiles - hgfiles
-        if missing:
-            ui.write('missing files:\n')
-            for f in sorted(missing):
-                ui.write('  %s\n' % f)
+        for f in sorted(missing):
+            ui.write('missing file: %s\n' % f)
         result = 1
 
     util.progress(ui, 'verify', None)

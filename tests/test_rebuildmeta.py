@@ -101,11 +101,16 @@ def buildmethod(case, name, stupid, single):
     return m
 
 
+skip = set([
+    'project_root_not_repo_root.svndump',
+    'corrupt.svndump',
+])
+
 attrs = {'_do_case': _do_case,
          }
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
     # this fixture results in an empty repository, don't use it
-    if case == 'project_root_not_repo_root.svndump':
+    if case in skip:
         continue
     bname = 'test_' + case[:-len('.svndump')]
     attrs[bname] = buildmethod(case, bname, False, False)
