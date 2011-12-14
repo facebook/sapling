@@ -271,17 +271,21 @@ def uisetup(ui):
     class progressui(ui.__class__):
         _progbar = None
 
+        def _quiet(self):
+            return self.debugflag or self.quiet
+
         def progress(self, *args, **opts):
-            self._progbar.progress(*args, **opts)
+            if not self._quiet():
+                self._progbar.progress(*args, **opts)
             return super(progressui, self).progress(*args, **opts)
 
         def write(self, *args, **opts):
-            if self._progbar.printed:
+            if not self._quiet() and self._progbar.printed:
                 self._progbar.clear()
             return super(progressui, self).write(*args, **opts)
 
         def write_err(self, *args, **opts):
-            if self._progbar.printed:
+            if not self._quiet() and self._progbar.printed:
                 self._progbar.clear()
             return super(progressui, self).write_err(*args, **opts)
 
