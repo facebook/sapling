@@ -885,3 +885,18 @@ Test that removing .hgsub removes .hgsubstate:
   rm2
   
   
+Test issue3153: diff -S with deleted subrepos
+
+  $ hg diff --nodates -S -c .
+  diff -r 3941e0aa5236 -r 8b31de9d13d1 .hgsub
+  --- a/.hgsub
+  +++ /dev/null
+  @@ -1,2 +0,0 @@
+  -s = s
+  -t = t
+  diff -r 3941e0aa5236 -r 8b31de9d13d1 .hgsubstate
+  --- a/.hgsubstate
+  +++ /dev/null
+  @@ -1,2 +0,0 @@
+  -fc627a69481fcbe5f1135069e8a3881c023e4cf5 s
+  -e95bcfa18a358dc4936da981ebf4147b4cad1362 t
