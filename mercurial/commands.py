@@ -5157,7 +5157,8 @@ def status(ui, repo, *pats, **opts):
 
       Examples:
 
-      - show changes in the working directory relative to a changeset:
+      - show changes in the working directory relative to a
+        changeset::
 
           hg status --rev 9353
 
