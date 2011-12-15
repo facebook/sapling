@@ -1992,8 +1992,12 @@ class localrepository(repo.repository):
                           url=url, pending=p)
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
-            if srctype != 'strip':
-                phases.advanceboundary(self, 0, added)
+            if self.ui.configbool('phases', 'publish', True):
+                if srctype != 'strip':
+                    phases.advanceboundary(self, 0, added)
+            else:
+                phases.retractboundary(self, 1, added)
+
             # make changelog see real files again
             cl.finalize(trp)
 

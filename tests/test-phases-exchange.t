@@ -109,4 +109,30 @@ update must update phase of common changeset too
   1 0 a-B
   0 0 a-A
 
+Publish configuration option
+----------------------------
+
+changegroup are added without phase movement
+
+  $ hg bundle -a ../base.bundle
+  5 changesets found
+  $ cd ..
+  $ hg init mu
+  $ cd mu
+  $ cat > .hg/hgrc << EOF
+  > [phases]
+  > publish=0
+  > EOF
+  $ hg unbundle ../base.bundle
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 5 changes to 5 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hgph
+  4 1 a-D
+  3 1 a-C
+  2 1 b-A
+  1 1 a-B
+  0 1 a-A
 
