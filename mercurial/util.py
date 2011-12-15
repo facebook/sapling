@@ -104,18 +104,15 @@ def _fastsha1(s=''):
     _fastsha1 = sha1 = _sha1
     return _sha1(s)
 
-import __builtin__
-
-if sys.version_info[0] < 3:
-    def fakebuffer(sliceable, offset=0):
-        return sliceable[offset:]
-else:
-    def fakebuffer(sliceable, offset=0):
-        return memoryview(sliceable)[offset:]
 try:
-    buffer
+    buffer = buffer
 except NameError:
-    __builtin__.buffer = fakebuffer
+    if sys.version_info[0] < 3:
+        def buffer(sliceable, offset=0):
+            return sliceable[offset:]
+    else:
+        def buffer(sliceable, offset=0):
+            return memoryview(sliceable)[offset:]
 
 import subprocess
 closefds = os.name == 'posix'

@@ -318,7 +318,7 @@ def patchtext(bin):
 def patch(a, bin):
     if len(a) == 0:
         # skip over trivial delta header
-        return buffer(bin, 12)
+        return util.buffer(bin, 12)
     return mpatch.patches(a, [bin])
 
 # similar to difflib.SequenceMatcher.get_matching_blocks

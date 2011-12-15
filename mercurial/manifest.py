@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import mdiff, parsers, error, revlog
+import mdiff, parsers, error, revlog, util
 import array, struct
 
 class manifestdict(dict):
@@ -164,7 +164,7 @@ class manifest(revlog.revlog):
             dline = [""]
             start = 0
             # zero copy representation of addlist as a buffer
-            addbuf = buffer(addlist)
+            addbuf = util.buffer(addlist)
 
             # start with a readonly loop that finds the offset of
             # each line and creates the deltas
@@ -196,7 +196,7 @@ class manifest(revlog.revlog):
             # apply the delta to the addlist, and get a delta for addrevision
             cachedelta = (self.rev(p1), addlistdelta(addlist, delta))
             arraytext = addlist
-            text = buffer(arraytext)
+            text = util.buffer(arraytext)
 
         n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
         self._mancache = (n, map, arraytext)
