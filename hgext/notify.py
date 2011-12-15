@@ -108,6 +108,11 @@ notify.merge
 notify.mbox
   If set, append mails to this mbox file instead of sending. Default: None.
 
+notify.fromauthor
+  If set, use the first committer of the changegroup for the "From" field of
+  the notification mail. If not set, take the user from the pushing repo.
+  Default: False.
+
 If set, the following entries will also be used to customize the notifications:
 
 email.from
@@ -338,11 +343,14 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     ui.pushbuffer()
     data = ''
     count = 0
+    author = ''
     if hooktype == 'changegroup' or hooktype == 'outgoing':
         start, end = ctx.rev(), len(repo)
         for rev in xrange(start, end):
             if n.node(repo[rev]):
                 count += 1
+                if not author:
+                    author = repo[rev].user()
             else:
                 data += ui.popbuffer()
                 ui.note(_('notify: suppressing notification for merge %d:%s\n') %
@@ -360,5 +368,9 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         n.diff(ctx)
 
     data += ui.popbuffer()
+    fromauthor = ui.config('notify', 'fromauthor')
+    if author and fromauthor:
+        data = '\n'.join(['From: %s' % author, data])
+
     if count:
         n.send(ctx, count, data)

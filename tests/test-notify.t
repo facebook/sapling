@@ -116,6 +116,11 @@
   notify.mbox
     If set, append mails to this mbox file instead of sending. Default: None.
   
+  notify.fromauthor
+    If set, use the first committer of the changegroup for the "From" field of
+    the notification mail. If not set, take the user from the pushing repo.
+    Default: False.
+  
   If set, the following entries will also be used to customize the
   notifications:
   
