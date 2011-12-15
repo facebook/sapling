@@ -1507,6 +1507,7 @@ class localrepository(repo.repository):
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
+                added = []
                 result = 0
             else:
                 if heads is None and list(common) == [nullid]:
@@ -1526,8 +1527,26 @@ class localrepository(repo.repository):
                                            "changegroupsubset."))
                 else:
                     cg = remote.changegroupsubset(fetch, heads, 'pull')
+                clstart = len(self.changelog)
                 result = self.addchangegroup(cg, 'pull', remote.url())
-            phases.advanceboundary(self, 0, common)
+                clend = len(self.changelog)
+                added = [self.changelog.node(r) for r in xrange(clstart, clend)]
+
+
+            # Get remote phases data from remote
+            remotephases = remote.listkeys('phases')
+            publishing = bool(remotephases.get('publishing', False))
+            if remotephases and not publishing:
+                # remote is new and unpublishing
+                subset = common + added
+                rheads, rroots = phases.analyzeremotephases(self, subset,
+                                                            remotephases)
+                for phase, boundary in enumerate(rheads):
+                    phases.advanceboundary(self, phase, boundary)
+            else:
+                # Remote is old or publishing all common changesets
+                # should be seen as public
+                phases.advanceboundary(self, 0, common + added)
         finally:
             lock.release()
 
