@@ -2045,10 +2045,12 @@ class localrepository(repo.repository):
                           url=url, pending=p)
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
-            if self.ui.configbool('phases', 'publish', True):
-                if srctype != 'strip':
-                    phases.advanceboundary(self, 0, added)
-            else:
+            publishing = self.ui.configbool('phases', 'publish', True)
+            if publishing and srctype == 'push':
+                # Old server can not push the boundary themself.
+                # This clause ensure pushed changeset are alway marked as public
+                phases.advanceboundary(self, 0, added)
+            elif srctype != 'strip': # strip should not touch boundary at all
                 phases.retractboundary(self, 1, added)
 
             # make changelog see real files again

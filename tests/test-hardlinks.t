@@ -96,6 +96,7 @@ Repo r3 should not be hardlinked:
   1 r3/.hg/store/data/d1/f2.i
   1 r3/.hg/store/data/f1.i
   1 r3/.hg/store/fncache
+  1 r3/.hg/store/phaseroots
   1 r3/.hg/store/undo
   1 r3/.hg/store/undo.phaseroots
 

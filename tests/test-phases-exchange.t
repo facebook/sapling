@@ -245,8 +245,8 @@ pulling into publish=True
   added 2 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hgph
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
+  6 1 n-B - 145e75495359
+  5 1 n-A - d6bcb4f74035
   4 0 b-A - f54f1bb90ff3
   3 0 a-D - b555f63b6063
   2 0 a-C - 54acac6f23ab
@@ -269,15 +269,38 @@ pulling back into original repo
   2 0 a-C - 54acac6f23ab
   1 0 a-B - 548a3d25dbf0
   0 0 a-A - 054250a37db4
-  $ cd ..
 
 Push
 ````
 
+(inserted)
+
+Test that phase are pushed even when they are nothing to pus
+(this might be tested later bu are very convenient to not alter too much test)
+
+Push back to alpha
+
+  $ hg push ../alpha # from nu
+  pushing to ../alpha
+  searching for changes
+  no changes found
+  $ cd ..
+  $ cd alpha
+  $ hgph
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+(end insertion)
+
+
 initial setup
 
-  $ cd alpha
-  $ hg glog
+  $ hg glog # of alpha
   o  changeset:   6:145e75495359
   |  tag:         tip
   |  user:        test
