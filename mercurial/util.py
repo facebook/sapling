@@ -74,6 +74,11 @@ username = platform.username
 
 # Python compatibility
 
+_notset = object()
+
+def safehasattr(thing, attr):
+    return getattr(thing, attr, _notset) is not _notset
+
 def sha1(s=''):
     '''
     Low-overhead wrapper around Python's SHA support
@@ -86,10 +91,6 @@ def sha1(s=''):
     '''
 
     return _fastsha1(s)
-
-_notset = object()
-def safehasattr(thing, attr):
-    return getattr(thing, attr, _notset) is not _notset
 
 def _fastsha1(s=''):
     # This function will import sha1 from hashlib or sha (whichever is
