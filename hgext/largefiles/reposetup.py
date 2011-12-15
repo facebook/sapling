@@ -113,6 +113,18 @@ def reposetup(ui, repo):
                 if match is None:
                     match = match_.always(self.root, self.getcwd())
 
+                # First check if there were files specified on the
+                # command line.  If there were, and none of them were
+                # largefiles, we should just bail here and let super
+                # handle it -- thus gaining a big performance boost.
+                lfdirstate = lfutil.openlfdirstate(ui, self)
+                if match.files() and not match.anypats():
+                    matchedfiles = [f for f in match.files() if f in lfdirstate]
+                    if not matchedfiles:
+                        return super(lfiles_repo, self).status(node1, node2,
+                                match, listignored, listclean,
+                                listunknown, listsubrepos)
+
                 # Create a copy of match that matches standins instead
                 # of largefiles.
                 def tostandin(file):
@@ -144,7 +156,6 @@ def reposetup(ui, repo):
                         # taken out or lfdirstate.status will report an error.
                         # The status of these files was already computed using
                         # super's status.
-                        lfdirstate = lfutil.openlfdirstate(ui, self)
                         # Override lfdirstate's ignore matcher to not do
                         # anything
                         orig_ignore = lfdirstate._ignore
