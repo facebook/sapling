@@ -100,3 +100,43 @@ def retractboundary(repo, targetphase, nodes):
             del repo._phaserev
         repo._dirtyphases = True
 
+
+def listphases(repo):
+    """List phases root for serialisation over pushkey"""
+    keys = {}
+    for phase in trackedphases:
+        for root in repo._phaseroots[phase]:
+            keys[hex(root)] = '%i' % phase
+    if repo.ui.configbool('phases', 'publish', True):
+        # Add an extra data to let remote know we are a publishing repo.
+        # Publishing repo can't just pretend they are old repo. When pushing to
+        # a publishing repo, the client still need to push phase boundary
+        #
+        # Push do not only push changeset. It also push phase data. New
+        # phase data may apply to common changeset which won't be push (as they
+        # are common).  Here is a very simple example:
+        #
+        # 1) repo A push changeset X as draft to repo B
+        # 2) repo B make changeset X public
+        # 3) repo B push to repo A. X is not pushed but the data that X as now
+        #    public should
+        #
+        # The server can't handle it on it's own as it has no idea of client
+        # phase data.
+        keys['publishing'] = 'True'
+    return keys
+
+def pushphase(repo, nhex, oldphasestr, newphasestr):
+    """List phases root for serialisation over pushkey"""
+    lock = repo.lock()
+    try:
+        currentphase = repo[nhex].phase()
+        newphase = abs(int(newphasestr)) # let's avoid negative index surprise
+        oldphase = abs(int(oldphasestr)) # let's avoid negative index surprise
+        if currentphase == oldphase and newphase < oldphase:
+            advanceboundary(repo, newphase, [bin(nhex)])
+            return 1
+        else:
+            return 0
+    finally:
+        lock.release()

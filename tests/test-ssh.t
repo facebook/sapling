@@ -165,6 +165,7 @@ test pushkeys and bookmarks
   $ cd ../local
   $ hg debugpushkey --config ui.ssh="python $TESTDIR/dummyssh" ssh://user@dummy/remote namespaces
   bookmarks	
+  phases	
   namespaces	
   $ hg book foo -r 0
   $ hg out -B

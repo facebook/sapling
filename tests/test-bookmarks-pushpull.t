@@ -34,6 +34,7 @@ import bookmark by name
      Y                         0:4e3505fd9583
   $ hg debugpushkey ../a namespaces
   bookmarks	
+  phases	
   namespaces	
   $ hg debugpushkey ../a bookmarks
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
@@ -151,6 +152,7 @@ hgweb
 
   $ hg debugpushkey http://localhost:$HGPORT/ namespaces 
   bookmarks	
+  phases	
   namespaces	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
