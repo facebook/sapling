@@ -140,3 +140,30 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
             return 0
     finally:
         lock.release()
+
+def analyzeremotephases(repo, subset, roots):
+    """Compute phases heads and root in a subset of node from root dict
+
+    * subset is heads of the subset
+    * roots is {<nodeid> => phase} mapping. key and value are string.
+
+    Accept unknown element input
+    """
+    # build list from dictionary
+    phaseroots = [[] for p in allphases]
+    for nhex, phase in roots.iteritems():
+        if nhex == 'publishing': # ignore data related to publish option
+            continue
+        node = bin(nhex)
+        phase = int(phase)
+        if node in repo:
+            phaseroots[phase].append(node)
+    # compute heads
+    phaseheads = [[] for p in allphases]
+    for phase in allphases[:-1]:
+        toproof = phaseroots[phase + 1]
+        revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
+                          subset, toproof, toproof, subset)
+        phaseheads[phase].extend(c.node() for c in revset)
+    return phaseheads, phaseroots
+
