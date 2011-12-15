@@ -1,20 +1,75 @@
 # Russian translations for Mercurial package.
 # Copyright (C) 2011 Matt Mackall <mpm@selenic.com> and others
 # This file is distributed under the same license as the Mercurial package.
-# Alexander Sauta <demosito@gmail.com>, 2011.
+# === Glossary ===
+#
+# extensions     расширения
+# options        настройки
+# source         источник, исходник, первоисточник
+# directory      директория
+# folder         папка
+# changeset      набор изменений
+# commit         коммит
+# pull           подтянуть, загрузить изменения
+# push           протолкнуть, передать изменения
+# tip            оконечная ревизия
+# revision       ревизия
+# changegroup    группа изменений
+# version        версия
+# log            журнал (о hg log), лог
+# tag            метка
+# branch         ветка
+# working copy   рабочая копия
+# repository     репозиторий
+# surepo         субрепозиторий
+# diff           дифф, различия
+# hash           хэш
+# glob           глоб, glob
+# commit comment комментарий к коммиту (?)
+# update         обновить
+# binary         бинарный
+# backout        
+# basename       
+# head           голова, головная ревизия
+# import         импортировать
+# export         экспортировать
+# merge          слияние, сливать
+# patch          патч
+# rename         переименовать
+# revert
+# delete         удалить (файл из файловой системы)
+# undo           отменить
+# track          отслеживать
+# bundle         бандл
+# committer      автор
+# alias          псевдоним
+# whitespace     пробельный символ
+# match          совпадать (о шаблоне)
+# restricted     ограниченный
+# graft          перенести (изменения)
+# id             идентификатор
+# store          хранилище
+# ========= TODO ==========
+# Эти вещи требуют доработки
+# - keyword template maps в keywords - придумать лучший перевод
+# - вычитка, исправление опечаток, стилистика многих предложений
+# - протестировать сообщения об ошибках (я не видел большинство из них в работе)
+
+
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-07-01 00:15+0400\n"
-"PO-Revision-Date: 2011-11-09 18:25+0100\n"
+"POT-Creation-Date: 2011-12-07 22:44+0400\n"
+"PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%"
-"10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #, python-format
 msgid " (default: %s)"
@@ -33,9 +88,9 @@ msgid ""
 "This section contains help for extensions that are distributed together with "
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
-"Этот раздел содержит справку по расширениям, включенным в стандартную "
-"комплектацию Mercurial. Справка по другим расширениям может быть получена в "
-"справочной системе."
+"Этот раздел содержит справку по расширениям, включенным в стандартный "
+"дистрибутив Mercurial. Справка по другим расширениям может быть получена "
+"всправочной системе."
 
 msgid "Options:"
 msgstr "Параметры:"
@@ -45,19 +100,25 @@ msgid "    aliases: %s"
 msgstr "    псевдонимы: %s"
 
 msgid "hooks for controlling repository access"
-msgstr "Хуки для контроля доступа к репозиторию"
+msgstr "хуки для контроля доступа к репозиторию"
 
 msgid ""
 "This hook makes it possible to allow or deny write access to given\n"
 "branches and paths of a repository when receiving incoming changesets\n"
 "via pretxnchangegroup and pretxncommit."
 msgstr ""
+"Этот хук позволяет разрешить или запретить доступ на запись к заданным\n"
+"веткам и путям репозитория во время получения входяших наборов изменений\n"
+"через pretxnchangegroup и pretxncommit."
 
 msgid ""
 "The authorization is matched based on the local user name on the\n"
 "system where the hook runs, and not the committer of the original\n"
 "changeset (since the latter is merely informative)."
 msgstr ""
+"Авторизация основана на локальном имени пользователя\n"
+"системы, где выполняется хук, а не на имени автора (committer) исходного\n"
+"изменения (changeset) (так как последний имеет чисто информативный характер)."
 
 msgid ""
 "The acl hook is best used along with a restricted shell like hgsh,\n"
@@ -67,9 +128,18 @@ msgid ""
 "remote users share an account, because then there is no way to\n"
 "distinguish them."
 msgstr ""
+"Хук авторизации (acl hook) лучше всего использовать вместе с ограниченной "
+"(restricted) оболочкой, как, например hgsh,\n"
+"которая предотвращает доступ ко всему кроме push или pull неавторизованными "
+"пользователями.\n"
+"Хук небезопасно использовать, если используется интерактивная оболочка,\n"
+"так как при этом пользователи могут отключить хук. Это также небезопасно "
+"если\n"
+"удалённые пользователи разделяют один и тот же аккаунт, так как при этом "
+"нельзя различить пользователей."
 
 msgid "The order in which access checks are performed is:"
-msgstr ""
+msgstr "Порядок, в котором выполняются проверки доступа:"
 
 msgid ""
 "1) Deny  list for branches (section ``acl.deny.branches``)\n"
@@ -77,38 +147,55 @@ msgid ""
 "3) Deny  list for paths    (section ``acl.deny``)\n"
 "4) Allow list for paths    (section ``acl.allow``)"
 msgstr ""
+"1) Отказной   список для бранчей (раздел ``acl.deny.branches``)\n"
+"2) Одобренный список для бранчей (раздел ``acl.allow.branches``)\n"
+"3) Отказной   список для путей   (раздел ``acl.deny``)\n"
+"4) Одобренный список для путей   (раздел ``acl.allow``)"
 
 msgid "The allow and deny sections take key-value pairs."
 msgstr ""
+"Одобренный и отказной разделы (секции ``allow`` и ``deny``) принимают пары "
+"ключ-значение."
 
 msgid ""
 "Branch-based Access Control\n"
 "..........................."
 msgstr ""
+"Конроль доступа, основанный на ветке\n"
+"...................................."
 
 msgid ""
 "Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to\n"
 "have branch-based access control. Keys in these sections can be\n"
 "either:"
 msgstr ""
+"Используйте разделы ``acl.deny.branches`` и ``acl.allow.branches``\n"
+"чтобы получить конроль доступа, основанный на ветке. Ключами в этих разделах "
+"могут быть:"
 
 msgid ""
 "- a branch name, or\n"
 "- an asterisk, to match any branch;"
 msgstr ""
+"- имя ветки, или\n"
+"- звёздочка, чтобы выбрать любую ветку;"
 
 msgid "The corresponding values can be either:"
-msgstr ""
+msgstr "Соответствующие значения могут быть:"
 
 msgid ""
 "- a comma-separated list containing users and groups, or\n"
 "- an asterisk, to match anyone;"
 msgstr ""
+"- список, разделённый запятыми, содержащий пользователей и группы, или\n"
+"- звёздочка, чтобы выбрать любого;"
 
 msgid ""
 "Path-based Access Control\n"
 "........................."
 msgstr ""
+"Конроль доступа основанный на пути\n"
+".................................."
 
 msgid ""
 "Use the ``acl.deny`` and ``acl.allow`` sections to have path-based\n"
@@ -116,16 +203,26 @@ msgid ""
 "a glob syntax by default). The corresponding values follow the same\n"
 "syntax as the other sections above."
 msgstr ""
+"Используйте разделы ``acl.deny`` и ``acl.allow`` для конроля доступа, "
+"основанного на пути.\n"
+"Ключи в этих разделах принимают шаблон для поддерева (с\n"
+"синтаксисом glob по умолчанию). Соответствующие значения следуют тем же "
+"синтаксическим правилам,\n"
+"что и вышеперечисленные разделы."
 
 msgid ""
 "Groups\n"
 "......"
 msgstr ""
+"Группы\n"
+"......"
 
 msgid ""
 "Group names must be prefixed with an ``@`` symbol. Specifying a group\n"
 "name has the same effect as specifying all the users in that group."
 msgstr ""
+"Имена групп должны начинаться с символа  ``@``. Если имя группы задано,\n"
+"это даёт тот же эффект, что и указание всех пользователей в этой группе."
 
 msgid ""
 "You can define group members in the ``acl.groups`` section.\n"
@@ -133,14 +230,21 @@ msgid ""
 "a Unix-like system, the list of users will be taken from the OS.\n"
 "Otherwise, an exception will be raised."
 msgstr ""
+"Можно задать членов группы в разделе ``acl.groups``.\n"
+"Если имя группы там не определено, и Mercurial работает под управлением\n"
+"Unix-подобной системы, то список пользователей будет определяться "
+"операционной системой.\n"
+"В противном случае генерируется исключение."
 
 msgid ""
 "Example Configuration\n"
 "....................."
 msgstr ""
+"Пример конфигурации\n"
+"..................."
 
 msgid "::"
-msgstr ""
+msgstr "::"
 
 msgid "  [hooks]"
 msgstr ""
@@ -149,12 +253,19 @@ msgid ""
 "  # Use this if you want to check access restrictions at commit time\n"
 "  pretxncommit.acl = python:hgext.acl.hook"
 msgstr ""
+"  # Используйте это если хотите проверять ограничения доступа во время "
+"коммита\n"
+"  pretxncommit.acl = python:hgext.acl.hook"
 
 msgid ""
 "  # Use this if you want to check access restrictions for pull, push,\n"
 "  # bundle and serve.\n"
 "  pretxnchangegroup.acl = python:hgext.acl.hook"
 msgstr ""
+"  # Используйте это если хотите проверять ограничения доступа для pull, "
+"push,\n"
+"  # bundle и serve.\n"
+"  pretxnchangegroup.acl = python:hgext.acl.hook"
 
 msgid ""
 "  [acl]\n"
@@ -165,6 +276,16 @@ msgid ""
 "  # Default: serve\n"
 "  sources = serve"
 msgstr ""
+"  [acl]\n"
+"  # Разрешать или запрещать доступ к входящим изменениям только если их "
+"первоисточник\n"
+"  # указан здесь, разрешать в противном случае. Источник - \"serve\" для "
+"всех\n"
+"  # удалённых операций (по http или ssh), или же \"push\", \"pull\" или "
+"\"bundle\", когда\n"
+"  # соответствующие команды выполняются локально.\n"
+"  # По умолчанию: serve\n"
+"  sources = serve"
 
 msgid "  [acl.deny.branches]"
 msgstr ""
@@ -173,11 +294,15 @@ msgid ""
 "  # Everyone is denied to the frozen branch:\n"
 "  frozen-branch = *"
 msgstr ""
+"  # Всем закрыт доступ к ветке frozen:\n"
+"  frozen-branch = *"
 
 msgid ""
 "  # A bad user is denied on all branches:\n"
 "  * = bad-user"
 msgstr ""
+"  # Плохой пользователь забанен на всех ветках:\n"
+"  * = bad-user"
 
 msgid "  [acl.allow.branches]"
 msgstr ""
@@ -186,21 +311,29 @@ msgid ""
 "  # A few users are allowed on branch-a:\n"
 "  branch-a = user-1, user-2, user-3"
 msgstr ""
+"  # Некоторые пользователи допущены в branch-a:\n"
+"  branch-a = user-1, user-2, user-3"
 
 msgid ""
 "  # Only one user is allowed on branch-b:\n"
 "  branch-b = user-1"
 msgstr ""
+"  # Только один пользователь допущен в branch-b:\n"
+"  branch-b = user-1"
 
 msgid ""
 "  # The super user is allowed on any branch:\n"
 "  * = super-user"
 msgstr ""
+"  # Администратор допущен в любую ветку:\n"
+"  * = super-user"
 
 msgid ""
 "  # Everyone is allowed on branch-for-tests:\n"
 "  branch-for-tests = *"
 msgstr ""
+"  # Все допущены в branch-for-tests:\n"
+"  branch-for-tests = *"
 
 msgid ""
 "  [acl.deny]\n"
@@ -208,45 +341,71 @@ msgid ""
 "  # checked. All users are granted access if acl.deny is not present.\n"
 "  # Format for both lists: glob pattern = user, ..., @group, ..."
 msgstr ""
+"  [acl.deny]\n"
+"  # Этот список проверяется первым. Если найдено совпадение, acl.allow не\n"
+"  # проверяется. Все пользователи получают доступ если acl.deny "
+"отсутствует.\n"
+"  # Формат для обоих списков: glob-шаблон = пользователь, ..., @группа, ..."
 
 msgid ""
 "  # To match everyone, use an asterisk for the user:\n"
 "  # my/glob/pattern = *"
 msgstr ""
+"  # Чтобы обозначить любого пользователя, используйте звёздочку:\n"
+"  # my/glob/pattern = *"
 
 msgid ""
 "  # user6 will not have write access to any file:\n"
 "  ** = user6"
 msgstr ""
+"  # user6 не будет иметь прав на запись для любого файла:\n"
+"  ** = user6"
 
 msgid ""
 "  # Group \"hg-denied\" will not have write access to any file:\n"
 "  ** = @hg-denied"
 msgstr ""
+"  # Группа \"hg-denied\" не будет иметь прав на запись для любого файла:\n"
+"  ** = @hg-denied"
 
 msgid ""
 "  # Nobody will be able to change \"DONT-TOUCH-THIS.txt\", despite\n"
 "  # everyone being able to change all other files. See below.\n"
 "  src/main/resources/DONT-TOUCH-THIS.txt = *"
 msgstr ""
+"  # Никто не сможет изменить файл \"DONT-TOUCH-THIS.txt\", несмотря на то, "
+"что\n"
+"  # все могут менять любые другие файлы. См. далее.\n"
+"  src/main/resources/DONT-TOUCH-THIS.txt = *"
 
 msgid ""
 "  [acl.allow]\n"
 "  # if acl.allow is not present, all users are allowed by default\n"
 "  # empty acl.allow = no users allowed"
 msgstr ""
+"  [acl.allow]\n"
+"  # Если acl.allow отсутствует, все пользователи разрешены по умолчанию,\n"
+"  # пустой acl.allow означает что никому нет доступа"
 
 msgid ""
 "  # User \"doc_writer\" has write access to any file under the \"docs\"\n"
 "  # folder:\n"
 "  docs/** = doc_writer"
 msgstr ""
+"  # Пользователь \"doc_writer\" имеет доступ на запись для любого файла в "
+"\"docs\"\n"
+"  # папке:\n"
+"  docs/** = doc_writer"
 
 msgid ""
 "  # User \"jack\" and group \"designers\" have write access to any file\n"
 "  # under the \"images\" folder:\n"
 "  images/** = jack, @designers"
 msgstr ""
+"  # Пользователь \"jack\" и группа \"designers\" имеют доступ на запись для "
+"любого файла\n"
+"  # в папке \"images\":\n"
+"  images/** = jack, @designers"
 
 msgid ""
 "  # Everyone (except for \"user6\" - see acl.deny above) will have write\n"
@@ -254,18 +413,25 @@ msgid ""
 "  # file. See acl.deny):\n"
 "  src/main/resources/** = *"
 msgstr ""
+"  # Любой пользователь (за исключением \"user6\" - см. acl.deny выше) "
+"получит доступ на запись\n"
+"  # в любой файл в папке \"resources\" (за исключением 1\n"
+"  # файла. Смотри acl.deny):\n"
+"  src/main/resources/** = *"
 
 msgid "  .hgtags = release_engineer"
 msgstr ""
 
 #, python-format
 msgid "group '%s' is undefined"
-msgstr ""
+msgstr "группа '%s' не определена"
 
 #, python-format
 msgid ""
 "config error - hook type \"%s\" cannot stop incoming changesets nor commits"
 msgstr ""
+"ошибка конфигурации - хук типа \"%s\" не может предотвратить входящие "
+"изменения (changesets, commits)"
 
 #, python-format
 msgid "acl: user \"%s\" denied on branch \"%s\" (changeset \"%s\")"
@@ -273,14 +439,18 @@ msgstr ""
 
 #, python-format
 msgid "acl: user \"%s\" not allowed on branch \"%s\" (changeset \"%s\")"
-msgstr ""
+msgstr "acl: пользователь \"%s\" не допущен в ветку \"%s\" (ревизия \"%s\")"
 
 #, python-format
-msgid "acl: access denied for changeset %s"
-msgstr ""
+msgid "acl: user \"%s\" denied on \"%s\" (changeset \"%s\")"
+msgstr "acl: пользователь \"%s\" не допущен в \"%s\" (ревизия \"%s\")"
+
+#, python-format
+msgid "acl: user \"%s\" not allowed on \"%s\" (changeset \"%s\")"
+msgstr "acl: пользователь \"%s\" не допущен в \"%s\" (ревизия \"%s\")"
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
-msgstr ""
+msgstr "хуки для интеграции с Bugzilla bug tracker"
 
 msgid ""
 "This hook extension adds comments on bugs in Bugzilla when changesets\n"
@@ -339,12 +509,14 @@ msgid ""
 msgstr ""
 
 msgid "Configuration items common to all access modes:"
-msgstr ""
+msgstr "Общие параметры для всех режимов доступа:"
 
 msgid ""
 "bugzilla.version\n"
 "  This access type to use. Values recognised are:"
 msgstr ""
+"bugzilla.version\n"
+"  Тип доступа. Возможны следующие значения:"
 
 msgid ""
 "  :``xmlrpc``:       Bugzilla XMLRPC interface.\n"
@@ -369,6 +541,8 @@ msgid ""
 "bugzilla.style\n"
 "  The style file to use when formatting comments."
 msgstr ""
+"bugzilla.style\n"
+"  Файл стиля для форматирования комментариев."
 
 msgid ""
 "bugzilla.template\n"
@@ -403,9 +577,12 @@ msgid ""
 "  Base URL for browsing Mercurial repositories. Referenced from\n"
 "  templates as ``{hgweb}``."
 msgstr ""
+"web.baseurl\n"
+"  Базовый URL для просмотра репозиториев Mercurial. На него ссылаются из\n"
+"  шаблонов ``{hgweb}``."
 
 msgid "Configuration items common to XMLRPC+email and MySQL access modes:"
-msgstr ""
+msgstr "Общие параметры для XMLRPC+email и MySQL режимов доступа:"
 
 msgid ""
 "bugzilla.usermap\n"
@@ -696,8 +873,7 @@ msgid "command to display child changesets"
 msgstr "Команда для отображения дочерних наборов изменений"
 
 msgid "show the children of the given or working directory revision"
-msgstr ""
-"показать дочерние ревизии для заданной текущей ревизии рабочего каталога"
+msgstr "показать дочерние ревизии для заданной ревизии"
 
 msgid ""
 "    Print the children of the working directory's revisions. If a\n"
@@ -707,6 +883,13 @@ msgid ""
 "    argument to --rev if given) is printed.\n"
 "    "
 msgstr ""
+"    Без параметров печатает дочерние ревизии рабочего каталога. Если\n"
+"    ревизия задана с помощью -r/--rev, то выведутся ее дочерние ревизии.\n"
+"    Если задан файл в качестве аргумента, то будет выведена ревизия в "
+"которой\n"
+"    этот файл был изменён (после текушей ревизии рабочей директории или\n"
+"    для заданного аргумента --rev).\n"
+"    "
 
 msgid "REV"
 msgstr "РЕВИЗИЯ"
@@ -715,20 +898,20 @@ msgid "show children of the specified revision"
 msgstr "показать дочерние наборы изменений для указанной ревизии"
 
 msgid "hg children [-r REV] [FILE]"
-msgstr ""
+msgstr "hg children [-r РЕВИЗИЯ] [ФАЙЛ]"
 
 msgid "command to display statistics about repository history"
-msgstr ""
+msgstr "команда для отображения статистики об истории репозитория"
 
 #, python-format
 msgid "Revision %d is a merge, ignoring...\n"
-msgstr ""
+msgstr "Ревизия %d это слияние (merge), пропускаем...\n"
 
 msgid "analyzing"
-msgstr ""
+msgstr "анализ"
 
 msgid "histogram of changes to the repository"
-msgstr ""
+msgstr "гистограмма изменений, внесенных в репозиторий"
 
 msgid ""
 "    This command will display a histogram representing the number\n"
@@ -737,95 +920,116 @@ msgid ""
 "    The --dateformat option may be used to group the results by\n"
 "    date instead."
 msgstr ""
+"    Эта команда показывает гистограмму, представляющую количество\n"
+"    изменённых строк или ревизий, сгруппированных в соответствии с\n"
+"    заданным шаблоном. Стандартный шаблон группирует изменения по автору.\n"
+"    Опция --dateformat может быть использавана, чтобы сгруппировать    "
+"результаты по дате."
 
 msgid ""
 "    Statistics are based on the number of changed lines, or\n"
 "    alternatively the number of matching revisions if the\n"
 "    --changesets option is specified."
 msgstr ""
+"    Статистика основана на количестве изменённых строк, либо\n"
+"    числе соответствующих ревизий, если задана опция\n"
+"    --changesets."
 
 msgid "    Examples::"
-msgstr ""
+msgstr "    Примеры::"
 
 msgid ""
 "      # display count of changed lines for every committer\n"
 "      hg churn -t '{author|email}'"
 msgstr ""
+"      # отобразить число изменённых строк для каждого автора\n"
+"      hg churn -t '{author|email}'"
 
 msgid ""
 "      # display daily activity graph\n"
 "      hg churn -f '%H' -s -c"
 msgstr ""
+"      # отобразить график ежедневной активности\n"
+"      hg churn -f '%H' -s -c"
 
 msgid ""
 "      # display activity of developers by month\n"
 "      hg churn -f '%Y-%m' -s -c"
 msgstr ""
+"      # отобразить активность разработчиков помесячно\n"
+"      hg churn -f '%Y-%m' -s -c"
 
 msgid ""
 "      # display count of lines changed in every year\n"
 "      hg churn -f '%Y' -s"
 msgstr ""
+"      # отобразить число изменённых строк за каждый год\n"
+"      hg churn -f '%Y' -s"
 
 msgid ""
 "    It is possible to map alternate email addresses to a main address\n"
 "    by providing a file using the following format::"
 msgstr ""
+"    Можно заменить почтовые адреса на любые другие, задав файл\n"
+"    следующего формата::"
 
 msgid "      <alias email> = <actual email>"
-msgstr ""
+msgstr "      <псевдоним адреса> = <настоящий адрес>"
 
 msgid ""
 "    Such a file may be specified with the --aliases option, otherwise\n"
 "    a .hgchurn file will be looked for in the working directory root.\n"
 "    "
 msgstr ""
+"    Такой файл может быть задан опцией --aliases, иначе\n"
+"    поиск файла .hgchurn происходит в корне рабочей директории.\n"
+"    "
 
 #, python-format
 msgid "skipping malformed alias: %s\n"
-msgstr ""
+msgstr "пропущен неверный псевдоним: %s\n"
 
 msgid "count rate for the specified revision or range"
-msgstr ""
+msgstr "рассчитывать статистику для заданной ревизии или диапазона"
 
 msgid "DATE"
 msgstr "ДАТА"
 
 msgid "count rate for revisions matching date spec"
-msgstr ""
+msgstr "рассчитывать статистику для ревизий, соответствующих заданному шаблону"
 
 msgid "TEMPLATE"
-msgstr ""
+msgstr "ШАБЛОН"
 
 msgid "template to group changesets"
-msgstr ""
+msgstr "шаблон для группировки изменений"
 
 msgid "FORMAT"
 msgstr "ФОРМАТ"
 
 msgid "strftime-compatible format for grouping by date"
-msgstr ""
+msgstr "strftime-совместимый формат для группирования по дате"
 
 msgid "count rate by number of changesets"
-msgstr ""
+msgstr "считать количество наборов изменений"
 
 msgid "sort by key (default: sort by count)"
-msgstr ""
+msgstr "отсортировать по ключу (по умолчанию: сортировать по количеству)"
 
 msgid "display added/removed lines separately"
-msgstr ""
+msgstr "отобразить добавленные/удалённые строки отдельно"
 
 msgid "FILE"
 msgstr "ФАЙЛ"
 
 msgid "file with email aliases"
-msgstr ""
+msgstr "файл с псевдонимами почтовых адресов"
 
 msgid "hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]"
-msgstr ""
+msgstr "hg churn [-d ДАТА] [-r РЕВ] [--aliases ФАЙЛ] [ФАЙЛ]"
 
 msgid "colorize output from some commands"
-msgstr "Раскрашивает вывод некоторых команд"
+msgstr "раскрашивает вывод некоторых команд"
 
 msgid ""
 "This extension modifies the status and resolve commands to add color\n"
@@ -834,6 +1038,12 @@ msgid ""
 "diff-related commands to highlight additions, removals, diff headers,\n"
 "and trailing whitespace."
 msgstr ""
+"Это расширение добавляет цветной вывод для некоторых команд.\n"
+"В командах status и resolve цвет отражает статус файла; в qseries -\n"
+"статус патча (применен, не применен, отсутствует); в команды, связанные\n"
+"с различиями (diff) добавляет подсветку добавлений и удалений файлов, "
+"заголовков\n"
+"различий, а также ведущих пробельных символов."
 
 msgid ""
 "Other effects in addition to color, like bold and underlined text, are\n"
@@ -842,9 +1052,16 @@ msgid ""
 "available, then effects are rendered with the ECMA-48 SGR control\n"
 "function (aka ANSI escape codes)."
 msgstr ""
+"Кроме цвета, также доступны и другие эффекты, такие как жирный или "
+"подчёркнутый текст.\n"
+"Пр умолчанию для нахождения кодов терминала для эффекта или изменения цвета\n"
+"используется база terminfo. Если terminfo не доступен,\n"
+"эффекты отображаются при помощи контрольной функции ECMA-48 SGR control\n"
+"(также известной как ANSI escape codes)."
 
 msgid "Default effects may be overridden from your configuration file::"
 msgstr ""
+"Стандартные эффекты могут быть переопределены в вашем файле конфигурации::"
 
 msgid ""
 "  [color]\n"
@@ -855,18 +1072,32 @@ msgid ""
 "  status.unknown = magenta bold underline\n"
 "  status.ignored = black bold"
 msgstr ""
+"  [цвет]\n"
+"  status.modified = blue bold underline red_background # синий подчёркнутый "
+"красный_фон\n"
+"  status.added = green bold # зелёный жирный\n"
+"  status.removed = red bold blue_background # красный жирный синий_фон\n"
+"  status.deleted = cyan bold underline # голубой жирный подчёркнутый\n"
+"  status.unknown = magenta bold underline # пурпурный жирный подчёркнутый\n"
+"  status.ignored = black bold # чёрный жирный"
 
 msgid ""
 "  # 'none' turns off all effects\n"
 "  status.clean = none\n"
 "  status.copied = none"
 msgstr ""
+"  # 'none' выключает все эффекты\n"
+"  status.clean = none\n"
+"  status.copied = none"
 
 msgid ""
 "  qseries.applied = blue bold underline\n"
 "  qseries.unapplied = black bold\n"
 "  qseries.missing = red bold"
 msgstr ""
+"  qseries.applied = blue bold underline # синий жирный подчёркнутый\n"
+"  qseries.unapplied = black bold # чёрный подчёркнутый\n"
+"  qseries.missing = red bold # красный жирный"
 
 msgid ""
 "  diff.diffline = bold\n"
@@ -879,14 +1110,25 @@ msgid ""
 "  diff.changed = white\n"
 "  diff.trailingwhitespace = bold red_background"
 msgstr ""
+"  diff.diffline = bold # жирный\n"
+"  diff.extended = cyan bold # голубой жирный\n"
+"  diff.file_a = red bold # красный жирный\n"
+"  diff.file_b = green bold # зелёный жирный\n"
+"  diff.hunk = magenta # пурпурный\n"
+"  diff.deleted = red # красный\n"
+"  diff.inserted = green # зелёный\n"
+"  diff.changed = white # белый\n"
+"  diff.trailingwhitespace = bold red_background # жирный красный_фон "
 
 msgid ""
 "  resolve.unresolved = red bold\n"
 "  resolve.resolved = green bold"
 msgstr ""
+"  resolve.unresolved = red bold # красный жирный\n"
+"  resolve.resolved = green bold # зелёный жирный"
 
 msgid "  bookmarks.current = green"
-msgstr ""
+msgstr "  bookmarks.current = green # зеленый"
 
 msgid ""
 "  branches.active = none\n"
@@ -896,6 +1138,13 @@ msgid ""
 msgstr ""
 
 msgid ""
+"  tags.normal = green\n"
+"  tags.local = black bold"
+msgstr ""
+"  tags.normal = green # зеленый\n"
+"  tags.local = black bold # черный жирный"
+
+msgid ""
 "The available effects in terminfo mode are 'blink', 'bold', 'dim',\n"
 "'inverse', 'invisible', 'italic', 'standout', and 'underline'; in\n"
 "ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and\n"
@@ -903,6 +1152,13 @@ msgid ""
 "Some may not be available for a given terminal type, and will be\n"
 "silently ignored."
 msgstr ""
+"В режиме terminfo доступны эффекты 'blink' (мигающий), 'bold' (жирный),\n"
+"'dim' (тусклый), 'invisible' (невидимый), 'italic' (курсивный), 'standout'\n"
+"(выделенный) и 'underline' (подчеркнутый); в режиме ECMA-48 доступны\n"
+"'bold', 'inverse', 'italic' и 'underline'. Конкретный вид каждого эффекта\n"
+"зависит от вашего эмулятора терминала. Некоторые из них могут быть "
+"недоступны\n"
+"в вашем терминале и будут молча проигнорированы."
 
 msgid ""
 "Note that on some systems, terminfo mode may cause problems when using\n"
@@ -913,18 +1169,31 @@ msgid ""
 "pass through all terminal control codes, not just color control\n"
 "codes)."
 msgstr ""
+"Обратите внимание, что на некоторых системах режим terminfo может вызывать\n"
+"проблемы с расширением pager и с less -R. less с опцией -R будет отображать\n"
+"только цветовые коды ECMA-48, а режим terminfo иногда может порождать\n"
+"коды, которые less не понимает. Это можно обойти, если использовать режим\n"
+"ansi (или auto), или используя less -r (который пропускает все контрольные\n"
+"последовательности, а не только коды цвета)."
 
 msgid ""
 "Because there are only eight standard colors, this module allows you\n"
 "to define color names for other color slots which might be available\n"
 "for your terminal type, assuming terminfo mode.  For instance::"
 msgstr ""
+"Поскольку стандартных цветов всего восемь, этот модуль позволяет определить\n"
+"имена для других слотов цвета, которые могут быть доступны в вашем "
+"терминале.\n"
+"Например::"
 
 msgid ""
 "  color.brightblue = 12\n"
 "  color.pink = 207\n"
 "  color.orange = 202"
 msgstr ""
+"  color.brightblue = 12 # светлоголубой\n"
+"  color.pink = 207 # розовый\n"
+"  color.orange = 202 # оранжевый"
 
 msgid ""
 "to set 'brightblue' to color slot 12 (useful for 16 color terminals\n"
@@ -933,12 +1202,22 @@ msgid ""
 "defined colors may then be used as any of the pre-defined eight,\n"
 "including appending '_background' to set the background to that color."
 msgstr ""
+"задает имя 'bightblue' для слота 12 (полезно для 16-цветных терминалов,\n"
+"в которых светлые цвета определены в старших 8 кодах) и 'pink' и 'orange'\n"
+"для 256-цветного xterm. Определенные таким образом цвета могут "
+"использоваться\n"
+"так же, как и восемь стандартных, т.ч. и с добавлением '_background' для\n"
+"установки цвета фона."
 
 msgid ""
 "By default, the color extension will use ANSI mode (or win32 mode on\n"
 "Windows) if it detects a terminal. To override auto mode (to enable\n"
 "terminfo mode, for example), set the following configuration option::"
 msgstr ""
+"По умолчанию расширение использует режим ANSI (или win32 под windows),\n"
+"если она обнаруживает терминал. Чтобы переопределить режим по умолчанию\n"
+"(например, чтобы включить режим terminfo), используются следующие\n"
+"параметры::"
 
 msgid ""
 "  [color]\n"
@@ -949,22 +1228,26 @@ msgid ""
 "Any value other than 'ansi', 'win32', 'terminfo', or 'auto' will\n"
 "disable color.\n"
 msgstr ""
+"Любое другое значение, кроме 'ansi', 'win32', 'terminfo' или 'auto'\n"
+"отключает цвета.\n"
 
 msgid "no terminfo entry for setab/setaf: reverting to ECMA-48 color\n"
-msgstr ""
+msgstr "нет записи terminfo для setab/setaf: возвращаюсь в режим ECMA-48\n"
 
 #, python-format
 msgid "warning: failed to set color mode to %s\n"
-msgstr ""
+msgstr "предупреждение: не удалось установить режим %s\n"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
-msgstr ""
+msgstr "игнорируется неизвестный цвет/эффект %r (заданный в цвете.%s)\n"
 
 #. i18n: 'always', 'auto', and 'never' are keywords and should
 #. not be translated
 msgid "when to colorize (boolean, always, auto, or never)"
 msgstr ""
+"когда раскрашивать вывод (логическое. always (всегда), auto (автоматически)"
+"или never (не раскрашивать))"
 
 msgid "TYPE"
 msgstr "ТИП"
@@ -1243,10 +1526,10 @@ msgstr ""
 
 msgid ""
 "    :convert.hg.saverev: store original revision ID in changeset\n"
-"        (forces target IDs to change). It takes and boolean argument\n"
-"        and defaults to False."
+"        (forces target IDs to change). It takes a boolean argument and\n"
+"        defaults to False."
 msgstr ""
-"    :convert.hg.saverev: созранять исходный номер ревизии в наборе\n"
+"    :convert.hg.saverev: сохранять исходный номер ревизии в наборе\n"
 "        изменений (изменяет выходные номера ревизий).\n"
 "        True или False, по умолчанию False."
 
@@ -1490,13 +1773,12 @@ msgstr ""
 "    :convert.hg.clonebranches: создавать отдельные репозитории на\n"
 "        каждую ветвь источника. По умолчанию False."
 
-#, fuzzy
 msgid ""
 "    :convert.hg.tagsbranch: branch name for tag revisions, defaults to\n"
 "        ``default``."
 msgstr ""
 "    :convert.hg.tagsbranch: имя ветви для помеченных ревизий,\n"
-"         по умолчанию ``default``\n"
+"         по умолчанию ``default``"
 
 msgid ""
 "    :convert.hg.usebranchnames: preserve branch names. The default is\n"
@@ -1614,10 +1896,10 @@ msgstr ""
 
 #, python-format
 msgid "%s does not look like a Bazaar repository"
-msgstr ""
+msgstr "%s не похож на репозиторий Bazaar"
 
 msgid "Bazaar modules could not be loaded"
-msgstr ""
+msgstr "Не удалось загрузить модули Bazaar"
 
 msgid ""
 "warning: lightweight checkouts may cause conversion failures, try with a "
@@ -2099,7 +2381,7 @@ msgid "writing Subversion tags is not yet implemented\n"
 msgstr ""
 
 msgid "automatically manage newlines in repository files"
-msgstr ""
+msgstr "автоматический перевод форматов новой строки в репозитории"
 
 msgid ""
 "This extension allows you to manage the type of line endings (CRLF or\n"
@@ -2107,6 +2389,10 @@ msgid ""
 "directory. That way you can get CRLF line endings on Windows and LF on\n"
 "Unix/Mac, thereby letting everybody use their OS native line endings."
 msgstr ""
+"Это расширение позволяет управлять форматом перевода строки (CRLF или\n"
+"LF), который используется в репозитории или в рабочей копии. Таким\n"
+"образом можно получить переносы в виде CRLF в Windows и LF в Unix/Mac,\n"
+"позволяя всем использовать нативные для их платформы переносы."
 
 msgid ""
 "The extension reads its configuration from a versioned ``.hgeol``\n"
@@ -2115,6 +2401,10 @@ msgid ""
 "configuration files. It uses two sections, ``[patterns]`` and\n"
 "``[repository]``."
 msgstr ""
+"Расширение читает настройки из версионируемого файла конфигурации\n"
+"``.hgeol``, находящегося в корне рабочего каталога. Файл ``.hgeol``\n"
+"имеет тот же синтаксис, что и другие файлы конфигурации Mercurial.\n"
+"Он использует две секции: ``[patterns]`` и ``[repository]``."
 
 msgid ""
 "The ``[patterns]`` section specifies how line endings should be\n"
@@ -2123,6 +2413,11 @@ msgid ""
 "specific patterns first. The available line endings are ``LF``,\n"
 "``CRLF``, and ``BIN``."
 msgstr ""
+"Секция ``[patterns]`` определяет, как переносы строк должны "
+"преобразовываться\n"
+"между рабочей копией и репозиторием. Формат задается шаблоном файла.\n"
+"Используется первый совпавший шаблон, так что помещайте более конкрентные\n"
+"шаблоны в начале. Достуны окончания строки ``LF``, ``CRLF`` и ``BIN``."
 
 msgid ""
 "Files with the declared format of ``CRLF`` or ``LF`` are always\n"
@@ -2134,6 +2429,14 @@ msgid ""
 "default behaviour; it is only needed if you need to override a later,\n"
 "more general pattern."
 msgstr ""
+"Файлы, для которых задан формат ``CRLF`` или ``LF`` всегда извлекаются\n"
+"и хранятся в репозитории в этом формате, файлы с форматом ``BIN``\n"
+"остаются неизменными. Дополнительно может спользоваться формат ``native``,\n"
+"позволяющий извлекать файлы в родном для текущей платформы формате: ``LF``\n"
+"в Unix (включая Mac OS X) и ``CRLF`` в Windows. Обратите внимание, что\n"
+"``BIN`` (ничего не делать с переводом строки) является поведением Mercurial\n"
+"по умолчанию; он требуется, только если надо переопределить последующий,\n"
+"более общий шаблон."
 
 msgid ""
 "The optional ``[repository]`` section specifies the line endings to\n"
@@ -2146,9 +2449,20 @@ msgid ""
 "declared as ``LF``, ``CRLF``, or ``BIN`` in the ``[patterns]`` section\n"
 "are always stored as-is in the repository."
 msgstr ""
+"Необязательная секция ``[repository]`` задает формат перевода строки\n"
+"для файлов в репозитории. Он имеет единственный параметр - ``native``, - \n"
+"который определяет формат новой строки для файлов, объявленных как "
+"``native``\n"
+"в секции ``[patterns]``. Он может быть установлен в ``LF`` или ``CRLF``.\n"
+"По умолчанию ``LF``. Это означает, что, например, под Windows файлы,\n"
+"сконфигурированные как ``native`` (``CRLF`` по умолчанию), будут "
+"преобразованы\n"
+"к формату ``LF`` при хранении в репозитории. Файлы, объявленные как ``LF``,\n"
+"``CRLF`` или ``BIN`` в секции ``[patterns]``, всегда хранятся в репозитории\n"
+"в неизменном виде."
 
 msgid "Example versioned ``.hgeol`` file::"
-msgstr ""
+msgstr "Пример версионированного файла ``.hgeol``::"
 
 msgid ""
 "  [patterns]\n"
@@ -2169,12 +2483,22 @@ msgid ""
 "   The rules will first apply when files are touched in the working\n"
 "   copy, e.g. by updating to null and back to tip to touch all files."
 msgstr ""
+".. note::\n"
+"   Правила будут впервые применены, когда файлы будут изменены в рабочей\n"
+"   копии, например, при обновлении на нулевую (null) и обратно на оконечную\n"
+"   (tip) ревизию."
 
 msgid ""
-"The extension uses an optional ``[eol]`` section in your hgrc file\n"
-"(not the ``.hgeol`` file) for settings that control the overall\n"
-"behavior. There are two settings:"
+"The extension uses an optional ``[eol]`` section read from both the\n"
+"normal Mercurial configuration files and the ``.hgeol`` file, with the\n"
+"latter overriding the former. You can use that section to control the\n"
+"overall behavior. There are three settings:"
 msgstr ""
+"Расширение использует необязательную секцию ``[eol]``, которую читает\n"
+"из обычного конфигурационного файла Mercurial или из файла ``.hgeol``,\n"
+"причем последний имеет более высокий приоритет. Эту секцию можно "
+"использовать,\n"
+"чтобы управлять общим поведением. Поддерживаются три параметра:"
 
 msgid ""
 "- ``eol.native`` (default ``os.linesep``) can be set to ``LF`` or\n"
@@ -2182,6 +2506,11 @@ msgid ""
 "  checkout. This can be used with :hg:`archive` on Unix, say, to\n"
 "  generate an archive where files have line endings for Windows."
 msgstr ""
+"- ``eol.native`` (по умолчанию ``ls.linesep``) может быть установлен в\n"
+"  ``LF`` или ``CRLF``, чтобы переопределить интерпретацию ``native``\n"
+"  по умолчанию для извлечения файлов. Это можно использовать с\n"
+"  :hg:`archive` в Unix, например, чтобы сгенерировать архив, в котором\n"
+"  файлы имеют формат новой строки для Windows."
 
 msgid ""
 "- ``eol.only-consistent`` (default True) can be set to False to make\n"
@@ -2190,6 +2519,21 @@ msgid ""
 "  Such files are normally not touched under the assumption that they\n"
 "  have mixed EOLs on purpose."
 msgstr ""
+"- ``eol.only-consistent`` (по умолчанию True) можно установить в False,\n"
+"  чтобы преобразовать файлы с непостоянными переводами строк, т.е. такие,\n"
+"  в которых встречаются и ``CRLF`` и ``LF``. Обычно такие файлы не\n"
+"  преобразуются в предположении, что у них смешанные переводы строк\n"
+"  оставлены намеренно."
+
+msgid ""
+"- ``eol.fix-trailing-newline`` (default False) can be set to True to\n"
+"  ensure that converted files end with a EOL character (either ``\\n``\n"
+"  or ``\\r\\n`` as per the configured patterns)."
+msgstr ""
+"- ``eol.fix-trailing-newline`` (по умолчанию False) можно установить в "
+"True,\n"
+"  чтобы убедиться, что преобразованные файлы оканчиваются символом перевода\n"
+"  строки (``\\n`` или ``\\r\\n``, в зависимости от шаблона в конфиге)."
 
 msgid ""
 "The extension provides ``cleverencode:`` and ``cleverdecode:`` filters\n"
@@ -2197,6 +2541,10 @@ msgid ""
 "disable win32text and enable eol and your filters will still work. You\n"
 "only need to these filters until you have prepared a ``.hgeol`` file."
 msgstr ""
+"Расширение предоставляет фильтры ``cleverencode:`` и ``cleverdecode:``,\n"
+"аналогичные устаревшему расширению win32text. Это означает, что win32text\n"
+"можно отключить, и все ваши фильтры будут по-прежнему работать. Они вам\n"
+"понадобятся только до тех пор, пока вы не напишете файл ``.hgeol``."
 
 msgid ""
 "The ``win32text.forbid*`` hooks provided by the win32text extension\n"
@@ -2208,36 +2556,45 @@ msgid ""
 "``eol.checkallhook`` hook. These hooks are best used as\n"
 "``pretxnchangegroup`` hooks."
 msgstr ""
+"Хуки ``win32text.forbid*``, предоставляемые расширением win32text, были\n"
+"объединены в единый хук ``eol.checkheadshook``. Хук считывает ожидаемые\n"
+"переводы строк из файла ``.hgeol``, поэтому необходимо подготовить файл\n"
+"``.hgeol`` перед использованием хука. ``eol.checkheadshook`` проверяет\n"
+"только головные ревизии, промежуточные ревизии с неверными перводами\n"
+"строк будут приняты. Чтобы запретить их полностью, используйте хук\n"
+"``eol.checkallhook``. Эти хуки лучше всего использовать в качестве\n"
+"хука ``pretxnchangegroup``."
 
 msgid ""
 "See :hg:`help patterns` for more information about the glob patterns\n"
 "used.\n"
-msgstr ""
+msgstr "О шаблонах в формате blob см. :hg:`help patterns`\n"
 
 #, python-format
 msgid "ignoring unknown EOL style '%s' from %s\n"
-msgstr ""
+msgstr "игнорируется неизвестный формат новой строки '%s' из %s\n"
 
 #, python-format
 msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
 msgstr ""
+"внимание: файл .hgeol игнорируется из-за синтаксический ошибки в стр %s: %s\n"
 
 #, python-format
 msgid "  %s in %s should not have %s line endings"
-msgstr ""
+msgstr "  %s в %s не должен иметь переводы строки вида %s"
 
 msgid "end-of-line check failed:\n"
-msgstr ""
+msgstr "ошибка в формате новой строки:\n"
 
 msgid "the eol extension is incompatible with the win32text extension\n"
-msgstr ""
+msgstr "расширение eol несовместимо с расширением win32text\n"
 
 #, python-format
 msgid "inconsistent newline style in %s\n"
-msgstr ""
+msgstr "в %s используются смешанные переводы строки\n"
 
 msgid "command to allow external programs to compare revisions"
-msgstr ""
+msgstr "позволяет сравнивать ревизии с помощью внешних программ"
 
 msgid ""
 "The extdiff Mercurial extension allows you to use external programs\n"
@@ -2246,11 +2603,17 @@ msgid ""
 "non-option arguments: paths to directories containing snapshots of\n"
 "files to compare."
 msgstr ""
+"Расширение extdiff позволяет использовать внешние программы для сравнения\n"
+"двух ревизий или заданной ревизии с рабочим каталогом. Внешние программы\n"
+"сравнения вызываются с набором настраиваемых аргументов, и двумя жестко\n"
+"заданными: путями к каталогам, содержащим версии сравниваемых файлов."
 
 msgid ""
 "The extdiff extension also allows you to configure new diff commands, so\n"
 "you do not need to type :hg:`extdiff -p kdiff3` always. ::"
 msgstr ""
+"Расширение extdiff также позволяет настроить новые команды для\n"
+"сравнения, чтобы не набирать все время :hg:`extdiff -p kdiff3`. ::"
 
 msgid ""
 "  [extdiff]\n"
@@ -2260,16 +2623,28 @@ msgid ""
 "  #cmd.cdiff = gdiff\n"
 "  #opts.cdiff = -Nprc5"
 msgstr ""
+"  [extdiff]\n"
+"  # добавить новую команду, которая запускает GNU diff(1)\n"
+"  # cо сравнением с контекстом'\n"
+"  cdiff = gdiff -Nprc5\n"
+"  ## то же самое старым способом:\n"
+"  #cmd.cdiff = gdiff\n"
+"  #opts.cdiff = -Nprc5"
 
 msgid ""
 "  # add new command called vdiff, runs kdiff3\n"
 "  vdiff = kdiff3"
 msgstr ""
+"  # добавить новую команду vdiff, запускающую kdiff3\n"
+"  vdiff = kdiff3"
 
 msgid ""
 "  # add new command called meld, runs meld (no need to name twice)\n"
 "  meld ="
 msgstr ""
+"  # добавить новую команду meld, запускающую meld (не нужно набирать "
+"дважды)\n"
+"  meld ="
 
 msgid ""
 "  # add new command called vimdiff, runs gvimdiff with DirDiff plugin\n"
@@ -2278,9 +2653,16 @@ msgid ""
 "  # your .vimrc\n"
 "  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
 msgstr ""
+"  # добавить новую команду vimdiff, запускающую gvimdiff с плагином DirDiff\n"
+"  # (см. http://www.vim.org/scripts/script.php?script_id=102)\n"
+"  # Неанглоязычные пользователи. не забудьте добавить\n"
+"  # \"let g:DirDiffDynamicDiffText = 1\" в ваш .vimrc\n"
+"  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
 
 msgid "Tool arguments can include variables that are expanded at runtime::"
 msgstr ""
+"Аргументы программы могут включать в себя переменные, в которых\n"
+"выполняется подстановка во время выполнения::"
 
 msgid ""
 "  $parent1, $plabel1 - filename, descriptive label of first parent\n"
@@ -2289,11 +2671,18 @@ msgid ""
 "  $root              - repository root\n"
 "  $parent is an alias for $parent1."
 msgstr ""
+"  $parent1, $plabel1 - имя файла, читаемая метка первого родителя\n"
+"  $child,   $clabel  - имя файла, читаемая метка дочерней ревизии\n"
+"  $parent2, $plabel2 - имя файла, читаемая метка второго родителя\n"
+"  $root              - корень репозитория\n"
+"  $parent - псевдоним для $parent1."
 
 msgid ""
 "The extdiff extension will look in your [diff-tools] and [merge-tools]\n"
 "sections for diff tool arguments, when none are specified in [extdiff]."
 msgstr ""
+"extdiff читает аргументы для программ сравнения в секциях [diff-tools]\n"
+"и [merge-tools] конфигурационного файла, если они не заданы в [extdiff]."
 
 msgid ""
 "  [extdiff]\n"
@@ -2311,6 +2700,11 @@ msgid ""
 "needed files, so running the external diff program will actually be\n"
 "pretty fast (at least faster than having to compare the entire tree).\n"
 msgstr ""
+"Можно использоваеть ключи -I/-X и список имен файлов или директорий,\n"
+"как и в обычной команде :hg:`diff`. Расширение extdiff делает снимки\n"
+"только нужных файлов, поэтому запуск программы сравнения будет довольно\n"
+"быстрым (по крайней мере быстрее, чем если бы надо было сравнить все\n"
+"дерево файлов из репозитория).\n"
 
 #, python-format
 msgid "making snapshot of %d files from rev %s\n"
@@ -2318,10 +2712,10 @@ msgstr "создается снимок %d файлов для ревизии %s
 
 #, python-format
 msgid "making snapshot of %d files from working directory\n"
-msgstr ""
+msgstr "создается снимок %d файлов из рабочего каталога\n"
 
 msgid "cannot specify --rev and --change at the same time"
-msgstr "нельзя указывать одновременно --reb и --change"
+msgstr "нельзя указывать одновременно --rev и --change"
 
 msgid "cleaning up temp directory\n"
 msgstr "очистка временного каталога\n"
@@ -2366,7 +2760,7 @@ msgid "CMD"
 msgstr "КОМАНДА"
 
 msgid "comparison program to run"
-msgstr ""
+msgstr "запускаемая программа сравнения"
 
 msgid "OPT"
 msgstr "ОПЦИЯ"
@@ -2400,15 +2794,19 @@ msgid "hg %s [OPTION]... [FILE]..."
 msgstr "hg %s [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "pull, update and merge in one command"
-msgstr ""
+msgstr "подтянуть, обновиться и слить одной командой"
 
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr ""
+"подтягивает изменения из удаленного репозитория, проводит\n"
+"при необходимости."
 
 msgid ""
 "    This finds all changes from the repository at the specified path\n"
 "    or URL and adds them to the local repository."
 msgstr ""
+"    Находит все изменения в репозитории по указанному пути или URL и\n"
+"    добавляет их в локальный репозиторий."
 
 msgid ""
 "    If the pulled changes add a new branch head, the head is\n"
@@ -2416,6 +2814,9 @@ msgid ""
 "    Otherwise, the working directory is updated to include the new\n"
 "    changes."
 msgstr ""
+"    Если подтянутые изменения создают новую голову, она автоматически\n"
+"    сливается, и результат слияния коммитится. В противном влучае,\n"
+"    рабочий каталог обновляется, чтобы отразить новые изменения."
 
 msgid ""
 "    When a merge occurs, the newly pulled changes are assumed to be\n"
@@ -2423,6 +2824,10 @@ msgid ""
 "    parent, with local changes as the second. To switch the merge\n"
 "    order, use --switch-parent."
 msgstr ""
+"    Во время слияния подтянутые изменения считаются \"приоритетными\".\n"
+"    Головная ревизия новых изменений используется в качестве первого\n"
+"    родителя, вторым являются локальные изменения. Чтобы изменить\n"
+"    этот порядок, используйте --switch-parent."
 
 msgid "    See :hg:`help dates` for a list of formats valid for -d/--date."
 msgstr "    Список возможных форматов для --d/--dates см. :hg:`help dates`"
@@ -2437,75 +2842,83 @@ msgstr ""
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
+"рабочий каталог не на оконечной ревизии (используйте \"hg update\",\n"
+"чтобы извлечь оконечную ревизию)"
 
 msgid "outstanding uncommitted merge"
-msgstr ""
+msgstr "незакоммиченное слияние"
 
 msgid "outstanding uncommitted changes"
-msgstr ""
+msgstr "незакоммиченные изменений"
 
 msgid "working directory is missing some files"
-msgstr ""
+msgstr "в рабочем каталоге отсутствуют некоторые файлы"
 
 msgid ""
 "multiple heads in this branch (use \"hg heads .\" and \"hg merge\" to merge)"
 msgstr ""
+"на этой ветви несколько голов (используйте \"hg heads .\" и \"hg merge\"\n"
+"для слияния"
 
 #, python-format
 msgid "pulling from %s\n"
-msgstr "подтягивая из %s\n"
+msgstr "получение изменений из %s\n"
 
 msgid ""
 "Other repository doesn't support revision lookup, so a rev cannot be "
 "specified."
 msgstr ""
+"Другой репозиторий не поддерживает поиск ревизий, поэтому нельзя\n"
+"задавать ревизию."
 
 #, python-format
 msgid ""
 "not merging with %d other new branch heads (use \"hg heads .\" and \"hg merge"
 "\" to merge them)\n"
 msgstr ""
+"не выполняется слияние с %d новыми головными ревизиями (используйте\n"
+"\"hg heads .\" и \"hg merge\" для слияния)\n"
 
 #, python-format
 msgid "updating to %d:%s\n"
-msgstr ""
+msgstr "обновление на %d:%s\n"
 
 #, python-format
 msgid "merging with %d:%s\n"
-msgstr ""
+msgstr "слияние с %d:%s\n"
 
 #, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
-msgstr ""
+msgstr "новый набор изменений %d:%s сливает удаленные изменения с локальными\n"
 
 msgid "a specific revision you would like to pull"
-msgstr ""
+msgstr "конкретная ревизия, которую вы хотите подтянуть"
 
 msgid "edit commit message"
 msgstr "редактировать комментарий к коммиту"
 
 msgid "edit commit message (DEPRECATED)"
-msgstr ""
+msgstr "редактировать комментарий к коммиту (УСТАРЕЛО)"
 
 msgid "switch parents when merging"
-msgstr ""
+msgstr "поменять родителей при слиянии"
 
 msgid "hg fetch [SOURCE]"
-msgstr ""
+msgstr "hg fetch [ИСТОЧНИК]"
 
 msgid "commands to sign and verify changesets"
-msgstr ""
+msgstr "команды для подписи и проверки наборов изменений"
 
 msgid "error while verifying signature"
-msgstr ""
+msgstr "ошибка при проверки подписи"
 
 #, python-format
 msgid "%s Bad signature from \"%s\"\n"
-msgstr ""
+msgstr "%s Плохая подпись от \"%s\"\n"
 
 #, python-format
 msgid "%s Note: Signature has expired (signed by: \"%s\")\n"
-msgstr ""
+msgstr "%s Внимание: Срок действия подписи истек (автор подписи: \"%s\")\n"
 
 #, python-format
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
@@ -2515,92 +2928,100 @@ msgid "hg sigs"
 msgstr ""
 
 msgid "list signed changesets"
-msgstr ""
+msgstr "перечислить подписанные наборы изменений"
 
 #, python-format
 msgid "%s:%d node does not exist\n"
-msgstr ""
+msgstr "узел %s:%d не существует\n"
 
 msgid "hg sigcheck REVISION"
-msgstr ""
+msgstr "hg sigcheck РЕВИЗИЯ"
 
 msgid "verify all the signatures there may be for a particular revision"
-msgstr ""
+msgstr "проверить все возможные подписи для указанной ревизии"
 
 #, python-format
 msgid "No valid signature for %s\n"
-msgstr ""
+msgstr "Нет действительной подписи для %s\n"
 
 msgid "make the signature local"
-msgstr ""
+msgstr "сделать подпись локальной"
 
 msgid "sign even if the sigfile is modified"
-msgstr ""
+msgstr "подписать, даже есть файл подписей (sigfile) изменен"
 
 msgid "do not commit the sigfile after signing"
-msgstr ""
+msgstr "не коммитить файл подписей (sigfile) после подписывания"
 
 msgid "ID"
-msgstr "ID"
+msgstr "ИД"
 
 msgid "the key id to sign with"
-msgstr ""
+msgstr "идентификатор ключа, используемого для подписи"
 
 msgid "TEXT"
 msgstr "ТЕКСТ"
 
 msgid "commit message"
-msgstr ""
+msgstr "комментарий к коммиту"
 
 msgid "hg sign [OPTION]... [REVISION]..."
-msgstr ""
+msgstr "hg sign [ПАРАМЕТР]... [РЕВИЗИЯ]..."
 
 msgid "add a signature for the current or given revision"
-msgstr ""
+msgstr "добавить подпись для текущей или заданной ревизии"
 
 msgid ""
 "    If no revision is given, the parent of the working directory is used,\n"
 "    or tip if no revision is checked out."
 msgstr ""
+"    Если ревизия не указана, используется родительская ревизия рабочего\n"
+"    каталога, либо оконечная ревизия, если рабочий каталог не извлечен."
 
 msgid ""
 "    See :hg:`help dates` for a list of formats valid for -d/--date.\n"
 "    "
 msgstr ""
+"    О возможных форматах для -d/--date см. :hg:`help dates`\n"
+"    "
 
 msgid "uncommitted merge - please provide a specific revision"
-msgstr ""
+msgstr "незакоммиченное слияние - пожалуйста, явно укажите ревизию"
 
 #, python-format
 msgid "Signing %d:%s\n"
-msgstr ""
+msgstr "Подписывается %d:%s\n"
 
 msgid "error while signing"
-msgstr ""
+msgstr "ошибка при подписи"
 
 msgid ""
 "working copy of .hgsigs is changed (please commit .hgsigs manually or use --"
 "force)"
 msgstr ""
+"рабочая копия файла .hgsigs изменена (пожалуста, закоммитьте .hgsigs "
+"вручнуюили используйте --force"
 
 msgid "unknown signature version"
-msgstr ""
+msgstr "неизвестная версия подписи"
 
 msgid "command to view revision graphs from a shell"
-msgstr ""
+msgstr "команда для просмотра графа ревизий в командной строке"
 
 msgid ""
 "This extension adds a --graph option to the incoming, outgoing and log\n"
 "commands. When this options is given, an ASCII representation of the\n"
 "revision graph is also shown.\n"
 msgstr ""
+"Эта команда добавляет опцию --graph к командам incoming, outgoing и\n"
+"log. Если эта опция указана, то отображается граф ревизий в ASCII-графике.\n"
 
 #, python-format
 msgid "-G/--graph option is incompatible with --%s"
-msgstr ""
+msgstr "опция -G/--graph несовместима с --%s "
 
 msgid "-G/--graph option is incompatible with --follow with file argument"
-msgstr ""
+msgstr "опция -G/--graph несовместима с --follow с аргументом-файлом"
 
 msgid "NUM"
 msgstr "КОЛ-ВО"
@@ -2615,32 +3036,40 @@ msgid "show the specified revision or range"
 msgstr "показать заданную ревизию или диапазон ревизий"
 
 msgid "hg glog [OPTION]... [FILE]"
-msgstr ""
+msgstr "hg glog [ПАРАМЕТР]... [ФАЙЛ]"
 
 msgid "show revision history alongside an ASCII revision graph"
-msgstr ""
+msgstr "показать историю ревизий рядом с ASCII-графом ревизий"
 
 msgid ""
 "    Print a revision history alongside a revision graph drawn with\n"
 "    ASCII characters."
 msgstr ""
+"    Печатает историю ревизий рядом с графом ревизий, отображаемого\n"
+"    с помощью ASCII-симоволов."
 
 msgid ""
 "    Nodes printed as an @ character are parents of the working\n"
 "    directory.\n"
 "    "
 msgstr ""
+"    Вершины, печатаемые символом @, являются родителями рабочего\n"
+"    каталога.\n"
+"    "
 
 msgid "show the revision DAG"
-msgstr ""
+msgstr "показать граф ревизий"
 
 msgid "hooks for integrating with the CIA.vc notification service"
-msgstr ""
+msgstr "хуки для инеграции с сервисом уведомлений CIA.vc"
 
 msgid ""
 "This is meant to be run as a changegroup or incoming hook. To\n"
 "configure it, set the following options in your hgrc::"
 msgstr ""
+"Подразумевается использование для хуков changegroup или incoming.\n"
+"Чтобы настроить уведомления, используйте следующие параметры в вашем\n"
+"конфиге Mercurial::"
 
 msgid ""
 "  [cia]\n"
@@ -2666,6 +3095,28 @@ msgid ""
 "  # number of slashes to strip for url paths\n"
 "  #strip = 0"
 msgstr ""
+"  [cia]\n"
+"  # ваше имя пользователя в CIA\n"
+"  user = foo\n"
+"  # название проекта в CIA\n"
+"  project = foo\n"
+"  # модуль (подпроект) (необязательный)\n"
+"  #module = foo\n"
+"  # Добавить diffstat к журнальному сообщению (необязательный)\n"
+"  #diffstat = False\n"
+"  # Шаблон для журнальных сообщений (необязательный)\n"
+"  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
+"  # Используемый стиль (необязательный)\n"
+"  #style = foo\n"
+"  # URL сервися уведомлений CIA (необязательный)\n"
+"  # Можно использовать URL вида mailto: для отправки по почте, наприммер\n"
+"  # mailto:cia@cia.vc\n"
+"  # Обязательно задайте при этом email.from.\n"
+"  #url = http://cia.vc/\n"
+"  # напечатать сообщение вместо его отправки (необязательный)\n"
+"  #test = False\n"
+"  # количество удаляемых слешей из путей в форме url\n"
+"  #strip = 0"
 
 msgid ""
 "  [hooks]\n"
@@ -2794,6 +3245,7 @@ msgstr ""
 msgid "hg debug-merge-base REV REV"
 msgstr ""
 
+#. i18n: bisect changeset status
 msgid "ignored"
 msgstr "игнорируемые"
 
@@ -3026,31 +3478,41 @@ msgid "interhg: invalid regexp for %s: %s\n"
 msgstr ""
 
 msgid "expand keywords in tracked files"
-msgstr ""
+msgstr "выполнять подстановку ключевых слов в отслеживаемых файлах"
 
 msgid ""
 "This extension expands RCS/CVS-like or self-customized $Keywords$ in\n"
 "tracked text files selected by your configuration."
 msgstr ""
+"Это расширение выполняет подстановку RCS/CVS-подобных или самостоятельно\n"
+"определенных $КлючевыхСлов$ в выбранных вами отслеживаемых файлах."
 
 msgid ""
 "Keywords are only expanded in local repositories and not stored in the\n"
 "change history. The mechanism can be regarded as a convenience for the\n"
 "current user or for archive distribution."
 msgstr ""
+"Ключевые слова подставляются только в локальных репозиториях и не хранятся\n"
+"в истории изменений. Такой механизм может использоваться для повышения\n"
+"удобства работы текущего пользователя или при архивации дистрибутива."
 
 msgid ""
 "Keywords expand to the changeset data pertaining to the latest change\n"
 "relative to the working directory parent of each file."
 msgstr ""
+"Ключевые слова подставляются согласно данным последнего изменения "
+"относительно\n"
+"родителя каждого файла в рабочем каталоге."
 
 msgid ""
 "Configuration is done in the [keyword], [keywordset] and [keywordmaps]\n"
 "sections of hgrc files."
 msgstr ""
+"Настройки осуществляются в секциях [keyword], [keywordset] и [keywordmaps]\n"
+"файлов конфигурации."
 
 msgid "Example::"
-msgstr ""
+msgstr "Пример::"
 
 msgid ""
 "    [keyword]\n"
@@ -3058,27 +3520,42 @@ msgid ""
 "    **.py =\n"
 "    x*    = ignore"
 msgstr ""
+"    [keyword]\n"
+"    # подставлять ключевые слова во всех файлах на python, кроме "
+"    #совпадающих с шаблоном \"x*\"\n"
+"    **.py =\n"
+"    x*    = ignore"
 
 msgid ""
 "    [keywordset]\n"
 "    # prefer svn- over cvs-like default keywordmaps\n"
 "    svn = True"
 msgstr ""
+"    [keywordset]\n"
+"    # предпочитать svn- а не cvs-подобные подстановки (keywordmaps) по"
+"    #умолчанию\n"
+"    svn = True"
 
 msgid ""
 ".. note::\n"
 "   The more specific you are in your filename patterns the less you\n"
 "   lose speed in huge repositories."
 msgstr ""
+".. note::\n"
+"   Чем более конкретны ваши шаблоны файлов, тем меньше накладные расходы\n"
+"   в больших репозиториях."
 
 msgid ""
 "For [keywordmaps] template mapping and expansion demonstration and\n"
 "control run :hg:`kwdemo`. See :hg:`help templates` for a list of\n"
 "available templates and filters."
 msgstr ""
+"Для примера использования [keywordmaps] для отображения шаблонов\n"
+"и демонстрации подстановок, используйте :hg:`kwdemo`. Список возможных\n"
+"шаблонов и фильтров см. в :hg:`help templates`."
 
 msgid "Three additional date template filters are provided:"
-msgstr ""
+msgstr "Имеются также три дополнительных фильтров шаблонов дат:"
 
 msgid ""
 ":``utcdate``:    \"2006/09/18 15:13:13\"\n"
@@ -3091,166 +3568,211 @@ msgid ""
 "replaced with customized keywords and templates. Again, run\n"
 ":hg:`kwdemo` to control the results of your configuration changes."
 msgstr ""
+"Отображения (mappings) шаблонов по умолчанию (их можно посмотреть с\n"
+"помощью :hg:`kwdemo -d`) могут быть заменены своими ключевыми словами\n"
+"и шаблонами. Для контроля результатов вашей настройки запустите\n"
+":hg:`kwdemo` еще раз."
 
 msgid ""
 "Before changing/disabling active keywords, you must run :hg:`kwshrink`\n"
 "to avoid storing expanded keywords in the change history."
 msgstr ""
+"Перед изменением/удалением активных улючевых слов, необходимо запустить\n"
+":hg:`kwshrink`, чтобы избежать сохранения подставленных ключевых слов\n"
+"в истории изменений."
 
 msgid ""
 "To force expansion after enabling it, or a configuration change, run\n"
 ":hg:`kwexpand`."
 msgstr ""
+"Для принудительной подстановки после ее включения или изменения настроек,\n"
+"запустите :hg:`kwexpand`."
 
 msgid ""
 "Expansions spanning more than one line and incremental expansions,\n"
 "like CVS' $Log$, are not supported. A keyword template map \"Log =\n"
 "{desc}\" expands to the first line of the changeset description.\n"
 msgstr ""
+"Подстановки, охватывающие более одной строки, и инкрементальные\n"
+"подстановки вроде CVS $Log$ не поддерживаются. Отображение шаблона\n"
+"ключевого слова (keyword template map) вида \"Log = {desc}\"\n"
+"раскроется в первую строку описания набора изменений.\n"
 
 #, python-format
 msgid "overwriting %s expanding keywords\n"
-msgstr ""
+msgstr "перезаписываются %s подставляемых ключевых слов\n"
 
 #, python-format
 msgid "overwriting %s shrinking keywords\n"
-msgstr ""
+msgstr "перезаписываются %s отмененных (shrinking) ключевых слов\n"
 
 msgid "[keyword] patterns cannot match"
-msgstr ""
+msgstr "шаблоны в [keyword] не совпадут ни с чем"
 
 msgid "no [keyword] patterns configured"
-msgstr ""
+msgstr "в секции [keyword] нет настроенных шаблонов"
 
 msgid "show default keyword template maps"
-msgstr ""
+msgstr "показать отображения шаблонов ключевых слов по умолчанию"
 
 msgid "read maps from rcfile"
-msgstr ""
+msgstr "читать отображения из файла"
 
 msgid "hg kwdemo [-d] [-f RCFILE] [TEMPLATEMAP]..."
-msgstr ""
+msgstr "hg kwdemo [-d] [-f ФАЙЛ] [ОТОБРАЖЕНИЕ_ШАБЛОНОВ]..."
 
 msgid "print [keywordmaps] configuration and an expansion example"
-msgstr ""
+msgstr "напечатать настройки в [keywordmaps] и пример подстановки"
 
 msgid ""
 "    Show current, custom, or default keyword template maps and their\n"
 "    expansions."
 msgstr ""
+"    Показывает текущие, настроенные или заданные по умолчанию отображения\n"
+"    шаблонов ключевых слов (keyword template maps) и их подстановку."
 
 msgid ""
 "    Extend the current configuration by specifying maps as arguments\n"
 "    and using -f/--rcfile to source an external hgrc file."
 msgstr ""
+"    Можно дополнить текущие настройки, указав отображения в качестве\n"
+"    аргументов или используя опцию -f/--rcfile, чтобы прочитать\n"
+"    настройки из файла."
 
 msgid "    Use -d/--default to disable current configuration."
-msgstr ""
+msgstr "   Используйте -d/--default чтобы отключить текущие настрйки."
 
 msgid ""
 "    See :hg:`help templates` for information on templates and filters.\n"
 "    "
 msgstr ""
+"    О шаблонах и фильтрах см. :hg:`help templates`.\n"
+"    "
 
 #, python-format
 msgid "creating temporary repository at %s\n"
-msgstr ""
+msgstr "создание временного репозитория в %s\n"
 
 msgid ""
 "\n"
 "\tconfiguration using custom keyword template maps\n"
 msgstr ""
+"\n"
+"\tнастройка с использованием заданных отображение шаблонов ключевых слов\n"
 
 msgid "\textending current template maps\n"
-msgstr ""
+msgstr "\tдополнение текущий отображений шаблонов\n"
 
 msgid "\toverriding default svn keywordset\n"
-msgstr ""
+msgstr "\tпереопределение наборов ключевых слов svn по умолчанию\n"
 
 msgid "\toverriding default cvs keywordset\n"
-msgstr ""
+msgstr "\tпереопределение наборов ключевых слов cvs по умолчанию\n"
 
 msgid ""
 "\n"
 "\tconfiguration using default svn keywordset\n"
 msgstr ""
+"\n"
+"\tнастройка с использованием ключевых слов svn по умолчанию\n"
 
 msgid ""
 "\n"
 "\tconfiguration using default cvs keywordset\n"
 msgstr ""
+"\n"
+"\tнастройка с использованием ключевых слов cvs по умолчанию\n"
 
 msgid "\tdisabling current template maps\n"
-msgstr ""
+msgstr "\tотключение текущих отображений шаблонов\n"
 
 msgid ""
 "\n"
 "\tconfiguration using current keyword template maps\n"
 msgstr ""
+"\n"
+"\tнастройка с использованием текущих отображений шаблонов ключевых слов\n"
 
 #, python-format
 msgid ""
 "\n"
 "keywords written to %s:\n"
 msgstr ""
+"\n"
+"ключевые слова записаны в %s:\n"
 
 msgid "hg keyword configuration and expansion example"
-msgstr ""
+msgstr "пример настройки и подстановки ключевых слов"
 
 msgid ""
 "\n"
 "\tkeywords expanded\n"
 msgstr ""
+"\n"
+"\tрезультат подстановки ключевых слов\n"
 
 msgid "hg kwexpand [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwexpand [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "expand keywords in the working directory"
-msgstr ""
+msgstr "выполнить подстановку ключевых слов в рабочем каталоге"
 
 msgid "    Run after (re)enabling keyword expansion."
 msgstr ""
+"    Запускайте после включения и повторного включения\n"
+"    подстановки ключевых слов."
 
 msgid ""
 "    kwexpand refuses to run if given files contain local changes.\n"
 "    "
 msgstr ""
+"    kwexpand откажется выполняться, если указанные файлы содержат локальные\n"
+"    изменения.\n"
+"    "
 
 msgid "show keyword status flags of all files"
-msgstr ""
+msgstr "показать флаги состояний ключевых слов для всех файлов"
 
 msgid "show files excluded from expansion"
-msgstr ""
+msgstr "показать файлы, в которых не производится подстановка"
 
 msgid "only show unknown (not tracked) files"
-msgstr ""
+msgstr "показать только неизвестные (неотслеживаемые) файлы"
 
 msgid "hg kwfiles [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwfiles [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "show files configured for keyword expansion"
-msgstr ""
+msgstr "показать файлы, настроенные для подстановки ключевых слов"
 
 msgid ""
 "    List which files in the working directory are matched by the\n"
 "    [keyword] configuration patterns."
 msgstr ""
+"    Показывает файлы в рабочем каталоге, имена которых совпадают\n"
+"    с шаблонами, заданными в секции [keyword] конфига."
 
 msgid ""
 "    Useful to prevent inadvertent keyword expansion and to speed up\n"
 "    execution by including only files that are actual candidates for\n"
 "    expansion."
 msgstr ""
+"    Полезно для предотвращения нежелательных подстановок ключевых слов\n"
+"    и для ускорения выполнения за счет обработки только нужных файлов."
 
 msgid ""
 "    See :hg:`help keyword` on how to construct patterns both for\n"
 "    inclusion and exclusion of files."
 msgstr ""
+"    О том, как задавать шаблоны имен файлов, в которых выполняется\n"
+"    или не выполняется подстановка, см. :hg:`help keyword`."
 
 msgid ""
 "    With -A/--all and -v/--verbose the codes used to show the status\n"
 "    of files are::"
 msgstr ""
+"    С опциями -A/--all и -v/--verbose используются следующие коды\n"
+"    состояний файлов::"
 
 msgid ""
 "      K = keyword expansion candidate\n"
@@ -3259,20 +3781,496 @@ msgid ""
 "      i = ignored (not tracked)\n"
 "    "
 msgstr ""
+"      K = кандидат на подстановку ключевых слов\n"
+"      k = кандидат на подстановку ключевых слов (не отслежиывается)\n"
+"      I = игноруруется\n"
+"      i = игноруруется (не отслеживается)\n"
+"    "
 
 msgid "hg kwshrink [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg kwshrink [ПАРАМЕТР]... [ФАЙЛ]..."
 
 msgid "revert expanded keywords in the working directory"
-msgstr ""
+msgstr "отменить подстановки ключевых слов в рабочем каталоге"
 
 msgid "    Must be run before changing/disabling active keywords."
 msgstr ""
+"    Следует запускать перед измененим/отключением активных\n"
+"    ключевых слов."
 
 msgid ""
 "    kwshrink refuses to run if given files contain local changes.\n"
 "    "
 msgstr ""
+"    kwshrink откажется запускаться, если заданные файлы содержат\n"
+"    незакоммиченные локальные изменения.    "
+
+msgid "track large binary files"
+msgstr "отслеживает большие бинарные файлы"
+
+msgid ""
+"Large binary files tend to be not very compressible, not very\n"
+"diffable, and not at all mergeable. Such files are not handled\n"
+"efficiently by Mercurial's storage format (revlog), which is based on\n"
+"compressed binary deltas; storing large binary files as regular\n"
+"Mercurial files wastes bandwidth and disk space and increases\n"
+"Mercurial's memory usage. The largefiles extension addresses these\n"
+"problems by adding a centralized client-server layer on top of\n"
+"Mercurial: largefiles live in a *central store* out on the network\n"
+"somewhere, and you only fetch the revisions that you need when you\n"
+"need them."
+msgstr ""
+"Большие бинарные файлы обычно плохо сжимаются, их сложно сравнивать,\n"
+"и еще сложнее сливать. Такие файлы не могут эффективно храниться\n"
+"в формате Mercurial (revlog), который основан на сжатых двоичных\n"
+"различиях (дельтах); хранение больших файлов в Mercurial обычным\n"
+"способом перегружает сеть, использует много места и увеличивает\n"
+"потребление памяти. Расширение largefiles решает эти проблемы,\n"
+"добавляя централизованный клиент-серверный слой поверх Mercurial:\n"
+"большие файлы помещаются в *центральное хранилище* где-нибудь\n"
+"в сети, а вы извлекаете нужные ревизии по мере необходимости."
+
+msgid ""
+"largefiles works by maintaining a \"standin file\" in .hglf/ for each\n"
+"largefile. The standins are small (41 bytes: an SHA-1 hash plus\n"
+"newline) and are tracked by Mercurial. Largefile revisions are\n"
+"identified by the SHA-1 hash of their contents, which is written to\n"
+"the standin. largefiles uses that revision ID to get/put largefile\n"
+"revisions from/to the central store. This saves both disk space and\n"
+"bandwidth, since you don't need to retrieve all historical revisions\n"
+"of large files when you clone or pull."
+msgstr ""
+"largefiles создает \"замещающий файл\" (\"standin file\") в .hglf\n"
+"для каждого большого файла. Эти файлы малы (41 байт: хэш SHA-1 и\n"
+"перевод строки) и отслеживаются Mercurial. Ревизии больших файлов\n"
+"определядются по хэшу SHA-1 их содержимого, который пишется в\n"
+"стандартный ввод. largefiles использует этот идентификатор ревизии\n"
+"чтобы получить/передать ревизию большого файла из/в центральное\n"
+"хранилище. Это позволяет экономить место на диске и трафик, поскольку\n"
+"вам не надо передавать всю историю ревизий больших файлов при\n"
+"клонировании или операции pull."
+
+msgid ""
+"To start a new repository or add new large binary files, just add\n"
+"--large to your :hg:`add` command. For example::"
+msgstr ""
+"Чтобы создать новый репозиторий или добавить новый большой бинарный\n"
+"файл, просто добавбте --large к команде :hg:`add`. Например::"
+
+msgid ""
+"  $ dd if=/dev/urandom of=randomdata count=2000\n"
+"  $ hg add --large randomdata\n"
+"  $ hg commit -m 'add randomdata as a largefile'"
+msgstr ""
+"  $ dd if=/dev/urandom of=randomdata count=2000\n"
+"  $ hg add --large randomdata\n"
+"  $ hg commit -m  'randomdata добавлен как большой файл'"
+
+msgid ""
+"When you push a changeset that adds/modifies largefiles to a remote\n"
+"repository, its largefile revisions will be uploaded along with it.\n"
+"Note that the remote Mercurial must also have the largefiles extension\n"
+"enabled for this to work."
+msgstr ""
+"Когда вы передаете набор изменений, который добавляет или изменяет\n"
+"большой файл с помощью команды push, его largefile-ревизия будет\n"
+"также передана. Обратите внимание, что на удаленной машине расширение\n"
+"largefiles также должно быть включено."
+
+msgid ""
+"When you pull a changeset that affects largefiles from a remote\n"
+"repository, Mercurial behaves as normal. However, when you update to\n"
+"such a revision, any largefiles needed by that revision are downloaded\n"
+"and cached (if they have never been downloaded before). This means\n"
+"that network access may be required to update to changesets you have\n"
+"not previously updated to."
+msgstr ""
+"Когда вы подтягиваете набор изменений, который затрагивает большие\n"
+"файлы, из удаленного репозитория, Mercurial ведет себя как обычно.\n"
+"Однако, когда вы обновляетесь на такую ревизию, все большие файлы,\n"
+"нужные для этой ревизии, загружаются и кешируются (если они не были\n"
+"загружены ранее). Это означает, что вам может понадобится доступ к сети,\n"
+"чтобы обновится на ревизию, на которую вы до этого ни разу не обновлялись."
+
+msgid ""
+"If you already have large files tracked by Mercurial without the\n"
+"largefiles extension, you will need to convert your repository in\n"
+"order to benefit from largefiles. This is done with the\n"
+":hg:`lfconvert` command::"
+msgstr ""
+"Если у вас уже есть большие файлы, отслеживаемые Mrecurial без\n"
+"расширения largefiles, вам надо будет преобразовать свой репозиторий,\n"
+"чтобы извлечь пользу из расширения largefiles. Это делается командой\n"
+":hg:`lfconvert`::"
+
+msgid "  $ hg lfconvert --size 10 oldrepo newrepo"
+msgstr "  $ hg lfconvert --size 10 старый_репозиторий новый_репозиторий"
+
+msgid ""
+"In repositories that already have largefiles in them, any new file\n"
+"over 10MB will automatically be added as a largefile. To change this\n"
+"threshold, set ``largefiles.minsize`` in your Mercurial config file\n"
+"to the minimum size in megabytes to track as a largefile, or use the\n"
+"--lfsize option to the add command (also in megabytes)::"
+msgstr ""
+"В репозиториях, уже содержащих большие файлы, каждый файл больше 10 Мб\n"
+"будет добавлен как большой. Чтобы изменить этот порог, используйте\n"
+"параметр ``largefiles.minsize`` в вашем конфиге Mercurial, чтобы\n"
+"задать минимальный размер в мегабайтах, начиная с которого файл считается\n"
+"большим, или используйте параметр командны add --lfsize (также в Мб)::"
+
+msgid ""
+"  [largefiles]\n"
+"  minsize = 2"
+msgstr ""
+
+msgid "  $ hg add --lfsize 2"
+msgstr ""
+
+msgid ""
+"The ``largefiles.patterns`` config option allows you to specify a list\n"
+"of filename patterns (see :hg:`help patterns`) that should always be\n"
+"tracked as largefiles::"
+msgstr ""
+"Параметр конфига ``largefiles.patterns`` позволяет задать список\n"
+"шаблонов имен файлов (см. :hg:`help patterns`), которые должны всегда\n"
+"отслеживаться как большие::"
+
+msgid ""
+"  [largefiles]\n"
+"  patterns =\n"
+"    *.jpg\n"
+"    re:.*\\.(png|bmp)$\n"
+"    library.zip\n"
+"    content/audio/*"
+msgstr ""
+
+msgid ""
+"Files that match one of these patterns will be added as largefiles\n"
+"regardless of their size.\n"
+msgstr ""
+"Файлы, подходящие под любой из этих шаблонов, будут добавлены как\n"
+"большие вне зависимости от их размера.\n"
+
+msgid "convert a normal repository to a largefiles repository"
+msgstr "преобразовать обычный в репозиторий largefiles"
+
+msgid ""
+"    Convert repository SOURCE to a new repository DEST, identical to\n"
+"    SOURCE except that certain files will be converted as largefiles:\n"
+"    specifically, any file that matches any PATTERN *or* whose size is\n"
+"    above the minimum size threshold is converted as a largefile. The\n"
+"    size used to determine whether or not to track a file as a\n"
+"    largefile is the size of the first version of the file. The\n"
+"    minimum size can be specified either with --size or in\n"
+"    configuration as ``largefiles.size``."
+msgstr ""
+"    Преобразует репозиторий ИСТОЧНИК в новый репозиторий НАЗН,\n"
+"    идентичный ИСТОЧНИКУ, за исключением того, что некоторые файлы\n"
+"    будут преобразованы в большие, а именно те, имена которых\n"
+"    совпадают с ШАБЛОНОМ *или* чей размер превышает заданный порог.\n"
+"    Для определения, является ли данный файл большим, используется\n"
+"    размер его первой версии. Минимальный размер может быть задан с\n"
+"    помощью аргумента командной строки --size или в конфиге с помощью\n"
+"    ``largefiles.size``."
+
+msgid ""
+"    After running this command you will need to make sure that\n"
+"    largefiles is enabled anywhere you intend to push the new\n"
+"    repository."
+msgstr ""
+"    После запуска этой команды, вам следует убедиться, что расширение\n"
+"    largefiles включено на всех машинах, с которыми вы собираетесь\n"
+"    обмениваться изменениями."
+
+msgid ""
+"    Use --to-normal to convert largefiles back to normal files; after\n"
+"    this, the DEST repository can be used without largefiles at all."
+msgstr ""
+"    Используйте --to-normal чтобы преобразовать большие файлы\n"
+"    обратно в нормальные; после этого, репозиторий НАЗН может\n"
+"    быть использован и без largefiles."
+
+msgid "getting largefiles"
+msgstr "получение большие файлы"
+
+#, python-format
+msgid "getting %s:%s\n"
+msgstr "получение %s:%s\n"
+
+#, python-format
+msgid "%s: data corruption (expected %s, got %s)\n"
+msgstr "%s: данные повреждены (ожидется %s, получено %s)\n"
+
+#, python-format
+msgid "searching %d changesets for largefiles\n"
+msgstr "поиск %d изменений для больших файлов\n"
+
+#, python-format
+msgid "verified contents of %d revisions of %d largefiles\n"
+msgstr "проверено содержимое %d ревизий %d файлов\n"
+
+#, python-format
+msgid "verified existence of %d revisions of %d largefiles\n"
+msgstr "проверено существование %d ревизий %d файлов\n"
+
+#, python-format
+msgid "unsupported URL scheme %r"
+msgstr "неподдерживаемая схема URL %r"
+
+#, python-format
+msgid "%s does not appear to be a largefile store"
+msgstr "%s не является хранилищем больших файлов"
+
+#, python-format
+msgid "%s is not a local Mercurial repo"
+msgstr "%s - не локальный репозиторий Mercurial"
+
+#, python-format
+msgid "initializing destination %s\n"
+msgstr "инициализация репозитория назначения %s\n"
+
+msgid "converting revisions"
+msgstr "преобразование ревизий"
+
+#, python-format
+msgid "renamed/copied largefile %s becomes symlink"
+msgstr ""
+"переименованный/скопированный большой файл %s становитсясимволической ссылкой"
+
+#, python-format
+msgid "largefile %s becomes symlink"
+msgstr "большой файл %s становится символьической ссылкой"
+
+msgid "uploading largefiles"
+msgstr "передача больших файлов"
+
+#, python-format
+msgid "largefile %s missing from store (needs to be uploaded)"
+msgstr "большой файл %s отсутствует в хранилище (необходимо его загрузить)"
+
+msgid "getting changed largefiles\n"
+msgstr "получение измененных больших файлов\n"
+
+#, python-format
+msgid "%d largefiles updated, %d removed\n"
+msgstr "%d больших файлов загружено, %d удалено\n"
+
+msgid "minimum size (MB) for files to be converted as largefiles"
+msgstr ""
+"минимальный размер (Мб), начиная с которого файлы преобразуютсяв большие"
+
+msgid "convert from a largefiles repo to a normal repo"
+msgstr "преобразовать из репозитория largefiles в обычный репозиторий"
+
+msgid "hg lfconvert SOURCE DEST [FILE ...]"
+msgstr "hg lfconvert ИСТОЧНИК НАЗН [ФАЙЛ]"
+
+#, python-format
+msgid "largefiles: size must be number (not %s)\n"
+msgstr "largefiles: размер должен быть числом (не %s)\n"
+
+msgid "minimum size for largefiles must be specified"
+msgstr "необходимо указать минимальный размер больших файлов"
+
+#, python-format
+msgid "unknown operating system: %s\n"
+msgstr "неизвестная операционная система: %s\n"
+
+#, python-format
+msgid "Found %s in store\n"
+msgstr "%s найден  в хранилище\n"
+
+#, python-format
+msgid "Found %s in system cache\n"
+msgstr "%s найден в кэше системы\n"
+
+#, python-format
+msgid "bad hash in '%s' (only %d bytes long)"
+msgstr "неверный хэш в '%s' (длина всего %d байт)"
+
+msgid "Can't get file locally"
+msgstr "Невозможно получить файл локально"
+
+#, python-format
+msgid ""
+"changeset %s: %s missing\n"
+"  (looked for hash %s)\n"
+msgstr ""
+"набор изменений %s: %s отсутствует\n"
+"  (пытался найти хзш %s)\n"
+
+#, python-format
+msgid ""
+"changeset %s: %s: contents differ\n"
+"  (%s:\n"
+"  expected hash %s,\n"
+"  but got %s)\n"
+msgstr ""
+"набор изменений %s: %s: содержимое различно\n"
+"  (%s:\n"
+"  ожидаемый хэш %s,\n"
+"  полученный %s)\n"
+
+#, python-format
+msgid "%s already a largefile\n"
+msgstr "файл %s уже считается большим файлом\n"
+
+#, python-format
+msgid "adding %s as a largefile\n"
+msgstr "добавление %s как большого файла\n"
+
+msgid "no files specified"
+msgstr "не задано ни одного файла"
+
+#, python-format
+msgid "not removing %s: %s (use -f to force removal)\n"
+msgstr "%s не удален: %s(-f - удалить принудительно)\n"
+
+msgid "file still exists"
+msgstr "файл уже существует"
+
+msgid "file is modified"
+msgstr "файл изменен"
+
+msgid "file has been marked for add"
+msgstr "файл был помечен для добавления"
+
+#, python-format
+msgid "removing %s\n"
+msgstr "удаляется %s\n"
+
+msgid "uncommitted local changes"
+msgstr "незакоммиченные локальные изменения"
+
+#, python-format
+msgid "merging %s and %s to %s\n"
+msgstr "слияние %s и %s в %s\n"
+
+#, python-format
+msgid "merging %s\n"
+msgstr "слияние %s\n"
+
+#, python-format
+msgid ""
+"largefile %s has a merge conflict\n"
+"keep (l)ocal or take (o)ther?"
+msgstr ""
+"конфликт слияние большого файла %s\n"
+"оставить локальный - (l)ocal, или другой - (o)ther)?"
+
+#, fuzzy
+msgid "&Local"
+msgstr "&Локальные"
+
+#, fuzzy
+msgid "&Other"
+msgstr "&Другие"
+
+msgid "destination largefile already exists"
+msgstr "большой файл назначения уже существует"
+
+msgid "no files to copy"
+msgstr "нет файлов для копирования"
+
+#, python-format
+msgid "unknown archive type '%s'"
+msgstr ""
+
+msgid "cannot give prefix when archiving to files"
+msgstr ""
+
+#, python-format
+msgid "not removing %s: file is already untracked\n"
+msgstr "%s не удален, он и так не отслеживается\n"
+
+msgid "largefiles: No remote repo\n"
+msgstr ""
+
+msgid "largefiles to upload:\n"
+msgstr ""
+
+#, python-format
+msgid "largefiles: %d to upload\n"
+msgstr ""
+
+msgid "addremove cannot be run on a repo with largefiles"
+msgstr ""
+
+#, python-format
+msgid "largefiles: failed to put %s (%s) into store: %s"
+msgstr ""
+
+#, python-format
+msgid "requested largefile %s not present in cache"
+msgstr ""
+
+msgid "putlfile failed:"
+msgstr ""
+
+msgid "putlfile failed (unexpected response):"
+msgstr ""
+
+msgid "unexpected response:"
+msgstr ""
+
+#, python-format
+msgid "remotestore: could not put %s to remote store %s"
+msgstr ""
+
+#, python-format
+msgid "remotestore: put %s to remote store %s"
+msgstr ""
+
+#, python-format
+msgid "remotestore: could not open file %s: %s"
+msgstr ""
+
+#, python-format
+msgid "remotestore: largefile %s is invalid"
+msgstr ""
+
+#, python-format
+msgid "remotestore: largefile %s is missing"
+msgstr ""
+
+#, fuzzy, python-format
+msgid "changeset %s: %s: contents differ\n"
+msgstr "Набор изменений %d:%s: %s\n"
+
+#, fuzzy, python-format
+msgid "changeset %s: %s missing\n"
+msgstr "Набор изменений %d:%s: %s\n"
+
+#, python-format
+msgid ""
+"largefiles: repo method %r appears to have already been wrapped by another "
+"extension: largefiles may behave incorrectly\n"
+msgstr ""
+
+#, python-format
+msgid "file \"%s\" is a largefile standin"
+msgstr ""
+
+msgid "add as largefile"
+msgstr ""
+
+msgid ""
+"add all files above this size (in megabytes) as largefiles (default: 10)"
+msgstr ""
+
+msgid "verify largefiles"
+msgstr ""
+
+msgid "verify all revisions of largefiles not just current"
+msgstr ""
+
+msgid "verify largefile contents not just existence"
+msgstr ""
+
+#, fuzzy
+msgid "display outgoing largefiles"
+msgstr "отображать с использование файла-карты шаблонов"
 
 msgid "manage a stack of patches"
 msgstr ""
@@ -4309,6 +5307,11 @@ msgstr ""
 msgid "copy %s to %s\n"
 msgstr ""
 
+msgid ""
+"strip specified revision (optional, can specify revisions without this "
+"option)"
+msgstr ""
+
 msgid "force removal of changesets, discard uncommitted changes (no backup)"
 msgstr ""
 
@@ -4485,7 +5488,14 @@ msgstr ""
 msgid "no revisions specified"
 msgstr ""
 
+#, fuzzy
+msgid "warning: uncommitted changes in the working directory\n"
+msgstr "показать измененные файлы в рабочем каталоге"
+
 msgid "list all available queues"
+msgstr ""
+
+msgid "print name of active queue"
 msgstr ""
 
 msgid "create new queue"
@@ -4516,7 +5526,9 @@ msgid ""
 "registered\n"
 "    queues - by default the \"normal\" patches queue is registered. The "
 "currently\n"
-"    active queue will be marked with \"(active)\"."
+"    active queue will be marked with \"(active)\". Specifying --active will "
+"print\n"
+"    only the name of the active queue."
 msgstr ""
 
 msgid ""
@@ -4610,94 +5622,189 @@ msgstr "mq не требует аргументов"
 msgid "operate on patch repository"
 msgstr "работать с репозиторием патчей mq"
 
-msgid "hooks for sending email notifications at commit/push time"
+msgid "hooks for sending email push notifications"
 msgstr ""
 
 msgid ""
-"Subscriptions can be managed through a hgrc file. Default mode is to\n"
-"print messages to stdout, for testing and configuring."
+"This extension let you run hooks sending email notifications when\n"
+"changesets are being pushed, from the sending or receiving side."
 msgstr ""
 
 msgid ""
-"To use, configure the notify extension and enable it in hgrc like\n"
-"this::"
-msgstr ""
-
-msgid ""
-"  [extensions]\n"
-"  notify ="
+"First, enable the extension as explained in :hg:`help extensions`, and\n"
+"register the hook you want to run. ``incoming`` and ``outgoing`` hooks\n"
+"are run by the changesets receiver while the ``outgoing`` one is for\n"
+"the sender::"
 msgstr ""
 
 msgid ""
 "  [hooks]\n"
 "  # one email for each incoming changeset\n"
 "  incoming.notify = python:hgext.notify.hook\n"
-"  # batch emails when many changesets incoming at one time\n"
-"  changegroup.notify = python:hgext.notify.hook\n"
-"  # batch emails when many changesets outgoing at one time (client side)\n"
+"  # one email for all incoming changesets\n"
+"  changegroup.notify = python:hgext.notify.hook"
+msgstr ""
+
+msgid ""
+"  # one email for all outgoing changesets\n"
 "  outgoing.notify = python:hgext.notify.hook"
 msgstr ""
 
 msgid ""
-"  [notify]\n"
-"  # config items go here"
-msgstr ""
-
-msgid "Required configuration items::"
-msgstr ""
-
-msgid "  config = /path/to/file # file containing subscriptions"
-msgstr ""
-
-msgid "Optional configuration items::"
-msgstr ""
-
-msgid ""
-"  test = True            # print messages to stdout for testing\n"
-"  strip = 3              # number of slashes to strip for url paths\n"
-"  domain = example.com   # domain to use if committer missing domain\n"
-"  style = ...            # style file to use when formatting email\n"
-"  template = ...         # template to use when formatting email\n"
-"  incoming = ...         # template to use when run as incoming hook\n"
-"  outgoing = ...         # template to use when run as outgoing hook\n"
-"  changegroup = ...      # template to use when run as changegroup hook\n"
-"  maxdiff = 300          # max lines of diffs to include (0=none, -1=all)\n"
-"  maxsubject = 67        # truncate subject line longer than this\n"
-"  diffstat = True        # add a diffstat before the diff content\n"
-"  sources = serve        # notify if source of incoming changes in this "
-"list\n"
-"                         # (serve == ssh or http, push, pull, bundle)\n"
-"  merge = False          # send notification for merges (default True)\n"
-"  [email]\n"
-"  from = user@host.com   # email address to send as if none given\n"
-"  [web]\n"
-"  baseurl = http://hgserver/... # root of hg web site for browsing commits"
-msgstr ""
-
-msgid ""
-"The notify config file has same format as a regular hgrc file. It has\n"
-"two sections so you can express subscriptions in whatever way is\n"
-"handier for you."
+"Now the hooks are running, subscribers must be assigned to\n"
+"repositories. Use the ``[usersubs]`` section to map repositories to a\n"
+"given email or the ``[reposubs]`` section to map emails to a single\n"
+"repository::"
 msgstr ""
 
 msgid ""
 "  [usersubs]\n"
-"  # key is subscriber email, value is \",\"-separated list of glob patterns\n"
+"  # key is subscriber email, value is a comma-separated list of glob\n"
+"  # patterns\n"
 "  user@host = pattern"
 msgstr ""
 
 msgid ""
 "  [reposubs]\n"
-"  # key is glob pattern, value is \",\"-separated list of subscriber emails\n"
+"  # key is glob pattern, value is a comma-separated list of subscriber\n"
+"  # emails\n"
 "  pattern = user@host"
 msgstr ""
 
-msgid "Glob patterns are matched against path to repository root."
+msgid ""
+"Glob patterns are matched against absolute path to repository\n"
+"root. The subscriptions can be defined in their own file and\n"
+"referenced with::"
 msgstr ""
 
 msgid ""
-"If you like, you can put notify config file in repository that users\n"
-"can push changes to, they can manage their own subscriptions.\n"
+"  [notify]\n"
+"  config = /path/to/subscriptionsfile"
+msgstr ""
+
+msgid ""
+"Alternatively, they can be added to Mercurial configuration files by\n"
+"setting the previous entry to an empty value."
+msgstr ""
+
+msgid ""
+"At this point, notifications should be generated but will not be sent until "
+"you\n"
+"set the ``notify.test`` entry to ``False``."
+msgstr ""
+
+msgid ""
+"Notifications content can be tweaked with the following configuration "
+"entries:"
+msgstr ""
+
+msgid ""
+"notify.test\n"
+"  If ``True``, print messages to stdout instead of sending them. Default: "
+"True."
+msgstr ""
+
+msgid ""
+"notify.sources\n"
+"  Space separated list of change sources. Notifications are sent only\n"
+"  if it includes the incoming or outgoing changes source. Incoming\n"
+"  sources can be ``serve`` for changes coming from http or ssh,\n"
+"  ``pull`` for pulled changes, ``unbundle`` for changes added by\n"
+"  :hg:`unbundle` or ``push`` for changes being pushed\n"
+"  locally. Outgoing sources are the same except for ``unbundle`` which\n"
+"  is replaced by ``bundle``. Default: serve."
+msgstr ""
+
+msgid ""
+"notify.strip\n"
+"  Number of leading slashes to strip from url paths. By default, "
+"notifications\n"
+"  references repositories with their absolute path. ``notify.strip`` let "
+"you\n"
+"  turn them into relative paths. For example, ``notify.strip=3`` will "
+"change\n"
+"  ``/long/path/repository`` into ``repository``. Default: 0."
+msgstr ""
+
+msgid ""
+"notify.domain\n"
+"  If subscribers emails or the from email have no domain set, complete them\n"
+"  with this value."
+msgstr ""
+
+#, fuzzy
+msgid ""
+"notify.style\n"
+"  Style file to use when formatting emails."
+msgstr ""
+"bugzilla.style\n"
+"  Файл стиля для форматирования комментариев."
+
+#, fuzzy
+msgid ""
+"notify.template\n"
+"  Template to use when formatting emails."
+msgstr ""
+"bugzilla.style\n"
+"  Файл стиля для форматирования комментариев."
+
+msgid ""
+"notify.incoming\n"
+"  Template to use when run as incoming hook, override ``notify.template``."
+msgstr ""
+
+msgid ""
+"notify.outgoing\n"
+"  Template to use when run as outgoing hook, override ``notify.template``."
+msgstr ""
+
+msgid ""
+"notify.changegroup\n"
+"  Template to use when running as changegroup hook, override\n"
+"  ``notify.template``."
+msgstr ""
+
+msgid ""
+"notify.maxdiff\n"
+"  Maximum number of diff lines to include in notification email. Set to 0\n"
+"  to disable the diff, -1 to include all of it. Default: 300."
+msgstr ""
+
+msgid ""
+"notify.maxsubject\n"
+"  Maximum number of characters in emails subject line. Default: 67."
+msgstr ""
+
+msgid ""
+"notify.diffstat\n"
+"  Set to True to include a diffstat before diff content. Default: True."
+msgstr ""
+
+msgid ""
+"notify.merge\n"
+"  If True, send notifications for merge changesets. Default: True."
+msgstr ""
+
+msgid ""
+"notify.mbox\n"
+"  If set, append mails to this mbox file instead of sending. Default: None."
+msgstr ""
+
+msgid ""
+"If set, the following entries will also be used to customize the "
+"notifications:"
+msgstr ""
+
+msgid ""
+"email.from\n"
+"  Email ``From`` address to use if none can be found in generated email "
+"content."
+msgstr ""
+
+msgid ""
+"web.baseurl\n"
+"  Root repository browsing URL to combine with repository paths when making\n"
+"  references. See also ``notify.strip``."
 msgstr ""
 
 #, python-format
@@ -4848,13 +5955,6 @@ msgid ""
 "that the patchbomb extension can automatically send patchbombs\n"
 "directly from the commandline. See the [email] and [smtp] sections in\n"
 "hgrc(5) for details.\n"
-msgstr ""
-
-#, python-format
-msgid "%s Please enter a valid value"
-msgstr ""
-
-msgid "Please enter a valid value.\n"
 msgstr ""
 
 msgid "send patches as attachments"
@@ -5068,6 +6168,9 @@ msgstr ""
 msgid "This patch series consists of %d patches."
 msgstr ""
 
+msgid "no recipient addresses provided"
+msgstr ""
+
 msgid ""
 "\n"
 "Final summary:"
@@ -5088,16 +6191,13 @@ msgstr ""
 msgid "Displaying "
 msgstr ""
 
-msgid "Writing "
-msgstr ""
-
-msgid "writing"
-msgstr ""
-
 msgid "Sending "
 msgstr ""
 
 msgid "sending"
+msgstr ""
+
+msgid "writing"
 msgstr ""
 
 msgid "show progress bars for some actions"
@@ -5116,6 +6216,9 @@ msgstr ""
 msgid ""
 "  [progress]\n"
 "  delay = 3 # number of seconds (float) before showing the progress bar\n"
+"  changedelay = 1 # changedelay: minimum delay before showing a new topic.\n"
+"                  # If set to less than 3 * refresh, that value will\n"
+"                  # be used instead.\n"
 "  refresh = 0.1 # time in seconds between refreshes of the progress bar\n"
 "  format = topic bar number estimate # format of the progress bar\n"
 "  width = <none> # if set, the maximum width of the progress information\n"
@@ -5262,6 +6365,10 @@ msgid ""
 "ancestor of base and dest)"
 msgstr ""
 
+#, fuzzy
+msgid "rebase these revisions"
+msgstr "вернуть состяние на момент указанной ревизию"
+
 msgid "rebase onto the specified changeset"
 msgstr ""
 
@@ -5270,6 +6377,9 @@ msgstr ""
 
 msgid "use text as collapse commit message"
 msgstr ""
+
+msgid "invoke editor on commit messages"
+msgstr "вызвать редактор для создания комментария к коммиту"
 
 msgid "read collapse commit message from file"
 msgstr ""
@@ -5380,8 +6490,16 @@ msgstr ""
 msgid "tool option will be ignored\n"
 msgstr ""
 
+#, fuzzy
+msgid "cannot specify both a source and a base"
+msgstr "нельзя указывать --noupdate и --updaterev одновременно"
+
 msgid "cannot specify both a revision and a base"
 msgstr ""
+
+#, fuzzy
+msgid "cannot specify both a revision and a source"
+msgstr "нельзя указывать одновременно дату и ревизию"
 
 msgid "detach requires a revision to be specified"
 msgstr ""
@@ -5389,7 +6507,17 @@ msgstr ""
 msgid "cannot specify a base with detach"
 msgstr ""
 
+msgid "can't remove original changesets with unrebased descendants"
+msgstr ""
+
+#, fuzzy
+msgid "use --keep to keep original changesets"
+msgstr "пропустить тестирование набора изменений"
+
 msgid "nothing to rebase\n"
+msgstr ""
+
+msgid "cannot collapse multiple named branches"
 msgstr ""
 
 msgid "rebasing"
@@ -5437,10 +6565,14 @@ msgstr ""
 msgid "cannot rebase onto an applied mq patch"
 msgstr ""
 
-msgid "source is ancestor of destination"
+#, fuzzy
+msgid "no matching revisions"
+msgstr "напечатать заданную ревизию"
+
+msgid "can't rebase multiple roots"
 msgstr ""
 
-msgid "source is descendant of destination"
+msgid "source is ancestor of destination"
 msgstr ""
 
 msgid "--tool can only be used with --rebase"
@@ -5757,6 +6889,19 @@ msgid ""
 "       (e.g. tip).\n"
 "    "
 msgstr ""
+
+#, fuzzy
+msgid "convert a shared repository to a normal one"
+msgstr "Преобразовать репозиторий другой SCM в репозиторий Mercurial"
+
+msgid ""
+"    Copy the store data to the repo and remove the sharedpath data.\n"
+"    "
+msgstr ""
+
+#, fuzzy
+msgid "this is not a shared repo"
+msgstr "%s не родитель %s"
 
 msgid "do not create a working copy"
 msgstr ""
@@ -6153,14 +7298,11 @@ msgstr ""
 msgid "archive prefix contains illegal components"
 msgstr ""
 
-msgid "cannot give prefix when archiving to files"
+msgid "archiving"
 msgstr ""
 
 #, python-format
-msgid "unknown archive type '%s'"
-msgstr ""
-
-msgid "archiving"
+msgid "malformed line in .hg/bookmarks: %r\n"
 msgstr ""
 
 #, python-format
@@ -6221,6 +7363,10 @@ msgstr ""
 #, python-format
 msgid "the name '%s' is reserved"
 msgstr "имя '%s' зарезервировано"
+
+#, python-format
+msgid "uncommitted changes in subrepo %s"
+msgstr ""
 
 msgid "options --message and --logfile are mutually exclusive"
 msgstr ""
@@ -6306,9 +7452,6 @@ msgstr ""
 
 #, python-format
 msgid "destination %s is not a directory"
-msgstr ""
-
-msgid "no files to copy"
 msgstr ""
 
 msgid "(consider using --after)\n"
@@ -6451,8 +7594,8 @@ msgstr "ДИР"
 msgid "change working directory"
 msgstr "сменить рабочий каталог"
 
-msgid "do not prompt, assume 'yes' for any required answers"
-msgstr "не спрашивать подтверждания, всегда автоматически отвечать 'да'"
+msgid "do not prompt, automatically pick the first choice for all prompts"
+msgstr ""
 
 msgid "suppress output"
 msgstr "подавлять вывод"
@@ -6516,10 +7659,10 @@ msgid "PATTERN"
 msgstr "ШАБЛОН"
 
 msgid "include names matching the given patterns"
-msgstr "включить файлы, имена которых соответствуют данным шаблонам"
+msgstr "добавить файлы, имена которых соответствуют данным шаблонам"
 
 msgid "exclude names matching the given patterns"
-msgstr "исключить файлы, имена которых соответствуют данным шаблонам"
+msgstr "не добавлять файлы, имена которых соответствуют данным шаблонам"
 
 msgid "use text as commit message"
 msgstr "текст комментария к коммиту"
@@ -6660,7 +7803,7 @@ msgid ""
 "    can be expensive. After using this option, :hg:`status -C` can be\n"
 "    used to check which files were identified as moved or renamed."
 msgstr ""
-"    Используйте параметр -s/--similarity чтобы найти переименованные\n"
+"    Используйте параметр -s/--similarity, чтобы найти переименованные\n"
 "    файлы. Если этот параметр больше 0, то производится сравнение\n"
 "    каждого удаленного файла с каждым добавленным, и если они достаточно\n"
 "    похожи, то это фиксируется как переименование. Этот параметр принимает\n"
@@ -6721,7 +7864,7 @@ msgid ""
 "    This command is useful for discovering when a change was made and\n"
 "    by whom."
 msgstr ""
-"    Эта комадна полезна для того чтобы узнать, когда и кем было внесено\n"
+"    Эта комадна полезна для того, чтобы узнать, когда и кем было внесено\n"
 "    изменение."
 
 msgid ""
@@ -6780,6 +7923,21 @@ msgstr ""
 "    Тип архива выбирается автоматически на основе расширения файла\n"
 "    (можно переопределить с помощью -t/--type)."
 
+msgid "      Examples:"
+msgstr "      Примеры::"
+
+msgid "      - create a zip file containing the 1.0 release::"
+msgstr ""
+
+msgid "          hg archive -r 1.0 project-1.0.zip"
+msgstr ""
+
+msgid "      - create a tarball excluding .hg files::"
+msgstr ""
+
+msgid "          hg archive project.tar.gz -X \".hg*\""
+msgstr ""
+
 msgid "    Valid types are:"
 msgstr "    Допустимые типы:"
 
@@ -6828,8 +7986,8 @@ msgstr "не могу архивировать обычный каталог в 
 msgid "merge with old dirstate parent after backout"
 msgstr "слить со старым родителем после завершения"
 
-msgid "parent to choose when backing out merge"
-msgstr "выбираемая родительская ревизия при отмене слияния"
+msgid "parent to choose when backing out merge (DEPRECATED)"
+msgstr "выбираемая родительская ревизия при отмене слияния (УСТАРЕЛО)"
 
 msgid "revision to backout"
 msgstr "ревизия для отмены"
@@ -6858,27 +8016,33 @@ msgstr ""
 "    незакоммиченным."
 
 msgid ""
-"    By default, the pending changeset will have one parent,\n"
-"    maintaining a linear history. With --merge, the pending changeset\n"
-"    will instead have two parents: the old parent of the working\n"
-"    directory and a new child of REV that simply undoes REV."
+"    .. note::\n"
+"      backout cannot be used to fix either an unwanted or\n"
+"      incorrect merge."
 msgstr ""
-"    По умолчанию, созданный набор изменений будет иметь одного\n"
-"    родителя, что сохраняет линейую история. Если указан --merge,\n"
-"    он будет иметь двух родителей: предыдущего родителя рабочего\n"
-"    каталога и новую дочернюю ревизию РЕВИЗИИ, которая просто\n"
-"    отменяет ее действие."
 
 msgid ""
-"    Before version 1.7, the behavior without --merge was equivalent to\n"
-"    specifying --merge followed by :hg:`update --clean .` to cancel\n"
-"    the merge and leave the child of REV as a head to be merged\n"
-"    separately."
+"      By default, the pending changeset will have one parent,\n"
+"      maintaining a linear history. With --merge, the pending\n"
+"      changeset will instead have two parents: the old parent of the\n"
+"      working directory and a new child of REV that simply undoes REV."
 msgstr ""
-"    До версии 1.7 поведение без --merge было эквивалентно поведению\n"
-"    с --merge с последующим :hg:`update --clean .` с целью отменить\n"
-"    слияние и оставить дочернюю ревизию РЕВИЗИИ как голову для\n"
-"    для дальнейшего слияния"
+"      По умолчанию, созданный набор изменений будет иметь одного\n"
+"      родителя, что сохраняет линейую история. Если указан --merge,\n"
+"      он будет иметь двух родителей: предыдущего родителя рабочего\n"
+"      каталога и новую дочернюю ревизию РЕВИЗИИ, которая просто\n"
+"      отменяет ее действие."
+
+msgid ""
+"      Before version 1.7, the behavior without --merge was equivalent\n"
+"      to specifying --merge followed by :hg:`update --clean .` to\n"
+"      cancel the merge and leave the child of REV as a head to be\n"
+"      merged separately."
+msgstr ""
+"      До версии 1.7 поведение без --merge было эквивалентно поведению\n"
+"      с --merge с последующим :hg:`update --clean .` с целью отменить\n"
+"      слияние и оставить дочернюю ревизию РЕВИЗИИ как голову для\n"
+"      для дальнейшего слияния"
 
 msgid "please specify just one revision"
 msgstr "пожалуйста, укажите ровно одну ревизию"
@@ -6892,8 +8056,8 @@ msgstr "не могу отменить ревизию на другой ветк
 msgid "cannot backout a change with no parents"
 msgstr "не могу отменить ревизию без родителей"
 
-msgid "cannot backout a merge changeset without --parent"
-msgstr "немогу отменить ревизию слияния без --parent"
+msgid "cannot backout a merge changeset"
+msgstr "не могу отменить ревизию слияния"
 
 #, python-format
 msgid "%s is not a parent of %s"
@@ -6978,6 +8142,81 @@ msgstr ""
 "    как плохую или хорошую: код 0 - хорошая, код 125 означает пропустить\n"
 "    ревизию, 127 (команда не найдена) отменяет поиск, любой другой\n"
 "    код возврата означает плохую ревизию."
+
+msgid "      Some examples:"
+msgstr "      Несколько примеров::"
+
+msgid ""
+"      - start a bisection with known bad revision 12, and good revision 34::"
+msgstr ""
+
+msgid ""
+"          hg bisect --bad 34\n"
+"          hg bisect --good 12"
+msgstr ""
+
+msgid ""
+"      - advance the current bisection by marking current revision as good "
+"or\n"
+"        bad::"
+msgstr ""
+
+msgid ""
+"          hg bisect --good\n"
+"          hg bisect --bad"
+msgstr ""
+
+msgid ""
+"      - mark the current revision, or a known revision, to be skipped (eg. "
+"if\n"
+"        that revision is not usable because of another issue)::"
+msgstr ""
+
+msgid ""
+"          hg bisect --skip\n"
+"          hg bisect --skip 23"
+msgstr ""
+
+msgid "      - forget the current bisection::"
+msgstr ""
+
+msgid "          hg bisect --reset"
+msgstr ""
+
+msgid ""
+"      - use 'make && make tests' to automatically find the first broken\n"
+"        revision::"
+msgstr ""
+
+msgid ""
+"          hg bisect --reset\n"
+"          hg bisect --bad 34\n"
+"          hg bisect --good 12\n"
+"          hg bisect --command 'make && make tests'"
+msgstr ""
+
+msgid ""
+"      - see all changesets whose states are already known in the current\n"
+"        bisection::"
+msgstr ""
+
+msgid "          hg log -r \"bisect(pruned)\""
+msgstr ""
+
+msgid "      - see all changesets that took part in the current bisection::"
+msgstr ""
+
+msgid "          hg log -r \"bisect(range)\""
+msgstr ""
+
+msgid "      - with the graphlog extension, you can even get a nice graph::"
+msgstr ""
+
+msgid "          hg log --graph -r \"bisect(range)\""
+msgstr ""
+
+msgid "      See :hg:`help revsets` for more about the `bisect()` keyword."
+msgstr "    Подробнее о `bisect()` см. :hg:`help revsets`."
 
 msgid "The first good revision is:\n"
 msgstr "Первая хорошая ревизия:\n"
@@ -7092,6 +8331,9 @@ msgstr ""
 "    должно быть включено расширение bookmarks.\n"
 "    "
 
+msgid "bookmark name required"
+msgstr "укажите имя закладки"
+
 #, python-format
 msgid "bookmark '%s' does not exist"
 msgstr "закладки '%s' не существует"
@@ -7102,9 +8344,6 @@ msgstr "закладка '%s' уже существует (-f - принудит
 
 msgid "new bookmark name required"
 msgstr "укажите новое имя закладки"
-
-msgid "bookmark name required"
-msgstr "укажите имя закладки"
 
 msgid "bookmark name cannot contain newlines"
 msgstr "имя закладки не может содержать символ перевода строки"
@@ -7165,14 +8404,13 @@ msgstr ""
 "    ветвь. Используйте :hg:`commit --close-branch` чтобы пометить эту\n"
 "    ветвь как закрытую."
 
-msgid "    .. note::"
-msgstr ""
-
 msgid ""
+"    .. note::\n"
 "       Branch names are permanent. Use :hg:`bookmark` to create a\n"
 "       light-weight bookmark instead. See :hg:`help glossary` for more\n"
 "       information about named branches and bookmarks."
 msgstr ""
+"    .. note::\n"
 "       Имена ветвей постоянны. В качестве альтернативы можно использовать\n"
 "       :hg:`bookmark`, чтобы создать легковесную ветвь. Дополнительную\n"
 "       информацию о ветвях и закладках см. в :hg:`help glossary`."
@@ -7400,48 +8638,35 @@ msgstr ""
 "    Адрес источника добавляется в файл ``.hg/hgrc`` нового репозитория,\n"
 "    и используется по умолчанию для последующих pull'ов и push'ей."
 
-msgid "    See :hg:`help urls` for valid source format details."
-msgstr "    См. :hg:`help urls` о форматах адреса источника."
-
 msgid ""
-"    It is possible to specify an ``ssh://`` URL as the destination, but no\n"
-"    ``.hg/hgrc`` and working directory will be created on the remote side.\n"
-"    Please see :hg:`help urls` for important details about ``ssh://`` URLs."
+"    Only local paths and ``ssh://`` URLs are supported as\n"
+"    destinations. For ``ssh://`` destinations, no working directory or\n"
+"    ``.hg/hgrc`` will be created on the remote side."
 msgstr ""
-"    Можно указать ``ssh://...`` в качестве адреса назначения, но файл\n"
-"    ``.hg/hgrc`` и рабочая копия не будут созданы на удаленном компьютере.\n"
-"    См. :hg:`help urls` для важной информации об адресах вида ``ssh://...``."
 
 msgid ""
-"    A set of changesets (tags, or branch names) to pull may be specified\n"
-"    by listing each changeset (tag, or branch name) with -r/--rev.\n"
-"    If -r/--rev is used, the cloned repository will contain only a subset\n"
-"    of the changesets of the source repository. Only the set of changesets\n"
-"    defined by all -r/--rev options (including all their ancestors)\n"
-"    will be pulled into the destination repository.\n"
-"    No subsequent changesets (including subsequent tags) will be present\n"
-"    in the destination."
+"    To pull only a subset of changesets, specify one or more revisions\n"
+"    identifiers with -r/--rev or branches with -b/--branch. The\n"
+"    resulting clone will contain only the specified changesets and\n"
+"    their ancestors. These options (or 'clone src#rev dest') imply\n"
+"    --pull, even for local source repositories. Note that specifying a\n"
+"    tag will include the tagged changeset but not the changeset\n"
+"    containing the tag."
 msgstr ""
-"    Копируемые наборы изменений (changesets) (как метки или имена ветвей)\n"
-"    могут быть заданы указанием каждого набора изменений (метки или имени\n"
-"    ветви) с помощью -r/--rev. При использовании -r/--rev, клонированный\n"
-"    репозиторий будет содержать только подмножество наборов изменений\n"
-"    источника."
 
 msgid ""
-"    Using -r/--rev (or 'clone src#rev dest') implies --pull, even for\n"
-"    local source repositories."
+"    To check out a particular version, use -u/--update, or\n"
+"    -U/--noupdate to create a clone with no working directory."
 msgstr ""
-"    Использование -r/--rev (или 'clone источник#ревизия назн')\n"
-"    предполагает --pull, даже если источник локален."
 
+#, fuzzy
 msgid ""
-"    For efficiency, hardlinks are used for cloning whenever the source\n"
-"    and destination are on the same filesystem (note this applies only\n"
-"    to the repository data, not to the working directory). Some\n"
-"    filesystems, such as AFS, implement hardlinking incorrectly, but\n"
-"    do not report errors. In these cases, use the --pull option to\n"
-"    avoid hardlinking."
+"      For efficiency, hardlinks are used for cloning whenever the\n"
+"      source and destination are on the same filesystem (note this\n"
+"      applies only to the repository data, not to the working\n"
+"      directory). Some filesystems, such as AFS, implement hardlinking\n"
+"      incorrectly, but do not report errors. In these cases, use the\n"
+"      --pull option to avoid hardlinking."
 msgstr ""
 "    Для эффективности, при клонировании источника на одной файловой\n"
 "    системе с целевым репозиторием, используются жесткие ссылки (это\n"
@@ -7450,23 +8675,26 @@ msgstr ""
 "    жесткие ссылки, но не сообщают об ошибках. В этом случае используйте\n"
 "    --pull чтобы избежать жестких ссылок."
 
+#, fuzzy
 msgid ""
-"    In some cases, you can clone repositories and the working directory\n"
-"    using full hardlinks with ::"
+"      In some cases, you can clone repositories and the working\n"
+"      directory using full hardlinks with ::"
 msgstr ""
 "    В некоторых случаях можно клонировать репозитории и рабочие\n"
 "    каталоги целиком жесткими ссылками ::"
 
-msgid "      $ cp -al REPO REPOCLONE"
+#, fuzzy
+msgid "        $ cp -al REPO REPOCLONE"
 msgstr "      $ cp -al РЕПОЗИТОРИЙ КЛОН"
 
+#, fuzzy
 msgid ""
-"    This is the fastest way to clone, but it is not always safe. The\n"
-"    operation is not atomic (making sure REPO is not modified during\n"
-"    the operation is up to you) and you have to make sure your editor\n"
-"    breaks hardlinks (Emacs and most Linux Kernel tools do so). Also,\n"
-"    this is not compatible with certain extensions that place their\n"
-"    metadata under the .hg directory, such as mq."
+"      This is the fastest way to clone, but it is not always safe. The\n"
+"      operation is not atomic (making sure REPO is not modified during\n"
+"      the operation is up to you) and you have to make sure your\n"
+"      editor breaks hardlinks (Emacs and most Linux Kernel tools do\n"
+"      so). Also, this is not compatible with certain extensions that\n"
+"      place their metadata under the .hg directory, such as mq."
 msgstr ""
 "    Это самый быстрый способ клонирования, но он не всегда безопасен.\n"
 "    Эта операция не атомарна (вам надо следить за тем, что РЕПОЗИТОРИЙ\n"
@@ -7476,24 +8704,26 @@ msgstr ""
 "    не совместим с некоторыми расширениями, которые хранят свои\n"
 "    метаданные в каталоге .hg, как mq."
 
+#, fuzzy
 msgid ""
-"    Mercurial will update the working directory to the first applicable\n"
-"    revision from this list:"
+"      Mercurial will update the working directory to the first applicable\n"
+"      revision from this list:"
 msgstr ""
 "    Mercurial обновит рабочий каталог до первой подходящей ревизии по\n"
 "    списку:"
 
+#, fuzzy
 msgid ""
-"    a) null if -U or the source repository has no changesets\n"
-"    b) if -u . and the source repository is local, the first parent of\n"
-"       the source repository's working directory\n"
-"    c) the changeset specified with -u (if a branch name, this means the\n"
-"       latest head of that branch)\n"
-"    d) the changeset specified with -r\n"
-"    e) the tipmost head specified with -b\n"
-"    f) the tipmost head specified with the url#branch source syntax\n"
-"    g) the tipmost head of the default branch\n"
-"    h) tip"
+"      a) null if -U or the source repository has no changesets\n"
+"      b) if -u . and the source repository is local, the first parent of\n"
+"         the source repository's working directory\n"
+"      c) the changeset specified with -u (if a branch name, this means the\n"
+"         latest head of that branch)\n"
+"      d) the changeset specified with -r\n"
+"      e) the tipmost head specified with -b\n"
+"      f) the tipmost head specified with the url#branch source syntax\n"
+"      g) the tipmost head of the default branch\n"
+"      h) tip"
 msgstr ""
 "    а) пустой каталог, если в источнике нет наборов изменений или указан -U\n"
 "    б) если указан -u . и источник локален, до первого родителя рабочей "
@@ -7506,6 +8736,51 @@ msgstr ""
 "    е) до последней ревизии указанной как url#ветвь\n"
 "    ж) до последней ревизии ветви default\n"
 "    з) до последней ревизии"
+
+#, fuzzy
+msgid "      - clone a remote repository to a new directory named hg/::"
+msgstr "    Создает копию существующего репозитория в новом каталоге."
+
+msgid "          hg clone http://selenic.com/hg"
+msgstr ""
+
+msgid "      - create a lightweight local clone::"
+msgstr ""
+
+msgid "          hg clone project/ project-feature/"
+msgstr ""
+
+msgid ""
+"      - clone from an absolute path on an ssh server (note double-slash)::"
+msgstr ""
+
+msgid "          hg clone ssh://user@server//home/projects/alpha/"
+msgstr ""
+
+msgid ""
+"      - do a high-speed clone over a LAN while checking out a\n"
+"        specified version::"
+msgstr ""
+
+msgid "          hg clone --uncompressed http://server/repo -u 1.5"
+msgstr ""
+
+msgid ""
+"      - create a repository without changesets after a particular revision::"
+msgstr ""
+
+msgid "          hg clone -r 04e544 experimental/ good/"
+msgstr ""
+
+msgid "      - clone (and track) a particular named branch::"
+msgstr ""
+
+msgid "          hg clone http://selenic.com/hg#stable"
+msgstr ""
+
+#, fuzzy
+msgid "    See :hg:`help urls` for details on specifying URLs."
+msgstr "    Подробнее см. :hg:`help urls`."
 
 msgid "cannot specify both --noupdate and --updaterev"
 msgstr "нельзя указывать --noupdate и --updaterev одновременно"
@@ -7884,7 +9159,8 @@ msgstr ""
 msgid " (check that you compiled the extensions)\n"
 msgstr ""
 
-msgid "Checking templates...\n"
+#, python-format
+msgid "Checking templates (%s)...\n"
 msgstr ""
 
 msgid " (templates seem to have been installed incorrectly)\n"
@@ -8064,6 +9340,42 @@ msgstr ""
 "    Используйте -g/--git чтобы генерировать отличия в расширенном\n"
 "    формате git. Подробнее см. :hg:`help diffs`."
 
+#, fuzzy
+msgid "      - compare a file in the current working directory to its parent::"
+msgstr "    Если каталог не задан, будет использован текущий."
+
+msgid "          hg diff foo.c"
+msgstr ""
+
+msgid ""
+"      - compare two historical versions of a directory, with rename info::"
+msgstr ""
+
+msgid "          hg diff --git -r 1.0:1.2 lib/"
+msgstr ""
+
+msgid "      - get change stats relative to the last change on some date::"
+msgstr ""
+
+msgid "          hg diff --stat -r \"date('may 2')\""
+msgstr ""
+
+#, fuzzy
+msgid "      - diff all newly-added files that contain a keyword::"
+msgstr "- Найти текстовые файлы, содержащие строку::"
+
+msgid "          hg diff \"set:added() and grep(GNU)\""
+msgstr ""
+
+msgid "      - compare a revision and its parents::"
+msgstr ""
+
+msgid ""
+"          hg diff -c 9353         # compare against first parent\n"
+"          hg diff -r 9353^:9353   # same using revset syntax\n"
+"          hg diff -r 9353^2:9353  # compare against the second parent"
+msgstr ""
+
 msgid "diff against the second parent"
 msgstr "отличия от второй родительской ревизии"
 
@@ -8108,6 +9420,7 @@ msgstr ""
 "    Можно осуществлять вывод в файл, при этом имя файла задается\n"
 "    в виде форматирующей строки. Правила форматирования:"
 
+#, fuzzy
 msgid ""
 "    :``%%``: literal \"%\" character\n"
 "    :``%H``: changeset hash (40 hexadecimal digits)\n"
@@ -8115,6 +9428,8 @@ msgid ""
 "    :``%R``: changeset revision number\n"
 "    :``%b``: basename of the exporting repository\n"
 "    :``%h``: short-form changeset hash (12 hexadecimal digits)\n"
+"    :``%m``: first line of the commit message (only alphanumeric "
+"characters)\n"
 "    :``%n``: zero-padded sequence number, starting at 1\n"
 "    :``%r``: zero-padded changeset revision number"
 msgstr ""
@@ -8150,6 +9465,30 @@ msgstr ""
 "    Если указан --switch-parent, будут генерироваться отличия от\n"
 "    второго родителя. Это может быть полезно при анализе слияния."
 
+msgid ""
+"      - use export and import to transplant a bugfix to the current\n"
+"        branch::"
+msgstr ""
+
+msgid "          hg export -r 9353 | hg import -"
+msgstr ""
+
+msgid ""
+"      - export all the changesets between two revisions to a file with\n"
+"        rename information::"
+msgstr ""
+
+msgid "          hg export --git -r 123:150 > changes.txt"
+msgstr ""
+
+msgid ""
+"      - split outgoing changes into a series of patches with\n"
+"        descriptive names::"
+msgstr ""
+
+msgid "          hg export -r \"outgoing()\" -o \"%n-%m.patch\""
+msgstr ""
+
 msgid "export requires at least one changeset"
 msgstr "для экспорта требуется хотя бы один набор изменений"
 
@@ -8182,16 +9521,145 @@ msgstr ""
 "    Чтобы отменить действие forget до следующего коммита\n"
 "    см. :hg:`add`."
 
-msgid "no files specified"
-msgstr "не задано ни одного файла"
+msgid "      - forget newly-added binary files::"
+msgstr "      - забыть только что добавленные бинарные файлы::"
+
+msgid "          hg forget \"set:added() and binary()\""
+msgstr ""
+
+msgid "      - forget files that would be excluded by .hgignore::"
+msgstr ""
+
+msgid "          hg forget \"set:hgignore()\""
+msgstr ""
+
+msgid "resume interrupted graft"
+msgstr "возобновить прерванную операцию graft"
+
+msgid "record the current date as commit date"
+msgstr "использовать текущую дату в качестве даты коммита"
+
+msgid "record the current user as committer"
+msgstr "использовать текущего пользователя как автора коммита"
+
+msgid "[OPTION]... REVISION..."
+msgstr "[ПАРАМЕТР]... РЕВИЗИЯ..."
+
+msgid "copy changes from other branches onto the current branch"
+msgstr "копировать изменения с другой ветки в текущую"
+
+msgid ""
+"    This command uses Mercurial's merge logic to copy individual\n"
+"    changes from other branches without merging branches in the\n"
+"    history graph. This is sometimes known as 'backporting' or\n"
+"    'cherry-picking'. By default, graft will copy user, date, and\n"
+"    description from the source changesets."
+msgstr ""
+"    Эта команда использует возможности слияния Mercurial, чтобы\n"
+"    скопировать отдельные изменения из других веток без полного слияния\n"
+"    ветвей в графе истории. Иногда эту операцию также называют\n"
+"    'бэкпортирование' ('backporting') или 'cherry-picking'. По умолчанию\n"
+"    graft копирует имя автора, даты и описание из ревизии-источника."
+
+msgid ""
+"    Changesets that are ancestors of the current revision, that have\n"
+"    already been grafted, or that are merges will be skipped."
+msgstr ""
+"    Наборы изменений, являющиеся предками текущей ревизии, и к которым\n"
+"    уже была применена операция graft, а также ревизии слияния будут\n"
+"    пропущены."
+
+msgid ""
+"    If a graft merge results in conflicts, the graft process is\n"
+"    aborted so that the current merge can be manually resolved. Once\n"
+"    all conflicts are addressed, the graft process can be continued\n"
+"    with the -c/--continue option."
+msgstr ""
+"    Если во время операции возникает конфликт, операция отменяется для\n"
+"    того, чтобы текущее слияние было завершено вручную. После разрешения\n"
+"    всех конфликтов, можно продолжить процесс с помощью параметра\n"
+"    -c/--continue."
+
+msgid ""
+"    .. note::\n"
+"      The -c/--continue option does not reapply earlier options."
+msgstr ""
+"    .. note::\n"
+"      Параметр -c/--continue не применяет повторно ранее заданные опции."
+
+msgid ""
+"      - copy a single change to the stable branch and edit its description::"
+msgstr ""
+"      - скопировать одно изменение в ветку stable и отредактировать ее\n"
+"        описание::"
+
+msgid ""
+"          hg update stable\n"
+"          hg graft --edit 9393"
+msgstr ""
+
+msgid ""
+"      - graft a range of changesets with one exception, updating dates::"
+msgstr ""
+"      - перенести диапазон ревизий с одним исключением, обновляя даты::"
+
+msgid "          hg graft -D \"2085::2093 and not 2091\""
+msgstr ""
+
+msgid "      - continue a graft after resolving conflicts::"
+msgstr "      - продолжить перенос после разрешения конфликтов::"
+
+msgid "          hg graft -c"
+msgstr ""
+
+msgid "      - show the source of a grafted changeset::"
+msgstr "      - показать источник перенесенного набора изменений::"
+
+msgid "          hg log --debug -r tip"
+msgstr ""
+
+msgid ""
+"    Returns 0 on successful completion.\n"
+"    "
+msgstr ""
+"    В случае успеха возвращает 0.\n"
+"    "
+
+msgid "can't specify --continue and revisions"
+msgstr "нельзя указывать --continue и ревизии одновременно"
+
+msgid "no graft state found, can't continue"
+msgstr "не найдено состояние операции graft, продолжение невозможно"
 
 #, python-format
-msgid "not removing %s: file is already untracked\n"
-msgstr "%s не удален, он и так не отслеживается\n"
+msgid "skipping ungraftable merge revision %s\n"
+msgstr "пропускаю ревизию слияния %s\n"
 
 #, python-format
-msgid "removing %s\n"
-msgstr "удаляю %s\n"
+msgid "skipping ancestor revision %s\n"
+msgstr "пропускаю предка %s\n"
+
+#, python-format
+msgid "skipping already grafted revision %s\n"
+msgstr "пропускаю уже перенесенную ревизию %s\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (same origin %d)\n"
+msgstr "пропускаю уже перенесенную ревизию %s (тот же источник %d)\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (was grafted from %d)\n"
+msgstr "пропускаю уже перенесенную ревизию %s (была перенесена из %d)\n"
+
+#, python-format
+msgid "grafting revision %s\n"
+msgstr "перенос ревизии %s\n"
+
+msgid "unresolved conflicts, can't continue"
+msgstr "неразрешенные конфликты, продолжение невозможно"
+
+msgid "use hg resolve and hg graft --continue"
+msgstr "используйте hg resolve и hg graft --continue"
 
 msgid "end fields with NUL"
 msgstr "заканчивать поля символом NUL"
@@ -8295,9 +9763,12 @@ msgstr ""
 "    объектами для операций update или merge. Головы ветвей - это наборы\n"
 "    изменений, у которых нет дочерних наборов на той же ветви."
 
+#, fuzzy
 msgid ""
 "    If one or more REVs are given, only branch heads on the branches\n"
-"    associated with the specified changesets are shown."
+"    associated with the specified changesets are shown. This means\n"
+"    that you can use :hg:`heads foo` to see the heads on a branch\n"
+"    named ``foo``."
 msgstr ""
 "    Если указана одна или более РЕВИЗИЯ, показываются только головы\n"
 "    на ветвях, ассоциированных с указанными ревизиями."
@@ -8370,6 +9841,19 @@ msgstr ""
 "    Возвращает 0 при успешном выполнении.\n"
 "    "
 
+msgid "VALUE"
+msgstr "ЗНАЧЕНИЕ"
+
+msgid "DEPRECATED"
+msgstr "УСТАРЕЛО"
+
+msgid ""
+"\n"
+"[+] marked option can be specified multiple times\n"
+msgstr ""
+"\n"
+"параметры, помеченные [+], могут указываться многократно\n"
+
 msgid "global options:"
 msgstr "глобальные параметры:"
 
@@ -8392,11 +9876,8 @@ msgstr ""
 "глобальные параметры"
 
 #, python-format
-msgid "use \"hg -v help %s\" to show global options"
-msgstr "используйте \"hg -v help %s\" для просмотра глобальных параметров"
-
-msgid "list of commands:"
-msgstr "список команд:"
+msgid "use \"hg -v help %s\" to show more info"
+msgstr "используйте \"hg -v help %s\" для дополнительной информации"
 
 #, python-format
 msgid ""
@@ -8426,22 +9907,41 @@ msgid "%s"
 msgstr "%s"
 
 #, python-format
-msgid ""
-"\n"
-"use \"hg -v help %s\" to show verbose help\n"
-msgstr ""
-"\n"
-"используйте \"hg -v help %s\" чтобы посмотреть подробную справку\n"
-
-msgid "options:\n"
-msgstr "параметры:\n"
-
-#, python-format
 msgid "use \"hg help -e %s\" to show help for the %s extension"
 msgstr "используйте \"hg help -e %s\" для просмотра справки по расширению %s"
 
+#, fuzzy, python-format
+msgid ""
+"\n"
+"use \"hg help %s\" to show the full help text\n"
+msgstr "используйте \"hg help %s\" чтобы получить полную справку"
+
+#, python-format
+msgid ""
+"\n"
+"use \"hg -v help %s\" to show more info\n"
+msgstr ""
+"\n"
+"используйте \"hg -v help %s\" для дополнительной информации\n"
+
+msgid "basic commands:"
+msgstr "Основные команды:"
+
+msgid "list of commands:"
+msgstr "список команд:"
+
 msgid "no commands defined\n"
 msgstr "команды не определены\n"
+
+msgid "enabled extensions:"
+msgstr "Включенные расширения:"
+
+msgid ""
+"\n"
+"additional help topics:"
+msgstr ""
+"\n"
+"дополнительные разделы справки:"
 
 #, python-format
 msgid ""
@@ -8466,33 +9966,7 @@ msgid "'%s' is provided by the following extension:"
 msgstr "'%s' предоставляется следующим расширением:"
 
 msgid "Mercurial Distributed SCM\n"
-msgstr "Распределенная SCM Mercurial\n"
-
-msgid "basic commands:"
-msgstr "Основные команды:"
-
-msgid "enabled extensions:"
-msgstr "Включенные расширения:"
-
-msgid "VALUE"
-msgstr "ЗНАЧЕНИЕ"
-
-msgid "DEPRECATED"
-msgstr "УСТАРЕЛО"
-
-msgid ""
-"\n"
-"[+] marked option can be specified multiple times"
-msgstr ""
-"\n"
-"параметры, помеченные [+], могут указываться многократно"
-
-msgid ""
-"\n"
-"additional help topics:"
-msgstr ""
-"\n"
-"дополнительные разделы справки:"
+msgstr "Распределенная система контроля версий Mercurial\n"
 
 msgid "identify the specified revision"
 msgstr "описать заданную ревизию"
@@ -8543,6 +10017,25 @@ msgid ""
 msgstr ""
 "    Если задан путь к репозиторию или бандлу Mercurial, будет\n"
 "    работать с этим репозиторием/бандлом."
+
+msgid "      - generate a build identifier for the working directory::"
+msgstr ""
+
+msgid "          hg id --id > build-id.dat"
+msgstr ""
+
+msgid "      - find the revision corresponding to a tag::"
+msgstr ""
+
+msgid "          hg id -n -r 1.3"
+msgstr ""
+
+#, fuzzy
+msgid "      - check the most recent revision of a remote repository::"
+msgstr "    Печатает корневой каталог текущего репозитория."
+
+msgid "          hg id -r tip http://selenic.com/hg/"
+msgstr ""
 
 msgid "can't query remote revision number, branch, or tags"
 msgstr "не могу запросить номер удаленной ревизии, ветви или метки"
@@ -8661,6 +10154,36 @@ msgstr ""
 "    стандартного ввода. Если указан URL, патч будет загружен оттуда.\n"
 "    См. :hg:`help dates` о допустимых форматах дат для -d/--date."
 
+msgid "      - import a traditional patch from a website and detect renames::"
+msgstr ""
+
+msgid "          hg import -s 80 http://example.com/bugfix.patch"
+msgstr ""
+
+msgid "      - import a changeset from an hgweb server::"
+msgstr ""
+
+msgid "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
+msgstr ""
+
+msgid "      - import all the patches in an Unix-style mbox::"
+msgstr ""
+
+msgid "          hg import incoming-patches.mbox"
+msgstr ""
+
+msgid ""
+"      - attempt to exactly restore an exported changeset (not always\n"
+"        possible)::"
+msgstr ""
+
+msgid "          hg import --exact proposed-fix.patch"
+msgstr ""
+
+#, fuzzy
+msgid "need at least one patch to import"
+msgstr "работать с репозиторием патчей mq"
+
 msgid "cannot use --no-commit with --bypass"
 msgstr ""
 
@@ -8670,20 +10193,23 @@ msgstr ""
 msgid "patch is damaged or loses information"
 msgstr "патч поврежден или в нем недостает данных"
 
-msgid "to working directory"
+#, fuzzy
+msgid "applied to working directory"
 msgstr "в рабочий каталог"
 
 msgid "not a Mercurial patch"
 msgstr "не патч Mercurial"
 
+#. i18n: refers to a short changeset id
+#, fuzzy, python-format
+msgid "created %s"
+msgstr "удаленный репозиторий: %s\n"
+
 msgid "applying patch from stdin\n"
 msgstr "применяю патч со стандартного вводар\n"
 
-#, python-format
-msgid "applied %s\n"
-msgstr "применен %s\n"
-
-msgid "no diffs found"
+#, fuzzy, python-format
+msgid "%s: no diffs found"
 msgstr "отличий не найдено"
 
 msgid "run even if remote repository is unrelated"
@@ -8816,7 +10342,8 @@ msgstr ""
 "    проблем, когда \"xargs\" считает отдельные имена с пробелами\n"
 "    несколькими файлами."
 
-msgid "only follow the first parent of merge changesets"
+#, fuzzy
+msgid "only follow the first parent of merge changesets (DEPRECATED)"
 msgstr "следовать только за первым родителем ревизий слияния"
 
 msgid "show revisions matching date spec"
@@ -8831,7 +10358,8 @@ msgstr "выполнить поиск данного текста, игнори�
 msgid "include revisions where files were removed"
 msgstr "включить ревизии, в которых файлы были удалены"
 
-msgid "show only merges"
+#, fuzzy
+msgid "show only merges (DEPRECATED)"
 msgstr "показывать только слияния"
 
 msgid "revisions committed by user"
@@ -8846,7 +10374,8 @@ msgstr "показывать наборы изменений на данной �
 msgid "do not display revision or any of its ancestors"
 msgstr "не показывать ревизию и всех ее предшественников"
 
-msgid "show hidden changesets"
+#, fuzzy
+msgid "show hidden changesets (DEPRECATED)"
 msgstr "показывать скрытые наборы изменений"
 
 msgid "[OPTION]... [FILE]"
@@ -8860,12 +10389,23 @@ msgid ""
 "    project."
 msgstr "    Печатает историю ревизий указанных файлов или всего проекта."
 
+#, fuzzy
+msgid ""
+"    If no revision range is specified, the default is ``tip:0`` unless\n"
+"    --follow is set, in which case the working directory parent is\n"
+"    used as the starting revision."
+msgstr ""
+"    Если не указан диапазон ревизий, по умолчанию используется\n"
+"    ``tip:0``, если не указан --follow, в случае чего родительская\n"
+"    ревизия рабочего каталога используются как начальная ревизия.\n"
+"    Можно также указывать набор ревизий, см. :hg:`help revsets`."
+
+#, fuzzy
 msgid ""
 "    File history is shown without following rename or copy history of\n"
 "    files. Use -f/--follow with a filename to follow history across\n"
 "    renames and copies. --follow without a filename will only show\n"
-"    ancestors or descendants of the starting revision. --follow-first\n"
-"    only follows the first parent of merge revisions."
+"    ancestors or descendants of the starting revision."
 msgstr ""
 "    История файла показывается без следования за переименованиями или\n"
 "    копированиями файлов. Используйте -f/-follow, чтобы показать\n"
@@ -8873,17 +10413,6 @@ msgstr ""
 "    файла покажет только родительские или дочерние ревизии начальной\n"
 "    ревизии. С --follow-first отслеживает только первого родителя\n"
 "    ревизий слияния."
-
-msgid ""
-"    If no revision range is specified, the default is ``tip:0`` unless\n"
-"    --follow is set, in which case the working directory parent is\n"
-"    used as the starting revision. You can specify a revision set for\n"
-"    log, see :hg:`help revsets` for more information."
-msgstr ""
-"    Если не указан диапазон ревизий, по умолчанию используется\n"
-"    ``tip:0``, если не указан --follow, в случае чего родительская\n"
-"    ревизия рабочего каталога используются как начальная ревизия.\n"
-"    Можно также указывать набор ревизий, см. :hg:`help revsets`."
 
 msgid ""
 "    By default this command prints revision number and changeset id,\n"
@@ -8909,6 +10438,82 @@ msgstr ""
 "       ревизий слияния, поскольку сравнение слитой ревизии\n"
 "       производится только с ее первым родителем. Также в список\n"
 "       попадут только файлы, отличные от ОБОИХ родителей:."
+
+msgid ""
+"    .. note::\n"
+"       for performance reasons, log FILE may omit duplicate changes\n"
+"       made on branches and will not show deletions. To see all\n"
+"       changes including duplicates and deletions, use the --removed\n"
+"       switch."
+msgstr ""
+
+msgid "      - changesets with full descriptions and file lists::"
+msgstr ""
+
+msgid "          hg log -v"
+msgstr ""
+
+#, fuzzy
+msgid "      - changesets ancestral to the working directory::"
+msgstr "показать измененные файлы в рабочем каталоге"
+
+msgid "          hg log -f"
+msgstr ""
+
+#, fuzzy
+msgid "      - last 10 commits on the current branch::"
+msgstr "задать или показать имя текущей ветви"
+
+msgid "          hg log -l 10 -b ."
+msgstr ""
+
+msgid ""
+"      - changesets showing all modifications of a file, including removals::"
+msgstr ""
+
+msgid "          hg log --removed file.c"
+msgstr ""
+
+#, fuzzy
+msgid ""
+"      - all changesets that touch a directory, with diffs, excluding merges::"
+msgstr ""
+"- Ревизии на ветви default, начиная с ветки 1.5, не включая ревизии\n"
+"  слияния::"
+
+msgid "          hg log -Mp lib/"
+msgstr ""
+
+#, fuzzy
+msgid "      - all revision numbers that match a keyword::"
+msgstr "печатать все подходящие ревизии"
+
+msgid "          hg log -k bug --template \"{rev}\\n\""
+msgstr ""
+
+msgid "      - check if a given changeset is included is a tagged release::"
+msgstr ""
+
+msgid "          hg log -r \"a21ccf and ancestor(1.9)\""
+msgstr ""
+
+msgid "      - find all changesets by some user in a date range::"
+msgstr ""
+
+msgid "          hg log -k alice -d \"may 2008 to jul 2008\""
+msgstr ""
+
+msgid "      - summary of all changesets after the last tag::"
+msgstr ""
+
+msgid ""
+"          hg log -r \"last(tagged())::\" --template \"{desc|firstline}\\n\""
+msgstr ""
+
+msgid ""
+"    See :hg:`help revisions` and :hg:`help revsets` for more about\n"
+"    specifying revisions."
+msgstr ""
 
 msgid "revision to display"
 msgstr "показать ревизию"
@@ -9207,7 +10812,7 @@ msgid "pull changes from the specified source"
 msgstr "подтянуть изменения из указанного источника"
 
 msgid "    Pull changes from a remote repository to a local one."
-msgstr "    Подтягивает изменения из удаленного репозитория в локальный."
+msgstr "    Скачивает изменения из удаленного репозитория в локальный."
 
 msgid ""
 "    This finds all changes from the repository at the specified path\n"
@@ -9392,15 +10997,25 @@ msgstr ""
 msgid "remove the specified files on the next commit"
 msgstr "удалить указанные файлы при следующем коммите"
 
-msgid "    Schedule the indicated files for removal from the repository."
+#, fuzzy
+msgid "    Schedule the indicated files for removal from the current branch."
 msgstr "    Помечает заданные файлы для удаления из репозитория."
 
+#, fuzzy
 msgid ""
-"    This only removes files from the current branch, not from the\n"
-"    entire project history. -A/--after can be used to remove only\n"
-"    files that have already been deleted, -f/--force can be used to\n"
-"    force deletion, and -Af can be used to remove files from the next\n"
-"    revision without deleting them from the working directory."
+"    This command schedules the files to be removed at the next commit.\n"
+"    To undo a remove before that, see :hg:`revert`. To undo added\n"
+"    files, see :hg:`forget`."
+msgstr ""
+"    Эта команда помечает файлы для удаления при следующем коммите.\n"
+"    Чтобы отменить удаление до коммита, см. :hg:`revert`."
+
+#, fuzzy
+msgid ""
+"      -A/--after can be used to remove only files that have already\n"
+"      been deleted, -f/--force can be used to force deletion, and -Af\n"
+"      can be used to remove files from the next revision without\n"
+"      deleting them from the working directory."
 msgstr ""
 "    Удаляются только файлы с текущей ветки, а не из всей истории\n"
 "    проекта. Используйте -A/--after, чтобы удалить из репозитория\n"
@@ -9409,12 +11024,13 @@ msgstr ""
 "    удалить файлы из следующей ревизии, не удаляя их из рабочего\n"
 "    каталога."
 
+#, fuzzy
 msgid ""
-"    The following table details the behavior of remove for different\n"
-"    file states (columns) and option combinations (rows). The file\n"
-"    states are Added [A], Clean [C], Modified [M] and Missing [!] (as\n"
-"    reported by :hg:`status`). The actions are Warn, Remove (from\n"
-"    branch) and Delete (from disk)::"
+"      The following table details the behavior of remove for different\n"
+"      file states (columns) and option combinations (rows). The file\n"
+"      states are Added [A], Clean [C], Modified [M] and Missing [!]\n"
+"      (as reported by :hg:`status`). The actions are Warn, Remove\n"
+"      (from branch) and Delete (from disk):"
 msgstr ""
 "    Приведенная ниже таблица поясняет поведение команды remove для\n"
 "    разных состояний файла (столбцы) и комбинаций параметров (строки).\n"
@@ -9427,11 +11043,14 @@ msgstr ""
 # сбивается форматирование!!!
 #, fuzzy
 msgid ""
-"             A  C  M  !\n"
-"      none   W  RD W  R\n"
-"      -f     R  RD RD R\n"
-"      -A     W  W  W  R\n"
-"      -Af    R  R  R  R"
+"      ======= == == == ==\n"
+"              A  C  M  !\n"
+"      ======= == == == ==\n"
+"      none    W  RD W  R\n"
+"      -f      R  RD RD R\n"
+"      -A      W  W  W  R\n"
+"      -Af     R  R  R  R\n"
+"      ======= == == == =="
 msgstr ""
 "             A  C  M  !\n"
 "      нет    W  RD W  R\n"
@@ -9439,19 +11058,13 @@ msgstr ""
 "      -A     W  W  W  R\n"
 "      -Af    R  R  R  R"
 
+#, fuzzy
 msgid ""
-"    Note that remove never deletes files in Added [A] state from the\n"
-"    working directory, not even if option --force is specified."
+"      Note that remove never deletes files in Added [A] state from the\n"
+"      working directory, not even if option --force is specified."
 msgstr ""
 "    Обратите внимание, что remove никогда не удаляет из рабочего\n"
 "    каталога файлы с состоянием Added [A], даже c опцией --force."
-
-msgid ""
-"    This command schedules the files to be removed at the next commit.\n"
-"    To undo a remove before that, see :hg:`revert`."
-msgstr ""
-"    Эта команда помечает файлы для удаления при следующем коммите.\n"
-"    Чтобы отменить удаление до коммита, см. :hg:`revert`."
 
 msgid ""
 "    Returns 0 on success, 1 if any warnings encountered.\n"
@@ -9470,9 +11083,8 @@ msgstr "%s не удален: файл еще существует (-f - уда�
 msgid "not removing %s: file is modified (use -f to force removal)\n"
 msgstr "%s не удален: файл изменен (-f - удалить принудительно)\n"
 
-#, python-format
-msgid ""
-"not removing %s: file has been marked for add (use -f to force removal)\n"
+#, fuzzy, python-format
+msgid "not removing %s: file has been marked for add (use forget to undo)\n"
 msgstr ""
 "%s не удален: файл был помечен для добавления (-f - удалить принудительно)\n"
 
@@ -9538,14 +11150,16 @@ msgstr ""
 msgid "    The resolve command can be used in the following ways:"
 msgstr "    Команда resolve может использоваться следующими способами:"
 
+#, fuzzy
 msgid ""
 "    - :hg:`resolve [--tool TOOL] FILE...`: attempt to re-merge the "
 "specified\n"
 "      files, discarding any previous merge attempts. Re-merging is not\n"
 "      performed for files already marked as resolved. Use ``--all/-a``\n"
-"      to selects all unresolved files. ``--tool`` can be used to specify\n"
+"      to select all unresolved files. ``--tool`` can be used to specify\n"
 "      the merge tool used for the given files. It overrides the HGMERGE\n"
-"      environment variable and your configuration files."
+"      environment variable and your configuration files.  Previous file\n"
+"      contents are saved with a ``.orig`` suffix."
 msgstr ""
 "    - :hg:`resolve [--tool ПРОГРАММА] ФАЙЛ...`: попытаться повторитьслияние\n"
 "    файлов, отменяя предыдущие попытки. Повторное слияние не проводится\n"
@@ -9632,11 +11246,14 @@ msgstr ""
 "       :hg:`update РЕВИЗИЯ`. Чтобы отменить слияние (с потерей сделанных)\n"
 "       изменений), используйте :hg:`update --clean .`."
 
+#, fuzzy
 msgid ""
 "    With no revision specified, revert the specified files or directories\n"
-"    to the state they had in the first parent of the working directory.\n"
+"    to the contents they had in the parent of the working directory.\n"
 "    This restores the contents of files to an unmodified\n"
-"    state and unschedules adds, removes, copies, and renames."
+"    state and unschedules adds, removes, copies, and renames. If the\n"
+"    working directory has two parents, you must explicitly specify a\n"
+"    revision."
 msgstr ""
 "    Если ревизия не задана, вернуть указанные файлы и каталоги к\n"
 "    состоянию, в котором они сохранены в родительской ревизии\n"
@@ -9668,6 +11285,14 @@ msgstr ""
 
 msgid "you can't specify a revision and a date"
 msgstr "нельзя указывать одновременно дату и ревизию"
+
+msgid "uncommitted merge with no revision specified"
+msgstr ""
+
+#, fuzzy
+msgid "use \"hg update\" or see \"hg help revert\""
+msgstr ""
+"незакомиченное слияние - используйте \"hg update\", см. \"hg help revert\""
 
 msgid "no files or directories specified"
 msgstr "не указаны файлы или каталоги"
@@ -9720,6 +11345,9 @@ msgstr "файл не под контролем версий: %s\n"
 msgid "no changes needed to %s\n"
 msgstr "не требуются изменения для %s\n"
 
+msgid "ignore safety measures"
+msgstr ""
+
 msgid "roll back the last transaction (dangerous)"
 msgstr "откатить последнюю транзакцию (опасно)"
 
@@ -9759,6 +11387,14 @@ msgstr ""
 "    - pull\n"
 "    - push (с текущим репозиторием в качестве назначения)\n"
 "    - unbundle"
+
+msgid ""
+"    It's possible to lose data with rollback: commit, update back to\n"
+"    an older changeset, and then rollback. The update removes the\n"
+"    changes you committed from the working directory, and rollback\n"
+"    removes them from history. To avoid data loss, you must pass\n"
+"    --force in this case."
+msgstr ""
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -10032,6 +11668,25 @@ msgstr ""
 "      I = игнорируется (ignored)\n"
 "        = источник предыдущего файла показанного как A (добавлен)"
 
+#, fuzzy
+msgid "      - show changes in the working directory relative to a changeset:"
+msgstr "показать измененные файлы в рабочем каталоге"
+
+msgid "          hg status --rev 9353"
+msgstr ""
+
+msgid "      - show all changes including copies in an existing changeset::"
+msgstr ""
+
+msgid "          hg status --copies --change 9353"
+msgstr ""
+
+msgid "      - get a NUL separated list of added files, suitable for xargs::"
+msgstr ""
+
+msgid "          hg status -an0"
+msgstr ""
+
 msgid "check for push and pull"
 msgstr "проверить наличие входящих и исходящих изменений"
 
@@ -10066,6 +11721,10 @@ msgstr " (нет извлеченной ревизии)"
 #, python-format
 msgid "branch: %s\n"
 msgstr "ветвь: %s\n"
+
+#, fuzzy
+msgid "bookmarks:"
+msgstr "показать закладки"
 
 #, python-format
 msgid "%d modified"
@@ -10425,9 +12084,6 @@ msgstr ""
 msgid "cannot specify both -c/--check and -C/--clean"
 msgstr "нельзя одновременно указывать -c/--check и -C/-clean"
 
-msgid "uncommitted local changes"
-msgstr "незакоммиченные локальные изменения"
-
 msgid "verify the integrity of the repository"
 msgstr "проверить целостность репозитория"
 
@@ -10462,7 +12118,7 @@ msgid ""
 msgstr ""
 "(С) 2005-2011 Matt Mackall и другие.\n"
 "Это свободное ПО; условия распространения см. в исходном коде.\n"
-"НИКАКИХ ГАРАНТИЙ НЕ ПРЕДОСТАВЛЯЕТСЯ, в том числе, на пригодность для\n"
+"НИКАКИХ ГАРАНТИЙ НЕ ПРЕДОСТАВЛЯЕТСЯ, в том числе на пригодность для\n"
 "коммерческого использования и для решения конкертных задач.\n"
 
 #, python-format
@@ -10575,7 +12231,7 @@ msgstr ""
 
 #, python-format
 msgid "push creates new remote branches: %s!"
-msgstr ""
+msgstr "push создаст новые ветки в удаленном репозитории: %s!"
 
 msgid "use 'hg push --new-branch' to create new remote branches"
 msgstr ""
@@ -10593,6 +12249,14 @@ msgstr ""
 
 msgid "did you forget to merge? use push -f to force"
 msgstr ""
+
+#, python-format
+msgid "new remote heads on branch '%s'\n"
+msgstr "новые головные ревизии в удаленном репозитории на ветке '%s'\n"
+
+#, python-format
+msgid "new remote head %s\n"
+msgstr "новая головная ревизия %s в удаленном репозитории\n"
 
 msgid "note: unsynced remote changes!\n"
 msgstr ""
@@ -10644,6 +12308,9 @@ msgstr ""
 
 #, python-format
 msgid "hg: %s\n"
+msgstr ""
+
+msgid "abort: remote error:\n"
 msgstr ""
 
 #, python-format
@@ -10756,11 +12423,11 @@ msgid "repository '%s' is not local"
 msgstr "репозиторий '%s' не локальный"
 
 #, python-format
-msgid "no repository found in %r (.hg not found)"
-msgstr ""
+msgid "no repository found in '%s' (.hg not found)"
+msgstr "репозиторий не найден '%s' (нет .hg)"
 
 msgid "warning: --repository ignored\n"
-msgstr ""
+msgstr "внимание: параметр --repository игнорируется\n"
 
 #, python-format
 msgid "unrecognized profiling format '%s' - Ignored\n"
@@ -10807,20 +12474,6 @@ msgid ""
 "keep (l)ocal or take (o)ther?"
 msgstr ""
 
-msgid "&Local"
-msgstr "&Локальные"
-
-msgid "&Other"
-msgstr "&Другие"
-
-#, python-format
-msgid "merging %s and %s to %s\n"
-msgstr ""
-
-#, python-format
-msgid "merging %s\n"
-msgstr ""
-
 #, python-format
 msgid "%s.premerge not valid ('%s' is neither boolean nor %s)"
 msgstr ""
@@ -10833,6 +12486,10 @@ msgstr ""
 msgid ""
 " output file %s appears unchanged\n"
 "was merge successful (yn)?"
+msgstr ""
+
+#, python-format
+msgid "merging %s incomplete! (edit conflicts, then use 'hg resolve --mark')\n"
 msgstr ""
 
 #, python-format
@@ -10938,7 +12595,7 @@ msgstr ""
 
 msgid ""
 "``binary()``\n"
-"    File that appears to be binary (contails NUL bytes)."
+"    File that appears to be binary (contains NUL bytes)."
 msgstr ""
 "``binary()``\n"
 "    Файл, который рассматривается как бинарный (содержит символы NUL)."
@@ -11078,6 +12735,33 @@ msgstr ""
 
 #, python-format
 msgid "unknown bisect kind %s"
+msgstr ""
+
+msgid "invalid bisect state"
+msgstr ""
+
+#. i18n: bisect changeset status
+msgid "good"
+msgstr ""
+
+#. i18n: bisect changeset status
+msgid "bad"
+msgstr ""
+
+#. i18n: bisect changeset status
+msgid "skipped"
+msgstr "пропущен"
+
+#. i18n: bisect changeset status
+msgid "untested"
+msgstr ""
+
+#. i18n: bisect changeset status
+msgid "good (implicit)"
+msgstr ""
+
+#. i18n: bisect changeset status
+msgid "bad (implicit)"
 msgstr ""
 
 msgid "disabled extensions:"
@@ -11589,6 +13273,46 @@ msgstr ""
 "``hg echo foo``, ``$HG_ARGS`` раскроется в ``echo foo``."
 
 msgid ""
+".. note:: Some global configuration options such as ``-R`` are\n"
+"   processed before shell aliases and will thus not be passed to\n"
+"   aliases."
+msgstr ""
+
+msgid ""
+"\n"
+"``annotate``\n"
+"\"\"\"\"\"\"\"\""
+msgstr ""
+
+msgid ""
+"Settings used when displaying file annotations. All values are\n"
+"Booleans and default to False. See ``diff`` section for related\n"
+"options for the diff command."
+msgstr ""
+
+msgid ""
+"``ignorews``\n"
+"    Ignore white space when comparing lines."
+msgstr ""
+"``ignorews``\n"
+"    Игнорировать пробельные символы при сравнении строк"
+
+msgid ""
+"``ignorewsamount``\n"
+"    Ignore changes in the amount of white space."
+msgstr ""
+"``ignorewsamount``\n"
+"    Игнорировать изменения в количестве пробельных символов"
+
+msgid ""
+"``ignoreblanklines``\n"
+"    Ignore changes whose lines are all blank."
+msgstr ""
+"``ignoreblanklines``\n"
+"    Игнорировать изменения, состоящие только из пустых строк"
+
+msgid ""
+"\n"
 "``auth``\n"
 "\"\"\"\"\"\"\"\""
 msgstr ""
@@ -11655,13 +13379,17 @@ msgid ""
 "    Optional. Username to authenticate with. If not given, and the\n"
 "    remote site requires basic or digest authentication, the user will\n"
 "    be prompted for it. Environment variables are expanded in the\n"
-"    username letting you do ``foo.username = $USER``."
+"    username letting you do ``foo.username = $USER``. If the URI\n"
+"    includes a username, only ``[auth]`` entries with a matching\n"
+"    username or without a username will be considered."
 msgstr ""
 "``username``\n"
 "    Не обязательный. Имя, используемое при аутентификации. Если не\n"
 "    задан, а удаленный сайт требует базовую или digest-аутентификацию,\n"
 "    пользователь должен будет ввести имя. Переменные окружения\n"
-"    раскрываются, позволяя написать ``foo.username = $USER``."
+"    раскрываются, позволяя написать ``foo.username = $USER``. Если URI\n"
+"    включает имя пользователя, рассматриваются только параметры из \n"
+"    секции ``[auth]`` с совпадающим именем или без имени."
 
 msgid ""
 "``password``\n"
@@ -11861,9 +13589,11 @@ msgid ""
 "\"\"\"\"\"\"\"\""
 msgstr ""
 
+#, fuzzy
 msgid ""
-"Settings used when displaying diffs. Everything except for ``unified`` is a\n"
-"Boolean and defaults to False."
+"Settings used when displaying diffs. Everything except for ``unified``\n"
+"is a Boolean and defaults to False. See ``annotate`` section for\n"
+"related options for the annotate command."
 msgstr ""
 "Настройки отображения различий. Все параметры, кроме ``unified``, являются\n"
 "логическими и по умолчанию имеют значение Ложь (False)."
@@ -11888,27 +13618,6 @@ msgid ""
 msgstr ""
 "``showfunc``\n"
 "    Для каждого изменения показать, в какой оно сделано функции"
-
-msgid ""
-"``ignorews``\n"
-"    Ignore white space when comparing lines."
-msgstr ""
-"``ignorews``\n"
-"    Игнорировать пробельные символы при сравнении строк"
-
-msgid ""
-"``ignorewsamount``\n"
-"    Ignore changes in the amount of white space."
-msgstr ""
-"``ignorewsamount``\n"
-"    Игнорировать изменения в количестве пробельных символов"
-
-msgid ""
-"``ignoreblanklines``\n"
-"    Ignore changes whose lines are all blank."
-msgstr ""
-"``ignoreblanklines``\n"
-"    Игнорировать изменения, состоящие только из пустых строк"
 
 msgid ""
 "``unified``\n"
@@ -13214,13 +14923,13 @@ msgid ""
 "    Whether to commit modified subrepositories when committing the\n"
 "    parent repository. If False and one subrepository has uncommitted\n"
 "    changes, abort the commit.\n"
-"    Default is True."
+"    Default is False."
 msgstr ""
 "``commitsubrepos``\n"
 "    Коммитить или нет измененные субрепозитории при коммите\n"
 "    родительского репозитория. Если False, и один из субрепозиториев\n"
 "    имеет незакоммиченные изменения, отменить коммит.\n"
-"    По умолчанию True (включено)."
+"    По умолчанию False (выключено)."
 
 msgid ""
 "``debug``\n"
@@ -13555,6 +15264,15 @@ msgstr ""
 "    Этот список проверяется после списка deny_push."
 
 msgid ""
+"``guessmime``\n"
+"    Control MIME types for raw download of file content.\n"
+"    Set to True to let hgweb guess the content type from the file\n"
+"    extension. This will serve HTML files as ``text/html`` and might\n"
+"    allow cross-site scripting attacks when serving untrusted\n"
+"    repositories. Default is False."
+msgstr ""
+
+msgid ""
 "``allow_read``\n"
 "    If the user has not already been denied repository access due to\n"
 "    the contents of deny_read, this list determines whether to grant\n"
@@ -13774,6 +15492,14 @@ msgid ""
 msgstr ""
 "``ipv6``\n"
 "    Использовать IPv6. По умолчанию False (не использовать)."
+
+msgid ""
+"``logoimg``\n"
+"    File name of the logo image that some templates display on each page.\n"
+"    The file name is relative to ``staticurl``. That is, the full path to\n"
+"    the logo image is \"staticurl/logoimg\".\n"
+"    If unset, ``hglogo.png`` will be used."
+msgstr ""
 
 msgid ""
 "``logourl``\n"
@@ -14407,9 +16133,8 @@ msgstr "- Вернуть (revert) копии больших бинарных ф�
 msgid "    hg revert \"set:copied() and binary() and size('>1M')\""
 msgstr ""
 
-msgid "- Remove files listed in files.lst that contain the letter a or b::"
-msgstr ""
-"- Удалить файлы, перечисленные в files.lst и содержащие букву a или b::"
+msgid "- Remove files listed in foo.lst that contain the letter a or b::"
+msgstr "- Удалить файлы, перечисленные в foo.lst и содержащие букву a или b::"
 
 msgid "    hg remove \"set: 'listfile:foo.lst' and (**a* or **b*)\""
 msgstr ""
@@ -15269,7 +16994,6 @@ msgstr ""
 "Рабочий каталог, родитель\n"
 "    См. 'Родитель, рабочего каталога'.\n"
 
-#, fuzzy
 msgid ""
 "Synopsis\n"
 "--------"
@@ -16222,32 +17946,35 @@ msgid ""
 msgstr "- Не помеченные ревизии, содержищие слова \"bug\" или \"issue\"::"
 
 msgid ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
-"\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 msgstr ""
 
 msgid ""
 "Subrepositories let you nest external repositories or projects into a\n"
 "parent Mercurial repository, and make commands operate on them as a\n"
-"group. External Mercurial and Subversion projects are currently\n"
-"supported."
+"group."
 msgstr ""
 "Субрепозитории (подрепозитории) позволяют вложить несколько внешних\n"
-"репозиториев или пректов в один репозиторий Mercurial и выполнять\n"
-"над ними команды как над единой группой. В настоящее время поддерживаются\n"
-"внешнии проекты Mercurial и Subversion."
+"репозиториев или пректов в родительский репозиторий Mercurial и выполнять\n"
+"над ними команды как над единой группой."
+
+msgid ""
+"Mercurial currently supports Mercurial, Git, and Subversion\n"
+"subrepositories."
+msgstr ""
+"В настоящее время поддерживаются субрепозитории Mercurial, Git\n"
+"и Subversion."
 
 msgid "Subrepositories are made of three components:"
 msgstr "Субрепозитории включают три компонента:"
 
 msgid ""
 "1. Nested repository checkouts. They can appear anywhere in the\n"
-"   parent working directory, and are Mercurial clones or Subversion\n"
-"   checkouts."
+"   parent working directory."
 msgstr ""
 "1. Извлеченные рабочие копии вложенных репозиториев. Они могут\n"
-"   находится где угодно в рабочем каталоге и являются либо клонами\n"
-"   Mercurial, либо рабочими копиями Subversion."
+"   находится где угодно в рабочем каталоге."
 
 msgid ""
 "2. Nested repository references. They are defined in ``.hgsub`` and\n"
@@ -16261,20 +17988,24 @@ msgstr ""
 msgid "     path/to/nested = https://example.com/nested/repo/path"
 msgstr ""
 
+msgid "   Git and Subversion subrepos are also supported:"
+msgstr ""
+
+msgid ""
+"     path/to/nested = [git]git://example.com/nested/repo/path\n"
+"     path/to/nested = [svn]https://example.com/nested/trunk/path"
+msgstr ""
+
 msgid ""
 "   where ``path/to/nested`` is the checkout location relatively to the\n"
 "   parent Mercurial root, and ``https://example.com/nested/repo/path``\n"
 "   is the source repository path. The source can also reference a\n"
-"   filesystem path. Subversion repositories are defined with:"
+"   filesystem path."
 msgstr ""
 "   где ``path/to/nested`` - путь к извлеченной рабочей копии относительно\n"
 "   корня родительского репозитория Mercurial, а \n"
 "   ``https://example.com/nested/repo/path`` - путь к репозиторию-\n"
-"   источнику. Источник может быть также путем в файловой системе.\n"
-"   Репозитории Subversion определяются так:"
-
-msgid "     path/to/nested = [svn]https://example.com/nested/trunk/path"
-msgstr ""
+"   источнику. Источник может быть также путем в файловой системе."
 
 msgid ""
 "   Note that ``.hgsub`` does not exist by default in Mercurial\n"
@@ -16381,14 +18112,18 @@ msgstr ""
 "Взаимодействие с командами Mercurial\n"
 "------------------------------------"
 
+#, fuzzy
 msgid ""
 ":add: add does not recurse in subrepos unless -S/--subrepos is\n"
-"    specified. Subversion subrepositories are currently silently\n"
+"    specified.  However, if you specify the full path of a file in a\n"
+"    subrepo, it will be added even without -S/--subrepos specified.\n"
+"    Git and Subversion subrepositories are currently silently\n"
 "    ignored."
 msgstr ""
-":add: add не обрабатывает субрепозитории рекурсивно, если не указана\n"
-"    опция -S/--subrepos. Субрепозитории Subversion в настоящее\n"
-"    время молча игнорируются."
+":diff: diff не обрабатывает субрепозитории рекурсивно, если не указана\n"
+"    опция -S/--subrepos. Различия отображаются как обычно для элементов    "
+"субрепозиториев. Репозитории Subversion в настоящее время молча\n"
+"    игнорируются."
 
 msgid ""
 ":archive: archive does not recurse in subrepositories unless\n"
@@ -16397,14 +18132,16 @@ msgstr ""
 ":archive: archive не обрабатывает субрепозитории рекурсивно, если\n"
 "    не указана опция -S/--subrepos."
 
+#, fuzzy
 msgid ""
 ":commit: commit creates a consistent snapshot of the state of the\n"
-"    entire project and its subrepositories. It does this by first\n"
-"    attempting to commit all modified subrepositories, then recording\n"
-"    their state and finally committing it in the parent\n"
-"    repository. Mercurial can be made to abort if any subrepository\n"
-"    content is modified by setting \"ui.commitsubrepos=no\" in a\n"
-"    configuration file (see :hg:`help config`)."
+"    entire project and its subrepositories. If any subrepositories\n"
+"    have been modified, Mercurial will abort.  Mercurial can be made\n"
+"    to instead commit all modified subrepositories by specifying\n"
+"    -S/--subrepos, or setting \"ui.commitsubrepos=True\" in a\n"
+"    configuration file (see :hg:`help config`).  After there are no\n"
+"    longer any modified subrepositories, it records their state and\n"
+"    finally commits it in the parent repository."
 msgstr ""
 ":commit: commit создает целостный снисок состояния всего проекта и\n"
 "    его субрепозиториев. Она делает это сначала пытаясь закоммитить\n"
@@ -16414,30 +18151,42 @@ msgstr ""
 "    субрепозиторий изменено, с помощью установки \"ui.commitsubrepos=no\"\n"
 "    в конфиге (см. :hg:`help config`)."
 
+#, fuzzy
 msgid ""
 ":diff: diff does not recurse in subrepos unless -S/--subrepos is\n"
 "    specified. Changes are displayed as usual, on the subrepositories\n"
-"    elements. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    elements. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 ":diff: diff не обрабатывает субрепозитории рекурсивно, если не указана\n"
 "    опция -S/--subrepos. Различия отображаются как обычно для элементов    "
 "субрепозиториев. Репозитории Subversion в настоящее время молча\n"
 "    игнорируются."
 
+#, fuzzy
+msgid ""
+":forget: forget currently only handles exact file matches in subrepos.\n"
+"    Git and Subversion subrepositories are currently silently ignored."
+msgstr ""
+":outgoing: outgoing не обрабатывает субрепозитории рекурсивно, если\n"
+"    не указана опция -S/--subrepos. Субрепозитории Subversion в\n"
+"    настоящее время молча игнорируются."
+
+#, fuzzy
 msgid ""
 ":incoming: incoming does not recurse in subrepos unless -S/--subrepos\n"
-"    is specified. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    is specified. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 ":incoming: incoming не обрабатывает субрепозитории рекурсивно, если\n"
 "    не указана опция -S/--subrepos. Субрепозитории Subversion в\n"
 "    настоящее время молча игнорируются."
 
+#, fuzzy
 msgid ""
 ":outgoing: outgoing does not recurse in subrepos unless -S/--subrepos\n"
-"    is specified. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    is specified. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 ":outgoing: outgoing не обрабатывает субрепозитории рекурсивно, если\n"
 "    не указана опция -S/--subrepos. Субрепозитории Subversion в\n"
@@ -16456,11 +18205,12 @@ msgstr ""
 "    подтянуютые ревизии родительского репозитория в лучшем случае\n"
 "    дорого, и вообще не возможно в случае Subversion."
 
+#, fuzzy
 msgid ""
 ":push: Mercurial will automatically push all subrepositories first\n"
 "    when the parent repository is being pushed. This ensures new\n"
 "    subrepository changes are available when referenced by top-level\n"
-"    repositories."
+"    repositories.  Push is a no-op for Subversion subrepositories."
 msgstr ""
 ":push: Mercurial автоматически выполняет push для всех субрепозиториев\n"
 "    при выполнении push для родительского репозитория. Это позволяет\n"
@@ -16600,7 +18350,7 @@ msgstr "Возможные следующие формы URL::"
 
 msgid ""
 "  local/filesystem/path[#revision]\n"
-"  file://local/filesystem/path[#revision]\n"
+"  file://localhost/filesystem/path[#revision]\n"
 "  http://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  https://[user[:pass]@]host[:port]/[path][#revision]\n"
 "  ssh://[user@]host[:port]/[path][#revision]"
@@ -16918,9 +18668,6 @@ msgstr ""
 msgid "'%s' uses newer protocol %s"
 msgstr ""
 
-msgid "unexpected response:"
-msgstr ""
-
 #, python-format
 msgid "push failed: %s"
 msgstr ""
@@ -16983,6 +18730,9 @@ msgstr ""
 msgid "no interrupted transaction available\n"
 msgstr ""
 
+msgid "no rollback information available\n"
+msgstr ""
+
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
 msgstr ""
@@ -16994,8 +18744,14 @@ msgstr ""
 msgid "rolling back unknown transaction\n"
 msgstr ""
 
+msgid "rollback of last commit while not checked out may lose data"
+msgstr ""
+
+msgid "use -f to force"
+msgstr ""
+
 #, python-format
-msgid "named branch could not be reset, current branch is still: %s\n"
+msgid "named branch could not be reset: current branch is still '%s'\n"
 msgstr ""
 
 #, python-format
@@ -17004,9 +18760,6 @@ msgstr ""
 
 #, python-format
 msgid "working directory now based on revision %d\n"
-msgstr ""
-
-msgid "no rollback information available\n"
 msgstr ""
 
 #, python-format
@@ -17031,8 +18784,7 @@ msgstr ""
 msgid "can't commit subrepos without .hgsub"
 msgstr ""
 
-#, python-format
-msgid "uncommitted changes in subrepo %s"
+msgid "use --subrepos for recursive commit"
 msgstr ""
 
 msgid "file not found!"
@@ -17409,6 +19161,10 @@ msgid "patch failed to apply"
 msgstr ""
 
 #, python-format
+msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
+msgstr ""
+
+#, python-format
 msgid "exited with status %d"
 msgstr ""
 
@@ -17525,14 +19281,20 @@ msgid "author requires a string"
 msgstr ""
 
 msgid ""
-"``bisected(string)``\n"
-"    Changesets marked in the specified bisect state (good, bad, skip)."
+"``bisect(string)``\n"
+"    Changesets marked in the specified bisect status:"
+msgstr ""
+
+msgid ""
+"    - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip\n"
+"    - ``goods``, ``bads``      : csets topologicaly good/bad\n"
+"    - ``range``              : csets taking part in the bisection\n"
+"    - ``pruned``             : csets that are goods, bads or skipped\n"
+"    - ``untested``           : csets whose fate is yet unknown\n"
+"    - ``ignored``            : csets ignored due to DAG topology"
 msgstr ""
 
 msgid "bisect requires a string"
-msgstr ""
-
-msgid "invalid bisect state"
 msgstr ""
 
 msgid ""
@@ -17608,6 +19370,11 @@ msgid ""
 msgstr ""
 
 msgid "filelog requires a pattern"
+msgstr ""
+
+msgid ""
+"``first(set, [n])``\n"
+"    An alias for limit()."
 msgstr ""
 
 msgid ""
@@ -17687,13 +19454,14 @@ msgid "keyword requires a string"
 msgstr ""
 
 msgid ""
-"``limit(set, n)``\n"
-"    First n members of set."
+"``limit(set, [n])``\n"
+"    First n members of set, defaulting to 1."
 msgstr ""
 
 #. i18n: "limit" is a keyword
-msgid "limit requires two arguments"
-msgstr ""
+#, fuzzy
+msgid "limit requires one or two arguments"
+msgstr "unknown не требует аргументов"
 
 #. i18n: "limit" is a keyword
 msgid "limit requires a number"
@@ -17704,13 +19472,14 @@ msgid "limit expects a number"
 msgstr ""
 
 msgid ""
-"``last(set, n)``\n"
-"    Last n members of set."
+"``last(set, [n])``\n"
+"    Last n members of set, defaulting to 1."
 msgstr ""
 
 #. i18n: "last" is a keyword
-msgid "last requires two arguments"
-msgstr ""
+#, fuzzy
+msgid "last requires one or two arguments"
+msgstr "unknown не требует аргументов"
 
 #. i18n: "last" is a keyword
 msgid "last requires a number"
@@ -17913,7 +19682,7 @@ msgid "path contains illegal component: %s"
 msgstr ""
 
 #, python-format
-msgid "path %r is inside nested repo %r"
+msgid "path '%s' is inside nested repo %r"
 msgstr ""
 
 #, python-format
@@ -17941,6 +19710,13 @@ msgstr ""
 
 msgid "searching for changes\n"
 msgstr ""
+
+msgid "all local heads known remotely\n"
+msgstr ""
+
+#, fuzzy
+msgid "sampling from both directions\n"
+msgstr "применяю патч со стандартного вводар\n"
 
 msgid "queries"
 msgstr ""
@@ -17988,6 +19764,9 @@ msgstr ""
 
 #, python-format
 msgid "push refused: %s"
+msgstr ""
+
+msgid "Python SSL support not found"
 msgstr ""
 
 msgid "certificate checking requires Python 2.6"
@@ -18054,11 +19833,11 @@ msgstr ""
 msgid "subrepo spec file %s not found"
 msgstr ""
 
-msgid "missing ] in subrepo source"
-msgstr ""
-
 #, python-format
 msgid "bad subrepository pattern in %s: %s"
+msgstr ""
+
+msgid "missing ] in subrepo source"
 msgstr ""
 
 #, python-format
@@ -18124,6 +19903,10 @@ msgstr ""
 
 #, python-format
 msgid "pushing subrepo %s to %s\n"
+msgstr ""
+
+#, python-format
+msgid "'svn' executable not found for subrepo '%s'"
 msgstr ""
 
 msgid "cannot retrieve svn tool version"
@@ -18314,6 +20097,13 @@ msgstr ""
 ":short: Хэш набора изменений. Возвращает хэш набора изменений в\n"
 "    сокращенной форме, т.е. строку из 12 шестнадцатиричных символов."
 
+msgid ""
+":shortbisect: Any text. Treats `text` as a bisection status, and\n"
+"    returns a single-character representing the status (G: good, B: bad,\n"
+"    S: skipped, U: untested, I: ignored). Returns single space if `text`\n"
+"    is not a valid bisection status."
+msgstr ""
+
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
 msgstr ":shortdate: Дата. Возвращает дату в виде \"2006-09-18\"."
 
@@ -18356,6 +20146,10 @@ msgstr ":user: Произвольный текст. Возвращает пол�
 
 msgid ":author: String. The unmodified author of the changeset."
 msgstr ":author: Строка. Неизмененный автор набора изменений."
+
+#, fuzzy
+msgid ":bisect: String. The changeset bisection status."
+msgstr ":desc: Строка. Текст описания набора изменений."
 
 msgid ""
 ":branch: String. The name of the branch on which the changeset was\n"
@@ -18441,6 +20235,10 @@ msgid ""
 msgstr ""
 ":node: Строка. Хэш набора изменений в виде 40-значной шестнадцатиричной\n"
 "    строки."
+
+#, fuzzy
+msgid ":rev: Integer. The changeset phase."
+msgstr ":rev: Целое число. Локальный номер ревизии в этом репозитории."
 
 msgid ":rev: Integer. The repository-local changeset revision number."
 msgstr ":rev: Целое число. Локальный номер ревизии в этом репозитории."
@@ -18849,6 +20647,68 @@ msgstr ""
 msgid "push failed:"
 msgstr ""
 
+#~ msgid "acl: access denied for changeset %s"
+#~ msgstr "acl: нет доступа для набора изменений %s"
+
+#~ msgid "    See :hg:`help urls` for valid source format details."
+#~ msgstr "    См. :hg:`help urls` о форматах адреса источника."
+
+#~ msgid ""
+#~ "    It is possible to specify an ``ssh://`` URL as the destination, but "
+#~ "no\n"
+#~ "    ``.hg/hgrc`` and working directory will be created on the remote "
+#~ "side.\n"
+#~ "    Please see :hg:`help urls` for important details about ``ssh://`` "
+#~ "URLs."
+#~ msgstr ""
+#~ "    Можно указать ``ssh://...`` в качестве адреса назначения, но файл\n"
+#~ "    ``.hg/hgrc`` и рабочая копия не будут созданы на удаленном "
+#~ "компьютере.\n"
+#~ "    См. :hg:`help urls` для важной информации об адресах вида ``ssh://..."
+#~ "``."
+
+#~ msgid ""
+#~ "    A set of changesets (tags, or branch names) to pull may be specified\n"
+#~ "    by listing each changeset (tag, or branch name) with -r/--rev.\n"
+#~ "    If -r/--rev is used, the cloned repository will contain only a "
+#~ "subset\n"
+#~ "    of the changesets of the source repository. Only the set of "
+#~ "changesets\n"
+#~ "    defined by all -r/--rev options (including all their ancestors)\n"
+#~ "    will be pulled into the destination repository.\n"
+#~ "    No subsequent changesets (including subsequent tags) will be present\n"
+#~ "    in the destination."
+#~ msgstr ""
+#~ "    Копируемые наборы изменений (changesets) (как метки или имена "
+#~ "ветвей)\n"
+#~ "    могут быть заданы указанием каждого набора изменений (метки или "
+#~ "имени\n"
+#~ "    ветви) с помощью -r/--rev. При использовании -r/--rev, клонированный\n"
+#~ "    репозиторий будет содержать только подмножество наборов изменений\n"
+#~ "    источника."
+
+#~ msgid ""
+#~ "    Using -r/--rev (or 'clone src#rev dest') implies --pull, even for\n"
+#~ "    local source repositories."
+#~ msgstr ""
+#~ "    Использование -r/--rev (или 'clone источник#ревизия назн')\n"
+#~ "    предполагает --pull, даже если источник локален."
+
+#~ msgid "applied %s\n"
+#~ msgstr "применен %s\n"
+
+#~ msgid ""
+#~ ":add: add does not recurse in subrepos unless -S/--subrepos is\n"
+#~ "    specified. Subversion subrepositories are currently silently\n"
+#~ "    ignored."
+#~ msgstr ""
+#~ ":add: add не обрабатывает субрепозитории рекурсивно, если не указана\n"
+#~ "    опция -S/--subrepos. Субрепозитории Subversion в настоящее\n"
+#~ "    время молча игнорируются."
+
+#~ msgid "do not prompt, assume 'yes' for any required answers"
+#~ msgstr "не спрашивать подтверждания, всегда автоматически отвечать 'да'"
+
 #~ msgid "read config from: %s\n"
 #~ msgstr "читаю конфиг из: %s\n"
 
@@ -18901,27 +20761,15 @@ msgstr ""
 #~ "    Если заданы имена, восстанавливаются все файлы с подходящими\n"
 #~ "    именами. Без аргумнтов никакие файлы не будут восстановлены."
 
-#~ msgid "uncommitted merge - use \"hg update\", see \"hg help revert\""
-#~ msgstr ""
-#~ "незакомиченное слияние - используйте \"hg update\", см. \"hg help revert\""
-
 #~ msgid ""
 #~ "no files or directories specified; use --all to revert the whole repo"
 #~ msgstr "не заданы файлы или каталоги; --all откатит весь репозиторий"
-
-#, fuzzy
-#~ msgid "%s already exists"
-#~ msgstr "файл %s уже существует\n"
 
 #~ msgid "base path"
 #~ msgstr "базовый путь"
 
 #~ msgid "not updating, since new heads added\n"
 #~ msgstr "не обновляюсь т.к. добавлены новые головы\n"
-
-#, fuzzy
-#~ msgid "%s still exists!\n"
-#~ msgstr "файл %s уже существует\n"
 
 #~ msgid ""
 #~ "Mercurial reads configuration data from several files, if they exist.\n"
