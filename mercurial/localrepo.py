@@ -1587,6 +1587,8 @@ class localrepository(repo.repository):
                 cg, remote_heads, fut = discovery.prepush(self, remote, force,
                                                            revs, newbranch)
                 ret = remote_heads
+                # create a callback for addchangegroup.
+                # If will be used branch of the conditionnal too.
                 if cg is not None:
                     if unbundle:
                         # local repo finds heads on server, finds out what
@@ -1601,9 +1603,41 @@ class localrepository(repo.repository):
                     else:
                         # we return an integer indicating remote head count change
                         ret = remote.addchangegroup(cg, 'push', self.url())
-                # if we don't push, the common data is already useful
-                # everything exchange is public for now
-                phases.advanceboundary(self, 0, fut)
+
+                # even when we don't push, exchanging phase data is useful
+                remotephases = remote.listkeys('phases')
+                if not remotephases: # old server or public only repo
+                    phases.advanceboundary(self, 0, fut)
+                    # don't push any phase data as there is nothing to push
+                else:
+                    ana = phases.analyzeremotephases(self, fut, remotephases)
+                    rheads, rroots = ana
+                    ### Apply remote phase on local
+                    if remotephases.get('publishing', False):
+                        phases.advanceboundary(self, 0, fut)
+                    else: # publish = False
+                        for phase, rpheads in enumerate(rheads):
+                            phases.advanceboundary(self, phase, rpheads)
+                    ### Apply local phase on remote
+                    #
+                    # XXX If push failed we should use strict common and not
+                    # future to avoir pushing phase data on unknown changeset.
+                    # This is to done later.
+                    futctx = [self[n] for n in fut if n != nullid]
+                    for phase in phases.trackedphases[::-1]:
+                        prevphase = phase -1
+                        # get all candidate for head in previous phase
+                        inprev = [ctx for ctx in futctx
+                                      if ctx.phase() == prevphase]
+                        for newremotehead in  self.set('heads(%ld & (%ln::))',
+                                              inprev, rroots[phase]):
+                            r = remote.pushkey('phases',
+                                               newremotehead.hex(),
+                                               str(phase), str(prevphase))
+                            if not r:
+                                self.ui.warn(_('updating phase of %s'
+                                               'to %s failed!\n')
+                                                % (newremotehead, prevphase))
             finally:
                 locallock.release()
         finally:

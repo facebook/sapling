@@ -270,3 +270,216 @@ pulling back into original repo
   1 0 a-B - 548a3d25dbf0
   0 0 a-A - 054250a37db4
   $ cd ..
+
+Push
+````
+
+initial setup
+
+  $ cd alpha
+  $ hg glog
+  o  changeset:   6:145e75495359
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     n-B
+  |
+  o  changeset:   5:d6bcb4f74035
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     n-A
+  |
+  o  changeset:   4:f54f1bb90ff3
+  |  parent:      1:548a3d25dbf0
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b-A
+  |
+  | @  changeset:   3:b555f63b6063
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     a-D
+  | |
+  | o  changeset:   2:54acac6f23ab
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     a-C
+  |
+  o  changeset:   1:548a3d25dbf0
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     a-B
+  |
+  o  changeset:   0:054250a37db4
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a-A
+  
+  $ mkcommit a-E
+  $ mkcommit a-F
+  $ mkcommit a-G
+  $ hg up d6bcb4f74035 -q
+  $ mkcommit a-H
+  created new head
+  $ hgph
+  10 1 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 1 a-F - b740e3e5c05d
+  7 1 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+Pushing to Publish=False (unknown changeset)
+
+  $ hg push ../mu -r b740e3e5c05d # a-F
+  pushing to ../mu
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  $ hgph
+  10 1 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 1 a-F - b740e3e5c05d
+  7 1 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+  $ cd ../mu
+  $ hgph # d6bcb4f74035 and 145e75495359 changed because common is too smart
+  8 1 a-F - b740e3e5c05d
+  7 1 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+Pushing to Publish=True (unknown changeset)
+
+  $ hg push ../beta -r b740e3e5c05d
+  pushing to ../beta
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  $ hgph # again d6bcb4f74035 and 145e75495359 changed because common is too smart
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+Pushing to Publish=True (common changeset)
+
+  $ cd ../beta
+  $ hg push ../alpha
+  pushing to ../alpha
+  searching for changes
+  no changes found
+  $ hgph
+  6 0 a-F - b740e3e5c05d
+  5 0 a-E - e9f537e46dea
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+  $ cd ../alpha
+  $ hgph # e9f537e46dea and b740e3e5c05d should have been sync to 0
+  10 1 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+Pushing to Publish=False (common changeset that change phase + unknown one)
+
+  $ hg push ../mu -r 967b449fbc94 -f
+  pushing to ../mu
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  $ hgph
+  10 1 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+  $ cd ../mu
+  $ hgph # d6bcb4f74035 should have changed phase
+  >      # again d6bcb4f74035 and 145e75495359 changed because common was too smart
+  9 1 a-H - 967b449fbc94
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
+
+Pushing to Publish=True (common changeset from publish=False)
+
+  $ hg push ../alpha
+  pushing to ../alpha
+  searching for changes
+  no changes found
+  $ hgph
+  9 0 a-H - 967b449fbc94
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+  $ hgph -R ../alpha # a-H should have been synced to 0
+  10 0 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
