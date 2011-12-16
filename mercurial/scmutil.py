@@ -76,12 +76,16 @@ class pathauditor(object):
         self.auditeddir = set()
         self.root = root
         self.callback = callback
+        if os.path.lexists(root) and not util.checkcase(root):
+            self.normcase = util.normcase
+        else:
+            self.normcase = lambda x: x
 
     def __call__(self, path):
         '''Check the relative path.
         path may contain a pattern (e.g. foodir/**.txt)'''
 
-        normpath = os.path.normcase(path)
+        normpath = self.normcase(path)
         if normpath in self.audited:
             return
         # AIX ignores "/" at end of path, others raise EISDIR.
