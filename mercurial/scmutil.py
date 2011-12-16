@@ -81,12 +81,12 @@ class pathauditor(object):
         '''Check the relative path.
         path may contain a pattern (e.g. foodir/**.txt)'''
 
-        if path in self.audited:
+        normpath = os.path.normcase(path)
+        if normpath in self.audited:
             return
         # AIX ignores "/" at end of path, others raise EISDIR.
         if util.endswithsep(path):
             raise util.Abort(_("path ends in directory separator: %s") % path)
-        normpath = os.path.normcase(path)
         parts = util.splitpath(normpath)
         if (os.path.splitdrive(path)[0]
             or parts[0].lower() in ('.hg', '.hg.', '')
@@ -128,7 +128,7 @@ class pathauditor(object):
             prefixes.append(prefix)
             parts.pop()
 
-        self.audited.add(path)
+        self.audited.add(normpath)
         # only add prefixes to the cache after checking everything: we don't
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
