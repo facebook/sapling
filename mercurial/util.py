@@ -630,6 +630,13 @@ def fspath(name, root):
     if not os.path.lexists(os.path.join(root, name)):
         return None
 
+    def find(p, contents):
+        lenp = len(p)
+        for n in contents:
+            if lenp == len(n) and normcase(n) == p:
+                return n
+        return None
+
     seps = os.sep
     if os.altsep:
         seps = seps + os.altsep
@@ -643,18 +650,19 @@ def fspath(name, root):
             result.append(sep)
             continue
 
-        if dir not in _fspathcache:
-            _fspathcache[dir] = os.listdir(dir)
-        contents = _fspathcache[dir]
+        contents = _fspathcache.get(dir, None)
+        if contents is None:
+            contents = os.listdir(dir)
+            _fspathcache[dir] = contents
 
-        lenp = len(part)
-        for n in contents:
-            if lenp == len(n) and normcase(n) == part:
-                result.append(n)
-                break
-        else:
-            # Cannot happen, as the file exists!
-            result.append(part)
+        found = find(part, contents)
+        if not found:
+            # retry once for the corner case: add files after dir walking
+            contents = os.listdir(dir)
+            _fspathcache[dir] = contents
+            found = find(part, contents)
+
+        result.append(found or part)
         dir = os.path.join(dir, part)
 
     return ''.join(result)
