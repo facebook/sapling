@@ -595,9 +595,12 @@ def checkcase(path):
     """
     s1 = os.stat(path)
     d, b = os.path.split(path)
-    p2 = os.path.join(d, b.upper())
-    if path == p2:
-        p2 = os.path.join(d, b.lower())
+    b2 = b.upper()
+    if b == b2:
+        b2 = b.lower()
+        if b == b2:
+            return True # no evidence against case sensitivity
+    p2 = os.path.join(d, b2)
     try:
         s2 = os.stat(p2)
         if s2 == s1:
