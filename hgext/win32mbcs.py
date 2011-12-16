@@ -127,7 +127,9 @@ def wrapname(name, wrapper):
 # NOTE: os.path.dirname() and os.path.basename() are safe because
 #       they use result of os.path.split()
 funcs = '''os.path.join os.path.split os.path.splitext
- os.path.splitunc os.path.normpath os.path.normcase os.makedirs
+ os.path.splitunc os.path.normpath os.makedirs
+ mercurial.windows.normcase
+ mercurial.util.normcase
  mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
  mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
  mercurial.util.checkwinfilename mercurial.util.checkosfilename'''
