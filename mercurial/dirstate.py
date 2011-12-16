@@ -65,6 +65,10 @@ class dirstate(object):
         return self._copymap
 
     @propertycache
+    def _normroot(self):
+        return util.normcase(self._root)
+
+    @propertycache
     def _foldmap(self):
         f = {}
         for name in self._map:
@@ -384,7 +388,7 @@ class dirstate(object):
                 folded = path
             else:
                 folded = self._foldmap.setdefault(normed,
-                                util.fspath(path, self._root))
+                                util.fspath(normed, self._normroot))
         return folded
 
     def normalize(self, path, isknown=False):

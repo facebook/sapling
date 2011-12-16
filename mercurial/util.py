@@ -616,10 +616,10 @@ def fspath(name, root):
     The name is either relative to root, or it is an absolute path starting
     with root. Note that this function is unnecessary, and should not be
     called, for case-sensitive filesystems (simply because it's expensive).
+
+    Both name and root should be normcase-ed.
     '''
     # If name is absolute, make it relative
-    name = normcase(name)
-    root = normcase(root)
     if name.startswith(root):
         l = len(root)
         if name[l] == os.sep or name[l] == os.altsep:
