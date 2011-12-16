@@ -69,6 +69,7 @@ class dirstate(object):
         f = {}
         for name in self._map:
             f[util.normcase(name)] = name
+        f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
     @propertycache
