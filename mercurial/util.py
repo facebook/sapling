@@ -614,22 +614,13 @@ _fspathcache = {}
 def fspath(name, root):
     '''Get name in the case stored in the filesystem
 
-    The name is either relative to root, or it is an absolute path starting
-    with root. Note that this function is unnecessary, and should not be
+    The name should be relative to root, and be normcase-ed for efficiency.
+
+    Note that this function is unnecessary, and should not be
     called, for case-sensitive filesystems (simply because it's expensive).
 
-    Both name and root should be normcase-ed.
+    The root should be normcase-ed, too.
     '''
-    # If name is absolute, make it relative
-    if name.startswith(root):
-        l = len(root)
-        if name[l] == os.sep or name[l] == os.altsep:
-            l = l + 1
-        name = name[l:]
-
-    if not os.path.lexists(os.path.join(root, name)):
-        return None
-
     def find(p, contents):
         lenp = len(p)
         for n in contents:
