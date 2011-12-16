@@ -25,7 +25,7 @@
 #     commit comment  — комментарий с сообщением фиксации (только для BugzillaExtension)
 # log                 — журнал
 #     log message     — сообщение журнала, журнальное сообщение
-#     log entry       - запись журнала, журнальная запись
+#     log entry       — запись журнала, журнальная запись
 # pull                — затянуть (не «подтянуть»)
 # push                — протолкнуть (не «затолкнуть»)
 # update              — обновить (~ до определённой ревизии)
@@ -39,18 +39,19 @@
 #
 # clean                  — чистый (~ локальный файл, не содержащий изменений по сравнению с хранилищем)
 #     clean working copy — чистая рабочая копия (= не содержащая изменённых файлов) 
-# ??? purge                  — уничтожить лишнее (= удалить неиспользуемые файлы из рабочей копии), 
-#                          (не «удалить», не «очистить»), (thg: зачистить)
+# purge                  — зачистить (= удалить неиспользуемые файлы из рабочей копии), 
+#                          (не «удалить», не «очистить»)
 # strip                  — срезать (~ ревизию и всех её потомков) (thg: содрать (как одежду));
 #     strip revision     — срезать ревизию 
 # ??? delete                 — уничтожить (= стереть с диска, не «удалить»)
 # remove                 — изъять (из-под контроля версий, не «удалить») 
-# 
-# 
+#
+#
 #                   Слова на тему «слияние»
 #
-# branch              — ветка (не «ветвь», не «бранч»)
+# branch              — ветка (не «ветвь», не «бранч»), гл. ветвление
 #     frozen branch   — замороженная ветка 
+#     named branch    — именованная ветка
 # diff                — различия (не «дифф»)
 # merge               — слить (сущ. «слияние»)
 # ??? fetch               — залить (сущ. «заливка» — означает слияние поверх незафиксированных изменений)
@@ -89,7 +90,7 @@
 # status         — состояние
 # ??? head       — голова (= ревизия, не имеющая дочерних ревизий)
 #
-# ??? tip — оконечная ревизия
+# ??? tip        — оконечная ревизия
 #
 # ??? tip revision — (ревизия-)макушка, вариант: оконечная ревизия, ревизия-наконечник 
 #
@@ -110,9 +111,9 @@
 # whitespace     пробельный символ
 # match          совпадать (о шаблоне)
 # restricted     ограниченный
-# graft          перенести (изменения)
+# graft          перенести (изменения) ??? вообще пересадить
 # id             идентификатор
-# guard (в mq)   страж (необходимо пояснение) ??? предохранитель (thg: стражник)
+# guard (в mq)   страж (необходимо пояснение) (thg: стражник)
 # positive/negative guard положительный/отрицательный страж ??? (может разрешающий/запрещающий?)
 # apply patch    наложить патч
 # fuzz (patch)   несоответствие контекстов (в патче и целевом файле) ???
@@ -127,6 +128,10 @@
 # backup         резервная копия
 # finish (mq, qfinish) финализировать??? -- «завершить» // comment by Andrei Polushin
 # fold (patch)     подшить ??? вообще свернуть
+# imply          подразумевать
+# rebase         перебазировать
+# root           корень, корневая ревизия ???
+# progress bar   индикатор выполнения
 #
 #
 # === TODO ===
@@ -154,7 +159,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-11 18:02+0400\n"
+"POT-Creation-Date: 2011-12-16 10:27+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -183,8 +188,8 @@ msgid ""
 "Mercurial. Help for other extensions is available in the help system."
 msgstr ""
 "Этот раздел содержит справку по расширениям, включенным в стандартный "
-"дистрибутив Mercurial. Справка по другим расширениям может быть получена "
-"в справочной системе."
+"дистрибутив Mercurial. Справка по другим расширениям может быть получена в "
+"справочной системе."
 
 msgid "Options:"
 msgstr "Параметры:"
@@ -264,8 +269,8 @@ msgid ""
 "either:"
 msgstr ""
 "Используйте разделы ``acl.deny.branches`` и ``acl.allow.branches``\n"
-"чтобы получить контроль доступа, основанный на ветке. Ключами в этих разделах "
-"могут быть:"
+"чтобы получить контроль доступа, основанный на ветке. Ключами в этих "
+"разделах могут быть:"
 
 msgid ""
 "- a branch name, or\n"
@@ -2983,7 +2988,8 @@ msgstr "слияние с %d:%s\n"
 
 #, python-format
 msgid "new changeset %d:%s merges remote changes with local\n"
-msgstr "новый набор изменений %d:%s сливает отдалённые изменения с локальными\n"
+msgstr ""
+"новый набор изменений %d:%s сливает отдалённые изменения с локальными\n"
 
 msgid "a specific revision you would like to pull"
 msgstr "конкретная ревизия, которую вы хотите затянуть"
@@ -4130,7 +4136,8 @@ msgstr "преобразование ревизий"
 #, python-format
 msgid "renamed/copied largefile %s becomes symlink"
 msgstr ""
-"переименованный/скопированный большой файл %s становится символической ссылкой"
+"переименованный/скопированный большой файл %s становится символической "
+"ссылкой"
 
 #, python-format
 msgid "largefile %s becomes symlink"
@@ -4289,8 +4296,7 @@ msgid "largefiles: %d to upload\n"
 msgstr "largefiles: %d для загрузки\n"
 
 msgid "addremove cannot be run on a repo with largefiles"
-msgstr ""
-"нельзя запускать addremove в хранилище с большими файлами (largefiles)"
+msgstr "нельзя запускать addremove в хранилище с большими файлами (largefiles)"
 
 #, python-format
 msgid "largefiles: failed to put %s (%s) into store: %s"
@@ -4857,7 +4863,8 @@ msgid ""
 "With\n"
 "    -k/--keep, the patch files are preserved in the patch directory."
 msgstr ""
-"    Патчи не должны быть наложенными, и требуется по крайней мере один патч.\n"
+"    Патчи не должны быть наложенными, и требуется по крайней мере один "
+"патч.\n"
 "    С -k/--keep патчи сохраняются в каталоге патчей."
 
 msgid ""
@@ -4964,7 +4971,8 @@ msgstr ""
 "    с помощью -r/--rev (т.е. qimport --rev tip -n patch поместит\n"
 "    оконечную ревизию под контроль mq). С -g/--git патчи, импортированные\n"
 "    с --rev, будут использовать формат git. О том, почему это важно\n"
-"    для сохранения информации о копировании/переименовании и правах доступа,\n"
+"    для сохранения информации о копировании/переименовании и правах "
+"доступа,\n"
 "    см. соответствующий раздел справки о различиях (diffs). Используйте\n"
 "    :hg:`qfinish` чтобы изъять наборы изменений из-под контроля mq."
 
@@ -5316,7 +5324,8 @@ msgid ""
 "    deleted. With -k/--keep, the folded patch files will not be\n"
 "    removed afterwards."
 msgstr ""
-"    Патчи не должны быть наложены. Каждый патч будет последовательно наложен\n"
+"    Патчи не должны быть наложены. Каждый патч будет последовательно "
+"наложен\n"
 "    на текущий патч в заданном порядке. Если патчи успешно наложились,\n"
 "    текущий патч будет обновлен (refreshed) с новым совокупным патчем,\n"
 "    а подшитые патчи будут удалены. С -k/--keep, подшитые файлы патчей\n"
@@ -5375,7 +5384,8 @@ msgid ""
 "command\n"
 "    has activated it."
 msgstr ""
-"    Стражи (guards) контролируют, можно ли протолкнуть (в стек) данный патч.\n"
+"    Стражи (guards) контролируют, можно ли протолкнуть (в стек) данный "
+"патч.\n"
 "    Патч без стражей проталкивается всегда. Патч с положительным стражем\n"
 "    (\"+foo\") проталкивается только если он был активирован командой\n"
 "    :hg:`qselect`. Патч с отрицательным стражем (\"-foo\") никогда не\n"
@@ -5551,8 +5561,8 @@ msgid ""
 "strip specified revision (optional, can specify revisions without this "
 "option)"
 msgstr ""
-"срезать указанную ревизию (необязательный, можно задать ревизии и без "
-"этого параметра"
+"срезать указанную ревизию (необязательный, можно задать ревизии и без этого "
+"параметра"
 
 msgid "force removal of changesets, discard uncommitted changes (no backup)"
 msgstr ""
@@ -5783,8 +5793,8 @@ msgid ""
 "    to upstream."
 msgstr ""
 "    Это может быть особенно полезным, если ваши изменения были наложены\n"
-"    в вышестоящем (upstream) хранилище, или вы как раз собираетесь\n "
-"    протолкнуть туда ваши изменения."
+"    в вышестоящем (upstream) хранилище, или вы как раз собираетесь\n"
+"     протолкнуть туда ваши изменения."
 
 msgid "no revisions specified"
 msgstr "ревизии не заданы"
@@ -6514,7 +6524,7 @@ msgid "writing"
 msgstr ""
 
 msgid "show progress bars for some actions"
-msgstr ""
+msgstr "показать индикаторы выполнения для некоторых действий"
 
 msgid ""
 "This extension uses the progress information logged by hg commands\n"
@@ -6522,9 +6532,14 @@ msgid ""
 "bars only offer indeterminate information, while others have a definite\n"
 "end point."
 msgstr ""
+"Это расширение использует информацию о ходе выполнения операции,\n"
+"предоставляемую командами Mercurial, чтобы отобразить максимально\n"
+"информативные индикаторы выполнения. Некоторые индикаторы показывают\n"
+"олько неопределенную информацию, в то время как другие имеют\n"
+"определенную точку завершения."
 
 msgid "The following settings are available::"
-msgstr ""
+msgstr "Доступны следущюие настройки::"
 
 msgid ""
 "  [progress]\n"
@@ -6541,7 +6556,21 @@ msgid ""
 "  assume-tty = False # if true, ALWAYS show a progress bar, unless\n"
 "                     # disable is given"
 msgstr ""
+"  [progress]\n"
+"  delay = 3 # количество секунд (дробное) до показа индикатора выполнения\n"
+"  changedelay = 1 # минимальная задержка перед показом нового этапа\n"
+"                  # Если меньше, чем 3 * refresh, то будет использовано\n"
+"                  # это значение вместо refresh.\n"
+"  refresh = 0.1 # время в секундах между обновлениями индикатора\n"
+"  format = topic bar number estimate # формат индикатора выполнения\n"
+"  width = <none> # если задан, максимальная ширина индикатора\n"
+"                 # (т.е., будет использован min(width, term width))\n"
+"  clear-complete = True # очистить индикатор после завершения операции\n"
+"  disable = False # если истина, не показывать индиктор выполнения\n"
+"  assume-tty = False # если истина, ВСЕГДА показывать индикатор, если\n"
+"                     # не задан disable"
 
+# TODO неадекват
 msgid ""
 "Valid entries for the format field are topic, bar, number, unit,\n"
 "estimate, speed, and item. item defaults to the last 20 characters of\n"
@@ -6549,89 +6578,107 @@ msgid ""
 "would take the last num characters, or ``+<num>`` for the first num\n"
 "characters.\n"
 msgstr ""
+"Допустимые значения для поля format - topic, bar, number, unit, estimate,\n"
+"speed и item. item по умолчанию устанавливается в последние 20 символов\n"
+"описания, но это можно изменить, добавляя ``-<число>``, который использует\n"
+"заданное число симоволов с конца, или ``+<число>``, чтобы использовать\n"
+"заданное число символов с начала.\n"
 
 #. i18n: format XX seconds as "XXs"
 #, python-format
 msgid "%02ds"
-msgstr ""
+msgstr "%02dс"
 
 #. i18n: format X minutes and YY seconds as "XmYYs"
 #, python-format
-msgid "%dm%02ds"
-msgstr ""
+msgid "%dм%02dс"
+msgstr "%dм%02dс"
 
 #. i18n: format X hours and YY minutes as "XhYYm"
 #, python-format
 msgid "%dh%02dm"
-msgstr ""
+msgstr "%dч%02dм"
 
 #. i18n: format X days and YY hours as "XdYYh"
 #, python-format
 msgid "%dd%02dh"
-msgstr ""
+msgstr "%dд%02dм"
 
 #. i18n: format X weeks and YY days as "XwYYd"
 #, python-format
 msgid "%dw%02dd"
-msgstr ""
+msgstr "%dн%02dд"
 
 #. i18n: format X years and YY weeks as "XyYYw"
 #, python-format
 msgid "%dy%02dw"
-msgstr ""
+msgstr "%dг%02dн"
 
 #, python-format
 msgid "%d %s/sec"
-msgstr ""
+msgstr "%d %s/сек"
 
 msgid "command to delete untracked files from the working directory"
-msgstr ""
+msgstr "команда для удаления неотслеживаемых файлов из рабочего каталога"
 
 msgid "abort if an error occurs"
-msgstr ""
+msgstr "прервать выполнение при возникновении ошибки"
 
 msgid "purge ignored files too"
-msgstr ""
+msgstr "зачистить также игнорируемые файлы"
 
 msgid "print filenames instead of deleting them"
-msgstr ""
+msgstr "напечатать имена файлов вместо их удаления"
 
 msgid "end filenames with NUL, for use with xargs (implies -p/--print)"
 msgstr ""
+"добавлять NUL после имен файлов для использования с xargs (подразумевает-p/--"
+"print)"
 
 msgid "hg purge [OPTION]... [DIR]..."
-msgstr ""
+msgstr "hg purge [ПАРАМЕТР]... [КАТАЛОГ]..."
 
 msgid "removes files not tracked by Mercurial"
-msgstr ""
+msgstr "удалить файлы, не отслеживаемые Mercurial"
 
 msgid ""
 "    Delete files not known to Mercurial. This is useful to test local\n"
 "    and uncommitted changes in an otherwise-clean source tree."
 msgstr ""
+"    Удаляет файлы, не известные Mercurial. Это бывает полезно, чтобы\n"
+"    протестировать локальные и незафиксированные изменения в чистом\n"
+"    во всех других отношениях дереве исходных файлов."
 
 msgid "    This means that purge will delete:"
-msgstr ""
+msgstr "    Это означает, что purge удалит:"
 
 msgid ""
 "    - Unknown files: files marked with \"?\" by :hg:`status`\n"
 "    - Empty directories: in fact Mercurial ignores directories unless\n"
 "      they contain files under source control management"
 msgstr ""
+"    - Неизвестные файлы: файлы, помеченные \"?\" в :hg:`status`\n"
+"    - Пустые каталоги: фактически, Mercurial игнорирует каталоги,\n"
+"      если они не содержат файлов, находящихся под контролем версий."
 
 msgid "    But it will leave untouched:"
-msgstr ""
+msgstr "    Но оставит нетронутыми:"
 
 msgid ""
 "    - Modified and unmodified tracked files\n"
 "    - Ignored files (unless --all is specified)\n"
 "    - New files added to the repository (with :hg:`add`)"
 msgstr ""
+"    - Измененные и неизмененные отслеживаемые файлы\n"
+"    - Игнорируемые файлы (если не указан --all)\n"
+"    - Новые файлы, добавленные в хранилище (с помощью :hg:`add`)"
 
 msgid ""
 "    If directories are given on the command line, only files in these\n"
 "    directories are considered."
 msgstr ""
+"    Если в командной строке заданы каталоги, рассматриваются только файлы\n"
+"    в этих каталогах."
 
 msgid ""
 "    Be careful with purge, as you could irreversibly delete some files\n"
@@ -6640,87 +6687,102 @@ msgid ""
 "    option.\n"
 "    "
 msgstr ""
+"    Будьте острожны с purge, т.к. вы можете необратимо удалить файлы,\n"
+"    которые вы забыли добавить в хранилище. Если вы просто хотите\n"
+"    напечатать список файлов, которые были бы удалены этой программой,\n"
+"    используйте параметр --print."
 
 #, python-format
 msgid "%s cannot be removed"
-msgstr ""
+msgstr "%s не может быть удален"
 
 #, python-format
 msgid "warning: %s\n"
-msgstr ""
+msgstr "предупреждение: %s\n"
 
 #, python-format
 msgid "Removing file %s\n"
-msgstr ""
+msgstr "Удаляем файл %s\n"
 
 #, python-format
 msgid "Removing directory %s\n"
-msgstr ""
+msgstr "Удаляем каталог %s\n"
 
 msgid "command to move sets of revisions to a different ancestor"
-msgstr ""
+msgstr "команда для перемещения наборов ревизий к другому предку"
 
 msgid ""
 "This extension lets you rebase changesets in an existing Mercurial\n"
 "repository."
 msgstr ""
+"Это расширение позволяет вам перебазировать наборы изменений в существующем\n"
+"хранилище Mercurial."
 
 msgid ""
 "For more information:\n"
 "http://mercurial.selenic.com/wiki/RebaseExtension\n"
 msgstr ""
+"Дополнительная информация:\n"
+"http://mercurial.selenic.com/wiki/RebaseExtension\n"
 
 msgid "rebase from the specified changeset"
-msgstr ""
+msgstr "перебазировать от указанного набора изменений"
 
 msgid ""
 "rebase from the base of the specified changeset (up to greatest common "
 "ancestor of base and dest)"
 msgstr ""
+"перебазировать от базовой ревизии указанного набора изменений (вплоть до "
+"первого общего предка базовой ревизии и ревизии назначения)"
 
 msgid "rebase these revisions"
 msgstr "перебазировать эти ревизии"
 
 msgid "rebase onto the specified changeset"
-msgstr ""
+msgstr "перебазировать на указанный набор изменений"
 
 msgid "collapse the rebased changesets"
-msgstr ""
+msgstr "объединить перебазированные наборы изменений"
 
 msgid "use text as collapse commit message"
 msgstr ""
+"использовать текст в качестве сообщения фиксации для объединенных наборов "
+"изменений"
 
 msgid "invoke editor on commit messages"
 msgstr "вызвать редактор для создания сообщения фиксации"
 
 msgid "read collapse commit message from file"
-msgstr ""
+msgstr "взять сообщения фиксации для объединенных наборов изменений из файла"
 
 msgid "keep original changesets"
-msgstr ""
+msgstr "сохранить исходные наборы изменений"
 
 msgid "keep original branch names"
-msgstr ""
+msgstr "сохранить исходные имена веток"
 
 msgid "force detaching of source from its original branch"
-msgstr ""
+msgstr "принудительно отцепить источник от его ветки-источника"
 
 msgid "specify merge tool"
 msgstr "задать инструмент слияния"
 
 msgid "continue an interrupted rebase"
-msgstr ""
+msgstr "продолжить прерванное перебазирование"
 
 msgid "abort an interrupted rebase"
-msgstr ""
+msgstr "отменить прерванное перебазирование"
 
+# BUG one line?
 msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [options]\n"
 "hg rebase {-a|-c}"
 msgstr ""
+"hg rebase [-s РЕВ | -b РЕВ] [-d РЕВ] [параметры]\n"
+"hg rebase {-a|-c}"
 
 msgid "move changeset (and descendants) to a different branch"
-msgstr ""
+msgstr "переместить наборы изменений (с потомками) на другую ветку"
 
 msgid ""
 "    Rebase uses repeated merging to graft changesets from one part of\n"
@@ -6728,6 +6790,10 @@ msgid ""
 "    useful for linearizing *local* changes relative to a master\n"
 "    development tree."
 msgstr ""
+"    Rebase использует повторяющиеся слияния, чтобы перенести наборы\n"
+"    изменений из одной части истории (источник) в другую (назначение).\n"
+"    Это может быть полезным для линеаризации *локальных* изменений\n"
+"    относительно основного дерева разработки."
 
 msgid ""
 "    You should not rebase changesets that have already been shared\n"
@@ -6735,6 +6801,11 @@ msgid ""
 "    same rebase or they will end up with duplicated changesets after\n"
 "    pulling in your rebased changesets."
 msgstr ""
+"    Не стоит перебазировать наборы изменений, которые уже были\n"
+"    опубликованы. Это заставит всех остальных также выполнить\n"
+"    перебазирование, поскольку в противном случае они получат\n"
+"    продублированные наборы изменений после того, как затянут\n"
+"    ваши перебазированные наборы изменений."
 
 msgid ""
 "    If you don't specify a destination changeset (``-d/--dest``),\n"
@@ -6742,6 +6813,11 @@ msgid ""
 "    destination. (The destination changeset is not modified by\n"
 "    rebasing, but new changesets are added as its descendants.)"
 msgstr ""
+"    Если вы не укажете ревизию назначения (``-d/--dest``),\n"
+"    rebase использует оконечную голову текущей именованной ветки\n"
+"    в качестве назначения. (Набор изменения назначения не изменяется\n"
+"    при перебазировании, но новые наборы изменений добавляются\n"
+"    в качестве его потомков)"
 
 msgid ""
 "    You can specify which changesets to rebase in two ways: as a\n"
@@ -6756,6 +6832,20 @@ msgid ""
 "    the whole branch. If you specify neither ``-s`` nor ``-b``, rebase\n"
 "    uses the parent of the working directory as the base."
 msgstr ""
+"    Можно задавать ревизии для перебазирования двумя способами: \n"
+"    как \"исходный\" набор изменений, или как \"базовый\". Оба они\n"
+"    являются сокращениями для топологически связанных множеств\n"
+"    наборов изменений (\"исходная ветка\"). Если вы указываете\n"
+"    источник наборов изменений (``-s/--source``), то производится\n"
+"    перебазирование этого набора изменений и всех его потомков\n"
+"    на ревизию назначения. Если задается базовый набор изменений\n"
+"    (``-b/--base``), rebase выберет его предков вплоть до последнего\n"
+"    общего с ревизией назначения, не включая ее саму. Т.о., ``-b``\n"
+"    менее точный, но более удобный, чем ``-s``: вы можете указать\n"
+"    любой набор изменений в исходной ветке, и rebase выберет всю\n"
+"    ветку. Если не указан ни ``-s``, ни ``-b``, rebase использует\n"
+"    родительскую ревизию рабочего каталога в качестве базового\n"
+"    набора изменений."
 
 msgid ""
 "    By default, rebase recreates the changesets in the source branch\n"
@@ -6764,6 +6854,12 @@ msgid ""
 "    changesets in the source branch (e.g. merges from the destination\n"
 "    branch) may be dropped if they no longer contribute any change."
 msgstr ""
+"    По умолчанию rebase заново создает наборы изменений в ветке-источнике\n"
+"    как потомков ревизии назначения, после чего удаляет оригиналы.\n"
+"    Используйте ``--keep`` чтобы сохранить оригиналы в источнике.\n"
+"    Некоторые наборы изменений в ветке-источнике (например, слияния\n"
+"    с веткой назначения) могут быть выброшены, если они более не\n"
+"    вносят никаких изменений."
 
 msgid ""
 "    One result of the rules for selecting the destination changeset\n"
@@ -6773,122 +6869,136 @@ msgid ""
 "    destination (or ``update`` to the other head, if it's the head of\n"
 "    the intended source branch)."
 msgstr ""
+"    Одним из следствий правил выбора ревизии назначения и ветки-источника\n"
+"    является то, что, в отличие от ``слияния``, rebase не сделает ничего,\n"
+"    если вы не на самой поздней (оконечной) голове именованной ветки\n"
+"    с двумя головами. Требуется явно указать источник и/или назначение\n"
+"    (или обноваться на другую голову, если это голова предполагаемой\n"
+"    ветки-источника)."
 
 msgid ""
 "    If a rebase is interrupted to manually resolve a merge, it can be\n"
 "    continued with --continue/-c or aborted with --abort/-a."
 msgstr ""
+"    Если перебазирование прерывается для ручного разрешения конфликтов\n"
+"    при слиянии, его можно продолжить с помощью --continue/-c или\n"
+"    отменить с помощью --abort/-a."
 
 msgid ""
 "    Returns 0 on success, 1 if nothing to rebase.\n"
 "    "
 msgstr ""
+"    В случае успеха возвращает 0, 1 если нечего перебазировать.\n"
+"    "
 
 msgid "message can only be specified with collapse"
-msgstr ""
+msgstr "сообщение можно задавать только при объединении"
 
 msgid "cannot use both abort and continue"
-msgstr ""
+msgstr "нельзя одновременно указывать abort и continue"
 
 msgid "cannot use collapse with continue or abort"
-msgstr ""
+msgstr "нельзя использовать collapse с continue или abort"
 
 msgid "cannot use detach with continue or abort"
-msgstr ""
+msgstr "нельзя использовать detach с continue или abort"
 
 msgid "abort and continue do not allow specifying revisions"
-msgstr ""
+msgstr "abort и continue не позволяют задавать ревизии"
 
 msgid "tool option will be ignored\n"
-msgstr ""
+msgstr "параметр tool будет проигнорирован\n"
 
-#, fuzzy
 msgid "cannot specify both a source and a base"
-msgstr "нельзя указывать --noupdate и --updaterev одновременно"
+msgstr "нельзя задавать source и base одновременно"
 
 msgid "cannot specify both a revision and a base"
-msgstr ""
+msgstr "нельзя одновременно задавать ревизию и base"
 
-#, fuzzy
 msgid "cannot specify both a revision and a source"
-msgstr "нельзя указывать одновременно дату и ревизию"
+msgstr "нельзя указывать одновременно ревизию и source"
 
 msgid "detach requires a revision to be specified"
-msgstr ""
+msgstr "detach требует указания ревизии"
 
 msgid "cannot specify a base with detach"
-msgstr ""
+msgstr "нельзя задавать base с detach"
 
 msgid "can't remove original changesets with unrebased descendants"
 msgstr ""
+"не удается удалить исходный набор изменений с неперебазированными потомками"
 
-#, fuzzy
 msgid "use --keep to keep original changesets"
-msgstr "пропустить тестирование набора изменений"
+msgstr "используйте --keep чтобы оставить исходные наборы изменений"
 
 msgid "nothing to rebase\n"
-msgstr ""
+msgstr "нечего перебазировать\n"
 
 msgid "cannot collapse multiple named branches"
-msgstr ""
+msgstr "не могу объединить несколько именованных веток"
 
 msgid "rebasing"
-msgstr ""
+msgstr "перебазируем"
 
 msgid "changesets"
-msgstr ""
+msgstr "наборы изменений"
 
 msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
-msgstr ""
+msgstr "неулаженные конфликты ( см. hg resolve, потом hg rebase --continue)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
-msgstr ""
+msgstr "нет изменений, ревизия %d пропущена\n"
 
 msgid "rebase merging completed\n"
-msgstr ""
+msgstr "слияние перебазирования завершено\n"
 
 msgid "warning: new changesets detected on source branch, not stripping\n"
 msgstr ""
+"внимание: новые наборы изменений обнаружены на ветке-источнике, не "
+"срезаются\n"
 
 msgid "rebase completed\n"
-msgstr ""
+msgstr "перебазирование завершено\n"
 
 #, python-format
 msgid "%d revisions have been skipped\n"
-msgstr ""
+msgstr "было пропущено %d ревизий\n"
 
 msgid "unable to collapse, there is more than one external parent"
-msgstr ""
+msgstr "не удается объединить - более одного внешнего родителя"
 
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr ""
+"не могу использовать ревизию %d в качестве базовой, результат будет иметь 3 "
+"родителя"
 
 msgid "no rebase in progress"
-msgstr ""
+msgstr "нет прерванного перебазирования"
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
+"внимание: новые наборы изменений обнаружены на ветке назначения, отмена "
+"невозможна\n"
 
 msgid "rebase aborted\n"
-msgstr ""
+msgstr "перебазирование отменено\n"
 
 msgid "cannot rebase onto an applied mq patch"
-msgstr ""
+msgstr "не могу перебазировать на наложенный патч mq"
 
-#, fuzzy
 msgid "no matching revisions"
-msgstr "напечатать заданную ревизию"
+msgstr "нет подходящих ревизий"
 
 msgid "can't rebase multiple roots"
-msgstr ""
+msgstr "не могу перебазировать несколько корневых ревизий"
 
 msgid "source is ancestor of destination"
-msgstr ""
+msgstr "источник является предком ревизии назначения"
 
 msgid "--tool can only be used with --rebase"
-msgstr ""
+msgstr "--tool можно использовать только вместе с --rebase"
 
 msgid "rebase working directory to branch head"
 msgstr "перебазировать рабочий каталог поверх головы ветки"
@@ -10104,8 +10214,8 @@ msgid ""
 "only\n"
 "    changesets without children will be shown."
 msgstr ""
-"    Если указан -t/--topo, механизм именованных веток игнорируется,"
-"    и будут показаны только наборы изменений без дочерних наборов."
+"    Если указан -t/--topo, механизм именованных веток игнорируется,    и "
+"будут показаны только наборы изменений без дочерних наборов."
 
 msgid ""
 "    Returns 0 if matching heads are found, 1 if not.\n"
@@ -10377,7 +10487,8 @@ msgid "apply patch to the nodes from which it was generated"
 msgstr "применить патч к узлам, для которых он был сгенерирован"
 
 msgid "use any branch information in patch (implied by --exact)"
-msgstr "использовать любую информацию о ветках из патча (включается --exact)"
+msgstr ""
+"использовать любую информацию о ветках из патча (подразумевается при --exact)"
 
 msgid "[OPTION]... PATCH..."
 msgstr "[ПАРАМЕТР]... ПАТЧ..."
@@ -11280,7 +11391,8 @@ msgid "roll back an interrupted transaction"
 msgstr "откатить прерванную транзакцию"
 
 msgid "    Recover from an interrupted commit or pull."
-msgstr "    Восстанавливает хранилище после прерванной фиксации или затягивания"
+msgstr ""
+"    Восстанавливает хранилище после прерванной фиксации или затягивания"
 
 msgid ""
 "    This command tries to fix the repository status after an\n"
@@ -11473,7 +11585,8 @@ msgid ""
 "      environment variable and your configuration files.  Previous file\n"
 "      contents are saved with a ``.orig`` suffix."
 msgstr ""
-"    - :hg:`resolve [--tool ПРОГРАММА] ФАЙЛ...`: попытаться повторить слияние\n"
+"    - :hg:`resolve [--tool ПРОГРАММА] ФАЙЛ...`: попытаться повторить "
+"слияние\n"
 "    файлов, отменяя предыдущие попытки. Повторное слияние не проводится\n"
 "    для файлов, помеченных как разрешенные. Используйте ``--all/-a``,\n"
 "    чтобы повторить слияние для всех неразрешенных файлов. Параметр\n"
@@ -11602,8 +11715,7 @@ msgid "uncommitted merge with no revision specified"
 msgstr ""
 
 msgid "use \"hg update\" or see \"hg help revert\""
-msgstr ""
-"используйте \"hg update\", или см. \"hg help revert\""
+msgstr "используйте \"hg update\", или см. \"hg help revert\""
 
 msgid "no files or directories specified"
 msgstr "не указаны файлы или каталоги"
@@ -14897,8 +15009,8 @@ msgid ""
 "    smtps or none. Default: none."
 msgstr ""
 "``tls``\n"
-"    Необязательный. Способ включения TLS при подключении к "
-"почтовому серверу:\n"
+"    Необязательный. Способ включения TLS при подключении к почтовому "
+"серверу:\n"
 "    starttls, smtps или none (откл.). По умолчанию: none."
 
 msgid ""
@@ -15225,7 +15337,8 @@ msgid ""
 msgstr ""
 "``askusername``\n"
 "    Спрашивать или нет имя пользователя при фиксации. Если True, и не\n"
-"    установлены ни ``$HGUSER``, ни ``$EMAIL``, пользователю будет предложено\n"
+"    установлены ни ``$HGUSER``, ни ``$EMAIL``, пользователю будет "
+"предложено\n"
 "    ввести имя пользователя. Если ничего не введено, будет использовано\n"
 "    ``ПОЛЬЗОВАТЕЛЬ@ХОСТ``. По умолчанию False (отключено)."
 
@@ -15349,7 +15462,8 @@ msgid ""
 "    remote command to use for clone/push/pull operations. Default is ``hg``."
 msgstr ""
 "``remotecmd``\n"
-"    Команда, используемая на отдалённой машине для операций clone/push/pull.\n"
+"    Команда, используемая на отдалённой машине для операций clone/push/"
+"pull.\n"
 "    По умолчанию ``hg``."
 
 msgid ""
@@ -18246,7 +18360,8 @@ msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
 msgstr ""
 
 msgid "- Changesets committed in May 2008, sorted by user::"
-msgstr "- Ревизии, зафиксированные в мае 2008, отсортированные по пользователю::"
+msgstr ""
+"- Ревизии, зафиксированные в мае 2008, отсортированные по пользователю::"
 
 msgid "    hg log -r \"sort(date('May 2008'), user)\""
 msgstr ""
@@ -20465,7 +20580,8 @@ msgstr ":desc: Строка. Текст описания набора измен
 msgid ""
 ":branch: String. The name of the branch on which the changeset was\n"
 "    committed."
-msgstr ":branch: Строка. Имя ветки, на которую был зафиксирован набор изменений."
+msgstr ""
+":branch: Строка. Имя ветки, на которую был зафиксирован набор изменений."
 
 msgid ""
 ":branches: List of strings. The name of the branch on which the\n"
@@ -20989,8 +21105,7 @@ msgstr ""
 #~ "    No subsequent changesets (including subsequent tags) will be present\n"
 #~ "    in the destination."
 #~ msgstr ""
-#~ "    Копируемые наборы изменений (changesets) (как метки или имена "
-#~ "веток)\n"
+#~ "    Копируемые наборы изменений (changesets) (как метки или имена веток)\n"
 #~ "    могут быть заданы указанием каждого набора изменений (метки или "
 #~ "имени\n"
 #~ "    ветки) с помощью -r/--rev. При использовании -r/--rev, клонированное\n"
