@@ -618,7 +618,9 @@ def fspath(name, root):
     called, for case-sensitive filesystems (simply because it's expensive).
     '''
     # If name is absolute, make it relative
-    if name.lower().startswith(root.lower()):
+    name = normcase(name)
+    root = normcase(root)
+    if name.startswith(root):
         l = len(root)
         if name[l] == os.sep or name[l] == os.altsep:
             l = l + 1
@@ -633,7 +635,7 @@ def fspath(name, root):
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
     pattern = re.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
-    dir = os.path.normcase(os.path.normpath(root))
+    dir = os.path.normpath(root)
     result = []
     for part, sep in pattern.findall(name):
         if sep:
@@ -644,16 +646,15 @@ def fspath(name, root):
             _fspathcache[dir] = os.listdir(dir)
         contents = _fspathcache[dir]
 
-        lpart = part.lower()
         lenp = len(part)
         for n in contents:
-            if lenp == len(n) and n.lower() == lpart:
+            if lenp == len(n) and normcase(n) == part:
                 result.append(n)
                 break
         else:
             # Cannot happen, as the file exists!
             result.append(part)
-        dir = os.path.join(dir, lpart)
+        dir = os.path.join(dir, part)
 
     return ''.join(result)
 
