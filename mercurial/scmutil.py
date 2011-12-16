@@ -87,7 +87,7 @@ class pathauditor(object):
         # AIX ignores "/" at end of path, others raise EISDIR.
         if util.endswithsep(path):
             raise util.Abort(_("path ends in directory separator: %s") % path)
-        parts = util.splitpath(normpath)
+        parts = util.splitpath(path)
         if (os.path.splitdrive(path)[0]
             or parts[0].lower() in ('.hg', '.hg.', '')
             or os.pardir in parts):
@@ -101,11 +101,16 @@ class pathauditor(object):
                     raise util.Abort(_('path %r is inside nested repo %r')
                                      % (path, base))
 
+        normparts = util.splitpath(normpath)
+        assert len(parts) == len(normparts)
+
         parts.pop()
+        normparts.pop()
         prefixes = []
         while parts:
             prefix = os.sep.join(parts)
-            if prefix in self.auditeddir:
+            normprefix = os.sep.join(normparts)
+            if normprefix in self.auditeddir:
                 break
             curpath = os.path.join(self.root, prefix)
             try:
@@ -125,8 +130,9 @@ class pathauditor(object):
                     if not self.callback or not self.callback(curpath):
                         raise util.Abort(_('path %r is inside nested repo %r') %
                                          (path, prefix))
-            prefixes.append(prefix)
+            prefixes.append(normprefix)
             parts.pop()
+            normparts.pop()
 
         self.audited.add(normpath)
         # only add prefixes to the cache after checking everything: we don't
