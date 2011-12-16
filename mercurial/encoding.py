@@ -171,3 +171,22 @@ def lower(s):
         return lu.encode(encoding)
     except UnicodeError:
         return s.lower() # we don't know how to fold this except in ASCII
+    except LookupError, k:
+        raise error.Abort(k, hint="please check your locale settings")
+
+def upper(s):
+    "best-effort encoding-aware case-folding of local string s"
+    try:
+        if isinstance(s, localstr):
+            u = s._utf8.decode("utf-8")
+        else:
+            u = s.decode(encoding, encodingmode)
+
+        uu = u.upper()
+        if u == uu:
+            return s # preserve localstring
+        return uu.encode(encoding)
+    except UnicodeError:
+        return s.upper() # we don't know how to fold this except in ASCII
+    except LookupError, k:
+        raise error.Abort(k, hint="please check your locale settings")
