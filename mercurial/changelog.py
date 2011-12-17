@@ -24,9 +24,20 @@ def _string_escape(text):
     return text.replace('\0', '\\0')
 
 def decodeextra(text):
+    """
+    >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'}))
+    {'foo': 'bar', 'baz': '\\x002'}
+    >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(92) + chr(0) + '2'}))
+    {'foo': 'bar', 'baz': '\\\\\\x002'}
+    """
     extra = {}
     for l in text.split('\0'):
         if l:
+            if '\\0' in l:
+                # fix up \0 without getting into trouble with \\0
+                l = l.replace('\\\\', '\\\\\n')
+                l = l.replace('\\0', '\0')
+                l = l.replace('\n', '')
             k, v = l.decode('string_escape').split(':', 1)
             extra[k] = v
     return extra
