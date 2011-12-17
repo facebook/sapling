@@ -242,6 +242,90 @@ def override_update(orig, ui, repo, *pats, **opts):
         wlock.release()
     return orig(ui, repo, *pats, **opts)
 
+# Before starting the manifest merge, merge.updates will call
+# _checkunknown to check if there are any files in the merged-in
+# changeset that collide with unknown files in the working copy.
+#
+# The largefiles are seen as unknown, so this prevents us from merging
+# in a file 'foo' if we already have a largefile with the same name.
+#
+# The overridden function filters the unknown files by removing any
+# largefiles. This makes the merge proceed and we can then handle this
+# case further in the overridden manifestmerge function below.
+def override_checkunknown(origfn, wctx, mctx, folding):
+    origunknown = wctx.unknown()
+    wctx._unknown = filter(lambda f: lfutil.standin(f) not in wctx, origunknown)
+    try:
+        return origfn(wctx, mctx, folding)
+    finally:
+        wctx._unknown = origunknown
+
+# The manifest merge handles conflicts on the manifest level. We want
+# to handle changes in largefile-ness of files at this level too.
+#
+# The strategy is to run the original manifestmerge and then process
+# the action list it outputs. There are two cases we need to deal with:
+#
+# 1. Normal file in p1, largefile in p2. Here the largefile is
+#    detected via its standin file, which will enter the working copy
+#    with a "get" action. It is not "merge" since the standin is all
+#    Mercurial is concerned with at this level -- the link to the
+#    existing normal file is not relevant here.
+#
+# 2. Largefile in p1, normal file in p2. Here we get a "merge" action
+#    since the largefile will be present in the working copy and
+#    different from the normal file in p2. Mercurial therefore
+#    triggers a merge action.
+#
+# In both cases, we prompt the user and emit new actions to either
+# remove the standin (if the normal file was kept) or to remove the
+# normal file and get the standin (if the largefile was kept). The
+# default prompt answer is to use the largefile version since it was
+# presumably changed on purpose.
+#
+# Finally, the merge.applyupdates function will then take care of
+# writing the files into the working copy and lfcommands.updatelfiles
+# will update the largefiles.
+def override_manifestmerge(origfn, repo, p1, p2, pa, overwrite, partial):
+    actions = origfn(repo, p1, p2, pa, overwrite, partial)
+    processed = []
+
+    for action in actions:
+        if overwrite:
+            processed.append(action)
+            continue
+        f, m = action[:2]
+
+        choices = (_('&Largefile'), _('&Normal file'))
+        if m == "g" and lfutil.splitstandin(f) in p1 and f in p2:
+            # Case 1: normal file in the working copy, largefile in
+            # the second parent
+            lfile = lfutil.splitstandin(f)
+            standin = f
+            msg = _('%s has been turned into a largefile\n'
+                    'use (l)argefile or keep as (n)ormal file?') % lfile
+            if repo.ui.promptchoice(msg, choices, 0) == 0:
+                processed.append((lfile, "r"))
+                processed.append((standin, "g", p2.flags(standin)))
+            else:
+                processed.append((standin, "r"))
+        elif m == "m" and lfutil.standin(f) in p1 and f in p2:
+            # Case 2: largefile in the working copy, normal file in
+            # the second parent
+            standin = lfutil.standin(f)
+            lfile = f
+            msg = _('%s has been turned into a normal file\n'
+                    'keep as (l)argefile or use (n)ormal file?') % lfile
+            if repo.ui.promptchoice(msg, choices, 0) == 0:
+                processed.append((lfile, "r"))
+            else:
+                processed.append((standin, "r"))
+                processed.append((lfile, "g", p2.flags(lfile)))
+        else:
+            processed.append(action)
+
+    return processed
+
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits, and copy/rename +
 # edit without prompting the user.

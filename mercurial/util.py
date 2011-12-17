@@ -24,6 +24,9 @@ if os.name == 'nt':
 else:
     import posix as platform
 
+platform.encodinglower = encoding.lower
+platform.encodingupper = encoding.upper
+
 cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink
@@ -593,9 +596,12 @@ def checkcase(path):
     """
     s1 = os.stat(path)
     d, b = os.path.split(path)
-    p2 = os.path.join(d, b.upper())
-    if path == p2:
-        p2 = os.path.join(d, b.lower())
+    b2 = b.upper()
+    if b == b2:
+        b2 = b.lower()
+        if b == b2:
+            return True # no evidence against case sensitivity
+    p2 = os.path.join(d, b2)
     try:
         s2 = os.stat(p2)
         if s2 == s1:
@@ -611,9 +617,11 @@ def fspath(name, root):
     The name is either relative to root, or it is an absolute path starting
     with root. Note that this function is unnecessary, and should not be
     called, for case-sensitive filesystems (simply because it's expensive).
+
+    Both name and root should be normcase-ed.
     '''
     # If name is absolute, make it relative
-    if name.lower().startswith(root.lower()):
+    if name.startswith(root):
         l = len(root)
         if name[l] == os.sep or name[l] == os.altsep:
             l = l + 1
@@ -628,7 +636,7 @@ def fspath(name, root):
     # Protect backslashes. This gets silly very quickly.
     seps.replace('\\','\\\\')
     pattern = re.compile(r'([^%s]+)|([%s]+)' % (seps, seps))
-    dir = os.path.normcase(os.path.normpath(root))
+    dir = os.path.normpath(root)
     result = []
     for part, sep in pattern.findall(name):
         if sep:
@@ -639,16 +647,15 @@ def fspath(name, root):
             _fspathcache[dir] = os.listdir(dir)
         contents = _fspathcache[dir]
 
-        lpart = part.lower()
         lenp = len(part)
         for n in contents:
-            if lenp == len(n) and n.lower() == lpart:
+            if lenp == len(n) and normcase(n) == part:
                 result.append(n)
                 break
         else:
             # Cannot happen, as the file exists!
             result.append(part)
-        dir = os.path.join(dir, lpart)
+        dir = os.path.join(dir, part)
 
     return ''.join(result)
 

@@ -446,7 +446,11 @@ def _updatelfile(repo, lfdirstate, lfile):
             os.chmod(abslfile, mode)
             ret = 1
     else:
-        if os.path.exists(abslfile):
+        # Remove lfiles for which the standin is deleted, unless the
+        # lfile is added to the repository again. This happens when a
+        # largefile is converted back to a normal file: the standin
+        # disappears, but a new (normal) file appears as the lfile.
+        if os.path.exists(abslfile) and lfile not in repo[None]:
             os.unlink(abslfile)
             ret = -1
     state = repo.dirstate[lfutil.standin(lfile)]
