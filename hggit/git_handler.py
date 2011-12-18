@@ -82,6 +82,8 @@ class GitHandler(object):
 
         self.paths = ui.configitems('paths')
 
+        self.branch_bookmark_suffix = ui.config('git', 'branch_bookmark_suffix')
+
         self.load_map()
         self.load_tags()
 
@@ -721,7 +723,10 @@ class GitHandler(object):
         for rev in revs:
             ctx = self.repo[rev]
             if getattr(ctx, 'bookmarks', None):
-                labels = lambda c: ctx.tags() + ctx.bookmarks()
+                labels = lambda c: ctx.tags() + [
+                                fltr for fltr, bm 
+                                in self._filter_for_bookmarks(ctx.bookmarks())
+                            ]
             else:
                 labels = lambda c: ctx.tags()
             prep = lambda itr: [i.replace(' ', '_') for i in itr]
@@ -839,13 +844,25 @@ class GitHandler(object):
                 self.git.refs['refs/tags/' + tag] = self.map_git_get(hex(sha))
                 self.tags[tag] = hex(sha)
 
+    def _filter_for_bookmarks(self, bms):
+        if not self.branch_bookmark_suffix:
+            return [(bm, bm) for bm in bms]
+        else:
+            def _filter_bm(bm):
+                if bm.endswith(self.branch_bookmark_suffix):
+                    return bm[0:-(len(self.branch_bookmark_suffix))]
+                else:
+                    return bm
+            return [(_filter_bm(bm), bm) for bm in bms]
+
     def local_heads(self):
         try:
             if getattr(bookmarks, 'parse', None):
                 bms = bookmarks.parse(self.repo)
             else:
                 bms = self.repo._bookmarks
-            return dict([(bm, hex(bms[bm])) for bm in bms])
+            return dict([(filtered_bm, hex(bms[bm])) for 
+                        filtered_bm, bm in self._filter_for_bookmarks(bms)])
         except AttributeError: #pragma: no cover
             return {}
 
@@ -886,6 +903,7 @@ class GitHandler(object):
                 bms = bookmarks.parse(self.repo)
             else:
                 bms = self.repo._bookmarks
+
             heads = dict([(ref[11:],refs[ref]) for ref in refs
                           if ref.startswith('refs/heads/')])
 
@@ -903,6 +921,22 @@ class GitHandler(object):
                     if bm.ancestor(self.repo[hgsha]) == bm:
                         # fast forward
                         bms[head] = hgsha
+
+            # if there's a branch bookmark suffix,
+            # then add it on to all bookmark names
+            # that would otherwise conflict with a branch
+            # name
+            if self.branch_bookmark_suffix:
+                real_branch_names = self.repo.branchmap()
+                bms = dict(
+                    (
+                        bm_name + self.branch_bookmark_suffix 
+                            if bm_name in real_branch_names
+                        else bm_name,
+                        bms[bm_name]
+                    )
+                    for bm_name in bms
+                )
             if heads:
                 if oldbm:
                     bookmarks.write(self.repo, bms)
