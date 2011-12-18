@@ -99,7 +99,7 @@ import errno
 from node import nullid, bin, hex, short
 from i18n import _
 
-allphases = range(2)
+allphases = range(3)
 trackedphases = allphases[1:]
 
 def readroots(repo):
