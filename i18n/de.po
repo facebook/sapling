@@ -43,9 +43,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-04 13:42+0200\n"
-"PO-Revision-Date: 2010-12-24 15:09+0100\n"
-"Last-Translator: Martin Roppelt <m.p.roppelt@web.de>\n"
+"POT-Creation-Date: 2011-12-19 12:19+0100\n"
+"PO-Revision-Date: 2011-12-13 19:02+0100\n"
+"Last-Translator: Martin Schröder <martinschroeder@vcp-sh.de>\n"
 "Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
 "<>\n"
 "Language: de\n"
@@ -10481,8 +10481,9 @@ msgid "%s"
 msgstr ""
 
 #, python-format
-msgid "use \"hg -v help %s\" to show help for the %s extension"
-msgstr "Nutze \"hg -v help %s\" um Hilfe für die Erweitung %s anzuzeigen"
+msgid "use \"hg help -e %s\" to show help for the %s extension"
+msgstr ""
+"Benutzen Sie \"hg -v help %s\" um Hilfe für die Erweitung %s anzuzeigen"
 
 #, python-format
 msgid ""
@@ -11862,14 +11863,17 @@ msgid ""
 "uncommitted merge, use --all to discard all changes, or 'hg update -C .' to "
 "abort the merge"
 msgstr ""
-"Nicht übernommene Zusammenführung - nutze --all um alle Änderungen eines Vorgängers zu vergessen, oder :hg:`update -C .` um die Zusammenführung nicht durchzuführen"
+"Nicht übernommene Zusammenführung - nutze --all um alle Änderungen eines "
+"Vorgängers zu vergessen, oder :hg:`update -C .` um die Zusammenführung nicht "
+"durchzuführen"
 
 #, python-format
 msgid ""
 "uncommitted changes, use --all to discard all changes, or 'hg update %s' to "
 "update"
 msgstr ""
-"Ausstehende nicht versionierte Änderungen - nutze -all um alle Änderungen zu verwerfen, oder :hg:`update %s` zum Aktualisieren"
+"Ausstehende nicht versionierte Änderungen - nutze -all um alle Änderungen zu "
+"verwerfen, oder :hg:`update %s` zum Aktualisieren"
 
 #, python-format
 msgid "use --all to revert all files, or 'hg update %s' to update"
@@ -11877,7 +11881,8 @@ msgstr ""
 
 msgid "uncommitted changes, use --all to discard all changes"
 msgstr ""
-"Ausstehende nicht versionierte Änderungen - nutze -all um alle Änderungen zu verwerfen"
+"Ausstehende nicht versionierte Änderungen - nutze -all um alle Änderungen zu "
+"verwerfen"
 
 msgid "use --all to revert all files"
 msgstr "nutze -all, um alle Dateien zurückzusetzen"
@@ -12800,7 +12805,9 @@ msgid "push creates new remote head %s!"
 msgstr "Push erzeugt neuen entfernten Kopfe %s!"
 
 msgid "you should pull and merge or use push -f to force"
-msgstr "Sie sollten zuerst synchronisieren (pull) und Zusammenführen (merge), oder -f/--force zum Erzwingen verwenden"
+msgstr ""
+"Sie sollten zuerst synchronisieren (pull) und Zusammenführen (merge), oder -"
+"f/--force zum Erzwingen verwenden"
 
 msgid "did you forget to merge? use push -f to force"
 msgstr "(Haben Sie vergessen zu mergen? Nutze push -f um zu erzwingen)"
@@ -16450,20 +16457,27 @@ msgid ""
 "character is treated as a comment character, and the ``\\`` character\n"
 "is treated as an escape character."
 msgstr ""
+"Eine ignore-Datei ist eine Textdatei, die aus einer Liste von Patterns "
+"besteht,\n"
+"mit einem Ausdruck pro Zeile. Leere Zeilen werden übersprungen.\n"
+"Das ``#``-Zeichen wird als Kommentarzeichen behandelt und das \n"
+"``\\``-Zeichen als Escape-Zeichen."
 
 msgid ""
 "Mercurial supports several pattern syntaxes. The default syntax used\n"
 "is Python/Perl-style regular expressions."
 msgstr ""
+"Mercurial unterstützt verschiedene Pattern-Syntaxen. Im Normalfall\n"
+"werden Python/Perl-artige Reguläre Ausdrücke verwendet."
 
 msgid "To change the syntax used, use a line of the following form::"
 msgstr ""
 
 msgid "  syntax: NAME"
-msgstr ""
+msgstr "  Syntax: NAME"
 
 msgid "where ``NAME`` is one of the following:"
-msgstr ""
+msgstr "wobei ``NAME`` einer der folgenden ist:"
 
 msgid ""
 "``regexp``\n"
@@ -16476,6 +16490,8 @@ msgid ""
 "The chosen syntax stays in effect when parsing all patterns that\n"
 "follow, until another syntax is selected."
 msgstr ""
+"Die gewählte Syntax wird auf auf alle folgenden Patterns angewendet\n"
+"bis eine andere Syntax ausgewählt wird."
 
 msgid ""
 "Neither glob nor regexp patterns are rooted. A glob-syntax pattern of\n"
@@ -17182,20 +17198,27 @@ msgid ""
 "Mercurial currently supports Mercurial, Git, and Subversion\n"
 "subrepositories."
 msgstr ""
+"Mercurial unterstützt im Augenblick Mercurial-, Git- und Subversion-\n"
+"Subrepositories."
 
 msgid "Subrepositories are made of three components:"
-msgstr ""
+msgstr "Subrespositories bestehen aus drei Komponenten:"
 
 msgid ""
 "1. Nested repository checkouts. They can appear anywhere in the\n"
 "   parent working directory."
 msgstr ""
+"1. Verschachtelte Repository Checkouts. Sie können überall im\n"
+"   übergeordneten Arbeitsverzeichnis auftauchen."
 
 msgid ""
 "2. Nested repository references. They are defined in ``.hgsub`` and\n"
 "   tell where the subrepository checkouts come from. Mercurial\n"
 "   subrepositories are referenced like:"
 msgstr ""
+"2. Verschachtelte Repository References. Sie werden in  ``.hgsub``\n"
+"   definiert und geben an, wo Subrepository Checkouts herkommen.\n"
+"   Mercurial Subrepositories werden wie folgt angegeben:"
 
 msgid "     path/to/nested = https://example.com/nested/repo/path"
 msgstr ""
@@ -17284,6 +17307,8 @@ msgid ""
 "To remove a subrepository from the parent repository, delete its\n"
 "reference from ``.hgsub``, then remove its files."
 msgstr ""
+"Um ein Subrepository aus seinem Parent Repository zu entfernen,\n"
+"entfernen Sie seine Verweise aus ``.hgsub`` und löschen die Dateien."
 
 msgid ""
 "Interaction with Mercurial Commands\n"
@@ -17521,6 +17546,9 @@ msgid ""
 "Note that the security of HTTPS URLs depends on proper configuration of\n"
 "web.cacerts."
 msgstr ""
+"Beachten Sie, dass die Sicherheit von HTTPS-URLs von der richtigen "
+"Konfiguration\n"
+"von web.cacerts abhängt."
 
 msgid "Some notes about using SSH with Mercurial:"
 msgstr "Einige Hinweise zur Nutzung von SSH mit Mercurial:"
@@ -17898,7 +17926,7 @@ msgid "rollback of last commit while not checked out may lose data"
 msgstr ""
 
 msgid "use -f to force"
-msgstr ""
+msgstr "Benutzen Sie -f, um dennoch fortzufahren"
 
 #, python-format
 msgid "named branch could not be reset: current branch is still '%s'\n"
@@ -18244,7 +18272,7 @@ msgstr "Unerwartetes Token: %s"
 
 #, python-format
 msgid "not a prefix: %s"
-msgstr "keine Prefix: %s"
+msgstr "kein Präfix: %s"
 
 #, python-format
 msgid "not an infix: %s"
@@ -18970,7 +18998,7 @@ msgstr ""
 "kopiert).\n"
 
 msgid ".hg/requires file is corrupt"
-msgstr ""
+msgstr ".hg/requires file ist korrumpiert"
 
 #, python-format
 msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
@@ -18989,7 +19017,7 @@ msgid "queries"
 msgstr ""
 
 msgid "searching"
-msgstr ""
+msgstr "suchen"
 
 msgid "repository is unrelated"
 msgstr "Projektarchiv steht in keinem Zusammenhang"
@@ -19049,8 +19077,9 @@ msgstr "Zertifikat ist für %s"
 msgid "IDN in certificate not supported"
 msgstr ""
 
+#, fuzzy
 msgid "no commonName or subjectAltName found in certificate"
-msgstr ""
+msgstr "Kein commonName oder subjectAltNamt gefunden im Zertifikat"
 
 #, python-format
 msgid "could not find web.cacerts: %s"
@@ -19059,6 +19088,7 @@ msgstr "Konnte web.cacerts nicht finden: %s"
 #, python-format
 msgid "%s certificate error: %s (use --insecure to connect insecurely)"
 msgstr ""
+"%s Zertifikatsfehler: %s (Benutzen Sie --insecure, um unsicher zu verbinden)"
 
 #, python-format
 msgid "invalid certificate for %s with fingerprint %s"
@@ -19073,10 +19103,13 @@ msgstr ""
 #, python-format
 msgid "host fingerprint for %s can't be verified (Python too old)"
 msgstr ""
+"Host fingerprint für %s kann nicht verifiziert werden (Python ist zu alt)"
 
 #, python-format
 msgid "warning: certificate for %s can't be verified (Python too old)\n"
 msgstr ""
+"Warnung: Zertifikat für %s kann nicht verifiziert werden (Python ist zu "
+"alt)\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -19219,11 +19252,13 @@ msgstr ""
 msgid "pushing branch %s of subrepo %s\n"
 msgstr "Übertrage Zweig %s von Unterarchiv %s\n"
 
-#, python-format
+#, fuzzy, python-format
 msgid ""
 "no branch checked out in subrepo %s\n"
 "cannot push revision %s"
 msgstr ""
+"kein Branch in Subrepo %s ausgecheckt\n"
+"Revision %s kann nicht gepusht werden"
 
 #, python-format
 msgid "%s, line %s: %s\n"
@@ -19237,7 +19272,7 @@ msgid "node '%s' is not well formed"
 msgstr "Knoten '%s' ist nicht wohlgeformt"
 
 msgid ".hg/cache/tags is corrupt, rebuilding it\n"
-msgstr ""
+msgstr ".hg/cache/tags ist korrupt, wird wiederhergestellt\n"
 
 msgid ""
 ":addbreaks: Any text. Add an XHTML \"<br />\" tag before the end of\n"
@@ -19306,10 +19341,13 @@ msgstr ":fill76: Beliebiger Text. Umbricht den Text bei 76 Zeichen."
 msgid ":firstline: Any text. Returns the first line of text."
 msgstr ":firstline: Beliebiger Text. Gibt die erste Zeile des Texts zurück."
 
+#, fuzzy
 msgid ""
 ":hex: Any text. Convert a binary Mercurial node identifier into\n"
 "    its long hexadecimal representation."
 msgstr ""
+":hex: Beliebiger Text. Konvertiert einen binären Mercurial node identifier \n"
+"    in seine lange hexadezimale Repräsentation."
 
 msgid ""
 ":hgdate: Date. Returns the date as a pair of numbers: \"1157407993\n"
@@ -19376,12 +19414,19 @@ msgstr ""
 ":short: Prüfsumme. Gibt die Kurzform der Prüfsumme zurück, d.h.\n"
 "    als 12 Zeichen lange hexadezimale Zeichenkette."
 
+#, fuzzy
 msgid ""
 ":shortbisect: Any text. Treats `text` as a bisection status, and\n"
 "    returns a single-character representing the status (G: good, B: bad,\n"
 "    S: skipped, U: untested, I: ignored). Returns single space if `text`\n"
 "    is not a valid bisection status."
 msgstr ""
+":shortbisect: Beliebiger text. Behandelt `text` als Teilungsstatus, und\n"
+"    gibt ein einzelnes Zeichen zurück, dass den Status repräsentiert (G: "
+"gut, B: schlecht,\n"
+"    S: übersprungen, U: ungetestet, I: ignoriert). Gibt ein einzelnes "
+"Leerzeichen zurück,\n"
+"    wenn `text` kein gültiger Teilungsstatus ist."
 
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
 msgstr ":shortdate: Datumsangabe. Gibt ein Datum wie \"2006-09-18\" zurück."
@@ -19518,8 +19563,9 @@ msgstr ""
 ":node: Zeichenkette. Die Prüfsumme, die einen Änderungssatz identifiziert,\n"
 "    als 40 Zeichen lange hexadezimale Zeichenkette."
 
+#, fuzzy
 msgid ":rev: Integer. The changeset phase."
-msgstr ""
+msgstr ":rev: Ganze Zahl. Die Phase des Changesets."
 
 msgid ":rev: Integer. The repository-local changeset revision number."
 msgstr ""
@@ -19547,7 +19593,7 @@ msgstr ""
 
 #, python-format
 msgid "filter %s expects one argument"
-msgstr ""
+msgstr "Filter %s erwartet ein Argument"
 
 msgid "unmatched quotes"
 msgstr "unpassende Anführungszeichen"
@@ -19657,22 +19703,22 @@ msgstr "Befehl '%s' fehlgeschlagen: %s"
 
 #, python-format
 msgid "filename contains '%s', which is reserved on Windows"
-msgstr ""
+msgstr "Dateiname enthält '%s', was in Windows reserviert ist"
 
 #, python-format
 msgid "filename contains %r, which is invalid on Windows"
-msgstr ""
+msgstr "Dateiname enthält '%r', was in Windows ungültig ist"
 
 #, python-format
 msgid "filename ends with '%s', which is not allowed on Windows"
-msgstr ""
+msgstr "Dateiname endet mit '%s', was in Windows nicht erlaubt ist"
 
 msgid "check your clock"
-msgstr ""
+msgstr "überprüfen Sie ihre Uhr"
 
 #, python-format
 msgid "negative timestamp: %d"
-msgstr ""
+msgstr "negativer Zeitstempel: %d"
 
 #, python-format
 msgid "invalid date: %r"
@@ -19684,7 +19730,7 @@ msgstr "Datum überschreitet 32 Bit: %d"
 
 #, python-format
 msgid "negative date value: %d"
-msgstr ""
+msgstr "negativer Datumswert: %d"
 
 #, python-format
 msgid "impossible time zone offset: %d"
@@ -19705,7 +19751,7 @@ msgstr "Ungültige Datumsangabe: %s"
 
 #, python-format
 msgid "%s must be nonnegative (see 'hg help dates')"
-msgstr ""
+msgstr "%s muss nichtnegativ sein (siehe 'hg help dates')"
 
 #, python-format
 msgid "%.0f GB"
@@ -19752,7 +19798,7 @@ msgid "no port number associated with service '%s'"
 msgstr "Dem Dient '%s' ist keine Portnummer zugewiesen"
 
 msgid "file:// URLs can only refer to localhost"
-msgstr ""
+msgstr "file://-URLs können nur auf localhost verweisen"
 
 msgid "cannot verify bundle or remote repos"
 msgstr "Kann Bündel oder entfernte Projektarchive nicht verifizieren"
