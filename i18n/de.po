@@ -5,8 +5,10 @@
 # Übersetzer:
 #   Tobias Bell
 #   Fabian Kreutz
-#   jemand names Christoph
-#   --- andere?
+#   Christoph Mewes
+#   Martin Roppelt
+#   Georg Brandl
+#   Martin Schröder
 #
 # Übersetzungshilfen
 # ==================
@@ -14,40 +16,82 @@
 # Der Benutzer sollte mit formeller Anrede angesprochen werden. Je nach
 # Fall kann aber auch eine unpersönliche Anrede ("man") verwendet werden.
 #
-# Deutsche Begriffe sind fein, man sollte es aber nicht übertreiben. Ein
-# Hilfstext à la "Beim Versionieren von Etiketten auf Zweigen" hilft
-# niemandem. Erfahrene Benutzer sind kurz irritiert, weil sie bekannte
-# Begriffe vermissen, während neue Nutzer sich eh noch nichts unter den
-# Begriffen vorstellen können und entweder `hg help` oder Google bemühen
-# müssen.
-# Gleichzeitig fördert die Suche nach "Mercurial Etikett" wenig
-# Brauchbares zu Tage.
-# Hier sollten diese krassen Eindeutschungen nur in der Erklärung zu "tag"
-# verwendet, sonst aber eher vermieden werden.
+# Die Übersetzung der Handbuchseiten hat zwei Ziele:
+#  a) Die ohnehin komplexen Zusammenhänge der Funktion von Mercurial für
+#     Benutzer, die im Englischen wenig versiert sind, verständlicher zu
+#     erklären.
+#  b) Basisbegriffe auf Deutsch zu schaffen, damit nicht jeder in 
+#     der Kommunikation eigene erfinden oder eine D-E-Mischung nutzen muss.
 #
-# branch        Branch/Zweig/Verzweigung
-# bundle        Bündel
-# change        Änderung
-# changeset     Änderungssatz
-# check out     auschecken
-# commit        Commit
-# commit (v)    übernehmen
-# deprecated    veraltet
-# hook          Hook
-# merge         zusammenführen
-# notation      Schreibweise
-# repository    Projektarchiv
-# manage/track  versionieren
+# Für a) ist es wichtig, dass eine gute, erklärende Übersetzung mit deutscher
+# Grammatik verwendet wird und keine direkte Wort-für-Wort Übersetzung, die
+# auch ein Programm hinkriegt. Eine Übersetzung nur zum Zwecke der Füllung
+# von msgstr Werten ist letzlich nicht hilfreich.
+#
+# b) ist besonders schwierig, da es viele Begriffe im Deutschen noch nicht gibt
+# und Neudefinitionen am Anfang sehr ungewöhnlich und gedrückt klingen.  Wer
+# jedoch die englischen Begriffe bevorzugt, bzw. gegen eine Definition von
+# deutschen Äquivalenten ist, muss die Übersetzung ja nicht einschalten.
+# Englische Begriffe müssen zuweilen einbezogen werden, sollten dann aber als
+# eingebundenes Fremdwort und nicht anstelle eines deutschen Substantivs oder
+# Verbs verwendet werden:
+#
+# Gut:
+#   Synchronisieren Sie ihr Projektarchiv (mit pull).
+#   Im Verlaufe einer Zusammenführung mit :hg:`merge` wird...
+#   Falls es während der 'pull'-Operation zu Verbindungsfehlern kommt...
+#
+# Schlecht:
+#   Mergen Sie zunächst die Branche.
+#   Falls der Tag im Filelog zu finden ist...
+#
+# Übersetzungen:
+#  branch        Zweig/Verzweigung/Entwicklungszweig
+#  bookmark      Lesezeichen
+#  bundle        Bündel
+#  change        Änderung
+#  changeset     Änderungssatz
+#  commit        Commit/Übernahme
+#  commit (v)    übernehmen
+#  committer     Autor
+#  deprecated    veraltet
+#  merge         zusammenführen
+#  notation      Schreibweise
+#  repository    (Projekt)archiv
+#  manage/track  versionieren
+#  pull          abrufen
+#  push          übertragen
+#  rebase        Pfropfung
+#  section       Abschnitt (nicht Sektion)
+#  tag           Etikett    (svn verwendet "Marke")
+#
+# Nicht übersetzt bleiben
+#  hook     mangels guter Übersetzung
+#  token    Fachbegriff auch im Deutschen
+#  parser   Fachbegriff auch im Deutschen
+#  patch    Bezieht sich auf ein sehr altes Programm mit demselben Namen und
+#           Dateien in dessen Syntax/Format
+#  diff     Siehe patch, ausserdem Abkürzung eines auch deutschen Worts
+#  glob
+# 
+# Weiteres:
+#  graft/transplant: Da graft eine Reimplementierung von transplant als
+#         Kernfunktion ist, kann in beiden Fällen "Transplantation" als
+#         Übersetzung verwendet werden.
+#  keyword ist manchmal ein Schlüsselwort, manchmal ein Platzhalter.
+#         Übersetzungen müssen zum Kontext passen.
+#  commit: wird manchmal anstelle von revision verwendet. In solchen Fällen
+#         kann die Übersetzung "Revision" lauten.
+#  largefile: Binärriese
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-19 12:19+0100\n"
-"PO-Revision-Date: 2011-12-13 19:02+0100\n"
-"Last-Translator: Martin Schröder <martinschroeder@vcp-sh.de>\n"
-"Language-Team: German (http://transifex.net/projects/p/mercurial/team/de/) "
-"<>\n"
+"POT-Creation-Date: 2011-12-04 13:42+0200\n"
+"PO-Revision-Date: 2010-12-24 15:09+0100\n"
+"Last-Translator: Fabian Kreutz <fabian.kreutz@qvantel.com>\n"
+"Language-Team: \n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -133,22 +177,22 @@ msgstr ""
 
 msgid "The allow and deny sections take key-value pairs."
 msgstr ""
-"Die allow- und deny-Abschnitte werden in Schlüssel-Wert-Paaren angegeben."
+"Die Erlaubnis- und Verbotslisten werden in Schlüssel-Wert-Paaren angegeben."
 
 msgid ""
 "Branch-based Access Control\n"
 "..........................."
 msgstr ""
-"Branch-basierte Zugriffskontrolle\n"
-"..........................."
+"Zweig-basierte Zugriffskontrolle\n"
+"................................"
 
 msgid ""
 "Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to\n"
 "have branch-based access control. Keys in these sections can be\n"
 "either:"
 msgstr ""
-"Verwenden Sie die Abschnitte ``acl.deny.branches`` und\n"
-"``acl.allow.branches``, um Zugriffe auf Basis von Zweigen zu realisieren.\n"
+"Verwenden Sie Abschnitte ``acl.deny.branches`` und ``acl.allow.branches``,\n"
+"um Zugriffe zweigbasiert zu realisieren.\n"
 "Die Schlüssel in diesem Abschnitt können sein:"
 
 msgid ""
@@ -173,7 +217,7 @@ msgid ""
 "........................."
 msgstr ""
 "Pfad-basierte Zugriffskontrolle\n"
-"........................."
+"..............................."
 
 msgid ""
 "Use the ``acl.deny`` and ``acl.allow`` sections to have path-based\n"
@@ -181,7 +225,7 @@ msgid ""
 "a glob syntax by default). The corresponding values follow the same\n"
 "syntax as the other sections above."
 msgstr ""
-"Benutzen Sie die ``acl.deny`` und ``acl.allow``-Bereiche, um eine\n"
+"Benutzen Sie die ``acl.deny`` und ``acl.allow``-Abschnitte, um eine\n"
 "pfadbasierte Zugriffskontrolle umzusetzen. Schlüssel in diesen Bereichen\n"
 "akzeptieren ein Verzeichnismuster (standardmäßig mit glob-Syntax). Die\n"
 "entsprechenden Werte folgen derselben Syntax wie in den anderen o.g.\n"
@@ -192,7 +236,7 @@ msgid ""
 "......"
 msgstr ""
 "Gruppen\n"
-"......"
+"......."
 
 msgid ""
 "Group names must be prefixed with an ``@`` symbol. Specifying a group\n"
@@ -210,13 +254,13 @@ msgstr ""
 "Sie können Gruppen-Mitglieder im ``acl.groups``-Bereich definieren. Wenn\n"
 "eine Gruppe nicht existiert und Mercurial auf einem Unix-artigen System\n"
 "läuft, wird die Liste der Benutzer vom Betriebssystem abgerufen.\n"
-"Andernfalls wird eine Ausnahme ausgelöst."
+"Andernfalls wird ein Ausnahmefehler ausgelöst."
 
 msgid ""
 "Example Configuration\n"
 "....................."
 msgstr ""
-"Beispielkonfiguration:\n"
+"Beispielkonfiguration\n"
 "....................."
 
 msgid "::"
@@ -229,7 +273,8 @@ msgid ""
 "  # Use this if you want to check access restrictions at commit time\n"
 "  pretxncommit.acl = python:hgext.acl.hook"
 msgstr ""
-"  # Verwenden Sie dies, wenn Sie den Zugriff zur Commitzeit prüfen wollen:\n"
+"  # Verwenden Sie dies, wenn Sie den Zugriff zur Zeit der lokalen Übernahme\n"
+"  # (commit) prüfen wollen:\n"
 "  pretxncommit.acl = python:hgext.acl.hook"
 
 msgid ""
@@ -237,9 +282,9 @@ msgid ""
 "  # bundle and serve.\n"
 "  pretxnchangegroup.acl = python:hgext.acl.hook"
 msgstr ""
-"  # Verwenden Sie dies, wenn Sie den Zugriff beim Übertragen (push),\n"
-"  # Abrufen (pull), Bündeln (bundle) oder Ausliefern (serve) prüfen\n"
-"  # wollen.\n"
+"  # Verwenden Sie dies, wenn Sie den Zugriff beim Synchronisieren mit\n"
+"  # anderen Archiven (Übertragen, Abrufen, Bündeln oder Ausliefern (serve))\n"
+"  # prüfen wollen.\n"
 "  pretxnchangegroup.acl = python:hgext.acl.hook"
 
 msgid ""
@@ -268,8 +313,8 @@ msgid ""
 "  # Everyone is denied to the frozen branch:\n"
 "  frozen-branch = *"
 msgstr ""
-"  # Jedem wird der Zugriff auf den frozen-Zweig verweigert:\n"
-"  frozen-zweig = *"
+"  # Jedem wird der Zugriff auf den Zweig \"gesperrt\" verweigert:\n"
+"  gesperrt = *"
 
 msgid ""
 "  # A bad user is denied on all branches:\n"
@@ -299,8 +344,8 @@ msgid ""
 "  # The super user is allowed on any branch:\n"
 "  * = super-user"
 msgstr ""
-"  # Der Super-User darf auf jeden Zweig zugreifen:\n"
-"  * = super-user"
+"  # Der Administrator darf auf jeden Zweig zugreifen:\n"
+"  * = benutzer-admin"
 
 msgid ""
 "  # Everyone is allowed on branch-for-tests:\n"
@@ -339,7 +384,7 @@ msgid ""
 "  # Group \"hg-denied\" will not have write access to any file:\n"
 "  ** = @hg-denied"
 msgstr ""
-"  # Die Gruppe \"hd-verboten\" wird auf keine Datei Schreibzugriff haben:\n"
+"  # Die Gruppe \"hg-verboten\" wird auf keine Datei Schreibzugriff haben:\n"
 "  ** = @hg-verboten"
 
 msgid ""
@@ -402,31 +447,27 @@ msgid ""
 msgstr ""
 "Konfigurationsfehler - Hook-Typ \"%s\" kann weder eingehende "
 "Änderungssätze \n"
-"noch Commits stoppen"
+"noch lokales Übernehmen stoppen"
 
 #, python-format
 msgid "acl: user \"%s\" denied on branch \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: Benutzer \"%s\" hat keinen Zugriff auf Zweig \"%s\" (Änderungssatz \"%s"
-"\")"
+"acl: Zugriff für \"%s\" auf Zweig \"%s\" abgelehnt (Änderungssatz \"%s\")"
 
 #, python-format
 msgid "acl: user \"%s\" not allowed on branch \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: Benutzer \"%s\" hat keinen Zugriff auf Zweig \"%s\" (Änderungssatz \"%s"
-"\")"
+"acl: Zugriff für \"%s\" auf Zweig \"%s\" nicht erlaubt (Änderungssatz \"%s\")"
 
 #, python-format
 msgid "acl: user \"%s\" denied on \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: Zugriff von Benutzer \"%s\" auf Zweig \"%s\" abgelehnt (Änderungssatz \"%s"
-"\")"
+"acl: Zugriff für \"%s\" auf \"%s\" abgelehnt (Änderungssatz \"%s\")"
 
 #, python-format
 msgid "acl: user \"%s\" not allowed on \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: Zugriff von Benutzer \"%s\" auf Zweig \"%s\" nicht erlaubt (Änderungssatz \"%s"
-"\")"
+"acl: Zugriff für \"%s\" auf \"%s\" nicht erlaubt (Änderungssatz \"%s\")"
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
 msgstr "Hooks zur Integration mit dem Bugzilla Bugtracker"
@@ -463,8 +504,8 @@ msgid ""
 "3. Writing directly to the Bugzilla database. Only Bugzilla installations\n"
 "   using MySQL are supported. Requires Python MySQLdb."
 msgstr ""
-"3. Direkte Schreiben in die Bugzilla Datenbank. Funktioniert nur, wenn die\n"
-"   Bugzilla-Instanz MySQL verwendet. Benötigt Python MySQLdb."
+"3. Direktes Schreiben in die Bugzilla Datenbank. Funktioniert nur, wenn die\n"
+"   Bugzilla-Instanz MySQL verwendet. Benötigt das Python MySQLdb Modul."
 
 msgid ""
 "Writing directly to the database is susceptible to schema changes, and\n"
@@ -477,6 +518,14 @@ msgid ""
 "deprecated, and will not be updated for new Bugzilla versions going\n"
 "forward."
 msgstr ""
+"Direktes Schreiben in die Datenbank führt leicht zu Problemen bei Schema-\n"
+"veränderungen. Ausserdem wird ein externes Bugzilla Script benötigt, um\n"
+"Benachrichtigungsemails zu versenden. Dieses Script wird mit den Rechten des\n"
+"Mercurial-Benutzers ausgeführt, benötigt eine lokale Bugzilla-Installation\n"
+"sowie Leserechte an der Bugzilla Konfigurationsdatei und MySQL Benutzername\n"
+"und Passwort, um vollen Zugriff auf die Bugzilla Datenbank zu haben. Aus\n"
+"diesen Gründen wird diese Zugriffsmethode als veraltet angesehen und nicht\n"
+"mehr für zukünftigen Bugzillaversionen angepasst."
 
 msgid ""
 "Access via XMLRPC needs a Bugzilla username and password to be specified\n"
@@ -485,6 +534,11 @@ msgid ""
 "that the rights of that user are restricted in Bugzilla to the minimum\n"
 "necessary to add comments."
 msgstr ""
+"Zugriff über XMLRPC benötigt einen Bugzilla-Benutzernamen und -Passwort in\n"
+"der Konfigurationsdatei. Kommentare werden unter diesem Benutzer eingefügt.\n"
+"Da es notwendig ist, dass alle Mercurial-Benutzer Zugriff auf diese Datei\n"
+"haben, ist es empfohlen dieses Benutzerkonto in Bugzilla mit minimalen\n"
+"Rechten (um Kommentare einzufügen) auszustatten."
 
 msgid ""
 "Access via XMLRPC/email uses XMLRPC to query Bugzilla, but sends\n"
@@ -495,14 +549,23 @@ msgid ""
 "user, the email associated with the Bugzilla username used to log into\n"
 "Bugzilla is used instead as the source of the comment."
 msgstr ""
+"Zugriff über XMLRPC/Email verwendet XMLRPC für Anfragen an Bugzilla, aber\n"
+"sendet Emails an die Email-Schnittstelle um Kommentare einzufügen. Die\n"
+"Adresse im 'Absender:' Feld wird auf die Emailadresse des Mercurial-"
+"Benutzers\n"
+"gesetzt, so dass Bugzilla den Autor richtig setzt. Falls Bugzilla den so\n"
+"empfangenen Benutzer nicht kennt, wird der Benutzer für den XMLRPC-Zugriff\n"
+"als Autor verwendet."
 
 msgid "Configuration items common to all access modes:"
-msgstr ""
+msgstr "Konfigurationseinträge für alle Zugriffsmethoden:"
 
 msgid ""
 "bugzilla.version\n"
 "  This access type to use. Values recognised are:"
 msgstr ""
+"bugzilla.version\n"
+"  Die zu verwendende Zugriffsmethod. Erlaubte Werte sind:"
 
 msgid ""
 "  :``xmlrpc``:       Bugzilla XMLRPC interface.\n"
@@ -513,6 +576,11 @@ msgid ""
 "  :``2.16``:         MySQL access, Bugzilla 2.16 and up to but not\n"
 "                     including 2.18."
 msgstr ""
+"  :``xmlrpc``:       Bugzilla XMLRPC Schnittstelle.\n"
+"  :``xmlrpc+email``: Bugzilla XMLRPC und Email Schnittstellen.\n"
+"  :``3.0``:          MySQL Zugriff, Bugzilla 3.0 oder höher.\n"
+"  :``2.18``:         MySQL Zugriff, Bugzilla 2.18 bis ausschliesslich 3.0.\n"
+"  :``2.16``:         MySQL Zugriff, Bugzilla 2.16 bis ausschliesslich 2.18."
 
 msgid ""
 "bugzilla.regexp\n"
@@ -571,6 +639,11 @@ msgid ""
 "  ``/var/local/my-project`` with a strip of 2 gives a value for\n"
 "  ``{webroot}`` of ``my-project``. Default 0."
 msgstr ""
+"bugzilla.strip\n"
+"  Die Anzahl von Verzeichnisebenen, die vom Anfang des Archivpfads\n"
+"  (``{root}`` in Vorlagen) abgeschnitten wird, um ``{webroot}`` zu erhalten.\n"
+"  Zum Beispiel mit ``{root}`` als ``/var/local/mein-projekt`` und einem\n"
+"  Wert 2, wird ``{webroot}`` auf ``mein-projekt`` gesetzt. Standard 0."
 
 msgid ""
 "web.baseurl\n"
@@ -582,7 +655,7 @@ msgstr ""
 "  ``{hgweb}`` verwendet werden."
 
 msgid "Configuration items common to XMLRPC+email and MySQL access modes:"
-msgstr ""
+msgstr "Gemeinsame Zugriffskonfiguration für XMLRPC+email und MySQL:"
 
 msgid ""
 "bugzilla.usermap\n"
@@ -605,7 +678,7 @@ msgid ""
 "committer email to Bugzilla user email. See also ``bugzilla.usermap``.\n"
 "Contains entries of the form ``committer = Bugzilla user``."
 msgstr ""
-"Einträge in dieser ``[usermap]`` Sektion weisen Mercurial Benutzern eine\n"
+"Einträge im ``[usermap]``-Abschnitt weisen Mercurial Benutzern eine\n"
 "Bugzilla-Emailadresse zu. Siehe auch Option ``bugzilla.usermap``.\n"
 "Enthält Einträge der Form ``Mercurial-Benutzer = Bugzilla-Benutzer``"
 
@@ -617,32 +690,44 @@ msgid ""
 "  The base URL for the Bugzilla installation.\n"
 "  Default ``http://localhost/bugzilla``."
 msgstr ""
+"bugzilla.bzurl\n"
+"  Die Basis-URL der Bugzilla Installation\n"
+"  Standard ``http://localhost/bugzilla``."
 
 msgid ""
 "bugzilla.user\n"
 "  The username to use to log into Bugzilla via XMLRPC. Default\n"
 "  ``bugs``."
 msgstr ""
+"bugzilla.user\n"
+"  Der Benutzername für den Bugzilla-Zugriff via XMLRPC. Standard ``bugs``."
 
 msgid ""
 "bugzilla.password\n"
 "  The password for Bugzilla login."
 msgstr ""
+"bugzilla.password\n"
+"  Das Passwort für den Bugzilla-Zugriff."
 
 msgid ""
 "XMLRPC+email access mode uses the XMLRPC access mode configuration items,\n"
 "and also:"
 msgstr ""
+"XMLRPC+email nutzt die gleichen Zugriffskonfiguration wie XMLRPC plus:"
 
 msgid ""
 "bugzilla.bzemail\n"
 "  The Bugzilla email address."
 msgstr ""
+"bugzilla.bzemail\n"
+"  Die Bugzilla Emailadresse."
 
 msgid ""
 "In addition, the Mercurial email settings must be configured. See the\n"
 "documentation in hgrc(5), sections ``[email]`` and ``[smtp]``."
 msgstr ""
+"Zusütlich müssen der Emailversand für Mercurial konfiguriert werden. Sie\n"
+"dazu die Dokumentation von hgrc(5), Abschnitte ``[email]`` und ``[smtp]``."
 
 msgid "MySQL access mode configuration:"
 msgstr "MySQL Zugriffskonfiguration:"
@@ -712,7 +797,7 @@ msgid ""
 msgstr ""
 "bugzilla.notify\n"
 "  Das Kommando um Hinweis-E-Mails zu versenden. Die drei Schlüssel\n"
-"  ``bzdir``, ``id`` (Ticket ID) und ``user`` (Überträger) werden ersetzt.\n"
+"  ``bzdir``, ``id`` (Ticket ID) und ``user`` (Autor) werden ersetzt.\n"
 "  Der Standard hängt von der Version ab; ab 2.18 ist es\n"
 "  \"cd %(bzdir)s && perl -T contrib/sendbugmail.pl %(id)s %(user)s\""
 
@@ -732,8 +817,8 @@ msgid ""
 "    incoming.bugzilla = python:hgext.bugzilla.hook"
 msgstr ""
 "    [hooks]\n"
-"    # führt Einhängeaktion für jede Änderung aus, die hierher geholt oder\n"
-"    # geschoben wird\n"
+"    # führt Hook für jede Änderung aus, die hierher abgerufen oder\n"
+"    # übertragen wird\n"
 "    incoming.bugzilla = python:hgext.bugzilla.hook"
 
 msgid "Example configurations:"
@@ -746,6 +831,11 @@ msgid ""
 "collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
 "with a web interface at ``http://my-project.org/hg``. ::"
 msgstr ""
+"XMLRPC Beispielkonfiguration. Genutzt wird Bugzilla auf\n"
+"``http://mein-projekt.org/bugzilla``, mit dem Benutzer\n"
+"``bugmail@mein-projekt.org`` und Password ``plugh``. Die Archive, deren\n"
+"Änderungen dort kommentiert werden, sind in ``/var/local/hg/repos/``,\n"
+"mit einem Web-Interface auf ``http://mein-projekt.org/hg``. ::"
 
 msgid ""
 "    [bugzilla]\n"
@@ -784,6 +874,12 @@ msgid ""
 "are sent to the Bugzilla email address\n"
 "``bugzilla@my-project.org``. ::"
 msgstr ""
+"XMLRPC+email Beispielkonfiguration. Genutzt wird Bugzilla auf\n"
+"``http://mein-projekt.org/bugzilla``, mit dem Benutzer\n"
+"``bugmail@mein-projekt.org`` und Password ``plugh``. Die Archive, deren\n"
+"Änderungen dort kommentiert werden, sind in ``/var/local/hg/repos/``,\n"
+"mit einem Web-Interface auf ``http://mein-projekt.org/hg``. Die Kommentare\n"
+"werden an die Emailadresse ``bugzilla@mein-projekt.org`` gesendet. ::"
 
 msgid ""
 "    [bugzilla]\n"
@@ -823,6 +919,12 @@ msgid ""
 "with a collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
 "with a web interface at ``http://my-project.org/hg``. ::"
 msgstr ""
+"MySQL Beispielkonfiguration. Bugzilla 3.2 ist lokal in ``/opt/bugzilla-3.2``\n"
+"installiert. Die MySQL Datenbank wird per ``localhost`` angesprochen,\n"
+"der Name der Bugzilla Datenbank ist ``bugs`` und der MySQL Zugriff ist für\n"
+"enutzer ``bugs`` mit Password ``XYZZY`` erlaubt. Die Archive, deren\n"
+"Änderungen dort kommentiert werden, sind in ``/var/local/hg/repos/``,\n"
+"mit einem Web-Interface auf ``http://mein-projekt.org/hg``. ::"
 
 msgid ""
 "    [bugzilla]\n"
@@ -899,7 +1001,7 @@ msgid "bugzilla notify command %s"
 msgstr "Fehler beim 'notify'-Befehl: %s"
 
 msgid "done\n"
-msgstr "erledigt\n"
+msgstr "fertig\n"
 
 #, python-format
 msgid "looking up user %s\n"
@@ -968,7 +1070,7 @@ msgid "REV"
 msgstr "REV"
 
 msgid "show children of the specified revision"
-msgstr "Zeigt die Kinder der übergebenen Revision"
+msgstr "Zeigt die Kinder der gegebenen Revision"
 
 msgid "hg children [-r REV] [FILE]"
 msgstr "hg children [-r REV] [DATEI]"
@@ -978,7 +1080,7 @@ msgstr "Zeigt Statistiken über die Projekthistorie"
 
 #, python-format
 msgid "Revision %d is a merge, ignoring...\n"
-msgstr "Revision %d ist eine Zusammenführung, wird ignoriert...\n"
+msgstr "Revision %d ist eine Zusammenführung. Ignoriere...\n"
 
 msgid "analyzing"
 msgstr "Analysiere"
@@ -1131,7 +1233,8 @@ msgstr ""
 "Effekte durch die ECMA-48 SGR Funktionen (ANSI Escape Codes) realisiert."
 
 msgid "Default effects may be overridden from your configuration file::"
-msgstr "Standardeffekte können durch die .hgrc-Datei verändert werden::"
+msgstr ""
+"Standardeffekte können durch die Konfigurationsdatei verändert werden::"
 
 msgid ""
 "  [color]\n"
@@ -1214,6 +1317,8 @@ msgid ""
 "  tags.normal = green\n"
 "  tags.local = black bold"
 msgstr ""
+"  tags.normal = green\n"
+"  tags.local = black bold"
 
 msgid ""
 "The available effects in terminfo mode are 'blink', 'bold', 'dim',\n"
@@ -1223,6 +1328,13 @@ msgid ""
 "Some may not be available for a given terminal type, and will be\n"
 "silently ignored."
 msgstr ""
+"Die verfügbaren Effekte im terminfo-Modus sind 'blink' (blinkend), 'bold'\n"
+"(fettgeschrieben), 'dim' (gedämmt), 'inverse' (Vorder- und Hintergrund\n"
+"getauscht), 'italic' (Schrägschrift), 'standout' (hervorstehend) und\n"
+"'underline' (unterstrichen); im ECMA-48 Modus nur 'bold', 'inverse',\n"
+"'italic' und 'underline'. Wie dies tatsächlich aussieht, hängt vom Terminal-\n"
+"emulator ab. Effekte, die nicht realisiert werden können, werden ohne\n"
+"Warnung ignoriert."
 
 msgid ""
 "Note that on some systems, terminfo mode may cause problems when using\n"
@@ -1233,18 +1345,28 @@ msgid ""
 "pass through all terminal control codes, not just color control\n"
 "codes)."
 msgstr ""
+"Beachten Sie, dass terminfo-Farben in Verbindung mit der pager-Erweiterung\n"
+"und 'less -R' zu Problemen führen kann. 'less' wird mit der -R Option nur\n"
+"ECMA-48 Farbcodes anzeigen und der terminfo-Modus sendet manchmal Werte,\n"
+"die 'less' nicht versteht. Eine Abhilfe ist der ansi (oder auto) -Modus\n"
+"oder 'less -r', was alle Terminalkodes unverändert durchleitet."
 
 msgid ""
 "Because there are only eight standard colors, this module allows you\n"
 "to define color names for other color slots which might be available\n"
 "for your terminal type, assuming terminfo mode.  For instance::"
 msgstr ""
+"Dieses Modul erlaubt im terminfo-Modus die Definition neuer Farben für\n"
+"die Plätze oberhalb der acht Standardfarben. Zum Beispiel::"
 
 msgid ""
 "  color.brightblue = 12\n"
 "  color.pink = 207\n"
 "  color.orange = 202"
 msgstr ""
+"  color.brightblue = 12\n"
+"  color.pink = 207\n"
+"  color.orange = 202"
 
 msgid ""
 "to set 'brightblue' to color slot 12 (useful for 16 color terminals\n"
@@ -1253,12 +1375,21 @@ msgid ""
 "defined colors may then be used as any of the pre-defined eight,\n"
 "including appending '_background' to set the background to that color."
 msgstr ""
+"um Hellblau (brightblue) auf Platz 12 zu setzen (nützlich für 16-Farben-\n"
+"Terminale, die in den oberen acht Plätzen die helleren Farben setzen) und\n"
+"Rosa und Orange auf ihre Plätze im Standard-Farbwürfel eines 256-Farben\n"
+"XTerms. Diese Farben können nun genau wie die vordefinierten Acht verwendet\n"
+"werden, auch als Hintergrundfarbe durch Anhängen von '_background'."
 
 msgid ""
 "By default, the color extension will use ANSI mode (or win32 mode on\n"
 "Windows) if it detects a terminal. To override auto mode (to enable\n"
 "terminfo mode, for example), set the following configuration option::"
 msgstr ""
+"Standardmäßig wird die Fareberweiterung den ANSI-Modus (bzw. win32-Modus\n"
+"auf Windows) verwenden, falls ein Terminal gefunden wird (also keine\n"
+"Umleitung in eine Datei). Um den auto-Modus zu überschreiben (z.B. mit dem\n"
+"terminfo-Modus), muss die folgende Konfigurationsoption gesetzt werden::"
 
 msgid ""
 "  [color]\n"
@@ -1276,10 +1407,12 @@ msgstr ""
 
 msgid "no terminfo entry for setab/setaf: reverting to ECMA-48 color\n"
 msgstr ""
+"Kein terminfo-Eintrag für setab/setaf: Falle auf ECMA-48 zurück\n"
 
 #, python-format
 msgid "warning: failed to set color mode to %s\n"
 msgstr ""
+"Warnung: Konnte Farbmodus nicht auf %s setzen\n"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
@@ -1395,9 +1528,9 @@ msgid ""
 "    text file that maps each source commit ID to the destination ID\n"
 "    for that revision, like so::"
 msgstr ""
-"    Wenn <REVMAP> nicht gegeben ist, wird es in einer standardisierten\n"
-"    Stelle (standardmäßig <dest>/.hg/shamap) abgelegt. Die <REVMAP> ist\n"
-"    eine einfache Textdatei, die die IDs aus dem Quellarchiv mit denen\n"
+"    Wenn ``REVMAP`` nicht gegeben ist, wird es in einer standardisierten\n"
+"    Stelle (standardmäßig ``<dest>/.hg/shamap``) abgelegt. Die ``REVMAP``\n"
+"    ist eine einfache Textdatei, die die IDs aus dem Quellarchiv mit denen\n"
 "    aus dem Zielarchiv verknüpft. Das Format ist::"
 
 msgid "      <source ID> <destination ID>"
@@ -1428,7 +1561,7 @@ msgstr "      Quellautor = Zielautor"
 
 msgid "    Empty lines and lines starting with a ``#`` are ignored."
 msgstr ""
-"    Leere Zeilen werden ignoriert, ebenso Zeilen, die mit ``#`` beginnen."
+"    Leere Zeilen und Zeilen, die mit ``#`` beginnen, werden ignoriert."
 
 msgid ""
 "    The filemap is a file that allows filtering and remapping of files\n"
@@ -1554,7 +1687,7 @@ msgid ""
 "    ''''''''''''''''"
 msgstr ""
 "    Mercurial als Quelle\n"
-"    --------------------"
+"    ''''''''''''''''''''"
 
 msgid ""
 "    The Mercurial source recognizes the following configuration\n"
@@ -1594,7 +1727,7 @@ msgid ""
 "    ''''''''''"
 msgstr ""
 "    CVS als Quelle\n"
-"    --------------"
+"    ''''''''''''''"
 
 msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
@@ -1707,7 +1840,7 @@ msgid ""
 "    '''''''''''''''''"
 msgstr ""
 "    Subversion als Quelle\n"
-"    ---------------------"
+"    '''''''''''''''''''''"
 
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
@@ -1778,7 +1911,7 @@ msgid ""
 "    '''''''''''''''"
 msgstr ""
 "    Perforce als Quelle\n"
-"    -------------------"
+"    '''''''''''''''''''"
 
 msgid ""
 "    The Perforce (P4) importer can be given a p4 depot path or a\n"
@@ -1813,8 +1946,8 @@ msgid ""
 "    Mercurial Destination\n"
 "    '''''''''''''''''''''"
 msgstr ""
-"    Mercurial Ziel\n"
-"    ''''''''''''''"
+"    Mercurial als Ziel\n"
+"    ''''''''''''''''''"
 
 msgid "    The following options are supported:"
 msgstr "    Die folgenden Optionen werden unterstützt:"
@@ -1935,13 +2068,13 @@ msgid "hg debugcvsps [OPTION]... [PATH]..."
 msgstr "hg debugcvsps [OPTION]... [PATH]..."
 
 msgid ":svnrev: String. Converted subversion revision number."
-msgstr ""
+msgstr ":svnrev: Zeichenkette. Die konvertierte subversion-Revisionsnummer."
 
 msgid ":svnpath: String. Converted subversion revision project path."
-msgstr ""
+msgstr ":svnpath: Zeichenkette. Der konvertierte subversion-Projektpfad."
 
 msgid ":svnuuid: String. Converted subversion revision repository identifier."
-msgstr ""
+msgstr ":svnuuid: Zeichenkette. Der konvertierte subversion-Archivbezeichner."
 
 #, python-format
 msgid "%s does not look like a Bazaar repository"
@@ -2279,7 +2412,7 @@ msgid "filtering out empty revision\n"
 msgstr "Filtere leere Revision aus\n"
 
 msgid "updating tags\n"
-msgstr "Aktualisiere Tags\n"
+msgstr "Aktualisiere Etiketten\n"
 
 msgid "updating bookmarks\n"
 msgstr "Aktualisiere Lesezeichen\n"
@@ -2297,36 +2430,37 @@ msgid "%s does not look like a monotone repository"
 msgstr "%s scheint kein monotone-Archiv zu sein"
 
 msgid "bad mtn packet - no end of commandnbr"
-msgstr ""
+msgstr "Fehlerhaftes mtn-Paket - Ende von commandnbr nicht gefunden"
 
 #, python-format
 msgid "bad mtn packet - bad stream type %s"
-msgstr ""
+msgstr "Fehlerhaftes mtn-Paket - Falscher Stromtyp %s"
 
 msgid "bad mtn packet - no divider before size"
-msgstr ""
+msgstr "Fehlerhaftes mtn-Paket - Kein Teiler vor der Größenangabe"
 
 msgid "bad mtn packet - no end of packet size"
-msgstr ""
+msgstr "Fehlerhaftes mtn-Paket - Ende der Größenangabe nicht gefunden"
 
 #, python-format
 msgid "bad mtn packet - bad packet size %s"
-msgstr ""
+msgstr "Fehlerhaftes mtn-Paket - Ungültige Größenangabe %s"
 
 #, python-format
 msgid "bad mtn packet - unable to read full packet read %s of %s"
 msgstr ""
+"Fehlerhaftes mtn-Paket - Konnte Paket %s von %s nicht vollständig auslesen"
 
 #, python-format
 msgid "mtn command '%s' returned %s"
-msgstr "mtn Befehl '%s' fehlgeschlagen: %s"
+msgstr "mtn Befehl '%s' gab %s zurück"
 
 #, python-format
 msgid "copying file in renamed directory from '%s' to '%s'"
 msgstr "Kopiere Dateien in unbenanntem Verzeichnis von '%s' nach '%s'"
 
 msgid "unable to determine mtn automate interface version"
-msgstr ""
+msgstr "Konnte die Version der mtn automate-Schnittstelle nicht herausfinden"
 
 #, python-format
 msgid "mtn automate stdio header unexpected: %s"
@@ -2363,7 +2497,7 @@ msgid "%s does not look like a Subversion repository"
 msgstr "%s scheint kein Subversion-Archiv zu sein"
 
 msgid "Could not load Subversion python bindings"
-msgstr ""
+msgstr "Subversion Python-API konnte nicht geladen werden"
 
 #, python-format
 msgid "Subversion python bindings %d.%d found, 1.4 or later required"
@@ -2578,7 +2712,7 @@ msgid ""
 msgstr ""
 "- ``eol.native`` (Standard ist ``os.linesep``) kann auf ``LF`` oder\n"
 "  ``CRLF`` gesetzt werden, um die Interpretation von ``native`` beim\n"
-"  Auschecken zu überschreiben. Dies kann mit :hg:``archive`` unter Unix\n"
+"  Aktualisieren zu überschreiben. Dies kann mit :hg:``archive`` unter Unix\n"
 "  verwendet werden, um bspw. ein Archiv zu erzeugen, in dem alle Dateien\n"
 "  Windows-Zeilenumbrüche haben."
 
@@ -2632,9 +2766,9 @@ msgstr ""
 "worden: ``eol.checkheadshook``. Der Hook liest die erwarteten Zeilenenden\n"
 "aus der ``.hgeol`` Datei aus, daher muss zuerst eine ``.hgeol`` Datei\n"
 "anlegen werden, bevor Sie den Hook verwenden können. Er werden nur\n"
-"Kopfversionen geprüft, intermediäre ungültige Revisionen werden übertragen.\n"
-"Um dies vollständig zu verbieten, kann der ``eol.checkallhook`` verwendet\n"
-"werden. Diese eignen sich am besten für ``pretxnchangegroup`` Hooks."
+"Kopfversionen geprüft; intermediäre Revisionen mit ungültigen Zeilenenden\n"
+"werden übertragen. Um auch dies zu verbieten, kann der ``eol.checkallhook``\n"
+"verwendet werden. Sie eignen sich am besten für ``pretxnchangegroup`` Hooks."
 
 msgid ""
 "See :hg:`help patterns` for more information about the glob patterns\n"
@@ -2649,14 +2783,14 @@ msgstr "Ignoriere unbekannten EOL-Stil '%s' aus '%s'\n"
 
 #, python-format
 msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
-msgstr ""
+msgstr "Warning: Ignoriere .hgeol Datei wegen eines Parserfehlers bei %s: %s\n"
 
 #, python-format
 msgid "  %s in %s should not have %s line endings"
 msgstr "  %s in %s sollte keine %s-Zeilenumbrüche haben"
 
 msgid "end-of-line check failed:\n"
-msgstr ""
+msgstr "Zeilende-Prüfung fehlgeschlagen:\n"
 
 msgid "the eol extension is incompatible with the win32text extension\n"
 msgstr "Die eol-Erweiterung ist inkompatibel mit der win32text-Erweiterung.\n"
@@ -2874,12 +3008,12 @@ msgstr "hg %s [OPTION]... [DATEI]..."
 
 msgid "pull, update and merge in one command"
 msgstr ""
-"Holen, Aktualisieren und Zusammenführen in einem Befehl zusammengefasst"
+"Abrufen, Aktualisieren und Zusammenführen in einem Befehl zusammengefasst"
 
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr ""
-"Holt Änderungen aus einem entfernten Projektarchiv, führt neue Änderungen "
-"zusammen wenn nötig."
+"Ruft Änderungen aus einem entfernten Projektarchiv ab und führt sie, falls "
+"nötig, zusammen."
 
 msgid ""
 "    This finds all changes from the repository at the specified path\n"
@@ -2894,11 +3028,10 @@ msgid ""
 "    Otherwise, the working directory is updated to include the new\n"
 "    changes."
 msgstr ""
-"    Wenn die geholten Änderungen einen neuen Zweigkopf erzeugen, wird "
-"dieser\n"
-"    Kopf automatisch zusammengeführt, und das Resultat der Zusammenführung\n"
-"    wird eine neue Version. Andernfalls wird das Arbeitsverzeichnis mit den\n"
-"    geholten Änderungen aktualisiert."
+"    Wenn die abgerufenen Änderungen einen neuen Zweigkopf erzeugen, wird\n"
+"    dieser Kopf automatisch zusammengeführt und das Resultat als neue\n"
+"    Revision übernommen. Andernfalls wird das Arbeitsverzeichnis mit den\n"
+"    neue Änderungen aktualisiert."
 
 msgid ""
 "    When a merge occurs, the newly pulled changes are assumed to be\n"
@@ -2926,8 +3059,8 @@ msgstr ""
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
-"Arbeitsverzeichnis ist nicht Spitze (tip) des Zweiges (nutze 'hg update' um\n"
-"auf die Zweigspitze zu wechseln)"
+"Arbeitsverzeichnis ist nicht Spitze des Zweiges (nutze :hg:`update` um auf\n"
+"die Zweigspitze zu wechseln)"
 
 msgid "outstanding uncommitted merge"
 msgstr "Ausstehende nicht versionierte Zusammenführung"
@@ -2947,7 +3080,7 @@ msgstr ""
 
 #, python-format
 msgid "pulling from %s\n"
-msgstr "Hole von %s\n"
+msgstr "Rufe von %s ab\n"
 
 msgid ""
 "Other repository doesn't support revision lookup, so a rev cannot be "
@@ -3134,7 +3267,7 @@ msgstr "Zeigt die Revisionshistorie zusammen mit einem ASCII Revisionsgraphen"
 msgid ""
 "    Print a revision history alongside a revision graph drawn with\n"
 "    ASCII characters."
-msgstr "    Zeigt die Revisionshistorie und zusammen mit einem ASCII-Graphen."
+msgstr "    Zeigt die Revisionshistorie und einen ASCII-Graphen an."
 
 msgid ""
 "    Nodes printed as an @ character are parents of the working\n"
@@ -3204,7 +3337,7 @@ msgstr ""
 "  #url = http://cia.vc/\n"
 "  # Nachrichten ausgeben statt sie zu senden (optional)\n"
 "  #test = False\n"
-"  # Anzahl von Schrägstrichen, die von URL-Pfaden entfernt werden sollen\n"
+"  # Anzahl von Verzeichnissen, die von URL-Pfaden entfernt werden sollen\n"
 "  #strip = 0"
 
 msgid ""
@@ -3303,7 +3436,7 @@ msgstr ""
 "auszuführen.\n"
 
 msgid "diff trees from two commits"
-msgstr "Vergleicht (Teil)bäume von zwei Commits"
+msgstr "Vergleicht (Teil)bäume von zwei Revisionen"
 
 msgid "output common ancestor information"
 msgstr "gibt Informationen über gemeinsame Vorfahren aus"
@@ -3527,7 +3660,7 @@ msgstr "%s-Ereignis: %s geändert\n"
 
 #, python-format
 msgid "filesystem containing %s was unmounted\n"
-msgstr "Dateisystem, das %s enthielt, wurde ausgehangen\n"
+msgstr "Dateisystem, das %s enthielt, wurde ausgehängt\n"
 
 #, python-format
 msgid "%s readable: %d bytes\n"
@@ -3535,7 +3668,7 @@ msgstr "%s lesbar: %d Bytes\n"
 
 #, python-format
 msgid "%s below threshold - unhooking\n"
-msgstr "%s unterhalb der Grenze - aushängen\n"
+msgstr "%s unterhalb der Grenze - hänge aus\n"
 
 #, python-format
 msgid "%s reading %d events\n"
@@ -3965,6 +4098,16 @@ msgid ""
 "somewhere, and you only fetch the revisions that you need when you\n"
 "need them."
 msgstr ""
+"Grosse Binärdateien sind für gewöhnlich schlecht komprimierbar, Änderungen\n"
+"können nicht verständlich angezeigt werden und automatische Zusammenführung\n"
+"ist unmöglich. Derartige Dateien können von Mercurials Speicherformat\n"
+"'revlog' nicht effizient gehandhabt werden, da es auf komprimierten bin-\n"
+"deltas basiert. Grosse Binärdateien als reguläre Dateien zu versionieren\n"
+"verschwendet Bandbreite, Speicherplatz und erhöht den Hauptspeicher-\n"
+"verbrauch. Die Erweiterung 'largefiles' versucht dies einzudämmen, indem\n"
+"sie ein zusätzliches *zentrales Lager* für diese Binärriesen (irgendwo\n"
+"im Netzwerk) einrichtet. Für jede Arbeitskopie werden dann nur die\n"
+"benötigten Revisionen abgerufen."
 
 msgid ""
 "largefiles works by maintaining a \"standin file\" in .hglf/ for each\n"
@@ -3976,17 +4119,30 @@ msgid ""
 "bandwidth, since you don't need to retrieve all historical revisions\n"
 "of large files when you clone or pull."
 msgstr ""
+"Dies funktioniert, indem für jeden Binärriesen ein kleiner Stellvertreter\n"
+"in .hglf/ regulär von Mercurial überwacht wird. Diese Dateien enthalten\n"
+"nur 41 Bytes: eine SHA-1 Prüfsumme und ein Zeilenumsprung. Die Revision\n"
+"der Binärdatei wird durch die Prüfsumme identifiziert, so dass die\n"
+"eigentliche Datei von der Erweiterung aus dem zentralen Lager abgerufen\n"
+"bzw. hinein übertragen werden kann. Damit wird sowohl Speicherplatz als\n"
+"auch Bandbreite gespart, da clone- and pull-Operationen nicht die ganze\n"
+"Historie der Änderungen übertragen müssen."
 
 msgid ""
 "To start a new repository or add new large binary files, just add\n"
 "--large to your :hg:`add` command. For example::"
 msgstr ""
+"Um ein neues Archiv zu starten, oder einen neuen Binärriesen hinzuzufügen,\n"
+"wird einfach :hg:`add --large` angegeben. Zum Beispiel::"
 
 msgid ""
 "  $ dd if=/dev/urandom of=randomdata count=2000\n"
 "  $ hg add --large randomdata\n"
 "  $ hg commit -m 'add randomdata as a largefile'"
 msgstr ""
+"  $ dd if=/dev/urandom of=binaerchaos count=2000\n"
+"  $ hg add --large binaerchaos\n"
+"  $ hg commit -m 'Füge binaerchaos als Binärriese hinzu'"
 
 msgid ""
 "When you push a changeset that adds/modifies largefiles to a remote\n"
@@ -3994,6 +4150,10 @@ msgid ""
 "Note that the remote Mercurial must also have the largefiles extension\n"
 "enabled for this to work."
 msgstr ""
+"Wird ein Änderungssatz, welcher einen Binärriesen ändert oder hinzufügt,\n"
+"in ein entferntes Archiv übertragen, so werden auch die Revisionen der\n"
+"Binärdatei übertragen. Das entfernte Mercurial muss hierfür die\n"
+"largefiles-Erweiterung unterstützen."
 
 msgid ""
 "When you pull a changeset that affects largefiles from a remote\n"
@@ -4003,6 +4163,14 @@ msgid ""
 "that network access may be required to update to changesets you have\n"
 "not previously updated to."
 msgstr ""
+"Wird ein Änderungssatz, der Binärriesen betrifft, von einem entfernten\n"
+"Archiv abgerufen, verhält sich Mercurial zunächst normal. Erst wenn das\n"
+"Arbeitsverzeichnis auf eine Revision aktualisiert wird, die eine solche\n"
+"Datei enthält, wird die Binärdatei heruntergeladen. Durch permanente\n"
+"Zwischenspeicherung jeder Revision wird wiederholtes Herunterladen "
+"verhindert.\n"
+"Das bedeutet allerdings, dass zum Zeitpunkt der Aktualisierung auf eine\n"
+"bisher unbekannte Revision, Netzwerkzugriff möglich sein muss."
 
 msgid ""
 "If you already have large files tracked by Mercurial without the\n"
@@ -4010,9 +4178,12 @@ msgid ""
 "order to benefit from largefiles. This is done with the\n"
 ":hg:`lfconvert` command::"
 msgstr ""
+"Falls ein Archiv bereits grosse Binärdateien regulär (ohne die Erweiterung)\n"
+"versioniert, muss es zunächst konvertiert werden, um die Vorteile von\n"
+"largefiles zu nutzen. Dies geschieht duch den :hg:`lfconvert` Befehl."
 
 msgid "  $ hg lfconvert --size 10 oldrepo newrepo"
-msgstr ""
+msgstr "  $ hg lfconvert --size 10 altes-archiv neues-archiv"
 
 msgid ""
 "In repositories that already have largefiles in them, any new file\n"
@@ -4021,20 +4192,29 @@ msgid ""
 "to the minimum size in megabytes to track as a largefile, or use the\n"
 "--lfsize option to the add command (also in megabytes)::"
 msgstr ""
+"Ein derart konvertiertes Archiv wird neue Dateien, die über 10MB gross sind\n"
+"automatisch als Binärriesen handhaben. Diese Grenze kann entweder mit\n"
+"``largefiles.minsize`` in der Konfigurationsdatei oder der --lfsize Option\n"
+"des 'add'-Befehls geändert werden (Angabe in MB)::"
 
 msgid ""
 "  [largefiles]\n"
 "  minsize = 2"
 msgstr ""
+"  [largefiles]\n"
+"  minsize = 2"
 
 msgid "  $ hg add --lfsize 2"
-msgstr ""
+msgstr "  $ hg add --lfsize 2"
 
 msgid ""
 "The ``largefiles.patterns`` config option allows you to specify a list\n"
 "of filename patterns (see :hg:`help patterns`) that should always be\n"
 "tracked as largefiles::"
 msgstr ""
+"Mit der Konfigurationsoption ``largefiles.patterns`` kann man Dateimuster\n"
+"angeben (siehe :hg:`help patterns`), die bestimmen, welche Dateien als\n"
+"Binärriesen gehandhabt werden sollen::"
 
 msgid ""
 "  [largefiles]\n"
@@ -4044,14 +4224,22 @@ msgid ""
 "    library.zip\n"
 "    content/audio/*"
 msgstr ""
+"  [largefiles]\n"
+"  patterns =\n"
+"    *.jpg\n"
+"    re:.*\\.(png|bmp)$\n"
+"    library.zip\n"
+"    content/audio/*"
 
 msgid ""
 "Files that match one of these patterns will be added as largefiles\n"
 "regardless of their size.\n"
 msgstr ""
+"Dateien, die auf ein solches Muster passen, werden unabhängig von ihrer\n"
+"Größe als Binärriesen hinzugefügt.\n"
 
 msgid "convert a normal repository to a largefiles repository"
-msgstr "Konvertiert ein normales Archiv in ein Archiv mit grossen Dateien."
+msgstr "Konvertiert ein normales Archiv in ein Archiv mit Binärriesen"
 
 msgid ""
 "    Convert repository SOURCE to a new repository DEST, identical to\n"
@@ -4063,48 +4251,61 @@ msgid ""
 "    minimum size can be specified either with --size or in\n"
 "    configuration as ``largefiles.size``."
 msgstr ""
+"    Konvertiert das Archiv QUELLE in ein neues Archiv ZIEL, welches sich\n"
+"    nur dadurch unterscheidet, dass gewisse Dateien als Binärriesen\n"
+"    behandlet werden. Genauer sind es die, die auf ein MUSTER passen,\n"
+"    *oder* deren Größe die konfigurierte Grenze überschreitet. Die Größe,\n"
+"    welche zur Entscheidung verwendet wird, ist die zur Zeit des ersten\n"
+"    Hinzufügens der Datei (ob die Datei in späteren Revisionen größer wird\n"
+"    wird nicht geprüft). Der Grenzwert wird mit --size oder dem\n"
+"    Konfigurationseintrag ``largefiles.size`` (je in MB) definiert."
 
 msgid ""
 "    After running this command you will need to make sure that\n"
 "    largefiles is enabled anywhere you intend to push the new\n"
 "    repository."
 msgstr ""
+"    Nach der Ausführung dieses Befehls muss sichergestellt werden, dass die\n"
+"    Erweiterung largefiles in allen entfernten Archiven, mit denen die\n"
+"    Änderungen synchonisiert werden, aktiv ist."
 
 msgid ""
 "    Use --to-normal to convert largefiles back to normal files; after\n"
 "    this, the DEST repository can be used without largefiles at all."
 msgstr ""
+"    Verwende --to-normal um die Konversion in Binärriesen rückgängig zu\n"
+"    machen. Danach kann ZIEL völlig ohne Binärriesen verwendet werden."
 
 msgid "getting largefiles"
-msgstr ""
+msgstr "Hole Binärriesen"
 
 #, python-format
 msgid "getting %s:%s\n"
-msgstr ""
+msgstr "Hole %s:%s\n"
 
 #, python-format
 msgid "%s: data corruption (expected %s, got %s)\n"
-msgstr ""
+msgstr "%s: Beschädigte Daten (erwartete %s, erhielt %s)\n"
 
 #, python-format
 msgid "searching %d changesets for largefiles\n"
-msgstr ""
+msgstr "Durchsuche %d Änderungssätze nach Binärriesen\n"
 
 #, python-format
 msgid "verified contents of %d revisions of %d largefiles\n"
-msgstr ""
+msgstr "Inhalt von %d Revisionen von %d Binärriesen verifiziert\n"
 
 #, python-format
 msgid "verified existence of %d revisions of %d largefiles\n"
-msgstr ""
+msgstr "Existenz von %d Revisionen von %d Binärriesen verifiziert\n"
 
 #, python-format
 msgid "unsupported URL scheme %r"
-msgstr ""
+msgstr "Nicht unterstütztes URL-Schema %r"
 
 #, python-format
 msgid "%s does not appear to be a largefile store"
-msgstr ""
+msgstr "%s scheint kein Lager für Binärriesen zu sein"
 
 #, python-format
 msgid "%s is not a local Mercurial repo"
@@ -4112,48 +4313,49 @@ msgstr "%s ist kein lokales Mercurial-Projektarchiv"
 
 #, python-format
 msgid "initializing destination %s\n"
-msgstr ""
+msgstr "Initialisiere Ziel %s\n"
 
 msgid "converting revisions"
-msgstr ""
+msgstr "Konvertiere Revisionen"
 
 #, python-format
 msgid "renamed/copied largefile %s becomes symlink"
-msgstr ""
+msgstr "Umbenannter/kopierter Binärriese %s wird ein symbolischer Verweis"
 
 #, python-format
 msgid "largefile %s becomes symlink"
-msgstr ""
+msgstr "Binärriese %s wird ein symbolischer Verweis"
 
 msgid "uploading largefiles"
-msgstr ""
+msgstr "Lade Binärriesen hoch"
 
 #, python-format
 msgid "largefile %s missing from store (needs to be uploaded)"
-msgstr ""
+msgstr "Binärriese %s fehlt im Lager (muss hochgeladen werden)"
 
 msgid "getting changed largefiles\n"
-msgstr ""
+msgstr "Lade veränderte Binärriesen herunter\n"
 
 #, python-format
 msgid "%d largefiles updated, %d removed\n"
-msgstr ""
+msgstr "%d Binärriesen verändert, %d entfernt\n"
 
 msgid "minimum size (MB) for files to be converted as largefiles"
 msgstr ""
+"Minimale Dateigröße in MB von Dateien, die in Binärriesen konvertiert werden"
 
 msgid "convert from a largefiles repo to a normal repo"
-msgstr ""
+msgstr "Konvertiert ein Binärriesen-Archiv in ein reguläres Archiv"
 
 msgid "hg lfconvert SOURCE DEST [FILE ...]"
-msgstr ""
+msgstr "hg lfconvert QUELLE ZIEL [DATEI ...]"
 
 #, python-format
 msgid "largefiles: size must be number (not %s)\n"
-msgstr ""
+msgstr "largefiles: Dateigröße muss eine Zahl sein (nicht %s)\n"
 
 msgid "minimum size for largefiles must be specified"
-msgstr ""
+msgstr "Grenzgröße für Binärriesen muss angegeben werden"
 
 #, python-format
 msgid "unknown operating system: %s\n"
@@ -4161,24 +4363,26 @@ msgstr "Unbekanntes Betriebssytem: %s\n"
 
 #, python-format
 msgid "Found %s in store\n"
-msgstr ""
+msgstr "%s im Lager gefunden\n"
 
 #, python-format
 msgid "Found %s in system cache\n"
-msgstr ""
+msgstr "%s im Zwischenspeicher gefunden\n"
 
 #, python-format
 msgid "bad hash in '%s' (only %d bytes long)"
-msgstr ""
+msgstr "Prüfsummenfehler in '%s' (nur %d Bytes lang)"
 
 msgid "Can't get file locally"
-msgstr ""
+msgstr "Kann Datei nicht lokal abrufen"
 
 #, python-format
 msgid ""
 "changeset %s: %s missing\n"
 "  (looked for hash %s)\n"
 msgstr ""
+"Änderungssatz %s: %s fehlt\n"
+"  (Prüfsumme %s)\n"
 
 #, python-format
 msgid ""
@@ -4187,14 +4391,18 @@ msgid ""
 "  expected hash %s,\n"
 "  but got %s)\n"
 msgstr ""
+"Änderungssatz %s: %s: verschiedene Inhalte\n"
+"  (%s:\n"
+"  erwartete Prüfsumme %s,\n"
+"  tatsächlich %s)\n"
 
 #, python-format
 msgid "%s already a largefile\n"
-msgstr ""
+msgstr "%s ist bereits ein Binärriese\n"
 
 #, python-format
 msgid "adding %s as a largefile\n"
-msgstr ""
+msgstr "Füge %s als Binärriese hinzu\n"
 
 msgid "no files specified"
 msgstr "Keine Dateien angegeben"
@@ -4210,7 +4418,7 @@ msgid "file is modified"
 msgstr "Datei ist modifiziert"
 
 msgid "file has been marked for add"
-msgstr ""
+msgstr "Datei ist als hinzuzufügen markiert"
 
 #, python-format
 msgid "removing %s\n"
@@ -4221,26 +4429,28 @@ msgstr "Ausstehende nicht versionierte Änderungen"
 
 #, python-format
 msgid "merging %s and %s to %s\n"
-msgstr ""
+msgstr "Führe %s und %s zusammen zu %s\n"
 
 #, python-format
 msgid "merging %s\n"
-msgstr ""
+msgstr "Führe %s zusammen\n"
 
 #, python-format
 msgid ""
 "largefile %s has a merge conflict\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
+"Zusammenführung führt zu Konflikt im Binärriesen %s\n"
+"(l)okale Version, oder (a)ndere verwenden?"
 
 msgid "&Local"
-msgstr ""
+msgstr "&Lokal"
 
 msgid "&Other"
-msgstr ""
+msgstr "&Andere"
 
 msgid "destination largefile already exists"
-msgstr ""
+msgstr "Ziel-Binärriese existiert bereits"
 
 msgid "no files to copy"
 msgstr "Keine Dateien zu kopieren"
@@ -4257,91 +4467,94 @@ msgid "not removing %s: file is already untracked\n"
 msgstr "Entferne %s nicht: Datei ist nicht versioniert\n"
 
 msgid "largefiles: No remote repo\n"
-msgstr ""
+msgstr "largefiles: Kein entferntes Archiv\n"
 
 msgid "largefiles to upload:\n"
-msgstr ""
+msgstr "Hochzuladende Binärriesen:\n"
 
 #, python-format
 msgid "largefiles: %d to upload\n"
-msgstr ""
+msgstr "largefiles: %d hochzuladen\n"
 
 msgid "addremove cannot be run on a repo with largefiles"
 msgstr ""
+"'addremove' kann nicht auf ein Archiv mit Binärriesen angewendet werden"
 
 #, python-format
 msgid "largefiles: failed to put %s (%s) into store: %s"
-msgstr ""
+msgstr "largefiles: Konnte %s (%s) nicht in einlagern: %s"
 
 #, python-format
 msgid "requested largefile %s not present in cache"
-msgstr ""
+msgstr "Angeforderer Binärriese %s ist nicht im Zwischenspeicher"
 
 msgid "putlfile failed:"
-msgstr ""
+msgstr "putlfile fehlgeschlagen:"
 
 msgid "putlfile failed (unexpected response):"
-msgstr ""
+msgstr "putlfile fehlgeschlagen (unerwartete Anwort):"
 
 msgid "unexpected response:"
 msgstr "Unerwartete Antwort:"
 
 #, python-format
 msgid "remotestore: could not put %s to remote store %s"
-msgstr ""
+msgstr "remotestore: Konnte %s nicht ins entfernte Lager %s packen"
 
 #, python-format
 msgid "remotestore: put %s to remote store %s"
-msgstr ""
+msgstr "remotestore: %s ins entfernte Lager %s gepackt"
 
 #, python-format
 msgid "remotestore: could not open file %s: %s"
-msgstr ""
+msgstr "remotestore: Konnte Datei %s nicht öffnen: %s"
 
 #, python-format
 msgid "remotestore: largefile %s is invalid"
-msgstr ""
+msgstr "remotestore: Binärriese %s ist ungültig"
 
 #, python-format
 msgid "remotestore: largefile %s is missing"
-msgstr ""
+msgstr "remotestore: Binärriese %s fehlt"
 
 #, python-format
 msgid "changeset %s: %s: contents differ\n"
-msgstr ""
+msgstr "Änderungssatz %s: %s: Unterschiedliche Inhalte\n"
 
 #, python-format
 msgid "changeset %s: %s missing\n"
-msgstr ""
+msgstr "Änderungssatz %s: %s fehlt\n"
 
 #, python-format
 msgid ""
 "largefiles: repo method %r appears to have already been wrapped by another "
 "extension: largefiles may behave incorrectly\n"
 msgstr ""
+"largefiles: Aktion %r scheint bereits von einer anderen Erweiterung verändert zu sein. Dadurch kann es zu Fehlern in largefiles kommen\n"
 
 #, python-format
 msgid "file \"%s\" is a largefile standin"
-msgstr ""
+msgstr "Datei  \"%s\" ist Stellvertreter für einen Binärriesen"
 
 msgid "add as largefile"
-msgstr ""
+msgstr "Füge als Binärriese hinzu"
 
 msgid ""
 "add all files above this size (in megabytes) as largefiles (default: 10)"
 msgstr ""
+"Größe in MB ab der Dateien als Binärriesen hinzugefügt werden (Standard: 10)"
 
 msgid "verify largefiles"
-msgstr ""
+msgstr "Verifiziere Binärriesen"
 
 msgid "verify all revisions of largefiles not just current"
-msgstr ""
+msgstr "Verifiziere alle Revisionen der Binärriesen, nicht nur die aktuelle"
 
 msgid "verify largefile contents not just existence"
-msgstr ""
+msgstr "Verifiziere Inhalte der Binärriesen und nicht nur die Existenz"
 
 msgid "display outgoing largefiles"
-msgstr ""
+msgstr "Zeigt zu übertragende Binärriesen an"
 
 msgid "manage a stack of patches"
 msgstr "Verwaltet einen Stapel von Patches"
@@ -6608,7 +6821,7 @@ msgid ""
 "    hgrc. See the [email] section in hgrc(5) for details.\n"
 "    "
 msgstr ""
-"    Um dieses Kommando zu benutzen muss das Email-Versenden in der Sektion\n"
+"    Um dieses Kommando zu benutzen muss das Email-Versenden im Abschnitt\n"
 "    [email] der Konfiguration aktiviert sein. Siehe hgrc(5) für Details.\n"
 "    "
 
@@ -6947,7 +7160,7 @@ msgid ""
 "    same rebase or they will end up with duplicated changesets after\n"
 "    pulling in your rebased changesets."
 msgstr ""
-"    Sie sollten keine changesets rebasen, die auch andere bereits\n"
+"    Sie sollten keine Änderungssätze umpfropfen, die auch andere bereits\n"
 "    haben, ansonsten zwingen Sie jeden anderen die gleiche rebase-\n"
 "    Operation durchzuführen, um die verschobenen Versionen nicht\n"
 "    doppelt zu haben, wenn sie Ihre Änderungen ziehen."
@@ -6981,7 +7194,7 @@ msgstr ""
 "    Abkürzungen für ein Menge von Changesets, die topologisch\n"
 "    zusammenhängen (die \"source\" Branch). Wenn Sie source angeben\n"
 "    (``-s/--source``), rebase wird dieses Changeset und all seine\n"
-"    Descendants nach dest rebasen. Wenn Sie base angeben (``-b/--base``),\n"
+"    Descendants nach dest pfropfen. Wenn Sie base angeben (``-b/--base``),\n"
 "    rebase wird Vorgänger von base auswählen, bis zu aber nicht\n"
 "    einschließlich dem gemeinsamen Vorgänger mit dest. Es ist also\n"
 "    ``-b`` weniger präzise, aber bequemer, als ``-s``: Sie können\n"
@@ -7264,7 +7477,8 @@ msgstr "      ? - zeigt Hilfe an"
 
 msgid "    This command is not available when committing a merge."
 msgstr ""
-"    Dieses Kommando ist nicht verfügbar, wenn Sie einen Merge committen."
+"    Dieses Kommando ist nicht verfügbar, wenn Sie einen Zusammenführung\n"
+"    übernehmen."
 
 msgid "interactively record a new patch"
 msgstr "Interaktive Aufnahme eines neuen Patches"
@@ -8197,7 +8411,7 @@ msgstr "Ausgabe weiterer Informationen"
 
 msgid "set/override config option (use 'section.name=value')"
 msgstr ""
-"Setze/Überschreibe Konfigurationsoption: %s (nutze --config Sektion."
+"Setze/Überschreibe Konfigurationsoption: %s (nutze --config Abschnitt."
 "Name=Wert)"
 
 msgid "CONFIG"
@@ -11022,6 +11236,7 @@ msgstr ""
 
 msgid "      - changesets ancestral to the working directory::"
 msgstr ""
+"      - Alle Änderungssätze, die Vorfahren des Arbeitsverzeichnisses sind"
 
 msgid "          hg log -f"
 msgstr ""
@@ -12959,7 +13174,7 @@ msgstr ""
 
 #, python-format
 msgid "malformed --config option: %r (use --config section.name=value)"
-msgstr "fehlerhafte --config Option: %s (nutze --config Sektion.Name=Wert)"
+msgstr "fehlerhafte --config Option: %s (nutze --config Abschnitt.Name=Wert)"
 
 #, python-format
 msgid "error getting current working directory: %s"
@@ -13362,8 +13577,8 @@ msgid ""
 "by ``name = value`` entries::"
 msgstr ""
 "Für die Konfigurationsdateien wird ein einfaches ini-Dateiformat verwendet.\n"
-"Die Datei enthält Sektionen (durch ``[Sektionsname]`` eingeleitet), welche\n"
-"ihrerseits Zeilen der Form ``name = wert`` enthalten::"
+"Die Datei enthält Abschnitte (durch ``[Abschnittsname]`` eingeleitet),\n"
+"welche ihrerseits Zeilen der Form ``name = wert`` enthalten::"
 
 msgid ""
 "  [ui]\n"
@@ -13489,8 +13704,8 @@ msgid ""
 "and followed by ``name = value`` entries (sometimes called\n"
 "``configuration keys``)::"
 msgstr ""
-"Die Datei enthält Sektionen (durch ``[Sektionsname]`` eingeleitet), welche\n"
-"ihrerseits Zeilen der Form ``name = wert`` enthalten (manchmal als\n"
+"Die Datei enthält Abschnitte (durch ``[Abschnittsname]`` eingeleitet),\n"
+"welche ihrerseits Zeilen der Form ``name = wert`` enthalten (manchmal als\n"
 "``Konfigurationsschlüssel`` bezeichnet)::"
 
 msgid ""
@@ -13610,8 +13825,8 @@ msgid ""
 "Sections\n"
 "--------"
 msgstr ""
-"Sektion\n"
-"-------"
+"Abschnitte\n"
+"----------"
 
 msgid ""
 "This section describes the different sections that may appear in a\n"
@@ -15407,7 +15622,7 @@ msgid ""
 msgstr ""
 "Um Mercurial dazu zu bringen, das erweiterte Git-Format zu erzeugen,\n"
 "kann man entweder den für viele Befehle verfügbaren Schalter --git\n"
-"verwenden werden oder 'git = True' in der Sektion [diff] in der\n"
+"verwenden werden oder 'git = True' im Abschnitt [diff] in der\n"
 "Konfigurationsdatei angeben. Wenn Diffs in diesem Format importiert oder\n"
 "mit der mq Erweiterung genutzt werden, muss diese Option nicht angegeben\n"
 "werden.\n"
@@ -17599,7 +17814,7 @@ msgid ""
 "These URLs can all be stored in your configuration file with path\n"
 "aliases under the [paths] section like so::"
 msgstr ""
-"Diese URLs können alle in der hgrc als Aliase unter der Sektion [paths]\n"
+"Diese URLs können alle in der hgrc als Aliase unter dem Abschnitt [paths]\n"
 "wie folgt abgelegt werden::"
 
 msgid ""
