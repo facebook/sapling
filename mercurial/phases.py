@@ -153,6 +153,7 @@ def advanceboundary(repo, targetphase, nodes):
     in the target phase or kept in a *lower* phase.
 
     Simplify boundary to contains phase roots only."""
+    delroots = [] # set of root deleted by this path
     for phase in xrange(targetphase + 1, len(allphases)):
         # filter nodes that are not in a compatible phase already
         # XXX rev phase cache might have been invalidated by a previous loop
@@ -170,6 +171,12 @@ def advanceboundary(repo, targetphase, nodes):
             if '_phaserev' in vars(repo):
                 del repo._phaserev
             repo._dirtyphases = True
+            # some roots may need to be declared for lower phases
+            delroots.extend(olds - roots)
+        # declare deleted root in the target phase
+        if targetphase != 0:
+            retractboundary(repo, targetphase, delroots)
+
 
 def retractboundary(repo, targetphase, nodes):
     """Set nodes back to a phase changing other nodes phases if necessary.
