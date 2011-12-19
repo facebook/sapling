@@ -236,6 +236,21 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
     finally:
         lock.release()
 
+def visibleheads(repo):
+    """return the set of visible head of this repo"""
+    # XXX we want a cache on this
+    sroots = repo._phaseroots[2]
+    if sroots:
+        # XXX very slow revset. storing heads or secret "boundary" would help.
+        revset = repo.set('heads(not (%ln::))', sroots)
+
+        vheads = [ctx.node() for ctx in revset]
+        if not vheads:
+            vheads.append(nullid)
+    else:
+        vheads = repo.heads()
+    return vheads
+
 def analyzeremotephases(repo, subset, roots):
     """Compute phases heads and root in a subset of node from root dict
 
