@@ -2778,11 +2778,19 @@ msgid ""
 "  Makefile = LF\n"
 "  **.jpg = BIN"
 msgstr ""
+"  [patterns]\n"
+"  **.py = native\n"
+"  **.vcproj = CRLF\n"
+"  **.txt = native\n"
+"  Makefile = LF\n"
+"  **.jpg = BIN"
 
 msgid ""
 "  [repository]\n"
 "  native = LF"
 msgstr ""
+"  [repository]\n"
+"  native = LF"
 
 msgid ""
 ".. note::\n"
@@ -2994,11 +3002,15 @@ msgid ""
 "  [extdiff]\n"
 "  kdiff3 ="
 msgstr ""
+"  [extdiff]\n"
+"  kdiff3 ="
 
 msgid ""
 "  [diff-tools]\n"
 "  kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child"
 msgstr ""
+"  [diff-tools]\n"
+"  kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child"
 
 msgid ""
 "You can use -I/-X and list of file or directory names like normal\n"
@@ -3229,10 +3241,10 @@ msgstr "%s Внимание: Срок действия подписи истек
 
 #, python-format
 msgid "%s Note: This key has expired (signed by: \"%s\")\n"
-msgstr ""
+msgstr "%s Замечание: Время действия этого ключа истекло (подписано \"%s\")\n"
 
 msgid "hg sigs"
-msgstr ""
+msgstr "hg sigs"
 
 msgid "list signed changesets"
 msgstr "перечислить подписанные наборы изменений"
@@ -3431,23 +3443,30 @@ msgid ""
 "  changegroup.cia = python:hgcia.hook\n"
 "  #incoming.cia = python:hgcia.hook"
 msgstr ""
+"  [hooks]\n"
+"  # один из этих:\n"
+"  changegroup.cia = python:hgcia.hook\n"
+"  #incoming.cia = python:hgcia.hook"
 
 msgid ""
 "  [web]\n"
 "  # If you want hyperlinks (optional)\n"
 "  baseurl = http://server/path/to/repo\n"
 msgstr ""
+"  [web]\n"
+"  # Если вам нужны гиперссылки (необязательный)\n"
+"  baseurl = http://server/path/to/repo\n"
 
 #, python-format
 msgid "%s returned an error: %s"
-msgstr ""
+msgstr "%s вернул ошибку: %s"
 
 #, python-format
 msgid "hgcia: sending update to %s\n"
-msgstr ""
+msgstr "hgcia: отправляем обновление %s\n"
 
 msgid "email.from must be defined when sending by email"
-msgstr ""
+msgstr "поле 'от' (email.from) должно быть заполнено при отправке email"
 
 msgid "browse the repository in a graphical way"
 msgstr "графический обозреватель хранилища"
@@ -3561,74 +3580,80 @@ msgid "search"
 msgstr "search"
 
 msgid "hg git-diff-tree [OPTION]... NODE1 NODE2 [FILE]..."
-msgstr ""
+msgstr "hg git-diff-tree [ПАРАМЕТР]... УЗЕЛ1 УЗЕЛ2 [ФАЙЛ]..."
 
 msgid "hg debug-cat-file [OPTION]... TYPE FILE"
-msgstr ""
+msgstr "hg debug-cat-file [ПАРАМЕТР]... ТИП ФАЙЛ"
 
 msgid "hg debug-config"
-msgstr ""
+msgstr "hg debug-config"
 
 msgid "hg debug-merge-base REV REV"
-msgstr ""
+msgstr "hg debug-merge-base РЕВИЗИЯ РЕВИЗИЯ"
 
 #. i18n: bisect changeset status
 msgid "ignored"
 msgstr "игнорируемые"
 
 msgid "hg debug-rev-parse REV"
-msgstr ""
+msgstr "hg debug-rev-parse РЕВИЗИЯ"
 
 msgid "header"
-msgstr ""
+msgstr "заголовок"
 
 msgid "topo-order"
-msgstr ""
+msgstr "топологический порядок"
 
 msgid "parents"
-msgstr ""
+msgstr "родители"
 
 msgid "max-count"
-msgstr ""
+msgstr "максимальное количество"
 
 msgid "hg debug-rev-list [OPTION]... REV..."
-msgstr ""
+msgstr "hg debug-rev-list [ПАРАМЕТР]... РЕВИЗИЯ..."
 
 msgid "syntax highlighting for hgweb (requires Pygments)"
-msgstr ""
+msgstr "подсветка синтаксиса для hgweb (требует Pygments)"
 
 msgid ""
 "It depends on the Pygments syntax highlighting library:\n"
 "http://pygments.org/"
 msgstr ""
+"Зависит от библиотеки подсветки синтаксиса Pygments:\n"
+"http://pygments.org/"
 
 msgid "There is a single configuration option::"
-msgstr ""
+msgstr "Поддерживает единственный параметр конфигурации::"
 
 msgid ""
 "  [web]\n"
 "  pygments_style = <style>"
 msgstr ""
+"  [web]\n"
+"  pygments_style = <стиль>"
 
 msgid "The default is 'colorful'.\n"
-msgstr ""
+msgstr "По умолчанию 'colorful'.\n"
 
 msgid "accelerate status report using Linux's inotify service"
-msgstr ""
+msgstr "ускоренные уведомления об изменениях с использованием Linux inotify"
 
 msgid "start an inotify server for this repository"
-msgstr ""
+msgstr "запустить сервер inotify для данного хранилища"
 
 msgid "debugging information for inotify extension"
-msgstr ""
+msgstr "отладочная информация для расширения inotify"
 
 msgid ""
 "    Prints the list of directories being watched by the inotify server.\n"
 "    "
 msgstr ""
+"    Печатает список каталогов, отслеживаемых сервером inotify.\n"
+"    "
 
 msgid "directories being watched:\n"
-msgstr ""
+msgstr "отслеживаемые каталоги:\n"
 
 msgid "run server in background"
 msgstr "запустить сервер в фоновом режиме"
@@ -3637,156 +3662,170 @@ msgid "used internally by daemon mode"
 msgstr "используется внутренней реализацией в режиме демона"
 
 msgid "minutes to sit idle before exiting"
-msgstr ""
+msgstr "количество минут неактивности перед выходом"
 
 msgid "name of file to write process ID to"
 msgstr "имя файла для записи ID процесса"
 
 msgid "hg inserve [OPTION]..."
-msgstr ""
+msgstr "hg inserve [ПАРАМЕТР]..."
 
 msgid "inotify-client: found dead inotify server socket; removing it\n"
 msgstr ""
+"inotify-client: обнаружен мертвый сокет inotify-сервера; закрываем его\n"
 
 #, python-format
 msgid "inotify-client: could not start inotify server: %s\n"
-msgstr ""
+msgstr "inotify-client: не удается запустить сервер inotify: %s\n"
 
 #, python-format
 msgid "inotify-client: could not talk to new inotify server: %s\n"
 msgstr ""
+"inotify-client: не удается наладить общение с новым сервером inotify: %s\n"
 
 #, python-format
 msgid "inotify-client: failed to contact inotify server: %s\n"
-msgstr ""
+msgstr "inotify-client: не удается соединиться с сервером inotify: %s\n"
 
 msgid "inotify-client: received empty answer from inotify server"
-msgstr ""
+msgstr "inotify-client: получен пустой ответ от сервера inotify"
 
 #, python-format
 msgid "(inotify: received response from incompatible server version %d)\n"
-msgstr ""
+msgstr "(inotify: получен ответ от сервера несовместимой версии %d)\n"
 
 #, python-format
 msgid "(inotify: received '%s' response when expecting '%s')\n"
-msgstr ""
+msgstr "(inotify: получен ответ '%s', ожидался '%s')\n"
 
 msgid "this system does not seem to support inotify"
-msgstr ""
+msgstr "ваша система, похоже, не поддерживает inotify"
 
 #, python-format
 msgid "*** the current per-user limit on the number of inotify watches is %s\n"
 msgstr ""
+"*** текущее предельное количество наблюдений inotify на одного пользователя "
+"- %s\n"
 
 msgid "*** this limit is too low to watch every directory in this repository\n"
 msgstr ""
+"*** этот предел слишком мал чтобы наблюдать за всеми каталогами этого "
+"репозитория\n"
 
 msgid "*** counting directories: "
-msgstr ""
+msgstr "*** подсчет каталогов: "
 
 #, python-format
 msgid "found %d\n"
-msgstr ""
+msgstr "найдено %d\n"
 
 #, python-format
 msgid "*** to raise the limit from %d to %d (run as root):\n"
-msgstr ""
+msgstr "*** чтобы поднять предел с %d до %d (с правами root):)\n"
 
 #, python-format
 msgid "***  echo %d > %s\n"
-msgstr ""
+msgstr "***  echo %d > %s\n"
 
 #, python-format
 msgid "cannot watch %s until inotify watch limit is raised"
-msgstr ""
+msgstr "невозможно отслеживать %s пока не будет повышен предел наблюдений"
 
 #, python-format
 msgid "inotify service not available: %s"
-msgstr ""
+msgstr "служба inotify недоступна: %s"
 
 #, python-format
 msgid "watching %r\n"
-msgstr ""
+msgstr "наблюдаем за %r\n"
 
 #, python-format
 msgid "watching directories under %r\n"
-msgstr ""
+msgstr "наблюдаем за каталогами в %r\n"
 
 #, python-format
 msgid "%s event: created %s\n"
-msgstr ""
+msgstr "%s событие: создан %s\n"
 
 #, python-format
 msgid "%s event: deleted %s\n"
-msgstr ""
+msgstr "%s событие: %s удален\n"
 
 #, python-format
 msgid "%s event: modified %s\n"
-msgstr ""
+msgstr "%s событие: %s изменен\n"
 
 #, python-format
 msgid "filesystem containing %s was unmounted\n"
-msgstr ""
+msgstr "файловая система, содержащая %s, была отмонтирована\n"
 
 #, python-format
 msgid "%s readable: %d bytes\n"
-msgstr ""
+msgstr "%s доступно для чтения: %d байт\n"
 
 #, python-format
 msgid "%s below threshold - unhooking\n"
-msgstr ""
+msgstr "%s достигнут предел - отцепляем хук\n"
 
 #, python-format
 msgid "%s reading %d events\n"
-msgstr ""
+msgstr "%s читает %d событий\n"
 
 #, python-format
 msgid "%s hooking back up with %d bytes readable\n"
-msgstr ""
+msgstr "%s присоединяем хук заново, можно прочитать %d байт\n"
 
 msgid "finished setup\n"
-msgstr ""
+msgstr "установка завершена\n"
 
 #, python-format
 msgid "status: %r %s -> %s\n"
-msgstr ""
+msgstr "состояние: %r %s -> %s\n"
 
 msgid "rescanning due to .hgignore change\n"
-msgstr ""
+msgstr "повторное сканирование из-за изменения .hgignore\n"
 
 msgid "cannot start: socket is already bound"
-msgstr ""
+msgstr "не удается запуститься: сокет уже привязан"
 
 msgid ""
 "cannot start: tried linking .hg/inotify.sock to a temporary socket but .hg/"
 "inotify.sock already exists"
 msgstr ""
+"не удается запуститься: пытались связать .hg/inotify.sock с временным "
+"сокетом,\n"
+"но .hg/inotify.sock уже существует"
 
 #, python-format
 msgid "answering query for %r\n"
-msgstr ""
+msgstr "отвечаем на запрос для %r\n"
 
 #, python-format
 msgid "received query from incompatible client version %d\n"
-msgstr ""
+msgstr "получен запрос от клиента несовместимой версии %d\n"
 
 #, python-format
 msgid "unrecognized query type: %s\n"
-msgstr ""
+msgstr "неизвестный тип запроса: %s\n"
 
 msgid "expand expressions into changelog and summaries"
-msgstr ""
+msgstr "раскрывает выражения в журнале изменений и сводках"
 
 msgid ""
 "This extension allows the use of a special syntax in summaries, which\n"
 "will be automatically expanded into links or any other arbitrary\n"
 "expression, much like InterWiki does."
 msgstr ""
+"Это расширение позволяет использовать в сводках выражения особого вида,\n"
+"которые автоматически раскрываются в ссылки или любое другое произвольное\n"
+"выражение, как это делается в InterWiki."
 
 msgid ""
 "A few example patterns (link to bug tracking, etc.) that may be used\n"
 "in your hgrc::"
 msgstr ""
+"Примеры шабловнов (ссылка на баг-трекер и т.п.), которые могут быть\n"
+"использованы в вашем hgrc::"
 
 msgid ""
 "  [interhg]\n"
@@ -3795,14 +3834,19 @@ msgid ""
 "i\n"
 "  boldify = s!(^|\\s)#(\\d+)\\b! <b>#\\2</b>!\n"
 msgstr ""
+"  [interhg]\n"
+"  issues = s!issue(\\d+)!<a href=\"http://bts/issue\\1\">issue\\1</a>!\n"
+"  bugzilla = s!((?:bug|b=|(?=#?\\d{4,}))(?:\\s*#?)(\\d+))!<a..=\\2\">\\1</a>!"
+"i\n"
+"  boldify = s!(^|\\s)#(\\d+)\\b! <b>#\\2</b>!\n"
 
 #, python-format
 msgid "interhg: invalid pattern for %s: %s\n"
-msgstr ""
+msgstr "interhg: неверный шаблон для %s: %s\n"
 
 #, python-format
 msgid "interhg: invalid regexp for %s: %s\n"
-msgstr ""
+msgstr "interhg: неверное регулярное выражение для %s: %s\n"
 
 msgid "expand keywords in tracked files"
 msgstr "выполнять подстановку ключевых слов в отслеживаемых файлах"
@@ -3889,6 +3933,9 @@ msgid ""
 ":``svnutcdate``: \"2006-09-18 15:13:13Z\"\n"
 ":``svnisodate``: \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
 msgstr ""
+":``utcdate``:    \"2006/09/18 15:13:13\"\n"
+":``svnutcdate``: \"2006-09-18 15:13:13Z\"\n"
+":``svnisodate``: \"2006-09-18 08:13:13 -700 (Mon, 18 Sep 2006)\""
 
 msgid ""
 "The default template mappings (view with :hg:`kwdemo -d`) can be\n"
@@ -4250,9 +4297,11 @@ msgid ""
 "  [largefiles]\n"
 "  minsize = 2"
 msgstr ""
+"  [largefiles]\n"
+"  minsize = 2"
 
 msgid "  $ hg add --lfsize 2"
-msgstr ""
+msgstr "  $ hg add --lfsize 2"
 
 msgid ""
 "The ``largefiles.patterns`` config option allows you to specify a list\n"
@@ -4271,6 +4320,12 @@ msgid ""
 "    library.zip\n"
 "    content/audio/*"
 msgstr ""
+"  [largefiles]\n"
+"  patterns =\n"
+"    *.jpg\n"
+"    re:.*\\.(png|bmp)$\n"
+"    library.zip\n"
+"    content/audio/*"
 
 msgid ""
 "Files that match one of these patterns will be added as largefiles\n"
@@ -4661,6 +4716,8 @@ msgid ""
 "  [mq]\n"
 "  git = auto/keep/yes/no"
 msgstr ""
+"  [mq]\n"
+"  git = auto/keep/yes/no"
 
 msgid ""
 "If set to 'keep', mq will obey the [diff] section configuration while\n"
@@ -5216,7 +5273,7 @@ msgid "    To import an existing patch while renaming it::"
 msgstr "    Импортировать существующий патч с переименованием::"
 
 msgid "      hg qimport -e existing-patch -n new-name"
-msgstr ""
+msgstr "      hg qimport -e существующий-патч -n новое-имя"
 
 msgid ""
 "    Returns 0 if import succeeded.\n"
@@ -5229,7 +5286,7 @@ msgid "create queue repository"
 msgstr "создать хранилище очереди"
 
 msgid "hg qinit [-c]"
-msgstr ""
+msgstr "hg qinit [-c]"
 
 msgid "init a new queue repository (DEPRECATED)"
 msgstr "инициализирует новое хранилище очереди (УСТАРЕЛО)"
@@ -5339,25 +5396,25 @@ msgid "print patches not in series"
 msgstr "напечатать патчи, не входящие в последовательность"
 
 msgid "hg qseries [-ms]"
-msgstr ""
+msgstr "hg qseries [-ms]"
 
 msgid "print the entire series file"
 msgstr "напечатать весь файл последовательностей"
 
 msgid "hg qtop [-s]"
-msgstr ""
+msgstr "hg qtop [-s]"
 
 msgid "print the name of the current patch"
 msgstr "напечатать имя текущего патча"
 
 msgid "hg qnext [-s]"
-msgstr ""
+msgstr "hg qnext [-s]"
 
 msgid "print the name of the next patch"
 msgstr "напечатать имя следующего патча"
 
 msgid "hg qprev [-s]"
-msgstr ""
+msgstr "hg qprev [-s]"
 
 msgid "print the name of the previous patch"
 msgstr "напечатать имя предыдущего патча"
@@ -7242,7 +7299,7 @@ msgid "specify merge tool for rebase"
 msgstr "задать программу для слияния при перебазировании"
 
 msgid "commands to interactively select changes for commit/qrefresh"
-msgstr ""
+msgstr "команды для интерактивного выбора изменений для commit/qrefresh"
 
 msgid "ignore white space when comparing lines"
 msgstr "игнорировать пробельные символы при сравнении строк"
