@@ -49,3 +49,8 @@ mercurial/parsers.py
 syntax: regexp
 ^\.pc/
 ^\.(pydev)?project
+
+# hackable windows distribution additions
+^hg-python26/
+^hg.exe$
+^hg.py$
