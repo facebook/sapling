@@ -34,6 +34,7 @@ These phases share a hierarchy of traits:
             immutable shared
     public:     X        X
     draft:               X
+    secret:
 
 local commits are draft by default
 
@@ -49,6 +50,8 @@ A small list of fact/rules define the exchange of phase:
 * old client never changes server states
 * pull never changes server states
 * publish and old server csets are seen as public by client
+
+* Any secret changeset seens in another repository is lowered to at least draft
 
 
 Here is the final table summing up the 49 possible usecase of phase exchange:
