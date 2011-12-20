@@ -1251,8 +1251,15 @@ class localrepository(repo.repository):
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
-            # ensure the new commit is 1-phase
-            phases.retractboundary(self, 1, [n])
+            # set the new commit is proper phase
+            targetphase = self.ui.configint('phases', 'new-commit', 1)
+            if targetphase:
+                # retract boundary do not alter parent changeset.
+                # if a parent have higher the resulting phase will
+                # be compliant anyway
+                #
+                # if minimal phase was 0 we don't need to retract anything
+                phases.retractboundary(self, targetphase, [n])
             tr.close()
 
             if self._branchcache:
