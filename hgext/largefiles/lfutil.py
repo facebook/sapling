@@ -79,7 +79,7 @@ def link(src, dest):
     except OSError:
         # if hardlinks fail, fallback on atomic copy
         dst = util.atomictempfile(dest)
-        for chunk in util.filechunkiter(open(src)):
+        for chunk in util.filechunkiter(open(src, 'rb')):
             dst.write(chunk)
         dst.close()
         os.chmod(dest, os.stat(src).st_mode)
@@ -238,7 +238,7 @@ def copytostoreabsolute(repo, file, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
         dst = util.atomictempfile(storepath(repo, hash))
-        for chunk in util.filechunkiter(open(file)):
+        for chunk in util.filechunkiter(open(file, 'rb')):
             dst.write(chunk)
         dst.close()
         util.copymode(file, storepath(repo, hash))

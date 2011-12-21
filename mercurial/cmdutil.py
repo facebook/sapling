@@ -588,16 +588,17 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
         ctx1 = repo[node1]
         ctx2 = repo[node2]
         for subpath, sub in subrepo.itersubrepos(ctx1, ctx2):
+            tempnode2 = node2
             try:
                 if node2 is not None:
-                    node2 = ctx2.substate[subpath][1]
+                    tempnode2 = ctx2.substate[subpath][1]
             except KeyError:
                 # A subrepo that existed in node1 was deleted between node1 and
                 # node2 (inclusive). Thus, ctx2's substate won't contain that
                 # subpath. The best we can do is to ignore it.
-                node2 = None
+                tempnode2 = None
             submatch = matchmod.narrowmatcher(subpath, match)
-            sub.diff(diffopts, node2, submatch, changes=changes,
+            sub.diff(diffopts, tempnode2, submatch, changes=changes,
                      stat=stat, fp=fp, prefix=prefix)
 
 class changeset_printer(object):
