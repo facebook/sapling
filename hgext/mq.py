@@ -1765,6 +1765,9 @@ class queue(object):
 
             diffopts = self.diffopts({'git': git})
             for r in rev:
+                if not repo[r].mutable():
+                    raise util.Abort(_('revision %d is not mutable') % r,
+                                     hint=_('see "hg help phases" for details'))
                 p1, p2 = repo.changelog.parentrevs(r)
                 n = repo.changelog.node(r)
                 if p2 != nullrev:
