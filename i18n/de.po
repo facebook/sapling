@@ -39,13 +39,14 @@
 # Gut:
 #   Synchronisieren Sie ihr Projektarchiv (mit pull).
 #   Im Verlaufe einer Zusammenführung mit :hg:`merge` wird...
-#   Falls es während der 'pull'-Operation zu Verbindungsfehlern kommt...
+#   Falls es während der 'push'-Operation zu Verbindungsfehlern kommt...
 #
 # Schlecht:
 #   Mergen Sie zunächst die Branche.
 #   Falls der Tag im Filelog zu finden ist...
 #
 # Übersetzungen:
+#  backup        Sicherheitskopie (gewinnt in google-fight gegen Sicherungsk.)
 #  branch        Zweig/Verzweigung/Entwicklungszweig
 #  bookmark      Lesezeichen
 #  bundle        Bündel
@@ -55,24 +56,31 @@
 #  commit (v)    übernehmen
 #  committer     Autor
 #  deprecated    veraltet
+#  force (v)     erzwingen
 #  merge         zusammenführen
 #  notation      Schreibweise
+#  queue         Reihe
 #  repository    (Projekt)archiv
 #  manage/track  versionieren
 #  pull          abrufen
 #  push          übertragen
-#  rebase        Pfropfung
+#  rebase        Pfropfung/Verschiebung
 #  section       Abschnitt (nicht Sektion)
 #  tag           Etikett    (svn verwendet "Marke")
 #
 # Nicht übersetzt bleiben
-#  hook     mangels guter Übersetzung
+#  hook     mangels guter Übersetzung (Einhängeaktion?)
 #  token    Fachbegriff auch im Deutschen
 #  parser   Fachbegriff auch im Deutschen
 #  patch    Bezieht sich auf ein sehr altes Programm mit demselben Namen und
 #           Dateien in dessen Syntax/Format
+#           Die ursprüngliche Bedeutung des englischen Wortes (Flicken) trifft
+#           heute eh nicht mehr zu.
 #  diff     Siehe patch, ausserdem Abkürzung eines auch deutschen Worts
 #  glob
+#  dirstate Nur für Entwickler interessant. Im sonstigen Handbuch umschreiben!
+#  .. note:: Dies ist spezielle reStructured-Syntax und darf nicht geändert
+#           werden
 # 
 # Weiteres:
 #  graft/transplant: Da graft eine Reimplementierung von transplant als
@@ -82,7 +90,8 @@
 #         Übersetzungen müssen zum Kontext passen.
 #  commit: wird manchmal anstelle von revision verwendet. In solchen Fällen
 #         kann die Übersetzung "Revision" lauten.
-#  largefile: Binärriese
+#  largefile: Binärriese (neues Wort, vielleicht fällt jemandem ein besseres
+#             ein. Dies ist zur Zeit konsequent verwendet)
 #
 msgid ""
 msgstr ""
@@ -3814,7 +3823,7 @@ msgid ""
 "   The more specific you are in your filename patterns the less you\n"
 "   lose speed in huge repositories."
 msgstr ""
-".. HINWEIS::\n"
+".. note::\n"
 "   Je genauer die Muster für Dateinamen sind, desto weniger\n"
 "   Geschwindigkeit geht in großen Projektarchiven verloren."
 
@@ -4801,7 +4810,7 @@ msgstr "\"%s\" kann nicht als Patchname verwendet werden"
 
 #, python-format
 msgid "patch name cannot begin with \"%s\""
-msgstr ""
+msgstr "Patchname darf nicht mit \"%s\" anfangen"
 
 #, python-format
 msgid "\"%s\" cannot be used in the name of a patch"
@@ -4809,7 +4818,7 @@ msgstr "\"%s\" kann nicht in einem Patchnamen verwendet werden"
 
 #, python-format
 msgid "\"%s\" already exists as a directory"
-msgstr "\"%s\" existiert bereits"
+msgstr "\"%s\" existiert bereits als Verzeichnis"
 
 #, python-format
 msgid "patch \"%s\" already exists"
@@ -5021,7 +5030,7 @@ msgid "renaming %s to %s\n"
 msgstr "Benenne %s in %s um\n"
 
 msgid "need --name to import a patch from -"
-msgstr "Option --name muss beim Import via stdin angegeben werden"
+msgstr "Beim Import von der Standardeingabe muss die Option --name angegeben werden"
 
 #, python-format
 msgid "unable to read file %s"
@@ -5038,7 +5047,7 @@ msgid "stop managing a revision (DEPRECATED)"
 msgstr "Hört auf, eine Revision zu verwalten (VERALTET)"
 
 msgid "hg qdelete [-k] [PATCH]..."
-msgstr ""
+msgstr "hg qdelete [-k] [PATCH]..."
 
 msgid "remove patches from queue"
 msgstr "Entfernt Patches aus der Patch-Reihe"
@@ -5409,18 +5418,18 @@ msgstr "Aktualisiert nur angegebene und bereits in Patches enthaltene Dateien"
 
 msgid "add/update author field in patch with current user"
 msgstr ""
-"Erstellt/Aktualisiert das Autor-Feld im Patch mit dem aktuellen Benutzer"
+"Erstellt/aktualisiert das Autor-Feld im Patch mit dem aktuellen Benutzer"
 
 msgid "add/update author field in patch with given user"
 msgstr ""
-"Erstellt/Aktualisiert das Autor-Feld im Patch mit dem angegebenen Benutzer"
+"Erstellt/aktualisiert das Autor-Feld im Patch mit dem angegebenen Benutzer"
 
 msgid "add/update date field in patch with current date"
 msgstr "Erstellt/Aktualisiert das Datumsfeld im Patch mit dem aktuellen Datum"
 
 msgid "add/update date field in patch with given date"
 msgstr ""
-"Erstellt/Aktualisiert das Datumsfeld im Patch mit dem angegebenen Datum"
+"Erstellt/aktualisiert das Datumsfeld im Patch mit dem angegebenen Datum"
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
 msgstr "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l DATEI] [-s] [DATEI]..."
@@ -5459,7 +5468,7 @@ msgstr ""
 "    Wenn -e/--edit angegeben wird, wird Mercurial den konfigurierten Editor\n"
 "    starten, in dem Sie die Versionsmeldung eintragen können. Falls "
 "qrefresh\n"
-"    fehlschlägt, wird eine Sicherungskopie in ``.hg/last-message.txt`` "
+"    fehlschlägt, wird eine Sicherheitskopie in ``.hg/last-message.txt`` "
 "abgelegt."
 
 msgid ""
@@ -5507,8 +5516,7 @@ msgstr ""
 "Änderungen\n"
 "    des aktuellen Patches ohne die nachträglichen Änderungen seit dem "
 "letzten\n"
-"    qrefresh sehen möchten.\n"
-"    "
+"    qrefresh sehen möchten."
 
 msgid "edit patch header"
 msgstr "Bearbeitet den Kopf eines Patches"
@@ -5581,7 +5589,7 @@ msgid "drop all guards"
 msgstr "Entfernt alle Wächter"
 
 msgid "hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"
-msgstr "hg qguard [-l] [-n] [PATCH] [-- [+GUARD]... [-GUARD]...]"
+msgstr "hg qguard [-l] [-n] [PATCH] [-- [+WÄCHTER]... [-WÄCHTER]...]"
 
 msgid "set or print guards for a patch"
 msgstr "Setzt einen Wächter oder gibt die Wächter eines Patches aus"
@@ -5615,7 +5623,7 @@ msgid ""
 "       Specifying negative guards now requires '--'."
 msgstr ""
 "    .. note::\n"
-"       Spezifizieren von negativen Guards erfordert jetzt '--'."
+"       Spezifizieren von negativen Wächtern erfordert jetzt '--'."
 
 msgid "    To set guards on another patch::"
 msgstr "    Um die Wächter eines anderen Patches zu setzen::"
@@ -5663,7 +5671,7 @@ msgid "reorder patch series and apply only the patch"
 msgstr "Sortiert die Patch-Serie neu und wendet nur den Patch an"
 
 msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
 
 msgid "push the next patch onto the stack"
 msgstr "Schiebt den nächsten Patch auf den Stapel"
@@ -5673,8 +5681,7 @@ msgid ""
 "    will be lost."
 msgstr ""
 "    Wenn -f/--force angegeben ist, werden alle lokalen Änderungen in den\n"
-"    gepatchten Dateien verlorengehen.\n"
-"    "
+"    vom Patch betroffenen Dateien verlorengehen."
 
 msgid "no saved queues found, please use -n\n"
 msgstr "Keine gespeicherten Reihen gefunden, bitte benutze -n\n"
@@ -5690,10 +5697,10 @@ msgid "queue name to pop (DEPRECATED)"
 msgstr "Name der zu entnehmenden Reihe (VERALTET)"
 
 msgid "forget any local changes to patched files"
-msgstr "Vergisst alle lokalen Änderungen an gepatchten Dateien"
+msgstr "Vergisst alle lokalen Änderungen an zu ändernden Dateien"
 
 msgid "hg qpop [-a] [-f] [PATCH | INDEX]"
-msgstr ""
+msgstr "hg qpop [-a] [-f] [PATCH | INDEX]"
 
 msgid "pop the current patch off the stack"
 msgstr "Holt den aktuellen Patch vom Stapel herunter"
@@ -5705,8 +5712,7 @@ msgid ""
 msgstr ""
 "    Standardmäßig wird der oberste Patch vom Stapel genommen. Wenn ein\n"
 "    Patchname angegeben ist, wird solange vom Stapel heruntergenommen, bis\n"
-"    der angegebene Patch der oberste ist.\n"
-"    "
+"    der angegebene Patch der oberste ist."
 
 #, python-format
 msgid "using patch queue: %s\n"
@@ -5766,7 +5772,7 @@ msgstr "Das Ziel %s existiert und ist kein Verzeichnis"
 
 #, python-format
 msgid "destination %s exists, use -f to force"
-msgstr "Das Ziel %s existiert bereits, verwende -f zum Erzwingen"
+msgstr "Das Ziel %s existiert bereits. Verwende -f zum Erzwingen"
 
 #, python-format
 msgid "copy %s to %s\n"
@@ -5776,11 +5782,13 @@ msgid ""
 "strip specified revision (optional, can specify revisions without this "
 "option)"
 msgstr ""
+"Entfernt die gegebene Revision (optional, da schon die Argumente Revisionen "
+"sind)"
 
 msgid "force removal of changesets, discard uncommitted changes (no backup)"
 msgstr ""
 "erzwingt Entfernung von Änderungssätzen und unversionierten Änderungen\n"
-"(kein Backup)"
+"(keine Sicherheitskopie)"
 
 msgid ""
 "bundle only changesets with local revision number greater than REV which are "
@@ -5790,16 +5798,16 @@ msgstr ""
 "die nicht Nachfahren von REV sind (VERALTET)"
 
 msgid "no backups"
-msgstr "Keine Sicherungskopien"
+msgstr "Keine Sicherheitskopien"
 
 msgid "no backups (DEPRECATED)"
-msgstr "Keine Sicherungskopien (VERALTET)"
+msgstr "Keine Sicherheitskopien (VERALTET)"
 
 msgid "do not modify working copy during strip"
 msgstr "ändern Sie nicht die Working Copy während des strip Vorgangs"
 
 msgid "hg strip [-k] [-f] [-n] REV..."
-msgstr ""
+msgstr "hg strip [-k] [-f] [-n] REV..."
 
 msgid "strip changesets and all their descendants from the repository"
 msgstr "Entfernt Änderungssätze und alle Nachfahren aus dem Projektarchiv"
@@ -5846,8 +5854,7 @@ msgid ""
 "    operation completes."
 msgstr ""
 "    Benutzen Sie den Schalter --no-backup, um die Bündel zu entfernen,\n"
-"    wenn die Operation abgeschlossen ist.\n"
-"    "
+"    wenn die Operation abgeschlossen ist."
 
 msgid "empty revision set"
 msgstr "Revisionsmenge ist leer"
@@ -10073,40 +10080,16 @@ msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr "[OPTION]... ([-c REV] | [-r REV1] [-r REV2]]) [DATEI]..."
 
 msgid "diff repository (or selected files)"
-msgstr ""
-"Zeigt Änderungen des Projektarchivs oder angegebener Dateien an\n"
-"\n"
-"    Zeigt Unterschiede von Dateien zwischen Revisionen im unified-diff-\n"
-"    Format an.\n"
-"\n"
-"    HINWEIS: diff kann bei Zusammenführungen unerwartete Resultate "
-"anzeigen,\n"
-"    da es nur mit einer (der ersten wenn keine Revision angegeben ist)\n"
-"    Vorgängerversion vergleicht.\n"
-"\n"
-"    Bei Angabe zweier Revisionen als Parameter werden Unterschiede\n"
-"    zwischen diesen beiden angezeigt. Wenn nur eine Revision angegeben\n"
-"    wurde, wird diese mit dem Arbeitsverzeichnis verglichen. Sollte keine\n"
-"    Revision angegeben worden sein, wird das Arbeitsverzeichnis mit der\n"
-"    Vorgängerversion verglichen.\n"
-"\n"
-"    Ohne die Option -a vermeidet export den Vergleich von binären Dateien.\n"
-"    Mit -a wird der Vergleich in jedem Fall durchgeführt, wahrscheinlich "
-"mit\n"
-"    unerwünschtem Resultat.\n"
-"\n"
-"    Nutze die Option --git um Vergleiche im git-erweiterten diff-Format zu\n"
-"    erzeugen. Zur weiteren Information ist \"hg help diff\" "
-"aufschlussreich.\n"
-"    "
+msgstr "Zeigt Änderungen des Projektarchivs oder angegebener Dateien an"
 
 msgid "    Show differences between revisions for the specified files."
-msgstr "    Zeigt Änderungen des Projektarchiv oder angegebener Dateien an."
+msgstr ""
+"    Zeigt Änderungen zwischen den Revisionen der angegebenen Dateien an."
 
 msgid "    Differences between files are shown using the unified diff format."
 msgstr ""
-"    Zeigt Unterschiede von Dateien zwischen Revisionen im unified-diff-\n"
-"    Format an."
+"    Unterschiede von Dateien zwischen Revisionen werden im unified-diff-\n"
+"    Format angezeigt."
 
 msgid ""
 "    .. note::\n"
@@ -10114,7 +10097,7 @@ msgid ""
 "       default to comparing against the working directory's first\n"
 "       parent changeset if no revisions are specified."
 msgstr ""
-"    .. HINWEIS::\n"
+"    .. note::\n"
 "       diff kann bei Zusammenführungen unerwartete Resultate anzeigen, da\n"
 "       es nur mit einer (der ersten wenn keine Revision angegeben ist)\n"
 "       Vorgängerversion vergleicht."
@@ -10209,7 +10192,7 @@ msgid ""
 "       changesets, as it will compare the merge changeset against its\n"
 "       first parent only."
 msgstr ""
-"    .. HINWEIS::\n"
+"    .. note::\n"
 "       export kann bei Zusammenführungen unerwartete Resultate anzeigen,\n"
 "       da es nur mit der ersten Vorgängerversion vergleicht."
 
@@ -11213,7 +11196,7 @@ msgid ""
 "       its first parent. Also, only files different from BOTH parents\n"
 "       will appear in files:."
 msgstr ""
-"    .. HINWEIS::\n"
+"    .. note::\n"
 "       log -p/--patch kann ein unerwartetes Diff für Zusammenführungen\n"
 "       erzeugen, da es standardmäßig die Zusammenführungsversion mit der\n"
 "       ersten Vorgängerversion vergleicht. Auch in der Dateiliste werden\n"
@@ -12004,7 +11987,7 @@ msgid "revert to the specified revision"
 msgstr "Geht bis zur angegebene Revision zurück"
 
 msgid "do not save backup copies of files"
-msgstr "Keine Sicherheitskopien (.orig) anlegen"
+msgstr "Keine Sicherheitskopie (.orig) anlegen"
 
 msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
@@ -12018,7 +12001,7 @@ msgid ""
 "       To check out earlier revisions, you should use :hg:`update REV`.\n"
 "       To cancel a merge (and lose your changes), use :hg:`update --clean .`."
 msgstr ""
-"    .. HINWEIS::\n"
+"    .. note::\n"
 "       Um das Arbeitsverzeichnis auf eine ältere Version zu setzen, nutze\n"
 "       :hg:`update REV`. Um eine nicht übernommene Zusammenführung "
 "rückgängig\n"
@@ -12411,7 +12394,7 @@ msgid ""
 "       not report permission changes and diff only reports changes\n"
 "       relative to one merge parent."
 msgstr ""
-"    .. HINWEIS:\n"
+"    .. note:\n"
 "       Der Status kann sich vom Diff unterscheiden, wenn sich Berechtigungen\n"
 "       geändert haben oder eine Zusammenführung durchgeführt wurde. Das\n"
 "       Standard-Diff-Format zeigt keine Berechtigungsänderungen an und\n"
@@ -18596,7 +18579,7 @@ msgstr "Getötet von Signal %d"
 
 #, python-format
 msgid "saved backup bundle to %s\n"
-msgstr "Speichere Bündel-Sicherungskopie in %s\n"
+msgstr "Speichere Bündel-Sicherheitskopie in %s\n"
 
 msgid "adding branch\n"
 msgstr "füge Zweig hinzu\n"
