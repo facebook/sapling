@@ -7,7 +7,9 @@
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
-  >    hg ci -m "$1"
+  >    message="$1"
+  >    shift
+  >    hg ci -m "$message" $*
   > }
 
   $ hg init alpha
@@ -478,6 +480,7 @@ Pushing to Publish=False (common changeset that change phase + unknown one)
 
 Pushing to Publish=True (common changeset from publish=False)
 
+(in mu)
   $ hg push ../alpha
   pushing to ../alpha
   searching for changes
@@ -505,4 +508,63 @@ Pushing to Publish=True (common changeset from publish=False)
   2 0 a-C - 54acac6f23ab
   1 0 a-B - 548a3d25dbf0
   0 0 a-A - 054250a37db4
+
+
+Discovery locally secret changeset on a remote repository:
+
+- should make it non-secret
+
+  $ cd ../alpha
+  $ mkcommit A-secret --config phases.new-commit=2
+  $ hgph
+  11 2 A-secret - 435b5d83910c
+  10 0 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+  $ hg bundle --base 'parents(.)' -r . ../secret-bundle.hg
+  1 changesets found
+  $ hg -R ../mu unbundle ../secret-bundle.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hgph -R ../mu
+  10 1 A-secret - 435b5d83910c
+  9 0 a-H - 967b449fbc94
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+  $ hg pull ../mu
+  pulling from ../mu
+  searching for changes
+  no changes found
+  $ hgph
+  11 1 A-secret - 435b5d83910c
+  10 0 a-H - 967b449fbc94
+  9 1 a-G - 3e27b6f1eee1
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 b-A - f54f1bb90ff3
+  3 0 a-D - b555f63b6063
+  2 0 a-C - 54acac6f23ab
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
+
 

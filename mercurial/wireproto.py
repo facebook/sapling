@@ -10,6 +10,7 @@ from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
 import repo, error, encoding, util, store
+import phases
 
 # abstract batching support
 
@@ -449,7 +450,7 @@ def getbundle(repo, proto, others):
     return streamres(proto.groupchunks(cg))
 
 def heads(repo, proto):
-    h = repo.heads()
+    h = phases.visibleheads(repo)
     return encodelist(h) + "\n"
 
 def hello(repo, proto):

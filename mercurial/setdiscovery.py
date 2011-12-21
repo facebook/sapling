@@ -9,6 +9,7 @@
 from node import nullid
 from i18n import _
 import random, collections, util, dagutil
+import phases
 
 def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
     # if nodes is empty we scan the entire graph
@@ -99,7 +100,7 @@ def findcommonheads(ui, local, remote,
     sample = ownheads
     if remote.local():
         # stopgap until we have a proper localpeer that supports batch()
-        srvheadhashes = remote.heads()
+        srvheadhashes = phases.visibleheads(remote)
         yesno = remote.known(dag.externalizeall(sample))
     elif remote.capable('batch'):
         batch = remote.batch()

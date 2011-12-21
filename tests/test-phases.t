@@ -88,3 +88,49 @@ Even on merge
   1 0 B
   0 0 A
 
+Test secret changeset are not pushed
+
+  $ hg init ../push-dest
+  $ hg push ../push-dest -f # force because we push multiple heads
+  pushing to ../push-dest
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 5 changes to 5 files (+1 heads)
+  $ hglog
+  7 2 merge B' and E
+  6 0 B'
+  5 2 H
+  4 2 E
+  3 0 D
+  2 0 C
+  1 0 B
+  0 0 A
+  $ cd ../push-dest
+  $ hglog
+  4 0 B'
+  3 0 D
+  2 0 C
+  1 0 B
+  0 0 A
+  $ cd ..
+
+Test secret changeset are not pull
+
+  $ hg init pull-dest
+  $ cd pull-dest
+  $ hg pull ../initialrepo
+  pulling from ../initialrepo
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 5 changes to 5 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hglog
+  4 0 B'
+  3 0 D
+  2 0 C
+  1 0 B
+  0 0 A

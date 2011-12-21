@@ -85,11 +85,27 @@ def prepush(repo, remote, force, revs, newbranch):
     _common, inc, remoteheads = commoninc
 
     cl = repo.changelog
-    outg = cl.findmissing(common, revs)
+    alloutg = cl.findmissing(common, revs)
+    outg = []
+    secret = []
+    for o in alloutg:
+        if repo[o].phase() >= 2:
+            secret.append(o)
+        else:
+            outg.append(o)
 
     if not outg:
-        repo.ui.status(_("no changes found\n"))
+        if secret:
+            repo.ui.status(_("no changes to push but %i secret changesets\n")
+                           % len(secret))
+        else:
+            repo.ui.status(_("no changes found\n"))
         return None, 1, common
+
+    if secret:
+        # recompute target revs
+        revs = [ctx.node() for ctx in repo.set('heads(::(%ld))',
+                                               map(repo.changelog.rev, outg))]
 
     if not force and remoteheads != [nullid]:
         if remote.capable('branchmap'):
