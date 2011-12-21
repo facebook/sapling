@@ -142,18 +142,12 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         f.close()
         return name
 
-    def isbin(ctx):
-        try:
-            return util.binary(ctx.data())
-        except IOError:
-            return False
-
     if not fco.cmp(fcd): # files identical?
         return None
 
     ui = repo.ui
     fd = fcd.path()
-    binary = isbin(fcd) or isbin(fco) or isbin(fca)
+    binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
     symlink = 'l' in fcd.flags() + fco.flags()
     tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
     ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %

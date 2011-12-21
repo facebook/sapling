@@ -372,6 +372,12 @@ class filectx(object):
     def size(self):
         return self._filelog.size(self._filerev)
 
+    def isbinary(self):
+        try:
+            return util.binary(self.data())
+        except IOError:
+            return False
+
     def cmp(self, fctx):
         """compare with other file context
 
