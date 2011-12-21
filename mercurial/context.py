@@ -805,6 +805,15 @@ class workingctx(changectx):
             b.extend(p.bookmarks())
         return b
 
+    def phase(self):
+        phase = 1 # default phase to draft
+        for p in self.parents():
+            phase = max(phase, p.phase())
+        return phase
+
+    def hidden(self):
+        return False
+
     def children(self):
         return []
 
