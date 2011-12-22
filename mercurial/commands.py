@@ -2507,9 +2507,9 @@ def graft(ui, repo, *revs, **opts):
     already been grafted, or that are merges will be skipped.
 
     If a graft merge results in conflicts, the graft process is
-    aborted so that the current merge can be manually resolved. Once
-    all conflicts are addressed, the graft process can be continued
-    with the -c/--continue option.
+    interrupted so that the current merge can be manually resolved.
+    Once all conflicts are addressed, the graft process can be
+    continued with the -c/--continue option.
 
     .. note::
       The -c/--continue option does not reapply earlier options.
