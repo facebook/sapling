@@ -646,7 +646,8 @@ def fspath(name, root):
 
         found = find(part, contents)
         if not found:
-            # retry once for the corner case: add files after dir walking
+            # retry "once per directory" per "dirstate.walk" which
+            # may take place for each patches of "hg qpush", for example
             contents = os.listdir(dir)
             _fspathcache[dir] = contents
             found = find(part, contents)
