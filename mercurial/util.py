@@ -622,9 +622,8 @@ def fspath(name, root):
     The root should be normcase-ed, too.
     '''
     def find(p, contents):
-        lenp = len(p)
         for n in contents:
-            if lenp == len(n) and normcase(n) == p:
+            if normcase(n) == p:
                 return n
         return None
 
