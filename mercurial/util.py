@@ -640,10 +640,9 @@ def fspath(name, root):
             result.append(sep)
             continue
 
-        contents = _fspathcache.get(dir, None)
-        if contents is None:
-            contents = os.listdir(dir)
-            _fspathcache[dir] = contents
+        if dir not in _fspathcache:
+            _fspathcache[dir] = os.listdir(dir)
+        contents = _fspathcache[dir]
 
         found = find(part, contents)
         if not found:
