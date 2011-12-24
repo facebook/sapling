@@ -92,7 +92,7 @@ def state(ctx, ui):
                     src = remapped
 
         src = remap(src)
-        state[path] = (src.strip(), rev.get(path, ''), kind)
+        state[util.pconvert(path)] = (src.strip(), rev.get(path, ''), kind)
 
     return state
 
