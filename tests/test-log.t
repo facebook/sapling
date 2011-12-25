@@ -1159,3 +1159,56 @@ Diff here should be the same:
   $ hg log --template='{rev}:{node}\n' --hidden
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+
+clear extensions configuration
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "hidden=!" >> $HGRCPATH
+  $ cd ..
+
+test -u/-k for problematic encoding
+# unicode: cp932:
+# u30A2    0x83 0x41(= 'A')
+# u30C2    0x83 0x61(= 'a')
+
+  $ hg init problematicencoding
+  $ cd problematicencoding
+
+  $ python > setup.sh <<EOF
+  > print u'''
+  > echo a > text
+  > hg add text
+  > hg --encoding utf-8 commit -u '\u30A2' -m none
+  > echo b > text
+  > hg --encoding utf-8 commit -u '\u30C2' -m none
+  > echo c > text
+  > hg --encoding utf-8 commit -u none -m '\u30A2'
+  > echo d > text
+  > hg --encoding utf-8 commit -u none -m '\u30C2'
+  > '''.encode('utf-8')
+  > EOF
+  $ sh < setup.sh
+
+test in problematic encoding
+  $ python > test.sh <<EOF
+  > print u'''
+  > hg --encoding cp932 log --template '{rev}\\n' -u '\u30A2'
+  > echo ====
+  > hg --encoding cp932 log --template '{rev}\\n' -u '\u30C2'
+  > echo ====
+  > hg --encoding cp932 log --template '{rev}\\n' -k '\u30A2'
+  > echo ====
+  > hg --encoding cp932 log --template '{rev}\\n' -k '\u30C2'
+  > '''.encode('cp932')
+  > EOF
+  $ sh < test.sh
+  0
+  ====
+  1
+  ====
+  2
+  0
+  ====
+  3
+  1
+
+  $ cd ..

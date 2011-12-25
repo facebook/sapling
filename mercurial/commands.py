@@ -3897,14 +3897,21 @@ def log(ui, repo, *pats, **opts):
             return
         if df and not df(ctx.date()[0]):
             return
-        if opts['user'] and not [k for k in opts['user']
-                                 if k.lower() in ctx.user().lower()]:
-            return
+
+        lower = encoding.lower
+        if opts.get('user'):
+            luser = lower(ctx.user())
+            for k in [lower(x) for x in opts['user']]:
+                if (k in luser):
+                    break
+            else:
+                return
         if opts.get('keyword'):
-            for k in [kw.lower() for kw in opts['keyword']]:
-                if (k in ctx.user().lower() or
-                    k in ctx.description().lower() or
-                    k in " ".join(ctx.files()).lower()):
+            luser = lower(ctx.user())
+            ldesc = lower(ctx.description())
+            lfiles = lower(" ".join(ctx.files()))
+            for k in [lower(x) for x in opts['keyword']]:
+                if (k in luser or k in ldesc or k in lfiles):
                     break
             else:
                 return
