@@ -127,10 +127,13 @@ def wrapname(name, wrapper):
 # NOTE: os.path.dirname() and os.path.basename() are safe because
 #       they use result of os.path.split()
 funcs = '''os.path.join os.path.split os.path.splitext
- os.path.splitunc os.path.normpath os.makedirs
+ os.path.normpath os.makedirs
  mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
  mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
  mercurial.util.checkwinfilename mercurial.util.checkosfilename'''
+
+# List of Windows specific functions to be wrapped.
+winfuncs = '''os.path.splitunc'''
 
 # codec and alias names of sjis and big5 to be faked.
 problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
@@ -140,7 +143,8 @@ problematic_encodings = '''big5 big5-tw csbig5 big5hkscs big5-hkscs
 
 def extsetup(ui):
     # TODO: decide use of config section for this extension
-    if not os.path.supports_unicode_filenames:
+    if ((not os.path.supports_unicode_filenames) and
+        (sys.platform != 'cygwin')):
         ui.warn(_("[win32mbcs] cannot activate on this platform.\n"))
         return
     # determine encoding for filename
@@ -150,6 +154,9 @@ def extsetup(ui):
     if _encoding.lower() in problematic_encodings.split():
         for f in funcs.split():
             wrapname(f, wrapper)
+        if os.name == 'nt':
+            for f in winfuncs.split():
+                wrapname(f, wrapper)
         wrapname("mercurial.osutil.listdir", wrapperforlistdir)
         # Check sys.args manually instead of using ui.debug() because
         # command line options is not yet applied when
