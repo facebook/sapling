@@ -11,6 +11,7 @@ import node as nodemod
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
+import encoding
 
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
@@ -233,8 +234,8 @@ def author(repo, subset, x):
     Alias for ``user(string)``.
     """
     # i18n: "author" is a keyword
-    n = getstring(x, _("author requires a string")).lower()
-    return [r for r in subset if n in repo[r].user().lower()]
+    n = encoding.lower(getstring(x, _("author requires a string")))
+    return [r for r in subset if n in encoding.lower(repo[r].user())]
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -376,11 +377,11 @@ def desc(repo, subset, x):
     Search commit message for string. The match is case-insensitive.
     """
     # i18n: "desc" is a keyword
-    ds = getstring(x, _("desc requires a string")).lower()
+    ds = encoding.lower(getstring(x, _("desc requires a string")))
     l = []
     for r in subset:
         c = repo[r]
-        if ds in c.description().lower():
+        if ds in encoding.lower(c.description()):
             l.append(r)
     return l
 
@@ -522,12 +523,12 @@ def keyword(repo, subset, x):
     string. The match is case-insensitive.
     """
     # i18n: "keyword" is a keyword
-    kw = getstring(x, _("keyword requires a string")).lower()
+    kw = encoding.lower(getstring(x, _("keyword requires a string")))
     l = []
     for r in subset:
         c = repo[r]
         t = " ".join(c.files() + [c.user(), c.description()])
-        if kw in t.lower():
+        if kw in encoding.lower(t):
             l.append(r)
     return l
 
