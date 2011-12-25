@@ -124,7 +124,8 @@ def _search(web, req, tmpl):
 
     def changelist(**map):
         count = 0
-        qw = query.lower().split()
+        lower = encoding.lower
+        qw = lower(query).split()
 
         def revgen():
             for i in xrange(len(web.repo) - 1, 0, -100):
@@ -139,9 +140,9 @@ def _search(web, req, tmpl):
         for ctx in revgen():
             miss = 0
             for q in qw:
-                if not (q in ctx.user().lower() or
-                        q in ctx.description().lower() or
-                        q in " ".join(ctx.files()).lower()):
+                if not (q in lower(ctx.user()) or
+                        q in lower(ctx.description()) or
+                        q in lower(" ".join(ctx.files()))):
                     miss = 1
                     break
             if miss:
