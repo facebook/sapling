@@ -3,6 +3,9 @@
   > graphlog=
   > rebase=
   > 
+  > [phases]
+  > publish=False
+  > 
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
   > EOF
@@ -269,6 +272,16 @@ C onto A - rebase onto an ancestor:
   |/
   o  0: 'A'
   
+
+Check rebasing public changeset
+
+  $ hg pull --config phases.publish=True -q -r 6 . # update phase of 6
+  $ hg rebase -d 5 -b 6
+  abort: Can't rebase immutable changeset e1c4361dd923
+  (see hg help phases for details)
+  [255]
+
+  $ hg rebase -d 5 -b 6 --keep
   $ cd ..
 
 Test for revset

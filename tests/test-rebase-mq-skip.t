@@ -7,6 +7,9 @@ already has one local mq patch
   > rebase=
   > mq=
   > 
+  > [phases]
+  > publish=False
+  > 
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' tags: {tags}\n"
   > EOF

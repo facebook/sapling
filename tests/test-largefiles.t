@@ -6,6 +6,8 @@
   > purge=
   > rebase=
   > transplant=
+  > [phases]
+  > publish=False
   > [largefiles]
   > minsize=2
   > patterns=glob:**.dat

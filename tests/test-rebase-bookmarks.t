@@ -3,6 +3,9 @@
   > graphlog=
   > rebase=
   > 
+  > [phases]
+  > publish=False
+  > 
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' bookmarks: {bookmarks}\n"
   > EOF

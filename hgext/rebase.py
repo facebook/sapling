@@ -193,6 +193,11 @@ def rebase(ui, repo, **opts):
                 rebaseset = repo.revs('(children(ancestor(%r, %d)) & ::%r)::',
                     base, dest, base)
 
+            if rebaseset:
+                root = min(rebaseset)
+            else:
+                root = None
+
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination')
                 result = None
@@ -202,6 +207,10 @@ def rebase(ui, repo, **opts):
                     _("can't remove original changesets with"
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
+            elif not keepf and not repo[root].mutable():
+                raise util.Abort(_("Can't rebase immutable changeset %s")
+                                 % repo[root],
+                                 hint=_('see hg help phases for details'))
             else:
                 result = buildstate(repo, dest, rebaseset, detachf)
 

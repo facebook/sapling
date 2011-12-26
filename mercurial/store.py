@@ -409,8 +409,8 @@ class fncachestore(basicstore):
             self.fncache.rewrite(existing)
 
     def copylist(self):
-        d = ('data dh fncache'
-             ' 00manifest.d 00manifest.i 00changelog.d 00changelog.i phaseroots')
+        d = ('data dh fncache phaseroots'
+             ' 00manifest.d 00manifest.i 00changelog.d 00changelog.i')
         return (['requires', '00changelog.i'] +
                 ['store/' + f for f in d.split()])
 
