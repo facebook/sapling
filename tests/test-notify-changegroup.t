@@ -184,19 +184,19 @@ push
   Message-Id: <*> (glob)
   To: baz, foo@bar
   
-  changeset 84e487dddc58 in $TESTTMP/a
+  changeset 84e487dddc58 in $TESTTMP/a (glob)
   details: $TESTTMP/a?cmd=changeset;node=84e487dddc58
   summary: newfile
   
-  changeset b29c7a2b6b0c in $TESTTMP/a
+  changeset b29c7a2b6b0c in $TESTTMP/a (glob)
   details: $TESTTMP/a?cmd=changeset;node=b29c7a2b6b0c
   summary: x
   
-  changeset 0957c7d64886 in $TESTTMP/a
+  changeset 0957c7d64886 in $TESTTMP/a (glob)
   details: $TESTTMP/a?cmd=changeset;node=0957c7d64886
   summary: y
   
-  changeset 485b4e6b0249 in $TESTTMP/a
+  changeset 485b4e6b0249 in $TESTTMP/a (glob)
   details: $TESTTMP/a?cmd=changeset;node=485b4e6b0249
   summary: merged
   
