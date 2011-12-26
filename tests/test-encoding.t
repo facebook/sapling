@@ -235,7 +235,8 @@ hg log (utf-8)
 hg log (dolphin)
 
   $ HGENCODING=dolphin hg log
-  abort: unknown encoding: dolphin, please check your locale settings
+  abort: unknown encoding: dolphin
+  (please check your locale settings)
   [255]
   $ HGENCODING=ascii hg branch `cat latin-1-tag`
   abort: decoding near '\xe9': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)! (esc)
