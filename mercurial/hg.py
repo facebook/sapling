@@ -183,7 +183,10 @@ def copystore(ui, srcrepo, destpath):
     try:
         hardlink = None
         num = 0
+        srcpublishing = srcrepo.ui.configbool('phases', 'publish', True)
         for f in srcrepo.store.copylist():
+            if srcpublishing and f.endswith('phaseroots'):
+                continue
             src = os.path.join(srcrepo.sharedpath, f)
             dst = os.path.join(destpath, f)
             dstbase = os.path.dirname(dst)
