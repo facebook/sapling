@@ -566,5 +566,26 @@ Discovery locally secret changeset on a remote repository:
   2 0 a-C - 54acac6f23ab
   1 0 a-B - 548a3d25dbf0
   0 0 a-A - 054250a37db4
+  $ cd ..
+Test Clone behavior
 
+A. Clone without secret changeset
+
+1.  cloning non-publishing repository
+
+(Phase should be preserved°
+
+  $ hg clone -U mu Tau
+  $ hgph -R Tau
+  10 1 A-secret - 435b5d83910c
+  9 0 a-H - 967b449fbc94
+  8 0 a-F - b740e3e5c05d
+  7 0 a-E - e9f537e46dea
+  6 0 n-B - 145e75495359
+  5 0 n-A - d6bcb4f74035
+  4 0 a-D - b555f63b6063
+  3 0 a-C - 54acac6f23ab
+  2 0 b-A - f54f1bb90ff3
+  1 0 a-B - 548a3d25dbf0
+  0 0 a-A - 054250a37db4
 
