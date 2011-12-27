@@ -85,6 +85,7 @@ class pathauditor(object):
         '''Check the relative path.
         path may contain a pattern (e.g. foodir/**.txt)'''
 
+        path = util.localpath(path)
         normpath = self.normcase(path)
         if normpath in self.audited:
             return

@@ -128,6 +128,7 @@ class localrepository(repo.repository):
         if not path.startswith(self.root):
             return False
         subpath = path[len(self.root) + 1:]
+        normsubpath = util.pconvert(subpath)
 
         # XXX: Checking against the current working copy is wrong in
         # the sense that it can reject things like
@@ -149,9 +150,9 @@ class localrepository(repo.repository):
         ctx = self[None]
         parts = util.splitpath(subpath)
         while parts:
-            prefix = os.sep.join(parts)
+            prefix = '/'.join(parts)
             if prefix in ctx.substate:
-                if prefix == subpath:
+                if prefix == normsubpath:
                     return True
                 else:
                     sub = ctx.sub(prefix)
