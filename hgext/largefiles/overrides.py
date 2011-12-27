@@ -63,7 +63,7 @@ def override_add(orig, ui, repo, *pats, **opts):
         ui, lfutil.islfilesrepo(repo), opts.pop('lfsize', None))
 
     lfmatcher = None
-    if os.path.exists(repo.wjoin(lfutil.shortname)):
+    if lfutil.islfilesrepo(repo):
         lfpats = ui.configlist(lfutil.longname, 'patterns', default=[])
         if lfpats:
             lfmatcher = match_.match(repo.root, '', list(lfpats))
