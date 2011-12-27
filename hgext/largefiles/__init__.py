@@ -78,6 +78,12 @@ tracked as largefiles::
 
 Files that match one of these patterns will be added as largefiles
 regardless of their size.
+
+The ``largefiles.minsize`` and ``largefiles.patterns`` config options
+will be ignored for any repositories not already containing a
+largefile. To add the first largefile to a repository, you must
+explicitly do so with the --large flag passed to the :hg:`add`
+command.
 '''
 
 from mercurial import commands
