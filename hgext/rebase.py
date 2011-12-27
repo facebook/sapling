@@ -47,7 +47,7 @@ command = cmdutil.command(cmdtable)
      _('read collapse commit message from file'), _('FILE')),
     ('', 'keep', False, _('keep original changesets')),
     ('', 'keepbranches', False, _('keep original branch names')),
-    ('', 'detach', False, _('force detaching of source from its original '
+    ('D', 'detach', False, _('force detaching of source from its original '
                             'branch')),
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
