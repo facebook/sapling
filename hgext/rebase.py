@@ -168,7 +168,7 @@ def rebase(ui, repo, **opts):
                 raise util.Abort(_('cannot specify both a '
                                    'revision and a source'))
             if detachf:
-                if not srcf:
+                if not (srcf or revf):
                     raise util.Abort(
                         _('detach requires a revision to be specified'))
                 if basef:
