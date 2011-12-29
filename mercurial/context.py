@@ -124,6 +124,8 @@ class changectx(object):
             # outdated cache
             del self._repo._phaserev
         return self._repo._phaserev[self._rev]
+    def phasestr(self):
+        return phases.phasenames[self.phase()]
     def mutable(self):
         return self._repo._phaserev[self._rev] > phases.public
     def hidden(self):
