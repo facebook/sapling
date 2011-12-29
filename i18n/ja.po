@@ -52,7 +52,7 @@
 # commit comment        コミットログ
 # copy(of file, repo)   複製
 # default(, by)         指定が無い場合/通常は
-# delete/remove         (構成管理からの)登録除外
+# delete                (作業領域からの)ファイル削除
 # diff                  差分
 # directory             ディレクトリ
 # dirstate              dirstate
@@ -82,6 +82,7 @@
 # push(patch)           (パッチの)適用
 # raise(of exception)   (例外の)発生
 # remote(repo)          連携先(リポジトリ)
+# remove                (構成管理からの)登録除外
 # rename                改名
 # repo(sitory)          リポジトリ/(.hg を指す場合は)管理領域
 # resolve/unresolve     (衝突)解消/(衝突)未解消
@@ -96,9 +97,9 @@
 # support(, un)         (未)サポート
 # tag                   タグ
 # tracked xxxx          構成管理対象の xxxx
-# xxxxx type            xxxx 種別
-# user                  ユーザ
+# type, xxxxx           xxxx 種別
 # unknown xxxx          未知の xxxx
+# user                  ユーザ
 # working copy(of xxx)  作業領域(中の xxx)
 # working directory     作業領域
 # ========================================
@@ -107,7 +108,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-10-30 23:25+0900\n"
+"POT-Creation-Date: 2011-12-29 12:28+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -2033,7 +2034,7 @@ msgstr "svn: 開始リビジョン %d 以降にリビジョンはありません
 
 #, python-format
 msgid "%s not found up to revision %d"
-msgstr "リビジョン %s は %d までのりビジョンに見当たりません"
+msgstr "リビジョン %s は %d までのリビジョンに見当たりません"
 
 msgid "scanning paths"
 msgstr "パスの走査中"
@@ -3516,7 +3517,7 @@ msgid "converting revisions"
 msgstr "リビジョンの表示"
 
 #, python-format
-msgid "Renamed/copied largefile %s becomes symlink"
+msgid "renamed/copied largefile %s becomes symlink"
 msgstr ""
 
 #, python-format
@@ -3623,6 +3624,24 @@ msgstr "%s を登録除外中\n"
 msgid "uncommitted local changes"
 msgstr "作業領域に未コミットの変更があります"
 
+msgid "&Largefile"
+msgstr ""
+
+msgid "&Normal file"
+msgstr ""
+
+#, python-format
+msgid ""
+"%s has been turned into a largefile\n"
+"use (l)argefile or keep as (n)ormal file?"
+msgstr ""
+
+#, python-format
+msgid ""
+"%s has been turned into a normal file\n"
+"keep as (l)argefile or use (n)ormal file?"
+msgstr ""
+
 #, python-format
 msgid "merging %s and %s to %s\n"
 msgstr "%s と %s を %s にマージ中\n"
@@ -3677,7 +3696,8 @@ msgstr ""
 msgid "addremove cannot be run on a repo with largefiles"
 msgstr ""
 
-msgid "error: could not put received data into largefile store"
+#, python-format
+msgid "largefiles: failed to put %s (%s) into store: %s"
 msgstr ""
 
 #, python-format
@@ -6280,7 +6300,7 @@ msgid "cannot use detach with continue or abort"
 msgstr "--detach と、 --abort や --continue は併用できません"
 
 msgid "abort and continue do not allow specifying revisions"
-msgstr "--abort や --continue と、 りビジョン指定は併用できません"
+msgstr "--abort や --continue と、 リビジョン指定は併用できません"
 
 msgid "tool option will be ignored\n"
 msgstr ""
@@ -6733,7 +6753,7 @@ msgstr ""
 
 #, python-format
 msgid "skipping already applied revision %s\n"
-msgstr "すでに適用したりビジョン %s を飛ばしています\n"
+msgstr "適用済みリビジョン %s を飛ばしています\n"
 
 #, python-format
 msgid "skipping merge changeset %s:%s\n"
@@ -8275,6 +8295,20 @@ msgid "set or show the current branch name"
 msgstr "ブランチ名の設定、 ないし現ブランチ名の表示"
 
 msgid ""
+"    .. note::\n"
+"       Branch names are permanent and global. Use :hg:`bookmark` to create "
+"a\n"
+"       light-weight bookmark instead. See :hg:`help glossary` for more\n"
+"       information about named branches and bookmarks."
+msgstr ""
+"    .. note::\n"
+"       ブランチ名は永続的で且つ共有されます。\n"
+"       軽量な名前付けが必要なら、\n"
+"       :hg:`bookmark` でブックマークを作成してください。\n"
+"       名前付きブランチと、 ブックマークの詳細に関しては、\n"
+"       :hg:`help glossary` を参照してください。"
+
+msgid ""
 "    With no argument, show the current branch name. With one argument,\n"
 "    set the working directory branch name (the branch will not exist\n"
 "    in the repository until the next commit). Standard practice\n"
@@ -8309,18 +8343,6 @@ msgstr ""
 "    使用してください。 現ブランチを閉鎖する場合は\n"
 "    :hg:`commit --close-branch` を使用してください。"
 
-msgid ""
-"    .. note::\n"
-"       Branch names are permanent. Use :hg:`bookmark` to create a\n"
-"       light-weight bookmark instead. See :hg:`help glossary` for more\n"
-"       information about named branches and bookmarks."
-msgstr ""
-"    .. note::\n"
-"       ブランチ名は永続的なものです。軽量な名前付けをする場合は、\n"
-"       :hg:`bookmark` でブックマークを作成してください。\n"
-"       名前付きブランチとブックマークの詳細に関しては、\n"
-"       :hg:`help glossary` を参照してください。"
-
 #, python-format
 msgid "reset working directory to branch %s\n"
 msgstr "作業領域のブランチを %s にリセット\n"
@@ -8335,6 +8357,9 @@ msgstr "作業領域を既存ブランチに切り替えるには 'hg update' �
 #, python-format
 msgid "marked working directory as branch %s\n"
 msgstr "作業領域をブランチ %s に設定\n"
+
+msgid "(branches are permanent and global, did you want a bookmark?)\n"
+msgstr "(ブランチは永続的且つ共有されます。ブックマークはいかがですか？)\n"
 
 msgid "show only branches that have unmerged heads"
 msgstr "未マージなヘッドを持つブランチのみを表示"
@@ -9469,9 +9494,9 @@ msgstr ""
 
 msgid ""
 "    If a graft merge results in conflicts, the graft process is\n"
-"    aborted so that the current merge can be manually resolved. Once\n"
-"    all conflicts are addressed, the graft process can be continued\n"
-"    with the -c/--continue option."
+"    interrupted so that the current merge can be manually resolved.\n"
+"    Once all conflicts are addressed, the graft process can be\n"
+"    continued with the -c/--continue option."
 msgstr ""
 
 msgid ""
@@ -9530,7 +9555,19 @@ msgstr "祖先ビジョン %s を飛ばしています\n"
 
 #, python-format
 msgid "skipping already grafted revision %s\n"
-msgstr "すでに移植したりビジョン %s を飛ばしています\n"
+msgstr "移植済みビジョン %s を飛ばしています\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (same origin %d)\n"
+msgstr "移植済みリビジョン %s を飛ばしています (由来元: %d)\n"
+
+#, python-format
+msgid "skipping already grafted revision %s (was grafted from %d)\n"
+msgstr "移植済みリビジョン %s を飛ばしています (移植元: %d)\n"
+
+#, python-format
+msgid "grafting revision %s\n"
+msgstr "リビジョン %s の移植中\n"
 
 msgid "unresolved conflicts, can't continue"
 msgstr "衝突が未解消のため、継続できません"
@@ -9896,22 +9933,22 @@ msgstr ""
 "    状態を表示します。"
 
 msgid "      - generate a build identifier for the working directory::"
-msgstr ""
+msgstr "      - 作業領域のビルド識別情報の生成::"
 
 msgid "          hg id --id > build-id.dat"
-msgstr ""
+msgstr "          hg id --id > build-id.dat"
 
 msgid "      - find the revision corresponding to a tag::"
-msgstr ""
+msgstr "      - タグに対応するリビジョンの特定::"
 
 msgid "          hg id -n -r 1.3"
-msgstr ""
+msgstr "          hg id -n -r 1.3"
 
 msgid "      - check the most recent revision of a remote repository::"
-msgstr ""
+msgstr "      - 連携先リポジトリにおける最新リビジョンの確認::"
 
 msgid "          hg id -r tip http://selenic.com/hg/"
-msgstr ""
+msgstr "          hg id -r tip http://selenic.com/hg/"
 
 msgid "can't query remote revision number, branch, or tags"
 msgstr "リビジョン番号/ブランチ/タグは遠隔問い合わせできません"
@@ -10026,30 +10063,31 @@ msgstr ""
 "    -d/--date での日時表記は :hg:`help dates` を参照してください。"
 
 msgid "      - import a traditional patch from a website and detect renames::"
-msgstr ""
+msgstr "      - ウェブサイトから入手した標準的なパッチの適用と改名の判定::"
 
 msgid "          hg import -s 80 http://example.com/bugfix.patch"
-msgstr ""
+msgstr "          hg import -s 80 http://example.com/bugfix.patch"
 
 msgid "      - import a changeset from an hgweb server::"
-msgstr ""
+msgstr "      - hgweb サーバからの指定リビジョンの取り込み::"
 
 msgid "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
-msgstr ""
+msgstr "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
 
 msgid "      - import all the patches in an Unix-style mbox::"
-msgstr ""
+msgstr "      - Unix 形式 mbox ファイル中の全パッチの取り込み::"
 
 msgid "          hg import incoming-patches.mbox"
-msgstr ""
+msgstr "          hg import incoming-patches.mbox"
 
 msgid ""
 "      - attempt to exactly restore an exported changeset (not always\n"
 "        possible)::"
 msgstr ""
+"      - export されたリビジョンの厳密適用 (常に成功するとは限りません)::"
 
 msgid "          hg import --exact proposed-fix.patch"
-msgstr ""
+msgstr "          hg import --exact proposed-fix.patch"
 
 msgid "need at least one patch to import"
 msgstr "取り込みには最低1つのパッチ名指定が必要です"
@@ -10229,10 +10267,10 @@ msgid "show only merges"
 msgstr "マージ実施リビジョンのみを表示"
 
 msgid "revisions committed by user"
-msgstr "当該ユーザによってコミットされたリビジョンを表示"
+msgstr "当該ユーザによるリビジョンを表示"
 
 msgid "show only changesets within the given named branch (DEPRECATED)"
-msgstr "指定の名前付きブランチに属するリビジョンのみを表示 (非推奨)"
+msgstr "指定の名前付きブランチに属するリビジョンを表示 (非推奨)"
 
 msgid "show changesets within the given named branch"
 msgstr "指定の名前付きブランチに属するリビジョンを表示"
@@ -10307,63 +10345,69 @@ msgid ""
 "       changes including duplicates and deletions, use the --removed\n"
 "       switch."
 msgstr ""
+"    .. note::\n"
+"       ファイル名指定付きでの実行では、 複数ブランチ上での同一変更や、\n"
+"       登録除外実施リビジョンは、 性能的な点から表示しません。\n"
+"       重複変更や登録除外を含め、 全てのリビジョンを表示する場合、\n"
+"       --removed を指定してください。"
 
 msgid "      - changesets with full descriptions and file lists::"
-msgstr ""
+msgstr "      - 全リビジョンのコミットメッセージとファイル一覧の表示::"
 
 msgid "          hg log -v"
-msgstr ""
+msgstr "          hg log -v"
 
 msgid "      - changesets ancestral to the working directory::"
-msgstr ""
+msgstr "      - 作業領域の祖先の表示::"
 
 msgid "          hg log -f"
-msgstr ""
+msgstr "          hg log -f"
 
 msgid "      - last 10 commits on the current branch::"
-msgstr ""
+msgstr "      - 現行ブランチにおける直近の 10 リビジョンの表示::"
 
 msgid "          hg log -l 10 -b ."
-msgstr ""
+msgstr "          hg log -l 10 -b ."
 
 msgid ""
 "      - changesets showing all modifications of a file, including removals::"
-msgstr ""
+msgstr "      - 登録除外を含む、ファイルに対する全変更の表示::"
 
 msgid "          hg log --removed file.c"
-msgstr ""
+msgstr "          hg log --removed file.c"
 
 msgid ""
 "      - all changesets that touch a directory, with diffs, excluding merges::"
-msgstr ""
+msgstr "      - マージ以外での、ディレクトリ配下への全変更の差分付き表示::"
 
 msgid "          hg log -Mp lib/"
-msgstr ""
+msgstr "          hg log -Mp lib/"
 
 msgid "      - all revision numbers that match a keyword::"
-msgstr ""
+msgstr "      - 指定キーワードに合致する全リビジョン番号の表示::"
 
 msgid "          hg log -k bug --template \"{rev}\\n\""
-msgstr ""
+msgstr "          hg log -k bug --template \"{rev}\\n\""
 
 msgid "      - check if a given changeset is included is a tagged release::"
-msgstr ""
+msgstr "      - 指定リビジョンが指定タグ時点において含まれているかを確認::"
 
 msgid "          hg log -r \"a21ccf and ancestor(1.9)\""
-msgstr ""
+msgstr "          hg log -r \"a21ccf and ancestor(1.9)\""
 
 msgid "      - find all changesets by some user in a date range::"
-msgstr ""
+msgstr "      - 指定期間における指定ユーザによる全変更の表示::"
 
 msgid "          hg log -k alice -d \"may 2008 to jul 2008\""
-msgstr ""
+msgstr "          hg log -k alice -d \"may 2008 to jul 2008\""
 
 msgid "      - summary of all changesets after the last tag::"
-msgstr ""
+msgstr "      - 最後のタグ付け以降の全変更の概要の表示::"
 
 msgid ""
 "          hg log -r \"last(tagged())::\" --template \"{desc|firstline}\\n\""
 msgstr ""
+"          hg log -r \"last(tagged())::\" --template \"{desc|firstline}\\n\""
 
 msgid ""
 "    See :hg:`help revisions` and :hg:`help revsets` for more about\n"
@@ -11189,7 +11233,7 @@ msgid "no changes needed to %s\n"
 msgstr "%s には改変の必要がありません\n"
 
 msgid "ignore safety measures"
-msgstr ""
+msgstr "安全判定を無視"
 
 msgid "roll back the last transaction (dangerous)"
 msgstr "直前のトランザクションの巻き戻し(要注意)"
@@ -11237,6 +11281,15 @@ msgid ""
 "    removes them from history. To avoid data loss, you must pass\n"
 "    --force in this case."
 msgstr ""
+"    例えば commit、旧リビジョンへの update、 rollback の順で実行すると、\n"
+"    データが喪失します。 commit 内容が、 update により作業領域から、\n"
+"    rollback により履歴から破棄されるためです。\n"
+"    このケースにおけるデータ喪失を避けるには --force を指定してください。\n"
+"    (訳注: --force 指定が『無い』場合、 このケースのようなデータ喪失は、\n"
+"    実行中断により防止されます。 原文では、 --force 指定は\n"
+"    \"avoid data loss\" (データ喪失の回避) のためと記載されていますが、\n"
+"    実際には『データ喪失に構わず rollback を強行する』場合にのみ\n"
+"    --force を指定してください)"
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -11509,23 +11562,25 @@ msgstr ""
 "      I = 無視(Ignored)\n"
 "        = 直前に表示される新規登録予定ファイル(A)の複製元"
 
-msgid "      - show changes in the working directory relative to a changeset:"
-msgstr ""
+msgid ""
+"      - show changes in the working directory relative to a\n"
+"        changeset::"
+msgstr "      - 作業領域と指定リビジョンとの間での状態変更を表示::"
 
 msgid "          hg status --rev 9353"
-msgstr ""
+msgstr "          hg status --rev 9353"
 
 msgid "      - show all changes including copies in an existing changeset::"
-msgstr ""
+msgstr "      - 指定リビジョンにおける状態変更 (複製元含む) を表示::"
 
 msgid "          hg status --copies --change 9353"
-msgstr ""
+msgstr "          hg status --copies --change 9353"
 
 msgid "      - get a NUL separated list of added files, suitable for xargs::"
-msgstr ""
+msgstr "      - 追加登録されたファイルの NUL 区切り一覧の表示 (xargs 向け)::"
 
 msgid "          hg status -an0"
-msgstr ""
+msgstr "          hg status -an0"
 
 msgid "check for push and pull"
 msgstr "push/pull 実施結果の確認"
@@ -12083,6 +12138,14 @@ msgstr "pull と merge を実施するか、 push -f で強制実行してくだ
 msgid "did you forget to merge? use push -f to force"
 msgstr "マージは済んでいますか？ push -f で強制実行できます"
 
+#, python-format
+msgid "new remote heads on branch '%s'\n"
+msgstr "新しいヘッドが連携先のブランチ '%s' に作成されます\n"
+
+#, python-format
+msgid "new remote head %s\n"
+msgstr "新しいヘッド %s が連携先に作成されます\n"
+
 msgid "note: unsynced remote changes!\n"
 msgstr "注意: 連携先での変更点が取り込まれていません!\n"
 
@@ -12136,6 +12199,9 @@ msgstr "hg %s: %s\n"
 #, python-format
 msgid "hg: %s\n"
 msgstr "hg: %s\n"
+
+msgid "abort: remote error:\n"
+msgstr "中止: 連携エラー:\n"
 
 #, python-format
 msgid "abort: %s!\n"
@@ -12363,7 +12429,7 @@ msgid ""
 "    File that is removed according to status."
 msgstr ""
 "``removed()``\n"
-"    削除ステータスを持つファイル"
+"    登録除外(予定)ステータスを持つファイル"
 
 #. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
@@ -12374,7 +12440,7 @@ msgid ""
 "    File that is deleted according to status."
 msgstr ""
 "``deleted()``\n"
-"    削除ステータスを持つファイル"
+"    作業領域のファイル不在ステータスを持つファイル"
 
 #. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
@@ -12569,7 +12635,7 @@ msgid "unknown bisect kind %s"
 msgstr "未知の分岐種類 %s"
 
 msgid "invalid bisect state"
-msgstr ""
+msgstr "bisect 状態が不正です"
 
 #. i18n: bisect changeset status
 msgid "good"
@@ -17761,8 +17827,8 @@ msgstr ""
 
 msgid ""
 ":add: add does not recurse in subrepos unless -S/--subrepos is\n"
-"    specified. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    specified. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 
 msgid ""
@@ -17772,31 +17838,32 @@ msgstr ""
 
 msgid ""
 ":commit: commit creates a consistent snapshot of the state of the\n"
-"    entire project and its subrepositories. It does this by first\n"
-"    attempting to commit all modified subrepositories, then recording\n"
-"    their state and finally committing it in the parent\n"
-"    repository. Mercurial can be made to abort if any subrepository\n"
-"    content is modified by setting \"ui.commitsubrepos=no\" in a\n"
-"    configuration file (see :hg:`help config`)."
+"    entire project and its subrepositories. If any subrepositories\n"
+"    have been modified, Mercurial will abort.  Mercurial can be made\n"
+"    to instead commit all modified subrepositories by specifying\n"
+"    -S/--subrepos, or setting \"ui.commitsubrepos=True\" in a\n"
+"    configuration file (see :hg:`help config`).  After there are no\n"
+"    longer any modified subrepositories, it records their state and\n"
+"    finally commits it in the parent repository."
 msgstr ""
 
 msgid ""
 ":diff: diff does not recurse in subrepos unless -S/--subrepos is\n"
 "    specified. Changes are displayed as usual, on the subrepositories\n"
-"    elements. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    elements. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 
 msgid ""
 ":incoming: incoming does not recurse in subrepos unless -S/--subrepos\n"
-"    is specified. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    is specified. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 
 msgid ""
 ":outgoing: outgoing does not recurse in subrepos unless -S/--subrepos\n"
-"    is specified. Subversion subrepositories are currently silently\n"
-"    ignored."
+"    is specified. Git and Subversion subrepositories are currently\n"
+"    silently ignored."
 msgstr ""
 
 msgid ""
@@ -17811,7 +17878,7 @@ msgid ""
 ":push: Mercurial will automatically push all subrepositories first\n"
 "    when the parent repository is being pushed. This ensures new\n"
 "    subrepository changes are available when referenced by top-level\n"
-"    repositories."
+"    repositories.  Push is a no-op for Subversion subrepositories."
 msgstr ""
 
 msgid ""
@@ -19302,6 +19369,12 @@ msgstr "未知のリポジトリ形式です: '%s' サポートが必要 (要 Me
 
 msgid "searching for changes\n"
 msgstr "変更点を探索中\n"
+
+msgid "all local heads known remotely\n"
+msgstr ""
+
+msgid "sampling from both directions\n"
+msgstr ""
 
 msgid "queries"
 msgstr "問い合わせ"
