@@ -4902,11 +4902,9 @@ def rollback(ui, repo, **opts):
     - push (with this repository as the destination)
     - unbundle
 
-    It's possible to lose data with rollback: commit, update back to
-    an older changeset, and then rollback. The update removes the
-    changes you committed from the working directory, and rollback
-    removes them from history. To avoid data loss, you must pass
-    --force in this case.
+    To avoid permanent data loss, rollback will refuse to rollback a
+    commit transaction if it isn't checked out. Use --force to
+    override this protection.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
