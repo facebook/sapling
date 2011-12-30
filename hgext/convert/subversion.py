@@ -106,11 +106,11 @@ def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=Tr
                        discover_changed_paths,
                        strict_node_history,
                        receiver)
-    except SubversionException, (inst, num):
-        pickle.dump(num, fp, protocol)
     except IOError:
         # Caller may interrupt the iteration
         pickle.dump(None, fp, protocol)
+    except Exception, inst:
+        pickle.dump(str(inst), fp, protocol)
     else:
         pickle.dump(None, fp, protocol)
     fp.close()
@@ -145,7 +145,7 @@ class logstream(object):
             except:
                 if entry is None:
                     break
-                raise SubversionException("child raised exception", entry)
+                raise util.Abort(_("log stream exception '%s'") % entry)
             yield entry
 
     def close(self):
