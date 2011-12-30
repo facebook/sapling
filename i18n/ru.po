@@ -133,6 +133,7 @@
 # root           корень, корневая ревизия ???
 # progress bar   индикатор выполнения
 # map (file)     ??? да и вообще все с map плохо
+# abort          отмена или останов (в статусах)
 #
 #
 # === TODO ===
@@ -154,6 +155,9 @@
 #   Сюда же относятся сообщения cannot do smth: не могу сделать что-то или что-то невозможно?
 #   Cейчас последний вариант. -- А лучше «не удаётся» // comment by Andrei Polushin
 # - внести определения согласованных терминов в hg glossary
+# - bisect - можно во многих местах употреблять термин "бисекция" вместо
+#            неуклюжего "метод деления пополам". Это устоявшийся термин.
+# - в строке дожно быть не более 75 символов!
 #
 #
 msgid ""
@@ -199,6 +203,7 @@ msgstr "Параметры:"
 msgid "    aliases: %s"
 msgstr "    псевдонимы: %s"
 
+# {{{ Start of extensions
 msgid "hooks for controlling repository access"
 msgstr "хуки для контроля доступа к хранилищу"
 
@@ -3544,7 +3549,7 @@ msgstr "cat-file: не задан тип или ревизия\n"
 
 # BUG
 msgid "aborting hg cat-file only understands commits\n"
-msgstr "отмена: hg cat-file понимает только фиксации (commits)\n"
+msgstr "останов: hg cat-file понимает только фиксации (commits)\n"
 
 msgid "parse given revisions"
 msgstr "разбор заданых ревизий"
@@ -8281,70 +8286,72 @@ msgid ""
 "  zc-test = http://example.com:8000/test\n"
 msgstr ""
 
+# }}} End of extensions
 msgid "archive prefix contains illegal components"
-msgstr ""
+msgstr "префикс архива содержит недопустимые компоненты"
 
 msgid "archiving"
-msgstr ""
+msgstr "архивирование"
 
 #, python-format
 msgid "malformed line in .hg/bookmarks: %r\n"
-msgstr ""
+msgstr "плохая строка в .hg/bookmarks: %r\n"
 
 #, python-format
 msgid "bookmark '%s' contains illegal character"
-msgstr ""
+msgstr "закладка '%s' содержит недопустимый символ"
 
 #, python-format
 msgid "branch %s not found"
-msgstr ""
+msgstr "ветка %s не найдена"
 
 #, python-format
 msgid "updating bookmark %s\n"
-msgstr ""
+msgstr "обновление закладки %s\n"
 
+# NOT-SURE
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
-msgstr ""
+msgstr "закладка на расходящейся ревизии %s сохранена как %s\n"
 
 msgid "searching for changed bookmarks\n"
-msgstr ""
+msgstr "поиск изменившихся закладок\n"
 
 msgid "no changed bookmarks found\n"
-msgstr ""
+msgstr "измененных закладок не найдено\n"
 
 msgid "unknown parent"
-msgstr ""
+msgstr "неизвестный родитель"
 
 #, python-format
 msgid "integrity check failed on %s:%d"
-msgstr ""
+msgstr "ошибка при проверке целостности %s:%d"
 
 msgid "cannot create new bundle repository"
-msgstr ""
+msgstr "невозможно создать новое хранилище-комплект (bundle)"
 
 #, python-format
 msgid "stream ended unexpectedly (got %d bytes, expected %d)"
-msgstr ""
+msgstr "неожиданное завершение потока (получено %d байт, ожидалось %d)"
 
 #, python-format
 msgid "invalid chunk length %d"
-msgstr ""
+msgstr "неверная длина участка %d"
 
 #, python-format
 msgid "%s: not a Mercurial bundle"
-msgstr ""
+msgstr "%s: не комплект Mercurial"
 
 #, python-format
 msgid "%s: unknown bundle version %s"
-msgstr ""
+msgstr "%s: неизвестная версия комплекта %s"
 
 msgid "empty username"
-msgstr ""
+msgstr "пустое имя пользователя"
 
 #, python-format
 msgid "username %s contains a newline"
-msgstr ""
+msgstr "имя пользователя %s содержит перевод строки"
 
 #, python-format
 msgid "the name '%s' is reserved"
@@ -8352,33 +8359,33 @@ msgstr "имя '%s' зарезервировано"
 
 #, python-format
 msgid "uncommitted changes in subrepo %s"
-msgstr ""
+msgstr "незафиксированные изменения в подхранилище %s"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "параметры --massage и --logfile взаимно исключающие"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr ""
+msgstr "не удается прочитать сообщение фиксации '%s': %s"
 
 msgid "limit must be a positive integer"
-msgstr ""
+msgstr "ограничение должено быть положительным целым числом"
 
 msgid "limit must be positive"
-msgstr ""
+msgstr "ограничение должно быть положительным"
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
-msgstr ""
+msgstr "неверная спецификация формата '%%%s' в имени выходного файла"
 
 msgid "cannot specify --changelog and --manifest at the same time"
-msgstr ""
+msgstr "нельзя указывать --changelog и --manifest одновременно"
 
 msgid "cannot specify filename with --changelog or --manifest"
-msgstr ""
+msgstr "нельзя задавать имя файла с --changelog или --manifest"
 
 msgid "cannot specify --changelog or --manifest without a repository"
-msgstr ""
+msgstr "нельзя задавать --changelog или --manifest без хранилища"
 
 msgid "invalid arguments"
 msgstr "неверные параметры"
@@ -8389,187 +8396,196 @@ msgstr "revlog '%s' не найден"
 
 #, python-format
 msgid "%s: not copying - file is not managed\n"
-msgstr ""
+msgstr "%s: не копируется - файл не контролируется\n"
 
 #, python-format
 msgid "%s: not copying - file has been marked for remove\n"
-msgstr ""
+msgstr "%s: не копируется - файл был помечен для удаления\n"
 
 #, python-format
 msgid "%s: not overwriting - %s collides with %s\n"
-msgstr ""
+msgstr "%s: не перезаписывается - %s конфликтует с %s\n"
 
 #, python-format
 msgid "%s: not overwriting - file exists\n"
-msgstr ""
+msgstr "%s: не перезаписывается - файл существует\n"
 
 #, python-format
 msgid "%s: not recording move - %s does not exist\n"
-msgstr ""
+msgstr "%s: перемещение не записывается - %s не существует\n"
 
 #, python-format
 msgid "%s: not recording copy - %s does not exist\n"
-msgstr ""
+msgstr "%s: копирование не записывается - %s не существует\n"
 
 #, python-format
 msgid "%s: deleted in working copy\n"
-msgstr ""
+msgstr "%s: удален в рабочей копии\n"
 
 #, python-format
 msgid "%s: cannot copy - %s\n"
-msgstr ""
+msgstr "%s: не удается скопировать - %s\n"
 
 #, python-format
 msgid "moving %s to %s\n"
-msgstr ""
+msgstr "%s перемещается в %s\n"
 
 #, python-format
 msgid "copying %s to %s\n"
-msgstr ""
+msgstr "%s копируется в %s\n"
 
 msgid "no source or destination specified"
-msgstr ""
+msgstr "не указан источник или назначение"
 
 msgid "no destination specified"
-msgstr ""
+msgstr "не указано назначение"
 
 msgid "with multiple sources, destination must be an existing directory"
 msgstr ""
+"если задано несколько источников, назначение должно быть существующим "
+"каталогом"
 
 #, python-format
 msgid "destination %s is not a directory"
-msgstr ""
+msgstr "назначение %s не является каталогом"
 
 msgid "(consider using --after)\n"
-msgstr ""
+msgstr "(попробуйте использовать --after?)\n"
 
 msgid "child process failed to start"
-msgstr ""
+msgstr "не удалось запустить дочерний процесс"
 
+# может сделать "набор изм-й" или "ревизия" для экономии места?
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr ""
+msgstr "набор изменений:  %d:%s\n"
 
 #, python-format
 msgid "branch:      %s\n"
-msgstr ""
+msgstr "ветка:            %s\n"
 
 #, python-format
 msgid "bookmark:    %s\n"
-msgstr ""
+msgstr "закладка:         %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
-msgstr ""
+msgstr "метка:            %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr ""
+msgstr "родитель:         %d:%s\n"
 
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr ""
+msgstr "манифест:         %d:%s\n"
 
 #, python-format
 msgid "user:        %s\n"
-msgstr ""
+msgstr "пользователь:     %s\n"
 
 #, python-format
 msgid "date:        %s\n"
-msgstr ""
+msgstr "дата:             %s\n"
 
 msgid "files+:"
-msgstr ""
+msgstr "файлов+:"
 
 msgid "files-:"
-msgstr ""
+msgstr "файлов-:"
 
 msgid "files:"
-msgstr ""
+msgstr "файлы:"
 
 #, python-format
 msgid "files:       %s\n"
-msgstr ""
+msgstr "файлы:            %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr ""
+msgstr "скопировано:      %s\n"
 
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr ""
+msgstr "дополнительно:    %s=%s\n"
 
 msgid "description:\n"
-msgstr ""
+msgstr "описание:\n"
 
 #, python-format
 msgid "summary:     %s\n"
-msgstr ""
+msgstr "сводка:           %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
-msgstr ""
+msgstr "%s: нет ключа с именем '%s'"
 
-#, python-format
+# может, не из а от?
+#, fuzzy, python-format
 msgid "Found revision %s from %s\n"
-msgstr ""
+msgstr "найдена ревизия %s из %s\n"
 
 msgid "revision matching date not found"
-msgstr ""
+msgstr "не найдена ревизия для данной даты"
 
 #, python-format
 msgid "cannot follow nonexistent file: \"%s\""
-msgstr ""
+msgstr "невозможно отслеживать несуществующий файл: \"%s\""
 
 msgid "can only follow copies/renames for explicit filenames"
 msgstr ""
+"чтобы отслеживать копирования/переименовывания, требуется явное имя файла"
 
 #, python-format
 msgid "adding %s\n"
-msgstr "добавляю %s\n"
+msgstr "добавлется %s\n"
 
 #, python-format
 msgid "skipping missing subrepository: %s\n"
-msgstr ""
+msgstr "пропускается отсутствующее подхранилище: %s\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
 msgstr ""
+"HG: Введите сообщение фиксации. Строки, начинающиеся с 'HG:' будут удалены."
 
 msgid "HG: Leave message empty to abort commit."
-msgstr ""
+msgstr "HG: Оставьте сообщение пустым, чтобы отменить фиксацию."
 
 #, python-format
 msgid "HG: user: %s"
-msgstr ""
+msgstr "HG: пользователь: %s"
 
 msgid "HG: branch merge"
-msgstr ""
+msgstr "HG: слияние веток"
 
 #, python-format
 msgid "HG: branch '%s'"
-msgstr ""
+msgstr "HG: ветка '%s'"
 
 #, python-format
 msgid "HG: subrepo %s"
-msgstr ""
+msgstr "HG: подхранилище %s"
 
+# UGLY
 #, python-format
 msgid "HG: added %s"
-msgstr ""
+msgstr "HG: добавлен(ы) %s"
 
+# UGLY
 #, python-format
 msgid "HG: changed %s"
-msgstr ""
+msgstr "HG: изменен(ы) %s"
 
+# UGLY
 #, python-format
 msgid "HG: removed %s"
-msgstr ""
+msgstr "HG: удален(ы) %s"
 
 msgid "HG: no files changed"
-msgstr ""
+msgstr "HG: нет измененных файлов"
 
 msgid "empty commit message"
-msgstr ""
+msgstr "пустое сообщение фиксации"
 
 msgid "repository root directory or name of overlay bundle file"
 msgstr "корневой каталог хранилища или файл бандла"
@@ -8591,7 +8607,8 @@ msgstr "включить дополнительный вывод"
 
 msgid "set/override config option (use 'section.name=value')"
 msgstr ""
-"задать/переопределить параметр конфига (в виде 'секция.параметр=значение')"
+"задать/переопределить параметр конфигурации (в виде 'секция."
+"параметр=значение')"
 
 msgid "CONFIG"
 msgstr "КОНФИГ"
@@ -8725,8 +8742,9 @@ msgstr ""
 msgid "    If no names are given, add all files to the repository."
 msgstr "    Если имена файлов не заданы, в будут добавлены все файлы."
 
+# does this require a translation?
 msgid "    .. container:: verbose"
-msgstr ""
+msgstr "    .. container:: подробный"
 
 msgid ""
 "       An example showing how new (unknown) files are added\n"
@@ -8913,16 +8931,16 @@ msgid "      Examples:"
 msgstr "      Примеры::"
 
 msgid "      - create a zip file containing the 1.0 release::"
-msgstr ""
+msgstr "      - создать zip-файл, содержащий релиз 1.0::"
 
 msgid "          hg archive -r 1.0 project-1.0.zip"
-msgstr ""
+msgstr "          hg archive -r 1.0 project-1.0.zip"
 
 msgid "      - create a tarball excluding .hg files::"
-msgstr ""
+msgstr "      - создать тарбол (tarball), исключив файлы .hg::"
 
 msgid "          hg archive project.tar.gz -X \".hg*\""
-msgstr ""
+msgstr "          hg archive project.tar.gz -X \".hg*\""
 
 msgid "    Valid types are:"
 msgstr "    Допустимые типы:"
@@ -9006,6 +9024,9 @@ msgid ""
 "      backout cannot be used to fix either an unwanted or\n"
 "      incorrect merge."
 msgstr ""
+"    .. note::\n"
+"       backout не может использоваться для исправления нежелательного\n"
+"       или некорректного слияния."
 
 msgid ""
 "      By default, the pending changeset will have one parent,\n"
@@ -9134,45 +9155,57 @@ msgstr "      Несколько примеров::"
 
 msgid ""
 "      - start a bisection with known bad revision 12, and good revision 34::"
-msgstr ""
+msgstr "      - начать бисекцию с известной плохой ревизией 12, хорошей 34::"
 
 msgid ""
 "          hg bisect --bad 34\n"
 "          hg bisect --good 12"
 msgstr ""
+"          hg bisect --bad 34\n"
+"          hg bisect --good 12"
 
 msgid ""
 "      - advance the current bisection by marking current revision as good "
 "or\n"
 "        bad::"
 msgstr ""
+"      - продвинуть текущую бисекцию, пометив текущую ревизию как плохую или "
+"хорошую::"
 
 msgid ""
 "          hg bisect --good\n"
 "          hg bisect --bad"
 msgstr ""
+"          hg bisect --good\n"
+"          hg bisect --bad"
 
 msgid ""
 "      - mark the current revision, or a known revision, to be skipped (eg. "
 "if\n"
 "        that revision is not usable because of another issue)::"
 msgstr ""
+"      - пометить текущую или известную ревизию для пропуска (например,\n"
+"        потому что ее нельзя использовать из-за другой проблемы)::"
 
 msgid ""
 "          hg bisect --skip\n"
 "          hg bisect --skip 23"
 msgstr ""
+"          hg bisect --skip\n"
+"          hg bisect --skip 23"
 
 msgid "      - forget the current bisection::"
-msgstr ""
+msgstr "      - забыть текущую бисекцию::"
 
 msgid "          hg bisect --reset"
-msgstr ""
+msgstr "          hg bisect --reset"
 
 msgid ""
 "      - use 'make && make tests' to automatically find the first broken\n"
 "        revision::"
 msgstr ""
+"      - использовать команду 'make && make tests' для автоматического\n"
+"        поиска первой нерабочей ревизии::"
 
 msgid ""
 "          hg bisect --reset\n"
@@ -9180,26 +9213,35 @@ msgid ""
 "          hg bisect --good 12\n"
 "          hg bisect --command 'make && make tests'"
 msgstr ""
+"          hg bisect --reset\n"
+"          hg bisect --bad 34\n"
+"          hg bisect --good 12\n"
+"          hg bisect --command 'make && make tests'"
 
 msgid ""
 "      - see all changesets whose states are already known in the current\n"
 "        bisection::"
 msgstr ""
+"      - посмтреть все наборы изменений, чьи состояния уже известны в\n"
+"        текущей бисекции::"
 
 msgid "          hg log -r \"bisect(pruned)\""
-msgstr ""
+msgstr "          hg log -r \"bisect(pruned)\""
 
 msgid "      - see all changesets that took part in the current bisection::"
 msgstr ""
+"      - посмотреть все наборы изменений, которые участвовали в текущей "
+"бисекции::"
 
 msgid "          hg log -r \"bisect(range)\""
-msgstr ""
+msgstr "          hg log -r \"bisect(range)\""
 
 msgid "      - with the graphlog extension, you can even get a nice graph::"
 msgstr ""
+"      - с расширением graphlog, вы даже можете получить симпатичный граф::"
 
 msgid "          hg log --graph -r \"bisect(range)\""
-msgstr ""
+msgstr "          hg log --graph -r \"bisect(range)\""
 
 msgid "      See :hg:`help revsets` for more about the `bisect()` keyword."
 msgstr "    Подробнее о `bisect()` см. :hg:`help revsets`."
@@ -9420,6 +9462,8 @@ msgstr "рабочий каталог помечен как ветка %s\n"
 
 msgid "(branches are permanent and global, did you want a bookmark?)\n"
 msgstr ""
+"(ветки (branch) глобальны и перманентны, быть может, вам нужна\n"
+"закладка (bookmark?)\n"
 
 msgid "show only branches that have unmerged heads"
 msgstr "показывать только ветки, на которых есть неслитые головы"
@@ -9634,6 +9678,9 @@ msgid ""
 "    destinations. For ``ssh://`` destinations, no working directory or\n"
 "    ``.hg/hgrc`` will be created on the remote side."
 msgstr ""
+"    В качестве путей назначения поддерживаются только локальные пути и\n"
+"    URL вида ``ssh://``. Для назначения ``ssh://`` не создается рабочей\n"
+"    копии или файла ``.hg/hgrc`` на отдаленной стороне."
 
 msgid ""
 "    To pull only a subset of changesets, specify one or more revisions\n"
@@ -9644,11 +9691,23 @@ msgid ""
 "    tag will include the tagged changeset but not the changeset\n"
 "    containing the tag."
 msgstr ""
+"    Чтобы затянуть подмножество наборов изменений, укажите один или более\n"
+"    идентификатор ревизии с помощью -r/--rev или ветки с помощь -b/--"
+"branch.\n"
+"    Клон будет содержать только заданные ревизии и их предков. Эти "
+"параметры\n"
+"    (равно как и `clone ист#рев назн') подразумевают --pull, даже для "
+"локальных\n"
+"    исходных хранилищ. Обратите внимание, что при задании метки, клон будет\n"
+"    включать в себя помеченный набор изменений, но не набор изменений,\n"
+"    содержащий метку."
 
 msgid ""
 "    To check out a particular version, use -u/--update, or\n"
 "    -U/--noupdate to create a clone with no working directory."
 msgstr ""
+"    Чтобы извлечь конкретную версию, используйте -u/--update;\n"
+"    чтобы создать клон без рабочего каталога, используйте -U/--noupdate."
 
 msgid ""
 "      For efficiency, hardlinks are used for cloning whenever the\n"
@@ -9658,9 +9717,11 @@ msgid ""
 "      incorrectly, but do not report errors. In these cases, use the\n"
 "      --pull option to avoid hardlinking."
 msgstr ""
-"      Для эффективности, при клонировании источника на одной файловой\n"
-"      системе с целевым хранилищем, используются жесткие ссылки (это\n"
-"      относится только к данным хранилища, не рабочему каталогу).\n"
+"      Из соображений эффективности при клонировании источника находящегося\n"
+"      на одной файловой системе с хранилищем назначения, используются "
+"жесткие\n"
+"      ссылки (это относится только к данным хранилища, не рабочему "
+"каталогу).\n"
 "      Некоторые файловые системы, например, AFS, некорректно реализуют\n"
 "      жесткие ссылки, но не сообщают об ошибках. В этом случае используйте\n"
 "      --pull чтобы избежать жестких ссылок."
@@ -9689,7 +9750,7 @@ msgstr ""
 "      ваш редактор умеет разрывать жесткие ссылки (Emacs и большинство\n"
 "      инструментов разработчика ядра Linux умеют). Этот способ также\n"
 "      не совместим с некоторыми расширениями, которые хранят свои\n"
-"      метаданные в каталоге .hg, как mq."
+"      метаданные в каталоге .hg, таких как mq."
 
 msgid ""
 "      Mercurial will update the working directory to the first applicable\n"
@@ -9725,7 +9786,7 @@ msgstr ""
 
 msgid "      - clone a remote repository to a new directory named hg/::"
 msgstr ""
-"      - создает клон отдаленного хранилища в новом каталоге с именем hg/::"
+"      - создать клон отдаленного хранилища в новом каталоге с именем hg/::"
 
 msgid "          hg clone http://selenic.com/hg"
 msgstr "          hg clone http://selenic.com/hg"
@@ -9900,6 +9961,7 @@ msgstr "найти родительскую ревизию двух ревизи
 msgid "either two or three arguments required"
 msgstr "требуются два или три аргумента"
 
+# {{{ Debug commands
 msgid "add single file mergeable changes"
 msgstr ""
 
@@ -10284,6 +10346,7 @@ msgstr ""
 msgid "REPO [OPTIONS]... [ONE [TWO]]"
 msgstr ""
 
+# }}} end of debug commands
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
 msgstr "[ПАРАМЕТР]... ([-c РЕВ] | [-r РЕВ1 [-r РЕВ2]]) [ФАЙЛ]..."
 
@@ -10467,25 +10530,31 @@ msgid ""
 "      - use export and import to transplant a bugfix to the current\n"
 "        branch::"
 msgstr ""
+"      - использовать export вместе с import чтобы перенести исправление\n"
+"        бага на текущую ветку::"
 
 msgid "          hg export -r 9353 | hg import -"
-msgstr ""
+msgstr "          hg export -r 9353 | hg import -"
 
 msgid ""
 "      - export all the changesets between two revisions to a file with\n"
 "        rename information::"
 msgstr ""
+"      - экспортировать все наборы изменений между двумя ревизиями в файл,\n"
+"        включая информацию о переименованиях::"
 
 msgid "          hg export --git -r 123:150 > changes.txt"
-msgstr ""
+msgstr "          hg export --git -r 123:150 > changes.txt"
 
 msgid ""
 "      - split outgoing changes into a series of patches with\n"
 "        descriptive names::"
 msgstr ""
+"      - преобразовать исходящие изменений в серию патчей с описывающими\n"
+"        их именами::"
 
 msgid "          hg export -r \"outgoing()\" -o \"%n-%m.patch\""
-msgstr ""
+msgstr "          hg export -r \"outgoing()\" -o \"%n-%m.patch\""
 
 msgid "export requires at least one changeset"
 msgstr "для экспорта требуется хотя бы один набор изменений"
@@ -10523,13 +10592,13 @@ msgid "      - forget newly-added binary files::"
 msgstr "      - забыть только что добавленные бинарные файлы::"
 
 msgid "          hg forget \"set:added() and binary()\""
-msgstr ""
+msgstr "          hg forget \"set:added() and binary()\""
 
 msgid "      - forget files that would be excluded by .hgignore::"
-msgstr ""
+msgstr "      - забыть файлы, которые будут исключены с учетом .hgignore::"
 
 msgid "          hg forget \"set:hgignore()\""
-msgstr ""
+msgstr "          hg forget \"set:hgignore()\""
 
 msgid "resume interrupted graft"
 msgstr "возобновить прерванную операцию graft"
@@ -10596,6 +10665,8 @@ msgid ""
 "          hg update stable\n"
 "          hg graft --edit 9393"
 msgstr ""
+"          hg update stable\n"
+"          hg graft --edit 9393"
 
 msgid ""
 "      - graft a range of changesets with one exception, updating dates::"
@@ -10603,19 +10674,19 @@ msgstr ""
 "      - перенести диапазон ревизий с одним исключением, обновляя даты::"
 
 msgid "          hg graft -D \"2085::2093 and not 2091\""
-msgstr ""
+msgstr "          hg graft -D \"2085::2093 and not 2091\""
 
 msgid "      - continue a graft after resolving conflicts::"
 msgstr "      - продолжить перенос после разрешения конфликтов::"
 
 msgid "          hg graft -c"
-msgstr ""
+msgstr "          hg graft -c"
 
 msgid "      - show the source of a grafted changeset::"
 msgstr "      - показать источник перенесенного набора изменений::"
 
 msgid "          hg log --debug -r tip"
-msgstr ""
+msgstr "          hg log --debug -r tip"
 
 msgid ""
 "    Returns 0 on successful completion.\n"
@@ -11020,16 +11091,16 @@ msgstr ""
 "    работать с этим хранилищем/бандлом."
 
 msgid "      - generate a build identifier for the working directory::"
-msgstr ""
+msgstr "      - сгенерировать идентификатор сборки для рабочего каталога::"
 
 msgid "          hg id --id > build-id.dat"
-msgstr ""
+msgstr "          hg id --id > build-id.dat"
 
 msgid "      - find the revision corresponding to a tag::"
-msgstr ""
+msgstr "      - найти ревизию, соответствующую метке::"
 
 msgid "          hg id -n -r 1.3"
-msgstr ""
+msgstr "          hg id -n -r 1.3"
 
 msgid "      - check the most recent revision of a remote repository::"
 msgstr "      - посмотреть последнюю ревизию в отдаленном репозитории::"
@@ -11157,38 +11228,41 @@ msgstr ""
 
 msgid "      - import a traditional patch from a website and detect renames::"
 msgstr ""
+"      - импортировать традиционный патч и веб-сайта и найти переименования::"
 
 msgid "          hg import -s 80 http://example.com/bugfix.patch"
-msgstr ""
+msgstr "          hg import -s 80 http://example.com/bugfix.patch"
 
 msgid "      - import a changeset from an hgweb server::"
-msgstr ""
+msgstr "      - импортировать набор изменений с сервера hgweb::"
 
 msgid "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
-msgstr ""
+msgstr "          hg import http://www.selenic.com/hg/rev/5ca8c111e9aa"
 
 msgid "      - import all the patches in an Unix-style mbox::"
-msgstr ""
+msgstr "      - импортировать все патчи из файла почтового ящика Unix mbox::"
 
 msgid "          hg import incoming-patches.mbox"
-msgstr ""
+msgstr "          hg import incoming-patches.mbox"
 
 msgid ""
 "      - attempt to exactly restore an exported changeset (not always\n"
 "        possible)::"
 msgstr ""
+"      - попытаться строго восстановить экспортированный набор изменений (не\n"
+"        всегда возможно)::"
 
 msgid "          hg import --exact proposed-fix.patch"
-msgstr ""
+msgstr "          hg import --exact proposed-fix.patch"
 
 msgid "need at least one patch to import"
 msgstr "для импорта требуется хотя бы один патч"
 
 msgid "cannot use --no-commit with --bypass"
-msgstr ""
+msgstr "нельзя использовать --no-commit с --bypass"
 
 msgid "cannot use --similarity with --bypass"
-msgstr ""
+msgstr "нельзя использовать --similarityt с --bypass"
 
 msgid "patch is damaged or loses information"
 msgstr "патч поврежден или в нем недостает данных"
@@ -11437,12 +11511,18 @@ msgid ""
 "       changes including duplicates and deletions, use the --removed\n"
 "       switch."
 msgstr ""
+"    .. note::\n"
+"       из соображений производительности, в ФАЙЛе журнала могут\n"
+"       отсутствовать дублирующиеся изменения, сделанные на ветках,\n"
+"       а также там будут отсутствовать удаления. Чтобы увидеть все\n"
+"       изменения, включая дубликаты и удаления, используйте параметр\n"
+"       --removed."
 
 msgid "      - changesets with full descriptions and file lists::"
-msgstr ""
+msgstr "      - наборы изменений с полными описаниями и списками файлов::"
 
 msgid "          hg log -v"
-msgstr ""
+msgstr "          hg log -v"
 
 msgid "      - changesets ancestral to the working directory::"
 msgstr "      - наборы изменений, являющиеся предками рабочего каталога::"
@@ -11459,9 +11539,8 @@ msgstr "          hg log -l 10 -b ."
 msgid ""
 "      - changesets showing all modifications of a file, including removals::"
 msgstr ""
-"      - наборы изменений, отражающие все изменения файла, т.ч. изъятия из-"
-"под\n"
-"        контроля версий::"
+"      - наборы изменений, отражающие все изменения файла, т.ч. изъятия "
+"из-        под контроля версий::"
 
 msgid "          hg log --removed file.c"
 msgstr "          hg log --removed file.c"
@@ -11469,8 +11548,8 @@ msgstr "          hg log --removed file.c"
 msgid ""
 "      - all changesets that touch a directory, with diffs, excluding merges::"
 msgstr ""
-"      - все наборы изменений, затрагивающие каталог, с различиями, кроме "
-"слияний::"
+"      - все наборы изменений, затрагивающие каталог, с различиями, "
+"кроме         слияний::"
 
 msgid "          hg log -Mp lib/"
 msgstr "          hg log -Mp lib/"
@@ -12286,7 +12365,7 @@ msgid "you can't specify a revision and a date"
 msgstr "нельзя указывать одновременно дату и ревизию"
 
 msgid "uncommitted merge with no revision specified"
-msgstr ""
+msgstr "имеется незафиксированное слияние, и номер ревизии не указан"
 
 msgid "use \"hg update\" or see \"hg help revert\""
 msgstr "используйте \"hg update\", или см. \"hg help revert\""
@@ -12298,12 +12377,16 @@ msgid ""
 "uncommitted merge, use --all to discard all changes, or 'hg update -C .' to "
 "abort the merge"
 msgstr ""
+"незафиксированное слияние, используйте --all чтобы сбросить все изменения\n"
+"или 'hg update -C .' чтобы отменить слияние."
 
 #, python-format
 msgid ""
 "uncommitted changes, use --all to discard all changes, or 'hg update %s' to "
 "update"
 msgstr ""
+"незафиксированные изменения, используйте --all чтобы сбросить все изменения\n"
+"или 'hg update %s' чтобы обновиться."
 
 #, python-format
 msgid "use --all to revert all files, or 'hg update %s' to update"
@@ -12343,7 +12426,7 @@ msgid "no changes needed to %s\n"
 msgstr "не требуются изменения для %s\n"
 
 msgid "ignore safety measures"
-msgstr ""
+msgstr "игнорировать меры безопасности"
 
 msgid "roll back the last transaction (dangerous)"
 msgstr "откатить последнюю транзакцию (опасно)"
@@ -12385,6 +12468,7 @@ msgstr ""
 "    - push (с текущим хранилищем в качестве назначения)\n"
 "    - unbundle"
 
+# BUG force won't help you to avoid data loss
 msgid ""
 "    It's possible to lose data with rollback: commit, update back to\n"
 "    an older changeset, and then rollback. The update removes the\n"
@@ -12392,6 +12476,11 @@ msgid ""
 "    removes them from history. To avoid data loss, you must pass\n"
 "    --force in this case."
 msgstr ""
+"    При использовании rollback возможна потеря данных: зафиксировать,\n"
+"    обновиться обратно на предыдущую ревизию и сделать rollback. Update\n"
+"    удалит изменения, которые вы зафиксировали, из рабочего каталога,\n"
+"    а rollback сотрет их из истории. Чтобы избежать потери данных,\n"
+"    вы должны в таком случае передать --force."
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -12515,7 +12604,7 @@ msgstr ""
 "    напечатает выбранный порт."
 
 msgid "cannot use --stdio with --cmdserver"
-msgstr ""
+msgstr "нельзя использовать --stdio с --cmdserver"
 
 msgid "There is no Mercurial repository here (.hg not found)"
 msgstr "Здесь нет хранилища Mercurial (.hg не обнаружен)"
@@ -13134,103 +13223,107 @@ msgstr "неизвестная команда %s"
 
 #, python-format
 msgid "cannot include %s (%s)"
-msgstr ""
+msgstr "не удается включить %s (%s)"
 
 msgid "not found in manifest"
-msgstr ""
+msgstr "не найден в манифесте"
 
 #, python-format
 msgid "no such file in rev %s"
-msgstr ""
+msgstr "нет такого файла в ревизии %s"
 
 msgid "branch name not in UTF-8!"
-msgstr ""
+msgstr "имя ветки не в UTF-8"
 
 #, python-format
 msgid "%s does not exist!\n"
-msgstr ""
+msgstr "%s не существует!\n"
 
 #, python-format
 msgid ""
 "%s: up to %d MB of RAM may be required to manage this file\n"
 "(use 'hg revert %s' to cancel the pending addition)\n"
 msgstr ""
+"%s: может потребовтаь до %d Мб памяти для обработки этого файла\n"
+"(используйте 'hg revert %s' чтобы отменить запланированное добавление)\n"
 
 #, python-format
 msgid "%s not added: only files and symlinks supported currently\n"
 msgstr ""
+"%s не добавлен: в настоящий момент поддерживаются только файлы\n"
+"и символические ссылки\n"
 
 #, python-format
 msgid "%s already tracked!\n"
-msgstr ""
+msgstr "%s уже отслеживается!\n"
 
 #, python-format
 msgid "%s not tracked!\n"
-msgstr ""
+msgstr "%s не отслеживается!\n"
 
 #, python-format
 msgid "%s not removed!\n"
-msgstr ""
+msgstr "%s не изъят из-под контроля версий!\n"
 
 #, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
-msgstr ""
+msgstr "ошибка при копировании: %s не файл и не символическая ссылка\n"
 
 #, python-format
 msgid "invalid character in dag description: %s..."
-msgstr ""
+msgstr "недопустимый символ в описании графа: %s..."
 
 #, python-format
 msgid "expected id %i, got %i"
-msgstr ""
+msgstr "ожидается идентификатор %i, получен %i"
 
 #, python-format
 msgid "parent id %i is larger than current id %i"
-msgstr ""
+msgstr "идентификатор родителя %i больше текущего идентификатора %i"
 
 #, python-format
 msgid "invalid event type in dag: %s"
-msgstr ""
+msgstr "недопустимый тип события в графе: %s"
 
 msgid "nullid"
-msgstr ""
+msgstr "пустой идентификатор (nullid)"
 
 msgid "working directory state appears damaged!"
-msgstr ""
+msgstr "похоже, рабочий каталог находится в поврежденном состоянии!"
 
 #, python-format
 msgid "directory %r already in dirstate"
-msgstr ""
+msgstr "каталог %r уже в dirstate"
 
 #, python-format
 msgid "file %r in dirstate clashes with %r"
-msgstr ""
+msgstr "файл %r конфликтует c %r в dirstate"
 
 #, python-format
 msgid "setting %r to other parent only allowed in merges"
-msgstr ""
+msgstr "установка %r в другого родителя разрешена только для слияний"
 
 msgid "unknown"
 msgstr "неизвестно"
 
 msgid "character device"
-msgstr ""
+msgstr "символьное устройство"
 
 msgid "block device"
-msgstr ""
+msgstr "блочное устройство"
 
 msgid "fifo"
-msgstr ""
+msgstr "fifo"
 
 msgid "socket"
-msgstr ""
+msgstr "сокет"
 
 msgid "directory"
-msgstr ""
+msgstr "каталог"
 
 #, python-format
 msgid "unsupported file type (type is %s)"
-msgstr ""
+msgstr "неподдерживаемый тип файла (%s)"
 
 #, python-format
 msgid "no changes to push but %i secret changesets\n"
@@ -13242,10 +13335,12 @@ msgstr "push создаст новые ветки в отдалённом хра
 
 msgid "use 'hg push --new-branch' to create new remote branches"
 msgstr ""
+"используйте 'hg push --new-branch' чтобы создать новые ветки ветки\n"
+"в отдаленном хранилище"
 
 #, python-format
 msgid "push creates new remote head %s on branch '%s'!"
-msgstr ""
+msgstr "push создает новую голову в отдаленном хранилище %s на ветке '%s'!"
 
 #, python-format
 msgid "push creates new remote head %s!"
@@ -13253,9 +13348,13 @@ msgstr "push создаст новую голову %s в отдалённом �
 
 msgid "you should pull and merge or use push -f to force"
 msgstr ""
+"необходимо выпобнить pull, затем merge, либо использовать push -f,\n"
+"чтобы протолкнуть принудительно"
 
 msgid "did you forget to merge? use push -f to force"
 msgstr ""
+"забыли выполнить слияние? используйте push -f, чтобы протолкнуть "
+"принудительно"
 
 #, python-format
 msgid "new remote heads on branch '%s'\n"
@@ -13266,164 +13365,176 @@ msgid "new remote head %s\n"
 msgstr "новая головная ревизия %s в отдалённом хранилище\n"
 
 msgid "note: unsynced remote changes!\n"
-msgstr ""
+msgstr "внимание: несинхронизированные изменения в отдаленном хранилище!\n"
 
 #, python-format
 msgid "abort: %s\n"
-msgstr ""
+msgstr "останов: %s\n"
 
 #, python-format
 msgid "(%s)\n"
-msgstr ""
+msgstr "(%s)\n"
 
 #, python-format
 msgid "hg: parse error at %s: %s\n"
-msgstr ""
+msgstr "hg: ошибка разбора в %s: %s\n"
 
 #, python-format
 msgid "hg: parse error: %s\n"
-msgstr ""
+msgstr "hg: ошибка разбора: %s\n"
 
 msgid "entering debugger - type c to continue starting hg or h for help\n"
 msgstr ""
+"вход в отладчик - напечатайте c для продолжения запуска hg или h для "
+"справки\n"
 
 #, python-format
 msgid ""
 "hg: command '%s' is ambiguous:\n"
 "    %s\n"
 msgstr ""
+"hg: команда '%s' неоднозначна:\n"
+"    %s\n"
 
 #, python-format
 msgid "timed out waiting for lock held by %s"
-msgstr ""
+msgstr "таймаут при ожидании блокировки, удерживаемой %s"
 
 #, python-format
 msgid "lock held by %s"
-msgstr ""
+msgstr "блокировка удерживается %s"
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr ""
+msgstr "останов: %s: %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr ""
+msgstr "останов: не удается заблокировать %s: %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
-msgstr ""
+msgstr "hg %s: %s\n"
 
 #, python-format
 msgid "hg: %s\n"
-msgstr ""
+msgstr "hg: %s\n"
 
 msgid "abort: remote error:\n"
-msgstr ""
+msgstr "останов: ошибка на отдаленной стороне:\n"
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr "прервано: %s!\n"
+msgstr "останов: %s!\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr ""
+msgstr "останов: %s"
 
 msgid " empty string\n"
-msgstr ""
+msgstr " пустая строка\n"
 
+# можно так перевести?
 msgid "killed!\n"
-msgstr ""
+msgstr "прервано сигналом!\n"
 
 #, python-format
 msgid "hg: unknown command '%s'\n"
-msgstr ""
+msgstr "hg: неизвестная команда '%s'\n"
 
 msgid "(did you forget to compile extensions?)\n"
-msgstr ""
+msgstr "(вы не забыли скомпилировать расширения?)\n"
 
 msgid "(is your Python install correct?)\n"
-msgstr ""
+msgstr "(правильно ли у вас установлен Python?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr ""
+msgstr "останов: ошибка: %s\n"
 
 msgid "broken pipe\n"
-msgstr ""
+msgstr "обрыв канала (broken pipe)\n"
 
 msgid "interrupted!\n"
-msgstr ""
+msgstr "прервано!\n"
 
 msgid ""
 "\n"
 "broken pipe\n"
 msgstr ""
+"\n"
+"обрыв канала (broken pipe)\n"
 
 msgid "abort: out of memory\n"
-msgstr ""
+msgstr "останов: недостаточно памяти\n"
 
 msgid "** unknown exception encountered, please report by visiting\n"
-msgstr ""
+msgstr "** неизвестное исключение, пожалуйте, сообщите об этом по адресу\n"
 
 msgid "**  http://mercurial.selenic.com/wiki/BugTracker\n"
-msgstr ""
+msgstr "**  http://mercurial.selenic.com/wiki/BugTracker\n"
 
 #, python-format
 msgid "** Python %s\n"
-msgstr ""
+msgstr "** Python %s\n"
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr ""
+msgstr "** Распределенная система контроля версий Mercurial (версия %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
-msgstr ""
+msgstr "** Загруженные расширения: %s\n"
 
 #, python-format
 msgid "no definition for alias '%s'\n"
-msgstr ""
+msgstr "отсутствует определение псевдонима '%s'\n"
 
 #, python-format
 msgid ""
 "error in definition for alias '%s': %s may only be given on the command "
 "line\n"
 msgstr ""
+"ошибка в определении псеводнима '%s': %s может быть задан только в командной "
+"строке\n"
 
 #, python-format
 msgid "alias '%s' resolves to unknown command '%s'\n"
-msgstr ""
+msgstr "псевдоним '%s' сводится к неизвестной команде '%s'\n"
 
 #, python-format
 msgid "alias '%s' resolves to ambiguous command '%s'\n"
-msgstr ""
+msgstr "псевдоним '%s' сводится к неоднозначной команде '%s'\n"
 
 #, python-format
 msgid "malformed --config option: %r (use --config section.name=value)"
 msgstr ""
+"некорректный параметр --config: %r (используйте --config секция.имя=значение)"
 
 #, python-format
 msgid "error getting current working directory: %s"
-msgstr ""
+msgstr "ошибка при получении текущего рабочего каталога (cwd): %s"
 
 #, python-format
 msgid "extension '%s' overrides commands: %s\n"
 msgstr "расширение '%s' переопределяет команды: %s\n"
 
 msgid "option --config may not be abbreviated!"
-msgstr ""
+msgstr "параметр --config не может быть сокращен!"
 
 msgid "option --cwd may not be abbreviated!"
-msgstr ""
+msgstr "параметр --cwd не может быть сокращен!"
 
 msgid ""
 "Option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
+"Параметр -R должен быть отделен от других параметров (т.е. не -qR) и\n"
+"--repository можно сократить только до --repo!"
 
 #, python-format
 msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
-msgstr ""
+msgstr "Время: полное (real) %.3f c (польз %.3f+%.3f сист %.3f+%.3f)\n"
 
 #, python-format
 msgid "repository '%s' is not local"
@@ -13449,46 +13560,49 @@ msgstr ""
 
 #, python-format
 msgid "*** failed to import extension %s from %s: %s\n"
-msgstr ""
+msgstr "*** не удалось испортировать расширение %s из %s: %s\n"
 
 #, python-format
 msgid "*** failed to import extension %s: %s\n"
-msgstr ""
+msgstr "*** не удалось испортировать расширение %s: %s\n"
 
 #, python-format
 msgid "warning: error finding commands in %s\n"
-msgstr ""
+msgstr "внимание: не удалось найти команды в %s\n"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
-msgstr ""
+msgstr "не удалось найти программу для слияния %s\n"
 
 #, python-format
 msgid "tool %s can't handle symlinks\n"
-msgstr ""
+msgstr "программа %s не умеет работать с символическими ссылками\n"
 
 #, python-format
 msgid "tool %s can't handle binary\n"
-msgstr ""
+msgstr "программа %s не умеет работать с бинарными файлами\n"
 
 #, python-format
 msgid "tool %s requires a GUI\n"
-msgstr ""
+msgstr "программа %s требует графического интерфейсафайлами\n"
 
+# INPUT
 #, python-format
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
 
-#, python-format
+#, fuzzy, python-format
 msgid "%s.premerge not valid ('%s' is neither boolean nor %s)"
-msgstr ""
+msgstr "некорректный %s.premerge ('%s' не логический и не %s)"
 
+# INPUT
 #, python-format
 msgid "was merge of '%s' successful (yn)?"
 msgstr ""
 
+# INPUT
 #, python-format
 msgid ""
 " output file %s appears unchanged\n"
@@ -13498,10 +13612,12 @@ msgstr ""
 #, python-format
 msgid "merging %s incomplete! (edit conflicts, then use 'hg resolve --mark')\n"
 msgstr ""
+"слияние %s не завершено! (устраните конфликты, затем используйте 'hg resolve "
+"--mark')\n"
 
 #, python-format
 msgid "merging %s failed!\n"
-msgstr ""
+msgstr "не удалось слияние %s!\n"
 
 msgid "unterminated string"
 msgstr "незавершенная строка"
@@ -13598,7 +13714,7 @@ msgstr "clean не требует аргументов"
 
 #, python-format
 msgid "not a function: %s"
-msgstr ""
+msgstr "не функция: %s"
 
 msgid ""
 "``binary()``\n"
@@ -13734,26 +13850,26 @@ msgid "invalid token"
 msgstr "неизвестный символ"
 
 msgid "starting revisions are not directly related"
-msgstr ""
+msgstr "начальные ревизии не связаны напрямую"
 
 #, python-format
 msgid "inconsistent state, %s:%s is good and bad"
-msgstr ""
+msgstr "противоречивое состояние, %s:%s одновременно плохой и хороший"
 
 #, python-format
 msgid "unknown bisect kind %s"
-msgstr ""
+msgstr "неизвестный тип бисекции %s"
 
 msgid "invalid bisect state"
-msgstr ""
+msgstr "некорректное состояние бисекции"
 
 #. i18n: bisect changeset status
 msgid "good"
-msgstr ""
+msgstr "хороший"
 
 #. i18n: bisect changeset status
 msgid "bad"
-msgstr ""
+msgstr "плохой"
 
 #. i18n: bisect changeset status
 msgid "skipped"
@@ -13761,15 +13877,15 @@ msgstr "пропущен"
 
 #. i18n: bisect changeset status
 msgid "untested"
-msgstr ""
+msgstr "непротестирован"
 
 #. i18n: bisect changeset status
 msgid "good (implicit)"
-msgstr ""
+msgstr "хороший (неявно)"
 
 #. i18n: bisect changeset status
 msgid "bad (implicit)"
-msgstr ""
+msgstr "плохой (неявно)"
 
 msgid "disabled extensions:"
 msgstr "отключенные расширения:"
@@ -14166,7 +14282,6 @@ msgstr ""
 "Только кавычки в начале слова являются разделителем (т.е.\n"
 "``foo\"bar baz`` - это список из ``foo\"bar`` и ``baz``)."
 
-# BUG черточки рисуются без перевода строки
 msgid ""
 "Sections\n"
 "--------"
