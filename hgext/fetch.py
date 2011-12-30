@@ -102,6 +102,9 @@ def fetch(ui, repo, source='default', **opts):
                       (len(newheads) - 1))
             return 1
 
+        if not newheads:
+            return 0
+
         # Otherwise, let's merge.
         err = False
         if newheads:
