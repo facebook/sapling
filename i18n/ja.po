@@ -108,7 +108,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-29 12:28+0900\n"
+"POT-Creation-Date: 2011-12-31 13:47+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -381,16 +381,17 @@ msgstr ""
 #, python-format
 msgid "acl: user \"%s\" not allowed on branch \"%s\" (changeset \"%s\")"
 msgstr ""
+"acl: ユーザ \"%s\" はブランチ \"%s\" が許可されていません(リビジョン \"%s\")"
 
-#, fuzzy, python-format
+#, python-format
 msgid "acl: user \"%s\" denied on \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: ユーザ \"%s\" はブランチ \"%s\" で拒否されました(リビジョン \"%s\")"
+"acl: ユーザ \"%s\" はファイル \"%s\" で拒否されました(リビジョン \"%s\")"
 
-#, fuzzy, python-format
+#, python-format
 msgid "acl: user \"%s\" not allowed on \"%s\" (changeset \"%s\")"
 msgstr ""
-"acl: ユーザ \"%s\" はブランチ \"%s\" で拒否されました(リビジョン \"%s\")"
+"acl: ユーザ \"%s\" はファイル \"%s\" が許可されていません(リビジョン \"%s\")"
 
 msgid "hooks for integrating with the Bugzilla bug tracker"
 msgstr ""
@@ -3345,9 +3346,8 @@ msgstr ""
 "    指定されたファイルに未コミット変更がある場合、 実行は中断されます。\n"
 "    "
 
-#, fuzzy
 msgid "track large binary files"
-msgstr "これはバイナリファイルです\n"
+msgstr "大容量バイナリファイルの管理"
 
 msgid ""
 "Large binary files tend to be not very compressible, not very\n"
@@ -3443,12 +3443,19 @@ msgstr ""
 
 msgid ""
 "Files that match one of these patterns will be added as largefiles\n"
-"regardless of their size.\n"
+"regardless of their size."
 msgstr ""
 
-#, fuzzy
+msgid ""
+"The ``largefiles.minsize`` and ``largefiles.patterns`` config options\n"
+"will be ignored for any repositories not already containing a\n"
+"largefile. To add the first largefile to a repository, you must\n"
+"explicitly do so with the --large flag passed to the :hg:`add`\n"
+"command.\n"
+msgstr ""
+
 msgid "convert a normal repository to a largefiles repository"
-msgstr "別 SCM のリポジトリから Mercurial リポジトリへの変換"
+msgstr "既存リポジトリから largefiles を利用するリポジトリへの変換"
 
 msgid ""
 "    Convert repository SOURCE to a new repository DEST, identical to\n"
@@ -3472,21 +3479,20 @@ msgid ""
 "    this, the DEST repository can be used without largefiles at all."
 msgstr ""
 
-#, fuzzy
 msgid "getting largefiles"
-msgstr "ファイルの取得中"
+msgstr "大容量ファイルの取得中"
 
-#, fuzzy, python-format
+#, python-format
 msgid "getting %s:%s\n"
-msgstr "%s を取得しています\n"
+msgstr "ファイル %s の取得中:%s\n"
 
 #, python-format
 msgid "%s: data corruption (expected %s, got %s)\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "searching %d changesets for largefiles\n"
-msgstr "類似ファイルを探索中"
+msgstr "大容量ファイルのために %d 個のリビジョンを検索中\n"
 
 #, python-format
 msgid "verified contents of %d revisions of %d largefiles\n"
@@ -3496,25 +3502,24 @@ msgstr ""
 msgid "verified existence of %d revisions of %d largefiles\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unsupported URL scheme %r"
-msgstr "URL 要素 \"%s\" は未サポートです"
+msgstr "%r は未サポートな URL 形式です"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s does not appear to be a largefile store"
-msgstr "'%s' は Mercurial リポジトリ形式とは思われません"
+msgstr "%s は largefiles 対応とは思われません"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s is not a local Mercurial repo"
 msgstr "%s はローカルの Mercurial リポジトリではありません"
 
-#, fuzzy, python-format
+#, python-format
 msgid "initializing destination %s\n"
 msgstr "変換先リポジトリ %s の初期化中\n"
 
-#, fuzzy
 msgid "converting revisions"
-msgstr "リビジョンの表示"
+msgstr "リビジョンの変換中"
 
 #, python-format
 msgid "renamed/copied largefile %s becomes symlink"
@@ -3531,9 +3536,8 @@ msgstr ""
 msgid "largefile %s missing from store (needs to be uploaded)"
 msgstr ""
 
-#, fuzzy
 msgid "getting changed largefiles\n"
-msgstr "ファイルの取得中"
+msgstr "更新された大容量ファイルの取得中\n"
 
 #, python-format
 msgid "%d largefiles updated, %d removed\n"
@@ -3545,9 +3549,8 @@ msgstr ""
 msgid "convert from a largefiles repo to a normal repo"
 msgstr ""
 
-#, fuzzy
 msgid "hg lfconvert SOURCE DEST [FILE ...]"
-msgstr "hg convert [OPTION]... SOURCE [DEST [REVMAP]]"
+msgstr "hg lfconvert SOURCE DEST [FILE ...]"
 
 #, python-format
 msgid "largefiles: size must be number (not %s)\n"
@@ -3556,13 +3559,13 @@ msgstr ""
 msgid "minimum size for largefiles must be specified"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "unknown operating system: %s\n"
-msgstr "未知のパッチです: %s\n"
+msgstr "未知の OS です: %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Found %s in store\n"
-msgstr "%s が %r にありました\n"
+msgstr "%s が見つかりました\n"
 
 #, python-format
 msgid "Found %s in system cache\n"
@@ -3589,33 +3592,29 @@ msgid ""
 "  but got %s)\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s already a largefile\n"
-msgstr "%s は登録済です!\n"
+msgstr "%s は大容量ファイルとして登録済です\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "adding %s as a largefile\n"
-msgstr "パッチ %s を追加中\n"
+msgstr "%s を大容量ファイルとして追加登録中\n"
 
 msgid "no files specified"
 msgstr "ファイル名指定がありません"
 
-#, fuzzy, python-format
+#, python-format
 msgid "not removing %s: %s (use -f to force removal)\n"
-msgstr ""
-"%s は削除されません: ファイルは改変されています(削除の強行は -f を指定)\n"
+msgstr "%s は削除されません: %s (削除の強行は -f を指定)\n"
 
-#, fuzzy
 msgid "file still exists"
-msgstr "ファイル %s は既に存在します\n"
+msgstr "ファイルは維持されます"
 
-#, fuzzy
 msgid "file is modified"
-msgstr "変更ファイル数     %d"
+msgstr "ファイルは改変されています"
 
-#, fuzzy
 msgid "file has been marked for add"
-msgstr "%s: コピー失敗 - 削除予定のファイルです\n"
+msgstr "追加登録予定のファイルです"
 
 #, python-format
 msgid "removing %s\n"
@@ -3650,12 +3649,12 @@ msgstr "%s と %s を %s にマージ中\n"
 msgid "merging %s\n"
 msgstr "%s をマージ中\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "largefile %s has a merge conflict\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
-" %s のマージに適切なツールが見つかりません\n"
+"大容量ファイル %s のマージで衝突が検出されました。\n"
 "どちらの内容を採用しますか？ 作業領域:(l)ocal マージ対象:(o)ther"
 
 msgid "&Local"
@@ -3664,9 +3663,8 @@ msgstr "&Local"
 msgid "&Other"
 msgstr "&Other"
 
-#, fuzzy
 msgid "destination largefile already exists"
-msgstr "複製先 '%s' は既に存在します"
+msgstr "大容量ファイルの複製先は既に存在します"
 
 msgid "no files to copy"
 msgstr "コピーするファイルがありません"
@@ -3682,16 +3680,15 @@ msgstr "アーカイブにファイルを追加するときは接頭辞を指定
 msgid "not removing %s: file is already untracked\n"
 msgstr "%s は削除されません: 既に構成管理対象ではありません\n"
 
-#, fuzzy
 msgid "largefiles: No remote repo\n"
-msgstr "ローカルリポジトリ以外は検証できません"
+msgstr ""
 
 msgid "largefiles to upload:\n"
-msgstr ""
+msgstr "転送予定大容量ファイル:\n"
 
 #, python-format
 msgid "largefiles: %d to upload\n"
-msgstr ""
+msgstr "largefiles: 転送予定ファイル数 %d\n"
 
 msgid "addremove cannot be run on a repo with largefiles"
 msgstr ""
@@ -3704,13 +3701,11 @@ msgstr ""
 msgid "requested largefile %s not present in cache"
 msgstr ""
 
-#, fuzzy
 msgid "putlfile failed:"
-msgstr "フィルターに失敗"
+msgstr "大容量ファイルの転送に失敗:"
 
-#, fuzzy
 msgid "putlfile failed (unexpected response):"
-msgstr "履歴反映に失敗(未知のレスポンス):"
+msgstr "大容量ファイルの転送に失敗 (未知の応答):"
 
 msgid "unexpected response:"
 msgstr "未知の応答:"
@@ -3723,9 +3718,9 @@ msgstr ""
 msgid "remotestore: put %s to remote store %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "remotestore: could not open file %s: %s"
-msgstr "変換ファイル %r を開くことができません: %s"
+msgstr "remotestore: ファイル %s を開くことができません: %s"
 
 #, python-format
 msgid "remotestore: largefile %s is invalid"
@@ -3735,13 +3730,13 @@ msgstr ""
 msgid "remotestore: largefile %s is missing"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "changeset %s: %s: contents differ\n"
-msgstr "リビジョン %d:%s: %s\n"
+msgstr "リビジョン %s: %s: 内容が異なります\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "changeset %s: %s missing\n"
-msgstr "リビジョン %d:%s: %s\n"
+msgstr "リビジョン %s: ファイル %s が不在です\n"
 
 #, python-format
 msgid ""
@@ -3769,9 +3764,8 @@ msgstr ""
 msgid "verify largefile contents not just existence"
 msgstr ""
 
-#, fuzzy
 msgid "display outgoing largefiles"
-msgstr "当該スタイルで表示をカスタマイズ"
+msgstr "転送対象大容量ファイルを表示"
 
 msgid "manage a stack of patches"
 msgstr "パッチ併用の管理"
@@ -5315,9 +5309,8 @@ msgstr "mq 指定には引数が指定できません"
 msgid "operate on patch repository"
 msgstr "パッチ管理リポジトリへの操作"
 
-#, fuzzy
 msgid "hooks for sending email push notifications"
-msgstr "commit/push 契機でのメール通知用フック集"
+msgstr "push 通知電子メール送信用のフック集"
 
 msgid ""
 "This extension let you run hooks sending email notifications when\n"
@@ -6147,9 +6140,8 @@ msgid ""
 "ancestor of base and dest)"
 msgstr "指定リビジョンの先祖から移動 (移動先との共通祖先まで遡ります)"
 
-#, fuzzy
 msgid "rebase these revisions"
-msgstr "指定リビジョンの解析"
+msgstr "指定リビジョンの移動"
 
 msgid "rebase onto the specified changeset"
 msgstr "複製先リビジョン"
@@ -6305,16 +6297,14 @@ msgstr "--abort や --continue と、 リビジョン指定は併用できませ
 msgid "tool option will be ignored\n"
 msgstr ""
 
-#, fuzzy
 msgid "cannot specify both a source and a base"
 msgstr "--soruce と --base は併用できません"
 
 msgid "cannot specify both a revision and a base"
-msgstr "--soruce と --base は併用できません"
+msgstr "--rev と --base は併用できません"
 
-#, fuzzy
 msgid "cannot specify both a revision and a source"
-msgstr "--soruce と --base は併用できません"
+msgstr "--rev と --soruce は併用できません"
 
 msgid "detach requires a revision to be specified"
 msgstr "--detach にはリビジョン指定が必要です"
@@ -6325,9 +6315,8 @@ msgstr "--base と --detach は同時には指定できません"
 msgid "can't remove original changesets with unrebased descendants"
 msgstr ""
 
-#, fuzzy
 msgid "use --keep to keep original changesets"
-msgstr "元リビジョンを維持"
+msgstr "元リビジョンを維持する場合は --keep を使用してください"
 
 msgid "nothing to rebase\n"
 msgstr "リベースの必要はありません\n"
@@ -6380,9 +6369,8 @@ msgstr "リベースが中断されました\n"
 msgid "cannot rebase onto an applied mq patch"
 msgstr "MQ パッチ上へのリベースはできません"
 
-#, fuzzy
 msgid "no matching revisions"
-msgstr "合致するガードはありません"
+msgstr "合致するリビジョンはありません"
 
 msgid "can't rebase multiple roots"
 msgstr ""
@@ -6718,18 +6706,16 @@ msgid ""
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "convert a shared repository to a normal one"
-msgstr "別 SCM のリポジトリから Mercurial リポジトリへの変換"
+msgstr "共有状態のリポジトリから通常リポジトリへの変換"
 
 msgid ""
 "    Copy the store data to the repo and remove the sharedpath data.\n"
 "    "
 msgstr ""
 
-#, fuzzy
 msgid "this is not a shared repo"
-msgstr "%s は %s の親リビジョンではありません"
+msgstr "共有状態のリポジトリではありません"
 
 msgid "do not create a working copy"
 msgstr "作業領域の更新を抑止します"
@@ -11275,21 +11261,13 @@ msgstr ""
 "    - unbundle"
 
 msgid ""
-"    It's possible to lose data with rollback: commit, update back to\n"
-"    an older changeset, and then rollback. The update removes the\n"
-"    changes you committed from the working directory, and rollback\n"
-"    removes them from history. To avoid data loss, you must pass\n"
-"    --force in this case."
+"    To avoid permanent data loss, rollback will refuse to rollback a\n"
+"    commit transaction if it isn't checked out. Use --force to\n"
+"    override this protection."
 msgstr ""
-"    例えば commit、旧リビジョンへの update、 rollback の順で実行すると、\n"
-"    データが喪失します。 commit 内容が、 update により作業領域から、\n"
-"    rollback により履歴から破棄されるためです。\n"
-"    このケースにおけるデータ喪失を避けるには --force を指定してください。\n"
-"    (訳注: --force 指定が『無い』場合、 このケースのようなデータ喪失は、\n"
-"    実行中断により防止されます。 原文では、 --force 指定は\n"
-"    \"avoid data loss\" (データ喪失の回避) のためと記載されていますが、\n"
-"    実際には『データ喪失に構わず rollback を強行する』場合にのみ\n"
-"    --force を指定してください)"
+"    データが永遠に失われるのを回避するため、 コミットの巻き戻し操作は、\n"
+"    作業領域の親リビジョン以外に対しては、 失敗するようになっています。\n"
+"    この回避挙動は --force 指定により抑止されます。"
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -20286,85 +20264,10 @@ msgid "look up remote revision"
 msgstr "連携先でのリビジョンの検索"
 
 msgid "push failed (unexpected response):"
-msgstr "履歴反映に失敗(未知のレスポンス):"
+msgstr "履歴反映に失敗 (未知の応答):"
 
 msgid "look up remote changes"
 msgstr "連携先での変更の検索"
 
 msgid "push failed:"
 msgstr "履歴反映に失敗:"
-
-#~ msgid "acl: access denied for changeset %s"
-#~ msgstr "acl: チェンジセット %s のアクセスは拒否されました"
-
-#~ msgid "%s Please enter a valid value"
-#~ msgstr "%s 適切な値を入力してください"
-
-#~ msgid "Please enter a valid value.\n"
-#~ msgstr "適切な値を入力してください。\n"
-
-#~ msgid "source is descendant of destination"
-#~ msgstr "移動元は移動先の子孫です"
-
-#~ msgid "cannot backout a merge changeset without --parent"
-#~ msgstr "マージリビジョンの打消しには --parent 指定が必要です"
-
-#~ msgid "    .. note::"
-#~ msgstr "    .. note::"
-
-#~ msgid "    See :hg:`help urls` for valid source format details."
-#~ msgstr ""
-#~ "    リポジトリ位置指定の詳細は、 :hg:`help urls` を参照してください。"
-
-#~ msgid ""
-#~ "    It is possible to specify an ``ssh://`` URL as the destination, but "
-#~ "no\n"
-#~ "    ``.hg/hgrc`` and working directory will be created on the remote "
-#~ "side.\n"
-#~ "    Please see :hg:`help urls` for important details about ``ssh://`` "
-#~ "URLs."
-#~ msgstr ""
-#~ "    複製先として ``ssh://`` URL 形式を指定することも可能ですが、\n"
-#~ "    遠隔ホスト上では、 ``.hg/hgrc`` の作成も、\n"
-#~ "    作業領域の更新も行われません。\n"
-#~ "    ``ssh://`` URL 形式の詳細は、 :hg:`help urls` を参照してください。"
-
-#~ msgid ""
-#~ "    A set of changesets (tags, or branch names) to pull may be specified\n"
-#~ "    by listing each changeset (tag, or branch name) with -r/--rev.\n"
-#~ "    If -r/--rev is used, the cloned repository will contain only a "
-#~ "subset\n"
-#~ "    of the changesets of the source repository. Only the set of "
-#~ "changesets\n"
-#~ "    defined by all -r/--rev options (including all their ancestors)\n"
-#~ "    will be pulled into the destination repository.\n"
-#~ "    No subsequent changesets (including subsequent tags) will be present\n"
-#~ "    in the destination."
-#~ msgstr ""
-#~ "    複製先に取り込む一連のリビジョンは、 -r/--rev によりリビジョン\n"
-#~ "    (タグ名やブランチ名も可) を列挙することで指定します。\n"
-#~ "    -r/--rev でのリビジョン指定複製を行なう場合、 複製先リポジトリには、\n"
-#~ "    複製元リポジトリの持つリビジョンの、 一部のみが取り込まれます。\n"
-#~ "    取り込み対象は、 -r/--rev での指定リビジョン (およびその祖先) です。\n"
-#~ "    指定リビジョン以後のリビジョンは、 複製先に取り込まれません\n"
-#~ "    (後続のタグ付けリビジョンも除外されます)。"
-
-#~ msgid ""
-#~ "    Using -r/--rev (or 'clone src#rev dest') implies --pull, even for\n"
-#~ "    local source repositories."
-#~ msgstr ""
-#~ "    -r/--rev 指定付き (ないしは :hg:`clone 複製元#リビジョン` 形式)\n"
-#~ "    複製の場合、 同一ファイルシステム上での複製であっても、\n"
-#~ "    暗黙的に --pull 指定を伴います。"
-
-#~ msgid "options:\n"
-#~ msgstr "オプション:\n"
-
-#~ msgid "applied %s\n"
-#~ msgstr "%s に対して適用\n"
-
-#~ msgid "limit requires two arguments"
-#~ msgstr "limit 指定には2つの引数が必要です"
-
-#~ msgid "last requires two arguments"
-#~ msgstr "last 指定には2つの引数が必要です"
