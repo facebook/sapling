@@ -8,6 +8,9 @@ import tempfile
 import urlparse
 import urllib
 import collections
+import fnmatch
+import ConfigParser
+import sys
 
 class SubversionRepoCanNotReplay(Exception):
     """Exception raised when the svn server is too old to have replay.
@@ -78,3 +81,66 @@ class Revision(tuple):
 
     def __str__(self):
         return 'r%d by %s' % (self.revnum, self.author)
+
+
+_svn_config_dir = None
+
+
+class AutoPropsConfig(object):
+    """Provides the subversion auto-props functionality
+       when pushing new files.
+    """
+    def __init__(self, config_dir=None):
+        config_file = config_file_path(config_dir)
+        self.config = ConfigParser.RawConfigParser()
+        self.config.read([config_file])
+
+    def properties(self, file):
+        """Returns a dictionary of the auto-props applicable for file.
+           Takes enable-auto-props into account.
+        """
+        properties = {}
+        if self.autoprops_enabled():
+            for pattern,prop_list in self.config.items('auto-props'):
+                if fnmatch.fnmatchcase(os.path.basename(file), pattern):
+                    properties.update(parse_autoprops(prop_list))
+        return properties
+
+    def autoprops_enabled(self):
+        return (self.config.has_option('miscellany', 'enable-auto-props') 
+        and self.config.getboolean( 'miscellany', 'enable-auto-props')
+        and self.config.has_section('auto-props')) 
+
+
+def config_file_path(config_dir):
+    if config_dir == None:
+        global _svn_config_dir
+        config_dir = _svn_config_dir
+    if config_dir == None:
+        if sys.platform == 'win32':
+            config_dir = os.path.join(os.environ['APPDATA'], 'Subversion')
+        else:
+            config_dir = os.path.join(os.environ['HOME'], '.subversion')
+    return os.path.join(config_dir, 'config')
+
+
+def parse_autoprops(prop_list):
+    """Parses a string of autoprops and returns a dictionary of
+       the results.
+       Emulates the parsing of core.auto_props_enumerator.
+    """
+    def unquote(s):
+        if len(s)>1 and s[0] in ['"', "'"] and s[0]==s[-1]:
+            return s[1:-1]
+        return s
+
+    properties = {}
+    for prop in prop_list.split(';'):
+        if '=' in prop:
+            prop, value = prop.split('=',1)
+            value = unquote(value.strip())
+        else:
+            value = ''
+        properties[prop.strip()] = value
+    return properties
+

@@ -133,6 +133,10 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                     # this kind of renames: a -> b, b -> c
                     copies[file] = renamed[0]
                     base_data = parent[renamed[0]].data()
+                else:
+                    autoprops = svn.autoprops_config.properties(file) 
+                    if autoprops:
+                        props.setdefault(file, {}).update(autoprops)
 
                 action = 'add'
                 dirname = '/'.join(file.split('/')[:-1] + [''])

@@ -38,6 +38,7 @@ except AttributeError:
             SkipTest = None
 
 from hgsubversion import util
+from hgsubversion import svnwrap
 
 # Documentation for Subprocess.Popen() says:
 #   "Note that on Windows, you cannot set close_fds to true and
@@ -260,6 +261,10 @@ class TestBase(unittest.TestCase):
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
         self.svn_wc = None
 
+        self.config_dir = self.tmpdir
+        svnwrap.common._svn_config_dir = self.config_dir
+        self.setup_svn_config('')
+
         # Previously, we had a MockUI class that wrapped ui, and giving access
         # to the stream. The ui.pushbuffer() and ui.popbuffer() can be used
         # instead. Using the regular UI class, with all stderr redirected to
@@ -267,6 +272,10 @@ class TestBase(unittest.TestCase):
         # setups.
         self.patch = (ui.ui.write_err, ui.ui.write)
         setattr(ui.ui, self.patch[0].func_name, self.patch[1])
+
+    def setup_svn_config(self, config):
+        with open(self.config_dir + '/config', 'w') as c:
+            c.write(config)
 
     def _makerepopath(self):
         self.repocount += 1

@@ -191,6 +191,7 @@ class SubversionRepo(object):
         # expects unquoted paths
         self.subdir = urllib.unquote(self.subdir)
         self.hasdiff3 = True
+        self.autoprops_config = common.AutoPropsConfig()
 
     def init_ra_and_client(self):
         """
