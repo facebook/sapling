@@ -24,7 +24,7 @@
   <?define i18nFolder.guid = {EADFA693-A0B5-4f31-87C9-3997CFAC1B42} ?>
 
   <!-- templates.wxs -->
-  <?define templates.root.guid = {111509CB-4C96-4035-80BC-F66A99CD5ACB} ?>
+  <?define templates.root.guid = {8DF97574-33E9-412F-8414-65B48BB18783} ?>
   <?define templates.atom.guid = {AB5D2908-BC95-44BE-9D79-069EF43D93E2} ?>
   <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
   <?define templates.gitweb.guid = {6A33D168-F84E-45AA-912C-23CAC2D66BCA} ?>

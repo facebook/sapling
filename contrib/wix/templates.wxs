@@ -31,6 +31,7 @@
           <File Name="map-cmdline.changelog" KeyPath="yes" />
           <File Name="map-cmdline.compact" />
           <File Name="map-cmdline.default" />
+          <File Name="map-cmdline.bisect" />
           <File Name="map-cmdline.xml" />
           <File Name="template-vars.txt" />
         </Component>
