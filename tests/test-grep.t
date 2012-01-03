@@ -59,8 +59,9 @@ other
 
 follow
 
-  $ hg grep --traceback -f 'import$' port2
+  $ hg grep --traceback -f 'import\n\Z' port2
   port:0:import
+  
   $ echo deport >> port2
   $ hg commit -m 5 -u eggs -d '6 0'
   $ hg grep -f --all -nu port port2

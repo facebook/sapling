@@ -1117,7 +1117,7 @@ Filters work:
   $ hg log --template '{date|age}\n' > /dev/null || exit 1
 
   $ hg log -l1 --template '{date|age}\n' 
-  8 years from now
+  7 years from now
   $ hg log --template '{date|date}\n'
   Wed Jan 01 10:01:00 2020 +0000
   Mon Jan 12 13:46:40 1970 +0000

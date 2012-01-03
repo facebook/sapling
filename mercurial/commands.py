@@ -2694,7 +2694,7 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     Returns 0 if a match is found, 1 otherwise.
     """
-    reflags = 0
+    reflags = re.M
     if opts.get('ignore_case'):
         reflags |= re.I
     try:
