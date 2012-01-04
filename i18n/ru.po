@@ -4540,28 +4540,31 @@ msgstr "удаляется %s\n"
 msgid "uncommitted local changes"
 msgstr "незафиксированные локальные изменения"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid "&Largefile"
-msgstr "добавить как большой файл"
+msgstr "&Largefile - большой файл"
 
-# INPUT
+# PROMPT
 msgid "&Normal file"
-msgstr ""
+msgstr "&Normal - обычный файл"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 "%s has been turned into a largefile\n"
 "use (l)argefile or keep as (n)ormal file?"
 msgstr ""
+"%s был преобразован в большой файл\n"
+"Использовать как большой файл:(l)argefile или оставить обычным:(n)ormal?"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 "%s has been turned into a normal file\n"
 "keep as (l)argefile or use (n)ormal file?"
 msgstr ""
+"%s был преобразован в обычнй файл\n"
+"Оставить как большой файл:(l)argefile или использовать обычный:(n)ormal?"
 
 #, python-format
 msgid "merging %s and %s to %s\n"
@@ -4571,24 +4574,22 @@ msgstr "слияние %s и %s в %s\n"
 msgid "merging %s\n"
 msgstr "слияние %s\n"
 
-# INPUT
-#, fuzzy, python-format
+# PROMPT
+#, python-format
 msgid ""
 "largefile %s has a merge conflict\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
-"конфликт слияние большого файла %s\n"
-"оставить локальный - (l)ocal, или другой - (o)ther)?"
+"конфликт слияния большого файла %s\n"
+"оставить локальный:(l)ocal или другой:(o)ther?"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid "&Local"
-msgstr "&Локальные"
+msgstr "&Local - локальный"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid "&Other"
-msgstr "&Другие"
+msgstr "&Other - другой"
 
 msgid "destination largefile already exists"
 msgstr "большой файл назначения уже существует"
@@ -7078,15 +7079,15 @@ msgstr ""
 "\n"
 "Итоговая сводка:"
 
-# INPUT
+# PROMPT
 msgid "are you sure you want to send (yn)?"
 msgstr "вы уверены, что хотите отправить письмо (yn)?"
 
-# INPUT
+# PROMPT
 msgid "&No"
 msgstr "&Нет"
 
-# INPUT
+# PROMPT
 msgid "&Yes"
 msgstr "&Да"
 
@@ -7610,32 +7611,41 @@ msgstr "это двоичный файл\n"
 msgid "%d hunks, %d lines changed\n"
 msgstr "изменено полос: %d, строк: %d\n"
 
+# PROMPT
 msgid "[Ynsfdaq?]"
-msgstr ""
+msgstr "[Ynsfdaq?]"
 
+# PROMPT
 msgid "&Yes, record this change"
-msgstr ""
+msgstr "&Yes - Да, записать это изменение"
 
+# PROMPT
 msgid "&No, skip this change"
-msgstr ""
+msgstr "&No - Нет, пропустить это изменение"
 
+# PROMPT
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "&Skip - Пропустить оставшиеся изменения в этом файле"
 
+# PROMPT
 msgid "Record remaining changes to this &file"
-msgstr ""
+msgstr "&file - Записать оставшиеся изменения в этом файле"
 
+# PROMPT
 msgid "&Done, skip remaining changes and files"
-msgstr ""
+msgstr "&Done - Пропустить оставшиеся изменения и файлы"
 
+# PROMPT
 msgid "Record &all changes to all remaining files"
-msgstr ""
+msgstr "&all - записать изменения во всех оставшихся файлах"
 
+# PROMPT
 msgid "&Quit, recording no changes"
-msgstr ""
+msgstr "&Quit - выйти, ничего не записывая"
 
+# PROMPT
 msgid "&?"
-msgstr ""
+msgstr "&?"
 
 msgid "user quit"
 msgstr "пользовательский выход"
@@ -7679,8 +7689,7 @@ msgstr ""
 "    записывать ли каждое изменение. На каждый вопрос возможны следующие\n"
 "    варианты ответов::"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid ""
 "      y - record this change\n"
 "      n - skip this change"
@@ -7688,8 +7697,7 @@ msgstr ""
 "      y - записать это изменение\n"
 "      n - пропустить это изменение"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid ""
 "      s - skip remaining changes to this file\n"
 "      f - record remaining changes to this file"
@@ -7697,8 +7705,7 @@ msgstr ""
 "      s - пропустить оставшиеся изменения в этом файле\n"
 "      f - записать оставшиеся изменения в этом файле"
 
-# INPUT
-#, fuzzy
+# PROMPT
 msgid ""
 "      d - done, skip remaining changes and files\n"
 "      a - record all changes to all remaining files\n"
@@ -7708,6 +7715,7 @@ msgstr ""
 "      a - записать все изменения во всех оставшихся файлах\n"
 "      q - выйти, ничего не записывая"
 
+# PROMPT
 msgid "      ? - display help"
 msgstr "      ? - показать справку"
 
@@ -13802,28 +13810,32 @@ msgstr "программа %s не умеет работать с бинарны
 msgid "tool %s requires a GUI\n"
 msgstr "программа %s требует графического интерфейсафайлами\n"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " no tool found to merge %s\n"
 "keep (l)ocal or take (o)ther?"
 msgstr ""
+" не найден инструмент для слияния %s\n"
+"использовать локальный файл:(l)ocal или взять другой:(o)ther?"
 
 #, fuzzy, python-format
 msgid "%s.premerge not valid ('%s' is neither boolean nor %s)"
 msgstr "некорректный %s.premerge ('%s' не логический и не %s)"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid "was merge of '%s' successful (yn)?"
-msgstr ""
+msgstr "было ли слияние '%s' успешным (y - да, n - нет)?"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " output file %s appears unchanged\n"
 "was merge successful (yn)?"
 msgstr ""
+" выходной файл %s, похоже, не изменен\n"
+"было ли слияние успешным (y - да, n - нет)?"
 
 #, python-format
 msgid "merging %s incomplete! (edit conflicts, then use 'hg resolve --mark')\n"
@@ -20507,53 +20519,59 @@ msgstr ""
 msgid "case-folding collision between %s and %s"
 msgstr "конфликт регистров букв между %s и %s"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " conflicting flags for %s\n"
 "(n)one, e(x)ec or sym(l)ink?"
 msgstr ""
+" конфликт флагов для %s\n"
+"нет:(n)one, исполнимый:e(x)ec или символическая ссылка: sym(l)ink?"
 
-# INPUT
+# PROMPT
 msgid "&None"
-msgstr ""
+msgstr "&None - Нет"
 
-# INPUT
+# PROMPT
 msgid "E&xec"
-msgstr ""
+msgstr "E&xec - Исполнимый"
 
-# INPUT
+# PROMPT
 msgid "Sym&link"
-msgstr ""
+msgstr "Sym&link - Символическая ссылка"
 
 msgid "resolving manifests\n"
-msgstr ""
+msgstr "разрешаем манифесты\n"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " local changed %s which remote deleted\n"
 "use (c)hanged version or (d)elete?"
 msgstr ""
+" локально файл %s изменен, на отдаленной машине удален\n"
+"использовать измененную:(c)hanged версию или удалить:(d)elete?"
 
-# INPUT
+# PROMPT
 msgid "&Changed"
-msgstr ""
+msgstr "&Changed - Измененную"
 
-# INPUT
+# PROMPT
 msgid "&Delete"
-msgstr ""
+msgstr "&Delete - Удалить"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 "remote changed %s which local deleted\n"
 "use (c)hanged version or leave (d)eleted?"
 msgstr ""
+" на отдаленной машине файл %s изменен, локально удален\n"
+"использовать измененную:(c)hanged версию или оставить удаленным:(d)eleted?"
 
-# INPUT
+# PROMPT
 msgid "&Deleted"
-msgstr ""
+msgstr "&Deleted - Оставить удаленным"
 
 msgid "updating"
 msgstr "обновление"
@@ -20722,9 +20740,9 @@ msgstr "неподдерживаемый тип перевода строки: %
 msgid "patch failed to apply"
 msgstr "не уадлось наложить патч"
 
-#, python-format
+#, fuzzy, python-format
 msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
-msgstr ""
+msgstr "Удаляем неизвестный узел %(n)s из границы %(p)i-фазы"
 
 #, python-format
 msgid "exited with status %d"
@@ -21247,7 +21265,7 @@ msgstr "путь '%s' находится внутри вложенного хр�
 
 #, python-format
 msgid "path %r traverses symbolic link %r"
-msgstr ""
+msgstr "путь %r проходит символическую ссылку %r"
 
 # BUG?
 #, python-format
@@ -21414,44 +21432,54 @@ msgstr "некорректный шаблон подхранилища в %s: %s
 msgid "missing ] in subrepo source"
 msgstr "не хватает ] в источнике подхранилища"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " subrepository sources for %s differ\n"
 "use (l)ocal source (%s) or (r)emote source (%s)?"
 msgstr ""
+" источники подхранилищ для %s различаются\n"
+"использовать локальный:(l)ocal (%s) или отдаленный:(r)emote источник (%s)?"
 
-# INPUT
+# PROMPT
 msgid "&Remote"
-msgstr ""
+msgstr "&Remote - Отдаленный"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " local changed subrepository %s which remote removed\n"
 "use (c)hanged version or (d)elete?"
 msgstr ""
+" локально подхранилище %s изменено, на отдаленной машине удалено\n"
+"использовать измененную:(c)hanged версию, или удалить:(d)elete?"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " remote changed subrepository %s which local removed\n"
 "use (c)hanged version or (d)elete?"
 msgstr ""
+" на отдаленной машине подхранилище %s изменено, локально удалено\n"
+"использовать измененную:(c)hanged версию, или удалить:(d)elete?"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " subrepository sources for %s differ\n"
 "use (l)ocal source (%s) or (r)emote source (%s)?\n"
 msgstr ""
+" источники подхранилищ для %s различаются\n"
+"использовать локальный:(l)ocal (%s) или отдаленный:(r)emote источник (%s)?\n"
 
-# INPUT
+# PROMPT
 #, python-format
 msgid ""
 " subrepository sources for %s differ (in checked out version)\n"
 "use (l)ocal source (%s) or (r)emote source (%s)?\n"
 msgstr ""
+" источники подхранилищ для %s различаются (в извлеченной версии)\n"
+"использовать локальный:(l)ocal (%s) или отдаленный:(r)emote источник (%s)?\n"
 
 #, python-format
 msgid "default path for subrepository %s not found"
