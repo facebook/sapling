@@ -5206,17 +5206,7 @@ def status(ui, repo, *pats, **opts):
     changestates = zip(states, 'MAR!?IC', stat)
 
     if (opts.get('all') or opts.get('copies')) and not opts.get('no_status'):
-        ctx1 = repo[node1]
-        ctx2 = repo[node2]
-        added = stat[1]
-        if node2 is None:
-            added = stat[0] + stat[1] # merged?
-
-        for k, v in copies.pathcopies(ctx1, ctx2).iteritems():
-            if k in added:
-                copy[k] = v
-            elif v in added:
-                copy[v] = k
+        copy = copies.pathcopies(repo[node1], repo[node2])
 
     for state, char, files in changestates:
         if state in show:

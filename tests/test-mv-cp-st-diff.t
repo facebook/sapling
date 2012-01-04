@@ -560,6 +560,7 @@ $4 - test description
   
   - parent to root: --rev . --rev 0
   M a
+    b
   R b
   
   diff --git a/a b/a
@@ -611,6 +612,7 @@ $4 - test description
   
   - parent to branch: --rev . --rev 2
   M a
+    b
   A x/y
   R b
   
@@ -906,6 +908,7 @@ $4 - test description
   
   - parent to root: --rev . --rev 0
   M a
+    b
   R b
   R c
   
@@ -975,6 +978,7 @@ $4 - test description
   
   - parent to branch: --rev . --rev 2
   M a
+    b
   A x/y
   R b
   R c

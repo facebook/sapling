@@ -84,8 +84,89 @@ def _findlimit(repo, a, b):
         return None
     return limit
 
-def pathcopies(c1, c2):
-    return mergecopies(c1._repo, c1, c2, c1._repo["null"], False)[0]
+def _chain(src, dst, a, b):
+    '''chain two sets of copies a->b'''
+    t = a.copy()
+    for k, v in b.iteritems():
+        if v in t:
+            # found a chain
+            if t[v] != k:
+                # file wasn't renamed back to itself
+                t[k] = t[v]
+            if v not in dst:
+                # chain was a rename, not a copy
+                del t[v]
+        if v in src:
+            # file is a copy of an existing file
+            t[k] = v
+    return t
+
+def _tracefile(fctx, actx):
+    '''return file context that is the ancestor of fctx present in actx'''
+    stop = actx.rev()
+    am = actx.manifest()
+
+    for f in fctx.ancestors():
+        if am.get(f.path(), None) == f.filenode():
+            return f
+        if f.rev() < stop:
+            return None
+
+def _dirstatecopies(d):
+    ds = d._repo.dirstate
+    c = ds.copies().copy()
+    for k in c.keys():
+        if ds[k] not in 'anm':
+            del c[k]
+    return c
+
+def _forwardcopies(a, b):
+    '''find {dst@b: src@a} copy mapping where a is an ancestor of b'''
+
+    # check for working copy
+    w = None
+    if b.rev() is None:
+        w = b
+        b = w.p1()
+        if a == b:
+            # short-circuit to avoid issues with merge states
+            return _dirstatecopies(w)
+
+    # find where new files came from
+    # we currently don't try to find where old files went, too expensive
+    # this means we can miss a case like 'hg rm b; hg cp a b'
+    cm = {}
+    for f in b:
+        if f not in a:
+            ofctx = _tracefile(b[f], a)
+            if ofctx:
+                cm[f] = ofctx.path()
+
+    # combine copies from dirstate if necessary
+    if w is not None:
+        cm = _chain(a, w, cm, _dirstatecopies(w))
+
+    return cm
+
+def _backwardcopies(a, b):
+    # because the forward mapping is 1:n, we can lose renames here
+    # in particular, we find renames better than copies
+    f = _forwardcopies(b, a)
+    r = {}
+    for k, v in f.iteritems():
+        r[v] = k
+    return r
+
+def pathcopies(x, y):
+    '''find {dst@y: src@x} copy mapping for directed compare'''
+    if x == y or not x or not y:
+        return {}
+    a = y.ancestor(x)
+    if a == x:
+        return _forwardcopies(x, y)
+    if a == y:
+        return _backwardcopies(x, y)
+    return _chain(x, y, _backwardcopies(x, a), _forwardcopies(a, y))
 
 def mergecopies(repo, c1, c2, ca, checkdirs=True):
     """

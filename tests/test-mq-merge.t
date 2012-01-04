@@ -149,13 +149,11 @@ Check patcha is still a git patch:
   -b
   +a
   +c
-  diff --git a/a b/aa
-  copy from a
-  copy to aa
-  --- a/a
+  diff --git a/aa b/aa
+  new file mode 100644
+  --- /dev/null
   +++ b/aa
-  @@ -1,1 +1,1 @@
-  -b
+  @@ -0,0 +1,1 @@
   +a
 
 Check patcha2 is still a regular patch:
