@@ -91,6 +91,10 @@ Even on merge
 Test secret changeset are not pushed
 
   $ hg init ../push-dest
+  $ cat > ../push-dest/.hg/hgrc << EOF
+  > [phases]
+  > publish=False
+  > EOF
   $ hg push ../push-dest -f # force because we push multiple heads
   pushing to ../push-dest
   searching for changes
@@ -100,18 +104,18 @@ Test secret changeset are not pushed
   added 5 changesets with 5 changes to 5 files (+1 heads)
   $ hglog
   7 2 merge B' and E
-  6 0 B'
+  6 1 B'
   5 2 H
   4 2 E
-  3 0 D
-  2 0 C
+  3 1 D
+  2 1 C
   1 0 B
   0 0 A
   $ cd ../push-dest
   $ hglog
-  4 0 B'
-  3 0 D
-  2 0 C
+  4 1 B'
+  3 1 D
+  2 1 C
   1 0 B
   0 0 A
   $ cd ..
@@ -142,10 +146,10 @@ Test revset
   $ hglog -r 'public()'
   0 0 A
   1 0 B
-  2 0 C
-  3 0 D
-  6 0 B'
   $ hglog -r 'draft()'
+  2 1 C
+  3 1 D
+  6 1 B'
   $ hglog -r 'secret()'
   4 2 E
   5 2 H

@@ -29,7 +29,7 @@ expect ssl error
   searching for changes
   remote: ssl required
   remote: ssl required
-  updating phase of ba677d0156c1to 0 failed!
+  updating phase of ba677d0156c1 to 0 from 1 failed!
   % serve errors
 
 expect authorization error
