@@ -104,6 +104,7 @@ from i18n import _
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
+phasenames = ['public', 'draft', 'secret']
 
 def readroots(repo):
     """Read phase roots from disk"""
