@@ -1600,7 +1600,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     copy = {}
     if opts.git or opts.upgrade:
-        copy = copies.copies(repo, ctx1, ctx2, repo[nullid])[0]
+        copy = copies.pathcopies(ctx1, ctx2)
 
     difffn = lambda opts, losedata: trydiff(repo, revs, ctx1, ctx2,
                  modified, added, removed, copy, getfilectx, opts, losedata, prefix)

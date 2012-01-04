@@ -84,7 +84,10 @@ def _findlimit(repo, a, b):
         return None
     return limit
 
-def copies(repo, c1, c2, ca, checkdirs=False):
+def pathcopies(c1, c2):
+    return mergecopies(c1._repo, c1, c2, c1._repo["null"], False)[0]
+
+def mergecopies(repo, c1, c2, ca, checkdirs=True):
     """
     Find moves and copies between context c1 and c2
     """

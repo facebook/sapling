@@ -1201,7 +1201,7 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
 def duplicatecopies(repo, rev, p1, p2):
     "Reproduce copies found in the source revision in the dirstate for grafts"
     # Here we simulate the copies and renames in the source changeset
-    cop, diver = copies.copies(repo, repo[rev], repo[p1], repo[p2], True)
+    cop, diver = copies.mergecopies(repo, repo[rev], repo[p1], repo[p2])
     m1 = repo[rev].manifest()
     m2 = repo[p1].manifest()
     for k, v in cop.iteritems():
