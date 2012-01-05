@@ -10186,28 +10186,31 @@ msgid "either two or three arguments required"
 msgstr "требуются два или три аргумента"
 
 # {{{ Debug commands
+#, fuzzy
 msgid "add single file mergeable changes"
-msgstr ""
+msgstr "добавить единственный файл, объединяющий изменения"
 
 msgid "add single file all revs overwrite"
-msgstr ""
+msgstr "добавить единственный файл, перезаписываемый во всех ревизиях"
 
 msgid "add new file at each rev"
-msgstr ""
+msgstr "добавлять новый файл в каждой ревизии"
 
 msgid "[OPTION]... [TEXT]"
 msgstr "[ПАРАМЕТР]... [ТЕКСТ]..."
 
 msgid "builds a repo with a given DAG from scratch in the current empty repo"
-msgstr ""
+msgstr "построить хранилище по данному графу в текущем пустом хранилище"
 
 msgid ""
 "    The description of the DAG is read from stdin if not given on the\n"
 "    command line."
 msgstr ""
+"    Описание графа читается со стандартного ввода, если оно не задано\n"
+"    в командной строке."
 
 msgid "    Elements:"
-msgstr ""
+msgstr "    Элементы:"
 
 msgid ""
 "     - \"+n\" is a linear run of n nodes based on the current default "
@@ -10223,12 +10226,29 @@ msgid ""
 "     - \"@branch\" sets the named branch for subsequent nodes\n"
 "     - \"#...\\n\" is a comment up to the end of the line"
 msgstr ""
+"     - \"+n\" - линейная последовательность из n узлов, основанная на "
+"текущем родителе по умолчанию\n"
+"     - \".\" - один узел, основанный на текущем родителе по умолчанию\n"
+"     - \"$\" сбрасывает родителя по умолчанию на null (подразумевается в "
+"начале);\n"
+"           в противном случае родителем по умолчaнию является последний\n"
+"           созданный узел\n"
+"     - \"<p\" устанавливает родителя по умолчанию в обратную ссылку "
+"(backref) на p\n"
+"     - \"*p\" - разветвление в родителе p, который является backref\n"
+"     - \"*p1/p2\" - слияние родителей p1 и p2, которые являются backref\n"
+"     - \"/p2\" - слияние предыдущего узла и p2\n"
+"     - \":tag\" задает локальную метку для предыдущего узла\n"
+"     - \"@branch\" устанавливает именованную ветку для последующих узлов\n"
+"     - \"#...\\n\" - комментарий до конца строки"
 
+# syntax highlight off ;) />
 msgid "    Whitespace between the above elements is ignored."
 msgstr ""
+"    Пробельные символы между вышеперечисленными элементами игнорируются."
 
 msgid "    A backref is either"
-msgstr ""
+msgstr "    Backref это"
 
 msgid ""
 "     - a number n, which references the node curr-n, where curr is the "
@@ -10237,6 +10257,11 @@ msgid ""
 "     - the name of a local tag you placed earlier using \":tag\", or\n"
 "     - empty to denote the default parent."
 msgstr ""
+"     - число n, которое ссылается на узел curr-n, где curr - текущий узел\n"
+"     или\n"
+"     - имя локальной метки, заданной ранее с помощью \":tag\"\n"
+"     или\n"
+"     - пустое значение, означающее родителя по умолчанию."
 
 msgid ""
 "    All string valued-elements are either strictly alphanumeric, or must\n"
@@ -10244,49 +10269,52 @@ msgid ""
 "character.\n"
 "    "
 msgstr ""
+"    Все значения-строки должны быть либо строго буквенно-цифровыми, либо\n"
+"    заключаться в двойные кавычки (\"...\") и использовать \"\\\" в качестве\n"
+"    экранирующего символа."
 
 msgid "reading DAG from stdin\n"
-msgstr ""
+msgstr "читаем граф со стандартного ввода\n"
 
 msgid "repository is not empty"
-msgstr ""
+msgstr "хранилище не пустое"
 
 msgid "building"
-msgstr ""
+msgstr "построение"
 
 msgid "show all details"
-msgstr ""
+msgstr "показать все детали"
 
 msgid "lists the contents of a bundle"
-msgstr ""
+msgstr "напечатать содержимое комплекта (bundle)"
 
 msgid "validate the correctness of the current dirstate"
-msgstr ""
+msgstr "проверить корректность текущего dirstate"
 
 #, python-format
 msgid "%s in state %s, but not in manifest1\n"
-msgstr ""
+msgstr "%s в состоянии %s, но не в манифесте1\n"
 
 #, python-format
 msgid "%s in state %s, but also in manifest1\n"
-msgstr ""
+msgstr "%s в состоянии %s, а также в манифесте1\n"
 
 #, python-format
 msgid "%s in state %s, but not in either manifest\n"
-msgstr ""
+msgstr "%s в состоянии %s, но ни в одном из манифестов\n"
 
 #, python-format
 msgid "%s in manifest1, but listed as state %s"
-msgstr ""
+msgstr "%s в манифесте1, но перечислен в состоянии %s"
 
 msgid ".hg/dirstate inconsistent with current parent's manifest"
-msgstr ""
+msgstr ".hg/dirstate не согласуется с манифестом текущего родителя"
 
 msgid "[COMMAND]"
-msgstr ""
+msgstr "[КОМАНДА]"
 
 msgid "list all available commands and options"
-msgstr ""
+msgstr "перечислить все доступные команды и параметры"
 
 msgid "show the command options"
 msgstr "показать параметры команды"
@@ -10295,96 +10323,102 @@ msgid "[-o] CMD"
 msgstr "[-o] КОМАНДА"
 
 msgid "returns the completion list associated with the given command"
-msgstr ""
+msgstr "возвращает список дополнения, ассоциированный с данной командой"
 
 msgid "use tags as labels"
-msgstr ""
+msgstr "использовать метки Mercurial в качестве маркировки"
 
 msgid "annotate with branch names"
-msgstr ""
+msgstr "добавлять имена веток"
 
 msgid "use dots for runs"
-msgstr ""
+msgstr "ставить точки для прогонов"
 
 msgid "separate elements by spaces"
-msgstr ""
+msgstr "разделять элементы пробелами"
 
 msgid "[OPTION]... [FILE [REV]...]"
-msgstr ""
+msgstr "[ПАРАМЕТР]... [ФАЙЛ [РЕВИЗИЯ]...]"
 
 msgid "format the changelog or an index DAG as a concise textual description"
-msgstr ""
+msgstr "показать журнал изменений или граф индексов в кратком текстовом виде"
 
 msgid ""
 "    If you pass a revlog index, the revlog's DAG is emitted. If you list\n"
 "    revision numbers, they get labelled in the output as rN."
 msgstr ""
+"    Если вы передадите индекс revlog, отображается граф revlog. Если вы\n"
+"    укажете номера ревизий, они помечаются как rN."
 
 msgid ""
 "    Otherwise, the changelog DAG of the current repo is emitted.\n"
 "    "
 msgstr ""
+"    В противном случае, отображается граф журнала изменений (changelog)\n"
+"    текущего хранилища.\n"
+"    "
 
 msgid "need repo for changelog dag"
-msgstr ""
+msgstr "для графа истории требуется хранилище "
 
 msgid "open changelog"
 msgstr "открыть журнал изменений (changelog)"
 
 msgid "open manifest"
-msgstr ""
+msgstr "открыть манифест"
 
 msgid "-c|-m|FILE REV"
-msgstr ""
+msgstr "-c|-m|ФАЙЛ РЕВИЗИЯ"
 
 msgid "dump the contents of a data file revision"
-msgstr ""
+msgstr "дамп содержимого ревизии файла данных (data file)"
 
 #, python-format
 msgid "invalid revision identifier %s"
-msgstr ""
+msgstr "неверный идентификатор ревизии %s"
 
 msgid "try extended date formats"
-msgstr ""
+msgstr "пробовать расширенные форматы даты"
 
 msgid "[-e] DATE [RANGE]"
-msgstr ""
+msgstr "[-e] ДАТА [ДИАПАЗОН]"
 
 msgid "parse and display a date"
-msgstr ""
+msgstr "разобрать и отобразить дату"
 
 msgid "use old-style discovery"
-msgstr ""
+msgstr "использовать обнаружение в старом стиле"
 
 msgid "use old-style discovery with non-heads included"
-msgstr ""
+msgstr "использовать обнаружение в старом стиле, включая не-головы (non-heads)"
 
 msgid "[-l REV] [-r REV] [-b BRANCH]... [OTHER]"
-msgstr ""
+msgstr "[-l РЕВ] [-r РЕВ] [-b ВЕТКА]... [ДРУГОЙ]"
 
 msgid "runs the changeset discovery protocol in isolation"
 msgstr ""
+"запускает протокол обнаружения набора изменения в изолированном окружении"
 
 msgid "parse and apply a fileset specification"
-msgstr ""
+msgstr "разобрать и применить спецификацию набора файлов (fileset)"
 
 msgid "[PATH]"
-msgstr ""
+msgstr "[ПУТЬ]"
 
 msgid "show information detected about current filesystem"
-msgstr ""
+msgstr "показать собранную информацию о текущей файловой системе"
 
 msgid "id of head node"
-msgstr ""
+msgstr "идентификатор головного узла"
 
 msgid "id of common node"
-msgstr ""
+msgstr "идентификатор общего узла"
 
 msgid "REPO FILE [-H|-C ID]..."
-msgstr ""
+msgstr "ХРАНИЛИЩЕ ФАЙЛ [-H|-C ИД]..."
 
 msgid "retrieves a bundle from a repo"
-msgstr ""
+msgstr "извлечь комплект (bundle) из хранилища"
 
 msgid ""
 "    Every ID must be a full-length hex node id string. Saves the bundle to "
@@ -10392,87 +10426,90 @@ msgid ""
 "    given file.\n"
 "    "
 msgstr ""
+"    Каждый идентификатор должен полным 16-ричным идентификатором узла.\n"
+"    Комплект сохраняется в заданный файл.\n"
+"    "
 
 msgid "display the combined ignore pattern"
-msgstr ""
+msgstr "показать результирующий шаблон игнорирования"
 
 msgid "no ignore patterns found"
-msgstr ""
+msgstr "шаблонов игнорирования не найдено"
 
 msgid "revlog format"
-msgstr ""
+msgstr "фомат revlog"
 
 msgid "[-f FORMAT] -c|-m|FILE"
-msgstr ""
+msgstr "[-f ФОРМАТ] -c|-m|ФАЙЛ"
 
 msgid "dump the contents of an index file"
-msgstr ""
+msgstr "дамп содержимого файла индекса"
 
 #, python-format
 msgid "unknown format %d"
-msgstr ""
+msgstr "неизвестный формат %d"
 
 msgid "dump an index DAG as a graphviz dot file"
-msgstr ""
+msgstr "дамп графа индексов в виде dot-файла graphviz"
 
 msgid "test Mercurial installation"
-msgstr ""
+msgstr "протестировать установка Mercurial"
 
 #, python-format
 msgid "Checking encoding (%s)...\n"
-msgstr ""
+msgstr "Проверка кодировки (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
-msgstr ""
+msgstr " (проверьте правильность установки локали)\n"
 
 #, python-format
 msgid "Checking installed modules (%s)...\n"
-msgstr ""
+msgstr "Проверка установленных модулей (%s)...\n"
 
 msgid " One or more extensions could not be found"
-msgstr ""
+msgstr " Одно или более расширение не найдено"
 
 msgid " (check that you compiled the extensions)\n"
-msgstr ""
+msgstr " (убедитесь, что вы скомпилировали расширение)\n"
 
 #, python-format
 msgid "Checking templates (%s)...\n"
-msgstr ""
+msgstr "Проверка шаблонов (%s)...\n"
 
 msgid " (templates seem to have been installed incorrectly)\n"
-msgstr ""
+msgstr " (шаблоны, похоже, некорректно установлены)\n"
 
 msgid "Checking commit editor...\n"
-msgstr ""
+msgstr "Проверка редактора сообщений фиксации...\n"
 
 msgid " No commit editor set and can't find vi in PATH\n"
-msgstr ""
+msgstr " Редактор сообщений не установлен и vi не доступен в PATH\n"
 
 msgid " (specify a commit editor in your configuration file)\n"
-msgstr ""
+msgstr " (задайте редактор сообщений в вашем конфиге)\n"
 
 #, python-format
 msgid " Can't find editor '%s' in PATH\n"
-msgstr ""
+msgstr " Редактор '%s' не доступен в PATH\n"
 
 msgid "Checking username...\n"
-msgstr ""
+msgstr "Проверка имени пользователя...\n"
 
 msgid " (specify a username in your configuration file)\n"
-msgstr ""
+msgstr " (задайте имя пользователя в конфиге)\n"
 
 msgid "No problems detected\n"
-msgstr ""
+msgstr "Проблем не обнаружено\n"
 
 #, python-format
 msgid "%s problems detected, please check your install!\n"
-msgstr ""
+msgstr "Найдено %s проблем, пожалуйста, проверьте вашу установку!\n"
 
 msgid "REPO ID..."
-msgstr ""
+msgstr "ИД ХРАНИЛИЩА..."
 
 msgid "test whether node ids are known to a repo"
-msgstr ""
+msgstr "проверить, известны ли идентификаторы узлов в хранилище"
 
 msgid ""
 "    Every ID must be a full-length hex node id string. Returns a list of 0s "
@@ -10480,95 +10517,103 @@ msgid ""
 "    indicating unknown/known.\n"
 "    "
 msgstr ""
+"    Каждый идентификатор должен быть полным 16-ричным идентификатором узла.\n"
+"    Возвращает список нулей и единиц, означающих неизвестен/известен.\n"
+"    "
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
-msgstr ""
+msgstr "ХРАНИЛИЩЕ ПРОСТРАНСТВО_ИМЕН [КЛЮЧ СТАРЫЙ НОВЫЙ]"
 
 msgid "access the pushkey key/value protocol"
-msgstr ""
+msgstr "доступ к протоколу ключ/значение pushkey"
 
 msgid "    With two args, list the keys in the given namespace."
-msgstr ""
+msgstr "    С двумя аргументами перечисляет ключи в данном пространстве имен."
 
 msgid ""
 "    With five args, set a key to new if it currently is set to old.\n"
 "    Reports success or failure.\n"
 "    "
 msgstr ""
+"    С пятью аргументами устанавливает КЛЮЧ в НОВЫЙ, если он равен СТАРОМУ.\n"
+"    Сообщает об успехе или неудаче.\n"
+"    "
 
 msgid "revision to rebuild to"
-msgstr ""
+msgstr "перестроить на данную ревизию"
 
 msgid "[-r REV] [REV]"
-msgstr ""
+msgstr "[-r РЕВИЗИЯ] [РЕВИЗИЯ]"
 
 msgid "rebuild the dirstate as it would look like for the given revision"
-msgstr ""
+msgstr "перестроить dirstate, как оно бы выглядело в данной ревизии"
 
 msgid "revision to debug"
-msgstr ""
+msgstr "ревизия для отладки"
 
 msgid "[-r REV] FILE"
-msgstr ""
+msgstr "[-r РЕВИЗИЯ] ФАЙЛ"
 
 msgid "dump rename information"
-msgstr ""
+msgstr "дамп информации о переименовании"
 
 #, python-format
 msgid "%s renamed from %s:%s\n"
-msgstr ""
+msgstr "%s переименован из %s:%s\n"
 
 #, python-format
 msgid "%s not renamed\n"
-msgstr ""
+msgstr "%s не переименован\n"
 
 msgid "dump index data"
-msgstr ""
+msgstr "дамп данных индекса"
 
 msgid "-c|-m|FILE"
-msgstr ""
+msgstr "-c|-m|ФАЙЛ"
 
 msgid "show data and statistics about a revlog"
-msgstr ""
+msgstr "показать данные и статистику по revlog'у"
 
 msgid "parse and apply a revision specification"
-msgstr ""
+msgstr "разобрать и применить спецификацию ревизии"
 
 msgid "REV1 [REV2]"
-msgstr ""
+msgstr "РЕВИЗИЯ1 [РЕВИЗИЯ2]"
 
 msgid "manually set the parents of the current working directory"
-msgstr ""
+msgstr "вручную установить родителей текущего рабочего каталога"
 
 msgid ""
 "    This is useful for writing repository conversion tools, but should\n"
 "    be used with care."
 msgstr ""
+"    Это полезно при написании инструментов для конвертирования хранилища,\n"
+"    но пользоваться этим надо осторожно."
 
 msgid "do not display the saved mtime"
-msgstr ""
+msgstr "не показывать сохраненное mtime"
 
 msgid "sort by saved mtime"
-msgstr ""
+msgstr "сортировать по сохраненному mtime"
 
 msgid "[OPTION]..."
-msgstr ""
+msgstr "[ПАРАМЕТР]..."
 
 msgid "show the contents of the current dirstate"
-msgstr ""
+msgstr "показать содержимое текущего dirstate"
 
 #, python-format
 msgid "copy: %s -> %s\n"
-msgstr ""
+msgstr "копирование: %s -> %s\n"
 
 msgid "revision to check"
-msgstr ""
+msgstr "ревизия для проверки"
 
 msgid "show how files match on given patterns"
-msgstr ""
+msgstr "показать, как файлы совпадают с заданными шаблонами"
 
 msgid "REPO [OPTIONS]... [ONE [TWO]]"
-msgstr ""
+msgstr "ХРАНИЛИЩЕ [ПАРАМЕТРЫ]... [ПЕРВЫЙ [ВТОРОЙ]]"
 
 # }}} end of debug commands
 msgid "[OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]..."
