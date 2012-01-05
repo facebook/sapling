@@ -27,12 +27,12 @@ def putlfile(repo, proto, sha):
             proto.getfile(tmpfp)
             tmpfp.seek(0)
             if sha != lfutil.hexsha1(tmpfp):
-                return wireproto.pushres(1)
+                raise IOError(0, _('largefile contents do not match hash'))
             tmpfp.close()
             lfutil.copytostoreabsolute(repo, tmpname, sha)
         except IOError, e:
-            repo.ui.warn(_('largefiles: failed to put %s (%s) into store: %s') %
-                         (sha, tmpname, e.strerror))
+            repo.ui.warn(_('largefiles: failed to put %s into store: %s') %
+                         (sha, e.strerror))
             return wireproto.pushres(1)
     finally:
         tmpfp.close()
@@ -81,10 +81,16 @@ def wirereposetup(ui, repo):
             # input file-like into a bundle before sending it, so we can't use
             # it ...
             if issubclass(self.__class__, httprepo.httprepository):
+                res = None
                 try:
-                    return int(self._call('putlfile', data=fd, sha=sha,
-                        headers={'content-type':'application/mercurial-0.1'}))
+                    res = self._call('putlfile', data=fd, sha=sha,
+                        headers={'content-type':'application/mercurial-0.1'})
+                    d, output = res.split('\n', 1)
+                    for l in output.splitlines(True):
+                        self.ui.warn(_('remote: '), l, '\n')
+                    return int(d)
                 except (ValueError, urllib2.HTTPError):
+                    self.ui.warn(_('unexpected putlfile response: %s') % res)
                     return 1
             # ... but we can't use sshrepository._call because the data=
             # argument won't get sent, and _callpush does exactly what we want

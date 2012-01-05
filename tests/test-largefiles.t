@@ -1,5 +1,7 @@
   $ "$TESTDIR/hghave" symlink unix-permissions serve || exit 80
 
+  $ USERCACHE=`pwd`/cache; export USERCACHE
+  $ mkdir -p ${USERCACHE}
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles=
@@ -11,6 +13,7 @@
   > [largefiles]
   > minsize=2
   > patterns=glob:**.dat
+  > usercache=${USERCACHE}
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
@@ -823,6 +826,21 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   abort: http://localhost:$HGPORT/ does not appear to be a largefile store
   [255]
   $ cd ..
+
+putlfile errors are shown (issue3123)
+Corrupt the cached largefile in r7
+  $ echo corruption > $USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ hg init empty
+  $ hg serve -R empty -d -p $HGPORT1 --pid-file hg.pid \
+  >   --config 'web.allow_push=*' --config web.push_ssl=False
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg push -R r7 http://localhost:$HGPORT1
+  pushing to http://localhost:$HGPORT1/
+  searching for changes
+  remote: largefiles: failed to put 4cdac4d8b084d0b599525cf732437fb337d422a8 into store: largefile contents do not match hash
+  abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/
+  [255]
+  $ rm -rf empty
 
 Clone a local repository owned by another user
 We have to simulate that here by setting $HOME and removing write permissions
