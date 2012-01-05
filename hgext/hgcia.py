@@ -113,7 +113,7 @@ class ciamsg(object):
                 # diffstat is stupid
                 self.name = 'cia'
             def write(self, data):
-                self.lines.append(data)
+                self.lines += data.splitlines(True)
             def close(self):
                 pass
 
