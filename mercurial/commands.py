@@ -3444,7 +3444,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     revision.
 
     With -s/--similarity, hg will attempt to discover renames and
-    copies in the patch in the same way as 'addremove'.
+    copies in the patch in the same way as :hg:`addremove`.
 
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
