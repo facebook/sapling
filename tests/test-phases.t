@@ -134,3 +134,19 @@ Test secret changeset are not pull
   2 0 C
   1 0 B
   0 0 A
+  $ cd ..
+
+Test revset
+
+  $ cd initialrepo
+  $ hglog -r 'public()'
+  0 0 A
+  1 0 B
+  2 0 C
+  3 0 D
+  6 0 B'
+  $ hglog -r 'draft()'
+  $ hglog -r 'secret()'
+  4 2 E
+  5 2 H
+  7 2 merge B' and E
