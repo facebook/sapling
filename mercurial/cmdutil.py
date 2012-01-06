@@ -1198,18 +1198,10 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
         bad.extend(f for f in rejected if f in match.files())
     return bad
 
-def duplicatecopies(repo, rev, p1, p2):
+def duplicatecopies(repo, rev, p1):
     "Reproduce copies found in the source revision in the dirstate for grafts"
-    # Here we simulate the copies and renames in the source changeset
-    cop, diver = copies.mergecopies(repo, repo[rev], repo[p1], repo[p2])
-    m1 = repo[rev].manifest()
-    m2 = repo[p1].manifest()
-    for k, v in cop.iteritems():
-        if k in m1:
-            if v in m1 or v in m2:
-                repo.dirstate.copy(v, k)
-                if v in m2 and v not in m1 and k in m2:
-                    repo.dirstate.remove(v)
+    for dst, src in copies.pathcopies(repo[p1], repo[rev]).iteritems():
+        repo.dirstate.copy(src, dst)
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''

@@ -269,7 +269,7 @@ def rebase(ui, repo, **opts):
                                         'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '')
-                cmdutil.duplicatecopies(repo, rev, target, p2)
+                cmdutil.duplicatecopies(repo, rev, target)
                 if not collapsef:
                     newrev = concludenode(repo, rev, p1, p2, extrafn=extrafn,
                                           editor=editor)

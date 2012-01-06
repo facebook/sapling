@@ -106,14 +106,6 @@ Graft out of order, skipping a merge and a duplicate
    b: local copied/moved to a -> m
   preserving b for resolve of b
   updating: b 1/1 files (100.00%)
-    searching for copies back to rev 1
-    unmatched files in local:
-     a
-    unmatched files in other:
-     b
-    all copies found (* = to merge, ! = divergent):
-     b -> a *
-    checking for directory renames
   b
    b: searching for copy revision for a
    b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
@@ -127,12 +119,6 @@ Graft out of order, skipping a merge and a duplicate
    e: remote is newer -> g
   updating: e 1/1 files (100.00%)
   getting e
-    searching for copies back to rev 1
-    unmatched files in local:
-     c
-    all copies found (* = to merge, ! = divergent):
-     c -> b *
-    checking for directory renames
   e
   grafting revision 4
     searching for copies back to rev 1
@@ -152,12 +138,6 @@ Graft out of order, skipping a merge and a duplicate
   my e@77eb504366ab+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-    searching for copies back to rev 1
-    unmatched files in local:
-     c
-    all copies found (* = to merge, ! = divergent):
-     c -> b *
-    checking for directory renames
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
