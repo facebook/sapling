@@ -4,6 +4,7 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+import errno
 
 from node import nullid
 from i18n import _
@@ -80,7 +81,9 @@ class dirstate(object):
     def _branch(self):
         try:
             return self._opener.read("branch").strip() or "default"
-        except IOError:
+        except IOError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
             return "default"
 
     @propertycache
