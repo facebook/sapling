@@ -2,7 +2,7 @@
   > [extensions]
   > graphlog=
   > EOF
-  $ alias hgph='hg log --template "{rev} {phase} {desc} - {node|short}\n"'
+  $ alias hgph='hg log --template "{rev} {phaseidx} {desc} - {node|short}\n"'
 
   $ mkcommit() {
   >    echo "$1" > "$1"

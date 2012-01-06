@@ -1,4 +1,4 @@
-  $ alias hglog='hg log --template "{rev} {phase} {desc}\n"'
+  $ alias hglog='hg log --template "{rev} {phaseidx} {desc}\n"'
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
