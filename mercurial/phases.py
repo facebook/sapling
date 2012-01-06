@@ -102,7 +102,7 @@ import errno
 from node import nullid, bin, hex, short
 from i18n import _
 
-allphases = range(3)
+allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
 
 def readroots(repo):
@@ -242,7 +242,7 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
 def visibleheads(repo):
     """return the set of visible head of this repo"""
     # XXX we want a cache on this
-    sroots = repo._phaseroots[2]
+    sroots = repo._phaseroots[secret]
     if sroots:
         # XXX very slow revset. storing heads or secret "boundary" would help.
         revset = repo.set('heads(not (%ln::))', sroots)

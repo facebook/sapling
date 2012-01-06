@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, short, hex
 from i18n import _
-import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding
+import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import match as matchmod
 import os, errno, stat
 
@@ -119,13 +119,13 @@ class changectx(object):
         return self._repo.nodebookmarks(self._node)
     def phase(self):
         if self._rev == -1:
-            return 0
+            return phases.public
         if self._rev >= len(self._repo._phaserev):
             # outdated cache
             del self._repo._phaserev
         return self._repo._phaserev[self._rev]
     def mutable(self):
-        return self._repo._phaserev[self._rev] > 0
+        return self._repo._phaserev[self._rev] > phases.public
     def hidden(self):
         return self._rev in self._repo.changelog.hiddenrevs
 
@@ -812,7 +812,7 @@ class workingctx(changectx):
         return b
 
     def phase(self):
-        phase = 1 # default phase to draft
+        phase = phases.draft # default phase to draft
         for p in self.parents():
             phase = max(phase, p.phase())
         return phase

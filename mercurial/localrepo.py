@@ -181,7 +181,7 @@ class localrepository(repo.repository):
 
     @propertycache
     def _phaserev(self):
-        cache = [0] * len(self)
+        cache = [phases.public] * len(self)
         for phase in phases.trackedphases:
             roots = map(self.changelog.rev, self._phaseroots[phase])
             if roots:
@@ -1253,7 +1253,8 @@ class localrepository(repo.repository):
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
             # set the new commit is proper phase
-            targetphase = self.ui.configint('phases', 'new-commit', 1)
+            targetphase = self.ui.configint('phases', 'new-commit',
+                                            phases.draft)
             if targetphase:
                 # retract boundary do not alter parent changeset.
                 # if a parent have higher the resulting phase will
@@ -1554,7 +1555,7 @@ class localrepository(repo.repository):
             else:
                 # Remote is old or publishing all common changesets
                 # should be seen as public
-                phases.advanceboundary(self, 0, common + added)
+                phases.advanceboundary(self, phases.public, common + added)
         finally:
             lock.release()
 
@@ -1615,14 +1616,14 @@ class localrepository(repo.repository):
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
-                    phases.advanceboundary(self, 0, fut)
+                    phases.advanceboundary(self, phases.public, fut)
                     # don't push any phase data as there is nothing to push
                 else:
                     ana = phases.analyzeremotephases(self, fut, remotephases)
                     rheads, rroots = ana
                     ### Apply remote phase on local
                     if remotephases.get('publishing', False):
-                        phases.advanceboundary(self, 0, fut)
+                        phases.advanceboundary(self, phases.public, fut)
                     else: # publish = False
                         for phase, rpheads in enumerate(rheads):
                             phases.advanceboundary(self, phase, rpheads)
@@ -2057,9 +2058,9 @@ class localrepository(repo.repository):
             if publishing and srctype == 'push':
                 # Old server can not push the boundary themself.
                 # This clause ensure pushed changeset are alway marked as public
-                phases.advanceboundary(self, 0, added)
+                phases.advanceboundary(self, phases.public, added)
             elif srctype != 'strip': # strip should not touch boundary at all
-                phases.retractboundary(self, 1, added)
+                phases.retractboundary(self, phases.draft, added)
 
             # make changelog see real files again
             cl.finalize(trp)
