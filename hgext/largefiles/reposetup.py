@@ -26,8 +26,6 @@ def reposetup(ui, repo):
 
     for name in ('status', 'commitctx', 'commit', 'push'):
         method = getattr(repo, name)
-        #if not (isinstance(method, types.MethodType) and
-        #        method.im_func is repo.__class__.commitctx.im_func):
         if (isinstance(method, types.FunctionType) and
             method.func_name == 'wrap'):
             ui.warn(_('largefiles: repo method %r appears to have already been'
