@@ -8227,13 +8227,12 @@ msgstr "незафиксированные слияния"
 msgid "outstanding local changes"
 msgstr "незафиксированные локальные изменения"
 
-#, fuzzy
 msgid ""
 "``transplanted([set])``\n"
 "    Transplanted changesets in set, or all transplanted changesets."
 msgstr ""
 "``transplanted([множество])``\n"
-"    Пересаженные изменения в виде множества, или все пересаженные\n"
+"    Пересаженные наборы изменений из множества, или все пересаженные\n"
 "    наборы изменений."
 
 msgid ""
@@ -17582,10 +17581,9 @@ msgid ""
 "e.g., ``\\n`` is interpreted as a newline. To prevent them from being\n"
 "interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``."
 msgstr ""
-"Спец. символы могут использоваться в идентификаторах, при этом они\n"
-"должны экранироваться, например ``\\n`` интерпретируется как перевод\n"
-"строки. Чтобы отключить интерпретацию спецсимволов, строку можно\n"
-"предварять ``r``, например ``r'...'``."
+"В идентификаторах можно использовать специальные символы, экранируя их.\n"
+"Например ``\\n`` интерпретируется как перевод строки. Чтобы запретить\n"
+"такую интерпретацию, поставьте перед строкой ``r``, например, ``r'...'``."
 
 msgid "There is a single prefix operator:"
 msgstr "Поддерживается один префиксный оператор:"
@@ -19294,7 +19292,7 @@ msgid ""
 "operators. Parenthesis can be used for grouping."
 msgstr ""
 "Язык поддерживает несколько предикатов, которые объединяются с помощью\n"
-"инфиксных операторов. Можно использовать скобки для группировки."
+"инфиксных операторов. Для группировки можно использовать круглые скобки."
 
 msgid ""
 "Identifiers such as branch names must be quoted with single or double\n"
@@ -19302,9 +19300,9 @@ msgid ""
 "``[._a-zA-Z0-9\\x80-\\xff]`` or if they match one of the predefined\n"
 "predicates."
 msgstr ""
-"Идентификаторы, такие как имена веток, должны заключаться в одинарные\n"
-"или двойные кавычки, если они содержат символы не из множества\n"
-"``[._a-zA-Z0-9\\x80-\\xff]`` или если их имена совпадают с одним\n"
+"Различные идентификаторы, такие как имена веток, должны заключаться в\n"
+"одинарные или двойные кавычки в случаях, когда они содержат символы не\n"
+"из множества ``[._a-zA-Z0-9\\x80-\\xff]``, или если они совпадают с одним\n"
 "из предопределенных предикатов."
 
 msgid ""
@@ -19312,7 +19310,7 @@ msgid ""
 "  Changesets not in x. Short form is ``! x``."
 msgstr ""
 "``not x``\n"
-"  Наборы изменений не в х. Краткая форма: ``! x``."
+"  Наборы изменений, не входящие в х. Краткая форма: ``! x``."
 
 msgid ""
 "``x::y``\n"
@@ -19325,7 +19323,7 @@ msgstr ""
 "  Диапазон на графе ревизий, означающий все ревизии, являющиеся\n"
 "  предками y и потомками x, включая x и y. Если первая ревизия\n"
 "  опущена, это эквивалентно ``ancestors(y)``, если вторая ревизия\n"
-"  опущена, это эквивалентно ``descendats(x)``."
+"  опущена, это эквивалентно ``descendants(x)``."
 
 msgid "  An alternative syntax is ``x..y``."
 msgstr "  Альтернативная форма: ``x..y``."
@@ -19369,9 +19367,10 @@ msgid ""
 "  For n == 0, x; for n == 1, the first parent of each changeset in x;\n"
 "  for n == 2, the second parent of changeset in x."
 msgstr ""
-"  n-ый родитель x, n == 0, 1, или 2.\n"
-"  Если n == 0, соответствует x; если n == 1, соответствует первому\n"
-"  родителю каждой ревизии из x; если n == 2 - второму родителю."
+"``x^n``\n"
+"  n-ый родитель x, где n == 0, 1 или 2.\n"
+"  Если n == 0, соответствует x; если n == 1, то соответствует первому\n"
+"  родителю каждой ревизии из x; если n == 2 — второму родителю."
 
 msgid ""
 "``x~n``\n"
@@ -20871,45 +20870,56 @@ msgid ""
 "``adds(pattern)``\n"
 "    Changesets that add a file matching pattern."
 msgstr ""
+"``adds(шаблон)``\n"
+"    Наборы изменений, добавляющие файл, совпадающий с шаблоном."
 
 #. i18n: "adds" is a keyword
 msgid "adds requires a pattern"
-msgstr ""
+msgstr "adds требует шаблон"
 
 msgid ""
 "``ancestor(single, single)``\n"
 "    Greatest common ancestor of the two changesets."
 msgstr ""
+"``ancestor(одна_ревизия, одна_ревизия)``\n"
+"    Наибольший общий предок двух наборов изменений."
 
 #. i18n: "ancestor" is a keyword
 msgid "ancestor requires two arguments"
-msgstr ""
+msgstr "ancestor требует два аргумента"
 
 #. i18n: "ancestor" is a keyword
 msgid "ancestor arguments must be single revisions"
-msgstr ""
+msgstr "агрументы для ancestor должны быть единичными ревизиями"
 
 msgid ""
 "``ancestors(set)``\n"
 "    Changesets that are ancestors of a changeset in set."
 msgstr ""
+"``ancestors(множество)``\n"
+"    Наборы изменений, являющиеся предками какого-либо набора\n"
+"    изменений из множества."
 
 msgid "~ expects a number"
-msgstr ""
+msgstr "~ ожидает число"
 
 msgid ""
 "``author(string)``\n"
 "    Alias for ``user(string)``."
 msgstr ""
+"``author(строка)``\n"
+"    Псевдоним для ``user(строка)``."
 
 #. i18n: "author" is a keyword
 msgid "author requires a string"
-msgstr ""
+msgstr "author требует строку"
 
 msgid ""
 "``bisect(string)``\n"
 "    Changesets marked in the specified bisect status:"
 msgstr ""
+"``bisect(строка)``\n"
+"    Наборы изменений, отмеченные состоянием в ходе бисекции:"
 
 msgid ""
 "    - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip\n"
@@ -20919,22 +20929,30 @@ msgid ""
 "    - ``untested``           : csets whose fate is yet unknown\n"
 "    - ``ignored``            : csets ignored due to DAG topology"
 msgstr ""
+"    - ``good``, ``bad``, ``skip``: явно помеченные как хороший/плохой/пропущенный\n"
+"    - ``goods``, ``bads``      : топологически хорошие/плохие\n"
+"    - ``range``              : находящиеся в рамках бисекции\n"
+"    - ``pruned``             : goods, bads или пропущенные\n"
+"    - ``untested``           : те, чья судьба ещё неизвестна\n"
+"    - ``ignored``            : игнорируемые ввиду топологии графа ревизий"
 
 msgid "bisect requires a string"
-msgstr ""
+msgstr "bisect требует строку"
 
 msgid ""
 "``bookmark([name])``\n"
 "    The named bookmark or all bookmarks."
 msgstr ""
+"``bookmark([имя])``\n"
+"    Именованная закладка или все закладки."
 
 #. i18n: "bookmark" is a keyword
 msgid "bookmark takes one or no arguments"
-msgstr ""
+msgstr "bookmark принимает один или ноль аргументов"
 
 #. i18n: "bookmark" is a keyword
 msgid "the argument to bookmark must be a string"
-msgstr ""
+msgstr "аргумент для bookmark должен быть строкой"
 
 msgid ""
 "``branch(string or set)``\n"
@@ -20942,66 +20960,86 @@ msgid ""
 "given\n"
 "    changesets."
 msgstr ""
+"``branch(строка или множество)``\n"
+"    Все наборы изменений, принадлежащие указанной ветке или веткам\n"
+"    данных наборов изменений."
 
 msgid ""
 "``children(set)``\n"
 "    Child changesets of changesets in set."
 msgstr ""
+"``children(множество)``\n"
+"    Дочерние наборы изменений для наборов изменений из множества."
 
 msgid ""
 "``closed()``\n"
 "    Changeset is closed."
 msgstr ""
+"``closed()``\n"
+"    Набор изменений, который закрыт."
 
 #. i18n: "closed" is a keyword
 msgid "closed takes no arguments"
-msgstr ""
+msgstr "closed не требует аргументов"
 
 msgid ""
 "``contains(pattern)``\n"
 "    Revision contains a file matching pattern. See :hg:`help patterns`\n"
 "    for information about file patterns."
 msgstr ""
+"``contains(шаблон)``\n"
+"    Ревизия, содержащая файл, совпадающий с шаблоном. См. справку по шаблонам\n"
+"    имён файлов: :hg:`help patterns`."
 
 #. i18n: "contains" is a keyword
 msgid "contains requires a pattern"
-msgstr ""
+msgstr "contains требует шаблон"
 
 msgid ""
 "``date(interval)``\n"
 "    Changesets within the interval, see :hg:`help dates`."
 msgstr ""
+"``date(интервал)``\n"
+"    Наборы изменений в интервале дат, см. :hg:`help dates`."
 
 #. i18n: "date" is a keyword
 msgid "date requires a string"
-msgstr ""
+msgstr "date требует строку"
 
 msgid ""
 "``desc(string)``\n"
 "    Search commit message for string. The match is case-insensitive."
 msgstr ""
+"``desc(строка)``\n"
+"    Искать строку в сообщениях фиксации. Регистр букв не учитывается."
 
 #. i18n: "desc" is a keyword
 msgid "desc requires a string"
-msgstr ""
+msgstr "desc требует строку"
 
 msgid ""
 "``descendants(set)``\n"
 "    Changesets which are descendants of changesets in set."
 msgstr ""
+"``descendants(множество)``\n"
+"    Наборы изменений, являющиеся потомками наборов из множества."
 
 msgid ""
 "``filelog(pattern)``\n"
 "    Changesets connected to the specified filelog."
 msgstr ""
+"``filelog(шаблон)``\n"
+"    Наборы изменений, связанные с указанным объектом filelog."
 
 msgid "filelog requires a pattern"
-msgstr ""
+msgstr "filelog требует шаблон"
 
 msgid ""
 "``first(set, [n])``\n"
 "    An alias for limit()."
 msgstr ""
+"``first(множество, [n])``\n"
+"    Псевдоним для limit()."
 
 msgid ""
 "``follow([file])``\n"
@@ -21009,10 +21047,14 @@ msgid ""
 "    If a filename is specified, the history of the given file is followed,\n"
 "    including copies."
 msgstr ""
+"``follow([файл])``\n"
+"    Псевдоним для ``::.`` (предки первого родителя рабочей копии).\n"
+"    Если указано имя файла, прослеживается вся история данного файла,\n"
+"    включая копии."
 
 #. i18n: "follow" is a keyword
 msgid "follow takes no arguments or a filename"
-msgstr "follow не принимает аргументов или имени файла"
+msgstr "follow принимает либо ноль аргументов, либо имя файла"
 
 msgid "follow expected a filename"
 msgstr "follow ожидает имя файла"
@@ -21025,6 +21067,8 @@ msgid ""
 "``all()``\n"
 "    All changesets, the same as ``0:tip``."
 msgstr ""
+"``all()``\n"
+"    Все наборы изменений, то же, что ``0:tip``."
 
 #. i18n: "all" is a keyword
 msgid "all takes no arguments"
@@ -21036,52 +21080,67 @@ msgid ""
 "    to ensure special escape characters are handled correctly. Unlike\n"
 "    ``keyword(string)``, the match is case-sensitive."
 msgstr ""
+"``grep(регулярное_выражение)``\n"
+"    То же, что ``keyword(строка)``, но принимает регулярное выражение.\n"
+"    Используйте ``grep(r'...')``, чтобы включить в выражение специальные\n"
+"    символы. В отличие от ``keyword(строка)``, регистр букв учитывается."
 
 #. i18n: "grep" is a keyword
 msgid "grep requires a string"
-msgstr ""
+msgstr "grep требует строку"
 
 #, python-format
 msgid "invalid match pattern: %s"
-msgstr ""
+msgstr "неверный шаблон поиска: %s"
 
 msgid ""
 "``file(pattern)``\n"
 "    Changesets affecting files matched by pattern."
 msgstr ""
+"``file(шаблон)``\n"
+"    Наборы изменений, затрагивающие файлы, совпадающие с шаблоном."
 
 #. i18n: "file" is a keyword
 msgid "file requires a pattern"
-msgstr ""
+msgstr "file требует шаблон"
 
 msgid ""
 "``head()``\n"
 "    Changeset is a named branch head."
 msgstr ""
+"``head()``\n"
+"    Набор изменений, являющийся головой именованной ветки."
 
 #. i18n: "head" is a keyword
 msgid "head takes no arguments"
-msgstr ""
+msgstr "head не требует аргументов"
 
 msgid ""
 "``heads(set)``\n"
 "    Members of set with no children in set."
 msgstr ""
+"``heads(множество)``\n"
+"    Элементы множества, у которых в этом множестве нет детей."
 
 msgid ""
 "``keyword(string)``\n"
 "    Search commit message, user name, and names of changed files for\n"
 "    string. The match is case-insensitive."
 msgstr ""
+"``keyword(строка)``\n"
+"    Искать строку в сообщениях фиксации, именах пользователей, именах\n"
+"    изменённых файлов. Регистр букв не учитывается."
 
 #. i18n: "keyword" is a keyword
 msgid "keyword requires a string"
-msgstr ""
+msgstr "keyword требует строку"
 
 msgid ""
 "``limit(set, [n])``\n"
 "    First n members of set, defaulting to 1."
 msgstr ""
+"``limit(множество, [n])``\n"
+"    Первые n элементов множества. По умолчанию 1 элемент."
 
 #. i18n: "limit" is a keyword
 msgid "limit requires one or two arguments"
@@ -21089,16 +21148,18 @@ msgstr "limit требует один или два аргумента"
 
 #. i18n: "limit" is a keyword
 msgid "limit requires a number"
-msgstr ""
+msgstr "limit требует число"
 
 #. i18n: "limit" is a keyword
 msgid "limit expects a number"
-msgstr ""
+msgstr "limit ожидает число"
 
 msgid ""
 "``last(set, [n])``\n"
 "    Last n members of set, defaulting to 1."
 msgstr ""
+"``last(множество, [n])``\n"
+"    Последние n элементов множества. По умолчанию 1 элемент."
 
 #. i18n: "last" is a keyword
 msgid "last requires one or two arguments"
@@ -21106,58 +21167,71 @@ msgstr "last требует один или два аргумента"
 
 #. i18n: "last" is a keyword
 msgid "last requires a number"
-msgstr ""
+msgstr "last требует число"
 
 #. i18n: "last" is a keyword
 msgid "last expects a number"
-msgstr ""
+msgstr "last ожидает число"
 
 msgid ""
 "``max(set)``\n"
 "    Changeset with highest revision number in set."
 msgstr ""
+"``max(множество)``\n"
+"    Набор изменений с наибольшим номером ревизии из множества."
 
 msgid ""
 "``merge()``\n"
 "    Changeset is a merge changeset."
 msgstr ""
+"``merge()``\n"
+"    Набор изменений, являющийся ревизией слияния."
 
 #. i18n: "merge" is a keyword
 msgid "merge takes no arguments"
-msgstr ""
+msgstr "merge не требует аргументов"
 
 msgid ""
 "``min(set)``\n"
 "    Changeset with lowest revision number in set."
 msgstr ""
+"``min(множество)``\n"
+"    Набор изменений с наименьшим номером ревизии из множества."
 
 msgid ""
 "``modifies(pattern)``\n"
 "    Changesets modifying files matched by pattern."
 msgstr ""
+"``modifies(шаблон)``\n"
+"    Наборы изменений, изменяющие файлы, совпадающие с шаблоном."
 
 #. i18n: "modifies" is a keyword
 msgid "modifies requires a pattern"
-msgstr ""
+msgstr "modifies требует шаблон"
 
 msgid ""
 "``id(string)``\n"
 "    Revision non-ambiguously specified by the given hex string prefix."
 msgstr ""
+"``id(строка)``\n"
+"    Ревизия, однозначно идентифицируемая данным шестнадцатеричным префиксом."
 
 #. i18n: "id" is a keyword
 msgid "id requires one argument"
-msgstr ""
+msgstr "id требует один аргумент"
 
 #. i18n: "id" is a keyword
 msgid "id requires a string"
-msgstr ""
+msgstr "id требует строку"
 
 msgid ""
 "``outgoing([path])``\n"
 "    Changesets not found in the specified destination repository, or the\n"
 "    default push location."
 msgstr ""
+"``outgoing([путь])``\n"
+"    Наборы изменений, отсутствующие в указанном целевом хранилище, или\n"
+"    в месте для проталкивания по умолчанию."
 
 #. i18n: "outgoing" is a keyword
 msgid "outgoing takes one or no arguments"
@@ -21165,77 +21239,100 @@ msgstr "outgoing требует либо один аргумент, либо н�
 
 #. i18n: "outgoing" is a keyword
 msgid "outgoing requires a repository path"
-msgstr ""
+msgstr "outgoing требует путь к хранилищу"
 
 msgid ""
 "``p1([set])``\n"
 "    First parent of changesets in set, or the working directory."
 msgstr ""
+"``p1([множество])``\n"
+"    Первый родитель для всех наборов изменений из множества\n"
+"    или для рабочего каталога."
 
 msgid ""
 "``p2([set])``\n"
 "    Second parent of changesets in set, or the working directory."
 msgstr ""
+"``p2([множество])``\n"
+"    Второй родитель для всех наборов изменений из множества\n"
+"    или для рабочего каталога."
 
 msgid ""
 "``parents([set])``\n"
 "    The set of all parents for all changesets in set, or the working "
 "directory."
 msgstr ""
+"``parents([множество])``\n"
+"    Множество всех родителей для всех наборов изменений из множества\n"
+"    или для рабочего каталога."
 
 msgid "^ expects a number 0, 1, or 2"
-msgstr ""
+msgstr "^ ожидает число 0, 1 или 2"
 
 msgid ""
 "``present(set)``\n"
 "    An empty set, if any revision in set isn't found; otherwise,\n"
 "    all revisions in set."
 msgstr ""
+"``present(множество)``\n"
+"    Пустое множество, если какая-либо ревизия из множества не найдена.\n"
+"    Иначе все ревизии из множества."
 
 msgid ""
 "``removes(pattern)``\n"
 "    Changesets which remove files matching pattern."
 msgstr ""
+"``removes(шаблон)``\n"
+"    Наборы изменений, удаляющие файлы, совпадающие с шаблоном."
 
 #. i18n: "removes" is a keyword
 msgid "removes requires a pattern"
-msgstr ""
+msgstr "removes требует шаблон"
 
 msgid ""
 "``rev(number)``\n"
 "    Revision with the given numeric identifier."
 msgstr ""
+"``rev(число)``\n"
+"    Ревизия с указанным числовым идентификатором."
 
 #. i18n: "rev" is a keyword
 msgid "rev requires one argument"
-msgstr ""
+msgstr "rev требует один аргумент"
 
 #. i18n: "rev" is a keyword
 msgid "rev requires a number"
-msgstr ""
+msgstr "rev требует число"
 
 #. i18n: "rev" is a keyword
 msgid "rev expects a number"
-msgstr ""
+msgstr "rev ожидает число"
 
 msgid ""
 "``reverse(set)``\n"
 "    Reverse order of set."
 msgstr ""
+"``reverse(множество)``\n"
+"    Элементы множества в обратном порядке."
 
 msgid ""
 "``roots(set)``\n"
 "    Changesets with no parent changeset in set."
 msgstr ""
+"``roots(множество)``\n"
+"    Наборы изменений, не имеющие родителя во множестве."
 
 msgid ""
 "``sort(set[, [-]key...])``\n"
 "    Sort set by keys. The default sort order is ascending, specify a key\n"
 "    as ``-key`` to sort in descending order."
 msgstr ""
+"``sort(множество[, [-]ключ...])``\n"
+"    Сортировать множество по ключам. Порядок по умолчанию — возрастающий,\n"
+"    укажите ``-ключ``, чтобы отсортировать в убывающем порядке."
 
 msgid "    The keys can be:"
-msgstr ""
+msgstr "    В качестве ключа можно указать:"
 
 msgid ""
 "    - ``rev`` for the revision number,\n"
@@ -21244,48 +21341,57 @@ msgid ""
 "    - ``user`` for user name (``author`` can be used as an alias),\n"
 "    - ``date`` for the commit date"
 msgstr ""
+"    - ``rev`` для сортировки по номеру ревизии,\n"
+"    - ``branch`` по имени ветки,\n"
+"    - ``desc`` по сообщению фиксации,\n"
+"    - ``user`` по имени пользователя (то же, что ``author``),\n"
+"    - ``date`` по дате фиксации"
 
 #. i18n: "sort" is a keyword
 msgid "sort requires one or two arguments"
-msgstr ""
+msgstr "sort требует один или два аргумента"
 
 msgid "sort spec must be a string"
-msgstr ""
+msgstr "спецификация sort должна быть строкой"
 
 #, python-format
 msgid "unknown sort key %r"
-msgstr ""
+msgstr "неизвестный ключ сортировки %r"
 
 msgid ""
 "``tag([name])``\n"
 "    The specified tag by name, or all tagged revisions if no name is given."
 msgstr ""
+"``tag([имя])``\n"
+"    Именованная метка или все помеченные ревизии, если имя не указано."
 
 #. i18n: "tag" is a keyword
 msgid "tag takes one or no arguments"
-msgstr ""
+msgstr "tag не требует аргументов"
 
 #. i18n: "tag" is a keyword
 msgid "the argument to tag must be a string"
-msgstr ""
+msgstr "агрумент для tag должен быть строкой"
 
 msgid ""
 "``user(string)``\n"
 "    User name contains string. The match is case-insensitive."
 msgstr ""
+"``user(строка)``\n"
+"    Имя пользователя содержит строку. Регистр букв не учитывается."
 
 msgid "can't negate that"
-msgstr ""
+msgstr "это нельзя отрицать"
 
 msgid "not a symbol"
-msgstr ""
+msgstr "не является символом"
 
 #, python-format
 msgid "invalid number of arguments: %s"
 msgstr "неверное количество аргументов: %s"
 
 msgid "empty query"
-msgstr ""
+msgstr "пустой запрос"
 
 # }}} revsets
 #, python-format
