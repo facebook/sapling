@@ -2,7 +2,7 @@
   > [extensions]
   > graphlog=
   > EOF
-  $ alias hgph='hg log --template "{rev} {phaseidx} {desc} - {node|short}\n"'
+  $ alias hgph='hg log -G --template "{rev} {phase} {desc} - {node|short}\n"'
 
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -19,10 +19,14 @@
   $ mkcommit a-C
   $ mkcommit a-D
   $ hgph
-  3 1 a-D - b555f63b6063
-  2 1 a-C - 54acac6f23ab
-  1 1 a-B - 548a3d25dbf0
-  0 1 a-A - 054250a37db4
+  @  3 draft a-D - b555f63b6063
+  |
+  o  2 draft a-C - 54acac6f23ab
+  |
+  o  1 draft a-B - 548a3d25dbf0
+  |
+  o  0 draft a-A - 054250a37db4
+  
 
   $ hg init ../beta
   $ hg push -r 1 ../beta
@@ -33,21 +37,30 @@
   adding file changes
   added 2 changesets with 2 changes to 2 files
   $ hgph
-  3 1 a-D - b555f63b6063
-  2 1 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  3 draft a-D - b555f63b6063
+  |
+  o  2 draft a-C - 54acac6f23ab
+  |
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
   $ cd ../beta
   $ hgph
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg up -q
   $ mkcommit b-A
   $ hgph
-  2 1 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  2 draft b-A - f54f1bb90ff3
+  |
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg pull ../alpha
   pulling from ../alpha
   searching for changes
@@ -57,30 +70,43 @@
   added 2 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 1 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  4 public a-D - b555f63b6063
+  |
+  o  3 public a-C - 54acac6f23ab
+  |
+  | @  2 draft b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 pull did not updated ../alpha state.
 push from alpha to beta should update phase even if nothing is transfered
 
   $ cd ../alpha
   $ hgph # not updated by remote pull
-  3 1 a-D - b555f63b6063
-  2 1 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  3 draft a-D - b555f63b6063
+  |
+  o  2 draft a-C - 54acac6f23ab
+  |
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg push ../beta
   pushing to ../beta
   searching for changes
   no changes found
   $ hgph
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  3 public a-D - b555f63b6063
+  |
+  o  2 public a-C - 54acac6f23ab
+  |
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 update must update phase of common changeset too
 
@@ -95,21 +121,31 @@ update must update phase of common changeset too
 
   $ cd ../beta
   $ hgph # not updated by remote pull
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 1 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  4 public a-D - b555f63b6063
+  |
+  o  3 public a-C - 54acac6f23ab
+  |
+  | @  2 draft b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg pull ../alpha
   pulling from ../alpha
   searching for changes
   no changes found
   $ hgph
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  4 public a-D - b555f63b6063
+  |
+  o  3 public a-C - 54acac6f23ab
+  |
+  | @  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Publish configuration option
 ----------------------------
@@ -135,11 +171,16 @@ changegroup are added without phase movement
   added 5 changesets with 5 changes to 5 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
-  4 1 a-D - b555f63b6063
-  3 1 a-C - 54acac6f23ab
-  2 1 b-A - f54f1bb90ff3
-  1 1 a-B - 548a3d25dbf0
-  0 1 a-A - 054250a37db4
+  o  4 draft a-D - b555f63b6063
+  |
+  o  3 draft a-C - 54acac6f23ab
+  |
+  | o  2 draft b-A - f54f1bb90ff3
+  |/
+  o  1 draft a-B - 548a3d25dbf0
+  |
+  o  0 draft a-A - 054250a37db4
+  
   $ cd ..
 
 Pulling from publish=False to publish=False does not move boundary.
@@ -158,9 +199,12 @@ Pulling from publish=False to publish=False does not move boundary.
   added 3 changesets with 3 changes to 3 files
   (run 'hg update' to get a working copy)
   $ hgph
-  2 1 a-C - 54acac6f23ab
-  1 1 a-B - 548a3d25dbf0
-  0 1 a-A - 054250a37db4
+  o  2 draft a-C - 54acac6f23ab
+  |
+  o  1 draft a-B - 548a3d25dbf0
+  |
+  o  0 draft a-A - 054250a37db4
+  
 
 Even for common
 
@@ -173,10 +217,14 @@ Even for common
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hgph
-  3 1 b-A - f54f1bb90ff3
-  2 1 a-C - 54acac6f23ab
-  1 1 a-B - 548a3d25dbf0
-  0 1 a-A - 054250a37db4
+  o  3 draft b-A - f54f1bb90ff3
+  |
+  | o  2 draft a-C - 54acac6f23ab
+  |/
+  o  1 draft a-B - 548a3d25dbf0
+  |
+  o  0 draft a-A - 054250a37db4
+  
 
 
 Pulling from Publish=True to Publish=False move boundary in common set.
@@ -191,11 +239,16 @@ we are in nu
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hgph
-  4 0 a-D - b555f63b6063
-  3 0 b-A - f54f1bb90ff3
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  4 public a-D - b555f63b6063
+  |
+  | o  3 public b-A - f54f1bb90ff3
+  | |
+  o |  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 pulling from Publish=False to publish=False with some public
 
@@ -203,13 +256,20 @@ pulling from Publish=False to publish=False with some public
   $ mkcommit n-A
   $ mkcommit n-B
   $ hgph
-  6 1 n-B - 145e75495359
-  5 1 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 b-A - f54f1bb90ff3
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  6 draft n-B - 145e75495359
+  |
+  o  5 draft n-A - d6bcb4f74035
+  |
+  | o  4 public a-D - b555f63b6063
+  | |
+  o |  3 public b-A - f54f1bb90ff3
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ../mu
   $ hg pull ../nu
   pulling from ../nu
@@ -220,24 +280,36 @@ pulling from Publish=False to publish=False with some public
   added 2 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hgph
-  6 1 n-B - 145e75495359
-  5 1 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  6 draft n-B - 145e75495359
+  |
+  o  5 draft n-A - d6bcb4f74035
+  |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ..
 
 pulling into publish=True
 
   $ cd alpha
   $ hgph
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  4 public b-A - f54f1bb90ff3
+  |
+  | @  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg pull ../mu
   pulling from ../mu
   searching for changes
@@ -247,13 +319,20 @@ pulling into publish=True
   added 2 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
   $ hgph
-  6 1 n-B - 145e75495359
-  5 1 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  6 draft n-B - 145e75495359
+  |
+  o  5 draft n-A - d6bcb4f74035
+  |
+  o  4 public b-A - f54f1bb90ff3
+  |
+  | @  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ..
 
 pulling back into original repo
@@ -264,13 +343,20 @@ pulling back into original repo
   searching for changes
   no changes found
   $ hgph
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 b-A - f54f1bb90ff3
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  6 public n-B - 145e75495359
+  |
+  o  5 public n-A - d6bcb4f74035
+  |
+  | o  4 public a-D - b555f63b6063
+  | |
+  o |  3 public b-A - f54f1bb90ff3
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Push
 ````
@@ -289,13 +375,20 @@ Push back to alpha
   $ cd ..
   $ cd alpha
   $ hgph
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  6 public n-B - 145e75495359
+  |
+  o  5 public n-A - d6bcb4f74035
+  |
+  o  4 public b-A - f54f1bb90ff3
+  |
+  | @  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 (end insertion)
 
@@ -347,17 +440,28 @@ initial setup
   $ mkcommit a-H
   created new head
   $ hgph
-  10 1 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 1 a-F - b740e3e5c05d
-  7 1 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  10 draft a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 draft a-F - b740e3e5c05d
+  | |
+  | o  7 draft a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Pushing to Publish=False (unknown changeset)
 
@@ -369,29 +473,49 @@ Pushing to Publish=False (unknown changeset)
   adding file changes
   added 2 changesets with 2 changes to 2 files
   $ hgph
-  10 1 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 1 a-F - b740e3e5c05d
-  7 1 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  10 draft a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 draft a-F - b740e3e5c05d
+  | |
+  | o  7 draft a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
   $ cd ../mu
   $ hgph # d6bcb4f74035 and 145e75495359 changed because common is too smart
-  8 1 a-F - b740e3e5c05d
-  7 1 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  8 draft a-F - b740e3e5c05d
+  |
+  o  7 draft a-E - e9f537e46dea
+  |
+  | o  6 public n-B - 145e75495359
+  | |
+  | o  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public a-D - b555f63b6063
+  | |
+  o |  3 public a-C - 54acac6f23ab
+  | |
+  | o  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Pushing to Publish=True (unknown changeset)
 
@@ -403,15 +527,24 @@ Pushing to Publish=True (unknown changeset)
   adding file changes
   added 2 changesets with 2 changes to 2 files
   $ hgph # again d6bcb4f74035 and 145e75495359 changed because common is too smart
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  8 public a-F - b740e3e5c05d
+  |
+  o  7 public a-E - e9f537e46dea
+  |
+  | o  6 public n-B - 145e75495359
+  | |
+  | o  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public a-D - b555f63b6063
+  | |
+  o |  3 public a-C - 54acac6f23ab
+  | |
+  | o  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Pushing to Publish=True (common changeset)
 
@@ -421,26 +554,44 @@ Pushing to Publish=True (common changeset)
   searching for changes
   no changes found
   $ hgph
-  6 0 a-F - b740e3e5c05d
-  5 0 a-E - e9f537e46dea
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  6 public a-F - b740e3e5c05d
+  |
+  o  5 public a-E - e9f537e46dea
+  |
+  o  4 public a-D - b555f63b6063
+  |
+  o  3 public a-C - 54acac6f23ab
+  |
+  | @  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ../alpha
   $ hgph # e9f537e46dea and b740e3e5c05d should have been sync to 0
-  10 1 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  10 draft a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 Pushing to Publish=False (common changeset that change phase + unknown one)
 
@@ -452,30 +603,51 @@ Pushing to Publish=False (common changeset that change phase + unknown one)
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   $ hgph
-  10 1 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  10 draft a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ../mu
   $ hgph # d6bcb4f74035 should have changed phase
   >      # again d6bcb4f74035 and 145e75495359 changed because common was too smart
-  9 1 a-H - 967b449fbc94
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  9 draft a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 
 Pushing to Publish=True (common changeset from publish=False)
@@ -486,28 +658,49 @@ Pushing to Publish=True (common changeset from publish=False)
   searching for changes
   no changes found
   $ hgph
-  9 0 a-H - 967b449fbc94
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  9 public a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hgph -R ../alpha # a-H should have been synced to 0
-  10 0 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  10 public a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 
 Discovery locally secret changeset on a remote repository:
@@ -517,18 +710,30 @@ Discovery locally secret changeset on a remote repository:
   $ cd ../alpha
   $ mkcommit A-secret --config phases.new-commit=2
   $ hgph
-  11 2 A-secret - 435b5d83910c
-  10 0 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  11 secret A-secret - 435b5d83910c
+  |
+  o  10 public a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg bundle --base 'parents(.)' -r . ../secret-bundle.hg
   1 changesets found
   $ hg -R ../mu unbundle ../secret-bundle.hg
@@ -538,34 +743,57 @@ Discovery locally secret changeset on a remote repository:
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hgph -R ../mu
-  10 1 A-secret - 435b5d83910c
-  9 0 a-H - 967b449fbc94
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  10 draft A-secret - 435b5d83910c
+  |
+  o  9 public a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg pull ../mu
   pulling from ../mu
   searching for changes
   no changes found
   $ hgph
-  11 1 A-secret - 435b5d83910c
-  10 0 a-H - 967b449fbc94
-  9 1 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  @  11 draft A-secret - 435b5d83910c
+  |
+  o  10 public a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ cd ..
 Test Clone behavior
 
@@ -577,17 +805,28 @@ A. Clone without secret changeset
 
   $ hg clone -U mu Tau
   $ hgph -R Tau
-  10 1 A-secret - 435b5d83910c
-  9 0 a-H - 967b449fbc94
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 a-D - b555f63b6063
-  3 0 a-C - 54acac6f23ab
-  2 0 b-A - f54f1bb90ff3
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  10 draft A-secret - 435b5d83910c
+  |
+  o  9 public a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
 
 2. cloning publishing repository
 
@@ -595,15 +834,27 @@ A. Clone without secret changeset
 
   $ hg clone -U alpha Upsilon
   $ hgph -R Upsilon
-  11 0 A-secret - 435b5d83910c
-  10 0 a-H - 967b449fbc94
-  9 0 a-G - 3e27b6f1eee1
-  8 0 a-F - b740e3e5c05d
-  7 0 a-E - e9f537e46dea
-  6 0 n-B - 145e75495359
-  5 0 n-A - d6bcb4f74035
-  4 0 b-A - f54f1bb90ff3
-  3 0 a-D - b555f63b6063
-  2 0 a-C - 54acac6f23ab
-  1 0 a-B - 548a3d25dbf0
-  0 0 a-A - 054250a37db4
+  o  11 public A-secret - 435b5d83910c
+  |
+  o  10 public a-H - 967b449fbc94
+  |
+  | o  9 public a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
