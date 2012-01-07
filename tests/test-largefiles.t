@@ -393,58 +393,17 @@ revisions (this was a very bad bug that took a lot of work to fix).
   getting changed largefiles
   1 largefiles updated, 0 removed
   saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
-  $ hg log
-  changeset:   9:598410d3eb9a
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify normal file largefile in repo d
-  
-  changeset:   8:a381d2c8c80e
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify normal file and largefile in repo b
-  
-  changeset:   7:daea875e9014
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add/edit more largefiles
-  
-  changeset:   6:4355d653f84f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files yet again
-  
-  changeset:   5:9d5af5072dbd
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files again
-  
-  changeset:   4:74c02385b94c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     move files
-  
-  changeset:   3:9e8fbc4bce62
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     copy files
-  
-  changeset:   2:51a0ae4d5864
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     remove files
-  
-  changeset:   1:ce8896473775
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files
-  
-  changeset:   0:30d30fe6a5be
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add files
-  
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
+  9:598410d3eb9a  modify normal file largefile in repo d
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  7:daea875e9014  add/edit more largefiles
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  3:9e8fbc4bce62  copy files
+  2:51a0ae4d5864  remove files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
   $ cat normal3
   normal3-modified
   $ cat sub/normal4
@@ -465,58 +424,17 @@ Rollback on largefiles.
   working directory now based on revision 9
   $ hg st
   M sub/large4
-  $ hg log
-  changeset:   9:598410d3eb9a
-  tag:         tip
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify normal file largefile in repo d
-  
-  changeset:   8:a381d2c8c80e
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     modify normal file and largefile in repo b
-  
-  changeset:   7:daea875e9014
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add/edit more largefiles
-  
-  changeset:   6:4355d653f84f
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files yet again
-  
-  changeset:   5:9d5af5072dbd
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files again
-  
-  changeset:   4:74c02385b94c
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     move files
-  
-  changeset:   3:9e8fbc4bce62
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     copy files
-  
-  changeset:   2:51a0ae4d5864
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     remove files
-  
-  changeset:   1:ce8896473775
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     edit files
-  
-  changeset:   0:30d30fe6a5be
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add files
-  
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
+  9:598410d3eb9a  modify normal file largefile in repo d
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  7:daea875e9014  add/edit more largefiles
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  3:9e8fbc4bce62  copy files
+  2:51a0ae4d5864  remove files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
   $ cat sub/large4
   large4-modified-again
 
