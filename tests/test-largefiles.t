@@ -286,6 +286,20 @@ dir after a purge.
   $ cat sub2/large7
   large7
 
+Test addremove: verify that files that should be added as largfiles are added as
+such and that already-existing largfiles are not added as normal files by
+accident.
+
+  $ rm normal3
+  $ rm sub/large4
+  $ echo "testing addremove with patterns" > testaddremove.dat
+  $ echo "normaladdremove" > normaladdremove
+  $ hg addremove
+  removing sub/large4
+  adding testaddremove.dat as a largefile
+  removing normal3
+  adding normaladdremove
+
 Clone a largefiles repo.
 
   $ hg clone . ../b
