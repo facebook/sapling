@@ -455,7 +455,13 @@ def _updatelfile(repo, lfdirstate, lfile):
             ret = -1
     state = repo.dirstate[lfutil.standin(lfile)]
     if state == 'n':
-        lfdirstate.normal(lfile)
+        # When rebasing, we need to synchronize the standin and the largefile,
+        # because otherwise the largefile will get reverted.  But for commit's
+        # sake, we have to mark the file as unclean.
+        if getattr(repo, "_isrebasing", False):
+           lfdirstate.normallookup(lfile)
+        else:
+            lfdirstate.normal(lfile)
     elif state == 'r':
         lfdirstate.remove(lfile)
     elif state == 'a':

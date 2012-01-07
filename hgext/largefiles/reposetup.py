@@ -278,14 +278,18 @@ def reposetup(ui, repo):
 
             wlock = repo.wlock()
             try:
+                # Case 0: Rebase
+                # We have to take the time to pull down the new largefiles now.
+                # Otherwise if we are rebasing, any largefiles that were
+                # modified in the destination changesets get overwritten, either
+                # by the rebase or in the first commit after the rebase.
+                # updatelfiles will update the dirstate to mark any pulled
+                # largefiles as modified
                 if getattr(repo, "_isrebasing", False):
-                    # We have to take the time to pull down the new
-                    # largefiles now. Otherwise if we are rebasing,
-                    # any largefiles that were modified in the
-                    # destination changesets get overwritten, either
-                    # by the rebase or in the first commit after the
-                    # rebase.
                     lfcommands.updatelfiles(repo.ui, repo)
+                    result = orig(text=text, user=user, date=date, match=match,
+                                    force=force, editor=editor, extra=extra)
+                    return result
                 # Case 1: user calls commit with no specific files or
                 # include/exclude patterns: refresh and commit all files that
                 # are "dirty".
