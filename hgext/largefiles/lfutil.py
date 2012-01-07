@@ -154,11 +154,7 @@ def openlfdirstate(ui, repo):
 
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
-    # largefiles operation in a new clone. It also gives us an easy
-    # way to forcibly rebuild largefiles state:
-    #   rm .hg/largefiles/dirstate && hg status
-    # Or even, if things are really messed up:
-    #   rm -rf .hg/largefiles && hg status
+    # largefiles operation in a new clone.
     if not os.path.exists(os.path.join(admin, 'dirstate')):
         util.makedirs(admin)
         matcher = getstandinmatcher(repo)
@@ -172,27 +168,19 @@ def openlfdirstate(ui, repo):
             except OSError, err:
                 if err.errno != errno.ENOENT:
                     raise
-
-        lfdirstate.write()
-
     return lfdirstate
 
 def lfdirstate_status(lfdirstate, repo, rev):
-    wlock = repo.wlock()
-    try:
-        match = match_.always(repo.root, repo.getcwd())
-        s = lfdirstate.status(match, [], False, False, False)
-        unsure, modified, added, removed, missing, unknown, ignored, clean = s
-        for lfile in unsure:
-            if repo[rev][standin(lfile)].data().strip() != \
-                    hashfile(repo.wjoin(lfile)):
-                modified.append(lfile)
-            else:
-                clean.append(lfile)
-                lfdirstate.normal(lfile)
-        lfdirstate.write()
-    finally:
-        wlock.release()
+    match = match_.always(repo.root, repo.getcwd())
+    s = lfdirstate.status(match, [], False, False, False)
+    unsure, modified, added, removed, missing, unknown, ignored, clean = s
+    for lfile in unsure:
+        if repo[rev][standin(lfile)].data().strip() != \
+                hashfile(repo.wjoin(lfile)):
+            modified.append(lfile)
+        else:
+            clean.append(lfile)
+            lfdirstate.normal(lfile)
     return (modified, added, removed, missing, unknown, ignored, clean)
 
 def listlfiles(repo, rev=None, matcher=None):

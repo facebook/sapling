@@ -147,9 +147,6 @@ def reposetup(ui, repo):
                 result = super(lfiles_repo, self).status(node1, node2, m,
                     True, clean, unknown, listsubrepos)
                 if working:
-                    # hold the wlock while we read largefiles and
-                    # update the lfdirstate
-                    wlock = repo.wlock()
                     try:
                         # Any non-largefiles that were explicitly listed must be
                         # taken out or lfdirstate.status will report an error.
@@ -186,7 +183,6 @@ def reposetup(ui, repo):
                                 else:
                                     clean.append(lfile)
                                     lfdirstate.normal(lfile)
-                            lfdirstate.write()
                         else:
                             tocheck = unsure + modified + added + clean
                             modified, added, clean = [], [], []
@@ -201,10 +197,9 @@ def reposetup(ui, repo):
                                         clean.append(lfile)
                                 else:
                                     added.append(lfile)
+                    finally:
                         # Replace the original ignore function
                         lfdirstate._ignore = orig_ignore
-                    finally:
-                        wlock.release()
 
                     for standin in ctx1.manifest():
                         if not lfutil.isstandin(standin):
@@ -324,10 +319,13 @@ def reposetup(ui, repo):
                             if not os.path.exists(
                                     repo.wjoin(lfutil.standin(lfile))):
                                 lfdirstate.drop(lfile)
-                    lfdirstate.write()
 
-                    return orig(text=text, user=user, date=date, match=match,
+                    result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
+                    # This needs to be after commit; otherwise precommit hooks
+                    # get the wrong status
+                    lfdirstate.write()
+                    return result
 
                 for f in match.files():
                     if lfutil.isstandin(f):
@@ -359,7 +357,6 @@ def reposetup(ui, repo):
                         lfdirstate.normal(lfile)
                     else:
                         lfdirstate.drop(lfile)
-                lfdirstate.write()
 
                 # Cook up a new matcher that only matches regular files or
                 # standins corresponding to the big files requested by the
@@ -400,8 +397,12 @@ def reposetup(ui, repo):
                         return f in standins
 
                 match.matchfn = matchfn
-                return orig(text=text, user=user, date=date, match=match,
+                result = orig(text=text, user=user, date=date, match=match,
                                 force=force, editor=editor, extra=extra)
+                # This needs to be after commit; otherwise precommit hooks
+                # get the wrong status
+                lfdirstate.write()
+                return result
             finally:
                 wlock.release()
 

@@ -910,15 +910,19 @@ def override_rollback(orig, ui, repo, **opts):
     result = orig(ui, repo, **opts)
     merge.update(repo, node=None, branchmerge=False, force=True,
         partial=lfutil.isstandin)
-    lfdirstate = lfutil.openlfdirstate(ui, repo)
-    lfiles = lfutil.listlfiles(repo)
-    oldlfiles = lfutil.listlfiles(repo, repo[None].parents()[0].rev())
-    for file in lfiles:
-        if file in oldlfiles:
-            lfdirstate.normallookup(file)
-        else:
-            lfdirstate.add(file)
-    lfdirstate.write()
+    wlock = repo.wlock()
+    try:
+        lfdirstate = lfutil.openlfdirstate(ui, repo)
+        lfiles = lfutil.listlfiles(repo)
+        oldlfiles = lfutil.listlfiles(repo, repo[None].parents()[0].rev())
+        for file in lfiles:
+            if file in oldlfiles:
+                lfdirstate.normallookup(file)
+            else:
+                lfdirstate.add(file)
+        lfdirstate.write()
+    finally:
+        wlock.release()
     return result
 
 def override_transplant(orig, ui, repo, *revs, **opts):
