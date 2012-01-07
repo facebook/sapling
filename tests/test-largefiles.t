@@ -1,5 +1,4 @@
   $ "$TESTDIR/hghave" symlink unix-permissions serve || exit 80
-
   $ USERCACHE=`pwd`/cache; export USERCACHE
   $ mkdir -p ${USERCACHE}
   $ cat >> $HGRCPATH <<EOF
@@ -14,6 +13,8 @@
   > minsize=2
   > patterns=glob:**.dat
   > usercache=${USERCACHE}
+  > [hooks]
+  > precommit=echo "Invoking status precommit hook"; hg status
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
@@ -30,22 +31,21 @@ is correct.
   $ hg add normal1 sub/normal2
   $ hg add --large large1 sub/large2
   $ hg commit -m "add files"
+  Invoking status precommit hook
+  A large1
+  A normal1
+  A sub/large2
+  A sub/normal2
   $ echo normal11 > normal1
   $ echo normal22 > sub/normal2
   $ echo large11 > large1
   $ echo large22 > sub/large2
-  $ hg st
+  $ hg commit -m "edit files"
+  Invoking status precommit hook
   M large1
   M normal1
   M sub/large2
   M sub/normal2
-  $ hg sum
-  parent: 0:30d30fe6a5be tip
-   add files
-  branch: default
-  commit: 4 modified
-  update: (current)
-  $ hg commit -m "edit files"
   $ hg sum --large
   parent: 1:ce8896473775 tip
    edit files
@@ -69,6 +69,9 @@ Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
   $ hg commit -m "remove files"
+  Invoking status precommit hook
+  R large1
+  R normal1
   $ ls
   sub
   $ echo "testlargefile" > large1-test
@@ -88,10 +91,10 @@ Copy both largefiles and normal files (testing that status output is correct).
 
   $ hg cp sub/normal2 normal1
   $ hg cp sub/large2 large1
-  $ hg st
+  $ hg commit -m "copy files"
+  Invoking status precommit hook
   A large1
   A normal1
-  $ hg commit -m "copy files"
   $ cat normal1
   normal22
   $ cat large1
@@ -104,6 +107,15 @@ Test moving largefiles and verify that normal files are also unaffected.
   $ hg mv sub/normal2 sub/normal4
   $ hg mv sub/large2 sub/large4
   $ hg commit -m "move files"
+  Invoking status precommit hook
+  A large3
+  A normal3
+  A sub/large4
+  A sub/normal4
+  R large1
+  R normal1
+  R sub/large2
+  R sub/normal2
   $ cat normal3
   normal22
   $ cat large3
@@ -173,6 +185,11 @@ Commit corner case: specify files to commit.
   $ echo normal4 > sub/normal4
   $ echo large4 > sub/large4
   $ hg commit normal3 large3 sub/normal4 sub/large4 -m "edit files again"
+  Invoking status precommit hook
+  M large3
+  M normal3
+  M sub/large4
+  M sub/normal4
   $ cat normal3
   normal3
   $ cat large3
@@ -191,6 +208,11 @@ One more commit corner case: commit from a subdirectory.
   $ echo large44 > sub/large4
   $ cd sub
   $ hg commit -m "edit files yet again"
+  Invoking status precommit hook
+  M large3
+  M normal3
+  M sub/large4
+  M sub/normal4
   $ cat ../normal3
   normal33
   $ cat ../large3
@@ -255,7 +277,8 @@ also tests that --lfsize overrides largefiles.minsize.
 Test forget on largefiles.
 
   $ hg forget large3 large5 test.dat reallylarge ratherlarge medium
-  $ hg st
+  $ hg commit -m "add/edit more largefiles"
+  Invoking status precommit hook
   A sub2/large6
   A sub2/large7
   R large3
@@ -265,7 +288,6 @@ Test forget on largefiles.
   ? ratherlarge
   ? reallylarge
   ? test.dat
-  $ hg commit -m "add/edit more largefiles"
   $ hg st
   ? large3
   ? large5
@@ -377,10 +399,16 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ echo large4-modified > sub/large4
   $ echo normal3-modified > normal3
   $ hg commit -m "modify normal file and largefile in repo b"
+  Invoking status precommit hook
+  M normal3
+  M sub/large4
   $ cd ../d
   $ echo large6-modified > sub2/large6
   $ echo normal4-modified > sub/normal4
   $ hg commit -m "modify normal file largefile in repo d"
+  Invoking status precommit hook
+  M sub/normal4
+  M sub2/large6
   $ cd ..
   $ hg clone d e
   updating to branch default
@@ -397,7 +425,10 @@ revisions (this was a very bad bug that took a lot of work to fix).
   added 1 changesets with 2 changes to 2 files (+1 heads)
   getting changed largefiles
   1 largefiles updated, 0 removed
-  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
+  Invoking status precommit hook
+  M sub/normal4
+  M sub2/large6
+  saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg
   nothing to rebase
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
@@ -432,7 +463,10 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ hg rebase
   getting changed largefiles
   1 largefiles updated, 0 removed
-  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
+  Invoking status precommit hook
+  M sub/normal4
+  M sub2/large6
+  saved backup bundle to $TESTTMP/e/.hg/strip-backup/f574fb32bb45-backup.hg
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -459,6 +493,8 @@ Rollback on largefiles.
 
   $ echo large4-modified-again > sub/large4 
   $ hg commit -m "Modify large4 again"
+  Invoking status precommit hook
+  M sub/large4
   $ hg rollback
   repository tip rolled back to revision 9 (undo commit)
   working directory now based on revision 9
@@ -582,6 +618,8 @@ been very problematic).
   $ cd f
   $ echo "large4-merge-test" > sub/large4
   $ hg commit -m "Modify large4 to test merge"
+  Invoking status precommit hook
+  M sub/large4
   $ hg pull ../e
   pulling from ../e
   searching for changes
@@ -599,6 +637,10 @@ been very problematic).
   getting changed largefiles
   1 largefiles updated, 0 removed
   $ hg commit -m "Merge repos e and f"
+  Invoking status precommit hook
+  M normal3
+  M sub/normal4
+  M sub2/large6
   $ cat normal3
   normal3-modified
   $ cat sub/normal4
@@ -615,9 +657,13 @@ Test status after merging with a branch that introduces a new largefile:
   $ echo large > large
   $ hg add --large large
   $ hg commit -m 'add largefile'
+  Invoking status precommit hook
+  A large
   $ hg update -q ".^"
   $ echo change >> normal3
   $ hg commit -m 'some change'
+  Invoking status precommit hook
+  M normal3
   created new head
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -682,10 +728,10 @@ Test that transplanting a largefile change works correctly.
 Test that renaming a largefile results in correct output for status
 
   $ hg rename sub/large4 large4-renamed
-  $ hg st
+  $ hg commit -m "test rename output"
+  Invoking status precommit hook
   A large4-renamed
   R sub/large4
-  $ hg commit -m "test rename output"
   $ cat large4-renamed
   large4-modified
   $ cd sub2
@@ -701,7 +747,9 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   $ hg init
   $ echo c1 > f1
   $ hg add f1
-  $ hg com -m "m1"
+  $ hg commit -m "m1"
+  Invoking status precommit hook
+  A f1
   $ cd ..
   $ hg serve -R r1 -d -p $HGPORT --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
@@ -732,7 +780,9 @@ vanilla clients locked out from largefiles http repos
   $ hg init
   $ echo c1 > f1
   $ hg add --large f1
-  $ hg com -m "m1"
+  $ hg commit -m "m1"
+  Invoking status precommit hook
+  A f1
   $ cd ..
   $ hg serve -R r4 -d -p $HGPORT2 --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
@@ -762,7 +812,9 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ hg init
   $ echo c1 > f1
   $ hg add f1
-  $ hg com -m "m1"
+  $ hg commit -m "m1"
+  Invoking status precommit hook
+  A f1
   $ cat >> .hg/hgrc <<!
   > [web]
   > push_ssl = false
@@ -775,7 +827,9 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ cd r7
   $ echo c2 > f2
   $ hg add --large f2
-  $ hg com -m "m2"
+  $ hg commit -m "m2"
+  Invoking status precommit hook
+  A f2
   $ hg --config extensions.largefiles=! -R ../r6 serve -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ hg push http://localhost:$HGPORT
@@ -811,6 +865,8 @@ We have to simulate that here by setting $HOME and removing write permissions
   $ dd if=/dev/urandom bs=1k count=11k > a-large-file 2> /dev/null
   $ hg add --large a-large-file
   $ hg commit -m "Add a large file"
+  Invoking status precommit hook
+  A a-large-file
   $ cd ..
   $ chmod -R a-w pubrepo
   $ cd ..
@@ -837,9 +893,13 @@ Symlink to a large largefile should behave the same as a symlink to a normal fil
   $ dd if=/dev/zero bs=1k count=10k of=largefile 2>/dev/null
   $ hg add --large largefile
   $ hg commit -m "commit a large file"
+  Invoking status precommit hook
+  A largefile
   $ ln -s largefile largelink
   $ hg add largelink
   $ hg commit -m "commit a large symlink"
+  Invoking status precommit hook
+  A largelink
   $ rm -f largelink
   $ hg up >/dev/null
   $ test -f largelink
