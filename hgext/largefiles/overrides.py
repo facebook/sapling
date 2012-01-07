@@ -591,7 +591,6 @@ def override_revert(orig, ui, repo, *pats, **opts):
 
 def hg_update(orig, repo, node):
     result = orig(repo, node)
-    # XXX check if it worked first
     lfcommands.updatelfiles(repo.ui, repo)
     return result
 
