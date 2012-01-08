@@ -556,27 +556,25 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     # Sort files in each changeset
 
-    for c in changesets:
-        def pathcompare(l, r):
-            'Mimic cvsps sorting order'
-            l = l.split('/')
-            r = r.split('/')
-            nl = len(l)
-            nr = len(r)
-            n = min(nl, nr)
-            for i in range(n):
-                if i + 1 == nl and nl < nr:
-                    return -1
-                elif i + 1 == nr and nl > nr:
-                    return +1
-                elif l[i] < r[i]:
-                    return -1
-                elif l[i] > r[i]:
-                    return +1
-            return 0
-        def entitycompare(l, r):
-            return pathcompare(l.file, r.file)
+    def entitycompare(l, r):
+        'Mimic cvsps sorting order'
+        l = l.file.split('/')
+        r = r.file.split('/')
+        nl = len(l)
+        nr = len(r)
+        n = min(nl, nr)
+        for i in range(n):
+            if i + 1 == nl and nl < nr:
+                return -1
+            elif i + 1 == nr and nl > nr:
+                return +1
+            elif l[i] < r[i]:
+                return -1
+            elif l[i] > r[i]:
+                return +1
+        return 0
 
+    for c in changesets:
         c.entries.sort(entitycompare)
 
     # Sort changesets by date
