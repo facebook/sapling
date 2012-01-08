@@ -117,22 +117,10 @@ def lfconvert(ui, src, dest, *pats, **opts):
 
 def _addchangeset(ui, rsrc, rdst, ctx, revmap):
  # Convert src parents to dst parents
-    parents = []
-    for p in ctx.parents():
-        parents.append(revmap[p.node()])
-    while len(parents) < 2:
-        parents.append(node.nullid)
+    parents = _convertparents(ctx, revmap)
 
     # Generate list of changed files
-    files = set(ctx.files())
-    if node.nullid not in parents:
-        mc = ctx.manifest()
-        mp1 = ctx.parents()[0].manifest()
-        mp2 = ctx.parents()[1].manifest()
-        files |= (set(mp1) | set(mp2)) - set(mc)
-        for f in mc:
-            if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f, None):
-                files.add(f)
+    files = _getchangedfiles(ctx, parents)
 
     def getfilectx(repo, memctx, f):
         if lfutil.standin(f) in files:
@@ -160,23 +148,7 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
             return context.memfilectx(f, data, 'l' in fctx.flags(),
                                       'x' in fctx.flags(), renamed)
         else:
-            try:
-                fctx = ctx.filectx(f)
-            except error.LookupError:
-                raise IOError()
-            renamed = fctx.renamed()
-            if renamed:
-                renamed = renamed[0]
-            data = fctx.data()
-            if f == '.hgtags':
-                newdata = []
-                for line in data.splitlines():
-                    id, name = line.split(' ', 1)
-                    newdata.append('%s %s\n' % (node.hex(revmap[node.bin(id)]),
-                        name))
-                data = ''.join(newdata)
-            return context.memfilectx(f, data, 'l' in fctx.flags(),
-                                      'x' in fctx.flags(), renamed)
+            return _getnormalcontext(repo.ui, ctx, f, revmap)
 
     dstfiles = []
     for file in files:
@@ -185,31 +157,15 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
         else:
             dstfiles.append(file)
     # Commit
-    mctx = context.memctx(rdst, parents, ctx.description(), dstfiles,
-                          getfilectx, ctx.user(), ctx.date(), ctx.extra())
-    ret = rdst.commitctx(mctx)
-    rdst.dirstate.setparents(ret)
-    revmap[ctx.node()] = rdst.changelog.tip()
+    _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap)
 
 def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
         matcher, size, lfiletohash):
     # Convert src parents to dst parents
-    parents = []
-    for p in ctx.parents():
-        parents.append(revmap[p.node()])
-    while len(parents) < 2:
-        parents.append(node.nullid)
+    parents = _convertparents(ctx, revmap)
 
     # Generate list of changed files
-    files = set(ctx.files())
-    if node.nullid not in parents:
-        mc = ctx.manifest()
-        mp1 = ctx.parents()[0].manifest()
-        mp2 = ctx.parents()[1].manifest()
-        files |= (set(mp1) | set(mp2)) - set(mc)
-        for f in mc:
-            if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f, None):
-                files.add(f)
+    files = _getchangedfiles(ctx, parents)
 
     dstfiles = []
     for f in files:
@@ -283,46 +239,79 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
             return context.memfilectx(f, lfiletohash[srcfname] + '\n', 'l' in
                 fctx.flags(), 'x' in fctx.flags(), renamed)
         else:
-            try:
-                fctx = ctx.filectx(f)
-            except error.LookupError:
-                raise IOError()
-            renamed = fctx.renamed()
-            if renamed:
-                renamed = renamed[0]
-
-            data = fctx.data()
-            if f == '.hgtags':
-                newdata = []
-                for line in data.splitlines():
-                    try:
-                        id, name = line.split(' ', 1)
-                    except ValueError:
-                        repo.ui.warn(_('skipping incorrectly formatted tag %s\n'
-                            % line))
-                        continue
-                    try:
-                        newid = node.bin(id)
-                    except TypeError:
-                        repo.ui.warn(_('skipping incorrectly formatted id %s\n'
-                            % id))
-                        continue
-                    try:
-                        newdata.append('%s %s\n' % (node.hex(revmap[newid]),
-                            name))
-                    except KeyError:
-                        repo.ui.warn(_('no mapping for id %s\n' % id))
-                        continue
-                data = ''.join(newdata)
-            return context.memfilectx(f, data, 'l' in fctx.flags(),
-                                      'x' in fctx.flags(), renamed)
+            return _getnormalcontext(repo.ui, ctx, f, revmap)
 
     # Commit
+    _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap)
+
+def _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap):
     mctx = context.memctx(rdst, parents, ctx.description(), dstfiles,
                           getfilectx, ctx.user(), ctx.date(), ctx.extra())
     ret = rdst.commitctx(mctx)
     rdst.dirstate.setparents(ret)
     revmap[ctx.node()] = rdst.changelog.tip()
+
+# Generate list of changed files
+def _getchangedfiles(ctx, parents):
+    files = set(ctx.files())
+    if node.nullid not in parents:
+        mc = ctx.manifest()
+        mp1 = ctx.parents()[0].manifest()
+        mp2 = ctx.parents()[1].manifest()
+        files |= (set(mp1) | set(mp2)) - set(mc)
+        for f in mc:
+            if mc[f] != mp1.get(f, None) or mc[f] != mp2.get(f, None):
+                files.add(f)
+    return files
+
+# Convert src parents to dst parents
+def _convertparents(ctx, revmap):
+    parents = []
+    for p in ctx.parents():
+        parents.append(revmap[p.node()])
+    while len(parents) < 2:
+        parents.append(node.nullid)
+    return parents
+
+# Get memfilectx for a normal file
+def _getnormalcontext(ui, ctx, f, revmap):
+    try:
+        fctx = ctx.filectx(f)
+    except error.LookupError:
+        raise IOError()
+    renamed = fctx.renamed()
+    if renamed:
+        renamed = renamed[0]
+
+    data = fctx.data()
+    if f == '.hgtags':
+        data = _converttags (ui, revmap, data)
+    return context.memfilectx(f, data, 'l' in fctx.flags(),
+                              'x' in fctx.flags(), renamed)
+
+# Remap tag data using a revision map
+def _converttags(ui, revmap, data):
+    newdata = []
+    for line in data.splitlines():
+        try:
+            id, name = line.split(' ', 1)
+        except ValueError:
+            ui.warn(_('skipping incorrectly formatted tag %s\n'
+                % line))
+            continue
+        try:
+            newid = node.bin(id)
+        except TypeError:
+            ui.warn(_('skipping incorrectly formatted id %s\n'
+                % id))
+            continue
+        try:
+            newdata.append('%s %s\n' % (node.hex(revmap[newid]),
+                name))
+        except KeyError:
+            ui.warn(_('no mapping for id %s\n' % id))
+            continue
+    return ''.join(newdata)
 
 def _islfile(file, ctx, matcher, size):
     '''Return true if file should be considered a largefile, i.e.
