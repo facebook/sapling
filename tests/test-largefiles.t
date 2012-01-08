@@ -50,6 +50,18 @@ Remove both largefiles and normal files.
   $ hg commit -m "remove files"
   $ ls
   sub
+  $ echo "testlargefile" > large1-test
+  $ hg add --large large1-test
+  $ hg st
+  A large1-test
+  $ hg rm large1-test
+  not removing large1-test: file has been marked for add (use forget to undo)
+  $ hg st
+  A large1-test
+  $ hg forget large1-test
+  $ hg st
+  ? large1-test
+  $ rm large1-test
 
 Copy both largefiles and normal files (testing that status output is correct).
 
