@@ -237,7 +237,9 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
             dstfiles.append(lfutil.standin(f))
             # largefile in manifest if it has not been removed/renamed
             if f in ctx.manifest():
-                if 'l' in ctx.filectx(f).flags():
+                fctx = ctx.filectx(f)
+                if 'l' in fctx.flags():
+                    renamed = fctx.renamed()
                     if renamed and renamed[0] in lfiles:
                         raise util.Abort(_('largefile %s becomes symlink') % f)
 
