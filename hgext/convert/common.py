@@ -339,7 +339,7 @@ class commandline(object):
 
         # Since ARG_MAX is for command line _and_ environment, lower our limit
         # (and make happy Windows shells while doing this).
-        return argmax / 2 - 1
+        return argmax // 2 - 1
 
     def limit_arglist(self, arglist, cmd, closestdin, *args, **kwargs):
         cmdlen = len(self._cmdline(cmd, closestdin, *args, **kwargs))

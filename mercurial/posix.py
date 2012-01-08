@@ -438,6 +438,8 @@ class cachestat(object):
     def cacheable(self):
         return bool(self.stat.st_ino)
 
+    __hash__ = object.__hash__
+
     def __eq__(self, other):
         try:
             return self.stat == other.stat

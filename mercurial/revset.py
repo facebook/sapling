@@ -1108,7 +1108,7 @@ def formatspec(expr, *args):
             return '(0-0)' # a minimal way to represent an empty set
         if l == 1:
             return argtype(t, s[0])
-        m = l / 2
+        m = l // 2
         return '(%s or %s)' % (listexp(s[:m], t), listexp(s[m:], t))
 
     ret = ''

@@ -38,7 +38,7 @@ class httpsendfile(object):
         self.write = self._data.write
         self.length = os.fstat(self._data.fileno()).st_size
         self._pos = 0
-        self._total = self.length / 1024 * 2
+        self._total = self.length // 1024 * 2
 
     def read(self, *args, **kwargs):
         try:
@@ -51,7 +51,7 @@ class httpsendfile(object):
         # requires authentication. Since we can't know until we try
         # once whether authentication will be required, just lie to
         # the user and maybe the push succeeds suddenly at 50%.
-        self.ui.progress(_('sending'), self._pos / 1024,
+        self.ui.progress(_('sending'), self._pos // 1024,
                          unit=_('kb'), total=self._total)
         return ret
 
