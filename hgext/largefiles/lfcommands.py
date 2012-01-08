@@ -295,9 +295,24 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
             if f == '.hgtags':
                 newdata = []
                 for line in data.splitlines():
-                    id, name = line.split(' ', 1)
-                    newdata.append('%s %s\n' % (node.hex(revmap[node.bin(id)]),
-                        name))
+                    try:
+                        id, name = line.split(' ', 1)
+                    except ValueError:
+                        repo.ui.warn(_('skipping incorrectly formatted tag %s\n'
+                            % line))
+                        continue
+                    try:
+                        newid = node.bin(id)
+                    except TypeError:
+                        repo.ui.warn(_('skipping incorrectly formatted id %s\n'
+                            % id))
+                        continue
+                    try:
+                        newdata.append('%s %s\n' % (node.hex(revmap[newid]),
+                            name))
+                    except KeyError:
+                        repo.ui.warn(_('no mapping for id %s\n' % id))
+                        continue
                 data = ''.join(newdata)
             return context.memfilectx(f, data, 'l' in fctx.flags(),
                                       'x' in fctx.flags(), renamed)
