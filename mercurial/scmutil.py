@@ -313,8 +313,8 @@ def canonpath(root, cwd, myname, auditor=None):
             try:
                 name_st = os.stat(name)
             except OSError:
-                break
-            if util.samestat(name_st, root_st):
+                name_st = None
+            if name_st and util.samestat(name_st, root_st):
                 if not rel:
                     # name was actually the same as root (maybe a symlink)
                     return ''

@@ -168,9 +168,10 @@ now addremove should remove old files
   ? foo
   $ hg status ../link
   ? foo
+  $ hg add foo
+  $ hg cp foo "$TESTTMP/link/bar"
+  foo has not been committed yet, so no copy data will be stored for bar.
   $ cd ..
-
-
 
 
   $ hg init b
