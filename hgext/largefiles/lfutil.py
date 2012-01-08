@@ -222,6 +222,16 @@ def copytostore(repo, rev, file, uploaded=False):
         return
     copytostoreabsolute(repo, repo.wjoin(file), hash)
 
+def copyalltostore(repo, node):
+    '''Copy all largefiles in a given revision to the store'''
+
+    ctx = repo[node]
+    for filename in ctx.files():
+        if isstandin(filename) and filename in ctx.manifest():
+            realfile = splitstandin(filename)
+            copytostore(repo, ctx.node(), realfile)
+
+
 def copytostoreabsolute(repo, file, hash):
     util.makedirs(os.path.dirname(storepath(repo, hash)))
     if inusercache(repo.ui, hash):

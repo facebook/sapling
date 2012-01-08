@@ -256,12 +256,7 @@ def reposetup(ui, repo):
         # cache.
         def commitctx(self, *args, **kwargs):
             node = super(lfiles_repo, self).commitctx(*args, **kwargs)
-            ctx = self[node]
-            for filename in ctx.files():
-                if lfutil.isstandin(filename) and filename in ctx.manifest():
-                    realfile = lfutil.splitstandin(filename)
-                    lfutil.copytostore(self, ctx.node(), realfile)
-
+            lfutil.copyalltostore(self, node)
             return node
 
         # Before commit, largefile standins have not had their
