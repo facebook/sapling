@@ -11,7 +11,8 @@ import copy
 import types
 import os
 
-from mercurial import context, error, manifest, match as match_, node, util
+from mercurial import context, error, manifest, match as match_, util
+from mercurial import node as node_
 from mercurial.i18n import _
 
 import lfcommands
@@ -407,7 +408,7 @@ def reposetup(ui, repo):
                 o = repo.changelog.nodesbetween(o, revs)[0]
                 for n in o:
                     parents = [p for p in repo.changelog.parents(n)
-                               if p != node.nullid]
+                               if p != node_.nullid]
                     ctx = repo[n]
                     files = set(ctx.files())
                     if len(parents) == 2:
