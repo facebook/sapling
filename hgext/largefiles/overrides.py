@@ -841,7 +841,11 @@ def override_outgoing(orig, ui, repo, dest=None, **opts):
             ui.status('\n')
 
 def override_summary(orig, ui, repo, *pats, **opts):
-    orig(ui, repo, *pats, **opts)
+    try:
+        repo.lfstatus = True
+        orig(ui, repo, *pats, **opts)
+    finally:
+        repo.lfstatus = False
 
     if opts.pop('large', None):
         toupload = getoutgoinglfiles(ui, repo, None, **opts)

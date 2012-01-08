@@ -10,7 +10,8 @@
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
-files, testing that status correctly shows largefiles.
+files, testing that status correctly shows largefiles and that summary output
+is correct.
 
   $ hg init a
   $ cd a
@@ -31,7 +32,20 @@ files, testing that status correctly shows largefiles.
   M normal1
   M sub/large2
   M sub/normal2
+  $ hg sum
+  parent: 0:30d30fe6a5be tip
+   add files
+  branch: default
+  commit: 4 modified
+  update: (current)
   $ hg commit -m "edit files"
+  $ hg sum --large
+  parent: 1:ce8896473775 tip
+   edit files
+  branch: default
+  commit: (clean)
+  update: (current)
+  largefiles: No remote repo
 
 Commit preserved largefile contents.
 
