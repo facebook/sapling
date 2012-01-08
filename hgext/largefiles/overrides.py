@@ -130,7 +130,7 @@ def override_remove(orig, ui, repo, *pats, **opts):
     orig(ui, repo, *pats, **opts)
     restorematchfn()
 
-    after, force = opts.get('after'), opts.get('force')
+    after = opts.get('after')
     if not pats and not after:
         raise util.Abort(_('no files specified'))
     m = scmutil.match(repo[None], pats, opts)
@@ -145,12 +145,10 @@ def override_remove(orig, ui, repo, *pats, **opts):
 
     def warn(files, reason):
         for f in files:
-            ui.warn(_('not removing %s: %s (use -f to force removal)\n')
+            ui.warn(_('not removing %s: %s (use forget to undo)\n')
                     % (m.rel(f), reason))
 
-    if force:
-        remove, forget = modified + deleted + clean, added
-    elif after:
+    if after:
         remove, forget = deleted, []
         warn(modified + added + clean, _('file still exists'))
     else:
@@ -839,7 +837,11 @@ def override_outgoing(orig, ui, repo, dest=None, **opts):
             ui.status('\n')
 
 def override_summary(orig, ui, repo, *pats, **opts):
-    orig(ui, repo, *pats, **opts)
+    try:
+        repo.lfstatus = True
+        orig(ui, repo, *pats, **opts)
+    finally:
+        repo.lfstatus = False
 
     if opts.pop('large', None):
         toupload = getoutgoinglfiles(ui, repo, None, **opts)
