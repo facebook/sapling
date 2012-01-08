@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch
+from mercurial import extensions, patch, scmutil
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -187,10 +187,11 @@ def rebase(ui, repo, **opts):
             if revf:
                 revgen = repo.set('%lr', revf)
             elif srcf:
-                revgen = repo.set('(%r)::', srcf)
+                src = scmutil.revrange(repo, [srcf])
+                revgen = repo.set('(%ld)::', src)
             else:
-                base = basef or '.'
-                revgen = repo.set('(children(ancestor(%r, %d)) and ::(%r))::',
+                base = scmutil.revrange(repo, [basef or '.'])
+                revgen = repo.set('(children(ancestor(%ld, %d)) and ::(%ld))::',
                                   base, dest, base)
 
             rebaseset = [c.rev() for c in revgen]
