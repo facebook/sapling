@@ -3,6 +3,7 @@
   > largefiles =
   > share =
   > graphlog =
+  > mq =
   > [largefiles]
   > minsize = 0.5
   > patterns = **.other
@@ -18,19 +19,45 @@
   > EOF
   $ mkdir sub
   $ dd if=/dev/zero bs=1k count=256 > large 2> /dev/null
+  $ dd if=/dev/zero bs=1k count=256 > large2 2> /dev/null
   $ echo normal > normal1
   $ echo alsonormal > sub/normal2
   $ dd if=/dev/zero bs=1k count=10 > sub/maybelarge.dat 2> /dev/null
   $ hg addremove
   adding large
+  adding large2
   adding normal1
   adding sub/maybelarge.dat
   adding sub/normal2
   $ hg commit -m"add large, normal1" large normal1
   $ hg commit -m"add sub/*" sub
+Test tag parsing
+  $ cat >> .hgtags <<EOF
+  > IncorrectlyFormattedTag!
+  > invalidhash sometag
+  > 0123456789abcdef anothertag
+  > EOF
+  $ hg add .hgtags
+  $ hg commit -m"add large2" large2 .hgtags
+  $ hg rename large2 large3
+Test link+rename largefile codepath
+  $ ln -sf large large3
+  $ hg commit -m"make large2 a symlink" large2 large3
   $ [ -d .hg/largefiles ] && echo fail || echo pass
   pass
   $ cd ..
+  $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
+  initializing destination largefiles-repo
+  skipping incorrectly formatted tag IncorrectlyFormattedTag!
+  skipping incorrectly formatted id invalidhash
+  no mapping for id 0123456789abcdef
+  abort: renamed/copied largefile large3 becomes symlink
+  [255]
+  $ cd bigfile-repo
+  $ hg strip --no-backup 2
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ cd ..
+  $ rm -rf largefiles-repo
   $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
 
