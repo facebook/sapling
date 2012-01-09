@@ -13,8 +13,16 @@ from mercurial.i18n import _
 try:
     # avoid using deprecated/broken FakeSocket in python 2.6
     import ssl
-    ssl_wrap_socket = ssl.wrap_socket
     CERT_REQUIRED = ssl.CERT_REQUIRED
+    def ssl_wrap_socket(sock, keyfile, certfile,
+                cert_reqs=ssl.CERT_NONE, ca_certs=None):
+        sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
+                cert_reqs=cert_reqs, ca_certs=ca_certs)
+        # check if wrap_socket failed silently because socket had been closed
+        # - see http://bugs.python.org/issue13721
+        if not sslsocket.cipher():
+            raise util.Abort(_('ssl connection failed'))
+        return sslsocket
 except ImportError:
     CERT_REQUIRED = 2
 
