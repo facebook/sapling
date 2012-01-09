@@ -403,13 +403,10 @@ class revlog(object):
 
     def findcommonmissing(self, common=None, heads=None):
         """Return a tuple of the ancestors of common and the ancestors of heads
-        that are not ancestors of common.
+        that are not ancestors of common. In revset terminology, we return the
+        tuple:
 
-        More specifically, the second element is a list of nodes N such that
-        every N satisfies the following constraints:
-
-          1. N is an ancestor of some node in 'heads'
-          2. N is not an ancestor of any node in 'common'
+          ::common, (::heads) - (::common)
 
         The list is sorted by revision number, meaning it is
         topologically sorted.
