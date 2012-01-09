@@ -977,7 +977,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
             raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
-        heads = revs and map(repo.lookup, revs) or revs
+        outheads = revs and map(repo.lookup, revs) or revs
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -988,7 +988,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                         onlyheads=heads,
                                                         force=opts.get('force'))
 
-    cg = repo.getbundle('bundle', common=common, heads=heads)
+    cg = repo.getbundle('bundle', common=common, heads=outheads)
     if not cg:
         ui.status(_("no changes found\n"))
         return 1
