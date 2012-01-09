@@ -180,7 +180,8 @@ variables in the filename
 cacert mismatch
 
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
-  abort: 127.0.0.1 certificate error: certificate is for localhost (use --insecure to connect insecurely)
+  abort: 127.0.0.1 certificate error: certificate is for localhost
+  (configure hostfingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
   warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)

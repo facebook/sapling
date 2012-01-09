@@ -110,18 +110,19 @@ class validator(object):
             self.ui.warn(_("warning: certificate for %s can't be verified "
                            "(Python too old)\n") % host)
             return
+        peercert = sock.getpeercert(True)
+        peerfingerprint = util.sha1(peercert).hexdigest()
+        nicefingerprint = ":".join([peerfingerprint[x:x + 2]
+            for x in xrange(0, len(peerfingerprint), 2)])
         if cacerts and not hostfingerprint:
             msg = _verifycert(sock.getpeercert(), host)
             if msg:
-                raise util.Abort(_('%s certificate error: %s '
-                                   '(use --insecure to connect '
-                                   'insecurely)') % (host, msg))
+                raise util.Abort(_('%s certificate error: %s') % (host, msg),
+                                 hint=_('configure hostfingerprint %s or use '
+                                        '--insecure to connect insecurely') %
+                                      nicefingerprint)
             self.ui.debug('%s certificate successfully verified\n' % host)
         else:
-            peercert = sock.getpeercert(True)
-            peerfingerprint = util.sha1(peercert).hexdigest()
-            nicefingerprint = ":".join([peerfingerprint[x:x + 2]
-                for x in xrange(0, len(peerfingerprint), 2)])
             if hostfingerprint:
                 if peerfingerprint.lower() != \
                         hostfingerprint.replace(':', '').lower():
