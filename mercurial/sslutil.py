@@ -110,6 +110,8 @@ class validator(object):
             self.ui.warn(_("warning: certificate for %s can't be verified "
                            "(Python too old)\n") % host)
             return
+        if not sock.cipher(): # work around http://bugs.python.org/issue13721
+            raise util.Abort(_('%s ssl connection error') % host)
         peercert = sock.getpeercert(True)
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
