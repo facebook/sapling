@@ -113,6 +113,9 @@ class validator(object):
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise util.Abort(_('%s ssl connection error') % host)
         peercert = sock.getpeercert(True)
+        if not peercert:
+            raise util.Abort(_('%s certificate error: '
+                               'no certificate received') % host)
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
             for x in xrange(0, len(peerfingerprint), 2)])
