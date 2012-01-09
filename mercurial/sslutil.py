@@ -103,6 +103,13 @@ class validator(object):
         host = self.host
         cacerts = self.ui.config('web', 'cacerts')
         hostfingerprint = self.ui.config('hostfingerprints', host)
+        if not getattr(sock, 'getpeercert', False): # python 2.5 ?
+            if hostfingerprint:
+                raise util.Abort(_("host fingerprint for %s can't be "
+                                   "verified (Python too old)") % host)
+            self.ui.warn(_("warning: certificate for %s can't be verified "
+                           "(Python too old)\n") % host)
+            return
         if cacerts and not hostfingerprint:
             msg = _verifycert(sock.getpeercert(), host)
             if msg:
@@ -111,28 +118,21 @@ class validator(object):
                                    'insecurely)') % (host, msg))
             self.ui.debug('%s certificate successfully verified\n' % host)
         else:
-            if getattr(sock, 'getpeercert', False):
-                peercert = sock.getpeercert(True)
-                peerfingerprint = util.sha1(peercert).hexdigest()
-                nicefingerprint = ":".join([peerfingerprint[x:x + 2]
-                    for x in xrange(0, len(peerfingerprint), 2)])
-                if hostfingerprint:
-                    if peerfingerprint.lower() != \
-                            hostfingerprint.replace(':', '').lower():
-                        raise util.Abort(_('invalid certificate for %s '
-                                           'with fingerprint %s') %
-                                         (host, nicefingerprint))
-                    self.ui.debug('%s certificate matched fingerprint %s\n' %
-                                  (host, nicefingerprint))
-                else:
-                    self.ui.warn(_('warning: %s certificate '
-                                   'with fingerprint %s not verified '
-                                   '(check hostfingerprints or web.cacerts '
-                                   'config setting)\n') %
-                                 (host, nicefingerprint))
-            else: # python 2.5 ?
-                if hostfingerprint:
-                    raise util.Abort(_("host fingerprint for %s can't be "
-                                       "verified (Python too old)") % host)
-                self.ui.warn(_("warning: certificate for %s can't be "
-                               "verified (Python too old)\n") % host)
+            peercert = sock.getpeercert(True)
+            peerfingerprint = util.sha1(peercert).hexdigest()
+            nicefingerprint = ":".join([peerfingerprint[x:x + 2]
+                for x in xrange(0, len(peerfingerprint), 2)])
+            if hostfingerprint:
+                if peerfingerprint.lower() != \
+                        hostfingerprint.replace(':', '').lower():
+                    raise util.Abort(_('invalid certificate for %s '
+                                       'with fingerprint %s') %
+                                     (host, nicefingerprint))
+                self.ui.debug('%s certificate matched fingerprint %s\n' %
+                              (host, nicefingerprint))
+            else:
+                self.ui.warn(_('warning: %s certificate '
+                               'with fingerprint %s not verified '
+                               '(check hostfingerprints or web.cacerts '
+                               'config setting)\n') %
+                             (host, nicefingerprint))
