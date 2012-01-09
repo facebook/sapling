@@ -114,7 +114,14 @@ class validator(object):
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
             for x in xrange(0, len(peerfingerprint), 2)])
-        if cacerts and not hostfingerprint:
+        if hostfingerprint:
+            if peerfingerprint.lower() != \
+                    hostfingerprint.replace(':', '').lower():
+                raise util.Abort(_('invalid certificate for %s with '
+                                   'fingerprint %s') % (host, nicefingerprint))
+            self.ui.debug('%s certificate matched fingerprint %s\n' %
+                          (host, nicefingerprint))
+        elif cacerts:
             msg = _verifycert(sock.getpeercert(), host)
             if msg:
                 raise util.Abort(_('%s certificate error: %s') % (host, msg),
@@ -123,17 +130,7 @@ class validator(object):
                                       nicefingerprint)
             self.ui.debug('%s certificate successfully verified\n' % host)
         else:
-            if hostfingerprint:
-                if peerfingerprint.lower() != \
-                        hostfingerprint.replace(':', '').lower():
-                    raise util.Abort(_('invalid certificate for %s '
-                                       'with fingerprint %s') %
-                                     (host, nicefingerprint))
-                self.ui.debug('%s certificate matched fingerprint %s\n' %
-                              (host, nicefingerprint))
-            else:
-                self.ui.warn(_('warning: %s certificate '
-                               'with fingerprint %s not verified '
-                               '(check hostfingerprints or web.cacerts '
-                               'config setting)\n') %
-                             (host, nicefingerprint))
+            self.ui.warn(_('warning: %s certificate with fingerprint %s not '
+                           'verified (check hostfingerprints or web.cacerts '
+                           'config setting)\n') %
+                         (host, nicefingerprint))
