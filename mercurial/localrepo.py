@@ -1739,6 +1739,18 @@ class localrepository(repo.repository):
         common = set(cl.ancestors(*[cl.rev(n) for n in bases]))
         return self._changegroupsubset(common, csets, heads, source)
 
+    def getlocalbundle(self, source, outgoing):
+        """Like getbundle, but taking a discovery.outgoing as an argument.
+
+        This is only implemented for local repos and reuses potentially
+        precomputed sets in outgoing."""
+        if not outgoing.missing:
+            return None
+        return self._changegroupsubset(outgoing.common,
+                                       outgoing.missing,
+                                       outgoing.missingheads,
+                                       source)
+
     def getbundle(self, source, heads=None, common=None):
         """Like changegroupsubset, but returns the set difference between the
         ancestors of heads and the ancestors common.
@@ -1756,10 +1768,8 @@ class localrepository(repo.repository):
             common = [nullid]
         if not heads:
             heads = cl.heads()
-        common, missing = cl.findcommonmissing(common, heads)
-        if not missing:
-            return None
-        return self._changegroupsubset(common, missing, heads, source)
+        return self.getlocalbundle(source,
+                                   discovery.outgoing(cl, common, heads))
 
     def _changegroupsubset(self, commonrevs, csets, heads, source):
 

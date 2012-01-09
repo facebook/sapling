@@ -46,20 +46,56 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     common, anyinc, srvheads = res
     return (list(common), anyinc, heads or list(srvheads))
 
+class outgoing(object):
+    '''Represents the set of nodes present in a local repo but not in a
+    (possibly) remote one.
+
+    Members:
+
+      missing is a list of all nodes present in local but not in remote.
+      common is a list of all nodes shared between the two repos.
+      missingheads is the list of heads of missing.
+      commonheads is the list of heads of common.
+
+    The sets are computed on demand from the heads, unless provided upfront
+    by discovery.'''
+
+    def __init__(self, revlog, commonheads, missingheads):
+        self.commonheads = commonheads
+        self.missingheads = missingheads
+        self._revlog = revlog
+        self._common = None
+        self._missing = None
+
+    def _computecommonmissing(self):
+        sets = self._revlog.findcommonmissing(self.commonheads,
+                                              self.missingheads)
+        self._common, self._missing = sets
+
+    @util.propertycache
+    def common(self):
+        if self._common is None:
+            self._computecommonmissing()
+        return self._common
+
+    @util.propertycache
+    def missing(self):
+        if self._missing is None:
+            self._computecommonmissing()
+        return self._missing
+
 def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
-    '''Return a tuple (common, anyoutgoing, heads) used to identify the set
-    of nodes present in repo but not in other.
+    '''Return an outgoing instance to identify the nodes present in repo but
+    not in other.
 
     If onlyheads is given, only nodes ancestral to nodes in onlyheads (inclusive)
     are included. If you already know the local repo's heads, passing them in
     onlyheads is faster than letting them be recomputed here.
 
     If commoninc is given, it must the the result of a prior call to
-    findcommonincoming(repo, other, force) to avoid recomputing it here.
-
-    The returned tuple is meant to be passed to changelog.findmissing.'''
+    findcommonincoming(repo, other, force) to avoid recomputing it here.'''
     common, _any, _hds = commoninc or findcommonincoming(repo, other, force=force)
-    return (common, onlyheads or repo.heads())
+    return outgoing(repo.changelog, common, onlyheads or repo.heads())
 
 def prepush(repo, remote, force, revs, newbranch):
     '''Analyze the local and remote repositories and determine which
@@ -80,12 +116,13 @@ def prepush(repo, remote, force, revs, newbranch):
     be after push completion.
     '''
     commoninc = findcommonincoming(repo, remote, force=force)
-    common, revs = findcommonoutgoing(repo, remote, onlyheads=revs,
+    outgoing = findcommonoutgoing(repo, remote, onlyheads=revs,
                                       commoninc=commoninc, force=force)
     _common, inc, remoteheads = commoninc
 
     cl = repo.changelog
-    alloutg = cl.findmissing(common, revs)
+    alloutg = outgoing.missing
+    common = outgoing.commonheads
     outg = []
     secret = []
     for o in alloutg:
@@ -208,7 +245,7 @@ def prepush(repo, remote, force, revs, newbranch):
         # use the fast path, no race possible on push
         cg = repo._changegroup(outg, 'push')
     else:
-        cg = repo.getbundle('push', heads=revs, common=common)
+        cg = repo.getlocalbundle('push', outgoing)
     # no need to compute outg ancestor. All node in outg have either:
     # - parents in outg
     # - parents in common

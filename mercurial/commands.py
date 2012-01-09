@@ -977,18 +977,18 @@ def bundle(ui, repo, fname, dest=None, **opts):
             raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
-        outheads = revs and map(repo.lookup, revs) or revs
+        heads = revs and map(repo.lookup, revs) or revs
+        cg = repo.getbundle('bundle', heads=heads, common=common)
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.peer(repo, opts, dest)
         revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
         heads = revs and map(repo.lookup, revs) or revs
-        common, outheads = discovery.findcommonoutgoing(repo, other,
-                                                        onlyheads=heads,
-                                                        force=opts.get('force'))
-
-    cg = repo.getbundle('bundle', common=common, heads=outheads)
+        outgoing = discovery.findcommonoutgoing(repo, other,
+                                                onlyheads=heads,
+                                                force=opts.get('force'))
+        cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
         ui.status(_("no changes found\n"))
         return 1
@@ -5436,10 +5436,10 @@ def summary(ui, repo, **opts):
             commoninc = None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
         repo.ui.pushbuffer()
-        common, outheads = discovery.findcommonoutgoing(repo, other,
-                                                        commoninc=commoninc)
+        outgoing = discovery.findcommonoutgoing(repo, other,
+                                                commoninc=commoninc)
         repo.ui.popbuffer()
-        o = repo.changelog.findmissing(common=common, heads=outheads)
+        o = outgoing.missing
         if o:
             t.append(_('%d outgoing') % len(o))
         if 'bookmarks' in other.listkeys('namespaces'):

@@ -507,9 +507,9 @@ def _outgoing(ui, repo, dest, opts):
         revs = [repo.lookup(rev) for rev in revs]
 
     other = peer(repo, opts, dest)
-    common, outheads = discovery.findcommonoutgoing(repo, other, revs,
-                                                    force=opts.get('force'))
-    o = repo.changelog.findmissing(common, outheads)
+    outgoing = discovery.findcommonoutgoing(repo, other, revs,
+                                            force=opts.get('force'))
+    o = outgoing.missing
     if not o:
         ui.status(_("no changes found\n"))
         return None
