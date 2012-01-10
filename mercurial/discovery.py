@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import util, setdiscovery, treediscovery
+import util, setdiscovery, treediscovery, phases
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
@@ -54,6 +54,7 @@ class outgoing(object):
 
       missing is a list of all nodes present in local but not in remote.
       common is a list of all nodes shared between the two repos.
+      excluded is the list of missing changeset that shouldn't be sent remotely.
       missingheads is the list of heads of missing.
       commonheads is the list of heads of common.
 
@@ -66,6 +67,7 @@ class outgoing(object):
         self._revlog = revlog
         self._common = None
         self._missing = None
+        self.excluded = []
 
     def _computecommonmissing(self):
         sets = self._revlog.findcommonmissing(self.commonheads,
@@ -94,8 +96,41 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
 
     If commoninc is given, it must the the result of a prior call to
     findcommonincoming(repo, other, force) to avoid recomputing it here.'''
-    common, _any, _hds = commoninc or findcommonincoming(repo, other, force=force)
-    return outgoing(repo.changelog, common, onlyheads or repo.heads())
+    # declare an empty outgoing object to be filled later
+    og = outgoing(repo.changelog, None, None)
+
+    # get common set if not provided
+    if commoninc is None:
+        commoninc = findcommonincoming(repo, other, force=force)
+    og.commonheads, _any, _hds = commoninc
+
+    # compute outgoing
+    if not repo._phaseroots[phases.secret]:
+        og.missingheads = onlyheads or repo.heads()
+    elif onlyheads is None:
+        # use visible heads as it should be cached
+        og.missingheads = phases.visibleheads(repo)
+        og.excluded = [ctx.node() for ctx in repo.set('secret()')]
+    else:
+        # compute common, missing and exclude secret stuff
+        sets = repo.changelog.findcommonmissing(og.commonheads, onlyheads)
+        og._common, allmissing = sets
+        og._missing = missing = []
+        og._excluded = excluded = []
+        for node in allmissing:
+            if repo[node].phase() >= phases.secret:
+                excluded.append(node)
+            else:
+                missing.append(node)
+        if excluded:
+            # update missing heads
+            rset = repo.set('heads(%ln)', missing)
+            missingheads = [ctx.node() for ctx in rset]
+        else:
+            missingheads = onlyheads
+        og.missingheads = missingheads
+
+    return og
 
 def prepush(repo, remote, force, revs, newbranch):
     '''Analyze the local and remote repositories and determine which
@@ -121,28 +156,16 @@ def prepush(repo, remote, force, revs, newbranch):
     _common, inc, remoteheads = commoninc
 
     cl = repo.changelog
-    alloutg = outgoing.missing
+    outg = outgoing.missing
     common = outgoing.commonheads
-    outg = []
-    secret = []
-    for o in alloutg:
-        if repo[o].phase() >= 2:
-            secret.append(o)
-        else:
-            outg.append(o)
 
     if not outg:
-        if secret:
+        if outgoing.excluded:
             repo.ui.status(_("no changes to push but %i secret changesets\n")
-                           % len(secret))
+                           % len(outgoing.excluded))
         else:
             repo.ui.status(_("no changes found\n"))
         return None, 1, common
-
-    if secret:
-        # recompute target revs
-        revs = [ctx.node() for ctx in repo.set('heads(::(%ld))',
-                                               map(repo.changelog.rev, outg))]
 
     if not force and remoteheads != [nullid]:
         if remote.capable('branchmap'):
@@ -241,7 +264,8 @@ def prepush(repo, remote, force, revs, newbranch):
         if unsynced:
             repo.ui.warn(_("note: unsynced remote changes!\n"))
 
-    if revs is None:
+    if revs is None and not outgoing.excluded:
+        # push everything,
         # use the fast path, no race possible on push
         cg = repo._changegroup(outg, 'push')
     else:

@@ -351,9 +351,6 @@
    >     If onlyheads is given, only nodes ancestral to nodes in onlyheads (inclusive)
    warning: line over 80 characters
   mercurial/discovery.py:0:
-   >     common, _any, _hds = commoninc or findcommonincoming(repo, other, force=force)
-   warning: line over 80 characters
-  mercurial/discovery.py:0:
    > def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
    warning: line over 80 characters
   mercurial/dispatch.py:0:

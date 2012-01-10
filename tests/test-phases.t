@@ -95,6 +95,23 @@ Test secret changeset are not pushed
   > [phases]
   > publish=False
   > EOF
+  $ hg outgoing ../push-dest --template='{rev} {phase} {desc|firstline}\n'
+  comparing with ../push-dest
+  searching for changes
+  0 public A
+  1 public B
+  2 draft C
+  3 draft D
+  6 draft B'
+  $ hg outgoing -r default ../push-dest --template='{rev} {phase} {desc|firstline}\n'
+  comparing with ../push-dest
+  searching for changes
+  0 public A
+  1 public B
+  2 draft C
+  3 draft D
+  6 draft B'
+
   $ hg push ../push-dest -f # force because we push multiple heads
   pushing to ../push-dest
   searching for changes
@@ -138,6 +155,13 @@ Test secret changeset are not pull
   2 0 C
   1 0 B
   0 0 A
+  $ cd ..
+
+But secret can still be bundled explicitly
+
+  $ cd initialrepo
+  $ hg bundle --base '4^' -r 'children(4)' ../secret-bundle.hg
+  4 changesets found
   $ cd ..
 
 Test revset
