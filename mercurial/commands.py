@@ -4228,12 +4228,13 @@ def phase(ui, repo, *revs, **opts):
 
     With no argument, show the phase name of specified revisions.
 
-    With on one of `--public`, `--draft` or `--secret`, change the phase value.
+    With one of `--public`, `--draft` or `--secret`, change the phase
+    value of the specified revisions.
 
     Unless -f/--force is specified, :hg:`phase` won't move changeset from a
-    lower phase to an higher phase. Phase are ordered as follow:
+    lower phase to an higher phase. Phases are ordered as follows:
 
-        public < draft < secret.
+        public < draft < secret
     """
     # search for a unique phase argument
     targetphase = None
