@@ -4301,11 +4301,11 @@ msgid ""
 "to the minimum size in megabytes to track as a largefile, or use the\n"
 "--lfsize option to the add command (also in megabytes)::"
 msgstr ""
-"В хранилищах, уже содержащих большие файлы, каждый файл больше 10 Мб\n"
+"В хранилищах, уже содержащих большие файлы, каждый файл больше 10 МБ\n"
 "будет добавлен как большой. Чтобы изменить этот порог, используйте\n"
 "параметр ``largefiles.minsize`` в вашем конфиге Mercurial, чтобы\n"
 "задать минимальный размер в мегабайтах, начиная с которого файл считается\n"
-"большим, или используйте параметр команды add --lfsize (также в Мб)::"
+"большим, или используйте параметр команды add --lfsize (также в МБ)::"
 
 msgid ""
 "  [largefiles]\n"
@@ -4467,7 +4467,7 @@ msgstr "%d больших файлов загружено, %d удалено\n"
 
 msgid "minimum size (MB) for files to be converted as largefiles"
 msgstr ""
-"минимальный размер (Мб), начиная с которого файлы преобразуются в большие"
+"минимальный размер (МБ), начиная с которого файлы преобразуются в большие"
 
 msgid "convert from a largefiles repo to a normal repo"
 msgstr "преобразовать из хранилища largefiles в обычное хранилище"
@@ -4696,7 +4696,7 @@ msgstr "добавить как большой файл"
 msgid ""
 "add all files above this size (in megabytes) as largefiles (default: 10)"
 msgstr ""
-"добавить все файлы больше этого размера (в Мб) как большие (по умолчанию: 10)"
+"добавить все файлы больше этого размера (в МБ) как большие (по умолчанию: 10)"
 
 msgid "verify largefiles"
 msgstr "проверить большие файлы"
@@ -13527,7 +13527,7 @@ msgid ""
 "%s: up to %d MB of RAM may be required to manage this file\n"
 "(use 'hg revert %s' to cancel the pending addition)\n"
 msgstr ""
-"%s: может потребовать до %d Мб памяти для обработки этого файла\n"
+"%s: может потребовать до %d МБ памяти для обработки этого файла\n"
 "(используйте 'hg revert %s' чтобы отменить запланированное добавление)\n"
 
 #, python-format
@@ -22207,39 +22207,39 @@ msgstr "%s должен быть неотрицательным (см. 'hg help 
 
 #, python-format
 msgid "%.0f GB"
-msgstr "%.0f Гб"
+msgstr "%.0f ГБ"
 
 #, python-format
 msgid "%.1f GB"
-msgstr "%.1f Гб"
+msgstr "%.1f ГБ"
 
 #, python-format
 msgid "%.2f GB"
-msgstr "%.2f Гб"
+msgstr "%.2f ГБ"
 
 #, python-format
 msgid "%.0f MB"
-msgstr "%.0f Мб"
+msgstr "%.0f МБ"
 
 #, python-format
 msgid "%.1f MB"
-msgstr "%.1f Мб"
+msgstr "%.1f МБ"
 
 #, python-format
 msgid "%.2f MB"
-msgstr "%.2f Мб"
+msgstr "%.2f МБ"
 
 #, python-format
 msgid "%.0f KB"
-msgstr "%.0f Кб"
+msgstr "%.0f КБ"
 
 #, python-format
 msgid "%.1f KB"
-msgstr "%.1f Кб"
+msgstr "%.1f КБ"
 
 #, python-format
 msgid "%.2f KB"
-msgstr "%.2f Кб"
+msgstr "%.2f КБ"
 
 #, python-format
 msgid "%.0f bytes"
