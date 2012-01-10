@@ -334,6 +334,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    init       create a new repository in the given directory
    log        show revision history of entire repository or files
    merge      merge working directory with another revision
+   phase      set or show the current phase name
    pull       pull changes from the specified source
    push       push changes to the specified destination
    remove     remove the specified files on the next commit
@@ -360,6 +361,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    init       create a new repository in the given directory
    log        show revision history of entire repository or files
    merge      merge working directory with another revision
+   phase      set or show the current phase name
    pull       pull changes from the specified source
    push       push changes to the specified destination
    remove     remove the specified files on the next commit
@@ -386,6 +388,7 @@ invalid global arguments for normal commands, aliases, and shell aliases
    init       create a new repository in the given directory
    log        show revision history of entire repository or files
    merge      merge working directory with another revision
+   phase      set or show the current phase name
    pull       pull changes from the specified source
    push       push changes to the specified destination
    remove     remove the specified files on the next commit

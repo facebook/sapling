@@ -18,6 +18,7 @@ import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil
+import phases as phasesmod
 
 table = {}
 
@@ -4213,6 +4214,58 @@ def paths(ui, repo, search=None):
                 ui.write("%s\n" % name)
             else:
                 ui.write("%s = %s\n" % (name, util.hidepassword(path)))
+
+@command('^phase',
+    [('p', 'public', False, _('Set changeset to public')),
+     ('d', 'draft', False, _('Set changeset to draft')),
+     ('s', 'secret', False, _('Set changeset to secret')),
+     ('f', 'force', False, _('allow to move boundary backward')),
+     ('r', 'rev', [], _('target revision')),
+    ],
+    _('[-p|-d|-s] [-f] [-C] [-r] REV'))
+def phase(ui, repo, *revs, **opts):
+    """set or show the current phase name
+
+    With no argument, show the phase name of specified revisions.
+
+    With on one of `--public`, `--draft` or `--secret`, change the phase value.
+
+    Unless -f/--force is specified, :hg:`phase` won't move changeset from a
+    lower phase to an higher phase. Phase are ordered as follow:
+
+        public < draft < secret.
+    """
+    # search for a unique phase argument
+    targetphase = None
+    for idx, name in enumerate(phasesmod.phasenames):
+        if opts[name]:
+            if targetphase is not None:
+                raise util.Abort('only one phase can be specified')
+            targetphase = idx
+
+    # look for specified revision
+    revs = list(revs)
+    revs.extend(opts['rev'])
+    if not revs:
+        raise NotImplementedError('working directory phase not implemented '
+                                  'yet')
+    lock = None
+    if targetphase is None:
+        # display
+        for ctx in repo.set('%lr', revs):
+            ui.write('%i: %s\n' % (ctx.rev(), ctx.phasestr()))
+    else:
+        lock = repo.lock()
+        try:
+            # set phase
+            nodes = [ctx.node() for ctx in repo.set('%lr', revs)]
+            if not nodes:
+                raise util.Abort(_('empty revision set'))
+            phasesmod.advanceboundary(repo, targetphase, nodes)
+            if opts['force']:
+                phasesmod.retractboundary(repo, targetphase, nodes)
+        finally:
+            lock.release()
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:

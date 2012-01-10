@@ -311,6 +311,7 @@ Testing -h/--help:
    outgoing     show changesets not found in the destination
    parents      show the parents of the working directory or revision
    paths        show aliases for remote repositories
+   phase        set or show the current phase name
    pull         pull changes from the specified source
    push         push changes to the specified destination
    recover      roll back an interrupted transaction
@@ -393,6 +394,7 @@ Testing -h/--help:
    outgoing     show changesets not found in the destination
    parents      show the parents of the working directory or revision
    paths        show aliases for remote repositories
+   phase        set or show the current phase name
    pull         pull changes from the specified source
    push         push changes to the specified destination
    recover      roll back an interrupted transaction

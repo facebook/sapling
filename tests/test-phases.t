@@ -26,7 +26,7 @@ Following commit are draft too
 
 Draft commit are properly created over public one:
 
-  $ hg pull -q . # XXX use the dedicated phase command once available
+  $ hg phase --public .
   $ hglog
   1 0 B
   0 0 A
@@ -154,3 +154,109 @@ Test revset
   4 2 E
   5 2 H
   7 2 merge B' and E
+
+Test phase command
+===================
+
+initial picture
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > hgext.graphlog=
+  > EOF
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    7 secret merge B' and E
+  |\
+  | o  6 draft B'
+  | |
+  +---o  5 secret H
+  | |
+  o |  4 secret E
+  | |
+  o |  3 draft D
+  | |
+  o |  2 draft C
+  |/
+  o  1 public B
+  |
+  o  0 public A
+  
+
+display changesets phase
+
+(mixing -r and plain rev specification)
+
+  $ hg phase 1::4 -r 7
+  1: public
+  2: draft
+  3: draft
+  4: secret
+  7: secret
+
+
+move changeset forward
+
+(with -r option)
+
+  $ hg phase --public -r 2
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    7 secret merge B' and E
+  |\
+  | o  6 draft B'
+  | |
+  +---o  5 secret H
+  | |
+  o |  4 secret E
+  | |
+  o |  3 draft D
+  | |
+  o |  2 public C
+  |/
+  o  1 public B
+  |
+  o  0 public A
+  
+
+move changeset backward
+
+(without -r option)
+
+  $ hg phase --draft --force 2
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    7 secret merge B' and E
+  |\
+  | o  6 draft B'
+  | |
+  +---o  5 secret H
+  | |
+  o |  4 secret E
+  | |
+  o |  3 draft D
+  | |
+  o |  2 draft C
+  |/
+  o  1 public B
+  |
+  o  0 public A
+  
+
+move changeset forward and backward
+
+  $ hg phase --draft --force 1::4
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    7 secret merge B' and E
+  |\
+  | o  6 draft B'
+  | |
+  +---o  5 secret H
+  | |
+  o |  4 draft E
+  | |
+  o |  3 draft D
+  | |
+  o |  2 draft C
+  |/
+  o  1 draft B
+  |
+  o  0 public A
+  

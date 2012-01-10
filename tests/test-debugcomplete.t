@@ -32,6 +32,7 @@ Show all commands except debug commands
   outgoing
   parents
   paths
+  phase
   pull
   push
   recover
@@ -198,6 +199,7 @@ Show all commands + options
   init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, patch, git, limit, no-merges, stat, style, template, include, exclude
   merge: force, rev, preview, tool
+  phase: public, draft, secret, force, rev
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
   remove: after, force, include, exclude
