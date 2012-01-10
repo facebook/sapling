@@ -1207,7 +1207,7 @@ class revlog(object):
 
         So we truncate the revlog on the first of these revisions, and
         trust that the caller has saved the revisions that shouldn't be
-        removed and that it'll readd them after this truncation.
+        removed and that it'll re-add them after this truncation.
         """
         if len(self) == 0:
             return
