@@ -4247,8 +4247,8 @@ def phase(ui, repo, *revs, **opts):
     revs = list(revs)
     revs.extend(opts['rev'])
     if not revs:
-        raise NotImplementedError('working directory phase not implemented '
-                                  'yet')
+        raise util.Abort(_('no revisions specified!'))
+
     lock = None
     if targetphase is None:
         # display
