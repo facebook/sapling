@@ -255,6 +255,18 @@ missing file
   abort: nosuchfile: no such file in rev e9e6b4fa872f
   [255]
 
+annotate file without '\n' on last line
+
+  $ printf "" > c
+  $ hg ci -A -m test -u nobody -d '1 0'
+  adding c
+  $ hg annotate c
+  $ printf "a\nb" > c
+  $ hg ci -m test
+  $ hg annotate c
+  [0-9]+: a (re)
+  [0-9]+: b (re)
+
 Test annotate with whitespace options
 
   $ cd ..
