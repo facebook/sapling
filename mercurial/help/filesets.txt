@@ -52,7 +52,7 @@ Some sample queries:
 
 - Find C files in a non-standard encoding::
 
-    hg locate "set:**.c and not encoding(ascii)"
+    hg locate "set:**.c and not encoding('UTF-8')"
 
 - Revert copies of large binary files::
 
