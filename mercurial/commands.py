@@ -4241,7 +4241,7 @@ def phase(ui, repo, *revs, **opts):
     for idx, name in enumerate(phasesmod.phasenames):
         if opts[name]:
             if targetphase is not None:
-                raise util.Abort('only one phase can be specified')
+                raise util.Abort(_('only one phase can be specified'))
             targetphase = idx
 
     # look for specified revision
