@@ -654,6 +654,7 @@ class queue(object):
                 finally:
                     repo.invalidate()
                     repo.dirstate.invalidate()
+                    self.invalidate()
                 raise
         finally:
             release(tr, lock, wlock)
