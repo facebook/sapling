@@ -307,7 +307,7 @@ class queue(object):
     @util.propertycache
     def fullseries(self):
         try:
-             return self.opener.read(self.seriespath).splitlines()
+            return self.opener.read(self.seriespath).splitlines()
         except IOError, e:
             if e.errno == errno.ENOENT:
                 return []
@@ -2316,9 +2316,7 @@ def fold(ui, repo, *files, **opts):
     current patch header, separated by a line of ``* * *``.
 
     Returns 0 on success."""
-
     q = repo.mq
-
     if not files:
         raise util.Abort(_('qfold requires at least one patch name'))
     if not q.checktoppatch(repo)[0]:
@@ -2531,7 +2529,7 @@ def push(ui, repo, patch=None, **opts):
         if not newpath:
             ui.warn(_("no saved queues found, please use -n\n"))
             return 1
-        mergeq = queue(ui, repo.join(""), newpath)
+        mergeq = queue(ui, repo.path, newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
@@ -2555,7 +2553,7 @@ def pop(ui, repo, patch=None, **opts):
     """
     localupdate = True
     if opts.get('name'):
-        q = queue(ui, repo.join(""), repo.join(opts.get('name')))
+        q = queue(ui, repo.path, repo.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
@@ -2573,9 +2571,7 @@ def rename(ui, repo, patch, name=None, **opts):
     With two arguments, renames PATCH1 to PATCH2.
 
     Returns 0 on success."""
-
     q = repo.mq
-
     if not name:
         name = patch
         patch = None
@@ -2956,9 +2952,7 @@ def qqueue(ui, repo, name=None, **opts):
 
     Returns 0 on success.
     '''
-
     q = repo.mq
-
     _defaultqueue = 'patches'
     _allqueues = 'patches.queues'
     _activequeue = 'patches.queue'
@@ -3105,7 +3099,7 @@ def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         @util.propertycache
         def mq(self):
-            return queue(self.ui, self.join(""))
+            return queue(self.ui, self.path)
 
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and not force:
