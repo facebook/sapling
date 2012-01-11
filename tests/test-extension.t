@@ -327,7 +327,7 @@ Extension module help vs command help:
   
   list of commands:
   
-   extdiff   use external program to diff repository (or selected files)
+   extdiff    use external program to diff repository (or selected files)
   
   use "hg -v help extdiff" to show builtin aliases and global options
 

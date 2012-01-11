@@ -55,29 +55,29 @@ help
   
   list of commands:
   
-   qapplied     print the patches already applied
-   qclone       clone main and patch repository at same time
-   qdelete      remove patches from queue
-   qdiff        diff of the current patch and subsequent modifications
-   qfinish      move applied patches into repository history
-   qfold        fold the named patches into the current patch
-   qgoto        push or pop patches until named patch is at top of stack
-   qguard       set or print guards for a patch
-   qheader      print the header of the topmost or specified patch
-   qimport      import a patch
-   qnew         create a new patch
-   qnext        print the name of the next patch
-   qpop         pop the current patch off the stack
-   qprev        print the name of the previous patch
-   qpush        push the next patch onto the stack
-   qqueue       manage multiple patch queues
-   qrefresh     update the current patch
-   qrename      rename a patch
-   qselect      set or print guarded patches to push
-   qseries      print the entire series file
-   qtop         print the name of the current patch
-   qunapplied   print the patches not yet applied
-   strip        strip changesets and all their descendants from the repository
+   qapplied      print the patches already applied
+   qclone        clone main and patch repository at same time
+   qdelete       remove patches from queue
+   qdiff         diff of the current patch and subsequent modifications
+   qfinish       move applied patches into repository history
+   qfold         fold the named patches into the current patch
+   qgoto         push or pop patches until named patch is at top of stack
+   qguard        set or print guards for a patch
+   qheader       print the header of the topmost or specified patch
+   qimport       import a patch
+   qnew          create a new patch
+   qnext         print the name of the next patch
+   qpop          pop the current patch off the stack
+   qprev         print the name of the previous patch
+   qpush         push the next patch onto the stack
+   qqueue        manage multiple patch queues
+   qrefresh      update the current patch
+   qrename       rename a patch
+   qselect       set or print guarded patches to push
+   qseries       print the entire series file
+   qtop          print the name of the current patch
+   qunapplied    print the patches not yet applied
+   strip         strip changesets and all their descendants from the repository
   
   use "hg -v help mq" to show builtin aliases and global options
 

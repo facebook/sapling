@@ -3155,7 +3155,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 ui.write(" %s:\n      %s\n"%(commands, h[f]))
             else:
                 ui.write('%s\n' % (util.wrap(h[f], textwidth,
-                                             initindent=' %-*s   ' % (m, f),
+                                             initindent=' %-*s    ' % (m, f),
                                              hangindent=' ' * (m + 4))))
 
         if not name:
@@ -3169,7 +3169,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 topics.append((sorted(names, key=len, reverse=True)[0], header))
             topics_len = max([len(s[0]) for s in topics])
             for t, desc in topics:
-                ui.write(" %-*s  %s\n" % (topics_len, t, desc))
+                ui.write(" %-*s   %s\n" % (topics_len, t, desc))
 
         optlist = []
         addglobalopts(optlist, True)
