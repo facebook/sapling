@@ -2652,7 +2652,7 @@ def save(ui, repo, **opts):
     ret = q.save(repo, msg=message)
     if ret:
         return ret
-    q.savedirty()
+    q.savedirty() # save to .hg/patches before copying
     if opts.get('copy'):
         path = q.path
         if opts.get('name'):
@@ -2669,10 +2669,9 @@ def save(ui, repo, **opts):
         ui.warn(_("copy %s to %s\n") % (path, newpath))
         util.copyfiles(path, newpath)
     if opts.get('empty'):
-        try:
-            os.unlink(q.join(q.statuspath))
-        except:
-            pass
+        del q.applied[:]
+        q.applieddirty = True
+        q.savedirty()
     return 0
 
 @command("strip",

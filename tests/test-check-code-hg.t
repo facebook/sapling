@@ -245,7 +245,6 @@
   hgext/mq.py:0:
    >         except:
    warning: naked except clause
-   warning: naked except clause
   hgext/mq.py:0:
    >         ui.write("mq:     %s\n" % ', '.join(m))
    warning: unwrapped ui message
