@@ -612,8 +612,15 @@ def hg_clean(orig, repo, node, show_stats=True):
     return result
 
 def hg_merge(orig, repo, node, force=None, remind=True):
-    result = orig(repo, node, force, remind)
-    lfcommands.updatelfiles(repo.ui, repo)
+    # Mark the repo as being in the middle of a merge, so that
+    # updatelfiles() will know that it needs to trust the standins in
+    # the working copy, not in the standins in the current node
+    repo._ismerging = True
+    try:
+        result = orig(repo, node, force, remind)
+        lfcommands.updatelfiles(repo.ui, repo)
+    finally:
+        repo._ismerging = False
     return result
 
 # When we rebase a repository with remotely changed largefiles, we need to

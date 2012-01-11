@@ -375,7 +375,15 @@ def cachelfiles(ui, repo, node):
     toget = []
 
     for lfile in lfiles:
-        expectedhash = repo[node][lfutil.standin(lfile)].data().strip()
+        # If we are mid-merge, then we have to trust the standin that is in the
+        # working copy to have the correct hashvalue.  This is because the
+        # original hg.merge() already updated the standin as part of the normal
+        # merge process -- we just have to udpate the largefile to match.
+        if getattr(repo, "_ismerging", False):
+            expectedhash = lfutil.readstandin(repo, lfile)
+        else:
+            expectedhash = repo[node][lfutil.standin(lfile)].data().strip()
+
         # if it exists and its hash matches, it might have been locally
         # modified before updating and the user chose 'local'.  in this case,
         # it will not be in any store, so don't look for it.
