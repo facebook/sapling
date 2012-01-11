@@ -128,15 +128,16 @@
       you can set on the command line with "--config":
   
       convert.hg.ignoreerrors
-                  ignore integrity errors when reading. Use it to fix Mercurial
-                  repositories with missing revlogs, by converting from and to
-                  Mercurial. Default is False.
+                    ignore integrity errors when reading. Use it to fix
+                    Mercurial repositories with missing revlogs, by converting
+                    from and to Mercurial. Default is False.
       convert.hg.saverev
-                  store original revision ID in changeset (forces target IDs to
-                  change). It takes a boolean argument and defaults to False.
+                    store original revision ID in changeset (forces target IDs
+                    to change). It takes a boolean argument and defaults to
+                    False.
       convert.hg.startrev
-                  convert start revision and its descendants. It takes a hg
-                  revision identifier and defaults to 0.
+                    convert start revision and its descendants. It takes a hg
+                    revision identifier and defaults to 0.
   
       CVS Source
       ''''''''''
@@ -153,36 +154,35 @@
       The following options can be used with "--config":
   
       convert.cvsps.cache
-                  Set to False to disable remote log caching, for testing and
-                  debugging purposes. Default is True.
+                    Set to False to disable remote log caching, for testing and
+                    debugging purposes. Default is True.
       convert.cvsps.fuzz
-                  Specify the maximum time (in seconds) that is allowed between
-                  commits with identical user and log message in a single
-                  changeset. When very large files were checked in as part of a
-                  changeset then the default may not be long enough. The default
-                  is 60.
+                    Specify the maximum time (in seconds) that is allowed
+                    between commits with identical user and log message in a
+                    single changeset. When very large files were checked in as
+                    part of a changeset then the default may not be long enough.
+                    The default is 60.
       convert.cvsps.mergeto
-                  Specify a regular expression to which commit log messages are
-                  matched. If a match occurs, then the conversion process will
-                  insert a dummy revision merging the branch on which this log
-                  message occurs to the branch indicated in the regex. Default
-                  is "{{mergetobranch ([-\w]+)}}"
+                    Specify a regular expression to which commit log messages
+                    are matched. If a match occurs, then the conversion process
+                    will insert a dummy revision merging the branch on which
+                    this log message occurs to the branch indicated in the
+                    regex. Default is "{{mergetobranch ([-\w]+)}}"
       convert.cvsps.mergefrom
-                  Specify a regular expression to which commit log messages are
-                  matched. If a match occurs, then the conversion process will
-                  add the most recent revision on the branch indicated in the
-                  regex as the second parent of the changeset. Default is
-                  "{{mergefrombranch ([-\w]+)}}"
-      hook.cvslog
-                  Specify a Python function to be called at the end of gathering
-                  the CVS log. The function is passed a list with the log
-                  entries, and can modify the entries in-place, or add or delete
-                  them.
+                    Specify a regular expression to which commit log messages
+                    are matched. If a match occurs, then the conversion process
+                    will add the most recent revision on the branch indicated in
+                    the regex as the second parent of the changeset. Default is
+                    "{{mergefrombranch ([-\w]+)}}"
+      hook.cvslog   Specify a Python function to be called at the end of
+                    gathering the CVS log. The function is passed a list with
+                    the log entries, and can modify the entries in-place, or add
+                    or delete them.
       hook.cvschangesets
-                  Specify a Python function to be called after the changesets
-                  are calculated from the the CVS log. The function is passed a
-                  list with the changeset entries, and can modify the changesets
-                  in-place, or add or delete them.
+                    Specify a Python function to be called after the changesets
+                    are calculated from the the CVS log. The function is passed
+                    a list with the changeset entries, and can modify the
+                    changesets in-place, or add or delete them.
   
       An additional "debugcvsps" Mercurial command allows the builtin changeset
       merging code to be run without doing a conversion. Its parameters and
@@ -205,19 +205,21 @@
       The following options can be set with "--config":
   
       convert.svn.branches
-                  specify the directory containing branches. The default is
-                  "branches".
+                    specify the directory containing branches. The default is
+                    "branches".
       convert.svn.tags
-                  specify the directory containing tags. The default is "tags".
+                    specify the directory containing tags. The default is
+                    "tags".
       convert.svn.trunk
-                  specify the name of the trunk branch. The default is "trunk".
+                    specify the name of the trunk branch. The default is
+                    "trunk".
   
       Source history can be retrieved starting at a specific revision, instead
       of being integrally converted. Only single branch conversions are
       supported.
   
       convert.svn.startrev
-                  specify start Subversion revision number. The default is 0.
+                    specify start Subversion revision number. The default is 0.
   
       Perforce Source
       '''''''''''''''
@@ -232,8 +234,8 @@
       specifying an initial Perforce revision:
   
       convert.p4.startrev
-                  specify initial Perforce revision (a Perforce changelist
-                  number).
+                    specify initial Perforce revision (a Perforce changelist
+                    number).
   
       Mercurial Destination
       '''''''''''''''''''''
@@ -241,12 +243,12 @@
       The following options are supported:
   
       convert.hg.clonebranches
-                  dispatch source branches in separate clones. The default is
-                  False.
+                    dispatch source branches in separate clones. The default is
+                    False.
       convert.hg.tagsbranch
-                  branch name for tag revisions, defaults to "default".
+                    branch name for tag revisions, defaults to "default".
       convert.hg.usebranchnames
-                  preserve branch names. The default is True.
+                    preserve branch names. The default is True.
   
   options:
   

@@ -419,14 +419,14 @@ Disabled extension commands:
   $ hg help email
   'email' is provided by the following extension:
   
-      patchbomb  command to send changesets as (a series of) patch emails
+      patchbomb     command to send changesets as (a series of) patch emails
   
   use "hg help extensions" for information on enabling extensions
   $ hg qdel
   hg: unknown command 'qdel'
   'qdelete' is provided by the following extension:
   
-      mq  manage a stack of patches
+      mq            manage a stack of patches
   
   use "hg help extensions" for information on enabling extensions
   [255]
@@ -434,7 +434,7 @@ Disabled extension commands:
   hg: unknown command 'churn'
   'churn' is provided by the following extension:
   
-      churn  command to display statistics about repository history
+      churn         command to display statistics about repository history
   
   use "hg help extensions" for information on enabling extensions
   [255]

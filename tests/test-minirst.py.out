@@ -414,35 +414,37 @@ marker after the option. It is treated as a normal paragraph:
 == fields ==
 60 column format:
 ----------------------------------------------------------------------
-a   First item.
-ab  Second item. Indentation and wrapping is handled
-    automatically.
+a             First item.
+ab            Second item. Indentation and wrapping is
+              handled automatically.
 
 Next list:
 
-small       The larger key below triggers full indentation
-            here.
+small         The larger key below triggers full indentation
+              here.
 much too large
-            This key is big enough to get its own line.
+              This key is big enough to get its own line.
 ----------------------------------------------------------------------
 
 30 column format:
 ----------------------------------------------------------------------
-a   First item.
-ab  Second item. Indentation
-    and wrapping is handled
-    automatically.
+a             First item.
+ab            Second item.
+              Indentation and
+              wrapping is
+              handled
+              automatically.
 
 Next list:
 
-small       The larger key
-            below triggers
-            full indentation
-            here.
+small         The larger key
+              below triggers
+              full indentation
+              here.
 much too large
-            This key is big
-            enough to get its
-            own line.
+              This key is big
+              enough to get
+              its own line.
 ----------------------------------------------------------------------
 
 html format:

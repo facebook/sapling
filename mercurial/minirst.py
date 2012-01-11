@@ -162,28 +162,24 @@ def splitparagraphs(blocks):
         i += 1
     return blocks
 
-_fieldwidth = 12
+_fieldwidth = 14
 
 def updatefieldlists(blocks):
-    """Find key and maximum key width for field lists."""
+    """Find key for field lists."""
     i = 0
     while i < len(blocks):
         if blocks[i]['type'] != 'field':
             i += 1
             continue
 
-        keywidth = 0
         j = i
         while j < len(blocks) and blocks[j]['type'] == 'field':
             m = _fieldre.match(blocks[j]['lines'][0])
             key, rest = m.groups()
             blocks[j]['lines'][0] = rest
             blocks[j]['key'] = key
-            keywidth = max(keywidth, len(key))
             j += 1
 
-        for block in blocks[i:j]:
-            block['keywidth'] = keywidth
         i = j + 1
 
     return blocks
@@ -492,19 +488,13 @@ def formatblock(block, width):
             m = _bulletre.match(block['lines'][0])
             subindent = indent + m.end() * ' '
     elif block['type'] == 'field':
-        keywidth = block['keywidth']
         key = block['key']
-
         subindent = indent + _fieldwidth * ' '
         if len(key) + 2 > _fieldwidth:
             # key too large, use full line width
             key = key.ljust(width)
-        elif keywidth + 2 < _fieldwidth:
-            # all keys are small, add only two spaces
-            key = key.ljust(keywidth + 2)
-            subindent = indent + (keywidth + 2) * ' '
         else:
-            # mixed sizes, use fieldwidth for this one
+            # key fits within field width
             key = key.ljust(_fieldwidth)
         block['lines'][0] = key + block['lines'][0]
     elif block['type'] == 'option':

@@ -15,7 +15,7 @@ help qrecord (no record)
   $ hg help qrecord
   'qrecord' is provided by the following extension:
   
-      record  commands to interactively select changes for commit/qrefresh
+      record        commands to interactively select changes for commit/qrefresh
   
   use "hg help extensions" for information on enabling extensions
 

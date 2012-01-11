@@ -675,7 +675,7 @@ Test that default list of commands omits extension commands
   
   enabled extensions:
   
-   helpext  (no help text available)
+   helpext       (no help text available)
   
   additional help topics:
   
@@ -748,10 +748,10 @@ Test a help topic
 Test templating help
 
   $ hg help templating | egrep '(desc|diffstat|firstline|nonempty)  '
-      desc        String. The text of the changeset description.
-      diffstat    String. Statistics of changes with the following format:
-      firstline   Any text. Returns the first line of text.
-      nonempty    Any text. Returns '(none)' if the string is empty.
+      desc          String. The text of the changeset description.
+      diffstat      String. Statistics of changes with the following format:
+      firstline     Any text. Returns the first line of text.
+      nonempty      Any text. Returns '(none)' if the string is empty.
 
 Test help hooks
 
