@@ -309,7 +309,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     :logfunc: function used to report error
               logfunc(filename, linenumber, linecontent, errormessage)
     :maxerr: number of error to display before arborting.
-             Set to None (default) to report all errors
+             Set to false (default) to report all errors
 
     return True if no error is found, False otherwise.
     """
@@ -392,7 +392,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         for e in errors:
             logfunc(*e)
             fc += 1
-            if maxerr is not None and fc >= maxerr:
+            if maxerr and fc >= maxerr:
                 print " (too many errors, giving up)"
                 break
 

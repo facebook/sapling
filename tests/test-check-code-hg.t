@@ -3,7 +3,7 @@
 
   $ "$check_code" `hg manifest` || echo 'FAILURE IS NOT AN OPTION!!!'
 
-  $ "$check_code" --warnings --nolineno `hg manifest`
+  $ "$check_code" --warnings --nolineno --per-file=0 `hg manifest`
   contrib/check-code.py:0:
    > #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=', "don't use underbars in identifiers"),
    warning: line over 80 characters
@@ -242,7 +242,16 @@
   hgext/mq.py:0:
    >           ('e', 'exact', None, _('apply the target patch to its recorded parent')),
    warning: line over 80 characters
-   (too many errors, giving up)
+  hgext/mq.py:0:
+   >         except:
+   warning: naked except clause
+   warning: naked except clause
+  hgext/mq.py:0:
+   >         ui.write("mq:     %s\n" % ', '.join(m))
+   warning: unwrapped ui message
+  hgext/mq.py:0:
+   >     repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
+   warning: line over 80 characters
   hgext/notify.py:0:
    >                 ui.note(_('notify: suppressing notification for merge %d:%s\n') %
    warning: line over 80 characters
@@ -328,7 +337,95 @@
   mercurial/commands.py:0:
    >             ui.write('    other            : ' + fmt2 % pcfmt(numoprev, numprev))
    warning: line over 80 characters
-   (too many errors, giving up)
+  mercurial/commands.py:0:
+   >             ui.write('    where prev = p1  : ' + fmt2 % pcfmt(nump1prev, numprev))
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >             ui.write('    where prev = p2  : ' + fmt2 % pcfmt(nump2prev, numprev))
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >             ui.write('deltas against other : ' + fmt % pcfmt(numother, numdeltas))
+   warning: line over 80 characters
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >             ui.write('deltas against p1    : ' + fmt % pcfmt(nump1, numdeltas))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >             ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >         cmd, ext, mod = extensions.disabledcmd(ui, name, ui.config('ui', 'strict'))
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >         except:
+   warning: naked except clause
+  mercurial/commands.py:0:
+   >         revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >         ui.write("common heads: %s\n" % " ".join([short(n) for n in common]))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >         ui.write("match: %s\n" % m(d[0]))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >         ui.write('deltas against prev  : ' + fmt % pcfmt(numprev, numdeltas))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >         ui.write('path %s\n' % k)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >         ui.write('uncompressed data size (min/max/avg) : %d / %d / %d\n'
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >     remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl), opts.get('branch'))
+   warning: line over 80 characters
+  mercurial/commands.py:0:
+   >     ui.write("digraph G {\n")
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write("internal: %s %s\n" % d)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write("standard: %s\n" % util.datestr(d))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('avg chain length  : ' + fmt % avgchainlen)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('compression ratio : ' + fmt % compratio)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('delta size (min/max/avg)             : %d / %d / %d\n'
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('flags  : %s\n' % ', '.join(flags))
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('format : %d\n' % format)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('full revision size (min/max/avg)     : %d / %d / %d\n'
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('revision size : ' + fmt2 % totalsize)
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('revisions     : ' + fmt2 % numrevs)
+   warning: unwrapped ui message
+   warning: unwrapped ui message
+  mercurial/commands.py:0:
+   >     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
+   warning: unwrapped ui message
   mercurial/commandserver.py:0:
    >         # the ui here is really the repo ui so take its baseui so we don't end up
    warning: line over 80 characters
