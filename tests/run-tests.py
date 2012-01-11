@@ -493,7 +493,7 @@ def outputcoverage(options):
         return
 
     covrun('-c')
-    omit = ','.join([BINDIR, TESTDIR])
+    omit = ','.join(map(os.path.join, [BINDIR, TESTDIR], ['*'] * 2))
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
     if options.annotate:
         adir = os.path.join(TESTDIR, 'annotated')
