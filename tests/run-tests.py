@@ -141,6 +141,8 @@ def parseargs():
              " rather than capturing and diff'ing it (disables timeout)")
     parser.add_option("-f", "--first", action="store_true",
         help="exit on the first test failure")
+    parser.add_option("-H", "--htmlcov", action="store_true",
+        help="create an HTML report of the coverage of the files")
     parser.add_option("--inotify", action="store_true",
         help="enable inotify extension when running tests")
     parser.add_option("-i", "--interactive", action="store_true",
@@ -211,7 +213,7 @@ def parseargs():
                          % hgbin)
         options.with_hg = hgbin
 
-    options.anycoverage = options.cover or options.annotate
+    options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
         try:
             import coverage
@@ -495,6 +497,9 @@ def outputcoverage(options):
     covrun('-c')
     omit = ','.join(os.path.join(x, '*') for x in [BINDIR, TESTDIR])
     covrun('-i', '-r', '"--omit=%s"' % omit) # report
+    if options.htmlcov:
+        htmldir = os.path.join(TESTDIR, 'htmlcov')
+        covrun('-i', '-b', '"--directory=%s"' % htmldir, '"--omit=%s"' % omit)
     if options.annotate:
         adir = os.path.join(TESTDIR, 'annotated')
         if not os.path.isdir(adir):

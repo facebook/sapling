@@ -19,6 +19,7 @@ syntax: glob
 tests/.coverage*
 tests/annotated
 tests/*.err
+tests/htmlcov
 build
 contrib/hgsh/hgsh
 dist
