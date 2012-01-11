@@ -164,6 +164,17 @@ But secret can still be bundled explicitly
   4 changesets found
   $ cd ..
 
+Test secret changeset are not cloned
+(during local clone)
+
+  $ hg clone -qU initialrepo clone-dest
+  $ hglog -R clone-dest
+  4 0 B'
+  3 0 D
+  2 0 C
+  1 0 B
+  0 0 A
+
 Test revset
 
   $ cd initialrepo
