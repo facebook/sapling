@@ -2452,6 +2452,10 @@ msgstr ""
 "Mercurial falhou ao executar a si próprio, veja se o executável hg está no "
 "PATH"
 
+#, python-format
+msgid "log stream exception '%s'"
+msgstr "exceção de log stream '%s'"
+
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
 "repository. Use --source-type if you know better.\n"
@@ -4396,8 +4400,8 @@ msgid "no files specified"
 msgstr "nenhum arquivo especificado"
 
 #, python-format
-msgid "not removing %s: %s (use -f to force removal)\n"
-msgstr "%s não removido: %s (use -f para forçar a remoção)\n"
+msgid "not removing %s: %s (use forget to undo)\n"
+msgstr "%s não removido: %s (use forget para desfazer)\n"
 
 msgid "file still exists"
 msgstr "o arquivo já existe"
@@ -5054,11 +5058,13 @@ msgid "remove patches from queue"
 msgstr "remove patches da fila"
 
 msgid ""
-"    The patches must not be applied, and at least one patch is required. With\n"
-"    -k/--keep, the patch files are preserved in the patch directory."
+"    The patches must not be applied, and at least one patch is required. Exact\n"
+"    patch identifiers must be given. With -k/--keep, the patch files are\n"
+"    preserved in the patch directory."
 msgstr ""
 "    Os patches não devem estar aplicados, e ao menos um patch deve\n"
-"    ser passado. Com -k/--keep, os arquivos de patch serão\n"
+"    ser passado. Devem ser fornecidos identificadores exatos para\n"
+"    os patches. Com -k/--keep, os arquivos de patch serão\n"
 "    preservados no diretório de patches."
 
 msgid ""
@@ -11265,10 +11271,10 @@ msgstr ""
 
 msgid ""
 "    With -s/--similarity, hg will attempt to discover renames and\n"
-"    copies in the patch in the same way as 'addremove'."
+"    copies in the patch in the same way as :hg:`addremove`."
 msgstr ""
 "    Com -s/--similarity, hg irá tentar determinar renomeações e\n"
-"    cópias no patch do mesmo modo que o comando 'addremove'."
+"    cópias no patch do mesmo modo que :hg:`addremove`."
 
 msgid ""
 "    To read a patch from standard input, use \"-\" as the patch name. If\n"
