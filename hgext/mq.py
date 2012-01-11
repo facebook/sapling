@@ -503,10 +503,13 @@ class queue(object):
             fp.close()
         if self.applieddirty:
             writelist(map(str, self.applied), self.statuspath)
+            self.applieddirty = False
         if self.seriesdirty:
             writelist(self.fullseries, self.seriespath)
+            self.seriesdirty = False
         if self.guardsdirty:
             writelist(self.activeguards, self.guardspath)
+            self.guardsdirty = False
         if self.added:
             qrepo = self.qrepo()
             if qrepo:
