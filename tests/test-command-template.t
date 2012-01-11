@@ -1114,10 +1114,6 @@ Filters work:
   other
   user
 
-  $ hg log --template '{date|age}\n' > /dev/null || exit 1
-
-  $ hg log -l1 --template '{date|age}\n' 
-  7 years from now
   $ hg log --template '{date|date}\n'
   Wed Jan 01 10:01:00 2020 +0000
   Mon Jan 12 13:46:40 1970 +0000
@@ -1219,6 +1215,20 @@ Formatnode filter works:
 
   $ hg --debug log -r 0 --template '{node|formatnode}\n'
   1e4e1b8f71e05681d422154f5421e385fec3454f
+
+Age filter:
+
+  $ hg log --template '{date|age}\n' > /dev/null || exit 1
+
+  >>> from datetime import datetime
+  >>> fp = open('a', 'w')
+  >>> fp.write(str(datetime.now().year + 8) + '-01-01 00:00')
+  >>> fp.close()
+  $ hg add a
+  $ hg commit -m future -d "`cat a`"
+
+  $ hg log -l1 --template '{date|age}\n' 
+  7 years from now
 
 Error on syntax:
 
