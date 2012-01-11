@@ -90,11 +90,16 @@ def _checkunknown(wctx, mctx, folding):
     folded = {}
     for fn in mctx:
         folded[foldf(fn)] = fn
+
+    error = False
     for fn in wctx.unknown():
         f = foldf(fn)
         if f in folded and mctx[folded[f]].cmp(wctx[f]):
-            raise util.Abort(_("untracked file in working directory differs"
-                               " from file in requested revision: '%s'") % fn)
+            error = True
+            wctx._repo.ui.warn(_("%s: untracked file differs\n") % fn)
+    if error:
+        raise util.Abort(_("untracked files in working directory differ "
+                           "from files in requested revision"))
 
 def _checkcollision(mctx, wctx):
     "check for case folding collisions in the destination context"

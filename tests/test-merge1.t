@@ -66,7 +66,8 @@ no merges expected
   $ echo This is file b2 > b
 merge should fail
   $ hg merge 1
-  abort: untracked file in working directory differs from file in requested revision: 'b'
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
   [255]
 merge of b expected
   $ hg merge -f 1

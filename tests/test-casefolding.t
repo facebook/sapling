@@ -66,7 +66,8 @@ no clobbering of untracked files with wrong casing
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo gold > a
   $ hg up
-  abort: untracked file in working directory differs from file in requested revision: 'a'
+  a: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
   [255]
   $ cat a
   gold
