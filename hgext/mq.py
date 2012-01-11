@@ -968,8 +968,6 @@ class queue(object):
                         for chunk in chunks:
                             p.write(chunk)
                     p.close()
-                    wlock.release()
-                    wlock = None
                     r = self.qrepo()
                     if r:
                         r[None].add([patchfn])
