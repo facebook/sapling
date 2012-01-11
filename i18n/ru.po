@@ -4805,31 +4805,31 @@ msgid "%s appears more than once in %s"
 msgstr "%s встречается более одного раза в %s"
 
 msgid "guard cannot be an empty string"
-msgstr "страж (guard) не может быть пустой строкой"
+msgstr "страж не может быть пустой строкой"
 
 #, python-format
 msgid "guard %r starts with invalid character: %r"
-msgstr "страж (guard) %r начинается с недопустимого символа: %r"
+msgstr "страж %r начинается с недопустимого символа: %r"
 
 #, python-format
 msgid "invalid character in guard %r: %r"
-msgstr "недопустимый символ в страже (guard) %r: %r"
+msgstr "недопустимый символ в страже %r: %r"
 
 #, python-format
 msgid "guard %r too short"
-msgstr "страж (guard) %r слишком короткий"
+msgstr "страж %r слишком короткий"
 
 #, python-format
 msgid "guard %r starts with invalid char"
-msgstr "страж (guard) %r начинается с недопустимого символа"
+msgstr "страж %r начинается с недопустимого символа"
 
 #, python-format
 msgid "allowing %s - no guards in effect\n"
-msgstr "%s разрешен - страж (guard) не задействуется\n"
+msgstr "%s разрешен - страж не задействуется\n"
 
 #, python-format
 msgid "allowing %s - no matching negative guards\n"
-msgstr "%s разрешен - нет подходящих запрещающих стражей (guards)\n"
+msgstr "%s разрешен - нет подходящих запрещающих стражей\n"
 
 #, python-format
 msgid "allowing %s - guarded by %s\n"
@@ -4841,7 +4841,7 @@ msgstr "%s пропускается - защищен %s\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
-msgstr "%s пропускается - нет подходящих стражей (guards)\n"
+msgstr "%s пропускается - нет подходящих стражей\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
@@ -5004,7 +5004,7 @@ msgid "guarded by %s"
 msgstr "защищен %s"
 
 msgid "no matching guards"
-msgstr "нет подходящих стражей (guards)"
+msgstr "нет подходящих стражей"
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
@@ -5706,7 +5706,7 @@ msgstr ""
 "стека"
 
 msgid "list all patches and guards"
-msgstr "перечислить все патчи и стражей (guards)"
+msgstr "перечислить все патчи и стражей"
 
 msgid "drop all guards"
 msgstr "удалить всех стражей"
