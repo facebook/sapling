@@ -794,19 +794,136 @@ Discovery locally secret changeset on a remote repository:
   |
   o  0 public a-A - 054250a37db4
   
+
+pull new changeset with common draft locally
+
+  $ hg up -q 967b449fbc94 # create a new root for draft
+  $ mkcommit 'alpha-more'
+  created new head
+  $ hg push -fr . ../mu
+  pushing to ../mu
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  $ cd ../mu
+  $ hg phase --secret --force 1c5cfd894796
+  $ hg up -q 435b5d83910c
+  $ mkcommit 'mu-more'
+  $ cd ../alpha
+  $ hg pull ../mu
+  pulling from ../mu
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hgph
+  o  13 draft mu-more - 5237fb433fc8
+  |
+  | @  12 draft alpha-more - 1c5cfd894796
+  | |
+  o |  11 draft A-secret - 435b5d83910c
+  |/
+  o  10 public a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
+
+Test that test are properly ignored on remote event when existing locally
+
   $ cd ..
+  $ hg clone -qU -r b555f63b6063 -r f54f1bb90ff3 beta gamma
+
+# pathological case are
+#
+# * secret remotely
+# * known locally
+# * repo have uncommon changeset
+
+  $ hg -R beta phase --secret --force f54f1bb90ff3
+  $ hg -R gamma phase --draft --force f54f1bb90ff3
+
+  $ cd gamma
+  $ hg pull ../beta
+  pulling from ../beta
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+  $ hg phase f54f1bb90ff3
+  2: draft
+
+same over the wire
+
+  $ cd ../beta
+  $ hg serve -p $HGPORT -d --pid-file=../beta.pid -E ../beta-error.log
+  $ cat ../beta.pid >> $DAEMON_PIDS
+  $ cd ../gamma
+
+  $ hg pull http://localhost:$HGPORT/
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ hg phase f54f1bb90ff3
+  2: draft
+
+check that secret local on both side are not synced to public
+
+  $ hg push -r b555f63b6063 http://localhost:$HGPORT/
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ hg phase f54f1bb90ff3
+  2: draft
+
+put the changeset in the draft state again
+(first test after this one expect to be able to copy)
+
+  $ cd ..
+
+
 Test Clone behavior
 
 A. Clone without secret changeset
 
 1.  cloning non-publishing repository
+(Phase should be preserved)
 
-(Phase should be preserved°
+# make sure there is no secret so we can use a copy clone
+
+  $ hg -R mu phase --draft 'secret()'
 
   $ hg clone -U mu Tau
   $ hgph -R Tau
-  o  10 draft A-secret - 435b5d83910c
+  o  12 draft mu-more - 5237fb433fc8
   |
+  | o  11 draft alpha-more - 1c5cfd894796
+  | |
+  o |  10 draft A-secret - 435b5d83910c
+  |/
   o  9 public a-H - 967b449fbc94
   |
   | o  8 public a-F - b740e3e5c05d
@@ -834,8 +951,12 @@ A. Clone without secret changeset
 
   $ hg clone -U alpha Upsilon
   $ hgph -R Upsilon
-  o  11 public A-secret - 435b5d83910c
+  o  13 public mu-more - 5237fb433fc8
   |
+  | o  12 public alpha-more - 1c5cfd894796
+  | |
+  o |  11 public A-secret - 435b5d83910c
+  |/
   o  10 public a-H - 967b449fbc94
   |
   | o  9 public a-G - 3e27b6f1eee1
@@ -858,3 +979,4 @@ A. Clone without secret changeset
   |
   o  0 public a-A - 054250a37db4
   
+

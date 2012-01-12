@@ -621,7 +621,12 @@ class localrepository(repo.repository):
 
     def known(self, nodes):
         nm = self.changelog.nodemap
-        return [(n in nm) for n in nodes]
+        result = []
+        for n in nodes:
+            r = nm.get(n)
+            resp = not (r is None or self._phaserev[r] >= phases.secret)
+            result.append(resp)
+        return result
 
     def local(self):
         return self
