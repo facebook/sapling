@@ -3555,7 +3555,7 @@ msgstr "cat-file: не задан тип или ревизия\n"
 
 # BUG
 msgid "aborting hg cat-file only understands commits\n"
-msgstr "останов: hg cat-file понимает только фиксации (commits)\n"
+msgstr "прервано: hg cat-file понимает только фиксации (commits)\n"
 
 msgid "parse given revisions"
 msgstr "разбор заданных ревизий"
@@ -4897,7 +4897,7 @@ msgstr ""
 "не удалось наложить патч, отклоненные файлы сохранены в рабочем каталоге\n"
 
 msgid "fuzz found when applying patch, stopping\n"
-msgstr "обнаружено несоответствие контекстов (fuzz), останов\n"
+msgstr "обнаружено несоответствие контекстов (fuzz), остановлено\n"
 
 #, python-format
 msgid "revision %s refers to unknown patches: %s\n"
@@ -13649,7 +13649,7 @@ msgstr "внимание: несинхронизированные измене�
 
 #, python-format
 msgid "abort: %s\n"
-msgstr "останов: %s\n"
+msgstr "прервано: %s\n"
 
 #, python-format
 msgid "(%s)\n"
@@ -13686,11 +13686,11 @@ msgstr "блокировка удерживается %s"
 
 #, python-format
 msgid "abort: %s: %s\n"
-msgstr "останов: %s: %s\n"
+msgstr "прервано: %s: %s\n"
 
 #, python-format
 msgid "abort: could not lock %s: %s\n"
-msgstr "останов: не удается заблокировать %s: %s\n"
+msgstr "прервано: не удается заблокировать %s: %s\n"
 
 #, python-format
 msgid "hg %s: %s\n"
@@ -13701,15 +13701,15 @@ msgid "hg: %s\n"
 msgstr "hg: %s\n"
 
 msgid "abort: remote error:\n"
-msgstr "останов: ошибка на отдаленной стороне:\n"
+msgstr "прервано: ошибка на отдаленной стороне:\n"
 
 #, python-format
 msgid "abort: %s!\n"
-msgstr "останов: %s!\n"
+msgstr "прервано: %s!\n"
 
 #, python-format
 msgid "abort: %s"
-msgstr "останов: %s"
+msgstr "прервано: %s"
 
 msgid " empty string\n"
 msgstr " пустая строка\n"
@@ -13730,10 +13730,10 @@ msgstr "(правильно ли у вас установлен Python?)\n"
 
 #, python-format
 msgid "abort: error: %s\n"
-msgstr "останов: ошибка: %s\n"
+msgstr "прервано: ошибка: %s\n"
 
 msgid "broken pipe\n"
-msgstr "обрыв канала (broken pipe)\n"
+msgstr "обрыв канала ввода-вывода\n"
 
 msgid "interrupted!\n"
 msgstr "прервано!\n"
@@ -13743,10 +13743,10 @@ msgid ""
 "broken pipe\n"
 msgstr ""
 "\n"
-"обрыв канала (broken pipe)\n"
+"обрыв канала ввода-вывода\n"
 
 msgid "abort: out of memory\n"
-msgstr "останов: недостаточно памяти\n"
+msgstr "прервано: недостаточно памяти\n"
 
 msgid "** unknown exception encountered, please report by visiting\n"
 msgstr "** неизвестное исключение, пожалуйте, сообщите об этом по адресу\n"
