@@ -795,6 +795,40 @@ Discovery locally secret changeset on a remote repository:
   o  0 public a-A - 054250a37db4
   
 
+pushing a locally public and draft changesets remotly secret should make them appear on the remote side
+
+  $ hg -R ../mu phase --secret --force 967b449fbc94
+  $ hg push -r 435b5d83910c ../mu
+  pushing to ../mu
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 2 files
+  $ hgph -R ../mu
+  o  10 draft A-secret - 435b5d83910c
+  |
+  o  9 public a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
+
 pull new changeset with common draft locally
 
   $ hg up -q 967b449fbc94 # create a new root for draft

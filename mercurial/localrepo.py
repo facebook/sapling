@@ -2111,11 +2111,22 @@ class localrepository(repo.repository):
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
             publishing = self.ui.configbool('phases', 'publish', True)
-            if publishing and srctype == 'push':
+            if srctype == 'push':
                 # Old server can not push the boundary themself.
-                # This clause ensure pushed changeset are alway marked as public
-                phases.advanceboundary(self, phases.public, added)
-            elif srctype != 'strip': # strip should not touch boundary at all
+                # New server won't push the boundary if changeset already
+                # existed locally as secrete
+                #
+                # We should not use added here but the list of all change in
+                # the bundle
+                if publishing:
+                    phases.advanceboundary(self, phases.public, srccontent)
+                else:
+                    phases.advanceboundary(self, phases.draft, srccontent)
+                    phases.retractboundary(self, phases.draft, added)
+            elif srctype != 'strip':
+                # publishing only alter behavior during push
+                #
+                # strip should not touch boundary at all
                 phases.retractboundary(self, phases.draft, added)
 
             # make changelog see real files again
