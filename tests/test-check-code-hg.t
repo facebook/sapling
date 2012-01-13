@@ -320,9 +320,6 @@
    >             except:
    warning: naked except clause
   mercurial/commands.py:0:
-   >             raise util.Abort(_('tag names cannot consist entirely of whitespace'))
-   warning: line over 80 characters
-  mercurial/commands.py:0:
    >             ui.status(_("(run 'hg heads .' to see heads, 'hg merge' to merge)\n"))
    warning: line over 80 characters
   mercurial/commands.py:0:

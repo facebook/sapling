@@ -5501,62 +5501,68 @@ def tag(ui, repo, name1, *names, **opts):
 
     Returns 0 on success.
     """
-
-    rev_ = "."
-    names = [t.strip() for t in (name1,) + names]
-    if len(names) != len(set(names)):
-        raise util.Abort(_('tag names must be unique'))
-    for n in names:
-        if n in ['tip', '.', 'null']:
-            raise util.Abort(_("the name '%s' is reserved") % n)
-        if not n:
-            raise util.Abort(_('tag names cannot consist entirely of whitespace'))
-    if opts.get('rev') and opts.get('remove'):
-        raise util.Abort(_("--rev and --remove are incompatible"))
-    if opts.get('rev'):
-        rev_ = opts['rev']
-    message = opts.get('message')
-    if opts.get('remove'):
-        expectedtype = opts.get('local') and 'local' or 'global'
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        rev_ = "."
+        names = [t.strip() for t in (name1,) + names]
+        if len(names) != len(set(names)):
+            raise util.Abort(_('tag names must be unique'))
         for n in names:
-            if not repo.tagtype(n):
-                raise util.Abort(_("tag '%s' does not exist") % n)
-            if repo.tagtype(n) != expectedtype:
-                if expectedtype == 'global':
-                    raise util.Abort(_("tag '%s' is not a global tag") % n)
-                else:
-                    raise util.Abort(_("tag '%s' is not a local tag") % n)
-        rev_ = nullid
+            if n in ['tip', '.', 'null']:
+                raise util.Abort(_("the name '%s' is reserved") % n)
+            if not n:
+                raise util.Abort(_('tag names cannot consist entirely of '
+                                   'whitespace'))
+        if opts.get('rev') and opts.get('remove'):
+            raise util.Abort(_("--rev and --remove are incompatible"))
+        if opts.get('rev'):
+            rev_ = opts['rev']
+        message = opts.get('message')
+        if opts.get('remove'):
+            expectedtype = opts.get('local') and 'local' or 'global'
+            for n in names:
+                if not repo.tagtype(n):
+                    raise util.Abort(_("tag '%s' does not exist") % n)
+                if repo.tagtype(n) != expectedtype:
+                    if expectedtype == 'global':
+                        raise util.Abort(_("tag '%s' is not a global tag") % n)
+                    else:
+                        raise util.Abort(_("tag '%s' is not a local tag") % n)
+            rev_ = nullid
+            if not message:
+                # we don't translate commit messages
+                message = 'Removed tag %s' % ', '.join(names)
+        elif not opts.get('force'):
+            for n in names:
+                if n in repo.tags():
+                    raise util.Abort(_("tag '%s' already exists "
+                                       "(use -f to force)") % n)
+        if not opts.get('local'):
+            p1, p2 = repo.dirstate.parents()
+            if p2 != nullid:
+                raise util.Abort(_('uncommitted merge'))
+            bheads = repo.branchheads()
+            if not opts.get('force') and bheads and p1 not in bheads:
+                raise util.Abort(_('not at a branch head (use -f to force)'))
+        r = scmutil.revsingle(repo, rev_).node()
+
         if not message:
             # we don't translate commit messages
-            message = 'Removed tag %s' % ', '.join(names)
-    elif not opts.get('force'):
-        for n in names:
-            if n in repo.tags():
-                raise util.Abort(_("tag '%s' already exists "
-                                   "(use -f to force)") % n)
-    if not opts.get('local'):
-        p1, p2 = repo.dirstate.parents()
-        if p2 != nullid:
-            raise util.Abort(_('uncommitted merge'))
-        bheads = repo.branchheads()
-        if not opts.get('force') and bheads and p1 not in bheads:
-            raise util.Abort(_('not at a branch head (use -f to force)'))
-    r = scmutil.revsingle(repo, rev_).node()
+            message = ('Added tag %s for changeset %s' %
+                       (', '.join(names), short(r)))
 
-    if not message:
-        # we don't translate commit messages
-        message = ('Added tag %s for changeset %s' %
-                   (', '.join(names), short(r)))
+        date = opts.get('date')
+        if date:
+            date = util.parsedate(date)
 
-    date = opts.get('date')
-    if date:
-        date = util.parsedate(date)
+        if opts.get('edit'):
+            message = ui.edit(message, ui.username())
 
-    if opts.get('edit'):
-        message = ui.edit(message, ui.username())
-
-    repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
+        repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
+    finally:
+        release(lock, wlock)
 
 @command('tags', [], '')
 def tags(ui, repo):
