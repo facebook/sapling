@@ -14,11 +14,11 @@ import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
 import match as matchmod
-import merge as mergemod
+import merge
 import minirst, revset, fileset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil
-import phases as phasesmod
+import phases
 
 table = {}
 
@@ -2623,8 +2623,8 @@ def graft(ui, repo, *revs, **opts):
             try:
                 # ui.forcemerge is an internal variable, do not document
                 repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                        ctx.p1().node())
+                stats = merge.update(repo, ctx.node(), True, True, False,
+                                     ctx.p1().node())
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
             # drop the second merge parent
@@ -4238,7 +4238,7 @@ def phase(ui, repo, *revs, **opts):
     """
     # search for a unique phase argument
     targetphase = None
-    for idx, name in enumerate(phasesmod.phasenames):
+    for idx, name in enumerate(phases.phasenames):
         if opts[name]:
             if targetphase is not None:
                 raise util.Abort(_('only one phase can be specified'))
@@ -4262,9 +4262,9 @@ def phase(ui, repo, *revs, **opts):
             nodes = [ctx.node() for ctx in repo.set('%lr', revs)]
             if not nodes:
                 raise util.Abort(_('empty revision set'))
-            phasesmod.advanceboundary(repo, targetphase, nodes)
+            phases.advanceboundary(repo, targetphase, nodes)
             if opts['force']:
-                phasesmod.retractboundary(repo, targetphase, nodes)
+                phases.retractboundary(repo, targetphase, nodes)
         finally:
             lock.release()
 
@@ -4655,7 +4655,7 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
 
-    ms = mergemod.mergestate(repo)
+    ms = merge.mergestate(repo)
     m = scmutil.match(repo[None], pats, opts)
     ret = 0
 
@@ -5352,7 +5352,7 @@ def summary(ui, repo, **opts):
     st.insert(3, renamed)
     st.insert(4, copied)
 
-    ms = mergemod.mergestate(repo)
+    ms = merge.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
 
     subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
