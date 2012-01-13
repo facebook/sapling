@@ -17,12 +17,17 @@ def addrev(text, renamed=False):
     else:
         meta = {}
 
-    t = repo.transaction('commit')
+    lock = t = None
     try:
+        lock = repo.lock()
+        t = repo.transaction('commit')
         node = fl.add(text, meta, t, 0, nullid, nullid)
         return node
     finally:
-        t.close()
+        if t:
+            t.close()
+        if lock:
+            lock.release()
 
 def error(text):
     print 'ERROR: ' + text
