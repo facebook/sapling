@@ -4216,9 +4216,9 @@ def paths(ui, repo, search=None):
                 ui.write("%s = %s\n" % (name, util.hidepassword(path)))
 
 @command('^phase',
-    [('p', 'public', False, _('Set changeset to public')),
-     ('d', 'draft', False, _('Set changeset to draft')),
-     ('s', 'secret', False, _('Set changeset to secret')),
+    [('p', 'public', False, _('set changeset phase to public')),
+     ('d', 'draft', False, _('set changeset phase to draft')),
+     ('s', 'secret', False, _('set changeset phase to secret')),
      ('f', 'force', False, _('allow to move boundary backward')),
      ('r', 'rev', [], _('target revision')),
     ],
