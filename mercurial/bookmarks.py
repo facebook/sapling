@@ -84,7 +84,7 @@ def write(repo):
             raise util.Abort(_("bookmark '%s' contains illegal "
                 "character" % mark))
 
-    wlock = repo.wlock()
+    lock = repo.lock()
     try:
 
         file = repo.opener('bookmarks', 'w', atomictemp=True)
@@ -99,7 +99,7 @@ def write(repo):
             pass
 
     finally:
-        wlock.release()
+        lock.release()
 
 def setcurrent(repo, mark):
     '''Set the name of the bookmark that we are currently on
@@ -117,13 +117,13 @@ def setcurrent(repo, mark):
         raise util.Abort(_("bookmark '%s' contains illegal "
             "character" % mark))
 
-    wlock = repo.wlock()
+    lock = repo.lock()
     try:
         file = repo.opener('bookmarks.current', 'w', atomictemp=True)
         file.write(encoding.fromlocal(mark))
         file.close()
     finally:
-        wlock.release()
+        lock.release()
     repo._bookmarkcurrent = mark
 
 def updatecurrentbookmark(repo, oldnode, curbranch):
@@ -162,7 +162,7 @@ def listbookmarks(repo):
     return d
 
 def pushbookmark(repo, key, old, new):
-    w = repo.wlock()
+    lock = repo.lock()
     try:
         marks = repo._bookmarks
         if hex(marks.get(key, '')) != old:
@@ -176,7 +176,7 @@ def pushbookmark(repo, key, old, new):
         write(repo)
         return True
     finally:
-        w.release()
+        lock.release()
 
 def updatefromremote(ui, repo, remote, path):
     ui.debug("checking for updated bookmarks\n")
