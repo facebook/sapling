@@ -14,7 +14,7 @@ import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
 import match as matchmod
-import merge
+import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil
@@ -2623,8 +2623,8 @@ def graft(ui, repo, *revs, **opts):
             try:
                 # ui.forcemerge is an internal variable, do not document
                 repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                stats = merge.update(repo, ctx.node(), True, True, False,
-                                     ctx.p1().node())
+                stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                        ctx.p1().node())
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
             # drop the second merge parent
@@ -4655,7 +4655,7 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_('no files or directories specified; '
                            'use --all to remerge all files'))
 
-    ms = merge.mergestate(repo)
+    ms = mergemod.mergestate(repo)
     m = scmutil.match(repo[None], pats, opts)
     ret = 0
 
@@ -5352,7 +5352,7 @@ def summary(ui, repo, **opts):
     st.insert(3, renamed)
     st.insert(4, copied)
 
-    ms = merge.mergestate(repo)
+    ms = mergemod.mergestate(repo)
     st.append([f for f in ms if ms[f] == 'u'])
 
     subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
