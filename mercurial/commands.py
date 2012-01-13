@@ -4228,7 +4228,7 @@ def phase(ui, repo, *revs, **opts):
 
     With no argument, show the phase name of specified revisions.
 
-    With one of ``--public``, ``--draft`` or ``--secret``, change the
+    With one of -p/--public, -d/--draft or -s/--secret, change the
     phase value of the specified revisions.
 
     Unless -f/--force is specified, :hg:`phase` won't move changeset from a
