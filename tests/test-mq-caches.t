@@ -26,7 +26,7 @@
 
 mq patch on an empty repo
 
-  $ hg qnew p1
+  $ hg qnew -d '0 0' p1
   $ show_branch_cache
   tip: 0
   No branch cache
@@ -69,7 +69,7 @@ add some mq patches
   c229711f16da3d7591f89b1b8d963b79bda22714 bar
   dc25e3827021582e979f600811852e36cbe57341 foo
 
-  $ hg qnew p2
+  $ hg qnew -d '0 0' p2
   $ echo foo > .hg/branch
   $ echo foo2 >> foo
   $ hg qrefresh -m 'patch 2'
