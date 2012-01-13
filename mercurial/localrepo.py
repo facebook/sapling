@@ -480,7 +480,7 @@ class localrepository(repo.repository):
     def updatebranchcache(self):
         tip = self.changelog.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
-            return self._branchcache
+            return
 
         oldtip = self._branchcachetip
         self._branchcachetip = tip
