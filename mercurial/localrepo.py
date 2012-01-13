@@ -2015,8 +2015,8 @@ class localrepository(repo.repository):
             source.callback = pr
 
             source.changelogheader()
-            if (cl.addgroup(source, csmap, trp) is None
-                and not emptyok):
+            srccontent = cl.addgroup(source, csmap, trp)
+            if not (srccontent or emptyok):
                 raise util.Abort(_("received changelog group is empty"))
             clend = len(cl)
             changesets = clend - clstart
@@ -2064,7 +2064,7 @@ class localrepository(repo.repository):
                 pr()
                 fl = self.file(f)
                 o = len(fl)
-                if fl.addgroup(source, revmap, trp) is None:
+                if not fl.addgroup(source, revmap, trp):
                     raise util.Abort(_("received file revlog group is empty"))
                 revisions += len(fl) - o
                 files += 1

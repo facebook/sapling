@@ -1131,6 +1131,7 @@ class revlog(object):
         """
 
         # track the base of the current delta log
+        content = []
         node = None
 
         r = len(self)
@@ -1161,6 +1162,8 @@ class revlog(object):
                 deltabase = chunkdata['deltabase']
                 delta = chunkdata['delta']
 
+                content.append(node)
+
                 link = linkmapper(cs)
                 if node in self.nodemap:
                     # this can happen if two branches make the same change
@@ -1190,7 +1193,7 @@ class revlog(object):
                 dfh.close()
             ifh.close()
 
-        return node
+        return content
 
     def strip(self, minlink, transaction):
         """truncate the revlog on the first revision with a linkrev >= minlink
