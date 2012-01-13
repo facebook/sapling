@@ -1368,8 +1368,10 @@ def debugbuilddag(ui, repo, text=None,
 
     tags = []
 
-    tr = repo.transaction("builddag")
+    lock = tr = None
     try:
+        lock = repo.lock()
+        tr = repo.transaction("builddag")
 
         at = -1
         atbranch = 'default'
@@ -1445,12 +1447,12 @@ def debugbuilddag(ui, repo, text=None,
                 atbranch = data
             ui.progress(_('building'), id, unit=_('revisions'), total=total)
         tr.close()
+
+        if tags:
+            repo.opener.write("localtags", "".join(tags))
     finally:
         ui.progress(_('building'), None)
-        tr.release()
-
-    if tags:
-        repo.opener.write("localtags", "".join(tags))
+        release(tr, lock)
 
 @command('debugbundle', [('a', 'all', None, _('show all details'))], _('FILE'))
 def debugbundle(ui, bundlepath, all=None, **opts):
