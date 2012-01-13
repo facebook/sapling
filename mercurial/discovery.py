@@ -137,11 +137,9 @@ def prepush(repo, remote, force, revs, newbranch):
     changesets need to be pushed to the remote. Return value depends
     on circumstances:
 
-    If we are not going to push anything, return a tuple (None,
-    outgoing, common) where outgoing is 0 if there are no outgoing
-    changesets and 1 if there are, but we refuse to push them
-    (e.g. would create new remote heads). The third element "common"
-    is the list of heads of the common set between local and remote.
+    If we are not going to push anything, return a tuple (None, 1,
+    common) The third element "common" is the list of heads of the
+    common set between local and remote.
 
     Otherwise, return a tuple (changegroup, remoteheads, futureheads),
     where changegroup is a readable file-like object whose read()
