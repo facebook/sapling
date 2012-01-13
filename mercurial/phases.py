@@ -203,9 +203,10 @@ def retractboundary(repo, targetphase, nodes):
 def listphases(repo):
     """List phases root for serialisation over pushkey"""
     keys = {}
-    for phase in trackedphases:
-        for root in repo._phaseroots[phase]:
-            keys[hex(root)] = '%i' % phase
+    value = '%i' % draft
+    for root in repo._phaseroots[draft]:
+        keys[hex(root)] = value
+
     if repo.ui.configbool('phases', 'publish', True):
         # Add an extra data to let remote know we are a publishing repo.
         # Publishing repo can't just pretend they are old repo. When pushing to
@@ -264,20 +265,26 @@ def analyzeremotephases(repo, subset, roots):
     Accept unknown element input
     """
     # build list from dictionary
-    phaseroots = [[] for p in allphases]
+    draftroots = []
+    nm = repo.changelog.nodemap # to filter unknown node
     for nhex, phase in roots.iteritems():
         if nhex == 'publishing': # ignore data related to publish option
             continue
         node = bin(nhex)
         phase = int(phase)
-        if node in repo:
-            phaseroots[phase].append(node)
+        if phase == 0:
+            if node != nullid:
+                msg = _('ignoring inconsistense public root from remote: %s')
+                repo.ui.warn(msg, nhex)
+        elif phase == 1:
+            if node in nm:
+                draftroots.append(node)
+        else:
+            msg = _('ignoring unexpected root from remote: %i %s')
+            repo.ui.warn(msg, phase, nhex)
     # compute heads
-    phaseheads = [[] for p in allphases]
-    for phase in allphases[:-1]:
-        toproof = phaseroots[phase + 1]
-        revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
-                          subset, toproof, toproof, subset)
-        phaseheads[phase].extend(c.node() for c in revset)
-    return phaseheads, phaseroots
+    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
+                      subset, draftroots, draftroots, subset)
+    publicheads = [c.node() for c in revset]
+    return publicheads, draftroots
 

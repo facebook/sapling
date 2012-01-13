@@ -1555,10 +1555,10 @@ class localrepository(repo.repository):
             if remotephases and not publishing:
                 # remote is new and unpublishing
                 subset = common + added
-                rheads, rroots = phases.analyzeremotephases(self, subset,
-                                                            remotephases)
-                for phase, boundary in enumerate(rheads):
-                    phases.advanceboundary(self, phase, boundary)
+                pheads, _dr = phases.analyzeremotephases(self, subset,
+                                                         remotephases)
+                phases.advanceboundary(self, phases.public, pheads)
+                phases.advanceboundary(self, phases.draft, common + added)
             else:
                 # Remote is old or publishing all common changesets
                 # should be seen as public
@@ -1627,72 +1627,32 @@ class localrepository(repo.repository):
                     # don't push any phase data as there is nothing to push
                 else:
                     ana = phases.analyzeremotephases(self, fut, remotephases)
-                    rheads, rroots = ana
+                    pheads, droots = ana
                     ### Apply remote phase on local
                     if remotephases.get('publishing', False):
                         phases.advanceboundary(self, phases.public, fut)
                     else: # publish = False
-                        for phase, rpheads in enumerate(rheads):
-                            phases.advanceboundary(self, phase, rpheads)
+                        phases.advanceboundary(self, phases.public, pheads)
+                        phases.advanceboundary(self, phases.draft, fut)
                     ### Apply local phase on remote
                     #
                     # XXX If push failed we should use strict common and not
-                    # future to avoir pushing phase data on unknown changeset.
+                    # future to avoid pushing phase data on unknown changeset.
                     # This is to done later.
 
-                    # element we want to push
-                    topush = []
-
-                    # store details of known remote phase of several revision
-                    # /!\ set of index I holds rev where: I <= rev.phase()
-                    # /!\ public phase (index 0) is ignored
-                    remdetails = [set() for i in xrange(len(phases.allphases))]
-                    _revs = set()
-                    for relremphase in phases.trackedphases[::-1]:
-                        # we iterate backward because the list alway grows
-                        # when filled in this direction.
-                        _revs.update(self.revs('%ln::%ln',
-                                               rroots[relremphase], fut))
-                        remdetails[relremphase].update(_revs)
-
-                    for phase in phases.allphases[:-1]:
-                        # We don't need the last phase as we will never want to
-                        # move anything to it while moving phase backward.
-
-                        # Get the list of all revs on remote which are in a
-                        # phase higher than currently processed phase.
-                        relremrev = remdetails[phase + 1]
-
-                        if not relremrev:
-                            # no candidate to remote push anymore
-                            # break before any expensive revset
-                            break
-
-                        #dynamical inject appropriate phase symbol
-                        phasename = phases.phasenames[phase]
-                        odrevset = 'heads(%%ld and %s())' % phasename
-                        outdated =  self.set(odrevset, relremrev)
-                        for od in outdated:
-                            candstart = len(remdetails) - 1
-                            candstop = phase + 1
-                            candidateold = xrange(candstart, candstop, -1)
-                            for oldphase in candidateold:
-                                if od.rev() in remdetails[oldphase]:
-                                    break
-                            else: # last one: no need to search
-                                oldphase = phase + 1
-                            topush.append((oldphase, phase, od))
-
-                    # push every needed data
-                    for oldphase, newphase, newremotehead in topush:
+                    # Get the list of all revs draft on remote by public here.
+                    # XXX Beware that revset break if droots is not strictly
+                    # XXX root we may want to ensure it is but it is costly
+                    outdated =  self.set('heads((%ln::%ln) and public())',
+                                         droots, fut)
+                    for newremotehead in outdated:
                         r = remote.pushkey('phases',
                                            newremotehead.hex(),
-                                           str(oldphase), str(newphase))
+                                           str(phases.draft),
+                                           str(phases.public))
                         if not r:
-                            self.ui.warn(_('updating phase of %s '
-                                           'to %s from %s failed!\n')
-                                            % (newremotehead, newphase,
-                                               oldphase))
+                            self.ui.warn(_('updating %s to public failed!\n')
+                                            % newremotehead)
             finally:
                 locallock.release()
         finally:
