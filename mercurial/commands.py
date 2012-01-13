@@ -4222,7 +4222,7 @@ def paths(ui, repo, search=None):
      ('f', 'force', False, _('allow to move boundary backward')),
      ('r', 'rev', [], _('target revision')),
     ],
-    _('[-p|-d|-s] [-f] [-r] REV'))
+    _('[-p|-d|-s] [-f] [-r] REV...'))
 def phase(ui, repo, *revs, **opts):
     """set or show the current phase name
 
