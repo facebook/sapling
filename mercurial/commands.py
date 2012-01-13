@@ -4220,7 +4220,7 @@ def paths(ui, repo, search=None):
      ('d', 'draft', False, _('set changeset phase to draft')),
      ('s', 'secret', False, _('set changeset phase to secret')),
      ('f', 'force', False, _('allow to move boundary backward')),
-     ('r', 'rev', [], _('target revision')),
+     ('r', 'rev', [], _('target revision'), _('REV')),
     ],
     _('[-p|-d|-s] [-f] [-r] REV...'))
 def phase(ui, repo, *revs, **opts):
