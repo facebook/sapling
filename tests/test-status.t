@@ -272,3 +272,26 @@ hg status -A --change 1 and revset:
     modified
   R removed
   C deleted
+
+  $ cd ..
+
+hg status of binary file starting with '\1\n', a separator for metadata:
+
+  $ hg init repo5
+  $ cd repo5
+  $ printf '\1\nfoo' > 010a
+  $ hg ci -q -A -m 'initial checkin'
+  $ hg status -A
+  C 010a
+
+  $ printf '\1\nbar' > 010a
+  $ hg status -A
+  M 010a
+  $ hg ci -q -m 'modify 010a'
+  $ hg status -A --rev 0:1
+  M 010a
+
+  $ touch empty
+  $ hg ci -q -A -m 'add another file'
+  $ hg status -A --rev 1:2 010a
+  C 010a
