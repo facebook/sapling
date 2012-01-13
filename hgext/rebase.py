@@ -115,8 +115,8 @@ def rebase(ui, repo, **opts):
 
     lock = wlock = None
     try:
-        lock = repo.lock()
         wlock = repo.wlock()
+        lock = repo.lock()
 
         # Validate input and define rebasing points
         destf = opts.get('dest', None)
