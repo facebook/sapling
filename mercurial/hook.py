@@ -124,6 +124,14 @@ def _exthook(ui, repo, name, cmd, args, throw):
         ui.warn(_('warning: %s hook %s\n') % (name, desc))
     return r
 
+def _allhooks(ui):
+    hooks = []
+    for name, cmd in ui.configitems('hooks'):
+        if not name.startswith('priority'):
+            priority = ui.configint('hooks', 'priority.%s' % name, 0)
+            hooks.append((-priority, len(hooks), name, cmd))
+    return [(k, v) for p, o, k, v in sorted(hooks)]
+
 _redirect = False
 def redirect(state):
     global _redirect
@@ -147,7 +155,7 @@ def hook(ui, repo, name, throw=False, **args):
             pass
 
     try:
-        for hname, cmd in ui.configitems('hooks'):
+        for hname, cmd in _allhooks(ui):
             if hname.split('.')[0] != name or not cmd:
                 continue
             if util.safehasattr(cmd, '__call__'):

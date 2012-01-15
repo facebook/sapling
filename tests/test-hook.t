@@ -553,3 +553,19 @@ that is passed to pre/post hooks
   calling hook pre-identify: hooktests.verbosehook
   verbose output from hook
   cb9a9f314b8b
+
+Ensure hooks can be prioritized
+
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'pre-identify.a = python:hooktests.verbosehook' >> .hg/hgrc
+  $ echo 'pre-identify.b = python:hooktests.verbosehook' >> .hg/hgrc
+  $ echo 'priority.pre-identify.b = 1' >> .hg/hgrc
+  $ echo 'pre-identify.c = python:hooktests.verbosehook' >> .hg/hgrc
+  $ hg id --verbose
+  calling hook pre-identify.b: hooktests.verbosehook
+  verbose output from hook
+  calling hook pre-identify.a: hooktests.verbosehook
+  verbose output from hook
+  calling hook pre-identify.c: hooktests.verbosehook
+  verbose output from hook
+  cb9a9f314b8b

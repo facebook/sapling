@@ -655,7 +655,10 @@ Commands or Python functions that get automatically executed by
 various actions such as starting or finishing a commit. Multiple
 hooks can be run for the same action by appending a suffix to the
 action. Overriding a site-wide hook can be done by changing its
-value or setting it to an empty string.
+value or setting it to an empty string.  Hooks can be prioritized
+by adding a prefix of ``priority`` to the hook name on a new line
+and setting the priority.  The default priority is 0 if
+not specified.
 
 Example ``.hg/hgrc``::
 
@@ -666,6 +669,8 @@ Example ``.hg/hgrc``::
   incoming =
   incoming.email = /my/email/hook
   incoming.autobuild = /my/build/hook
+  # force autobuild hook to run before other incoming hooks
+  priority.incoming.autobuild = 1
 
 Most hooks are run with environment variables set that give useful
 additional information. For each hook below, the environment
