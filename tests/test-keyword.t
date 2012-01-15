@@ -160,12 +160,30 @@ hg cat files and symlink, no expansion
   ignore $Id$
   a
 
-Test hook execution
-
   $ diff a hooktest
 
   $ cp $HGRCPATH.nohooks $HGRCPATH
   $ rm hooktest
+
+hg status of kw-ignored binary file starting with '\1\n'
+
+  $ printf '\1\nfoo' > i
+  $ hg -q commit -Am metasep i
+  $ hg status
+  $ printf '\1\nbar' > i
+  $ hg status
+  M i
+  $ hg -q commit -m "modify metasep" i
+  $ hg status --rev 2:3
+  M i
+  $ touch empty
+  $ hg -q commit -A -m "another file"
+  $ hg status -A --rev 3:4 i
+  C i
+
+  $ hg -q strip -n 2
+
+Test hook execution
 
 bundle
 
