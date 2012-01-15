@@ -371,7 +371,7 @@ class filectx(object):
         if (fctx._filerev is None
             and (self._repo._encodefilterpats
                  # if file data starts with '\1\n', empty metadata block is
-                 # prepended, which adds 4 bytes to fielog.size().
+                 # prepended, which adds 4 bytes to filelog.size().
                  or self.size() - 4 == fctx.size())
             or self.size() == fctx.size()):
             return self._filelog.cmp(self._filenode, fctx.data())
