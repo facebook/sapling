@@ -680,7 +680,8 @@ def reposetup(ui, repo):
         # not make sense
         if (fctx._filerev is None and
             (self._repo._encodefilterpats or
-             kwt.match(fctx.path()) and not 'l' in fctx.flags()) or
+             kwt.match(fctx.path()) and not 'l' in fctx.flags() or
+             self.size() - 4 == fctx.size()) or
             self.size() == fctx.size()):
             return self._filelog.cmp(self._filenode, fctx.data())
         return True
