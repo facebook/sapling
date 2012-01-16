@@ -863,6 +863,16 @@ def user(repo, subset, x):
     """
     return author(repo, subset, x)
 
+# for internal use
+def _list(repo, subset, x):
+    s = getstring(x, "internal error")
+    if not s:
+        return []
+    if not isinstance(subset, set):
+        subset = set(subset)
+    ls = [repo[r].rev() for r in s.split('\0')]
+    return [r for r in ls if r in subset]
+
 symbols = {
     "adds": adds,
     "all": getall,
@@ -910,6 +920,7 @@ symbols = {
     "tag": tag,
     "tagged": tagged,
     "user": user,
+    "_list": _list,
 }
 
 methods = {
@@ -1095,7 +1106,7 @@ def formatspec(expr, *args):
     >>> formatspec('%d:: and not %d::', 10, 20)
     '10:: and not 20::'
     >>> formatspec('%ld or %ld', [], [1])
-    '(0-0) or 1'
+    "_list('') or 1"
     >>> formatspec('keyword(%s)', 'foo\\xe9')
     "keyword('foo\\\\xe9')"
     >>> b = lambda: 'default'
@@ -1103,7 +1114,7 @@ def formatspec(expr, *args):
     >>> formatspec('branch(%b)', b)
     "branch('default')"
     >>> formatspec('root(%ls)', ['a', 'b', 'c', 'd'])
-    "root((('a' or 'b') or ('c' or 'd')))"
+    "root(_list('a\\x00b\\x00c\\x00d'))"
     '''
 
     def quote(s):
@@ -1123,12 +1134,20 @@ def formatspec(expr, *args):
             return quote(arg.branch())
 
     def listexp(s, t):
-        "balance a list s of type t to limit parse tree depth"
         l = len(s)
         if l == 0:
-            return '(0-0)' # a minimal way to represent an empty set
-        if l == 1:
+            return "_list('')"
+        elif l == 1:
             return argtype(t, s[0])
+        elif t == 'd':
+            return "_list('%s')" % "\0".join(str(int(a)) for a in s)
+        elif t == 's':
+            return "_list('%s')" % "\0".join(s)
+        elif t == 'n':
+            return "_list('%s')" % "\0".join(nodemod.hex(a) for a in s)
+        elif t == 'b':
+            return "_list('%s')" % "\0".join(a.branch() for a in s)
+
         m = l // 2
         return '(%s or %s)' % (listexp(s[:m], t), listexp(s[m:], t))
 
