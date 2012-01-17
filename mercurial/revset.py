@@ -325,7 +325,7 @@ def _children(repo, narrow, s):
     cs = set()
     pr = repo.changelog.parentrevs
     s = set(s)
-    for r in narrow:
+    for r in xrange(len(repo)):
         for p in pr(r):
             if p in s:
                 cs.add(r)
@@ -776,7 +776,7 @@ def roots(repo, subset, x):
     """``roots(set)``
     Changesets with no parent changeset in set.
     """
-    s = getset(repo, subset, x)
+    s = getset(repo, xrange(len(repo)), x)
     cs = _children(repo, s, s)
     return [r for r in s if r not in cs]
 
