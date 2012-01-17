@@ -47,25 +47,26 @@ Rebasing D onto H detaching from C:
   |/
   o  0: 'A'
   
+  $ hg phase --force --secret 3
   $ hg rebase --detach -s 3 -d 7
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
-  $ hg tglog
-  @  7: 'D'
+  $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
+  @  7:secret 'D'
   |
-  o  6: 'H'
+  o  6:draft 'H'
   |
-  | o  5: 'G'
+  | o  5:draft 'G'
   |/|
-  o |  4: 'F'
+  o |  4:draft 'F'
   | |
-  | o  3: 'E'
+  | o  3:draft 'E'
   |/
-  | o  2: 'C'
+  | o  2:draft 'C'
   | |
-  | o  1: 'B'
+  | o  1:draft 'B'
   |/
-  o  0: 'A'
+  o  0:draft 'A'
   
   $ hg manifest
   A
@@ -185,6 +186,7 @@ Rebasing C onto H detaching from B and collapsing:
 
   $ hg clone -q -u . a a4
   $ cd a4
+  $ hg phase --force --secret 3
 
   $ hg tglog
   @  7: 'H'
@@ -206,21 +208,21 @@ Rebasing C onto H detaching from B and collapsing:
   $ hg rebase --detach --collapse -s 2 -d 7
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
-  $ hg tglog
-  @  6: 'Collapsed revision
+  $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
+  @  6:secret 'Collapsed revision
   |  * C
   |  * D'
-  o  5: 'H'
+  o  5:draft 'H'
   |
-  | o  4: 'G'
+  | o  4:draft 'G'
   |/|
-  o |  3: 'F'
+  o |  3:draft 'F'
   | |
-  | o  2: 'E'
+  | o  2:draft 'E'
   |/
-  | o  1: 'B'
+  | o  1:draft 'B'
   |/
-  o  0: 'A'
+  o  0:draft 'A'
   
   $ hg manifest
   A
@@ -360,13 +362,14 @@ Verify that target is not selected as external rev (issue3085)
 
   $ cd ..
 
-Ensure --continue restores a correct state (issue3046):
+Ensure --continue restores a correct state (issue3046) and phase:
   $ hg clone -q a a7
   $ cd a7
   $ hg up -q 3
   $ echo 'H2' > H
   $ hg ci -A -m 'H2'
   adding H
+  $ hg phase --force --secret 8
   $ hg rebase -s 8 -d 7 --detach --config ui.merge=internal:fail
   merging H
   warning: conflicts during merge.
@@ -376,23 +379,23 @@ Ensure --continue restores a correct state (issue3046):
   $ hg resolve --all -t internal:local
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)
-  $ hg tglog
-  @  8: 'H2'
+  $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
+  @  8:secret 'H2'
   |
-  o  7: 'H'
+  o  7:draft 'H'
   |
-  | o  6: 'G'
+  | o  6:draft 'G'
   |/|
-  o |  5: 'F'
+  o |  5:draft 'F'
   | |
-  | o  4: 'E'
+  | o  4:draft 'E'
   |/
-  | o  3: 'D'
+  | o  3:draft 'D'
   | |
-  | o  2: 'C'
+  | o  2:draft 'C'
   | |
-  | o  1: 'B'
+  | o  1:draft 'B'
   |/
-  o  0: 'A'
+  o  0:draft 'A'
   
 

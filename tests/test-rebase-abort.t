@@ -7,7 +7,7 @@
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   > EOF
 
 
@@ -35,16 +35,18 @@
   $ mv common.new common
   $ hg ci -m L2
 
+  $ hg phase --force --secret 2
+
   $ hg tglog
-  @  4: 'L2'
+  @  4:draft 'L2'
   |
-  o  3: 'L1'
+  o  3:draft 'L1'
   |
-  | o  2: 'C3'
+  | o  2:secret 'C3'
   |/
-  o  1: 'C2'
+  o  1:draft 'C2'
   |
-  o  0: 'C1'
+  o  0:draft 'C1'
   
 
 Conflicting rebase:
@@ -63,15 +65,15 @@ Abort:
   rebase aborted
 
   $ hg tglog
-  @  4: 'L2'
+  @  4:draft 'L2'
   |
-  o  3: 'L1'
+  o  3:draft 'L1'
   |
-  | o  2: 'C3'
+  | o  2:secret 'C3'
   |/
-  o  1: 'C2'
+  o  1:draft 'C2'
   |
-  o  0: 'C1'
+  o  0:draft 'C1'
   
   $ cd ..
 
@@ -104,18 +106,21 @@ Constrcut new repo:
   $ hg ci -Am C1
   adding c
 
+  $ hg phase --force --secret 1
+  $ hg phase --public 1
+
 Rebase and abort without generating new changesets:
 
   $ hg tglog
-  @  4: 'C1'
+  @  4:draft 'C1'
   |
-  o  3: 'B bis'
+  o  3:draft 'B bis'
   |
-  | o  2: 'C'
+  | o  2:secret 'C'
   | |
-  | o  1: 'B'
+  | o  1:public 'B'
   |/
-  o  0: 'A'
+  o  0:public 'A'
   
   $ hg rebase -b 4 -d 2
   merging c
@@ -125,27 +130,27 @@ Rebase and abort without generating new changesets:
   [255]
 
   $ hg tglog
-  @  4: 'C1'
+  @  4:draft 'C1'
   |
-  o  3: 'B bis'
+  o  3:draft 'B bis'
   |
-  | @  2: 'C'
+  | @  2:secret 'C'
   | |
-  | o  1: 'B'
+  | o  1:public 'B'
   |/
-  o  0: 'A'
+  o  0:public 'A'
   
   $ hg rebase -a
   rebase aborted
 
   $ hg tglog
-  @  4: 'C1'
+  @  4:draft 'C1'
   |
-  o  3: 'B bis'
+  o  3:draft 'B bis'
   |
-  | o  2: 'C'
+  | o  2:secret 'C'
   | |
-  | o  1: 'B'
+  | o  1:public 'B'
   |/
-  o  0: 'A'
+  o  0:public 'A'
   

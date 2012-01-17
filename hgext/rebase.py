@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil
+from mercurial import extensions, patch, scmutil, phases
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -372,6 +372,10 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         newrev = repo.commit(text=commitmsg, user=ctx.user(),
                              date=ctx.date(), extra=extra, editor=editor)
         repo.dirstate.setbranch(repo[newrev].branch())
+        targetphase = max(ctx.phase(), phases.draft)
+        # retractboundary doesn't overwrite upper phase inherited from parent
+        newnode = repo[newrev].node()
+        phases.retractboundary(repo, targetphase, [newnode])
         return newrev
     except util.Abort:
         # Invalidate the previous setparents
@@ -552,7 +556,13 @@ def restorestatus(repo):
 
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
-    if set(repo.changelog.descendants(target)) - set(state.values()):
+    descendants = repo.changelog.descendants
+    ispublic = lambda r: repo._phaserev[r] == phases.public
+    if filter(ispublic, descendants(target)):
+        repo.ui.warn(_("warning: immutable rebased changeset detected, "
+                       "can't abort\n"))
+        return -1
+    elif set(descendants(target)) - set(state.values()):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
                                                     "can't abort\n"))
         return -1

@@ -8,6 +8,7 @@
   > 
   > [alias]
   > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
+  > tglogp = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   > EOF
 
 Create repo a:
@@ -43,28 +44,31 @@ Create repo a:
   $ cd ..
 
 
-Rebasing B onto H:
+Rebasing B onto H and collapsing changesets with different phases:
+
 
   $ hg clone -q -u 3 a a1
   $ cd a1
 
+  $ hg phase --force --secret 3
+
   $ hg rebase --collapse --keepbranches
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
-  $ hg tglog
-  @  5: 'Collapsed revision
+  $ hg tglogp
+  @  5:secret 'Collapsed revision
   |  * B
   |  * C
   |  * D'
-  o  4: 'H'
+  o  4:draft 'H'
   |
-  | o  3: 'G'
+  | o  3:draft 'G'
   |/|
-  o |  2: 'F'
+  o |  2:draft 'F'
   | |
-  | o  1: 'E'
+  | o  1:draft 'E'
   |/
-  o  0: 'A'
+  o  0:draft 'A'
   
   $ hg manifest
   A
@@ -82,6 +86,7 @@ Rebasing E onto H:
   $ hg clone -q -u . a a2
   $ cd a2
 
+  $ hg phase --force --secret 6
   $ hg rebase --source 4 --collapse
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 

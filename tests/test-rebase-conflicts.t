@@ -7,7 +7,7 @@
   > publish=False
   > 
   > [alias]
-  > tglog = log -G --template "{rev}: '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}:{phase} '{desc}' {branches}\n"
   > EOF
 
   $ hg init a
@@ -37,18 +37,20 @@
   $ hg add extra2
   $ hg ci -m L3
 
+  $ hg phase --force --secret 4
+
   $ hg tglog
-  @  5: 'L3'
+  @  5:secret 'L3'
   |
-  o  4: 'L2'
+  o  4:secret 'L2'
   |
-  o  3: 'L1'
+  o  3:draft 'L1'
   |
-  | o  2: 'C3'
+  | o  2:draft 'C3'
   |/
-  o  1: 'C2'
+  o  1:draft 'C2'
   |
-  o  0: 'C1'
+  o  0:draft 'C1'
   
 Try to call --continue:
 
@@ -79,17 +81,17 @@ Conclude rebase:
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  5: 'L3'
+  @  5:secret 'L3'
   |
-  o  4: 'L2'
+  o  4:secret 'L2'
   |
-  o  3: 'L1'
+  o  3:draft 'L1'
   |
-  o  2: 'C3'
+  o  2:draft 'C3'
   |
-  o  1: 'C2'
+  o  1:draft 'C2'
   |
-  o  0: 'C1'
+  o  0:draft 'C1'
   
 Check correctness:
 
