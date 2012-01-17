@@ -1,7 +1,7 @@
 changeset = 'changeset:   {rev}:{node|short}\n{branches}{bookmarks}{tags}{parents}user:        {author}\ndate:        {date|date}\nsummary:     {desc|firstline}\n\n'
 changeset_quiet = '{rev}:{node|short}\n'
 changeset_verbose = 'changeset:   {rev}:{node|short}\n{branches}{bookmarks}{tags}{parents}user:        {author}\ndate:        {date|date}\n{files}{file_copies_switch}description:\n{desc|strip}\n\n\n'
-changeset_debug = 'changeset:   {rev}:{node}\n{branches}{bookmarks}{tags}{parents}{manifest}user:        {author}\ndate:        {date|date}\n{file_mods}{file_adds}{file_dels}{file_copies_switch}{extras}description:\n{desc|strip}\n\n\n'
+changeset_debug = 'changeset:   {rev}:{node}\n{branches}{bookmarks}{tags}phase:       {phase}\n{parents}{manifest}user:        {author}\ndate:        {date|date}\n{file_mods}{file_adds}{file_dels}{file_copies_switch}{extras}description:\n{desc|strip}\n\n\n'
 start_files = 'files:      '
 file = ' {file}'
 end_files = '\n'

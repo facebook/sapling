@@ -72,6 +72,7 @@ Look for extra:source
   $ hg log --debug -r tip
   changeset:   7:d2e44c99fd3f31c176ea4efb9eca9f6306c81756
   tag:         tip
+  phase:       draft
   parent:      0:68795b066622ca79a25816a662041d8f78f3cd9e
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    7:5d59766436fd8fbcd38e7bebef0f6eaf3eebe637
@@ -222,6 +223,7 @@ Graft again onto another branch should preserve the original source
   $ hg log --debug -r tip
   changeset:   13:39bb1d13572759bd1e6fc874fed1b12ece047a18
   tag:         tip
+  phase:       draft
   parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    13:0780e055d8f4cd12eadd5a2719481648f336f7a9

@@ -130,6 +130,7 @@ Test for invalid branch cache:
   changeset:   4:adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6
   branch:      foo
   tag:         tip
+  phase:       draft
   parent:      1:6c0e42da283a56b5edc5b4fadb491365ec7f5fa8
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    1:8c342a37dfba0b3d3ce073562a00d8a813c54ffe

@@ -672,6 +672,9 @@ class changeset_printer(object):
         for tag in self.repo.nodetags(changenode):
             self.ui.write(_("tag:         %s\n") % tag,
                           label='log.tag')
+        if self.ui.debugflag and ctx.phase():
+            self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
+                          label='log.phase')
         for parent in parents:
             self.ui.write(_("parent:      %d:%s\n") % parent,
                           label='log.parent')
