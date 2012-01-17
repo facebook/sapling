@@ -22,6 +22,24 @@ Create a repo with some stuff in it:
   $ hg merge -q default --tool internal:local
   $ hg branch -q default
   $ hg ci -m6
+  $ hg phase --public 3
+  $ hg phase --force --secret 6
+
+  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}.{phase}: {desc}\n'
+  @    test@6.secret: 6
+  |\
+  | o  test@5.draft: 5
+  | |
+  o |  test@4.draft: 4
+  |/
+  o  baz@3.public: 3
+  |
+  o  test@2.public: 2
+  |
+  o  bar@1.public: 1
+  |
+  o  test@0.public: 0
+  
 
 Need to specify a rev:
 
@@ -181,30 +199,30 @@ Compare with original:
 
 View graph:
 
-  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}: {desc}\n'
-  @  test@11: 3
+  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}.{phase}: {desc}\n'
+  @  test@11.draft: 3
   |
-  o  test@10: 4
+  o  test@10.draft: 4
   |
-  o  test@9: 5
+  o  test@9.draft: 5
   |
-  o  bar@8: 1
+  o  bar@8.draft: 1
   |
-  o  foo@7: 2
+  o  foo@7.draft: 2
   |
-  | o    test@6: 6
+  | o    test@6.secret: 6
   | |\
-  | | o  test@5: 5
+  | | o  test@5.draft: 5
   | | |
-  | o |  test@4: 4
+  | o |  test@4.draft: 4
   | |/
-  | o  baz@3: 3
+  | o  baz@3.public: 3
   | |
-  | o  test@2: 2
+  | o  test@2.public: 2
   | |
-  | o  bar@1: 1
+  | o  bar@1.public: 1
   |/
-  o  test@0: 0
+  o  test@0.public: 0
   
 Graft again onto another branch should preserve the original source
   $ hg up -q 0
