@@ -460,9 +460,13 @@ def updatemq(repo, state, skipped, **opts):
                 mq.qimport(repo, (), patchname=name, git=isgit,
                                 rev=[str(state[rev])])
 
-        # restore old series to preserve guards
-        mq.fullseries = original_series
-        mq.series_dirty = True
+        # restore missing guards
+        for s in original_series:
+            pname = mq.guard_re.split(s, 1)[0]
+            if pname in mq.fullseries:
+                repo.ui.debug('restoring guard for patch %s' % (pname))
+                mq.fullseries[mq.fullseries.index(pname)] = s
+                mq.series_dirty = True
         mq.savedirty()
 
 def updatebookmarks(repo, nstate, originalbookmarks, **opts):

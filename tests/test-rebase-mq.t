@@ -244,7 +244,7 @@ Rebase with guards
   $ hg ci -Am a
   adding a
 
-Create mq repo with guarded patches foo and bar:
+Create mq repo with guarded patches foo and bar and empty patch:
 
   $ hg qinit
   $ hg qnew foo
@@ -256,6 +256,8 @@ Create mq repo with guarded patches foo and bar:
   popping foo
   patch queue now empty
 
+  $ hg qnew empty-important -m 'important commit message'
+
   $ hg qnew bar
   $ hg qguard bar +baz
   $ echo bar > bar
@@ -263,13 +265,16 @@ Create mq repo with guarded patches foo and bar:
   $ hg qref
 
   $ hg qguard -l
+  empty-important: unguarded
   bar: +baz
   foo: +baz
 
   $ hg tglog
-  @  1:* '[mq]: bar' tags: bar qbase qtip tip (glob)
+  @  2: '[mq]: bar' tags: bar qtip tip
   |
-  o  0:* 'a' tags: qparent (glob)
+  o  1: 'important commit message' tags: empty-important qbase
+  |
+  o  0: 'a' tags: qparent
   
 Create new head to rebase bar onto:
 
@@ -279,28 +284,35 @@ Create new head to rebase bar onto:
   $ hg add b
   $ hg ci -m b
   created new head
-  $ hg up -C 1
+  $ hg up -C 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg qref
 
   $ hg tglog
-  @  2:* '[mq]: bar' tags: bar qbase qtip tip (glob)
+  @  3: '[mq]: bar' tags: bar qtip tip
   |
-  | o  1:* 'b' tags: (glob)
+  | o  2: 'b' tags:
+  | |
+  o |  1: 'important commit message' tags: empty-important qbase
   |/
-  o  0:* 'a' tags: qparent (glob)
+  o  0: 'a' tags: qparent
   
 
-Rebase bar (make sure series order is preserved):
+Rebase bar (make sure series order is preserved and empty-important also is
+removed from the series):
 
   $ hg qseries
+  empty-important
   bar
   foo
-  $ hg -q rebase -d 1
+  $ [ -f .hg/patches/empty-important ]
+  $ hg -q rebase -d 2
   $ hg qseries
   bar
   foo
+  $ [ -f .hg/patches/empty-important ]
+  [1]
 
   $ hg qguard -l
   bar: +baz
