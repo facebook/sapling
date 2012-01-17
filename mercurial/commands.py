@@ -4237,6 +4237,8 @@ def phase(ui, repo, *revs, **opts):
     lower phase to an higher phase. Phases are ordered as follows::
 
         public < draft < secret
+
+    Return 0 on success, 1 if no phases were changed.
     """
     # search for a unique phase argument
     targetphase = None
@@ -4253,6 +4255,7 @@ def phase(ui, repo, *revs, **opts):
         raise util.Abort(_('no revisions specified!'))
 
     lock = None
+    ret = 0
     if targetphase is None:
         # display
         for ctx in repo.set('%lr', revs):
@@ -4264,11 +4267,22 @@ def phase(ui, repo, *revs, **opts):
             nodes = [ctx.node() for ctx in repo.set('%lr', revs)]
             if not nodes:
                 raise util.Abort(_('empty revision set'))
+            olddata = repo._phaserev[:]
             phases.advanceboundary(repo, targetphase, nodes)
             if opts['force']:
                 phases.retractboundary(repo, targetphase, nodes)
         finally:
             lock.release()
+        if olddata is not None:
+            changes = 0
+            newdata = repo._phaserev
+            changes = sum(o != newdata[i] for i, o in enumerate(olddata))
+            if changes:
+                ui.note(_('phase change for %i changesets\n') % changes)
+            else:
+                ui.warn(_('no phases changed\n'))
+                ret = 1
+        return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
