@@ -3138,6 +3138,13 @@ def qqueue(ui, repo, name=None, **opts):
             raise util.Abort(_('use --create to create a new queue'))
         _setactive(name)
 
+def mqphasedefaults(repo, roots):
+    """callback used to set mq changeset as secret when no phase data exists"""
+    if repo.mq.applied:
+        qbase = repo[repo.mq.applied[0]]
+        roots[phases.secret].add(qbase.node())
+    return roots
+
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         @util.propertycache
@@ -3236,6 +3243,8 @@ def reposetup(ui, repo):
 
     if repo.local():
         repo.__class__ = mqrepo
+
+        repo._phasedefaults.append(mqphasedefaults)
 
 def mqimport(orig, ui, repo, *args, **kwargs):
     if (hasattr(repo, 'abortifwdirpatched')
