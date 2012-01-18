@@ -61,6 +61,19 @@ class config(object):
         self._source.update(src._source)
     def get(self, section, item, default=None):
         return self._data.get(section, {}).get(item, default)
+
+    def backup(self, section, item):
+        """return a tuple allowing restore to reinstall a previous valuesi
+
+        The main reason we need it is because it handle the "no data" case.
+        """
+        try:
+            value = self._data[section][item]
+            source = self.source(section, item)
+            return (section, item, value, source)
+        except KeyError:
+            return (section, item)
+
     def source(self, section, item):
         return self._source.get((section, item), "")
     def sections(self):
@@ -72,6 +85,20 @@ class config(object):
             self._data[section] = sortdict()
         self._data[section][item] = value
         self._source[(section, item)] = source
+
+    def restore(self, data):
+        """restore data returned by self.backup"""
+        if len(data) == 4:
+            # restore old data
+            section, item, value, source = data
+            self._data[section][item] = value
+            self._source[(section, item)] = source
+        else:
+            # no data before, remove everything
+            section, item = data
+            if section in self._data:
+                del self._data[section][item]
+            self._source.pop((section, item), None)
 
     def parse(self, src, data, sections=None, remap=None, include=None):
         sectionre = re.compile(r'\[([^\[]+)\]')

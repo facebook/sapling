@@ -142,6 +142,15 @@ class ui(object):
             self._trustusers.update(self.configlist('trusted', 'users'))
             self._trustgroups.update(self.configlist('trusted', 'groups'))
 
+    def backupconfig(self, section, item):
+        return (self._ocfg.backup(section, item),
+                self._tcfg.backup(section, item),
+                self._ucfg.backup(section, item),)
+    def restoreconfig(self, data):
+        self._ocfg.restore(data[0])
+        self._tcfg.restore(data[1])
+        self._ucfg.restore(data[2])
+
     def setconfig(self, section, name, value, overlay=True):
         if overlay:
             self._ocfg.set(section, name, value)
