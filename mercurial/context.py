@@ -900,16 +900,20 @@ class workingctx(changectx):
         finally:
             wlock.release()
 
-    def forget(self, files):
+    def forget(self, files, prefix=""):
+        join = lambda f: os.path.join(prefix, f)
         wlock = self._repo.wlock()
         try:
+            rejected = []
             for f in files:
                 if self._repo.dirstate[f] != 'a':
                     self._repo.dirstate.remove(f)
                 elif f not in self._repo.dirstate:
-                    self._repo.ui.warn(_("%s not tracked!\n") % f)
+                    self._repo.ui.warn(_("%s not tracked!\n") % join(f))
+                    rejected.append(f)
                 else:
                     self._repo.dirstate.drop(f)
+            return rejected
         finally:
             wlock.release()
 

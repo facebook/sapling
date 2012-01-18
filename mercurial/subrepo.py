@@ -360,8 +360,8 @@ class abstractsubrepo(object):
         '''
         pass
 
-    def forget(self, files):
-        pass
+    def forget(self, ui, match, prefix):
+        return []
 
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
@@ -561,9 +561,9 @@ class hgsubrepo(abstractsubrepo):
         ctx = self._repo[None]
         return ctx.walk(match)
 
-    def forget(self, files):
-        ctx = self._repo[None]
-        ctx.forget(files)
+    def forget(self, ui, match, prefix):
+        return cmdutil.forget(ui, self._repo, match,
+                              os.path.join(prefix, self._path), True)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):

@@ -1201,6 +1201,48 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
         bad.extend(f for f in rejected if f in match.files())
     return bad
 
+def forget(ui, repo, match, prefix, explicitonly):
+    join = lambda f: os.path.join(prefix, f)
+    bad = []
+    oldbad = match.bad
+    match.bad = lambda x, y: bad.append(x) or oldbad(x, y)
+    wctx = repo[None]
+    forgot = []
+    s = repo.status(match=match, clean=True)
+    forget = sorted(s[0] + s[1] + s[3] + s[6])
+    if explicitonly:
+        forget = [f for f in forget if match.exact(f)]
+
+    for subpath in wctx.substate:
+        sub = wctx.sub(subpath)
+        try:
+            submatch = matchmod.narrowmatcher(subpath, match)
+            subbad, subforgot = sub.forget(ui, submatch, prefix)
+            bad.extend([subpath + '/' + f for f in subbad])
+            forgot.extend([subpath + '/' + f for f in subforgot])
+        except error.LookupError:
+            ui.status(_("skipping missing subrepository: %s\n")
+                           % join(subpath))
+
+    for f in match.files():
+        if match.exact(f) or not explicitonly:
+            if f not in repo.dirstate and not os.path.isdir(match.rel(join(f))):
+                if f not in forgot:
+                    if os.path.exists(match.rel(join(f))):
+                        ui.warn(_('not removing %s: '
+                                  'file is already untracked\n')
+                                % match.rel(join(f)))
+                    bad.append(f)
+
+    for f in forget:
+        if ui.verbose or not match.exact(f):
+            ui.status(_('removing %s\n') % match.rel(join(f)))
+
+    rejected = wctx.forget(forget, prefix)
+    bad.extend(f for f in rejected if f in match.files())
+    forgot.extend(forget)
+    return bad, forgot
+
 def duplicatecopies(repo, rev, p1):
     "Reproduce copies found in the source revision in the dirstate for grafts"
     for dst, src in copies.pathcopies(repo[p1], repo[rev]).iteritems():

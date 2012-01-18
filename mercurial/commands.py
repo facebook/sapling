@@ -13,7 +13,6 @@ import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
 import patch, help, url, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
-import match as matchmod
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
@@ -2449,46 +2448,9 @@ def forget(ui, repo, *pats, **opts):
     if not pats:
         raise util.Abort(_('no files specified'))
 
-    wctx = repo[None]
-    m = scmutil.match(wctx, pats, opts)
-    s = repo.status(match=m, clean=True)
-    forget = sorted(s[0] + s[1] + s[3] + s[6])
-    subforget = {}
-    errs = 0
-
-    for subpath in wctx.substate:
-        sub = wctx.sub(subpath)
-        try:
-            submatch = matchmod.narrowmatcher(subpath, m)
-            for fsub in sub.walk(submatch):
-                if submatch.exact(fsub):
-                    subforget[subpath + '/' + fsub] = (fsub, sub)
-        except error.LookupError:
-            ui.status(_("skipping missing subrepository: %s\n") % subpath)
-
-    for f in m.files():
-        if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
-            if f not in subforget:
-                if os.path.exists(m.rel(f)):
-                    ui.warn(_('not removing %s: file is already untracked\n')
-                            % m.rel(f))
-                errs = 1
-
-    for f in forget:
-        if ui.verbose or not m.exact(f):
-            ui.status(_('removing %s\n') % m.rel(f))
-
-    if ui.verbose:
-        for f in sorted(subforget.keys()):
-            ui.status(_('removing %s\n') % m.rel(f))
-
-    wctx.forget(forget)
-
-    for f in sorted(subforget.keys()):
-        fsub, sub = subforget[f]
-        sub.forget([fsub])
-
-    return errs
+    m = scmutil.match(repo[None], pats, opts)
+    rejected = cmdutil.forget(ui, repo, m, prefix="", explicitonly=False)[0]
+    return rejected and 1 or 0
 
 @command(
     'graft',
