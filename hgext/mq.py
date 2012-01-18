@@ -46,7 +46,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, url, error
+from mercurial import repair, extensions, url, error, phases
 from mercurial import patch as patchmod
 import os, re, errno, shutil
 
@@ -750,6 +750,7 @@ class queue(object):
             for p in patches:
                 os.unlink(self.join(p))
 
+        qfinished = []
         if numrevs:
             qfinished = self.applied[:numrevs]
             del self.applied[:numrevs]
@@ -776,6 +777,7 @@ class queue(object):
 
         self.parseseries()
         self.seriesdirty = True
+        return [entry.node for entry in qfinished]
 
     def _revpatches(self, repo, revs):
         firstrev = repo[self.applied[0].node].rev()
@@ -803,7 +805,11 @@ class queue(object):
 
     def finish(self, repo, revs):
         patches = self._revpatches(repo, sorted(revs))
-        self._cleanup(patches, len(patches))
+        qfinished = self._cleanup(patches, len(patches))
+        if qfinished:
+            oldqbase = repo[qfinished[0]]
+            if oldqbase.p1().phase() < phases.secret:
+                phases.advanceboundary(repo, phases.draft, [oldqbase.node()])
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
@@ -2918,9 +2924,15 @@ def finish(ui, repo, *revrange, **opts):
     revs = scmutil.revrange(repo, revrange)
     if repo['.'].rev() in revs and repo[None].files():
         ui.warn(_('warning: uncommitted changes in the working directory\n'))
-
-    q.finish(repo, revs)
-    q.savedirty()
+    # queue.finish may changes phases but leave the responsability to lock the
+    # repo to the caller to avoid deadlock with wlock. This command code is
+    # responsability for this locking.
+    lock = repo.lock()
+    try:
+        q.finish(repo, revs)
+        q.savedirty()
+    finally:
+        lock.release()
     return 0
 
 @command("qqueue",
