@@ -546,6 +546,14 @@ Now "update check" is happy.
   getting changed largefiles
   1 largefiles updated, 0 removed
 
+Test removing empty largefiles directories on update
+  $ test -d sub2 && echo "sub2 exists"
+  sub2 exists
+  $ hg update -q null
+  $ test -d sub2 && echo "error: sub2 should not exist anymore"
+  [1]
+  $ hg update -q
+
 "revert" works on largefiles (and normal files too).
   $ echo hack3 >> normal3
   $ echo hack4 >> sub/normal4

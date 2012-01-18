@@ -466,7 +466,7 @@ def _updatelfile(repo, lfdirstate, lfile):
         # largefile is converted back to a normal file: the standin
         # disappears, but a new (normal) file appears as the lfile.
         if os.path.exists(abslfile) and lfile not in repo[None]:
-            os.unlink(abslfile)
+            util.unlinkpath(abslfile)
             ret = -1
     state = repo.dirstate[lfutil.standin(lfile)]
     if state == 'n':
