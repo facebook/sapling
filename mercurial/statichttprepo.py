@@ -86,6 +86,7 @@ class statichttprepository(localrepo.localrepository):
 
         opener = build_opener(ui, authinfo)
         self.opener = opener(self.path)
+        self._phasedefaults = []
 
         try:
             requirements = scmutil.readrequires(self.opener, self.supported)

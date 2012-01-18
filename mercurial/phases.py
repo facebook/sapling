@@ -109,7 +109,6 @@ phasenames = ['public', 'draft', 'secret']
 def readroots(repo):
     """Read phase roots from disk"""
     roots = [set() for i in allphases]
-    roots[0].add(nullid)
     try:
         f = repo.sopener('phaseroots')
         try:
@@ -121,6 +120,8 @@ def readroots(repo):
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
+        for f in repo._phasedefaults:
+            roots = f(repo, roots)
     return roots
 
 def writeroots(repo):

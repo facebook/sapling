@@ -37,6 +37,10 @@ class localrepository(repo.repository):
         self.baseui = baseui
         self.ui = baseui.copy()
         self._dirtyphases = False
+        # A list of callback to shape the phase if no data were found.
+        # Callback are in the form: func(repo, roots) --> processed root.
+        # This list it to be filled by extension during repo setup
+        self._phasedefaults = []
 
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
