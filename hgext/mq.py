@@ -2055,13 +2055,18 @@ def clone(ui, source, dest=None, **opts):
     Return 0 on success.
     '''
     def patchdir(repo):
+        """compute a patch repo url from a repo object"""
         url = repo.url()
         if url.endswith('/'):
             url = url[:-1]
         return url + '/.hg/patches'
+
+    # main repo (destination and sources)
     if dest is None:
         dest = hg.defaultdest(source)
     sr = hg.repository(hg.remoteui(ui, opts), ui.expandpath(source))
+
+    # patches repo (source only)
     if opts.get('patches'):
         patchespath = ui.expandpath(opts.get('patches'))
     else:
@@ -2084,16 +2089,19 @@ def clone(ui, source, dest=None, **opts):
             qbase = sr.lookup('qbase')
         except error.RepoError:
             pass
+
     ui.note(_('cloning main repository\n'))
     sr, dr = hg.clone(ui, opts, sr.url(), dest,
                       pull=opts.get('pull'),
                       rev=destrev,
                       update=False,
                       stream=opts.get('uncompressed'))
+
     ui.note(_('cloning patch repository\n'))
     hg.clone(ui, opts, opts.get('patches') or patchdir(sr), patchdir(dr),
              pull=opts.get('pull'), update=not opts.get('noupdate'),
              stream=opts.get('uncompressed'))
+
     if dr.local():
         if qbase:
             ui.note(_('stripping applied patches from destination '
