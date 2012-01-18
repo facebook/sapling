@@ -279,7 +279,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             if self.dir_:
                 self.rmtree(self.dir_, True)
 
-    srclock = destwlock = destlock = dircleanup = None
+    srclock = destlock = dircleanup = None
     try:
         abspath = origsource
         if islocal(origsource):
@@ -325,11 +325,6 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             # we need to re-init the repo after manually copying the data
             # into it
             destrepo = repository(remoteui(ui, peeropts), dest)
-            # we need full recursive locking of the new repo instance
-            destwlock = destrepo.wlock()
-            if destlock:
-                destlock.release() # a little race condition - but no deadlock
-            destlock = destrepo.lock()
             srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
@@ -406,7 +401,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
         return srcrepo, destrepo
     finally:
-        release(srclock, destlock, destwlock)
+        release(srclock, destlock)
         if dircleanup is not None:
             dircleanup.cleanup()
 
