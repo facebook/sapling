@@ -117,14 +117,14 @@ def inusercache(ui, hash):
 def findfile(repo, hash):
     if instore(repo, hash):
         repo.ui.note(_('Found %s in store\n') % hash)
+        return storepath(repo, hash)
     elif inusercache(repo.ui, hash):
         repo.ui.note(_('Found %s in system cache\n') % hash)
         path = storepath(repo, hash)
         util.makedirs(os.path.dirname(path))
         link(usercachepath(repo.ui, hash), path)
-    else:
-        return None
-    return storepath(repo, hash)
+        return path
+    return None
 
 class largefiles_dirstate(dirstate.dirstate):
     def __getitem__(self, key):
