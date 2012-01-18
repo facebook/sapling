@@ -174,7 +174,7 @@ def add(ui, repo, *pats, **opts):
 
     m = scmutil.match(repo[None], pats, opts)
     rejected = cmdutil.add(ui, repo, m, opts.get('dry_run'),
-                           opts.get('subrepos'), prefix="")
+                           opts.get('subrepos'), prefix="", explicitonly=False)
     return rejected and 1 or 0
 
 @command('addremove',

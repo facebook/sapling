@@ -193,11 +193,6 @@ Test explicit path commands within subrepos: add/forget
   $ hg status -S
   ? foo/bar/z2.txt
   $ hg add foo/bar/z2.txt
-This is expected to add the file, but is currently broken
-  $ hg status -S
-  ? foo/bar/z2.txt
-When fixed, remove the next two commands
-  $ hg add -R foo/bar foo/bar/z2.txt
   $ hg status -S
   A foo/bar/z2.txt
 This is expected to forget the file, but is currently broken

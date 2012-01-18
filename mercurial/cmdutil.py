@@ -1162,7 +1162,7 @@ def walkchangerevs(repo, match, opts, prepare):
                 yield change(rev)
     return iterate()
 
-def add(ui, repo, match, dryrun, listsubrepos, prefix):
+def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
     bad = []
     oldbad = match.bad
@@ -1175,7 +1175,7 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
         cca = scmutil.casecollisionauditor(ui, abort, wctx)
     for f in repo.walk(match):
         exact = match.exact(f)
-        if exact or f not in repo.dirstate:
+        if exact or not explicitonly and f not in repo.dirstate:
             if cca:
                 cca(f)
             names.append(f)
@@ -1187,11 +1187,11 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix):
         try:
             submatch = matchmod.narrowmatcher(subpath, match)
             if listsubrepos:
-                bad.extend(sub.add(ui, submatch, dryrun, prefix))
+                bad.extend(sub.add(ui, submatch, dryrun, listsubrepos, prefix,
+                                   False))
             else:
-                for f in sub.walk(submatch):
-                    if submatch.exact(f):
-                        bad.extend(sub.add(ui, submatch, dryrun, prefix))
+                bad.extend(sub.add(ui, submatch, dryrun, listsubrepos, prefix,
+                                   True))
         except error.LookupError:
             ui.status(_("skipping missing subrepository: %s\n")
                            % join(subpath))
