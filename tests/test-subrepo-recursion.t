@@ -188,6 +188,30 @@ Cleanup and final commit:
   committing subrepository foo
   committing subrepository foo/bar (glob)
 
+Test explicit path commands within subrepos: add/forget
+  $ echo z1 > foo/bar/z2.txt
+  $ hg status -S
+  ? foo/bar/z2.txt
+  $ hg add foo/bar/z2.txt
+This is expected to add the file, but is currently broken
+  $ hg status -S
+  ? foo/bar/z2.txt
+When fixed, remove the next two commands
+  $ hg add -R foo/bar foo/bar/z2.txt
+  $ hg status -S
+  A foo/bar/z2.txt
+This is expected to forget the file, but is currently broken
+  $ hg forget foo/bar/z2.txt
+  not removing foo/bar/z2.txt: file is already untracked
+  [1]
+  $ hg status -S
+  A foo/bar/z2.txt
+When fixed, remove the next two commands
+  $ hg forget -R foo/bar foo/bar/z2.txt
+  $ hg status -S
+  ? foo/bar/z2.txt
+  $ rm foo/bar/z2.txt
+
 Log with the relationships between repo and its subrepo:
 
   $ hg log --template '{rev}:{node|short} {desc}\n'
