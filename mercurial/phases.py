@@ -141,8 +141,9 @@ def filterunknown(repo, phaseroots=None):
     """
     if phaseroots is None:
         phaseroots = repo._phaseroots
+    nodemap = repo.changelog.nodemap # to filter unknown nodes
     for phase, nodes in enumerate(phaseroots):
-        missing = [node for node in nodes if node not in repo]
+        missing = [node for node in nodes if node not in nodemap]
         if missing:
             for mnode in missing:
                 msg = _('Removing unknown node %(n)s from %(p)i-phase boundary')
@@ -266,7 +267,7 @@ def analyzeremotephases(repo, subset, roots):
     """
     # build list from dictionary
     draftroots = []
-    nm = repo.changelog.nodemap # to filter unknown node
+    nodemap = repo.changelog.nodemap # to filter unknown nodes
     for nhex, phase in roots.iteritems():
         if nhex == 'publishing': # ignore data related to publish option
             continue
@@ -277,7 +278,7 @@ def analyzeremotephases(repo, subset, roots):
                 msg = _('ignoring inconsistense public root from remote: %s')
                 repo.ui.warn(msg, nhex)
         elif phase == 1:
-            if node in nm:
+            if node in nodemap:
                 draftroots.append(node)
         else:
             msg = _('ignoring unexpected root from remote: %i %s')
