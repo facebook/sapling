@@ -37,6 +37,8 @@ repo as "default" path in .hg/hgrc.
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
+  caching new largefiles
+  0 largefiles cached
 
 Update working directory to "tip", which requires largefile("large"),
 but there is no cache file for it.  So, hg must treat it as

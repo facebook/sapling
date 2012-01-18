@@ -460,6 +460,8 @@ revisions (this was a very bad bug that took a lot of work to fix).
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  caching new largefiles
+  0 largefiles cached
   $ hg rebase
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -610,11 +612,12 @@ revert some files to an older revision
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
 
-Merging does not revert to old versions of largefiles (this has also
-been very problematic).
+Merging does not revert to old versions of largefiles and also check
+that merging after having pulled from a non-default remote works
+correctly.
 
   $ cd ..
-  $ hg clone -r 7 e f
+  $ hg clone -r 7 e temp
   adding changesets
   adding manifests
   adding file changes
@@ -623,6 +626,14 @@ been very problematic).
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  $ hg clone temp f
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+# Delete the largefiles in the largefiles system cache so that we have an
+# opportunity to test that caching after a pull works.
+  $ rm ${USERCACHE}/*
   $ cd f
   $ echo "large4-merge-test" > sub/large4
   $ hg commit -m "Modify large4 to test merge"
@@ -636,6 +647,8 @@ been very problematic).
   adding file changes
   added 2 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  caching new largefiles
+  2 largefiles cached
   $ hg merge
   merging sub/large4
   largefile sub/large4 has a merge conflict

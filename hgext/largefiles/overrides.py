@@ -658,6 +658,19 @@ def override_pull(orig, ui, repo, source=None, **opts):
         if not source:
             source = 'default'
         result = orig(ui, repo, source, **opts)
+        # If we do not have the new largefiles for any new heads we pulled, we
+        # will run into a problem later if we try to merge or rebase with one of
+        # these heads, so cache the largefiles now direclty into the system
+        # cache.
+        ui.status(_("caching new largefiles\n"))
+        numcached = 0
+        branches = repo.branchmap()
+        for branch in branches:
+            heads = repo.branchheads(branch)
+            for head in heads:
+                (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
+                numcached += len(cached)
+        ui.status(_("%d largefiles cached\n" % numcached))
     return result
 
 def override_rebase(orig, ui, repo, **opts):
