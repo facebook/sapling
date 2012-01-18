@@ -251,6 +251,19 @@ class patchheader(object):
                 ci += 1
             del self.comments[ci]
 
+def secretcommit(repo, *args, **kwargs):
+    """helper dedicated to ensure a commit are secret
+
+    It should be used instead of repo.commit inside the mq source
+    """
+    backup = repo.ui.backupconfig('phases', 'new-commit')
+    try:
+        # ensure we create a secret changeset
+        repo.ui.setconfig('phases', 'new-commit', phases.secret)
+        return repo.commit(*args, **kwargs)
+    finally:
+        repo.ui.restoreconfig(backup)
+
 class queue(object):
     def __init__(self, ui, path, patchdir=None):
         self.basepath = path
@@ -553,7 +566,7 @@ class queue(object):
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = repo.commit(ctx.description(), ctx.user(), force=True)
+        n = secretcommit(repo, ctx.description(), ctx.user(), force=True)
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -723,8 +736,8 @@ class queue(object):
                 repo.dirstate.setparents(p1, merge)
 
             match = scmutil.matchfiles(repo, files or [])
-            n = repo.commit(message, ph.user, ph.date, match=match, force=True)
-
+            n = secretcommit(repo, message, ph.user, ph.date, match=match,
+                             force=True)
             if n is None:
                 raise util.Abort(_("repository commit failed"))
 
@@ -958,7 +971,8 @@ class queue(object):
                 if util.safehasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
-                n = repo.commit(commitmsg, user, date, match=match, force=True)
+                n = secretcommit(repo, commitmsg, user, date, match=match,
+                                 force=True)
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
@@ -1500,8 +1514,8 @@ class queue(object):
 
             try:
                 # might be nice to attempt to roll back strip after this
-                n = repo.commit(message, user, ph.date, match=match,
-                                force=True)
+                n = secretcommit(repo, message, user, ph.date, match=match,
+                                 force=True)
                 # only write patch after a successful commit
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))

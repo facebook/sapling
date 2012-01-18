@@ -148,8 +148,12 @@ qinit -c should create both files if they don't exist
   $ hg qnew A
   $ checkundo qnew
   $ echo foo > foo
+  $ hg phase -r qbase
+  0: secret
   $ hg add foo
   $ hg qrefresh
+  $ hg phase -r qbase
+  0: secret
   $ hg qnew B
   $ echo >> foo
   $ hg qrefresh
@@ -297,6 +301,8 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
   $ hg qpush
   applying test.patch
   now at: test.patch
+  $ hg phase -r qbase
+  2: secret
   $ hg tags > /dev/null
 
 .hg/cache/tags (post qpush):
@@ -1207,6 +1213,11 @@ repo with unversioned patch dir
 repo with patches applied
 
   $ hg qclone qclonesource qclonedest
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
