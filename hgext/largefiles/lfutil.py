@@ -390,15 +390,6 @@ def blockstream(infile, blocksize=128 * 1024):
     # same blecch as copyandhash() above
     infile.close()
 
-def readhash(filename):
-    rfile = open(filename, 'rb')
-    hash = rfile.read(40)
-    rfile.close()
-    if len(hash) < 40:
-        raise util.Abort(_('bad hash in \'%s\' (only %d bytes long)')
-                         % (filename, len(hash)))
-    return hash
-
 def writehash(hash, filename, executable):
     util.makedirs(os.path.dirname(filename))
     util.writefile(filename, hash + '\n')
