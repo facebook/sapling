@@ -145,9 +145,6 @@ def strip(ui, repo, node, backup="all"):
         for m in updatebm:
             bm[m] = repo['.'].node()
         bookmarks.write(repo)
-        # remove potential unknown phase
-        # XXX using to_strip data would be faster
-        phases.filterunknown(repo)
     except:
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
@@ -158,3 +155,7 @@ def strip(ui, repo, node, backup="all"):
         raise
 
     repo.destroyed()
+
+    # remove potential unknown phase
+    # XXX using to_strip data would be faster
+    phases.filterunknown(repo)
