@@ -720,6 +720,10 @@ def override_archive(orig, repo, dest, node, kind, decode=True, matchfn=None,
         getdata = ctx[f].data
         if lfutil.isstandin(f):
             path = lfutil.findfile(repo, getdata().strip())
+            if path is None:
+                raise util.Abort(
+                    _('largefile %s not found in repo store or system cache')
+                    % lfutil.splitstandin(f))
             f = lfutil.splitstandin(f)
 
             def getdatafn():
