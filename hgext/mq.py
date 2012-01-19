@@ -2078,7 +2078,7 @@ def clone(ui, source, dest=None, **opts):
                            ' (see init --mq)'))
     qbase, destrev = None, None
     if sr.local():
-        if sr.mq.applied:
+        if sr.mq.applied and sr[qbase].phase() != phases.secret:
             qbase = sr.mq.applied[0].node
             if not hg.islocal(dest):
                 heads = set(sr.heads())
