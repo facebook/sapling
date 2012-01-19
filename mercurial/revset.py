@@ -742,6 +742,41 @@ def public(repo, subset, x):
     getargs(x, 0, 0, _("public takes no arguments"))
     return [r for r in subset if repo._phaserev[r] == phases.public]
 
+def remote(repo, subset, x):
+    """``remote([id], [path])``
+    Local revision that corresponds to the given identifier in a
+    remote repository, if present. Here, the '.' identifier is a
+    synonym for the current local branch.
+    """
+
+    import hg # avoid start-up nasties
+    # i18n: "remote" is a keyword
+    l = getargs(x, 0, 2, _("outgoing takes one or two arguments"))
+
+    q = '.'
+    if len(l) > 0:
+    # i18n: "remote" is a keyword
+        q = getstring(l[0], _("remote requires a string id"))
+    if q == '.':
+        q = repo['.'].branch()
+
+    dest = ''
+    if len(l) > 1:
+        # i18n: "remote" is a keyword
+        dest = getstring(l[1], _("remote requires a repository path"))
+    dest = repo.ui.expandpath(dest or 'default')
+    dest, branches = hg.parseurl(dest)
+    revs, checkout = hg.addbranchrevs(repo, repo, branches, [])
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+    other = hg.peer(repo, {}, dest)
+    n = other.lookup(q)
+    if n in repo:
+        r = repo[n].rev()
+    if r in subset:
+        return [r]
+    return []
+
 def removes(repo, subset, x):
     """``removes(pattern)``
     Changesets which remove files matching pattern.
@@ -916,6 +951,7 @@ symbols = {
     "parents": parents,
     "present": present,
     "public": public,
+    "remote": remote,
     "removes": removes,
     "rev": rev,
     "reverse": reverse,
