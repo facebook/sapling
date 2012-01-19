@@ -556,6 +556,14 @@ Test removing empty largefiles directories on update
   [1]
   $ hg update -q
 
+Test hg remove removes empty largefiles directories
+  $ test -d sub2 && echo "sub2 exists"
+  sub2 exists
+  $ hg remove sub2/*
+  $ test -d sub2 && echo "error: sub2 should not exist anymore"
+  [1]
+  $ hg revert sub2/large6 sub2/large7
+
 "revert" works on largefiles (and normal files too).
   $ echo hack3 >> normal3
   $ echo hack4 >> sub/normal4
