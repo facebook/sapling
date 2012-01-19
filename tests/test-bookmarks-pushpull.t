@@ -109,7 +109,7 @@ divergent bookmarks
    * X                         1:9b140be10808
      Y                         0:4e3505fd9583
      foo                       -1:000000000000
-     foobar                    -1:000000000000
+     foobar                    1:9b140be10808
 
   $ hg pull --config paths.foo=../a foo
   pulling from $TESTTMP/a
@@ -125,7 +125,7 @@ divergent bookmarks
      X@foo                     2:0d2164f0ce0d
      Y                         0:4e3505fd9583
      foo                       -1:000000000000
-     foobar                    -1:000000000000
+     foobar                    1:9b140be10808
   $ hg push -f ../a
   pushing to ../a
   searching for changes
@@ -158,7 +158,7 @@ hgweb
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   X	9b140be1080824d768c5a4691a564088eede71f9
   foo	0000000000000000000000000000000000000000
-  foobar	0000000000000000000000000000000000000000
+  foobar	9b140be1080824d768c5a4691a564088eede71f9
   $ hg out -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
   searching for changed bookmarks
@@ -174,7 +174,7 @@ hgweb
   searching for changed bookmarks
      Z                         0d2164f0ce0d
      foo                       000000000000
-     foobar                    000000000000
+     foobar                    9b140be10808
   $ hg pull -B Z http://localhost:$HGPORT/
   pulling from http://localhost:$HGPORT/
   no changes found
@@ -193,6 +193,6 @@ hgweb
      Y                         0:4e3505fd9583
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
-     foobar                    -1:000000000000
+     foobar                    1:9b140be10808
 
   $ kill `cat ../hg.pid`

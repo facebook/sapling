@@ -5633,7 +5633,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     Update the repository's working directory to the specified
     changeset. If no changeset is specified, update to the tip of the
-    current named branch.
+    current named branch and move the current bookmark.
 
     If the changeset is not a descendant of the working directory's
     parent, the update is aborted. With the -c/--check option, the
@@ -5678,6 +5678,11 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if rev is None or rev == '':
         rev = node
 
+    # with no argument, we also move the current bookmark, if any
+    movemarkfrom = None
+    if node is None or node == '':
+        movemarkfrom = repo['.'].node()
+
     # if we defined a bookmark, we have to remember the original bookmark name
     brev = rev
     rev = scmutil.revsingle(repo, rev, rev).rev()
@@ -5701,7 +5706,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     else:
         ret = hg.update(repo, rev)
 
-    if brev in repo._bookmarks:
+    if not ret and movemarkfrom:
+        bookmarks.update(repo, [movemarkfrom], repo['.'].node())
+    elif brev in repo._bookmarks:
         bookmarks.setcurrent(repo, brev)
 
     return ret
