@@ -353,6 +353,9 @@ preoutgoing hook can prevent outgoing changes for local clones
   > def verbosehook(ui, **args):
   >     ui.note('verbose output from hook\n')
   > 
+  > def printtags(ui, repo, **args):
+  >     print repo.tags().keys()
+  > 
   > class container:
   >     unreachable = 1
   > EOF
@@ -569,3 +572,10 @@ Ensure hooks can be prioritized
   calling hook pre-identify.c: hooktests.verbosehook
   verbose output from hook
   cb9a9f314b8b
+
+new tags must be visible in pretxncommit (issue3210)
+
+  $ echo 'pretxncommit.printtags = python:hooktests.printtags' >> .hg/hgrc
+  $ hg tag -f foo
+  ['a', 'foo', 'tip']
+

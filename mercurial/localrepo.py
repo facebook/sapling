@@ -326,6 +326,8 @@ class localrepository(repo.repository):
 
         fp.close()
 
+        self.invalidatecaches()
+
         if '.hgtags' not in self.dirstate:
             self[None].add(['.hgtags'])
 
