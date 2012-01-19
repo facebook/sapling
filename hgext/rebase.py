@@ -375,7 +375,8 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         targetphase = max(ctx.phase(), phases.draft)
         # retractboundary doesn't overwrite upper phase inherited from parent
         newnode = repo[newrev].node()
-        phases.retractboundary(repo, targetphase, [newnode])
+        if newnode:
+            phases.retractboundary(repo, targetphase, [newnode])
         return newrev
     except util.Abort:
         # Invalidate the previous setparents
