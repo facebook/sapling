@@ -29,7 +29,7 @@ expect ssl error
   searching for changes
   remote: ssl required
   remote: ssl required
-  updating ba677d0156c1 to public failed!
+  updating cb9a9f314b8b to public failed!
   % serve errors
 
 expect authorization error

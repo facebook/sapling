@@ -1622,7 +1622,6 @@ class localrepository(repo.repository):
                         self.ui.status(_(msg) % len(outgoing.excluded))
                     else:
                         self.ui.status(_("no changes found\n"))
-                    fut = outgoing.common
                     ret = 1
                 else:
                     # something to push
@@ -1653,33 +1652,32 @@ class localrepository(repo.repository):
                         # we return an integer indicating remote head count change
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
-                # compute what should be the now common
-                #
-                # XXX If push failed we should use strict common and not
-                # future to avoid pushing phase data on unknown changeset.
-                # This is to done later.
-                fut = outgoing.commonheads + outgoing.missingheads
+                cheads = outgoing.commonheads[:]
+                if ret:
+                    # push succeed, synchonize common + pushed
+                    # this is a no-op if there was nothing to push
+                    cheads += outgoing.missingheads
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
-                    phases.advanceboundary(self, phases.public, fut)
+                    phases.advanceboundary(self, phases.public, cheads)
                     # don't push any phase data as there is nothing to push
                 else:
-                    ana = phases.analyzeremotephases(self, fut, remotephases)
+                    ana = phases.analyzeremotephases(self, cheads, remotephases)
                     pheads, droots = ana
                     ### Apply remote phase on local
                     if remotephases.get('publishing', False):
-                        phases.advanceboundary(self, phases.public, fut)
+                        phases.advanceboundary(self, phases.public, cheads)
                     else: # publish = False
                         phases.advanceboundary(self, phases.public, pheads)
-                        phases.advanceboundary(self, phases.draft, fut)
+                        phases.advanceboundary(self, phases.draft, cheads)
                     ### Apply local phase on remote
 
                     # Get the list of all revs draft on remote by public here.
                     # XXX Beware that revset break if droots is not strictly
                     # XXX root we may want to ensure it is but it is costly
                     outdated =  self.set('heads((%ln::%ln) and public())',
-                                         droots, fut)
+                                         droots, cheads)
                     for newremotehead in outdated:
                         r = remote.pushkey('phases',
                                            newremotehead.hex(),
