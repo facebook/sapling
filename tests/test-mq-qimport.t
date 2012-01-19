@@ -165,8 +165,6 @@ try to import --push
   patch b.diff finalized without changeset message
   patch another.diff finalized without changeset message
   $ hg qimport -rtip -P
-  $ hg phase -r qbase
-  2: secret
   $ hg qpop -a
   popping 2.diff
   patch queue now empty
