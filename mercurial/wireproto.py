@@ -471,7 +471,11 @@ def listkeys(repo, proto, namespace):
 
 def lookup(repo, proto, key):
     try:
-        r = hex(repo.lookup(encoding.tolocal(key)))
+        k = encoding.tolocal(key)
+        c = repo[k]
+        if c.phase() == phases.secret:
+            raise error.RepoLookupError(_("unknown revision '%s'") % k)
+        r = c.hex()
         success = 1
     except Exception, inst:
         r = str(inst)
