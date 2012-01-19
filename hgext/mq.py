@@ -822,7 +822,7 @@ class queue(object):
         if qfinished:
             oldqbase = repo[qfinished[0]]
             if oldqbase.p1().phase() < phases.secret:
-                phases.advanceboundary(repo, phases.draft, [oldqbase.node()])
+                phases.advanceboundary(repo, phases.draft, qfinished)
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
