@@ -171,7 +171,7 @@ Pushing applied patch with --force
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes
-  no changes found
+  no changes to push but 1 secret changesets
   $ hg phase -d 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
