@@ -1606,26 +1606,59 @@ class localrepository(repo.repository):
             # get local lock as we might write phase data
             locallock = self.lock()
             try:
-                cg, remote_heads, fut = discovery.prepush(self, remote, force,
-                                                           revs, newbranch)
-                ret = remote_heads
-                # create a callback for addchangegroup.
-                # If will be used branch of the conditionnal too.
-                if cg is not None:
+                # discovery
+                fci = discovery.findcommonincoming
+                commoninc = fci(self, remote, force=force)
+                common, inc, remoteheads = commoninc
+                fco = discovery.findcommonoutgoing
+                outgoing = fco(self, remote, onlyheads=revs,
+                               commoninc=commoninc, force=force)
+
+
+                if not outgoing.missing:
+                    # nothing to push
+                    if outgoing.excluded:
+                        msg = "no changes to push but %i secret changesets\n"
+                        self.ui.status(_(msg) % len(outgoing.excluded))
+                    else:
+                        self.ui.status(_("no changes found\n"))
+                    fut = outgoing.common
+                    ret = 1
+                else:
+                    # something to push
+                    if not force:
+                        discovery.checkheads(self, remote, outgoing,
+                                             remoteheads, newbranch)
+
+                    # create a changegroup from local
+                    if revs is None and not outgoing.excluded:
+                        # push everything,
+                        # use the fast path, no race possible on push
+                        cg = self._changegroup(outgoing.missing, 'push')
+                    else:
+                        cg = self.getlocalbundle('push', outgoing)
+
+                    # apply changegroup to remote
                     if unbundle:
                         # local repo finds heads on server, finds out what
                         # revs it must push. once revs transferred, if server
                         # finds it has different heads (someone else won
                         # commit/push race), server aborts.
                         if force:
-                            remote_heads = ['force']
+                            remoteheads = ['force']
                         # ssh: return remote's addchangegroup()
                         # http: return remote's addchangegroup() or 0 for error
-                        ret = remote.unbundle(cg, remote_heads, 'push')
+                        ret = remote.unbundle(cg, remoteheads, 'push')
                     else:
                         # we return an integer indicating remote head count change
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
+                # compute what should be the now common
+                #
+                # XXX If push failed we should use strict common and not
+                # future to avoid pushing phase data on unknown changeset.
+                # This is to done later.
+                fut = outgoing.commonheads + outgoing.missingheads
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
@@ -1641,10 +1674,6 @@ class localrepository(repo.repository):
                         phases.advanceboundary(self, phases.public, pheads)
                         phases.advanceboundary(self, phases.draft, fut)
                     ### Apply local phase on remote
-                    #
-                    # XXX If push failed we should use strict common and not
-                    # future to avoid pushing phase data on unknown changeset.
-                    # This is to done later.
 
                     # Get the list of all revs draft on remote by public here.
                     # XXX Beware that revset break if droots is not strictly

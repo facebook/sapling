@@ -438,9 +438,6 @@
    >                 if not st is None and not getkind(st.st_mode) in (regkind, lnkkind):
    warning: line over 80 characters
   mercurial/discovery.py:0:
-   >                     repo.ui.note(_("new remote heads on branch '%s'\n") % branch)
-   warning: line over 80 characters
-  mercurial/discovery.py:0:
    >     If onlyheads is given, only nodes ancestral to nodes in onlyheads (inclusive)
    warning: line over 80 characters
   mercurial/discovery.py:0:
