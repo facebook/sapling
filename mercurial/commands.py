@@ -745,6 +745,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     push` and :hg:`help pull`). This requires both the local and remote
     repositories to support bookmarks. For versions prior to 1.8, this means
     the bookmarks extension must be enabled.
+
+    With -i/--inactive, the new bookmark will not be made the active
+    bookmark. If -r/--rev is given, the new bookmark will not be made
+    active even if -i/--inactive is not given. If no NAME is given, the
+    current active bookmark will be marked inactive.
     '''
     hexfn = ui.debugflag and hex or short
     marks = repo._bookmarks
