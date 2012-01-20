@@ -98,7 +98,7 @@ defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
     'port': ('HGTEST_PORT', 20059),
-    'shell': ('HGTEST_SHELL', '/bin/sh'),
+    'shell': ('HGTEST_SHELL', 'sh'),
 }
 
 def parselistfiles(files, listtype, warn=True):
