@@ -285,8 +285,15 @@ def analyzeremotephases(repo, subset, roots):
             repo.ui.warn(_('ignoring unexpected root from remote: %i %s\n')
                          % (phase, nhex))
     # compute heads
-    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
-                      subset, draftroots, draftroots, subset)
-    publicheads = [c.node() for c in revset]
+    publicheads = newheads(repo, subset, draftroots)
     return publicheads, draftroots
+
+def newheads(repo, heads, roots):
+    """compute new head of a subset minus another
+
+    * `heads`: define the first subset
+    * `rroots`: define the second we substract to the first"""
+    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
+                      heads, roots, roots, heads)
+    return [c.node() for c in revset]
 
