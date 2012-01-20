@@ -124,8 +124,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
                 missing.append(node)
         if excluded:
             # update missing heads
-            rset = repo.set('heads(%ln)', missing)
-            missingheads = [ctx.node() for ctx in rset]
+            missingheads = phases.newheads(repo, onlyheads, excluded)
         else:
             missingheads = onlyheads
         og.missingheads = missingheads
