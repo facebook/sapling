@@ -276,7 +276,7 @@ def analyzeremotephases(repo, subset, roots):
         phase = int(phase)
         if phase == 0:
             if node != nullid:
-                msg = _('ignoring inconsistense public root from remote: %s')
+                msg = _('ignoring inconsistent public root from remote: %s')
                 repo.ui.warn(msg, nhex)
         elif phase == 1:
             if node in nodemap:
