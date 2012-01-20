@@ -276,14 +276,14 @@ def analyzeremotephases(repo, subset, roots):
         phase = int(phase)
         if phase == 0:
             if node != nullid:
-                msg = _('ignoring inconsistent public root from remote: %s')
-                repo.ui.warn(msg, nhex)
+                repo.ui.warn(_('ignoring inconsistent public root'
+                               ' from remote: %s\n') % nhex)
         elif phase == 1:
             if node in nodemap:
                 draftroots.append(node)
         else:
-            msg = _('ignoring unexpected root from remote: %i %s')
-            repo.ui.warn(msg, phase, nhex)
+            repo.ui.warn(_('ignoring unexpected root from remote: %i %s\n')
+                         % (phase, nhex))
     # compute heads
     revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
                       subset, draftroots, draftroots, subset)
