@@ -238,10 +238,10 @@ we are in nu
   adding file changes
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
-  $ hgph
+  $ hgph # f54f1bb90ff3 stay draft, not ancestor of -r
   o  4 public a-D - b555f63b6063
   |
-  | o  3 public b-A - f54f1bb90ff3
+  | o  3 draft b-A - f54f1bb90ff3
   | |
   o |  2 public a-C - 54acac6f23ab
   |/
@@ -262,7 +262,7 @@ pulling from Publish=False to publish=False with some public
   |
   | o  4 public a-D - b555f63b6063
   | |
-  o |  3 public b-A - f54f1bb90ff3
+  o |  3 draft b-A - f54f1bb90ff3
   | |
   | o  2 public a-C - 54acac6f23ab
   |/
@@ -288,7 +288,7 @@ pulling from Publish=False to publish=False with some public
   | |
   | o  3 public a-C - 54acac6f23ab
   | |
-  o |  2 public b-A - f54f1bb90ff3
+  o |  2 draft b-A - f54f1bb90ff3
   |/
   o  1 public a-B - 548a3d25dbf0
   |
@@ -497,20 +497,21 @@ Pushing to Publish=False (unknown changeset)
   
 
   $ cd ../mu
-  $ hgph # d6bcb4f74035 and 145e75495359 changed because common is too smart
+  $ hgph # again f54f1bb90ff3, d6bcb4f74035 and 145e75495359 stay draft,
+  >      # not ancestor of -r
   o  8 draft a-F - b740e3e5c05d
   |
   o  7 draft a-E - e9f537e46dea
   |
-  | o  6 public n-B - 145e75495359
+  | o  6 draft n-B - 145e75495359
   | |
-  | o  5 public n-A - d6bcb4f74035
+  | o  5 draft n-A - d6bcb4f74035
   | |
   o |  4 public a-D - b555f63b6063
   | |
   o |  3 public a-C - 54acac6f23ab
   | |
-  | o  2 public b-A - f54f1bb90ff3
+  | o  2 draft b-A - f54f1bb90ff3
   |/
   o  1 public a-B - 548a3d25dbf0
   |
@@ -526,20 +527,21 @@ Pushing to Publish=True (unknown changeset)
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  $ hgph # again d6bcb4f74035 and 145e75495359 changed because common is too smart
+  $ hgph # again f54f1bb90ff3, d6bcb4f74035 and 145e75495359 stay draft,
+  >      # not ancestor of -r
   o  8 public a-F - b740e3e5c05d
   |
   o  7 public a-E - e9f537e46dea
   |
-  | o  6 public n-B - 145e75495359
+  | o  6 draft n-B - 145e75495359
   | |
-  | o  5 public n-A - d6bcb4f74035
+  | o  5 draft n-A - d6bcb4f74035
   | |
   o |  4 public a-D - b555f63b6063
   | |
   o |  3 public a-C - 54acac6f23ab
   | |
-  | o  2 public b-A - f54f1bb90ff3
+  | o  2 draft b-A - f54f1bb90ff3
   |/
   o  1 public a-B - 548a3d25dbf0
   |
@@ -569,7 +571,7 @@ Pushing to Publish=True (common changeset)
   o  0 public a-A - 054250a37db4
   
   $ cd ../alpha
-  $ hgph # e9f537e46dea and b740e3e5c05d should have been sync to 0
+  $ hgph
   @  10 draft a-H - 967b449fbc94
   |
   | o  9 draft a-G - 3e27b6f1eee1
@@ -627,14 +629,14 @@ Pushing to Publish=False (common changeset that change phase + unknown one)
   
   $ cd ../mu
   $ hgph # d6bcb4f74035 should have changed phase
-  >      # again d6bcb4f74035 and 145e75495359 changed because common was too smart
+  >      # 145e75495359 is still draft. not ancestor of -r
   o  9 draft a-H - 967b449fbc94
   |
   | o  8 public a-F - b740e3e5c05d
   | |
   | o  7 public a-E - e9f537e46dea
   | |
-  +---o  6 public n-B - 145e75495359
+  +---o  6 draft n-B - 145e75495359
   | |
   o |  5 public n-A - d6bcb4f74035
   | |

@@ -1554,21 +1554,29 @@ class localrepository(repo.repository):
                 clend = len(self.changelog)
                 added = [self.changelog.node(r) for r in xrange(clstart, clend)]
 
+            # compute target subset
+            if heads is None:
+                # We pulled every thing possible
+                # sync on everything common
+                subset = common + added
+            else:
+                # We pulled a specific subset
+                # sync on this subset
+                subset = heads
 
             # Get remote phases data from remote
             remotephases = remote.listkeys('phases')
             publishing = bool(remotephases.get('publishing', False))
             if remotephases and not publishing:
                 # remote is new and unpublishing
-                subset = common + added
                 pheads, _dr = phases.analyzeremotephases(self, subset,
                                                          remotephases)
                 phases.advanceboundary(self, phases.public, pheads)
-                phases.advanceboundary(self, phases.draft, common + added)
+                phases.advanceboundary(self, phases.draft, subset)
             else:
                 # Remote is old or publishing all common changesets
                 # should be seen as public
-                phases.advanceboundary(self, phases.public, common + added)
+                phases.advanceboundary(self, phases.public, subset)
         finally:
             lock.release()
 
@@ -1652,11 +1660,35 @@ class localrepository(repo.repository):
                         # we return an integer indicating remote head count change
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
-                cheads = outgoing.commonheads[:]
                 if ret:
-                    # push succeed, synchonize common + pushed
-                    # this is a no-op if there was nothing to push
-                    cheads += outgoing.missingheads
+                    # push succeed, synchonize target of the push
+                    cheads = outgoing.missingheads
+                elif revs is None:
+                    # All out push fails. synchronize all common
+                    cheads = outgoing.commonheads
+                else:
+                    # I want cheads = heads(::missingheads and ::commonheads)
+                    # (missingheads is revs with secret changeset filtered out)
+                    #
+                    # This can be expressed as:
+                    #     cheads = ( (missingheads and ::commonheads)
+                    #              + (commonheads and ::missingheads))"
+                    #              )
+                    #
+                    # while trying to push we already computed the following:
+                    #     common = (::commonheads)
+                    #     missing = ((commonheads::missingheads) - commonheads)
+                    #
+                    # We can pick:
+                    # * missingheads part of comon (::commonheads)
+                    common = set(outgoing.common)
+                    cheads = [n for node in revs if n in common]
+                    # and 
+                    # * commonheads parents on missing
+                    rvset = repo.revset('%ln and parents(roots(%ln))',
+                                        outgoing.commonheads,
+                                        outgoing.missing)
+                    cheads.extend(c.node() for c in rvset)
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
