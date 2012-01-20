@@ -21,7 +21,7 @@ class AuthorMap(dict):
         The ui argument is used to print diagnostic messages.
 
         The path argument is the location of the backing store,
-        typically .hg/authormap.
+        typically .hg/svn/authors.
         '''
         self.ui = ui
         self.path = path
@@ -252,13 +252,24 @@ class RevMap(dict):
 
 class FileMap(object):
 
-    def __init__(self, repo):
-        self.ui = repo.ui
+    VERSION = 1
+
+    def __init__(self, ui, path):
+        '''Initialise a new FileMap.
+
+        The ui argument is used to print diagnostic messages.
+
+        The path argument is the location of the backing store,
+        typically .hg/svn/filemap.
+        '''
+        self.ui = ui
+        self.path = path
         self.include = {}
         self.exclude = {}
-        filemap = repo.ui.config('hgsubversion', 'filemap')
-        if filemap and os.path.exists(filemap):
-            self.load(filemap)
+        if os.path.isfile(self.path):
+            self._load()
+        else:
+            self._write()
 
     def _rpairs(self, name):
         yield '.', name
@@ -301,10 +312,18 @@ class FileMap(object):
         bits = m.strip('e'), path
         self.ui.debug('%sing %s\n' % bits)
         mapping[path] = path
+        if fn != self.path:
+            f = open(self.path, 'a')
+            f.write(m + ' ' + path + '\n')
+            f.close()
 
     def load(self, fn):
         self.ui.note('reading file map from %s\n' % fn)
         f = open(fn, 'r')
+        self.load_fd(f, fn)
+        f.close()
+
+    def load_fd(self, f, fn):
         for line in f:
             if line.strip() == '' or line.strip()[0] == '#':
                 continue
@@ -319,6 +338,20 @@ class FileMap(object):
             except IndexError:
                 msg = 'ignoring bad line in filemap %s: %s\n'
                 self.ui.warn(msg % (fn, line.rstrip()))
+
+    def _load(self):
+        self.ui.note('reading in-repo file map from %s\n' % self.path)
+        f = open(self.path)
+        ver = int(f.readline())
+        if ver != self.VERSION:
+            print 'filemap too new -- please upgrade'
+            raise NotImplementedError
+        self.load_fd(f, self.path)
+        f.close()
+
+    def _write(self):
+        f = open(self.path, 'w')
+        f.write('%s\n' % self.VERSION)
         f.close()
 
 class BranchMap(dict):

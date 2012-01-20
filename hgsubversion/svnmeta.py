@@ -55,6 +55,7 @@ class SVNMeta(object):
                                                  'usebranchnames', True)
         branchmap = self.ui.config('hgsubversion', 'branchmap')
         tagmap = self.ui.config('hgsubversion', 'tagmap')
+        filemap = self.ui.config('hgsubversion', 'filemap')
 
         self.branches = {}
         if os.path.exists(self.branch_info_file):
@@ -94,8 +95,11 @@ class SVNMeta(object):
         if tagmap:
             self.tagmap.load(tagmap)
 
+        self.filemap = maps.FileMap(self.ui, self.filemap_file)
+        if filemap:
+            self.filemap.load(filemap)
+
         self.lastdate = '1970-01-01 00:00:00 -0000'
-        self.filemap = maps.FileMap(repo)
         self.addedtags = {}
         self.deletedtags = {}
 
@@ -190,6 +194,10 @@ class SVNMeta(object):
     @property
     def authors_file(self):
         return os.path.join(self.meta_data_dir, 'authors')
+
+    @property
+    def filemap_file(self):
+        return os.path.join(self.meta_data_dir, 'filemap')
 
     @property
     def branchmapfile(self):
