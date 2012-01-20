@@ -166,8 +166,11 @@ def _openstore(repo, remote=None, put=False):
     ui = repo.ui
 
     if not remote:
-        path = (getattr(repo, 'lfpullsource', None) or
-                ui.expandpath('default-push', 'default'))
+        lfpullsource = getattr(repo, 'lfpullsource', None)
+        if lfpullsource:
+            path = ui.expandpath(lfpullsource)
+        else:
+            path = ui.expandpath('default-push', 'default')
 
         # ui.expandpath() leaves 'default-push' and 'default' alone if
         # they cannot be expanded: fallback to the empty string,
