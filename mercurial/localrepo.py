@@ -1597,14 +1597,14 @@ class localrepository(repo.repository):
         # unbundle assumes local user cannot lock remote repo (new ssh
         # servers, http servers).
 
-        self.checkpush(force, revs)
-        lock = None
-        unbundle = remote.capable('unbundle')
-        if not unbundle:
-            lock = remote.lock()
+        # get local lock as we might write phase data
+        locallock = self.lock()
         try:
-            # get local lock as we might write phase data
-            locallock = self.lock()
+            self.checkpush(force, revs)
+            lock = None
+            unbundle = remote.capable('unbundle')
+            if not unbundle:
+                lock = remote.lock()
             try:
                 # discovery
                 fci = discovery.findcommonincoming
@@ -1687,10 +1687,10 @@ class localrepository(repo.repository):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
             finally:
-                locallock.release()
+                if lock is not None:
+                    lock.release()
         finally:
-            if lock is not None:
-                lock.release()
+            locallock.release()
 
         self.ui.debug("checking for updated bookmarks\n")
         rb = remote.listkeys('bookmarks')

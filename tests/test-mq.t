@@ -393,8 +393,9 @@ commit should fail
   abort: cannot commit over an applied mq patch
   [255]
 
-push should fail
+push should fail if draft
 
+  $ hg phase --draft 'mq()'
   $ hg push ../../k
   pushing to ../../k
   abort: source has mq patches applied

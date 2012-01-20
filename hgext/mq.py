@@ -3161,15 +3161,22 @@ def reposetup(ui, repo):
 
         def checkpush(self, force, revs):
             if self.mq.applied and not force:
-                haspatches = True
+                outapplied = [e.node for e in self.mq.applied]
                 if revs:
-                    # Assume applied patches have no non-patch descendants
-                    # and are not on remote already. If they appear in the
-                    # set of resolved 'revs', bail out.
-                    applied = set(e.node for e in self.mq.applied)
-                    haspatches = bool([n for n in revs if n in applied])
-                if haspatches:
-                    raise util.Abort(_('source has mq patches applied'))
+                    # Assume applied patches have no non-patch descendants and
+                    # are not on remote already. Filtering any changeset not
+                    # pushed.
+                    heads = set(revs)
+                    for node in reversed(outapplied):
+                        if node in heads:
+                            break
+                        else:
+                            outapplied.pop()
+                # looking for pushed and shared changeset
+                for node in outapplied:
+                    if repo[node].phase() < phases.secret:
+                        raise util.Abort(_('source has mq patches applied'))
+                # no non-secret patches pushed
             super(mqrepo, self).checkpush(force, revs)
 
         def _findtags(self):

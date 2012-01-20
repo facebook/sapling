@@ -144,7 +144,18 @@ Testing applied patches, push and --force
 
 Pushing applied patch with --rev without --force
 
-  $ hg push -r default ../forcepush2
+All secret
+
+  $ hg push -r . ../forcepush2
+  pushing to ../forcepush2
+  searching for changes
+  no changes to push but 1 secret changesets
+
+some draft
+
+  $ hg phase --draft 'mq()'
+
+  $ hg push -r . ../forcepush2
   pushing to ../forcepush2
   abort: source has mq patches applied
   [255]
@@ -168,11 +179,12 @@ Pushing revs excluding applied patch
 
 Pushing applied patch with --force
 
+  $ hg phase --force --secret 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes
   no changes to push but 1 secret changesets
-  $ hg phase -d 'mq()'
+  $ hg phase --draft 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes
