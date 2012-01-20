@@ -210,7 +210,7 @@ def rebase(ui, repo, **opts):
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
             elif not keepf and not repo[root].mutable():
-                raise util.Abort(_("Can't rebase immutable changeset %s")
+                raise util.Abort(_("can't rebase immutable changeset %s")
                                  % repo[root],
                                  hint=_('see hg help phases for details'))
             else:
