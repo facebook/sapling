@@ -4219,7 +4219,7 @@ def phase(ui, repo, *revs, **opts):
     revs = list(revs)
     revs.extend(opts['rev'])
     if not revs:
-        raise util.Abort(_('no revisions specified!'))
+        raise util.Abort(_('no revisions specified'))
 
     lock = None
     ret = 0
