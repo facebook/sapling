@@ -79,7 +79,7 @@ def tokenize(program):
             pos += 1
             while pos < l: # find end of symbol
                 d = program[pos]
-                if not (d.isalnum() or d in "._" or ord(d) > 127):
+                if not (d.isalnum() or d in "._/" or ord(d) > 127):
                     break
                 if d == '.' and program[pos - 1] == '.': # special case for ..
                     pos -= 1
