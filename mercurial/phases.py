@@ -147,7 +147,7 @@ def filterunknown(repo, phaseroots=None):
         missing = [node for node in nodes if node not in nodemap]
         if missing:
             for mnode in missing:
-                msg = _('Removing unknown node %(n)s from %(p)i-phase boundary')
+                msg = 'Removing unknown node %(n)s from %(p)i-phase boundary'
                 repo.ui.debug(msg, {'n': short(mnode), 'p': phase})
             nodes.symmetric_difference_update(missing)
             repo._dirtyphases = True
