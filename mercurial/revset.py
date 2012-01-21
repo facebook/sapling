@@ -462,16 +462,6 @@ def follow(repo, subset, x):
     s |= set([p])
     return [r for r in subset if r in s]
 
-def followfile(repo, subset, x):
-    """``follow()``
-    An alias for ``::.`` (ancestors of the working copy's first parent).
-    """
-    # i18n: "follow" is a keyword
-    getargs(x, 0, 0, _("follow takes no arguments"))
-    p = repo['.'].rev()
-    s = set(repo.changelog.ancestors(p)) | set([p])
-    return [r for r in subset if r in s]
-
 def getall(repo, subset, x):
     """``all()``
     All changesets, the same as ``0:tip``.
