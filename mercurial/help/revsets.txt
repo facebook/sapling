@@ -4,10 +4,9 @@ revisions.
 The language supports a number of predicates which are joined by infix
 operators. Parenthesis can be used for grouping.
 
-Identifiers such as branch names must be quoted with single or double
-quotes if they contain characters outside of
-``[._a-zA-Z0-9\x80-\xff]`` or if they match one of the predefined
-predicates.
+Identifiers such as branch names may need quoting with single or
+double quotes if they contain characters like ``-`` or if they match
+one of the predefined predicates.
 
 Special characters can be used in quoted identifiers by escaping them,
 e.g., ``\n`` is interpreted as a newline. To prevent them from being
