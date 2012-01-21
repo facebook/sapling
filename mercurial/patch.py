@@ -1802,9 +1802,9 @@ def diffstatdata(lines):
             elif line.startswith('diff -r'):
                 # format: "diff -r ... -r ... filename"
                 filename = diffre.search(line).group(1)
-        elif line.startswith('+') and not line.startswith('+++'):
+        elif line.startswith('+') and not line.startswith('+++ '):
             adds += 1
-        elif line.startswith('-') and not line.startswith('---'):
+        elif line.startswith('-') and not line.startswith('--- '):
             removes += 1
         elif (line.startswith('GIT binary patch') or
               line.startswith('Binary file')):
