@@ -85,7 +85,7 @@
 #  .. note:: Dies ist spezielle reStructured-Syntax und darf nicht geändert
 #           werden
 #  Pager (m) mangels guter Übersetzung (Theoretisch "Verseitener" :)
-# 
+#
 # Weiteres:
 #  graft/transplant: Da graft eine Reimplementierung von transplant als
 #         Kernfunktion ist, kann in beiden Fällen "Transplantation" als
@@ -103,7 +103,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2011-12-04 13:42+0200\n"
+"POT-Creation-Date: 2012-01-21 14:20+0200\n"
 "PO-Revision-Date: 2010-12-24 15:09+0100\n"
 "Last-Translator: Fabian Kreutz <fabian.kreutz@qvantel.com>\n"
 "Language-Team: \n"
@@ -476,8 +476,7 @@ msgstr ""
 
 #, python-format
 msgid "acl: user \"%s\" denied on \"%s\" (changeset \"%s\")"
-msgstr ""
-"acl: Zugriff für \"%s\" auf \"%s\" abgelehnt (Änderungssatz \"%s\")"
+msgstr "acl: Zugriff für \"%s\" auf \"%s\" abgelehnt (Änderungssatz \"%s\")"
 
 #, python-format
 msgid "acl: user \"%s\" not allowed on \"%s\" (changeset \"%s\")"
@@ -535,7 +534,8 @@ msgid ""
 msgstr ""
 "Direktes Schreiben in die Datenbank führt leicht zu Problemen bei Schema-\n"
 "veränderungen. Ausserdem wird ein externes Bugzilla Script benötigt, um\n"
-"Benachrichtigungsemails zu versenden. Dieses Script wird mit den Rechten des\n"
+"Benachrichtigungsemails zu versenden. Dieses Script wird mit den Rechten "
+"des\n"
 "Mercurial-Benutzers ausgeführt, benötigt eine lokale Bugzilla-Installation\n"
 "sowie Leserechte an der Bugzilla Konfigurationsdatei und MySQL Benutzername\n"
 "und Passwort, um vollen Zugriff auf die Bugzilla Datenbank zu haben. Aus\n"
@@ -656,7 +656,8 @@ msgid ""
 msgstr ""
 "bugzilla.strip\n"
 "  Die Anzahl von Verzeichnisebenen, die vom Anfang des Archivpfads\n"
-"  (``{root}`` in Vorlagen) abgeschnitten wird, um ``{webroot}`` zu erhalten.\n"
+"  (``{root}`` in Vorlagen) abgeschnitten wird, um ``{webroot}`` zu "
+"erhalten.\n"
 "  Zum Beispiel mit ``{root}`` als ``/var/local/mein-projekt`` und einem\n"
 "  Wert 2, wird ``{webroot}`` auf ``mein-projekt`` gesetzt. Standard 0."
 
@@ -727,8 +728,7 @@ msgstr ""
 msgid ""
 "XMLRPC+email access mode uses the XMLRPC access mode configuration items,\n"
 "and also:"
-msgstr ""
-"XMLRPC+email nutzt die gleichen Zugriffskonfiguration wie XMLRPC plus:"
+msgstr "XMLRPC+email nutzt die gleichen Zugriffskonfiguration wie XMLRPC plus:"
 
 msgid ""
 "bugzilla.bzemail\n"
@@ -934,7 +934,8 @@ msgid ""
 "with a collection of Mercurial repositories in ``/var/local/hg/repos/``,\n"
 "with a web interface at ``http://my-project.org/hg``. ::"
 msgstr ""
-"MySQL Beispielkonfiguration. Bugzilla 3.2 ist lokal in ``/opt/bugzilla-3.2``\n"
+"MySQL Beispielkonfiguration. Bugzilla 3.2 ist lokal in ``/opt/"
+"bugzilla-3.2``\n"
 "installiert. Die MySQL Datenbank wird per ``localhost`` angesprochen,\n"
 "der Name der Bugzilla Datenbank ist ``bugs`` und der MySQL Zugriff ist für\n"
 "enutzer ``bugs`` mit Password ``XYZZY`` erlaubt. Die Archive, deren\n"
@@ -1347,7 +1348,8 @@ msgstr ""
 "(fettgeschrieben), 'dim' (gedämmt), 'inverse' (Vorder- und Hintergrund\n"
 "getauscht), 'italic' (Schrägschrift), 'standout' (hervorstehend) und\n"
 "'underline' (unterstrichen); im ECMA-48 Modus nur 'bold', 'inverse',\n"
-"'italic' und 'underline'. Wie dies tatsächlich aussieht, hängt vom Terminal-\n"
+"'italic' und 'underline'. Wie dies tatsächlich aussieht, hängt vom "
+"Terminal-\n"
 "emulator ab. Effekte, die nicht realisiert werden können, werden ohne\n"
 "Warnung ignoriert."
 
@@ -1421,13 +1423,11 @@ msgstr ""
 "deaktivieren.\n"
 
 msgid "no terminfo entry for setab/setaf: reverting to ECMA-48 color\n"
-msgstr ""
-"Kein terminfo-Eintrag für setab/setaf: Falle auf ECMA-48 zurück\n"
+msgstr "Kein terminfo-Eintrag für setab/setaf: Falle auf ECMA-48 zurück\n"
 
 #, python-format
 msgid "warning: failed to set color mode to %s\n"
-msgstr ""
-"Warnung: Konnte Farbmodus nicht auf %s setzen\n"
+msgstr "Warnung: Konnte Farbmodus nicht auf %s setzen\n"
 
 #, python-format
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
@@ -1575,8 +1575,7 @@ msgid "      source author = destination author"
 msgstr "      Quellautor = Zielautor"
 
 msgid "    Empty lines and lines starting with a ``#`` are ignored."
-msgstr ""
-"    Leere Zeilen und Zeilen, die mit ``#`` beginnen, werden ignoriert."
+msgstr "    Leere Zeilen und Zeilen, die mit ``#`` beginnen, werden ignoriert."
 
 msgid ""
 "    The filemap is a file that allows filtering and remapping of files\n"
@@ -2482,7 +2481,7 @@ msgid "mtn automate stdio header unexpected: %s"
 msgstr ""
 
 msgid "failed to reach end of mtn automate stdio headers"
-msgstr ""
+msgstr "Konnte den Endpunkt der mtn automate-Schnittstelle nicht erreichen"
 
 #, python-format
 msgid "%s does not look like a P4 repository"
@@ -2498,6 +2497,10 @@ msgid "Mercurial failed to run itself, check hg executable is in PATH"
 msgstr ""
 "Mercurial konnte sich selbst nicht ausführen, prüfe, ob die Programmdatei\n"
 "in PATH enthalten ist."
+
+#, python-format
+msgid "log stream exception '%s'"
+msgstr ""
 
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
@@ -4167,7 +4170,8 @@ msgid ""
 msgstr ""
 "Wird ein Änderungssatz, welcher einen Binärriesen ändert oder hinzufügt,\n"
 "in ein entferntes Archiv übertragen, so werden gleichzeitig (asymmetrisch\n"
-"zum Abrufen per pull) auch die (neuen) Revisionen der Binärdatei übertragen.\n"
+"zum Abrufen per pull) auch die (neuen) Revisionen der Binärdatei "
+"übertragen.\n"
 "Das entfernte Mercurial muss hierfür die largefiles-Erweiterung unterstützen."
 
 msgid ""
@@ -4248,10 +4252,18 @@ msgstr ""
 
 msgid ""
 "Files that match one of these patterns will be added as largefiles\n"
-"regardless of their size.\n"
+"regardless of their size."
 msgstr ""
 "Dateien, die auf ein solches Muster passen, werden unabhängig von ihrer\n"
-"Größe als Binärriesen hinzugefügt.\n"
+"Größe als Binärriesen hinzugefügt."
+
+msgid ""
+"The ``largefiles.minsize`` and ``largefiles.patterns`` config options\n"
+"will be ignored for any repositories not already containing a\n"
+"largefile. To add the first largefile to a repository, you must\n"
+"explicitly do so with the --large flag passed to the :hg:`add`\n"
+"command.\n"
+msgstr ""
 
 msgid "convert a normal repository to a largefiles repository"
 msgstr "Konvertiert ein normales Archiv in ein Archiv mit Binärriesen"
@@ -4341,6 +4353,18 @@ msgstr "Umbenannter/kopierter Binärriese %s wird ein symbolischer Verweis"
 msgid "largefile %s becomes symlink"
 msgstr "Binärriese %s wird ein symbolischer Verweis"
 
+#, python-format
+msgid "skipping incorrectly formatted tag %s\n"
+msgstr "Überspringe fehlerhaft formatiertes Etikett: %s\n"
+
+#, python-format
+msgid "skipping incorrectly formatted id %s\n"
+msgstr "Überspringe fehlerhaft formatierte ID: %s\n"
+
+#, python-format
+msgid "no mapping for id %s\n"
+msgstr "Keine Abbildung für ID %s\n"
+
 msgid "uploading largefiles"
 msgstr "Lade Binärriesen hoch"
 
@@ -4384,10 +4408,6 @@ msgstr "%s im Lager gefunden\n"
 msgid "Found %s in system cache\n"
 msgstr "%s im Zwischenspeicher gefunden\n"
 
-#, python-format
-msgid "bad hash in '%s' (only %d bytes long)"
-msgstr "Prüfsummenfehler in '%s' (nur %d Bytes lang)"
-
 msgid "Can't get file locally"
 msgstr "Kann Datei nicht lokal abrufen"
 
@@ -4423,8 +4443,8 @@ msgid "no files specified"
 msgstr "Keine Dateien angegeben"
 
 #, python-format
-msgid "not removing %s: %s (use -f to force removal)\n"
-msgstr "Entferne nicht %s: %s (Nutze -f um Entfernung zu erzwingen)\n"
+msgid "not removing %s: %s (use forget to undo)\n"
+msgstr "Entferne nicht %s: %s (Nutze ``forget`` um rückgängig zu machen)\n"
 
 msgid "file still exists"
 msgstr "Datei existiert noch"
@@ -4441,6 +4461,28 @@ msgstr "Entferne %s\n"
 
 msgid "uncommitted local changes"
 msgstr "Ausstehende nicht versionierte Änderungen"
+
+msgid "&Largefile"
+msgstr "&Binärriese"
+
+msgid "&Normal file"
+msgstr "&Normale Datei"
+
+#, python-format
+msgid ""
+"%s has been turned into a largefile\n"
+"use (l)argefile or keep as (n)ormal file?"
+msgstr ""
+"%s wurde in einen Binärriesen umgewandelt.\n"
+"Nutze als (B)inärriese oder als (n)ormale Datei?"
+
+#, python-format
+msgid ""
+"%s has been turned into a normal file\n"
+"keep as (l)argefile or use (n)ormal file?"
+msgstr ""
+"%s wurde in eine normale Datei umgewandelt.\n"
+"Nutze als (B)inärriese oder als (n)ormale Datei?"
 
 #, python-format
 msgid "merging %s and %s to %s\n"
@@ -4470,12 +4512,23 @@ msgstr "Ziel-Binärriese existiert bereits"
 msgid "no files to copy"
 msgstr "Keine Dateien zu kopieren"
 
+msgid "caching new largefiles\n"
+msgstr "Lade neue Binärriesen in den Zwischenspeicher\n"
+
+#, python-format
+msgid "%d largefiles cached\n"
+msgstr "%d Binärriesen in den Zwischenspeicher geladen\n"
+
 #, python-format
 msgid "unknown archive type '%s'"
 msgstr "Unbekannter Archivtyp '%s'"
 
 msgid "cannot give prefix when archiving to files"
 msgstr "Bei Archivierung in Dateien kann kein Präfix angegeben werden"
+
+#, python-format
+msgid "largefile %s not found in repo store or system cache"
+msgstr "Binärriese %s weder im Archivlager noch Zwischenspeicher gefunden"
 
 #, python-format
 msgid "not removing %s: file is already untracked\n"
@@ -4491,17 +4544,23 @@ msgstr "Hochzuladende Binärriesen:\n"
 msgid "largefiles: %d to upload\n"
 msgstr "largefiles: %d hochzuladen\n"
 
-msgid "addremove cannot be run on a repo with largefiles"
-msgstr ""
-"'addremove' kann nicht auf ein Archiv mit Binärriesen angewendet werden"
+msgid "largefile contents do not match hash"
+msgstr "Inhalt des Binärriesen passt nicht auf Prüfsumme"
 
 #, python-format
-msgid "largefiles: failed to put %s (%s) into store: %s"
-msgstr "largefiles: Konnte %s (%s) nicht in einlagern: %s"
+msgid "largefiles: failed to put %s into store: %s"
+msgstr "largefiles: Konnte %s nicht in einlagern: %s"
 
 #, python-format
 msgid "requested largefile %s not present in cache"
 msgstr "Angeforderer Binärriese %s ist nicht im Zwischenspeicher"
+
+msgid "remote: "
+msgstr "Entfernt: "
+
+#, python-format
+msgid "unexpected putlfile response: %s"
+msgstr "Unerwartete Antwort von putlfile: %s"
 
 msgid "putlfile failed:"
 msgstr "putlfile fehlgeschlagen:"
@@ -4545,7 +4604,8 @@ msgid ""
 "largefiles: repo method %r appears to have already been wrapped by another "
 "extension: largefiles may behave incorrectly\n"
 msgstr ""
-"largefiles: Aktion %r scheint bereits von einer anderen Erweiterung verändert zu sein. Dadurch kann es zu Fehlern in largefiles kommen\n"
+"largefiles: Aktion %r scheint bereits von einer anderen Erweiterung "
+"verändert zu sein. Dadurch kann es zu Fehlern in largefiles kommen\n"
 
 #, python-format
 msgid "file \"%s\" is a largefile standin"
@@ -5017,6 +5077,13 @@ msgid "revision %d has unmanaged children"
 msgstr "Nachfahren der Revision %d werden nicht verwaltet"
 
 #, python-format
+msgid "revision %d is not mutable"
+msgstr "Revision %d ist unveränderbar"
+
+msgid "see \"hg help phases\" for details"
+msgstr "siehe :hg:`help phases` für Details"
+
+#, python-format
 msgid "cannot import merge revision %d"
 msgstr "Kann Zusammenführung %d nicht importieren"
 
@@ -5036,7 +5103,8 @@ msgid "renaming %s to %s\n"
 msgstr "Benenne %s in %s um\n"
 
 msgid "need --name to import a patch from -"
-msgstr "Beim Import von der Standardeingabe muss die Option --name angegeben werden"
+msgstr ""
+"Beim Import von der Standardeingabe muss die Option --name angegeben werden"
 
 #, python-format
 msgid "unable to read file %s"
@@ -5060,11 +5128,13 @@ msgstr "Entfernt Patches aus der Patch-Reihe"
 
 msgid ""
 "    The patches must not be applied, and at least one patch is required. "
-"With\n"
-"    -k/--keep, the patch files are preserved in the patch directory."
+"Exact\n"
+"    patch identifiers must be given. With -k/--keep, the patch files are\n"
+"    preserved in the patch directory."
 msgstr ""
 "    Die Patches dürfen nicht angewendet sein und mindestens einer muss\n"
-"    angegeben sein. Mit -k/--keep werden die Patchdateien erhalten."
+"    angegeben sein. Exakte Patch-IDs müssen verwendet werden. Mit -k/--keep\n"
+"    werden die Patchdateien erhalten."
 
 msgid ""
 "    To stop managing a patch and move it into permanent history,\n"
@@ -5902,12 +5972,12 @@ msgstr ""
 "    Beispiel::"
 
 msgid ""
-"        qguard foo.patch -stable    (negative guard)\n"
-"        qguard bar.patch +stable    (positive guard)\n"
+"        qguard foo.patch -- -stable    (negative guard)\n"
+"        qguard bar.patch    +stable    (positive guard)\n"
 "        qselect stable"
 msgstr ""
-"        qguard foo.patch -stable    (negativer Wächter)\n"
-"        qguard bar.patch +stable    (positiver Wächter)\n"
+"        qguard foo.patch -- -stable    (negativer Wächter)\n"
+"        qguard bar.patch    +stable    (positiver Wächter)\n"
 "        qselect stable"
 
 msgid ""
@@ -6196,9 +6266,9 @@ msgid ""
 "This extension let you run hooks sending email notifications when\n"
 "changesets are being pushed, from the sending or receiving side."
 msgstr ""
-"Diese Erweiterung ermöglicht das Senden von Benachrichtungsemails, wann-\n"
-"immer Änderungssätze übertragen werden. Dies kann von der übertragenden\n"
-"oder der empfangenden Seite aus geschehen."
+"Diese Erweiterung ermöglicht das Senden von Benachrichtigungsemails,\n"
+"wannimmer Änderungssätze übertragen werden. Dies kann von der über-\n"
+"tragenden oder der empfangenden Seite aus geschehen."
 
 msgid ""
 "First, enable the extension as explained in :hg:`help extensions`, and\n"
@@ -6431,7 +6501,21 @@ msgid ""
 "  If set, append mails to this mbox file instead of sending. Default: None."
 msgstr ""
 "notify.mbox\n"
-"  Schreibe Nachrichten in mbox Datei, anstatt sie zu versenden. Standard: None"
+"  Schreibe Nachrichten in mbox Datei, anstatt sie zu versenden. Standard: "
+"None"
+
+msgid ""
+"notify.fromauthor\n"
+"  If set, use the first committer of the changegroup for the \"From\" field "
+"of\n"
+"  the notification mail. If not set, take the user from the pushing repo.\n"
+"  Default: False."
+msgstr ""
+"notify.fromauthor\n"
+"  Verwende den Autoren der ersten Änderungsgruppe als Absender der\n"
+"  Benachrichtigungsemail. Falls nicht gesetzt, verwende den Nutzer im\n"
+"  übertragenden Archiv. Standard: False."
+
 
 msgid ""
 "If set, the following entries will also be used to customize the "
@@ -7045,17 +7129,17 @@ msgstr "%d:%02d"
 #. i18n: format X days and YY hours as "XdYYh"
 #, python-format
 msgid "%dd%02dh"
-msgstr ""
+msgstr "%dd%02dh"
 
 #. i18n: format X weeks and YY days as "XwYYd"
 #, python-format
 msgid "%dw%02dd"
-msgstr ""
+msgstr "%dw%02dd"
 
 #. i18n: format X years and YY weeks as "XyYYw"
 #, python-format
 msgid "%dy%02dw"
-msgstr ""
+msgstr "%dy%02dw"
 
 #, python-format
 msgid "%d %s/sec"
@@ -7305,7 +7389,8 @@ msgid ""
 "    the intended source branch)."
 msgstr ""
 "    Als Folge der automatischen Auswahlregeln für Quelle und Ziel wird\n"
-"    (im Gegensatz zu einer Zusammenführung) keine Verschiebung durchgeführt,\n"
+"    (im Gegensatz zu einer Zusammenführung) keine Verschiebung "
+"durchgeführt,\n"
 "    wenn der jüngere von zwei Köpfen eines Zweiges aktuell ist. In diesem\n"
 "    Falle (z.B. bei lokaler Versionsübernahme nach einem Abrufen), muss\n"
 "    eine Quelle und/oder ein Ziel explizit angegeben werden. Dieser Fall\n"
@@ -7368,6 +7453,13 @@ msgstr "Kann Änderungssatz nicht ohne dessen Nachfahren verschieben"
 msgid "use --keep to keep original changesets"
 msgstr "Verwende --keep, um die ursprünglichen Änderungssätze zu behalten"
 
+#, python-format
+msgid "Can't rebase immutable changeset %s"
+msgstr "Nicht veränderbarer Änderungssatz %s kann nicht verschoben werden"
+
+msgid "see hg help phases for details"
+msgstr "Siehe :hg:`help phases` für Details"
+
 msgid "nothing to rebase\n"
 msgstr "Kein Verschiebung nötig\n"
 
@@ -7414,9 +7506,13 @@ msgstr ""
 msgid "no rebase in progress"
 msgstr "Keine vorherige Verschiebung zur Wiederaufnahme"
 
+msgid "warning: immutable rebased changeset detected, can't abort\n"
+msgstr ""
+"Warnung: Unveränderbare Änderungssätze gefunden. Kann nicht abbrechen\n"
+
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
-"Warnung: Neue Änderungssätze auf Zielzweig gefunden, kann nicht abbrechen\n"
+"Warnung: Neue Änderungssätze auf Zielzweig gefunden. Kann nicht abbrechen\n"
 
 msgid "rebase aborted\n"
 msgstr "Verschiebung abgebrochen\n"
@@ -7536,7 +7632,7 @@ msgid ""
 "      y - record this change\n"
 "      n - skip this change"
 msgstr ""
-"      y - übernimmt diese Änderung\n"
+"      j - übernimmt diese Änderung\n"
 "      n - überspringt diese Änderung"
 
 msgid ""
@@ -7551,9 +7647,9 @@ msgid ""
 "      a - record all changes to all remaining files\n"
 "      q - quit, recording no changes"
 msgstr ""
-"      d - fertig, überspringt verbleibende Änderungen und Dateien\n"
+"      f - fertig, überspringt verbleibende Änderungen und Dateien\n"
 "      a - übernimmt alle Änderungen aller verbleibenden Dateien\n"
-"      q - beendet ohne Änderungen zu übernehmen"
+"      b - beendet ohne Änderungen zu übernehmen"
 
 msgid "      ? - display help"
 msgstr "      ? - zeigt Hilfe an"
@@ -7583,8 +7679,8 @@ msgstr "Nicht-interaktive Ausführung, nutze stattdessen '%s'"
 
 msgid "cannot partially commit a merge (use \"hg commit\" instead)"
 msgstr ""
-"Eine Zusammenführung kann nicht teilweise übernommen werden (verwende "
-"stattdessen :h:`commit`)"
+"Eine Zusammenführung kann nicht teilweise übernommen werden (verwende :hg:"
+"`commit`)"
 
 msgid "no changes to record\n"
 msgstr "Keine Änderungen zu übernehmen\n"
@@ -7596,49 +7692,51 @@ msgid "interactively select changes to refresh"
 msgstr "Interaktive Auswahl der Änderungen für refresh"
 
 msgid "recreates hardlinks between repository clones"
-msgstr "stellt Hardlinks zwischen Repository Clones wieder her"
+msgstr "stellt Hardlinks zwischen Archivklonen wieder her"
 
 msgid "recreate hardlinks between two repositories"
-msgstr "stellt Hardlinks zwischen zwei Repositories wieder her"
+msgstr "stellt harte Verknüpfungen zwischen zwei Archiven wieder her"
 
 msgid ""
 "    When repositories are cloned locally, their data files will be\n"
 "    hardlinked so that they only use the space of a single repository."
 msgstr ""
-"    Wenn Repositories lokal geklont werden, werden ihre Datendateien\n"
-"    hart gelinkt, sodaß sie nur den Platz eines einzelnen Repositories\n"
-"    belegen."
+"    Wenn Archive lokal geklont werden, werden ihre Datendateien hart\n"
+"    verknüpft, sodass sie nur den Platz eines einzelnen Archivs belegen."
 
 msgid ""
 "    Unfortunately, subsequent pulls into either repository will break\n"
 "    hardlinks for any files touched by the new changesets, even if\n"
 "    both repositories end up pulling the same changes."
 msgstr ""
-"    Unglücklicherweise werden nachfolgende ``pull``s in jedes von diesen\n"
-"    Repositories Hardlinks für alle Dateien, die von dem neuen Changeset\n"
-"    betroffen sind, brechen, selbst wenn beide Repositories schlussendlich\n"
-"    die gleichen Änderungen einbeziehen."
+"    Unglücklicherweise brechen spätere Archivänderungen (z.B. Abrufen) die\n"
+"    Verknüpfungen aller Dateien, die von neuen Änderungssätzen betroffen\n"
+"    sind, selbst wenn beide Archive letzlich dieselben Änderungen enthalten."
 
 msgid ""
 "    Similarly, passing --rev to \"hg clone\" will fail to use any\n"
 "    hardlinks, falling back to a complete copy of the source\n"
 "    repository."
 msgstr ""
-"    In gleicher Weise scheitert \"hg clone\" mit --rev an Hardlinks,\n"
-"    sondern nutzt eine komplette Kopie des Quell-Repositories."
+"    In gleicher Weise scheitert \"hg clone\" mit --rev an harten\n"
+"    Verknüpfungen und nutzt eine komplette Kopie des Quellarchivs."
 
 msgid ""
 "    This command lets you recreate those hardlinks and reclaim that\n"
 "    wasted space."
 msgstr ""
-"    Dieses Kommando erlaubt Ihnen, diese Hardlinks wieder herzustellen und\n"
-"    den verlorenen Platz wieder zurück zu gewinnen."
+"    Dieses Kommando erlaubt es, diese Verknüpfungen wieder herzustellen\n"
+"    und den verlorenen Platz zurückzugewinnen."
 
 msgid ""
 "    This repository will be relinked to share space with ORIGIN, which\n"
 "    must be on the same local disk. If ORIGIN is omitted, looks for\n"
 "    \"default-relink\", then \"default\", in [paths]."
 msgstr ""
+"    Dieses Archiv wird neu verknüpft um den Speicher mit HERKUNFT, welches\n"
+"    auf derselben lokalen Platte sein muss, zu teilen. Wenn HERKUNFT nicht\n"
+"    angegeben ist, wird der Pfade (siehe [paths]) mit dem Namen\n"
+"    \"default-relink\" und schliesslich \"default\" verwendet."
 
 msgid ""
 "    Do not attempt any read operations on this repository while the\n"
@@ -7646,9 +7744,12 @@ msgid ""
 "    writes.)\n"
 "    "
 msgstr ""
+"    Versuchen Sie nicht, während der Aktion Leseoperationen auf diesem\n"
+"    Archiv durchzuführen. Schreiben wird von beiden Archive verhindert.\n"
+"    "
 
 msgid "hardlinks are not supported on this system"
-msgstr "Hardlinks werden von diesem System nicht unterstützt"
+msgstr "Harte Verknüpfungen werden von diesem System nicht unterstützt"
 
 msgid "must specify local origin repository"
 msgstr "Lokales Quellarchiv muss angegeben werden"
@@ -7658,11 +7759,11 @@ msgid "relinking %s to %s\n"
 msgstr "Wiederverknüpft: %s nach %s\n"
 
 msgid "there is nothing to relink\n"
-msgstr ""
+msgstr "Es gibt nichts zum wiederverknüpfen\n"
 
 #, python-format
 msgid "tip has %d files, estimated total number of files: %s\n"
-msgstr ""
+msgstr "Die Archivspitze (tip) hat %d Dateien. Geschätzte Gesamtzahl: %s\n"
 
 msgid "collecting"
 msgstr "Sammle"
@@ -7678,21 +7779,21 @@ msgid "source and destination are on different devices"
 msgstr "Quelle und Ziel sind auf unterschiedlichen Geräten"
 
 msgid "pruning"
-msgstr ""
+msgstr "Schränke ein"
 
 #, python-format
 msgid "pruned down to %d probably relinkable files\n"
-msgstr ""
+msgstr "Schränke auf %d wahrscheinlich wiederverknüpfbare Dateien ein\n"
 
 msgid "relinking"
-msgstr ""
+msgstr "Verknüpfe erneut"
 
 #, python-format
 msgid "relinked %d files (%s reclaimed)\n"
-msgstr ""
+msgstr "%d Dateien wiederverknüpft (%s zurückgewonnen)\n"
 
 msgid "[ORIGIN]"
-msgstr ""
+msgstr "[HERKUNFT]"
 
 msgid "extend schemes with shortcuts to repository swarms"
 msgstr ""
@@ -7807,7 +7908,7 @@ msgstr ""
 
 #, python-format
 msgid "skipping already applied revision %s\n"
-msgstr ""
+msgstr "Überspringe bereits angewendete Revision %s\n"
 
 #, python-format
 msgid "skipping merge changeset %s:%s\n"
@@ -7826,14 +7927,14 @@ msgid "filtering %s\n"
 msgstr ""
 
 msgid "filter failed"
-msgstr ""
+msgstr "Filter fehlgeschlagen"
 
 msgid "can only omit patchfile if merging"
 msgstr ""
 
 #, python-format
 msgid "%s: empty changeset"
-msgstr ""
+msgstr "%s: leerer Änderungssatz"
 
 msgid "fix up the merge and run hg transplant --continue"
 msgstr ""
@@ -7850,7 +7951,7 @@ msgid "working dir not at transplant parent %s"
 msgstr ""
 
 msgid "commit failed"
-msgstr ""
+msgstr "Übernahme der Änderungen schlug fehl"
 
 msgid "filter corrupted changeset (no user or date)"
 msgstr "filtriere beschädigte Änderungssätze (ohne Nutzer oder Datum)"
@@ -8205,8 +8306,8 @@ msgid "updating bookmark %s\n"
 msgstr "Aktualisiere Lesezeichen %s\n"
 
 #, python-format
-msgid "not updating divergent bookmark %s\n"
-msgstr "Aktualisiere nicht divergierendes Lesezeichen %s\n"
+msgid "divergent bookmark %s stored as %s\n"
+msgstr "Divergierendes Lesezeichen %s als %s gespeichert\n"
 
 msgid "searching for changed bookmarks\n"
 msgstr "Suche nach geänderten Lesezeichen\n"
@@ -8362,6 +8463,10 @@ msgstr "Lesezeichen:     %s\n"
 #, python-format
 msgid "tag:         %s\n"
 msgstr "Marke:           %s\n"
+
+#, python-format
+msgid "phase:       %s\n"
+msgstr "Phase:       %s\n"
 
 #, python-format
 msgid "parent:      %d:%s\n"
@@ -8660,6 +8765,8 @@ msgid ""
 "    Returns 0 if all files are successfully added.\n"
 "    "
 msgstr ""
+"    Gibt 0 zurück, wenn alle Dateien erfolgreich hinzugefügt wurden.\n"
+"    "
 
 msgid "add all new files, delete all missing files"
 msgstr "Fügt alle neuen Dateien hinzu, löscht alle fehlenden Dateien"
@@ -8676,8 +8783,8 @@ msgid ""
 "    ``.hgignore``. As with add, these changes take effect at the next\n"
 "    commit."
 msgstr ""
-"    Neue Dateien werden ignoriert, wenn sie einem der Muster aus "
-"``.hgignore``\n"
+"    Neue Dateien werden ignoriert, wenn sie einem der Muster aus ``."
+"hgignore``\n"
 "    entsprechen. Genau wie add, wirken diese Änderungen erst beim nächsten\n"
 "    Übernehmen (commit)."
 
@@ -8707,8 +8814,7 @@ msgid "annotate the specified revision"
 msgstr "Annotiert die angegebene Revision"
 
 msgid "follow copies/renames and list the filename (DEPRECATED)"
-msgstr ""
-"Folge Kopien/Umbenennungen und liste Dateinamen auf (VERALTET)"
+msgstr "Folge Kopien/Umbenennungen und liste Dateinamen auf (VERALTET)"
 
 msgid "don't follow copies and renames"
 msgstr "Unterläßt das Folgen von Dateikopien und Umbenennungen"
@@ -9161,17 +9267,18 @@ msgstr "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
 msgid "track a line of development with movable markers"
 msgstr "Folgt einem Entwicklungsstrang mit einer beweglichen Markierung"
 
+#, fuzzy
 msgid ""
-"    Bookmarks are pointers to certain commits that move when\n"
-"    committing. Bookmarks are local. They can be renamed, copied and\n"
-"    deleted. It is possible to use bookmark names in :hg:`merge` and\n"
-"    :hg:`update` to merge and update respectively to a given bookmark."
+"    Bookmarks are pointers to certain commits that move when committing.\n"
+"    Bookmarks are local. They can be renamed, copied and deleted. It is\n"
+"    possible to use :hg:`merge NAME` to merge from a given bookmark, and\n"
+"    :hg:`update NAME` to update to a given bookmark."
 msgstr ""
 "    Lesezeichen sind Zeiger auf bestimmte Versionen, die mitwandern,\n"
 "    wenn eine neuen Version erzeugt wird. Lesezeichen sind nur lokal.\n"
 "    Sie können umbenannt, kopiert und gelöscht werden. Es ist möglich,\n"
-"    Lesezeichen bei :hg: `merge` und :hg:`update` zu nutzen, um auf das\n"
-"    angegebene Lesezeichen zu aktualisieren."
+"    Lesezeichen bei :hg: `merge` und :hg:`update` anzugeben, um das an-\n"
+"    gegebene Lesezeichen zusammenzuführen, bzw. darauf zu aktualisieren."
 
 msgid ""
 "    You can use :hg:`bookmark NAME` to set a bookmark on the working\n"
@@ -9240,6 +9347,14 @@ msgid "set or show the current branch name"
 msgstr "Setzt oder zeigt den Namen des aktuellen Zweigs"
 
 msgid ""
+"    .. note::\n"
+"       Branch names are permanent and global. Use :hg:`bookmark` to create "
+"a\n"
+"       light-weight bookmark instead. See :hg:`help glossary` for more\n"
+"       information about named branches and bookmarks."
+msgstr ""
+
+msgid ""
 "    With no argument, show the current branch name. With one argument,\n"
 "    set the working directory branch name (the branch will not exist\n"
 "    in the repository until the next commit). Standard practice\n"
@@ -9276,13 +9391,6 @@ msgstr ""
 "    :hg:`update`. Mit :hg:`commit --close-branch` wird der aktuelle Zweig\n"
 "    geschlossen."
 
-msgid ""
-"    .. note::\n"
-"       Branch names are permanent. Use :hg:`bookmark` to create a\n"
-"       light-weight bookmark instead. See :hg:`help glossary` for more\n"
-"       information about named branches and bookmarks."
-msgstr ""
-
 #, python-format
 msgid "reset working directory to branch %s\n"
 msgstr "Setze Arbeitsverzeichnis auf Zweig %s zurück\n"
@@ -9297,6 +9405,9 @@ msgstr ""
 #, python-format
 msgid "marked working directory as branch %s\n"
 msgstr "Arbeitsverzeichnis wurde als Zweig %s markiert\n"
+
+msgid "(branches are permanent and global, did you want a bookmark?)\n"
+msgstr ""
 
 msgid "show only branches that have unmerged heads"
 msgstr "Zeigt nur Branches deren Köpfe nicht zusammengeführt wurden"
@@ -9334,12 +9445,14 @@ msgid ""
 "    Returns 0.\n"
 "    "
 msgstr ""
+"    Gibt 0 zurück.\n"
+"    "
 
 msgid " (closed)"
-msgstr ""
+msgstr " (geschlossen)"
 
 msgid " (inactive)"
-msgstr ""
+msgstr " (inaktiv)"
 
 msgid "run even when the destination is unrelated"
 msgstr "Auch ausführen, wenn das Ziel keinen Bezug hat"
@@ -9536,7 +9649,8 @@ msgid ""
 "      --pull option to avoid hardlinking."
 msgstr ""
 "      Aus Effizienzgründen werden 'hardlinks' für das Klonen genutzt, wann\n"
-"      immer Quelle und Ziel auf dem selben Dateisystem liegen (dies gilt nur\n"
+"      immer Quelle und Ziel auf dem selben Dateisystem liegen (dies gilt "
+"nur\n"
 "      für die Daten des Archivs, nicht für die Arbeitskopie). Einige\n"
 "      Dateisyteme, wie etwa AFS, implementieren 'hardlinks' fehlerhaft,\n"
 "      erzeugen dabei aber keine Fehlermeldung. Dann muss die --pull Option\n"
@@ -9629,8 +9743,7 @@ msgid "          hg clone http://selenic.com/hg#stable"
 msgstr ""
 
 msgid "    See :hg:`help urls` for details on specifying URLs."
-msgstr ""
-"    Siehe auch :hg:`help urls` für das Format von Adressangaben."
+msgstr "    Siehe auch :hg:`help urls` für das Format von Adressangaben."
 
 msgid "cannot specify both --noupdate and --updaterev"
 msgstr ""
@@ -10246,8 +10359,7 @@ msgid "[OPTION]... [-o OUTFILESPEC] REV..."
 msgstr "[OPTION]... [-o DATEINAMENMUSTER] REV..."
 
 msgid "dump the header and diffs for one or more changesets"
-msgstr ""
-"Gibt Kopfzeilen und Änderungsverlauf einer oder mehrerer Versionen aus"
+msgstr "Gibt Kopfzeilen und Änderungsverlauf einer oder mehrerer Versionen aus"
 
 msgid "    Print the changeset header and diffs for one or more revisions."
 msgstr ""
@@ -10296,8 +10408,10 @@ msgstr ""
 "    :``%N``: Anzahl der generierten Patches\n"
 "    :``%R``: Revisionnummer des Änderungssatzes\n"
 "    :``%b``: Basisname des exportierten Archivs\n"
-"    :``%h``: Kurzform der Prüfsumme des Änderungssatzes (12 Byte hexadezimal)\n"
-"    :``%m``: Erste Zeile der Übernahmenachricht (nur alphanumerische Zeichen)\n"
+"    :``%h``: Kurzform der Prüfsumme des Änderungssatzes (12 Byte "
+"hexadezimal)\n"
+"    :``%m``: Erste Zeile der Übernahmenachricht (nur alphanumerische "
+"Zeichen)\n"
 "    :``%n``: Laufende Nummer mit führenden Nullen, beginnend bei 1\n"
 "    :``%r``: Revisionsnummer mit führenden Nullen"
 
@@ -10424,9 +10538,9 @@ msgstr ""
 
 msgid ""
 "    If a graft merge results in conflicts, the graft process is\n"
-"    aborted so that the current merge can be manually resolved. Once\n"
-"    all conflicts are addressed, the graft process can be continued\n"
-"    with the -c/--continue option."
+"    interrupted so that the current merge can be manually resolved.\n"
+"    Once all conflicts are addressed, the graft process can be\n"
+"    continued with the -c/--continue option."
 msgstr ""
 
 msgid ""
@@ -10988,10 +11102,10 @@ msgstr ""
 
 msgid ""
 "    With -s/--similarity, hg will attempt to discover renames and\n"
-"    copies in the patch in the same way as 'addremove'."
+"    copies in the patch in the same way as :hg:`addremove`."
 msgstr ""
 "    Mit der Option -s/--similarity werden Umbenennungen und Kopien auf\n"
-"    gleiche Weise wie mit dem Befehl \"hg addremove\" erkannt."
+"    gleiche Weise wie mit dem Befehl :hg:`addremove` erkannt."
 
 msgid ""
 "    To read a patch from standard input, use \"-\" as the patch name. If\n"
@@ -11479,12 +11593,11 @@ msgstr "Zweig '%s' hat einen Kopf - Bitte wähle eine explizite Revision"
 msgid "run 'hg heads' to see all heads"
 msgstr ":hg:`heads .` zeigt alle Köpfe"
 
-msgid "there is nothing to merge"
+msgid "nothing to merge"
 msgstr "Es gibt nichts zum Zusammenführen"
 
-#, python-format
-msgid "%s - use \"hg update\" instead"
-msgstr "%s - Nutze \"hg update\" stattdessen"
+msgid "use 'hg update' instead"
+msgstr "Nutze stattdessen 'hg update'"
 
 msgid "working directory not at a head revision"
 msgstr "Arbeitsverzeichnis ist nicht auf Stand der Kopfversion"
@@ -11553,7 +11666,7 @@ msgid "'%s' not found in manifest!"
 msgstr "'%s' nicht im Manifest gefunden!"
 
 msgid "[NAME]"
-msgstr ""
+msgstr "[NAME]"
 
 msgid "show aliases for remote repositories"
 msgstr "Zeigt Adresse für Aliasnamen von entfernten Projektarchiven an"
@@ -11599,6 +11712,61 @@ msgstr "    Siehe auch :hg:`help urls` für das Format von Adressangaben."
 
 msgid "not found!\n"
 msgstr "nicht gefunden!\n"
+
+msgid "set changeset phase to public"
+msgstr ""
+
+msgid "set changeset phase to draft"
+msgstr ""
+
+msgid "set changeset phase to secret"
+msgstr ""
+
+msgid "allow to move boundary backward"
+msgstr ""
+
+msgid "target revision"
+msgstr ""
+
+msgid "[-p|-d|-s] [-f] [-r] REV..."
+msgstr ""
+
+msgid "set or show the current phase name"
+msgstr ""
+
+msgid "    With no argument, show the phase name of specified revisions."
+msgstr ""
+
+msgid ""
+"    With one of -p/--public, -d/--draft or -s/--secret, change the\n"
+"    phase value of the specified revisions."
+msgstr ""
+
+msgid ""
+"    Unless -f/--force is specified, :hg:`phase` won't move changeset from a\n"
+"    lower phase to an higher phase. Phases are ordered as follows::"
+msgstr ""
+
+msgid "        public < draft < secret"
+msgstr ""
+
+msgid ""
+"    Return 0 on success, 1 if no phases were changed.\n"
+"    "
+msgstr ""
+
+msgid "only one phase can be specified"
+msgstr ""
+
+msgid "no revisions specified!"
+msgstr ""
+
+#, python-format
+msgid "phase change for %i changesets\n"
+msgstr ""
+
+msgid "no phases changed\n"
+msgstr ""
 
 #, python-format
 msgid "not updating: %s\n"
@@ -11747,8 +11915,7 @@ msgstr ""
 msgid ""
 "    Push changesets from the local repository to the specified\n"
 "    destination."
-msgstr ""
-"    Überträgt lokale Änderungen in das angegebene Ziel."
+msgstr "    Überträgt lokale Änderungen in das angegebene Ziel."
 
 msgid ""
 "    This operation is symmetrical to pull: it is identical to a pull\n"
@@ -11803,7 +11970,6 @@ msgstr ""
 "gezogen\n"
 "    werden. Beim Weglassen des ZIELs wird standardmäßig der 'default'-Pfad\n"
 "    genutzt. Weitere Hilfe gibt unter :hg:`help urls`."
-"    "
 
 msgid ""
 "    Returns 0 if push was successful, 1 if nothing to push.\n"
@@ -11884,7 +12050,8 @@ msgid ""
 msgstr ""
 "      Option -A/--after kann genutzt werden, um Dateien zu entfernen, die\n"
 "      bereits gelöscht wurden, -f/--force kann genutzt werden, um die\n"
-"      Löschung zu erzwingen. -Af entfernt Dateien aus der nächsten Revision,\n"
+"      Löschung zu erzwingen. -Af entfernt Dateien aus der nächsten "
+"Revision,\n"
 "      ohne sie im Arbeitsverzeichnis zu löschen"
 
 msgid ""
@@ -11894,7 +12061,8 @@ msgid ""
 "      (as reported by :hg:`status`). The actions are Warn, Remove\n"
 "      (from branch) and Delete (from disk):"
 msgstr ""
-"      Die folgende Tabelle beschreibt detailliert das Verhalten von 'remove'\n"
+"      Die folgende Tabelle beschreibt detailliert das Verhalten von "
+"'remove'\n"
 "      für unterschiedliche Dateizustände (Spalten) und Optionskombinationen\n"
 "      (Reihen). Die Dateizustände sind Hinzugefügt (A), Unverändert (C),\n"
 "      Verändert (M) und Fehlend (!) (wie von :hg:`status` angezeigt). Die\n"
@@ -11946,7 +12114,9 @@ msgstr "Entferne nicht %s: Datei ist verändert (-f zum Erzwingen)\n"
 
 #, python-format
 msgid "not removing %s: file has been marked for add (use forget to undo)\n"
-msgstr "Entferne nicht %s: Datei soll hinzugefügt werden (:hg:`forget` um dies rückgängig zu machen)\n"
+msgstr ""
+"Entferne nicht %s: Datei soll hinzugefügt werden (:hg:`forget` um dies "
+"rückgängig zu machen)\n"
 
 msgid "record a rename that has already occurred"
 msgstr ""
@@ -12069,8 +12239,7 @@ msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr ""
 
 msgid "restore files to their checkout state"
-msgstr ""
-"Setzt gegebene Dateien oder Verzeichnisse auf frühere Version zurück"
+msgstr "Setzt gegebene Dateien oder Verzeichnisse auf frühere Version zurück"
 
 msgid ""
 "    .. note::\n"
@@ -12108,7 +12277,8 @@ msgid ""
 msgstr ""
 "    Mit der -r/--rev oder der -d/--date Option werden die Dateien oder\n"
 "    Verzeichnisse auf die gegebene Revision zurückgesetzt. Da 'revert' aber\n"
-"    nicht die mit dem Arbeitsverzeichnis assoziierte Revisionsnummer ändert,\n"
+"    nicht die mit dem Arbeitsverzeichnis assoziierte Revisionsnummer "
+"ändert,\n"
 "    gelten die betroffenen Dateien dann als modifiziert. Damit kann man\n"
 "    ungewollte aber bereits übernommene Änderungen rückgängig machen. Siehe\n"
 "    auch :hg:`backout` für eine ähnliche Methode."
@@ -12230,17 +12400,14 @@ msgstr ""
 "    - unbundle"
 
 msgid ""
-"    It's possible to lose data with rollback: commit, update back to\n"
-"    an older changeset, and then rollback. The update removes the\n"
-"    changes you committed from the working directory, and rollback\n"
-"    removes them from history. To avoid data loss, you must pass\n"
-"    --force in this case."
+"    To avoid permanent data loss, rollback will refuse to rollback a\n"
+"    commit transaction if it isn't checked out. Use --force to\n"
+"    override this protection."
 msgstr ""
-"    Es gibt die Möglichkeit durch das Zurückrollen Daten zu verlieren, z.B.\n"
-"    die Übernahme neuer Änderungen (commit) gefolgt von einer Aktualisierung\n"
-"    auf eine andere Revision und einem Zurückrollen der Übernahme.\n"
-"    Damit dies nicht aus Versehen passiert, wird in diesem Falle --force als\n"
-"    Parameter gefordert."
+"    Um einen versehentlichen Datenverlust zu verhindern, wird rollback\n"
+"    keine Änderungssätze aus der Historie entfernen, die nicht im\n"
+"    Arbeitsverzeichnis aktuell sind. Um diesen Schutz abzuschalten,\n"
+"    muss --force (erzwingen) angegeben werden."
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -12301,8 +12468,7 @@ msgstr ""
 "Name der auf der Webseite angezeigt wird (Standard: Arbeitsverzeichnis)"
 
 msgid "name of the hgweb config file (see \"hg help hgweb\")"
-msgstr ""
-"Name der hgweb-Konfigurationsdatei (siehe :hg:`help hgweb`)"
+msgstr "Name der hgweb-Konfigurationsdatei (siehe :hg:`help hgweb`)"
 
 msgid "name of the hgweb config file (DEPRECATED)"
 msgstr ""
@@ -12471,7 +12637,8 @@ msgid ""
 "       relative to one merge parent."
 msgstr ""
 "    .. note:\n"
-"       Der Status kann sich vom Diff unterscheiden, wenn sich Berechtigungen\n"
+"       Der Status kann sich vom Diff unterscheiden, wenn sich "
+"Berechtigungen\n"
 "       geändert haben oder eine Zusammenführung durchgeführt wurde. Das\n"
 "       Standard-Diff-Format zeigt keine Berechtigungsänderungen an und\n"
 "       'diff' zeigt nur Änderungen relativ zu einer Vorgängerversion einer\n"
@@ -12511,9 +12678,12 @@ msgstr ""
 "      I = ignoriert\n"
 "        = die zuvor hinzugefügt Datei (A) wurde von hier kopiert"
 
-msgid "      - show changes in the working directory relative to a changeset:"
+msgid ""
+"      - show changes in the working directory relative to a\n"
+"        changeset::"
 msgstr ""
-"      - zeigt Änderungen zwischen dem Arbeitsverzeichnis und einer Revision:"
+"      - zeigt Änderungen zwischen dem Arbeitsverzeichnis und einer\n"
+"        Revision::"
 
 msgid "          hg status --rev 9353"
 msgstr ""
@@ -12796,7 +12966,8 @@ msgstr ""
 "    umbenannt oder manuell einem anderen Änderungssatz angehängt werden."
 
 msgid "update to new branch head if changesets were unbundled"
-msgstr "aktualisiere auf den neuen Zweigkopf when Änderungssätze entpackt wurden"
+msgstr ""
+"aktualisiere auf den neuen Zweigkopf when Änderungssätze entpackt wurden"
 
 msgid "[-u] FILE..."
 msgstr "[-u] DATEI..."
@@ -12820,7 +12991,9 @@ msgid "discard uncommitted changes (no backup)"
 msgstr "entferne nicht versionierte Änderungen (kein Backup)"
 
 msgid "update across branches if no uncommitted changes"
-msgstr "Aktualisiere auf anderen Zweig (falls keine unversionierte Änderungen ausstehen)"
+msgstr ""
+"Aktualisiere auf anderen Zweig (falls keine unversionierten Änderungen "
+"ausstehen)"
 
 msgid "[-c] [-C] [-d DATE] [[-r] REV]"
 msgstr "[-c] [-C] [-d DATUM] [[-r] REV]"
@@ -12831,10 +13004,11 @@ msgstr "Aktualisiert das Arbeitsverzeichnis (oder wechselt die Version)"
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
-"    current named branch."
+"    current named branch and move the current bookmark."
 msgstr ""
 "    Hebt das Arbeitsverzeichnis auf die angegebene Revision an. Ohne\n"
-"    Angabe einer Revision wird der Spitze des aktuellen Zweigs gewählt."
+"    Angabe einer Revision wird der Spitze des aktuellen Zweigs gewählt\n"
+"    und ggf. das aktuelle Lesezeichen verschoben."
 
 msgid ""
 "    If the changeset is not a descendant of the working directory's\n"
@@ -12942,11 +13116,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(siehe http://mercurial.selenic.com für mehr Information)"
 
 msgid ""
-"Copyright (C) 2005-2011 Matt Mackall and others\n"
+"Copyright (C) 2005-2012 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2011 Matt Mackall und andere\n"
+"Copyright (C) 2005-2012 Matt Mackall und andere\n"
 "Dies ist freie Software; siehe Quellen für Kopierbestimmungen. Es besteht\n"
 "KEINE Gewährleistung für das Programm, nicht einmal der Marktreife oder der\n"
 "Verwendbarkeit für einen bestimmten Zweck.\n"
@@ -13250,7 +13424,7 @@ msgid "option --cwd may not be abbreviated!"
 msgstr "Option --cwd kann nicht abgekürzt werden!"
 
 msgid ""
-"Option -R has to be separated from other options (e.g. not -qR) and --"
+"option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
 "Option -R muss von anderen Optionen getrennt werden (also z.B. nicht -qR) "
@@ -13974,7 +14148,7 @@ msgstr ""
 msgid ""
 "\n"
 "``annotate``\n"
-"\"\"\"\"\"\"\"\""
+"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
 
 msgid ""
@@ -14577,11 +14751,14 @@ msgid ""
 "various actions such as starting or finishing a commit. Multiple\n"
 "hooks can be run for the same action by appending a suffix to the\n"
 "action. Overriding a site-wide hook can be done by changing its\n"
-"value or setting it to an empty string."
+"value or setting it to an empty string.  Hooks can be prioritized\n"
+"by adding a prefix of ``priority`` to the hook name on a new line\n"
+"and setting the priority.  The default priority is 0 if\n"
+"not specified."
 msgstr ""
 
 msgid "Example ``.hg/hgrc``::"
-msgstr ""
+msgstr "Beispiel ``.hg/hgrc``-Datei::"
 
 msgid ""
 "  [hooks]\n"
@@ -14590,7 +14767,9 @@ msgid ""
 "  # do not use the site-wide hook\n"
 "  incoming =\n"
 "  incoming.email = /my/email/hook\n"
-"  incoming.autobuild = /my/build/hook"
+"  incoming.autobuild = /my/build/hook\n"
+"  # force autobuild hook to run before other incoming hooks\n"
+"  priority.incoming.autobuild = 1"
 msgstr ""
 
 msgid ""
@@ -15875,7 +16054,8 @@ msgstr ""
 "    Manchmal muss Mercurial eine Textdatei in einem Editor öffnen, damit\n"
 "    der Nutzer sie bearbeiten kann, zum Beispiel wenn eine Versionsmeldung\n"
 "    geschrieben wird. Der verwendete Editor wird aus den drei Umgebungs-\n"
-"    variablen HGEDITOR, VISUAL und EDITOR (in dieser Reihenfolge) ermittelt.\n"
+"    variablen HGEDITOR, VISUAL und EDITOR (in dieser Reihenfolge) "
+"ermittelt.\n"
 "    Der erste nicht-leere wird verwendet. Wenn alle Angaben leer sind, wird\n"
 "    der Standard 'vi' verwendet."
 
@@ -16068,7 +16248,7 @@ msgstr ""
 msgid "- Find C files in a non-standard encoding::"
 msgstr ""
 
-msgid "    hg locate \"set:**.c and not encoding(ascii)\""
+msgid "    hg locate \"set:**.c and not encoding('UTF-8')\""
 msgstr ""
 
 msgid "- Revert copies of large binary files::"
@@ -17177,8 +17357,7 @@ msgid "Regexp examples::"
 msgstr "Beispiel mit regulärem Ausdruck::"
 
 msgid "  re:.*\\.c$      any name ending in \".c\", anywhere in the repository"
-msgstr ""
-"  re:.*\\.c$     jeder Name endend mit \".c\" überall im Projektarchiv"
+msgstr "  re:.*\\.c$     jeder Name endend mit \".c\" überall im Projektarchiv"
 
 msgid "File examples::"
 msgstr "Datei-Beispiele::"
@@ -18277,6 +18456,10 @@ msgstr ""
 "changegroupsubset nicht unterstützt."
 
 #, python-format
+msgid "updating %s to public failed!\n"
+msgstr ""
+
+#, python-format
 msgid "%d changesets found\n"
 msgstr "%d Änderungssätze gefunden\n"
 
@@ -18413,11 +18596,13 @@ msgid "diff context lines count must be an integer, not %r"
 msgstr "Zeilenangaben im Diff-Kontext müssen Zahlen sein, nicht %r"
 
 #, python-format
+msgid "%s: untracked file differs\n"
+msgstr "%s: Unversionierte Datei verändert\n"
+
 msgid ""
-"untracked file in working directory differs from file in requested revision: "
-"'%s'"
+"untracked files in working directory differ from files in requested revision"
 msgstr ""
-"Unversionierte Datei in der Arbeitskopie unterscheidet sich von der "
+"Unversionierte Dateien in der Arbeitskopie unterscheidet sich von der "
 "angeforderten Revision: '%s'"
 
 #, python-format
@@ -18489,15 +18674,11 @@ msgstr ""
 msgid "merging with a working directory ancestor has no effect"
 msgstr "Zusammenführen mit einem Vorfahren der Arbeitskopie hat keinen Effekt"
 
-msgid "nothing to merge (use 'hg update' or check 'hg heads')"
-msgstr ""
-"Nichts zum Zusammenführen gefunden (nutze 'hg update' oder überprüfe 'hg "
-"heads')"
+msgid "use 'hg update' or check 'hg heads'"
+msgstr "nutze 'hg update' oder überprüfe 'hg heads'"
 
-msgid "outstanding uncommitted changes (use 'hg status' to list changes)"
-msgstr ""
-"Ausstehende nicht versionierte Änderungen (nutze 'hg status' zur Auflistung "
-"der Änderungen)"
+msgid "use 'hg status' to list changes"
+msgstr "nutze 'hg status' zur Auflistung der Änderungen"
 
 #, python-format
 msgid "outstanding uncommitted changes in subrepository '%s'"
@@ -18642,6 +18823,14 @@ msgstr "Patch schlug fehl"
 
 #, python-format
 msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
+msgstr ""
+
+#, python-format
+msgid "ignoring inconsistense public root from remote: %s"
+msgstr ""
+
+#, python-format
+msgid "ignoring unexpected root from remote: %i %s"
 msgstr ""
 
 #, python-format
@@ -18868,6 +19057,14 @@ msgid ""
 msgstr ""
 "``descendants(liste)``\n"
 "    Nachkommen der Änderungssätze in der Liste sind."
+
+msgid ""
+"``draft()``\n"
+"    Changeset in draft phase."
+msgstr ""
+
+msgid "draft takes no arguments"
+msgstr "draft erwartet keine Argumente"
 
 msgid ""
 "``filelog(pattern)``\n"
@@ -19121,6 +19318,33 @@ msgstr ""
 "    ein Eintrag nicht gefunden wird, die leere Menge."
 
 msgid ""
+"``public()``\n"
+"    Changeset in public phase."
+msgstr ""
+
+msgid "public takes no arguments"
+msgstr "public erwartet keine Argumente"
+
+msgid ""
+"``remote([id], [path])``\n"
+"    Local revision that corresponds to the given identifier in a\n"
+"    remote repository, if present. Here, the '.' identifier is a\n"
+"    synonym for the current local branch."
+msgstr ""
+
+#. i18n: "remote" is a keyword
+msgid "outgoing takes one or two arguments"
+msgstr "'outgoing' erwartet ein oder zwei Argumente"
+
+#. i18n: "remote" is a keyword
+msgid "remote requires a string id"
+msgstr "remote erwartet eine Zeichenkette (ID)"
+
+#. i18n: "remote" is a keyword
+msgid "remote requires a repository path"
+msgstr "'remote' erwartet einen Projektarchivpfad"
+
+msgid ""
 "``removes(pattern)``\n"
 "    Changesets which remove files matching pattern."
 msgstr ""
@@ -19161,6 +19385,14 @@ msgid ""
 msgstr ""
 "``roots(menge)``\n"
 "    Änderungssätze, die keine Eltern in der Menge haben."
+
+msgid ""
+"``secret()``\n"
+"    Changeset in secret phase."
+msgstr ""
+
+msgid "secret takes no arguments"
+msgstr "secret erwartet keine Argumente"
 
 msgid ""
 "``sort(set[, [-]key...])``\n"
@@ -19237,7 +19469,7 @@ msgstr ""
 
 #, python-format
 msgid "possible case-folding collision for %s"
-msgstr ""
+msgstr "Groß-/Kleinschreibungskonflikt bei %s"
 
 #, python-format
 msgid "path ends in directory separator: %s"
@@ -19327,12 +19559,12 @@ msgstr "Konnte entferntes Projektarchiv nicht erstellen"
 msgid "no suitable response from remote hg"
 msgstr "Keine passende Antwort des entfernten hg"
 
-msgid "remote: "
-msgstr "Entfernt: "
-
 #, python-format
 msgid "push refused: %s"
 msgstr "Hochladen abgewiesen: %s"
+
+msgid "ssl connection failed"
+msgstr "ssk-Verbindung fehlgeschlagen"
 
 msgid "Python SSL support not found"
 msgstr "SSL-Unterstützung für Python nicht gefunden"
@@ -19358,21 +19590,6 @@ msgid "could not find web.cacerts: %s"
 msgstr "Konnte web.cacerts nicht finden: %s"
 
 #, python-format
-msgid "%s certificate error: %s (use --insecure to connect insecurely)"
-msgstr ""
-"%s Zertifikatsfehler: %s (Benutzen Sie --insecure, um unsicher zu verbinden)"
-
-#, python-format
-msgid "invalid certificate for %s with fingerprint %s"
-msgstr ""
-
-#, python-format
-msgid ""
-"warning: %s certificate with fingerprint %s not verified (check "
-"hostfingerprints or web.cacerts config setting)\n"
-msgstr ""
-
-#, python-format
 msgid "host fingerprint for %s can't be verified (Python too old)"
 msgstr ""
 "Server Authentizität für %s kann nicht verifiziert werden (Python ist zu alt)"
@@ -19382,6 +19599,34 @@ msgid "warning: certificate for %s can't be verified (Python too old)\n"
 msgstr ""
 "Warnung: Zertifikat für %s kann nicht verifiziert werden (Python ist zu "
 "alt)\n"
+
+#, python-format
+msgid "%s ssl connection error"
+msgstr ""
+
+#, python-format
+msgid "%s certificate error: no certificate received"
+msgstr "%s Zertifikatfehler: Kein Zertifikat empfangen"
+
+#, python-format
+msgid "invalid certificate for %s with fingerprint %s"
+msgstr ""
+
+#, python-format
+msgid "%s certificate error: %s"
+msgstr "%s Zertifikatfehler: %s"
+
+#, , python-format
+msgid "configure hostfingerprint %s or use --insecure to connect insecurely"
+msgstr ""
+"Erlauben Sie Serverkennung %s in der Konfiguration oder benutzen Sie "
+"--insecure, um unsicher zu verbinden"
+
+#, python-format
+msgid ""
+"warning: %s certificate with fingerprint %s not verified (check "
+"hostfingerprints or web.cacerts config setting)\n"
+msgstr ""
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -19831,7 +20076,10 @@ msgstr ""
 ":node: Zeichenkette. Die Prüfsumme, die einen Änderungssatz identifiziert,\n"
 "    als 40 Zeichen lange hexadezimale Zeichenkette."
 
-msgid ":rev: Integer. The changeset phase."
+msgid ":rev: String. The changeset phase name."
+msgstr ""
+
+msgid ":rev: Integer. The changeset phase index."
 msgstr ""
 
 msgid ":rev: Integer. The repository-local changeset revision number."
