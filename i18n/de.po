@@ -43,7 +43,7 @@
 #
 # Schlecht:
 #   Mergen Sie zunächst die Branche.
-#   Falls der Tag im Filelog zu finden ist...
+#   Falls der Tag im Filelog nicht gecheckt werden kann...
 #
 # Übersetzungen:
 #  backup        Sicherheitskopie (gewinnt in google-fight gegen Sicherungsk.)
@@ -54,9 +54,12 @@
 #  changeset     Änderungssatz
 #  commit        Commit/Übernahme
 #  commit (v)    übernehmen
+#  comm. message Versionsmeldung
 #  committer     Autor
+#  corrupt       beschädigt (nicht korrumpiert)
 #  deprecated    veraltet
 #  force (v)     erzwingen
+#  history       Historie
 #  merge         zusammenführen
 #  notation      Schreibweise
 #  queue         Reihe
@@ -64,23 +67,24 @@
 #  manage/track  versionieren
 #  pull          abrufen
 #  push          übertragen
-#  rebase        Pfropfung/Verschiebung
+#  rebase        Verschiebung (Pfropfung)
 #  section       Abschnitt (nicht Sektion)
 #  tag           Etikett    (svn verwendet "Marke")
 #
 # Nicht übersetzt bleiben
-#  hook     mangels guter Übersetzung (Einhängeaktion?)
-#  token    Fachbegriff auch im Deutschen
-#  parser   Fachbegriff auch im Deutschen
-#  patch    Bezieht sich auf ein sehr altes Programm mit demselben Namen und
+#  Hook  (m) mangels guter Übersetzung (Einhängeaktion?)
+#  Token (n) Fachbegriff auch im Deutschen
+#  Parser(m) Fachbegriff auch im Deutschen
+#  Patch (m) Bezieht sich auf ein sehr altes Programm mit demselben Namen und
 #           Dateien in dessen Syntax/Format
 #           Die ursprüngliche Bedeutung des englischen Wortes (Flicken) trifft
 #           heute eh nicht mehr zu.
-#  diff     Siehe patch, ausserdem Abkürzung eines auch deutschen Worts
-#  glob
+#  Diff  (n) Siehe patch, ausserdem Abkürzung eines auch deutschen Worts
+#  glob  (n)
 #  dirstate Nur für Entwickler interessant. Im sonstigen Handbuch umschreiben!
 #  .. note:: Dies ist spezielle reStructured-Syntax und darf nicht geändert
 #           werden
+#  Pager (m) mangels guter Übersetzung (Theoretisch "Verseitener" :)
 # 
 # Weiteres:
 #  graft/transplant: Da graft eine Reimplementierung von transplant als
@@ -92,6 +96,8 @@
 #         kann die Übersetzung "Revision" lauten.
 #  largefile: Binärriese (neues Wort, vielleicht fällt jemandem ein besseres
 #             ein. Dies ist zur Zeit konsequent verwendet)
+#  default: Sollte dies nicht lieber eine Voreinstellung statt des Standards
+#           sein?
 #
 msgid ""
 msgstr ""
@@ -3331,10 +3337,10 @@ msgstr ""
 "  project = foo\n"
 "  # das Modul (Unterprojekt) (optional)\n"
 "  #module = foo\n"
-"  # Hänge eine Statistik über die Änderungen an die Commit-Nachricht an\n"
+"  # Hänge eine Statistik über Änderungen an die Versionsmeldung an\n"
 "  # (optional)\n"
 "  #diffstat = False\n"
-"  # Vorlage für die Commit-Nachrichten (optional)\n"
+"  # Vorlage für die Versionsmeldungen (optional)\n"
 "  #template = {desc}\\n{baseurl}{webroot}/rev/{node}-- {diffstat}\n"
 "  # zu verwendender Stil (optional)\n"
 "  #style = foo\n"
@@ -4160,9 +4166,9 @@ msgid ""
 "enabled for this to work."
 msgstr ""
 "Wird ein Änderungssatz, welcher einen Binärriesen ändert oder hinzufügt,\n"
-"in ein entferntes Archiv übertragen, so werden auch die Revisionen der\n"
-"Binärdatei übertragen. Das entfernte Mercurial muss hierfür die\n"
-"largefiles-Erweiterung unterstützen."
+"in ein entferntes Archiv übertragen, so werden gleichzeitig (asymmetrisch\n"
+"zum Abrufen per pull) auch die (neuen) Revisionen der Binärdatei übertragen.\n"
+"Das entfernte Mercurial muss hierfür die largefiles-Erweiterung unterstützen."
 
 msgid ""
 "When you pull a changeset that affects largefiles from a remote\n"
@@ -6005,7 +6011,7 @@ msgid ""
 msgstr ""
 "    Schließt die angegebenen Revisionen ab (entspricht den angewandten\n"
 "    Patches), indem sie aus der Kontrolle von mq entfernt und in die\n"
-"    reguläre Projektgeschichte übernommen werden."
+"    reguläre Projekthistorie übernommen werden."
 
 msgid ""
 "    Accepts a revision range or the -a/--applied option. If --applied\n"
@@ -6025,8 +6031,7 @@ msgid ""
 msgstr ""
 "    Dies kann insbes. nützlich sein, wenn Ihre Änderungen in einem\n"
 "    vorgelagerten Projektarchiv angewandt wurden, oder wenn Sie Ihre\n"
-"    Änderungen in ein vorgelagertes Archiv übertragen wollen.\n"
-"    "
+"    Änderungen in ein vorgelagertes Archiv übertragen wollen."
 
 msgid "no revisions specified"
 msgstr "Keine Revisionen angegeben"
@@ -6062,9 +6067,8 @@ msgid ""
 "    Supports switching between different patch queues, as well as creating\n"
 "    new patch queues and deleting existing ones."
 msgstr ""
-"    Unterstützt das Wechseln zwischen verschiedener Patch-Reihen, ebenso "
-"wie\n"
-"    das erstellen neuer Reihen und das Löschen bereits bestehender."
+"    Unterstützt das Wechseln zwischen verschiedener Patch-Reihen, sowie\n"
+"    das Erstellen neuer Reihen und das Löschen bereits bestehender."
 
 msgid ""
 "    Omitting a queue name or specifying -l/--list will show you the "
@@ -6130,7 +6134,7 @@ msgstr "Kann \"%s\" nicht zu ihrem aktuellen Namen umbenennen"
 
 #, python-format
 msgid "non-queue directory \"%s\" already exists"
-msgstr "Nicht-Reihen-Verzeichnis \"%s\" existiert bereits"
+msgstr "Verzeichnis \"%s\" existiert bereits, ist aber keine Reihe"
 
 msgid "use --create to create a new queue"
 msgstr "Verwenden Sie --create, um eine neue Reihe zu erzeugen"
@@ -6192,6 +6196,9 @@ msgid ""
 "This extension let you run hooks sending email notifications when\n"
 "changesets are being pushed, from the sending or receiving side."
 msgstr ""
+"Diese Erweiterung ermöglicht das Senden von Benachrichtungsemails, wann-\n"
+"immer Änderungssätze übertragen werden. Dies kann von der übertragenden\n"
+"oder der empfangenden Seite aus geschehen."
 
 msgid ""
 "First, enable the extension as explained in :hg:`help extensions`, and\n"
@@ -6199,6 +6206,10 @@ msgid ""
 "are run by the changesets receiver while the ``outgoing`` one is for\n"
 "the sender::"
 msgstr ""
+"Zunächst muss die Erweiterung (wie in :hg:`help extensions` beschrieben)\n"
+"aktiviert werden und dann als Hook registriert werden. Für den Empfänger\n"
+"sind dies die ``incoming`` und ``outgoing`` Hooks, für den Sender der\n"
+"``outgoing`` Hook::"
 
 msgid ""
 "  [hooks]\n"
@@ -6217,6 +6228,8 @@ msgid ""
 "  # one email for all outgoing changesets\n"
 "  outgoing.notify = python:hgext.notify.hook"
 msgstr ""
+"  # eine E-Mail für jeden übertragenen Änderungssatz\n"
+"  outgoing.notify = python:hgext.notify.hook"
 
 msgid ""
 "Now the hooks are running, subscribers must be assigned to\n"
@@ -6224,6 +6237,9 @@ msgid ""
 "given email or the ``[reposubs]`` section to map emails to a single\n"
 "repository::"
 msgstr ""
+"Schliesslich müssen noch die Abonnements für die Projektarchive definiert\n"
+"werden. Im Abschnitt ``[usersubs]`` kann man mehrere Archive einer Email\n"
+"zuweisen, in ``[reposubs]`` umgekehrt mehrere Emails für ein Archiv angeben."
 
 msgid ""
 "  [usersubs]\n"
@@ -6252,6 +6268,9 @@ msgid ""
 "root. The subscriptions can be defined in their own file and\n"
 "referenced with::"
 msgstr ""
+"Die glob-Muster müssen auf den absoluten Pfad zum Archiv passen. Alle\n"
+"Abonnements können in einer eigenen Datei gesammelt werden und folgender-\n"
+"maßen in der Konfiguration eingebunden werden::"
 
 msgid ""
 "  [notify]\n"
@@ -6264,23 +6283,33 @@ msgid ""
 "Alternatively, they can be added to Mercurial configuration files by\n"
 "setting the previous entry to an empty value."
 msgstr ""
+"Alternativ (mit leerem Wert für ``notify.config``) können die Abonnements\n"
+"in der Mercurial Konfigurationsdatei angegeben werden."
 
 msgid ""
 "At this point, notifications should be generated but will not be sent until "
 "you\n"
 "set the ``notify.test`` entry to ``False``."
 msgstr ""
+"Nach dieser Konfiguration werden die Benachrichtigungen nun generiert, aber\n"
+"noch nicht gesendet, bis der Wert von ``notify.test`` auf ``False`` gesetzt\n"
+"wird."
 
 msgid ""
 "Notifications content can be tweaked with the following configuration "
 "entries:"
 msgstr ""
+"Der Inhalt der Benachrichtigungen kann mit der folgenden Konfiguration\n"
+"angepasst werden:"
 
 msgid ""
 "notify.test\n"
 "  If ``True``, print messages to stdout instead of sending them. Default: "
 "True."
 msgstr ""
+"notify.test\n"
+"  Falls ``True`` werden die Nachrichten auf die Standardausgabe und nicht\n"
+"  als Email versendet. Standard: True."
 
 msgid ""
 "notify.sources\n"
@@ -6292,6 +6321,14 @@ msgid ""
 "  locally. Outgoing sources are the same except for ``unbundle`` which\n"
 "  is replaced by ``bundle``. Default: serve."
 msgstr ""
+"notify.sources\n"
+"  Kommaseparierte Liste von Quellaktionen. Benachrichtigungen werden nur\n"
+"  gesendet, wenn die Änderungen von einer solchen Aktion ausgelöst wurden.\n"
+"  Quellen für ankommende Änderungen sind ``serve`` (Änderungen via http\n"
+"  oder ssh), ``pull`` (aktiv abgerufen), ``unbundle`` (per :hg:`unbundle`\n"
+"  eingefügt) oder ``push`` (lokal übertragen). Für ausgehende Änderungen\n"
+"  gibt es die gleichen, nur mit ``unbundle`` gegen ``bundle`` getauscht.\n"
+"  Standard: serve."
 
 msgid ""
 "notify.strip\n"
@@ -6303,12 +6340,21 @@ msgid ""
 "change\n"
 "  ``/long/path/repository`` into ``repository``. Default: 0."
 msgstr ""
+"notify.strip\n"
+"  Anzahl der Schrägstriche, die vom URL-Pfad abgeschnitten werden sollen.\n"
+"  Standardmäßig werden Archive mit ihrem absoluten Pfad benannt.\n"
+"  Mit ``notify.strip`` lässt sich das in relative Pfade abwandeln. Zum\n"
+"  Beispiel wird ``/langer/pfad/zum/archiv`` mit ``strip=4`` zu ``archiv``.\n"
+"  Standard: 0."
 
 msgid ""
 "notify.domain\n"
 "  If subscribers emails or the from email have no domain set, complete them\n"
 "  with this value."
 msgstr ""
+"notify.domain\n"
+"  Falls eine Abonnementen- oder die Sender-Adresse keine Domäne haben,\n"
+"  wird dieser Wert eingefügt."
 
 msgid ""
 "notify.style\n"
@@ -6328,38 +6374,57 @@ msgid ""
 "notify.incoming\n"
 "  Template to use when run as incoming hook, override ``notify.template``."
 msgstr ""
+"notify.incoming\n"
+"  Vorlage (mit höherer Priorität als ``notify.template``), falls die Aktion\n"
+"  durch einen 'incoming'-Hook ausgelöst wurde."
 
 msgid ""
 "notify.outgoing\n"
 "  Template to use when run as outgoing hook, override ``notify.template``."
 msgstr ""
+"notify.outcoming\n"
+"  Vorlage (mit höherer Priorität als ``notify.template``), falls die Aktion\n"
+"  durch einen 'outcoming'-Hook ausgelöst wurde."
 
 msgid ""
 "notify.changegroup\n"
 "  Template to use when running as changegroup hook, override\n"
 "  ``notify.template``."
 msgstr ""
+"notify.changegroup\n"
+"  Vorlage (mit höherer Priorität als ``notify.template``), falls die Aktion\n"
+"  durch einen 'changegroup'-Hook ausgelöst wurde."
 
 msgid ""
 "notify.maxdiff\n"
 "  Maximum number of diff lines to include in notification email. Set to 0\n"
 "  to disable the diff, -1 to include all of it. Default: 300."
 msgstr ""
+"notify.maxdiff\n"
+"  Maximale Zeilenanzahl des Diffs in der Benachrichtigungsemail. Der Wert\n"
+"  0 unterbindet die Anzeige des Diffs, -1 wird das gesamte Diff ausgeben.\n"
+"  Standard: 300."
 
 msgid ""
 "notify.maxsubject\n"
 "  Maximum number of characters in emails subject line. Default: 67."
 msgstr ""
+"notify.maxsubject\n"
+"  Maximale Länge der Betreffszeile. Standard: 67."
 
 msgid ""
 "notify.diffstat\n"
 "  Set to True to include a diffstat before diff content. Default: True."
 msgstr ""
+"notify.diffstat\n"
+"  Zeige eine Diff-Statistik vor dem eigentlich Diff an. Standard: True."
 
 msgid ""
 "notify.merge\n"
 "  If True, send notifications for merge changesets. Default: True."
 msgstr ""
+"notify.merge\n"
+"  Sende Nachrichten auch für Zusammenführungen. Standard: True."
 
 msgid ""
 "notify.mbox\n"
@@ -6372,18 +6437,26 @@ msgid ""
 "If set, the following entries will also be used to customize the "
 "notifications:"
 msgstr ""
+"Durch Setzen der folgenden Einträge können die Benachrichtigungen weiter\n"
+"angepasst werden:"
 
 msgid ""
 "email.from\n"
 "  Email ``From`` address to use if none can be found in generated email "
 "content."
 msgstr ""
+"email.from\n"
+"  Die zu verwendende Senderadresse (``From``), falls die Vorlage keinen\n"
+"  Wert setzt."
 
 msgid ""
 "web.baseurl\n"
 "  Root repository browsing URL to combine with repository paths when making\n"
 "  references. See also ``notify.strip``."
 msgstr ""
+"web.baseurl\n"
+"  Die Basis-URL für alle Archive, die mit dem abgeschnittenen (siehe\n"
+"  ``notify.strip``) Archivpfad für Referenzen verwendet wird."
 
 #, python-format
 msgid "%s: %d new changesets"
@@ -6487,7 +6560,7 @@ msgstr ""
 "Befehle den Pager benutzen."
 
 msgid "If pager.attend is present, pager.ignore will be ignored."
-msgstr "Wenn pager.attend vorhanden ist, wird pager.ignore ignoriert."
+msgstr "Wenn pager.attend vorhanden ist, ist pager.ignore wirkungslos."
 
 msgid ""
 "To ignore global commands like :hg:`version` or :hg:`help`, you have\n"
@@ -6550,7 +6623,7 @@ msgid ""
 "configuration file::"
 msgstr ""
 "Andere Standardwerte können beispielsweise durch den folgenden Abschnitt\n"
-"in der hgrc konfiguriert werden::"
+"in der Konfigurationsdatei gesetzt werden::"
 
 msgid ""
 "  [email]\n"
@@ -6571,8 +6644,8 @@ msgid ""
 "Use ``[patchbomb]`` as configuration section name if you need to\n"
 "override global ``[email]`` address settings."
 msgstr ""
-"Benutzen Sie [patchbomb] als Abschnittsnamen, falls Sie globale\n"
-"[email]-Einstellungen überschreiben müssen."
+"Benutzen Sie ``[patchbomb]`` als Abschnittsnamen, falls Sie globale\n"
+"``[email]``-Einstellungen überschreiben müssen."
 
 msgid ""
 "Then you can use the :hg:`email` command to mail a series of\n"
@@ -6709,9 +6782,9 @@ msgid ""
 "    with a final summary of all messages and asked for confirmation before\n"
 "    the messages are sent."
 msgstr ""
-"Bei der Angabe der Optionen -d/--diffstat oder -c/--confirm wird eine\n"
-"abschließende Zusammenfassung aller Nachrichten angezeigt und um\n"
-"Bestätigung gebeten, bevor die Nachrichten versendet werden."
+"    Bei der Angabe der Optionen -d/--diffstat oder -c/--confirm wird eine\n"
+"    abschließende Zusammenfassung aller Nachrichten angezeigt und um\n"
+"    Bestätigung gebeten, bevor die Nachrichten versendet werden."
 
 msgid ""
 "    By default the patch is included as text in the email body for\n"
@@ -6747,9 +6820,9 @@ msgid ""
 "    previewed with any mail user agent which supports UNIX mbox\n"
 "    files."
 msgstr ""
-"Alternativ werden die Nachrichten mit der Option -m/--mbox in eine Datei\n"
-"geschrieben, die von jedem Emailprogramm, welches das UNIX-mbox-Format\n"
-"unterstützt, geprüft werden, zum Beispiel mit mutt::"
+"    Alternativ werden die Nachrichten mit der Option -m/--mbox in eine\n"
+"    Datei geschrieben, die von jedem Emailprogramm, welches das UNIX-mbox-\n"
+"    Format unterstützt, geprüft werden, zum Beispiel mit mutt::"
 
 msgid ""
 "    With -n/--test, all steps will run, but mail will not be sent.\n"
@@ -6759,13 +6832,13 @@ msgid ""
 "    PAGER environment variable is set, your pager will be fired up once\n"
 "    for each patchbomb message, so you can verify everything is alright."
 msgstr ""
-"Um das Versenden verfrühter Patches zu verhindern, sollte man :hg:`email`\n"
-"mit der Option \"-n\" (Testmodus) aufrufen. Sie werden nach einer\n"
-"Empfängeradresse, einem Betreff und einer einleitenden Nachricht gefragt,\n"
-"die die Patches Ihrer Patchbombe beschreibt. Danach werden die\n"
-"Patchbombennachrichten angezeigt. Wenn die PAGER-Umgebungsvariable gesetzt\n"
-"ist, wird Ihr Pager für jede Patchbombe einzeln aufgerufen, so dass alles\n"
-"überprüft werden kann."
+"    Mit der Option -n/--test werden alle Schritte ausgeführt und das\n"
+"    Ergebnis angezeigt, aber keine Email versendet. Sie werden also nach\n"
+"    einer Empfängeradresse, einem Betreff und einer einleitenden Nachricht,\n"
+"    die die Patches Ihrer Patchbombe beschreibt, gefragt. Dann werden alle\n"
+"    Patchbombennachrichten angezeigt. Wenn die PAGER-Umgebungsvariable\n"
+"    gesetzt ist, wird Ihr Pager für jede Patchbombe einzeln aufgerufen, so\n"
+"    dass alles überprüft werden kann."
 
 msgid ""
 "    In case email sending fails, you will find a backup of your series\n"
@@ -6828,7 +6901,7 @@ msgid ""
 "    hgrc. See the [email] section in hgrc(5) for details.\n"
 "    "
 msgstr ""
-"    Um dieses Kommando zu benutzen muss das Email-Versenden im Abschnitt\n"
+"    Um dieses Kommando zu benutzen muss der Emailversand im Abschnitt\n"
 "    [email] der Konfiguration aktiviert sein. Siehe hgrc(5) für Details.\n"
 "    "
 
@@ -6863,23 +6936,23 @@ msgid "This patch series consists of %d patches."
 msgstr "Diese Patch-Serie besteht aus %d Patches."
 
 msgid "no recipient addresses provided"
-msgstr ""
+msgstr "Keine Empfängeradresse angegeben"
 
 msgid ""
 "\n"
 "Final summary:"
 msgstr ""
 "\n"
-"Zusammenfassung:"
+"Engültige Zusammenfassung:"
 
 msgid "are you sure you want to send (yn)?"
-msgstr "Sicher, dass Sie jetzt senden möchten (y/n)?"
+msgstr "Sicher, dass Sie jetzt senden möchten (j/n)?"
 
 msgid "&No"
 msgstr "&Nein"
 
 msgid "&Yes"
-msgstr "Ja (&y)"
+msgstr "&Ja"
 
 msgid "patchbomb canceled"
 msgstr "patchbomb abgebrochen"
@@ -6957,17 +7030,17 @@ msgstr ""
 #. i18n: format XX seconds as "XXs"
 #, python-format
 msgid "%02ds"
-msgstr ""
+msgstr "%02dsek"
 
 #. i18n: format X minutes and YY seconds as "XmYYs"
 #, python-format
 msgid "%dm%02ds"
-msgstr ""
+msgstr "%d:%02d"
 
 #. i18n: format X hours and YY minutes as "XhYYm"
 #, python-format
 msgid "%dh%02dm"
-msgstr ""
+msgstr "%d:%02d"
 
 #. i18n: format X days and YY hours as "XdYYh"
 #, python-format
@@ -6986,7 +7059,7 @@ msgstr ""
 
 #, python-format
 msgid "%d %s/sec"
-msgstr ""
+msgstr "%d %s/Sek"
 
 msgid "command to delete untracked files from the working directory"
 msgstr "Löscht nicht versionierte Dateien aus dem Arbeitsverzeichnis"
@@ -7056,7 +7129,7 @@ msgid ""
 "    option.\n"
 "    "
 msgstr ""
-"    Seien Sie mit purge vorsichtig, da Sie Dateien unwiderbringlich\n"
+"    Seien Sie mit purge vorsichtig, da Sie Dateien unwiederbringlich\n"
 "    löschen könnten, die Sie nicht zum Projektarchiv hinzugefügt\n"
 "    haben. Wenn Sie nur die Liste der Dateien sehen wollen, die dieses\n"
 "    Programm entfernen würde, nutzen Sie die Option --print.\n"
@@ -7112,16 +7185,16 @@ msgid "rebase onto the specified changeset"
 msgstr "Verschiebe auf den gegebenen Änderungssatz"
 
 msgid "collapse the rebased changesets"
-msgstr "Faltet die erzeugten Änderungssätze nach dem Rebase zusammen"
+msgstr "Fügt die verschobenen Änderungssätze zu einem einzelnen zusammen"
 
 msgid "use text as collapse commit message"
-msgstr "Nimm Text als gefaltete Commit-Nachricht"
+msgstr "Setzt die Versionsmeldung des zusammengefügten Änderungssatzes"
 
 msgid "invoke editor on commit messages"
-msgstr "Ruft Editor zum setzen der Versionsmeldung auf"
+msgstr "Ruft Editor zum Setzen der Versionsmeldung auf"
 
 msgid "read collapse commit message from file"
-msgstr "Liest gefaltete Commit-Nachricht aus Datei"
+msgstr "Liest Versionsmeldung für den zusammengefügten Änderungssatz aus Datei"
 
 msgid "keep original changesets"
 msgstr "Behält die ursprünglichen Änderungssätze bei"
@@ -7136,15 +7209,17 @@ msgid "specify merge tool"
 msgstr "Methode für das Zusammenführen"
 
 msgid "continue an interrupted rebase"
-msgstr "Führt einen unterbrochenen Rebase fort"
+msgstr "Führt eine unterbrochene Pfropfung fort"
 
 msgid "abort an interrupted rebase"
-msgstr "Bricht einen unterbrochenen Rebase ab"
+msgstr "Bricht eine unterbrochene Pfropfung ab"
 
 msgid ""
 "hg rebase [-s REV | -b REV] [-d REV] [options]\n"
 "hg rebase {-a|-c}"
 msgstr ""
+"hg rebase [-s REV | -b REV] [-d REV] [Optionen]\n"
+"hg rebase {-a|-c}"
 
 msgid "move changeset (and descendants) to a different branch"
 msgstr ""
@@ -7170,7 +7245,7 @@ msgstr ""
 "    Sie sollten keine Änderungssätze umpfropfen, die auch andere bereits\n"
 "    haben, ansonsten zwingen Sie jeden anderen die gleiche rebase-\n"
 "    Operation durchzuführen, um die verschobenen Versionen nicht\n"
-"    doppelt zu haben, wenn sie Ihre Änderungen ziehen."
+"    doppelt zu haben, sobald sie Ihre Änderungen abrufen."
 
 msgid ""
 "    If you don't specify a destination changeset (``-d/--dest``),\n"
@@ -7178,10 +7253,10 @@ msgid ""
 "    destination. (The destination changeset is not modified by\n"
 "    rebasing, but new changesets are added as its descendants.)"
 msgstr ""
-"    Wenn Sie keine Zielversion spezifizieren (``-d/--dest``),\n"
-"    verwendet rebase den head des aktuellen named branch, der am \n"
-"    nächsten an tip ist als Ziel (die Zielversion wird durch rebase\n"
-"    nicht verändert. Sie erhält nur neue changesets als Kinder)."
+"    Wenn Sie keine Zielversion spezifizieren (``-d/--dest``), verwendet\n"
+"    rebase als Ziel den Kopf des aktuellen benannten Zweigs, der\n"
+"    der Projektspitze (tip) am nächsten ist. (Die Zielversion wird durch\n"
+"    die Verschiebung nicht verändert, aber erhält neue Kinder.)"
 
 msgid ""
 "    You can specify which changesets to rebase in two ways: as a\n"
@@ -7196,19 +7271,17 @@ msgid ""
 "    the whole branch. If you specify neither ``-s`` nor ``-b``, rebase\n"
 "    uses the parent of the working directory as the base."
 msgstr ""
-"    Sie können auf zwei Arten angeben, welche Changesets rebased werden\n"
-"    sollen: als \"source\" oder als \"base\" Changesets. Beide sind\n"
-"    Abkürzungen für ein Menge von Changesets, die topologisch\n"
-"    zusammenhängen (die \"source\" Branch). Wenn Sie source angeben\n"
-"    (``-s/--source``), rebase wird dieses Changeset und all seine\n"
-"    Descendants nach dest pfropfen. Wenn Sie base angeben (``-b/--base``),\n"
-"    rebase wird Vorgänger von base auswählen, bis zu aber nicht\n"
-"    einschließlich dem gemeinsamen Vorgänger mit dest. Es ist also\n"
-"    ``-b`` weniger präzise, aber bequemer, als ``-s``: Sie können\n"
-"    jegliches Changeset im Quell-Branch angeben, und rebase wird den\n"
-"    gesamten Branch auswählen. Wenn Sie weder ``-s``noch ``-b`` angeben,\n"
-"    wird rebase den Parent des aktuellen Verzeichnisses als Base\n"
-"    auswählen."
+"    Sie können die zu verschiebenden Versionen auf zwei Arten angeben: Als\n"
+"    \"Quell-\" oder als \"Basisversion\". Mit diesen ist jeweils eine Menge\n"
+"    von topologisch verwandten Revisionen gemeint (der \"Quell\"-zweig).\n"
+"    Wenn Sie eine Quellversion (``-s/--source``) angeben, wird Mercurial\n"
+"    diese Version und alle ihrer Nachfahren verschieben. Geben Sie eine\n"
+"    Basisversion (``-b/--base``) an, so sucht Mercurial den jüngsten\n"
+"    gemeinsamen Vorfahren der Basis und des Ziels und verschiebt den Zweig,\n"
+"    der die Basis enthält, nicht jedoch den gemeinsamen Vorfahren.\n"
+"    Somit ist ``-s`` genauer, aber ``-b`` praktischer: Man gibt irgendeine\n"
+"    Version im zu verschiebenden Zweig an. Wenn Sie weder ``-s`` noch\n"
+"    ``-b`` angeben, wird den Vorfahr der Arbeitskopie als Basis verwendet."
 
 msgid ""
 "    By default, rebase recreates the changesets in the source branch\n"
@@ -7217,12 +7290,11 @@ msgid ""
 "    changesets in the source branch (e.g. merges from the destination\n"
 "    branch) may be dropped if they no longer contribute any change."
 msgstr ""
-"    Per Default erzeugt rebase die Changesets im Quell-Branch als\n"
-"    Descendants von dest neu, und zerstört dann die Originale. Benutzen\n"
-"    Sie ``--keep``, um die originalen Quell-Changesets zu bewahren.\n"
-"    Einige Changeset im Quell-Branch (z.B. Merges vom Ziel-Branch),\n"
-"    können gelöscht werden, wenn sie keine weiteren Änderungen\n"
-"    mehr beisteuern."
+"    Standardmäßig werden die Änderungssätze des Quellzweigs als Nachfahren\n"
+"    des Ziels erzeugt und ihr Original zerstört. Mit ``--keep`` werden\n"
+"    die Originale erhalten. Einige Änderungssätze des Quellzweigs könnten\n"
+"    entfernt werden (z.B. Zusammenführungen aus dem Zielzweig, die keine\n"
+"    eigenen Änderungen über die Zusammenführung hinaus enthalten)."
 
 msgid ""
 "    One result of the rules for selecting the destination changeset\n"
@@ -7232,11 +7304,13 @@ msgid ""
 "    destination (or ``update`` to the other head, if it's the head of\n"
 "    the intended source branch)."
 msgstr ""
-"    Ein Ergebnis der Regeln für das Auswählen der Ziel-Changesets und des\n"
-"    Quell-Branches ist, daß, im Gegensatz zu ``merge``, rebase nichts\n"
-"    tun wird, wenn Sie auf dem neuesten (tipmost) Head eines benannten\n"
-"    Branches mit zwei Heads sind. Sie müssen Quelle und/oder Ziel angeben\n"
-"    (oder auf den anderen Head ``update``en)."
+"    Als Folge der automatischen Auswahlregeln für Quelle und Ziel wird\n"
+"    (im Gegensatz zu einer Zusammenführung) keine Verschiebung durchgeführt,\n"
+"    wenn der jüngere von zwei Köpfen eines Zweiges aktuell ist. In diesem\n"
+"    Falle (z.B. bei lokaler Versionsübernahme nach einem Abrufen), muss\n"
+"    eine Quelle und/oder ein Ziel explizit angegeben werden. Dieser Fall\n"
+"    tritt aber vor allem ein, wenn das Arbeitsverzeichnis im Zielzweig\n"
+"    liegt, also zunächst auf den Quellzweig aktualisiert werden muss."
 
 msgid ""
 "    If a rebase is interrupted to manually resolve a merge, it can be\n"
@@ -7255,9 +7329,11 @@ msgstr ""
 
 msgid "message can only be specified with collapse"
 msgstr ""
+"Eine Versionsmeldung kann nur für beim Zusammenfalten (--collapse) gegeben\n"
+"werden"
 
 msgid "cannot use both abort and continue"
-msgstr "abort und continue können nicht gleichzeitig genutzt werden"
+msgstr "abort und continue dürfen nicht gleichzeitig angegeben werden"
 
 msgid "cannot use collapse with continue or abort"
 msgstr "collapse kann nicht mit continue oder abort genutzt werden"
@@ -7266,19 +7342,19 @@ msgid "cannot use detach with continue or abort"
 msgstr "detach kann nicht mit continue oder abort genutzt werden"
 
 msgid "abort and continue do not allow specifying revisions"
-msgstr "abort und continue erlauben die Angabe einer Revision nicht"
+msgstr "abort und continue erlauben keine Angabe einer Revision"
 
 msgid "tool option will be ignored\n"
-msgstr ""
+msgstr "Die Option tool wird ignoriert\n"
 
 msgid "cannot specify both a source and a base"
-msgstr "Es können nicht Quelle und Basis gleichzeitig angegeben werden"
+msgstr "Quelle und Basis dürfen nicht gleichzeitig angegeben werden"
 
 msgid "cannot specify both a revision and a base"
-msgstr "Es können nicht Revision und Basis gleichzeitig angegeben werden"
+msgstr "Revision und Basis dürfen nicht gleichzeitig angegeben werden"
 
 msgid "cannot specify both a revision and a source"
-msgstr "Es können nicht Revision und Quelle gleichzeitig angegeben werden"
+msgstr "Revision und Quelle dürfen nicht gleichzeitig angegeben werden"
 
 msgid "detach requires a revision to be specified"
 msgstr "detach benötigt eine Revision"
@@ -7293,10 +7369,10 @@ msgid "use --keep to keep original changesets"
 msgstr "Verwende --keep, um die ursprünglichen Änderungssätze zu behalten"
 
 msgid "nothing to rebase\n"
-msgstr "Kein Rebase nötig\n"
+msgstr "Kein Verschiebung nötig\n"
 
 msgid "cannot collapse multiple named branches"
-msgstr "Kann nicht mehrere benannte Zweige kollabieren"
+msgstr "Mehrere benannte Zweige können nicht zusammengefaltet werden"
 
 msgid "rebasing"
 msgstr "Verschiebe"
@@ -7313,13 +7389,13 @@ msgid "no changes, revision %d skipped\n"
 msgstr "keine Änderungen, Revision %d übersprungen\n"
 
 msgid "rebase merging completed\n"
-msgstr "Zusammenführungen des Rebase abgeschlossen\n"
+msgstr "Zusammenführungen der Verschiebung abgeschlossen\n"
 
 msgid "warning: new changesets detected on source branch, not stripping\n"
 msgstr "Warnung: Neue Änderungssätze auf Quellzweig gefunden, lösche nicht\n"
 
 msgid "rebase completed\n"
-msgstr "Rebase abgeschlossen\n"
+msgstr "Verschiebung abgeschlossen\n"
 
 #, python-format
 msgid "%d revisions have been skipped\n"
@@ -7332,39 +7408,39 @@ msgstr ""
 #, python-format
 msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr ""
-"Revision %d kann nicht als Basis genutzt werden, das Ergebnis hätte 3 "
+"Revision %d kann nicht als Basis genutzt werden: das Ergebnis hätte 3 "
 "Vorgänger"
 
 msgid "no rebase in progress"
-msgstr "Kein vorheriger Rebase zur Wiederaufnahme"
+msgstr "Keine vorherige Verschiebung zur Wiederaufnahme"
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
 "Warnung: Neue Änderungssätze auf Zielzweig gefunden, kann nicht abbrechen\n"
 
 msgid "rebase aborted\n"
-msgstr "Rebase abgebrochen\n"
+msgstr "Verschiebung abgebrochen\n"
 
 msgid "cannot rebase onto an applied mq patch"
-msgstr "Rebase kann auf einem angewandten MQ-Patch nicht aufsetzen"
+msgstr "Verschiebung kann nicht auf einem angewandten MQ-Patch aufsetzen"
 
 msgid "no matching revisions"
 msgstr "keine passenden Revisionen"
 
 msgid "can't rebase multiple roots"
-msgstr ""
+msgstr "Mehrere Wurzeln können nicht verschoben werden"
 
 msgid "source is ancestor of destination"
 msgstr "Quelle ist ein Vorfahr des Ziels"
 
 msgid "--tool can only be used with --rebase"
-msgstr ""
+msgstr "--tool kann nicht gleichzeitig mit --rebase verwendet werden"
 
 msgid "rebase working directory to branch head"
-msgstr "Führt Rebase zu einem Zweigkopf auf dem Arbeitsverzeichnis aus"
+msgstr "Führt Verschiebung des Arbeitsverzeichnisses auf den Zweigkopf"
 
 msgid "specify merge tool for rebase"
-msgstr "Method für Zusammenführungen innerhalb der Verschiebung"
+msgstr "Methode für Zusammenführungen innerhalb der Verschiebung"
 
 msgid "commands to interactively select changes for commit/qrefresh"
 msgstr "Befehle um interaktiv Änderungen für commit/qrefresh zu wählen"
@@ -7389,16 +7465,16 @@ msgid "%d hunks, %d lines changed\n"
 msgstr "%d Hunks, %d Zeilen geändert\n"
 
 msgid "[Ynsfdaq?]"
-msgstr ""
+msgstr "[Jnsdfab?]"
 
 msgid "&Yes, record this change"
-msgstr "&Yes - übernimmt diese Änderung"
+msgstr "&Ja - übernimmt diese Änderung"
 
 msgid "&No, skip this change"
-msgstr "&No, überspringt diese Änderung"
+msgstr "&Nein, überspringt diese Änderung"
 
 msgid "&Skip remaining changes to this file"
-msgstr "&Überspringe die restlichen Änderungen an dieser Datei"
+msgstr "Über&springe die restlichen Änderungen an dieser Datei"
 
 msgid "Record remaining changes to this &file"
 msgstr "Zeichne die restlichen Änderungen an dieser &Datei auf"
@@ -7407,13 +7483,13 @@ msgid "&Done, skip remaining changes and files"
 msgstr "&Fertig, überspringe die restlichen Änderungen und Dateien"
 
 msgid "Record &all changes to all remaining files"
-msgstr "Übernimmt &alle Änderungen aller restlichen Dateien"
+msgstr "Zeichne &alle Änderungen der verbleibenden Dateien auf"
 
 msgid "&Quit, recording no changes"
-msgstr "&Quit, übernimmt keine Änderungen"
+msgstr "&Beende, zeichnet keine Änderungen auf"
 
 msgid "&?"
-msgstr ""
+msgstr "&?"
 
 msgid "user quit"
 msgstr "Abbruch durch Benutzer"
@@ -10965,7 +11041,7 @@ msgid "cannot use --similarity with --bypass"
 msgstr ""
 
 msgid "patch is damaged or loses information"
-msgstr "Prüfsumme stimmt nicht überein: Patch korrumpiert"
+msgstr "Prüfsumme stimmt nicht überein: Patch beschädigt"
 
 msgid "applied to working directory"
 msgstr "Angewendet aufs Arbeitsverzeichnis"
@@ -15797,11 +15873,11 @@ msgid ""
 msgstr ""
 "EDITOR\n"
 "    Manchmal muss Mercurial eine Textdatei in einem Editor öffnen, damit\n"
-"    der Nutzer sie bearbeiten kann, zum Beispiel when eine Commit-\n"
-"    Nachricht geschrieben wird. Der verwendete Editor wird aus den drei\n"
-"    Umgebungsvariablen HGEDITOR, VISUAL und EDITOR (in dieser Reihenfolge)\n"
-"    ermittelt. Der erste nicht-leere wird verwendet. Wenn alle Angaben\n"
-"    leer sind, wird der Standard 'vi' verwendet."
+"    der Nutzer sie bearbeiten kann, zum Beispiel wenn eine Versionsmeldung\n"
+"    geschrieben wird. Der verwendete Editor wird aus den drei Umgebungs-\n"
+"    variablen HGEDITOR, VISUAL und EDITOR (in dieser Reihenfolge) ermittelt.\n"
+"    Der erste nicht-leere wird verwendet. Wenn alle Angaben leer sind, wird\n"
+"    der Standard 'vi' verwendet."
 
 msgid ""
 "PYTHONPATH\n"
@@ -16655,9 +16731,8 @@ msgid ""
 "character is treated as a comment character, and the ``\\`` character\n"
 "is treated as an escape character."
 msgstr ""
-"Eine ignore-Datei ist eine Textdatei, die aus einer Liste von Patterns "
-"besteht,\n"
-"mit einem Ausdruck pro Zeile. Leere Zeilen werden übersprungen.\n"
+"Eine ignore-Datei ist eine Textdatei, die aus einer Liste von Dateimustern\n"
+"besteht, mit einem Ausdruck pro Zeile. Leere Zeilen werden übersprungen.\n"
 "Das ``#``-Zeichen wird als Kommentarzeichen behandelt und das \n"
 "``\\``-Zeichen als Escape-Zeichen."
 
@@ -16665,11 +16740,11 @@ msgid ""
 "Mercurial supports several pattern syntaxes. The default syntax used\n"
 "is Python/Perl-style regular expressions."
 msgstr ""
-"Mercurial unterstützt verschiedene Pattern-Syntaxen. Im Normalfall\n"
+"Mercurial unterstützt verschiedene Dateimuster-Syntaxen. Im Normalfall\n"
 "werden Python/Perl-artige Reguläre Ausdrücke verwendet."
 
 msgid "To change the syntax used, use a line of the following form::"
-msgstr ""
+msgstr "Die folgende Zeile ändert die von diesem Punkt an verwendete Syntax::"
 
 msgid "  syntax: NAME"
 msgstr "  Syntax: NAME"
@@ -16688,7 +16763,7 @@ msgid ""
 "The chosen syntax stays in effect when parsing all patterns that\n"
 "follow, until another syntax is selected."
 msgstr ""
-"Die gewählte Syntax wird auf auf alle folgenden Patterns angewendet\n"
+"Die gewählte Syntax wird auf auf alle folgenden Muster angewendet\n"
 "bis eine andere Syntax ausgewählt wird."
 
 msgid ""
@@ -17397,16 +17472,16 @@ msgid ""
 "subrepositories."
 msgstr ""
 "Mercurial unterstützt im Augenblick Mercurial-, Git- und Subversion-\n"
-"Subrepositories."
+"Unterarchive."
 
 msgid "Subrepositories are made of three components:"
-msgstr "Subrespositories bestehen aus drei Komponenten:"
+msgstr "Unterarchive bestehen aus drei Komponenten:"
 
 msgid ""
 "1. Nested repository checkouts. They can appear anywhere in the\n"
 "   parent working directory."
 msgstr ""
-"1. Verschachtelte Repository Checkouts. Sie können überall im\n"
+"1. Verschachtelte Archivaktualisierungen. Sie können überall im\n"
 "   übergeordneten Arbeitsverzeichnis auftauchen."
 
 msgid ""
@@ -17414,9 +17489,9 @@ msgid ""
 "   tell where the subrepository checkouts come from. Mercurial\n"
 "   subrepositories are referenced like:"
 msgstr ""
-"2. Verschachtelte Repository References. Sie werden in  ``.hgsub``\n"
-"   definiert und geben an, wo Subrepository Checkouts herkommen.\n"
-"   Mercurial Subrepositories werden wie folgt angegeben:"
+"2. Verschachtelte Archivreferenzen. Sie werden in ``.hgsub`` definiert\n"
+"   und geben an, wo Archivaktualisierungen herkommen.\n"
+"   Mercurial-Unterarchive werden wie folgt angegeben:"
 
 msgid "     path/to/nested = https://example.com/nested/repo/path"
 msgstr ""
@@ -17505,8 +17580,8 @@ msgid ""
 "To remove a subrepository from the parent repository, delete its\n"
 "reference from ``.hgsub``, then remove its files."
 msgstr ""
-"Um ein Subrepository aus seinem Parent Repository zu entfernen,\n"
-"entfernen Sie seine Verweise aus ``.hgsub`` und löschen die Dateien."
+"Um ein Unterarchiv aus seinem Elternarchiv zu entfernen, löschen Sie\n"
+"seine Verweise aus ``.hgsub`` und seine Dateien."
 
 msgid ""
 "Interaction with Mercurial Commands\n"
@@ -18124,7 +18199,7 @@ msgid "rollback of last commit while not checked out may lose data"
 msgstr ""
 
 msgid "use -f to force"
-msgstr "Benutzen Sie -f, um dennoch fortzufahren"
+msgstr "Benutzen Sie -f zum erzwingen"
 
 #, python-format
 msgid "named branch could not be reset: current branch is still '%s'\n"
@@ -19108,7 +19183,7 @@ msgid ""
 msgstr ""
 "    - ``rev`` für die Revisionsnummer,\n"
 "    - ``branch`` für den Zweignamen,\n"
-"    - ``desc`` für die Commit-Nachricht (description),\n"
+"    - ``desc`` für die Versionsmeldung (description),\n"
 "    - ``user`` für den Benutzernamen (Alias ``author``),\n"
 "    - ``date`` für das Datum des Commits"
 
@@ -19196,7 +19271,7 @@ msgstr ""
 "kopiert).\n"
 
 msgid ".hg/requires file is corrupt"
-msgstr ".hg/requires file ist korrumpiert"
+msgstr ".hg/requires file ist beschädigt"
 
 #, python-format
 msgid "unknown repository format: requires features '%s' (upgrade Mercurial)"
@@ -19215,7 +19290,7 @@ msgid "queries"
 msgstr ""
 
 msgid "searching"
-msgstr "suchen"
+msgstr ""
 
 msgid "repository is unrelated"
 msgstr "Projektarchiv steht in keinem Zusammenhang"
@@ -19275,9 +19350,8 @@ msgstr "Zertifikat ist für %s"
 msgid "IDN in certificate not supported"
 msgstr ""
 
-#, fuzzy
 msgid "no commonName or subjectAltName found in certificate"
-msgstr "Kein commonName oder subjectAltNamt gefunden im Zertifikat"
+msgstr "Kein commonName oder subjectAltName im Zertifikat gefunden"
 
 #, python-format
 msgid "could not find web.cacerts: %s"
@@ -19301,7 +19375,7 @@ msgstr ""
 #, python-format
 msgid "host fingerprint for %s can't be verified (Python too old)"
 msgstr ""
-"Host fingerprint für %s kann nicht verifiziert werden (Python ist zu alt)"
+"Server Authentizität für %s kann nicht verifiziert werden (Python ist zu alt)"
 
 #, python-format
 msgid "warning: certificate for %s can't be verified (Python too old)\n"
@@ -19450,13 +19524,13 @@ msgstr ""
 msgid "pushing branch %s of subrepo %s\n"
 msgstr "Übertrage Zweig %s von Unterarchiv %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "no branch checked out in subrepo %s\n"
 "cannot push revision %s"
 msgstr ""
-"kein Branch in Subrepo %s ausgecheckt\n"
-"Revision %s kann nicht gepusht werden"
+"kein Zweig in Unterarchiv %s aktuell\n"
+"Revision %s kann nicht übertragen werden"
 
 #, python-format
 msgid "%s, line %s: %s\n"
@@ -19539,13 +19613,12 @@ msgstr ":fill76: Beliebiger Text. Umbricht den Text bei 76 Zeichen."
 msgid ":firstline: Any text. Returns the first line of text."
 msgstr ":firstline: Beliebiger Text. Gibt die erste Zeile des Texts zurück."
 
-#, fuzzy
 msgid ""
 ":hex: Any text. Convert a binary Mercurial node identifier into\n"
 "    its long hexadecimal representation."
 msgstr ""
-":hex: Beliebiger Text. Konvertiert einen binären Mercurial node identifier \n"
-"    in seine lange hexadezimale Repräsentation."
+":hex: Beliebiger Text. Konvertiert eine binären Mercurial Knoten-ID \n"
+"    in eine lange hexadezimale Repräsentation."
 
 msgid ""
 ":hgdate: Date. Returns the date as a pair of numbers: \"1157407993\n"
@@ -19612,7 +19685,6 @@ msgstr ""
 ":short: Prüfsumme. Gibt die Kurzform der Prüfsumme zurück, d.h.\n"
 "    als 12 Zeichen lange hexadezimale Zeichenkette."
 
-#, fuzzy
 msgid ""
 ":shortbisect: Any text. Treats `text` as a bisection status, and\n"
 "    returns a single-character representing the status (G: good, B: bad,\n"
@@ -19620,11 +19692,9 @@ msgid ""
 "    is not a valid bisection status."
 msgstr ""
 ":shortbisect: Beliebiger text. Behandelt `text` als Teilungsstatus, und\n"
-"    gibt ein einzelnes Zeichen zurück, dass den Status repräsentiert (G: "
-"gut, B: schlecht,\n"
-"    S: übersprungen, U: ungetestet, I: ignoriert). Gibt ein einzelnes "
-"Leerzeichen zurück,\n"
-"    wenn `text` kein gültiger Teilungsstatus ist."
+"    gibt einen repräsentatives Buchstaben zurück (G: gut, B: schlecht,\n"
+"    S: übersprungen, U: ungetestet, I: ignoriert). Wenn `text` kein\n"
+"    gültiger Teilungsstatus ist, wird ein Leerzeichen zurückgegeben."
 
 msgid ":shortdate: Date. Returns a date like \"2006-09-18\"."
 msgstr ":shortdate: Datumsangabe. Gibt ein Datum wie \"2006-09-18\" zurück."
@@ -19761,9 +19831,8 @@ msgstr ""
 ":node: Zeichenkette. Die Prüfsumme, die einen Änderungssatz identifiziert,\n"
 "    als 40 Zeichen lange hexadezimale Zeichenkette."
 
-#, fuzzy
 msgid ":rev: Integer. The changeset phase."
-msgstr ":rev: Ganze Zahl. Die Phase des Changesets."
+msgstr ""
 
 msgid ":rev: Integer. The repository-local changeset revision number."
 msgstr ""
