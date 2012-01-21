@@ -449,17 +449,20 @@ def follow(repo, subset, x):
     """
     # i18n: "follow" is a keyword
     l = getargs(x, 0, 1, _("follow takes no arguments or a filename"))
-    p = repo['.'].rev()
+    c = repo['.']
     if l:
         x = getstring(l[0], _("follow expected a filename"))
-        if x in repo['.']:
-            s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
+        if x in c:
+            cx = c[x]
+            s = set(ctx.rev() for ctx in cx.ancestors())
+            # include the revision responsible for the most recent version
+            s.add(cx.linkrev())
         else:
             return []
     else:
-        s = set(repo.changelog.ancestors(p))
+        s = set(repo.changelog.ancestors(c.rev()))
+        s.add(c.rev())
 
-    s |= set([p])
     return [r for r in subset if r in s]
 
 def getall(repo, subset, x):
