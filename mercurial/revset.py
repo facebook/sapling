@@ -296,15 +296,17 @@ def branch(repo, subset, x):
     return [r for r in subset if r in s or repo[r].branch() in b]
 
 def checkstatus(repo, subset, pat, field):
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
-    fast = (m.files() == [pat])
+    fast = not matchmod.patkind(pat)
     for r in subset:
         c = repo[r]
         if fast:
             if pat not in c.files():
                 continue
         else:
+            if not m or matchmod.patkind(pat) == 'set':
+                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
             for f in c.files():
                 if m(f):
                     break
@@ -354,15 +356,18 @@ def contains(repo, subset, x):
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
-    if m.files() == [pat]:
+    if not matchmod.patkind(pat):
         for r in subset:
             if pat in repo[r]:
                 s.append(r)
     else:
         for r in subset:
-            for f in repo[r].manifest():
+            c = repo[r]
+            if not m or matchmod.patkind(pat) == 'set':
+                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+            for f in c.manifest():
                 if m(f):
                     s.append(r)
                     break
@@ -412,10 +417,11 @@ def filelog(repo, subset, x):
     """
 
     pat = getstring(x, _("filelog requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath')
+    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath',
+                       ctx=repo[None])
     s = set()
 
-    if not m.anypats():
+    if not matchmod.patkind(pat):
         for f in m.files():
             fl = repo.file(f)
             for fr in fl:
@@ -500,10 +506,13 @@ def hasfile(repo, subset, x):
     """
     # i18n: "file" is a keyword
     pat = getstring(x, _("file requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
     for r in subset:
-        for f in repo[r].files():
+        c = repo[r]
+        if not m or matchmod.patkind(pat) == 'set':
+            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+        for f in c.files():
             if m(f):
                 s.append(r)
                 break
