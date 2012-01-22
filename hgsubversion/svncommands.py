@@ -49,7 +49,9 @@ def verify(ui, repo, args=None, **opts):
     svnfiles = set()
     result = 0
 
-    for fn, type in svn.list_files(branchpath, srev):
+    svndata = svn.list_files(branchpath, srev)
+    for i, (fn, type) in enumerate(svndata):
+        util.progress(ui, 'verify', i)
         if type != 'f':
             continue
         svnfiles.add(fn)
