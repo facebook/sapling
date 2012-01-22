@@ -58,16 +58,17 @@ function Graph() {
 		
 		// Set the colour.
 		//
-		// If color is hex string "FFFFFF" then append sharp and apply as is 
-		// If color is number
-		// picks a distinct colour based on an internal wheel; the bg
-		// parameter provides the value that should be assigned to the 'zero'
-		// colours and the fg parameter provides the multiplier that should be
-		// applied to the foreground colours.
+		// If color is a string, expect an hexadecimal RGB
+		// value and apply it unchanged. If color is a number,
+		// pick a distinct colour based on an internal wheel;
+		// the bg parameter provides the value that should be
+		// assigned to the 'zero' colours and the fg parameter
+		// provides the multiplier that should be applied to
+		// the foreground colours.
 		var s;
-		if(typeof color == "string"){
-			s = "#"+color;
-		}else{ //typeof color == "number"
+		if(typeof color == "string") {
+			s = "#" + color;
+		} else { //typeof color == "number"
 			color %= colors.length;
 			var red = (colors[color][0] * fg) || bg;
 			var green = (colors[color][1] * fg) || bg;
@@ -83,9 +84,11 @@ function Graph() {
 		
 	}
 
-	this.edge = function(x0, y0, x1, y1, color) {
+	this.edge = function(x0, y0, x1, y1, color, width) {
 		
 		this.setColor(color, 0.0, 0.65);
+		if(width >= 0)
+			 this.ctx.lineWidth = width;
 		this.ctx.beginPath();
 		this.ctx.moveTo(x0, y0);
 		this.ctx.lineTo(x1, y1);
@@ -109,13 +112,20 @@ function Graph() {
 			var edges = cur[2];
 			var fold = false;
 			
+			var prevWidth = this.ctx.lineWidth;
 			for (var j in edges) {
 				
 				line = edges[j];
 				start = line[0];
 				end = line[1];
 				color = line[2];
-
+				var width = line[3];
+				if(width < 0)
+					 width = prevWidth;
+				var branchcolor = line[4];
+				if(branchcolor)
+					color = branchcolor;
+				
 				if (end > this.columns || start > this.columns) {
 					this.columns += 1;
 				}
@@ -128,17 +138,11 @@ function Graph() {
 				y0 = this.bg[1] - this.bg_height / 2;
 				x1 = this.cell[0] + this.box_size * end + this.box_size / 2;
 				y1 = this.bg[1] + this.bg_height / 2;
-				// Width if exists
-				if(line[3] && line[3]['width']){
-					this.ctx.lineWidth = line[3]['width'];
-				}
-				// Color if exists
-				if(line[3] && line[3]['color']){
-					color = line[3]['color'];
-				}
-				this.edge(x0, y0, x1, y1, color);
-				this.ctx.lineWidth = 1;
+				
+				this.edge(x0, y0, x1, y1, color, width);
+				
 			}
+			this.ctx.lineWidth = prevWidth;
 			
 			// Draw the revision node in the right column
 			

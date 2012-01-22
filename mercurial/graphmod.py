@@ -91,14 +91,15 @@ def colored(dag, repo):
             branch, setting = key.rsplit('.', 1)
             # Validation
             if setting == "width" and val.isdigit():
-                config.setdefault(branch, {})[setting] = val
+                config.setdefault(branch, {})[setting] = int(val)
             elif setting == "color" and val.isalnum():
                 config.setdefault(branch, {})[setting] = val
 
     if config:
-        getconf = util.lrucachefunc(lambda rev: config.get(repo[rev].branch()))
+        getconf = util.lrucachefunc(
+            lambda rev: config.get(repo[rev].branch(), {}))
     else:
-        getconf = lambda rev: None
+        getconf = lambda rev: {}
 
     for (cur, type, data, parents) in dag:
 
@@ -128,14 +129,18 @@ def colored(dag, repo):
         edges = []
         for ecol, eid in enumerate(seen):
             if eid in next:
+                bconf = getconf(eid)
                 edges.append((
                     ecol, next.index(eid), colors[eid],
-                    getconf(eid)))
+                    bconf.get('width', -1),
+                    bconf.get('color', '')))
             elif eid == cur:
                 for p in parents:
+                    bconf = getconf(p)
                     edges.append((
                         ecol, next.index(p), color,
-                        getconf(p)))
+                        bconf.get('width', -1),
+                        bconf.get('color', '')))
 
         # Yield and move on
         yield (cur, type, data, (col, color), edges)
