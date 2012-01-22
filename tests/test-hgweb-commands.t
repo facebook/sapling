@@ -24,6 +24,13 @@ Set up the repo
   marked working directory as branch stable
   (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Ambranch
+  $ hg branch unstable
+  marked working directory as branch unstable
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -Ambranch
+  $ echo [graph] >> .hg/hgrc
+  $ echo default.width = 3 >> .hg/hgrc
+  $ echo stable.width = 3 >> .hg/hgrc
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -41,6 +48,22 @@ Logs and changes
    <title>test Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
+   <entry>
+    <title>branch</title>
+    <id>http://*:$HGPORT/#changeset-ba87b23d29ca67a305625d81a20ac279c1e3f444</id> (glob)
+    <link href="http://*:$HGPORT/rev/ba87b23d29ca"/> (glob)
+    <author>
+     <name>test</name>
+     <email>&#116;&#101;&#115;&#116;</email>
+    </author>
+    <updated>1970-01-01T00:00:00+00:00</updated>
+    <published>1970-01-01T00:00:00+00:00</published>
+    <content type="xhtml">
+     <div xmlns="http://www.w3.org/1999/xhtml">
+      <pre xml:space="preserve">branch</pre>
+     </div>
+    </content>
+   </entry>
    <entry>
     <title>branch</title>
     <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
@@ -103,6 +126,22 @@ Logs and changes
    <title>test Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
+   <entry>
+    <title>branch</title>
+    <id>http://*:$HGPORT/#changeset-ba87b23d29ca67a305625d81a20ac279c1e3f444</id> (glob)
+    <link href="http://*:$HGPORT/rev/ba87b23d29ca"/> (glob)
+    <author>
+     <name>test</name>
+     <email>&#116;&#101;&#115;&#116;</email>
+    </author>
+    <updated>1970-01-01T00:00:00+00:00</updated>
+    <published>1970-01-01T00:00:00+00:00</published>
+    <content type="xhtml">
+     <div xmlns="http://www.w3.org/1999/xhtml">
+      <pre xml:space="preserve">branch</pre>
+     </div>
+    </content>
+   </entry>
    <entry>
     <title>branch</title>
     <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
@@ -208,14 +247,14 @@ Logs and changes
   </div>
   <ul>
   <li class="active">log</li>
-  <li><a href="/graph/1d22e65f027e">graph</a></li>
+  <li><a href="/graph/ba87b23d29ca">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/1d22e65f027e">changeset</a></li>
-  <li><a href="/file/1d22e65f027e">browse</a></li>
+  <li><a href="/rev/ba87b23d29ca">changeset</a></li>
+  <li><a href="/file/ba87b23d29ca">browse</a></li>
   </ul>
   <ul>
   
@@ -237,9 +276,9 @@ Logs and changes
   </form>
   
   <div class="navigate">
-  <a href="/shortlog/2?revcount=30">less</a>
-  <a href="/shortlog/2?revcount=120">more</a>
-  | rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
+  <a href="/shortlog/3?revcount=30">less</a>
+  <a href="/shortlog/3?revcount=120">more</a>
+  | rev 3: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
   </div>
   
   <table class="bigtable">
@@ -251,14 +290,19 @@ Logs and changes
    <tr class="parity0">
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
+    <td class="description"><a href="/rev/ba87b23d29ca">branch</a><span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
    </tr>
    <tr class="parity1">
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
+    <td class="description"><a href="/rev/1d22e65f027e">branch</a><span class="branchhead">stable</span> </td>
    </tr>
    <tr class="parity0">
+    <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
+    <td class="author">test</td>
+    <td class="description"><a href="/rev/a4f92ed23982">Added tag 1.0 for changeset 2ef0ac749a14</a><span class="branchhead">default</span> </td>
+   </tr>
+   <tr class="parity1">
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/2ef0ac749a14">base</a><span class="tag">1.0</span> <span class="tag">anotherthing</span> </td>
@@ -267,9 +311,9 @@ Logs and changes
   </table>
   
   <div class="navigate">
-  <a href="/shortlog/2?revcount=30">less</a>
-  <a href="/shortlog/2?revcount=120">more</a>
-  | rev 2: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
+  <a href="/shortlog/3?revcount=30">less</a>
+  <a href="/shortlog/3?revcount=120">more</a>
+  | rev 3: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
   </div>
   
   </div>
@@ -637,18 +681,19 @@ Overviews
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/raw-tags'
   200 Script output follows
   
-  tip	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  tip	ba87b23d29ca67a305625d81a20ac279c1e3f444
   1.0	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/raw-branches'
   200 Script output follows
   
-  stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	open
+  unstable	ba87b23d29ca67a305625d81a20ac279c1e3f444	open
+  stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	inactive
   default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/raw-bookmarks'
   200 Script output follows
   
   anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
-  something	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  something	ba87b23d29ca67a305625d81a20ac279c1e3f444
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/summary/?style=gitweb'
   200 Script output follows
   
@@ -688,7 +733,7 @@ Overviews
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a> |
+  <a href="/file/ba87b23d29ca?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
   </div>
@@ -707,9 +752,23 @@ Overviews
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
+  <a class="list" href="/rev/ba87b23d29ca?style=gitweb">
+  <b>branch</b>
+  <span class="logtags"><span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+  </a>
+  </td>
+  <td class="link" nowrap>
+  <a href="/rev/ba87b23d29ca?style=gitweb">changeset</a> |
+  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity1">
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
+  <td><i>test</i></td>
+  <td>
   <a class="list" href="/rev/1d22e65f027e?style=gitweb">
   <b>branch</b>
-  <span class="logtags"><span class="branchtag" title="stable">stable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
+  <span class="logtags"><span class="branchtag" title="stable">stable</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
@@ -717,7 +776,7 @@ Overviews
   <a href="/file/1d22e65f027e?style=gitweb">files</a>
   </td>
   </tr>
-  <tr class="parity1">
+  <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
@@ -731,7 +790,7 @@ Overviews
   <a href="/file/a4f92ed23982?style=gitweb">files</a>
   </td>
   </tr>
-  <tr class="parity0">
+  <tr class="parity1">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
@@ -777,11 +836,11 @@ Overviews
   </tr>
   <tr class="parity1">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td><a class="list" href="/rev/1d22e65f027e?style=gitweb"><b>something</b></a></td>
+  <td><a class="list" href="/rev/ba87b23d29ca?style=gitweb"><b>something</b></a></td>
   <td class="link">
-  <a href="/rev/1d22e65f027e?style=gitweb">changeset</a> |
-  <a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a>
+  <a href="/rev/ba87b23d29ca?style=gitweb">changeset</a> |
+  <a href="/log/ba87b23d29ca?style=gitweb">changelog</a> |
+  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="light"><td colspan="3"><a class="list" href="/bookmarks?style=gitweb">...</a></td></tr>
@@ -792,6 +851,16 @@ Overviews
   
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
+  <td><a class="list" href="/shortlog/ba87b23d29ca?style=gitweb"><b>ba87b23d29ca</b></a></td>
+  <td class="">unstable</td>
+  <td class="link">
+  <a href="/changeset/ba87b23d29ca?style=gitweb">changeset</a> |
+  <a href="/log/ba87b23d29ca?style=gitweb">changelog</a> |
+  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity1">
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
   <td class="">stable</td>
   <td class="link">
@@ -800,7 +869,7 @@ Overviews
   <a href="/file/1d22e65f027e?style=gitweb">files</a>
   </td>
   </tr>
-  <tr class="parity1">
+  <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
   <td class="">default</td>
@@ -861,17 +930,17 @@ Overviews
   <div class="page_nav">
   <a href="/summary?style=gitweb">summary</a> |
   <a href="/shortlog?style=gitweb">shortlog</a> |
-  <a href="/log/2?style=gitweb">changelog</a> |
+  <a href="/log/3?style=gitweb">changelog</a> |
   graph |
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/1d22e65f027e?style=gitweb">files</a> |
+  <a href="/file/ba87b23d29ca?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
-  <a href="/graph/2?style=gitweb&revcount=30">less</a>
-  <a href="/graph/2?style=gitweb&revcount=120">more</a>
-  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-2</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+  <a href="/graph/3?style=gitweb&revcount=30">less</a>
+  <a href="/graph/3?style=gitweb&revcount=120">more</a>
+  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-3</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
   </div>
   
   <div class="title">&nbsp;</div>
@@ -880,14 +949,14 @@ Overviews
   
   <div id="wrapper">
   <ul id="nodebgs"></ul>
-  <canvas id="graph" width="480" height="129"></canvas>
+  <canvas id="graph" width="480" height="168"></canvas>
   <ul id="graphnodes"></ul>
   </div>
   
   <script>
   <!-- hide script content
   
-  var data = [["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", true], ["tip"], ["something"]], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  var data = [["ba87b23d29ca", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
   var graph = new Graph();
   graph.scale(39);
   
@@ -960,9 +1029,9 @@ Overviews
   </script>
   
   <div class="page_nav">
-  <a href="/graph/2?style=gitweb&revcount=30">less</a>
-  <a href="/graph/2?style=gitweb&revcount=120">more</a>
-  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-2</a> <a href="/graph/tip?style=gitweb">tip</a> 
+  <a href="/graph/3?style=gitweb&revcount=30">less</a>
+  <a href="/graph/3?style=gitweb&revcount=120">more</a>
+  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-3</a> <a href="/graph/tip?style=gitweb">tip</a> 
   </div>
   
   <script type="text/javascript">process_dates()</script>
@@ -991,7 +1060,7 @@ heads
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=heads'
   200 Script output follows
   
-  1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  ba87b23d29ca67a305625d81a20ac279c1e3f444
 
 branches
 
@@ -1005,10 +1074,11 @@ changegroup
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=changegroup&roots=0000000000000000000000000000000000000000'
   200 Script output follows
   
-  x\x9c\xbdTMHUA\x14\xbe\xa8\xf9\xec\xda&\x10\x11*\xb8\x88\x81\x99\xbef\xe6\xce\xbdw\xc6\xf2a\x16E\x1b\x11[%\x98\xcc\xaf\x8f\x8c\xf7\xc0\xf7\x82 (esc)
-  4\x11KP2m\x95\xad*\xabE\x05AP\xd0\xc22Z\x14\xf9\x03\xb9j\xa3\x9b$\xa4MJ\xb4\x90\xc0\x9a\x9bO0\x10\xdf\x13\xa2\x81\x0f\x869g\xe6|\xe7\x9c\xef\x8ceY\xf7\xa2KO\xd2\xb7K\x16~\\n\xe9\xad\x90w\x86\xab\x93W\x8e\xdf\xb0r\\Y\xee6(\xa2)\xf6\x95\xc6\x01\xe4\x1az\x80R\xe8kN\x98\xe7R\xa4\xa9K@\xe0!A\xb4k\xa7U*m\x03\x07\xd8\x92\x1d\xd2\xc9\xa4\x1d\xc2\xe6,\xa5\xcc+\x1f\xef\xafDgi\xef\xab\x1d\x1d\xb7\x9a\xe7[W\xfbc\x8f\xde-\xcd\xe7\xcaz\xb3\xbb\x19\xd3\x81\x10>c>\x08\x00"X\x11\xc2\x84@\xd2\xe7B*L\x00\x01P\x04R\xc3@\xbaB0\xdb8#\x83:\x83\xa2h\xbc=\xcd\xdaS\xe1Y,L\xd3\xa0\xf2\xa8\x94J:\xe6\xd8\x81Q\xe0\xe8d\xa7#\xe2,\xd1\xaeR*\xed \xa5\x01\x13\x01\xa6\x0cb\xe3;\xbe\xaf\xfcK[^wK\xe1N\xaf\xbbk\xe8B\xd1\xf4\xc1\x07\xb3\xab[\x10\xfdkmvwcB\xa6\xa4\xd4G\xc4D\xc2\x141\xad\x91\x10\x00\x08J\x81\xcb}\xee	\xee+W\xba\x8a\x80\x90|\xd4\xa0\xd6\xa0\xd4T\xde\xe1\x9d,!\xe2\xb5\xa94\xe3\xe7\xd5\x9f\x06\x18\xcba\x03aP\xb8f\xcd\x04\x1a_\\9\xf1\xed\xe4\x9e\xe5\xa6\xd1\xd2\x9f\x03\xa7o\xae\x90H\xf3\xfb\xef\xffH3\xadk (esc)
-  \xb0\x90\x92\x88\xb9\x14"\x068\xc2\x1e@\x00\xbb\x8a)\xd3'\x859 (esc)
-  \xa8\x80\x84S \xa5\xbd-g\x13`\xe4\xdc\xc3H^\xdf\xe2\xc0TM\xc7\xf4BO\xcf\xde\xae\xe5\xae#\x1frM(K\x97`F\x19\x16s\x05GD\xb9\x01\xc1\x00+\x8c|\x9fp\xc11\xf0\x14\x00\x9cJ\x82<\xe0\x12\x9f\xc1\x90\xd0\xf5\xc8\x19>Pr\xaa\xeaW\xf5\xc4\xae\xd1\xfc\x17\xcf'\x13u\xb1\x9e\xcdHnC\x0e\xcc`\xc8\xa0&\xac\x0e\xf1|\x8c\x10$\xc4\x8c\xa2p\x05`\xdc\x08 \x80\xc4\xd7Rr-\x94\x10\x102\xedi;\xf3f\xf1z\x16\x86\xdb\xd8d\xe5\xe7\x8b\xf5\x8d\rzp\xb2\xfe\xac\xf5\xf2\xd3\xfe\xfckws\xedt\x96b\xd5l\x1c\x0b\x85\xb5\x170\x8f\x11\x84\xb0\x8f\x19\xa0\x00	_\x07\x1ac\xa2\xc3\x89Z\xe7\x96\xf9 \xccNFg\xc7F\xaa\x8a+\x9a\x9cc_\x17\x1b\x17\x9e]z38<\x97+\xb5,",\xc8\xc8?\\\x91\xff\x17.~U\x96\x97\xf5%\xdeN<\x8e\xf5\x97%\xe7^\xcfL\xed~\xda\x96k\xdc->\x86\x02\x83"\x96H\xa6\xe3\xaas=-\xeb7\xe5\xda\x8f\xbc (no-eol) (esc)
+  x\x9c\xbdTMHTQ\x14\x1e\xfc\xef\xd9&\x10\x11*x\x88\x81\x9aN\xf7\xddw\xdf{\xf7Y\x0efR\xb4\x11\xb1U\x82\xc5\xfd\x9d!c\x06\x9c'd\xa0\x99X\x82\x92i\xablUZ-*\x08\x84\x82\x02KkQ\xf8\x13\xe4\xaa\x8dn\x94\x906)\xd5B\x02\xeb\xbe\x9c\x01\x85\xc9\x996\x1d\xf8x\x97{\xefy\xe7;\xe7|\xe7\x06\x02\x81\xb1\xe0\xda\x13\xefN\xd1\xca\x8f\xcb-\xbde\xfc\xeepU\xecJ\xc3\xcd@\x86\x96\xc6\xb7^`\xe9"[H\xe4\x18T\x1a\x16p]\xc3\x96\x14\x13\xcbt\xa1tM\x0c\x1c\x0b2,M\xcd\x13qO\x03:\xd089"c1\xcd\x87FI\\\xa8\xbf|\xbc\xbf\x11\\p{_\xe5\xb6\xddn^j\xdd\xec\x0f=z\xb7\xb6\x94)\xebT\xbe\x89\xa3 (esc)
+  \x1f6!6p\x00\xc4H`L\x18\x83\xdc\xa6\x8c\x0b\x84\x01\x06\x06s\xb84\x1cn2F4u\x19*\xd4*\x14\x04#a\x8f\x84\xe3\xfe^\xc8OS\xa1\xfc8\xe7\x82\xebj[7\x82@\x97\xb1v\x9dEH4,\xe2\xc2\xd3\xa1\x90\x800\x07\xb9\xc4@\xea\xee\xe4\xc1\xd2\xcf\xe7\xb3\xba[\xf2\xf6X\xdd]C\x1d\x05\xf3\x87\x1f,l\xeeBt\x87\xa5\xf2\xdd\x9e\x90*\xa9kC\xac"!\x17\x12)!c\x000\xd7\x05&\xb5\xa9\xc5\xa8-Ln (esc)
+  \x0c|\xf2A\x85\x1a\x85bUy\x9d\xb6\x93(\x8b\xd4\xc4=B/\x8a?\rP'G\x15\x98B\xde\xd6\xa9Zy/\xfb'j+f\xc2\xe3\xb9\xb4\xf5\xea\x98\xf6\xa6sz\xf9{\xc3.\xa4vX*\xdf\x04\x0f\xff[\xb4\x8dGG4\xc1$\xe1:\xb9\xbaq\xf2\xeb\xa9\xfd\xebM\xa3\xc5?\x07\xce\xdc\xda\xc0\xf9\xcd\xef\xbf\xa5\xd3g\xd2\xd2\xa8\xa5uKu\x01(8$\xa6k@\x02(D\x16\x80\x00\x99\x82\x08\xa5\r\x81(t\\f`\xea\x02\xce\xb5\x7f\xba\xac\x02\x8c\\x\x98\x9f\xd5\xb7:0W\xdd6\xbf\xd2\xd3s\xa0k\xbd\xeb\xd8L\xa6	\xa5Q\x86\x91Pc\x80\x98\x8cB,L\x07#\x80\x04\x82\xb6\x8d)\xa3\x08X\x02\x00\xear\x0c-`b\x9b\x18>\xa1\x1b\xf9g\xe9@\xd1\xe9\xca_US{G\xb3\x9f?\x9b\x8d\xd6\x86zR\x91LE\xe8/\xdd& (esc)
+  C
+  \xd5~u\xb0e#\x08\r\x8c\xd5\xf83\x93\x01B\x95\xe8\x1c\x03\xdb\x92s*\x99`\xcc0\x88\xb4d\xb2\xbd\x85\xc9,\x14\xb7\xf1\xd9\xf2\xe5Ku\x8d\xf5rp\xb6\xee\\\xe0\xc5\xa7C\xd9\xd7\xefe\xda\xe94\xc5\xaa\xde>\x8a\x02I\xcb!\x16\xc1\x10"\x1b\x11\xe0\x02\xc8l\xe9H\x84\xb0\xf4\xa78\xc9-\xf1(\xa9\x15\x0f.\x8c\x8fT\x16\x965\xe9'\xbe\xac6\xaeLtN\x0f\x0e/fJ-\x8d\x08s\x12#\xe7[\xfe\xff\x0b\x17\xb9\xc6KK\xfa\xa2o\xa7\x1e\x87\xfaKb\x8b\xaf?\xcc\xed{z>\xd3\xb8\xbb\xcc}\x8eB\x01\x89\xc6\xbc\x88hO\xa6\x15\xf8\rr4\xb3\xe5 (no-eol) (esc)
 
 stream_out
 
@@ -1153,8 +1223,9 @@ Graph json escape of multibyte character
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/' \
   >     | grep '^var data ='
-  var data = [["40b4d6888e92", [0, 1], [[0, 0, 1]], "\u80fd", "test", "1970-01-01", ["stable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1]], "branch", "test", "1970-01-01", ["stable", false], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  var data = [["548001d11f45", [0, 1], [[0, 0, 1, null]], "\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["ba87b23d29ca", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
 
 ERRORS ENCOUNTERED
 
   $ cat errors.log
+

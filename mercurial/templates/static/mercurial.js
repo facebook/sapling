@@ -112,9 +112,12 @@ function Graph() {
 				y0 = this.bg[1] - this.bg_height / 2;
 				x1 = this.cell[0] + this.box_size * end + this.box_size / 2;
 				y1 = this.bg[1] + this.bg_height / 2;
-				
+				// Width if exists
+				if(line[3] && line[3]['width']){
+					this.ctx.lineWidth = line[3]['width'];
+				}
 				this.edge(x0, y0, x1, y1, color);
-				
+				this.ctx.lineWidth = 1;
 			}
 			
 			// Draw the revision node in the right column

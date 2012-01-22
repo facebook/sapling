@@ -770,7 +770,7 @@ def graph(web, req, tmpl):
         startrev = uprev
 
     dag = graphmod.dagwalker(web.repo, range(startrev, downrev - 1, -1))
-    tree = list(graphmod.colored(dag))
+    tree = list(graphmod.colored(dag, web.repo))
     canvasheight = (len(tree) + 1) * bg_height - 27
     data = []
     for (id, type, ctx, vtx, edges) in tree:

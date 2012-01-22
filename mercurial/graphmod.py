@@ -67,7 +67,7 @@ def nodes(repo, nodes):
         parents = set([p.rev() for p in ctx.parents() if p.node() in include])
         yield (ctx.rev(), CHANGESET, ctx, sorted(parents))
 
-def colored(dag):
+def colored(dag, repo):
     """annotates a DAG with colored edge information
 
     For each DAG node this function emits tuples::
@@ -83,6 +83,20 @@ def colored(dag):
     seen = []
     colors = {}
     newcolor = 1
+    config = {}
+
+    for key, val in repo.ui.configitems('graph'):
+        if '.' not in key:
+            continue
+        branch, setting = key.rsplit('.', 1)
+        gdict = config.setdefault(branch, {})
+
+        # Validation
+        if (setting == "width" and val.isdigit() and 0 < int(val) < 30):
+            gdict[setting] = val
+        else:
+            continue
+
     for (cur, type, data, parents) in dag:
 
         # Compute seen and next
@@ -111,10 +125,14 @@ def colored(dag):
         edges = []
         for ecol, eid in enumerate(seen):
             if eid in next:
-                edges.append((ecol, next.index(eid), colors[eid]))
+                edges.append((
+                    ecol, next.index(eid), colors[eid],
+                    config.get(repo[eid].branch(), None)))
             elif eid == cur:
                 for p in parents:
-                    edges.append((ecol, next.index(p), color))
+                    edges.append((
+                        ecol, next.index(p), color,
+                        config.get(repo[p].branch(), None)))
 
         # Yield and move on
         yield (cur, type, data, (col, color), edges)
