@@ -1,6 +1,7 @@
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
+from mercurial import discovery
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -90,7 +91,13 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
     meta = repo.svnmeta(svn.uuid, svn.subdir)
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
-    return util.outgoing_common_and_heads(repo, hashes, parent)
+    common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
+    outobj = getattr(discovery, 'outgoing', None)
+    if outobj is not None:
+        # Mercurial 2.1 and later
+        return outobj(repo.changelog, common, heads)
+    # Mercurial 2.0 and earlier
+    return common, heads
 
 
 def findoutgoing(repo, dest=None, heads=None, force=False):
