@@ -3133,7 +3133,7 @@ def qqueue(ui, repo, name=None, **opts):
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
     if repo.mq.applied:
-        qbase = repo[repo.mq.applied[0]]
+        qbase = repo[repo.mq.applied[0].node]
         roots[phases.secret].add(qbase.node())
     return roots
 
