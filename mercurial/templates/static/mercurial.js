@@ -58,19 +58,25 @@ function Graph() {
 		
 		// Set the colour.
 		//
-		// Picks a distinct colour based on an internal wheel; the bg
+		// If color is hex string "FFFFFF" then append sharp and apply as is 
+		// If color is number
+		// picks a distinct colour based on an internal wheel; the bg
 		// parameter provides the value that should be assigned to the 'zero'
 		// colours and the fg parameter provides the multiplier that should be
 		// applied to the foreground colours.
-		
-		color %= colors.length;
-		var red = (colors[color][0] * fg) || bg;
-		var green = (colors[color][1] * fg) || bg;
-		var blue = (colors[color][2] * fg) || bg;
-		red = Math.round(red * 255);
-		green = Math.round(green * 255);
-		blue = Math.round(blue * 255);
-		var s = 'rgb(' + red + ', ' + green + ', ' + blue + ')';
+		var s;
+		if(typeof color == "string"){
+			s = "#"+color;
+		}else{ //typeof color == "number"
+			color %= colors.length;
+			var red = (colors[color][0] * fg) || bg;
+			var green = (colors[color][1] * fg) || bg;
+			var blue = (colors[color][2] * fg) || bg;
+			red = Math.round(red * 255);
+			green = Math.round(green * 255);
+			blue = Math.round(blue * 255);
+			s = 'rgb(' + red + ', ' + green + ', ' + blue + ')';
+		}
 		this.ctx.strokeStyle = s;
 		this.ctx.fillStyle = s;
 		return s;
@@ -115,6 +121,10 @@ function Graph() {
 				// Width if exists
 				if(line[3] && line[3]['width']){
 					this.ctx.lineWidth = line[3]['width'];
+				}
+				// Color if exists
+				if(line[3] && line[3]['color']){
+					color = line[3]['color'];
 				}
 				this.edge(x0, y0, x1, y1, color);
 				this.ctx.lineWidth = 1;

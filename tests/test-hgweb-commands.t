@@ -31,6 +31,7 @@ Set up the repo
   $ echo [graph] >> .hg/hgrc
   $ echo default.width = 3 >> .hg/hgrc
   $ echo stable.width = 3 >> .hg/hgrc
+  $ echo stable.color = FF0000 >> .hg/hgrc
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -956,7 +957,7 @@ Overviews
   <script>
   <!-- hide script content
   
-  var data = [["ba87b23d29ca", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  var data = [["ba87b23d29ca", [0, 1], [[0, 0, 1, {"color": "FF0000", "width": "3"}]], "branch", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
   var graph = new Graph();
   graph.scale(39);
   
@@ -1223,9 +1224,8 @@ Graph json escape of multibyte character
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/' \
   >     | grep '^var data ='
-  var data = [["548001d11f45", [0, 1], [[0, 0, 1, null]], "\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["ba87b23d29ca", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  var data = [["548001d11f45", [0, 1], [[0, 0, 1, null]], "\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["ba87b23d29ca", [0, 1], [[0, 0, 1, {"color": "FF0000", "width": "3"}]], "branch", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, {"width": "3"}]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, {"width": "3"}]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
 
 ERRORS ENCOUNTERED
 
   $ cat errors.log
-

@@ -18,6 +18,7 @@ Data depends on type.
 """
 
 from mercurial.node import nullrev
+import re
 
 CHANGESET = 'C'
 
@@ -92,7 +93,8 @@ def colored(dag, repo):
         gdict = config.setdefault(branch, {})
 
         # Validation
-        if (setting == "width" and val.isdigit() and 0 < int(val) < 30):
+        if ((setting == "width" and val.isdigit() and 0 < int(val) < 30) or
+                (setting == "color" and re.match('^[0-9a-fA-F]{6}$', val))):
             gdict[setting] = val
         else:
             continue
