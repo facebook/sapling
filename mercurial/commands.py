@@ -4249,7 +4249,7 @@ def phase(ui, repo, *revs, **opts):
             else:
                 ui.warn(_('no phases changed\n'))
                 ret = 1
-        return ret
+    return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
