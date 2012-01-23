@@ -900,9 +900,10 @@ def override_addremove(orig, ui, repo, *pats, **opts):
     # to have handled by original addremove.  Monkey patching here makes sure
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
-    repo._isaddremove = True
-    remove_largefiles(ui, repo, *missing, **opts)
-    repo._isaddremove = False
+    if missing:
+        repo._isaddremove = True
+        remove_largefiles(ui, repo, *missing, **opts)
+        repo._isaddremove = False
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
     add_largefiles(ui, repo, *pats, **opts)
