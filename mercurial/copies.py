@@ -99,6 +99,13 @@ def _chain(src, dst, a, b):
         if v in src:
             # file is a copy of an existing file
             t[k] = v
+
+    # remove criss-crossed copies
+    for k, v in t.items():
+        if k in src and v in dst:
+            print "bad", k, v
+            del t[k]
+
     return t
 
 def _tracefile(fctx, actx):
