@@ -131,7 +131,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
 
     return og
 
-def checkheads(repo, remote, outgoing, remoteheads, newbranch=False):
+def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     """Check that a push won't add any outgoing head
 
     raise Abort error and display ui message as needed.
@@ -190,9 +190,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False):
         # Construct {old,new}map with branch = None (topological branch).
         # (code based on _updatebranchcache)
         oldheads = set(h for h in remoteheads if h in cl.nodemap)
-        newheads = oldheads.union(outg)
+        newheads = oldheads.union(outgoing.missing)
         if len(newheads) > 1:
-            for latest in reversed(outg):
+            for latest in reversed(outgoing.missing):
                 if latest not in newheads:
                     continue
                 minhrev = min(cl.rev(h) for h in newheads)

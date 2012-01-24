@@ -1635,7 +1635,8 @@ class localrepository(repo.repository):
                     # something to push
                     if not force:
                         discovery.checkheads(self, remote, outgoing,
-                                             remoteheads, newbranch)
+                                             remoteheads, newbranch,
+                                             bool(inc))
 
                     # create a changegroup from local
                     if revs is None and not outgoing.excluded:
