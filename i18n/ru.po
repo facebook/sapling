@@ -1758,10 +1758,10 @@ msgstr ""
 "    родители должны быть изменены (тот же формат, что и в файле\n"
 "    .hg/shamap). Параметры являются номерами ревизий (во входном\n"
 "    или выходном хранилище), которые используются в качестве\n"
-"    новых родителей для данного узла. Например, если были слиты\n"
-"    ветки \"release-1.0\" и \"trunk\", то нужно указать номер\n"
-"    ревизии в ветке \"trunk\" в качестве родитель1, и номер ревизии\n"
-"    в ветке \"release-1.0\" в качестве родитель2."
+"    новых родителей для данного узла. Например, если ветка \"release-1.0\"\n"
+"    была слита в \"trunk\", то нужно указать номер ревизии в ветке\n"
+"    \"trunk\" в качестве первого родителя, и номер ревизии из ветки\n"
+"    \"release-1.0\" в качестве второго родителя."
 
 msgid ""
 "    The branchmap is a file that allows you to rename a branch when it is\n"
@@ -1884,8 +1884,8 @@ msgid ""
 msgstr ""
 "    :convert.cvsps.fuzz: задает максимально допустимое время \n"
 "        (в секундах) между фиксациями с одинаковыми пользователем \n"
-"        и журнальным сообщением в рамках одного набора изменений.        "
-"Значения по умолчанию может не хватить, если очень большие файлы были\n"
+"        и журнальным сообщением в рамках одного набора изменений. Значения\n"
+"        по умолчанию может не хватить, если очень большие файлы были\n"
 "        сохранены в наборе изменений. По умолчанию 60 сек."
 
 msgid ""
@@ -2601,6 +2601,10 @@ msgstr ""
 "Mercurial не удалось запустить себя самого, убедитесь, что переменная\n"
 "PATH содержит путь к hg"
 
+#, python-format
+msgid "log stream exception '%s'"
+msgstr ""
+
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
 "repository. Use --source-type if you know better.\n"
@@ -2660,6 +2664,10 @@ msgstr "svn: начальная ревизия не поддерживается
 #, python-format
 msgid "svn: no revision found after start revision %d"
 msgstr "svn: не найдено ревизий после стартовой ревизии %d"
+
+#, python-format
+msgid "svn: revision %s not found"
+msgstr "svn: ревизия %s не найдена"
 
 #, python-format
 msgid "%s not found up to revision %d"
@@ -4448,6 +4456,18 @@ msgstr ""
 msgid "largefile %s becomes symlink"
 msgstr "большой файл %s становится символической ссылкой"
 
+#, python-format
+msgid "skipping incorrectly formatted tag %s\n"
+msgstr "пропущена неверная метка: %s\n"
+
+#, python-format
+msgid "skipping incorrectly formatted id %s\n"
+msgstr "пропущен неверный идентификатор: %s\n"
+
+#, python-format
+msgid "no mapping for id %s\n"
+msgstr "нет сопоставления для идентификатора %s\n"
+
 msgid "uploading largefiles"
 msgstr "передача больших файлов"
 
@@ -4491,10 +4511,6 @@ msgstr "%s найден на складе\n"
 msgid "Found %s in system cache\n"
 msgstr "%s найден в кэше системы\n"
 
-#, python-format
-msgid "bad hash in '%s' (only %d bytes long)"
-msgstr "неверный хэш в '%s' (длина всего %d байт)"
-
 msgid "Can't get file locally"
 msgstr "Невозможно получить файл локально"
 
@@ -4530,8 +4546,8 @@ msgid "no files specified"
 msgstr "не задано ни одного файла"
 
 #, python-format
-msgid "not removing %s: %s (use -f to force removal)\n"
-msgstr "%s не удален: %s(-f - удалить принудительно)\n"
+msgid "not removing %s: %s (use forget to undo)\n"
+msgstr "не изымаем %s: %s (используйте forget, чтобы отменить добавление)\n"
 
 msgid "file still exists"
 msgstr "файл уже существует"
@@ -4545,6 +4561,9 @@ msgstr "файл был помечен для добавления"
 #, python-format
 msgid "removing %s\n"
 msgstr "удаляется %s\n"
+
+msgid "--normal cannot be used with --large"
+msgstr "--normal нельзя использовать с --large"
 
 msgid "uncommitted local changes"
 msgstr "незафиксированные локальные изменения"
@@ -4606,12 +4625,23 @@ msgstr "большой файл назначения уже существует
 msgid "no files to copy"
 msgstr "нет файлов для копирования"
 
+msgid "caching new largefiles\n"
+msgstr "кэшируем новые большие файлы\n"
+
+#, python-format
+msgid "%d largefiles cached\n"
+msgstr "%d больших файлов закэшировано\n"
+
 #, python-format
 msgid "unknown archive type '%s'"
 msgstr "неизвестный тип архива '%s'"
 
 msgid "cannot give prefix when archiving to files"
 msgstr "нельзя задавать префикс при архивировании в файлы"
+
+#, python-format
+msgid "largefile %s not found in repo store or system cache"
+msgstr "большой файл %s не найден ни на складе хранилища, ни в системном кэше"
 
 #, python-format
 msgid "not removing %s: file is already untracked\n"
@@ -4627,16 +4657,23 @@ msgstr "больших файлов для отправки:\n"
 msgid "largefiles: %d to upload\n"
 msgstr "largefiles: %d для загрузки\n"
 
-msgid "addremove cannot be run on a repo with largefiles"
-msgstr "нельзя запускать addremove в хранилище с большими файлами (largefiles)"
+msgid "largefile contents do not match hash"
+msgstr "содержимое большого файла не совпадает с хэш-суммой"
 
 #, python-format
-msgid "largefiles: failed to put %s (%s) into store: %s"
-msgstr "largefiles: не удалось поместить %s (%s) на склад: %s"
+msgid "largefiles: failed to put %s into store: %s"
+msgstr "largefiles: не удалось поместить %s на склад: %s"
 
 #, python-format
 msgid "requested largefile %s not present in cache"
 msgstr "требуемый большой файл %s отсутствует в кэше"
+
+msgid "remote: "
+msgstr "отдалённо: "
+
+#, python-format
+msgid "unexpected putlfile response: %s"
+msgstr "непредвиденный ответ при размещении файла: %s"
 
 msgid "putlfile failed:"
 msgstr "не удалось выполнить putlfile:"
@@ -4689,6 +4726,9 @@ msgstr "файл \"%s\" подменяет большой файл"
 
 msgid "add as largefile"
 msgstr "добавить как большой файл"
+
+msgid "add as normal file"
+msgstr "добавить как обычный файл"
 
 msgid ""
 "add all files above this size (in megabytes) as largefiles (default: 10)"
@@ -5201,11 +5241,13 @@ msgstr "удалить патчи из очереди"
 
 msgid ""
 "    The patches must not be applied, and at least one patch is required. "
-"With\n"
-"    -k/--keep, the patch files are preserved in the patch directory."
+"Exact\n"
+"    patch identifiers must be given. With -k/--keep, the patch files are\n"
+"    preserved in the patch directory."
 msgstr ""
 "    Патчи не должны быть наложенными, и требуется по крайней мере один "
 "патч.\n"
+"    Нужно указывать точные идентификаторы патчей.\n"
 "    С -k/--keep патчи сохраняются в каталоге патчей."
 
 msgid ""
@@ -7524,8 +7566,8 @@ msgid "use --keep to keep original changesets"
 msgstr "используйте --keep чтобы оставить исходные наборы изменений"
 
 #, python-format
-msgid "Can't rebase immutable changeset %s"
-msgstr "Невозможно перебазировать неизменяемый набор изменений %s"
+msgid "can't rebase immutable changeset %s"
+msgstr "невозможно перебазировать неизменяемый набор изменений %s"
 
 msgid "see hg help phases for details"
 msgstr "подробнее см. hg help phases"
@@ -7575,6 +7617,11 @@ msgstr ""
 
 msgid "no rebase in progress"
 msgstr "нет прерванного перебазирования"
+
+msgid "warning: immutable rebased changeset detected, can't abort\n"
+msgstr ""
+"внимание: обнаружены неизменяемые перебазированные наборы изменений, "
+"нельзя прервать\n"
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
@@ -8712,6 +8759,10 @@ msgid "tag:         %s\n"
 msgstr "метка:            %s\n"
 
 #, python-format
+msgid "phase:       %s\n"
+msgstr "фаза:             %s\n"
+
+#, python-format
 msgid "parent:      %d:%s\n"
 msgstr "родитель:         %d:%s\n"
 
@@ -9552,8 +9603,8 @@ msgstr "удалить указанную закладку"
 msgid "rename a given bookmark"
 msgstr "переименовать указанную закладку"
 
-msgid "do not mark a new bookmark active"
-msgstr "не помечать новую закладку как активную"
+msgid "mark a bookmark inactive"
+msgstr "пометить закладку как неактивную"
 
 msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
 msgstr "hg bookmarks [-f] [-d] [-i] [-m ИМЯ] [-r РЕВИЗИЯ] [ИМЯ]"
@@ -9590,8 +9641,7 @@ msgid ""
 "    push` and :hg:`help pull`). This requires both the local and remote\n"
 "    repositories to support bookmarks. For versions prior to 1.8, this "
 "means\n"
-"    the bookmarks extension must be enabled.\n"
-"    "
+"    the bookmarks extension must be enabled."
 msgstr ""
 "    Закладки могут передаваться между хранилищами с помощью команд\n"
 "    push и pull (см. :hg:`help push` и :hg:`help pull). Для этого\n"
@@ -9599,6 +9649,14 @@ msgstr ""
 "    закладки. Для Mercurial версий меньше 1.8 это означает, что\n"
 "    должно быть включено расширение bookmarks.\n"
 "    "
+
+msgid ""
+"    With -i/--inactive, the new bookmark will not be made the active\n"
+"    bookmark. If -r/--rev is given, the new bookmark will not be made\n"
+"    active even if -i/--inactive is not given. If no NAME is given, the\n"
+"    current active bookmark will be marked inactive.\n"
+"    "
+msgstr ""
 
 msgid "bookmark name required"
 msgstr "укажите имя закладки"
@@ -11497,10 +11555,10 @@ msgstr ""
 
 msgid ""
 "    With -s/--similarity, hg will attempt to discover renames and\n"
-"    copies in the patch in the same way as 'addremove'."
+"    copies in the patch in the same way as :hg:`addremove`."
 msgstr ""
 "    Если указан -s/--similatity, Mercurial попытается обнаружить\n"
-"    копирования и переименования в патче так же, как в 'addremove'."
+"    копирования и переименования в патче так же, как в :hg:`addremove`."
 
 msgid ""
 "    To read a patch from standard input, use \"-\" as the patch name. If\n"
@@ -12132,6 +12190,64 @@ msgstr "    Подробнее см. :hg:`help urls`."
 
 msgid "not found!\n"
 msgstr "не найден!\n"
+
+msgid "set changeset phase to public"
+msgstr "установить набор изменений в открытую фазу"
+
+msgid "set changeset phase to draft"
+msgstr "установить набор изменений в черновую фазу"
+
+msgid "set changeset phase to secret"
+msgstr "установить набор изменений в секретную фазу"
+
+msgid "allow to move boundary backward"
+msgstr "разрешить перемещение границы назад"
+
+msgid "target revision"
+msgstr "целевая ревизия"
+
+msgid "[-p|-d|-s] [-f] [-r] REV..."
+msgstr "[-p|-d|-s] [-f] [-r] РЕВИЗИЯ..."
+
+msgid "set or show the current phase name"
+msgstr "задать или показать текущую фазу"
+
+msgid "    With no argument, show the phase name of specified revisions."
+msgstr "    Если аргументы не заданы, показывает фазу указанных ревизий."
+
+msgid ""
+"    With one of -p/--public, -d/--draft or -s/--secret, change the\n"
+"    phase value of the specified revisions."
+msgstr ""
+"    Если задан один из -p/--public, -d/--draft or -s/--secret, то изменяет\n"
+"    фазу указанных ревизий."
+
+msgid ""
+"    Unless -f/--force is specified, :hg:`phase` won't move changeset from a\n"
+"    lower phase to an higher phase. Phases are ordered as follows::"
+msgstr ""
+"    Если не указан -f/--force, то :hg:`phase` не перемещает набор изменений\n"
+"    из меньшей фазы в большую. Порядок фаз такой::"
+
+msgid "        public < draft < secret"
+msgstr "        открытая < черновая < секретная"
+
+msgid ""
+"    Return 0 on success, 1 if no phases were changed.\n"
+"    "
+msgstr ""
+"    Возвращает 0 при успехе, 1 если никакие фазы не изменены.\n"
+"    "
+
+msgid "only one phase can be specified"
+msgstr "можно указать только одну фазу"
+
+#, python-format
+msgid "phase change for %i changesets\n"
+msgstr "изменение фазы для %i наборов изменений\n"
+
+msgid "no phases changed\n"
+msgstr "никакие фазы не изменены\n"
 
 #, python-format
 msgid "not updating: %s\n"
@@ -13372,14 +13488,17 @@ msgstr "[-c] [-C] [-d ДАТА] [[-r] РЕВИЗИЯ]"
 msgid "update working directory (or switch revisions)"
 msgstr "обновить рабочий каталог (или переключить ревизию)"
 
+#, fuzzy
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
-"    current named branch."
+"    current named branch and move the current bookmark (see :hg:`help\n"
+"    bookmarks`)."
 msgstr ""
 "    Обновляет рабочую копию хранилища на указанную ревизию. Если\n"
 "    ревизия не задана, обновляет до оконечной ревизии (tip) текущей\n"
-"    именованной ветки."
+"    именованной ветки и перемещает текущую заплатку (см. :hg:`help\n"
+"    bookmarks`)."
 
 msgid ""
 "    If the changeset is not a descendant of the working directory's\n"
@@ -13484,11 +13603,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(подробнее см. http://mercurial.selenic.com)"
 
 msgid ""
-"Copyright (C) 2005-2011 Matt Mackall and others\n"
+"Copyright (C) 2005-2012 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"(С) 2005-2011 Matt Mackall и другие.\n"
+"(С) 2005-2012 Matt Mackall и другие.\n"
 "Это свободное ПО; условия распространения см. в исходном коде.\n"
 "НИКАКИХ ГАРАНТИЙ НЕ ПРЕДОСТАВЛЯЕТСЯ, в том числе на пригодность для\n"
 "коммерческого использования и для решения конкретных задач.\n"
@@ -13604,10 +13723,6 @@ msgstr "каталог"
 #, python-format
 msgid "unsupported file type (type is %s)"
 msgstr "неподдерживаемый тип файла (%s)"
-
-#, python-format
-msgid "no changes to push but %i secret changesets\n"
-msgstr "нет исходящих изменений, но есть %i секретных наборов изменений\n"
 
 #, python-format
 msgid "push creates new remote branches: %s!"
@@ -13806,10 +13921,10 @@ msgid "option --cwd may not be abbreviated!"
 msgstr "параметр --cwd не может быть сокращен!"
 
 msgid ""
-"Option -R has to be separated from other options (e.g. not -qR) and --"
+"option -R has to be separated from other options (e.g. not -qR) and --"
 "repository may only be abbreviated as --repo!"
 msgstr ""
-"Параметр -R должен быть отделен от других параметров (т.е. не -qR) и\n"
+"параметр -R должен быть отделен от других параметров (т.е. не -qR) и\n"
 "--repository можно сократить только до --repo!"
 
 #, python-format
@@ -15625,22 +15740,30 @@ msgstr ""
 "``hooks``\n"
 "\"\"\"\"\"\"\"\"\""
 
+#, fuzzy
 msgid ""
 "Commands or Python functions that get automatically executed by\n"
 "various actions such as starting or finishing a commit. Multiple\n"
 "hooks can be run for the same action by appending a suffix to the\n"
 "action. Overriding a site-wide hook can be done by changing its\n"
-"value or setting it to an empty string."
+"value or setting it to an empty string.  Hooks can be prioritized\n"
+"by adding a prefix of ``priority`` to the hook name on a new line\n"
+"and setting the priority.  The default priority is 0 if\n"
+"not specified."
 msgstr ""
 "Команды или функции Python, вызываемые автоматически при различных\n"
 "действиях, таких как начало или конец фиксации. Можно задавать несколько\n"
 "хуков для одного и того же действия, добавляя к действию суффикс.\n"
 "Можно переопределить глобальный хук, изменив его значения или задав\n"
-"для него пустую строку."
+"для него пустую строку.  Hooks can be prioritized\n"
+"by adding a prefix of ``priority`` to the hook name on a new line\n"
+"and setting the priority.  The default priority is 0 if\n"
+"not specified."
 
 msgid "Example ``.hg/hgrc``::"
 msgstr "Пример ``.hg/hgrc``::"
 
+#, fuzzy
 msgid ""
 "  [hooks]\n"
 "  # update working directory after adding changesets\n"
@@ -15648,7 +15771,9 @@ msgid ""
 "  # do not use the site-wide hook\n"
 "  incoming =\n"
 "  incoming.email = /my/email/hook\n"
-"  incoming.autobuild = /my/build/hook"
+"  incoming.autobuild = /my/build/hook\n"
+"  # force autobuild hook to run before other incoming hooks\n"
+"  priority.incoming.autobuild = 1"
 msgstr ""
 "  [hooks]\n"
 "  # Обновить рабочий каталог после добавления наборов изменений\n"
@@ -15656,7 +15781,9 @@ msgstr ""
 "  # не использовать глобальный хук\n"
 "  incoming =\n"
 "  incoming.email = /my/email/hook\n"
-"  incoming.autobuild = /my/build/hook"
+"  incoming.autobuild = /my/build/hook\n"
+"  # force autobuild hook to run before other incoming hooks\n"
+"  priority.incoming.autobuild = 1"
 
 msgid ""
 "Most hooks are run with environment variables set that give useful\n"
@@ -17664,8 +17791,8 @@ msgstr "    hg locate \"set:grep(magic) and not binary()\""
 msgid "- Find C files in a non-standard encoding::"
 msgstr "- Найти файлы С с нестандартной кодировкой::"
 
-msgid "    hg locate \"set:**.c and not encoding(ascii)\""
-msgstr "    hg locate \"set:**.c and not encoding(ascii)\""
+msgid "    hg locate \"set:**.c and not encoding('UTF-8')\""
+msgstr "    hg locate \"set:**.c and not encoding('UTF-8')\""
 
 msgid "- Revert copies of large binary files::"
 msgstr "- Вернуть (revert) копии больших бинарных файлов::"
@@ -19306,15 +19433,14 @@ msgstr ""
 "инфиксных операторов. Для группировки можно использовать круглые скобки."
 
 msgid ""
-"Identifiers such as branch names must be quoted with single or double\n"
-"quotes if they contain characters outside of\n"
-"``[._a-zA-Z0-9\\x80-\\xff]`` or if they match one of the predefined\n"
-"predicates."
+"Identifiers such as branch names may need quoting with single or\n"
+"double quotes if they contain characters like ``-`` or if they match\n"
+"one of the predefined predicates."
 msgstr ""
-"Различные идентификаторы, такие как имена веток, должны заключаться в\n"
-"одинарные или двойные кавычки в случаях, когда они содержат символы не\n"
-"из множества ``[._a-zA-Z0-9\\x80-\\xff]``, или если они совпадают с одним\n"
-"из предопределенных предикатов."
+"Различные идентификаторы, такие как имена веток, могут заключаться в\n"
+"одинарные или двойные кавычки, особенно если они содержат такие символы\n"
+"как ``-``, или если их имена совпадают с именем одного из предопределенных\n"
+"предикатов."
 
 msgid ""
 "``not x``\n"
@@ -19515,11 +19641,11 @@ msgstr ""
 "  и не входящие в помеченный релиз::"
 
 msgid ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
-"())\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
+"\"\n"
 msgstr ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
-"())\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
+"\"\n"
 
 msgid ""
 "Subrepositories let you nest external repositories or projects into a\n"
@@ -20420,10 +20546,10 @@ msgstr ""
 "частичное затягивание не может быть произведено, т.к. второе хранилище\n"
 "не поддерживает подмножества групп изменений (changegroupsubset)"
 
-# BUG
+# CHECK ME
 #, python-format
-msgid "updating phase of %sto %s failed!\n"
-msgstr "фаза обновления %s до %s завершилась неудачей!\n"
+msgid "updating %s to public failed!\n"
+msgstr "обновление %s до открытой фазы завершилась неудачей!\n"
 
 #, python-format
 msgid "%d changesets found\n"
@@ -20563,11 +20689,13 @@ msgstr ""
 "количество строк контекста для различий должно быть целым числом, а не %r"
 
 #, python-format
+msgid "%s: untracked file differs\n"
+msgstr "%s: неотслеживаемый файл различается\n"
+
 msgid ""
-"untracked file in working directory differs from file in requested revision: "
-"'%s'"
+"untracked files in working directory differ from files in requested revision"
 msgstr ""
-"неотслеживаемый файл в рабочем каталоге отличается от файла в указанной\n"
+"неотслеживаемые файлы в рабочем каталоге отличаются от файлов в запрашиваемой\n"
 "ревизии: '%s'"
 
 #, fuzzy, python-format
@@ -20795,9 +20923,13 @@ msgstr "неподдерживаемый тип перевода строки: %
 msgid "patch failed to apply"
 msgstr "не удалось наложить патч"
 
-#, fuzzy, python-format
-msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
-msgstr "Удаляем неизвестный узел %(n)s из границы %(p)i-фазы"
+#, python-format
+msgid "ignoring inconsistent public root from remote: %s\n"
+msgstr "игнорируем неподходящий открытый корень от отдалённого сервера: %s\n"
+
+#, python-format
+msgid "ignoring unexpected root from remote: %i %s\n"
+msgstr "игнорируем неожиданный корень от отдалённого сервера: %i %s\n"
 
 #, python-format
 msgid "exited with status %d"
@@ -21038,6 +21170,16 @@ msgstr ""
 "    Наборы изменений, являющиеся потомками наборов из множества."
 
 msgid ""
+"``draft()``\n"
+"    Changeset in draft phase."
+msgstr ""
+"``draft()``\n"
+"    Набор изменений в черновой фазе."
+
+msgid "draft takes no arguments"
+msgstr "draft не требует аргументов"
+
+msgid ""
 "``filelog(pattern)``\n"
 "    Changesets connected to the specified filelog."
 msgstr ""
@@ -21071,10 +21213,6 @@ msgstr "follow принимает либо ноль аргументов, либ
 
 msgid "follow expected a filename"
 msgstr "follow ожидает имя файла"
-
-#. i18n: "follow" is a keyword
-msgid "follow takes no arguments"
-msgstr "follow не требует аргументов"
 
 msgid ""
 "``all()``\n"
@@ -21292,6 +21430,39 @@ msgstr ""
 "    Иначе все ревизии из множества."
 
 msgid ""
+"``public()``\n"
+"    Changeset in public phase."
+msgstr ""
+"``public()``\n"
+"    Набор изменений в открытой фазе."
+
+msgid "public takes no arguments"
+msgstr "public не требует аргументов"
+
+msgid ""
+"``remote([id], [path])``\n"
+"    Local revision that corresponds to the given identifier in a\n"
+"    remote repository, if present. Here, the '.' identifier is a\n"
+"    synonym for the current local branch."
+msgstr ""
+"``remote([id], [path])``\n"
+"    Локальная ревизия, соответствующая указанному идентификатору\n"
+"    в отдалённом хранилище, если такая существует. Идентификатор\n"
+"    '.' является здесь синонимом текущей локальной ветки."
+
+#. i18n: "remote" is a keyword
+msgid "remote takes one or two arguments"
+msgstr "remote принимает один или два аргумента"
+
+#. i18n: "remote" is a keyword
+msgid "remote requires a string id"
+msgstr "remote требует строковый идентификатор"
+
+#. i18n: "remote" is a keyword
+msgid "remote requires a repository path"
+msgstr "remote требует путь к хранилищу"
+
+msgid ""
 "``removes(pattern)``\n"
 "    Changesets which remove files matching pattern."
 msgstr ""
@@ -21334,6 +21505,16 @@ msgid ""
 msgstr ""
 "``roots(множество)``\n"
 "    Наборы изменений, не имеющие родителя во множестве."
+
+msgid ""
+"``secret()``\n"
+"    Changeset in secret phase."
+msgstr ""
+"``secret()``\n"
+"    Набор изменений в секретной фазе."
+
+msgid "secret takes no arguments"
+msgstr "secret не требует аргументов"
 
 msgid ""
 "``sort(set[, [-]key...])``\n"
@@ -21509,13 +21690,12 @@ msgstr "не удается создать отдаленное хранилищ
 msgid "no suitable response from remote hg"
 msgstr "не получено подходящего ответа от отдаленного hg"
 
-#, fuzzy
-msgid "remote: "
-msgstr "отдалённо: "
-
 #, python-format
 msgid "push refused: %s"
 msgstr "push отклонен: %s"
+
+msgid "ssl connection failed"
+msgstr "попытка установить SSL соединение не удалась"
 
 msgid "Python SSL support not found"
 msgstr "Не найдена поддержка SSL для Python"
@@ -21541,14 +21721,35 @@ msgid "could not find web.cacerts: %s"
 msgstr "не найден web.cacerts: %s"
 
 #, python-format
-msgid "%s certificate error: %s (use --insecure to connect insecurely)"
+msgid "host fingerprint for %s can't be verified (Python too old)"
+msgstr "отпечаток хоста %s не может быть проверен (Python слишком старый)"
+
+#, python-format
+msgid "warning: certificate for %s can't be verified (Python too old)\n"
 msgstr ""
-"ошибка сертификата %s: %s (используйте --insecure для небезопасного "
-"подключения)"
+"внимание: сертификат %s не может быть проверен (Python слишком старый)\n"
+
+#, python-format
+msgid "%s ssl connection error"
+msgstr ""
+
+#, python-format
+msgid "%s certificate error: no certificate received"
+msgstr "%s ошибка сертификата: сертификатов не получено"
 
 #, python-format
 msgid "invalid certificate for %s with fingerprint %s"
 msgstr "недействительный сертификат для %s с отпечатком %s"
+
+#, python-format
+msgid "%s certificate error: %s"
+msgstr "%s ошибка сертификата: %s"
+
+#, python-format
+msgid "configure hostfingerprint %s or use --insecure to connect insecurely"
+msgstr ""
+"настройте отпечатки пальцев хоста %s или используйте --insecure для небезопасного "
+"подключения"
 
 #, python-format
 msgid ""
@@ -21557,15 +21758,6 @@ msgid ""
 msgstr ""
 "внимание: сертификат %s c отпечатком %s не проверен (проверьте параметры\n"
 "конфигурации hostfingerprints или web.cacerts)\n"
-
-#, python-format
-msgid "host fingerprint for %s can't be verified (Python too old)"
-msgstr "отпечаток хоста %s не может быть проверен (Python слишком старый)"
-
-#, python-format
-msgid "warning: certificate for %s can't be verified (Python too old)\n"
-msgstr ""
-"внимание: сертификат %s не может быть проверен (Python слишком старый)\n"
 
 #, python-format
 msgid "'%s' does not appear to be an hg repository"
@@ -22017,8 +22209,11 @@ msgstr ""
 ":node: Строка. Хэш набора изменений в виде 40-значной шестнадцатеричной\n"
 "    строки."
 
-msgid ":rev: Integer. The changeset phase."
-msgstr ":rev: Целое число. Фаза набора изменений."
+msgid ":phase: String. The changeset phase name."
+msgstr ":phase: Строка. Имя фазы набора изменений."
+
+msgid ":phaseidx: Integer. The changeset phase index."
+msgstr ":phaseidx: Целое число. Индекс фазы набора изменений."
 
 msgid ":rev: Integer. The repository-local changeset revision number."
 msgstr ":rev: Целое число. Локальный номер ревизии в этом хранилище."
@@ -22430,6 +22625,23 @@ msgstr "поиск отдаленных изменений"
 msgid "push failed:"
 msgstr "ошибка при проталкивании:"
 
+#~ msgid "bad hash in '%s' (only %d bytes long)"
+#~ msgstr "неверный хэш в '%s' (длина всего %d байт)"
+
+#~ msgid "addremove cannot be run on a repo with largefiles"
+#~ msgstr ""
+#~ "нельзя запускать addremove в хранилище с большими файлами (largefiles)"
+
+#~ msgid "no changes to push but %i secret changesets\n"
+#~ msgstr "нет исходящих изменений, но есть %i секретных наборов изменений\n"
+
+#, fuzzy
+#~ msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
+#~ msgstr "Удаляем неизвестный узел %(n)s из границы %(p)i-фазы"
+
+#~ msgid "follow takes no arguments"
+#~ msgstr "follow не требует аргументов"
+
 # BUG force won't help you to avoid data loss
 #~ msgid ""
 #~ "    It's possible to lose data with rollback: commit, update back to\n"
@@ -22601,8 +22813,8 @@ msgstr "ошибка при проталкивании:"
 #~ "- ``%USERPROFILE%\\mercurial.ini``\n"
 #~ "- ``%HOME%\\.hgrc``\n"
 #~ "- ``%HOME%\\mercurial.ini``\n"
-#~ "- ``C:\\mercurial\\mercurial.ini`` (если не найден ключ в реестре или hgrc."
-#~ "d\\)\n"
+#~ "- ``C:\\mercurial\\mercurial.ini`` (если не найден ключ в реестре или "
+#~ "hgrc.d\\)\n"
 #~ "- ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Mercurial`` (если не найден hgrc.d\\или "
 #~ "mercurial.ini)\n"
 #~ "- ``<каталог-с-hg.exe>\\hgrc.d\\*.rc`` (если не найден mercurial.ini)\n"
