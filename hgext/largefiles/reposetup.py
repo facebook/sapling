@@ -268,15 +268,17 @@ def reposetup(ui, repo):
 
             wlock = repo.wlock()
             try:
-                # Case 0: Rebase
+                # Case 0: Rebase or Transplant
                 # We have to take the time to pull down the new largefiles now.
-                # Otherwise if we are rebasing, any largefiles that were
-                # modified in the destination changesets get overwritten, either
-                # by the rebase or in the first commit after the rebase.
+                # Otherwise, any largefiles that were modified in the
+                # destination changesets get overwritten, either by the rebase
+                # or in the first commit after the rebase or transplant.
                 # updatelfiles will update the dirstate to mark any pulled
                 # largefiles as modified
-                if getattr(repo, "_isrebasing", False):
-                    lfcommands.updatelfiles(repo.ui, repo)
+                if getattr(repo, "_isrebasing", False) or \
+                        getattr(repo, "_istransplanting", False):
+                    lfcommands.updatelfiles(repo.ui, repo, filelist=None,
+                                            printmessage=False)
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
                     return result
