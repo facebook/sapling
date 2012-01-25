@@ -3062,11 +3062,15 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
         # options
         if not ui.quiet and entry[1]:
-            rst += '\noptions:\n\n'
+            rst += '\n'
+            rst += _("options:")
+            rst += '\n\n'
             rst += optrst(entry[1])
 
         if ui.verbose:
-            rst += '\nglobal options:\n\n'
+            rst += '\n'
+            rst += _("global options:")
+            rst += '\n\n'
             rst += optrst(globalopts)
 
         keep = ui.verbose and ['verbose'] or []
