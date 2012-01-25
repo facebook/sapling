@@ -14,7 +14,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2012-01-25 08:34+0100\n"
-"PO-Revision-Date: 2012-01-25 08:48+0100\n"
+"PO-Revision-Date: 2012-01-25 09:32+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -6882,17 +6882,17 @@ msgid "uncommitted changes in subrepo %s"
 msgstr "oarkiverade ändringar i underarkivet %s"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "du kan bara ange en av --message och --logfile"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr ""
+msgstr "kan inte läsa arkiveringsmeddelande '%s': %s"
 
 msgid "limit must be a positive integer"
-msgstr ""
+msgstr "limit måste vara ett positivt heltal"
 
 msgid "limit must be positive"
-msgstr ""
+msgstr "limit måste vara positivt"
 
 #, python-format
 msgid "invalid format spec '%%%s' in output filename"
@@ -7387,7 +7387,7 @@ msgstr ""
 "    om resultatet antagligen inte kommer att vara användbart."
 
 msgid "at least one filename or pattern is required"
-msgstr ""
+msgstr "minst ett filnamn eller mönster krävs"
 
 msgid "at least one of -n/-c is required for -l"
 msgstr ""
@@ -8678,53 +8678,53 @@ msgstr "testa Mercurial-installation"
 
 #, python-format
 msgid "Checking encoding (%s)...\n"
-msgstr ""
+msgstr "Kontrollerar teckenkodning (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
-msgstr ""
+msgstr " (kontrollera att din locale är korrekt inställd)\n"
 
 #, python-format
 msgid "Checking installed modules (%s)...\n"
-msgstr ""
+msgstr "Kontrollerar installerade moduler (%s)...\n"
 
 msgid " One or more extensions could not be found"
-msgstr ""
+msgstr " En eller fler utökningar kunde inte hittas"
 
 msgid " (check that you compiled the extensions)\n"
-msgstr ""
+msgstr " (kontrollera att du kompilerade utökningarna)\n"
 
 #, python-format
 msgid "Checking templates (%s)...\n"
 msgstr "Kontrollerar mallar (%s)...\n"
 
 msgid " (templates seem to have been installed incorrectly)\n"
-msgstr ""
+msgstr " (mallar verkar vara inkorrekt installerade)\n"
 
 msgid "Checking commit editor...\n"
-msgstr ""
+msgstr "Kontrollerar arkiveringseditor...\n"
 
 msgid " No commit editor set and can't find vi in PATH\n"
-msgstr ""
+msgstr " Ingen arkiveringseditor satt och kan inte hitta vi i PATH\n"
 
 msgid " (specify a commit editor in your configuration file)\n"
-msgstr ""
+msgstr " (specificera en arkiveringseditor i din konfigurationsfil)\n"
 
 #, python-format
 msgid " Can't find editor '%s' in PATH\n"
-msgstr ""
+msgstr " Kan inte hitta editorn '%s' i PATH\n"
 
 msgid "Checking username...\n"
-msgstr ""
+msgstr "Kontrollerar användarnamn...\n"
 
 msgid " (specify a username in your configuration file)\n"
-msgstr ""
+msgstr " (ange ett användarnamn i din konfigurationsfil)\n"
 
 msgid "No problems detected\n"
-msgstr ""
+msgstr "Inga problem upptäcktes\n"
 
 #, python-format
 msgid "%s problems detected, please check your install!\n"
-msgstr ""
+msgstr "%s problem upptäcktes, kontrollera din installation!\n"
 
 msgid "REPO ID..."
 msgstr ""
@@ -11606,21 +11606,21 @@ msgstr "okänt kommando %s"
 
 #, python-format
 msgid "cannot include %s (%s)"
-msgstr ""
+msgstr "kan inte inkludera %s (%s)"
 
 msgid "not found in manifest"
-msgstr ""
+msgstr "hittades inte i manifestet"
 
 #, python-format
 msgid "no such file in rev %s"
-msgstr ""
+msgstr "ingen sådan fil i rev %s"
 
 msgid "branch name not in UTF-8!"
-msgstr ""
+msgstr "grennamn inte i UTF-8!"
 
 #, python-format
 msgid "%s does not exist!\n"
-msgstr ""
+msgstr "%s existerar inte!\n"
 
 #, python-format
 msgid ""
@@ -11632,19 +11632,19 @@ msgstr ""
 
 #, python-format
 msgid "%s not added: only files and symlinks supported currently\n"
-msgstr ""
+msgstr "%s inte tillagd: bara filer och symlänkar stödjs\n"
 
 #, python-format
 msgid "%s already tracked!\n"
-msgstr ""
+msgstr "%s spåras redan!\n"
 
 #, python-format
 msgid "%s not tracked!\n"
-msgstr ""
+msgstr "%s spåras inte!\n"
 
 #, python-format
 msgid "%s not removed!\n"
-msgstr ""
+msgstr "%s inte borttagen!\n"
 
 #, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
