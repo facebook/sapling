@@ -176,7 +176,7 @@ class localrepository(repo.repository):
     def _writebookmarks(self, marks):
       bookmarks.write(self)
 
-    @filecache('phaseroots')
+    @filecache('phaseroots', True)
     def _phaseroots(self):
         self._dirtyphases = False
         phaseroots = phases.readroots(self)
