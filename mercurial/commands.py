@@ -994,7 +994,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 force=opts.get('force'))
         cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
-        ui.status(_("no changes found\n"))
+        if 'outgoing' in locals() and outgoing.excluded:
+            repo.ui.status(_("no changes found but %i secret changesets\n")
+                           % len(outgoing.excluded))
+        else:
+            ui.status(_("no changes found\n"))
         return 1
 
     bundletype = opts.get('type', 'bzip2').lower()
