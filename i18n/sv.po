@@ -10256,7 +10256,7 @@ msgid "set changeset phase to secret"
 msgstr "sätt ändringsfas till secret"
 
 msgid "allow to move boundary backward"
-msgstr ""
+msgstr "tillåt att gränser flyttas bakåt"
 
 msgid "target revision"
 msgstr "målrevision"
@@ -10268,20 +10268,25 @@ msgid "set or show the current phase name"
 msgstr "sätt eller visa det aktuella fasnamnet"
 
 msgid "    With no argument, show the phase name of specified revisions."
-msgstr ""
+msgstr "    Om inga argument ges, så visas fasnamnet för angivna revisioner."
 
 msgid ""
 "    With one of -p/--public, -d/--draft or -s/--secret, change the\n"
 "    phase value of the specified revisions."
 msgstr ""
+"    Med en av -p/--public, -d/--draft eller -s/--secret, så ändras\n"
+"    fasvärdet för de angivna revisionerna."
 
 msgid ""
 "    Unless -f/--force is specified, :hg:`phase` won't move changeset from a\n"
 "    lower phase to an higher phase. Phases are ordered as follows::"
 msgstr ""
+"    Om inte -f/--force anges, så kommer inte :hg:`phase` att flytta\n"
+"    ändringar från en lägre fas till en högre fas. Faser är ordnade enligt\n"
+"    följande::"
 
 msgid "        public < draft < secret"
-msgstr ""
+msgstr "        public < draft < secret"
 
 msgid ""
 "    Return 0 on success, 1 if no phases were changed.\n"
