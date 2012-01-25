@@ -185,6 +185,12 @@ def tagscache(server):
     os.system('hg tag -r 0 foo')
     runcommand(server, ['id', '-t', '-r', '0'])
 
+def setphase(server):
+    readchannel(server)
+    runcommand(server, ['phase', '-r', '.'])
+    os.system('hg phase -r . -p')
+    runcommand(server, ['phase', '-r', '.'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -203,3 +209,4 @@ if __name__ == '__main__':
     check(outsidechanges)
     check(bookmarks)
     check(tagscache)
+    check(setphase)
