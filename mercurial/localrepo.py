@@ -879,10 +879,14 @@ class localrepository(repo.repository):
         return 0
 
     def invalidatecaches(self):
-        try:
-            delattr(self, '_tagscache')
-        except AttributeError:
-            pass
+        def delcache(name):
+            try:
+                delattr(self, name)
+            except AttributeError:
+                pass
+
+        delcache('_tagscache')
+        delcache('_phaserev')
 
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
