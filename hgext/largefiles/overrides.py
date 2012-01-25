@@ -535,6 +535,8 @@ def override_revert(orig, ui, repo, *pats, **opts):
             lfutil.lfdirstate_status(lfdirstate, repo, repo['.'].rev())
         for lfile in modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
+        for lfile in missing:
+            os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
             ctx = repo[opts.get('rev')]

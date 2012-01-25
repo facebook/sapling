@@ -564,6 +564,8 @@ Test hg remove removes empty largefiles directories
   $ echo hack3 >> normal3
   $ echo hack4 >> sub/normal4
   $ echo hack4 >> sub/large4
+  $ rm sub2/large6
+  $ hg revert sub2/large6
   $ hg rm sub2/large6
   $ echo new >> sub2/large8
   $ hg add --large sub2/large8
