@@ -10,6 +10,14 @@ import util, error, osutil, revset, similar, encoding
 import match as matchmod
 import os, errno, re, stat, sys, glob
 
+def nochangesfound(ui, secretlist=None):
+    '''report no changes for push/pull'''
+    if secretlist:
+        ui.status(_("no changes found (ignored %d secret changesets)\n")
+                  % len(secretlist))
+    else:
+        ui.status(_("no changes found\n"))
+
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
     if '\r' in f or '\n' in f:

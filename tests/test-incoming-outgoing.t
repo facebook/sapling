@@ -405,7 +405,7 @@ test outgoing with secret changesets
   $ hg -R test-dev outgoing test
   comparing with test
   searching for changes
-  no outgoing changes but 5 secret changesets
+  no changes found (ignored 5 secret changesets)
   [1]
   $ hg -R test-dev phase --draft -r 'head()'
 

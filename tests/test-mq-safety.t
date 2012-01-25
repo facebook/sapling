@@ -149,7 +149,7 @@ All secret
   $ hg push -r . ../forcepush2
   pushing to ../forcepush2
   searching for changes
-  no changes to push but 1 secret changesets
+  no changes found (ignored 1 secret changesets)
 
 some draft
 
@@ -183,7 +183,7 @@ Pushing applied patch with --force
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes
-  no changes to push but 1 secret changesets
+  no changes found (ignored 1 secret changesets)
   $ hg phase --draft 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2

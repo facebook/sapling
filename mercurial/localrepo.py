@@ -1629,11 +1629,7 @@ class localrepository(repo.repository):
 
                 if not outgoing.missing:
                     # nothing to push
-                    if outgoing.excluded:
-                        msg = "no changes to push but %i secret changesets\n"
-                        self.ui.status(_(msg) % len(outgoing.excluded))
-                    else:
-                        self.ui.status(_("no changes found\n"))
+                    scmutil.nochangesfound(self.ui, outgoing.excluded)
                     ret = 1
                 else:
                     # something to push

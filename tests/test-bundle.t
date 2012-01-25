@@ -44,7 +44,7 @@ Bundle and phase
   $ hg -R test phase --force --secret 0
   $ hg -R test bundle phase.hg empty
   searching for changes
-  no changes found but 9 secret changesets
+  no changes found (ignored 9 secret changesets)
   [1]
   $ hg -R test phase --draft -r 'head()'
 

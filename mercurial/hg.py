@@ -10,7 +10,7 @@ from i18n import _
 from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo, bookmarks
-import lock, util, extensions, error, node
+import lock, util, extensions, error, node, scmutil
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -511,11 +511,7 @@ def _outgoing(ui, repo, dest, opts):
                                             force=opts.get('force'))
     o = outgoing.missing
     if not o:
-        if outgoing.excluded:
-            repo.ui.status(_("no outgoing changes but %i secret changesets\n")
-                           % len(outgoing.excluded))
-        else:
-            ui.status(_("no changes found\n"))
+        scmutil.nochangesfound(repo.ui, outgoing.excluded)
         return None
     return o
 

@@ -983,6 +983,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
         cg = repo.getbundle('bundle', heads=heads, common=common)
+        outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -994,11 +995,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 force=opts.get('force'))
         cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
-        if 'outgoing' in locals() and outgoing.excluded:
-            repo.ui.status(_("no changes found but %i secret changesets\n")
-                           % len(outgoing.excluded))
-        else:
-            ui.status(_("no changes found\n"))
+        scmutil.nochangesfound(ui, outgoing and outgoing.excluded)
         return 1
 
     bundletype = opts.get('type', 'bzip2').lower()
