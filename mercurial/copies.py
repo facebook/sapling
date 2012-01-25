@@ -103,7 +103,6 @@ def _chain(src, dst, a, b):
     # remove criss-crossed copies
     for k, v in t.items():
         if k in src and v in dst:
-            print "bad", k, v
             del t[k]
 
     return t
