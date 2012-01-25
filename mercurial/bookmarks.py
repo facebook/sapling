@@ -221,7 +221,8 @@ def diff(ui, repo, remote):
 
     diff = sorted(set(rmarks) - set(lmarks))
     for k in diff:
-        ui.write("   %-25s %s\n" % (k, rmarks[k][:12]))
+        mark = ui.debugflag and rmarks[k] or rmarks[k][:12]
+        ui.write("   %-25s %s\n" % (k, mark))
 
     if len(diff) <= 0:
         ui.status(_("no changed bookmarks found\n"))
