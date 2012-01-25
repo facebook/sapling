@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-01-20 10:47+0100\n"
-"PO-Revision-Date: 2012-01-20 11:10+0100\n"
+"POT-Creation-Date: 2012-01-25 08:34+0100\n"
+"PO-Revision-Date: 2012-01-25 08:48+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -1986,6 +1986,10 @@ msgid "svn: no revision found after start revision %d"
 msgstr ""
 
 #, python-format
+msgid "svn: revision %s not found"
+msgstr "svn: revisionen %s hittades inte"
+
+#, python-format
 msgid "%s not found up to revision %d"
 msgstr ""
 
@@ -3501,6 +3505,9 @@ msgstr "filen har markerats för addering"
 msgid "removing %s\n"
 msgstr "tar bort %s\n"
 
+msgid "--normal cannot be used with --large"
+msgstr "--normal kan inte användas med --large"
+
 msgid "uncommitted local changes"
 msgstr "oarkiverade lokala ändringar"
 
@@ -3646,7 +3653,10 @@ msgid "file \"%s\" is a largefile standin"
 msgstr ""
 
 msgid "add as largefile"
-msgstr ""
+msgstr "lägg till som largefile"
+
+msgid "add as normal file"
+msgstr "lägg till som normal fil"
 
 msgid ""
 "add all files above this size (in megabytes) as largefiles (default: 10)"
@@ -5997,7 +6007,7 @@ msgid "use --keep to keep original changesets"
 msgstr "använd --keep för att bevara originaländringarna"
 
 #, python-format
-msgid "Can't rebase immutable changeset %s"
+msgid "can't rebase immutable changeset %s"
 msgstr ""
 
 msgid "see hg help phases for details"
@@ -7796,8 +7806,8 @@ msgstr "ta bort angivet bokmärke"
 msgid "rename a given bookmark"
 msgstr "döp om angivet bokmärke"
 
-msgid "do not mark a new bookmark active"
-msgstr "markera inte ett nytt bokmärke som aktivt"
+msgid "mark a bookmark inactive"
+msgstr "markera ett bokmärke som inaktivt"
 
 msgid "hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]"
 msgstr "hg bookmarks [-f] [-d] [-i] [-m NAMN] [-r REV] [NAMN]"
@@ -7833,13 +7843,24 @@ msgid ""
 "    push` and :hg:`help pull`). This requires both the local and remote\n"
 "    repositories to support bookmarks. For versions prior to 1.8, this "
 "means\n"
-"    the bookmarks extension must be enabled.\n"
-"    "
+"    the bookmarks extension must be enabled."
 msgstr ""
 "    Bokmärken kan tryckas och dras mellan arkiv (se :hg:`help push` och\n"
 "    :hg:`help pull`). Detta kräver att både det lokala och fjärrarkivet\n"
 "    stödjer bokmärken. För versioner innan 1.8, så betyder det att\n"
-"    bookmarks-utökningen måste vara aktiverad.\n"
+"    bookmarks-utökningen måste vara aktiverad."
+
+msgid ""
+"    With -i/--inactive, the new bookmark will not be made the active\n"
+"    bookmark. If -r/--rev is given, the new bookmark will not be made\n"
+"    active even if -i/--inactive is not given. If no NAME is given, the\n"
+"    current active bookmark will be marked inactive.\n"
+"    "
+msgstr ""
+"    Med -i/--inactive blir det nya bokmärket inte det aktiva bokmärket.\n"
+"    Om -r/--rev anges så är bokmärket inte aktivt även om -i/--inactive\n"
+"    inte anges. Om inget NAMN anges, kommer det nuvarande aktiva bokmärket\n"
+"    att markeras som inaktivt.\n"
 "    "
 
 msgid "bookmark name required"
@@ -10272,9 +10293,6 @@ msgstr ""
 msgid "only one phase can be specified"
 msgstr "bara en fas kan vara angiven"
 
-msgid "no revisions specified!"
-msgstr "inga revisioner angivna!"
-
 #, python-format
 msgid "phase change for %i changesets\n"
 msgstr "fasändring för %i ändringar\n"
@@ -11467,11 +11485,12 @@ msgstr "uppdatera arbetskatalogen (eller växla mellan revisioner)"
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
-"    current named branch and move the current bookmark."
+"    current named branch and move the current bookmark (see :hg:`help\n"
+"    bookmarks`)."
 msgstr ""
 "    Uppdatera arkivets arbetskatalog till den angivna ändringen. Om ingen\n"
 "    ändring anges, så uppdateras till toppen på den nuvarande namngivna\n"
-"    grenen och nuvarande bokmärket flyttas."
+"    grenen och nuvarande bokmärket flyttas (se :hg:`help bookmarks`)."
 
 msgid ""
 "    If the changeset is not a descendant of the working directory's\n"
@@ -15755,10 +15774,9 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Identifiers such as branch names must be quoted with single or double\n"
-"quotes if they contain characters outside of\n"
-"``[._a-zA-Z0-9\\x80-\\xff]`` or if they match one of the predefined\n"
-"predicates."
+"Identifiers such as branch names may need quoting with single or\n"
+"double quotes if they contain characters like ``-`` or if they match\n"
+"one of the predefined predicates."
 msgstr ""
 
 msgid ""
@@ -16966,15 +16984,11 @@ msgid "patch failed to apply"
 msgstr ""
 
 #, python-format
-msgid "Removing unknown node %(n)s from %(p)i-phase boundary"
+msgid "ignoring inconsistent public root from remote: %s\n"
 msgstr ""
 
 #, python-format
-msgid "ignoring inconsistense public root from remote: %s"
-msgstr ""
-
-#, python-format
-msgid "ignoring unexpected root from remote: %i %s"
+msgid "ignoring unexpected root from remote: %i %s\n"
 msgstr ""
 
 #, python-format
@@ -17212,10 +17226,6 @@ msgstr "follow tar inga argument eller ett filnamn"
 msgid "follow expected a filename"
 msgstr "follow förväntade sig ett filnamn"
 
-#. i18n: "follow" is a keyword
-msgid "follow takes no arguments"
-msgstr "follow tar inga argument"
-
 msgid ""
 "``all()``\n"
 "    All changesets, the same as ``0:tip``."
@@ -17403,12 +17413,12 @@ msgid ""
 msgstr ""
 
 #. i18n: "remote" is a keyword
-msgid "outgoing takes one or two arguments"
-msgstr "outgoing tar ett eller två argument"
+msgid "remote takes one or two arguments"
+msgstr "remote tar ett eller två argument"
 
 #. i18n: "remote" is a keyword
 msgid "remote requires a string id"
-msgstr "remotee kräver ett sträng-id"
+msgstr "remote kräver ett sträng-id"
 
 #. i18n: "remote" is a keyword
 msgid "remote requires a repository path"
@@ -17668,7 +17678,8 @@ msgstr "%s certifikatfel: %s"
 #, python-format
 msgid "configure hostfingerprint %s or use --insecure to connect insecurely"
 msgstr ""
-"konfigurera hostfingerprint %s eller använd --insecure för att ansluta osäkert"
+"konfigurera hostfingerprint %s eller använd --insecure för att ansluta "
+"osäkert"
 
 #, python-format
 msgid ""
@@ -18038,10 +18049,10 @@ msgid ""
 "    digit string."
 msgstr ""
 
-msgid ":rev: String. The changeset phase name."
+msgid ":phase: String. The changeset phase name."
 msgstr ""
 
-msgid ":rev: Integer. The changeset phase index."
+msgid ":phaseidx: Integer. The changeset phase index."
 msgstr ""
 
 msgid ":rev: Integer. The repository-local changeset revision number."
