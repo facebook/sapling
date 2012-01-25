@@ -511,7 +511,11 @@ def _outgoing(ui, repo, dest, opts):
                                             force=opts.get('force'))
     o = outgoing.missing
     if not o:
-        ui.status(_("no changes found\n"))
+        if outgoing.excluded:
+            repo.ui.status(_("no outgoing changes but %i secret changesets\n")
+                           % len(outgoing.excluded))
+        else:
+            ui.status(_("no changes found\n"))
         return None
     return o
 

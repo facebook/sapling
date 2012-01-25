@@ -399,6 +399,15 @@ test outgoing
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
+test outgoing with secret changesets
+
+  $ hg -R test-dev phase --force --secret 9
+  $ hg -R test-dev outgoing test
+  comparing with test
+  searching for changes
+  no outgoing changes but 5 secret changesets
+  [1]
+  $ hg -R test-dev phase --draft -r 'head()'
 
 limit to 3 changesets
 
