@@ -2517,6 +2517,10 @@ msgid "svn: no revision found after start revision %d"
 msgstr "svn: nenhuma revisão encontrada após revisão inicial %d"
 
 #, python-format
+msgid "svn: revision %s not found"
+msgstr "svn: revisão %s não encontrada"
+
+#, python-format
 msgid "%s not found up to revision %d"
 msgstr "%s não encontrado até revisão %d"
 
@@ -11121,6 +11125,9 @@ msgstr "%s"
 #, python-format
 msgid "use \"hg help -e %s\" to show help for the %s extension"
 msgstr "use \"hg help -e %s\" para mostrar a ajuda para a extensão %s"
+
+msgid "options:"
+msgstr "opções:"
 
 #, python-format
 msgid ""
@@ -21550,6 +21557,10 @@ msgstr "número de argumentos inválido: %s"
 
 msgid "empty query"
 msgstr "consulta vazia"
+
+#, python-format
+msgid "no changes found (ignored %d secret changesets)\n"
+msgstr "nenhuma mudança encontrada (%d revisões secretas ignoradas)\n"
 
 #, python-format
 msgid "ui.portablefilenames value is invalid ('%s')"
