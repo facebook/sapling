@@ -119,6 +119,7 @@ Short help:
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
+   phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
    subrepos      Subrepositories
@@ -196,6 +197,7 @@ Short help:
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
+   phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
    subrepos      Subrepositories
@@ -691,6 +693,7 @@ Test that default list of commands omits extension commands
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
+   phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
    subrepos      Subrepositories
