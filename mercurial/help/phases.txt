@@ -50,7 +50,7 @@ phase to share unfinished work. This can be done by setting a
 repository to disable publishing in its configuration file::
 
   [phases]
-  publishing = False
+  publish = False
 
 See :hg:`help config` for more information on config files.
 
