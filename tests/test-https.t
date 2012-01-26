@@ -225,7 +225,8 @@ Fingerprints
 
 - fails when cert doesn't match hostname (port is ignored)
   $ hg -R copy-pull id https://localhost:$HGPORT1/
-  abort: invalid certificate for localhost with fingerprint 28:ff:71:bf:65:31:14:23:ad:62:92:b4:0e:31:99:18:fc:83:e3:9b
+  abort: certificate for localhost has unexpected fingerprint 28:ff:71:bf:65:31:14:23:ad:62:92:b4:0e:31:99:18:fc:83:e3:9b
+  (check hostfingerprint configuration)
   [255]
 
 - ignores that certificate doesn't match hostname
