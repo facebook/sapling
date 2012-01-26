@@ -51,7 +51,7 @@ repository to disable publishing in its configuration file::
 
   [phases]
   publishing = False
-  
+
 See :hg:`help config` for more information on config files.
 
 .. note::
