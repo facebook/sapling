@@ -775,8 +775,8 @@ def remote(repo, subset, x):
     n = other.lookup(q)
     if n in repo:
         r = repo[n].rev()
-    if r in subset:
-        return [r]
+        if r in subset:
+            return [r]
     return []
 
 def removes(repo, subset, x):
