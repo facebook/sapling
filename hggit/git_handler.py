@@ -1100,34 +1100,19 @@ class GitHandler(object):
                                    ("git@", client.SSHGitClient),
                                    ("git+ssh://", client.SSHGitClient)):
             if uri.startswith(handler):
-                # We need to split around : or /, whatever comes first
                 hostpath = uri[len(handler):]
-                if (hostpath.find(':') > 0 and hostpath.find('/') > 0):
-                    # we have both, whatever is first wins.
-                    if hostpath.find(':') < hostpath.find('/'):
-                      hostpath_seper = ':'
-                    else:
-                      hostpath_seper = '/'
-                elif hostpath.find(':') > 0:
-                    hostpath_seper = ':'
-                else:
-                    hostpath_seper = '/'
+                # Support several URL forms, including separating the
+                #  host and path with either a / or : (sepr)
+                pattern = re.compile(
+                    '^(?P<host>.*?)(:(?P<port>\d+))?(?P<sepr>[:/])(?P<path>.*)$')
+                res = pattern.match(hostpath).groupdict()
+                host, port, sepr, path = res['host'], res['port'], res['sepr'], res['path']
+                if sepr == '/':
+                    path = '/' + path
+                if port:
+                    client.port = port
 
-                port = None
-                host, path = hostpath.split(hostpath_seper, 1)
-                if hostpath_seper == '/':
-                    transportpath = '/' + path
-                else:
-                    # port number should be recognized
-                    m = re.match('^(?P<port>\d+)?(?P<path>.*)$', path)
-                    if m.group('port'):
-                        client.port = m.group('port')
-                        port = client.port
-                        transportpath = m.group('path')
-                    else:
-                        transportpath = path
-
-                return transport(host, thin_packs=False, port=port), transportpath
+                return transport(host, thin_packs=False, port=port), path
 
         httpclient = getattr(client, 'HttpGitClient', None)
 
