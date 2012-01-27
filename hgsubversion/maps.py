@@ -272,32 +272,34 @@ class FileMap(object):
             self._write()
 
     def _rpairs(self, name):
-        yield '.', name
         e = len(name)
         while e != -1:
             yield name[:e], name[e+1:]
             e = name.rfind('/', 0, e)
+        yield '.', name
 
     def check(self, m, path):
         m = getattr(self, m)
         for pre, _suf in self._rpairs(path):
-            if pre not in m:
-                continue
-            return m[pre]
-        return None
+            if pre in m:
+                return m[pre]
+        return -1
 
     def __contains__(self, path):
-        if len(self.include) and len(path):
+        if not len(path):
+            return True
+        if len(self.include):
             inc = self.check('include', path)
+        elif not len(self.exclude):
+            return True
         else:
-            inc = path
-        if len(self.exclude) and len(path):
+            inc = 0
+        if len(self.exclude):
             exc = self.check('exclude', path)
         else:
-            exc = None
-        if inc is None or exc is not None:
-            return False
-        return True
+            exc = -1
+        # respect rule order: newer rules override older
+        return inc > exc
 
     # Needed so empty filemaps are false
     def __len__(self):
@@ -311,7 +313,8 @@ class FileMap(object):
             return
         bits = m.strip('e'), path
         self.ui.debug('%sing %s\n' % bits)
-        mapping[path] = path
+        # respect rule order
+        mapping[path] = len(self)
         if fn != self.path:
             f = open(self.path, 'a')
             f.write(m + ' ' + path + '\n')
