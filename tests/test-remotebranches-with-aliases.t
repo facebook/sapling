@@ -17,7 +17,7 @@
   $ cd alpha
   $ mkcommit 0
   $ mkcommit 1
-  $ hg branch stable
+  $ hg branch stable | grep -v 'permanent and global'
   marked working directory as branch stable
   $ mkcommit 2
   $ cd ..
@@ -64,7 +64,7 @@
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg branch default
+  $ hg branch default | grep -v 'permanent and global'
   marked working directory as branch default
 
   $ mkcommit 4

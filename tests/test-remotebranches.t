@@ -15,7 +15,7 @@
   $ cd alpha
   $ mkcommit a
   $ mkcommit b
-  $ hg branch stable
+  $ hg branch stable | grep -v 'permanent and global'
   marked working directory as branch stable
   $ mkcommit c
   $ cd ..
@@ -58,7 +58,7 @@
   (run 'hg update' to get a working copy)
   $ hg co -C default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch default
+  $ hg branch default | grep -v 'permanent and global'
   marked working directory as branch default
   $ mkcommit e
   $ hg merge stable
@@ -130,38 +130,39 @@ make sure bogus revisions in .hg/remotebranches do not break hg
   summary:     merging stable
   
 Verify that the revsets operate as expected:
-  $ hg log --graph -r 'not pushed()'
-  @    changeset:   6:ce61ec32ee23
-  |\   tag:         tip
-  | |  parent:      5:6d6442577283
-  | |  parent:      4:8948da77173b
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merging stable
-  | |
-  | o  changeset:   5:6d6442577283
-  | |  parent:      3:78f83396d79e
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add e
-  | |
+  $ hg log -r 'not pushed()'
+  changeset:   5:6d6442577283
+  parent:      3:78f83396d79e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add e
+  
+  changeset:   6:ce61ec32ee23
+  tag:         tip
+  parent:      5:6d6442577283
+  parent:      4:8948da77173b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merging stable
+  
+
 
 Upstream without configuration is synonymous with pushed():
-  $ hg log --graph -r 'not upstream()'
-  @    changeset:   6:ce61ec32ee23
-  |\   tag:         tip
-  | |  parent:      5:6d6442577283
-  | |  parent:      4:8948da77173b
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merging stable
-  | |
-  | o  changeset:   5:6d6442577283
-  | |  parent:      3:78f83396d79e
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add e
-  | |
+  $ hg log -r 'not upstream()'
+  changeset:   5:6d6442577283
+  parent:      3:78f83396d79e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add e
+  
+  changeset:   6:ce61ec32ee23
+  tag:         tip
+  parent:      5:6d6442577283
+  parent:      4:8948da77173b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merging stable
+  
 
 but configured, it'll do the expected thing:
   $ echo '[remotebranches]' >> .hg/hgrc

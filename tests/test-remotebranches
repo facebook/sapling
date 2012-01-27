@@ -18,7 +18,7 @@ hg init alpha
 cd alpha
 mkcommit a
 mkcommit b
-hg branch stable
+hg branch stable | grep -v 'permanent and global'
 mkcommit c
 cd ..
 hg clone alpha beta | $FILTERPWD
@@ -40,7 +40,7 @@ EOF
 hg pull | $FILTERPWD
 hg pull beta | $FILTERPWD
 hg co -C default
-hg branch default
+hg branch default | grep -v 'permanent and global'
 mkcommit e
 hg merge stable
 hg ci -m 'merging stable'
