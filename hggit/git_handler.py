@@ -1096,23 +1096,24 @@ class GitHandler(object):
         if not issubclass(client.get_ssh_vendor, _ssh.SSHVendor):
             client.get_ssh_vendor = _ssh.generate_ssh_vendor(self.ui)
 
-        for handler, transport in (("git://", client.TCPGitClient),
-                                   ("git@", client.SSHGitClient),
-                                   ("git+ssh://", client.SSHGitClient)):
-            if uri.startswith(handler):
-                hostpath = uri[len(handler):]
-                # Support several URL forms, including separating the
-                #  host and path with either a / or : (sepr)
-                pattern = re.compile(
-                    '^(?P<host>.*?)(:(?P<port>\d+))?(?P<sepr>[:/])(?P<path>.*)$')
-                res = pattern.match(hostpath).groupdict()
-                host, port, sepr, path = res['host'], res['port'], res['sepr'], res['path']
-                if sepr == '/':
-                    path = '/' + path
-                if port:
-                    client.port = port
+        # Test for git:// and git+ssh:// URI.
+        #  Support several URL forms, including separating the
+        #  host and path with either a / or : (sepr)
+        git_pattern = re.compile(
+            r'^(?P<scheme>git([+]ssh)?://)(?P<host>.*?)(:(?P<port>\d+))?'
+            r'(?P<sepr>[:/])(?P<path>.*)$'
+        )
+        git_match = git_pattern.match(uri)
+        if git_match:
+            res = git_match.groupdict()
+            transport = client.SSHGitClient if 'ssh' in res['scheme'] else client.TCPGitClient
+            host, port, sepr, path = res['host'], res['port'], res['sepr'], res['path']
+            if sepr == '/':
+                path = '/' + path
+            if port:
+                client.port = port
 
-                return transport(host, thin_packs=False, port=port), path
+            return transport(host, thin_packs=False, port=port), path
 
         httpclient = getattr(client, 'HttpGitClient', None)
 
