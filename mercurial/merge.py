@@ -173,6 +173,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if m and m != a: # changed from a to m
             return m
         if n and n != a: # changed from a to n
+            if n == 'l' or a == 'l':
+                # can't automatically merge symlink flag change here, let
+                # filemerge take care of it
+                return m
             return n
         return '' # flag was cleared
 
@@ -359,7 +363,6 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                     updated += 1
                 else:
                     merged += 1
-            util.setflags(repo.wjoin(fd), 'l' in flags, 'x' in flags)
             if (move and repo.dirstate.normalize(fd) != f
                 and os.path.lexists(repo.wjoin(f))):
                 repo.ui.debug("removing %s\n" % f)
