@@ -27,7 +27,7 @@ hg up -r0
 echo C > afile
 hg ci -m "A->C"
 
-hg merge -r1 | sed 's/-C ./-C/' | grep -v 'merging afile'
+hg merge -r1 2>&1 | sed 's/-C ./-C/' | egrep -v '^merging afile$' | sed 's/incomplete.*/failed!/'
 # resolve using first parent
 echo C > afile
 hg resolve -m afile

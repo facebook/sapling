@@ -131,27 +131,8 @@ try:
         kwname = 'onlyheads'
     def findoutgoing(orig, local, remote, *args, **kwargs):
         if isinstance(remote, gitrepo.gitrepo):
-            hgver = hg.util.version()
-            if hgver >= '1.8.9' or (hgver > '1.8' and '+' in hgver):
-                raise hgutil.Abort(
-                    'hg-git outgoing support is broken on hg 1.9.x')
-            # clean up this cruft when we're 1.7-only, remoteheads and
-            # the return value change happened between 1.6 and 1.7.
-            kw = {}
-            kw.update(kwargs)
-            for val, k in zip(args, ('base', kwname, 'force')):
-                kw[k] = val
-            git = GitHandler(local, local.ui)
-            base, heads = git.get_refs(remote.path)
-            newkw = {'base': base, kwname: heads}
-            newkw.update(kw)
-            kw = newkw
-            if kwname == 'heads':
-                r = orig(local, remote, **kw)
-                return [x[0] for x in r]
-            if kwname == 'onlyheads':
-                del kw['base']
-            return orig(local, remote, **kw)
+            raise hgutil.Abort(
+                'hg-git outgoing support is broken')
         return orig(local, remote, *args, **kwargs)
     if getattr(discovery, 'findoutgoing', None):
         extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)

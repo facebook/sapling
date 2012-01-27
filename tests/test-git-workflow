@@ -43,7 +43,7 @@ hg init
 echo alpha > alpha
 hg add alpha
 hgcommit -m "add alpha"
-hg log --graph --debug
+hg log --graph --debug | grep -v phase:
 
 cd ..
 
@@ -65,6 +65,6 @@ commit -m 'add beta'
 
 echo % get things back to hg
 hg gimport
-hg log --graph --debug | grep -v ': *master'
+hg log --graph --debug | grep -v ': *master' | grep -v phase:
 echo % gimport should have updated the bookmarks as well
 hg bookmarks

@@ -209,7 +209,7 @@ class GitHandler(object):
             return {}
 
         try:
-            client.send_pack(path, changed, None)
+            client.send_pack(path, changed, lambda have, want: [])
 
             changed_refs = [ref for ref, sha in new_refs.iteritems()
                             if sha != old_refs.get(ref)]

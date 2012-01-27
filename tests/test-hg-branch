@@ -71,7 +71,7 @@ hg mv alpha beta
 hgcommit -m 'rename alpha to beta'
 hg push
 
-hg branch gamma
+hg branch gamma | grep -v 'permanent and global'
 hgcommit -m 'started branch gamma'
 hg push
 
