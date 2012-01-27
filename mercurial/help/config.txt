@@ -918,7 +918,7 @@ the following entries.
 ``phases``
 """"""""""
 
-Specifies default handling of phases. See :hg:'help phases' for more
+Specifies default handling of phases. See :hg:`help phases` for more
 information about working with phases.
 
 ``publish``
