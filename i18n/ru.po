@@ -170,7 +170,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-01-08 13:29+0400\n"
+"POT-Creation-Date: 2012-01-27 11:03+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -2421,7 +2421,8 @@ msgstr ""
 "внимание: комментарий фиксации CVS ссылается на несуществующую ветку %r:\n"
 "%s\n"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "%d changeset entries\n"
 msgstr "%d наборов изменений\n"
 
@@ -2517,7 +2518,8 @@ msgstr "%s - не локальное хранилище Mercurial"
 msgid "initializing destination %s repository\n"
 msgstr "инициализация хранилища назначения %s\n"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "could not create hg repository %s as sink"
 msgstr "не удается создать хранилище-приемник Mercurial %s"
 
@@ -2602,8 +2604,9 @@ msgstr ""
 "PATH содержит путь к hg"
 
 #, python-format
+# NOT-SURE
 msgid "log stream exception '%s'"
-msgstr ""
+msgstr "исключение '%s' в итераторе потока"
 
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
@@ -4891,9 +4894,10 @@ msgstr "ошибка при удалении страховки (undo): %s\n"
 msgid "apply failed for patch %s"
 msgstr "не удалось наложить патч %s"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr "патч не сработал, сливаем %s\n"
+msgstr "не удалось наложить патч, сливаем %s\n"
 
 #, python-format
 msgid "update returned %d"
@@ -4951,7 +4955,8 @@ msgstr "неизвестные патчи: %s\n"
 msgid "revision %d is not managed"
 msgstr "ревизия %d не контролируется"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "cannot delete revision %d above applied patches"
 msgstr "невозможно удалить ревизию %d поверх наложенных патчей"
 
@@ -5828,10 +5833,9 @@ msgstr "слить из другой очереди (УСТАРЕЛО)"
 msgid "merge queue name (DEPRECATED)"
 msgstr "имя очереди слияния (УСТАРЕЛО)"
 
-# может, единственный патч? совмещенный патч?
-#, fuzzy
 msgid "reorder patch series and apply only the patch"
-msgstr "переупорядочить последовательность патчей и наложить только патч"
+msgstr ""
+"переупорядочить последовательность патчей и наложить только данный патч"
 
 msgid "hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]"
 msgstr "hg qpush [-f] [-l] [-a] [--move] [ПАТЧ | ИНДЕКС]"
@@ -7620,8 +7624,8 @@ msgstr "нет прерванного перебазирования"
 
 msgid "warning: immutable rebased changeset detected, can't abort\n"
 msgstr ""
-"внимание: обнаружены неизменяемые перебазированные наборы изменений, "
-"нельзя прервать\n"
+"внимание: обнаружены неизменяемые перебазированные наборы изменений, нельзя "
+"прервать\n"
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
@@ -8810,10 +8814,10 @@ msgstr "сводка:           %s\n"
 msgid "%s: no key named '%s'"
 msgstr "%s: нет ключа с именем '%s'"
 
-# может, не из а от?
-#, fuzzy, python-format
+# NOT-SURE от или из?
+#, python-format
 msgid "Found revision %s from %s\n"
-msgstr "найдена ревизия %s из %s\n"
+msgstr "Найдена ревизия %s от %s\n"
 
 msgid "revision matching date not found"
 msgstr "не найдена ревизия для данной даты"
@@ -9657,6 +9661,10 @@ msgid ""
 "    current active bookmark will be marked inactive.\n"
 "    "
 msgstr ""
+"    Если указан -i/--inactive, новая закладка не будет сделана активной.\n"
+"    Если указан -r/--rev, новая закладка не будет активной, даже если\n"
+"    -i/--inactive не задан. Если не указано ИМЯ, текущая активная закладка\n"
+"    будет помечена как неактивная.    "
 
 msgid "bookmark name required"
 msgstr "укажите имя закладки"
@@ -10260,7 +10268,7 @@ msgid "either two or three arguments required"
 msgstr "требуются два или три аргумента"
 
 # {{{ Debug commands
-#, fuzzy
+# NOT-SURE
 msgid "add single file mergeable changes"
 msgstr "добавить единственный файл, объединяющий изменения"
 
@@ -10979,17 +10987,16 @@ msgstr ""
 "    уже была применена операция graft, а также ревизии слияния будут\n"
 "    пропущены."
 
-#, fuzzy
 msgid ""
 "    If a graft merge results in conflicts, the graft process is\n"
 "    interrupted so that the current merge can be manually resolved.\n"
 "    Once all conflicts are addressed, the graft process can be\n"
 "    continued with the -c/--continue option."
 msgstr ""
-"    Если во время операции возникает конфликт, операция отменяется для\n"
-"    того, чтобы текущее слияние было завершено вручную. После разрешения\n"
-"    всех конфликтов, можно продолжить процесс с помощью параметра\n"
-"    -c/--continue."
+"    Если во время операции graft возникает конфликт, операция отменяется\n"
+"    для того, чтобы текущее слияние было завершено вручную. После\n"
+"    разрешения всех конфликтов, можно продолжить процесс с помощью\n"
+"    параметра -c/--continue."
 
 msgid ""
 "    .. note::\n"
@@ -12010,8 +12017,8 @@ msgid ""
 "    configuration files. See :hg:`help merge-tools` for options."
 msgstr ""
 "    С помощью ``--tool`` можно задать инструмент для слияния файлов.\n"
-"    Она заменяет переменную окружения HGEMERGT и настройки конфига.\n"
-"    Подробнее см. :hg:``help merge-tool``."
+"    Она заменяет переменную окружения HGMERGE и настройки конфига.\n"
+"    Подробнее см. :hg:``help merge-tools``."
 
 msgid ""
 "    If no revision is specified, the working directory's parent is a\n"
@@ -13488,7 +13495,7 @@ msgstr "[-c] [-C] [-d ДАТА] [[-r] РЕВИЗИЯ]"
 msgid "update working directory (or switch revisions)"
 msgstr "обновить рабочий каталог (или переключить ревизию)"
 
-#, fuzzy
+# NOT-SURE update вроде не двигает закладки?
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
@@ -13497,7 +13504,7 @@ msgid ""
 msgstr ""
 "    Обновляет рабочую копию хранилища на указанную ревизию. Если\n"
 "    ревизия не задана, обновляет до оконечной ревизии (tip) текущей\n"
-"    именованной ветки и перемещает текущую заплатку (см. :hg:`help\n"
+"    именованной ветки и перемещает текущую закладку (см. :hg:`help\n"
 "    bookmarks`)."
 
 msgid ""
@@ -13990,9 +13997,9 @@ msgstr ""
 " не найден инструмент для слияния %s\n"
 "использовать локальный файл:(l)ocal или взять другой:(o)ther?"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s.premerge not valid ('%s' is neither boolean nor %s)"
-msgstr "некорректный %s.premerge ('%s' не логический и не %s)"
+msgstr "некорректный параметр %s.premerge ('%s' не логический и не %s)"
 
 # PROMPT
 #, python-format
@@ -15740,7 +15747,7 @@ msgstr ""
 "``hooks``\n"
 "\"\"\"\"\"\"\"\"\""
 
-#, fuzzy
+# NOT-SURE site-wide - ?
 msgid ""
 "Commands or Python functions that get automatically executed by\n"
 "various actions such as starting or finishing a commit. Multiple\n"
@@ -15752,18 +15759,16 @@ msgid ""
 "not specified."
 msgstr ""
 "Команды или функции Python, вызываемые автоматически при различных\n"
-"действиях, таких как начало или конец фиксации. Можно задавать несколько\n"
-"хуков для одного и того же действия, добавляя к действию суффикс.\n"
+"действиях, таких как начало или завершение фиксации. Можно задавать\n"
+"несколько хуков для одного и того же действия, добавляя к действию суффикс.\n"
 "Можно переопределить глобальный хук, изменив его значения или задав\n"
-"для него пустую строку.  Hooks can be prioritized\n"
-"by adding a prefix of ``priority`` to the hook name on a new line\n"
-"and setting the priority.  The default priority is 0 if\n"
-"not specified."
+"для него пустую строку. Для хука можно задать приоритет, добавив\n"
+"префикс ``priority`` к имени хука в отдельной строке и задав приоритет.\n"
+"Если приоритет не указан, используется значение по умолчанию - 0."
 
 msgid "Example ``.hg/hgrc``::"
 msgstr "Пример ``.hg/hgrc``::"
 
-#, fuzzy
 msgid ""
 "  [hooks]\n"
 "  # update working directory after adding changesets\n"
@@ -15782,7 +15787,7 @@ msgstr ""
 "  incoming =\n"
 "  incoming.email = /my/email/hook\n"
 "  incoming.autobuild = /my/build/hook\n"
-"  # force autobuild hook to run before other incoming hooks\n"
+"  # выполнять хук autobuild перед другими хуками incoming\n"
 "  priority.incoming.autobuild = 1"
 
 msgid ""
@@ -18984,7 +18989,7 @@ msgid ""
 "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
 "Возможные инструменты слияния\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 
 msgid ""
 "External merge tools and their properties are configured in the\n"
@@ -19093,7 +19098,7 @@ msgid ""
 "\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
 "Выбор инструмента слияния\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
 
 msgid "Mercurial uses these rules when deciding which merge tool to use:"
 msgstr "Mercurial использует следующие правила при выбора программы слияния:"
@@ -19641,11 +19646,11 @@ msgstr ""
 "  и не входящие в помеченный релиз::"
 
 msgid ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
-"\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 msgstr ""
-"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
-"\"\n"
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 
 msgid ""
 "Subrepositories let you nest external repositories or projects into a\n"
@@ -20193,11 +20198,11 @@ msgstr ""
 "  Команда push сначала ищет путь с именем `default-push` и предпочтет\n"
 "  использовать его вместо 'default', если оба определены.\n"
 
-#, fuzzy
+# NOT-SURE
 msgid "remote branch lookup not supported"
 msgstr "поиск отдаленных веток не поддерживается"
 
-#, fuzzy
+# NOT-SURE
 msgid "dirstate branch not accessible"
 msgstr "нет доступа к ветке с dirstate"
 
@@ -20243,20 +20248,19 @@ msgstr "обновляемся на ветку %s\n"
 #, python-format
 msgid ""
 "%d files updated, %d files merged, %d files removed, %d files unresolved\n"
-msgstr ""
-"%d файлов обновлено, %d слито, %d удалено, %d c конфликтами\n"
+msgstr "%d файлов обновлено, %d слито, %d удалено, %d c конфликтами\n"
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
 "используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами\n"
 
-#, fuzzy
+# NOT-SURE отменить слияние или оставить как есть?
 msgid ""
 "use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to "
 "abandon\n"
 msgstr ""
-"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами или 'hg "
-"update -C .' чтобы отменить слияние\n"
+"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами или "
+"'hg update -C .' чтобы отменить слияние\n"
 
 msgid "(branch merge, don't forget to commit)\n"
 msgstr "(слияние веток, не забудьте зафиксировать)\n"
@@ -20419,7 +20423,8 @@ msgstr "хранилище %s уже существует"
 msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ".hg/sharedpath указывает на несуществующий каталог %s"
 
-#, fuzzy, python-format
+# NOT-SURE что такое рабочий родитель?
+#, python-format
 msgid "warning: ignoring unknown working parent %s!\n"
 msgstr "внимание: игнорируется неизвестный рабочий родитель %s!\n"
 
@@ -20455,11 +20460,13 @@ msgstr "нет прерванной транзакции\n"
 msgid "no rollback information available\n"
 msgstr "нет доступной информации для отката\n"
 
-#, fuzzy, python-format
+# NOT-SURE откачена - не по-русски. И вообще это так?
+#, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
 msgstr "оконечная ревизия откачена на ревизию %s (отменен %s: %s)\n"
 
-#, fuzzy, python-format
+# NOT-SURE откачена - не по-русски. И вообще это так?
+#, python-format
 msgid "repository tip rolled back to revision %s (undo %s)\n"
 msgstr "оконечная ревизия откачена на ревизию %s (отменен %s)\n"
 
@@ -20581,11 +20588,12 @@ msgstr "добавляем манифесты\n"
 msgid "adding file changes\n"
 msgstr "добавляем изменения в файлы\n"
 
-#, fuzzy
+# NOT-SURE
 msgid "received file revlog group is empty"
 msgstr "полученная группа revlog файла пуста"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "missing file data for %s:%s - run hg verify"
 msgstr "отсутствуют данные файлов для %s:%s - выполните hg verify"
 
@@ -20609,7 +20617,7 @@ msgstr "не удалось заблокировать отдаленное хр
 msgid "the server sent an unknown error code"
 msgstr "сервер передал неизвестный код ошибки"
 
-#, fuzzy
+# NOT-SURE
 msgid "streaming all changes\n"
 msgstr "поточная передача всех изменений\n"
 
@@ -20652,7 +20660,8 @@ msgstr "smtp задан в качестве транспорта email, но smt
 msgid "%r specified as email transport, but not in PATH"
 msgstr "%r задан в качестве транспорта email, но он не доступен в PATH"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "ignoring invalid sendcharset: %s\n"
 msgstr "игнорируется неверная кодировка исходящих писем: %s\n"
 
@@ -20679,7 +20688,8 @@ msgstr "недопустимый шаблон (%s): %s"
 msgid "invalid pattern"
 msgstr "недопустимый шаблон"
 
-#, fuzzy, python-format
+# NOT-SURE что за список? почему file а не files?
+#, python-format
 msgid "unable to read file list (%s)"
 msgstr "не удается прочитать список файлов (%s)"
 
@@ -20695,10 +20705,11 @@ msgstr "%s: неотслеживаемый файл различается\n"
 msgid ""
 "untracked files in working directory differ from files in requested revision"
 msgstr ""
-"неотслеживаемые файлы в рабочем каталоге отличаются от файлов в запрашиваемой\n"
-"ревизии: '%s'"
+"неотслеживаемые файлы в рабочем каталоге отличаются от файлов в "
+"запрашиваемой ревизии"
 
-#, fuzzy, python-format
+# NOT-SURE такой смысл? или конфликт преобразования регистров?
+#, python-format
 msgid "case-folding collision between %s and %s"
 msgstr "конфликт регистров букв между %s и %s"
 
@@ -21592,7 +21603,8 @@ msgstr "пустой запрос"
 msgid "ui.portablefilenames value is invalid ('%s')"
 msgstr "недопустимое значение ui.portablefilenames ('%s')"
 
-#, fuzzy, python-format
+# NOT-SURE
+#, python-format
 msgid "possible case-folding collision for %s"
 msgstr "возможен конфликт при свертке регистра букв в %s"
 
@@ -21641,12 +21653,11 @@ msgstr "поиск изменений\n"
 msgid "all local heads known remotely\n"
 msgstr "все локальные головы известны на отдаленной стороне\n"
 
-#, fuzzy
+# NOT-SURE
 msgid "sampling from both directions\n"
 msgstr "выборка из обоих направлений\n"
 
-# такая форма?
-#, fuzzy
+# NOT-SURE такая форма?
 msgid "queries"
 msgstr "запросов"
 
@@ -21729,9 +21740,10 @@ msgid "warning: certificate for %s can't be verified (Python too old)\n"
 msgstr ""
 "внимание: сертификат %s не может быть проверен (Python слишком старый)\n"
 
+# BUG здесь %s - имя локального хоста
 #, python-format
 msgid "%s ssl connection error"
-msgstr ""
+msgstr "%s - ошибка ssl"
 
 #, python-format
 msgid "%s certificate error: no certificate received"
@@ -21748,8 +21760,8 @@ msgstr "%s ошибка сертификата: %s"
 #, python-format
 msgid "configure hostfingerprint %s or use --insecure to connect insecurely"
 msgstr ""
-"настройте отпечатки пальцев хоста %s или используйте --insecure для небезопасного "
-"подключения"
+"настройте отпечатки пальцев хоста %s или используйте --insecure для "
+"небезопасного подключения"
 
 #, python-format
 msgid ""
@@ -22246,9 +22258,10 @@ msgstr "незакрытые кавычки"
 msgid "style not found: %s"
 msgstr "стиль не найден: %s"
 
-#, fuzzy, python-format
+# NOT-SURE так?
+#, python-format
 msgid "\"%s\" not in template map"
-msgstr "\"%s\" не в отображении шаблона"
+msgstr "\"%s\" отсутсвует в сопоставлении шаблона"
 
 #, python-format
 msgid "template file %s: %s"
