@@ -1110,6 +1110,10 @@ class GitHandler(object):
             host, port, sepr, path = res['host'], res['port'], res['sepr'], res['path']
             if sepr == '/':
                 path = '/' + path
+            # strip trailing slash for heroku-style URLs
+            # ssh+git://git@heroku.com:project.git/
+            if sepr == ':' and path.endswith('.git/'):
+                path = path.rstrip('/')
             if port:
                 client.port = port
 
