@@ -58,4 +58,23 @@ See :hg:`help config` for more information on config files.
   Servers running older versions of Mercurial are treated as
   publishing.
 
-See :hg:`help phase` for information on manually manipulating phases.
+Examples
+--------
+
+ - list changesets in draft or secret phase::
+
+     hg log -r "not public()"
+
+ - change all secret changesets to draft::
+
+     hg phase --draft "secret()"
+
+ - forcibly move the current changeset and descendants from public to draft::
+
+     hg phase --force --draft .
+
+ - show a list of changeset revision and phase::
+
+     hg log --template "{rev} {phase}\n"
+
+See :hg:`help phase` for more information on manually manipulating phases.
