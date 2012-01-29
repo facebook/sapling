@@ -50,6 +50,12 @@ help
   will override the [diff] section and always generate git or regular patches,
   possibly losing data in the second case.
   
+  It may be desirable for mq changesets in the secret phase (see "hg help
+  phases"), which can be enabled with the following setting:
+  
+    [mq]
+    secret = True
+  
   You will by default be managing a patch queue named "patches". You can create
   other, independent patch queues with the "hg qqueue" command.
   
@@ -149,11 +155,11 @@ qinit -c should create both files if they don't exist
   $ checkundo qnew
   $ echo foo > foo
   $ hg phase -r qbase
-  0: secret
+  0: draft
   $ hg add foo
   $ hg qrefresh
   $ hg phase -r qbase
-  0: secret
+  0: draft
   $ hg qnew B
   $ echo >> foo
   $ hg qrefresh
@@ -302,7 +308,7 @@ Dump the tag cache to ensure that it has exactly one head after qpush.
   applying test.patch
   now at: test.patch
   $ hg phase -r qbase
-  2: secret
+  2: draft
   $ hg tags > /dev/null
 
 .hg/cache/tags (post qpush):
@@ -395,7 +401,6 @@ commit should fail
 
 push should fail if draft
 
-  $ hg phase --draft 'mq()'
   $ hg push ../../k
   pushing to ../../k
   abort: source has mq patches applied
@@ -1214,11 +1219,6 @@ repo with unversioned patch dir
 repo with patches applied
 
   $ hg qclone qclonesource qclonedest
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

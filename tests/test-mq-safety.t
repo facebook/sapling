@@ -144,17 +144,6 @@ Testing applied patches, push and --force
 
 Pushing applied patch with --rev without --force
 
-All secret
-
-  $ hg push -r . ../forcepush2
-  pushing to ../forcepush2
-  searching for changes
-  no changes found (ignored 1 secret changesets)
-
-some draft
-
-  $ hg phase --draft 'mq()'
-
   $ hg push -r . ../forcepush2
   pushing to ../forcepush2
   abort: source has mq patches applied

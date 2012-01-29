@@ -38,6 +38,12 @@ preserving existing git patches upon qrefresh. If set to 'yes' or
 'no', mq will override the [diff] section and always generate git or
 regular patches, possibly losing data in the second case.
 
+It may be desirable for mq changesets in the secret phase (see
+:hg:`help phases`), which can be enabled with the following setting::
+
+  [mq]
+  secret = True
+
 You will by default be managing a patch queue named "patches". You can
 create other, independent patch queues with the :hg:`qqueue` command.
 '''
@@ -256,6 +262,9 @@ def secretcommit(repo, *args, **kwargs):
 
     It should be used instead of repo.commit inside the mq source
     """
+    if not repo.ui.configbool('mq', 'secret', False):
+        return repo.commit(*args, **kwargs)
+
     backup = repo.ui.backupconfig('phases', 'new-commit')
     try:
         # ensure we create a secret changeset
