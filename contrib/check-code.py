@@ -71,6 +71,7 @@ testpats = [
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
     (r'^stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
+    (r'^alias\b.*=', "don't use alias, use a function"),
   ],
   # warnings
   []

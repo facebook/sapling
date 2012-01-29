@@ -18,7 +18,7 @@ Multi-line command:
 
 Return codes before inline python:
 
-  $ false
+  $ sh -c 'exit 1'
   [1]
 
 Doctest commands:
