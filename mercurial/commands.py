@@ -4260,11 +4260,16 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
+        movemarkfrom = repo['.'].node()
         try:
-            return hg.update(repo, checkout)
+            ret = hg.update(repo, checkout)
         except util.Abort, inst:
             ui.warn(_("not updating: %s\n" % str(inst)))
             return 0
+        if not ret and not checkout:
+            if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
+        return ret
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
         if currentbranchheads == modheads:
