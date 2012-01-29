@@ -637,10 +637,6 @@ class localrepository(repo.repository):
     def local(self):
         return self
 
-    def cancopy(self):
-        return (repo.repository.cancopy(self)
-                and not self._phaseroots[phases.secret])
-
     def join(self, f):
         return os.path.join(self.path, f)
 
