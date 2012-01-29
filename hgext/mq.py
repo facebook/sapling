@@ -257,10 +257,11 @@ class patchheader(object):
                 ci += 1
             del self.comments[ci]
 
-def secretcommit(repo, *args, **kwargs):
-    """helper dedicated to ensure a commit are secret
+def newcommit(repo, *args, **kwargs):
+    """helper dedicated to ensure a commit respect mq.secret setting
 
-    It should be used instead of repo.commit inside the mq source
+    It should be used instead of repo.commit inside the mq source for operation
+    creating new changeset.
     """
     if not repo.ui.configbool('mq', 'secret', False):
         return repo.commit(*args, **kwargs)
@@ -575,7 +576,7 @@ class queue(object):
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = secretcommit(repo, ctx.description(), ctx.user(), force=True)
+        n = newcommit(repo, ctx.description(), ctx.user(), force=True)
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -746,7 +747,7 @@ class queue(object):
 
             match = scmutil.matchfiles(repo, files or [])
             oldtip = repo['tip']
-            n = secretcommit(repo, message, ph.user, ph.date, match=match,
+            n = newcommit(repo, message, ph.user, ph.date, match=match,
                              force=True)
             if repo['tip'] == oldtip:
                 raise util.Abort(_("qpush exactly duplicates child changeset"))
@@ -987,7 +988,7 @@ class queue(object):
                 if util.safehasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
-                n = secretcommit(repo, commitmsg, user, date, match=match,
+                n = newcommit(repo, commitmsg, user, date, match=match,
                                  force=True)
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
