@@ -174,7 +174,7 @@ msgstr ""
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
-"Language: \n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -2421,10 +2421,9 @@ msgstr ""
 "внимание: комментарий фиксации CVS ссылается на несуществующую ветку %r:\n"
 "%s\n"
 
-# NOT-SURE
 #, python-format
 msgid "%d changeset entries\n"
-msgstr "%d наборов изменений\n"
+msgstr "%d записей о наборах изменений\n"
 
 #, python-format
 msgid "%s does not look like a darcs repository"
@@ -2518,7 +2517,6 @@ msgstr "%s - не локальное хранилище Mercurial"
 msgid "initializing destination %s repository\n"
 msgstr "инициализация хранилища назначения %s\n"
 
-# NOT-SURE
 #, python-format
 msgid "could not create hg repository %s as sink"
 msgstr "не удается создать хранилище-приемник Mercurial %s"
@@ -2604,9 +2602,8 @@ msgstr ""
 "PATH содержит путь к hg"
 
 #, python-format
-# NOT-SURE
 msgid "log stream exception '%s'"
-msgstr "исключение '%s' в итераторе потока"
+msgstr "при считывании журнала возникло исключение '%s'"
 
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
@@ -4894,10 +4891,9 @@ msgstr "ошибка при удалении страховки (undo): %s\n"
 msgid "apply failed for patch %s"
 msgstr "не удалось наложить патч %s"
 
-# NOT-SURE
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr "не удалось наложить патч, сливаем %s\n"
+msgstr "патч не сработал, сливаем %s\n"
 
 #, python-format
 msgid "update returned %d"
@@ -4955,10 +4951,9 @@ msgstr "неизвестные патчи: %s\n"
 msgid "revision %d is not managed"
 msgstr "ревизия %d не контролируется"
 
-# NOT-SURE
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr "невозможно удалить ревизию %d поверх наложенных патчей"
+msgstr "невозможно удалить ревизию %d, находящуюся поверх наложенных патчей"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
@@ -8599,10 +8594,9 @@ msgstr "ветка %s не найдена"
 msgid "updating bookmark %s\n"
 msgstr "обновление закладки %s\n"
 
-# NOT-SURE
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
-msgstr "закладка на расходящейся ревизии %s сохранена как %s\n"
+msgstr "противоречивая закладка %s сохранена как %s\n"
 
 msgid "searching for changed bookmarks\n"
 msgstr "поиск изменившихся закладок\n"
@@ -8814,7 +8808,7 @@ msgstr "сводка:           %s\n"
 msgid "%s: no key named '%s'"
 msgstr "%s: нет ключа с именем '%s'"
 
-# NOT-SURE от или из?
+# второй параметр - дата/время
 #, python-format
 msgid "Found revision %s from %s\n"
 msgstr "Найдена ревизия %s от %s\n"
@@ -12226,7 +12220,7 @@ msgid ""
 "    With one of -p/--public, -d/--draft or -s/--secret, change the\n"
 "    phase value of the specified revisions."
 msgstr ""
-"    Если задан один из -p/--public, -d/--draft or -s/--secret, то изменяет\n"
+"    Если задан один из -p/--public, -d/--draft или -s/--secret, то изменяет\n"
 "    фазу указанных ревизий."
 
 msgid ""
@@ -13495,7 +13489,6 @@ msgstr "[-c] [-C] [-d ДАТА] [[-r] РЕВИЗИЯ]"
 msgid "update working directory (or switch revisions)"
 msgstr "обновить рабочий каталог (или переключить ревизию)"
 
-# NOT-SURE update вроде не двигает закладки?
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
@@ -20198,13 +20191,11 @@ msgstr ""
 "  Команда push сначала ищет путь с именем `default-push` и предпочтет\n"
 "  использовать его вместо 'default', если оба определены.\n"
 
-# NOT-SURE
 msgid "remote branch lookup not supported"
-msgstr "поиск отдаленных веток не поддерживается"
+msgstr "отдалённый сервер не поддерживает обзор своих веток"
 
-# NOT-SURE
 msgid "dirstate branch not accessible"
-msgstr "нет доступа к ветке с dirstate"
+msgstr "нет доступа к ветке рабочего каталога"
 
 #, python-format
 msgid "unknown branch '%s'"
@@ -20252,15 +20243,15 @@ msgstr "%d файлов обновлено, %d слито, %d удалено, %d
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
-"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами\n"
+"используйте 'hg resolve' чтобы повторить попытку слияния конфликтующих "
+"файлов\n"
 
-# NOT-SURE отменить слияние или оставить как есть?
 msgid ""
 "use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to "
 "abandon\n"
 msgstr ""
-"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами или "
-"'hg update -C .' чтобы отменить слияние\n"
+"используйте 'hg resolve' чтобы повторить попытку слияния конфликтующих "
+"файлов, или 'hg update -C .' чтобы вернуть всё в исходное состояние\n"
 
 msgid "(branch merge, don't forget to commit)\n"
 msgstr "(слияние веток, не забудьте зафиксировать)\n"
@@ -20423,10 +20414,9 @@ msgstr "хранилище %s уже существует"
 msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ".hg/sharedpath указывает на несуществующий каталог %s"
 
-# NOT-SURE что такое рабочий родитель?
 #, python-format
 msgid "warning: ignoring unknown working parent %s!\n"
-msgstr "внимание: игнорируется неизвестный рабочий родитель %s!\n"
+msgstr "внимание: игнорируем неизвестного родителя %s рабочей копии!\n"
 
 #, python-format
 msgid "%r cannot be used in a tag name"
@@ -20460,15 +20450,13 @@ msgstr "нет прерванной транзакции\n"
 msgid "no rollback information available\n"
 msgstr "нет доступной информации для отката\n"
 
-# NOT-SURE откачена - не по-русски. И вообще это так?
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
-msgstr "оконечная ревизия откачена на ревизию %s (отменен %s: %s)\n"
+msgstr "оконечной ревизией обратно стала ревизия %s (отмена %s: %s)\n"
 
-# NOT-SURE откачена - не по-русски. И вообще это так?
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s)\n"
-msgstr "оконечная ревизия откачена на ревизию %s (отменен %s)\n"
+msgstr "оконечной ревизией обратно стала ревизия %s (отмена %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "откатываем неизвестную транзакцию\n"
@@ -20617,9 +20605,8 @@ msgstr "не удалось заблокировать отдаленное хр
 msgid "the server sent an unknown error code"
 msgstr "сервер передал неизвестный код ошибки"
 
-# NOT-SURE
 msgid "streaming all changes\n"
-msgstr "поточная передача всех изменений\n"
+msgstr "передаём все изменения в поток\n"
 
 #, python-format
 msgid "%d files to transfer, %s of data\n"
@@ -20660,10 +20647,9 @@ msgstr "smtp задан в качестве транспорта email, но smt
 msgid "%r specified as email transport, but not in PATH"
 msgstr "%r задан в качестве транспорта email, но он не доступен в PATH"
 
-# NOT-SURE
 #, python-format
 msgid "ignoring invalid sendcharset: %s\n"
-msgstr "игнорируется неверная кодировка исходящих писем: %s\n"
+msgstr "игнорируем неверную кодировку исходящих писем: %s\n"
 
 #, python-format
 msgid "invalid email address: %s"
@@ -20688,10 +20674,10 @@ msgstr "недопустимый шаблон (%s): %s"
 msgid "invalid pattern"
 msgstr "недопустимый шаблон"
 
-# NOT-SURE что за список? почему file а не files?
+# здесь file list — список шаблонов из listfile, см. hg help patterns
 #, python-format
 msgid "unable to read file list (%s)"
-msgstr "не удается прочитать список файлов (%s)"
+msgstr "не удается прочитать файл-список (%s)"
 
 #, python-format
 msgid "diff context lines count must be an integer, not %r"
@@ -20708,10 +20694,10 @@ msgstr ""
 "неотслеживаемые файлы в рабочем каталоге отличаются от файлов в "
 "запрашиваемой ревизии"
 
-# NOT-SURE такой смысл? или конфликт преобразования регистров?
+# смысл: проверка имён файлов в системах без учёта регистра (Windows)
 #, python-format
 msgid "case-folding collision between %s and %s"
-msgstr "конфликт регистров букв между %s и %s"
+msgstr "коллизия прописных/строчных букв между %s и %s"
 
 # PROMPT
 #, python-format
@@ -20952,7 +20938,7 @@ msgstr "завершен получением сигнала %d"
 
 #, python-format
 msgid "saved backup bundle to %s\n"
-msgstr "резервный комплект (backup bundle) сохранен в %s\n"
+msgstr "резервный комплект сохранен в %s\n"
 
 msgid "adding branch\n"
 msgstr "добавляется ветка\n"
@@ -21603,10 +21589,9 @@ msgstr "пустой запрос"
 msgid "ui.portablefilenames value is invalid ('%s')"
 msgstr "недопустимое значение ui.portablefilenames ('%s')"
 
-# NOT-SURE
 #, python-format
 msgid "possible case-folding collision for %s"
-msgstr "возможен конфликт при свертке регистра букв в %s"
+msgstr "возможная коллизия прописных/строчных букв в %s"
 
 #, python-format
 msgid "path ends in directory separator: %s"
@@ -21648,14 +21633,13 @@ msgstr ""
 "неизвестный формат хранилища: требуется возможность '%s' (обновите Mercurial)"
 
 msgid "searching for changes\n"
-msgstr "поиск изменений\n"
+msgstr "ищем изменения\n"
 
 msgid "all local heads known remotely\n"
 msgstr "все локальные головы известны на отдаленной стороне\n"
 
-# NOT-SURE
 msgid "sampling from both directions\n"
-msgstr "выборка из обоих направлений\n"
+msgstr "отбор образцов из обоих направлений\n"
 
 # NOT-SURE такая форма?
 msgid "queries"
