@@ -122,6 +122,7 @@ def readroots(repo):
             raise
         for f in repo._phasedefaults:
             roots = f(repo, roots)
+        repo._dirtyphases = True
     return roots
 
 def writeroots(repo):
