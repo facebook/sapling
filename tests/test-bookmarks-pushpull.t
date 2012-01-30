@@ -58,6 +58,7 @@ export bookmark by name
   searching for changes
   no changes found
   exporting bookmark W
+  [1]
   $ hg -R ../a bookmarks
      W                         -1:000000000000
      X                         0:4e3505fd9583
@@ -72,6 +73,7 @@ delete a remote bookmark
   searching for changes
   no changes found
   deleting remote bookmark W
+  [1]
 
 push/pull name that doesn't exist
 
@@ -169,6 +171,7 @@ hgweb
   searching for changes
   no changes found
   exporting bookmark Z
+  [1]
   $ hg book -d Z
   $ hg in -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/

@@ -181,6 +181,7 @@ pushkey hook
   no changes found
   exporting bookmark foo
   pushkey hook: HG_KEY=foo HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_RET=1 
+  [1]
   $ cd ../a
 
 listkeys hook

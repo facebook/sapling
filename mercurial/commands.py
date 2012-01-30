@@ -4451,7 +4451,6 @@ def push(ui, repo, dest=None, **opts):
                 ui.warn(_('updating bookmark %s failed!\n') % b)
                 if not result:
                     result = 2
-            result = 0
 
     return result
 
