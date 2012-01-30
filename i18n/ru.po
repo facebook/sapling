@@ -170,11 +170,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-01-27 11:03+0400\n"
+"POT-Creation-Date: 2012-01-30 12:05+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
-"Language: \n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -2421,10 +2421,9 @@ msgstr ""
 "внимание: комментарий фиксации CVS ссылается на несуществующую ветку %r:\n"
 "%s\n"
 
-# NOT-SURE
 #, python-format
 msgid "%d changeset entries\n"
-msgstr "%d наборов изменений\n"
+msgstr "%d записей о наборах изменений\n"
 
 #, python-format
 msgid "%s does not look like a darcs repository"
@@ -2518,7 +2517,6 @@ msgstr "%s - не локальное хранилище Mercurial"
 msgid "initializing destination %s repository\n"
 msgstr "инициализация хранилища назначения %s\n"
 
-# NOT-SURE
 #, python-format
 msgid "could not create hg repository %s as sink"
 msgstr "не удается создать хранилище-приемник Mercurial %s"
@@ -2604,9 +2602,8 @@ msgstr ""
 "PATH содержит путь к hg"
 
 #, python-format
-# NOT-SURE
 msgid "log stream exception '%s'"
-msgstr "исключение '%s' в итераторе потока"
+msgstr "при считывании журнала возникло исключение '%s'"
 
 msgid ""
 "svn: cannot probe remote repository, assume it could be a subversion "
@@ -4825,6 +4822,20 @@ msgstr ""
 "формате, с возможной потерей данных в последнем случае."
 
 msgid ""
+"It may be desirable for mq changesets in the secret phase (see\n"
+":hg:`help phases`), which can be enabled with the following setting::"
+msgstr ""
+"Если желательно устанавливать наборы изменений mq в секретную фазу (см.\n"
+":hg:`help phases`), то это может быть сделано при помощи такой настройки::"
+
+msgid ""
+"  [mq]\n"
+"  secret = True"
+msgstr ""
+"  [mq]\n"
+"  secret = True"
+
+msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
 "create other, independent patch queues with the :hg:`qqueue` command.\n"
 msgstr ""
@@ -4894,10 +4905,9 @@ msgstr "ошибка при удалении страховки (undo): %s\n"
 msgid "apply failed for patch %s"
 msgstr "не удалось наложить патч %s"
 
-# NOT-SURE
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr "не удалось наложить патч, сливаем %s\n"
+msgstr "патч не сработал, сливаем %s\n"
 
 #, python-format
 msgid "update returned %d"
@@ -4955,10 +4965,9 @@ msgstr "неизвестные патчи: %s\n"
 msgid "revision %d is not managed"
 msgstr "ревизия %d не контролируется"
 
-# NOT-SURE
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr "невозможно удалить ревизию %d поверх наложенных патчей"
+msgstr "невозможно удалить ревизию %d, находящуюся поверх наложенных патчей"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
@@ -8602,7 +8611,7 @@ msgstr "обновление закладки %s\n"
 # NOT-SURE
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
-msgstr "закладка на расходящейся ревизии %s сохранена как %s\n"
+msgstr "противоречивая закладка %s сохранена как %s\n"
 
 msgid "searching for changed bookmarks\n"
 msgstr "поиск изменившихся закладок\n"
@@ -8814,7 +8823,7 @@ msgstr "сводка:           %s\n"
 msgid "%s: no key named '%s'"
 msgstr "%s: нет ключа с именем '%s'"
 
-# NOT-SURE от или из?
+# второй параметр - дата/время
 #, python-format
 msgid "Found revision %s from %s\n"
 msgstr "Найдена ревизия %s от %s\n"
@@ -11330,6 +11339,9 @@ msgstr "%s"
 msgid "use \"hg help -e %s\" to show help for the %s extension"
 msgstr "используйте \"hg help -e %s\" для просмотра справки по расширению %s"
 
+msgid "options:"
+msgstr "параметры:"
+
 #, python-format
 msgid ""
 "\n"
@@ -12226,7 +12238,7 @@ msgid ""
 "    With one of -p/--public, -d/--draft or -s/--secret, change the\n"
 "    phase value of the specified revisions."
 msgstr ""
-"    Если задан один из -p/--public, -d/--draft or -s/--secret, то изменяет\n"
+"    Если задан один из -p/--public, -d/--draft или -s/--secret, то изменяет\n"
 "    фазу указанных ревизий."
 
 msgid ""
@@ -12620,14 +12632,16 @@ msgid ""
 "    setting, or a command-line merge tool like ``diff3``. The resolve\n"
 "    command is used to manage the files involved in a merge, after\n"
 "    :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the\n"
-"    working directory must have two parents)."
+"    working directory must have two parents). See :hg:`help\n"
+"    merge-tools` for information on configuring merge tools."
 msgstr ""
 "    Неразрешенные конфликтами часто являются результатом неинтерактивного\n"
 "    слияния с использованием ``internal:merge``, или программы слияния\n"
 "    с текстовым интерфейсом, вроде ``diff3``. Команда resolve может\n"
 "    быть использована для управления файлами, участвующими в слиянии,\n"
 "    после того, как была запущена :hg:`merge`, но до :hg:`commit`\n"
-"    (т.е. рабочий каталог должен иметь двух \"родителей\")."
+"    (т.е. рабочий каталог должен иметь двух \"родителей\"). См. :hg:`help\n"
+"    merge-tools` — справку о настройке средств слияния."
 
 msgid "    The resolve command can be used in the following ways:"
 msgstr "    Команда resolve может использоваться следующими способами:"
@@ -13495,7 +13509,6 @@ msgstr "[-c] [-C] [-d ДАТА] [[-r] РЕВИЗИЯ]"
 msgid "update working directory (or switch revisions)"
 msgstr "обновить рабочий каталог (или переключить ревизию)"
 
-# NOT-SURE update вроде не двигает закладки?
 msgid ""
 "    Update the repository's working directory to the specified\n"
 "    changeset. If no changeset is specified, update to the tip of the\n"
@@ -14346,6 +14359,9 @@ msgstr "Глоссарий"
 
 msgid "syntax for Mercurial ignore files"
 msgstr "Синтаксис файлов игнорирования Mercurial"
+
+msgid "Working with Phases"
+msgstr "Работа c фазами"
 
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
@@ -16330,11 +16346,46 @@ msgstr ""
 "    если хранилище назначения не задано."
 
 msgid ""
-"\n"
+"``phases``\n"
+"\"\"\"\"\"\"\"\"\"\""
+msgstr ""
+"``phases``\n"
+"\"\"\"\"\"\"\"\"\"\""
+
+msgid ""
+"Specifies default handling of phases. See :hg:`help phases` for more\n"
+"information about working with phases."
+msgstr ""
+"Установки работы с фазами по умолчанию. Подробнее о работе с фазами\n"
+"см. :hg:`help phases`."
+
+msgid ""
+"``publish``\n"
+"    Controls draft phase behavior when working as a server. When true,\n"
+"    pushed changesets are set to public in both client and server and\n"
+"    pulled or cloned changesets are set to public in the client.\n"
+"    Default: True"
+msgstr ""
+"``publish``\n"
+"    Управляет поведением черновой фазы при работе в качестве сервера. Если\n"
+"    Истина, проталкиваемые наборы изменений становятся публичными на "
+"клиенте\n"
+"    и на сервере, а затянутые или клонированные наборы изменений становятся\n"
+"    на стороне клиента.    По умолчанию: True (Истина)"
+
+msgid ""
+"``new-commit``\n"
+"    Phase of newly-created commits.\n"
+"    Default: draft"
+msgstr ""
+"``new-commit``\n"
+"    Фаза для вновь создаваемых фиксаций.\n"
+"    По умолчанию: draft (черновая)"
+
+msgid ""
 "``profiling``\n"
 "\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
-"\n"
 "``profiling``\n"
 "\"\"\"\"\"\"\"\"\"\"\"\"\""
 
@@ -19356,6 +19407,179 @@ msgstr ""
 msgid "See also :hg:`help filesets`.\n"
 msgstr "См. также :hg:`help filesetes`.\n"
 
+msgid ""
+"What are phases?\n"
+"----------------"
+msgstr ""
+"Что такое фазы?\n"
+"---------------"
+
+msgid ""
+"Phases are a system for tracking which changesets have been or should\n"
+"be shared. This helps prevent common mistakes when modifying history\n"
+"(for instance, with the mq or rebase extensions)."
+msgstr ""
+"Фазы - это система для отслеживания того, какие наборы изменений были\n"
+"или должны быть публично доступны. Это помогает предотвратить часто\n"
+"совершаемые ошибки при изменение истории (например, при помощи расширений\n"
+"mq или rebase)."
+
+msgid "Each changeset in a repository is in one of the following phases:"
+msgstr "Каждый набор изменений хранилища находится в одной из следующих фаз::"
+
+msgid ""
+" - public : changeset is visible on a public server\n"
+" - draft : changeset is not yet published\n"
+" - secret : changeset should not be pushed, pulled, or cloned"
+msgstr ""
+" - открытая : набор изменений опубликован на открытом сервере\n"
+" - черновая : набор изменений ещё не опубликован\n"
+" - секретная : он не должен проталкиваться, затягиваться, клонироваться"
+
+msgid ""
+"These phases are ordered (public < draft < secret) and no changeset\n"
+"can be in a lower phase than its ancestors. For instance, if a\n"
+"changeset is public, all its ancestors are also public. Lastly,\n"
+"changeset phases only be changed towards the public phase."
+msgstr ""
+"Фазы расположены в следующем порядке: открытая < черновая < секретная,\n"
+"при этом набор изменений не может находится в фазе, меньшей фазы его\n"
+"предков. Например, если набор изменений находится в открытой фазе,\n"
+"то и все его родительские ревизии будут в открытой фазе. Наконец, фазы\n"
+"набора изменений могут меняться только в сторону открытой фазы."
+
+msgid ""
+"How are phases managed?\n"
+"-----------------------"
+msgstr ""
+"Что происходит с фазами?\n"
+"------------------------"
+
+msgid ""
+"For the most part, phases should work transparently. By default, a\n"
+"changeset is created in the draft phase and is moved into the public\n"
+"phase when it is pushed to another repository."
+msgstr ""
+"Как правило работа с фазами прозрачна для пользователя. По умолчанию\n"
+"набор изменений создается в черновой фазе и перемещается в открытую фазу\n"
+"при проталкивании в другое хранилище."
+
+msgid ""
+"Once changesets become public, extensions like mq and rebase will\n"
+"refuse to operate on them to prevent creating duplicate changesets.\n"
+"Phases can also be manually manipulated with the :hg:`phase` command\n"
+"if needed. See :hg:`help -v phase` for examples."
+msgstr ""
+"После того, как набор изменений стал открытым, расширения вроде mq или\n"
+"rebase откажутся работать с ним, чтобы предотвратить создание дублирующихся\n"
+"наборов изменений. При необходимости фазами можно также манипулировать\n"
+"вручную с помощью команды :hg:`phase`."
+
+msgid ""
+"Phases and servers\n"
+"------------------"
+msgstr ""
+"Фазы и серверы\n"
+"--------------"
+
+msgid "Normally, all servers are ``publishing`` by default. This means::"
+msgstr "Как правило, все серверы по умолчанию ``публичные``. Это означает::"
+
+msgid ""
+" - all draft changesets that are pulled or cloned appear in phase\n"
+" public on the client"
+msgstr ""
+" - все черновые наборы изменений, которые затягиваются или клонируются,\n"
+" имеют открытую фазу на стороне клиента"
+
+msgid ""
+" - all draft changesets that are pushed appear as public on both\n"
+" client and server"
+msgstr ""
+" - все проталкиваемые черновые наборы изменений становятся открытыми\n"
+" как на клиенте, так и на сервере"
+
+msgid " - secret changesets are neither pushed, pulled, or cloned"
+msgstr ""
+" - секретные наборы изменений не проталкиваются, не затягиваются\n"
+" и не клонируются"
+
+msgid ""
+".. note::\n"
+"  Pulling a draft changeset from a publishing server does not mark it\n"
+"  as public on the server side due to the read-only nature of pull."
+msgstr ""
+".. note::\n"
+"  Затягивание чернового набора изменений из ``публичного`` сервера не\n"
+"  сделает этот набор открытым на сервере, т.к. команда pull выполняется\n"
+"  в режиме ``только чтение``."
+
+msgid ""
+"Sometimes it may be desirable to push and pull changesets in the draft\n"
+"phase to share unfinished work. This can be done by setting a\n"
+"repository to disable publishing in its configuration file::"
+msgstr ""
+"Иногда может потребоваться проталкивать и затягивать наборы изменений\n"
+"в черновой фазе, чтобы поделиться неоконченной работой. Это может быть\n"
+"реализовано путем отключения ``публичности`` в файле конфигурации::"
+
+msgid ""
+"  [phases]\n"
+"  publish = False"
+msgstr ""
+"  [phases]\n"
+"  publish = False"
+
+msgid "See :hg:`help config` for more information on config files."
+msgstr "См. :hg:`help config` — справку по файлам конфигурации."
+
+msgid ""
+".. note::\n"
+"  Servers running older versions of Mercurial are treated as\n"
+"  publishing."
+msgstr ""
+".. note::\n"
+"  Серверы, работающие со старыми версиями Mercurial, считаются\n"
+"  публичными."
+
+msgid ""
+"Examples\n"
+"--------"
+msgstr ""
+"Примеры\n"
+"-------"
+
+msgid " - list changesets in draft or secret phase::"
+msgstr " - перечислить наборы изменений в черновой или секретной фазе::"
+
+msgid "     hg log -r \"not public()\""
+msgstr "     hg log -r \"not public()\""
+
+msgid " - change all secret changesets to draft::"
+msgstr " - установить все секретные наборы изменений в черновую фазу::"
+
+msgid "     hg phase --draft \"secret()\""
+msgstr "     hg phase --draft \"secret()\""
+
+msgid ""
+" - forcibly move the current changeset and descendants from public to draft::"
+msgstr ""
+" - принудительно переместить текущий набор изменений и потомков из открытой "
+"фазы в черновую::"
+
+msgid "     hg phase --force --draft ."
+msgstr "     hg phase --force --draft ."
+
+msgid " - show a list of changeset revision and phase::"
+msgstr " - показать список из номера ревизий и фазы::"
+
+msgid "     hg log --template \"{rev} {phase}\\n\""
+msgstr "     hg log --template \"{rev} {phase}\\n\""
+
+msgid ""
+"See :hg:`help phase` for more information on manually manipulating phases.\n"
+msgstr "См. :hg:`help phase` — о том, как изменять фазы вручную.\n"
+
 msgid "Mercurial supports several ways to specify individual revisions."
 msgstr "Mercurial поддерживает несколько способов задания отдельных ревизий."
 
@@ -20198,13 +20422,11 @@ msgstr ""
 "  Команда push сначала ищет путь с именем `default-push` и предпочтет\n"
 "  использовать его вместо 'default', если оба определены.\n"
 
-# NOT-SURE
 msgid "remote branch lookup not supported"
-msgstr "поиск отдаленных веток не поддерживается"
+msgstr "отдалённый сервер не поддерживает обзор своих веток"
 
-# NOT-SURE
 msgid "dirstate branch not accessible"
-msgstr "нет доступа к ветке с dirstate"
+msgstr "нет доступа к ветке рабочего каталога"
 
 #, python-format
 msgid "unknown branch '%s'"
@@ -20252,15 +20474,15 @@ msgstr "%d файлов обновлено, %d слито, %d удалено, %d
 
 msgid "use 'hg resolve' to retry unresolved file merges\n"
 msgstr ""
-"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами\n"
+"используйте 'hg resolve' чтобы повторить попытку слияния конфликтующих "
+"файлов\n"
 
-# NOT-SURE отменить слияние или оставить как есть?
 msgid ""
 "use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to "
 "abandon\n"
 msgstr ""
-"используйте 'hg resolve' чтобы повторить слияние файлов с конфликтами или "
-"'hg update -C .' чтобы отменить слияние\n"
+"используйте 'hg resolve' чтобы повторить попытку слияния конфликтующих "
+"файлов, или 'hg update -C .' чтобы вернуть всё в исходное состояние\n"
 
 msgid "(branch merge, don't forget to commit)\n"
 msgstr "(слияние веток, не забудьте зафиксировать)\n"
@@ -20423,10 +20645,9 @@ msgstr "хранилище %s уже существует"
 msgid ".hg/sharedpath points to nonexistent directory %s"
 msgstr ".hg/sharedpath указывает на несуществующий каталог %s"
 
-# NOT-SURE что такое рабочий родитель?
 #, python-format
 msgid "warning: ignoring unknown working parent %s!\n"
-msgstr "внимание: игнорируется неизвестный рабочий родитель %s!\n"
+msgstr "внимание: игнорируем неизвестного родителя %s рабочей копии!\n"
 
 #, python-format
 msgid "%r cannot be used in a tag name"
@@ -20460,15 +20681,13 @@ msgstr "нет прерванной транзакции\n"
 msgid "no rollback information available\n"
 msgstr "нет доступной информации для отката\n"
 
-# NOT-SURE откачена - не по-русски. И вообще это так?
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
-msgstr "оконечная ревизия откачена на ревизию %s (отменен %s: %s)\n"
+msgstr "оконечной ревизией снова стала ревизия %s (отмена %s: %s)\n"
 
-# NOT-SURE откачена - не по-русски. И вообще это так?
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s)\n"
-msgstr "оконечная ревизия откачена на ревизию %s (отменен %s)\n"
+msgstr "оконечной ревизией снова стала ревизия %s (отмена %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "откатываем неизвестную транзакцию\n"
@@ -20619,7 +20838,7 @@ msgstr "сервер передал неизвестный код ошибки"
 
 # NOT-SURE
 msgid "streaming all changes\n"
-msgstr "поточная передача всех изменений\n"
+msgstr "передаём все изменения в поток\n"
 
 #, python-format
 msgid "%d files to transfer, %s of data\n"
@@ -20660,10 +20879,9 @@ msgstr "smtp задан в качестве транспорта email, но smt
 msgid "%r specified as email transport, but not in PATH"
 msgstr "%r задан в качестве транспорта email, но он не доступен в PATH"
 
-# NOT-SURE
 #, python-format
 msgid "ignoring invalid sendcharset: %s\n"
-msgstr "игнорируется неверная кодировка исходящих писем: %s\n"
+msgstr "игнорируем неверную кодировку исходящих писем: %s\n"
 
 #, python-format
 msgid "invalid email address: %s"
@@ -20688,10 +20906,10 @@ msgstr "недопустимый шаблон (%s): %s"
 msgid "invalid pattern"
 msgstr "недопустимый шаблон"
 
-# NOT-SURE что за список? почему file а не files?
+# здесь file list — список шаблонов из listfile, см. hg help patterns
 #, python-format
 msgid "unable to read file list (%s)"
-msgstr "не удается прочитать список файлов (%s)"
+msgstr "не удается прочитать файл-список (%s)"
 
 #, python-format
 msgid "diff context lines count must be an integer, not %r"
@@ -20708,10 +20926,10 @@ msgstr ""
 "неотслеживаемые файлы в рабочем каталоге отличаются от файлов в "
 "запрашиваемой ревизии"
 
-# NOT-SURE такой смысл? или конфликт преобразования регистров?
+# смысл: проверка имён файлов в системах без учёта регистра (Windows)
 #, python-format
 msgid "case-folding collision between %s and %s"
-msgstr "конфликт регистров букв между %s и %s"
+msgstr "коллизия прописных/строчных букв между %s и %s"
 
 # PROMPT
 #, python-format
@@ -20952,7 +21170,7 @@ msgstr "завершен получением сигнала %d"
 
 #, python-format
 msgid "saved backup bundle to %s\n"
-msgstr "резервный комплект (backup bundle) сохранен в %s\n"
+msgstr "резервный комплект (bundle) сохранен в %s\n"
 
 msgid "adding branch\n"
 msgstr "добавляется ветка\n"
@@ -21451,19 +21669,19 @@ msgid "public takes no arguments"
 msgstr "public не требует аргументов"
 
 msgid ""
-"``remote([id], [path])``\n"
+"``remote([id [,path]])``\n"
 "    Local revision that corresponds to the given identifier in a\n"
 "    remote repository, if present. Here, the '.' identifier is a\n"
 "    synonym for the current local branch."
 msgstr ""
-"``remote([id], [path])``\n"
+"``remote([id [,path]])``\n"
 "    Локальная ревизия, соответствующая указанному идентификатору\n"
 "    в отдалённом хранилище, если такая существует. Идентификатор\n"
 "    '.' является здесь синонимом текущей локальной ветки."
 
 #. i18n: "remote" is a keyword
-msgid "remote takes one or two arguments"
-msgstr "remote принимает один или два аргумента"
+msgid "remote takes one, two or no arguments"
+msgstr "remote принимает один, два или ноль аргументов"
 
 #. i18n: "remote" is a keyword
 msgid "remote requires a string id"
@@ -21598,15 +21816,18 @@ msgstr "неверное количество аргументов: %s"
 msgid "empty query"
 msgstr "пустой запрос"
 
+#, python-format
+msgid "no changes found (ignored %d secret changesets)\n"
+msgstr "изменений не найдено (игнорируем %d секретных наборов изменений)\n"
+
 # }}} revsets
 #, python-format
 msgid "ui.portablefilenames value is invalid ('%s')"
 msgstr "недопустимое значение ui.portablefilenames ('%s')"
 
-# NOT-SURE
 #, python-format
 msgid "possible case-folding collision for %s"
-msgstr "возможен конфликт при свертке регистра букв в %s"
+msgstr "возможная коллизия прописных/строчных букв в %s"
 
 #, python-format
 msgid "path ends in directory separator: %s"
@@ -21648,14 +21869,13 @@ msgstr ""
 "неизвестный формат хранилища: требуется возможность '%s' (обновите Mercurial)"
 
 msgid "searching for changes\n"
-msgstr "поиск изменений\n"
+msgstr "ищем изменения\n"
 
 msgid "all local heads known remotely\n"
 msgstr "все локальные головы известны на отдаленной стороне\n"
 
-# NOT-SURE
 msgid "sampling from both directions\n"
-msgstr "выборка из обоих направлений\n"
+msgstr "отбор образцов из обоих направлений\n"
 
 # NOT-SURE такая форма?
 msgid "queries"
@@ -21750,8 +21970,11 @@ msgid "%s certificate error: no certificate received"
 msgstr "%s ошибка сертификата: сертификатов не получено"
 
 #, python-format
-msgid "invalid certificate for %s with fingerprint %s"
-msgstr "недействительный сертификат для %s с отпечатком %s"
+msgid "certificate for %s has unexpected fingerprint %s"
+msgstr "сертификат для %s имеет неожиданные отпечатки %s"
+
+msgid "check hostfingerprint configuration"
+msgstr "проверьте настройку hostfingerprint"
 
 #, python-format
 msgid "%s certificate error: %s"
@@ -22644,9 +22867,6 @@ msgstr "ошибка при проталкивании:"
 #~ msgid "addremove cannot be run on a repo with largefiles"
 #~ msgstr ""
 #~ "нельзя запускать addremove в хранилище с большими файлами (largefiles)"
-
-#~ msgid "no changes to push but %i secret changesets\n"
-#~ msgstr "нет исходящих изменений, но есть %i секретных наборов изменений\n"
 
 #, fuzzy
 #~ msgid "Removing unknown node %(n)s from %(p)i-phase boundary"

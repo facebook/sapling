@@ -13,8 +13,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-01-25 08:34+0100\n"
-"PO-Revision-Date: 2012-01-25 09:32+0100\n"
+"POT-Creation-Date: 2012-01-30 16:25+0100\n"
+"PO-Revision-Date: 2012-01-30 16:27+0100\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -3746,6 +3746,20 @@ msgstr ""
 "satt till 'yes' eller 'no', kommer mq att ignorera sektionen [diff] och\n"
 "alltid generera git- eller vanliga patchar, även om data kan tappas i det\n"
 "andra fallet."
+
+msgid ""
+"It may be desirable for mq changesets in the secret phase (see\n"
+":hg:`help phases`), which can be enabled with the following setting::"
+msgstr ""
+"Det kan vara önskvärt att hålla alla mq-ändringar i secret-fasen (se\n"
+":hg:`help phases`), något som kan aktiveras med följande inställning::"
+
+msgid ""
+"  [mq]\n"
+"  secret = True"
+msgstr ""
+"  [mq]\n"
+"  secret = True"
 
 msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
@@ -9430,6 +9444,9 @@ msgstr "%s"
 msgid "use \"hg help -e %s\" to show help for the %s extension"
 msgstr "använd \"hg help -e %s\" för att visa hjälp för utökningen %s"
 
+msgid "options:"
+msgstr "flaggor:"
+
 #, python-format
 msgid ""
 "\n"
@@ -10657,7 +10674,8 @@ msgid ""
 "    setting, or a command-line merge tool like ``diff3``. The resolve\n"
 "    command is used to manage the files involved in a merge, after\n"
 "    :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the\n"
-"    working directory must have two parents)."
+"    working directory must have two parents). See :hg:`help\n"
+"    merge-tools` for information on configuring merge tools."
 msgstr ""
 
 msgid "    The resolve command can be used in the following ways:"
@@ -12257,6 +12275,9 @@ msgstr "Ordlista"
 msgid "syntax for Mercurial ignore files"
 msgstr "syntax för Mercurials ignoreringsfiler"
 
+msgid "Working with Phases"
+msgstr "Arbeta med Faser"
+
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
 "aspects of its behavior."
@@ -13574,7 +13595,30 @@ msgid ""
 msgstr ""
 
 msgid ""
-"\n"
+"``phases``\n"
+"\"\"\"\"\"\"\"\"\"\""
+msgstr ""
+
+msgid ""
+"Specifies default handling of phases. See :hg:`help phases` for more\n"
+"information about working with phases."
+msgstr ""
+
+msgid ""
+"``publish``\n"
+"    Controls draft phase behavior when working as a server. When true,\n"
+"    pushed changesets are set to public in both client and server and\n"
+"    pulled or cloned changesets are set to public in the client.\n"
+"    Default: True"
+msgstr ""
+
+msgid ""
+"``new-commit``\n"
+"    Phase of newly-created commits.\n"
+"    Default: draft"
+msgstr ""
+
+msgid ""
 "``profiling``\n"
 "\"\"\"\"\"\"\"\"\"\"\"\"\""
 msgstr ""
@@ -15703,6 +15747,137 @@ msgstr ""
 msgid "See also :hg:`help filesets`.\n"
 msgstr ""
 
+msgid ""
+"What are phases?\n"
+"----------------"
+msgstr ""
+
+msgid ""
+"Phases are a system for tracking which changesets have been or should\n"
+"be shared. This helps prevent common mistakes when modifying history\n"
+"(for instance, with the mq or rebase extensions)."
+msgstr ""
+
+msgid "Each changeset in a repository is in one of the following phases:"
+msgstr ""
+
+msgid ""
+" - public : changeset is visible on a public server\n"
+" - draft : changeset is not yet published\n"
+" - secret : changeset should not be pushed, pulled, or cloned"
+msgstr ""
+
+msgid ""
+"These phases are ordered (public < draft < secret) and no changeset\n"
+"can be in a lower phase than its ancestors. For instance, if a\n"
+"changeset is public, all its ancestors are also public. Lastly,\n"
+"changeset phases only be changed towards the public phase."
+msgstr ""
+
+msgid ""
+"How are phases managed?\n"
+"-----------------------"
+msgstr ""
+
+msgid ""
+"For the most part, phases should work transparently. By default, a\n"
+"changeset is created in the draft phase and is moved into the public\n"
+"phase when it is pushed to another repository."
+msgstr ""
+
+msgid ""
+"Once changesets become public, extensions like mq and rebase will\n"
+"refuse to operate on them to prevent creating duplicate changesets.\n"
+"Phases can also be manually manipulated with the :hg:`phase` command\n"
+"if needed. See :hg:`help -v phase` for examples."
+msgstr ""
+
+msgid ""
+"Phases and servers\n"
+"------------------"
+msgstr ""
+
+msgid "Normally, all servers are ``publishing`` by default. This means::"
+msgstr ""
+
+msgid ""
+" - all draft changesets that are pulled or cloned appear in phase\n"
+" public on the client"
+msgstr ""
+
+msgid ""
+" - all draft changesets that are pushed appear as public on both\n"
+" client and server"
+msgstr ""
+
+msgid " - secret changesets are neither pushed, pulled, or cloned"
+msgstr ""
+
+msgid ""
+".. note::\n"
+"  Pulling a draft changeset from a publishing server does not mark it\n"
+"  as public on the server side due to the read-only nature of pull."
+msgstr ""
+
+msgid ""
+"Sometimes it may be desirable to push and pull changesets in the draft\n"
+"phase to share unfinished work. This can be done by setting a\n"
+"repository to disable publishing in its configuration file::"
+msgstr ""
+
+msgid ""
+"  [phases]\n"
+"  publish = False"
+msgstr ""
+"  [phases]\n"
+"  publish = False"
+
+msgid "See :hg:`help config` for more information on config files."
+msgstr "Se :hg:`help config` för mer information om konfigurationsfiler."
+
+msgid ""
+".. note::\n"
+"  Servers running older versions of Mercurial are treated as\n"
+"  publishing."
+msgstr ""
+
+msgid ""
+"Examples\n"
+"--------"
+msgstr ""
+"Exempel\n"
+"-------"
+
+msgid " - list changesets in draft or secret phase::"
+msgstr " - visa ändringar i draft- eller secret-fasen::"
+
+msgid "     hg log -r \"not public()\""
+msgstr "     hg log -r \"not public()\""
+
+msgid " - change all secret changesets to draft::"
+msgstr " - ändra alla secret-ändringar till draft::"
+
+msgid "     hg phase --draft \"secret()\""
+msgstr "     hg phase --draft \"secret()\""
+
+msgid ""
+" - forcibly move the current changeset and descendants from public to draft::"
+msgstr " - tvinga nuvarande ändring och ättlingar från public till draft::"
+
+msgid "     hg phase --force --draft ."
+msgstr "     hg phase --force --draft ."
+
+msgid " - show a list of changeset revision and phase::"
+msgstr " - visa en lista med ändringsrevision och fas::"
+
+msgid "     hg log --template \"{rev} {phase}\\n\""
+msgstr "     hg log --template \"{rev} {phase}\\n\""
+
+msgid ""
+"See :hg:`help phase` for more information on manually manipulating phases.\n"
+msgstr ""
+"Se :hg:`help phase` för mer information om att manuellt änddra faser.\n"
+
 msgid "Mercurial supports several ways to specify individual revisions."
 msgstr "Mercurial stöder flera sätt att ange individuella revisioner."
 
@@ -17411,15 +17586,15 @@ msgid "public takes no arguments"
 msgstr "public tar inga argument"
 
 msgid ""
-"``remote([id], [path])``\n"
+"``remote([id [,path]])``\n"
 "    Local revision that corresponds to the given identifier in a\n"
 "    remote repository, if present. Here, the '.' identifier is a\n"
 "    synonym for the current local branch."
 msgstr ""
 
 #. i18n: "remote" is a keyword
-msgid "remote takes one or two arguments"
-msgstr "remote tar ett eller två argument"
+msgid "remote takes one, two or no arguments"
+msgstr "remote tar ett, två eller inga argument"
 
 #. i18n: "remote" is a keyword
 msgid "remote requires a string id"
@@ -17531,6 +17706,10 @@ msgstr "felaktigt antal argument: %s"
 
 msgid "empty query"
 msgstr "tom fråga"
+
+#, python-format
+msgid "no changes found (ignored %d secret changesets)\n"
+msgstr "inga ändringar hittades (ignorerade %d hemliga ändringar)\n"
 
 #, python-format
 msgid "ui.portablefilenames value is invalid ('%s')"
@@ -17673,8 +17852,11 @@ msgid "%s certificate error: no certificate received"
 msgstr "%s certifikatfel: inget certifikat mottaget"
 
 #, python-format
-msgid "invalid certificate for %s with fingerprint %s"
-msgstr "ogiltigt certifikat för %s med fingeravtrycket %s"
+msgid "certificate for %s has unexpected fingerprint %s"
+msgstr "certifikatet för %s har oväntat fingeravtryck %s"
+
+msgid "check hostfingerprint configuration"
+msgstr "kontrollera hostfingerprint-konfiguration"
 
 #, python-format
 msgid "%s certificate error: %s"
