@@ -4226,17 +4226,20 @@ def phase(ui, repo, *revs, **opts):
     if not revs:
         raise util.Abort(_('no revisions specified'))
 
+    revs = scmutil.revrange(repo, revs)
+
     lock = None
     ret = 0
     if targetphase is None:
         # display
-        for ctx in repo.set('%lr', revs):
+        for r in revs:
+            ctx = repo[r]
             ui.write('%i: %s\n' % (ctx.rev(), ctx.phasestr()))
     else:
         lock = repo.lock()
         try:
             # set phase
-            nodes = [ctx.node() for ctx in repo.set('%lr', revs)]
+            nodes = [ctx.node() for ctx in repo.set('%ld', revs)]
             if not nodes:
                 raise util.Abort(_('empty revision set'))
             olddata = repo._phaserev[:]
