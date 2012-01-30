@@ -212,6 +212,11 @@ Directory, working
     to the files introduced manually or by a merge. The repository
     metadata exists in the .hg directory inside the working directory.
 
+Draft
+    Changesets in the draft phase have not been shared with publishing
+    repositories and may thus be safely changed by history-modifying
+    extensions. See :hg:`help phases`.
+
 Graph
     See DAG and :hg:`help graphlog`.
 
@@ -300,6 +305,15 @@ Patch
 
     Example: "You will need to patch that revision."
 
+Phase
+    A per-changeset state tracking how the changeset has been or
+    should be shared. See :hg:`help phases`.
+
+Public
+    Changesets in the public phase have been shared with publishing
+    repositories and are therefore considered immutable. See :hg:`help
+    phases`.
+
 Pull
     An operation in which changesets in a remote repository which are
     not in the local repository are brought into the local
@@ -350,6 +364,10 @@ Rewriting history
 Root
     A changeset that has only the null changeset as its parent. Most
     repositories have only a single root changeset.
+
+Secret
+    Secret changesets are changesets that may not be shared via push
+    or pull. See :hg:`help phases`.
 
 Tag
     An alternative name given to a changeset. Tags can be used in all
