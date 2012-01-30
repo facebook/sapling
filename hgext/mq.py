@@ -38,7 +38,7 @@ preserving existing git patches upon qrefresh. If set to 'yes' or
 'no', mq will override the [diff] section and always generate git or
 regular patches, possibly losing data in the second case.
 
-It may be desirable for mq changesets in the secret phase (see
+It may be desirable for mq changesets to be kept in the secret phase (see
 :hg:`help phases`), which can be enabled with the following setting::
 
   [mq]
