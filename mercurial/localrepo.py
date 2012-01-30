@@ -1679,13 +1679,13 @@ class localrepository(repo.repository):
                     # We can pick:
                     # * missingheads part of comon (::commonheads)
                     common = set(outgoing.common)
-                    cheads = [n for node in revs if n in common]
+                    cheads = [node for node in revs if node in common]
                     # and 
                     # * commonheads parents on missing
-                    rvset = repo.revset('%ln and parents(roots(%ln))',
-                                        outgoing.commonheads,
-                                        outgoing.missing)
-                    cheads.extend(c.node() for c in rvset)
+                    revset = self.set('%ln and parents(roots(%ln))',
+                                     outgoing.commonheads,
+                                     outgoing.missing)
+                    cheads.extend(c.node() for c in revset)
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
