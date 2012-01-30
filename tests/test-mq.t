@@ -1448,4 +1448,19 @@ insensitive filesystem is not enough:
   applying modify-file
   now at: modify-file
 
-  $ cd ..
+Proper phase default with mq:
+
+1. mq.secret=false
+
+  $ rm .hg/store/phaseroots
+  $ hg phase 'qparent::'
+  0: draft
+  1: draft
+  2: draft
+  $ echo '[mq]' >> $HGRCPATH
+  $ echo 'secret=true' >> $HGRCPATH
+  $ rm -f .hg/store/phaseroots
+  $ hg phase 'qparent::'
+  0: secret
+  1: secret
+  2: secret
