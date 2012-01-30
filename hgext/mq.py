@@ -1511,6 +1511,8 @@ class queue(object):
 
                 user = ph.user or changes[1]
 
+                oldphase = repo[top].phase()
+
                 # assumes strip can roll itself back if interrupted
                 repo.dirstate.setparents(*cparents)
                 self.applied.pop()
@@ -1523,8 +1525,15 @@ class queue(object):
 
             try:
                 # might be nice to attempt to roll back strip after this
-                n = secretcommit(repo, message, user, ph.date, match=match,
-                                 force=True)
+                backup = repo.ui.backupconfig('phases', 'new-commit')
+                try:
+                    # Ensure we create a new changeset in the same phase than
+                    # the old one.
+                    repo.ui.setconfig('phases', 'new-commit', oldphase)
+                    n = repo.commit(message, user, ph.date, match=match,
+                                    force=True)
+                finally:
+                    repo.ui.restoreconfig(backup)
                 # only write patch after a successful commit
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))
