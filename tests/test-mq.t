@@ -1464,3 +1464,22 @@ Proper phase default with mq:
   0: secret
   1: secret
   2: secret
+
+Test that qfinish change phase when mq.secret=true
+
+  $ hg qfinish qbase
+  patch add-file1 finalized without changeset message
+  $ hg phase 'all()'
+  0: draft
+  1: secret
+  2: secret
+
+Test that qfinish preserve phase when mq.secret=false
+
+  $ sed -i'' $HGRCPATH -e 's/secret=true/secret=false/'
+  $ hg qfinish qbase
+  patch add-file2 finalized without changeset message
+  $ hg phase 'all()'
+  0: draft
+  1: secret
+  2: secret

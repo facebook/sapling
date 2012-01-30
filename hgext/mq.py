@@ -826,9 +826,13 @@ class queue(object):
         return patches
 
     def finish(self, repo, revs):
+        # Manually trigger phase computation to ensure phasedefaults is
+        # executed before we remove the patches.
+        repo._phaserev
         patches = self._revpatches(repo, sorted(revs))
         qfinished = self._cleanup(patches, len(patches))
-        if qfinished:
+        if qfinished and repo.ui.configbool('mq', 'secret', False):
+            # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
             if oldqbase.p1().phase() < phases.secret:
                 phases.advanceboundary(repo, phases.draft, qfinished)
