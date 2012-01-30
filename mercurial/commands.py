@@ -4426,7 +4426,7 @@ def push(ui, repo, dest=None, **opts):
     result = repo.push(other, opts.get('force'), revs=revs,
                        newbranch=opts.get('new_branch'))
 
-    result = (result == 0)
+    result = not result
 
     if opts.get('bookmark'):
         rb = other.listkeys('bookmarks')

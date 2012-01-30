@@ -185,6 +185,7 @@ test pushkeys and bookmarks
   searching for changes
   no changes found
   updating bookmark foo
+  [1]
   $ hg book -d foo
   $ hg in -B
   comparing with ssh://user@dummy/remote

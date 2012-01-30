@@ -98,6 +98,7 @@ push from alpha to beta should update phase even if nothing is transfered
   pushing to ../beta
   searching for changes
   no changes found
+  [1]
   $ hgph
   @  3 public a-D - b555f63b6063
   |
@@ -372,6 +373,7 @@ Push back to alpha
   pushing to ../alpha
   searching for changes
   no changes found
+  [1]
   $ cd ..
   $ cd alpha
   $ hgph
@@ -555,6 +557,7 @@ Pushing to Publish=True (common changeset)
   pushing to ../alpha
   searching for changes
   no changes found
+  [1]
   $ hgph
   o  6 public a-F - b740e3e5c05d
   |
@@ -659,6 +662,7 @@ Pushing to Publish=True (common changeset from publish=False)
   pushing to ../alpha
   searching for changes
   no changes found
+  [1]
   $ hgph
   o  9 public a-H - 967b449fbc94
   |
@@ -932,6 +936,7 @@ check that secret local on both side are not synced to public
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg phase f54f1bb90ff3
   2: draft
 

@@ -1592,7 +1592,8 @@ class localrepository(repo.repository):
     def push(self, remote, force=False, revs=None, newbranch=False):
         '''Push outgoing changesets (limited by revs) from the current
         repository to remote. Return an integer:
-          - 0 means HTTP error *or* nothing to push
+          - None means nothing to push
+          - 0 means HTTP error
           - 1 means we pushed and remote head count is unchanged *or*
             we have outgoing changesets but refused to push
           - other values as described by addchangegroup()
@@ -1626,7 +1627,7 @@ class localrepository(repo.repository):
                 if not outgoing.missing:
                     # nothing to push
                     scmutil.nochangesfound(self.ui, outgoing.excluded)
-                    ret = 1
+                    ret = None
                 else:
                     # something to push
                     if not force:
