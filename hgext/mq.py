@@ -1832,6 +1832,9 @@ class queue(object):
 
                 self.added.append(patchname)
                 patchname = None
+            if rev and repo.ui.configbool('mq', 'secret', False):
+                # if we added anything with --rev, we must move the secret root
+                phases.retractboundary(repo, phases.secret, [n])
             self.parseseries()
             self.applieddirty = True
             self.seriesdirty = True
@@ -2006,16 +2009,21 @@ def qimport(ui, repo, *filename, **opts):
 
     Returns 0 if import succeeded.
     """
-    q = repo.mq
+    lock = repo.lock() # cause this may move phase
     try:
-        q.qimport(repo, filename, patchname=opts.get('name'),
-              existing=opts.get('existing'), force=opts.get('force'),
-              rev=opts.get('rev'), git=opts.get('git'))
-    finally:
-        q.savedirty()
+        q = repo.mq
+        try:
+            q.qimport(repo, filename, patchname=opts.get('name'),
+                  existing=opts.get('existing'), force=opts.get('force'),
+                  rev=opts.get('rev'), git=opts.get('git'))
+        finally:
+            q.savedirty()
 
-    if opts.get('push') and not opts.get('rev'):
-        return q.push(repo, None)
+
+        if opts.get('push') and not opts.get('rev'):
+            return q.push(repo, None)
+    finally:
+        lock.release()
     return 0
 
 def qinit(ui, repo, create):

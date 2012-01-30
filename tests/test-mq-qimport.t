@@ -226,3 +226,19 @@ set up hgweb
   $ cd ../repo
   $ hg qimport http://localhost:$HGPORT/raw-rev/0///
   adding 0 to series file
+
+check qimport phase:
+
+  $ hg -q qpush
+  now at: 0
+  $ hg phase qparent
+  1: draft
+  $ hg qimport -r qparent
+  $ hg phase qbase
+  1: draft
+  $ hg qfinish qbase
+  $ echo '[mq]' >> $HGRCPATH
+  $ echo 'secret=true' >> $HGRCPATH
+  $ hg qimport -r qparent
+  $ hg phase qbase
+  1: secret
