@@ -8608,6 +8608,7 @@ msgstr "ветка %s не найдена"
 msgid "updating bookmark %s\n"
 msgstr "обновление закладки %s\n"
 
+# NOT-SURE
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
 msgstr "противоречивая закладка %s сохранена как %s\n"
@@ -14360,7 +14361,7 @@ msgid "syntax for Mercurial ignore files"
 msgstr "Синтаксис файлов игнорирования Mercurial"
 
 msgid "Working with Phases"
-msgstr "Работа фазами"
+msgstr "Работа c фазами"
 
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
@@ -20642,11 +20643,11 @@ msgstr "нет доступной информации для отката\n"
 
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
-msgstr "оконечной ревизией обратно стала ревизия %s (отмена %s: %s)\n"
+msgstr "оконечной ревизией снова стала ревизия %s (отмена %s: %s)\n"
 
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s)\n"
-msgstr "оконечной ревизией обратно стала ревизия %s (отмена %s)\n"
+msgstr "оконечной ревизией снова стала ревизия %s (отмена %s)\n"
 
 msgid "rolling back unknown transaction\n"
 msgstr "откатываем неизвестную транзакцию\n"
@@ -20795,6 +20796,7 @@ msgstr "не удалось заблокировать отдаленное хр
 msgid "the server sent an unknown error code"
 msgstr "сервер передал неизвестный код ошибки"
 
+# NOT-SURE
 msgid "streaming all changes\n"
 msgstr "передаём все изменения в поток\n"
 
@@ -21128,7 +21130,7 @@ msgstr "завершен получением сигнала %d"
 
 #, python-format
 msgid "saved backup bundle to %s\n"
-msgstr "резервный комплект сохранен в %s\n"
+msgstr "резервный комплект (bundle) сохранен в %s\n"
 
 msgid "adding branch\n"
 msgstr "добавляется ветка\n"
