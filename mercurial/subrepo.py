@@ -528,7 +528,7 @@ class hgsubrepo(abstractsubrepo):
         c = self._repo['']
         subs = c.substate # only repos that are committed
         for s in sorted(subs):
-            if not c.sub(s).push(opts):
+            if c.sub(s).push(opts) == 0:
                 return False
 
         dsturl = _abssource(self._repo, True)
