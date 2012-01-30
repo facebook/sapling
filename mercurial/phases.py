@@ -298,3 +298,20 @@ def newheads(repo, heads, roots):
                       heads, roots, roots, heads)
     return [c.node() for c in revset]
 
+
+def newcommitphase(ui):
+    """helper to get the target phase of new commit
+
+    Handle all possible values for the phases.new-commit options.
+
+    """
+    v = ui.config('phases', 'new-commit', draft)
+    try:
+        return phasenames.index(v)
+    except ValueError:
+        try:
+            return int(v)
+        except ValueError:
+            msg = _("phases.new-commit: not a valid phase name ('%s')")
+            raise error.ConfigError(msg % v)
+

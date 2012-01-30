@@ -1268,8 +1268,7 @@ class localrepository(repo.repository):
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
             # set the new commit is proper phase
-            targetphase = self.ui.configint('phases', 'new-commit',
-                                            phases.draft)
+            targetphase = phases.newcommitphase(self.ui)
             if targetphase:
                 # retract boundary do not alter parent changeset.
                 # if a parent have higher the resulting phase will
