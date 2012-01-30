@@ -44,6 +44,7 @@ import bookmark by name
   pulling from ../a
   no changes found
   importing bookmark X
+  [1]
   $ hg bookmark
      X                         0:4e3505fd9583
      Y                         0:4e3505fd9583
@@ -184,6 +185,7 @@ hgweb
   no changes found
   divergent bookmark X stored as X@1
   importing bookmark Z
+  [1]
   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
   requesting all changes
   adding changesets

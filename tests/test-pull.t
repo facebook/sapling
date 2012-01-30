@@ -48,6 +48,7 @@
   pulling from http://foo@localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
 
   $ hg rollback --dry-run --verbose
   repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
@@ -77,6 +78,7 @@ Test 'file:' uri handling:
   [255]
 
   $ hg pull -q file:../test
+  [1]
 
 It's tricky to make file:// URLs working on every platform with
 regular shell commands.
@@ -88,3 +90,4 @@ regular shell commands.
 
   $ URL=`python -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
   $ hg pull -q "$URL"
+  [1]

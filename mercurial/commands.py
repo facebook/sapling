@@ -4261,7 +4261,7 @@ def phase(ui, repo, *revs, **opts):
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
-        return
+        return 1
     if optupdate:
         movemarkfrom = repo['.'].node()
         try:
@@ -4312,7 +4312,8 @@ def pull(ui, repo, source="default", **opts):
     If SOURCE is omitted, the 'default' path will be used.
     See :hg:`help urls` for more information.
 
-    Returns 0 on success, 1 if an update had unresolved files.
+    Returns 0 on success, 1 if no changes found or an update had
+    unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.peer(repo, opts, source)

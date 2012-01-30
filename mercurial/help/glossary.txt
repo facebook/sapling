@@ -366,8 +366,8 @@ Root
     repositories have only a single root changeset.
 
 Secret
-    Secret changesets are changesets that may not be shared via push
-    or pull. See :hg:`help phases`.
+    Changesets in the secret phase may not be shared via push, pull,
+    or clone. See :hg:`help phases`.
 
 Tag
     An alternative name given to a changeset. Tags can be used in all

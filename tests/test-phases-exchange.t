@@ -136,6 +136,7 @@ update must update phase of common changeset too
   pulling from ../alpha
   searching for changes
   no changes found
+  [1]
   $ hgph
   o  4 public a-D - b555f63b6063
   |
@@ -343,6 +344,7 @@ pulling back into original repo
   pulling from ../alpha
   searching for changes
   no changes found
+  [1]
   $ hgph
   @  6 public n-B - 145e75495359
   |
@@ -775,6 +777,7 @@ Discovery locally secret changeset on a remote repository:
   pulling from ../mu
   searching for changes
   no changes found
+  [1]
   $ hgph
   @  11 draft A-secret - 435b5d83910c
   |
@@ -927,6 +930,7 @@ same over the wire
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg phase f54f1bb90ff3
   2: draft
 

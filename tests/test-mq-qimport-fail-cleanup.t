@@ -34,6 +34,7 @@ valid patches before fail added to series
   b.patch
 
   $ hg pull -q -r 0 . # update phase
+  [1]
   $ hg qimport -r 0
   abort: revision 0 is not mutable
   (see "hg help phases" for details)

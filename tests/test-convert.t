@@ -293,6 +293,7 @@
   pulling from ../a
   searching for changes
   no changes found
+  [1]
   $ touch bogusfile
 
 should fail
