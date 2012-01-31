@@ -136,13 +136,19 @@ class MapTests(test_util.TestBase):
         filemap = open(self.filemap, 'w')
         filemap.write("exclude alpha\n")
         filemap.write("include .\n")
+        filemap.write("exclude gamma\n")
         filemap.close()
         ui = self.ui(False)
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
         commands.clone(ui, test_util.fileurl(self.repo_path),
                        self.wc_path, filemap=self.filemap)
-        self.assertEqual(node.hex(self.repo[0].node()), '2cd09772e0f6ddf2d13c60ef3c1be11ad5a7dfae')
-        self.assertEqual(node.hex(self.repo['default'].node()), '8a525ca0671f456e6b1417187bf86c6115d2cb78')
+        # The exclusion of alpha is overridden by the later rule to
+        # include all of '.', whereas gamma should remain excluded
+        # because it's excluded after the root directory.
+        self.assertEqual(self.repo[0].manifest().keys(),
+                         ['alpha', 'beta'])
+        self.assertEqual(self.repo['default'].manifest().keys(),
+                         ['alpha', 'beta'])
 
     def test_branchmap(self, stupid=False):
         test_util.load_svndump_fixture(self.repo_path, 'branchmap.svndump')
