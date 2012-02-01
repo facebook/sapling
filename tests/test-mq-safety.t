@@ -1,5 +1,6 @@
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'mq =' >> $HGRCPATH
+  $ echo 'hgext.mq =' >> $HGRCPATH
+  $ echo 'hgext.graphlog =' >> $HGRCPATH
 
   $ hg init repo
   $ cd repo
@@ -17,6 +18,35 @@
   $ echo bar >> foo
   $ hg qrefresh -m 'append bar'
 
+Try to operate on public mq changeset
+
+  $ hg qpop
+  popping bar
+  now at: foo
+  $ hg phase --public qbase
+  $ echo babar >> foo
+  $ hg qref
+  abort: cannot refresh immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg revert -a
+  reverting foo
+  $ hg qpop
+  abort: popping would remove an immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg qfold bar
+  abort: cannot refresh immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg revert -a
+  reverting foo
+
+restore state for remaining test
+
+  $ hg qpush
+  applying bar
+  now at: bar
 
 try to commit on top of a patch
 
