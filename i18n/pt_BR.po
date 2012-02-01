@@ -4807,6 +4807,9 @@ msgstr "impossível ler %s\n"
 msgid "patch %s is empty\n"
 msgstr "o patch %s é vazio\n"
 
+msgid "qpush exactly duplicates child changeset"
+msgstr "qpush duplicaria com exatidão uma revisão filha"
+
 msgid "repository commit failed"
 msgstr "consolidação no repositório falhou"
 
@@ -4979,6 +4982,12 @@ msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
 "desempilhar removeria uma revisão não gerenciada por esta fila de patches"
 
+msgid "popping would remove an immutable revision"
+msgstr "qpop removeria uma revisão imutável"
+
+msgid "see \"hg help phases\" for details"
+msgstr "veja \"hg help phases\" para mais detalhes"
+
 msgid "deletions found between repo revs"
 msgstr "remoções encontradas entre revisões do repositório"
 
@@ -4991,6 +5000,9 @@ msgstr "a fila de patches agora está vazia\n"
 
 msgid "cannot refresh a revision with children"
 msgstr "não se pode renovar uma revisão com filhos"
+
+msgid "cannot refresh immutable revision"
+msgstr "não se pode renovar uma revisão imutável"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -5071,9 +5083,6 @@ msgstr "a revisão %d tem filhos não gerenciados"
 #, python-format
 msgid "revision %d is not mutable"
 msgstr "a revisão %d não é mutável"
-
-msgid "see \"hg help phases\" for details"
-msgstr "veja \"hg help phases\" para mais detalhes"
 
 #, python-format
 msgid "cannot import merge revision %d"
@@ -19581,6 +19590,14 @@ msgstr " - mostra uma lista de números de revisão e suas respectivas fases::"
 
 msgid "     hg log --template \"{rev} {phase}\\n\""
 msgstr "     hg log --template \"{rev} {phase}\\n\""
+
+msgid " - resynchronize draft changesets relative to a remote repository::"
+msgstr ""
+" - sincroniza novamente revisões de rascunho relativas a um repositório "
+"remoto::"
+
+msgid "     hg phase -fd 'outgoing(URL)' "
+msgstr "     hg phase -fd 'outgoing(URL)' "
 
 msgid ""
 "See :hg:`help phase` for more information on manually manipulating phases.\n"
