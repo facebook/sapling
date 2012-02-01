@@ -239,6 +239,9 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         if currentphase == oldphase and newphase < oldphase:
             advanceboundary(repo, newphase, [bin(nhex)])
             return 1
+        elif currentphase == newphase:
+            # raced, but got correct result
+            return 1
         else:
             return 0
     finally:
