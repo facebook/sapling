@@ -79,7 +79,7 @@ def tokenize(program):
             pos += 1
             while pos < l: # find end of symbol
                 d = program[pos]
-                if not (d.isalnum() or d in "._" or ord(d) > 127):
+                if not (d.isalnum() or d in "._/" or ord(d) > 127):
                     break
                 if d == '.' and program[pos - 1] == '.': # special case for ..
                     pos -= 1
@@ -296,15 +296,17 @@ def branch(repo, subset, x):
     return [r for r in subset if r in s or repo[r].branch() in b]
 
 def checkstatus(repo, subset, pat, field):
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
-    fast = (m.files() == [pat])
+    fast = not matchmod.patkind(pat)
     for r in subset:
         c = repo[r]
         if fast:
             if pat not in c.files():
                 continue
         else:
+            if not m or matchmod.patkind(pat) == 'set':
+                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
             for f in c.files():
                 if m(f):
                     break
@@ -354,15 +356,18 @@ def contains(repo, subset, x):
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
-    if m.files() == [pat]:
+    if not matchmod.patkind(pat):
         for r in subset:
             if pat in repo[r]:
                 s.append(r)
     else:
         for r in subset:
-            for f in repo[r].manifest():
+            c = repo[r]
+            if not m or matchmod.patkind(pat) == 'set':
+                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+            for f in c.manifest():
                 if m(f):
                     s.append(r)
                     break
@@ -412,10 +417,11 @@ def filelog(repo, subset, x):
     """
 
     pat = getstring(x, _("filelog requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath')
+    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath',
+                       ctx=repo[None])
     s = set()
 
-    if not m.anypats():
+    if not matchmod.patkind(pat):
         for f in m.files():
             fl = repo.file(f)
             for fr in fl:
@@ -443,27 +449,20 @@ def follow(repo, subset, x):
     """
     # i18n: "follow" is a keyword
     l = getargs(x, 0, 1, _("follow takes no arguments or a filename"))
-    p = repo['.'].rev()
+    c = repo['.']
     if l:
         x = getstring(l[0], _("follow expected a filename"))
-        if x in repo['.']:
-            s = set(ctx.rev() for ctx in repo['.'][x].ancestors())
+        if x in c:
+            cx = c[x]
+            s = set(ctx.rev() for ctx in cx.ancestors())
+            # include the revision responsible for the most recent version
+            s.add(cx.linkrev())
         else:
             return []
     else:
-        s = set(repo.changelog.ancestors(p))
+        s = set(repo.changelog.ancestors(c.rev()))
+        s.add(c.rev())
 
-    s |= set([p])
-    return [r for r in subset if r in s]
-
-def followfile(repo, subset, x):
-    """``follow()``
-    An alias for ``::.`` (ancestors of the working copy's first parent).
-    """
-    # i18n: "follow" is a keyword
-    getargs(x, 0, 0, _("follow takes no arguments"))
-    p = repo['.'].rev()
-    s = set(repo.changelog.ancestors(p)) | set([p])
     return [r for r in subset if r in s]
 
 def getall(repo, subset, x):
@@ -500,10 +499,13 @@ def hasfile(repo, subset, x):
     """
     # i18n: "file" is a keyword
     pat = getstring(x, _("file requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat])
+    m = None
     s = []
     for r in subset:
-        for f in repo[r].files():
+        c = repo[r]
+        if not m or matchmod.patkind(pat) == 'set':
+            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+        for f in c.files():
             if m(f):
                 s.append(r)
                 break
@@ -743,7 +745,7 @@ def public(repo, subset, x):
     return [r for r in subset if repo._phaserev[r] == phases.public]
 
 def remote(repo, subset, x):
-    """``remote([id], [path])``
+    """``remote([id [,path]])``
     Local revision that corresponds to the given identifier in a
     remote repository, if present. Here, the '.' identifier is a
     synonym for the current local branch.
@@ -751,7 +753,7 @@ def remote(repo, subset, x):
 
     import hg # avoid start-up nasties
     # i18n: "remote" is a keyword
-    l = getargs(x, 0, 2, _("outgoing takes one or two arguments"))
+    l = getargs(x, 0, 2, _("remote takes one, two or no arguments"))
 
     q = '.'
     if len(l) > 0:
@@ -773,8 +775,8 @@ def remote(repo, subset, x):
     n = other.lookup(q)
     if n in repo:
         r = repo[n].rev()
-    if r in subset:
-        return [r]
+        if r in subset:
+            return [r]
     return []
 
 def removes(repo, subset, x):

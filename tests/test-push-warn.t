@@ -116,6 +116,7 @@
   pushing to ../c
   searching for changes
   no changes found
+  [1]
 
   $ hg push -r 3 ../c
   pushing to ../c

@@ -199,7 +199,7 @@ def binary(mctx, x):
     """
     # i18n: "binary" is a keyword
     getargs(x, 0, 0, _("binary takes no arguments"))
-    return [f for f in mctx.subset if util.binary(mctx.ctx[f].data())]
+    return [f for f in mctx.existing() if util.binary(mctx.ctx[f].data())]
 
 def exec_(mctx, x):
     """``exec()``
@@ -207,7 +207,7 @@ def exec_(mctx, x):
     """
     # i18n: "exec" is a keyword
     getargs(x, 0, 0, _("exec takes no arguments"))
-    return [f for f in mctx.subset if mctx.ctx.flags(f) == 'x']
+    return [f for f in mctx.existing() if mctx.ctx.flags(f) == 'x']
 
 def symlink(mctx, x):
     """``symlink()``
@@ -215,7 +215,7 @@ def symlink(mctx, x):
     """
     # i18n: "symlink" is a keyword
     getargs(x, 0, 0, _("symlink takes no arguments"))
-    return [f for f in mctx.subset if mctx.ctx.flags(f) == 'l']
+    return [f for f in mctx.existing() if mctx.ctx.flags(f) == 'l']
 
 def resolved(mctx, x):
     """``resolved()``
@@ -253,7 +253,7 @@ def grep(mctx, x):
     """
     pat = getstring(x, _("grep requires a pattern"))
     r = re.compile(pat)
-    return [f for f in mctx.subset if r.search(mctx.ctx[f].data())]
+    return [f for f in mctx.existing() if r.search(mctx.ctx[f].data())]
 
 _units = dict(k=2**10, K=2**10, kB=2**10, KB=2**10,
               M=2**20, MB=2**20, G=2**30, GB=2**30)
@@ -320,7 +320,7 @@ def size(mctx, x):
     else:
         raise error.ParseError(_("couldn't parse size: %s") % expr)
 
-    return [f for f in mctx.subset if m(mctx.ctx[f].size())]
+    return [f for f in mctx.existing() if m(mctx.ctx[f].size())]
 
 def encoding(mctx, x):
     """``encoding(name)``
@@ -333,7 +333,7 @@ def encoding(mctx, x):
     enc = getstring(x, _("encoding requires an encoding name"))
 
     s = []
-    for f in mctx.subset:
+    for f in mctx.existing():
         d = mctx.ctx[f].data()
         try:
             d.decode(enc)
@@ -400,6 +400,8 @@ class matchctx(object):
         return self.ctx.match(patterns)
     def filter(self, files):
         return [f for f in files if f in self.subset]
+    def existing(self):
+        return (f for f in self.subset if f in self.ctx)
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
 

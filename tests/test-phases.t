@@ -1,4 +1,4 @@
-  $ alias hglog='hg log --template "{rev} {phaseidx} {desc}\n"'
+  $ hglog() { hg log --template "{rev} {phaseidx} {desc}\n" $*; }
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -42,7 +42,7 @@ Draft commit are properly created over public one:
 
 Test creating changeset as secret
 
-  $ mkcommit E --config phases.new-commit=2
+  $ mkcommit E --config phases.new-commit='secret'
   $ hglog
   4 2 E
   3 1 D

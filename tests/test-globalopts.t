@@ -347,6 +347,7 @@ Testing -h/--help:
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
+   phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
    subrepos      Subrepositories
@@ -430,6 +431,7 @@ Testing -h/--help:
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
+   phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
    subrepos      Subrepositories

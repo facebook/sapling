@@ -107,17 +107,6 @@ invalid diff.unified
   > c3
   > c4
   > EOF
-  $ diff -U0 f1 f2
-  --- f1	* (glob)
-  +++ f2	* (glob)
-  @@ -0,0 +1 @@
-  +c1
-  @@ -1,0 +3 @@
-  +c3
-  @@ -3 +4,0 @@
-  -c5
-  [1]
-
   $ mv f2 f1
   $ hg diff -U0 --nodates
   diff -r 55d8ff78db23 f1

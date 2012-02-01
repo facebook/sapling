@@ -39,6 +39,15 @@ Setting up test
   $ cd ..
   $ hg init empty
 
+Bundle and phase
+
+  $ hg -R test phase --force --secret 0
+  $ hg -R test bundle phase.hg empty
+  searching for changes
+  no changes found (ignored 9 secret changesets)
+  [1]
+  $ hg -R test phase --draft -r 'head()'
+
 Bundle --all
 
   $ hg -R test bundle --all all.hg
@@ -76,6 +85,7 @@ Pull full.hg into test (using --cwd)
   pulling from ../full.hg
   searching for changes
   no changes found
+  [1]
 
 Pull full.hg into empty (using --cwd)
 
@@ -110,6 +120,7 @@ Pull full.hg into test (using -R)
   pulling from full.hg
   searching for changes
   no changes found
+  [1]
 
 Pull full.hg into empty (using -R)
 
@@ -117,6 +128,7 @@ Pull full.hg into empty (using -R)
   pulling from full.hg
   searching for changes
   no changes found
+  [1]
 
 Rollback empty
 

@@ -80,6 +80,7 @@ empty default pull
   pulling from ssh://user@dummy/remote
   searching for changes
   no changes found
+  [1]
 
 local change
 
@@ -177,6 +178,7 @@ test pushkeys and bookmarks
   searching for changes
   no changes found
   exporting bookmark foo
+  [1]
   $ hg debugpushkey --config ui.ssh="python $TESTDIR/dummyssh" ssh://user@dummy/remote bookmarks
   foo	1160648e36cec0054048a7edc4110c6f84fde594
   $ hg book -f foo
@@ -185,6 +187,7 @@ test pushkeys and bookmarks
   searching for changes
   no changes found
   updating bookmark foo
+  [1]
   $ hg book -d foo
   $ hg in -B
   comparing with ssh://user@dummy/remote
@@ -196,12 +199,14 @@ test pushkeys and bookmarks
   no changes found
   updating bookmark foo
   importing bookmark foo
+  [1]
   $ hg book -d foo
   $ hg push -B foo
   pushing to ssh://user@dummy/remote
   searching for changes
   no changes found
   deleting remote bookmark foo
+  [1]
 
 a bad, evil hook that prints to stdout
 

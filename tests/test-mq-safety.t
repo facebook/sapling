@@ -1,5 +1,6 @@
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'mq =' >> $HGRCPATH
+  $ echo 'hgext.mq =' >> $HGRCPATH
+  $ echo 'hgext.graphlog =' >> $HGRCPATH
 
   $ hg init repo
   $ cd repo
@@ -17,6 +18,35 @@
   $ echo bar >> foo
   $ hg qrefresh -m 'append bar'
 
+Try to operate on public mq changeset
+
+  $ hg qpop
+  popping bar
+  now at: foo
+  $ hg phase --public qbase
+  $ echo babar >> foo
+  $ hg qref
+  abort: cannot refresh immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg revert -a
+  reverting foo
+  $ hg qpop
+  abort: popping would remove an immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg qfold bar
+  abort: cannot refresh immutable revision
+  (see "hg help phases" for details)
+  [255]
+  $ hg revert -a
+  reverting foo
+
+restore state for remaining test
+
+  $ hg qpush
+  applying bar
+  now at: bar
 
 try to commit on top of a patch
 
@@ -144,7 +174,7 @@ Testing applied patches, push and --force
 
 Pushing applied patch with --rev without --force
 
-  $ hg push -r default ../forcepush2
+  $ hg push -r . ../forcepush2
   pushing to ../forcepush2
   abort: source has mq patches applied
   [255]
@@ -168,11 +198,13 @@ Pushing revs excluding applied patch
 
 Pushing applied patch with --force
 
+  $ hg phase --force --secret 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes
-  no changes found
-  $ hg phase -d 'mq()'
+  no changes found (ignored 1 secret changesets)
+  [1]
+  $ hg phase --draft 'mq()'
   $ hg push --force -r default ../forcepush2
   pushing to ../forcepush2
   searching for changes

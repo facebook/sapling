@@ -116,7 +116,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
         sets = repo.changelog.findcommonmissing(og.commonheads, onlyheads)
         og._common, allmissing = sets
         og._missing = missing = []
-        og._excluded = excluded = []
+        og.excluded = excluded = []
         for node in allmissing:
             if repo[node].phase() >= phases.secret:
                 excluded.append(node)
@@ -124,15 +124,14 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
                 missing.append(node)
         if excluded:
             # update missing heads
-            rset = repo.set('heads(%ln)', missing)
-            missingheads = [ctx.node() for ctx in rset]
+            missingheads = phases.newheads(repo, onlyheads, excluded)
         else:
             missingheads = onlyheads
         og.missingheads = missingheads
 
     return og
 
-def checkheads(repo, remote, outgoing, remoteheads, newbranch=False):
+def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     """Check that a push won't add any outgoing head
 
     raise Abort error and display ui message as needed.
@@ -191,9 +190,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False):
         # Construct {old,new}map with branch = None (topological branch).
         # (code based on _updatebranchcache)
         oldheads = set(h for h in remoteheads if h in cl.nodemap)
-        newheads = oldheads.union(outg)
+        newheads = oldheads.union(outgoing.missing)
         if len(newheads) > 1:
-            for latest in reversed(outg):
+            for latest in reversed(outgoing.missing):
                 if latest not in newheads:
                     continue
                 minhrev = min(cl.rev(h) for h in newheads)

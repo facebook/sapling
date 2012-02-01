@@ -44,6 +44,7 @@ import bookmark by name
   pulling from ../a
   no changes found
   importing bookmark X
+  [1]
   $ hg bookmark
      X                         0:4e3505fd9583
      Y                         0:4e3505fd9583
@@ -58,6 +59,7 @@ export bookmark by name
   searching for changes
   no changes found
   exporting bookmark W
+  [1]
   $ hg -R ../a bookmarks
      W                         -1:000000000000
      X                         0:4e3505fd9583
@@ -72,6 +74,7 @@ delete a remote bookmark
   searching for changes
   no changes found
   deleting remote bookmark W
+  [1]
 
 push/pull name that doesn't exist
 
@@ -101,6 +104,7 @@ divergent bookmarks
   $ cd ../b
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating bookmark foobar
   $ echo c2 > f2
   $ hg ci -Am2
   adding f2
@@ -168,6 +172,7 @@ hgweb
   searching for changes
   no changes found
   exporting bookmark Z
+  [1]
   $ hg book -d Z
   $ hg in -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
@@ -180,6 +185,7 @@ hgweb
   no changes found
   divergent bookmark X stored as X@1
   importing bookmark Z
+  [1]
   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
   requesting all changes
   adding changesets

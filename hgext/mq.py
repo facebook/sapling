@@ -38,6 +38,12 @@ preserving existing git patches upon qrefresh. If set to 'yes' or
 'no', mq will override the [diff] section and always generate git or
 regular patches, possibly losing data in the second case.
 
+It may be desirable for mq changesets to be kept in the secret phase (see
+:hg:`help phases`), which can be enabled with the following setting::
+
+  [mq]
+  secret = True
+
 You will by default be managing a patch queue named "patches". You can
 create other, independent patch queues with the :hg:`qqueue` command.
 '''
@@ -256,6 +262,9 @@ def secretcommit(repo, *args, **kwargs):
 
     It should be used instead of repo.commit inside the mq source
     """
+    if not repo.ui.configbool('mq', 'secret', False):
+        return repo.commit(*args, **kwargs)
+
     backup = repo.ui.backupconfig('phases', 'new-commit')
     try:
         # ensure we create a secret changeset
@@ -736,8 +745,11 @@ class queue(object):
                 repo.dirstate.setparents(p1, merge)
 
             match = scmutil.matchfiles(repo, files or [])
+            oldtip = repo['tip']
             n = secretcommit(repo, message, ph.user, ph.date, match=match,
                              force=True)
+            if repo['tip'] == oldtip:
+                raise util.Abort(_("qpush exactly duplicates child changeset"))
             if n is None:
                 raise util.Abort(_("repository commit failed"))
 
@@ -817,9 +829,13 @@ class queue(object):
         return patches
 
     def finish(self, repo, revs):
+        # Manually trigger phase computation to ensure phasedefaults is
+        # executed before we remove the patches.
+        repo._phaserev
         patches = self._revpatches(repo, sorted(revs))
         qfinished = self._cleanup(patches, len(patches))
-        if qfinished:
+        if qfinished and repo.ui.configbool('mq', 'secret', False):
+            # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
             if oldqbase.p1().phase() < phases.secret:
                 phases.advanceboundary(repo, phases.draft, qfinished)
@@ -1297,6 +1313,10 @@ class queue(object):
             if heads != [self.applied[-1].node]:
                 raise util.Abort(_("popping would remove a revision not "
                                    "managed by this patch queue"))
+            if not repo[self.applied[-1].node].mutable():
+                raise util.Abort(
+                    _("popping would remove an immutable revision"),
+                    hint=_('see "hg help phases" for details'))
 
             # we know there are no local changes, so we can make a simplified
             # form of hg.update.
@@ -1358,6 +1378,9 @@ class queue(object):
             (top, patchfn) = (self.applied[-1].node, self.applied[-1].name)
             if repo.changelog.heads(top) != [top]:
                 raise util.Abort(_("cannot refresh a revision with children"))
+            if not repo[top].mutable():
+                raise util.Abort(_("cannot refresh immutable revision"),
+                                 hint=_('see "hg help phases" for details'))
 
             inclsubs = self.checksubstate(repo)
 
@@ -1502,6 +1525,8 @@ class queue(object):
 
                 user = ph.user or changes[1]
 
+                oldphase = repo[top].phase()
+
                 # assumes strip can roll itself back if interrupted
                 repo.dirstate.setparents(*cparents)
                 self.applied.pop()
@@ -1514,8 +1539,15 @@ class queue(object):
 
             try:
                 # might be nice to attempt to roll back strip after this
-                n = secretcommit(repo, message, user, ph.date, match=match,
-                                 force=True)
+                backup = repo.ui.backupconfig('phases', 'new-commit')
+                try:
+                    # Ensure we create a new changeset in the same phase than
+                    # the old one.
+                    repo.ui.setconfig('phases', 'new-commit', oldphase)
+                    n = repo.commit(message, user, ph.date, match=match,
+                                    force=True)
+                finally:
+                    repo.ui.restoreconfig(backup)
                 # only write patch after a successful commit
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))
@@ -1814,6 +1846,9 @@ class queue(object):
 
                 self.added.append(patchname)
                 patchname = None
+            if rev and repo.ui.configbool('mq', 'secret', False):
+                # if we added anything with --rev, we must move the secret root
+                phases.retractboundary(repo, phases.secret, [n])
             self.parseseries()
             self.applieddirty = True
             self.seriesdirty = True
@@ -1988,16 +2023,21 @@ def qimport(ui, repo, *filename, **opts):
 
     Returns 0 if import succeeded.
     """
-    q = repo.mq
+    lock = repo.lock() # cause this may move phase
     try:
-        q.qimport(repo, filename, patchname=opts.get('name'),
-              existing=opts.get('existing'), force=opts.get('force'),
-              rev=opts.get('rev'), git=opts.get('git'))
-    finally:
-        q.savedirty()
+        q = repo.mq
+        try:
+            q.qimport(repo, filename, patchname=opts.get('name'),
+                  existing=opts.get('existing'), force=opts.get('force'),
+                  rev=opts.get('rev'), git=opts.get('git'))
+        finally:
+            q.savedirty()
 
-    if opts.get('push') and not opts.get('rev'):
-        return q.push(repo, None)
+
+        if opts.get('push') and not opts.get('rev'):
+            return q.push(repo, None)
+    finally:
+        lock.release()
     return 0
 
 def qinit(ui, repo, create):
@@ -3133,8 +3173,12 @@ def qqueue(ui, repo, name=None, **opts):
 def mqphasedefaults(repo, roots):
     """callback used to set mq changeset as secret when no phase data exists"""
     if repo.mq.applied:
-        qbase = repo[repo.mq.applied[0]]
-        roots[phases.secret].add(qbase.node())
+        if repo.ui.configbool('mq', 'secret', False):
+            mqphase = phases.secret
+        else:
+            mqphase = phases.draft
+        qbase = repo[repo.mq.applied[0].node]
+        roots[mqphase].add(qbase.node())
     return roots
 
 def reposetup(ui, repo):
@@ -3161,15 +3205,22 @@ def reposetup(ui, repo):
 
         def checkpush(self, force, revs):
             if self.mq.applied and not force:
-                haspatches = True
+                outapplied = [e.node for e in self.mq.applied]
                 if revs:
-                    # Assume applied patches have no non-patch descendants
-                    # and are not on remote already. If they appear in the
-                    # set of resolved 'revs', bail out.
-                    applied = set(e.node for e in self.mq.applied)
-                    haspatches = bool([n for n in revs if n in applied])
-                if haspatches:
-                    raise util.Abort(_('source has mq patches applied'))
+                    # Assume applied patches have no non-patch descendants and
+                    # are not on remote already. Filtering any changeset not
+                    # pushed.
+                    heads = set(revs)
+                    for node in reversed(outapplied):
+                        if node in heads:
+                            break
+                        else:
+                            outapplied.pop()
+                # looking for pushed and shared changeset
+                for node in outapplied:
+                    if repo[node].phase() < phases.secret:
+                        raise util.Abort(_('source has mq patches applied'))
+                # no non-secret patches pushed
             super(mqrepo, self).checkpush(force, revs)
 
         def _findtags(self):

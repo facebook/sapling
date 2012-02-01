@@ -42,9 +42,11 @@ Both are empty:
   $ hg pull -R empty1 $remote
   pulling from http://localhost:$HGPORT/
   no changes found
+  [1]
   $ hg push -R empty1 $remote
   pushing to http://localhost:$HGPORT/
   no changes found
+  [1]
   $ tstop
 
 Base repo:
@@ -100,10 +102,12 @@ Full clone:
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg push $remote
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ cd ..
 
 Local is empty:
@@ -130,6 +134,7 @@ Local is empty:
   $ hg push $remote
   pushing to http://localhost:$HGPORT/
   no changes found
+  [1]
   $ hg pull $remote
   pulling from http://localhost:$HGPORT/
   requesting all changes
@@ -172,6 +177,7 @@ Local is subset:
   pushing to http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg pull $remote
   pulling from http://localhost:$HGPORT/
   searching for changes
@@ -215,6 +221,7 @@ Remote is empty:
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg push $remote
   pushing to http://localhost:$HGPORT/
   searching for changes
@@ -259,6 +266,7 @@ Local is superset:
   pulling from http://localhost:$HGPORT/
   searching for changes
   no changes found
+  [1]
   $ hg push $remote
   pushing to http://localhost:$HGPORT/
   searching for changes

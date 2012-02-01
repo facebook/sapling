@@ -725,7 +725,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     ('r', 'rev', '', _('revision'), _('REV')),
     ('d', 'delete', False, _('delete a given bookmark')),
     ('m', 'rename', '', _('rename a given bookmark'), _('NAME')),
-    ('i', 'inactive', False, _('do not mark a new bookmark active'))],
+    ('i', 'inactive', False, _('mark a bookmark inactive'))],
     _('hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]'))
 def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
              rename=None, inactive=False):
@@ -745,6 +745,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     push` and :hg:`help pull`). This requires both the local and remote
     repositories to support bookmarks. For versions prior to 1.8, this means
     the bookmarks extension must be enabled.
+
+    With -i/--inactive, the new bookmark will not be made the active
+    bookmark. If -r/--rev is given, the new bookmark will not be made
+    active even if -i/--inactive is not given. If no NAME is given, the
+    current active bookmark will be marked inactive.
     '''
     hexfn = ui.debugflag and hex or short
     marks = repo._bookmarks
@@ -978,6 +983,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
         cg = repo.getbundle('bundle', heads=heads, common=common)
+        outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -989,7 +995,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 force=opts.get('force'))
         cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
-        ui.status(_("no changes found\n"))
+        scmutil.nochangesfound(ui, outgoing and outgoing.excluded)
         return 1
 
     bundletype = opts.get('type', 'bzip2').lower()
@@ -3057,11 +3063,15 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
         # options
         if not ui.quiet and entry[1]:
-            rst += '\noptions:\n\n'
+            rst += '\n'
+            rst += _("options:")
+            rst += '\n\n'
             rst += optrst(entry[1])
 
         if ui.verbose:
-            rst += '\nglobal options:\n\n'
+            rst += '\n'
+            rst += _("global options:")
+            rst += '\n\n'
             rst += optrst(globalopts)
 
         keep = ui.verbose and ['verbose'] or []
@@ -4214,19 +4224,22 @@ def phase(ui, repo, *revs, **opts):
     revs = list(revs)
     revs.extend(opts['rev'])
     if not revs:
-        raise util.Abort(_('no revisions specified!'))
+        raise util.Abort(_('no revisions specified'))
+
+    revs = scmutil.revrange(repo, revs)
 
     lock = None
     ret = 0
     if targetphase is None:
         # display
-        for ctx in repo.set('%lr', revs):
+        for r in revs:
+            ctx = repo[r]
             ui.write('%i: %s\n' % (ctx.rev(), ctx.phasestr()))
     else:
         lock = repo.lock()
         try:
             # set phase
-            nodes = [ctx.node() for ctx in repo.set('%lr', revs)]
+            nodes = [ctx.node() for ctx in repo.set('%ld', revs)]
             if not nodes:
                 raise util.Abort(_('empty revision set'))
             olddata = repo._phaserev[:]
@@ -4244,17 +4257,22 @@ def phase(ui, repo, *revs, **opts):
             else:
                 ui.warn(_('no phases changed\n'))
                 ret = 1
-        return ret
+    return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
-        return
+        return 1
     if optupdate:
+        movemarkfrom = repo['.'].node()
         try:
-            return hg.update(repo, checkout)
+            ret = hg.update(repo, checkout)
         except util.Abort, inst:
             ui.warn(_("not updating: %s\n" % str(inst)))
             return 0
+        if not ret and not checkout:
+            if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
+        return ret
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
         if currentbranchheads == modheads:
@@ -4294,7 +4312,8 @@ def pull(ui, repo, source="default", **opts):
     If SOURCE is omitted, the 'default' path will be used.
     See :hg:`help urls` for more information.
 
-    Returns 0 on success, 1 if an update had unresolved files.
+    Returns 0 on success, 1 if no changes found or an update had
+    unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
     other = hg.peer(repo, opts, source)
@@ -4404,14 +4423,14 @@ def push(ui, repo, dest=None, **opts):
         c = repo['']
         subs = c.substate # only repos that are committed
         for s in sorted(subs):
-            if not c.sub(s).push(opts):
+            if c.sub(s).push(opts) == 0:
                 return False
     finally:
         del repo._subtoppath
     result = repo.push(other, opts.get('force'), revs=revs,
                        newbranch=opts.get('new_branch'))
 
-    result = (result == 0)
+    result = not result
 
     if opts.get('bookmark'):
         rb = other.listkeys('bookmarks')
@@ -4593,7 +4612,8 @@ def resolve(ui, repo, *pats, **opts):
     setting, or a command-line merge tool like ``diff3``. The resolve
     command is used to manage the files involved in a merge, after
     :hg:`merge` has been run, and before :hg:`commit` is run (i.e. the
-    working directory must have two parents).
+    working directory must have two parents). See :hg:`help
+    merge-tools` for information on configuring merge tools.
 
     The resolve command can be used in the following ways:
 
@@ -5633,7 +5653,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     Update the repository's working directory to the specified
     changeset. If no changeset is specified, update to the tip of the
-    current named branch and move the current bookmark.
+    current named branch and move the current bookmark (see :hg:`help
+    bookmarks`).
 
     If the changeset is not a descendant of the working directory's
     parent, the update is aborted. With the -c/--check option, the
@@ -5707,7 +5728,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         ret = hg.update(repo, rev)
 
     if not ret and movemarkfrom:
-        bookmarks.update(repo, [movemarkfrom], repo['.'].node())
+        if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+            ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
     elif brev in repo._bookmarks:
         bookmarks.setcurrent(repo, brev)
 

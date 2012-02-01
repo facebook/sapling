@@ -118,3 +118,10 @@ testing tagscache:
 
  runcommand id -t -r 0
 foo
+
+testing setphase:
+
+ runcommand phase -r .
+2: draft
+ runcommand phase -r .
+2: public

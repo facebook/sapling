@@ -176,7 +176,7 @@ class localrepository(repo.repository):
     def _writebookmarks(self, marks):
       bookmarks.write(self)
 
-    @filecache('phaseroots')
+    @filecache('phaseroots', True)
     def _phaseroots(self):
         self._dirtyphases = False
         phaseroots = phases.readroots(self)
@@ -637,10 +637,6 @@ class localrepository(repo.repository):
     def local(self):
         return self
 
-    def cancopy(self):
-        return (repo.repository.cancopy(self)
-                and not self._phaseroots[phases.secret])
-
     def join(self, f):
         return os.path.join(self.path, f)
 
@@ -879,10 +875,14 @@ class localrepository(repo.repository):
         return 0
 
     def invalidatecaches(self):
-        try:
-            delattr(self, '_tagscache')
-        except AttributeError:
-            pass
+        def delcache(name):
+            try:
+                delattr(self, name)
+            except AttributeError:
+                pass
+
+        delcache('_tagscache')
+        delcache('_phaserev')
 
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
@@ -1268,8 +1268,7 @@ class localrepository(repo.repository):
                       parent2=xp2, pending=p)
             self.changelog.finalize(trp)
             # set the new commit is proper phase
-            targetphase = self.ui.configint('phases', 'new-commit',
-                                            phases.draft)
+            targetphase = phases.newcommitphase(self.ui)
             if targetphase:
                 # retract boundary do not alter parent changeset.
                 # if a parent have higher the resulting phase will
@@ -1554,21 +1553,29 @@ class localrepository(repo.repository):
                 clend = len(self.changelog)
                 added = [self.changelog.node(r) for r in xrange(clstart, clend)]
 
+            # compute target subset
+            if heads is None:
+                # We pulled every thing possible
+                # sync on everything common
+                subset = common + added
+            else:
+                # We pulled a specific subset
+                # sync on this subset
+                subset = heads
 
             # Get remote phases data from remote
             remotephases = remote.listkeys('phases')
             publishing = bool(remotephases.get('publishing', False))
             if remotephases and not publishing:
                 # remote is new and unpublishing
-                subset = common + added
                 pheads, _dr = phases.analyzeremotephases(self, subset,
                                                          remotephases)
                 phases.advanceboundary(self, phases.public, pheads)
-                phases.advanceboundary(self, phases.draft, common + added)
+                phases.advanceboundary(self, phases.draft, subset)
             else:
                 # Remote is old or publishing all common changesets
                 # should be seen as public
-                phases.advanceboundary(self, phases.public, common + added)
+                phases.advanceboundary(self, phases.public, subset)
         finally:
             lock.release()
 
@@ -1584,7 +1591,8 @@ class localrepository(repo.repository):
     def push(self, remote, force=False, revs=None, newbranch=False):
         '''Push outgoing changesets (limited by revs) from the current
         repository to remote. Return an integer:
-          - 0 means HTTP error *or* nothing to push
+          - None means nothing to push
+          - 0 means HTTP error
           - 1 means we pushed and remote head count is unchanged *or*
             we have outgoing changesets but refused to push
           - other values as described by addchangegroup()
@@ -1597,14 +1605,14 @@ class localrepository(repo.repository):
         # unbundle assumes local user cannot lock remote repo (new ssh
         # servers, http servers).
 
-        self.checkpush(force, revs)
-        lock = None
-        unbundle = remote.capable('unbundle')
-        if not unbundle:
-            lock = remote.lock()
+        # get local lock as we might write phase data
+        locallock = self.lock()
         try:
-            # get local lock as we might write phase data
-            locallock = self.lock()
+            self.checkpush(force, revs)
+            lock = None
+            unbundle = remote.capable('unbundle')
+            if not unbundle:
+                lock = remote.lock()
             try:
                 # discovery
                 fci = discovery.findcommonincoming
@@ -1617,17 +1625,14 @@ class localrepository(repo.repository):
 
                 if not outgoing.missing:
                     # nothing to push
-                    if outgoing.excluded:
-                        msg = "no changes to push but %i secret changesets\n"
-                        self.ui.status(_(msg) % len(outgoing.excluded))
-                    else:
-                        self.ui.status(_("no changes found\n"))
-                    ret = 1
+                    scmutil.nochangesfound(self.ui, outgoing.excluded)
+                    ret = None
                 else:
                     # something to push
                     if not force:
                         discovery.checkheads(self, remote, outgoing,
-                                             remoteheads, newbranch)
+                                             remoteheads, newbranch,
+                                             bool(inc))
 
                     # create a changegroup from local
                     if revs is None and not outgoing.excluded:
@@ -1652,11 +1657,35 @@ class localrepository(repo.repository):
                         # we return an integer indicating remote head count change
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
-                cheads = outgoing.commonheads[:]
                 if ret:
-                    # push succeed, synchonize common + pushed
-                    # this is a no-op if there was nothing to push
-                    cheads += outgoing.missingheads
+                    # push succeed, synchonize target of the push
+                    cheads = outgoing.missingheads
+                elif revs is None:
+                    # All out push fails. synchronize all common
+                    cheads = outgoing.commonheads
+                else:
+                    # I want cheads = heads(::missingheads and ::commonheads)
+                    # (missingheads is revs with secret changeset filtered out)
+                    #
+                    # This can be expressed as:
+                    #     cheads = ( (missingheads and ::commonheads)
+                    #              + (commonheads and ::missingheads))"
+                    #              )
+                    #
+                    # while trying to push we already computed the following:
+                    #     common = (::commonheads)
+                    #     missing = ((commonheads::missingheads) - commonheads)
+                    #
+                    # We can pick:
+                    # * missingheads part of comon (::commonheads)
+                    common = set(outgoing.common)
+                    cheads = [node for node in revs if node in common]
+                    # and 
+                    # * commonheads parents on missing
+                    revset = self.set('%ln and parents(roots(%ln))',
+                                     outgoing.commonheads,
+                                     outgoing.missing)
+                    cheads.extend(c.node() for c in revset)
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
                 if not remotephases: # old server or public only repo
@@ -1687,10 +1716,10 @@ class localrepository(repo.repository):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
             finally:
-                locallock.release()
+                if lock is not None:
+                    lock.release()
         finally:
-            if lock is not None:
-                lock.release()
+            locallock.release()
 
         self.ui.debug("checking for updated bookmarks\n")
         rb = remote.listkeys('bookmarks')

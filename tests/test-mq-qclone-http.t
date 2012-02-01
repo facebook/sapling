@@ -43,7 +43,7 @@ test with recursive collection
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 2 changesets with 2 changes to 2 files
   requesting all changes
   adding changesets
   adding manifests
@@ -82,7 +82,7 @@ test with normal collection
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 2 changesets with 2 changes to 2 files
   requesting all changes
   adding changesets
   adding manifests
@@ -121,7 +121,7 @@ test with old-style collection
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 2 changesets with 2 changes to 2 files
   requesting all changes
   adding changesets
   adding manifests

@@ -179,6 +179,11 @@ def remove_largefiles(ui, repo, *pats, **opts):
 # matcher which matches only the normal files and runs the original
 # version of add.
 def override_add(orig, ui, repo, *pats, **opts):
+    normal = opts.pop('normal')
+    if normal:
+        if opts.get('large'):
+            raise util.Abort(_('--normal cannot be used with --large'))
+        return orig(ui, repo, *pats, **opts)
     bad = add_largefiles(ui, repo, *pats, **opts)
     installnormalfilesmatchfn(repo[None].manifest())
     result = orig(ui, repo, *pats, **opts)
@@ -530,6 +535,8 @@ def override_revert(orig, ui, repo, *pats, **opts):
             lfutil.lfdirstate_status(lfdirstate, repo, repo['.'].rev())
         for lfile in modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
+        for lfile in missing:
+            os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
             ctx = repo[opts.get('rev')]
@@ -895,9 +902,10 @@ def override_addremove(orig, ui, repo, *pats, **opts):
     # to have handled by original addremove.  Monkey patching here makes sure
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
-    repo._isaddremove = True
-    remove_largefiles(ui, repo, *missing, **opts)
-    repo._isaddremove = False
+    if missing:
+        repo._isaddremove = True
+        remove_largefiles(ui, repo, *missing, **opts)
+        repo._isaddremove = False
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
     add_largefiles(ui, repo, *pats, **opts)
@@ -946,6 +954,11 @@ def override_rollback(orig, ui, repo, **opts):
     return result
 
 def override_transplant(orig, ui, repo, *revs, **opts):
-    result = orig(ui, repo, *revs, **opts)
-    lfcommands.updatelfiles(repo.ui, repo)
+    try:
+        repo._istransplanting = True
+        result = orig(ui, repo, *revs, **opts)
+        lfcommands.updatelfiles(ui, repo, filelist=None,
+                                printmessage=False)
+    finally:
+        repo._istransplanting = False
     return result

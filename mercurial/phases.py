@@ -122,6 +122,7 @@ def readroots(repo):
             raise
         for f in repo._phasedefaults:
             roots = f(repo, roots)
+        repo._dirtyphases = True
     return roots
 
 def writeroots(repo):
@@ -147,7 +148,7 @@ def filterunknown(repo, phaseroots=None):
         missing = [node for node in nodes if node not in nodemap]
         if missing:
             for mnode in missing:
-                msg = _('Removing unknown node %(n)s from %(p)i-phase boundary')
+                msg = 'Removing unknown node %(n)s from %(p)i-phase boundary'
                 repo.ui.debug(msg, {'n': short(mnode), 'p': phase})
             nodes.symmetric_difference_update(missing)
             repo._dirtyphases = True
@@ -238,6 +239,9 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         if currentphase == oldphase and newphase < oldphase:
             advanceboundary(repo, newphase, [bin(nhex)])
             return 1
+        elif currentphase == newphase:
+            # raced, but got correct result
+            return 1
         else:
             return 0
     finally:
@@ -276,17 +280,41 @@ def analyzeremotephases(repo, subset, roots):
         phase = int(phase)
         if phase == 0:
             if node != nullid:
-                msg = _('ignoring inconsistense public root from remote: %s')
-                repo.ui.warn(msg, nhex)
+                repo.ui.warn(_('ignoring inconsistent public root'
+                               ' from remote: %s\n') % nhex)
         elif phase == 1:
             if node in nodemap:
                 draftroots.append(node)
         else:
-            msg = _('ignoring unexpected root from remote: %i %s')
-            repo.ui.warn(msg, phase, nhex)
+            repo.ui.warn(_('ignoring unexpected root from remote: %i %s\n')
+                         % (phase, nhex))
     # compute heads
-    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
-                      subset, draftroots, draftroots, subset)
-    publicheads = [c.node() for c in revset]
+    publicheads = newheads(repo, subset, draftroots)
     return publicheads, draftroots
+
+def newheads(repo, heads, roots):
+    """compute new head of a subset minus another
+
+    * `heads`: define the first subset
+    * `rroots`: define the second we substract to the first"""
+    revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
+                      heads, roots, roots, heads)
+    return [c.node() for c in revset]
+
+
+def newcommitphase(ui):
+    """helper to get the target phase of new commit
+
+    Handle all possible values for the phases.new-commit options.
+
+    """
+    v = ui.config('phases', 'new-commit', draft)
+    try:
+        return phasenames.index(v)
+    except ValueError:
+        try:
+            return int(v)
+        except ValueError:
+            msg = _("phases.new-commit: not a valid phase name ('%s')")
+            raise error.ConfigError(msg % v)
 

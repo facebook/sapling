@@ -10,7 +10,7 @@ from i18n import _
 from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo, bookmarks
-import lock, util, extensions, error, node
+import lock, util, extensions, error, node, scmutil
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -289,7 +289,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             dircleanup = DirCleanup(dest)
 
         copy = False
-        if srcrepo.cancopy() and islocal(dest):
+        if srcrepo.cancopy() and islocal(dest) and not srcrepo.revs("secret()"):
             copy = not pull and not rev
 
         if copy:
@@ -511,7 +511,7 @@ def _outgoing(ui, repo, dest, opts):
                                             force=opts.get('force'))
     o = outgoing.missing
     if not o:
-        ui.status(_("no changes found\n"))
+        scmutil.nochangesfound(repo.ui, outgoing.excluded)
         return None
     return o
 

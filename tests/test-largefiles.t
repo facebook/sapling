@@ -423,8 +423,6 @@ revisions (this was a very bad bug that took a lot of work to fix).
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
-  getting changed largefiles
-  1 largefiles updated, 0 removed
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
@@ -463,8 +461,6 @@ revisions (this was a very bad bug that took a lot of work to fix).
   caching new largefiles
   0 largefiles cached
   $ hg rebase
-  getting changed largefiles
-  1 largefiles updated, 0 removed
   Invoking status precommit hook
   M sub/normal4
   M sub2/large6
@@ -568,6 +564,8 @@ Test hg remove removes empty largefiles directories
   $ echo hack3 >> normal3
   $ echo hack4 >> sub/normal4
   $ echo hack4 >> sub/large4
+  $ rm sub2/large6
+  $ hg revert sub2/large6
   $ hg rm sub2/large6
   $ echo new >> sub2/large8
   $ hg add --large sub2/large8
@@ -730,8 +728,6 @@ Test that transplanting a largefile change works correctly.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
-  getting changed largefiles
-  1 largefiles updated, 0 removed
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -768,7 +764,18 @@ Test that renaming a largefile results in correct output for status
   $ hg st
   A sub2/large6-renamed
   R sub2/large6
-  $ cd ../..
+  $ cd ..
+
+Test --normal flag
+
+  $ dd if=/dev/urandom bs=2k count=11k > new-largefile 2> /dev/null
+  $ hg add --normal --large new-largefile
+  abort: --normal cannot be used with --large
+  [255]
+  $ hg add --normal new-largefile
+  new-largefile: up to 69 MB of RAM may be required to manage this file
+  (use 'hg revert new-largefile' to cancel the pending addition)
+  $ cd ..
 
 vanilla clients not locked out from largefiles servers on vanilla repos
   $ mkdir r1

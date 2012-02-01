@@ -915,6 +915,21 @@ the following entries.
     Optional. Directory or URL to use when pushing if no destination
     is specified.
 
+``phases``
+""""""""""
+
+Specifies default handling of phases. See :hg:`help phases` for more
+information about working with phases.
+
+``publish``
+    Controls draft phase behavior when working as a server. When true,
+    pushed changesets are set to public in both client and server and
+    pulled or cloned changesets are set to public in the client.
+    Default: True
+
+``new-commit``
+    Phase of newly-created commits.
+    Default: draft
 
 ``profiling``
 """""""""""""

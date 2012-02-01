@@ -476,6 +476,24 @@ issue2549 - correct optimizations
   $ log 'min(1 or 2) and not 1'
   $ log 'last(1 or 2, 1) and not 2'
 
+tests for 'remote()' predicate:
+#.  (csets in remote) (id)            (remote)
+1.  less than local   current branch  "default"
+2.  same with local   specified       "default"
+3.  more than local   specified       specified
+
+  $ hg clone --quiet -U . ../remote3
+  $ cd ../remote3
+  $ hg update -q 7
+  $ echo r > r
+  $ hg ci -Aqm 10
+  $ log 'remote()'
+  7
+  $ log 'remote("a-b-c-")'
+  2
+  $ cd ../repo
+  $ log 'remote(".a.b.c.", "../remote3")'
+
   $ cd ..
 
 test author/desc/keyword in problematic encoding

@@ -523,3 +523,23 @@ but only after writing the bad name into the patch.
   diff --git a/a b/a
   new file mode 100644
   $ cd ..
+
+Refresh with phase data:
+
+
+
+  $ cd repo
+  $ echo 'babar' >> a
+  $ hg qnew -m 'update a' p2.diff
+  $ hg phase p2.diff
+  2: draft
+  $ echo 'beber' >> a
+  $ hg qref
+  $ hg phase p2.diff
+  2: draft
+  $ hg phase --force --secret p2.diff
+  $ echo 'bibir' >> a
+  $ hg qref
+  $ hg phase p2.diff
+  2: secret
+

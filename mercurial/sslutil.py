@@ -122,8 +122,9 @@ class validator(object):
         if hostfingerprint:
             if peerfingerprint.lower() != \
                     hostfingerprint.replace(':', '').lower():
-                raise util.Abort(_('invalid certificate for %s with '
-                                   'fingerprint %s') % (host, nicefingerprint))
+                raise util.Abort(_('certificate for %s has unexpected '
+                                   'fingerprint %s') % (host, nicefingerprint),
+                                 hint=_('check hostfingerprint configuration'))
             self.ui.debug('%s certificate matched fingerprint %s\n' %
                           (host, nicefingerprint))
         elif cacerts:

@@ -96,6 +96,7 @@ subrepo paths with ssh urls
   no changes found
   searching for changes
   no changes found
+  [1]
 
   $ cat dummylog
   Got arguments 1:user@dummy 2:hg -R cloned serve --stdio
