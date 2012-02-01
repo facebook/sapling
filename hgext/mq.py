@@ -745,8 +745,11 @@ class queue(object):
                 repo.dirstate.setparents(p1, merge)
 
             match = scmutil.matchfiles(repo, files or [])
+            oldtip = repo['tip']
             n = secretcommit(repo, message, ph.user, ph.date, match=match,
                              force=True)
+            if repo['tip'] == oldtip:
+                raise util.Abort(_("qpush exactly duplicates child changeset"))
             if n is None:
                 raise util.Abort(_("repository commit failed"))
 
