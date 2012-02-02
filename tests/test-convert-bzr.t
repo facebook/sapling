@@ -32,9 +32,9 @@ create and rename on the same file in the same step
   1 Initial add: a, c, e
   0 rename a into b, create a, rename c into d
   $ glog -R source-hg
-  o  1 "rename a into b, create a, rename c into d" files: a b c d e f
+  o  1@source "rename a into b, create a, rename c into d" files: a b c d e f
   |
-  o  0 "Initial add: a, c, e" files: a c e
+  o  0@source "Initial add: a, c, e" files: a c e
   
 
 manifest
@@ -54,7 +54,7 @@ test --rev option
   converting...
   0 Initial add: a, c, e
   $ glog -R source-1-hg
-  o  0 "Initial add: a, c, e" files: a c e
+  o  0@source "Initial add: a, c, e" files: a c e
   
 
 test with filemap
@@ -77,22 +77,12 @@ test with filemap
 convert from lightweight checkout
 
   $ bzr checkout --lightweight source source-light
-  $ hg convert source-light source-light-hg
+  $ hg convert -s bzr source-light source-light-hg
   initializing destination source-light-hg repository
   warning: lightweight checkouts may cause conversion failures, try with a regular branch instead.
-  scanning source...
-  sorting...
-  converting...
-  1 Initial add: a, c, e
-  0 rename a into b, create a, rename c into d
-
-lightweight manifest
-
-  $ hg manifest -R source-light-hg -r tip
-  a
-  b
-  d
-  f
+  $TESTTMP/test-createandrename/source-light does not look like a Bazaar repository
+  abort: source-light: missing or unsupported repository
+  [255]
 
 extract timestamps that look just like hg's {date|isodate}:
 yyyy-mm-dd HH:MM zzzz (no seconds!)
@@ -147,13 +137,13 @@ merge
   1 Editing b
   0 Merged improve branch
   $ glog -R source-hg
-  o    3 "Merged improve branch" files:
+  o    3@source "Merged improve branch" files:
   |\
-  | o  2 "Editing b" files: b
+  | o  2@source-improve "Editing b" files: b
   | |
-  o |  1 "Editing a" files: a
+  o |  1@source "Editing a" files: a
   |/
-  o  0 "Initial add" files: a b
+  o  0@source "Initial add" files: a b
   
   $ cd ..
 
@@ -208,3 +198,41 @@ test the symlinks can be recreated
   $ hg cat syma; echo
   a
 
+Multiple branches
+
+  $ bzr init-repo -q --no-trees repo
+  $ bzr init -q repo/trunk
+  $ bzr co repo/trunk repo-trunk
+  $ cd repo-trunk
+  $ echo a > a
+  $ bzr add a
+  adding a
+  $ bzr ci -qm adda --commit-time '2012-01-01 00:00:01 +0000'
+  $ bzr switch -b branch
+  Tree is up to date at revision 1.
+  Switched to branch: *repo/branch/ (glob)
+  $ echo b > b
+  $ bzr add b
+  adding b
+  $ bzr ci -qm addb --commit-time '2012-01-01 00:00:02 +0000'
+  $ bzr switch --force ../repo/trunk
+  Updated to revision 1.
+  Switched to branch: */repo/trunk/ (glob)
+  $ echo a >> a
+  $ bzr ci -qm changea --commit-time '2012-01-01 00:00:03 +0000'
+  $ cd ..
+  $ hg convert --datesort repo repo-bzr
+  initializing destination repo-bzr repository
+  scanning source...
+  sorting...
+  converting...
+  2 adda
+  1 addb
+  0 changea
+  $ (cd repo-bzr; glog)
+  o  2@default "changea" files: a
+  |
+  | o  1@branch "addb" files: b
+  |/
+  o  0@default "adda" files: a
+  

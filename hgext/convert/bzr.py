@@ -23,7 +23,7 @@ from common import NoRepo, commit, converter_source
 
 try:
     # bazaar imports
-    from bzrlib import branch, revision, errors
+    from bzrlib import bzrdir, revision, errors
     from bzrlib.revisionspec import RevisionSpec
 except ImportError:
     pass
@@ -42,14 +42,17 @@ class bzr_source(converter_source):
 
         try:
             # access bzrlib stuff
-            branch
+            bzrdir
         except NameError:
             raise NoRepo(_('Bazaar modules could not be loaded'))
 
         path = os.path.abspath(path)
         self._checkrepotype(path)
-        self.branch = branch.Branch.open(path)
-        self.sourcerepo = self.branch.repository
+        try:
+            self.sourcerepo = bzrdir.BzrDir.open(path).open_repository()
+        except errors.NoRepositoryPresent:
+            raise NoRepo(_('%s does not look like a Bazaar repository')
+                         % path)
         self._parentids = {}
 
     def _checkrepotype(self, path):
@@ -90,14 +93,21 @@ class bzr_source(converter_source):
 
     def getheads(self):
         if not self.rev:
-            return [self.branch.last_revision()]
-        try:
-            r = RevisionSpec.from_string(self.rev)
-            info = r.in_history(self.branch)
-        except errors.BzrError:
-            raise util.Abort(_('%s is not a valid revision in current branch')
-                             % self.rev)
-        return [info.rev_id]
+            heads = sorted([b.last_revision()
+                            for b in self.sourcerepo.find_branches()])
+        else:
+            revid = None
+            for branch in self.sourcerepo.find_branches():
+                try:
+                    r = RevisionSpec.from_string(self.rev)
+                    info = r.in_history(branch)
+                except errors.BzrError:
+                    pass
+                revid = info.rev_id
+            if revid is None:
+                raise util.Abort(_('%s is not a valid revision') % self.rev)
+            heads = [revid]
+        return heads
 
     def getfile(self, name, rev):
         revtree = self.sourcerepo.revision_tree(rev)
@@ -140,19 +150,24 @@ class bzr_source(converter_source):
             parents = self._filterghosts(rev.parent_ids)
             self._parentids[version] = parents
 
+        branch = self.recode(rev.properties.get('branch-nick', u'default'))
+        if branch == 'trunk':
+            branch = 'default'
         return commit(parents=parents,
                 date='%d %d' % (rev.timestamp, -rev.timezone),
                 author=self.recode(rev.committer),
                 desc=self.recode(rev.message),
+                branch=branch,
                 rev=version)
 
     def gettags(self):
-        if not self.branch.supports_tags():
-            return {}
-        tagdict = self.branch.tags.get_tag_dict()
         bytetags = {}
-        for name, rev in tagdict.iteritems():
-            bytetags[self.recode(name)] = rev
+        for branch in self.sourcerepo.find_branches():
+            if not branch.supports_tags():
+                return {}
+            tagdict = branch.tags.get_tag_dict()
+            for name, rev in tagdict.iteritems():
+                bytetags[self.recode(name)] = rev
         return bytetags
 
     def getchangedfiles(self, rev, i):

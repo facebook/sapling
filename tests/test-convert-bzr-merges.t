@@ -48,17 +48,17 @@ test multiple merges at once
   1 Added brach2 file
   0 Merged branches
   $ glog -R source-hg
-  o    5 "(octopus merge fixup)" files:
+  o    5@source "(octopus merge fixup)" files:
   |\
-  | o    4 "Merged branches" files: file-branch2
+  | o    4@source "Merged branches" files: file-branch2
   | |\
-  o---+  3 "Added brach2 file" files: file-branch2
+  o---+  3@source-branch2 "Added brach2 file" files: file-branch2
    / /
-  | o  2 "Added parent file" files: file-parent
+  | o  2@source "Added parent file" files: file-parent
   | |
-  o |  1 "Added branch1 file" files: file file-branch1
+  o |  1@source-branch1 "Added branch1 file" files: file file-branch1
   |/
-  o  0 "Initial add" files: file
+  o  0@source "Initial add" files: file
   
   $ manifest source-hg tip
   % manifest of tip

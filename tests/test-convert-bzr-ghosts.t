@@ -30,7 +30,7 @@ ghost revisions
   1 Initial layout setup
   0 Commit with ghost revision
   $ glog -R source-hg
-  o  1 "Commit with ghost revision" files: somefile
+  o  1@source "Commit with ghost revision" files: somefile
   |
-  o  0 "Initial layout setup" files: somefile
+  o  0@source "Initial layout setup" files: somefile
   
