@@ -107,6 +107,8 @@ class bzr_source(converter_source):
             if revid is None:
                 raise util.Abort(_('%s is not a valid revision') % self.rev)
             heads = [revid]
+        # Empty repositories return 'null:', which cannot be retrieved
+        heads = [h for h in heads if h != 'null:']
         return heads
 
     def getfile(self, name, rev):

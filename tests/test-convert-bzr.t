@@ -7,6 +7,17 @@ create and rename on the same file in the same step
   $ mkdir test-createandrename
   $ cd test-createandrename
   $ bzr init -q source
+
+test empty repo conversion (issue3233)
+
+  $ hg convert source source-hg
+  initializing destination source-hg repository
+  scanning source...
+  sorting...
+  converting...
+
+back to the rename stuff
+
   $ cd source
   $ echo a > a
   $ echo c > c
@@ -25,7 +36,6 @@ create and rename on the same file in the same step
   $ bzr commit -q -m 'rename a into b, create a, rename c into d'
   $ cd ..
   $ hg convert source source-hg
-  initializing destination source-hg repository
   scanning source...
   sorting...
   converting...
