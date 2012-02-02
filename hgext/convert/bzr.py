@@ -143,7 +143,6 @@ class bzr_source(converter_source):
         return commit(parents=parents,
                 date='%d %d' % (rev.timestamp, -rev.timezone),
                 author=self.recode(rev.committer),
-                # bzr returns bytestrings or unicode, depending on the content
                 desc=self.recode(rev.message),
                 rev=version)
 
@@ -231,7 +230,11 @@ class bzr_source(converter_source):
                 continue
 
             # we got unicode paths, need to convert them
-            path, topath = [self.recode(part) for part in paths]
+            path, topath = paths
+            if path is not None:
+                path = self.recode(path)
+            if topath is not None:
+                topath = self.recode(topath)
             seen.add(path or topath)
 
             if topath is None:
@@ -260,19 +263,3 @@ class bzr_source(converter_source):
         parentmap = self.sourcerepo.get_parent_map(ids)
         parents = tuple([parent for parent in ids if parent in parentmap])
         return parents
-
-    def recode(self, s, encoding=None):
-        """This version of recode tries to encode unicode to bytecode,
-        and preferably using the UTF-8 codec.
-        Other types than Unicode are silently returned, this is by
-        intention, e.g. the None-type is not going to be encoded but instead
-        just passed through
-        """
-        if not encoding:
-            encoding = self.encoding or 'utf-8'
-
-        if isinstance(s, unicode):
-            return s.encode(encoding)
-        else:
-            # leave it alone
-            return s
