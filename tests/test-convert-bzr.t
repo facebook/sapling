@@ -218,6 +218,8 @@ Multiple branches
   $ bzr add a
   adding a
   $ bzr ci -qm adda --commit-time '2012-01-01 00:00:01 +0000'
+  $ bzr tag trunk-tag
+  Created tag trunk-tag.
   $ bzr switch -b branch
   Tree is up to date at revision 1.
   Switched to branch: *repo/branch/ (glob)
@@ -225,6 +227,8 @@ Multiple branches
   $ bzr add b
   adding b
   $ bzr ci -qm addb --commit-time '2012-01-01 00:00:02 +0000'
+  $ bzr tag branch-tag
+  Created tag branch-tag.
   $ bzr switch --force ../repo/trunk
   Updated to revision 1.
   Switched to branch: */repo/trunk/ (glob)
@@ -239,10 +243,21 @@ Multiple branches
   2 adda
   1 addb
   0 changea
+  updating tags
   $ (cd repo-bzr; glog)
+  o  3@default "update tags" files: .hgtags
+  |
   o  2@default "changea" files: a
   |
   | o  1@branch "addb" files: b
   |/
   o  0@default "adda" files: a
   
+
+Test tags (converted identifiers are not stable because bzr ones are
+not and get incorporated in extra fields).
+
+  $ hg -R repo-bzr tags
+  tip                                3:* (glob)
+  branch-tag                         1:* (glob)
+  trunk-tag                          0:* (glob)
