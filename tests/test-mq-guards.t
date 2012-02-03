@@ -172,6 +172,8 @@ should push b.patch
   $ hg qpush -a
   applying c.patch
   now at: c.patch
+  $ hg qprev
+  b.patch
 
 Used to be an issue with holes in the patch sequence
 So, put one hole on the base and ask for topmost patch.

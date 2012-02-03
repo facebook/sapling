@@ -2217,7 +2217,7 @@ def next(ui, repo, **opts):
 
 @command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
-    """print the name of the previous patch
+    """print the name of the previous applied patch
 
     Returns 0 on success."""
     q = repo.mq
@@ -2228,7 +2228,8 @@ def prev(ui, repo, **opts):
     if not l:
         ui.write(_("no patches applied\n"))
         return 1
-    q.qseries(repo, start=l - 2, length=1, status='A',
+    idx = q.series.index(q.applied[-2].name)
+    q.qseries(repo, start=idx, length=1, status='A',
               summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):
