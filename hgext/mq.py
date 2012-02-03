@@ -1758,9 +1758,9 @@ class queue(object):
             for i in xrange(start, len(self.series)):
                 p, reason = self.pushable(i)
                 if p:
-                    break
+                    return i
                 self.explainpushable(i)
-            return i
+            return len(self.series)
         if self.applied:
             p = self.applied[-1].name
             try:
@@ -2206,7 +2206,7 @@ def top(ui, repo, **opts):
 
 @command("qnext", seriesopts, _('hg qnext [-s]'))
 def next(ui, repo, **opts):
-    """print the name of the next patch
+    """print the name of the next pushable patch
 
     Returns 0 on success."""
     q = repo.mq
@@ -2218,7 +2218,7 @@ def next(ui, repo, **opts):
 
 @command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
-    """print the name of the previous patch
+    """print the name of the previous applied patch
 
     Returns 0 on success."""
     q = repo.mq
@@ -2229,7 +2229,8 @@ def prev(ui, repo, **opts):
     if not l:
         ui.write(_("no patches applied\n"))
         return 1
-    q.qseries(repo, start=l - 2, length=1, status='A',
+    idx = q.series.index(q.applied[-2].name)
+    q.qseries(repo, start=idx, length=1, status='A',
               summary=opts.get('summary'))
 
 def setupheaderopts(ui, opts):

@@ -107,6 +107,9 @@ should skip c.patch
   applying b.patch
   skipping c.patch - guarded by '-a'
   now at: b.patch
+  $ hg qnext
+  all patches applied
+  [1]
 
 should display b.patch
 
@@ -169,6 +172,8 @@ should push b.patch
   $ hg qpush -a
   applying c.patch
   now at: c.patch
+  $ hg qprev
+  b.patch
 
 Used to be an issue with holes in the patch sequence
 So, put one hole on the base and ask for topmost patch.
