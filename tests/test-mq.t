@@ -72,7 +72,7 @@ help
    qheader       print the header of the topmost or specified patch
    qimport       import a patch
    qnew          create a new patch
-   qnext         print the name of the next patch
+   qnext         print the name of the next pushable patch
    qpop          pop the current patch off the stack
    qprev         print the name of the previous patch
    qpush         push the next patch onto the stack

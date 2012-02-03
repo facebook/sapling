@@ -107,6 +107,9 @@ should skip c.patch
   applying b.patch
   skipping c.patch - guarded by '-a'
   now at: b.patch
+  $ hg qnext
+  all patches applied
+  [1]
 
 should display b.patch
 

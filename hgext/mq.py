@@ -1757,9 +1757,9 @@ class queue(object):
             for i in xrange(start, len(self.series)):
                 p, reason = self.pushable(i)
                 if p:
-                    break
+                    return i
                 self.explainpushable(i)
-            return i
+            return len(self.series)
         if self.applied:
             p = self.applied[-1].name
             try:
@@ -2205,7 +2205,7 @@ def top(ui, repo, **opts):
 
 @command("qnext", seriesopts, _('hg qnext [-s]'))
 def next(ui, repo, **opts):
-    """print the name of the next patch
+    """print the name of the next pushable patch
 
     Returns 0 on success."""
     q = repo.mq
