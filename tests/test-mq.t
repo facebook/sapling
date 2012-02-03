@@ -1476,7 +1476,7 @@ Test that qfinish change phase when mq.secret=true
 
 Test that qfinish preserve phase when mq.secret=false
 
-  $ sed -i'' $HGRCPATH -e 's/secret=true/secret=false/'
+  $ sed -i.bak -e 's/secret=true/secret=false/' $HGRCPATH
   $ hg qfinish qbase
   patch add-file2 finalized without changeset message
   $ hg phase 'all()'
