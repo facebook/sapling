@@ -12226,7 +12226,7 @@ msgstr ""
 
 msgid "name of the hgweb config file (see \"hg help hgweb\")"
 msgstr ""
-"Name der hgweb-Konfigurationsdatei (siehe :hg:`help hgweb`)"
+"Name der hgweb-Konfigurationsdatei (siehe \"hg help hgweb\")"
 
 msgid "name of the hgweb config file (DEPRECATED)"
 msgstr ""
@@ -18177,7 +18177,7 @@ msgid "file not tracked!"
 msgstr "Datei wird nicht versioniert!"
 
 msgid "unresolved merge conflicts (see hg help resolve)"
-msgstr "Ungelöste Konflikte beim Zusammenführen (siehe :hg:`help resolve`)"
+msgstr "Ungelöste Konflikte beim Zusammenführen (siehe hg help resolve)"
 
 #, python-format
 msgid "committing subrepository %s\n"
