@@ -3056,7 +3056,7 @@ msgstr ""
 
 msgid "    See :hg:`help dates` for a list of formats valid for -d/--date."
 msgstr ""
-"    Siehe 'hg help dates' für eine Liste gültiger Formate für -d/--date."
+"    Siehe :hg:`help dates` für eine Liste gültiger Formate für -d/--date."
 
 msgid ""
 "    Returns 0 on success.\n"
@@ -3068,7 +3068,7 @@ msgstr ""
 msgid ""
 "working dir not at branch tip (use \"hg update\" to check out branch tip)"
 msgstr ""
-"Arbeitsverzeichnis ist nicht Spitze des Zweiges (nutze :hg:`update` um auf\n"
+"Arbeitsverzeichnis ist nicht Spitze des Zweiges (nutze \"hg update\" um auf\n"
 "die Zweigspitze zu wechseln)"
 
 msgid "outstanding uncommitted merge"
@@ -3934,7 +3934,7 @@ msgid ""
 "    See :hg:`help templates` for information on templates and filters.\n"
 "    "
 msgstr ""
-"    Siehe :hg:`hg templates' für Informationen über Vorlagen und Filter.\n"
+"    Siehe :hg:`help templates` für Informationen über Vorlagen und Filter.\n"
 "    "
 
 #, python-format
@@ -8540,12 +8540,13 @@ msgid ""
 "    repository."
 msgstr "    Merkt Dateien zur Versionskontrolle im Projektarchiv vor."
 
+#, fuzzy
 msgid ""
 "    The files will be added to the repository at the next commit. To\n"
 "    undo an add before that, see :hg:`forget`."
 msgstr ""
 "    Die Dateien werden dem Projektarchiv beim nächsten Übernehmen (commit)\n"
-"    hinzugefügt. Um diese vorher rückgängig zu machen, siehe :hg:`revert`."
+"    hinzugefügt. Um diese vorher rückgängig zu machen, siehe :hg:`revert` (<---forget?)."
 
 msgid "    If no names are given, add all files to the repository."
 msgstr ""
@@ -11394,14 +11395,14 @@ msgid "branch '%s' has %d heads - please merge with an explicit rev"
 msgstr "Zweig '%s' hat %d Köpfe - Bitte wähle eine explizite Revision"
 
 msgid "run 'hg heads .' to see heads"
-msgstr ":hg:`heads .` zeigt Köpfe"
+msgstr "'hg heads .' zeigt Köpfe"
 
 #, python-format
 msgid "branch '%s' has one head - please merge with an explicit rev"
 msgstr "Zweig '%s' hat einen Kopf - Bitte wähle eine explizite Revision"
 
 msgid "run 'hg heads' to see all heads"
-msgstr ":hg:`heads .` zeigt alle Köpfe"
+msgstr "'hg heads' zeigt alle Köpfe"
 
 msgid "there is nothing to merge"
 msgstr "Es gibt nichts zum Zusammenführen"
@@ -11415,7 +11416,7 @@ msgstr "Arbeitsverzeichnis ist nicht auf Stand der Kopfversion"
 
 msgid "use 'hg update' or merge with an explicit revision"
 msgstr ""
-"Verwende :hg:`update` oder führe mit einer expliziten Revision zusammen"
+"Verwende 'hg update' oder führe mit einer expliziten Revision zusammen"
 
 msgid "a changeset intended to be included in the destination"
 msgstr "Ein Änderungssatz, den das Ziel einschliessen soll"
@@ -11534,10 +11535,10 @@ msgstr ""
 
 msgid "(run 'hg heads .' to see heads, 'hg merge' to merge)\n"
 msgstr ""
-"(:hg:`heads` zeigt alle Köpfe, nutze :hg:`merge` um sie zusammenzuführen)\n"
+"('hg heads' zeigt alle Köpfe, nutze 'hg merge' um sie zusammenzuführen)\n"
 
 msgid "(run 'hg heads' to see heads)\n"
-msgstr "(:hg:`heads` zeigt alle Köpfe)\n"
+msgstr "('hg heads' zeigt alle Köpfe)\n"
 
 msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(führe \"hg update\" aus, um ein Arbeitsverzeichnis zu erstellen)\n"
@@ -11870,7 +11871,7 @@ msgstr "Entferne nicht %s: Datei ist verändert (-f zum Erzwingen)\n"
 
 #, python-format
 msgid "not removing %s: file has been marked for add (use forget to undo)\n"
-msgstr "Entferne nicht %s: Datei soll hinzugefügt werden (:hg:`forget` um dies rückgängig zu machen)\n"
+msgstr "Entferne nicht %s: Datei soll hinzugefügt werden ('hg forget' um dies rückgängig zu machen)\n"
 
 msgid "record a rename that has already occurred"
 msgstr ""
@@ -12062,7 +12063,7 @@ msgid ""
 "abort the merge"
 msgstr ""
 "Nicht übernommene Zusammenführung - nutze --all um alle Änderungen eines "
-"Vorgängers zu vergessen, oder :hg:`update -C .` um die Zusammenführung nicht "
+"Vorgängers zu vergessen, oder 'hg update -C .' um die Zusammenführung nicht "
 "durchzuführen"
 
 #, python-format
@@ -12071,7 +12072,7 @@ msgid ""
 "update"
 msgstr ""
 "Ausstehende nicht versionierte Änderungen - nutze -all um alle Änderungen zu "
-"verwerfen, oder :hg:`update %s` zum Aktualisieren"
+"verwerfen, oder 'hg update %s' zum Aktualisieren"
 
 #, python-format
 msgid "use --all to revert all files, or 'hg update %s' to update"
