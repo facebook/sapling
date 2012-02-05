@@ -123,7 +123,7 @@ def setbinary(fd):
         msvcrt.setmode(fno(), os.O_BINARY)
 
 def pconvert(path):
-    return '/'.join(path.split(os.sep))
+    return path.replace(os.sep, '/')
 
 def localpath(path):
     return path.replace('/', '\\')
