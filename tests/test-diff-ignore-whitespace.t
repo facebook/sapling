@@ -455,3 +455,46 @@ Do not ignore all newlines, only blank lines
   +hello 
   +world
    goodbye world
+
+Test hunk offsets adjustments with --ignore-blank-lines
+
+  $ hg revert -aC
+  reverting foo
+  $ printf '\nb\nx\nd\n' > a
+  $ printf 'b\ny\nd\n' > b
+  $ hg add a b
+  $ hg ci -m add
+  $ hg cat -r . a > b
+  $ hg cat -r . b > a
+  $ hg diff -B --nodates a > ../diffa
+  $ cat ../diffa
+  diff -r 0e66aa54f318 a
+  --- a/a
+  +++ b/a
+  @@ -1,4 +1,4 @@
+   
+   b
+  -x
+  +y
+   d
+  $ hg diff -B --nodates b > ../diffb
+  $ cat ../diffb
+  diff -r 0e66aa54f318 b
+  --- a/b
+  +++ b/b
+  @@ -1,3 +1,3 @@
+   b
+  -y
+  +x
+   d
+  $ hg revert -aC
+  reverting a
+  reverting b
+  $ hg import --no-commit ../diffa
+  applying ../diffa
+  $ hg revert -aC
+  reverting a
+  $ hg import --no-commit ../diffb
+  applying ../diffb
+  $ hg revert -aC
+  reverting b
