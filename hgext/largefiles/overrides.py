@@ -454,7 +454,7 @@ def override_copy(orig, ui, repo, pats, opts, rename=False):
                 m._fmap = set(m._files)
                 orig_matchfn = m.matchfn
                 m.matchfn = lambda f: (lfutil.isstandin(f) and
-                                    lfile(lfutil.splitstandin(f)) and
+                                    (f in manifest) and
                                     orig_matchfn(lfutil.splitstandin(f)) or
                                     None)
                 return m
