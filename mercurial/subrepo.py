@@ -275,6 +275,11 @@ class abstractsubrepo(object):
         """
         raise NotImplementedError
 
+    def basestate(self):
+        """current working directory base state, disregarding .hgsubstate
+        state and working directory modifications"""
+        raise NotImplementedError
+
     def checknested(self, path):
         """check if path is a subrepository within this repository"""
         return False
@@ -445,6 +450,9 @@ class hgsubrepo(abstractsubrepo):
             # different version checked out
             return True
         return w.dirty() # working directory changed
+
+    def basestate(self):
+        return self._repo['.'].hex()
 
     def checknested(self, path):
         return self._repo._checknested(self._repo.wjoin(path))
@@ -665,6 +673,9 @@ class svnsubrepo(abstractsubrepo):
             if self._state[1] in self._wcrevs() or ignoreupdate:
                 return False
         return True
+
+    def basestate(self):
+        return self._wcrev()
 
     def commit(self, text, user, date):
         # user and date are out of our hands since svn is centralized
@@ -906,6 +917,9 @@ class gitsubrepo(abstractsubrepo):
         self._gitupdatestat()
         out, code = self._gitdir(['diff-index', '--quiet', 'HEAD'])
         return code == 1
+
+    def basestate(self):
+        return self._gitstate()
 
     def get(self, state, overwrite=False):
         source, revision, kind = state
