@@ -13244,7 +13244,7 @@ msgid "push creates new remote branches: %s!"
 msgstr "Push erzeugt neuen entfernten Zweig '%s'!"
 
 msgid "use 'hg push --new-branch' to create new remote branches"
-msgstr "Verwende :hg:`push --new-branch` um dies zu erlauben."
+msgstr "Verwende 'hg push --new-branch' um dies zu erlauben."
 
 #, python-format
 msgid "push creates new remote head %s on branch '%s'!"
