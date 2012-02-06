@@ -6415,7 +6415,7 @@ msgid "changesets"
 msgstr "チェンジセット"
 
 msgid "unresolved conflicts (see hg resolve, then hg rebase --continue)"
-msgstr "衝突が未解消です (:hg:`resolve` と :hg:`rebase --continue` 参照)"
+msgstr "衝突が未解消です (\"hg resolve\" と \"hg rebase --continue\" 参照)"
 
 #, python-format
 msgid "no changes, revision %d skipped\n"
@@ -6855,7 +6855,7 @@ msgid "%s: empty changeset"
 msgstr "%s: 空のチェンジセット"
 
 msgid "fix up the merge and run hg transplant --continue"
-msgstr "衝突解消後に :hg:`transplant --continue` してください"
+msgstr "衝突解消後に \"hg transplant --continue\" してください"
 
 #, python-format
 msgid "%s transplanted as %s\n"
@@ -7714,12 +7714,13 @@ msgid ""
 "    repository."
 msgstr "    構成管理へのファイルの追加登録を予約します。"
 
+#, fuzzy
 msgid ""
 "    The files will be added to the repository at the next commit. To\n"
 "    undo an add before that, see :hg:`forget`."
 msgstr ""
 "    指定されたファイルは次回のコミットから構成管理対象となります。\n"
-"    追加登録のコミット前取り消しは、 :hg:`help revert` を参照して\n"
+"    追加登録のコミット前取り消しは、 :hg:`help revert`(<--forget?) を参照して\n"
 "    ください。"
 
 msgid "    If no names are given, add all files to the repository."
@@ -8231,7 +8232,7 @@ msgid ""
 msgstr ""
 "このリビジョンの祖先に対する確認は完全ではありません。\n"
 "共通の祖先 %s から検索を継続する場合、\n"
-"--extend 付きで :hg:`bisect` を実行してください。\n"
+"--extend 付きで \"hg bisect\" を実行してください。\n"
 
 msgid "Due to skipped revisions, the first good revision could be any of:\n"
 msgstr "検証省略により、 最初の good なリビジョンは以下から選択可能です:\n"
