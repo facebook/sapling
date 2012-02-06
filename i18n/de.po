@@ -5081,7 +5081,7 @@ msgid "revision %d is not mutable"
 msgstr "Revision %d ist unveränderbar"
 
 msgid "see \"hg help phases\" for details"
-msgstr "siehe :hg:`help phases` für Details"
+msgstr "siehe \"hg help phases\" für Details"
 
 #, python-format
 msgid "cannot import merge revision %d"
@@ -7458,7 +7458,7 @@ msgid "Can't rebase immutable changeset %s"
 msgstr "Nicht veränderbarer Änderungssatz %s kann nicht verschoben werden"
 
 msgid "see hg help phases for details"
-msgstr "Siehe :hg:`help phases` für Details"
+msgstr "Siehe hg help phases für Details"
 
 msgid "nothing to rebase\n"
 msgstr "Kein Verschiebung nötig\n"
