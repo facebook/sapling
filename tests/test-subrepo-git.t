@@ -34,7 +34,6 @@ add subrepo clone
   $ git clone -q ../gitroot s
   $ hg add .hgsub
   $ hg commit -m 'new git subrepo'
-  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -55,7 +54,6 @@ record a new commit from upstream from a different branch
   $ hg status --subrepos
   M s/g
   $ hg commit -m 'update git subrepo'
-  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -222,7 +220,6 @@ sync to upstream git, distribute changes
   $ git pull -q >/dev/null 2>/dev/null
   $ cd ..
   $ hg commit -m 'git upstream sync'
-  committing subrepository s
   $ hg debugsub
   path s
    source   ../gitroot
@@ -287,7 +284,6 @@ create nested repo
   $ echo inner = inner > .hgsub
   $ hg add .hgsub
   $ hg commit -m 'nested sub'
-  committing subrepository inner
 
 nested commit
 
@@ -339,27 +335,32 @@ Don't crash if the .hgsubstate entry is missing
   $ hg update 1 -q
   $ hg rm .hgsubstate
   $ hg commit .hgsubstate -m 'no substate'
-  created new head
+  nothing changed
+  [1]
   $ hg tag -l nosubstate
   $ hg manifest
   .hgsub
+  .hgsubstate
   a
 
   $ hg status -S
+  R .hgsubstate
   $ hg sum | grep commit
-  commit: 1 subrepos
+  commit: 1 removed, 1 subrepos (new branch head)
 
   $ hg commit -m 'restore substate'
-  committing subrepository s
+  nothing changed
+  [1]
   $ hg manifest
   .hgsub
   .hgsubstate
   a
   $ hg sum | grep commit
-  commit: (clean)
+  commit: 1 removed, 1 subrepos (new branch head)
 
   $ hg update -qC nosubstate
   $ ls s
+  g
 
 issue3109: false positives in git diff-index
 

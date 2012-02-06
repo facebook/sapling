@@ -20,7 +20,6 @@ Preparing the 'main' repo which depends on the subrepo 'sub'
   adding main/.hgsub (glob)
   adding main/main (glob)
   $ hg commit -R main -m "main import"
-  committing subrepository sub
 
 Cleaning both repositories, just as a clone -U
 

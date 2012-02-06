@@ -474,9 +474,6 @@
    >     except:
    warning: naked except clause
   mercurial/localrepo.py:0:
-   >                                      hint=_("use --subrepos for recursive commit"))
-   warning: line over 80 characters
-  mercurial/localrepo.py:0:
    >                         # we return an integer indicating remote head count change
    warning: line over 80 characters
   mercurial/localrepo.py:0:

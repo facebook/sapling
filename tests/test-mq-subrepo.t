@@ -105,7 +105,6 @@ handle subrepos safely on qnew
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
   % qnew -m0 0.diff
-  committing subrepository sub
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -121,7 +120,6 @@ handle subrepos safely on qnew
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
   % qnew -m1 1.diff
-  committing subrepository sub2
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -166,7 +164,6 @@ handle subrepos safely on qrefresh
   % update substate when adding .hgsub w/clean updated subrepo
   A .hgsub
   % qrefresh
-  committing subrepository sub
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -183,7 +180,6 @@ handle subrepos safely on qrefresh
   % update substate when modifying .hgsub w/clean updated subrepo
   M .hgsub
   % qrefresh
-  committing subrepository sub2
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -225,7 +221,6 @@ handle subrepos safely on qpush/qpop
   $ echo sub = sub > .hgsub
   $ hg add .hgsub
   $ hg qnew -m0 0.diff
-  committing subrepository sub
   $ hg debugsub
   path sub
    source   sub
@@ -277,7 +272,6 @@ handle subrepos safely on qrecord
   diff --git a/.hgsub b/.hgsub
   new file mode 100644
   examine changes to '.hgsub'? [Ynsfdaq?] 
-  committing subrepository sub
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -310,7 +304,6 @@ handle subrepos safely on qrecord
    sub = sub
   +sub2 = sub2
   record this change to '.hgsub'? [Ynsfdaq?] 
-  committing subrepository sub2
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
@@ -360,4 +353,3 @@ correctly handle subrepos with patch queues
   $ echo sub = sub >> .hgsub
   $ hg add .hgsub
   $ hg qnew 0.diff
-  committing subrepository sub

@@ -7,12 +7,10 @@
   $ echo 'subrepo = subrepo' > .hgsub
   $ hg ci -Am addsubrepo
   adding .hgsub
-  committing subrepository subrepo
   $ echo b > subrepo/b
   $ hg -R subrepo ci -Am addb
   adding b
   $ hg ci -m updatedsub
-  committing subrepository subrepo
 
 delete .hgsub and revert it
 

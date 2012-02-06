@@ -37,7 +37,6 @@ qnew on repo w/svn subrepo
   $ hg status -S -X '**/format'
   A .hgsub
   $ hg qnew -m0 0.diff
-  committing subrepository sub
   $ cd sub
   $ echo a > a
   $ svn add a

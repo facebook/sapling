@@ -37,7 +37,6 @@ Issue2232: committing a subrepo without .hgsub
   commit: 1 added, 1 subrepos
   update: (current)
   $ hg ci -m1
-  committing subrepository s
 
 Revert can't (yet) revert subrepos:
 
@@ -105,7 +104,6 @@ bump sub rev (and check it is ignored by ui.commitsubrepos)
   $ echo b > s/a
   $ hg -R s ci -ms1
   $ hg --config ui.commitsubrepos=no ci -m3
-  committing subrepository s
 
 leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
 
@@ -455,7 +453,6 @@ shouldn't need merging
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg ci -Am1
   adding .hgsub
-  committing subrepository s
   $ hg branch br
   marked working directory as branch br
   (branches are permanent and global, did you want a bookmark?)
@@ -464,7 +461,6 @@ shouldn't need merging
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg ci -Am1
   adding b
-  committing subrepository s
   $ hg up default
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
@@ -483,7 +479,6 @@ shouldn't need merging
   $ echo d > d
   $ hg ci -Am1
   adding d
-  committing subrepository s
   $ hg up 3
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg -R s up 5
@@ -491,7 +486,6 @@ shouldn't need merging
   $ echo e > e
   $ hg ci -Am1
   adding e
-  committing subrepository s
 
   $ hg up 5
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -519,8 +513,6 @@ test subrepo delete from .hgsubstate
   $ hg -R testdelete add
   adding testdelete/.hgsub (glob)
   $ hg -R testdelete ci -m "nested 1 & 2 added"
-  committing subrepository nested
-  committing subrepository nested2
   $ echo nested = nested > testdelete/.hgsub
   $ hg -R testdelete ci -m "nested 2 deleted"
   $ cat testdelete/.hgsubstate
@@ -550,8 +542,6 @@ test repository cloning
   $ hg -R main add
   adding main/.hgsub (glob)
   $ hg -R main ci -m "add subrepos"
-  committing subrepository nested_absolute
-  committing subrepository nested_relative
   $ cd ..
   $ hg clone mercurial/main mercurial2/main
   updating to branch default
@@ -574,7 +564,6 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ echo s = s > repo/.hgsub
   $ hg -R repo ci -Am1
   adding .hgsub
-  committing subrepository s
   $ hg clone repo repo2
   updating to branch default
   cloning subrepo s from $TESTTMP/sub/repo/s (glob)
@@ -590,7 +579,6 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ hg -R repo2/s ci -m3
   created new head
   $ hg -R repo2 ci -m3
-  committing subrepository s
   $ hg -q -R repo2 push
   abort: push creates new remote head 9d66565e64e1!
   (did you forget to merge? use push -f to force)
@@ -701,7 +689,6 @@ subrepository:
   $ echo subrepo-2 = subrepo-2 >> .hgsub
   $ hg add .hgsub
   $ hg ci -m 'Added subrepos'
-  committing subrepository subrepo-1
   committing subrepository subrepo-2
   $ hg st subrepo-2/file
 
@@ -859,17 +846,16 @@ Test that removing .hgsubstate doesn't break anything:
 
   $ hg rm -f .hgsubstate
   $ hg ci -mrm
-  committing subrepository s
-  committing subrepository t
-  created new head
+  nothing changed
+  [1]
   $ hg log -vr tip
-  changeset:   14:3941e0aa5236
+  changeset:   13:925c17564ef8
   tag:         tip
-  parent:      11:365661e5936a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       .hgsubstate
   description:
-  rm
+  13
   
   
 
@@ -877,9 +863,11 @@ Test that removing .hgsub removes .hgsubstate:
 
   $ hg rm .hgsub
   $ hg ci -mrm2
+  created new head
   $ hg log -vr tip
-  changeset:   15:8b31de9d13d1
+  changeset:   14:2400bccd50af
   tag:         tip
+  parent:      11:365661e5936a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       .hgsub .hgsubstate
@@ -890,13 +878,13 @@ Test that removing .hgsub removes .hgsubstate:
 Test issue3153: diff -S with deleted subrepos
 
   $ hg diff --nodates -S -c .
-  diff -r 3941e0aa5236 -r 8b31de9d13d1 .hgsub
+  diff -r 365661e5936a -r 2400bccd50af .hgsub
   --- a/.hgsub
   +++ /dev/null
   @@ -1,2 +0,0 @@
   -s = s
   -t = t
-  diff -r 3941e0aa5236 -r 8b31de9d13d1 .hgsubstate
+  diff -r 365661e5936a -r 2400bccd50af .hgsubstate
   --- a/.hgsubstate
   +++ /dev/null
   @@ -1,2 +0,0 @@
@@ -911,7 +899,6 @@ Test behavior of add for explicit path in subrepo:
   $ hg add .hgsub
   $ hg init s
   $ hg ci -m0
-  committing subrepository s
 Adding with an explicit path in a subrepo adds the file
   $ echo c1 > f1
   $ echo c2 > s/f2
@@ -925,7 +912,6 @@ Adding with an explicit path in a subrepo adds the file
   $ hg ci -R s -m0
   $ hg ci -Am1
   adding f1
-  committing subrepository s
 Adding with an explicit path in a subrepo with -S has the same behavior
   $ echo c3 > f3
   $ echo c4 > s/f4
@@ -939,7 +925,6 @@ Adding with an explicit path in a subrepo with -S has the same behavior
   $ hg ci -R s -m1
   $ hg ci -Ama2
   adding f3
-  committing subrepository s
 Adding without a path or pattern silently ignores subrepos
   $ echo c5 > f5
   $ echo c6 > s/f6
@@ -958,7 +943,6 @@ Adding without a path or pattern silently ignores subrepos
   adding f6
   adding f7
   $ hg ci -m3
-  committing subrepository s
 Adding without a path or pattern with -S also adds files in subrepos
   $ echo c8 > f8
   $ echo c9 > s/f9
@@ -977,7 +961,6 @@ Adding without a path or pattern with -S also adds files in subrepos
   A s/f9
   $ hg ci -R s -m3
   $ hg ci -m4
-  committing subrepository s
 Adding with a pattern silently ignores subrepos
   $ echo c11 > fm11
   $ echo c12 > fn12
@@ -1000,7 +983,6 @@ Adding with a pattern silently ignores subrepos
   adding fn14
   $ hg ci -Am5
   adding fn12
-  committing subrepository s
 Adding with a pattern with -S also adds matches in subrepos
   $ echo c15 > fm15
   $ echo c16 > fn16
@@ -1023,7 +1005,6 @@ Adding with a pattern with -S also adds matches in subrepos
   adding fn18
   $ hg ci -Am6
   adding fn16
-  committing subrepository s
 
 Test behavior of forget for explicit path in subrepo:
 Forgetting an explicit path in a subrepo untracks the file

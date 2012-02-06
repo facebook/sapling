@@ -1096,36 +1096,57 @@ class localrepository(repo.repository):
 
             # check subrepos
             subs = []
-            removedsubs = set()
+            commitsubs = set()
+            newstate = wctx.substate.copy()
+            # only manage subrepos and .hgsubstate if .hgsub is present
             if '.hgsub' in wctx:
-                # only manage subrepos and .hgsubstate if .hgsub is present
-                for p in wctx.parents():
-                    removedsubs.update(s for s in p.substate if match(s))
-                for s in wctx.substate:
-                    removedsubs.discard(s)
-                    if match(s) and wctx.sub(s).dirty():
+                # we'll decide whether to track this ourselves, thanks
+                if '.hgsubstate' in changes[0]:
+                    changes[0].remove('.hgsubstate')
+                if '.hgsubstate' in changes[2]:
+                    changes[2].remove('.hgsubstate')
+
+                # compare current state to last committed state
+                # build new substate based on last committed state
+                oldstate = wctx.p1().substate
+                for s in sorted(newstate.keys()):
+                    if not match(s):
+                        # ignore working copy, use old state if present
+                        if s in oldstate:
+                            newstate[s] = oldstate[s]
+                            continue
+                        if not force:
+                            raise util.Abort(
+                                _("commit with new subrepo %s excluded") % s)
+                    if wctx.sub(s).dirty(True):
+                        if not self.ui.configbool('ui', 'commitsubrepos'):
+                            raise util.Abort(
+                                _("uncommitted changes in subrepo %s") % s,
+                                hint=_("use --subrepos for recursive commit"))
                         subs.append(s)
-                if (subs or removedsubs):
+                        commitsubs.add(s)
+                    else:
+                        bs = wctx.sub(s).basestate()
+                        newstate[s] = (newstate[s][0], bs, newstate[s][2])
+                        if oldstate.get(s, (None, None, None))[1] != bs:
+                            subs.append(s)
+
+                # check for removed subrepos
+                for p in wctx.parents():
+                    r = [s for s in p.substate if s not in newstate]
+                    subs += [s for s in r if match(s)]
+                if subs:
                     if (not match('.hgsub') and
                         '.hgsub' in (wctx.modified() + wctx.added())):
                         raise util.Abort(
                             _("can't commit subrepos without .hgsub"))
-                    if '.hgsubstate' not in changes[0]:
-                        changes[0].insert(0, '.hgsubstate')
-                        if '.hgsubstate' in changes[2]:
-                            changes[2].remove('.hgsubstate')
+                    changes[0].insert(0, '.hgsubstate')
+
             elif '.hgsub' in changes[2]:
                 # clean up .hgsubstate when .hgsub is removed
                 if ('.hgsubstate' in wctx and
                     '.hgsubstate' not in changes[0] + changes[1] + changes[2]):
                     changes[2].insert(0, '.hgsubstate')
-
-            if subs and not self.ui.configbool('ui', 'commitsubrepos', False):
-                changedsubs = [s for s in subs if wctx.sub(s).dirty(True)]
-                if changedsubs:
-                    raise util.Abort(_("uncommitted changes in subrepo %s")
-                                     % changedsubs[0],
-                                     hint=_("use --subrepos for recursive commit"))
 
             # make sure all explicit patterns are matched
             if not force and match.files():
@@ -1162,16 +1183,15 @@ class localrepository(repo.repository):
                 cctx._text = editor(self, cctx, subs)
             edited = (text != cctx._text)
 
-            # commit subs
-            if subs or removedsubs:
-                state = wctx.substate.copy()
-                for s in sorted(subs):
+            # commit subs and write new state
+            if subs:
+                for s in sorted(commitsubs):
                     sub = wctx.sub(s)
                     self.ui.status(_('committing subrepository %s\n') %
                         subrepo.subrelpath(sub))
                     sr = sub.commit(cctx._text, user, date)
-                    state[s] = (state[s][0], sr)
-                subrepo.writestate(self, state)
+                    newstate[s] = (newstate[s][0], sr)
+                subrepo.writestate(self, newstate)
 
             # Save commit message in case this transaction gets rolled back
             # (e.g. by a pretxncommit hook).  Leave the content alone on

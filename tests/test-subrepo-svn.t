@@ -69,8 +69,6 @@ add first svn sub with leading whitespaces
   $ svn co --quiet "$SVNREPO"/src subdir/s
   $ hg add .hgsub
   $ hg ci -m1
-  committing subrepository s
-  committing subrepository subdir/s
 
 make sure we avoid empty commits (issue2445)
 
@@ -432,7 +430,6 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ echo "s =        [svn]       $SVNREPO/src" >> .hgsub
   $ hg add .hgsub
   $ hg ci -m addsub
-  committing subrepository s
   $ echo a > a
   $ hg ci -Am adda
   adding a
@@ -440,7 +437,6 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ svn up -qr6 s
   $ hg ci -m updatesub
-  committing subrepository s
   created new head
   $ echo pyc > s/dir/epsilon.pyc
   $ hg up 1
@@ -462,14 +458,12 @@ test having obstructions when switching branches on checkout:
   $ echo "obstruct =        [svn]       $SVNREPO/externals" >> .hgsub
   $ svn co -r5 --quiet "$SVNREPO"/externals obstruct
   $ hg commit -m 'Start making obstructed working copy'
-  committing subrepository obstruct
   $ hg book other
   $ hg co -r 'p1(tip)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "obstruct =        [svn]       $SVNREPO/src" >> .hgsub
   $ svn co -r5 --quiet "$SVNREPO"/src obstruct
   $ hg commit -m 'Other branch which will be obstructed'
-  committing subrepository obstruct
   created new head
 
 Switching back to the head where we have another path mapped to the
@@ -530,12 +524,10 @@ First, create that condition in the repository.
   Checked out revision 10.
   $ echo "recreated =        [svn]       $SVNREPO/branch" >> .hgsub
   $ hg ci -m addsub
-  committing subrepository recreated
   $ cd recreated
   $ svn up -q
   $ cd ..
   $ hg ci -m updatesub
-  committing subrepository recreated
   $ hg up -r-2
   D    *recreated/somethingnew (glob)
   A    *recreated/somethingold (glob)

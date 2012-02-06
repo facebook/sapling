@@ -79,11 +79,9 @@ The --subrepos flag overwrite the config setting:
 
   $ cd ..
   $ hg commit -m 0-2-1
-  committing subrepository bar
 
   $ cd ..
   $ hg commit -m 1-2-1
-  committing subrepository foo
 
 Change working directory:
 
