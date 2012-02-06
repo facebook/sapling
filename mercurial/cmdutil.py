@@ -1224,8 +1224,8 @@ def forget(ui, repo, match, prefix, explicitonly):
             ui.status(_("skipping missing subrepository: %s\n")
                            % join(subpath))
 
-    for f in match.files():
-        if match.exact(f) or not explicitonly:
+    if not explicitonly:
+        for f in match.files():
             if f not in repo.dirstate and not os.path.isdir(match.rel(join(f))):
                 if f not in forgot:
                     if os.path.exists(match.rel(join(f))):
