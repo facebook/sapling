@@ -268,14 +268,23 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
     # them into diff output.
     #
     hunk = None
+    ignoredlines = 0
     for s, stype in allblocks(t1, t2, opts, l1, l2):
+        a1, a2, b1, b2 = s
         if stype != '!':
+            if stype == '~':
+                # The diff context lines are based on t1 content. When
+                # blank lines are ignored, the new lines offsets must
+                # be adjusted as if equivalent blocks ('~') had the
+                # same sizes on both sides.
+                ignoredlines += (b2 - b1) - (a2 - a1)
             continue
         delta = []
-        a1, a2, b1, b2 = s
         old = l1[a1:a2]
         new = l2[b1:b2]
 
+        b1 -= ignoredlines
+        b2 -= ignoredlines
         astart = contextstart(a1)
         bstart = contextstart(b1)
         prev = None

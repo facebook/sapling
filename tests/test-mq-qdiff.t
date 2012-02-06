@@ -98,7 +98,7 @@ qdiff filename:
   diff -r b0c220e1cf43 lines
   --- a/lines
   +++ b/lines
-  @@ -4,4 +6,4 @@
+  @@ -4,4 +4,4 @@
    4
   -hello world
   -goodbye world
