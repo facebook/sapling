@@ -303,7 +303,7 @@ def standin(filename):
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are
     #    passed filenames from an external source (like the command line).
-    return shortname + '/' + filename.replace(os.sep, '/')
+    return shortname + '/' + util.pconvert(filename)
 
 def isstandin(filename):
     '''Return true if filename is a big file standin. filename must be
@@ -314,7 +314,7 @@ def splitstandin(filename):
     # Split on / because that's what dirstate always uses, even on Windows.
     # Change local separator to / first just in case we are passed filenames
     # from an external source (like the command line).
-    bits = filename.replace(os.sep, '/').split('/', 1)
+    bits = util.pconvert(filename).split('/', 1)
     if len(bits) == 2 and bits[0] == shortname:
         return bits[1]
     else:
@@ -433,7 +433,7 @@ def httpsendfile(ui, filename):
 
 def unixpath(path):
     '''Return a version of path normalized for use with the lfdirstate.'''
-    return os.path.normpath(path).replace(os.sep, '/')
+    return util.pconvert(os.path.normpath(path))
 
 def islfilesrepo(repo):
     return ('largefiles' in repo.requirements and

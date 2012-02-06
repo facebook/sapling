@@ -468,7 +468,7 @@ else:
                                _HKEY_LOCAL_MACHINE)
         if not isinstance(value, str) or not value:
             return rcpath
-        value = value.replace('/', os.sep)
+        value = util.localpath(value)
         for p in value.split(os.pathsep):
             if p.lower().endswith('mercurial.ini'):
                 rcpath.append(p)

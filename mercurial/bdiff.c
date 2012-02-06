@@ -443,7 +443,7 @@ static PyObject *fixws(PyObject *self, PyObject *args)
 	r = PyBytes_AsString(s);
 	rlen = PyBytes_Size(s);
 
-	w = (char *)malloc(rlen);
+	w = (char *)malloc(rlen ? rlen : 1);
 	if (!w)
 		goto nomem;
 
