@@ -546,7 +546,7 @@ def override_revert(orig, ui, repo, *pats, **opts):
                 match = oldmatch(ctx, pats, opts, globbed, default)
                 m = copy.copy(match)
                 def tostandin(f):
-                    if lfutil.standin(f) in ctx or lfutil.standin(f) in ctx:
+                    if lfutil.standin(f) in ctx:
                         return lfutil.standin(f)
                     elif lfutil.standin(f) in repo[None]:
                         return None
