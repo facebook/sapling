@@ -29,16 +29,14 @@ mq patch on an empty repo
   $ hg qnew -d '0 0' p1
   $ show_branch_cache
   tip: 0
-  d986d5caac23a7d44a46efc0ddaf5eb9665844cf 0
-  d986d5caac23a7d44a46efc0ddaf5eb9665844cf default
+  No branch cache
 
   $ echo > pfile
   $ hg add pfile
   $ hg qrefresh -m 'patch 1'
   $ show_branch_cache
   tip: 0
-  a7977e38ed2c2942fa6c278030badfef3d180979 0
-  a7977e38ed2c2942fa6c278030badfef3d180979 default
+  No branch cache
 
 some regular revisions
 
@@ -67,8 +65,8 @@ add some mq patches
   now at: p1
   $ show_branch_cache
   tip: 2
-  982611f6955f9c48d3365decea203217c945ef0d 2
-  982611f6955f9c48d3365decea203217c945ef0d bar
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
   dc25e3827021582e979f600811852e36cbe57341 foo
 
   $ hg qnew -d '0 0' p2
@@ -77,8 +75,8 @@ add some mq patches
   $ hg qrefresh -m 'patch 2'
   $ show_branch_cache 1
   tip: 3
-  982611f6955f9c48d3365decea203217c945ef0d 2
-  982611f6955f9c48d3365decea203217c945ef0d bar
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
   dc25e3827021582e979f600811852e36cbe57341 foo
   branch foo: 3
   branch bar: 2
@@ -121,6 +119,6 @@ detect an invalid cache
   now at: p2
   $ show_branch_cache
   tip: 3
-  3fe2e3b237359b5c55cec6ed172ac41d3850fade 1
-  3fe2e3b237359b5c55cec6ed172ac41d3850fade foo
+  dc25e3827021582e979f600811852e36cbe57341 0
+  dc25e3827021582e979f600811852e36cbe57341 foo
 

@@ -267,11 +267,15 @@ def secretcommit(repo, phase, *args, **kwargs):
             phase = phases.secret
     if phase is not None:
         backup = repo.ui.backupconfig('phases', 'new-commit')
+    # Marking the repository as committing an mq patch can be used
+    # to optimize operations like _branchtags().
+    repo._committingpatch = True
     try:
         if phase is not None:
             repo.ui.setconfig('phases', 'new-commit', phase)
         return repo.commit(*args, **kwargs)
     finally:
+        repo._committingpatch = False
         if phase is not None:
             repo.ui.restoreconfig(backup)
 
@@ -3254,16 +3258,20 @@ def reposetup(ui, repo):
 
         def _branchtags(self, partial, lrev):
             q = self.mq
-            if not q.applied:
-                return super(mqrepo, self)._branchtags(partial, lrev)
-
             cl = self.changelog
-            qbasenode = q.applied[0].node
-            try:
-                qbase = cl.rev(qbasenode)
-            except error.LookupError:
-                self.ui.warn(_('mq status file refers to unknown node %s\n')
-                             % short(qbasenode))
+            qbase = None
+            if not q.applied:
+                if getattr(self, '_committingpatch', False):
+                    # Committing a new patch, must be tip
+                    qbase = len(cl) - 1
+            else:
+                qbasenode = q.applied[0].node
+                try:
+                    qbase = cl.rev(qbasenode)
+                except error.LookupError:
+                    self.ui.warn(_('mq status file refers to unknown node %s\n')
+                                 % short(qbasenode))
+            if qbase is None:
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
             start = lrev + 1

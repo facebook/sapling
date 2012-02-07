@@ -556,7 +556,6 @@ Copy and show added kwfiles
 Commit and show expansion in original and copy
 
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
-  invalidating branch cache (tip differs)
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
   overwriting c expanding keywords
