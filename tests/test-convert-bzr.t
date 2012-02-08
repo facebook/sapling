@@ -261,3 +261,24 @@ not and get incorporated in extra fields).
   tip                                3:* (glob)
   branch-tag                         1:* (glob)
   trunk-tag                          0:* (glob)
+
+Nested repositories (issue3254)
+
+  $ bzr init-repo -q --no-trees repo/inner
+  $ bzr init -q repo/inner/trunk
+  $ bzr co repo/inner/trunk inner-trunk
+  $ cd inner-trunk
+  $ echo b > b
+  $ bzr add b
+  adding b
+  $ bzr ci -qm addb
+  $ cd ..
+  $ hg convert --datesort repo noinner-bzr
+  initializing destination noinner-bzr repository
+  scanning source...
+  sorting...
+  converting...
+  2 adda
+  1 addb
+  0 changea
+  updating tags

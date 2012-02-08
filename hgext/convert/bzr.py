@@ -91,13 +91,16 @@ class bzr_source(converter_source):
     def after(self):
         self.sourcerepo.unlock()
 
+    def _bzrbranches(self):
+        return self.sourcerepo.find_branches(using=True)
+
     def getheads(self):
         if not self.rev:
-            heads = sorted([b.last_revision()
-                            for b in self.sourcerepo.find_branches()])
+            # Set using=True to avoid nested repositories (see issue3254)
+            heads = sorted([b.last_revision() for b in self._bzrbranches()])
         else:
             revid = None
-            for branch in self.sourcerepo.find_branches():
+            for branch in self._bzrbranches():
                 try:
                     r = RevisionSpec.from_string(self.rev)
                     info = r.in_history(branch)
@@ -164,7 +167,7 @@ class bzr_source(converter_source):
 
     def gettags(self):
         bytetags = {}
-        for branch in self.sourcerepo.find_branches():
+        for branch in self._bzrbranches():
             if not branch.supports_tags():
                 return {}
             tagdict = branch.tags.get_tag_dict()
