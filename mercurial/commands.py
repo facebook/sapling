@@ -4210,7 +4210,8 @@ def phase(ui, repo, *revs, **opts):
 
         public < draft < secret
 
-    Return 0 on success, 1 if no phases were changed.
+    Return 0 on success, 1 if no phases were changed or some could not
+    be changed.
     """
     # search for a unique phase argument
     targetphase = None
@@ -4252,8 +4253,18 @@ def phase(ui, repo, *revs, **opts):
             changes = 0
             newdata = repo._phaserev
             changes = sum(o != newdata[i] for i, o in enumerate(olddata))
+            rejected = [n for n in nodes
+                        if newdata[repo[n].rev()] < targetphase]
+            if rejected:
+                ui.warn(_('cannot move %i changesets to a more permissive '
+                          'phase, use --force\n') % len(rejected))
+                ret = 1
             if changes:
-                ui.note(_('phase change for %i changesets\n') % changes)
+                msg = _('phase changed for %i changesets\n') % changes
+                if ret:
+                    ui.status(msg)
+                else:
+                    ui.note(msg)
             else:
                 ui.warn(_('no phases changed\n'))
                 ret = 1

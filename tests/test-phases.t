@@ -402,3 +402,34 @@ move changeset forward and backward
   |
   o  0 public A
   
+test partial failure
+
+  $ hg phase --public 7
+  $ hg phase --draft '5 or 7'
+  cannot move 1 changesets to a more permissive phase, use --force
+  phase changed for 1 changesets
+  [1]
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    7 public merge B' and E
+  |\
+  | o  6 public B'
+  | |
+  +---o  5 draft H
+  | |
+  o |  4 public E
+  | |
+  o |  3 public D
+  | |
+  o |  2 public C
+  |/
+  o  1 public B
+  |
+  o  0 public A
+  
+
+test complete failure
+
+  $ hg phase --draft 7
+  cannot move 1 changesets to a more permissive phase, use --force
+  no phases changed
+  [1]
