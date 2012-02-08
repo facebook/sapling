@@ -35,7 +35,7 @@ Narrow diffstat:
 
   $ hg ci -m appenda
 
-  $ printf '\0' > c
+  >>> open("c", "wb").write("\0")
   $ touch d
   $ hg add c d
 
@@ -54,7 +54,7 @@ Binary git diffstat:
 
   $ hg ci -m createb
 
-  $ printf '\0' > "file with spaces"
+  >>> open("file with spaces", "wb").write("\0")
   $ hg add "file with spaces"
 
 Filename with spaces diffstat:

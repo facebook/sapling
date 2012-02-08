@@ -169,10 +169,10 @@ hg cat files and symlink, no expansion
 
 hg status of kw-ignored binary file starting with '\1\n'
 
-  $ printf '\1\nfoo' > i
+  >>> open("i", "wb").write("\1\nfoo")
   $ hg -q commit -Am metasep i
   $ hg status
-  $ printf '\1\nbar' > i
+  >>> open("i", "wb").write("\1\nbar")
   $ hg status
   M i
   $ hg -q commit -m "modify metasep" i
