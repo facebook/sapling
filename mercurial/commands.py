@@ -5711,18 +5711,20 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if check and clean:
         raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
 
-    if check:
-        # we could use dirty() but we can ignore merge and branch trivia
-        c = repo[None]
-        if c.modified() or c.added() or c.removed():
-            raise util.Abort(_("uncommitted local changes"))
-
     if date:
         if rev is not None:
             raise util.Abort(_("you can't specify a revision and a date"))
         rev = cmdutil.finddate(ui, repo, date)
 
-    if clean or check:
+    if check:
+        # we could use dirty() but we can ignore merge and branch trivia
+        c = repo[None]
+        if c.modified() or c.added() or c.removed():
+            raise util.Abort(_("uncommitted local changes"))
+        if not rev:
+            rev = repo[repo[None].branch()].rev()
+
+    if clean:
         ret = hg.clean(repo, rev)
     else:
         ret = hg.update(repo, rev)

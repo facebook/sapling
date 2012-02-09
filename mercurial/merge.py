@@ -558,7 +558,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
                                    " --check to force update)"))
             else:
                 # Allow jumping branches if clean and specific rev given
-                overwrite = True
+                pa = p1
 
         ### calculate phase
         action = []
