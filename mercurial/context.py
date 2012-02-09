@@ -698,9 +698,6 @@ class workingctx(changectx):
     def _manifest(self):
         """generate a manifest corresponding to the working directory"""
 
-        if self._unknown is None:
-            self.status(unknown=True)
-
         man = self._parents[0].manifest().copy()
         if len(self._parents) > 1:
             man2 = self.p2().manifest()
@@ -714,8 +711,7 @@ class workingctx(changectx):
         copied = self._repo.dirstate.copies()
         ff = self._flagfunc
         modified, added, removed, deleted = self._status
-        unknown = self._unknown
-        for i, l in (("a", added), ("m", modified), ("u", unknown)):
+        for i, l in (("a", added), ("m", modified)):
             for f in l:
                 orig = copied.get(f, f)
                 man[f] = getman(orig).get(orig, nullid) + i

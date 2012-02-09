@@ -27,7 +27,6 @@
     searching for copies back to rev 1
     unmatched files in local:
      a/c
-     a/d
     unmatched files in other:
      b/a
      b/b
@@ -37,33 +36,29 @@
     checking for directory renames
     dir a/ -> b/
     file a/c -> b/c
-    file a/d -> b/d
   resolving manifests
    overwrite: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
-   a/d: remote renamed directory to b/d -> d
    a/c: remote renamed directory to b/c -> d
    a/b: other deleted -> r
    a/a: other deleted -> r
    b/a: remote created -> g
    b/b: remote created -> g
-  updating: a/a 1/6 files (16.67%)
+  updating: a/a 1/5 files (20.00%)
   removing a/a
-  updating: a/b 2/6 files (33.33%)
+  updating: a/b 2/5 files (40.00%)
   removing a/b
-  updating: a/c 3/6 files (50.00%)
+  updating: a/c 3/5 files (60.00%)
   moving a/c to b/c
-  updating: a/d 4/6 files (66.67%)
-  moving a/d to b/d
-  updating: b/a 5/6 files (83.33%)
+  updating: b/a 4/5 files (80.00%)
   getting b/a
-  updating: b/b 6/6 files (100.00%)
+  updating: b/b 5/5 files (100.00%)
   getting b/b
-  4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
   $ echo a/* b/*
-  a/* b/a b/b b/c b/d
+  a/d b/a b/b b/c
   $ hg st -C
   M b/a
   M b/b
@@ -72,7 +67,7 @@
   R a/a
   R a/b
   R a/c
-  ? b/d
+  ? a/d
   $ hg ci -m "3 merge 2+1"
   $ hg debugrename b/c
   b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88 (glob)
@@ -84,7 +79,6 @@
     unmatched files in local:
      b/a
      b/b
-     b/d
     unmatched files in other:
      a/c
     all copies found (* = to merge, ! = divergent):
@@ -103,11 +97,11 @@
   (branch merge, don't forget to commit)
 
   $ echo a/* b/*
-  a/* b/a b/b b/c b/d
+  a/d b/a b/b b/c
   $ hg st -C
   A b/c
     a/c
-  ? b/d
+  ? a/d
   $ hg ci -m "4 merge 1+2"
   created new head
   $ hg debugrename b/c

@@ -319,7 +319,7 @@ def override_manifestmerge(origfn, repo, p1, p2, pa, overwrite, partial):
                 processed.append((standin, "g", p2.flags(standin)))
             else:
                 processed.append((standin, "r"))
-        elif m == "m" and lfutil.standin(f) in p1 and f in p2:
+        elif m == "g" and lfutil.standin(f) in p1 and f in p2:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
             standin = lfutil.standin(f)

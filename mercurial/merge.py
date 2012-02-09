@@ -245,7 +245,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                     act("prompt keep", "a", f)
             elif n[20:] == "a": # added, no remote
                 act("remote deleted", "f", f)
-            elif n[20:] != "u":
+            else:
                 act("other deleted", "r", f)
 
     for f, n in m2.iteritems():
@@ -265,7 +265,13 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 act("remote moved to " + f, "m",
                     f2, f, f, fmerge(f2, f, f2), True)
         elif f not in ma:
-            act("remote created", "g", f, m2.flags(f))
+            if (not overwrite
+                and _checkunknownfile(repo, p1, p2, f)):
+                rflags = fmerge(f, f, f)
+                act("remote differs from untracked local",
+                    "m", f, f, f, rflags, False)
+            else:
+                act("remote created", "g", f, m2.flags(f))
         elif n != ma[f]:
             if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
@@ -559,7 +565,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
 
         ### calculate phase
         action = []
-        wc.status(unknown=True) # prime cache
         folding = not util.checkcase(repo.path)
         if not force:
             _checkunknown(repo, wc, p2)
