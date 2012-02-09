@@ -265,13 +265,10 @@ def override_update(orig, ui, repo, *pats, **opts):
 # The overridden function filters the unknown files by removing any
 # largefiles. This makes the merge proceed and we can then handle this
 # case further in the overridden manifestmerge function below.
-def override_checkunknown(origfn, wctx, mctx, folding):
-    origunknown = wctx.unknown()
-    wctx._unknown = filter(lambda f: lfutil.standin(f) not in wctx, origunknown)
-    try:
-        return origfn(wctx, mctx, folding)
-    finally:
-        wctx._unknown = origunknown
+def override_checkunknownfile(origfn, repo, wctx, mctx, f):
+    if lfutil.standin(f) in wctx:
+        return False
+    return origfn(repo, wctx, mctx, f)
 
 # The manifest merge handles conflicts on the manifest level. We want
 # to handle changes in largefile-ness of files at this level too.

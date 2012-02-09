@@ -81,22 +81,19 @@ class mergestate(object):
             self.mark(dfile, 'r')
         return r
 
-def _checkunknown(wctx, mctx, folding):
+def _checkunknownfile(repo, wctx, mctx, f):
+    return (not repo.dirstate._ignore(f)
+        and os.path.exists(repo.wjoin(f))
+        and mctx[f].cmp(wctx[f]))
+
+def _checkunknown(repo, wctx, mctx):
     "check for collisions between unknown files and files in mctx"
-    if folding:
-        foldf = util.normcase
-    else:
-        foldf = lambda fn: fn
-    folded = {}
-    for fn in mctx:
-        folded[foldf(fn)] = fn
 
     error = False
-    for fn in wctx.unknown():
-        f = foldf(fn)
-        if f in folded and mctx[folded[f]].cmp(wctx[f]):
+    for f in mctx:
+        if f not in wctx and _checkunknownfile(repo, wctx, mctx, f):
             error = True
-            wctx._repo.ui.warn(_("%s: untracked file differs\n") % fn)
+            wctx._repo.ui.warn(_("%s: untracked file differs\n") % f)
     if error:
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
@@ -565,7 +562,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         wc.status(unknown=True) # prime cache
         folding = not util.checkcase(repo.path)
         if not force:
-            _checkunknown(wc, p2, folding)
+            _checkunknown(repo, wc, p2)
         if folding:
             _checkcollision(p2, branchmerge and p1)
         action += _forgetremoved(wc, p2, branchmerge)
