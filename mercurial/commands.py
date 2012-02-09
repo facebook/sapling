@@ -5723,6 +5723,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
             raise util.Abort(_("uncommitted local changes"))
         if not rev:
             rev = repo[repo[None].branch()].rev()
+        mergemod._checkunknown(repo, repo[None], repo[rev])
 
     if clean:
         ret = hg.clean(repo, rev)

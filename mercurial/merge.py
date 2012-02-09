@@ -545,6 +545,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
             if not force and (wc.files() or wc.deleted()):
                 raise util.Abort(_("outstanding uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
+            if not force:
+                _checkunknown(repo, wc, p2)
             for s in wc.substate:
                 if wc.sub(s).dirty():
                     raise util.Abort(_("outstanding uncommitted changes in "
@@ -566,8 +568,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         ### calculate phase
         action = []
         folding = not util.checkcase(repo.path)
-        if not force:
-            _checkunknown(repo, wc, p2)
         if folding:
             _checkcollision(p2, branchmerge and p1)
         action += _forgetremoved(wc, p2, branchmerge)
