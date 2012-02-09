@@ -430,6 +430,7 @@ aliases:
 
   $ echo '[revsetalias]' >> .hg/hgrc
   $ echo 'm = merge()' >> .hg/hgrc
+  $ echo 'sincem = descendants(m)' >> .hg/hgrc
   $ echo 'd($1) = reverse(sort($1, date))' >> .hg/hgrc
   $ echo 'rs(ARG1, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
   $ echo 'rs4(ARG1, ARGA, ARGB, ARG2) = reverse(sort(ARG1, ARG2))' >> .hg/hgrc
@@ -438,6 +439,46 @@ aliases:
   ('symbol', 'm')
   ('func', ('symbol', 'merge'), None)
   6
+
+test alias recursion
+
+  $ try sincem
+  ('symbol', 'sincem')
+  ('func', ('symbol', 'descendants'), ('func', ('symbol', 'merge'), None))
+  6
+  7
+
+test infinite recursion
+
+  $ echo 'recurse1 = recurse2' >> .hg/hgrc
+  $ echo 'recurse2 = recurse1' >> .hg/hgrc
+  $ try recurse1
+  ('symbol', 'recurse1')
+  hg: parse error: infinite expansion of revset alias "recurse1" detected
+  [255]
+
+test nesting and variable passing
+
+  $ echo 'nested($1) = nested2($1)' >> .hg/hgrc
+  $ echo 'nested2($1) = nested3($1)' >> .hg/hgrc
+  $ echo 'nested3($1) = max($1)' >> .hg/hgrc
+  $ try 'nested(2:5)'
+  ('func', ('symbol', 'nested'), ('range', ('symbol', '2'), ('symbol', '5')))
+  ('func', ('symbol', 'max'), ('range', ('symbol', '2'), ('symbol', '5')))
+  5
+
+test variable isolation, variable placeholders are rewritten as string
+then parsed and matched again as string. Check they do not leak too
+far away.
+
+  $ echo 'injectparamasstring = max("$1")' >> .hg/hgrc
+  $ echo 'callinjection($1) = descendants(injectparamasstring)' >> .hg/hgrc
+  $ try 'callinjection(2:5)'
+  ('func', ('symbol', 'callinjection'), ('range', ('symbol', '2'), ('symbol', '5')))
+  ('func', ('symbol', 'descendants'), ('func', ('symbol', 'max'), ('string', '$1')))
+  abort: unknown revision '$1'!
+  [255]
+
   $ try 'd(2:5)'
   ('func', ('symbol', 'd'), ('range', ('symbol', '2'), ('symbol', '5')))
   ('func', ('symbol', 'reverse'), ('func', ('symbol', 'sort'), ('list', ('range', ('symbol', '2'), ('symbol', '5')), ('symbol', 'date'))))

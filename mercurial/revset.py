@@ -1071,46 +1071,85 @@ class revsetalias(object):
         h = heads(default)
         b($1) = ancestors($1) - ancestors(default)
         '''
-        if isinstance(name, tuple): # parameter substitution
-            self.tree = name
-            self.replacement = value
-        else: # alias definition
-            m = self.funcre.search(name)
-            if m:
-                self.tree = ('func', ('symbol', m.group(1)))
-                self.args = [x.strip() for x in m.group(2).split(',')]
-                for arg in self.args:
-                    value = value.replace(arg, repr(arg))
-            else:
-                self.tree = ('symbol', name)
+        m = self.funcre.search(name)
+        if m:
+            self.name = m.group(1)
+            self.tree = ('func', ('symbol', m.group(1)))
+            self.args = [x.strip() for x in m.group(2).split(',')]
+            for arg in self.args:
+                value = value.replace(arg, repr(arg))
+        else:
+            self.name = name
+            self.tree = ('symbol', name)
 
-            self.replacement, pos = parse(value)
-            if pos != len(value):
-                raise error.ParseError(_('invalid token'), pos)
+        self.replacement, pos = parse(value)
+        if pos != len(value):
+            raise error.ParseError(_('invalid token'), pos)
 
-    def process(self, tree):
-        if isinstance(tree, tuple):
-            if self.args is None:
-                if tree == self.tree:
-                    return self.replacement
-            elif tree[:2] == self.tree:
-                l = getlist(tree[2])
-                if len(l) != len(self.args):
-                    raise error.ParseError(
-                        _('invalid number of arguments: %s') % len(l))
-                result = self.replacement
-                for a, v in zip(self.args, l):
-                    valalias = revsetalias(('string', a), v)
-                    result = valalias.process(result)
-                return result
-            return tuple(map(self.process, tree))
+def _getalias(aliases, tree):
+    """If tree looks like an unexpanded alias, return it. Return None
+    otherwise.
+    """
+    if isinstance(tree, tuple) and tree:
+        if tree[0] == 'symbol' and len(tree) == 2:
+            name = tree[1]
+            alias = aliases.get(name)
+            if alias and alias.args is None and alias.tree == tree:
+                return alias
+        if tree[0] == 'func' and len(tree) > 1:
+            if tree[1][0] == 'symbol' and len(tree[1]) == 2:
+                name = tree[1][1]
+                alias = aliases.get(name)
+                if alias and alias.args is not None and alias.tree == tree[:2]:
+                    return alias
+    return None
+
+def _expandargs(tree, args):
+    """Replace all occurences of ('string', name) with the
+    substitution value of the same name in args, recursively.
+    """
+    if not isinstance(tree, tuple):
         return tree
+    if len(tree) == 2 and tree[0] == 'string':
+        return args.get(tree[1], tree)
+    return tuple(_expandargs(t, args) for t in tree)
+
+def _expandaliases(aliases, tree, expanding):
+    """Expand aliases in tree, recursively.
+
+    'aliases' is a dictionary mapping user defined aliases to
+    revsetalias objects.
+    """
+    if not isinstance(tree, tuple):
+        # Do not expand raw strings
+        return tree
+    alias = _getalias(aliases, tree)
+    if alias is not None:
+        if alias in expanding:
+            raise error.ParseError(_('infinite expansion of revset alias "%s" '
+                                     'detected') % alias.name)
+        expanding.append(alias)
+        result = alias.replacement
+        if alias.args is not None:
+            l = getlist(tree[2])
+            if len(l) != len(alias.args):
+                raise error.ParseError(
+                    _('invalid number of arguments: %s') % len(l))
+            result = _expandargs(result, dict(zip(alias.args, l)))
+        # Recurse in place, the base expression may have been rewritten
+        result = _expandaliases(aliases, result, expanding)
+        expanding.pop()
+    else:
+        result = tuple(_expandaliases(aliases, t, expanding)
+                       for t in tree)
+    return result
 
 def findaliases(ui, tree):
+    aliases = {}
     for k, v in ui.configitems('revsetalias'):
         alias = revsetalias(k, v)
-        tree = alias.process(tree)
-    return tree
+        aliases[alias.name] = alias
+    return _expandaliases(aliases, tree, [])
 
 parse = parser.parser(tokenize, elements).parse
 
