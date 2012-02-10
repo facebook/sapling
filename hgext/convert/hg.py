@@ -223,6 +223,12 @@ class mercurial_sink(converter_sink):
             self.repo._bookmarks[bookmark] = bin(updatedbookmark[bookmark])
             bookmarks.write(self.repo)
 
+    def hascommit(self, rev):
+        if not rev in self.repo and self.clonebranches:
+            raise util.Abort(_('revision %s not be found in destination '
+                               'repository (lookups with clonebranches=true '
+                               'are not implemented)') % rev)
+        return rev in self.repo
 
 class mercurial_source(converter_source):
     def __init__(self, ui, path, rev=None):

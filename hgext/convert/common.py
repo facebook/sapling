@@ -245,6 +245,10 @@ class converter_sink(object):
         """
         pass
 
+    def hascommit(self, rev):
+        """Return True if the sink contains rev"""
+        raise NotImplementedError()
+
 class commandline(object):
     def __init__(self, ui, command):
         self.ui = ui

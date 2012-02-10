@@ -1187,3 +1187,12 @@ class svn_sink(converter_sink, commandline):
     def puttags(self, tags):
         self.ui.warn(_('writing Subversion tags is not yet implemented\n'))
         return None, None
+
+    def hascommit(self, rev):
+        # This is not correct as one can convert to an existing subversion
+        # repository and childmap would not list all revisions. Too bad.
+        if rev in self.childmap:
+            return True
+        raise util.Abort(_('splice map revision %s not found in subversion '
+                           'child map (revision lookups are not implemented')
+                         % rev)
