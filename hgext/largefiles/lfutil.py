@@ -449,3 +449,11 @@ def mkstemp(repo, prefix):
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
         self.storetypes = storetypes
+
+def getcurrentheads(repo):
+    branches = repo.branchmap()
+    heads = []
+    for branch in branches:
+        newheads = repo.branchheads(branch)
+        heads = heads + newheads
+    return heads
