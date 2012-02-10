@@ -15,7 +15,7 @@ from monotone import monotone_source
 from gnuarch import gnuarch_source
 from bzr import bzr_source
 from p4 import p4_source
-import filemap
+import filemap, common
 
 import os, shutil
 from mercurial import hg, util, encoding
@@ -118,7 +118,7 @@ class converter(object):
             self.readauthormap(opts.get('authormap'))
             self.authorfile = self.dest.authorfile()
 
-        self.splicemap = mapfile(ui, opts.get('splicemap'))
+        self.splicemap = common.parsesplicemap(opts.get('splicemap'))
         self.branchmap = mapfile(ui, opts.get('branchmap'))
 
     def walktree(self, heads):
@@ -319,7 +319,7 @@ class converter(object):
                                   self.commitcache[prev].branch))
         self.dest.setbranch(commit.branch, pbranches)
         try:
-            parents = self.splicemap[rev].replace(',', ' ').split()
+            parents = self.splicemap[rev]
             self.ui.status(_('spliced in %s as parents of %s\n') %
                            (parents, rev))
             parents = [self.map.get(p, p) for p in parents]

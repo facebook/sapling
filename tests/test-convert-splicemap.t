@@ -43,7 +43,7 @@ test invalid splicemap
   > $CHILDID2
   > EOF
   $ hg convert --splicemap splicemap repo2 repo1
-  abort: syntax error in splicemap(1): key/value pair expected
+  abort: syntax error in splicemap(1): child parent1[,parent2] expected
   [255]
 
 splice repo2 on repo1

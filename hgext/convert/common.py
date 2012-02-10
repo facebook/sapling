@@ -407,3 +407,25 @@ class mapfile(dict):
         if self.fp:
             self.fp.close()
             self.fp = None
+
+def parsesplicemap(path):
+    """Parse a splicemap, return a child/parents dictionary."""
+    m = {}
+    try:
+        fp = open(path, 'r')
+        for i, line in enumerate(fp):
+            try:
+                child, parents = line.splitlines()[0].rstrip().rsplit(' ', 1)
+                parents = parents.replace(',', ' ').split()
+            except ValueError:
+                raise util.Abort(_('syntax error in %s(%d): child parent1'
+                                   '[,parent2] expected') % (path, i + 1))
+            pp = []
+            for p in parents:
+                if p not in pp:
+                    pp.append(p)
+            m[child] = pp
+    except IOError, e:
+        if e.errno != errno.ENOENT:
+            raise
+    return m
