@@ -2154,7 +2154,11 @@ def debugrevlog(ui, repo, file_ = None, **opts):
 
 @command('debugrevspec', [], ('REVSPEC'))
 def debugrevspec(ui, repo, expr):
-    '''parse and apply a revision specification'''
+    """parse and apply a revision specification
+
+    Use --verbose to print the parsed tree before and after aliases
+    expansion.
+    """
     if ui.verbose:
         tree = revset.parse(expr)[0]
         ui.note(tree, "\n")
