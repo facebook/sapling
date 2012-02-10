@@ -160,7 +160,6 @@ cacert configured in local repo
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
   $ mv copy-pull/.hg/hgrc.bu copy-pull/.hg/hgrc
 
 cacert configured globally, also testing expansion of environment
@@ -172,13 +171,11 @@ variables in the filename
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
   $ P=`pwd` hg -R copy-pull pull --insecure
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
 
 cacert mismatch
 
@@ -191,7 +188,6 @@ cacert mismatch
   pulling from https://127.0.0.1:$HGPORT/
   searching for changes
   no changes found
-  [1]
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
   abort: error: *:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed (glob)
   [255]
@@ -200,7 +196,6 @@ cacert mismatch
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
 
 Test server cert which isn't valid yet
 
@@ -260,7 +255,6 @@ Test unvalidated https through proxy
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
 
 Test https with cacert and fingerprint through proxy
 
@@ -268,12 +262,10 @@ Test https with cacert and fingerprint through proxy
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  [1]
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/
   pulling from https://127.0.0.1:$HGPORT/
   searching for changes
   no changes found
-  [1]
 
 Test https with cert problems through proxy
 

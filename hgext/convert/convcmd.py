@@ -15,7 +15,7 @@ from monotone import monotone_source
 from gnuarch import gnuarch_source
 from bzr import bzr_source
 from p4 import p4_source
-import filemap
+import filemap, common
 
 import os, shutil
 from mercurial import hg, util, encoding
@@ -118,7 +118,7 @@ class converter(object):
             self.readauthormap(opts.get('authormap'))
             self.authorfile = self.dest.authorfile()
 
-        self.splicemap = mapfile(ui, opts.get('splicemap'))
+        self.splicemap = common.parsesplicemap(opts.get('splicemap'))
         self.branchmap = mapfile(ui, opts.get('branchmap'))
 
     def walktree(self, heads):
@@ -141,6 +141,29 @@ class converter(object):
         self.ui.progress(_('scanning'), None)
 
         return parents
+
+    def mergesplicemap(self, parents, splicemap):
+        """A splicemap redefines child/parent relationships. Check the
+        map contains valid revision identifiers and merge the new
+        links in the source graph.
+        """
+        for c in splicemap:
+            if c not in parents:
+                if not self.dest.hascommit(self.map.get(c, c)):
+                    # Could be in source but not converted during this run
+                    self.ui.warn(_('splice map revision %s is not being '
+                                   'converted, ignoring\n') % c)
+                continue
+            pc = []
+            for p in splicemap[c]:
+                # We do not have to wait for nodes already in dest.
+                if self.dest.hascommit(self.map.get(p, p)):
+                    continue
+                # Parent is not in dest and not being converted, not good
+                if p not in parents:
+                    raise util.Abort(_('unknown splice map parent: %s') % p)
+                pc.append(p)
+            parents[c] = pc
 
     def toposort(self, parents, sortmode):
         '''Return an ordering such that every uncommitted changeset is
@@ -319,7 +342,7 @@ class converter(object):
                                   self.commitcache[prev].branch))
         self.dest.setbranch(commit.branch, pbranches)
         try:
-            parents = self.splicemap[rev].replace(',', ' ').split()
+            parents = self.splicemap[rev]
             self.ui.status(_('spliced in %s as parents of %s\n') %
                            (parents, rev))
             parents = [self.map.get(p, p) for p in parents]
@@ -340,6 +363,7 @@ class converter(object):
             self.ui.status(_("scanning source...\n"))
             heads = self.source.getheads()
             parents = self.walktree(heads)
+            self.mergesplicemap(parents, self.splicemap)
             self.ui.status(_("sorting...\n"))
             t = self.toposort(parents, sortmode)
             num = len(t)

@@ -569,7 +569,6 @@ Issue1977: multirepo push should fail if subrepo push fails
   cloning subrepo s from $TESTTMP/sub/repo/s (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R repo2 pull -u
-  [1]
   $ echo 1 > repo2/s/a
   $ hg -R repo2/s ci -m2
   $ hg -q -R repo2/s push
@@ -627,7 +626,6 @@ Pull -u now doesn't help
   pulling from issue1852a
   searching for changes
   no changes found
-  [1]
 
 Try the same, but with pull -u
 
