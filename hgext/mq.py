@@ -257,22 +257,28 @@ class patchheader(object):
                 ci += 1
             del self.comments[ci]
 
-def newcommit(repo, *args, **kwargs):
+def newcommit(repo, phase, *args, **kwargs):
     """helper dedicated to ensure a commit respect mq.secret setting
 
     It should be used instead of repo.commit inside the mq source for operation
     creating new changeset.
     """
-    if not repo.ui.configbool('mq', 'secret', False):
-        return repo.commit(*args, **kwargs)
-
-    backup = repo.ui.backupconfig('phases', 'new-commit')
+    if phase is None:
+        if repo.ui.configbool('mq', 'secret', False):
+            phase = phases.secret
+    if phase is not None:
+        backup = repo.ui.backupconfig('phases', 'new-commit')
+    # Marking the repository as committing an mq patch can be used
+    # to optimize operations like _branchtags().
+    repo._committingpatch = True
     try:
-        # ensure we create a secret changeset
-        repo.ui.setconfig('phases', 'new-commit', phases.secret)
+        if phase is not None:
+            repo.ui.setconfig('phases', 'new-commit', phase)
         return repo.commit(*args, **kwargs)
     finally:
-        repo.ui.restoreconfig(backup)
+        repo._committingpatch = False
+        if phase is not None:
+            repo.ui.restoreconfig(backup)
 
 class queue(object):
     def __init__(self, ui, path, patchdir=None):
@@ -576,7 +582,7 @@ class queue(object):
         ret = hg.merge(repo, rev)
         if ret:
             raise util.Abort(_("update returned %d") % ret)
-        n = newcommit(repo, ctx.description(), ctx.user(), force=True)
+        n = newcommit(repo, None, ctx.description(), ctx.user(), force=True)
         if n is None:
             raise util.Abort(_("repo commit failed"))
         try:
@@ -616,7 +622,7 @@ class queue(object):
             # the first patch in the queue is never a merge patch
             #
             pname = ".hg.patches.merge.marker"
-            n = repo.commit('[mq]: merge marker', force=True)
+            n = newcommit(repo, None, '[mq]: merge marker', force=True)
             self.removeundo(repo)
             self.applied.append(statusentry(n, pname))
             self.applieddirty = True
@@ -747,8 +753,8 @@ class queue(object):
 
             match = scmutil.matchfiles(repo, files or [])
             oldtip = repo['tip']
-            n = newcommit(repo, message, ph.user, ph.date, match=match,
-                             force=True)
+            n = newcommit(repo, None, message, ph.user, ph.date, match=match,
+                          force=True)
             if repo['tip'] == oldtip:
                 raise util.Abort(_("qpush exactly duplicates child changeset"))
             if n is None:
@@ -988,8 +994,8 @@ class queue(object):
                 if util.safehasattr(msg, '__call__'):
                     msg = msg()
                 commitmsg = msg and msg or ("[mq]: %s" % patchfn)
-                n = newcommit(repo, commitmsg, user, date, match=match,
-                                 force=True)
+                n = newcommit(repo, None, commitmsg, user, date, match=match,
+                              force=True)
                 if n is None:
                     raise util.Abort(_("repo commit failed"))
                 try:
@@ -1540,15 +1546,11 @@ class queue(object):
 
             try:
                 # might be nice to attempt to roll back strip after this
-                backup = repo.ui.backupconfig('phases', 'new-commit')
-                try:
-                    # Ensure we create a new changeset in the same phase than
-                    # the old one.
-                    repo.ui.setconfig('phases', 'new-commit', oldphase)
-                    n = repo.commit(message, user, ph.date, match=match,
-                                    force=True)
-                finally:
-                    repo.ui.restoreconfig(backup)
+
+                # Ensure we create a new changeset in the same phase than
+                # the old one.
+                n = newcommit(repo, oldphase, message, user, ph.date,
+                              match=match, force=True)
                 # only write patch after a successful commit
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))
@@ -3257,16 +3259,20 @@ def reposetup(ui, repo):
 
         def _branchtags(self, partial, lrev):
             q = self.mq
-            if not q.applied:
-                return super(mqrepo, self)._branchtags(partial, lrev)
-
             cl = self.changelog
-            qbasenode = q.applied[0].node
-            try:
-                qbase = cl.rev(qbasenode)
-            except error.LookupError:
-                self.ui.warn(_('mq status file refers to unknown node %s\n')
-                             % short(qbasenode))
+            qbase = None
+            if not q.applied:
+                if getattr(self, '_committingpatch', False):
+                    # Committing a new patch, must be tip
+                    qbase = len(cl) - 1
+            else:
+                qbasenode = q.applied[0].node
+                try:
+                    qbase = cl.rev(qbasenode)
+                except error.LookupError:
+                    self.ui.warn(_('mq status file refers to unknown node %s\n')
+                                 % short(qbasenode))
+            if qbase is None:
                 return super(mqrepo, self)._branchtags(partial, lrev)
 
             start = lrev + 1

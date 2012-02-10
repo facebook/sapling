@@ -85,7 +85,7 @@ def fetch(ui, repo, source='default', **opts):
         newchildren = repo.changelog.nodesbetween([parent], newheads)[2]
         if len(newheads) == 1 and len(newchildren):
             if newchildren[0] != parent:
-                return hg.clean(repo, newchildren[0])
+                return hg.update(repo, newchildren[0])
             else:
                 return 0
 

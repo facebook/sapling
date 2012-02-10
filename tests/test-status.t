@@ -279,12 +279,12 @@ hg status of binary file starting with '\1\n', a separator for metadata:
 
   $ hg init repo5
   $ cd repo5
-  $ printf '\1\nfoo' > 010a
+  >>> open("010a", "wb").write("\1\nfoo")
   $ hg ci -q -A -m 'initial checkin'
   $ hg status -A
   C 010a
 
-  $ printf '\1\nbar' > 010a
+  >>> open("010a", "wb").write("\1\nbar")
   $ hg status -A
   M 010a
   $ hg ci -q -m 'modify 010a'

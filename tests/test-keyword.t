@@ -169,10 +169,10 @@ hg cat files and symlink, no expansion
 
 hg status of kw-ignored binary file starting with '\1\n'
 
-  $ printf '\1\nfoo' > i
+  >>> open("i", "wb").write("\1\nfoo")
   $ hg -q commit -Am metasep i
   $ hg status
-  $ printf '\1\nbar' > i
+  >>> open("i", "wb").write("\1\nbar")
   $ hg status
   M i
   $ hg -q commit -m "modify metasep" i
@@ -556,7 +556,6 @@ Copy and show added kwfiles
 Commit and show expansion in original and copy
 
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
-  invalidating branch cache (tip differs)
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
   overwriting c expanding keywords
