@@ -80,7 +80,6 @@ empty default pull
   pulling from ssh://user@dummy/remote
   searching for changes
   no changes found
-  [1]
 
 local change
 
@@ -199,7 +198,6 @@ test pushkeys and bookmarks
   no changes found
   updating bookmark foo
   importing bookmark foo
-  [1]
   $ hg book -d foo
   $ hg push -B foo
   pushing to ssh://user@dummy/remote

@@ -100,5 +100,4 @@ Pull multiple revisions with update:
 This used to abort: received changelog group is empty:
 
   $ hg pull -qr 1 ../repo
-  [1]
 

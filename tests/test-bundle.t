@@ -85,7 +85,6 @@ Pull full.hg into test (using --cwd)
   pulling from ../full.hg
   searching for changes
   no changes found
-  [1]
 
 Pull full.hg into empty (using --cwd)
 
@@ -120,7 +119,6 @@ Pull full.hg into test (using -R)
   pulling from full.hg
   searching for changes
   no changes found
-  [1]
 
 Pull full.hg into empty (using -R)
 
@@ -128,7 +126,6 @@ Pull full.hg into empty (using -R)
   pulling from full.hg
   searching for changes
   no changes found
-  [1]
 
 Rollback empty
 

@@ -141,7 +141,6 @@ Going back to the default branch:
 No new revs, no update:
 
   $ hg pull -qu
-  [1]
 
   $ hg parents -q
   0:1f0dee641bb7
