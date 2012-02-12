@@ -34,33 +34,7 @@ GUI is available if the tool requires a GUI.
 There are some internal merge tools which can be used. The internal
 merge tools are:
 
-``internal:merge``
-   Uses the internal non-interactive simple merge algorithm for merging
-   files. It will fail if there are any conflicts and leave markers in
-   the partially merged file.
-
-``internal:fail``
-   Rather than attempting to merge files that were modified on both
-   branches, it marks them as unresolved. The resolve command must be
-   used to resolve these conflicts.
-
-``internal:local``
-   Uses the local version of files as the merged version.
-
-``internal:other``
-   Uses the other version of files as the merged version.
-
-``internal:prompt``
-   Asks the user which of the local or the other version to keep as
-   the merged version.
-
-``internal:dump``
-   Creates three versions of the files to merge, containing the
-   contents of local, other and base. These files can then be used to
-   perform a merge manually. If the file to be merged is named
-   ``a.txt``, these files will accordingly be named ``a.txt.local``,
-   ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
-   same directory as ``a.txt``.
+.. internaltoolsmarker
 
 Internal tools are always available and do not require a GUI but will by default
 not handle symlinks or binary files.

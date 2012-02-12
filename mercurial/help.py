@@ -7,7 +7,7 @@
 
 from i18n import gettext, _
 import sys, os
-import extensions, revset, fileset, templatekw, templatefilters
+import extensions, revset, fileset, templatekw, templatefilters, filemerge
 import util
 
 def listexts(header, exts, indent=1):
@@ -105,6 +105,7 @@ def addtopicsymbols(topic, marker, symbols):
     addtopichook(topic, add)
 
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
+addtopicsymbols('merge-tools', '.. internaltoolsmarker', filemerge.internals)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
 addtopicsymbols('templates', '.. keywordsmarker', templatekw.keywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
