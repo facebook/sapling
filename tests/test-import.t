@@ -996,3 +996,79 @@ import a unified diff with no lines of context (diff -U0)
   c2
   c3
   c4
+
+Test corner case involving fuzz and skew
+
+  $ hg init morecornercases
+  $ cd morecornercases
+
+  $ cat > 01-no-context-beginning-of-file.diff <<EOF
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -1,0 +1,1 @@
+  > +line
+  > EOF
+
+  $ cat > 02-no-context-middle-of-file.diff <<EOF
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -1,1 +1,1 @@
+  > -2
+  > +add some skew
+  > @@ -2,0 +2,1 @@
+  > +line
+  > EOF
+
+  $ cat > 03-no-context-end-of-file.diff <<EOF
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -10,0 +10,1 @@
+  > +line
+  > EOF
+
+  $ cat > a <<EOF
+  > 1
+  > 2
+  > 3
+  > 4
+  > EOF
+  $ hg ci -Am adda a
+  $ for p in *.diff; do
+  >   hg import -v --no-commit $p
+  >   cat a
+  >   hg revert -aqC a
+  >   # patch -p1 < $p
+  >   # cat a
+  >   # hg revert -aC a
+  > done
+  applying 01-no-context-beginning-of-file.diff
+  patching file a
+  applied to working directory
+  1
+  line
+  2
+  3
+  4
+  applying 02-no-context-middle-of-file.diff
+  patching file a
+  Hunk #1 succeeded at 2 (offset 1 lines).
+  Hunk #2 succeeded at 4 (offset 1 lines).
+  applied to working directory
+  1
+  add some skew
+  3
+  line
+  4
+  applying 03-no-context-end-of-file.diff
+  patching file a
+  Hunk #1 succeeded at 5 (offset -6 lines).
+  applied to working directory
+  1
+  2
+  3
+  4
+  line
+

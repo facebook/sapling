@@ -748,20 +748,21 @@ class patchfile(object):
         self.hash = {}
         for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
-        if h.hunk[-1][0] != ' ':
-            # if the hunk tried to put something at the bottom of the file
-            # override the start line and use eof here
-            search_start = len(self.lines)
-        else:
-            search_start = orig_start + self.skew
 
         for fuzzlen in xrange(3):
             for toponly in [True, False]:
                 old, oldstart, new, newstart = h.fuzzit(fuzzlen, toponly)
+                oldstart = oldstart + self.offset + self.skew
+                oldstart = min(oldstart, len(self.lines))
+                if old:
+                    cand = self.findlines(old[0][1:], oldstart)
+                else:
+                    # Only adding lines with no or fuzzed context, just
+                    # take the skew in account
+                    cand = [oldstart]
 
-                cand = self.findlines(old[0][1:], search_start)
                 for l in cand:
-                    if diffhelpers.testhunk(old, self.lines, l) == 0:
+                    if not old or diffhelpers.testhunk(old, self.lines, l) == 0:
                         self.lines[l : l + len(old)] = new
                         self.offset += len(new) - len(old)
                         self.skew = l - orig_start
