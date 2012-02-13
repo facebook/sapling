@@ -457,3 +457,11 @@ def getcurrentheads(repo):
         newheads = repo.branchheads(branch)
         heads = heads + newheads
     return heads
+
+def getstandinsstate(repo):
+    standins = []
+    matcher = getstandinmatcher(repo)
+    for standin in dirstate_walk(repo.dirstate, matcher):
+        lfile = splitstandin(standin)
+        standins.append((lfile, readstandin(repo, lfile)))
+    return standins

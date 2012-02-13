@@ -602,8 +602,20 @@ def override_revert(orig, ui, repo, *pats, **opts):
         wlock.release()
 
 def hg_update(orig, repo, node):
+    # In order to not waste a lot of extra time during the update largefiles
+    # step, we keep track of the state of the standins before and after we
+    # call the original update function, and only update the standins that
+    # have changed in the hg.update() call
+    oldstandins = lfutil.getstandinsstate(repo)
     result = orig(repo, node)
-    lfcommands.updatelfiles(repo.ui, repo)
+    newstandins = lfutil.getstandinsstate(repo)
+    tobeupdated = set(oldstandins).symmetric_difference(set(newstandins))
+    filelist = []
+    for f in tobeupdated:
+        if f[0] not in filelist:
+            filelist.append(f[0])
+
+    lfcommands.updatelfiles(repo.ui, repo, filelist=filelist, printmessage=True)
     return result
 
 def hg_clean(orig, repo, node, show_stats=True):
