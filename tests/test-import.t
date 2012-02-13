@@ -445,7 +445,7 @@ Test fuzziness (ambiguous patch location, fuzz=2)
   $ hg import --no-commit -v fuzzy-tip.patch
   applying fuzzy-tip.patch
   patching file a
-  Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
+  Hunk #1 succeeded at 2 with fuzz 1 (offset 0 lines).
   applied to working directory
   $ hg revert -a
   reverting a
@@ -462,7 +462,7 @@ test fuzziness with eol=auto
   $ hg --config patch.eol=auto import --no-commit -v fuzzy-tip.patch
   applying fuzzy-tip.patch
   patching file a
-  Hunk #1 succeeded at 1 with fuzz 2 (offset -2 lines).
+  Hunk #1 succeeded at 2 with fuzz 1 (offset 0 lines).
   applied to working directory
   $ cd ..
 
@@ -1029,6 +1029,19 @@ Test corner case involving fuzz and skew
   > +line
   > EOF
 
+  $ cat > 04-middle-of-file-completely-fuzzed.diff <<EOF
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -1,1 +1,1 @@
+  > -2
+  > +add some skew
+  > @@ -2,2 +2,3 @@
+  >  not matching, should fuzz
+  >  ... a bit
+  > +line
+  > EOF
+
   $ cat > a <<EOF
   > 1
   > 2
@@ -1068,6 +1081,16 @@ Test corner case involving fuzz and skew
   applied to working directory
   1
   2
+  3
+  4
+  line
+  applying 04-middle-of-file-completely-fuzzed.diff
+  patching file a
+  Hunk #1 succeeded at 2 (offset 1 lines).
+  Hunk #2 succeeded at 5 with fuzz 2 (offset 1 lines).
+  applied to working directory
+  1
+  add some skew
   3
   4
   line

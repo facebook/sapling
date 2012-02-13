@@ -973,7 +973,7 @@ class hunk(object):
         # this removes context lines from the top and bottom of list 'l'.  It
         # checks the hunk to make sure only context lines are removed, and then
         # returns a new shortened list of lines.
-        fuzz = min(fuzz, len(old)-1)
+        fuzz = min(fuzz, len(old))
         if fuzz:
             top = 0
             bot = 0
@@ -991,18 +991,8 @@ class hunk(object):
                     else:
                         break
 
-            # top and bot now count context in the hunk
-            # adjust them if either one is short
-            context = max(top, bot, 3)
-            if bot < context:
-                bot = max(0, fuzz - (context - bot))
-            else:
-                bot = min(fuzz, bot)
-            if top < context:
-                top = max(0, fuzz - (context - top))
-            else:
-                top = min(fuzz, top)
-
+            bot = min(fuzz, bot)
+            top = min(fuzz, top)
             return old[top:len(old)-bot], new[top:len(new)-bot], top
         return old, new, 0
 

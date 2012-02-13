@@ -125,12 +125,10 @@ Merge:
   merging with queue at: $TESTTMP/t2/.hg/refqueue (glob)
   applying patcha
   patching file a
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file a.rej
-  patch failed, unable to continue (try -v)
-  patch failed, rejects left in working dir
+  Hunk #1 succeeded at 2 with fuzz 1 (offset 0 lines).
+  fuzz found when applying patch, stopping
   patch didn't work out, merging patcha
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   applying patcha2
