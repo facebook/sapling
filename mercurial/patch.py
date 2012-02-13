@@ -728,7 +728,7 @@ class patchfile(object):
             h = h.getnormalized()
 
         # fast case first, no offsets, no fuzz
-        old = h.old()
+        old, new = h.fuzzit(0, False)
         start = h.starta + self.offset
         # zero length hunk ranges already have their start decremented
         if h.lena:
@@ -741,7 +741,7 @@ class patchfile(object):
             if self.remove:
                 self.backend.unlink(self.fname)
             else:
-                self.lines[start : start + h.lena] = h.new()
+                self.lines[start : start + h.lena] = new
                 self.offset += h.lenb - h.lena
                 self.dirty = True
             return 0
@@ -759,14 +759,13 @@ class patchfile(object):
 
         for fuzzlen in xrange(3):
             for toponly in [True, False]:
-                old = h.old(fuzzlen, toponly)
+                old, new = h.fuzzit(fuzzlen, toponly)
 
                 cand = self.findlines(old[0][1:], search_start)
                 for l in cand:
                     if diffhelpers.testhunk(old, self.lines, l) == 0:
-                        newlines = h.new(fuzzlen, toponly)
-                        self.lines[l : l + len(old)] = newlines
-                        self.offset += len(newlines) - len(old)
+                        self.lines[l : l + len(old)] = new
+                        self.offset += len(new) - len(old)
                         self.skew = l - orig_start
                         self.dirty = True
                         offset = l - orig_start - fuzzlen
@@ -971,11 +970,11 @@ class hunk(object):
     def complete(self):
         return len(self.a) == self.lena and len(self.b) == self.lenb
 
-    def fuzzit(self, l, fuzz, toponly):
+    def _fuzzit(self, old, new, fuzz, toponly):
         # this removes context lines from the top and bottom of list 'l'.  It
         # checks the hunk to make sure only context lines are removed, and then
         # returns a new shortened list of lines.
-        fuzz = min(fuzz, len(l)-1)
+        fuzz = min(fuzz, len(old)-1)
         if fuzz:
             top = 0
             bot = 0
@@ -1005,14 +1004,11 @@ class hunk(object):
             else:
                 top = min(fuzz, top)
 
-            return l[top:len(l)-bot]
-        return l
+            return old[top:len(old)-bot], new[top:len(new)-bot]
+        return old, new
 
-    def old(self, fuzz=0, toponly=False):
-        return self.fuzzit(self.a, fuzz, toponly)
-
-    def new(self, fuzz=0, toponly=False):
-        return self.fuzzit(self.b, fuzz, toponly)
+    def fuzzit(self, fuzz, toponly):
+        return self._fuzzit(self.a, self.b, fuzz, toponly)
 
 class binhunk(object):
     'A binary patch file. Only understands literals so far.'
