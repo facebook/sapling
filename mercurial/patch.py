@@ -728,21 +728,19 @@ class patchfile(object):
             h = h.getnormalized()
 
         # fast case first, no offsets, no fuzz
-        old, new = h.fuzzit(0, False)
-        start = h.starta + self.offset
-        # zero length hunk ranges already have their start decremented
-        if h.lena:
-            start -= 1
-        orig_start = start
+        old, oldstart, new, newstart = h.fuzzit(0, False)
+        oldstart += self.offset
+        orig_start = oldstart
         # if there's skew we want to emit the "(offset %d lines)" even
         # when the hunk cleanly applies at start + skew, so skip the
         # fast case code
-        if self.skew == 0 and diffhelpers.testhunk(old, self.lines, start) == 0:
+        if (self.skew == 0 and
+            diffhelpers.testhunk(old, self.lines, oldstart) == 0):
             if self.remove:
                 self.backend.unlink(self.fname)
             else:
-                self.lines[start : start + h.lena] = new
-                self.offset += h.lenb - h.lena
+                self.lines[oldstart:oldstart + len(old)] = new
+                self.offset += len(new) - len(old)
                 self.dirty = True
             return 0
 
@@ -759,7 +757,7 @@ class patchfile(object):
 
         for fuzzlen in xrange(3):
             for toponly in [True, False]:
-                old, new = h.fuzzit(fuzzlen, toponly)
+                old, oldstart, new, newstart = h.fuzzit(fuzzlen, toponly)
 
                 cand = self.findlines(old[0][1:], search_start)
                 for l in cand:
@@ -1004,11 +1002,19 @@ class hunk(object):
             else:
                 top = min(fuzz, top)
 
-            return old[top:len(old)-bot], new[top:len(new)-bot]
-        return old, new
+            return old[top:len(old)-bot], new[top:len(new)-bot], top
+        return old, new, 0
 
     def fuzzit(self, fuzz, toponly):
-        return self._fuzzit(self.a, self.b, fuzz, toponly)
+        old, new, top = self._fuzzit(self.a, self.b, fuzz, toponly)
+        oldstart = self.starta + top
+        newstart = self.startb + top
+        # zero length hunk ranges already have their start decremented
+        if self.lena:
+            oldstart -= 1
+        if self.lenb:
+            newstart -= 1
+        return old, oldstart, new, newstart
 
 class binhunk(object):
     'A binary patch file. Only understands literals so far.'
