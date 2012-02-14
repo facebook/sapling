@@ -1795,6 +1795,7 @@ class queue(object):
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
+        imported = []
         if rev:
             # If mq patches are applied, we can only import revisions
             # that form a linear path to qbase.
@@ -1847,6 +1848,7 @@ class queue(object):
                 self.applied.insert(0, se)
 
                 self.added.append(patchname)
+                imported.append(patchname)
                 patchname = None
             if rev and repo.ui.configbool('mq', 'secret', False):
                 # if we added anything with --rev, we must move the secret root
@@ -1901,9 +1903,11 @@ class queue(object):
             self.seriesdirty = True
             self.ui.warn(_("adding %s to series file\n") % patchname)
             self.added.append(patchname)
+            imported.append(patchname)
             patchname = None
 
         self.removeundo(repo)
+        return imported
 
 @command("qdelete|qremove|qrm",
          [('k', 'keep', None, _('keep patch file')),
@@ -2029,15 +2033,16 @@ def qimport(ui, repo, *filename, **opts):
     try:
         q = repo.mq
         try:
-            q.qimport(repo, filename, patchname=opts.get('name'),
-                  existing=opts.get('existing'), force=opts.get('force'),
-                  rev=opts.get('rev'), git=opts.get('git'))
+            imported = q.qimport(
+                repo, filename, patchname=opts.get('name'),
+                existing=opts.get('existing'), force=opts.get('force'),
+                rev=opts.get('rev'), git=opts.get('git'))
         finally:
             q.savedirty()
 
 
-        if opts.get('push') and not opts.get('rev'):
-            return q.push(repo, None)
+        if imported and opts.get('push') and not opts.get('rev'):
+            return q.push(repo, imported[-1])
     finally:
         lock.release()
     return 0

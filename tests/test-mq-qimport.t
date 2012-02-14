@@ -153,21 +153,41 @@ qimport CRLF diff
 
 try to import --push
 
-  $ echo another >> b
-  $ hg diff > another.diff
-  $ hg up -C
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg qimport --push another.diff
-  adding another.diff to series file
-  applying another.diff
-  now at: another.diff
+  $ cat > appendfoo.diff <<EOF
+  > append foo
+  >  
+  > diff -r 07f494440405 -r 261500830e46 baz
+  > --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  > +++ b/baz	Thu Jan 01 00:00:00 1970 +0000
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > EOF
+
+  $ cat > appendbar.diff <<EOF
+  > append bar
+  >  
+  > diff -r 07f494440405 -r 261500830e46 baz
+  > --- a/baz	Thu Jan 01 00:00:00 1970 +0000
+  > +++ b/baz	Thu Jan 01 00:00:00 1970 +0000
+  > @@ -1,1 +1,2 @@
+  >  foo
+  > +bar
+  > EOF
+
+  $ hg qimport --push appendfoo.diff appendbar.diff
+  adding appendfoo.diff to series file
+  adding appendbar.diff to series file
+  applying appendfoo.diff
+  applying appendbar.diff
+  now at: appendbar.diff
   $ hg qfin -a
   patch b.diff finalized without changeset message
-  patch another.diff finalized without changeset message
-  $ hg qimport -rtip -P
+  $ hg qimport -r 'p1(.)::' -P
   $ hg qpop -a
+  popping 3.diff
   popping 2.diff
   patch queue now empty
+  $ hg qdel 3.diff
   $ hg qdel -k 2.diff
 
 qimport -e
