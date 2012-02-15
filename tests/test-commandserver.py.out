@@ -4,10 +4,10 @@ testing hellomessage:
 o, 'capabilities: getencoding runcommand\nencoding: ***'
  runcommand id
 000000000000 tip
-abort: unknown command unknowncommand
 
 testing unknowncommand:
 
+abort: unknown command unknowncommand
 
 testing checkruncommand:
 
@@ -134,11 +134,11 @@ testing setphase:
 3: draft
  runcommand phase -r .
 3: public
-no phases changed
 
 testing rollback:
 
  runcommand phase -r . -p
+no phases changed
  runcommand commit -Am.
  runcommand rollback
 repository tip rolled back to revision 3 (undo commit)

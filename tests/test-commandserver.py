@@ -27,6 +27,7 @@ def readchannel(server):
 
 def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None):
     print ' runcommand', ' '.join(args)
+    sys.stdout.flush()
     server.stdin.write('runcommand\n')
     writeblock(server, '\0'.join(args))
 
@@ -56,6 +57,7 @@ def check(func, repopath=None):
     print
     print 'testing %s:' % func.__name__
     print
+    sys.stdout.flush()
     server = connect(repopath)
     try:
         return func(server)
