@@ -181,6 +181,13 @@ def bookmarks(server):
     os.system('hg upd bm1 -q')
     runcommand(server, ['bookmarks'])
 
+    runcommand(server, ['bookmarks', 'bm3'])
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    runcommand(server, ['commit', '-Amm'])
+    runcommand(server, ['bookmarks'])
+
 def tagscache(server):
     readchannel(server)
     runcommand(server, ['id', '-t', '-r', '0'])
