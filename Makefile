@@ -3,7 +3,7 @@ PYTHON=python
 help:
 	@echo 'Commonly used make targets:'
 	@echo '  tests              - run all tests in the automatic test suite'
-	@echo '  all-version-tests - run all tests against many hg versions'
+	@echo '  all-version-tests  - run all tests against many hg versions'
 	@echo '  tests-%s           - run all tests in the specified hg version'
 
 all: help

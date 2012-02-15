@@ -99,6 +99,11 @@ hg add eta
 hgcommit -u "test < test@example.com >" -m 'add eta'
 hg push
 
+echo theta > theta
+hg add theta
+hgcommit -u "test >test@example.com>" -m 'add theta'
+hg push
+
 hg log --graph | egrep -v ': *(not-master|master)'
 
 cd ..

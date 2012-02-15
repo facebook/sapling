@@ -39,9 +39,19 @@ exporting hg objects to git
 creating and sending data
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:8c878c97
-@  changeset:   7:b90e988091a2
+pushing to git://localhost/gitrepo
+exporting hg objects to git
+creating and sending data
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:1e03e913
+@  changeset:   8:d3c51ce68cfd
 |  tag:         default/master
 |  tag:         tip
+|  user:        test >test@example.com>
+|  date:        Mon Jan 01 00:00:18 2007 +0000
+|  summary:     add theta
+|
+o  changeset:   7:b90e988091a2
 |  user:        test < test@example.com >
 |  date:        Mon Jan 01 00:00:17 2007 +0000
 |  summary:     add eta
@@ -83,10 +93,15 @@ o  changeset:   0:3442585be8a6
    summary:     add alpha
 
 importing git objects into hg
-7 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   7:8ab87d5066e4
+8 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   8:efec0270e295
 |  tag:         default/master
 |  tag:         tip
+|  user:        test ?test@example.com <test ?test@example.com>
+|  date:        Mon Jan 01 00:00:18 2007 +0000
+|  summary:     add theta
+|
+o  changeset:   7:8ab87d5066e4
 |  user:        test <test@example.com>
 |  date:        Mon Jan 01 00:00:17 2007 +0000
 |  summary:     add eta
@@ -126,6 +141,12 @@ o  changeset:   0:3442585be8a6
    user:        test <test@example.org>
    date:        Mon Jan 01 00:00:10 2007 +0000
    summary:     add alpha
+
+commit 1e03e913eca571b86ee06d3c1ddd795dde9ca917
+Author: test ?test@example.com <test ?test@example.com>
+Date:   Mon Jan 1 00:00:18 2007 +0000
+
+    add theta
 
 commit 8c878c9764e96e67ed9f62b3f317d156bf71bc52
 Author: test <test@example.com>
