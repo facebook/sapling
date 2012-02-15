@@ -948,4 +948,50 @@ Symlink to a large largefile should behave the same as a symlink to a normal fil
   $ test -L largelink
   $ cd ..
 
+test for pattern matching on 'hg status':
+to boost performance, largefiles checks whether specified patterns are
+related to largefiles in working directory (NOT to STANDIN) or not.
 
+  $ hg init statusmatch
+  $ cd statusmatch
+
+  $ mkdir -p a/b/c/d
+  $ echo normal > a/b/c/d/e.normal.txt
+  $ hg add a/b/c/d/e.normal.txt
+  $ echo large > a/b/c/d/e.large.txt
+  $ hg add --large a/b/c/d/e.large.txt
+  $ mkdir -p a/b/c/x
+  $ echo normal > a/b/c/x/y.normal.txt
+  $ hg add a/b/c/x/y.normal.txt
+  $ hg commit -m 'add files'
+  Invoking status precommit hook
+  A a/b/c/d/e.large.txt
+  A a/b/c/d/e.normal.txt
+  A a/b/c/x/y.normal.txt
+
+(1) no pattern: no performance boost
+  $ hg status -A
+  C a/b/c/d/e.large.txt
+  C a/b/c/d/e.normal.txt
+  C a/b/c/x/y.normal.txt
+
+(2) pattern not related to largefiles: performance boost
+  $ hg status -A a/b/c/x
+  C a/b/c/x/y.normal.txt
+
+(3) pattern related to largefiles: no performance boost
+  $ hg status -A a/b/c/d
+  C a/b/c/d/e.large.txt
+  C a/b/c/d/e.normal.txt
+
+(4) pattern related to STANDIN (not to largefiles): performance boost
+  $ hg status -A .hglf/a
+  C .hglf/a/b/c/d/e.large.txt
+
+(5) mixed case: no performance boost
+  $ hg status -A a/b/c/x a/b/c/d
+  C a/b/c/d/e.large.txt
+  C a/b/c/d/e.normal.txt
+  C a/b/c/x/y.normal.txt
+
+  $ cd ..
