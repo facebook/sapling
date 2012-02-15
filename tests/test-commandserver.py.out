@@ -134,3 +134,14 @@ testing setphase:
 3: draft
  runcommand phase -r .
 3: public
+no phases changed
+
+testing rollback:
+
+ runcommand phase -r . -p
+ runcommand commit -Am.
+ runcommand rollback
+repository tip rolled back to revision 3 (undo commit)
+working directory now based on revision 3
+ runcommand phase -r .
+3: public

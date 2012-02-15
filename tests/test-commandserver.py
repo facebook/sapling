@@ -200,6 +200,16 @@ def setphase(server):
     os.system('hg phase -r . -p')
     runcommand(server, ['phase', '-r', '.'])
 
+def rollback(server):
+    readchannel(server)
+    runcommand(server, ['phase', '-r', '.', '-p'])
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    runcommand(server, ['commit', '-Am.'])
+    runcommand(server, ['rollback'])
+    runcommand(server, ['phase', '-r', '.'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -219,3 +229,4 @@ if __name__ == '__main__':
     check(bookmarks)
     check(tagscache)
     check(setphase)
+    check(rollback)

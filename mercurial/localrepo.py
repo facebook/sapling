@@ -1304,6 +1304,9 @@ class localrepository(repo.repository):
         # tag cache retrieval" case to work.
         self.invalidatecaches()
 
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
+
     def walk(self, match, node=None):
         '''
         walk recursively through the directory tree or a given
