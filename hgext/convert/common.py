@@ -419,7 +419,7 @@ def parsesplicemap(path):
         fp = open(path, 'r')
         for i, line in enumerate(fp):
             try:
-                child, parents = line.splitlines()[0].rstrip().rsplit(' ', 1)
+                child, parents = line.splitlines()[0].rstrip().split(' ', 1)
                 parents = parents.replace(',', ' ').split()
             except ValueError:
                 raise util.Abort(_('syntax error in %s(%d): child parent1'
