@@ -93,6 +93,8 @@ eff892de26ec tip
 
 testing outsidechanges:
 
+ runcommand status
+M a
  runcommand tip
 changeset:   1:d3a0a68be6de
 tag:         tip
@@ -100,6 +102,7 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     2
 
+ runcommand status
 
 testing bookmarks:
 

@@ -163,8 +163,10 @@ def outsidechanges(server):
     f = open('a', 'ab')
     f.write('a\n')
     f.close()
+    runcommand(server, ['status'])
     os.system('hg ci -Am2')
     runcommand(server, ['tip'])
+    runcommand(server, ['status'])
 
 def bookmarks(server):
     readchannel(server)
