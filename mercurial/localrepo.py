@@ -949,6 +949,7 @@ class localrepository(repo.repository):
             self.store.write()
             if self._dirtyphases:
                 phases.writeroots(self)
+                self._dirtyphases = False
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
