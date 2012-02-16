@@ -27,6 +27,7 @@ def readchannel(server):
 
 def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None):
     print ' runcommand', ' '.join(args)
+    sys.stdout.flush()
     server.stdin.write('runcommand\n')
     writeblock(server, '\0'.join(args))
 
@@ -56,6 +57,7 @@ def check(func, repopath=None):
     print
     print 'testing %s:' % func.__name__
     print
+    sys.stdout.flush()
     server = connect(repopath)
     try:
         return func(server)
@@ -163,8 +165,10 @@ def outsidechanges(server):
     f = open('a', 'ab')
     f.write('a\n')
     f.close()
+    runcommand(server, ['status'])
     os.system('hg ci -Am2')
     runcommand(server, ['tip'])
+    runcommand(server, ['status'])
 
 def bookmarks(server):
     readchannel(server)
@@ -179,6 +183,13 @@ def bookmarks(server):
     os.system('hg upd bm1 -q')
     runcommand(server, ['bookmarks'])
 
+    runcommand(server, ['bookmarks', 'bm3'])
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    runcommand(server, ['commit', '-Amm'])
+    runcommand(server, ['bookmarks'])
+
 def tagscache(server):
     readchannel(server)
     runcommand(server, ['id', '-t', '-r', '0'])
@@ -189,6 +200,16 @@ def setphase(server):
     readchannel(server)
     runcommand(server, ['phase', '-r', '.'])
     os.system('hg phase -r . -p')
+    runcommand(server, ['phase', '-r', '.'])
+
+def rollback(server):
+    readchannel(server)
+    runcommand(server, ['phase', '-r', '.', '-p'])
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    runcommand(server, ['commit', '-Am.'])
+    runcommand(server, ['rollback'])
     runcommand(server, ['phase', '-r', '.'])
 
 if __name__ == '__main__':
@@ -210,3 +231,4 @@ if __name__ == '__main__':
     check(bookmarks)
     check(tagscache)
     check(setphase)
+    check(rollback)

@@ -402,6 +402,23 @@ Renames and strip
   A b
     a
   R a
+
+Renames, similarity and git diff
+
+  $ hg revert -aC
+  undeleting a
+  forgetting b
+  $ rm b
+  $ hg import --similarity 90 --no-commit - <<EOF
+  > diff --git a/a b/b
+  > rename from a
+  > rename to b
+  > EOF
+  applying patch from stdin
+  $ hg st --copies
+  A b
+    a
+  R a
   $ cd ..
 
 Pure copy with existing destination

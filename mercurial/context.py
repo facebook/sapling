@@ -902,11 +902,11 @@ class workingctx(changectx):
         try:
             rejected = []
             for f in files:
-                if self._repo.dirstate[f] != 'a':
-                    self._repo.dirstate.remove(f)
-                elif f not in self._repo.dirstate:
+                if f not in self._repo.dirstate:
                     self._repo.ui.warn(_("%s not tracked!\n") % join(f))
                     rejected.append(f)
+                elif self._repo.dirstate[f] != 'a':
+                    self._repo.dirstate.remove(f)
                 else:
                     self._repo.dirstate.drop(f)
             return rejected

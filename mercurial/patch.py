@@ -475,9 +475,15 @@ class workingbackend(fsbackend):
         addremoved = set(self.changed)
         for src, dst in self.copied:
             scmutil.dirstatecopy(self.ui, self.repo, wctx, src, dst)
-            addremoved.discard(src)
-        if (not self.similarity) and self.removed:
+        if self.removed:
             wctx.forget(sorted(self.removed))
+            for f in self.removed:
+                if f not in self.repo.dirstate:
+                    # File was deleted and no longer belongs to the
+                    # dirstate, it was probably marked added then
+                    # deleted, and should not be considered by
+                    # addremove().
+                    addremoved.discard(f)
         if addremoved:
             cwd = self.repo.getcwd()
             if cwd:
@@ -722,21 +728,19 @@ class patchfile(object):
             h = h.getnormalized()
 
         # fast case first, no offsets, no fuzz
-        old = h.old()
-        start = h.starta + self.offset
-        # zero length hunk ranges already have their start decremented
-        if h.lena:
-            start -= 1
-        orig_start = start
+        old, oldstart, new, newstart = h.fuzzit(0, False)
+        oldstart += self.offset
+        orig_start = oldstart
         # if there's skew we want to emit the "(offset %d lines)" even
         # when the hunk cleanly applies at start + skew, so skip the
         # fast case code
-        if self.skew == 0 and diffhelpers.testhunk(old, self.lines, start) == 0:
+        if (self.skew == 0 and
+            diffhelpers.testhunk(old, self.lines, oldstart) == 0):
             if self.remove:
                 self.backend.unlink(self.fname)
             else:
-                self.lines[start : start + h.lena] = h.new()
-                self.offset += h.lenb - h.lena
+                self.lines[oldstart:oldstart + len(old)] = new
+                self.offset += len(new) - len(old)
                 self.dirty = True
             return 0
 
@@ -744,23 +748,23 @@ class patchfile(object):
         self.hash = {}
         for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
-        if h.hunk[-1][0] != ' ':
-            # if the hunk tried to put something at the bottom of the file
-            # override the start line and use eof here
-            search_start = len(self.lines)
-        else:
-            search_start = orig_start + self.skew
 
         for fuzzlen in xrange(3):
             for toponly in [True, False]:
-                old = h.old(fuzzlen, toponly)
+                old, oldstart, new, newstart = h.fuzzit(fuzzlen, toponly)
+                oldstart = oldstart + self.offset + self.skew
+                oldstart = min(oldstart, len(self.lines))
+                if old:
+                    cand = self.findlines(old[0][1:], oldstart)
+                else:
+                    # Only adding lines with no or fuzzed context, just
+                    # take the skew in account
+                    cand = [oldstart]
 
-                cand = self.findlines(old[0][1:], search_start)
                 for l in cand:
-                    if diffhelpers.testhunk(old, self.lines, l) == 0:
-                        newlines = h.new(fuzzlen, toponly)
-                        self.lines[l : l + len(old)] = newlines
-                        self.offset += len(newlines) - len(old)
+                    if not old or diffhelpers.testhunk(old, self.lines, l) == 0:
+                        self.lines[l : l + len(old)] = new
+                        self.offset += len(new) - len(old)
                         self.skew = l - orig_start
                         self.dirty = True
                         offset = l - orig_start - fuzzlen
@@ -965,11 +969,11 @@ class hunk(object):
     def complete(self):
         return len(self.a) == self.lena and len(self.b) == self.lenb
 
-    def fuzzit(self, l, fuzz, toponly):
+    def _fuzzit(self, old, new, fuzz, toponly):
         # this removes context lines from the top and bottom of list 'l'.  It
         # checks the hunk to make sure only context lines are removed, and then
         # returns a new shortened list of lines.
-        fuzz = min(fuzz, len(l)-1)
+        fuzz = min(fuzz, len(old))
         if fuzz:
             top = 0
             bot = 0
@@ -987,26 +991,21 @@ class hunk(object):
                     else:
                         break
 
-            # top and bot now count context in the hunk
-            # adjust them if either one is short
-            context = max(top, bot, 3)
-            if bot < context:
-                bot = max(0, fuzz - (context - bot))
-            else:
-                bot = min(fuzz, bot)
-            if top < context:
-                top = max(0, fuzz - (context - top))
-            else:
-                top = min(fuzz, top)
+            bot = min(fuzz, bot)
+            top = min(fuzz, top)
+            return old[top:len(old)-bot], new[top:len(new)-bot], top
+        return old, new, 0
 
-            return l[top:len(l)-bot]
-        return l
-
-    def old(self, fuzz=0, toponly=False):
-        return self.fuzzit(self.a, fuzz, toponly)
-
-    def new(self, fuzz=0, toponly=False):
-        return self.fuzzit(self.b, fuzz, toponly)
+    def fuzzit(self, fuzz, toponly):
+        old, new, top = self._fuzzit(self.a, self.b, fuzz, toponly)
+        oldstart = self.starta + top
+        newstart = self.startb + top
+        # zero length hunk ranges already have their start decremented
+        if self.lena:
+            oldstart -= 1
+        if self.lenb:
+            newstart -= 1
+        return old, oldstart, new, newstart
 
 class binhunk(object):
     'A binary patch file. Only understands literals so far.'

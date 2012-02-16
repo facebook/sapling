@@ -949,6 +949,7 @@ class localrepository(repo.repository):
             self.store.write()
             if self._dirtyphases:
                 phases.writeroots(self)
+                self._dirtyphases = False
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
@@ -1322,6 +1323,9 @@ class localrepository(repo.repository):
         # But I think doing it this way is necessary for the "instant
         # tag cache retrieval" case to work.
         self.invalidatecaches()
+
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
 
     def walk(self, match, node=None):
         '''

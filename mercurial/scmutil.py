@@ -803,6 +803,10 @@ class filecache(object):
         return self
 
     def __get__(self, obj, type=None):
+        # do we need to check if the file changed?
+        if self.name in obj.__dict__:
+            return obj.__dict__[self.name]
+
         entry = obj._filecache.get(self.name)
 
         if entry:
@@ -818,5 +822,16 @@ class filecache(object):
 
             obj._filecache[self.name] = entry
 
-        setattr(obj, self.name, entry.obj)
+        obj.__dict__[self.name] = entry.obj
         return entry.obj
+
+    def __set__(self, obj, value):
+        if self.name in obj._filecache:
+            obj._filecache[self.name].obj = value # update cached copy
+        obj.__dict__[self.name] = value # update copy returned by obj.x
+
+    def __delete__(self, obj):
+        try:
+            del obj.__dict__[self.name]
+        except KeyError:
+            raise AttributeError, self.name

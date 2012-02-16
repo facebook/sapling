@@ -123,11 +123,11 @@ We want 2 to depend on 1 and 3. Since 3 is always converted after 2,
 the bug should be exhibited with all conversion orders.
 
   $ cat > ../splicemap <<EOF
-  > $(hg id -r 2 -i --debug) $(hg id -r 1 -i --debug),$(hg id -r 3 -i --debug)
+  > $(hg id -r 2 -i --debug) $(hg id -r 1 -i --debug), $(hg id -r 3 -i --debug)
   > EOF
   $ cd ..
   $ cat splicemap
-  7c364e7fa7d70ae525610c016317ed717b519d97 717d54d67e6c31fd75ffef2ff3042bdd98418437,102a90ea7b4a3361e4082ed620918c261189a36a
+  7c364e7fa7d70ae525610c016317ed717b519d97 717d54d67e6c31fd75ffef2ff3042bdd98418437, 102a90ea7b4a3361e4082ed620918c261189a36a
 
 Test regular conversion
 

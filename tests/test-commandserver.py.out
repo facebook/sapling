@@ -4,10 +4,10 @@ testing hellomessage:
 o, 'capabilities: getencoding runcommand\nencoding: ***'
  runcommand id
 000000000000 tip
-abort: unknown command unknowncommand
 
 testing unknowncommand:
 
+abort: unknown command unknowncommand
 
 testing checkruncommand:
 
@@ -93,6 +93,8 @@ eff892de26ec tip
 
 testing outsidechanges:
 
+ runcommand status
+M a
  runcommand tip
 changeset:   1:d3a0a68be6de
 tag:         tip
@@ -100,6 +102,7 @@ user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 summary:     2
 
+ runcommand status
 
 testing bookmarks:
 
@@ -111,6 +114,12 @@ no bookmarks set
  runcommand bookmarks
  * bm1                       1:d3a0a68be6de
    bm2                       1:d3a0a68be6de
+ runcommand bookmarks bm3
+ runcommand commit -Amm
+ runcommand bookmarks
+   bm1                       1:d3a0a68be6de
+   bm2                       1:d3a0a68be6de
+ * bm3                       2:aef17e88f5f0
 
 testing tagscache:
 
@@ -122,6 +131,17 @@ foo
 testing setphase:
 
  runcommand phase -r .
-2: draft
+3: draft
  runcommand phase -r .
-2: public
+3: public
+
+testing rollback:
+
+ runcommand phase -r . -p
+no phases changed
+ runcommand commit -Am.
+ runcommand rollback
+repository tip rolled back to revision 3 (undo commit)
+working directory now based on revision 3
+ runcommand phase -r .
+3: public
