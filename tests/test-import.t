@@ -663,7 +663,6 @@ test import with similarity and git and strip (issue295 et al.)
   applying ../rename.diff
   patching file a
   patching file b
-  removing a
   adding b
   recording removal of a as rename to b (88% similar)
   applied to working directory
@@ -679,7 +678,6 @@ test import with similarity and git and strip (issue295 et al.)
   applying ../rename.diff
   patching file a
   patching file b
-  removing a
   adding b
   applied to working directory
   $ hg st -C

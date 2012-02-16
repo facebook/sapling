@@ -475,9 +475,15 @@ class workingbackend(fsbackend):
         addremoved = set(self.changed)
         for src, dst in self.copied:
             scmutil.dirstatecopy(self.ui, self.repo, wctx, src, dst)
-            addremoved.discard(src)
-        if (not self.similarity) and self.removed:
+        if self.removed:
             wctx.forget(sorted(self.removed))
+            for f in self.removed:
+                if f not in self.repo.dirstate:
+                    # File was deleted and no longer belongs to the
+                    # dirstate, it was probably marked added then
+                    # deleted, and should not be considered by
+                    # addremove().
+                    addremoved.discard(f)
         if addremoved:
             cwd = self.repo.getcwd()
             if cwd:
