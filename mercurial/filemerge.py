@@ -24,7 +24,9 @@ internals = {}
 def internaltool(name, trymerge, onfailure=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
-        internals[name] = func
+        fullname = 'internal:' + name
+        func.__doc__ = "``%s``\n" % fullname + func.__doc__.strip()
+        internals[fullname] = func
         func.trymerge = trymerge
         func.onfailure = onfailure
         return func
@@ -131,10 +133,9 @@ def _matcheol(file, origfile):
             if newdata != data:
                 util.writefile(file, newdata)
 
-@internaltool('internal:prompt', False)
+@internaltool('prompt', False)
 def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """``internal:prompt``
-    Asks the user which of the local or the other version to keep as
+    """Asks the user which of the local or the other version to keep as
     the merged version."""
     ui = repo.ui
     fd = fcd.path()
@@ -146,22 +147,20 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     else:
         return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
 
-@internaltool('internal:local', False)
+@internaltool('local', False)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """``internal:local``
-    Uses the local version of files as the merged version."""
+    """Uses the local version of files as the merged version."""
     return 0
 
-@internaltool('internal:other', False)
+@internaltool('other', False)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """``internal:other``
-    Uses the other version of files as the merged version."""
+    """Uses the other version of files as the merged version."""
     repo.wwrite(fcd.path(), fco.data(), fco.flags())
     return 0
 
-@internaltool('internal:fail', False)
+@internaltool('fail', False)
 def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """``internal:fail``
+    """
     Rather than attempting to merge files that were modified on both
     branches, it marks them as unresolved. The resolve command must be
     used to resolve these conflicts."""
@@ -194,11 +193,11 @@ def _premerge(repo, toolconf, files):
             util.copyfile(back, a) # restore from backup and try again
     return 1 # continue merging
 
-@internaltool('internal:merge', True,
+@internaltool('merge', True,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"))
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
-    """``internal:merge``
+    """
     Uses the internal non-interactive simple merge algorithm for merging
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file."""
@@ -212,9 +211,9 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
         return True, r
     return False, 0
 
-@internaltool('internal:dump', True)
+@internaltool('dump', True)
 def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files):
-    """``internal:dump``
+    """
     Creates three versions of the files to merge, containing the
     contents of local, other and base. These files can then be used to
     perform a merge manually. If the file to be merged is named
