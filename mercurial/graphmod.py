@@ -18,7 +18,6 @@ Data depends on type.
 """
 
 from mercurial.node import nullrev
-import re
 
 CHANGESET = 'C'
 
@@ -87,17 +86,14 @@ def colored(dag, repo):
     config = {}
 
     for key, val in repo.ui.configitems('graph'):
-        if '.' not in key:
-            continue
-        branch, setting = key.rsplit('.', 1)
-        gdict = config.setdefault(branch, {})
+        if '.' in key:
+            branch, setting = key.rsplit('.', 1)
+            # Validation
+            if setting == "width" and val.isdigit():
+                config.setdefault(branch, {})[setting] = val
+            elif setting == "color" and val.isalnum():
+                config.setdefault(branch, {})[setting] = val
 
-        # Validation
-        if ((setting == "width" and val.isdigit() and 0 < int(val) < 30) or
-                (setting == "color" and re.match('^[0-9a-fA-F]{6}$', val))):
-            gdict[setting] = val
-        else:
-            continue
 
     for (cur, type, data, parents) in dag:
 
