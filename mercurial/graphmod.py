@@ -18,6 +18,7 @@ Data depends on type.
 """
 
 from mercurial.node import nullrev
+import util
 
 CHANGESET = 'C'
 
@@ -94,6 +95,10 @@ def colored(dag, repo):
             elif setting == "color" and val.isalnum():
                 config.setdefault(branch, {})[setting] = val
 
+    if config:
+        getconf = util.lrucachefunc(lambda rev: config.get(repo[rev].branch()))
+    else:
+        getconf = lambda rev: None
 
     for (cur, type, data, parents) in dag:
 
@@ -125,12 +130,12 @@ def colored(dag, repo):
             if eid in next:
                 edges.append((
                     ecol, next.index(eid), colors[eid],
-                    config.get(repo[eid].branch(), None)))
+                    getconf(eid)))
             elif eid == cur:
                 for p in parents:
                     edges.append((
                         ecol, next.index(p), color,
-                        config.get(repo[p].branch(), None)))
+                        getconf(p)))
 
         # Yield and move on
         yield (cur, type, data, (col, color), edges)
