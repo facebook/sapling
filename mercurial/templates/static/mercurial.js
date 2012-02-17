@@ -83,6 +83,16 @@ function Graph() {
 		
 	}
 
+	this.edge = function(x0, y0, x1, y1, color) {
+		
+		this.setColor(color, 0.0, 0.65);
+		this.ctx.beginPath();
+		this.ctx.moveTo(x0, y0);
+		this.ctx.lineTo(x1, y1);
+		this.ctx.stroke();
+		
+	}
+
 	this.render = function(data) {
 		
 		var backgrounds = '';

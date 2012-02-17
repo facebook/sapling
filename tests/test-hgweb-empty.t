@@ -250,16 +250,6 @@ Some tests for hgweb in an empty repository
   var graph = new Graph();
   graph.scale(39);
   
-  graph.edge = function(x0, y0, x1, y1, color) {
-  	
-  	this.setColor(color, 0.0, 0.65);
-  	this.ctx.beginPath();
-  	this.ctx.moveTo(x0, y0);
-  	this.ctx.lineTo(x1, y1);
-  	this.ctx.stroke();
-  	
-  }
-  
   var revlink = '<li style="_STYLE"><span class="desc">';
   revlink += '<a href="/rev/_NODEID" title="_NODEID">_DESC</a>';
   revlink += '</span>_TAGS<span class="info">_DATE, by _USER</span></li>';
