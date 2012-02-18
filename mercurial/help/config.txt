@@ -537,28 +537,30 @@ This feature is only supported when using Python 2.6 or later.
 ``graph``
 """""""""
 
-This section specifies line width and color to visually distinguish 
-"main branch" or trunk in central repository graph.
+Web graph view configuration. This section let you change graph
+elements display properties by branches, for instance to make the
+``default`` branch stand out.
 
-Format branch_name.attribute = value.
+Each line has the following format::
 
-Example::
-  [graph]
-  # 2px width
-  default.width = 2
-  # red color
-  default.color = FF0000
+    <branch>.<argument> = <value>
+
+where ``<branch>`` is the name of the branch being
+customized. Example::
+
+    [graph]
+    # 2px width
+    default.width = 2
+    # red color
+    default.color = FF0000
 
 Supported arguments:
 
 ``width``
-  Set width in px. Width is number 0-99.
+    Set branch edges width in pixels.
 
 ``color``
-  Color is six hexadecimal digits RRGGBB.
-
-Known issues:
-  If line style doesn't change, try to clear browser cache.
+    Set branch edges color in hexadecimal RGB notation.
 
 ``merge-patterns``
 """"""""""""""""""
