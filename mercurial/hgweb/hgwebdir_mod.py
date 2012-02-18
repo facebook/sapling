@@ -245,12 +245,67 @@ class hgwebdir(object):
         def rawentries(subdir="", **map):
 
             descend = self.ui.configbool('web', 'descend', True)
+            collapse = self.ui.configbool('web', 'collapse', False)
+            seenrepos = set()
+            seendirs = set()
             for name, path in self.repos:
 
                 if not name.startswith(subdir):
                     continue
                 name = name[len(subdir):]
-                if not descend and '/' in name:
+                directory = False
+
+                if '/' in name:
+                    if not descend:
+                        continue
+
+                    nameparts = name.split('/')
+                    rootname = nameparts[0]
+
+                    if not collapse:
+                        pass
+                    elif rootname in seendirs:
+                        continue
+                    elif rootname in seenrepos:
+                        pass
+                    else:
+                        directory = True
+                        name = rootname
+
+                        # redefine the path to refer to the directory
+                        discarded = '/'.join(nameparts[1:])
+
+                        # remove name parts plus accompanying slash
+                        path = path[:-len(discarded) - 1]
+
+                parts = [name]
+                if 'PATH_INFO' in req.env:
+                    parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
+                if req.env['SCRIPT_NAME']:
+                    parts.insert(0, req.env['SCRIPT_NAME'])
+                url = re.sub(r'/+', '/', '/'.join(parts) + '/')
+
+                # show either a directory entry or a repository
+                if directory:
+                    # get the directory's time information
+                    try:
+                        d = (get_mtime(path), util.makedate()[1])
+                    except OSError:
+                        continue
+
+                    row = dict(contact="",
+                               contact_sort="",
+                               name=name,
+                               name_sort=name,
+                               url=url,
+                               description="",
+                               description_sort="",
+                               lastchange=d,
+                               lastchange_sort=d[1]-d[0],
+                               archives=[])
+
+                    seendirs.add(name)
+                    yield row
                     continue
 
                 u = self.ui.copy()
@@ -267,13 +322,6 @@ class hgwebdir(object):
 
                 if not self.read_allowed(u, req):
                     continue
-
-                parts = [name]
-                if 'PATH_INFO' in req.env:
-                    parts.insert(0, req.env['PATH_INFO'].rstrip('/'))
-                if req.env['SCRIPT_NAME']:
-                    parts.insert(0, req.env['SCRIPT_NAME'])
-                url = re.sub(r'/+', '/', '/'.join(parts) + '/')
 
                 # update time with local timezone
                 try:
@@ -302,6 +350,8 @@ class hgwebdir(object):
                            lastchange=d,
                            lastchange_sort=d[1]-d[0],
                            archives=archivelist(u, "tip", url))
+
+                seenrepos.add(name)
                 yield row
 
         sortdefault = None, False

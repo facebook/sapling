@@ -31,6 +31,28 @@ create a nested repository
   $ hg --cwd c ci -Amc -d'3 0'
   adding c
 
+create a subdirectory containing repositories and subrepositories
+
+  $ mkdir notrepo
+  $ cd notrepo
+  $ hg init e
+  $ echo e > e/e
+  $ hg --cwd e ci -Ame -d'4 0'
+  adding e
+  $ hg init e/e2
+  $ echo e2 > e/e2/e2
+  $ hg --cwd e/e2 ci -Ame2 -d '4 0'
+  adding e2
+  $ hg init f
+  $ echo f > f/f
+  $ hg --cwd f ci -Amf -d'4 0'
+  adding f
+  $ hg init f/f2
+  $ echo f2 > f/f2/f2
+  $ hg --cwd f/f2 ci -Amf2 -d '4 0'
+  adding f2
+  $ cd ..
+
 create repository without .hg/store
 
   $ hg init nostore
@@ -119,20 +141,32 @@ should succeed, slashy names
   /coll/a/.hg/patches/
   /coll/b/
   /coll/c/
+  /coll/notrepo/e/
+  /coll/notrepo/f/
   /rcoll/a/
   /rcoll/a/.hg/patches/
   /rcoll/b/
   /rcoll/b/d/
   /rcoll/c/
+  /rcoll/notrepo/e/
+  /rcoll/notrepo/e/e2/
+  /rcoll/notrepo/f/
+  /rcoll/notrepo/f/f2/
   /star/webdir/a/
   /star/webdir/a/.hg/patches/
   /star/webdir/b/
   /star/webdir/c/
+  /star/webdir/notrepo/e/
+  /star/webdir/notrepo/f/
   /starstar/webdir/a/
   /starstar/webdir/a/.hg/patches/
   /starstar/webdir/b/
   /starstar/webdir/b/d/
   /starstar/webdir/c/
+  /starstar/webdir/notrepo/e/
+  /starstar/webdir/notrepo/e/e2/
+  /starstar/webdir/notrepo/f/
+  /starstar/webdir/notrepo/f/f2/
   /astar/
   /astar/.hg/patches/
   
@@ -217,6 +251,22 @@ should succeed, slashy names
   </tr>
   
   <tr class="parity0">
+  <td><a href="/coll/notrepo/e/?style=paper">coll/notrepo/e</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/coll/notrepo/f/?style=paper">coll/notrepo/f</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
   <td><a href="/rcoll/a/?style=paper">rcoll/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
@@ -257,6 +307,38 @@ should succeed, slashy names
   </tr>
   
   <tr class="parity1">
+  <td><a href="/rcoll/notrepo/e/?style=paper">rcoll/notrepo/e</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
+  <td><a href="/rcoll/notrepo/e/e2/?style=paper">rcoll/notrepo/e/e2</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/rcoll/notrepo/f/?style=paper">rcoll/notrepo/f</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
+  <td><a href="/rcoll/notrepo/f/f2/?style=paper">rcoll/notrepo/f/f2</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
   <td><a href="/star/webdir/a/?style=paper">star/webdir/a</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
@@ -282,6 +364,22 @@ should succeed, slashy names
   
   <tr class="parity0">
   <td><a href="/star/webdir/c/?style=paper">star/webdir/c</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/star/webdir/notrepo/e/?style=paper">star/webdir/notrepo/e</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
+  <td><a href="/star/webdir/notrepo/f/?style=paper">star/webdir/notrepo/f</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -322,6 +420,38 @@ should succeed, slashy names
   
   <tr class="parity1">
   <td><a href="/starstar/webdir/c/?style=paper">starstar/webdir/c</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
+  <td><a href="/starstar/webdir/notrepo/e/?style=paper">starstar/webdir/notrepo/e</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/starstar/webdir/notrepo/e/e2/?style=paper">starstar/webdir/notrepo/e/e2</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity0">
+  <td><a href="/starstar/webdir/notrepo/f/?style=paper">starstar/webdir/notrepo/f</a></td>
+  <td>unknown</td>
+  <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
+  <td class="age">*</td> (glob)
+  <td class="indexlinks"></td>
+  </tr>
+  
+  <tr class="parity1">
+  <td><a href="/starstar/webdir/notrepo/f/f2/?style=paper">starstar/webdir/notrepo/f/f2</a></td>
   <td>unknown</td>
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
@@ -489,6 +619,8 @@ Test [paths] '*' extension
   /coll/a/.hg/patches/
   /coll/b/
   /coll/c/
+  /coll/notrepo/e/
+  /coll/notrepo/f/
   
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/a/file/tip/a?style=raw'
   200 Script output follows
@@ -506,11 +638,139 @@ Test [paths] '**' extension
   /rcoll/b/
   /rcoll/b/d/
   /rcoll/c/
+  /rcoll/notrepo/e/
+  /rcoll/notrepo/e/e2/
+  /rcoll/notrepo/f/
+  /rcoll/notrepo/f/f2/
   
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/b/d/file/tip/d?style=raw'
   200 Script output follows
   
   d
+
+Test collapse = True
+
+  $ "$TESTDIR/killdaemons.py"
+  $ cat >> paths.conf <<EOF
+  > [web]
+  > collapse=true
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+  >     -A access-paths.log -E error-paths-3.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/?style=raw'
+  200 Script output follows
+  
+  
+  /coll/a/
+  /coll/a/.hg/patches/
+  /coll/b/
+  /coll/c/
+  /coll/notrepo/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/a/file/tip/a?style=raw'
+  200 Script output follows
+  
+  a
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/?style=raw'
+  200 Script output follows
+  
+  
+  /rcoll/a/
+  /rcoll/a/.hg/patches/
+  /rcoll/b/
+  /rcoll/b/d/
+  /rcoll/c/
+  /rcoll/notrepo/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/b/d/file/tip/d?style=raw'
+  200 Script output follows
+  
+  d
+
+Test intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/?style=raw'
+  200 Script output follows
+  
+  
+  /rcoll/notrepo/e/
+  /rcoll/notrepo/e/e2/
+  /rcoll/notrepo/f/
+  /rcoll/notrepo/f/f2/
+  
+
+Test repositories inside intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/e/file/tip/e?style=raw'
+  200 Script output follows
+  
+  e
+
+Test subrepositories inside intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/f/f2/file/tip/f2?style=raw'
+  200 Script output follows
+  
+  f2
+
+Test descend = False
+
+  $ "$TESTDIR/killdaemons.py"
+  $ cat >> paths.conf <<EOF
+  > descend=false
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+  >     -A access-paths.log -E error-paths-4.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/?style=raw'
+  200 Script output follows
+  
+  
+  /coll/a/
+  /coll/b/
+  /coll/c/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/coll/a/file/tip/a?style=raw'
+  200 Script output follows
+  
+  a
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/?style=raw'
+  200 Script output follows
+  
+  
+  /rcoll/a/
+  /rcoll/b/
+  /rcoll/c/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/b/d/file/tip/d?style=raw'
+  200 Script output follows
+  
+  d
+
+Test intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/?style=raw'
+  200 Script output follows
+  
+  
+  /rcoll/notrepo/e/
+  /rcoll/notrepo/f/
+  
+
+Test repositories inside intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/e/file/tip/e?style=raw'
+  200 Script output follows
+  
+  e
+
+Test subrepositories inside intermediate directories
+
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/rcoll/notrepo/f/f2/file/tip/f2?style=raw'
+  200 Script output follows
+  
+  f2
 
 Test [paths] '*' in a repo root
 
@@ -523,15 +783,60 @@ Test [paths] '*' in a repo root
   > t/a = $root/a
   > t/b = $root/b
   > c = $root/c
-  > [web]
-  > descend=false
   > EOF
   $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-3.log
+  >     -A access-paths.log -E error-paths-5.log
   $ cat hg.pid >> $DAEMON_PIDS
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
+  200 Script output follows
+  
+  
+  /t/a/
+  /t/b/
+  /c/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
+  200 Script output follows
+  
+  
+  /t/a/
+  /t/b/
+  
+
+Test collapse = True
+
+  $ "$TESTDIR/killdaemons.py"
+  $ cat >> paths.conf <<EOF
+  > [web]
+  > collapse=true
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+  >     -A access-paths.log -E error-paths-6.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
+  200 Script output follows
+  
+  
+  /t/
+  /c/
+  
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/t/?style=raw'
+  200 Script output follows
+  
+  
+  /t/a/
+  /t/b/
+  
 
 test descend = False
 
+  $ "$TESTDIR/killdaemons.py"
+  $ cat >> paths.conf <<EOF
+  > descend=false
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
+  >     -A access-paths.log -E error-paths-7.log
+  $ cat hg.pid >> $DAEMON_PIDS
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT1 '/?style=raw'
   200 Script output follows
   
@@ -552,7 +857,7 @@ test descend = False
   > inexistent = $root/inexistent
   > EOF
   $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --webdir-conf paths.conf \
-  >     -A access-paths.log -E error-paths-4.log
+  >     -A access-paths.log -E error-paths-8.log
   $ cat hg.pid >> $DAEMON_PIDS
 
 test inexistent and inaccessible repo should be ignored silently
@@ -617,6 +922,8 @@ collections: should succeed
   /a/.hg/patches/
   /b/
   /c/
+  /notrepo/e/
+  /notrepo/f/
   
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 '/a/file/tip/a?style=raw'
   200 Script output follows
@@ -671,6 +978,26 @@ paths errors 2
 paths errors 3
 
   $ cat error-paths-3.log
+
+paths errors 4
+
+  $ cat error-paths-4.log
+
+paths errors 5
+
+  $ cat error-paths-5.log
+
+paths errors 6
+
+  $ cat error-paths-6.log
+
+paths errors 7
+
+  $ cat error-paths-7.log
+
+paths errors 8
+
+  $ cat error-paths-8.log
 
 collections errors
 
