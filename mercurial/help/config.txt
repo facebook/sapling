@@ -489,24 +489,6 @@ Example for ``~/.hgrc``::
   myfeature = ~/.hgext/myfeature.py
 
 
-``hostfingerprints``
-""""""""""""""""""""
-
-Fingerprints of the certificates of known HTTPS servers.
-A HTTPS connection to a server with a fingerprint configured here will
-only succeed if the servers certificate matches the fingerprint.
-This is very similar to how ssh known hosts works.
-The fingerprint is the SHA-1 hash value of the DER encoded certificate.
-The CA chain and web.cacerts is not used for servers with a fingerprint.
-
-For example::
-
-    [hostfingerprints]
-    hg.intevation.org = 38:76:52:7c:87:26:9a:8f:4a:f8:d3:de:08:45:3b:ea:d6:4b:ee:cc
-
-This feature is only supported when using Python 2.6 or later.
-
-
 ``format``
 """"""""""
 
@@ -561,120 +543,6 @@ Supported arguments:
 
 ``color``
     Set branch edges color in hexadecimal RGB notation.
-
-``merge-patterns``
-""""""""""""""""""
-
-This section specifies merge tools to associate with particular file
-patterns. Tools matched here will take precedence over the default
-merge tool. Patterns are globs by default, rooted at the repository
-root.
-
-Example::
-
-  [merge-patterns]
-  **.c = kdiff3
-  **.jpg = myimgmerge
-
-``merge-tools``
-"""""""""""""""
-
-This section configures external merge tools to use for file-level
-merges.
-
-Example ``~/.hgrc``::
-
-  [merge-tools]
-  # Override stock tool location
-  kdiff3.executable = ~/bin/kdiff3
-  # Specify command line
-  kdiff3.args = $base $local $other -o $output
-  # Give higher priority
-  kdiff3.priority = 1
-
-  # Define new tool
-  myHtmlTool.args = -m $local $other $base $output
-  myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
-  myHtmlTool.priority = 1
-
-Supported arguments:
-
-``priority``
-  The priority in which to evaluate this tool.
-  Default: 0.
-
-``executable``
-  Either just the name of the executable or its pathname.  On Windows,
-  the path can use environment variables with ${ProgramFiles} syntax.
-  Default: the tool name.
-
-``args``
-  The arguments to pass to the tool executable. You can refer to the
-  files being merged as well as the output file through these
-  variables: ``$base``, ``$local``, ``$other``, ``$output``.
-  Default: ``$local $base $other``
-
-``premerge``
-  Attempt to run internal non-interactive 3-way merge tool before
-  launching external tool.  Options are ``true``, ``false``, or ``keep``
-  to leave markers in the file if the premerge fails.
-  Default: True
-
-``binary``
-  This tool can merge binary files. Defaults to False, unless tool
-  was selected by file pattern match.
-
-``symlink``
-  This tool can merge symlinks. Defaults to False, even if tool was
-  selected by file pattern match.
-
-``check``
-  A list of merge success-checking options:
-
-  ``changed``
-    Ask whether merge was successful when the merged file shows no changes.
-  ``conflicts``
-    Check whether there are conflicts even though the tool reported success.
-  ``prompt``
-    Always prompt for merge success, regardless of success reported by tool.
-
-``checkchanged``
-  True is equivalent to ``check = changed``.
-  Default: False
-
-``checkconflicts``
-  True is equivalent to ``check = conflicts``.
-  Default: False
-
-``fixeol``
-  Attempt to fix up EOL changes caused by the merge tool.
-  Default: False
-
-``gui``
-  This tool requires a graphical interface to run. Default: False
-
-``regkey``
-  Windows registry key which describes install location of this
-  tool. Mercurial will search for this key first under
-  ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
-  Default: None
-
-``regkeyalt``
-  An alternate Windows registry key to try if the first key is not
-  found.  The alternate key uses the same ``regname`` and ``regappend``
-  semantics of the primary key.  The most common use for this key
-  is to search for 32bit applications on 64bit operating systems.
-  Default: None
-
-``regname``
-  Name of value to read from specified registry key. Defaults to the
-  unnamed (default) value.
-
-``regappend``
-  String to append to the value read from the registry, typically
-  the executable name of the tool.
-  Default: None
-
 
 ``hooks``
 """""""""
@@ -855,6 +723,24 @@ If a Python hook returns a "true" value or raises an exception, this
 is treated as a failure.
 
 
+``hostfingerprints``
+""""""""""""""""""""
+
+Fingerprints of the certificates of known HTTPS servers.
+A HTTPS connection to a server with a fingerprint configured here will
+only succeed if the servers certificate matches the fingerprint.
+This is very similar to how ssh known hosts works.
+The fingerprint is the SHA-1 hash value of the DER encoded certificate.
+The CA chain and web.cacerts is not used for servers with a fingerprint.
+
+For example::
+
+    [hostfingerprints]
+    hg.intevation.org = 38:76:52:7c:87:26:9a:8f:4a:f8:d3:de:08:45:3b:ea:d6:4b:ee:cc
+
+This feature is only supported when using Python 2.6 or later.
+
+
 ``http_proxy``
 """"""""""""""
 
@@ -879,33 +765,118 @@ proxy.
     Optional. Always use the proxy, even for localhost and any entries
     in ``http_proxy.no``. True or False. Default: False.
 
-``smtp``
-""""""""
+``merge-patterns``
+""""""""""""""""""
 
-Configuration for extensions that need to send email messages.
+This section specifies merge tools to associate with particular file
+patterns. Tools matched here will take precedence over the default
+merge tool. Patterns are globs by default, rooted at the repository
+root.
 
-``host``
-    Host name of mail server, e.g. "mail.example.com".
+Example::
 
-``port``
-    Optional. Port to connect to on mail server. Default: 25.
+  [merge-patterns]
+  **.c = kdiff3
+  **.jpg = myimgmerge
 
-``tls``
-    Optional. Method to enable TLS when connecting to mail server: starttls,
-    smtps or none. Default: none.
+``merge-tools``
+"""""""""""""""
 
-``username``
-    Optional. User name for authenticating with the SMTP server.
-    Default: none.
+This section configures external merge tools to use for file-level
+merges.
 
-``password``
-    Optional. Password for authenticating with the SMTP server. If not
-    specified, interactive sessions will prompt the user for a
-    password; non-interactive sessions will fail. Default: none.
+Example ``~/.hgrc``::
 
-``local_hostname``
-    Optional. It's the hostname that the sender can use to identify
-    itself to the MTA.
+  [merge-tools]
+  # Override stock tool location
+  kdiff3.executable = ~/bin/kdiff3
+  # Specify command line
+  kdiff3.args = $base $local $other -o $output
+  # Give higher priority
+  kdiff3.priority = 1
+
+  # Define new tool
+  myHtmlTool.args = -m $local $other $base $output
+  myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
+  myHtmlTool.priority = 1
+
+Supported arguments:
+
+``priority``
+  The priority in which to evaluate this tool.
+  Default: 0.
+
+``executable``
+  Either just the name of the executable or its pathname.  On Windows,
+  the path can use environment variables with ${ProgramFiles} syntax.
+  Default: the tool name.
+
+``args``
+  The arguments to pass to the tool executable. You can refer to the
+  files being merged as well as the output file through these
+  variables: ``$base``, ``$local``, ``$other``, ``$output``.
+  Default: ``$local $base $other``
+
+``premerge``
+  Attempt to run internal non-interactive 3-way merge tool before
+  launching external tool.  Options are ``true``, ``false``, or ``keep``
+  to leave markers in the file if the premerge fails.
+  Default: True
+
+``binary``
+  This tool can merge binary files. Defaults to False, unless tool
+  was selected by file pattern match.
+
+``symlink``
+  This tool can merge symlinks. Defaults to False, even if tool was
+  selected by file pattern match.
+
+``check``
+  A list of merge success-checking options:
+
+  ``changed``
+    Ask whether merge was successful when the merged file shows no changes.
+  ``conflicts``
+    Check whether there are conflicts even though the tool reported success.
+  ``prompt``
+    Always prompt for merge success, regardless of success reported by tool.
+
+``checkchanged``
+  True is equivalent to ``check = changed``.
+  Default: False
+
+``checkconflicts``
+  True is equivalent to ``check = conflicts``.
+  Default: False
+
+``fixeol``
+  Attempt to fix up EOL changes caused by the merge tool.
+  Default: False
+
+``gui``
+  This tool requires a graphical interface to run. Default: False
+
+``regkey``
+  Windows registry key which describes install location of this
+  tool. Mercurial will search for this key first under
+  ``HKEY_CURRENT_USER`` and then under ``HKEY_LOCAL_MACHINE``.
+  Default: None
+
+``regkeyalt``
+  An alternate Windows registry key to try if the first key is not
+  found.  The alternate key uses the same ``regname`` and ``regappend``
+  semantics of the primary key.  The most common use for this key
+  is to search for 32bit applications on 64bit operating systems.
+  Default: None
+
+``regname``
+  Name of value to read from specified registry key. Defaults to the
+  unnamed (default) value.
+
+``regappend``
+  String to append to the value read from the registry, typically
+  the executable name of the tool.
+  Default: None
 
 
 ``patch``
@@ -1012,6 +983,35 @@ Controls generic server settings.
     Whether to validate the completeness of pushed changesets by
     checking that all new file revisions specified in manifests are
     present. Default is False.
+
+``smtp``
+""""""""
+
+Configuration for extensions that need to send email messages.
+
+``host``
+    Host name of mail server, e.g. "mail.example.com".
+
+``port``
+    Optional. Port to connect to on mail server. Default: 25.
+
+``tls``
+    Optional. Method to enable TLS when connecting to mail server: starttls,
+    smtps or none. Default: none.
+
+``username``
+    Optional. User name for authenticating with the SMTP server.
+    Default: none.
+
+``password``
+    Optional. Password for authenticating with the SMTP server. If not
+    specified, interactive sessions will prompt the user for a
+    password; non-interactive sessions will fail. Default: none.
+
+``local_hostname``
+    Optional. It's the hostname that the sender can use to identify
+    itself to the MTA.
+
 
 ``subpaths``
 """"""""""""
