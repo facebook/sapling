@@ -63,13 +63,21 @@ def reposetup(ui, repo):
                         return man1
                     def filectx(self, path, fileid=None, filelog=None):
                         try:
-                            result = super(lfiles_ctx, self).filectx(path,
-                                fileid, filelog)
+                            if filelog is not None:
+                                result = super(lfiles_ctx, self).filectx(
+                                    path, fileid, filelog)
+                            else:
+                                result = super(lfiles_ctx, self).filectx(
+                                    path, fileid)
                         except error.LookupError:
                             # Adding a null character will cause Mercurial to
                             # identify this as a binary file.
-                            result = super(lfiles_ctx, self).filectx(
-                                lfutil.standin(path), fileid, filelog)
+                            if filelog is not None:
+                                result = super(lfiles_ctx, self).filectx(
+                                    lfutil.standin(path), fileid, filelog)
+                            else:
+                                result = super(lfiles_ctx, self).filectx(
+                                    lfutil.standin(path), fileid)
                             olddata = result.data
                             result.data = lambda: olddata() + '\0'
                         return result
