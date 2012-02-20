@@ -7,7 +7,7 @@
 
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
-import config, scmutil, util, error
+import config, scmutil, util, error, formatter
 
 class ui(object):
     def __init__(self, src=None):
@@ -45,6 +45,9 @@ class ui(object):
 
     def copy(self):
         return self.__class__(self)
+
+    def formatter(self, topic, opts):
+        return formatter.formatter(self, topic, opts)
 
     def _trusted(self, fp, f):
         st = util.fstat(fp)
