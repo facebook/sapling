@@ -5277,18 +5277,22 @@ def status(ui, repo, *pats, **opts):
     if (opts.get('all') or opts.get('copies')) and not opts.get('no_status'):
         copy = copies.pathcopies(repo[node1], repo[node2])
 
+    fm = ui.formatter('status', opts)
+    format = '%s %s' + end
+    if opts.get('no_status'):
+        format = '%.0s%s' + end
+
     for state, char, files in changestates:
         if state in show:
-            format = "%s %%s%s" % (char, end)
-            if opts.get('no_status'):
-                format = "%%s%s" % end
-
+            label = 'status.' + state
             for f in files:
-                ui.write(format % repo.pathto(f, cwd),
-                         label='status.' + state)
+                fm.startitem()
+                fm.write("status char", format, char,
+                         repo.pathto(f, cwd), label=label)
                 if f in copy:
-                    ui.write('  %s%s' % (repo.pathto(copy[f], cwd), end),
+                    fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
                              label='status.copied')
+    fm.end()
 
 @command('^summary|sum',
     [('', 'remote', None, _('check for push and pull'))], '[--remote]')
