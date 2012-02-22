@@ -5287,7 +5287,7 @@ def status(ui, repo, *pats, **opts):
             label = 'status.' + state
             for f in files:
                 fm.startitem()
-                fm.write("status char", format, char,
+                fm.write("status path", format, char,
                          repo.pathto(f, cwd), label=label)
                 if f in copy:
                     fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
