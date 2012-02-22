@@ -1998,7 +1998,7 @@ def unapplied(ui, repo, patch=None, **opts):
           ('P', 'push', None, _('qpush after importing'))],
          _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...'))
 def qimport(ui, repo, *filename, **opts):
-    """import a patch
+    """import a patch or existing changeset
 
     The patch is inserted into the series after the last applied
     patch. If no patches have been applied, qimport prepends the patch

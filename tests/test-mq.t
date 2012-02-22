@@ -70,7 +70,7 @@ help
    qgoto         push or pop patches until named patch is at top of stack
    qguard        set or print guards for a patch
    qheader       print the header of the topmost or specified patch
-   qimport       import a patch
+   qimport       import a patch or existing changeset
    qnew          create a new patch
    qnext         print the name of the next pushable patch
    qpop          pop the current patch off the stack
