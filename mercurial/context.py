@@ -236,6 +236,22 @@ class changectx(object):
         return patch.diff(self._repo, ctx2.node(), self.node(),
                           match=match, opts=diffopts)
 
+    @propertycache
+    def _dirs(self):
+        dirs = set()
+        for f in self._manifest:
+            pos = f.rfind('/')
+            while pos != -1:
+                f = f[:pos]
+                if f in dirs:
+                    break # dirs already contains this and above
+                dirs.add(f)
+                pos = f.rfind('/')
+        return dirs
+
+    def dirs(self):
+        return self._dirs
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -952,6 +968,9 @@ class workingctx(changectx):
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()
+
+    def dirs(self):
+        return self._repo.dirstate.dirs()
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
