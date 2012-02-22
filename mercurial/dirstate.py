@@ -110,6 +110,9 @@ class dirstate(object):
                 _incdirs(dirs, f)
         return dirs
 
+    def dirs(self):
+        return self._dirs
+
     @propertycache
     def _ignore(self):
         files = [self._join('.hgignore')]

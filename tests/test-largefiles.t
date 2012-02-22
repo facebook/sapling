@@ -994,4 +994,14 @@ related to largefiles in working directory (NOT to STANDIN) or not.
   C a/b/c/d/e.normal.txt
   C a/b/c/x/y.normal.txt
 
+verify that largefiles doesn't break filesets
+
+  $ hg log --rev . --exclude "set:binary()"
+  changeset:   0:41bd42f10efa
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add files
+  
+
   $ cd ..

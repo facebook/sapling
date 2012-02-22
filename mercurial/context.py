@@ -206,14 +206,15 @@ class changectx(object):
         # follow that here, too
         fset.discard('.')
         for fn in self:
-            for ffn in fset:
-                # match if the file is the exact name or a directory
-                if ffn == fn or fn.startswith("%s/" % ffn):
-                    fset.remove(ffn)
-                    break
+            if fn in fset:
+                # specified pattern is the exact name
+                fset.remove(fn)
             if match(fn):
                 yield fn
         for fn in sorted(fset):
+            if fn in self._dirs:
+                # specified pattern is a directory
+                continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
 
@@ -235,6 +236,22 @@ class changectx(object):
         diffopts = patch.diffopts(self._repo.ui, opts)
         return patch.diff(self._repo, ctx2.node(), self.node(),
                           match=match, opts=diffopts)
+
+    @propertycache
+    def _dirs(self):
+        dirs = set()
+        for f in self._manifest:
+            pos = f.rfind('/')
+            while pos != -1:
+                f = f[:pos]
+                if f in dirs:
+                    break # dirs already contains this and above
+                dirs.add(f)
+                pos = f.rfind('/')
+        return dirs
+
+    def dirs(self):
+        return self._dirs
 
 class filectx(object):
     """A filecontext object makes access to data related to a particular
@@ -948,6 +965,9 @@ class workingctx(changectx):
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()
+
+    def dirs(self):
+        return self._repo.dirstate.dirs()
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular

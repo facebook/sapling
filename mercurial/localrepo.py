@@ -1371,7 +1371,9 @@ class localrepository(repo.repository):
 
         if not parentworking:
             def bad(f, msg):
-                if f not in ctx1:
+                # 'f' may be a directory pattern from 'match.files()',
+                # so 'f not in ctx1' is not enough
+                if f not in ctx1 and f not in ctx1.dirs():
                     self.ui.warn('%s: %s\n' % (self.dirstate.pathto(f), msg))
             match.bad = bad
 
