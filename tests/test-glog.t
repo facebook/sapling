@@ -1419,7 +1419,7 @@ Test log -G options
   abort: unknown revision 'something nice'!
   [255]
   $ hg log -G --print-revset -k 'something' -k 'nice'
-  ('group', ('and', ('func', ('symbol', 'keyword'), ('string', 'something')), ('func', ('symbol', 'keyword'), ('string', 'nice'))))
+  ('group', ('group', ('and', ('func', ('symbol', 'keyword'), ('string', 'something')), ('func', ('symbol', 'keyword'), ('string', 'nice')))))
   $ hg log -G --only-branch 'something nice'
   abort: unknown revision 'something nice'!
   [255]

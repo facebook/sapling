@@ -249,18 +249,18 @@ def revset(pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
     opt2revset = {
-        'follow': (0, 'follow()'),
-        'no_merges': (0, 'not merge()'),
-        'only_merges': (0, 'merge()'),
-        'removed': (0, 'removes("*")'),
-        'date': (1, 'date($)'),
-        'branch': (2, 'branch($)'),
-        'exclude': (2, 'not file($)'),
-        'include': (2, 'file($)'),
-        'keyword': (2, 'keyword($)'),
-        'only_branch': (2, 'branch($)'),
-        'prune': (2, 'not ($ or ancestors($))'),
-        'user': (2, 'user($)'),
+        'follow':      ('follow()', None),
+        'no_merges':   ('not merge()', None),
+        'only_merges': ('merge()', None),
+        'removed':     ('removes("*")', None),
+        'date':        ('date($)', None),
+        'branch':      ('branch($)', ' and '),
+        'exclude':     ('not file($)', ' and '),
+        'include':     ('file($)', ' and '),
+        'keyword':     ('keyword($)', ' and '),
+        'only_branch': ('branch($)', ' and '),
+        'prune':       ('not ($ or ancestors($))', ' and '),
+        'user':        ('user($)', ' and '),
         }
     optrevset = []
     revset = []
@@ -272,15 +272,16 @@ def revset(pats, opts):
             revset.extend(val)
         if op not in opt2revset:
             continue
-        arity, revop = opt2revset[op]
-        revop = revop.replace('$', '%(val)r')
-        if arity == 0:
+        revop, andor = opt2revset[op]
+        if '$' not in revop:
             optrevset.append(revop)
-        elif arity == 1:
-            optrevset.append(revop % {'val': val})
         else:
-            for f in val:
-                optrevset.append(revop % {'val': f})
+            revop = revop.replace('$', '%(val)r')
+            if not isinstance(val, list):
+                expr = revop % {'val': val}
+            else:
+                expr = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
+            optrevset.append(expr)
 
     for path in pats:
         optrevset.append('file(%r)' % path)
