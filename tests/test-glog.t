@@ -83,8 +83,26 @@ o  (0) root
   >   hg commit -Aqd "$rev 0" -m "($rev) $msg"
   > }
 
+  $ cat > printrevset.py <<EOF
+  > from mercurial import extensions, revset, commands
+  > from hgext import graphlog
+  >  
+  > def uisetup(ui):
+  >     def printrevset(orig, ui, repo, *pats, **opts):
+  >         if opts.get('print_revset'):
+  >             expr = graphlog.revset(pats, opts)
+  >             tree = revset.parse(expr)[0]
+  >             ui.write(tree, "\n")
+  >             return 0
+  >         return orig(ui, repo, *pats, **opts)
+  >     entry = extensions.wrapcommand(commands.table, 'log', printrevset)
+  >     entry[1].append(('', 'print-revset', False,
+  >                      'print generated revset and exit (DEPRECATED)'))
+  > EOF
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "graphlog=" >> $HGRCPATH
+  $ echo "printrevset=`pwd`/printrevset.py" >> $HGRCPATH
 
   $ hg init repo
   $ cd repo
@@ -1400,7 +1418,8 @@ Test log -G options
   $ hg log -G -b 'something nice'
   abort: unknown revision 'something nice'!
   [255]
-  $ hg log -G -k 'something nice'
+  $ hg log -G --print-revset -k 'something' -k 'nice'
+  ('group', ('and', ('func', ('symbol', 'keyword'), ('string', 'something')), ('func', ('symbol', 'keyword'), ('string', 'nice'))))
   $ hg log -G --only-branch 'something nice'
   abort: unknown revision 'something nice'!
   [255]
