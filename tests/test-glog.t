@@ -1435,8 +1435,8 @@ Test log -G options
   abort: unknown revision 'not-a-branch'!
   $ testlog -b default -b branch
   ('group', ('group', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch')))))
-  $ hg log -G --print-revset -k 'something' -k 'nice'
-  ('group', ('group', ('and', ('func', ('symbol', 'keyword'), ('string', 'something')), ('func', ('symbol', 'keyword'), ('string', 'nice')))))
+  $ testlog -k expand -k merge
+  ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
   $ hg log -G --only-branch 'something nice'
   abort: unknown revision 'something nice'!
   [255]

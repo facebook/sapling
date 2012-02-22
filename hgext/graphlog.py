@@ -257,7 +257,7 @@ def revset(pats, opts):
         'branch':      ('branch($)', ' or '),
         'exclude':     ('not file($)', ' and '),
         'include':     ('file($)', ' and '),
-        'keyword':     ('keyword($)', ' and '),
+        'keyword':     ('keyword($)', ' or '),
         'only_branch': ('branch($)', ' and '),
         'prune':       ('not ($ or ancestors($))', ' and '),
         'user':        ('user($)', ' or '),
