@@ -1414,7 +1414,17 @@ Do not crash or produce strange graphs if history is buggy
 
 Test log -G options
 
-  $ hg log -G -u 'something nice'
+  $ testlog() {
+  >   hg log -G --print-revset "$@"
+  >   hg log --template 'nodetag {rev}\n' "$@" | grep nodetag \
+  >     | sed 's/.*nodetag/nodetag/' > log.nodes
+  >   hg log -G --template 'nodetag {rev}\n' "$@" | grep nodetag \
+  >     | sed 's/.*nodetag/nodetag/' > glog.nodes
+  >   diff -u log.nodes glog.nodes
+  > }
+
+  $ testlog -u test -u not-a-user
+  ('group', ('group', ('or', ('func', ('symbol', 'user'), ('string', 'test')), ('func', ('symbol', 'user'), ('string', 'not-a-user')))))
   $ hg log -G -b 'something nice'
   abort: unknown revision 'something nice'!
   [255]

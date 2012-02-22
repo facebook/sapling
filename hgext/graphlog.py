@@ -260,7 +260,7 @@ def revset(pats, opts):
         'keyword':     ('keyword($)', ' and '),
         'only_branch': ('branch($)', ' and '),
         'prune':       ('not ($ or ancestors($))', ' and '),
-        'user':        ('user($)', ' and '),
+        'user':        ('user($)', ' or '),
         }
     optrevset = []
     revset = []
