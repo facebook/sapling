@@ -206,14 +206,15 @@ class changectx(object):
         # follow that here, too
         fset.discard('.')
         for fn in self:
-            for ffn in fset:
-                # match if the file is the exact name or a directory
-                if ffn == fn or fn.startswith("%s/" % ffn):
-                    fset.remove(ffn)
-                    break
+            if fn in fset:
+                # specified pattern is the exact name
+                fset.remove(fn)
             if match(fn):
                 yield fn
         for fn in sorted(fset):
+            if fn in self._dirs:
+                # specified pattern is a directory
+                continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
 
