@@ -1377,9 +1377,13 @@ File + limit + -ra:b, b < tip, (b - a) < limit:
 
 Do not crash or produce strange graphs if history is buggy
 
+  $ hg branch branch
+  marked working directory as branch branch
+  (branches are permanent and global, did you want a bookmark?)
   $ commit 36 "buggy merge: identical parents" 35 35
   $ hg glog -l5
-  @  changeset:   36:95fa8febd08a
+  @  changeset:   36:08a19a744424
+  |  branch:      branch
   |  tag:         tip
   |  parent:      35:9159c3644c5e
   |  parent:      35:9159c3644c5e
@@ -1425,9 +1429,12 @@ Test log -G options
 
   $ testlog -u test -u not-a-user
   ('group', ('group', ('or', ('func', ('symbol', 'user'), ('string', 'test')), ('func', ('symbol', 'user'), ('string', 'not-a-user')))))
-  $ hg log -G -b 'something nice'
-  abort: unknown revision 'something nice'!
-  [255]
+  $ testlog -b not-a-branch
+  ('group', ('group', ('func', ('symbol', 'branch'), ('string', 'not-a-branch'))))
+  abort: unknown revision 'not-a-branch'!
+  abort: unknown revision 'not-a-branch'!
+  $ testlog -b default -b branch
+  ('group', ('group', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch')))))
   $ hg log -G --print-revset -k 'something' -k 'nice'
   ('group', ('group', ('and', ('func', ('symbol', 'keyword'), ('string', 'something')), ('func', ('symbol', 'keyword'), ('string', 'nice')))))
   $ hg log -G --only-branch 'something nice'

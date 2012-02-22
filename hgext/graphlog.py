@@ -254,7 +254,7 @@ def revset(pats, opts):
         'only_merges': ('merge()', None),
         'removed':     ('removes("*")', None),
         'date':        ('date($)', None),
-        'branch':      ('branch($)', ' and '),
+        'branch':      ('branch($)', ' or '),
         'exclude':     ('not file($)', ' and '),
         'include':     ('file($)', ' and '),
         'keyword':     ('keyword($)', ' and '),
