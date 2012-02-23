@@ -3,7 +3,7 @@
 
   $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
 
-  $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0
+  $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 || true
   contrib/check-code.py:0:
    > #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=', "don't use underbars in identifiers"),
    warning: line over 80 characters
@@ -657,4 +657,3 @@
   tests/test-walkrepo.py:0:
    >         print "Found %d repositories when I should have found 3" % (len(reposet),)
    warning: line over 80 characters
-  [123]
