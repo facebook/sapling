@@ -103,3 +103,19 @@ Test permission of with files in .hg/largefiles created by update:
   $ hg pull ../src --update -q
   $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
   640
+
+Test permission of files created by push:
+
+  $ hg serve -R ../src -d -p $HGPORT --pid-file hg.pid \
+  >          --config "web.allow_push=*" --config web.push_ssl=no
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ echo change >> large
+  $ hg commit -m change
+
+  $ rm -r "$USERCACHE"
+
+  $ hg push -q http://localhost:$HGPORT/
+
+  $ ../ls-l.py ../src/.hg/largefiles/b734e14a0971e370408ab9bce8d56d8485e368a9
+  640
