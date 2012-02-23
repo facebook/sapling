@@ -253,13 +253,14 @@ def revset(pats, opts):
         'no_merges':   ('not merge()', None),
         'only_merges': ('merge()', None),
         'removed':     ('removes("*")', None),
-        'date':        ('date($)', None),
-        'branch':      ('branch($)', ' or '),
-        'exclude':     ('not file($)', ' and '),
-        'include':     ('file($)', ' and '),
-        'keyword':     ('keyword($)', ' or '),
-        'prune':       ('not ($ or ancestors($))', ' and '),
-        'user':        ('user($)', ' or '),
+        'date':        ('date(%(val)r)', None),
+        'branch':      ('branch(%(val)r)', ' or '),
+        'exclude':     ('not file(%(val)r)', ' and '),
+        'include':     ('file(%(val)r)', ' and '),
+        'keyword':     ('keyword(%(val)r)', ' or '),
+        'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
+        'user':        ('user(%(val)r)', ' or '),
+        'rev':         ('%(val)s', ' or '),
         }
 
     # branch and only_branch are really aliases and must be handled at
@@ -268,36 +269,27 @@ def revset(pats, opts):
         opts = dict(opts)
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
 
-    optrevset = []
     revset = []
     for op, val in opts.iteritems():
         if not val:
             continue
-        if op == 'rev':
-            # Already a revset
-            revset.extend(val)
         if op not in opt2revset:
             continue
         revop, andor = opt2revset[op]
-        if '$' not in revop:
-            optrevset.append(revop)
+        if '%(val)' not in revop:
+            revset.append(revop)
         else:
-            revop = revop.replace('$', '%(val)r')
             if not isinstance(val, list):
                 expr = revop % {'val': val}
             else:
                 expr = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
-            optrevset.append(expr)
+            revset.append(expr)
 
     for path in pats:
-        optrevset.append('file(%r)' % path)
+        revset.append('file(%r)' % path)
 
-    if revset or optrevset:
-        if revset:
-            revset = ['(' + ' or '.join(revset) + ')']
-        if optrevset:
-            revset.append('(' + ' and '.join(optrevset) + ')')
-        revset = ' and '.join(revset)
+    if revset:
+        revset = '(' + ' and '.join(revset) + ')'
     else:
         revset = 'all()'
     return revset

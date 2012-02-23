@@ -1486,19 +1486,3 @@ Test log -G options
   $ hg log -G --follow a
   abort: -G/--graph option is incompatible with --follow with file argument
   [255]
-
-Test multiple revision specifications are correctly handled
-
-  $ hg log -G -r 27 -r 25 -r 21 -r 34 -r 32 -r 31 --template '{rev}\n'
-  o  34
-  |
-  o    32
-  |\
-  | o    31
-  | |\
-  o | |  27
-  |/ /
-  | o  25
-  |/
-  o    21
-  |\
