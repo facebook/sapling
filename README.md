@@ -150,6 +150,36 @@ instead (named `.git`), add the following to your `hgrc`:
     [git]
     intree = True
 
+git.authors
+-----------
+
+Git uses a strict convention for "author names" when representing changesets,
+using the form `[realname] [email address]`.   Mercurial encourages this
+convention as well but is not as strict, so it's not uncommon for a Mercurial
+repo to have authors listed as simple usernames.   hg-git by default will 
+translate such names using the email address `none@none`, which then shows up
+unpleasantly on GitHub as "illegal email address".
+
+The `git.authors` option provides for an "authors translation file" that will 
+be used during outgoing transfers from mercurial to git only, by modifying 
+`hgrc` as such:
+
+    [git]
+    authors = authors.txt
+
+Where `authors.txt` is the name of a text file containing author name translations,
+one per each line, using the following format:
+
+    johnny = John Smith <jsmith@foo.com>
+    dougie = Doug Johnson <dougiej@bar.com>
+
+Empty lines and lines starting with a "#" are ignored.
+
+It should be noted that **this translation is on the hg->git side only**.  Changesets
+coming from Git back to Mercurial will not translate back into hg usernames, so
+it's best that the same username/email combination be used on both the hg and git sides;
+the author file is mostly useful for translating legacy changesets.
+
 git.branch_bookmark_suffix
 ---------------------------
 

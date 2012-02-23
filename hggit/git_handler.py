@@ -80,6 +80,8 @@ class GitHandler(object):
         else:
             self.gitdir = self.repo.join('git')
 
+        self.init_author_file()
+
         self.paths = ui.configitems('paths')
 
         self.branch_bookmark_suffix = ui.config('git', 'branch_bookmark_suffix')
@@ -94,6 +96,19 @@ class GitHandler(object):
         else:
             os.mkdir(self.gitdir)
             self.git = Repo.init_bare(self.gitdir)
+
+    def init_author_file(self):
+        self.author_map = {}
+        if self.ui.config('git', 'authors'):
+            with open(self.repo.wjoin(
+                self.ui.config('git', 'authors')
+            )) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    from_, to = re.split(r'\s*=\s*', line, 2)
+                    self.author_map[from_] = to
 
     ## FILE LOAD AND SAVE METHODS
 
@@ -400,6 +415,10 @@ class GitHandler(object):
     def get_git_author(self, ctx):
         # hg authors might not have emails
         author = ctx.user()
+
+        # see if a translation exists
+        if author in self.author_map:
+            author = self.author_map[author]
 
         # check for git author pattern compliance
         regex = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
