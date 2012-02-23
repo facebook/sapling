@@ -257,17 +257,19 @@ def revset(pats, opts):
         'branch':      ('branch(%(val)r)', ' or '),
         'exclude':     ('not file(%(val)r)', ' and '),
         'include':     ('file(%(val)r)', ' and '),
+        '_pats':       ('file(%(val)r)', ' or '),
         'keyword':     ('keyword(%(val)r)', ' or '),
         'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
         'user':        ('user(%(val)r)', ' or '),
         'rev':         ('%(val)s', ' or '),
         }
 
+    opts = dict(opts)
     # branch and only_branch are really aliases and must be handled at
     # the same time
     if 'branch' in opts and 'only_branch' in opts:
-        opts = dict(opts)
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
+    opts['_pats'] = list(pats)
 
     revset = []
     for op, val in opts.iteritems():
@@ -284,9 +286,6 @@ def revset(pats, opts):
             else:
                 expr = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
             revset.append(expr)
-
-    for path in pats:
-        revset.append('file(%r)' % path)
 
     if revset:
         revset = '(' + ' and '.join(revset) + ')'

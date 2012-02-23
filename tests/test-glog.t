@@ -1486,3 +1486,38 @@ Test log -G options
   $ hg log -G --follow a
   abort: -G/--graph option is incompatible with --follow with file argument
   [255]
+
+
+Dedicated repo for --follow and paths filtering
+
+  $ cd ..
+  $ hg init follow
+  $ cd follow
+  $ echo a > a
+  $ hg ci -Am "add a"
+  adding a
+  $ hg cp a b
+  $ hg ci -m "copy a b"
+  $ mkdir dir
+  $ hg mv b dir
+  $ hg ci -m "mv b dir/b"
+  $ hg mv a b
+  $ echo a > d
+  $ hg add d
+  $ hg ci -m "mv a b; add d"
+  $ hg mv dir/b e
+  $ hg ci -m "mv dir/b e"
+  $ hg glog --template '({rev}) {desc|firstline}\n'
+  @  (4) mv dir/b e
+  |
+  o  (3) mv a b; add d
+  |
+  o  (2) mv b dir/b
+  |
+  o  (1) copy a b
+  |
+  o  (0) add a
+  
+
+  $ testlog a c
+  ('group', ('group', ('or', ('func', ('symbol', 'file'), ('string', 'a')), ('func', ('symbol', 'file'), ('string', 'c')))))
