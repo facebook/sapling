@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
 Create user cache directory
 
   $ USERCACHE=`pwd`/cache; export USERCACHE
@@ -70,3 +72,25 @@ Update working directory to tip, again.
   0 largefiles updated, 0 removed
   $ hg status
   ! large
+
+Portable way to print file permissions:
+
+  $ cd ..
+  $ cat > ls-l.py <<EOF
+  > #!/usr/bin/env python
+  > import sys, os
+  > path = sys.argv[1]
+  > print '%03o' % (os.lstat(path).st_mode & 0777)
+  > EOF
+  $ chmod +x ls-l.py
+
+Test that files in .hg/largefiles inherit mode from .hg/store, not
+from file in working copy:
+
+  $ cd src
+  $ chmod 750 .hg/store
+  $ chmod 660 large
+  $ echo change >> large
+  $ hg commit -m change
+  $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
+  640
