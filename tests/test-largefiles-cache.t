@@ -94,3 +94,12 @@ from file in working copy:
   $ hg commit -m change
   $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
   640
+
+Test permission of with files in .hg/largefiles created by update:
+
+  $ cd ../mirror
+  $ rm -r "$USERCACHE" .hg/largefiles # avoid links
+  $ chmod 750 .hg/store
+  $ hg pull ../src --update -q
+  $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
+  640
