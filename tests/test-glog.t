@@ -90,7 +90,7 @@ o  (0) root
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
-  >             expr = graphlog.revset(pats, opts)
+  >             expr = graphlog.revset(repo, pats, opts)
   >             tree = revset.parse(expr)[0]
   >             ui.write(tree, "\n")
   >             return 0
@@ -1518,6 +1518,13 @@ Dedicated repo for --follow and paths filtering
   |
   o  (0) add a
   
+
+  $ testlog a
+  ('group', ('group', ('func', ('symbol', 'filelog'), ('string', 'a'))))
+  $ testlog a b
+  ('group', ('group', ('or', ('func', ('symbol', 'filelog'), ('string', 'a')), ('func', ('symbol', 'filelog'), ('string', 'b')))))
+
+Test falling back to slow path for non-existing files
 
   $ testlog a c
   ('group', ('group', ('or', ('func', ('symbol', 'file'), ('string', 'a')), ('func', ('symbol', 'file'), ('string', 'c')))))

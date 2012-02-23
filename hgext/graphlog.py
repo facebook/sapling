@@ -245,7 +245,7 @@ def check_unsupported_flags(pats, opts):
         raise util.Abort(_("-G/--graph option is incompatible with --follow "
                            "with file argument"))
 
-def revset(pats, opts):
+def revset(repo, pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
     opt2revset = {
@@ -258,6 +258,7 @@ def revset(pats, opts):
         'exclude':     ('not file(%(val)r)', ' and '),
         'include':     ('file(%(val)r)', ' and '),
         '_pats':       ('file(%(val)r)', ' or '),
+        '_patslog':    ('filelog(%(val)r)', ' or '),
         'keyword':     ('keyword(%(val)r)', ' or '),
         'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
         'user':        ('user(%(val)r)', ' or '),
@@ -269,7 +270,21 @@ def revset(pats, opts):
     # the same time
     if 'branch' in opts and 'only_branch' in opts:
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
-    opts['_pats'] = list(pats)
+
+    match = scmutil.match(repo[None], pats, opts)
+    slowpath = match.anypats() or (match.files() and opts.get('removed'))
+    if not slowpath:
+        for f in match.files():
+            filelog = repo.file(f)
+            if not len(filelog):
+                # A zero count may be a directory or deleted file, so
+                # try to find matching entries on the slow path.
+                slowpath = True
+    if slowpath:
+        # See cmdutil.walkchangerevs() slow path
+        opts['_pats'] = list(pats)
+    else:
+        opts['_patslog'] = list(pats)
 
     revset = []
     for op, val in opts.iteritems():
@@ -324,7 +339,7 @@ def graphlog(ui, repo, *pats, **opts):
 
     check_unsupported_flags(pats, opts)
 
-    revs = sorted(scmutil.revrange(repo, [revset(pats, opts)]), reverse=1)
+    revs = sorted(scmutil.revrange(repo, [revset(repo, pats, opts)]), reverse=1)
     limit = cmdutil.loglimit(opts)
     if limit is not None:
         revs = revs[:limit]
