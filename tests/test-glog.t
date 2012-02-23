@@ -1433,13 +1433,10 @@ Test log -G options
   ('group', ('group', ('func', ('symbol', 'branch'), ('string', 'not-a-branch'))))
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
-  $ testlog -b default -b branch
-  ('group', ('group', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch')))))
+  $ testlog -b default -b branch --only-branch branch
+  ('group', ('group', ('or', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch'))), ('func', ('symbol', 'branch'), ('string', 'branch')))))
   $ testlog -k expand -k merge
   ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
-  $ hg log -G --only-branch 'something nice'
-  abort: unknown revision 'something nice'!
-  [255]
   $ hg log -G --include 'some file' --exclude 'another file'
   $ hg log -G --follow  --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*36 (re)

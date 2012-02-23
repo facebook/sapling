@@ -258,10 +258,16 @@ def revset(pats, opts):
         'exclude':     ('not file($)', ' and '),
         'include':     ('file($)', ' and '),
         'keyword':     ('keyword($)', ' or '),
-        'only_branch': ('branch($)', ' and '),
         'prune':       ('not ($ or ancestors($))', ' and '),
         'user':        ('user($)', ' or '),
         }
+
+    # branch and only_branch are really aliases and must be handled at
+    # the same time
+    if 'branch' in opts and 'only_branch' in opts:
+        opts = dict(opts)
+        opts['branch'] = opts['branch'] + opts.pop('only_branch')
+
     optrevset = []
     revset = []
     for op, val in opts.iteritems():
