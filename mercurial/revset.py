@@ -112,7 +112,7 @@ def getlist(x):
 
 def getargs(x, min, max, err):
     l = getlist(x)
-    if len(l) < min or len(l) > max:
+    if len(l) < min or (max >= 0 and len(l) > max):
         raise error.ParseError(err)
     return l
 
@@ -493,23 +493,52 @@ def grep(repo, subset, x):
                 break
     return l
 
+def _matchfiles(repo, subset, x):
+    # _matchfiles takes a revset list of prefixed arguments:
+    #
+    #   [p:foo, i:bar, x:baz]
+    #
+    # builds a match object from them and filters subset. Allowed
+    # prefixes are 'p:' for regular patterns, 'i:' for include
+    # patterns and 'x:' for exclude patterns.
+
+    # i18n: "_matchfiles" is a keyword
+    l = getargs(x, 1, -1, _("_matchfiles requires at least one argument"))
+    pats, inc, exc = [], [], []
+    hasset = False
+    for arg in l:
+        s = getstring(arg, _("_matchfiles requires string arguments"))
+        prefix, value = s[:2], s[2:]
+        if prefix == 'p:':
+            pats.append(value)
+        elif prefix == 'i:':
+            inc.append(value)
+        elif prefix == 'x:':
+            exc.append(value)
+        else:
+            raise error.ParseError(_('invalid _matchfiles prefix: %s') % prefix)
+        if not hasset and matchmod.patkind(value) == 'set':
+            hasset = True
+    m = None
+    s = []
+    for r in subset:
+        c = repo[r]
+        if not m or hasset:
+            m = matchmod.match(repo.root, repo.getcwd(), pats, include=inc,
+                               exclude=exc, ctx=c)
+        for f in c.files():
+            if m(f):
+                s.append(r)
+                break
+    return s
+
 def hasfile(repo, subset, x):
     """``file(pattern)``
     Changesets affecting files matched by pattern.
     """
     # i18n: "file" is a keyword
     pat = getstring(x, _("file requires a pattern"))
-    m = None
-    s = []
-    for r in subset:
-        c = repo[r]
-        if not m or matchmod.patkind(pat) == 'set':
-            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
-        for f in c.files():
-            if m(f):
-                s.append(r)
-                break
-    return s
+    return _matchfiles(repo, subset, ('string', 'p:' + pat))
 
 def head(repo, subset, x):
     """``head()``
@@ -943,6 +972,7 @@ symbols = {
     "keyword": keyword,
     "last": last,
     "limit": limit,
+    "_matchfiles": _matchfiles,
     "max": maxrev,
     "merge": merge,
     "min": minrev,

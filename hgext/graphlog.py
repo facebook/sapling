@@ -255,9 +255,6 @@ def revset(repo, pats, opts):
         'removed':     ('removes("*")', None),
         'date':        ('date(%(val)r)', None),
         'branch':      ('branch(%(val)r)', ' or '),
-        'exclude':     ('not file(%(val)r)', ' and '),
-        'include':     ('file(%(val)r)', ' and '),
-        '_pats':       ('file(%(val)r)', ' or '),
         '_patslog':    ('filelog(%(val)r)', ' or '),
         'keyword':     ('keyword(%(val)r)', ' or '),
         'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
@@ -281,8 +278,21 @@ def revset(repo, pats, opts):
                 # try to find matching entries on the slow path.
                 slowpath = True
     if slowpath:
-        # See cmdutil.walkchangerevs() slow path
-        opts['_pats'] = list(pats)
+        # See cmdutil.walkchangerevs() slow path.
+        #
+        # pats/include/exclude cannot be represented as separate
+        # revset expressions as their filtering logic applies at file
+        # level. For instance "-I a -X a" matches a revision touching
+        # "a" and "b" while "file(a) and not file(b)" does not.
+        matchargs = []
+        for p in pats:
+            matchargs.append('p:' + p)
+        for p in opts.get('include', []):
+            matchargs.append('i:' + p)
+        for p in opts.get('exclude', []):
+            matchargs.append('x:' + p)
+        matchargs = ','.join(('%r' % p) for p in matchargs)
+        opts['rev'] = opts.get('rev', []) + ['_matchfiles(%s)' % matchargs]
     else:
         opts['_patslog'] = list(pats)
 

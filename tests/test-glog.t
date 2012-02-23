@@ -1437,7 +1437,6 @@ Test log -G options
   ('group', ('group', ('or', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch'))), ('func', ('symbol', 'branch'), ('string', 'branch')))))
   $ testlog -k expand -k merge
   ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
-  $ hg log -G --include 'some file' --exclude 'another file'
   $ hg log -G --follow  --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*36 (re)
   $ hg log -G --removed --template 'nodetag {rev}\n' | grep nodetag | wc -l
@@ -1527,4 +1526,9 @@ Dedicated repo for --follow and paths filtering
 Test falling back to slow path for non-existing files
 
   $ testlog a c
-  ('group', ('group', ('or', ('func', ('symbol', 'file'), ('string', 'a')), ('func', ('symbol', 'file'), ('string', 'c')))))
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'p:a'), ('string', 'p:c')))))
+
+Test multiple --include/--exclude/paths
+
+  $ testlog --include a --include e --exclude b --exclude e a e
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('list', ('list', ('list', ('list', ('string', 'p:a'), ('string', 'p:e')), ('string', 'i:a')), ('string', 'i:e')), ('string', 'x:b')), ('string', 'x:e')))))
