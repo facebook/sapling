@@ -607,6 +607,9 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     added, unknown, deleted, removed = [], [], [], []
     audit_path = pathauditor(repo.root)
     m = match(repo[None], pats, opts)
+    rejected = []
+    m.bad = lambda x, y: rejected.append(x)
+
     for abs in repo.walk(m):
         target = repo.wjoin(abs)
         good = True
@@ -650,6 +653,11 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                 wctx.copy(old, new)
         finally:
             wlock.release()
+
+    for f in rejected:
+        if f in m.files():
+            return 1
+    return 0
 
 def updatedir(ui, repo, patches, similarity=0):
     '''Update dirstate after patch application according to metadata'''
