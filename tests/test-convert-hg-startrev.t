@@ -115,6 +115,7 @@ Convert from merge parent
   o  0 "1: add c" files: a b c
   
   $ cd conv1
+  $ hg up -q
 
 Check copy preservation
 

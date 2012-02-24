@@ -2605,7 +2605,7 @@ def graft(ui, repo, *revs, **opts):
             repo.dirstate.setparents(current.node(), nullid)
             repo.dirstate.write()
             # fix up dirstate for copies and renames
-            cmdutil.duplicatecopies(repo, ctx.rev(), current.node())
+            cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
             # report any conflicts
             if stats and stats[3] > 0:
                 # write out state for --continue

@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" unix-permissions || exit 80
+
 Create user cache directory
 
   $ USERCACHE=`pwd`/cache; export USERCACHE
@@ -70,3 +72,50 @@ Update working directory to tip, again.
   0 largefiles updated, 0 removed
   $ hg status
   ! large
+
+Portable way to print file permissions:
+
+  $ cd ..
+  $ cat > ls-l.py <<EOF
+  > #!/usr/bin/env python
+  > import sys, os
+  > path = sys.argv[1]
+  > print '%03o' % (os.lstat(path).st_mode & 0777)
+  > EOF
+  $ chmod +x ls-l.py
+
+Test that files in .hg/largefiles inherit mode from .hg/store, not
+from file in working copy:
+
+  $ cd src
+  $ chmod 750 .hg/store
+  $ chmod 660 large
+  $ echo change >> large
+  $ hg commit -m change
+  $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
+  640
+
+Test permission of with files in .hg/largefiles created by update:
+
+  $ cd ../mirror
+  $ rm -r "$USERCACHE" .hg/largefiles # avoid links
+  $ chmod 750 .hg/store
+  $ hg pull ../src --update -q
+  $ ../ls-l.py .hg/largefiles/e151b474069de4ca6898f67ce2f2a7263adf8fea
+  640
+
+Test permission of files created by push:
+
+  $ hg serve -R ../src -d -p $HGPORT --pid-file hg.pid \
+  >          --config "web.allow_push=*" --config web.push_ssl=no
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ echo change >> large
+  $ hg commit -m change
+
+  $ rm -r "$USERCACHE"
+
+  $ hg push -q http://localhost:$HGPORT/
+
+  $ ../ls-l.py ../src/.hg/largefiles/b734e14a0971e370408ab9bce8d56d8485e368a9
+  640

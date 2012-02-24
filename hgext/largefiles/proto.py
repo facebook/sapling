@@ -20,23 +20,22 @@ def putlfile(repo, proto, sha):
     user cache.'''
     proto.redirect()
 
-    fd, tmpname = lfutil.mkstemp(repo, prefix='hg-putlfile')
-    tmpfp = os.fdopen(fd, 'wb+')
+    tmpfp = util.atomictempfile(lfutil.storepath(repo, sha),
+                                createmode=repo.store.createmode)
     try:
         try:
             proto.getfile(tmpfp)
-            tmpfp.seek(0)
-            if sha != lfutil.hexsha1(tmpfp):
+            tmpfp._fp.seek(0)
+            if sha != lfutil.hexsha1(tmpfp._fp):
                 raise IOError(0, _('largefile contents do not match hash'))
             tmpfp.close()
-            lfutil.copytostoreabsolute(repo, tmpname, sha)
+            lfutil.linktousercache(repo, sha)
         except IOError, e:
             repo.ui.warn(_('largefiles: failed to put %s into store: %s') %
                          (sha, e.strerror))
             return wireproto.pushres(1)
     finally:
-        tmpfp.close()
-        os.unlink(tmpname)
+        tmpfp.discard()
 
     return wireproto.pushres(0)
 

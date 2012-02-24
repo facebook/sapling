@@ -203,7 +203,7 @@ Test clonebranches
   >   --splicemap splicemap ordered ordered-hg3
   initializing destination ordered-hg3 repository
   scanning source...
-  abort: revision 717d54d67e6c31fd75ffef2ff3042bdd98418437 not be found in destination repository (lookups with clonebranches=true are not implemented)
+  abort: revision 717d54d67e6c31fd75ffef2ff3042bdd98418437 not found in destination repository (lookups with clonebranches=true are not implemented)
   [255]
 
 Test invalid dependency

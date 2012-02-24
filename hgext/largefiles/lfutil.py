@@ -13,7 +13,6 @@ import errno
 import platform
 import shutil
 import stat
-import tempfile
 
 from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
@@ -237,11 +236,11 @@ def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     else:
-        dst = util.atomictempfile(storepath(repo, hash))
+        dst = util.atomictempfile(storepath(repo, hash),
+                                  createmode=repo.store.createmode)
         for chunk in util.filechunkiter(open(file, 'rb')):
             dst.write(chunk)
         dst.close()
-        util.copymode(file, storepath(repo, hash))
         linktousercache(repo, hash)
 
 def linktousercache(repo, hash):
@@ -438,13 +437,6 @@ def unixpath(path):
 def islfilesrepo(repo):
     return ('largefiles' in repo.requirements and
             util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
-
-def mkstemp(repo, prefix):
-    '''Returns a file descriptor and a filename corresponding to a temporary
-    file in the repo's largefiles store.'''
-    path = repo.join(longname)
-    util.makedirs(path)
-    return tempfile.mkstemp(prefix=prefix, dir=path)
 
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
