@@ -1024,8 +1024,15 @@ def walkchangerevs(repo, match, opts, prepare):
 
             return reversed(revs)
         def iterfiles():
+            pctx = repo['.']
             for filename in match.files():
-                yield filename, None
+                if follow:
+                    if filename not in pctx:
+                        raise util.Abort(_('cannot follow file not in parent '
+                                           'revision: "%s"') % filename)
+                    yield filename, pctx[filename].filenode()
+                else:
+                    yield filename, None
             for filename_node in copies:
                 yield filename_node
         for file_, node in iterfiles():

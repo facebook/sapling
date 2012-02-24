@@ -40,7 +40,7 @@ changeset graph
 -f, directory
 
   $ hg log -f dir
-  abort: cannot follow nonexistent file: "dir"
+  abort: cannot follow file not in parent revision: "dir"
   [255]
 
 -f, but no args
@@ -75,6 +75,7 @@ changeset graph
 
 one rename
 
+  $ hg up -q 2
   $ hg log -vf a
   changeset:   0:9161b9aeaf16
   user:        test
@@ -87,6 +88,7 @@ one rename
 
 many renames
 
+  $ hg up -q tip
   $ hg log -vf e
   changeset:   4:7e4639b4691b
   tag:         tip
@@ -125,6 +127,7 @@ many renames
 
 log -pf dir/b
 
+  $ hg up -q 3
   $ hg log -pf dir/b
   changeset:   2:f8954cd4dc1f
   user:        test
@@ -187,6 +190,20 @@ log -vf dir/b
   a
   
   
+
+
+-f and multiple filelog heads
+
+  $ hg up -q 2
+  $ hg log -f g --template '{rev}\n'
+  2
+  1
+  0
+  $ hg up -q tip
+  $ hg log -f g --template '{rev}\n'
+  3
+  2
+  0
 
 
 log copies with --copies
