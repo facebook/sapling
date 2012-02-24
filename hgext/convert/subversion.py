@@ -1194,5 +1194,5 @@ class svn_sink(converter_sink, commandline):
         if rev in self.childmap:
             return True
         raise util.Abort(_('splice map revision %s not found in subversion '
-                           'child map (revision lookups are not implemented')
+                           'child map (revision lookups are not implemented)')
                          % rev)

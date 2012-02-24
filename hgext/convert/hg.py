@@ -225,7 +225,7 @@ class mercurial_sink(converter_sink):
 
     def hascommit(self, rev):
         if not rev in self.repo and self.clonebranches:
-            raise util.Abort(_('revision %s not be found in destination '
+            raise util.Abort(_('revision %s not found in destination '
                                'repository (lookups with clonebranches=true '
                                'are not implemented)') % rev)
         return rev in self.repo
