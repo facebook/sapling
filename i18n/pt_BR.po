@@ -2089,6 +2089,10 @@ msgid "could not open map file %r: %s"
 msgstr "não foi possível abrir arquivo de mapeamento %r: %s"
 
 #, python-format
+msgid "syntax error in %s(%d): child parent1[,parent2] expected"
+msgstr "erro de sintaxe em %s(%d): \"filho pai1[,pai2]\" esperado"
+
+#, python-format
 msgid "%s: invalid source repository type"
 msgstr "%s: tipo de repositório de origem inválido"
 
@@ -2116,6 +2120,14 @@ msgstr "revisões"
 
 msgid "scanning"
 msgstr "varrendo"
+
+#, python-format
+msgid "splice map revision %s is not being converted, ignoring\n"
+msgstr "revisão %s no splicemap não está sendo convertida, ignorando\n"
+
+#, python-format
+msgid "unknown splice map parent: %s"
+msgstr "pai desconhecido no splicemap: %s"
 
 #, python-format
 msgid "unknown sort mode: %s"
@@ -2387,6 +2399,14 @@ msgid "updating bookmarks\n"
 msgstr "atualizando marcadores\n"
 
 #, python-format
+msgid ""
+"revision %s not found in destination repository (lookups with "
+"clonebranches=true are not implemented)"
+msgstr ""
+"revisão %s não encontrada no repositório de destino (buscas com "
+"clonebranches=true não foram implementadas)"
+
+#, python-format
 msgid "%s is not a valid start revision"
 msgstr "%s não é uma revisão inicial válida"
 
@@ -2555,6 +2575,14 @@ msgstr "incapaz de lidar com saída do svn"
 
 msgid "writing Subversion tags is not yet implemented\n"
 msgstr "a escrita de tags do Subversion ainda não foi implementada\n"
+
+#, python-format
+msgid ""
+"splice map revision %s not found in subversion child map (revision lookups "
+"are not implemented)"
+msgstr ""
+"revisão %s no splicemap não encontrada no mapa de filhos do subversion "
+"(buscas por revisão não foram implementadas)"
 
 msgid "automatically manage newlines in repository files"
 msgstr "gerencia automaticamente quebras de linha em arquivos no repositório"
@@ -5393,14 +5421,14 @@ msgstr "imprime o nome do patch atual"
 msgid "hg qnext [-s]"
 msgstr "hg qnext [-s]"
 
-msgid "print the name of the next patch"
-msgstr "imprime o nome do próximo patch"
+msgid "print the name of the next pushable patch"
+msgstr "imprime o nome do próximo patch que pode ser aplicado"
 
 msgid "hg qprev [-s]"
 msgstr "hg qprev [-s]"
 
-msgid "print the name of the previous patch"
-msgstr "imprime o nome do patch anterior"
+msgid "print the name of the previous applied patch"
+msgstr "imprime o nome do patch aplicado anterior"
 
 msgid "import uncommitted changes (DEPRECATED)"
 msgstr "importa mudanças não consolidadas (OBSOLETO)"
@@ -8643,6 +8671,10 @@ msgstr "Encontrada revisão %s de %s\n"
 
 msgid "revision matching date not found"
 msgstr "revisão com data equivalente não encontrada"
+
+#, python-format
+msgid "cannot follow file not in parent revision: \"%s\""
+msgstr "não é possível seguir arquivo não presente na revisão pai: \"%s\""
 
 #, python-format
 msgid "cannot follow nonexistent file: \"%s\""
@@ -12166,12 +12198,11 @@ msgstr ""
 "    :hg:`help urls` para mais informações."
 
 msgid ""
-"    Returns 0 on success, 1 if no changes found or an update had\n"
-"    unresolved files.\n"
+"    Returns 0 on success, 1 if an update had unresolved files.\n"
 "    "
 msgstr ""
-"    Devolve 0 para indicar sucesso, 1 se nenhuma mudança for encontrada\n"
-"    ou se uma atualização tiver arquivos não resolvidos.\n"
+"    Devolve 0 para indicar sucesso, 1 se uma atualização resultar\n"
+"    em arquivos não resolvidos.\n"
 "    "
 
 #, python-format
