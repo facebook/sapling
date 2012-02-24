@@ -2161,10 +2161,10 @@ def debugrevspec(ui, repo, expr):
     """
     if ui.verbose:
         tree = revset.parse(expr)[0]
-        ui.note(tree, "\n")
+        ui.note(revset.prettyformat(tree), "\n")
         newtree = revset.findaliases(ui, tree)
         if newtree != tree:
-            ui.note(newtree, "\n")
+            ui.note(revset.prettyformat(newtree), "\n")
     func = revset.match(ui, expr)
     for c in func(repo, range(len(repo))):
         ui.write("%s\n" % c)

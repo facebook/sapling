@@ -13,11 +13,17 @@
   $ cd repo
 
   $ try 'p1()'
-  ('func', ('symbol', 'p1'), None)
+  (func
+    ('symbol', 'p1')
+    None)
   $ try 'p2()'
-  ('func', ('symbol', 'p2'), None)
+  (func
+    ('symbol', 'p2')
+    None)
   $ try 'parents()'
-  ('func', ('symbol', 'parents'), None)
+  (func
+    ('symbol', 'parents')
+    None)
 
 null revision
   $ log 'p1()'
