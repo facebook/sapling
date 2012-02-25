@@ -149,3 +149,37 @@ instead (named `.git`), add the following to your `hgrc`:
 
     [git]
     intree = True
+
+git.branch_bookmark_suffix
+---------------------------
+
+hg-git does not convert between Mercurial named branches and git branches as
+the two are conceptually different; instead, it uses Mercurial bookmarks to
+represent the concept of a git branch. Therefore, when translating an hg repo
+over to git, you typically need to create bookmarks to mirror all the named
+branches that you'd like to see transferred over to git. The major caveat with
+this is that you can't use the same name for your bookmark as that of the
+named branch, and furthermore there's no feasible way to rename a branch in
+Mercurial. For the use case where one would like to transfer an hg repo over
+to git, and maintain the same named branches as are present on the hg side,
+the `branch_bookmark_suffix` might be all that's needed. This presents a
+string "suffix" that will be recognized on each bookmark name, and stripped
+off as the bookmark is translated to a git branch:
+
+    [git]
+    branch_bookmark_suffix=_bookmark
+    
+Above, if an hg repo had a named branch called `release_6_maintenance`, you could 
+then link it to a bookmark called `release_6_maintenance_bookmark`.   hg-git will then
+strip off the `_bookmark` suffix from this bookmark name, and create a git branch
+called `release_6_maintenance`.   When pulling back from git to hg, the `_bookmark`
+suffix is then applied back, if and only if an hg named branch of that name exists.
+E.g., when changes to the `release_6_maintenance` branch are checked into git, these
+will be placed into the `release_6_maintenance_bookmark` bookmark on hg.  But if a
+new branch called `release_7_maintenance` were pulled over to hg, and there was
+not a `release_7_maintenance` named branch already, the bookmark will be named 
+`release_7_maintenance` with no usage of the suffix.
+
+The `branch_bookmark_suffix` option is, like the `authors` option, intended for
+migrating legacy hg named branches.   Going forward, an hg repo that is to 
+be linked with a git repo should only use bookmarks for named branching.
