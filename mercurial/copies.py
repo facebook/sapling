@@ -174,7 +174,7 @@ def pathcopies(x, y):
         return _backwardcopies(x, y)
     return _chain(x, y, _backwardcopies(x, a), _forwardcopies(a, y))
 
-def mergecopies(repo, c1, c2, ca, checkdirs=True):
+def mergecopies(repo, c1, c2, ca):
     """
     Find moves and copies between context c1 and c2 that are relevant
     for merging.
@@ -310,7 +310,7 @@ def mergecopies(repo, c1, c2, ca, checkdirs=True):
             repo.ui.debug("   %s -> %s %s\n" % (f, fullcopy[f], note))
     del diverge2
 
-    if not fullcopy or not checkdirs:
+    if not fullcopy:
         return copy, diverge
 
     repo.ui.debug("  checking for directory renames\n")

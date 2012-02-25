@@ -188,8 +188,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     elif pa == p2: # backwards
         pa = p1.p1()
     elif pa and repo.ui.configbool("merge", "followcopies", True):
-        dirs = repo.ui.configbool("merge", "followdirs", True)
-        copy, diverge = copies.mergecopies(repo, p1, p2, pa, dirs)
+        copy, diverge = copies.mergecopies(repo, p1, p2, pa)
         for of, fl in diverge.iteritems():
             act("divergent renames", "dr", of, fl)
 
