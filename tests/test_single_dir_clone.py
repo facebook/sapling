@@ -105,7 +105,7 @@ class TestSingleDir(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
@@ -136,7 +136,7 @@ class TestSingleDir(test_util.TestBase):
                              filectxfn,
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
-                             {'branch': 'localhacking',})
+                             {'branch': 'localhacking', })
         n = repo.commitctx(ctx)
         self.assertEqual(self.repo['tip']['bogus'].data(),
                          'contents of bogus')
@@ -171,7 +171,7 @@ class TestSingleDir(test_util.TestBase):
                                  file_callback,
                                  'an_author',
                                  '2009-10-19 18:49:30 -0500',
-                                 {'branch': 'default',})
+                                 {'branch': 'default', })
             repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions(expected_extra_back=1)
@@ -206,7 +206,7 @@ class TestSingleDir(test_util.TestBase):
                                           file_callback(name),
                                           'an_author',
                                           '2009-10-19 18:49:30 -0500',
-                                          {'branch': name,}))
+                                          {'branch': name, }))
 
         parent = repo['tip'].node()
         commit_to_branch('default', parent)
@@ -252,7 +252,7 @@ class TestSingleDir(test_util.TestBase):
                              file_callback,
                              'an_author',
                              '2009-10-19 18:49:30 -0500',
-                             {'branch': 'default',})
+                             {'branch': 'default', })
         self.repo.commitctx(ctx)
         hg.update(self.repo, self.repo['tip'].node())
         self.pushrevisions()
@@ -266,5 +266,5 @@ class TestSingleDir(test_util.TestBase):
         self.test_push_single_dir_renamed_branch(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
-    return unittest.TestSuite(all)
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
+    return unittest.TestSuite(all_tests)

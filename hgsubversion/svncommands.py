@@ -55,7 +55,7 @@ def verify(ui, repo, args=None, **opts):
         svnfiles.add(fn)
         fp = fn
         if branchpath:
-            fp = branchpath + '/'  + fn
+            fp = branchpath + '/' + fn
         data, mode = svn.get_file(posixpath.normpath(fp), srev)
         fctx = ctx[fn]
         dmatch = fctx.data() == data

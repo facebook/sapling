@@ -72,7 +72,7 @@ elif os.path.exists('.hg_archival.txt'):
     kw = dict([t.strip() for t in l.split(':', 1)]
               for l in open('.hg_archival.txt'))
     if 'tag' in kw:
-        version =  kw['tag']
+        version = kw['tag']
     elif 'latesttag' in kw:
         version = '%(latesttag)s+%(latesttagdistance)s-%(node).12s' % kw
     else:
@@ -107,22 +107,22 @@ except ImportError:
     requires.append('subvertpy>=0.7.4')
 
 setup(
-    name = 'hgsubversion',
-    version = version,
-    url = 'http://bitbucket.org/durin42/hgsubversion',
-    license = 'GNU GPL',
-    author = 'Augie Fackler, others',
-    author_email = 'durin42@gmail.com',
-    description = ('hgsubversion is a Mercurial extension for working with '
+    name='hgsubversion',
+    version=version,
+    url='http://bitbucket.org/durin42/hgsubversion',
+    license='GNU GPL',
+    author='Augie Fackler, others',
+    author_email='durin42@gmail.com',
+    description=('hgsubversion is a Mercurial extension for working with '
                    'Subversion repositories.'),
-    long_description = open(os.path.join(os.path.dirname(__file__),
+    long_description=open(os.path.join(os.path.dirname(__file__),
                                          'README')).read(),
-    keywords = 'mercurial',
-    packages = ('hgsubversion', 'hgsubversion.svnwrap'),
-    package_data = { 'hgsubversion': ['help/subversion.rst'] },
-    platforms = 'any',
+    keywords='mercurial',
+    packages=('hgsubversion', 'hgsubversion.svnwrap'),
+    package_data={ 'hgsubversion': ['help/subversion.rst'] },
+    platforms='any',
     install_requires=requires,
-    classifiers = [
+    classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Version Control',
@@ -130,5 +130,5 @@ setup(
         'Programming Language :: Python',
         'Operating System :: OS Independent',
     ],
-    cmdclass = {'build_py': build_py},
+    cmdclass={'build_py': build_py},
 )

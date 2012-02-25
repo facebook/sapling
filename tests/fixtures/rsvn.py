@@ -169,7 +169,7 @@ def rsvn(pool):
     sys.stderr.write(str(e) + '\n\n')
     usage()
     sys.exit(1)
-  
+
   for opt, value in opts:
     if opt == '--version':
       print '%s version %s' % (os.path.basename(sys.argv[0]), VERSION)
@@ -181,75 +181,75 @@ def rsvn(pool):
       username = value
     elif opt == '--message':
       log_msg = value
-  
+
   if log_msg == None:
     usage('Missing --message argument')
     sys.exit(1)
-  
+
   if len(args) != 1:
     usage('Missing repository path argument')
     sys.exit(1)
-  
+
   repos_path = args[0]
   print 'Accessing repository at [%s]' % repos_path
 
   repository = Repository(repos_path, pool)
   sub = repository.subpool()
-  
+
   try:
     txn = repository.begin(username, log_msg)
-  
+
     # Read commands from STDIN
     lineno = 0
     for line in sys.stdin:
       lineno += 1
-      
+
       core.svn_pool_clear(sub)
       try:
         if COMMENT_RE.search(line):
           continue
-    
+
         match = RCOPY_RE.search(line)
         if match:
           src = match.group(1)
           dest = match.group(2)
           txn.copy(src, dest, sub)
           continue
-    
+
         match = RMOVE_RE.search(line)
         if match:
           src = match.group(1)
           dest = match.group(2)
           txn.move(src, dest, sub)
           continue
-    
+
         match = RMKDIR_RE.search(line)
         if match:
           entry = match.group(1)
           txn.mkdir(entry, sub)
           continue
-    
+
         match = RDELETE_RE.search(line)
         if match:
           entry = match.group(1)
           txn.delete(entry, sub)
           continue
-  
+
         raise NameError, ('Unknown command [%s] on line %d' %
             (line, lineno))
-    
+
       except:
-        sys.stderr.write(('Exception occured while processing line %d:\n' % 
+        sys.stderr.write(('Exception occured while processing line %d:\n' %
             lineno))
         etype, value, tb = sys.exc_info()
         traceback.print_exception(etype, value, tb, None, sys.stderr)
         sys.stderr.write('\n')
         txn.rollback()
         sys.exit(1)
-  
+
     new_rev = txn.commit()
     print '\nCommitted revision %d.' % new_rev
-  
+
   finally:
     print '\nRepository closed.'
 

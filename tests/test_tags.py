@@ -138,9 +138,9 @@ rename a tag
        openheads = [h for h in heads if not repo[h].extra().get('close', False)]
        closedheads = set(heads) - set(openheads)
        self.assertEqual(len(openheads), 1)
-       self.assertEqual(len(closedheads), headcount-1)
+       self.assertEqual(len(closedheads), headcount - 1)
        closedheads = sorted(list(closedheads),
-                            cmp=lambda x,y: cmp(repo[x].rev(), repo[y].rev()))
+                            cmp=lambda x, y: cmp(repo[x].rev(), repo[y].rev()))
 
        # closeme has no open heads
        for h in openheads:

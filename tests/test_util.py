@@ -43,7 +43,7 @@ from hgsubversion import util
 #   "Note that on Windows, you cannot set close_fds to true and
 #   also redirect the standard handles by setting stdin, stdout or
 #   stderr."
-canCloseFds='win32' not in sys.platform
+canCloseFds = 'win32' not in sys.platform
 
 if not 'win32' in sys.platform:
     def kill_process(popen_obj):
@@ -75,7 +75,7 @@ else:
         DWORD, 'dwProcessId',
     )
 
-    CloseHandle =  WINAPI(BOOL, ctypes.windll.kernel32.CloseHandle,
+    CloseHandle = WINAPI(BOOL, ctypes.windll.kernel32.CloseHandle,
         HANDLE, 'hObject'
     )
 
@@ -163,10 +163,10 @@ def load_svndump_fixture(path, fixture_name):
     already exist.
     '''
     if os.path.exists(path): rmtree(path)
-    subprocess.call(['svnadmin', 'create', path,],
+    subprocess.call(['svnadmin', 'create', path, ],
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     inp = open(os.path.join(FIXTURES, fixture_name))
-    proc = subprocess.Popen(['svnadmin', 'load', path,], stdin=inp,
+    proc = subprocess.Popen(['svnadmin', 'load', path, ], stdin=inp,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     proc.communicate()
 
@@ -248,8 +248,8 @@ class TestBase(unittest.TestCase):
     def setUp(self):
         _verify_our_modules()
 
-        self.oldenv = dict([(k, os.environ.get(k, None), ) for k in
-                           ('LANG', 'LC_ALL', 'HGRCPATH', )])
+        self.oldenv = dict([(k, os.environ.get(k, None),) for k in
+                           ('LANG', 'LC_ALL', 'HGRCPATH',)])
         self.oldt = i18n.t
         os.environ['LANG'] = os.environ['LC_ALL'] = 'C'
         i18n.t = gettext.translation('hg', i18n.localedir, fallback=True)

@@ -29,7 +29,7 @@ except ImportError:
     raise ImportError('Subversion %d.%d.%d or later required, '
                       'but no bindings were found' % required_bindings)
 
-if current_bindings < required_bindings: #pragma: no cover
+if current_bindings < required_bindings: # pragma: no cover
     raise ImportError('Subversion %d.%d.%d or later required, '
                       'but bindings for %d.%d.%d found' %
                       (required_bindings + current_bindings))
@@ -60,7 +60,7 @@ def optrev(revnum):
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
     @staticmethod
-    def open_tmp_file(pool): #pragma: no cover
+    def open_tmp_file(pool): # pragma: no cover
         (fd, fn) = tempfile.mkstemp()
         os.close(fd)
         return fn
@@ -82,13 +82,13 @@ def ieditor(fn):
     def fun(self, *args, **kwargs):
         try:
             return fn(self, *args, **kwargs)
-        except: #pragma: no cover
+        except: # pragma: no cover
             if self.current.exception is not None:
                 self.current.exception = sys.exc_info()
             raise
     return fun
 
-def user_pass_prompt(realm, default_username, ms, pool): #pragma: no cover
+def user_pass_prompt(realm, default_username, ms, pool): # pragma: no cover
     # FIXME: should use getpass() and username() from mercurial.ui
     creds = core.svn_auth_cred_simple_t()
     creds.may_save = ms
@@ -103,7 +103,7 @@ def user_pass_prompt(realm, default_username, ms, pool): #pragma: no cover
     creds.password = getpass.getpass('Password for %s: ' % creds.username)
     return creds
 
-def _create_auth_baton(pool):
+def _create_auth_baton(pool, password_stores):
     """Create a Subversion authentication baton. """
     # Give the client context baton a suite of authentication
     # providers.h
@@ -124,7 +124,9 @@ def _create_auth_baton(pool):
                           None)
     if getprovider:
         # Available in svn >= 1.6
-        for name in ('gnome_keyring', 'keychain', 'kwallet', 'windows'):
+        if password_stores is None:
+            password_stores = ('gnome_keyring', 'keychain', 'kwallet', 'windows')
+        for name in password_stores:
             for type in ('simple', 'ssl_client_cert_pw', 'ssl_server_trust'):
                 p = getprovider(name, type, pool)
                 if p:
@@ -158,14 +160,14 @@ class SubversionRepo(object):
 
     It uses the SWIG Python bindings, see above for requirements.
     """
-    def __init__(self, url='', username='', password='', head=None):
+    def __init__(self, url='', username='', password='', head=None, password_stores=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
         self.password = parsed[1]
         self.svn_url = parsed[2]
         self.auth_baton_pool = core.Pool()
-        self.auth_baton = _create_auth_baton(self.auth_baton_pool)
+        self.auth_baton = _create_auth_baton(self.auth_baton_pool, password_stores)
         # self.init_ra_and_client() assumes that a pool already exists
         self.pool = core.Pool()
 
@@ -233,7 +235,7 @@ class SubversionRepo(object):
             holder = []
             ra.get_log(self.ra, [''],
                        self.HEAD, 1,
-                       1, #limit of how many log messages to load
+                       1, # limit of how many log messages to load
                        True, # don't need to know changed paths
                        True, # stop on copies
                        lambda paths, revnum, author, date, message, pool:
@@ -293,9 +295,9 @@ class SubversionRepo(object):
                 #       when converting the 65k+ rev. in LLVM.
                 ra.get_log(self.ra,
                            paths,
-                           start+1,
+                           start + 1,
                            stop,
-                           chunk_size, #limit of how many log messages to load
+                           chunk_size, # limit of how many log messages to load
                            True, # don't need to know changed paths
                            True, # stop on copies
                            callback,
@@ -403,7 +405,7 @@ class SubversionRepo(object):
         try:
             ra.replay(self.ra, revision, oldest_rev_i_have, True, e_ptr,
                       e_baton, self.pool)
-        except SubversionException, e: #pragma: no cover
+        except SubversionException, e: # pragma: no cover
             # can I depend on this number being constant?
             if (e.apr_err == core.SVN_ERR_RA_NOT_IMPLEMENTED or
                 e.apr_err == core.SVN_ERR_UNSUPPORTED_FEATURE):
@@ -497,7 +499,7 @@ class SubversionRepo(object):
             if e.args[1] in notfound: # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode  == 'l':
+        if mode == 'l':
             linkprefix = "link "
             if data.startswith(linkprefix):
                 data = data[len(linkprefix):]

@@ -71,7 +71,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     updateexternals(ui, meta, current)
 
-    if current.exception is not None:  #pragma: no cover
+    if current.exception is not None:  # pragma: no cover
         traceback.print_exception(*current.exception)
         raise ReplayException()
     if current.missing:
@@ -174,7 +174,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      date,
                                      extra)
 
-        new_hash = meta.repo.commitctx(current_ctx)
+        new_hash = meta.repo.svn_commitctx(current_ctx)
         util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap and not tag:
             meta.revmap[rev.revnum, branch] = new_hash
@@ -194,7 +194,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             raise IOError(errno.ENOENT, 'deleting all files')
 
         # True here meant nuke all files, shouldn't happen with branch closing
-        if current.emptybranches[branch]: #pragma: no cover
+        if current.emptybranches[branch]: # pragma: no cover
             raise hgutil.Abort('Empty commit to an open branch attempted. '
                                'Please report this issue.')
 
@@ -209,7 +209,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      meta.authors[rev.author],
                                      date,
                                      extra)
-        new_hash = meta.repo.commitctx(current_ctx)
+        new_hash = meta.repo.svn_commitctx(current_ctx)
         util.describe_commit(ui, new_hash, branch)
         if (rev.revnum, branch) not in meta.revmap:
             meta.revmap[rev.revnum, branch] = new_hash

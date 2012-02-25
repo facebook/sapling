@@ -15,7 +15,7 @@ try:
     from mercurial import revset
     revset.methods
 except ImportError:
-   revset = None
+    revset = None
 
 class CapturingUI(ui.ui):
 
@@ -82,5 +82,5 @@ class TestLogKeywords(test_util.TestBase):
                           template='{rev}:{svnrev} ', **defaults)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords),]
-    return unittest.TestSuite(all)
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords), ]
+    return unittest.TestSuite(all_tests)

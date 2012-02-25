@@ -11,6 +11,6 @@ class TestFetchBinaryFiles(test_util.TestBase):
         self.test_binaryfiles(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBinaryFiles),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBinaryFiles),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

@@ -39,7 +39,7 @@ class TestFetchSymlinks(test_util.TestBase):
                 'linka4': 'link to this',
                 },
             }
-            
+
         for rev in repo:
             ctx = repo[rev]
             for f in ctx.manifest():
@@ -53,6 +53,6 @@ class TestFetchSymlinks(test_util.TestBase):
         self.test_symlinks(True)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchSymlinks),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchSymlinks),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

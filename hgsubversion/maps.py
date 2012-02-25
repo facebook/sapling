@@ -5,6 +5,7 @@ from mercurial import util as hgutil
 from mercurial import node
 
 import svncommands
+import util
 
 class AuthorMap(dict):
     '''A mapping from Subversion-style authors to Mercurial-style
@@ -20,7 +21,7 @@ class AuthorMap(dict):
         The ui argument is used to print diagnostic messages.
 
         The path argument is the location of the backing store,
-        typically .hg/authormap.
+        typically .hg/svn/authors.
         '''
         self.ui = ui
         self.path = path
@@ -136,14 +137,14 @@ class Tags(dict):
             print 'tagmap too new -- please upgrade'
             raise NotImplementedError
         for l in f:
-            hash, revision, tag = l.split(' ', 2)
+            ha, revision, tag = l.split(' ', 2)
             revision = int(revision)
             tag = tag[:-1]
             if self.endrev is not None and revision > self.endrev:
                 break
             if not tag:
                 continue
-            dict.__setitem__(self, tag, node.bin(hash))
+            dict.__setitem__(self, tag, node.bin(ha))
         f.close()
 
     def _write(self):
@@ -168,11 +169,11 @@ class Tags(dict):
     def __setitem__(self, tag, info):
         if not tag:
             raise hgutil.Abort('tag cannot be empty')
-        hash, revision = info
+        ha, revision = info
         f = open(self.path, 'a')
-        f.write('%s %s %s\n' % (node.hex(hash), revision, tag))
+        f.write('%s %s %s\n' % (node.hex(ha), revision, tag))
         f.close()
-        dict.__setitem__(self, tag, hash)
+        dict.__setitem__(self, tag, ha)
 
 
 class RevMap(dict):
@@ -185,11 +186,10 @@ class RevMap(dict):
         self.ypath = os.path.join(repo.path, 'svn', 'lastpulled')
         # TODO(durin42): Consider moving management of the youngest
         # file to svnmeta itself rather than leaving it here.
-        self._youngest = 0
         # must load youngest file first, or else self._load() can
         # clobber the info
-        if os.path.isfile(self.ypath):
-            self._youngest = int(open(self.ypath).read().strip())
+        _yonngest_str = util.load_string(self.ypath, '0')
+        self._youngest = int(_yonngest_str.strip())
         self.oldest = 0
         if os.path.isfile(self.path):
             self._load()
@@ -198,9 +198,7 @@ class RevMap(dict):
 
     def _set_youngest(self, rev):
         self._youngest = max(self._youngest, rev)
-        fp = open(self.ypath, 'wb')
-        fp.write(str(self._youngest) + '\n')
-        fp.close()
+        util.save_string(self.ypath, str(self._youngest) + '\n')
 
     def _get_youngest(self):
         return self._youngest
@@ -221,7 +219,7 @@ class RevMap(dict):
             print 'revmap too new -- please upgrade'
             raise NotImplementedError
         for l in f:
-            revnum, hash, branch = l.split(' ', 2)
+            revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None
             else:
@@ -231,7 +229,7 @@ class RevMap(dict):
                 self.youngest = revnum
             if revnum < self.oldest or not self.oldest:
                 self.oldest = revnum
-            dict.__setitem__(self, (revnum, branch), node.bin(hash))
+            dict.__setitem__(self, (revnum, branch), node.bin(ha))
         f.close()
 
     def _write(self):
@@ -239,70 +237,96 @@ class RevMap(dict):
         f.write('%s\n' % self.VERSION)
         f.close()
 
-    def __setitem__(self, key, hash):
+    def __setitem__(self, key, ha):
         revnum, branch = key
         f = open(self.path, 'a')
         b = branch or ''
-        f.write(str(revnum) + ' ' + node.hex(hash) + ' ' + b + '\n')
+        f.write(str(revnum) + ' ' + node.hex(ha) + ' ' + b + '\n')
         f.close()
         if revnum > self.youngest or not self.youngest:
             self.youngest = revnum
         if revnum < self.oldest or not self.oldest:
             self.oldest = revnum
-        dict.__setitem__(self, (revnum, branch), hash)
+        dict.__setitem__(self, (revnum, branch), ha)
 
 
 class FileMap(object):
 
-    def __init__(self, repo):
-        self.ui = repo.ui
+    VERSION = 1
+
+    def __init__(self, ui, path):
+        '''Initialise a new FileMap.
+
+        The ui argument is used to print diagnostic messages.
+
+        The path argument is the location of the backing store,
+        typically .hg/svn/filemap.
+        '''
+        self.ui = ui
+        self.path = path
         self.include = {}
         self.exclude = {}
-        filemap = repo.ui.config('hgsubversion', 'filemap')
-        if filemap and os.path.exists(filemap):
-            self.load(filemap)
+        if os.path.isfile(self.path):
+            self._load()
+        else:
+            self._write()
 
     def _rpairs(self, name):
-        yield '.', name
         e = len(name)
         while e != -1:
             yield name[:e], name[e+1:]
             e = name.rfind('/', 0, e)
+        yield '.', name
 
-    def check(self, map, path):
-        map = getattr(self, map)
-        for pre, suf in self._rpairs(path):
-            if pre not in map:
-                continue
-            return map[pre]
-        return None
+    def check(self, m, path):
+        m = getattr(self, m)
+        for pre, _suf in self._rpairs(path):
+            if pre in m:
+                return m[pre]
+        return -1
 
     def __contains__(self, path):
-        if len(self.include) and len(path):
+        if not len(path):
+            return True
+        if len(self.include):
             inc = self.check('include', path)
+        elif not len(self.exclude):
+            return True
         else:
-            inc = path
-        if len(self.exclude) and len(path):
+            inc = 0
+        if len(self.exclude):
             exc = self.check('exclude', path)
         else:
-            exc = None
-        if inc is None or exc is not None:
-            return False
-        return True
+            exc = -1
+        # respect rule order: newer rules override older
+        return inc > exc
 
-    def add(self, fn, map, path):
-        mapping = getattr(self, map)
+    # Needed so empty filemaps are false
+    def __len__(self):
+        return len(self.include) + len(self.exclude)
+
+    def add(self, fn, m, path):
+        mapping = getattr(self, m)
         if path in mapping:
             msg = 'duplicate %s entry in %s: "%s"\n'
-            self.ui.status(msg % (map, fn, path))
+            self.ui.status(msg % (m, fn, path))
             return
-        bits = map.strip('e'), path
+        bits = m.strip('e'), path
         self.ui.debug('%sing %s\n' % bits)
-        mapping[path] = path
+        # respect rule order
+        mapping[path] = len(self)
+        if fn != self.path:
+            f = open(self.path, 'a')
+            f.write(m + ' ' + path + '\n')
+            f.close()
 
     def load(self, fn):
         self.ui.note('reading file map from %s\n' % fn)
         f = open(fn, 'r')
+        self.load_fd(f, fn)
+        f.close()
+
+    def load_fd(self, f, fn):
         for line in f:
             if line.strip() == '' or line.strip()[0] == '#':
                 continue
@@ -317,6 +341,20 @@ class FileMap(object):
             except IndexError:
                 msg = 'ignoring bad line in filemap %s: %s\n'
                 self.ui.warn(msg % (fn, line.rstrip()))
+
+    def _load(self):
+        self.ui.note('reading in-repo file map from %s\n' % self.path)
+        f = open(self.path)
+        ver = int(f.readline())
+        if ver != self.VERSION:
+            print 'filemap too new -- please upgrade'
+            raise NotImplementedError
+        self.load_fd(f, self.path)
+        f.close()
+
+    def _write(self):
+        f = open(self.path, 'w')
+        f.write('%s\n' % self.VERSION)
         f.close()
 
 class BranchMap(dict):

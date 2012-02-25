@@ -306,6 +306,17 @@ settings:
 
     Set the username or password for accessing Subversion repositories.
 
+  ``hgsubversion.password_stores``
+
+    List of methods to use for storing passwords (similar to the option of the
+    same name in the subversion configuration files). Default is
+    ``gnome_keyring,keychain,kwallet,windows``. Password stores can be disabled
+    completely by setting this to an empty value.
+
+    .. NOTE::
+
+        Password stores are only supported with the SWIG bindings.
+
   ``hgsubversion.stupid``
     Setting this boolean option to true will force using a slower method for
     pulling revisions from Subversion. This method is compatible with servers

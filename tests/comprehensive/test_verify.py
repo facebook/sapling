@@ -51,5 +51,5 @@ for case in fixtures:
 VerifyTests = type('VerifyTests', (test_util.TestBase,), attrs)
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(VerifyTests)]
-    return unittest.TestSuite(all)
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(VerifyTests)]
+    return unittest.TestSuite(all_tests)

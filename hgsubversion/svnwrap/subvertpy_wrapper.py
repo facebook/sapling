@@ -31,7 +31,7 @@ except ImportError:
 def _versionstr(v):
     return '.'.join(str(d) for d in v)
 
-if subvertpy.__version__ < subvertpy_required: #pragma: no cover
+if subvertpy.__version__ < subvertpy_required: # pragma: no cover
     raise ImportError('Subvertpy %s or later required, '
                       'but %s found'
                       % (_versionstr(subvertpy_required),
@@ -87,7 +87,7 @@ class PathAdapter(object):
             self.copyfrom_path = intern(self.copyfrom_path)
 
 class AbstractEditor(object):
-    __slots__ = ('editor', )
+    __slots__ = ('editor',)
 
     def __init__(self, editor):
         self.editor = editor
@@ -131,7 +131,7 @@ class AbstractEditor(object):
         self.editor.delete_entry(path, revnum, None)
 
 class FileEditor(AbstractEditor):
-    __slots__ = ('path', )
+    __slots__ = ('path',)
 
     def __init__(self, editor, path):
         super(FileEditor, self).__init__(editor)
@@ -145,7 +145,7 @@ class FileEditor(AbstractEditor):
         del self.path
 
 class DirectoryEditor(AbstractEditor):
-    __slots__ = ('path', )
+    __slots__ = ('path',)
 
     def __init__(self, editor, path):
         super(DirectoryEditor, self).__init__(editor)
@@ -165,8 +165,11 @@ class SubversionRepo(object):
     This wrapper uses Subvertpy, an alternate set of bindings for Subversion
     that's more pythonic and sucks less. See earlier in this file for version
     requirements.
+
+    Note that password stores do not work, the parameter is only here
+    to ensure that the API is the same as for the SWIG wrapper.
     """
-    def __init__(self, url='', username='', password='', head=None):
+    def __init__(self, url='', username='', password='', head=None, password_stores=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
@@ -306,7 +309,7 @@ class SubversionRepo(object):
                 #       ra.get_log(), even with chunk_size set, takes a while
                 #       when converting the 65k+ rev. in LLVM.
                 self.remote.get_log(paths=paths, revprops=revprops,
-                                    start=start+1, end=stop, limit=chunk_size,
+                                    start=start + 1, end=stop, limit=chunk_size,
                                     discover_changed_paths=True,
                                     callback=callback)
             except SubversionException, e:
@@ -338,7 +341,7 @@ class SubversionRepo(object):
             commit_info.append(args)
         commit_info = []
         revprops = { properties.PROP_REVISION_LOG: message }
-        #revprops.update(props)
+        # revprops.update(props)
         commiteditor = self.remote.get_commit_editor(revprops, commitcb)
 
         paths = set(paths)
@@ -417,7 +420,7 @@ class SubversionRepo(object):
 
         try:
             self.remote.replay(revision, oldestrev, AbstractEditor(editor))
-        except (SubversionException, NotImplementedError), e: #pragma: no cover
+        except (SubversionException, NotImplementedError), e: # pragma: no cover
             # can I depend on this number being constant?
             if (isinstance(e, NotImplementedError) or
                 e.args[1] == subvertpy.ERR_RA_NOT_IMPLEMENTED or
@@ -477,7 +480,7 @@ class SubversionRepo(object):
                 # File not found
                 raise IOError(errno.ENOENT, e.args[0])
             raise
-        if mode  == 'l':
+        if mode == 'l':
             linkprefix = "link "
             if data.startswith(linkprefix):
                 data = data[len(linkprefix):]
@@ -531,4 +534,4 @@ class SubversionRepo(object):
         if not path or path == '.':
             return self.svn_url
         assert path[0] != '/', path
-        return '/'.join((self.svn_url, urllib.quote(path).rstrip('/'), ))
+        return '/'.join((self.svn_url, urllib.quote(path).rstrip('/'),))

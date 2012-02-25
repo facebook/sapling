@@ -119,7 +119,7 @@ class HgEditor(svnwrap.Editor):
                 # assuming it is a directory
                 self.current.externals[path] = None
                 map(self.current.delete, [pat for pat in self.current.files.iterkeys()
-                                          if pat.startswith(path+'/')])
+                                          if pat.startswith(path + '/')])
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current.files:
@@ -335,23 +335,26 @@ class HgEditor(svnwrap.Editor):
         self.stream = target
 
         handler = svnwrap.apply_txdelta(base, target)
-        if not callable(handler): #pragma: no cover
+        if not callable(handler): # pragma: no cover
             raise hgutil.Abort('Error in Subversion bindings: '
                                'cannot call handler!')
         def txdelt_window(window):
             try:
                 if not self.meta.is_path_valid(self.current.file):
                     return
+                # Already get and store the value here, because calling
+                # handler(window) seems to close the target in Subversion 1.7.
+                val = target.getvalue()
                 handler(window)
                 # window being None means commit this file
                 if not window:
-                    self.current.files[self.current.file] = target.getvalue()
-            except svnwrap.SubversionException, e: #pragma: no cover
+                    self.current.files[self.current.file] = val
+            except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(self.current.file)
-                else: #pragma: no cover
+                else: # pragma: no cover
                     raise hgutil.Abort(*e.args)
-            except: #pragma: no cover
+            except: # pragma: no cover
                 print len(base), self.current.file
                 self._exception_info = sys.exc_info()
                 raise

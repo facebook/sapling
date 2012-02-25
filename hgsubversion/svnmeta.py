@@ -24,7 +24,7 @@ def pickle_atomic(data, file_path, dir=None):
         f = os.fdopen(f, 'w')
         pickle.dump(data, f)
         f.close()
-    except: #pragma: no cover
+    except: # pragma: no cover
         raise
     else:
         hgutil.rename(path, file_path)
@@ -55,6 +55,7 @@ class SVNMeta(object):
                                                  'usebranchnames', True)
         branchmap = self.ui.config('hgsubversion', 'branchmap')
         tagmap = self.ui.config('hgsubversion', 'tagmap')
+        filemap = self.ui.config('hgsubversion', 'filemap')
 
         self.branches = {}
         if os.path.exists(self.branch_info_file):
@@ -94,8 +95,11 @@ class SVNMeta(object):
         if tagmap:
             self.tagmap.load(tagmap)
 
+        self.filemap = maps.FileMap(self.ui, self.filemap_file)
+        if filemap:
+            self.filemap.load(filemap)
+
         self.lastdate = '1970-01-01 00:00:00 -0000'
-        self.filemap = maps.FileMap(repo)
         self.addedtags = {}
         self.deletedtags = {}
 
@@ -192,6 +196,10 @@ class SVNMeta(object):
         return os.path.join(self.meta_data_dir, 'authors')
 
     @property
+    def filemap_file(self):
+        return os.path.join(self.meta_data_dir, 'filemap')
+
+    @property
     def branchmapfile(self):
         return os.path.join(self.meta_data_dir, 'branchmap')
 
@@ -257,7 +265,7 @@ class SVNMeta(object):
                     branchpath = branch[3:]
                 else:
                     branchpath = 'branches/%s' % branch
-            path = '%s/%s' % (subdir , branchpath)
+            path = '%s/%s' % (subdir, branchpath)
 
         extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
             'uuid': self.uuid,
@@ -368,7 +376,7 @@ class SVNMeta(object):
         else:
             path = test.split('/')[-1]
             test = '/'.join(test.split('/')[:-1])
-        ln =  self.localname(test)
+        ln = self.localname(test)
         if ln and ln.startswith('../'):
             return None, None, None
         return path, ln, test
@@ -424,7 +432,7 @@ class SVNMeta(object):
             branch_created_rev = self.branches[branch][2]
             if parent_branch == 'trunk':
                 parent_branch = None
-            if branch_created_rev <= number+1 and branch != parent_branch:
+            if branch_created_rev <= number + 1 and branch != parent_branch:
                 # did the branch exist in previous run
                 if exact and branch in self.prevbranches:
                     if self.prevbranches[branch][1] < real_num:
@@ -450,7 +458,7 @@ class SVNMeta(object):
                     return node.hex(self.revmap[tagged])
                 tag = fromtag
             # Reference an existing tag
-            limitedtags = maps.Tags(self.repo, endrev=number-1)
+            limitedtags = maps.Tags(self.repo, endrev=number - 1)
             if tag in limitedtags:
                 return limitedtags[tag]
         r, br = self.get_parent_svn_branch_and_rev(number - 1, branch, exact)
@@ -609,7 +617,7 @@ class SVNMeta(object):
             branchparent = branchparent.parents()[0]
         branch = self.get_source_rev(ctx=branchparent)[1]
 
-        parentctx = self.repo[self.get_parent_revision(rev.revnum+1, branch)]
+        parentctx = self.repo[self.get_parent_revision(rev.revnum + 1, branch)]
         if '.hgtags' in parentctx:
             tagdata = parentctx.filectx('.hgtags').data()
         else:
@@ -639,7 +647,7 @@ class SVNMeta(object):
                              self.authors[rev.author],
                              date,
                              parentctx.extra())
-        new_hash = self.repo.commitctx(ctx)
+        new_hash = self.repo.svn_commitctx(ctx)
         if not newparent:
             assert self.revmap[revnum, branch] == parentctx.node()
             self.revmap[revnum, branch] = new_hash
@@ -704,7 +712,7 @@ class SVNMeta(object):
                                  self.authors[rev.author],
                                  date,
                                  extra)
-            new = self.repo.commitctx(ctx)
+            new = self.repo.svn_commitctx(ctx)
 
             if not fromtag and (rev.revnum, b) not in self.revmap:
                 self.revmap[rev.revnum, b] = new
@@ -726,5 +734,5 @@ class SVNMeta(object):
                              self.authors[rev.author],
                              self.fixdate(rev.date),
                              extra)
-        new = self.repo.commitctx(ctx)
+        new = self.repo.svn_commitctx(ctx)
         self.ui.status('Marked branch %s as closed.\n' % (branch or 'default'))

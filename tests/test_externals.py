@@ -10,7 +10,7 @@ try:
     subrepo.svnsubrepo
     hgutil.checknlink
 except (ImportError, AttributeError), e:
-    print >>sys.stderr, 'test_externals: skipping .hgsub tests'
+    print >> sys.stderr, 'test_externals: skipping .hgsub tests'
     subrepo = None
 
 from hgsubversion import svnexternals
@@ -358,7 +358,7 @@ HEAD subdir2/deps/project2
         self.assertchanges(changes, self.repo['tip'])
 
         # Check .hgsub and .hgsubstate were not pushed
-        self.assertEqual(['dir', 'subdir1', 'subdir1/a','subdir2',
+        self.assertEqual(['dir', 'subdir1', 'subdir1/a', 'subdir2',
                           'subdir2/a'], self.svnls('trunk'))
 
         # Remove all references from one directory, add a new one
@@ -408,7 +408,7 @@ HEAD subdir1/deps/project1
         self.assertchanges(changes, self.repo['tip'])
 
 def suite():
-    all = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
            unittest.TestLoader().loadTestsFromTestCase(TestPushExternals),
           ]
-    return unittest.TestSuite(all)
+    return unittest.TestSuite(all_tests)

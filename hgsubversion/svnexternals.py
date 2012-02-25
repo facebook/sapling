@@ -17,7 +17,7 @@ try:
     canonpath = hgutil.canonpath
 except (ImportError, AttributeError):
     from mercurial import scmutil
-    canonpath = scmutil.canonpath    
+    canonpath = scmutil.canonpath
     passpegrev = False
 
 import util
@@ -59,7 +59,6 @@ class externalsfile(dict):
     def read(self, data):
         self.clear()
         fp = cStringIO.StringIO(data)
-        dirs = {}
         target = None
         for line in fp.readlines():
             if not line.strip():
@@ -120,7 +119,7 @@ def parsedefinition(line):
         revgroup = 2
         path, rev, source = m.group(1, 2, 3)
     try:
-        nrev = int(rev)
+        int(rev) # ensure revision is int()able, so we bail otherwise
         norevline = line[:m.start(revgroup)] + '{REV}' + line[m.end(revgroup):]
     except (TypeError, ValueError):
         norevline = line
@@ -232,7 +231,7 @@ class externalsupdater:
         if rev:
             revspec = ['-r', rev]
         if os.path.isdir(path):
-            exturl, extroot, extrev = getsvninfo(path)
+            exturl, _extroot, extrev = getsvninfo(path)
             # Comparing the source paths is not enough, but I don't
             # know how to compare path+pegrev. The following update
             # might fail if the path was replaced by another unrelated
@@ -347,7 +346,7 @@ def getchanges(ui, repo, parentctx, exts):
         if exts:
             defs = parsedefinitions(ui, repo, '', exts)
             hgsub, hgsubstate = [], []
-            for path, rev, source, pegrev, norevline, base in sorted(defs):
+            for path, rev, _source, _pegrev, norevline, base in sorted(defs):
                 hgsub.append('%s = [hgsubversion] %s:%s\n'
                              % (path, base, norevline))
                 if rev is None:

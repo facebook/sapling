@@ -93,23 +93,23 @@ if __name__ == '__main__':
         import tempfile
         sys.stdout = tempfile.TemporaryFile()
 
-    all = tests()
+    all_tests = tests()
 
     args = [i.split('.py')[0].replace('-', '_') for i in args]
 
     if not args:
         check = lambda x: options.comprehensive or not comprehensive(x)
-        mods = [m for (n, m) in sorted(all.iteritems()) if check(m)]
+        mods = [m for (n, m) in sorted(all_tests.iteritems()) if check(m)]
         suite = [m.suite() for m in mods]
     else:
         suite = []
         for arg in args:
             if arg == 'test_util':
                 continue
-            elif arg not in all:
+            elif arg not in all_tests:
                 print >> sys.stderr, 'test module %s not available' % arg
             else:
-                suite.append(all[arg].suite())
+                suite.append(all_tests[arg].suite())
 
     runner = unittest.TextTestRunner(**testargs)
     result = runner.run(unittest.TestSuite(suite))

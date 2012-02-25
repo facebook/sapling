@@ -1,6 +1,7 @@
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
+from mercurial import discovery
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -90,7 +91,13 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
     meta = repo.svnmeta(svn.uuid, svn.subdir)
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
-    return util.outgoing_common_and_heads(repo, hashes, parent)
+    common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
+    outobj = getattr(discovery, 'outgoing', None)
+    if outobj is not None:
+        # Mercurial 2.1 and later
+        return outobj(repo.changelog, common, heads)
+    # Mercurial 2.0 and earlier
+    return common, heads
 
 
 def findoutgoing(repo, dest=None, heads=None, force=False):
@@ -98,7 +105,7 @@ def findoutgoing(repo, dest=None, heads=None, force=False):
     """
     assert dest.capable('subversion')
     # split off #rev; TODO implement --revision/#rev support
-    #svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
+    # svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
     svn = dest.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
     parent = repo.parents()[0].node()
@@ -354,11 +361,11 @@ def pull(repo, source, heads=[], force=False):
                         converted = True
                         firstrun = False
 
-                    except svnwrap.SubversionRepoCanNotReplay, e: #pragma: no cover
+                    except svnwrap.SubversionRepoCanNotReplay, e: # pragma: no cover
                         ui.status('%s\n' % e.message)
                         stupidmod.print_your_svn_is_old_message(ui)
                         have_replay = False
-                    except svnwrap.SubversionException, e: #pragma: no cover
+                    except svnwrap.SubversionException, e: # pragma: no cover
                         if (e.args[1] == svnwrap.ERR_RA_DAV_REQUEST_FAILED
                             and '502' in str(e)
                             and tries < 3):
@@ -475,6 +482,8 @@ def clone(orig, ui, source, dest=None, **opts):
                 ui.setconfig('hgsubversion', 'branch', branches[-1])
 
         data['srcrepo'], data['dstrepo'] = orig(ui, *args, **opts)
+
+        return data['srcrepo'], data['dstrepo']
 
     for opt, (section, name) in optionmap.iteritems():
         if opt in opts and opts[opt]:

@@ -35,7 +35,7 @@ def filterdiff(diff, oldrev, newrev):
                                   diff)
     oldrev = formatrev(oldrev)
     newrev = formatrev(newrev)
-    diff = a_re.sub(r'--- \1'+ oldrev, diff)
+    diff = a_re.sub(r'--- \1' + oldrev, diff)
     diff = b_re.sub(r'+++ \1' + newrev, diff)
     diff = devnull_re.sub(r'\1 /dev/null\t(working copy)', diff)
     diff = header_re.sub(r'Index: \1' + '\n' + ('=' * 67), diff)
@@ -65,9 +65,9 @@ def islocalrepo(url):
     path = url[prefixlen:]
     path = urllib.url2pathname(path).replace(os.sep, '/')
     while '/' in path:
-        if reduce(lambda x,y: x and y,
+        if reduce(lambda x, y: x and y,
                   map(lambda p: os.path.exists(os.path.join(path, p)),
-                      ('hooks', 'format', 'db', ))):
+                      ('hooks', 'format', 'db',))):
             return True
         path = path.rsplit('/', 1)[0]
     return False
@@ -98,6 +98,29 @@ def normalize_url(url):
     if checkout:
         url = '%s#%s' % (url, checkout)
     return url
+
+
+def load_string(file_path, default=None, limit=1024):
+    if not os.path.exists(file_path):
+        return default
+    try:
+        f = open(file_path, 'r')
+        ret = f.read(limit)
+        f.close()
+    except:
+        return default
+    if ret == '':
+        return default
+    return ret
+
+
+def save_string(file_path, string):
+    if string is None:
+        string = ""
+    f = open(file_path, 'wb')
+    f.write(str(string))
+    f.close()
+
 
 # TODO remove when we drop 1.3 support
 def progress(ui, *args, **kwargs):

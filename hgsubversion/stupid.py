@@ -2,10 +2,11 @@ import cStringIO
 import errno
 import re
 
-from mercurial import patch
-from mercurial import node
 from mercurial import context
+from mercurial import node
+from mercurial import patch
 from mercurial import revlog
+from mercurial import util as hgutil
 
 import svnwrap
 import svnexternals
@@ -45,7 +46,7 @@ class BadPatchApply(Exception):
     pass
 
 
-def print_your_svn_is_old_message(ui): #pragma: no cover
+def print_your_svn_is_old_message(ui): # pragma: no cover
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
               "as good a job. You should really upgrade your server.\n")
 
@@ -407,7 +408,7 @@ def fetch_externals(ui, svn, branchpath, r, parentctx):
     # revision in the common case.
     dirs = set(externals)
     if parentctx.node() == revlog.nullid:
-        dirs.update([p for p,k in svn.list_files(branchpath, r.revnum) if k == 'd'])
+        dirs.update([p for p, k in svn.list_files(branchpath, r.revnum) if k == 'd'])
         dirs.add('')
     else:
         branchprefix = (branchpath and branchpath + '/') or branchpath
@@ -559,7 +560,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             # we need to detect those branches. It's a little thorny and slow, but
             # seems to be the best option.
             elif paths[p].copyfrom_path and not p.startswith('tags/'):
-                paths_need_discovery.extend(['%s/%s' % (p,x[0])
+                paths_need_discovery.extend(['%s/%s' % (p, x[0])
                                              for x in listdir(p, revnum)
                                              if x[1] == 'f'])
 
@@ -588,6 +589,9 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
 
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     # this server fails at replay
+
+    if meta.filemap:
+        raise hgutil.Abort('filemaps currently unsupported with stupid replay.')
 
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
                                  svn.checkpath, svn.list_files)
@@ -709,7 +713,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                      meta.authors[r.author],
                                      date,
                                      extra)
-        ha = meta.repo.commitctx(current_ctx)
+        ha = meta.repo.svn_commitctx(current_ctx)
 
         if not tag:
             if (not origbranch in meta.branches
