@@ -1454,8 +1454,6 @@ glog always reorders nodes which explains the difference with log
   ('group', ('group', ('or', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch'))), ('func', ('symbol', 'branch'), ('string', 'branch')))))
   $ testlog -k expand -k merge
   ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
-  $ hg log -G --follow  --template 'nodetag {rev}\n' | grep nodetag | wc -l
-  \s*36 (re)
   $ hg log -G --removed --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*0 (re)
   $ hg log -G --only-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
@@ -1492,27 +1490,30 @@ glog always reorders nodes which explains the difference with log
   [255]
   $ testlog --prune 31 --prune 32
   ('group', ('group', ('and', ('not', ('group', ('or', ('string', '31'), ('func', ('symbol', 'ancestors'), ('string', '31'))))), ('not', ('group', ('or', ('string', '32'), ('func', ('symbol', 'ancestors'), ('string', '32'))))))))
-  $ hg log -G --follow a
-  abort: -G/--graph option is incompatible with --follow with file argument
-  [255]
 
-
-Dedicated repo for --follow and paths filtering
+Dedicated repo for --follow and paths filtering. The g is crafted to
+have 2 filelog topological heads in a linear changeset graph.
 
   $ cd ..
   $ hg init follow
   $ cd follow
   $ echo a > a
   $ echo aa > aa
+  $ echo f > f
   $ hg ci -Am "add a"
   adding a
   adding aa
+  adding f
   $ hg cp a b
+  $ hg cp f g
   $ hg ci -m "copy a b"
   $ mkdir dir
   $ hg mv b dir
+  $ echo g >> g
+  $ echo f >> f
   $ hg ci -m "mv b dir/b"
   $ hg mv a b
+  $ hg cp -f f g
   $ echo a > d
   $ hg add d
   $ hg ci -m "mv a b; add d"
@@ -1555,3 +1556,65 @@ Test glob expansion of pats
   >    testlog a*;
   > fi;
   ('group', ('group', ('func', ('symbol', 'filelog'), ('string', 'aa'))))
+
+Test --follow on a directory
+
+  $ testlog -f dir
+  abort: cannot follow file not in parent revision: "dir"
+  abort: cannot follow file not in parent revision: "dir"
+  abort: cannot follow file not in parent revision: "dir"
+
+Test --follow on file not in parent revision
+
+  $ testlog -f a
+  abort: cannot follow file not in parent revision: "a"
+  abort: cannot follow file not in parent revision: "a"
+  abort: cannot follow file not in parent revision: "a"
+
+Test --follow and patterns
+
+  $ testlog -f 'glob:*'
+  abort: can only follow copies/renames for explicit filenames
+  abort: can only follow copies/renames for explicit filenames
+  abort: can only follow copies/renames for explicit filenames
+
+Test --follow on a single rename
+
+  $ hg up -q 2
+  $ testlog -f a
+  ('group', ('group', ('func', ('symbol', 'follow'), ('string', 'a'))))
+
+Test --follow and multiple renames
+
+  $ hg up -q tip
+  $ testlog -f e
+  ('group', ('group', ('func', ('symbol', 'follow'), ('string', 'e'))))
+
+Test --follow and multiple filelog heads
+
+  $ hg up -q 2
+  $ testlog -f g
+  ('group', ('group', ('func', ('symbol', 'follow'), ('string', 'g'))))
+  $ cat log.nodes
+  nodetag 2
+  nodetag 1
+  nodetag 0
+  $ hg up -q tip
+  $ testlog -f g
+  ('group', ('group', ('func', ('symbol', 'follow'), ('string', 'g'))))
+  $ cat log.nodes
+  nodetag 3
+  nodetag 2
+  nodetag 0
+
+Test --follow and multiple files
+
+  $ testlog -f g e
+  ('group', ('group', ('or', ('func', ('symbol', 'follow'), ('string', 'g')), ('func', ('symbol', 'follow'), ('string', 'e')))))
+  $ cat log.nodes
+  nodetag 4
+  nodetag 3
+  nodetag 2
+  nodetag 1
+  nodetag 0
+

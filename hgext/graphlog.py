@@ -241,9 +241,6 @@ def check_unsupported_flags(pats, opts):
         if op in opts and opts[op]:
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
-    if pats and opts.get('follow'):
-        raise util.Abort(_("-G/--graph option is incompatible with --follow "
-                           "with file argument"))
 
 def revset(repo, pats, opts):
     """Return revset str built of revisions, log options and file patterns.
@@ -256,6 +253,7 @@ def revset(repo, pats, opts):
         'date':        ('date(%(val)r)', None),
         'branch':      ('branch(%(val)r)', ' or '),
         '_patslog':    ('filelog(%(val)r)', ' or '),
+        '_patsfollow': ('follow(%(val)r)', ' or '),
         'keyword':     ('keyword(%(val)r)', ' or '),
         'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
         'user':        ('user(%(val)r)', ' or '),
@@ -268,22 +266,35 @@ def revset(repo, pats, opts):
     if 'branch' in opts and 'only_branch' in opts:
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
 
+    follow = opts.get('follow')
+    if 'follow' in opts:
+        del opts['follow']
     # pats/include/exclude are passed to match.match() directly in
     # _matchfile() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
     # platforms without shell expansion (windows).
-    match, pats = scmutil.matchandpats(repo[None], pats, opts)
+    pctx = repo[None]
+    match, pats = scmutil.matchandpats(pctx, pats, opts)
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     if not slowpath:
         for f in match.files():
+            if follow and f not in pctx:
+                raise util.Abort(_('cannot follow file not in parent '
+                                   'revision: "%s"') % f)
             filelog = repo.file(f)
             if not len(filelog):
                 # A zero count may be a directory or deleted file, so
                 # try to find matching entries on the slow path.
+                if follow:
+                    raise util.Abort(
+                        _('cannot follow nonexistent file: "%s"') % f)
                 slowpath = True
     if slowpath:
         # See cmdutil.walkchangerevs() slow path.
         #
+        if follow:
+            raise util.Abort(_('can only follow copies/renames for explicit '
+                               'filenames'))
         # pats/include/exclude cannot be represented as separate
         # revset expressions as their filtering logic applies at file
         # level. For instance "-I a -X a" matches a revision touching
@@ -298,7 +309,13 @@ def revset(repo, pats, opts):
         matchargs = ','.join(('%r' % p) for p in matchargs)
         opts['rev'] = opts.get('rev', []) + ['_matchfiles(%s)' % matchargs]
     else:
-        opts['_patslog'] = list(pats)
+        if follow:
+            if pats:
+                opts['_patsfollow'] = list(pats)
+            else:
+                opts['follow'] = True
+        else:
+            opts['_patslog'] = list(pats)
 
     revset = []
     for op, val in opts.iteritems():
