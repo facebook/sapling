@@ -3853,9 +3853,11 @@ def log(ui, repo, *pats, **opts):
     limit = cmdutil.loglimit(opts)
     count = 0
 
-    endrev = None
-    if opts.get('copies') and opts.get('rev'):
-        endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
+    getrenamed, endrev = None, None
+    if opts.get('copies'):
+        if opts.get('rev'):
+            endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
+        getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
     df = False
     if opts["date"]:
@@ -3899,9 +3901,8 @@ def log(ui, repo, *pats, **opts):
                 return
 
         copies = None
-        if opts.get('copies') and rev:
+        if getrenamed is not None and rev:
             copies = []
-            getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
             for fn in ctx.files():
                 rename = getrenamed(fn, rev)
                 if rename:
