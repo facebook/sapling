@@ -237,7 +237,7 @@ def get_revs(repo, rev_opt):
         return (len(repo) - 1, 0)
 
 def check_unsupported_flags(pats, opts):
-    for op in ["follow_first", "copies", "newest_first"]:
+    for op in ["copies", "newest_first"]:
         if op in opts and opts[op]:
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
@@ -246,18 +246,20 @@ def revset(repo, pats, opts):
     """Return revset str built of revisions, log options and file patterns.
     """
     opt2revset = {
-        'follow':      ('follow()', None),
-        'no_merges':   ('not merge()', None),
-        'only_merges': ('merge()', None),
-        'removed':     ('removes("*")', None),
-        'date':        ('date(%(val)r)', None),
-        'branch':      ('branch(%(val)r)', ' or '),
-        '_patslog':    ('filelog(%(val)r)', ' or '),
-        '_patsfollow': ('follow(%(val)r)', ' or '),
-        'keyword':     ('keyword(%(val)r)', ' or '),
-        'prune':       ('not (%(val)r or ancestors(%(val)r))', ' and '),
-        'user':        ('user(%(val)r)', ' or '),
-        'rev':         ('%(val)s', ' or '),
+        'follow':           ('follow()', None),
+        'follow_first':     ('_followfirst()', None),
+        'no_merges':        ('not merge()', None),
+        'only_merges':      ('merge()', None),
+        'removed':          ('removes("*")', None),
+        'date':             ('date(%(val)r)', None),
+        'branch':           ('branch(%(val)r)', ' or '),
+        '_patslog':         ('filelog(%(val)r)', ' or '),
+        '_patsfollow':      ('follow(%(val)r)', ' or '),
+        '_patsfollowfirst': ('_followfirst(%(val)r)', ' or '),
+        'keyword':          ('keyword(%(val)r)', ' or '),
+        'prune':            ('not (%(val)r or ancestors(%(val)r))', ' and '),
+        'user':             ('user(%(val)r)', ' or '),
+        'rev':              ('%(val)s', ' or '),
         }
 
     opts = dict(opts)
@@ -266,9 +268,12 @@ def revset(repo, pats, opts):
     if 'branch' in opts and 'only_branch' in opts:
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
 
-    follow = opts.get('follow')
+    follow = opts.get('follow') or opts.get('follow_first')
+    followfirst = opts.get('follow_first')
     if 'follow' in opts:
         del opts['follow']
+    if 'follow_first' in opts:
+        del opts['follow_first']
     # pats/include/exclude are passed to match.match() directly in
     # _matchfile() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
@@ -310,10 +315,16 @@ def revset(repo, pats, opts):
         opts['rev'] = opts.get('rev', []) + ['_matchfiles(%s)' % matchargs]
     else:
         if follow:
-            if pats:
-                opts['_patsfollow'] = list(pats)
+            if followfirst:
+                if pats:
+                    opts['_patsfollowfirst'] = list(pats)
+                else:
+                    opts['follow_first'] = True
             else:
-                opts['follow'] = True
+                if pats:
+                    opts['_patsfollow'] = list(pats)
+                else:
+                    opts['follow'] = True
         else:
             opts['_patslog'] = list(pats)
 

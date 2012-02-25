@@ -465,6 +465,40 @@ def follow(repo, subset, x):
 
     return [r for r in subset if r in s]
 
+def _followfirst(repo, subset, x):
+    # ``followfirst([file])``
+    # Like ``follow([file])`` but follows only the first parent of
+    # every revision or file revision.
+    # i18n: "_followfirst" is a keyword
+    l = getargs(x, 0, 1, _("_followfirst takes no arguments or a filename"))
+    c = repo['.']
+    if l:
+        x = getstring(l[0], _("_followfirst expected a filename"))
+        if x not in c:
+            return []
+        cx = c[x]
+        visit = {}
+        s = set([cx.linkrev()])
+        while True:
+            for p in cx.parents()[:1]:
+                visit[(p.rev(), p.node())] = p
+            if not visit:
+                break
+            cx = visit.pop(max(visit))
+            s.add(cx.rev())
+    else:
+        cl = repo.changelog
+        s = set()
+        visit = [c.rev()]
+        while visit:
+            for prev in cl.parentrevs(visit.pop(0))[:1]:
+                if prev not in s and prev != nodemod.nullrev:
+                    visit.append(prev)
+                    s.add(prev)
+        s.add(c.rev())
+
+    return [r for r in subset if r in s]
+
 def getall(repo, subset, x):
     """``all()``
     All changesets, the same as ``0:tip``.
@@ -965,6 +999,7 @@ symbols = {
     "filelog": filelog,
     "first": first,
     "follow": follow,
+    "_followfirst": _followfirst,
     "grep": grep,
     "head": head,
     "heads": heads,
