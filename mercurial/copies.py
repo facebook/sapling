@@ -176,7 +176,16 @@ def pathcopies(x, y):
 
 def mergecopies(repo, c1, c2, ca, checkdirs=True):
     """
-    Find moves and copies between context c1 and c2
+    Find moves and copies between context c1 and c2 that are relevant
+    for merging.
+
+    Returns two dicts, "copy" and "diverge".
+
+    "copy" is a mapping from source name -> destination name,
+    where source is in c1 and destination is in c2 or vice-versa.
+
+    "diverge" is a mapping of source name -> list of destination names
+    for divergent renames.
     """
     # avoid silly behavior for update from empty dir
     if not c1 or not c2 or c1 == c2:
