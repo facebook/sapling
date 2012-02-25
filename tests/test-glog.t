@@ -1510,8 +1510,10 @@ Dedicated repo for --follow and paths filtering
   $ hg init follow
   $ cd follow
   $ echo a > a
+  $ echo aa > aa
   $ hg ci -Am "add a"
   adding a
+  adding aa
   $ hg cp a b
   $ hg ci -m "copy a b"
   $ mkdir dir
@@ -1549,3 +1551,14 @@ Test multiple --include/--exclude/paths
 
   $ testlog --include a --include e --exclude b --exclude e a e
   ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('list', ('list', ('list', ('list', ('string', 'p:a'), ('string', 'p:e')), ('string', 'i:a')), ('string', 'i:e')), ('string', 'x:b')), ('string', 'x:e')))))
+
+Test glob expansion of pats
+
+  $ expandglobs=`python -c "import mercurial.util; \
+  >   print mercurial.util.expandglobs and 'true' or 'false'"`
+  $ if [ $expandglobs = "true" ]; then
+  >    testlog 'a*';
+  > else
+  >    testlog a*;
+  > fi;
+  ('group', ('group', ('func', ('symbol', 'filelog'), ('string', 'aa'))))

@@ -268,7 +268,11 @@ def revset(repo, pats, opts):
     if 'branch' in opts and 'only_branch' in opts:
         opts['branch'] = opts['branch'] + opts.pop('only_branch')
 
-    match = scmutil.match(repo[None], pats, opts)
+    # pats/include/exclude are passed to match.match() directly in
+    # _matchfile() revset but walkchangerevs() builds its matcher with
+    # scmutil.match(). The difference is input pats are globbed on
+    # platforms without shell expansion (windows).
+    match, pats = scmutil.matchandpats(repo[None], pats, opts)
     slowpath = match.anypats() or (match.files() and opts.get('removed'))
     if not slowpath:
         for f in match.files():

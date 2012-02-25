@@ -579,7 +579,7 @@ def expandpats(pats):
         ret.append(p)
     return ret
 
-def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     if pats == ("",):
         pats = []
     if not globbed and default == 'relpath':
@@ -590,7 +590,10 @@ def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     def badfn(f, msg):
         ctx._repo.ui.warn("%s: %s\n" % (m.rel(f), msg))
     m.bad = badfn
-    return m
+    return m, pats
+
+def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+    return matchandpats(ctx, pats, opts, globbed, default)[0]
 
 def matchall(repo):
     return matchmod.always(repo.root, repo.getcwd())
