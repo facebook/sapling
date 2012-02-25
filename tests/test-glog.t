@@ -1490,15 +1490,8 @@ glog always reorders nodes which explains the difference with log
   $ hg log -G -d 'brace ) in a date'
   abort: invalid date: 'brace ) in a date'
   [255]
-  $ hg log -G -P 32 --template '{rev}\n'
-  @  36
-  |
-  o  35
-  |
-  o  34
-  |
-  | o  33
-  | |
+  $ testlog --prune 31 --prune 32
+  ('group', ('group', ('and', ('not', ('group', ('or', ('string', '31'), ('func', ('symbol', 'ancestors'), ('string', '31'))))), ('not', ('group', ('or', ('string', '32'), ('func', ('symbol', 'ancestors'), ('string', '32'))))))))
   $ hg log -G --follow a
   abort: -G/--graph option is incompatible with --follow with file argument
   [255]
