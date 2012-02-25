@@ -1427,6 +1427,23 @@ Test log -G options
   >   diff -u log.nodes glog.nodes
   > }
 
+glog always reorders nodes which explains the difference with log
+
+  $ testlog -r 27 -r 25 -r 21 -r 34 -r 32 -r 31
+  ('group', ('group', ('or', ('or', ('or', ('or', ('or', ('symbol', '27'), ('symbol', '25')), ('symbol', '21')), ('symbol', '34')), ('symbol', '32')), ('symbol', '31'))))
+  --- log.nodes	* (glob)
+  +++ glog.nodes	* (glob)
+  @@ -1,6 +1,6 @@
+  -nodetag 27
+  -nodetag 25
+  -nodetag 21
+   nodetag 34
+   nodetag 32
+   nodetag 31
+  +nodetag 27
+  +nodetag 25
+  +nodetag 21
+  [1]
   $ testlog -u test -u not-a-user
   ('group', ('group', ('or', ('func', ('symbol', 'user'), ('string', 'test')), ('func', ('symbol', 'user'), ('string', 'not-a-user')))))
   $ testlog -b not-a-branch
