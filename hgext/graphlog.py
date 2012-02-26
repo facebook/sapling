@@ -242,8 +242,40 @@ def check_unsupported_flags(pats, opts):
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
 
+def makefilematcher(repo, pats, followfirst):
+    # When displaying a revision with --patch --follow FILE, we have
+    # to know which file of the revision must be diffed. With
+    # --follow, we want the names of the ancestors of FILE in the
+    # revision, stored in "fcache". "fcache" is populated by
+    # reproducing the graph traversal already done by --follow revset
+    # and relating linkrevs to file names (which is not "correct" but
+    # good enough).
+    fcache = {}
+    fcacheready = [False]
+    pctx = repo['.']
+    wctx = repo[None]
+
+    def populate():
+        for fn in pats:
+            for i in ((pctx[fn],), pctx[fn].ancestors(followfirst=followfirst)):
+                for c in i:
+                    fcache.setdefault(c.linkrev(), set()).add(c.path())
+
+    def filematcher(rev):
+        if not fcacheready[0]:
+            # Lazy initialization
+            fcacheready[0] = True
+            populate()
+        return scmutil.match(wctx, fcache.get(rev, []), default='path')
+
+    return filematcher
+
 def revset(repo, pats, opts):
-    """Return revset str built of revisions, log options and file patterns.
+    """Return (expr, filematcher) where expr is a revset string built
+    of revisions, log options and file patterns. If --stat or --patch
+    are not passed filematcher is None. Otherwise it a a callable
+    taking a revision number and returning a match objects filtering
+    the files to be detailed when displaying the revision.
     """
     opt2revset = {
         'follow':           ('follow()', None),
@@ -329,6 +361,13 @@ def revset(repo, pats, opts):
         else:
             opts['_patslog'] = list(pats)
 
+    filematcher = None
+    if opts.get('patch') or opts.get('stat'):
+        if follow:
+            filematcher = makefilematcher(repo, pats, followfirst)
+        else:
+            filematcher = lambda rev: match
+
     revset = []
     for op, val in opts.iteritems():
         if not val:
@@ -349,9 +388,10 @@ def revset(repo, pats, opts):
         revset = '(' + ' and '.join(revset) + ')'
     else:
         revset = 'all()'
-    return revset
+    return revset, filematcher
 
-def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None):
+def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
+             filematcher=None):
     seen, state = [], asciistate()
     for rev, type, ctx, parents in dag:
         char = ctx.node() in showparents and '@' or 'o'
@@ -362,7 +402,10 @@ def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None):
                 rename = getrenamed(fn, ctx.rev())
                 if rename:
                     copies.append((fn, rename[0]))
-        displayer.show(ctx, copies=copies)
+        revmatchfn = None
+        if filematcher is not None:
+            revmatchfn = filematcher(ctx.rev())
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
         lines = displayer.hunk.pop(rev).split('\n')[:-1]
         displayer.flush(rev)
         edges = edgefn(type, char, lines, seen, rev, parents)
@@ -389,7 +432,8 @@ def graphlog(ui, repo, *pats, **opts):
 
     check_unsupported_flags(pats, opts)
 
-    revs = sorted(scmutil.revrange(repo, [revset(repo, pats, opts)]), reverse=1)
+    expr, filematcher = revset(repo, pats, opts)
+    revs = sorted(scmutil.revrange(repo, [expr]), reverse=1)
     limit = cmdutil.loglimit(opts)
     if limit is not None:
         revs = revs[:limit]
@@ -403,7 +447,8 @@ def graphlog(ui, repo, *pats, **opts):
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]
-    generate(ui, revdag, displayer, showparents, asciiedges, getrenamed)
+    generate(ui, revdag, displayer, showparents, asciiedges, getrenamed,
+             filematcher)
 
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)

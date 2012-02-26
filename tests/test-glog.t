@@ -90,7 +90,7 @@ o  (0) root
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
-  >             expr = graphlog.revset(repo, pats, opts)
+  >             expr = graphlog.revset(repo, pats, opts)[0]
   >             tree = revset.parse(expr)[0]
   >             ui.write(tree, "\n")
   >             return 0
@@ -1655,3 +1655,99 @@ Test --removed
   abort: can only follow copies/renames for explicit filenames
   abort: can only follow copies/renames for explicit filenames
   abort: can only follow copies/renames for explicit filenames
+
+Test --patch and --stat with --follow and --follow-first
+
+  $ hg up -q 3
+  $ hg log -G --git --patch b
+  o  changeset:   1:216d4c92cf98
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     copy a b
+  |
+  |  diff --git a/a b/b
+  |  copy from a
+  |  copy to b
+  |
+
+  $ hg log -G --git --stat b
+  o  changeset:   1:216d4c92cf98
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     copy a b
+  |
+  |   a |  0
+  |   1 files changed, 0 insertions(+), 0 deletions(-)
+  |
+
+  $ hg log -G --git --patch --follow b
+  o  changeset:   1:216d4c92cf98
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     copy a b
+  |
+  |  diff --git a/a b/b
+  |  copy from a
+  |  copy to b
+  |
+  o  changeset:   0:f8035bb17114
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+     diff --git a/a b/a
+     new file mode 100644
+     --- /dev/null
+     +++ b/a
+     @@ -0,0 +1,1 @@
+     +a
+  
+
+  $ hg log -G --git --stat --follow b
+  o  changeset:   1:216d4c92cf98
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     copy a b
+  |
+  |   a |  0
+  |   1 files changed, 0 insertions(+), 0 deletions(-)
+  |
+  o  changeset:   0:f8035bb17114
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+      a |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  
+
+  $ hg up -q 6
+  $ hg log -G --git --patch --follow-first e
+  @    changeset:   6:fc281d8ff18d
+  |\   tag:         tip
+  | |  parent:      5:99b31f1c2782
+  | |  parent:      4:17d952250a9d
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     merge 5 and 4
+  | |
+  | |  diff --git a/e b/e
+  | |  --- a/e
+  | |  +++ b/e
+  | |  @@ -1,1 +1,1 @@
+  | |  -ee
+  | |  +merge
+  | |
+  o |  changeset:   5:99b31f1c2782
+  | |  parent:      3:5918b8d165d1
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     add another e
+  | |
+  | |  diff --git a/e b/e
+  | |  new file mode 100644
+  | |  --- /dev/null
+  | |  +++ b/e
+  | |  @@ -0,0 +1,1 @@
+  | |  +ee
+  | |
