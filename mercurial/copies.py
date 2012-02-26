@@ -181,7 +181,7 @@ def mergecopies(repo, c1, c2, ca):
 
     Returns two dicts, "copy" and "diverge".
 
-    "copy" is a mapping from source name -> destination name,
+    "copy" is a mapping from destination name -> source name,
     where source is in c1 and destination is in c2 or vice-versa.
 
     "diverge" is a mapping of source name -> list of destination names
