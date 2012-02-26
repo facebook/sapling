@@ -18,15 +18,6 @@ def _dirname(f):
         return ""
     return f[:s]
 
-def _dirs(files):
-    d = set()
-    for f in files:
-        f = _dirname(f)
-        while f not in d:
-            d.add(f)
-            f = _dirname(f)
-    return d
-
 def _findlimit(repo, a, b):
     """Find the earliest revision that's an ancestor of a or b but not both,
     None if no such revision exists.
@@ -316,8 +307,8 @@ def mergecopies(repo, c1, c2, ca):
     repo.ui.debug("  checking for directory renames\n")
 
     # generate a directory move map
-    d1, d2 = _dirs(m1), _dirs(m2)
-    invalid = set()
+    d1, d2 = c1.dirs(), c2.dirs()
+    invalid = set([""])
     dirmove = {}
 
     # examine each file copy for a potential directory move, which is
