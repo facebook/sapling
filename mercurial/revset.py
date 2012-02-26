@@ -441,63 +441,45 @@ def first(repo, subset, x):
     """
     return limit(repo, subset, x)
 
-def follow(repo, subset, x):
-    """``follow([file])``
-    An alias for ``::.`` (ancestors of the working copy's first parent).
-    If a filename is specified, the history of the given file is followed,
-    including copies.
-    """
-    # i18n: "follow" is a keyword
-    l = getargs(x, 0, 1, _("follow takes no arguments or a filename"))
+def _follow(repo, subset, x, name, followfirst=False):
+    l = getargs(x, 0, 1, _("%s takes no arguments or a filename") % name)
     c = repo['.']
     if l:
-        x = getstring(l[0], _("follow expected a filename"))
+        x = getstring(l[0], _("%s expected a filename") % name)
         if x in c:
             cx = c[x]
-            s = set(ctx.rev() for ctx in cx.ancestors())
+            s = set(ctx.rev() for ctx in cx.ancestors(followfirst=followfirst))
             # include the revision responsible for the most recent version
             s.add(cx.linkrev())
         else:
             return []
     else:
-        s = set(repo.changelog.ancestors(c.rev()))
-        s.add(c.rev())
-
-    return [r for r in subset if r in s]
-
-def _followfirst(repo, subset, x):
-    # ``followfirst([file])``
-    # Like ``follow([file])`` but follows only the first parent of
-    # every revision or file revision.
-    # i18n: "_followfirst" is a keyword
-    l = getargs(x, 0, 1, _("_followfirst takes no arguments or a filename"))
-    c = repo['.']
-    if l:
-        x = getstring(l[0], _("_followfirst expected a filename"))
-        if x not in c:
-            return []
-        cx = c[x]
-        visit = {}
-        s = set([cx.linkrev()])
-        while True:
-            for p in cx.parents()[:1]:
-                visit[(p.rev(), p.node())] = p
-            if not visit:
-                break
-            cx = visit.pop(max(visit))
-            s.add(cx.rev())
-    else:
+        cut = followfirst and 1 or None
         cl = repo.changelog
         s = set()
         visit = [c.rev()]
         while visit:
-            for prev in cl.parentrevs(visit.pop(0))[:1]:
+            for prev in cl.parentrevs(visit.pop(0))[:cut]:
                 if prev not in s and prev != nodemod.nullrev:
                     visit.append(prev)
                     s.add(prev)
         s.add(c.rev())
 
     return [r for r in subset if r in s]
+
+def follow(repo, subset, x):
+    """``follow([file])``
+    An alias for ``::.`` (ancestors of the working copy's first parent).
+    If a filename is specified, the history of the given file is followed,
+    including copies.
+    """
+    return _follow(repo, subset, x, 'follow')
+
+def _followfirst(repo, subset, x):
+    # ``followfirst([file])``
+    # Like ``follow([file])`` but follows only the first parent of
+    # every revision or file revision.
+    return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
 def getall(repo, subset, x):
     """``all()``

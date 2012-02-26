@@ -611,11 +611,12 @@ class filectx(object):
 
         return None
 
-    def ancestors(self):
+    def ancestors(self, followfirst=False):
         visit = {}
         c = self
+        cut = followfirst and 1 or None
         while True:
-            for parent in c.parents():
+            for parent in c.parents()[:cut]:
                 visit[(parent.rev(), parent.node())] = parent
             if not visit:
                 break
@@ -930,9 +931,10 @@ class workingctx(changectx):
         finally:
             wlock.release()
 
-    def ancestors(self):
+    def ancestors(self, followfirst=False):
+        cut = followfirst and 1 or None
         for a in self._repo.changelog.ancestors(
-            *[p.rev() for p in self._parents]):
+            *[p.rev() for p in self._parents[:cut]]):
             yield changectx(self._repo, a)
 
     def undelete(self, list):
