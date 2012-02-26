@@ -17,7 +17,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions, scmutil
-from mercurial import hg, util, graphmod
+from mercurial import hg, util, graphmod, templatekw
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -237,7 +237,7 @@ def get_revs(repo, rev_opt):
         return (len(repo) - 1, 0)
 
 def check_unsupported_flags(pats, opts):
-    for op in ["copies", "newest_first"]:
+    for op in ["newest_first"]:
         if op in opts and opts[op]:
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
@@ -350,11 +350,18 @@ def revset(repo, pats, opts):
         revset = 'all()'
     return revset
 
-def generate(ui, dag, displayer, showparents, edgefn):
+def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None):
     seen, state = [], asciistate()
     for rev, type, ctx, parents in dag:
         char = ctx.node() in showparents and '@' or 'o'
-        displayer.show(ctx)
+        copies = None
+        if getrenamed and ctx.rev():
+            copies = []
+            for fn in ctx.files():
+                rename = getrenamed(fn, ctx.rev())
+                if rename:
+                    copies.append((fn, rename[0]))
+        displayer.show(ctx, copies=copies)
         lines = displayer.hunk.pop(rev).split('\n')[:-1]
         displayer.flush(rev)
         edges = edgefn(type, char, lines, seen, rev, parents)
@@ -387,9 +394,15 @@ def graphlog(ui, repo, *pats, **opts):
         revs = revs[:limit]
     revdag = graphmod.dagwalker(repo, revs)
 
+    getrenamed = None
+    if opts.get('copies'):
+        endrev = None
+        if opts.get('rev'):
+            endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
+        getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
     displayer = show_changeset(ui, repo, opts, buffered=True)
     showparents = [ctx.node() for ctx in repo[None].parents()]
-    generate(ui, revdag, displayer, showparents, asciiedges)
+    generate(ui, revdag, displayer, showparents, asciiedges, getrenamed)
 
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)

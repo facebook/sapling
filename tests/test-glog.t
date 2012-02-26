@@ -1642,3 +1642,21 @@ Cannot compare with log --follow-first FILE as it never worked
   o |  5 add another e
   | |
 
+Test --copies
+
+  $ hg log -G --copies --template "{rev} {desc|firstline} \
+  >   copies: {file_copies_switch}\n"
+  @    6 merge 5 and 4   copies:
+  |\
+  | o  5 add another e   copies:
+  | |
+  o |  4 mv dir/b e   copies: e (dir/b)
+  |/
+  o  3 mv a b; add d   copies: b (a)g (f)
+  |
+  o  2 mv b dir/b   copies: dir/b (b)
+  |
+  o  1 copy a b   copies: b (a)g (f)
+  |
+  o  0 add a   copies:
+  
