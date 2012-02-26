@@ -303,8 +303,10 @@ def revset(repo, pats, opts):
         # pats/include/exclude cannot be represented as separate
         # revset expressions as their filtering logic applies at file
         # level. For instance "-I a -X a" matches a revision touching
-        # "a" and "b" while "file(a) and not file(b)" does not.
-        matchargs = []
+        # "a" and "b" while "file(a) and not file(b)" does
+        # not. Besides, filesets are evaluated against the working
+        # directory.
+        matchargs = ['r:']
         for p in pats:
             matchargs.append('p:' + p)
         for p in opts.get('include', []):

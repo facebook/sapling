@@ -1539,12 +1539,12 @@ have 2 filelog topological heads in a linear changeset graph.
 Test falling back to slow path for non-existing files
 
   $ testlog a c
-  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'p:a'), ('string', 'p:c')))))
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('list', ('string', 'r:'), ('string', 'p:a')), ('string', 'p:c')))))
 
 Test multiple --include/--exclude/paths
 
   $ testlog --include a --include e --exclude b --exclude e a e
-  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('list', ('list', ('list', ('list', ('string', 'p:a'), ('string', 'p:e')), ('string', 'i:a')), ('string', 'i:e')), ('string', 'x:b')), ('string', 'x:e')))))
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('list', ('list', ('list', ('list', ('list', ('string', 'r:'), ('string', 'p:a')), ('string', 'p:e')), ('string', 'i:a')), ('string', 'i:e')), ('string', 'x:b')), ('string', 'x:e')))))
 
 Test glob expansion of pats
 
@@ -1660,3 +1660,10 @@ Test --copies
   |
   o  0 add a   copies:
   
+Test "set:..." and parent revision
+
+  $ hg up -q 4
+  $ testlog --include "set:copied()"
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'r:'), ('string', 'i:set:copied()')))))
+  $ testlog -r "sort(file('set:copied()'), -rev)"
+  ('group', ('group', ('func', ('symbol', 'sort'), ('list', ('func', ('symbol', 'file'), ('string', 'set:copied()')), ('negate', ('symbol', 'rev'))))))
