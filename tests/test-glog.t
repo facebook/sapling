@@ -1663,6 +1663,8 @@ Test --copies
 Test "set:..." and parent revision
 
   $ hg up -q 4
+  $ testlog "set:copied()"
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'r:'), ('string', 'p:set:copied()')))))
   $ testlog --include "set:copied()"
   ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'r:'), ('string', 'i:set:copied()')))))
   $ testlog -r "sort(file('set:copied()'), -rev)"

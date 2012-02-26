@@ -333,5 +333,5 @@ def _roots(patterns):
 
 def _anypats(patterns):
     for kind, name in patterns:
-        if kind in ('glob', 're', 'relglob', 'relre'):
+        if kind in ('glob', 're', 'relglob', 'relre', 'set'):
             return True
