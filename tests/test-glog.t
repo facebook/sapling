@@ -1456,35 +1456,12 @@ glog always reorders nodes which explains the difference with log
   ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
   $ hg log -G --removed --template 'nodetag {rev}\n' | grep nodetag | wc -l
   \s*0 (re)
-  $ hg log -G --only-merges --template 'nodetag {rev}\n' | grep nodetag | wc -l
-  \s*28 (re)
-  $ hg log -G --no-merges --template 'nodetag {rev}\n'
-  o  nodetag 35
-  |
-  o    nodetag 34
-  |\
-  | \
-  | |\
-  | | \
-  | | |\
-  | | | \
-  | | | |\
-  | | | | \
-  | | | | |\
-  +-+-+-+-----o  nodetag 33
-  | | | | | |
-  +---------o  nodetag 29
-  | | | | |
-  +-+-+---o  nodetag 27
-  | | | |/
-  | | | o  nodetag 3
-  | | |/
-  | | o  nodetag 2
-  | |/
-  | o  nodetag 1
-  |/
-  o  nodetag 0
-  
+  $ testlog --only-merges
+  ('group', ('func', ('symbol', 'merge'), None))
+  $ testlog --no-merges
+  ('group', ('not', ('func', ('symbol', 'merge'), None)))
+  $ testlog --date '2 0 to 4 0'
+  ('group', ('func', ('symbol', 'date'), ('string', '2 0 to 4 0')))
   $ hg log -G -d 'brace ) in a date'
   abort: invalid date: 'brace ) in a date'
   [255]
