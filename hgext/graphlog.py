@@ -250,7 +250,6 @@ def revset(repo, pats, opts):
         'follow_first':     ('_followfirst()', None),
         'no_merges':        ('not merge()', None),
         'only_merges':      ('merge()', None),
-        'removed':          ('removes("*")', None),
         'date':             ('date(%(val)r)', None),
         'branch':           ('branch(%(val)r)', ' or '),
         '_patslog':         ('filelog(%(val)r)', ' or '),

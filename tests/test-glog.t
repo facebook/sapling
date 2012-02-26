@@ -1454,8 +1454,6 @@ glog always reorders nodes which explains the difference with log
   ('group', ('group', ('or', ('or', ('func', ('symbol', 'branch'), ('string', 'default')), ('func', ('symbol', 'branch'), ('string', 'branch'))), ('func', ('symbol', 'branch'), ('string', 'branch')))))
   $ testlog -k expand -k merge
   ('group', ('group', ('or', ('func', ('symbol', 'keyword'), ('string', 'expand')), ('func', ('symbol', 'keyword'), ('string', 'merge')))))
-  $ hg log -G --removed --template 'nodetag {rev}\n' | grep nodetag | wc -l
-  \s*0 (re)
   $ testlog --only-merges
   ('group', ('func', ('symbol', 'merge'), None))
   $ testlog --no-merges
@@ -1646,3 +1644,14 @@ Test "set:..." and parent revision
   ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'r:'), ('string', 'i:set:copied()')))))
   $ testlog -r "sort(file('set:copied()'), -rev)"
   ('group', ('group', ('func', ('symbol', 'sort'), ('list', ('func', ('symbol', 'file'), ('string', 'set:copied()')), ('negate', ('symbol', 'rev'))))))
+
+Test --removed
+
+  $ testlog --removed
+  ('func', ('symbol', 'all'), None)
+  $ testlog --removed a
+  ('group', ('group', ('func', ('symbol', '_matchfiles'), ('list', ('string', 'r:'), ('string', 'p:a')))))
+  $ testlog --removed --follow a
+  abort: can only follow copies/renames for explicit filenames
+  abort: can only follow copies/renames for explicit filenames
+  abort: can only follow copies/renames for explicit filenames
