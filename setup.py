@@ -452,10 +452,18 @@ if os.name == 'nt':
 if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     # XCode 4.0 dropped support for ppc architecture, which is hardcoded in
     # distutils.sysconfig
-    version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()[0]
-    # Also parse only first digit, because 3.2.1 can't be parsed nicely
-    if (version.startswith('Xcode') and
-        StrictVersion(version.split()[1]) >= StrictVersion('4.0')):
+    version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()
+    if version:
+        version = version.splitlines()[0]
+        xcode4 = (version.startswith('Xcode') and
+                  StrictVersion(version.split()[1]) >= StrictVersion('4.0'))
+    else:
+        # xcodebuild returns empty on OS X Lion with XCode 4.3 not
+        # installed, but instead with only command-line tools. Assume
+        # that only happens on >= Lion, thus no PPC support.
+        xcode4 = True
+
+    if xcode4:
         os.environ['ARCHFLAGS'] = ''
 
 setup(name='mercurial',
