@@ -1929,7 +1929,7 @@ def delete(ui, repo, *patches, **opts):
     return 0
 
 @command("qapplied",
-         [('1', 'last', None, _('show only the last patch'))
+         [('1', 'last', None, _('show only the preceding applied patch'))
           ] + seriesopts,
          _('hg qapplied [-1] [-s] [PATCH]'))
 def applied(ui, repo, patch=None, **opts):
@@ -2224,7 +2224,7 @@ def next(ui, repo, **opts):
 
 @command("qprev", seriesopts, _('hg qprev [-s]'))
 def prev(ui, repo, **opts):
-    """print the name of the previous applied patch
+    """print the name of the preceding applied patch
 
     Returns 0 on success."""
     q = repo.mq
