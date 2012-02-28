@@ -126,6 +126,17 @@ def setcurrent(repo, mark):
         wlock.release()
     repo._bookmarkcurrent = mark
 
+def unsetcurrent(repo):
+    wlock = repo.wlock()
+    try:
+        util.unlink(repo.join('bookmarks.current'))
+        repo._bookmarkcurrent = None
+    except OSError, inst:
+        if inst.errno != errno.ENOENT:
+            raise
+    finally:
+        wlock.release()
+
 def updatecurrentbookmark(repo, oldnode, curbranch):
     try:
         return update(repo, oldnode, repo.branchtags()[curbranch])

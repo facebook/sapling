@@ -125,3 +125,29 @@ deactivate current bookmark while renaming
   $ hg bookmarks
      X                         0:719295282060
      Z                         0:719295282060
+
+test deleting .hg/bookmarks.current when explicitly updating
+to a revision
+
+  $ echo a >> b
+  $ hg ci -m.
+  $ hg up -q X
+  $ test -f .hg/bookmarks.current
+
+try to update to it again to make sure we don't
+set and then unset it
+
+  $ hg up -q X
+  $ test -f .hg/bookmarks.current
+
+  $ hg up -q 1
+  $ test -f .hg/bookmarks.current
+  [1]
+
+when a bookmark is active, hg up -r . is
+analogus to hg book -i <active bookmark>
+
+  $ hg up -q X
+  $ hg up -q .
+  $ test -f .hg/bookmarks.current
+  [1]
