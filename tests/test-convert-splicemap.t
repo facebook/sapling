@@ -67,10 +67,12 @@ splice repo2 on repo1
   $ cat > splicemap <<EOF
   > $CHILDID1 $PARENTID1
   > $CHILDID2 $PARENTID2,$CHILDID1
+  > 
   > EOF
   $ cat splicemap
   527cdedf31fbd5ea708aa14eeecf53d4676f38db 6d4c2037ddc2cb2627ac3a244ecce35283268f8e
   e4ea00df91897da3079a10fab658c1eddba6617b e55c719b85b60e5102fac26110ba626e7cb6b7dc,527cdedf31fbd5ea708aa14eeecf53d4676f38db
+  
   $ hg clone repo1 target1
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

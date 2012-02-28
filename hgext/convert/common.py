@@ -385,8 +385,12 @@ class mapfile(dict):
                 raise
             return
         for i, line in enumerate(fp):
+            line = line.splitlines()[0].rstrip()
+            if not line:
+                # Ignore blank lines
+                continue
             try:
-                key, value = line.splitlines()[0].rstrip().rsplit(' ', 1)
+                key, value = line.rsplit(' ', 1)
             except ValueError:
                 raise util.Abort(
                     _('syntax error in %s(%d): key/value pair expected')
@@ -418,8 +422,12 @@ def parsesplicemap(path):
     try:
         fp = open(path, 'r')
         for i, line in enumerate(fp):
+            line = line.splitlines()[0].rstrip()
+            if not line:
+                # Ignore blank lines
+                continue
             try:
-                child, parents = line.splitlines()[0].rstrip().split(' ', 1)
+                child, parents = line.split(' ', 1)
                 parents = parents.replace(',', ' ').split()
             except ValueError:
                 raise util.Abort(_('syntax error in %s(%d): child parent1'
