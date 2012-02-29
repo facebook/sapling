@@ -5171,8 +5171,8 @@ msgstr ""
 "    Para parar de gerenciar um patch e movê-lo para o histórico\n"
 "    permanente, use o comando :hg:`qfinish` ."
 
-msgid "show only the last patch"
-msgstr "mostra apenas o último patch"
+msgid "show only the preceding applied patch"
+msgstr "mostra apenas o patch aplicado anterior"
 
 msgid "hg qapplied [-1] [-s] [PATCH]"
 msgstr "hg qapplied [-1] [-s] [PATCH]"
@@ -5427,7 +5427,7 @@ msgstr "imprime o nome do próximo patch que pode ser aplicado"
 msgid "hg qprev [-s]"
 msgstr "hg qprev [-s]"
 
-msgid "print the name of the previous applied patch"
+msgid "print the name of the preceding applied patch"
 msgstr "imprime o nome do patch aplicado anterior"
 
 msgid "import uncommitted changes (DEPRECATED)"
