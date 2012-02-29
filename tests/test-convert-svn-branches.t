@@ -14,6 +14,8 @@ Convert trunk and branches
 
   $ cat > branchmap <<EOF
   > old3 newbranch
+  >     
+  > 
   > EOF
   $ hg convert --branchmap=branchmap --datesort -r 10 svn-repo A-hg
   initializing destination A-hg repository

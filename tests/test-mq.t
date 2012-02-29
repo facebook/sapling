@@ -74,7 +74,7 @@ help
    qnew          create a new patch
    qnext         print the name of the next pushable patch
    qpop          pop the current patch off the stack
-   qprev         print the name of the previous applied patch
+   qprev         print the name of the preceding applied patch
    qpush         push the next patch onto the stack
    qqueue        manage multiple patch queues
    qrefresh      update the current patch

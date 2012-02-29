@@ -5720,7 +5720,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     # with no argument, we also move the current bookmark, if any
     movemarkfrom = None
-    if node is None or node == '':
+    if rev is None or node == '':
         movemarkfrom = repo['.'].node()
 
     # if we defined a bookmark, we have to remember the original bookmark name
@@ -5754,6 +5754,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
             ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
     elif brev in repo._bookmarks:
         bookmarks.setcurrent(repo, brev)
+    elif brev:
+        bookmarks.unsetcurrent(repo)
 
     return ret
 

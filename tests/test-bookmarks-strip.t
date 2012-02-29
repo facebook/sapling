@@ -34,7 +34,7 @@ set bookmark
 
   $ hg book test2
 
-update to -2
+update to -2 (inactives the active bookmark)
 
   $ hg update -r -2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -61,7 +61,7 @@ list bookmarks
 
   $ hg book
      test                      1:8cf31af87a2b
-   * test2                     1:8cf31af87a2b
+     test2                     1:8cf31af87a2b
 
 immediate rollback and reentrancy issue
 
