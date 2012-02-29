@@ -129,11 +129,12 @@ def setcurrent(repo, mark):
 def unsetcurrent(repo):
     wlock = repo.wlock()
     try:
-        util.unlink(repo.join('bookmarks.current'))
-        repo._bookmarkcurrent = None
-    except OSError, inst:
-        if inst.errno != errno.ENOENT:
-            raise
+        try:
+            util.unlink(repo.join('bookmarks.current'))
+            repo._bookmarkcurrent = None
+        except OSError, inst:
+            if inst.errno != errno.ENOENT:
+                raise
     finally:
         wlock.release()
 
