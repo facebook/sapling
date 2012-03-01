@@ -145,3 +145,14 @@ repository tip rolled back to revision 3 (undo commit)
 working directory now based on revision 3
  runcommand phase -r .
 3: public
+
+testing branch:
+
+ runcommand branch
+default
+marked working directory as branch foo
+(branches are permanent and global, did you want a bookmark?)
+ runcommand branch
+foo
+marked working directory as branch default
+(branches are permanent and global, did you want a bookmark?)

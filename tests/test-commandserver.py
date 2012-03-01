@@ -212,6 +212,13 @@ def rollback(server):
     runcommand(server, ['rollback'])
     runcommand(server, ['phase', '-r', '.'])
 
+def branch(server):
+    readchannel(server)
+    runcommand(server, ['branch'])
+    os.system('hg branch foo')
+    runcommand(server, ['branch'])
+    os.system('hg branch default')
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -232,3 +239,4 @@ if __name__ == '__main__':
     check(tagscache)
     check(setphase)
     check(rollback)
+    check(branch)
