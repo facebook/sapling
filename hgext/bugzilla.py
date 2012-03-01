@@ -13,7 +13,7 @@ that refer to bugs by Bugzilla ID are seen. The comment is formatted using
 the Mercurial template mechanism.
 
 The bug references can optionally include an update for Bugzilla of the
-hours spent working on the bug.
+hours spent working on the bug. Bugs can also be marked fixed.
 
 Three basic modes of access to Bugzilla are provided:
 
@@ -39,7 +39,7 @@ Access via XMLRPC needs a Bugzilla username and password to be specified
 in the configuration. Comments are added under that username. Since the
 configuration must be readable by all Mercurial users, it is recommended
 that the rights of that user are restricted in Bugzilla to the minimum
-necessary to add comments.
+necessary to add comments. Marking bugs fixed requires Bugzilla 4.0 and later.
 
 Access via XMLRPC/email uses XMLRPC to query Bugzilla, but sends
 email to the Bugzilla email interface to submit comments to bugs.
@@ -47,7 +47,8 @@ The From: address in the email is set to the email address of the Mercurial
 user, so the comment appears to come from the Mercurial user. In the event
 that the Mercurial user email is not recognised by Bugzilla as a Bugzilla
 user, the email associated with the Bugzilla username used to log into
-Bugzilla is used instead as the source of the comment.
+Bugzilla is used instead as the source of the comment. Marking bugs fixed
+works on all supported Bugzilla versions.
 
 Configuration items common to all access modes:
 
@@ -63,7 +64,7 @@ bugzilla.version
                      including 2.18.
 
 bugzilla.regexp
-  Regular expression to match bug IDs in changeset commit message.
+  Regular expression to match bug IDs for update in changeset commit message.
   It must contain one "()" named group ``<ids>`` containing the bug
   IDs separated by non-digit characters. It may also contain
   a named group ``<hours>`` with a floating-point number giving the
@@ -73,6 +74,24 @@ bugzilla.regexp
   ``Bug number 1234``, ``Bugs 1234,5678``, ``Bug 1234 and 5678`` and
   variations thereof, followed by an hours number prefixed by ``h`` or
   ``hours``, e.g. ``hours 1.5``. Matching is case insensitive.
+
+bugzilla.fixregexp
+  Regular expression to match bug IDs for marking fixed in changeset
+  commit message. This must contain a "()" named group ``<ids>` containing
+  the bug IDs separated by non-digit characters. It may also contain
+  a named group ``<hours>`` with a floating-point number giving the
+  hours worked on the bug. If no named groups are present, the first
+  "()" group is assumed to contain the bug IDs, and work time is not
+  updated. The default expression matches ``Fixes 1234``, ``Fixes bug 1234``,
+  ``Fixes bugs 1234,5678``, ``Fixes 1234 and 5678`` and
+  variations thereof, followed by an hours number prefixed by ``h`` or
+  ``hours``, e.g. ``hours 1.5``. Matching is case insensitive.
+
+bugzilla.fixstatus
+  The status to set a bug to when marking fixed. Default ``RESOLVED``.
+
+bugzilla.fixresolution
+  The resolution to set a bug to when marking fixed. Default ``FIXED``.
 
 bugzilla.style
   The style file to use when formatting comments.
@@ -285,6 +304,7 @@ class bzaccess(object):
     # updates to bug state. Recognised dict keys are:
     #
     # 'hours': Value, float containing work hours to be updated.
+    # 'fix':   If key present, bug is to be marked fixed. Value ignored.
 
     def filter_real_bug_ids(self, bugs):
         '''remove bug IDs that do not exist in Bugzilla from bugs.'''
@@ -587,6 +607,10 @@ class bzxmlrpc(bzaccess):
         user = self.ui.config('bugzilla', 'user', 'bugs')
         passwd = self.ui.config('bugzilla', 'password')
 
+        self.fixstatus = self.ui.config('bugzilla', 'fixstatus', 'RESOLVED')
+        self.fixresolution = self.ui.config('bugzilla', 'fixresolution',
+                                            'FIXED')
+
         self.bzproxy = xmlrpclib.ServerProxy(bzweb, self.transport(bzweb))
         self.bzproxy.User.login(dict(login=user, password=passwd))
 
@@ -618,10 +642,23 @@ class bzxmlrpc(bzaccess):
                 del bugs[id]
 
     def updatebug(self, bugid, newstate, text, committer):
-        args = dict(id=bugid, comment=text)
+        args = {}
         if 'hours' in newstate:
             args['work_time'] = newstate['hours']
-        self.bzproxy.Bug.add_comment(args)
+
+        if self.bzvermajor >= 4:
+            args['ids'] = [bugid]
+            args['comment'] = {'body' : text}
+            args['status'] = self.fixstatus
+            args['resolution'] = self.fixresolution
+            self.bzproxy.Bug.update(args)
+        else:
+            if 'fix' in newstate:
+                self.ui.warn(_("Bugzilla/XMLRPC needs Bugzilla 4.0 or later "
+                               "to mark bugs fixed\n"))
+            args['id'] = bugid
+            args['comment'] = text
+            self.bzproxy.Bug.add_comment(args)
 
 class bzxmlrpcemail(bzxmlrpc):
     """Read data from Bugzilla via XMLRPC, send updates via email.
@@ -631,8 +668,9 @@ class bzxmlrpcemail(bzxmlrpc):
       2. Bug statuses or other fields not accessible via XMLRPC can
          potentially be updated.
 
-    Currently all status updates recognised can be done via XMLRPC, so
-    item 1 is the only actual advantage.
+    There is no XMLRPC function to change bug status before Bugzilla
+    4.0, so bugs cannot be marked fixed via XMLRPC before Bugzilla 4.0.
+    But bugs can be marked fixed via email from 3.4 onwards.
     """
 
     def __init__(self, ui):
@@ -680,6 +718,9 @@ class bzxmlrpcemail(bzxmlrpc):
         cmds = []
         if 'hours' in newstate:
             cmds.append(self.makecommandline("work_time", newstate['hours']))
+        if 'fix' in newstate:
+            cmds.append(self.makecommandline("bug_status", self.fixstatus))
+            cmds.append(self.makecommandline("resolution", self.fixresolution))
         self.send_bug_modify_email(bugid, cmds, text, committer)
 
 class bugzilla(object):
@@ -695,6 +736,11 @@ class bugzilla(object):
 
     _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
                        r'(?P<ids>(?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
+                       r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
+
+    _default_fix_re = (r'fix(?:es)?\s*(?:bugs?\s*)?,?\s*'
+                       r'(?:nos?\.?|num(?:ber)?s?)?\s*'
+                       r'(?P<ids>(?:#?\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
                        r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
 
     _bz = None
@@ -721,6 +767,7 @@ class bugzilla(object):
         return getattr(self.bz(), key)
 
     _bug_re = None
+    _fix_re = None
     _split_re = None
 
     def find_bugs(self, ctx):
@@ -732,18 +779,39 @@ class bugzilla(object):
         '''
         if bugzilla._bug_re is None:
             bugzilla._bug_re = re.compile(
-                self.ui.config('bugzilla', 'regexp', bugzilla._default_bug_re),
-                re.IGNORECASE)
+                self.ui.config('bugzilla', 'regexp',
+                               bugzilla._default_bug_re), re.IGNORECASE)
+            bugzilla._fix_re = re.compile(
+                self.ui.config('bugzilla', 'fixregexp',
+                               bugzilla._default_fix_re), re.IGNORECASE)
             bugzilla._split_re = re.compile(r'\D+')
         start = 0
         hours = 0.0
         bugs = {}
+        bugmatch = bugzilla._bug_re.search(ctx.description(), start)
+        fixmatch = bugzilla._fix_re.search(ctx.description(), start)
         while True:
             bugattribs = {}
-            m = bugzilla._bug_re.search(ctx.description(), start)
-            if not m:
+            if not bugmatch and not fixmatch:
                 break
+            if not bugmatch:
+                m = fixmatch
+            elif not fixmatch:
+                m = bugmatch
+            else:
+                if bugmatch.start() < fixmatch.start():
+                    m = bugmatch
+                else:
+                    m = fixmatch
             start = m.end()
+            if m is bugmatch:
+                bugmatch = bugzilla._bug_re.search(ctx.description(), start)
+                if 'fix' in bugattribs:
+                    del bugattribs['fix']
+            else:
+                fixmatch = bugzilla._fix_re.search(ctx.description(), start)
+                bugattribs['fix'] = None
+
             try:
                 ids = m.group('ids')
             except IndexError:
