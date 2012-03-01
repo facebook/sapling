@@ -211,7 +211,7 @@ class opener(abstractopener):
             if r:
                 raise util.Abort("%s: %r" % (r, path))
         self.auditor(path)
-        f = os.path.join(self.base, path)
+        f = self.join(path)
 
         if not text and "b" not in mode:
             mode += "b" # for that other OS
@@ -255,7 +255,7 @@ class opener(abstractopener):
 
     def symlink(self, src, dst):
         self.auditor(dst)
-        linkname = os.path.join(self.base, dst)
+        linkname = self.join(dst)
         try:
             os.unlink(linkname)
         except OSError:
@@ -279,6 +279,9 @@ class opener(abstractopener):
 
     def audit(self, path):
         self.auditor(path)
+
+    def join(self, path):
+        return os.path.join(self.base, path)
 
 class filteropener(abstractopener):
     '''Wrapper opener for filtering filenames with a function.'''
