@@ -156,3 +156,10 @@ marked working directory as branch foo
 foo
 marked working directory as branch default
 (branches are permanent and global, did you want a bookmark?)
+
+testing hgignore:
+
+ runcommand commit -Am.
+adding .hgignore
+ runcommand status -i -u
+I ignored-file

@@ -21,6 +21,11 @@ class repocache(filecache):
     def join(self, obj, fname):
         return obj._opener.join(fname)
 
+class rootcache(filecache):
+    """filecache for files in the repository root"""
+    def join(self, obj, fname):
+        return obj._join(fname)
+
 def _finddirs(path):
     pos = path.rfind('/')
     while pos != -1:
@@ -120,7 +125,7 @@ class dirstate(object):
     def dirs(self):
         return self._dirs
 
-    @propertycache
+    @rootcache('.hgignore')
     def _ignore(self):
         files = [self._join('.hgignore')]
         for name, path in self._ui.configitems("ui"):
