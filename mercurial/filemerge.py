@@ -220,6 +220,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
         util.copyfile(a, a + ".local")
         repo.wwrite(fd + ".other", fco.data(), fco.flags())
         repo.wwrite(fd + ".base", fca.data(), fca.flags())
+        os.unlink(b)
+        os.unlink(c)
         return 1 # unresolved
     else:
         args = _toolstr(ui, tool, "args", '$local $base $other')
