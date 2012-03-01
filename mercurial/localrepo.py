@@ -901,10 +901,13 @@ class localrepository(repo.repository):
         rereads the dirstate. Use dirstate.invalidate() if you want to
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state).'''
-        try:
+        if 'dirstate' in self.__dict__:
+            for k in self.dirstate._filecache:
+                try:
+                    delattr(self.dirstate, k)
+                except AttributeError:
+                    pass
             delattr(self, 'dirstate')
-        except AttributeError:
-            pass
 
     def invalidate(self):
         for k in self._filecache:

@@ -52,6 +52,7 @@ class dirstate(object):
         self._dirtypl = False
         self._lastnormaltime = 0
         self._ui = ui
+        self._filecache = {}
 
     @propertycache
     def _map(self):
