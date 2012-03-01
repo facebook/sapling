@@ -1,7 +1,7 @@
 # bugzilla.py - bugzilla integration for mercurial
 #
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
-# Copyright 2011 Jim Hague <jim.hague@acm.org>
+# Copyright 2011-2 Jim Hague <jim.hague@acm.org>
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
@@ -274,24 +274,32 @@ class bzaccess(object):
         return user
 
     # Methods to be implemented by access classes.
-    def filter_real_bug_ids(self, ids):
-        '''remove bug IDs that do not exist in Bugzilla from set.'''
+    #
+    # 'bugs' is a dict keyed on bug id, where values are a dict holding
+    # updates to bug state. Currently no states are recognised, but this
+    # will change soon.
+    def filter_real_bug_ids(self, bugs):
+        '''remove bug IDs that do not exist in Bugzilla from bugs.'''
         pass
 
-    def filter_cset_known_bug_ids(self, node, ids):
-        '''remove bug IDs where node occurs in comment text from set.'''
+    def filter_cset_known_bug_ids(self, node, bugs):
+        '''remove bug IDs where node occurs in comment text from bugs.'''
         pass
 
-    def add_comment(self, bugid, text, committer):
-        '''add comment to bug.
+    def updatebug(self, bugid, newstate, text, committer):
+        '''update the specified bug. Add comment text and set new states.
 
         If possible add the comment as being from the committer of
         the changeset. Otherwise use the default Bugzilla user.
         '''
         pass
 
-    def notify(self, ids, committer):
-        '''Force sending of Bugzilla notification emails.'''
+    def notify(self, bugs, committer):
+        '''Force sending of Bugzilla notification emails.
+
+        Only required if the access method does not trigger notification
+        emails automatically.
+        '''
         pass
 
 # Bugzilla via direct access to MySQL database.
@@ -353,30 +361,31 @@ class bzmysql(bzaccess):
             raise util.Abort(_('unknown database schema'))
         return ids[0][0]
 
-    def filter_real_bug_ids(self, ids):
-        '''filter not-existing bug ids from set.'''
+    def filter_real_bug_ids(self, bugs):
+        '''filter not-existing bugs from set.'''
         self.run('select bug_id from bugs where bug_id in %s' %
-                 bzmysql.sql_buglist(ids))
-        return set([c[0] for c in self.cursor.fetchall()])
+                 bzmysql.sql_buglist(bugs.keys()))
+        existing = [id for (id,) in self.cursor.fetchall()]
+        for id in bugs.keys():
+            if id not in existing:
+                self.ui.status(_('bug %d does not exist\n') % id)
+                del bugs[id]
 
-    def filter_cset_known_bug_ids(self, node, ids):
+    def filter_cset_known_bug_ids(self, node, bugs):
         '''filter bug ids that already refer to this changeset from set.'''
-
         self.run('''select bug_id from longdescs where
                     bug_id in %s and thetext like "%%%s%%"''' %
-                 (bzmysql.sql_buglist(ids), short(node)))
+                 (bzmysql.sql_buglist(bugs.keys()), short(node)))
         for (id,) in self.cursor.fetchall():
             self.ui.status(_('bug %d already knows about changeset %s\n') %
                            (id, short(node)))
-            ids.discard(id)
-        return ids
+            del bugs[id]
 
-    def notify(self, ids, committer):
+    def notify(self, bugs, committer):
         '''tell bugzilla to send mail.'''
-
         self.ui.status(_('telling bugzilla to send mail:\n'))
         (user, userid) = self.get_bugzilla_user(committer)
-        for id in ids:
+        for id in bugs.keys():
             self.ui.status(_('  bug %s\n') % id)
             cmdfmt = self.ui.config('bugzilla', 'notify', self.default_notify)
             bzdir = self.ui.config('bugzilla', 'bzdir', '/var/www/html/bugzilla')
@@ -435,9 +444,11 @@ class bzmysql(bzaccess):
                                  (user, defaultuser))
         return (user, userid)
 
-    def add_comment(self, bugid, text, committer):
-        '''add comment to bug. try adding comment as committer of
-        changeset, otherwise as default bugzilla user.'''
+    def updatebug(self, bugid, newstate, text, committer):
+        '''update bug state with comment text.
+
+        Try adding comment as committer of changeset, otherwise as
+        default bugzilla user.'''
         (user, userid) = self.get_bugzilla_user(committer)
         now = time.strftime('%Y-%m-%d %H:%M:%S')
         self.run('''insert into longdescs
@@ -576,26 +587,28 @@ class bzxmlrpc(bzaccess):
 
     def get_bug_comments(self, id):
         """Return a string with all comment text for a bug."""
-        c = self.bzproxy.Bug.comments(dict(ids=[id]))
+        c = self.bzproxy.Bug.comments(dict(ids=[id], include_fields=['text']))
         return ''.join([t['text'] for t in c['bugs'][str(id)]['comments']])
 
-    def filter_real_bug_ids(self, ids):
-        res = set()
-        bugs = self.bzproxy.Bug.get(dict(ids=sorted(ids), permissive=True))
-        for bug in bugs['bugs']:
-            res.add(bug['id'])
-        return res
+    def filter_real_bug_ids(self, bugs):
+        probe = self.bzproxy.Bug.get(dict(ids=sorted(bugs.keys()),
+                                          include_fields=[],
+                                          permissive=True))
+        for badbug in probe['faults']:
+            id = badbug['id']
+            self.ui.status(_('bug %d does not exist\n') % id)
+            del bugs[id]
 
-    def filter_cset_known_bug_ids(self, node, ids):
-        for id in sorted(ids):
+    def filter_cset_known_bug_ids(self, node, bugs):
+        for id in sorted(bugs.keys()):
             if self.get_bug_comments(id).find(short(node)) != -1:
                 self.ui.status(_('bug %d already knows about changeset %s\n') %
                                (id, short(node)))
-                ids.discard(id)
-        return ids
+                del bugs[id]
 
-    def add_comment(self, bugid, text, committer):
-        self.bzproxy.Bug.add_comment(dict(id=bugid, comment=text))
+    def updatebug(self, bugid, newstate, text, committer):
+        args = dict(id=bugid, comment=text)
+        self.bzproxy.Bug.add_comment(args)
 
 class bzxmlrpcemail(bzxmlrpc):
     """Read data from Bugzilla via XMLRPC, send updates via email.
@@ -647,7 +660,7 @@ class bzxmlrpcemail(bzxmlrpc):
         sendmail = mail.connect(self.ui)
         sendmail(user, bzemail, msg.as_string())
 
-    def add_comment(self, bugid, text, committer):
+    def updatebug(self, bugid, newstate, text, committer):
         self.send_bug_modify_email(bugid, [], text, committer)
 
 class bugzilla(object):
@@ -690,10 +703,10 @@ class bugzilla(object):
     _bug_re = None
     _split_re = None
 
-    def find_bug_ids(self, ctx):
-        '''return set of integer bug IDs from commit comment.
+    def find_bugs(self, ctx):
+        '''return bugs dictionary created from commit comment.
 
-        Extract bug IDs from changeset comments. Filter out any that are
+        Extract bug info from changeset comments. Filter out any that are
         not known to Bugzilla, and any that already have a reference to
         the given changeset in their comments.
         '''
@@ -703,7 +716,7 @@ class bugzilla(object):
                 re.IGNORECASE)
             bugzilla._split_re = re.compile(r'\D+')
         start = 0
-        ids = set()
+        bugs = {}
         while True:
             m = bugzilla._bug_re.search(ctx.description(), start)
             if not m:
@@ -712,14 +725,14 @@ class bugzilla(object):
             for id in bugzilla._split_re.split(m.group(1)):
                 if not id:
                     continue
-                ids.add(int(id))
-        if ids:
-            ids = self.filter_real_bug_ids(ids)
-        if ids:
-            ids = self.filter_cset_known_bug_ids(ctx.node(), ids)
-        return ids
+                bugs[int(id)] = {}
+        if bugs:
+            self.filter_real_bug_ids(bugs)
+        if bugs:
+            self.filter_cset_known_bug_ids(ctx.node(), bugs)
+        return bugs
 
-    def update(self, bugid, ctx):
+    def update(self, bugid, newstate, ctx):
         '''update bugzilla bug with reference to changeset.'''
 
         def webroot(root):
@@ -752,7 +765,7 @@ class bugzilla(object):
                root=self.repo.root,
                webroot=webroot(self.repo.root))
         data = self.ui.popbuffer()
-        self.add_comment(bugid, data, util.email(ctx.user()))
+        self.updatebug(bugid, newstate, data, util.email(ctx.user()))
 
 def hook(ui, repo, hooktype, node=None, **kwargs):
     '''add comment to bugzilla for each changeset that refers to a
@@ -764,11 +777,11 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
     try:
         bz = bugzilla(ui, repo)
         ctx = repo[node]
-        ids = bz.find_bug_ids(ctx)
-        if ids:
-            for id in ids:
-                bz.update(id, ctx)
-            bz.notify(ids, util.email(ctx.user()))
+        bugs = bz.find_bugs(ctx)
+        if bugs:
+            for bug in bugs:
+                bz.update(bug, bugs[bug], ctx)
+            bz.notify(bugs, util.email(ctx.user()))
     except Exception, e:
         raise util.Abort(_('Bugzilla error: %s') % e)
 
