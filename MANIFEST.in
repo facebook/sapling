@@ -1,2 +1,2 @@
-include Makefile *.rst
+include Makefile hgsubversion/help/*.rst
 recursive-include tests *.py *.sh *.svndump *.txt
