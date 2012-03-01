@@ -612,6 +612,9 @@ class bzxmlrpc(bzaccess):
                                             'FIXED')
 
         self.bzproxy = xmlrpclib.ServerProxy(bzweb, self.transport(bzweb))
+        ver = self.bzproxy.Bugzilla.version()['version'].split('.')
+        self.bzvermajor = int(ver[0])
+        self.bzverminor = int(ver[1])
         self.bzproxy.User.login(dict(login=user, password=passwd))
 
     def transport(self, uri):
@@ -673,6 +676,13 @@ class bzxmlrpcemail(bzxmlrpc):
     But bugs can be marked fixed via email from 3.4 onwards.
     """
 
+    # The email interface changes subtly between 3.4 and 3.6. In 3.4,
+    # in-email fields are specified as '@<fieldname> = <value>'. In
+    # 3.6 this becomes '@<fieldname> <value>'. And fieldname @bug_id
+    # in 3.4 becomes @id in 3.6. 3.6 and 4.0 both maintain backwards
+    # compatibility, but rather than rely on this use the new format for
+    # 4.0 onwards.
+
     def __init__(self, ui):
         bzxmlrpc.__init__(self, ui)
 
@@ -680,6 +690,14 @@ class bzxmlrpcemail(bzxmlrpc):
         if not self.bzemail:
             raise util.Abort(_("configuration 'bzemail' missing"))
         mail.validateconfig(self.ui)
+
+    def makecommandline(self, fieldname, value):
+        if self.bzvermajor >= 4:
+            return "@%s %s" % (fieldname, str(value))
+        else:
+            if fieldname == "id":
+                fieldname = "bug_id"
+            return "@%s = %s" % (fieldname, str(value))
 
     def send_bug_modify_email(self, bugid, commands, comment, committer):
         '''send modification message to Bugzilla bug via email.
@@ -701,8 +719,9 @@ class bzxmlrpcemail(bzxmlrpc):
                 raise util.Abort(_("default bugzilla user %s email not found") %
                                  user)
         user = matches['users'][0]['email']
+        commands.append(self.makecommandline("id", bugid))
 
-        text = "\n".join(commands) + "\n@bug_id = %d\n\n" % bugid + comment
+        text = "\n".join(commands) + "\n\n" + comment
 
         _charsets = mail._charsets(self.ui)
         user = mail.addressencode(self.ui, user, _charsets)
