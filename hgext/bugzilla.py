@@ -12,7 +12,8 @@ This hook extension adds comments on bugs in Bugzilla when changesets
 that refer to bugs by Bugzilla ID are seen. The comment is formatted using
 the Mercurial template mechanism.
 
-The hook does not change bug status.
+The bug references can optionally include an update for Bugzilla of the
+hours spent working on the bug.
 
 Three basic modes of access to Bugzilla are provided:
 
@@ -32,7 +33,7 @@ permission to read Bugzilla configuration details and the necessary
 MySQL user and password to have full access rights to the Bugzilla
 database. For these reasons this access mode is now considered
 deprecated, and will not be updated for new Bugzilla versions going
-forward.
+forward. Only adding comments is supported in this access mode.
 
 Access via XMLRPC needs a Bugzilla username and password to be specified
 in the configuration. Comments are added under that username. Since the
@@ -63,10 +64,15 @@ bugzilla.version
 
 bugzilla.regexp
   Regular expression to match bug IDs in changeset commit message.
-  Must contain one "()" group. The default expression matches ``Bug
-  1234``, ``Bug no. 1234``, ``Bug number 1234``, ``Bugs 1234,5678``,
-  ``Bug 1234 and 5678`` and variations thereof. Matching is case
-  insensitive.
+  It must contain one "()" named group ``<ids>`` containing the bug
+  IDs separated by non-digit characters. It may also contain
+  a named group ``<hours>`` with a floating-point number giving the
+  hours worked on the bug. If no named groups are present, the first
+  "()" group is assumed to contain the bug IDs, and work time is not
+  updated. The default expression matches ``Bug 1234``, ``Bug no. 1234``,
+  ``Bug number 1234``, ``Bugs 1234,5678``, ``Bug 1234 and 5678`` and
+  variations thereof, followed by an hours number prefixed by ``h`` or
+  ``hours``, e.g. ``hours 1.5``. Matching is case insensitive.
 
 bugzilla.style
   The style file to use when formatting comments.
@@ -276,8 +282,10 @@ class bzaccess(object):
     # Methods to be implemented by access classes.
     #
     # 'bugs' is a dict keyed on bug id, where values are a dict holding
-    # updates to bug state. Currently no states are recognised, but this
-    # will change soon.
+    # updates to bug state. Recognised dict keys are:
+    #
+    # 'hours': Value, float containing work hours to be updated.
+
     def filter_real_bug_ids(self, bugs):
         '''remove bug IDs that do not exist in Bugzilla from bugs.'''
         pass
@@ -449,6 +457,9 @@ class bzmysql(bzaccess):
 
         Try adding comment as committer of changeset, otherwise as
         default bugzilla user.'''
+        if len(newstate) > 0:
+            self.ui.warn(_("Bugzilla/MySQL cannot update bug state\n"))
+
         (user, userid) = self.get_bugzilla_user(committer)
         now = time.strftime('%Y-%m-%d %H:%M:%S')
         self.run('''insert into longdescs
@@ -608,6 +619,8 @@ class bzxmlrpc(bzaccess):
 
     def updatebug(self, bugid, newstate, text, committer):
         args = dict(id=bugid, comment=text)
+        if 'hours' in newstate:
+            args['work_time'] = newstate['hours']
         self.bzproxy.Bug.add_comment(args)
 
 class bzxmlrpcemail(bzxmlrpc):
@@ -615,8 +628,11 @@ class bzxmlrpcemail(bzxmlrpc):
 
     Advantages of sending updates via email:
       1. Comments can be added as any user, not just logged in user.
-      2. Bug statuses and other fields not accessible via XMLRPC can
-        be updated. This is not currently used.
+      2. Bug statuses or other fields not accessible via XMLRPC can
+         potentially be updated.
+
+    Currently all status updates recognised can be done via XMLRPC, so
+    item 1 is the only actual advantage.
     """
 
     def __init__(self, ui):
@@ -661,7 +677,10 @@ class bzxmlrpcemail(bzxmlrpc):
         sendmail(user, bzemail, msg.as_string())
 
     def updatebug(self, bugid, newstate, text, committer):
-        self.send_bug_modify_email(bugid, [], text, committer)
+        cmds = []
+        if 'hours' in newstate:
+            cmds.append(self.makecommandline("work_time", newstate['hours']))
+        self.send_bug_modify_email(bugid, cmds, text, committer)
 
 class bugzilla(object):
     # supported versions of bugzilla. different versions have
@@ -675,7 +694,8 @@ class bugzilla(object):
         }
 
     _default_bug_re = (r'bugs?\s*,?\s*(?:#|nos?\.?|num(?:ber)?s?)?\s*'
-                       r'((?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)')
+                       r'(?P<ids>(?:\d+\s*(?:,?\s*(?:and)?)?\s*)+)'
+                       r'\.?\s*(?:h(?:ours?)?\s*(?P<hours>\d*(?:\.\d+)?))?')
 
     _bz = None
 
@@ -716,16 +736,32 @@ class bugzilla(object):
                 re.IGNORECASE)
             bugzilla._split_re = re.compile(r'\D+')
         start = 0
+        hours = 0.0
         bugs = {}
         while True:
+            bugattribs = {}
             m = bugzilla._bug_re.search(ctx.description(), start)
             if not m:
                 break
             start = m.end()
-            for id in bugzilla._split_re.split(m.group(1)):
+            try:
+                ids = m.group('ids')
+            except IndexError:
+                ids = m.group(1)
+            try:
+                hours = float(m.group('hours'))
+                bugattribs['hours'] = hours
+            except IndexError:
+                pass
+            except TypeError:
+                pass
+            except ValueError:
+                self.ui.status(_("%s: invalid hours\n") % m.group('hours'))
+
+            for id in bugzilla._split_re.split(ids):
                 if not id:
                     continue
-                bugs[int(id)] = {}
+                bugs[int(id)] = bugattribs
         if bugs:
             self.filter_real_bug_ids(bugs)
         if bugs:
