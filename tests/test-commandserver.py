@@ -212,6 +212,27 @@ def rollback(server):
     runcommand(server, ['rollback'])
     runcommand(server, ['phase', '-r', '.'])
 
+def branch(server):
+    readchannel(server)
+    runcommand(server, ['branch'])
+    os.system('hg branch foo')
+    runcommand(server, ['branch'])
+    os.system('hg branch default')
+
+def hgignore(server):
+    readchannel(server)
+    f = open('.hgignore', 'ab')
+    f.write('')
+    f.close()
+    runcommand(server, ['commit', '-Am.'])
+    f = open('ignored-file', 'ab')
+    f.write('')
+    f.close()
+    f = open('.hgignore', 'ab')
+    f.write('ignored-file')
+    f.close()
+    runcommand(server, ['status', '-i', '-u'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -232,3 +253,5 @@ if __name__ == '__main__':
     check(tagscache)
     check(setphase)
     check(rollback)
+    check(branch)
+    check(hgignore)

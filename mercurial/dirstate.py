@@ -14,6 +14,17 @@ import cStringIO
 
 _format = ">cllll"
 propertycache = util.propertycache
+filecache = scmutil.filecache
+
+class repocache(filecache):
+    """filecache for files in .hg/"""
+    def join(self, obj, fname):
+        return obj._opener.join(fname)
+
+class rootcache(filecache):
+    """filecache for files in the repository root"""
+    def join(self, obj, fname):
+        return obj._join(fname)
 
 def _finddirs(path):
     pos = path.rfind('/')
@@ -52,6 +63,7 @@ class dirstate(object):
         self._dirtypl = False
         self._lastnormaltime = 0
         self._ui = ui
+        self._filecache = {}
 
     @propertycache
     def _map(self):
@@ -77,7 +89,7 @@ class dirstate(object):
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
-    @propertycache
+    @repocache('branch')
     def _branch(self):
         try:
             return self._opener.read("branch").strip() or "default"
@@ -113,7 +125,7 @@ class dirstate(object):
     def dirs(self):
         return self._dirs
 
-    @propertycache
+    @rootcache('.hgignore')
     def _ignore(self):
         files = [self._join('.hgignore')]
         for name, path in self._ui.configitems("ui"):

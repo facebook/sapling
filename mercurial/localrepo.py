@@ -19,6 +19,11 @@ import weakref, errno, os, time, inspect
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
+class storecache(filecache):
+    """filecache for files in the store"""
+    def join(self, obj, fname):
+        return obj.sjoin(fname)
+
 class localrepository(repo.repository):
     capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
                         'known', 'getbundle'))
@@ -176,7 +181,7 @@ class localrepository(repo.repository):
     def _writebookmarks(self, marks):
       bookmarks.write(self)
 
-    @filecache('phaseroots', True)
+    @storecache('phaseroots')
     def _phaseroots(self):
         self._dirtyphases = False
         phaseroots = phases.readroots(self)
@@ -195,7 +200,7 @@ class localrepository(repo.repository):
                     cache[rev] = phase
         return cache
 
-    @filecache('00changelog.i', True)
+    @storecache('00changelog.i')
     def changelog(self):
         c = changelog.changelog(self.sopener)
         if 'HG_PENDING' in os.environ:
@@ -204,7 +209,7 @@ class localrepository(repo.repository):
                 c.readpending('00changelog.i.a')
         return c
 
-    @filecache('00manifest.i', True)
+    @storecache('00manifest.i')
     def manifest(self):
         return manifest.manifest(self.sopener)
 
@@ -896,10 +901,13 @@ class localrepository(repo.repository):
         rereads the dirstate. Use dirstate.invalidate() if you want to
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state).'''
-        try:
+        if 'dirstate' in self.__dict__:
+            for k in self.dirstate._filecache:
+                try:
+                    delattr(self.dirstate, k)
+                except AttributeError:
+                    pass
             delattr(self, 'dirstate')
-        except AttributeError:
-            pass
 
     def invalidate(self):
         for k in self._filecache:
