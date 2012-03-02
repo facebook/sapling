@@ -11,5 +11,10 @@ Basic install:
  $ hg debuginstall # sanity-check setup
  $ hg              # see help
 
+Running without installing:
+
+ $ make local      # build for inplace usage
+ $ ./hg --version  # should show the latest version
+
 See http://mercurial.selenic.com/ for detailed installation
 instructions, platform-specific notes, and Mercurial user information.
