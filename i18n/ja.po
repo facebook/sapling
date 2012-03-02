@@ -66,6 +66,7 @@
 # header                ヘッダ
 # history(, revision)   変更履歴
 # import                取り込み(patch 系)/読み込み(module/extension)
+# immutable( revision)  改変不能(リビジョン)
 # interrupt             中断
 # list of ....          列挙された..../.... の一覧
 # local (repo)          手元(のリポジトリ)
@@ -110,7 +111,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-01-31 19:08+0900\n"
+"POT-Creation-Date: 2012-02-29 15:53+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -248,7 +249,7 @@ msgid ""
 msgstr ""
 
 msgid "::"
-msgstr ""
+msgstr "::"
 
 msgid "  [hooks]"
 msgstr "  [hooks]"
@@ -1522,7 +1523,7 @@ msgid "remap file names using contents of file"
 msgstr "変換時のファイル名変換用ファイル"
 
 msgid "splice synthesized history into place"
-msgstr "履歴の合成"
+msgstr "継ぎ合わせによる履歴の合成"
 
 msgid "change branch names while converting"
 msgstr "変換時のブランチ名変換用ファイル"
@@ -1625,6 +1626,10 @@ msgid "could not open map file %r: %s"
 msgstr "変換ファイル %r を開くことができません: %s"
 
 #, python-format
+msgid "syntax error in %s(%d): child parent1[,parent2] expected"
+msgstr "%s(%d) での文法エラー: 正しい形式は 子 親1[,親2]"
+
+#, python-format
 msgid "%s: invalid source repository type"
 msgstr "%s: 変換元リポジトリ種別が不正です"
 
@@ -1654,8 +1659,16 @@ msgid "scanning"
 msgstr "走査中"
 
 #, python-format
+msgid "splice map revision %s is not being converted, ignoring\n"
+msgstr "継ぎ合わせ指定中の %s が変換対象ではないため無視します\n"
+
+#, python-format
+msgid "unknown splice map parent: %s"
+msgstr "継ぎ合わせ指定に未知の親リビジョンがあります: %s"
+
+#, python-format
 msgid "unknown sort mode: %s"
-msgstr "未知の整列方式 %s"
+msgstr "未知の整列方式: %s"
 
 #, python-format
 msgid "cycle detected between %s and %s"
@@ -1682,7 +1695,7 @@ msgstr "作成者 %s の %s への変換を、 %s への変換で上書きしま
 
 #, python-format
 msgid "spliced in %s as parents of %s\n"
-msgstr "%s を %s の親として合成\n"
+msgstr "%s を %s の親として継ぎ合わせ\n"
 
 msgid "scanning source...\n"
 msgstr "変換元リポジトリの走査中...\n"
@@ -1916,6 +1929,12 @@ msgid "updating bookmarks\n"
 msgstr "ブックマークの更新中\n"
 
 #, python-format
+msgid ""
+"revision %s not found in destination repository (lookups with "
+"clonebranches=true are not implemented)"
+msgstr ""
+
+#, python-format
 msgid "%s is not a valid start revision"
 msgstr "%s は正しい開始リビジョンではありません"
 
@@ -2077,6 +2096,12 @@ msgid "unable to cope with svn output"
 msgstr "予期せぬ svn 出力のため継続できません"
 
 msgid "writing Subversion tags is not yet implemented\n"
+msgstr ""
+
+#, python-format
+msgid ""
+"splice map revision %s not found in subversion child map (revision lookups "
+"are not implemented)"
 msgstr ""
 
 msgid "automatically manage newlines in repository files"
@@ -4006,6 +4031,9 @@ msgstr "ファイル %s が読み込めません\n"
 msgid "patch %s is empty\n"
 msgstr "パッチ %s は空です\n"
 
+msgid "qpush exactly duplicates child changeset"
+msgstr "qpush の内容が適用先リビジョンと完全に一致します"
+
 msgid "repository commit failed"
 msgstr "リポジトリのコミット操作に失敗"
 
@@ -4177,6 +4205,12 @@ msgstr "未知のリビジョン %s が解除対象に指定されました"
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr "管理対象外のリビジョンが解除対象に指定されました"
 
+msgid "popping would remove an immutable revision"
+msgstr "適用解除対象は改変不能リビジョンです"
+
+msgid "see \"hg help phases\" for details"
+msgstr "詳細は \"hg help phases\" 参照"
+
 msgid "deletions found between repo revs"
 msgstr "リビジョン間で削除が検出されました"
 
@@ -4189,6 +4223,9 @@ msgstr "全てのパッチの適用が解除されました\n"
 
 msgid "cannot refresh a revision with children"
 msgstr "ヘッド以外は qrefresh の対象に指定できません"
+
+msgid "cannot refresh immutable revision"
+msgstr "改変不能リビジョンは qrefresh できません"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
@@ -4267,9 +4304,6 @@ msgstr "リビジョン %d には MQ 管理下に無い子リビジョンがあ�
 #, python-format
 msgid "revision %d is not mutable"
 msgstr "リビジョン %d は改変できません"
-
-msgid "see \"hg help phases\" for details"
-msgstr "詳細は \"hg help phases\" 参照"
 
 #, python-format
 msgid "cannot import merge revision %d"
@@ -4577,14 +4611,14 @@ msgstr "現行パッチの名前表示"
 msgid "hg qnext [-s]"
 msgstr "hg qnext [-s]"
 
-msgid "print the name of the next patch"
-msgstr "現行パッチの「次」の既知のパッチの名前表示"
+msgid "print the name of the next pushable patch"
+msgstr "現行パッチの「次」に適用されるパッチの名前表示"
 
 msgid "hg qprev [-s]"
 msgstr "hg qprev [-s]"
 
-msgid "print the name of the previous patch"
-msgstr "現行パッチの「前」の既知のパッチの名前表示"
+msgid "print the name of the previous applied patch"
+msgstr "現行パッチの「前」に適用されているパッチの名前表示"
 
 msgid "import uncommitted changes (DEPRECATED)"
 msgstr "作業領域の変更内容のパッチへの取り込み(非推奨)"
@@ -6397,7 +6431,7 @@ msgstr "元リビジョンを維持する場合は --keep を使用してくだ�
 
 #, python-format
 msgid "can't rebase immutable changeset %s"
-msgstr "改変不可のリビジョン %s は rebase できません"
+msgstr "改変不能なリビジョン %s は rebase できません"
 
 msgid "see hg help phases for details"
 msgstr ""
@@ -7520,8 +7554,12 @@ msgid "revision matching date not found"
 msgstr "リビジョンに一致する日付がありません"
 
 #, python-format
+msgid "cannot follow file not in parent revision: \"%s\""
+msgstr "親リビジョンに存在しないファイルは追跡できません: \"%s\""
+
+#, python-format
 msgid "cannot follow nonexistent file: \"%s\""
-msgstr "存在しないファイルを追跡できません: \"%s\""
+msgstr "存在しないファイルは追跡できません: \"%s\""
 
 msgid "can only follow copies/renames for explicit filenames"
 msgstr "ファイル名が明示された場合のみ複製/改名を追跡可能です"
@@ -7714,14 +7752,12 @@ msgid ""
 "    repository."
 msgstr "    構成管理へのファイルの追加登録を予約します。"
 
-#, fuzzy
 msgid ""
 "    The files will be added to the repository at the next commit. To\n"
 "    undo an add before that, see :hg:`forget`."
 msgstr ""
-"    指定されたファイルは次回のコミットから構成管理対象となります。\n"
-"    追加登録のコミット前取り消しは、 :hg:`help revert`(<--forget?) を参照して\n"
-"    ください。"
+"    指定されたファイルは、 次回のコミットから構成管理対象となります。\n"
+"    追加登録のコミット前取り消しは :hg:`help forget` を参照してください。"
 
 msgid "    If no names are given, add all files to the repository."
 msgstr ""
@@ -10883,9 +10919,8 @@ msgid ""
 "    project in the working directory."
 msgstr ""
 "    パスや URL で指定される連携先リポジトリ中の、 全てのリビジョンが\n"
-"    (-R 指定が無い場合は現在の)リポジトリへの取り込み対象となります。\n"
-"    特に指定が無い場合、 このコマンドを実行しても、 作業領域の内容は更新\n"
-"    されません。"
+"    (-R 指定が無い場合は現在の) リポジトリへの取り込み対象となります。\n"
+"    特に指定が無い場合、 このコマンドによる作業領域の更新はありません。"
 
 msgid ""
 "    Use :hg:`incoming` if you want to see what would have been added\n"
@@ -10906,12 +10941,11 @@ msgstr ""
 "    詳細は :hg:`help urls` を参照してください。"
 
 msgid ""
-"    Returns 0 on success, 1 if no changes found or an update had\n"
-"    unresolved files.\n"
+"    Returns 0 on success, 1 if an update had unresolved files.\n"
 "    "
 msgstr ""
-"    成功時のコマンド終了値は 0、 取り込みの必要が無かった場合や、\n"
-"    作業領域更新に失敗した場合は 1 です。\n"
+"    成功時のコマンド終了値は 0、 作業領域更新により、 \n"
+"    衝突未解消ファイルが生じる場合は 1 です。\n"
 "    "
 
 #, python-format
@@ -12571,7 +12605,7 @@ msgid ""
 "    File that is modified according to status."
 msgstr ""
 "``modified()``\n"
-"    更新ステータスを持つファイル"
+"    更新ステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "modified" is a keyword
 msgid "modified takes no arguments"
@@ -12582,7 +12616,7 @@ msgid ""
 "    File that is added according to status."
 msgstr ""
 "``added()``\n"
-"    追加ステータスを持つファイル"
+"    追加ステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "added" is a keyword
 msgid "added takes no arguments"
@@ -12593,7 +12627,7 @@ msgid ""
 "    File that is removed according to status."
 msgstr ""
 "``removed()``\n"
-"    登録除外(予定)ステータスを持つファイル"
+"    登録除外ステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "removed" is a keyword
 msgid "removed takes no arguments"
@@ -12604,7 +12638,7 @@ msgid ""
 "    File that is deleted according to status."
 msgstr ""
 "``deleted()``\n"
-"    作業領域のファイル不在ステータスを持つファイル"
+"    不在ステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "deleted" is a keyword
 msgid "deleted takes no arguments"
@@ -12632,7 +12666,7 @@ msgstr ""
 "``ignored()``\n"
 "    無視ステータスを持つファイル。\n"
 "    本述語が指定された時のみ、\n"
-"    無視ファイルが Mercurial の取り扱い対象になります。"
+"    無視対象ファイルが Mercurial の取り扱い対象になります。"
 
 #. i18n: "ignored" is a keyword
 msgid "ignored takes no arguments"
@@ -12643,7 +12677,7 @@ msgid ""
 "    File that is clean according to status."
 msgstr ""
 "``clean()``\n"
-"    変更無しステータスを持つファイル"
+"    変更無しステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "clean" is a keyword
 msgid "clean takes no arguments"
@@ -12778,7 +12812,7 @@ msgid ""
 "    File that is recorded as being copied."
 msgstr ""
 "``copied()``\n"
-"    複製されたファイル"
+"    複製先ステータスを持つファイル (訳注: 未コミット時点でのみ判定可能)"
 
 #. i18n: "copied" is a keyword
 msgid "copied takes no arguments"
@@ -16281,15 +16315,17 @@ msgstr ""
 msgid ""
 "Mercurial supports a functional language for selecting a set of\n"
 "files. "
-msgstr ""
-"Mercurial は、 複数のファイルを一括指定するための、\n"
-"問い合わせ言語を提供しています。"
+msgstr "Mercurial はファイル指定のための問い合わせ言語を提供しています。"
 
 msgid ""
 "Like other file patterns, this pattern type is indicated by a prefix,\n"
 "'set:'. The language supports a number of predicates which are joined\n"
 "by infix operators. Parenthesis can be used for grouping."
 msgstr ""
+"他のファイルパターン指定と同様に、 パターン種別が定められていて、\n"
+"'set:' 接頭辞で記述を始めます。 問い合わせ言語は「述語」 (predicate)\n"
+"(訳注: いわゆる「関数」的なもの) を提供しており、二項演算子による結合や、\n"
+"括弧によるグループ化も可能です。"
 
 msgid ""
 "Identifiers such as filenames or patterns must be quoted with single\n"
@@ -16298,88 +16334,101 @@ msgid ""
 "predefined predicates. This generally applies to file patterns other\n"
 "than globs and arguments for predicates."
 msgstr ""
+"ファイル名やパターンが、 ``[.*{}[]?/\\_a-zA-Z0-9\\x80-\\xff]``\n"
+"以外の文字や、 既存の述語と一致する場合、 引用符(') ないし二重引用符(\")\n"
+"で囲ってください。 この仕様は、 glob 対象や述語の引数以外の、\n"
+"全てのファイルパターンに適用されます。"
 
 msgid ""
 "Special characters can be used in quoted identifiers by escaping them,\n"
 "e.g., ``\\n`` is interpreted as a newline. To prevent them from being\n"
 "interpreted, strings can be prefixed with ``r``, e.g. ``r'...'``."
 msgstr ""
+"エスケープ表記により、 引用符中の文字列中で、 特殊文字を使用可能です。\n"
+"例: ``\\n`` は改行文字扱い。 特殊文字として解釈させたくない場合は、\n"
+"文字列指定の冒頭に ``r`` を付けます。 例: ``r'...'``."
 
 msgid "There is a single prefix operator:"
-msgstr ""
+msgstr "使用可能な単項演算子を以下に列挙します:"
 
 msgid ""
 "``not x``\n"
 "  Files not in x. Short form is ``! x``."
 msgstr ""
+"``not x``\n"
+"  ファイル群 x に含まれないファイル。 ``! x`` とも表記可能。"
 
 msgid "These are the supported infix operators:"
-msgstr ""
+msgstr "使用可能な二項演算子を以下に列挙します:"
 
 msgid ""
 "``x and y``\n"
 "  The intersection of files in x and y. Short form is ``x & y``."
 msgstr ""
+"``x and y``\n"
+"  ファイル群 x と y の共通部分。 ``x & y`` とも表記可能。"
 
 msgid ""
 "``x or y``\n"
 "  The union of files in x and y. There are two alternative short\n"
 "  forms: ``x | y`` and ``x + y``."
 msgstr ""
+"``x or y``\n"
+"  ファイル群 x と y の総和。 ``x | y`` 又は ``x + y`` とも表記可能。"
 
 msgid ""
 "``x - y``\n"
 "  Files in x but not in y."
-msgstr ""
+msgstr "  ファイル群 x のうち、 y に属さないもの。"
 
 msgid "The following predicates are supported:"
-msgstr ""
+msgstr "使用可能な述語を以下に列挙します:"
 
 msgid ".. predicatesmarker"
 msgstr ""
 
 msgid "Some sample queries:"
-msgstr ""
+msgstr "問い合わせの記述例:"
 
 msgid ""
 "- Show status of files that appear to be binary in the working directory::"
-msgstr ""
+msgstr "- 作業領域中のバイナリ扱いのファイルの状態を表示::"
 
 msgid "    hg status -A \"set:binary()\""
-msgstr ""
+msgstr "    hg status -A \"set:binary()\""
 
 msgid "- Forget files that are in .hgignore but are already tracked::"
-msgstr ""
+msgstr "- .hgignore 対象の中で、 既に構成管理されているファイルを登録除外::"
 
 msgid "    hg forget \"set:hgignore() and not ignored()\""
-msgstr ""
+msgstr "    hg forget \"set:hgignore() and not ignored()\""
 
 msgid "- Find text files that contain a string::"
-msgstr ""
+msgstr "- 正規表現 magic が含まれているテキストファイルの名前を表示::"
 
 msgid "    hg locate \"set:grep(magic) and not binary()\""
-msgstr ""
+msgstr "    hg locate \"set:grep(magic) and not binary()\""
 
 msgid "- Find C files in a non-standard encoding::"
-msgstr ""
+msgstr "- UTF-8 以外の文字コードを使う C 言語ソースのファイル名を表示::"
 
 msgid "    hg locate \"set:**.c and not encoding('UTF-8')\""
-msgstr ""
+msgstr "    hg locate \"set:**.c and not encoding('UTF-8')\""
 
 msgid "- Revert copies of large binary files::"
-msgstr ""
+msgstr "- 指定サイズ以上でバイナリ扱いのファイルの複製を取り消し::"
 
 msgid "    hg revert \"set:copied() and binary() and size('>1M')\""
-msgstr ""
+msgstr "    hg revert \"set:copied() and binary() and size('>1M')\""
 
 msgid "- Remove files listed in foo.lst that contain the letter a or b::"
-msgstr ""
+msgstr "- foo.lst の一覧中で a 又は b を名前に含むファイルを登録除外::"
 
 msgid "    hg remove \"set: 'listfile:foo.lst' and (**a* or **b*)\""
-msgstr ""
+msgstr "    hg remove \"set: 'listfile:foo.lst' and (**a* or **b*)\""
 
 msgid "See also :hg:`help patterns`.\n"
-msgstr ""
+msgstr ":hg:`help patterns` も参照してください。\n"
 
 msgid ""
 "Ancestor\n"
@@ -17910,6 +17959,12 @@ msgstr " - リビジョン番号とフェーズを表示::"
 msgid "     hg log --template \"{rev} {phase}\\n\""
 msgstr "     hg log --template \"{rev} {phase}\\n\""
 
+msgid " - resynchronize draft changesets relative to a remote repository::"
+msgstr " - 連携先リポジトリに応じて、リビジョンを draft フェーズ化::"
+
+msgid "     hg phase -fd 'outgoing(URL)' "
+msgstr "     hg phase -fd 'outgoing(URL)' "
+
 msgid ""
 "See :hg:`help phase` for more information on manually manipulating phases.\n"
 msgstr "フェーズの手動操作に関しては :hg:`help phase` を参照してください。\n"
@@ -17979,25 +18034,30 @@ msgstr ""
 msgid ""
 "Mercurial supports a functional language for selecting a set of\n"
 "revisions."
-msgstr ""
-"Mercurial は、 複数のリビジョンを一括指定するための問い合わせ言語を提供\n"
-"しています。"
+msgstr "Mercurial はリビジョン指定のための問い合わせ言語を提供しています。"
 
 msgid ""
 "The language supports a number of predicates which are joined by infix\n"
 "operators. Parenthesis can be used for grouping."
 msgstr ""
+"問い合わせ言語は「述語」 (predicate) (訳注: いわゆる「関数」的なもの)\n"
+"を提供しており、 二項演算子による結合や、 括弧によるグループ化も可能です。"
 
 msgid ""
 "Identifiers such as branch names may need quoting with single or\n"
 "double quotes if they contain characters like ``-`` or if they match\n"
 "one of the predefined predicates."
 msgstr ""
+"識別子として使用するブランチ名などが、 ``-`` 文字や、\n"
+"既存の述語と一致する場合、 引用符(') ないし二重引用符(\")\n"
+"で囲ってください。"
 
 msgid ""
 "``not x``\n"
 "  Changesets not in x. Short form is ``! x``."
 msgstr ""
+"``not x``\n"
+"  x に含まれないリビジョン群。 ``! x`` とも表記可能。"
 
 msgid ""
 "``x::y``\n"
@@ -18006,9 +18066,14 @@ msgid ""
 "  is left out, this is equivalent to ``ancestors(y)``, if the second\n"
 "  is left out it is equivalent to ``descendants(x)``."
 msgstr ""
+"``x::y``\n"
+"  x の子孫且つ y の祖先に相当するリビジョン群 (x および y 自身を含む)。\n"
+"  左側のリビジョン指定 (``x``) が省略された場合は ``ancestors(y)``、\n"
+"  右側のリビジョン指定 (``y``) が省略された場合は ``descendants(x)``\n"
+"  と等価です。"
 
 msgid "  An alternative syntax is ``x..y``."
-msgstr ""
+msgstr "  ``x..y`` とも表記可能。"
 
 msgid ""
 "``x:y``\n"
@@ -18016,22 +18081,32 @@ msgid ""
 "  inclusive. Either endpoint can be left out, they default to 0 and\n"
 "  tip."
 msgstr ""
+"``x:y``\n"
+"  リビジョン番号 x から y の間の全リビジョン群 (x および y 自身を含む)。\n"
+"  左右のリビジョン指定が省略された場合は、 それぞれが 0 および tip\n"
+"  とみなされます。"
 
 msgid ""
 "``x and y``\n"
 "  The intersection of changesets in x and y. Short form is ``x & y``."
 msgstr ""
+"``x and y``\n"
+"  リビジョン群 x と y の共通部分。 ``x & y`` とも表記可能。"
 
 msgid ""
 "``x or y``\n"
 "  The union of changesets in x and y. There are two alternative short\n"
 "  forms: ``x | y`` and ``x + y``."
 msgstr ""
+"``x or y``\n"
+"  リビジョン群 x と y の総和。 ``x | y`` 又は ``x + y`` とも表記可能。"
 
 msgid ""
 "``x - y``\n"
 "  Changesets in x but not in y."
 msgstr ""
+"``x - y``\n"
+"  リビジョン群 x のうち、 y に属さないもの。"
 
 msgid ""
 "``x^n``\n"
@@ -18039,42 +18114,58 @@ msgid ""
 "  For n == 0, x; for n == 1, the first parent of each changeset in x;\n"
 "  for n == 2, the second parent of changeset in x."
 msgstr ""
+"``x^n``\n"
+"  リビジョン群 x 中の各リビジョンの、 n 番目の親リビジョン。\n"
+"  n には 0 1 ないし 2 を指定可能。\n"
+"  n == 0 ならリビジョン自身、 n == 1 なら第1親、 n == 2 なら第2親。"
 
 msgid ""
 "``x~n``\n"
 "  The nth first ancestor of x; ``x~0`` is x; ``x~3`` is ``x^^^``."
 msgstr ""
+"``x~n``\n"
+"  リビジョン群 x 中の各リビジョンの、 第1親側の n 番目の祖先。\n"
+"  ``x~0`` はリビジョン自身、 ``x~3`` は ``x^^^`` と等価。"
 
 msgid "There is a single postfix operator:"
-msgstr ""
+msgstr "使用可能な単項演算子を以下に列挙します:"
 
 msgid ""
 "``x^``\n"
 "  Equivalent to ``x^1``, the first parent of each changeset in x."
 msgstr ""
+"``x^``\n"
+"  リビジョン群 x 中の各リビジョンの、 第1親リビジョン。 ``x^1`` と等価。"
 
 msgid ""
 "\n"
 "The following predicates are supported:"
 msgstr ""
+"\n"
+"使用可能な述語を以下に列挙します:"
 
 msgid ""
 "New predicates (known as \"aliases\") can be defined, using any combination "
 "of\n"
 "existing predicates or other aliases. An alias definition looks like::"
 msgstr ""
+"既存の述語や別名 (alias) を組み合わせることで、 新しい述語を定義可能です。\n"
+"別名は、 Mercurial 設定ファイルの ``revsetalias`` セクションにおける、\n"
+"以下のような記述で定義します::"
 
 msgid "  <alias> = <definition>"
-msgstr ""
+msgstr "  <別名> = <定義>"
 
 msgid ""
 "in the ``revsetalias`` section of a Mercurial configuration file. Arguments\n"
 "of the form `$1`, `$2`, etc. are substituted from the alias into the\n"
 "definition."
 msgstr ""
+"別名記述部分において `$1` や `$2` といった形式の引数を記述することで、\n"
+"別名定義部分でその引数を使用できます。"
 
 msgid "For example,"
-msgstr ""
+msgstr "記述例"
 
 msgid ""
 "  [revsetalias]\n"
@@ -18082,14 +18173,20 @@ msgid ""
 "  d($1) = sort($1, date)\n"
 "  rs($1, $2) = reverse(sort($1, $2))"
 msgstr ""
+"  [revsetalias]\n"
+"  h = heads()\n"
+"  d($1) = sort($1, date)\n"
+"  rs($1, $2) = reverse(sort($1, $2))"
 
 msgid ""
 "defines three aliases, ``h``, ``d``, and ``rs``. ``rs(0:tip, author)`` is\n"
 "exactly equivalent to ``reverse(sort(0:tip, author))``."
 msgstr ""
+"上記の記述で、 3つの別名 ``h``、 ``d`` および ``rs`` が定義されます。\n"
+"``rs(0:tip, author)`` は ``reverse(sort(0:tip, author))`` と同一です。"
 
 msgid "Command line equivalents for :hg:`log`::"
-msgstr ""
+msgstr ":hg:`log` のコマンド行オプション指定に対する等価な記述::"
 
 msgid ""
 "  -f    ->  ::.\n"
@@ -18101,48 +18198,62 @@ msgid ""
 "  -P x  ->  !::x\n"
 "  -l x  ->  limit(expr, x)"
 msgstr ""
+"  -f    ->  ::.\n"
+"  -d x  ->  date(x)\n"
+"  -k x  ->  keyword(x)\n"
+"  -m    ->  merge()\n"
+"  -u x  ->  user(x)\n"
+"  -b x  ->  branch(x)\n"
+"  -P x  ->  !::x\n"
+"  -l x  ->  limit(expr, x)"
 
 msgid "- Changesets on the default branch::"
-msgstr ""
+msgstr "- default ブランチのリビジョン群::"
 
 msgid "    hg log -r \"branch(default)\""
-msgstr ""
+msgstr "    hg log -r \"branch(default)\""
 
 msgid "- Changesets on the default branch since tag 1.5 (excluding merges)::"
-msgstr ""
+msgstr "- タグ 1.5 以後の default ブランチのリビジョン群 (マージ実施除く)::"
 
 msgid "    hg log -r \"branch(default) and 1.5:: and not merge()\""
-msgstr ""
+msgstr "    hg log -r \"branch(default) and 1.5:: and not merge()\""
 
 msgid "- Open branch heads::"
-msgstr ""
+msgstr "- 閉鎖 (close) されていないブランチンのヘッド::"
 
 msgid "    hg log -r \"head() and not closed()\""
-msgstr ""
+msgstr "    hg log -r \"head() and not closed()\""
 
 msgid ""
 "- Changesets between tags 1.3 and 1.5 mentioning \"bug\" that affect\n"
 "  ``hgext/*``::"
 msgstr ""
+"- タグ 1.3 と 1.5 の間で \"bug\" に言及し ``hgext/*``\n"
+"  に影響するリビジョン群::"
 
 msgid "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
-msgstr ""
+msgstr "    hg log -r \"1.3::1.5 and keyword(bug) and file('hgext/*')\""
 
 msgid "- Changesets committed in May 2008, sorted by user::"
-msgstr ""
+msgstr "- 2008 年 5 月 (May 2008) におけるリビジョン群をユーザ名順で表示::"
 
 msgid "    hg log -r \"sort(date('May 2008'), user)\""
-msgstr ""
+msgstr "    hg log -r \"sort(date('May 2008'), user)\""
 
 msgid ""
 "- Changesets mentioning \"bug\" or \"issue\" that are not in a tagged\n"
 "  release::"
 msgstr ""
+"- \"bug\" 又は \"issue\" に言及したリビジョン群のうち、 タグ tagged\n"
+"  時点の内容に含まれないもの::"
 
 msgid ""
 "    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
 "())\"\n"
 msgstr ""
+"    hg log -r \"(keyword(bug) or keyword(issue)) and not ancestors(tagged"
+"())\"\n"
 
 msgid ""
 "Subrepositories let you nest external repositories or projects into a\n"
@@ -19577,6 +19688,7 @@ msgid ""
 "    to ensure special escape characters are handled correctly. Unlike\n"
 "    ``keyword(string)``, the match is case-sensitive."
 msgstr ""
+"``grep(regex)``\n"
 "    ``keyword(string)`` と同等ですが、 正規表現を使用できます。\n"
 "    ``grep(r'...')`` 形式の場合、 特殊文字もそのまま適用されます。\n"
 "    (※ 訳注: 接頭辞 'r' の使用は、 バックスラッシュ等を含めて、\n"
