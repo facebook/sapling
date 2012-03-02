@@ -497,6 +497,7 @@ class cookietransportrequest(object):
 
     def request(self, host, handler, request_body, verbose=0):
         self.verbose = verbose
+        self.accept_gzip_encoding = False
 
         # issue XML-RPC request
         h = self.make_connection(host)

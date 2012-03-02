@@ -500,7 +500,7 @@ class hgsubrepo(abstractsubrepo):
         anc = dst.ancestor(cur)
 
         def mergefunc():
-            if anc == cur:
+            if anc == cur and dst.branch() == cur.branch():
                 self._repo.ui.debug("updating subrepo %s\n" % subrelpath(self))
                 hg.update(self._repo, state[1])
             elif anc == dst:

@@ -454,7 +454,7 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
     # distutils.sysconfig
     version = runcmd(['/usr/bin/xcodebuild', '-version'], {})[0].splitlines()
     if version:
-        version = version.splitlines()[0]
+        version = version[0]
         xcode4 = (version.startswith('Xcode') and
                   StrictVersion(version.split()[1]) >= StrictVersion('4.0'))
     else:
