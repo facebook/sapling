@@ -77,6 +77,7 @@ Invoke pull --rebase and nothing to rebase:
 
   $ cd ../c
 
+  $ hg book norebase
   $ hg pull --rebase
   pulling from $TESTTMP/a (glob)
   searching for changes
@@ -86,6 +87,7 @@ Invoke pull --rebase and nothing to rebase:
   added 1 changesets with 1 changes to 1 files
   nothing to rebase
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating bookmark norebase
 
   $ hg tglog -l 1
   @  2: 'R1'

@@ -628,6 +628,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
             ui.debug('--update and --rebase are not compatible, ignoring '
                      'the update flag\n')
 
+        movemarkfrom = repo['.'].node()
         cmdutil.bailifchanged(repo)
         revsprepull = len(repo)
         origpostincoming = commands.postincoming
@@ -646,6 +647,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
             if dest != repo['.'].rev():
                 # there was nothing to rebase we force an update
                 hg.update(repo, dest)
+                if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                    ui.status(_("updating bookmark %s\n")
+                              % repo._bookmarkcurrent)
     else:
         if opts.get('tool'):
             raise util.Abort(_('--tool can only be used with --rebase'))
