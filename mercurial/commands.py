@@ -1381,7 +1381,8 @@ def debugbuilddag(ui, repo, text=None,
         at = -1
         atbranch = 'default'
         nodeids = []
-        ui.progress(_('building'), 0, unit=_('revisions'), total=total)
+        id = 0
+        ui.progress(_('building'), id, unit=_('revisions'), total=total)
         for type, data in dagparser.parsedag(text):
             if type == 'n':
                 ui.note('node %s\n' % str(data))

@@ -5,7 +5,7 @@
   <?include defines.wxi ?>
 
   <?define hg_po_langs = 
-    da;de;el;fr;it;ja;pt_BR;sv;zh_CN;zh_TW
+    da;de;el;fr;it;ja;pt_BR;ro;ru;sv;zh_CN;zh_TW
   ?>
 
   <Fragment>

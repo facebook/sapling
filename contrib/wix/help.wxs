@@ -20,6 +20,7 @@
           <File Name="merge-tools.txt" />
           <File Name="multirevs.txt" />
           <File Name="patterns.txt" />
+          <File Name="phases.txt" />
           <File Name="revisions.txt" />
           <File Name="revsets.txt" />
           <File Name="subrepos.txt" />

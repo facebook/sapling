@@ -18,10 +18,10 @@
   <?define doc.style.css = {172F8262-98E0-4711-BD39-4DAE0D77EF05} ?>
 
   <!-- help.wxs -->
-  <?define helpFolder.guid = {84025FAA-7EB7-4D79-A097-D2D18852D78E} ?>
+  <?define helpFolder.guid = {9FA957DB-6DFE-44f2-AD03-293B2791CF17} ?>
   
   <!-- i18n.wxs -->
-  <?define i18nFolder.guid = {EADFA693-A0B5-4f31-87C9-3997CFAC1B42} ?>
+  <?define i18nFolder.guid = {1BF8026D-CF7C-4174-AEE6-D6B7BF119248} ?>
 
   <!-- templates.wxs -->
   <?define templates.root.guid = {8DF97574-33E9-412F-8414-65B48BB18783} ?>

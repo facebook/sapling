@@ -138,7 +138,7 @@ just check that directories have the same mode.
   $ hg init setgid
   $ cd setgid
   $ chmod g+rwx .hg/store
-  $ chmod g+s .hg/store 2> /dev/null
+  $ chmod g+s .hg/store 2> /dev/null || true
   $ mkdir dir
   $ touch dir/file
   $ hg ci -qAm 'add dir/file'

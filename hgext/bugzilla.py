@@ -336,7 +336,7 @@ class bzmysql(bzaccess):
 
     The earliest Bugzilla version this is tested with is version 2.16.
 
-    If your Bugzilla is version 3.2 or above, you are strongly
+    If your Bugzilla is version 3.4 or above, you are strongly
     recommended to use the XMLRPC access method instead.
     '''
 
