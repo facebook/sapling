@@ -1043,12 +1043,8 @@ class queue(object):
                 hg.clean(repo, urev)
                 repo.dirstate.write()
 
-            self.removeundo(repo)
             for rev in revs:
                 repair.strip(self.ui, repo, rev, backup)
-            # strip may have unbundled a set of backed up revisions after
-            # the actual strip
-            self.removeundo(repo)
         finally:
             release(lock, wlock)
 
