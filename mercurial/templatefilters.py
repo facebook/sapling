@@ -242,12 +242,14 @@ def permissions(flags):
     return "-rw-r--r--"
 
 def person(author):
-    """:person: Any text. Returns the text before an email address."""
+    """:person: Any text. Returns the name before an email address,
+    interpreting it as per RFC 5322.
+    """
     if not '@' in author:
         return author
     f = author.find('<')
     if f != -1:
-        return author[:f].rstrip()
+        return author[:f].strip(' "').replace('\\"', '"')
     f = author.find('@')
     return author[:f].replace('.', ' ')
 
