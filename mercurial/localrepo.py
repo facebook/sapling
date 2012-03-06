@@ -750,8 +750,8 @@ class localrepository(repo.repository):
             raise error.RepoError(
                 _("abandoned transaction found - run hg recover"))
 
-        journalfiles = self._writejournal(desc)
-        renames = [(x, undoname(x)) for x in journalfiles]
+        self._writejournal(desc)
+        renames = [(x, undoname(x)) for x in self._journalfiles()]
 
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                      self.sjoin("journal"),
@@ -759,6 +759,15 @@ class localrepository(repo.repository):
                                      self.store.createmode)
         self._transref = weakref.ref(tr)
         return tr
+
+    def _journalfiles(self):
+        return (self.sjoin('journal'), self.join('journal.dirstate'),
+                self.join('journal.branch'), self.join('journal.desc'),
+                self.join('journal.bookmarks'),
+                self.sjoin('journal.phaseroots'))
+
+    def undofiles(self):
+        return [undoname(x) for x in self._journalfiles()]
 
     def _writejournal(self, desc):
         # save dirstate for rollback
@@ -782,11 +791,6 @@ class localrepository(repo.repository):
             util.copyfile(phasesname, self.sjoin('journal.phaseroots'))
         else:
             self.sopener.write('journal.phaseroots', '')
-
-        return (self.sjoin('journal'), self.join('journal.dirstate'),
-                self.join('journal.branch'), self.join('journal.desc'),
-                self.join('journal.bookmarks'),
-                self.sjoin('journal.phaseroots'))
 
     def recover(self):
         lock = self.lock()
