@@ -56,7 +56,7 @@ def _collectbrokencsets(repo, files, striprev):
 
 def strip(ui, repo, node, backup="all"):
     cl = repo.changelog
-    # TODO delete the undo files, and handle undo of merge sets
+    # TODO handle undo of merge sets
     striprev = cl.rev(node)
 
     keeppartialbundle = backup == 'strip'
@@ -141,6 +141,14 @@ def strip(ui, repo, node, backup="all"):
             f.close()
             if not keeppartialbundle:
                 os.unlink(chgrpfile)
+
+        # remove undo files
+        for undofile in repo.undofiles():
+            try:
+                os.unlink(undofile)
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    ui.warn(_('error removing %s: %s\n') % (undofile, str(e)))
 
         for m in updatebm:
             bm[m] = repo['.'].node()
