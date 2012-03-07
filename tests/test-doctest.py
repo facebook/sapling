@@ -39,3 +39,6 @@ doctest.testmod(mercurial.revset)
 
 import mercurial.minirst
 doctest.testmod(mercurial.minirst)
+
+import mercurial.templatefilters
+doctest.testmod(mercurial.templatefilters)
