@@ -277,6 +277,12 @@ if sys.platform == 'cygwin':
     def checkexec(path):
         return False
 
+    # Similarly, Cygwin's symlink emulation is likely to create
+    # problems when Mercurial is used from both Cygwin and native
+    # Windows, with other native tools, or on shared volumes
+    def checklink(path):
+        return False
+
 def shellquote(s):
     if os.sys.platform == 'OpenVMS':
         return '"%s"' % s
