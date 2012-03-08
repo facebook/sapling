@@ -209,9 +209,6 @@
    >                             if os.path.exists(self.wjoin(lfutil.standin(lfile))):
    warning: line over 80 characters
   hgext/mq.py:0:
-   >                     raise util.Abort(_("%s does not have a parent recorded" % root))
-   warning: line over 80 characters
-  hgext/mq.py:0:
    >                     raise util.Abort(_("cannot push --exact with applied patches"))
    warning: line over 80 characters
   hgext/mq.py:0:

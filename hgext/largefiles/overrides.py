@@ -157,7 +157,7 @@ def remove_largefiles(ui, repo, *pats, **opts):
                 # If this is being called by addremove, notify the user that we
                 # are removing the file.
                 if getattr(repo, "_isaddremove", False):
-                    ui.status(_('removing %s\n' % f))
+                    ui.status(_('removing %s\n') % f)
                 if os.path.exists(repo.wjoin(f)):
                     util.unlinkpath(repo.wjoin(f))
             lfdirstate.remove(f)
@@ -682,7 +682,7 @@ def override_pull(orig, ui, repo, source=None, **opts):
         for head in newheads:
             (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
             numcached += len(cached)
-        ui.status(_("%d largefiles cached\n" % numcached))
+        ui.status(_("%d largefiles cached\n") % numcached)
     return result
 
 def override_rebase(orig, ui, repo, **opts):

@@ -113,7 +113,7 @@ class monotone_source(converter_source, commandline):
 
         stream = self.mtnreadfp.read(1)
         if stream not in 'mewptl':
-            raise util.Abort(_('bad mtn packet - bad stream type %s' % stream))
+            raise util.Abort(_('bad mtn packet - bad stream type %s') % stream)
 
         read = self.mtnreadfp.read(1)
         if read != ':':

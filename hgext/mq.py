@@ -1193,7 +1193,8 @@ class queue(object):
                 root = self.series[start]
                 target = patchheader(self.join(root), self.plainmode).parent
                 if not target:
-                    raise util.Abort(_("%s does not have a parent recorded" % root))
+                    raise util.Abort(
+                        _("%s does not have a parent recorded") % root)
                 if not repo[target] == repo['.']:
                     hg.update(repo, target)
 
