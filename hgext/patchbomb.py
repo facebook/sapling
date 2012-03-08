@@ -384,7 +384,7 @@ def patchbomb(ui, repo, *revs, **opts):
         prefix = '[PATCH %0*d of %d%s]' % (tlen, 0, len(patches), flag)
 
         subj = (opts.get('subject') or
-                prompt(ui, 'Subject: ', rest=prefix, default=''))
+                prompt(ui, '(optional) Subject: ', rest=prefix, default=''))
         if not subj:
             return None         # skip intro if the user doesn't bother
 

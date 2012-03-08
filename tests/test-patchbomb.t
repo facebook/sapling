@@ -1572,7 +1572,7 @@ no intro message in non-interactive mode
   >  -r 0:1
   This patch series consists of 2 patches.
   
-  Subject: [PATCH 0 of 2] 
+  (optional) Subject: [PATCH 0 of 2] 
   
   Displaying [PATCH 1 of 2] a ...
   Content-Type: text/plain; charset="us-ascii"
