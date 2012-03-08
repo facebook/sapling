@@ -270,6 +270,13 @@ if sys.platform == 'cygwin':
 
         return encodingupper(path)
 
+    # Cygwin translates native ACLs to POSIX permissions,
+    # but these translations are not supported by native
+    # tools, so the exec bit tends to be set erroneously.
+    # Therefore, disable executable bit access on Cygwin.
+    def checkexec(path):
+        return False
+
 def shellquote(s):
     if os.sys.platform == 'OpenVMS':
         return '"%s"' % s
