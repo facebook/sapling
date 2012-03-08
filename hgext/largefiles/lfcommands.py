@@ -309,7 +309,7 @@ def _converttags(ui, revmap, data):
             newdata.append('%s %s\n' % (node.hex(revmap[newid]),
                 name))
         except KeyError:
-            ui.warn(_('no mapping for id %s\n' % id))
+            ui.warn(_('no mapping for id %s\n') % id)
             continue
     return ''.join(newdata)
 
