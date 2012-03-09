@@ -94,8 +94,13 @@ def makeitemsdoc(topic, doc, marker, items):
             continue
         text = gettext(text)
         lines = text.splitlines()
-        lines[1:] = [('  ' + l.strip()) for l in lines[1:]]
-        entries.append('\n'.join(lines))
+        doclines = [(lines[0])]
+        for l in lines[1:]:
+            # Stop once we find some Python doctest
+            if l.strip().startswith('>>>'):
+                break
+            doclines.append('  ' + l.strip())
+        entries.append('\n'.join(doclines))
     entries = '\n\n'.join(entries)
     return doc.replace(marker, entries)
 
