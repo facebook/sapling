@@ -772,11 +772,12 @@ class localrepository(repo.repository):
         self.opener.write("journal.desc",
                           "%d\n%s\n" % (len(self), desc))
 
-        bkname = self.join('bookmarks')
-        if os.path.exists(bkname):
-            util.copyfile(bkname, self.join('journal.bookmarks'))
-        else:
-            self.opener.write('journal.bookmarks', '')
+        try:
+            bk = self.opener.read("bookmarks")
+        except IOError:
+            bk = ""
+        self.opener.write("journal.bookmarks", bk)
+
         phasesname = self.sjoin('phaseroots')
         if os.path.exists(phasesname):
             util.copyfile(phasesname, self.sjoin('journal.phaseroots'))
