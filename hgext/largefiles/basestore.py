@@ -114,14 +114,14 @@ class basestore(object):
             failed = util.any(self._verifyfile(
                 cctx, cset, contents, standin, verified) for standin in cctx)
 
-        num_revs = len(verified)
-        num_lfiles = len(set([fname for (fname, fnode) in verified]))
+        numrevs = len(verified)
+        numlfiles = len(set([fname for (fname, fnode) in verified]))
         if contents:
             write(_('verified contents of %d revisions of %d largefiles\n')
-                  % (num_revs, num_lfiles))
+                  % (numrevs, numlfiles))
         else:
             write(_('verified existence of %d revisions of %d largefiles\n')
-                  % (num_revs, num_lfiles))
+                  % (numrevs, numlfiles))
 
         return int(failed)
 
@@ -186,9 +186,9 @@ def _openstore(repo, remote=None, put=False):
     except KeyError:
         raise util.Abort(_('unsupported URL scheme %r') % scheme)
 
-    for class_obj in storeproviders:
+    for classobj in storeproviders:
         try:
-            return class_obj(ui, repo, remote)
+            return classobj(ui, repo, remote)
         except lfutil.storeprotonotcapable:
             pass
 

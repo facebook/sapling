@@ -23,14 +23,14 @@ longname = 'largefiles'
 
 # -- Portability wrappers ----------------------------------------------
 
-def dirstate_walk(dirstate, matcher, unknown=False, ignored=False):
+def dirstatewalk(dirstate, matcher, unknown=False, ignored=False):
     return dirstate.walk(matcher, [], unknown, ignored)
 
-def repo_add(repo, list):
+def repoadd(repo, list):
     add = repo[None].add
     return add(list)
 
-def repo_remove(repo, list, unlink=False):
+def reporemove(repo, list, unlink=False):
     def remove(list, unlink):
         wlock = repo.wlock()
         try:
@@ -46,7 +46,7 @@ def repo_remove(repo, list, unlink=False):
             wlock.release()
     return remove(list, unlink=unlink)
 
-def repo_forget(repo, list):
+def repoforget(repo, list):
     forget = repo[None].forget
     return forget(list)
 
@@ -125,21 +125,21 @@ def findfile(repo, hash):
         return path
     return None
 
-class largefiles_dirstate(dirstate.dirstate):
+class largefilesdirstate(dirstate.dirstate):
     def __getitem__(self, key):
-        return super(largefiles_dirstate, self).__getitem__(unixpath(key))
+        return super(largefilesdirstate, self).__getitem__(unixpath(key))
     def normal(self, f):
-        return super(largefiles_dirstate, self).normal(unixpath(f))
+        return super(largefilesdirstate, self).normal(unixpath(f))
     def remove(self, f):
-        return super(largefiles_dirstate, self).remove(unixpath(f))
+        return super(largefilesdirstate, self).remove(unixpath(f))
     def add(self, f):
-        return super(largefiles_dirstate, self).add(unixpath(f))
+        return super(largefilesdirstate, self).add(unixpath(f))
     def drop(self, f):
-        return super(largefiles_dirstate, self).drop(unixpath(f))
+        return super(largefilesdirstate, self).drop(unixpath(f))
     def forget(self, f):
-        return super(largefiles_dirstate, self).forget(unixpath(f))
+        return super(largefilesdirstate, self).forget(unixpath(f))
     def normallookup(self, f):
-        return super(largefiles_dirstate, self).normallookup(unixpath(f))
+        return super(largefilesdirstate, self).normallookup(unixpath(f))
 
 def openlfdirstate(ui, repo):
     '''
@@ -148,7 +148,7 @@ def openlfdirstate(ui, repo):
     '''
     admin = repo.join(longname)
     opener = scmutil.opener(admin)
-    lfdirstate = largefiles_dirstate(opener, ui, repo.root,
+    lfdirstate = largefilesdirstate(opener, ui, repo.root,
                                      repo.dirstate._validate)
 
     # If the largefiles dirstate does not exist, populate and create
@@ -157,7 +157,7 @@ def openlfdirstate(ui, repo):
     if not os.path.exists(os.path.join(admin, 'dirstate')):
         util.makedirs(admin)
         matcher = getstandinmatcher(repo)
-        for standin in dirstate_walk(repo.dirstate, matcher):
+        for standin in dirstatewalk(repo.dirstate, matcher):
             lfile = splitstandin(standin)
             hash = readstandin(repo, lfile)
             lfdirstate.normallookup(lfile)
@@ -169,7 +169,7 @@ def openlfdirstate(ui, repo):
                     raise
     return lfdirstate
 
-def lfdirstate_status(lfdirstate, repo, rev):
+def lfdirstatestatus(lfdirstate, repo, rev):
     match = match_.always(repo.root, repo.getcwd())
     s = lfdirstate.status(match, [], False, False, False)
     unsure, modified, added, removed, missing, unknown, ignored, clean = s
@@ -286,9 +286,9 @@ def composestandinmatcher(repo, rmatcher):
     as the paths specified by the user.'''
     smatcher = getstandinmatcher(repo, rmatcher.files())
     isstandin = smatcher.matchfn
-    def composed_matchfn(f):
+    def composedmatchfn(f):
         return isstandin(f) and rmatcher.matchfn(splitstandin(f))
-    smatcher.matchfn = composed_matchfn
+    smatcher.matchfn = composedmatchfn
 
     return smatcher
 
@@ -296,8 +296,8 @@ def standin(filename):
     '''Return the repo-relative path to the standin for the specified big
     file.'''
     # Notes:
-    # 1) Most callers want an absolute path, but _create_standin() needs
-    #    it repo-relative so lfadd() can pass it to repo_add().  So leave
+    # 1) Most callers want an absolute path, but _createstandin() needs
+    #    it repo-relative so lfadd() can pass it to repoadd().  So leave
     #    it up to the caller to use repo.wjoin() to get an absolute path.
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are
@@ -453,7 +453,7 @@ def getcurrentheads(repo):
 def getstandinsstate(repo):
     standins = []
     matcher = getstandinmatcher(repo)
-    for standin in dirstate_walk(repo.dirstate, matcher):
+    for standin in dirstatewalk(repo.dirstate, matcher):
         lfile = splitstandin(standin)
         standins.append((lfile, readstandin(repo, lfile)))
     return standins

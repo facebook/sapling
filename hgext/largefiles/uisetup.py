@@ -21,7 +21,7 @@ def uisetup(ui):
     # files in the result are under Mercurial's control
 
     entry = extensions.wrapcommand(commands.table, 'add',
-                                   overrides.override_add)
+                                   overrides.overrideadd)
     addopt = [('', 'large', None, _('add as largefile')),
               ('', 'normal', None, _('add as normal file')),
               ('', 'lfsize', '', _('add all files above this size '
@@ -30,19 +30,19 @@ def uisetup(ui):
     entry[1].extend(addopt)
 
     entry = extensions.wrapcommand(commands.table, 'addremove',
-            overrides.override_addremove)
+            overrides.overrideaddremove)
     entry = extensions.wrapcommand(commands.table, 'remove',
-                                   overrides.override_remove)
+                                   overrides.overrideremove)
     entry = extensions.wrapcommand(commands.table, 'forget',
-                                   overrides.override_forget)
+                                   overrides.overrideforget)
     entry = extensions.wrapcommand(commands.table, 'status',
-                                   overrides.override_status)
+                                   overrides.overridestatus)
     entry = extensions.wrapcommand(commands.table, 'log',
-                                   overrides.override_log)
+                                   overrides.overridelog)
     entry = extensions.wrapcommand(commands.table, 'rollback',
-                                   overrides.override_rollback)
+                                   overrides.overriderollback)
     entry = extensions.wrapcommand(commands.table, 'verify',
-                                   overrides.override_verify)
+                                   overrides.overrideverify)
 
     verifyopt = [('', 'large', None, _('verify largefiles')),
                  ('', 'lfa', None,
@@ -52,44 +52,44 @@ def uisetup(ui):
     entry[1].extend(verifyopt)
 
     entry = extensions.wrapcommand(commands.table, 'outgoing',
-        overrides.override_outgoing)
+        overrides.overrideoutgoing)
     outgoingopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(outgoingopt)
     entry = extensions.wrapcommand(commands.table, 'summary',
-                                   overrides.override_summary)
+                                   overrides.overridesummary)
     summaryopt = [('', 'large', None, _('display outgoing largefiles'))]
     entry[1].extend(summaryopt)
 
     entry = extensions.wrapcommand(commands.table, 'update',
-                                   overrides.override_update)
+                                   overrides.overrideupdate)
     entry = extensions.wrapcommand(commands.table, 'pull',
-                                   overrides.override_pull)
+                                   overrides.overridepull)
     entry = extensions.wrapfunction(merge, '_checkunknownfile',
-                                    overrides.override_checkunknownfile)
+                                    overrides.overridecheckunknownfile)
     entry = extensions.wrapfunction(merge, 'manifestmerge',
-                                    overrides.override_manifestmerge)
+                                    overrides.overridemanifestmerge)
     entry = extensions.wrapfunction(filemerge, 'filemerge',
-                                    overrides.override_filemerge)
+                                    overrides.overridefilemerge)
     entry = extensions.wrapfunction(cmdutil, 'copy',
-                                    overrides.override_copy)
+                                    overrides.overridecopy)
 
     # Backout calls revert so we need to override both the command and the
     # function
     entry = extensions.wrapcommand(commands.table, 'revert',
-                                   overrides.override_revert)
+                                   overrides.overriderevert)
     entry = extensions.wrapfunction(commands, 'revert',
-                                    overrides.override_revert)
+                                    overrides.overriderevert)
 
     # clone uses hg._update instead of hg.update even though they are the
     # same function... so wrap both of them)
-    extensions.wrapfunction(hg, 'update', overrides.hg_update)
-    extensions.wrapfunction(hg, '_update', overrides.hg_update)
-    extensions.wrapfunction(hg, 'clean', overrides.hg_clean)
-    extensions.wrapfunction(hg, 'merge', overrides.hg_merge)
+    extensions.wrapfunction(hg, 'update', overrides.hgupdate)
+    extensions.wrapfunction(hg, '_update', overrides.hgupdate)
+    extensions.wrapfunction(hg, 'clean', overrides.hgclean)
+    extensions.wrapfunction(hg, 'merge', overrides.hgmerge)
 
-    extensions.wrapfunction(archival, 'archive', overrides.override_archive)
+    extensions.wrapfunction(archival, 'archive', overrides.overridearchive)
     extensions.wrapfunction(cmdutil, 'bailifchanged',
-                            overrides.override_bailifchanged)
+                            overrides.overridebailifchanged)
 
     # create the new wireproto commands ...
     wireproto.commands['putlfile'] = (proto.putlfile, 'sha')
@@ -109,20 +109,20 @@ def uisetup(ui):
 
     # the hello wireproto command uses wireproto.capabilities, so it won't see
     # our largefiles capability unless we replace the actual function as well.
-    proto.capabilities_orig = wireproto.capabilities
+    proto.capabilitiesorig = wireproto.capabilities
     wireproto.capabilities = proto.capabilities
 
     # these let us reject non-largefiles clients and make them display
     # our error messages
-    protocol.webproto.refuseclient = proto.webproto_refuseclient
-    sshserver.sshserver.refuseclient = proto.sshproto_refuseclient
+    protocol.webproto.refuseclient = proto.webprotorefuseclient
+    sshserver.sshserver.refuseclient = proto.sshprotorefuseclient
 
     # can't do this in reposetup because it needs to have happened before
     # wirerepo.__init__ is called
-    proto.ssh_oldcallstream = sshrepo.sshrepository._callstream
-    proto.http_oldcallstream = httprepo.httprepository._callstream
-    sshrepo.sshrepository._callstream = proto.sshrepo_callstream
-    httprepo.httprepository._callstream = proto.httprepo_callstream
+    proto.ssholdcallstream = sshrepo.sshrepository._callstream
+    proto.httpoldcallstream = httprepo.httprepository._callstream
+    sshrepo.sshrepository._callstream = proto.sshrepocallstream
+    httprepo.httprepository._callstream = proto.httprepocallstream
 
     # don't die on seeing a repo with the largefiles requirement
     localrepo.localrepository.supported |= set(['largefiles'])
@@ -131,13 +131,13 @@ def uisetup(ui):
     for name, module in extensions.extensions():
         if name == 'fetch':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'fetch',
-                overrides.override_fetch)
+                overrides.overridefetch)
         if name == 'purge':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'purge',
-                overrides.override_purge)
+                overrides.overridepurge)
         if name == 'rebase':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'rebase',
-                overrides.override_rebase)
+                overrides.overriderebase)
         if name == 'transplant':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'transplant',
-                overrides.override_transplant)
+                overrides.overridetransplant)

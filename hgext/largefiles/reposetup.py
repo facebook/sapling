@@ -34,54 +34,54 @@ def reposetup(ui, repo):
                     'largefiles may behave incorrectly\n')
                     % name)
 
-    class lfiles_repo(repo.__class__):
+    class lfilesrepo(repo.__class__):
         lfstatus = False
         def status_nolfiles(self, *args, **kwargs):
-            return super(lfiles_repo, self).status(*args, **kwargs)
+            return super(lfilesrepo, self).status(*args, **kwargs)
 
         # When lfstatus is set, return a context that gives the names
         # of largefiles instead of their corresponding standins and
         # identifies the largefiles as always binary, regardless of
         # their actual contents.
         def __getitem__(self, changeid):
-            ctx = super(lfiles_repo, self).__getitem__(changeid)
+            ctx = super(lfilesrepo, self).__getitem__(changeid)
             if self.lfstatus:
-                class lfiles_manifestdict(manifest.manifestdict):
+                class lfilesmanifestdict(manifest.manifestdict):
                     def __contains__(self, filename):
-                        if super(lfiles_manifestdict,
+                        if super(lfilesmanifestdict,
                                 self).__contains__(filename):
                             return True
-                        return super(lfiles_manifestdict,
+                        return super(lfilesmanifestdict,
                             self).__contains__(lfutil.standin(filename))
-                class lfiles_ctx(ctx.__class__):
+                class lfilesctx(ctx.__class__):
                     def files(self):
-                        filenames = super(lfiles_ctx, self).files()
+                        filenames = super(lfilesctx, self).files()
                         return [lfutil.splitstandin(f) or f for f in filenames]
                     def manifest(self):
-                        man1 = super(lfiles_ctx, self).manifest()
-                        man1.__class__ = lfiles_manifestdict
+                        man1 = super(lfilesctx, self).manifest()
+                        man1.__class__ = lfilesmanifestdict
                         return man1
                     def filectx(self, path, fileid=None, filelog=None):
                         try:
                             if filelog is not None:
-                                result = super(lfiles_ctx, self).filectx(
+                                result = super(lfilesctx, self).filectx(
                                     path, fileid, filelog)
                             else:
-                                result = super(lfiles_ctx, self).filectx(
+                                result = super(lfilesctx, self).filectx(
                                     path, fileid)
                         except error.LookupError:
                             # Adding a null character will cause Mercurial to
                             # identify this as a binary file.
                             if filelog is not None:
-                                result = super(lfiles_ctx, self).filectx(
+                                result = super(lfilesctx, self).filectx(
                                     lfutil.standin(path), fileid, filelog)
                             else:
-                                result = super(lfiles_ctx, self).filectx(
+                                result = super(lfilesctx, self).filectx(
                                     lfutil.standin(path), fileid)
                             olddata = result.data
                             result.data = lambda: olddata() + '\0'
                         return result
-                ctx.__class__ = lfiles_ctx
+                ctx.__class__ = lfilesctx
             return ctx
 
         # Figure out the status of big files and insert them into the
@@ -92,7 +92,7 @@ def reposetup(ui, repo):
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
             if not self.lfstatus:
-                return super(lfiles_repo, self).status(node1, node2, match,
+                return super(lfilesrepo, self).status(node1, node2, match,
                     listignored, listclean, listunknown, listsubrepos)
             else:
                 # some calls in this function rely on the old version of status
@@ -130,7 +130,7 @@ def reposetup(ui, repo):
                         if match(f):
                             break
                     else:
-                        return super(lfiles_repo, self).status(node1, node2,
+                        return super(lfilesrepo, self).status(node1, node2,
                                 match, listignored, listclean,
                                 listunknown, listsubrepos)
 
@@ -154,7 +154,7 @@ def reposetup(ui, repo):
 
                 # Get ignored files here even if we weren't asked for them; we
                 # must use the result here for filtering later
-                result = super(lfiles_repo, self).status(node1, node2, m,
+                result = super(lfilesrepo, self).status(node1, node2, m,
                     True, clean, unknown, listsubrepos)
                 if working:
                     try:
@@ -164,7 +164,7 @@ def reposetup(ui, repo):
                         # super's status.
                         # Override lfdirstate's ignore matcher to not do
                         # anything
-                        orig_ignore = lfdirstate._ignore
+                        origignore = lfdirstate._ignore
                         lfdirstate._ignore = _ignoreoverride
 
                         match._files = [f for f in match._files if f in
@@ -209,7 +209,7 @@ def reposetup(ui, repo):
                                     added.append(lfile)
                     finally:
                         # Replace the original ignore function
-                        lfdirstate._ignore = orig_ignore
+                        lfdirstate._ignore = origignore
 
                     for standin in ctx1.manifest():
                         if not lfutil.isstandin(standin):
@@ -265,7 +265,7 @@ def reposetup(ui, repo):
         # As part of committing, copy all of the largefiles into the
         # cache.
         def commitctx(self, *args, **kwargs):
-            node = super(lfiles_repo, self).commitctx(*args, **kwargs)
+            node = super(lfilesrepo, self).commitctx(*args, **kwargs)
             lfutil.copyalltostore(self, node)
             return node
 
@@ -274,7 +274,7 @@ def reposetup(ui, repo):
         # Do that here.
         def commit(self, text="", user=None, date=None, match=None,
                 force=False, editor=False, extra={}):
-            orig = super(lfiles_repo, self).commit
+            orig = super(lfilesrepo, self).commit
 
             wlock = repo.wlock()
             try:
@@ -343,7 +343,7 @@ def reposetup(ui, repo):
                 # Case 2: user calls commit with specified patterns: refresh
                 # any matching big files.
                 smatcher = lfutil.composestandinmatcher(self, match)
-                standins = lfutil.dirstate_walk(self.dirstate, smatcher)
+                standins = lfutil.dirstatewalk(self.dirstate, smatcher)
 
                 # No matching big files: get out of the way and pass control to
                 # the usual commit() method.
@@ -371,7 +371,7 @@ def reposetup(ui, repo):
                 # complaining "not tracked" for big files.
                 lfiles = lfutil.listlfiles(repo)
                 match = copy.copy(match)
-                orig_matchfn = match.matchfn
+                origmatchfn = match.matchfn
 
                 # Check both the list of largefiles and the list of
                 # standins because if a largefile was removed, it
@@ -398,7 +398,7 @@ def reposetup(ui, repo):
                 match._files = actualfiles
 
                 def matchfn(f):
-                    if orig_matchfn(f):
+                    if origmatchfn(f):
                         return f not in lfiles
                     else:
                         return f in standins
@@ -443,10 +443,10 @@ def reposetup(ui, repo):
                              for f in files
                              if lfutil.isstandin(f) and f in ctx]))
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
-            return super(lfiles_repo, self).push(remote, force, revs,
+            return super(lfilesrepo, self).push(remote, force, revs,
                 newbranch)
 
-    repo.__class__ = lfiles_repo
+    repo.__class__ = lfilesrepo
 
     def checkrequireslfiles(ui, repo, **kwargs):
         if 'largefiles' not in repo.requirements and util.any(

@@ -131,15 +131,15 @@ def wirereposetup(ui, repo):
 
 # advertise the largefiles=serve capability
 def capabilities(repo, proto):
-    return capabilities_orig(repo, proto) + ' largefiles=serve'
+    return capabilitiesorig(repo, proto) + ' largefiles=serve'
 
 # duplicate what Mercurial's new out-of-band errors mechanism does, because
 # clients old and new alike both handle it well
-def webproto_refuseclient(self, message):
+def webprotorefuseclient(self, message):
     self.req.header([('Content-Type', 'application/hg-error')])
     return message
 
-def sshproto_refuseclient(self, message):
+def sshprotorefuseclient(self, message):
     self.ui.write_err('%s\n-\n' % message)
     self.fout.write('\n')
     self.fout.flush()
@@ -151,16 +151,16 @@ def heads(repo, proto):
         return wireproto.ooberror(LARGEFILES_REQUIRED_MSG)
     return wireproto.heads(repo, proto)
 
-def sshrepo_callstream(self, cmd, **args):
+def sshrepocallstream(self, cmd, **args):
     if cmd == 'heads' and self.capable('largefiles'):
         cmd = 'lheads'
     if cmd == 'batch' and self.capable('largefiles'):
         args['cmds'] = args['cmds'].replace('heads ', 'lheads ')
-    return ssh_oldcallstream(self, cmd, **args)
+    return ssholdcallstream(self, cmd, **args)
 
-def httprepo_callstream(self, cmd, **args):
+def httprepocallstream(self, cmd, **args):
     if cmd == 'heads' and self.capable('largefiles'):
         cmd = 'lheads'
     if cmd == 'batch' and self.capable('largefiles'):
         args['cmds'] = args['cmds'].replace('heads ', 'lheads ')
-    return http_oldcallstream(self, cmd, **args)
+    return httpoldcallstream(self, cmd, **args)
