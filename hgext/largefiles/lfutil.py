@@ -457,3 +457,11 @@ def getstandinsstate(repo):
         lfile = splitstandin(standin)
         standins.append((lfile, readstandin(repo, lfile)))
     return standins
+
+def getlfilestoupdate(oldstandins, newstandins):
+    changedstandins = set(oldstandins).symmetric_difference(set(newstandins))
+    filelist = []
+    for f in changedstandins:
+        if f[0] not in filelist:
+            filelist.append(f[0])
+    return filelist
