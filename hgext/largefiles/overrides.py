@@ -956,10 +956,13 @@ def override_rollback(orig, ui, repo, **opts):
 
 def override_transplant(orig, ui, repo, *revs, **opts):
     try:
+        oldstandins = lfutil.getstandinsstate(repo)
         repo._istransplanting = True
         result = orig(ui, repo, *revs, **opts)
-        lfcommands.updatelfiles(ui, repo, filelist=None,
-                                printmessage=False)
+        newstandins = lfutil.getstandinsstate(repo)
+        filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+        lfcommands.updatelfiles(repo.ui, repo, filelist=filelist,
+                                printmessage=True)
     finally:
         repo._istransplanting = False
     return result

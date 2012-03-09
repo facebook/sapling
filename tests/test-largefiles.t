@@ -728,6 +728,8 @@ Test that transplanting a largefile change works correctly.
   adding manifests
   adding file changes
   added 1 changesets with 2 changes to 2 files
+  getting changed largefiles
+  1 largefiles updated, 0 removed
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
