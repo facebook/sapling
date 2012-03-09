@@ -428,8 +428,8 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
     try:
         try:
-            # When we call orig below it creates the standins but we don't add them
-            # to the dir state until later so lock during that time.
+            # When we call orig below it creates the standins but we don't add
+            # them to the dir state until later so lock during that time.
             wlock = repo.wlock()
 
             manifest = repo[None].manifest()

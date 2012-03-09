@@ -202,12 +202,6 @@
   hgext/keyword.py:0:
    >     ui.note("hg ci -m '%s'\n" % msg)
    warning: unwrapped ui message
-  hgext/largefiles/overrides.py:0:
-   >             # When we call orig below it creates the standins but we don't add them
-   warning: line over 80 characters
-  hgext/largefiles/reposetup.py:0:
-   >                             if os.path.exists(self.wjoin(lfutil.standin(lfile))):
-   warning: line over 80 characters
   hgext/mq.py:0:
    >                     raise util.Abort(_("cannot push --exact with applied patches"))
    warning: line over 80 characters

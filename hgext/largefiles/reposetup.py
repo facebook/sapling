@@ -313,7 +313,8 @@ def reposetup(ui, repo):
                     # removed/renamed)
                     for lfile in lfiles:
                         if lfile in modifiedfiles:
-                            if os.path.exists(self.wjoin(lfutil.standin(lfile))):
+                            if os.path.exists(
+                                    self.wjoin(lfutil.standin(lfile))):
                                 # this handles the case where a rebase is being
                                 # performed and the working copy is not updated
                                 # yet.
