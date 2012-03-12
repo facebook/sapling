@@ -16,7 +16,7 @@ import sshserver, hgweb, hgweb.server, commandserver
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
-import random, setdiscovery, treediscovery, dagutil
+import random, setdiscovery, treediscovery, dagutil, pvec
 import phases
 
 table = {}
@@ -1962,6 +1962,27 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
         for k, v in target.listkeys(namespace).iteritems():
             ui.write("%s\t%s\n" % (k.encode('string-escape'),
                                    v.encode('string-escape')))
+
+@command('debugpvec', [], _('A B'))
+def debugpvec(ui, repo, a, b=None):
+    ca = scmutil.revsingle(repo, a)
+    cb = scmutil.revsingle(repo, b)
+    pa = pvec.ctxpvec(ca)
+    pb = pvec.ctxpvec(cb)
+    if pa == pb:
+        rel = "="
+    elif pa > pb:
+        rel = ">"
+    elif pa < pb:
+        rel = "<"
+    elif pa | pb:
+        rel = "|"
+    ui.write(_("a: %s\n") % pa)
+    ui.write(_("b: %s\n") % pb)
+    ui.write(_("depth(a): %d depth(b): %d\n") % (pa._depth, pb._depth))
+    ui.write(_("delta: %d hdist: %d distance: %d relation: %s\n") %
+             (abs(pa._depth - pb._depth), pvec._hamming(pa._vec, pb._vec),
+              pa.distance(pb), rel))
 
 @command('debugrebuildstate',
     [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],

@@ -169,7 +169,7 @@ pypats = [
      "missing whitespace around operator"),
     (r'\s(\+=|-=|!=|<>|<=|>=|<<=|>>=)\S',
      "missing whitespace around operator"),
-    (r'[^+=*/!<>&| -](\s=|=\s)[^= ]',
+    (r'[^^+=*/!<>&| -](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),

@@ -87,6 +87,7 @@ Show debug commands if there are no other candidates
   debuginstall
   debugknown
   debugpushkey
+  debugpvec
   debugrebuildstate
   debugrename
   debugrevlog
@@ -236,6 +237,7 @@ Show all commands + options
   debuginstall: 
   debugknown: 
   debugpushkey: 
+  debugpvec: 
   debugrebuildstate: rev
   debugrename: rev
   debugrevlog: changelog, manifest, dump
