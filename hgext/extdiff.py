@@ -33,7 +33,8 @@ you do not need to type :hg:`extdiff -p kdiff3` always. ::
   # (see http://www.vim.org/scripts/script.php?script_id=102) Non
   # English user, be sure to put "let g:DirDiffDynamicDiffText = 1" in
   # your .vimrc
-  vimdiff = gvim -f '+next' '+execute "DirDiff" argv(0) argv(1)'
+  vimdiff = gvim -f "+next" \\
+            "+execute 'DirDiff' fnameescape(argv(0)) fnameescape(argv(1))"
 
 Tool arguments can include variables that are expanded at runtime::
 

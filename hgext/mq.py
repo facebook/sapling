@@ -1043,8 +1043,7 @@ class queue(object):
                 hg.clean(repo, urev)
                 repo.dirstate.write()
 
-            for rev in revs:
-                repair.strip(self.ui, repo, rev, backup)
+            repair.strip(self.ui, repo, revs, backup)
         finally:
             release(lock, wlock)
 

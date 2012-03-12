@@ -14,7 +14,7 @@ Each changeset in a repository is in one of the following phases:
 These phases are ordered (public < draft < secret) and no changeset
 can be in a lower phase than its ancestors. For instance, if a
 changeset is public, all its ancestors are also public. Lastly,
-changeset phases only be changed towards the public phase.
+changeset phases should only be changed towards the public phase.
 
 How are phases managed?
 -----------------------

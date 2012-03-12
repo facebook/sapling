@@ -54,10 +54,13 @@ def _collectbrokencsets(repo, files, striprev):
 
     return s
 
-def strip(ui, repo, node, backup="all"):
+def strip(ui, repo, nodelist, backup="all"):
     cl = repo.changelog
     # TODO handle undo of merge sets
-    striprev = cl.rev(node)
+    if isinstance(nodelist, str):
+        nodelist = [nodelist]
+    striplist = [cl.rev(node) for node in nodelist]
+    striprev = min(striplist)
 
     keeppartialbundle = backup == 'strip'
 
@@ -68,8 +71,10 @@ def strip(ui, repo, node, backup="all"):
     # the list of heads and bases of the set of interesting revisions.
     # (head = revision in the set that has no descendant in the set;
     #  base = revision in the set that has no ancestor in the set)
-    tostrip = set(cl.descendants(striprev))
-    tostrip.add(striprev)
+    tostrip = set(striplist)
+    for rev in striplist:
+        for desc in cl.descendants(rev):
+            tostrip.add(desc)
 
     files = _collectfiles(repo, striprev)
     saverevs = _collectbrokencsets(repo, files, striprev)
@@ -88,6 +93,7 @@ def strip(ui, repo, node, backup="all"):
         descendants = set(cl.descendants(*saverevs))
         saverevs.difference_update(descendants)
     savebases = [cl.node(r) for r in saverevs]
+    stripbases = [cl.node(r) for r in tostrip]
 
     bm = repo._bookmarks
     updatebm = []
@@ -99,7 +105,7 @@ def strip(ui, repo, node, backup="all"):
     # create a changegroup for all the branches we need to keep
     backupfile = None
     if backup == "all":
-        backupfile = _bundle(repo, [node], cl.heads(), node, 'backup')
+        backupfile = _bundle(repo, stripbases, cl.heads(), node, 'backup')
         repo.ui.status(_("saved backup bundle to %s\n") % backupfile)
     if saveheads or savebases:
         # do not compress partial bundle if we remove it from disk later
