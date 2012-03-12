@@ -1043,8 +1043,7 @@ class queue(object):
                 repo.dirstate.write()
 
             self.removeundo(repo)
-            for rev in revs:
-                repair.strip(self.ui, repo, rev, backup)
+            repair.strip(self.ui, repo, revs, backup)
             # strip may have unbundled a set of backed up revisions after
             # the actual strip
             self.removeundo(repo)

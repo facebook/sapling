@@ -311,7 +311,6 @@ after strip of merge parent
   $ hg strip 2 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg glog
   @  changeset:   2:65bd5f99a4a3
   |  tag:         tip
@@ -421,3 +420,13 @@ Verify strip protects against stripping wc parent when there are uncommited mods
   $ hg status
   M bar
   ? b
+  $ cd ..
+
+stripping many nodes on a complex graph (issue3299)
+
+  $ hg init issue3299
+  $ cd issue3299
+  $ hg debugbuilddag '@a.:a@b.:b.:x<a@a.:a<b@b.:b<a@a.:a'
+  $ hg strip 'not ancestors(x)'
+  saved backup bundle to $TESTTMP/issue3299/.hg/strip-backup/*-backup.hg (glob)
+
