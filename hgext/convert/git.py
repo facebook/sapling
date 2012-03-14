@@ -143,19 +143,29 @@ class convert_git(converter_source):
 
     def gettags(self):
         tags = {}
+        alltags = {}
         fh = self.gitopen('git ls-remote --tags "%s"' % self.path)
         prefix = 'refs/tags/'
+
+        # Build complete list of tags, both annotated and bare ones
         for line in fh:
             line = line.strip()
-            if not line.endswith("^{}"):
-                continue
             node, tag = line.split(None, 1)
             if not tag.startswith(prefix):
                 continue
-            tag = tag[len(prefix):-3]
-            tags[tag] = node
+            alltags[tag[len(prefix):]] = node
         if fh.close():
             raise util.Abort(_('cannot read tags from %s') % self.path)
+
+        # Filter out tag objects for annotated tag refs
+        for tag in alltags:
+            if tag.endswith('^{}'):
+                tags[tag[:-3]] = alltags[tag]
+            else:
+                if tag + '^{}' in alltags:
+                    continue
+                else:
+                    tags[tag] = alltags[tag]
 
         return tags
 
