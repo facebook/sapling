@@ -2870,14 +2870,16 @@ msgid ""
 "  # (see http://www.vim.org/scripts/script.php?script_id=102) Non\n"
 "  # English user, be sure to put \"let g:DirDiffDynamicDiffText = 1\" in\n"
 "  # your .vimrc\n"
-"  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
+"  vimdiff = gvim -f \"+next\" \\\n"
+"            \"+execute 'DirDiff' fnameescape(argv(0)) fnameescape(argv(1))\""
 msgstr ""
 "  # adiciona um novo comando chamado vimdiff, executa gvimdiff\n"
 "  # com o plugin DirDiff\n"
 "  #(veja http://www.vim.org/scripts/script.php?script_id=102)\n"
 "  # Esteja certo de colocar \"let g:DirDiffDynamicDiffText = 1\"\n"
 "  # em seu .vimrc\n"
-"  vimdiff = gvim -f '+next' '+execute \"DirDiff\" argv(0) argv(1)'"
+"  vimdiff = gvim -f \"+next\" \\\n"
+"            \"+execute 'DirDiff' fnameescape(argv(0)) fnameescape(argv(1))\""
 
 msgid "Tool arguments can include variables that are expanded at runtime::"
 msgstr ""
@@ -7515,6 +7517,10 @@ msgstr "não é possível rebasear múltiplas raízes"
 msgid "source is ancestor of destination"
 msgstr "origem é ancestral do destino"
 
+#, python-format
+msgid "updating bookmark %s\n"
+msgstr "atualizando marcador %s\n"
+
 msgid "--tool can only be used with --rebase"
 msgstr "--tool só pode ser usada em conjunto com --rebase"
 
@@ -8446,10 +8452,6 @@ msgstr "o marcador '%s' contém um caractere ilegal"
 #, python-format
 msgid "branch %s not found"
 msgstr "ramo %s não encontrado"
-
-#, python-format
-msgid "updating bookmark %s\n"
-msgstr "atualizando marcador %s\n"
 
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
@@ -19480,13 +19482,13 @@ msgid ""
 "These phases are ordered (public < draft < secret) and no changeset\n"
 "can be in a lower phase than its ancestors. For instance, if a\n"
 "changeset is public, all its ancestors are also public. Lastly,\n"
-"changeset phases only be changed towards the public phase."
+"changeset phases should only be changed towards the public phase."
 msgstr ""
 "Estas fases são ordenadas (pública < rascunho < secreta) e\n"
 "nenhuma revisão pode estar em uma fase menor que as de seus\n"
 "ancestrais. Por exemplo, se uma revisão é pública, todos os\n"
-"seus ancestrais também serão públicos. Por fim, a fase de\n"
-"revisões só pode ser modificada em direção à fase pública."
+"seus ancestrais também serão públicos. Por fim, as fases de\n"
+"revisões só devem ser modificadas em direção à fase pública."
 
 msgid ""
 "How are phases managed?\n"
