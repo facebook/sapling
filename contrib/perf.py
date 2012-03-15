@@ -46,7 +46,7 @@ def perfstatus(ui, repo, *pats):
     timer(lambda: sum(map(len, repo.status())))
 
 def perfheads(ui, repo):
-    timer(lambda: len(repo.changelog.heads()))
+    timer(lambda: len(repo.changelog.headrevs()))
 
 def perftags(ui, repo):
     import mercurial.changelog, mercurial.manifest
@@ -84,8 +84,8 @@ def perfindex(ui, repo):
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo["tip"].node()
     def d():
-        repo.invalidate()
-        repo[n]
+        cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
+        cl.rev(n)
     timer(d)
 
 def perfstartup(ui, repo):
