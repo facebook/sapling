@@ -170,7 +170,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         if m and m != a: # changed from a to m
             return m
         if n and n != a: # changed from a to n
-            if (n == 'l' or a == 'l') and m1[f] != ma[f]:
+            if (n == 'l' or a == 'l') and m1.get(f) != ma.get(f):
                 # can't automatically merge symlink flag when there
                 # are file-level conflicts here, let filemerge take
                 # care of it
