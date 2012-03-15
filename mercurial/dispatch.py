@@ -694,6 +694,8 @@ def _runcommand(ui, options, cmd, cmdfunc):
 
     if options['profile']:
         format = ui.config('profiling', 'format', default='text')
+        field = ui.config('profiling', 'sort', default='inlinetime')
+        climit = ui.configint('profiling', 'nested', default=5)
 
         if not format in ['text', 'kcachegrind']:
             ui.warn(_("unrecognized profiling format '%s'"
@@ -728,8 +730,8 @@ def _runcommand(ui, options, cmd, cmdfunc):
             else:
                 # format == 'text'
                 stats = lsprof.Stats(p.getstats())
-                stats.sort()
-                stats.pprint(top=10, file=ostream, climit=5)
+                stats.sort(field)
+                stats.pprint(limit=30, file=ostream, climit=climit)
 
             if output:
                 ostream.close()

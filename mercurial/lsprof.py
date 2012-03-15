@@ -48,7 +48,7 @@ class Stats(object):
             if limit is not None and count == limit:
                 return
             ccount = 0
-            if e.calls:
+            if climit and e.calls:
                 for se in e.calls:
                     file.write(cols % ("+%s" % se.callcount, se.reccallcount,
                                        se.totaltime, se.inlinetime,
