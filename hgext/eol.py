@@ -252,7 +252,6 @@ def checkheadshook(ui, repo, node, hooktype, **kwargs):
 hook = checkheadshook
 
 def preupdate(ui, repo, hooktype, parent1, parent2):
-    #print "preupdate for %s: %s -> %s" % (repo.root, parent1, parent2)
     repo.loadeol([parent1])
     return False
 
@@ -270,7 +269,6 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     uisetup(repo.ui)
-    #print "reposetup for", repo.root
 
     if not repo.local():
         return
