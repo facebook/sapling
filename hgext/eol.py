@@ -315,7 +315,7 @@ def reposetup(ui, repo):
                             # again since the new .hgeol file might no
                             # longer match a file it matched before
                             self.dirstate.normallookup(f)
-                    # Touch the cache to update mtime.
+                    # Create or touch the cache to update mtime
                     self.opener("eol.cache", "w").close()
                     wlock.release()
                 except error.LockUnavailable:
