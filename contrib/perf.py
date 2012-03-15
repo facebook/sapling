@@ -79,6 +79,13 @@ def perfmanifest(ui, repo):
         repo.manifest._cache = None
     timer(d)
 
+def perfchangeset(ui, repo, rev):
+    n = repo[rev].node()
+    def d():
+        c = repo.changelog.read(n)
+        repo.changelog._cache = None
+    timer(d)
+
 def perfindex(ui, repo):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
@@ -151,6 +158,7 @@ cmdtable = {
     'perfstatus': (perfstatus, []),
     'perfwalk': (perfwalk, []),
     'perfmanifest': (perfmanifest, []),
+    'perfchangeset': (perfchangeset, []),
     'perfindex': (perfindex, []),
     'perfheads': (perfheads, []),
     'perftags': (perftags, []),
