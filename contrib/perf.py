@@ -83,7 +83,7 @@ def perfchangeset(ui, repo, rev):
     n = repo[rev].node()
     def d():
         c = repo.changelog.read(n)
-        repo.changelog._cache = None
+        #repo.changelog._cache = None
     timer(d)
 
 def perfindex(ui, repo):
