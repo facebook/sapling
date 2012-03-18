@@ -418,6 +418,8 @@ class mapfile(dict):
 
 def parsesplicemap(path):
     """Parse a splicemap, return a child/parents dictionary."""
+    if not path:
+        return {}
     m = {}
     try:
         fp = open(path, 'r')

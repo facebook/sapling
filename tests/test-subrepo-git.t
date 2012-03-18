@@ -482,9 +482,7 @@ Sticky subrepository, file changes and revision updates
   $ cd ..
 
 Sticky repository, update --clean
-  $ hg update --clean tip
-  Previous HEAD position was aa84837... f
-  HEAD is now at 32a3438... fff
+  $ hg update --clean tip 2>/dev/null
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
   7
