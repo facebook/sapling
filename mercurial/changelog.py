@@ -9,6 +9,8 @@ from node import bin, hex, nullid
 from i18n import _
 import util, error, revlog, encoding
 
+_defaultextra = {'branch': 'default'}
+
 def _string_escape(text):
     """
     >>> d = {'nl': chr(10), 'bs': chr(92), 'cr': chr(13), 'nul': chr(0)}
@@ -26,11 +28,11 @@ def _string_escape(text):
 def decodeextra(text):
     """
     >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'}))
-    {'foo': 'bar', 'baz': '\\x002'}
+    {'foo': 'bar', 'baz': '\\x002', 'branch': 'default'}
     >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(92) + chr(0) + '2'}))
-    {'foo': 'bar', 'baz': '\\\\\\x002'}
+    {'foo': 'bar', 'baz': '\\\\\\x002', 'branch': 'default'}
     """
-    extra = {}
+    extra = _defaultextra.copy()
     for l in text.split('\0'):
         if l:
             if '\\0' in l:
@@ -191,28 +193,26 @@ class changelog(revlog.revlog):
         """
         text = self.revision(node)
         if not text:
-            return (nullid, "", (0, 0), [], "", {'branch': 'default'})
+            return (nullid, "", (0, 0), [], "", _defaultextra)
         last = text.index("\n\n")
         desc = encoding.tolocal(text[last + 2:])
         l = text[:last].split('\n')
         manifest = bin(l[0])
         user = encoding.tolocal(l[1])
 
-        extra_data = l[2].split(' ', 2)
-        if len(extra_data) != 3:
-            time = float(extra_data.pop(0))
+        tdata = l[2].split(' ', 2)
+        if len(tdata) != 3:
+            time = float(tdata[0])
             try:
                 # various tools did silly things with the time zone field.
-                timezone = int(extra_data[0])
+                timezone = int(tdata[1])
             except ValueError:
                 timezone = 0
-            extra = {}
+            extra = _defaultextra
         else:
-            time, timezone, extra = extra_data
-            time, timezone = float(time), int(timezone)
-            extra = decodeextra(extra)
-        if not extra.get('branch'):
-            extra['branch'] = 'default'
+            time, timezone = float(tdata[0]), int(tdata[1])
+            extra = decodeextra(tdata[2])
+
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
 
