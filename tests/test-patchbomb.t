@@ -979,6 +979,62 @@ test attach for single patch (quoted-printable):
   
   --===*-- (glob)
 
+test attach and body for single patch:
+  $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a --body -r 2
+  This patch series consists of 1 patches.
+  
+  
+  Displaying [PATCH] test ...
+  Content-Type: multipart/mixed; boundary="===*" (glob)
+  MIME-Version: 1.0
+  Subject: [PATCH] test
+  X-Mercurial-Node: ff2c9fa2018b15fa74b33363bda9527323e2a99f
+  Message-Id: <ff2c9fa2018b15fa74b3.60@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:01:00 +0000
+  From: quux
+  To: foo
+  Cc: bar
+  
+  --===* (glob)
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  
+  # HG changeset patch
+  # User test
+  # Date 3 0
+  # Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+  # Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+  c
+  
+  diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:03 1970 +0000
+  @@ -0,0 +1,1 @@
+  +c
+  
+  --===* (glob)
+  Content-Type: text/x-patch; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Content-Disposition: attachment; filename=t2.patch
+  
+  # HG changeset patch
+  # User test
+  # Date 3 0
+  # Node ID ff2c9fa2018b15fa74b33363bda9527323e2a99f
+  # Parent  97d72e5f12c7e84f85064aa72e5a297142c36ed9
+  c
+  
+  diff -r 97d72e5f12c7 -r ff2c9fa2018b c
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/c	Thu Jan 01 00:00:03 1970 +0000
+  @@ -0,0 +1,1 @@
+  +c
+  
+  --===*-- (glob)
+
 test attach for multiple patches:
   $ hg email --date '1970-1-1 0:1' -n -f quux -t foo -c bar -s test -a \
   >  -r 0:1 -r 4

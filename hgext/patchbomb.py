@@ -84,7 +84,7 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     if not patchname and not node:
         raise ValueError
 
-    if opts.get('attach'):
+    if opts.get('attach') and not opts.get('body'):
         body = ('\n'.join(desc[1:]).strip() or
                 'Patch subject is complete summary.')
         body += '\n\n\n'
@@ -101,7 +101,11 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     if opts.get('diffstat'):
         body += ds + '\n\n'
 
-    if opts.get('attach') or opts.get('inline'):
+    addattachment = opts.get('attach') or opts.get('inline')
+    if not addattachment or opts.get('body'):
+        body += '\n'.join(patchlines)
+
+    if addattachment:
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
@@ -124,7 +128,6 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
         p['Content-Disposition'] = disposition + '; filename=' + patchname
         msg.attach(p)
     else:
-        body += '\n'.join(patchlines)
         msg = mail.mimetextpatch(body, display=opts.get('test'))
 
     flag = ' '.join(opts.get('flag'))
@@ -142,6 +145,7 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
     return msg, subj, ds
 
 emailopts = [
+    ('', 'body', None, _('send patches as inline message text (default)')),
     ('a', 'attach', None, _('send patches as attachments')),
     ('i', 'inline', None, _('send patches as inline attachments')),
     ('', 'bcc', [], _('email addresses of blind carbon copy recipients')),
@@ -199,7 +203,9 @@ def patchbomb(ui, repo, *revs, **opts):
     By default the patch is included as text in the email body for
     easy reviewing. Using the -a/--attach option will instead create
     an attachment for the patch. With -i/--inline an inline attachment
-    will be created.
+    will be created. You can include a patch both as text in the email
+    body and as a regular or an inline attachment by combining the
+    -a/--attach or -i/--inline with the --body option.
 
     With -o/--outgoing, emails will be generated for patches not found
     in the destination repository (or only those which are ancestors
