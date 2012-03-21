@@ -468,6 +468,16 @@ iterable in addbranchrevs()
   $ rm -r ua
 
 
+Test clone with special '@' bookmark:
+  $ cd a
+  $ hg bookmark -r a7949464abda @  # branch point of stable from default
+  $ hg clone . ../i
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -i ../i
+  a7949464abda
+
+
 Testing failures:
 
   $ mkdir fail
