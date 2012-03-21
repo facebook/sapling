@@ -169,7 +169,7 @@ def listbookmarks(repo):
     d = {}
     for k, v in marks.iteritems():
         # don't expose local divergent bookmarks
-        if '@' not in k and not k.endswith('@'):
+        if '@' not in k or k.endswith('@'):
             d[k] = hex(v)
     return d
 

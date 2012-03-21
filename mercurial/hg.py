@@ -356,7 +356,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         if dircleanup:
             dircleanup.close()
 
-        # clone all bookmarks
+        # clone all bookmarks except divergent ones
         if destrepo.local() and srcrepo.capable("pushkey"):
             rb = srcrepo.listkeys('bookmarks')
             for k, n in rb.iteritems():
