@@ -358,6 +358,28 @@ def copied(mctx, x):
             s.append(f)
     return s
 
+def subrepo(mctx, x):
+    """``subrepo([pattern])``
+    Subrepositories whose paths match the given pattern.
+    """
+    # i18n: "subrepo" is a keyword
+    getargs(x, 0, 1, _("subrepo takes at most one argument"))
+    ctx = mctx.ctx
+    sstate = ctx.substate
+    if x:
+        pat = getstring(x, _("subrepo requires a pattern or no arguments"))
+
+        import match as matchmod # avoid circular import issues
+        fast = not matchmod.patkind(pat)
+        if fast:
+            def m(s):
+                return (s == pat)
+        else:
+            m = matchmod.match(ctx._repo.root, '', [pat], ctx=ctx)
+        return [sub for sub in sstate if m(sub)]
+    else:
+        return [sub for sub in sstate]
+
 symbols = {
     'added': added,
     'binary': binary,
@@ -376,6 +398,7 @@ symbols = {
     'symlink': symlink,
     'unknown': unknown,
     'unresolved': unresolved,
+    'subrepo': subrepo,
 }
 
 methods = {
