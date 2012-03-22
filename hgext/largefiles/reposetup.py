@@ -137,7 +137,7 @@ def reposetup(ui, repo):
                 # Create a copy of match that matches standins instead
                 # of largefiles.
                 def tostandin(file):
-                    if inctx(lfutil.standin(file), ctx2):
+                    if working and lfutil.standin(file) in repo.dirstate:
                         return lfutil.standin(file)
                     return file
 

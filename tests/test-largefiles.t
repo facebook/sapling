@@ -68,6 +68,8 @@ Commit preserved largefile contents.
 Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
+  $ hg status large1
+  R large1
   $ hg commit -m "remove files"
   Invoking status precommit hook
   R large1
