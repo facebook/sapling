@@ -3622,8 +3622,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     try:
         try:
             wlock = repo.wlock()
-            lock = repo.lock()
-            tr = repo.transaction('import')
+            if not opts.get('no_commit'):
+                lock = repo.lock()
+                tr = repo.transaction('import')
             parents = repo.parents()
             for patchurl in patches:
                 if patchurl == '-':
@@ -3649,7 +3650,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 if not haspatch:
                     raise util.Abort(_('%s: no diffs found') % patchurl)
 
-            tr.close()
+            if tr:
+                tr.close()
             if msgs:
                 repo.savecommitmessage('\n* * *\n'.join(msgs))
         except:

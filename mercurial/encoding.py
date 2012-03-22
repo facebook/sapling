@@ -92,24 +92,32 @@ def tolocal(s):
     'foo: \\xc3\\xa4'
     """
 
-    for e in ('UTF-8', fallbackencoding):
+    try:
         try:
-            u = s.decode(e) # attempt strict decoding
+            # make sure string is actually stored in UTF-8
+            u = s.decode('UTF-8')
+            if encoding == 'UTF-8':
+                # fast path
+                return s
             r = u.encode(encoding, "replace")
             if u == r.decode(encoding):
                 # r is a safe, non-lossy encoding of s
                 return r
-            elif e == 'UTF-8':
-                return localstr(s, r)
-            else:
-                return localstr(u.encode('UTF-8'), r)
-
-        except LookupError, k:
-            raise error.Abort(k, hint="please check your locale settings")
+            return localstr(s, r)
         except UnicodeDecodeError:
-            pass
-    u = s.decode("utf-8", "replace") # last ditch
-    return u.encode(encoding, "replace") # can't round-trip
+            # we should only get here if we're looking at an ancient changeset
+            try:
+                u = s.decode(fallbackencoding)
+                r = u.encode(encoding, "replace")
+                if u == r.decode(encoding):
+                    # r is a safe, non-lossy encoding of s
+                    return r
+                return localstr(u.encode('UTF-8'), r)
+            except UnicodeDecodeError:
+                u = s.decode("utf-8", "replace") # last ditch
+                return u.encode(encoding, "replace") # can't round-trip
+    except LookupError, k:
+        raise error.Abort(k, hint="please check your locale settings")
 
 def fromlocal(s):
     """
