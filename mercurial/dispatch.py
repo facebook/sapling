@@ -225,7 +225,9 @@ def aliasargs(fn, givenargs):
         def replacer(m):
             num = int(m.group(1)) - 1
             nums.append(num)
-            return givenargs[num]
+            if num < len(givenargs):
+                return givenargs[num]
+            return ''
         cmd = re.sub(r'\$(\d+|\$)', replacer, cmd)
         givenargs = [x for i, x in enumerate(givenargs)
                      if i not in nums]
