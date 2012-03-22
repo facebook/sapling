@@ -137,8 +137,11 @@ def reposetup(ui, repo):
                 # Create a copy of match that matches standins instead
                 # of largefiles.
                 def tostandin(file):
-                    if working and lfutil.standin(file) in repo.dirstate:
-                        return lfutil.standin(file)
+                    if working:
+                        sf = lfutil.standin(file)
+                        dirstate = repo.dirstate
+                        if sf in dirstate or sf in dirstate.dirs():
+                            return sf
                     return file
 
                 # Create a function that we can use to override what is
@@ -167,8 +170,12 @@ def reposetup(ui, repo):
                         orig_ignore = lfdirstate._ignore
                         lfdirstate._ignore = _ignoreoverride
 
-                        match._files = [f for f in match._files if f in
-                            lfdirstate]
+                        def sfindirstate(f):
+                            sf = lfutil.standin(f)
+                            dirstate = repo.dirstate
+                            return sf in dirstate or sf in dirstate.dirs()
+                        match._files = [f for f in match._files
+                                        if sfindirstate(f)]
                         # Don't waste time getting the ignored and unknown
                         # files again; we already have them
                         s = lfdirstate.status(match, [], False,

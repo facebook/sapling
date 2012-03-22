@@ -251,6 +251,13 @@ Corner cases for adding largefiles.
   A sub2/large6
   A sub2/large7
 
+Test "hg status" with combination of 'file pattern' and 'directory
+pattern' for largefiles:
+
+  $ hg status sub2/large6 sub2
+  A sub2/large6
+  A sub2/large7
+
 Config settings (pattern **.dat, minsize 2 MB) are respected.
 
   $ echo testdata > test.dat
