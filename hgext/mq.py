@@ -2759,8 +2759,9 @@ def save(ui, repo, **opts):
           ('b', 'backup', None, _('bundle only changesets with local revision'
                                   ' number greater than REV which are not'
                                   ' descendants of REV (DEPRECATED)')),
-          ('n', 'no-backup', None, _('no backups')),
+          ('', 'no-backup', None, _('no backups')),
           ('', 'nobackup', None, _('no backups (DEPRECATED)')),
+          ('n', '', None, _('ignored  (DEPRECATED)')),
           ('k', 'keep', None, _("do not modify working copy during strip"))],
           _('hg strip [-k] [-f] [-n] REV...'))
 def strip(ui, repo, *revs, **opts):
