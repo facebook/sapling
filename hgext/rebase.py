@@ -557,15 +557,18 @@ def restorestatus(repo):
 
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
-    descendants = repo.changelog.descendants
-    ispublic = lambda r: repo._phaserev[r] == phases.public
-    if filter(ispublic, descendants(target)):
+    dstates = [s for s in state.values() if s != nullrev]
+    if [d for d in dstates if not repo[d].mutable()]:
         repo.ui.warn(_("warning: immutable rebased changeset detected, "
                        "can't abort\n"))
         return -1
-    elif set(descendants(target)) - set(state.values()):
+
+    descendants = set()
+    if dstates:
+        descendants = set(repo.changelog.descendants(*dstates))
+    if descendants - set(dstates):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
-                                                    "can't abort\n"))
+                       "can't abort\n"))
         return -1
     else:
         # Strip from the first rebased revision
