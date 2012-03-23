@@ -173,8 +173,7 @@ def diffs(repo, tmpl, ctx, files, parity, style):
             start += 1
 
     blockcount = countgen()
-    def prettyprintlines(diff):
-        blockno = blockcount.next()
+    def prettyprintlines(diff, blockno):
         for lineno, l in enumerate(diff.splitlines(True)):
             lineno = "%d.%d" % (blockno, lineno + 1)
             if l.startswith('+'):
@@ -203,14 +202,16 @@ def diffs(repo, tmpl, ctx, files, parity, style):
     block = []
     for chunk in patch.diff(repo, node1, node2, m, opts=diffopts):
         if chunk.startswith('diff') and block:
-            yield tmpl('diffblock', parity=parity.next(),
-                       lines=prettyprintlines(''.join(block)))
+            blockno = blockcount.next()
+            yield tmpl('diffblock', parity=parity.next(), blockno=blockno,
+                       lines=prettyprintlines(''.join(block), blockno))
             block = []
         if chunk.startswith('diff') and style != 'raw':
             chunk = ''.join(chunk.splitlines(True)[1:])
         block.append(chunk)
-    yield tmpl('diffblock', parity=parity.next(),
-               lines=prettyprintlines(''.join(block)))
+    blockno = blockcount.next()
+    yield tmpl('diffblock', parity=parity.next(), blockno=blockno,
+               lines=prettyprintlines(''.join(block), blockno))
 
 def diffstatgen(ctx):
     '''Generator function that provides the diffstat data.'''

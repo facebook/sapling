@@ -552,6 +552,51 @@ test import rev as raw-rev
   $ cd test1
   $ hg import -q --exact http://localhost:$HGPORT/rev/1
 
+raw revision with diff block numbers
+
+  $ "$TESTDIR/killdaemons.py"
+  $ cat <<EOF > .hg/hgrc
+  > [web]
+  > templates = rawdiff
+  > EOF
+  $ mkdir rawdiff
+  $ cat <<EOF > rawdiff/map
+  > mimetype = 'text/plain; charset={encoding}'
+  > changeset = '{diff}'
+  > difflineplus = '{line}'
+  > difflineminus = '{line}'
+  > difflineat = '{line}'
+  > diffline = '{line}'
+  > filenodelink = ''
+  > filenolink = ''
+  > fileline = '{line}'
+  > diffblock = 'Block: {blockno}\n{lines}\n'
+  > EOF
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/raw-rev/0'
+  200 Script output follows
+  
+  Block: 1
+  diff -r 000000000000 -r 0cd96de13884 a
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +a
+  
+  Block: 2
+  diff -r 000000000000 -r 0cd96de13884 b
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +b
+  
+  $ "$TESTDIR/killdaemons.py"
+  $ rm .hg/hgrc rawdiff/map
+  $ rmdir rawdiff
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
 errors
 
   $ cat ../test/errors.log

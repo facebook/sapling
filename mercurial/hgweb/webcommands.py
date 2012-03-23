@@ -262,10 +262,10 @@ def changeset(web, req, tmpl):
 
     files = []
     parity = paritygen(web.stripecount)
-    for f in ctx.files():
+    for blockno, f in enumerate(ctx.files()):
         template = f in ctx and 'filenodelink' or 'filenolink'
         files.append(tmpl(template,
-                          node=ctx.hex(), file=f,
+                          node=ctx.hex(), file=f, blockno=blockno + 1,
                           parity=parity.next()))
 
     style = web.config('web', 'style', 'paper')
