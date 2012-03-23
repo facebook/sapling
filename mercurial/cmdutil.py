@@ -285,6 +285,16 @@ def copy(ui, repo, pats, opts, rename=False):
 
         # check for overwrites
         exists = os.path.lexists(target)
+        samefile = False
+        if exists and abssrc != abstarget:
+            if (repo.dirstate.normalize(abssrc) ==
+                repo.dirstate.normalize(abstarget)):
+                if not rename:
+                    ui.warn(_("%s: can't copy - same file\n") % reltarget)
+                    return
+                exists = False
+                samefile = True
+
         if not after and exists or after and state in 'mn':
             if not opts['force']:
                 ui.warn(_('%s: not overwriting - file exists\n') %
@@ -307,7 +317,12 @@ def copy(ui, repo, pats, opts, rename=False):
                 targetdir = os.path.dirname(target) or '.'
                 if not os.path.isdir(targetdir):
                     os.makedirs(targetdir)
-                util.copyfile(src, target)
+                if samefile:
+                    tmp = target + "~hgrename"
+                    os.rename(src, tmp)
+                    os.rename(tmp, target)
+                else:
+                    util.copyfile(src, target)
                 srcexists = True
             except IOError, inst:
                 if inst.errno == errno.ENOENT:
@@ -330,7 +345,7 @@ def copy(ui, repo, pats, opts, rename=False):
         scmutil.dirstatecopy(ui, repo, wctx, abssrc, abstarget,
                              dryrun=dryrun, cwd=cwd)
         if rename and not dryrun:
-            if not after and srcexists:
+            if not after and srcexists and not samefile:
                 util.unlinkpath(repo.wjoin(abssrc))
             wctx.forget([abssrc])
 
