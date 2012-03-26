@@ -68,6 +68,8 @@ Commit preserved largefile contents.
 Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
+  $ hg status large1
+  R large1
   $ hg commit -m "remove files"
   Invoking status precommit hook
   R large1
@@ -246,6 +248,13 @@ Corner cases for adding largefiles.
   $ hg st
   M large3
   A large5
+  A sub2/large6
+  A sub2/large7
+
+Test "hg status" with combination of 'file pattern' and 'directory
+pattern' for largefiles:
+
+  $ hg status sub2/large6 sub2
   A sub2/large6
   A sub2/large7
 
