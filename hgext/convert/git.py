@@ -97,6 +97,8 @@ class convert_git(converter_source):
                 seen.add(f)
                 entry = entry.split()
                 h = entry[3]
+                if entry[1] == '160000':
+                    raise util.Abort('git submodules are not supported!')
                 p = (entry[1] == "100755")
                 s = (entry[1] == "120000")
                 self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
