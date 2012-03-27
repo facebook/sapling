@@ -26,12 +26,11 @@ test case collision on rename (issue750)
   adding a
   a
   committed changeset 0:07f4944404050f47db2e5c5071e0e84e7a27bba9
+
+Case-changing renames should work:
+
   $ hg mv a A
-  A: not overwriting - file exists
-
-'a' used to be removed under windows
-
-  $ test -f a || echo 'a is missing'
+  $ hg mv A a
   $ hg st
   $ cd ..
 
