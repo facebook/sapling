@@ -1474,6 +1474,22 @@ Test that qfinish change phase when mq.secret=true
   1: secret
   2: secret
 
+Test that qfinish respect phases.new-commit setting
+
+  $ echo '[phases]' >> $HGRCPATH
+  $ echo 'new-commit=secret' >> $HGRCPATH
+  $ hg qfinish qbase
+  patch add-file2 finalized without changeset message
+  $ hg phase 'all()'
+  0: draft
+  1: secret
+  2: secret
+
+(restore env for next test)
+
+  $ sed -i.bak -e 's/new-commit=secret//' $HGRCPATH
+  $ hg qimport -r 1 --name  add-file2
+
 Test that qfinish preserve phase when mq.secret=false
 
   $ sed -i.bak -e 's/secret=true/secret=false/' $HGRCPATH

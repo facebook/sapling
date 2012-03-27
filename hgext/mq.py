@@ -844,8 +844,9 @@ class queue(object):
         if qfinished and repo.ui.configbool('mq', 'secret', False):
             # only use this logic when the secret option is added
             oldqbase = repo[qfinished[0]]
-            if oldqbase.p1().phase() < phases.secret:
-                phases.advanceboundary(repo, phases.draft, qfinished)
+            tphase = repo.ui.config('phases', 'new-commit', phases.draft)
+            if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
+                phases.advanceboundary(repo, tphase, qfinished)
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):

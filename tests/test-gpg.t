@@ -6,7 +6,7 @@ Test the GPG extension
   > gpg=
   > 
   > [gpg]
-  > cmd=gpg --no-permission-warning --no-secmem-warning --homedir $TESTDIR/gpg
+  > cmd=gpg --no-permission-warning --no-secmem-warning --no-auto-check-trustdb --homedir $TESTDIR/gpg
   > EOF
   $ hg init r
   $ cd r
@@ -25,3 +25,7 @@ Test the GPG extension
   $ hg sigcheck 0
   e63c23eaa88a is signed by:
    hgtest
+
+verify that this test has not modified the trustdb.gpg file back in
+the main hg working dir
+  $ hg --cwd $TESTDIR status gpg
