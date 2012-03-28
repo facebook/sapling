@@ -336,8 +336,13 @@ def urlescape(text):
     return urllib.quote(text)
 
 def userfilter(text):
-    """:user: Any text. Returns the user portion of an email address."""
+    """:user: Any text. Returns a short representation of a user name or email
+    address."""
     return util.shortuser(text)
+
+def emailuser(text):
+    """:emailuser: Any text. Returns the user portion of an email address."""
+    return util.emailuser(text)
 
 def xmlescape(text):
     text = (text
@@ -382,6 +387,7 @@ filters = {
     "tabindent": tabindent,
     "urlescape": urlescape,
     "user": userfilter,
+    "emailuser": emailuser,
     "xmlescape": xmlescape,
 }
 

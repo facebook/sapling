@@ -1125,6 +1125,16 @@ def shortuser(user):
         user = user[:f]
     return user
 
+def emailuser(user):
+    """Return the user portion of an email address."""
+    f = user.find('@')
+    if f >= 0:
+        user = user[:f]
+    f = user.find('<')
+    if f >= 0:
+        user = user[f + 1:]
+    return user
+
 def email(author):
     '''get email of author.'''
     r = author.find('>')
