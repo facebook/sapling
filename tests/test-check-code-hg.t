@@ -31,15 +31,6 @@
    warning: naked except clause
    warning: naked except clause
   contrib/shrink-revlog.py:0:
-   >                    '(You can delete those files when you are satisfied that your\n'
-   warning: line over 80 characters
-  contrib/shrink-revlog.py:0:
-   >                 ('', 'sort', 'reversepostorder', 'name of sort algorithm to use'),
-   warning: line over 80 characters
-  contrib/shrink-revlog.py:0:
-   >                [('', 'revlog', '', _('index (.i) file of the revlog to shrink')),
-   warning: line over 80 characters
-  contrib/shrink-revlog.py:0:
    >         except:
    warning: naked except clause
   doc/gendoc.py:0:

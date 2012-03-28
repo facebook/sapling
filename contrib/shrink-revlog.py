@@ -269,19 +269,23 @@ def shrink(ui, repo, **opts):
         lock.release()
 
     if not opts.get('dry_run'):
-        ui.write(_('note: old revlog saved in:\n'
-                   '  %s\n'
-                   '  %s\n'
-                   '(You can delete those files when you are satisfied that your\n'
-                   'repository is still sane.  '
-                   'Running \'hg verify\' is strongly recommended.)\n')
-                 % (oldindexfn, olddatafn))
+        ui.write(
+            _('note: old revlog saved in:\n'
+              '  %s\n'
+              '  %s\n'
+              '(You can delete those files when you are satisfied that your\n'
+              'repository is still sane.  '
+              'Running \'hg verify\' is strongly recommended.)\n')
+            % (oldindexfn, olddatafn))
 
 cmdtable = {
     'shrink': (shrink,
-               [('', 'revlog', '', _('index (.i) file of the revlog to shrink')),
-                ('n', 'dry-run', None, _('do not shrink, simulate only')),
-                ('', 'sort', 'reversepostorder', 'name of sort algorithm to use'),
+               [('', 'revlog', '',
+                 _('the revlog to shrink (.i)')),
+                ('n', 'dry-run', None,
+                 _('do not shrink, simulate only')),
+                ('', 'sort', 'reversepostorder',
+                 _('name of sort algorithm to use')),
                 ],
                _('hg shrink [--revlog PATH]'))
 }
