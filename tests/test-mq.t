@@ -519,7 +519,15 @@ cleaning up
   $ hg qpush --move test.patch # already applied
   abort: cannot push to a previous patch: test.patch
   [255]
-  $ hg qpush
+  $ sed -i.bak '2i# make qtip index different in series and fullseries' `hg root`/.hg/patches/series
+  $ cat `hg root`/.hg/patches/series
+  # comment
+  # make qtip index different in series and fullseries
+  
+  test.patch
+  test1b.patch
+  test2.patch
+  $ hg qpush --move test2.patch
   applying test2.patch
   now at: test2.patch
 
@@ -527,11 +535,12 @@ cleaning up
 series after move
 
   $ cat `hg root`/.hg/patches/series
+  # comment
+  # make qtip index different in series and fullseries
+  
   test.patch
   test1b.patch
   test2.patch
-  # comment
-  
 
 
 pop, qapplied, qunapplied

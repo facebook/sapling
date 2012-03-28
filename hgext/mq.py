@@ -1200,15 +1200,19 @@ class queue(object):
             if move:
                 if not patch:
                     raise util.Abort(_("please specify the patch to move"))
-                for i, rpn in enumerate(self.fullseries[start:]):
+                for fullstart, rpn in enumerate(self.fullseries):
+                    # strip markers for patch guards
+                    if self.guard_re.split(rpn, 1)[0] == self.series[start]:
+                        break
+                for i, rpn in enumerate(self.fullseries[fullstart:]):
                     # strip markers for patch guards
                     if self.guard_re.split(rpn, 1)[0] == patch:
                         break
-                index = start + i
+                index = fullstart + i
                 assert index < len(self.fullseries)
                 fullpatch = self.fullseries[index]
                 del self.fullseries[index]
-                self.fullseries.insert(start, fullpatch)
+                self.fullseries.insert(fullstart, fullpatch)
                 self.parseseries()
                 self.seriesdirty = True
 
