@@ -9,13 +9,12 @@
   >    cat hg.pid >> "$DAEMON_PIDS"
   >    echo % errors
   >    cat errors.log
-  >    sleep 1
   >    if [ "$KILLQUIETLY" = "Y" ]; then
   >        kill `cat hg.pid` 2>/dev/null
   >    else
   >        kill `cat hg.pid`
   >    fi
-  >    sleep 1
+  >    while kill -0 `cat hg.pid` 2>/dev/null; do true; done
   > }
 
   $ hg init test
