@@ -1369,11 +1369,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 
+        # get the list of subrepos that must be reverted
         targetsubs = [s for s in repo[node].substate if m(s)]
-        if targetsubs and not opts.get('no_backup'):
-            msg = _("cannot revert subrepos without --no-backup")
-            raise util.Abort(msg)
-
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(set, changes)

@@ -38,20 +38,20 @@ Issue2232: committing a subrepo without .hgsub
   update: (current)
   $ hg ci -m1
 
-Revert can't (yet) revert subrepos:
+Revert subrepo:
 
   $ echo b > s/a
   $ hg revert s
-  abort: cannot revert subrepos without --no-backup
-  [255]
+  reverting subrepo s
+  reverting s/a
+  $ rm s/a.orig
 
-Revert currently ignores subrepos by default
+Revert subrepo with no backup. The "reverting s/a" line is gone since
+we're really running 'hg update' in the subrepo:
 
-  $ hg revert -a
-  abort: cannot revert subrepos without --no-backup
-  [255]
-  $ hg revert -R s -a -C
-  reverting s/a (glob)
+  $ echo b > s/a
+  $ hg revert --no-backup s
+  reverting subrepo s
 
 Issue2022: update -C
 
