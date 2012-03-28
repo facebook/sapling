@@ -368,6 +368,9 @@ class abstractsubrepo(object):
     def forget(self, ui, match, prefix):
         return []
 
+    def revert(self, ui, substate, *pats, **opts):
+        return []
+
 class hgsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
         self._path = path
@@ -572,6 +575,14 @@ class hgsubrepo(abstractsubrepo):
     def forget(self, ui, match, prefix):
         return cmdutil.forget(ui, self._repo, match,
                               os.path.join(prefix, self._path), True)
+
+    def revert(self, ui, substate, *pats, **opts):
+        # reverting a subrepo is done by updating it to the revision
+        # specified in the corresponding substate dictionary
+        ui.status(_('reverting subrepo %s\n') % substate[0])
+
+        # Update the repo to the revision specified in the given substate
+        self.get(substate, overwrite=True)
 
 class svnsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):

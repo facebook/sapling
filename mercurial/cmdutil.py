@@ -1356,8 +1356,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if path in names:
                 return
             if path in repo[node].substate:
-                ui.warn("%s: %s\n" % (m.rel(path),
-                    'reverting subrepos is unsupported'))
                 return
             path_ = path + '/'
             for f in names:
@@ -1370,6 +1368,11 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         for abs in repo[node].walk(m):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
+
+        targetsubs = [s for s in repo[node].substate if m(s)]
+        if targetsubs and not opts.get('no_backup'):
+            msg = _("cannot revert subrepos without --no-backup")
+            raise util.Abort(msg)
 
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
@@ -1499,6 +1502,10 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 checkout(f)
                 normal(f)
 
+            if targetsubs:
+                # Revert the subrepos on the revert list
+                for sub in targetsubs:
+                    ctx.sub(sub).revert(ui, ctx.substate[sub], *pats, **opts)
     finally:
         wlock.release()
 

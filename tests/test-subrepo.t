@@ -42,11 +42,14 @@ Revert can't (yet) revert subrepos:
 
   $ echo b > s/a
   $ hg revert s
-  s: reverting subrepos is unsupported
+  abort: cannot revert subrepos without --no-backup
+  [255]
 
 Revert currently ignores subrepos by default
 
   $ hg revert -a
+  abort: cannot revert subrepos without --no-backup
+  [255]
   $ hg revert -R s -a -C
   reverting s/a (glob)
 
