@@ -18,6 +18,7 @@ from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions, scmutil
 from mercurial import hg, util, graphmod, templatekw
+from mercurial import revset as revsetmod
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -272,16 +273,20 @@ def makefilematcher(repo, pats, followfirst):
 
 def revset(repo, pats, opts):
     """Return (expr, filematcher) where expr is a revset string built
-    of revisions, log options and file patterns. If --stat or --patch
-    are not passed filematcher is None. Otherwise it a a callable
-    taking a revision number and returning a match objects filtering
-    the files to be detailed when displaying the revision.
+    log options and file patterns, or None. Note that --rev options
+    are ignored when building expr because we do not know if they are
+    proper revsets or legacy expressions like a 'foo-bar' tags. If
+    --stat or --patch are not passed filematcher is None. Otherwise it
+    a a callable taking a revision number and returning a match
+    objects filtering the files to be detailed when displaying the
+    revision.
     """
     opt2revset = {
         'follow':           ('follow()', None),
         'follow_first':     ('_followfirst()', None),
         'no_merges':        ('not merge()', None),
         'only_merges':      ('merge()', None),
+        '_matchfiles':      ('_matchfiles(%(val)s)', None),
         'date':             ('date(%(val)r)', None),
         'branch':           ('branch(%(val)r)', ' or '),
         '_patslog':         ('filelog(%(val)r)', ' or '),
@@ -290,7 +295,6 @@ def revset(repo, pats, opts):
         'keyword':          ('keyword(%(val)r)', ' or '),
         'prune':            ('not (%(val)r or ancestors(%(val)r))', ' and '),
         'user':             ('user(%(val)r)', ' or '),
-        'rev':              ('%(val)s', ' or '),
         }
 
     opts = dict(opts)
@@ -343,7 +347,7 @@ def revset(repo, pats, opts):
         for p in opts.get('exclude', []):
             matchargs.append('x:' + p)
         matchargs = ','.join(('%r' % p) for p in matchargs)
-        opts['rev'] = opts.get('rev', []) + ['_matchfiles(%s)' % matchargs]
+        opts['_matchfiles'] = matchargs
     else:
         if follow:
             if followfirst:
@@ -385,7 +389,7 @@ def revset(repo, pats, opts):
     if revset:
         revset = '(' + ' and '.join(revset) + ')'
     else:
-        revset = 'all()'
+        revset = None
     return revset, filematcher
 
 def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
@@ -431,7 +435,13 @@ def graphlog(ui, repo, *pats, **opts):
     check_unsupported_flags(pats, opts)
 
     expr, filematcher = revset(repo, pats, opts)
-    revs = sorted(scmutil.revrange(repo, [expr]), reverse=1)
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts['rev'])
+    else:
+        revs = range(len(repo))
+    if expr:
+        revs = revsetmod.match(repo.ui, expr)(repo, revs)
+    revs = sorted(revs, reverse=1)
     limit = cmdutil.loglimit(opts)
     if limit is not None:
         revs = revs[:limit]

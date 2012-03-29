@@ -91,8 +91,12 @@ o  (0) root
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
   >             expr = graphlog.revset(repo, pats, opts)[0]
-  >             tree = revset.parse(expr)[0]
-  >             ui.write(revset.prettyformat(tree), "\n")
+  >             if expr:
+  >                 tree = revset.parse(expr)[0]
+  >             else:
+  >                 tree = []
+  >             ui.write('%r\n' % (opts.get('rev', []),))
+  >             ui.write(revset.prettyformat(tree) + '\n')
   >             return 0
   >         return orig(ui, repo, *pats, **opts)
   >     entry = extensions.wrapcommand(commands.table, 'log', printrevset)
@@ -1430,19 +1434,8 @@ Test log -G options
 glog always reorders nodes which explains the difference with log
 
   $ testlog -r 27 -r 25 -r 21 -r 34 -r 32 -r 31
-  (group
-    (group
-      (or
-        (or
-          (or
-            (or
-              (or
-                ('symbol', '27')
-                ('symbol', '25'))
-              ('symbol', '21'))
-            ('symbol', '34'))
-          ('symbol', '32'))
-        ('symbol', '31'))))
+  ['27', '25', '21', '34', '32', '31']
+  []
   --- log.nodes	* (glob)
   +++ glog.nodes	* (glob)
   @@ -1,6 +1,6 @@
@@ -1457,6 +1450,7 @@ glog always reorders nodes which explains the difference with log
   +nodetag 21
   [1]
   $ testlog -u test -u not-a-user
+  []
   (group
     (group
       (or
@@ -1467,6 +1461,7 @@ glog always reorders nodes which explains the difference with log
           ('symbol', 'user')
           ('string', 'not-a-user')))))
   $ testlog -b not-a-branch
+  []
   (group
     (group
       (func
@@ -1475,6 +1470,7 @@ glog always reorders nodes which explains the difference with log
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
   $ testlog -b default -b branch --only-branch branch
+  []
   (group
     (group
       (or
@@ -1489,6 +1485,7 @@ glog always reorders nodes which explains the difference with log
           ('symbol', 'branch')
           ('string', 'branch')))))
   $ testlog -k expand -k merge
+  []
   (group
     (group
       (or
@@ -1499,17 +1496,20 @@ glog always reorders nodes which explains the difference with log
           ('symbol', 'keyword')
           ('string', 'merge')))))
   $ testlog --only-merges
+  []
   (group
     (func
       ('symbol', 'merge')
       None))
   $ testlog --no-merges
+  []
   (group
     (not
       (func
         ('symbol', 'merge')
         None)))
   $ testlog --date '2 0 to 4 0'
+  []
   (group
     (func
       ('symbol', 'date')
@@ -1518,6 +1518,7 @@ glog always reorders nodes which explains the difference with log
   abort: invalid date: 'brace ) in a date'
   [255]
   $ testlog --prune 31 --prune 32
+  []
   (group
     (group
       (and
@@ -1577,12 +1578,14 @@ have 2 filelog topological heads in a linear changeset graph.
   
 
   $ testlog a
+  []
   (group
     (group
       (func
         ('symbol', 'filelog')
         ('string', 'a'))))
   $ testlog a b
+  []
   (group
     (group
       (or
@@ -1596,36 +1599,36 @@ have 2 filelog topological heads in a linear changeset graph.
 Test falling back to slow path for non-existing files
 
   $ testlog a c
+  []
   (group
-    (group
-      (func
-        ('symbol', '_matchfiles')
+    (func
+      ('symbol', '_matchfiles')
+      (list
         (list
-          (list
-            ('string', 'r:')
-            ('string', 'p:a'))
-          ('string', 'p:c')))))
+          ('string', 'r:')
+          ('string', 'p:a'))
+        ('string', 'p:c'))))
 
 Test multiple --include/--exclude/paths
 
   $ testlog --include a --include e --exclude b --exclude e a e
+  []
   (group
-    (group
-      (func
-        ('symbol', '_matchfiles')
+    (func
+      ('symbol', '_matchfiles')
+      (list
         (list
           (list
             (list
               (list
                 (list
-                  (list
-                    ('string', 'r:')
-                    ('string', 'p:a'))
-                  ('string', 'p:e'))
-                ('string', 'i:a'))
-              ('string', 'i:e'))
-            ('string', 'x:b'))
-          ('string', 'x:e')))))
+                  ('string', 'r:')
+                  ('string', 'p:a'))
+                ('string', 'p:e'))
+              ('string', 'i:a'))
+            ('string', 'i:e'))
+          ('string', 'x:b'))
+        ('string', 'x:e'))))
 
 Test glob expansion of pats
 
@@ -1636,6 +1639,7 @@ Test glob expansion of pats
   > else
   >    testlog a*;
   > fi;
+  []
   (group
     (group
       (func
@@ -1667,6 +1671,7 @@ Test --follow on a single rename
 
   $ hg up -q 2
   $ testlog -f a
+  []
   (group
     (group
       (func
@@ -1677,6 +1682,7 @@ Test --follow and multiple renames
 
   $ hg up -q tip
   $ testlog -f e
+  []
   (group
     (group
       (func
@@ -1687,6 +1693,7 @@ Test --follow and multiple filelog heads
 
   $ hg up -q 2
   $ testlog -f g
+  []
   (group
     (group
       (func
@@ -1698,6 +1705,7 @@ Test --follow and multiple filelog heads
   nodetag 0
   $ hg up -q tip
   $ testlog -f g
+  []
   (group
     (group
       (func
@@ -1711,6 +1719,7 @@ Test --follow and multiple filelog heads
 Test --follow and multiple files
 
   $ testlog -f g e
+  []
   (group
     (group
       (or
@@ -1739,6 +1748,7 @@ Test --follow-first
   $ echo merge > e
   $ hg ci -m "merge 5 and 4"
   $ testlog --follow-first
+  []
   (group
     (func
       ('symbol', '_followfirst')
@@ -1747,6 +1757,7 @@ Test --follow-first
 Cannot compare with log --follow-first FILE as it never worked
 
   $ hg log -G --print-revset --follow-first e
+  []
   (group
     (group
       (func
@@ -1780,47 +1791,38 @@ Test "set:..." and parent revision
 
   $ hg up -q 4
   $ testlog "set:copied()"
+  []
   (group
-    (group
-      (func
-        ('symbol', '_matchfiles')
-        (list
-          ('string', 'r:')
-          ('string', 'p:set:copied()')))))
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        ('string', 'r:')
+        ('string', 'p:set:copied()'))))
   $ testlog --include "set:copied()"
+  []
   (group
-    (group
-      (func
-        ('symbol', '_matchfiles')
-        (list
-          ('string', 'r:')
-          ('string', 'i:set:copied()')))))
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        ('string', 'r:')
+        ('string', 'i:set:copied()'))))
   $ testlog -r "sort(file('set:copied()'), -rev)"
-  (group
-    (group
-      (func
-        ('symbol', 'sort')
-        (list
-          (func
-            ('symbol', 'file')
-            ('string', 'set:copied()'))
-          (negate
-            ('symbol', 'rev'))))))
+  ["sort(file('set:copied()'), -rev)"]
+  []
 
 Test --removed
 
   $ testlog --removed
-  (func
-    ('symbol', 'all')
-    None)
+  []
+  []
   $ testlog --removed a
+  []
   (group
-    (group
-      (func
-        ('symbol', '_matchfiles')
-        (list
-          ('string', 'r:')
-          ('string', 'p:a')))))
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        ('string', 'r:')
+        ('string', 'p:a'))))
   $ testlog --removed --follow a
   abort: can only follow copies/renames for explicit filenames
   abort: can only follow copies/renames for explicit filenames
@@ -1921,3 +1923,10 @@ Test --patch and --stat with --follow and --follow-first
   | |  @@ -0,0 +1,1 @@
   | |  +ee
   | |
+
+Test old-style --rev
+
+  $ hg tag 'foo-bar'
+  $ testlog -r 'foo-bar'
+  ['foo-bar']
+  []
