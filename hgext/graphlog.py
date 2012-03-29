@@ -296,9 +296,7 @@ def revset(repo, pats, opts):
     opts = dict(opts)
     # branch and only_branch are really aliases and must be handled at
     # the same time
-    if 'branch' in opts and 'only_branch' in opts:
-        opts['branch'] = opts['branch'] + opts.pop('only_branch')
-
+    opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
     follow = opts.get('follow') or opts.get('follow_first')
     followfirst = opts.get('follow_first')
     if 'follow' in opts:
