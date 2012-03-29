@@ -233,15 +233,13 @@ Fingerprints
   $ hg -R copy-pull id https://127.0.0.1:$HGPORT/
   5fed3813f7f5
 
+  $ while kill `cat hg1.pid` 2>/dev/null; do true; done
+
 Prepare for connecting through proxy
 
-  $ kill `cat hg1.pid`
-  $ sleep 1
-
-  $ ("$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log 2>&1 </dev/null &
-  $ echo $! > proxy.pid)
+  $ "$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log </dev/null 2>&1 &
+  $ while [ ! -f proxy.pid ]; do true; done
   $ cat proxy.pid >> $DAEMON_PIDS
-  $ sleep 2
 
   $ echo "[http_proxy]" >> copy-pull/.hg/hgrc
   $ echo "always=True" >> copy-pull/.hg/hgrc
