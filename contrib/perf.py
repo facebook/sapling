@@ -111,6 +111,15 @@ def perfparents(ui, repo):
 def perflookup(ui, repo, rev):
     timer(lambda: len(repo.lookup(rev)))
 
+def perfnodelookup(ui, repo, rev):
+    import mercurial.revlog
+    mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
+    n = repo[rev].node()
+    def d():
+        cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
+        cl.rev(n)
+    timer(d)
+
 def perflog(ui, repo, **opts):
     ui.pushbuffer()
     timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
@@ -153,6 +162,7 @@ def perfrevlog(ui, repo, file_, **opts):
 
 cmdtable = {
     'perflookup': (perflookup, []),
+    'perfnodelookup': (perfnodelookup, []),
     'perfparents': (perfparents, []),
     'perfstartup': (perfstartup, []),
     'perfstatus': (perfstatus, []),
