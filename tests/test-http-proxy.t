@@ -8,10 +8,9 @@
   $ hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
-  $ ("$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log 2>&1 </dev/null &
-  $ echo $! > proxy.pid)
+  $ "$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log 2>&1 </dev/null &
+  $ while [ ! -f proxy.pid ]; do true; done
   $ cat proxy.pid >> $DAEMON_PIDS
-  $ sleep 2
 
 url for proxy, stream
 

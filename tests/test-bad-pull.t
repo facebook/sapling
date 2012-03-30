@@ -13,20 +13,12 @@
   >         handler_class=SimpleHTTPServer.SimpleHTTPRequestHandler):
   >     server_address = ('localhost', int(os.environ['HGPORT']))
   >     httpd = server_class(server_address, handler_class)
-  >     httpd.serve_forever()
-  > signal.signal(signal.SIGTERM, lambda x: sys.exit(0))
+  >     os.system("hg clone http://localhost:$HGPORT/foo copy2&")
+  >     httpd.handle_request()
   > run()
   > EOF
 
-  $ python dumb.py 2>/dev/null &
-  $ echo $! >> $DAEMON_PIDS
-
-give the server some time to start running
-
-  $ sleep 1
-
-  $ hg clone http://localhost:$HGPORT/foo copy2 2>&1
+  $ python dumb.py
+  localhost - - [*] code 404, message File not found (glob)
+  localhost - - [*] "GET /foo?cmd=capabilities HTTP/1.1" 404 - (glob)
   abort: HTTP Error 404: * (glob)
-  [255]
-
-  $ kill $!

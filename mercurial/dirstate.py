@@ -82,6 +82,8 @@ class dirstate(object):
         f = {}
         for name in self._map:
             f[util.normcase(name)] = name
+        for name in self._dirs:
+            f[util.normcase(name)] = name
         f['.'] = '.' # prevents useless util.fspath() invocation
         return f
 
@@ -401,8 +403,16 @@ class dirstate(object):
             if isknown or not os.path.lexists(os.path.join(self._root, path)):
                 folded = path
             else:
-                folded = self._foldmap.setdefault(normed,
-                                util.fspath(normed, self._root))
+                # recursively normalize leading directory components
+                # against dirstate
+                if '/' in normed:
+                    d, f = normed.rsplit('/')
+                    d = self._root + "/" + self._normalize(d, isknown)
+                    folded = d + "/" + util.fspath(f, d)
+                else:
+                    folded = util.fspath(normed, self._root)
+                self._foldmap[normed] = folded
+
         return folded
 
     def normalize(self, path, isknown=False):
@@ -548,7 +558,7 @@ class dirstate(object):
         elif match.files() and not match.anypats(): # match.match, no patterns
             skipstep3 = True
 
-        if self._checkcase:
+        if not exact and self._checkcase:
             normalize = self._normalize
             skipstep3 = False
         else:

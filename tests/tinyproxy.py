@@ -12,7 +12,7 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 
 __version__ = "0.2.1"
 
-import BaseHTTPServer, select, socket, SocketServer, urlparse
+import BaseHTTPServer, select, socket, SocketServer, urlparse, os
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     __base = BaseHTTPServer.BaseHTTPRequestHandler
@@ -122,7 +122,12 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     do_DELETE = do_GET
 
 class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
-                           BaseHTTPServer.HTTPServer): pass
+                           BaseHTTPServer.HTTPServer):
+    def __init__(self, *args, **kwargs):
+        BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
+        a = open("proxy.pid", "w")
+        a.write(str(os.getpid()) + "\n")
+        a.close()
 
 if __name__ == '__main__':
     from sys import argv

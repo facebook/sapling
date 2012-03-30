@@ -18,10 +18,10 @@ Test raw style of hgweb
   $ hg serve -p $HGPORT -A access.log -E error.log -d --pid-file=hg.pid
 
   $ cat hg.pid >> $DAEMON_PIDS
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/?f=a23bf1310f6e;file=sub/some%20%22text%22.txt;style=raw' content-type content-length content-disposition) >getoutput.txt &
-  $ sleep 5
-  $ kill `cat hg.pid`
-  $ sleep 1 # wait for server to scream and die
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/?f=a23bf1310f6e;file=sub/some%20%22text%22.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
+
+  $ while kill `cat hg.pid` 2>/dev/null; do true; done
+
   $ cat getoutput.txt
   200 Script output follows
   content-type: application/binary
@@ -40,10 +40,9 @@ Test raw style of hgweb
   > --config web.guessmime=True
 
   $ cat hg.pid >> $DAEMON_PIDS
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/?f=a23bf1310f6e;file=sub/some%20%22text%22.txt;style=raw' content-type content-length content-disposition) >getoutput.txt &
-  $ sleep 5
-  $ kill `cat hg.pid`
-  $ sleep 1 # wait for server to scream and die
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/?f=a23bf1310f6e;file=sub/some%20%22text%22.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
+  $ while kill `cat hg.pid` 2>/dev/null; do true; done
+
   $ cat getoutput.txt
   200 Script output follows
   content-type: text/plain; charset="ascii"
