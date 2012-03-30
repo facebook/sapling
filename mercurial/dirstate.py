@@ -558,7 +558,7 @@ class dirstate(object):
         elif match.files() and not match.anypats(): # match.match, no patterns
             skipstep3 = True
 
-        if self._checkcase:
+        if not exact and self._checkcase:
             normalize = self._normalize
             skipstep3 = False
         else:
