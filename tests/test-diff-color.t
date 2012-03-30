@@ -85,7 +85,7 @@ record
   \x1b[0;36;1mold mode 100644\x1b[0m (esc)
   \x1b[0;36;1mnew mode 100755\x1b[0m (esc)
   1 hunks, 1 lines changed
-  \x1b[0;33mexamine changes to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
+  \x1b[0;33mexamine changes to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
   \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
    c
    a
@@ -95,7 +95,7 @@ record
    a
    a
    c
-  \x1b[0;33mrecord this change to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
+  \x1b[0;33mrecord this change to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
@@ -113,7 +113,7 @@ qrecord
   \x1b[0;36;1mold mode 100644\x1b[0m (esc)
   \x1b[0;36;1mnew mode 100755\x1b[0m (esc)
   1 hunks, 1 lines changed
-  \x1b[0;33mexamine changes to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
+  \x1b[0;33mexamine changes to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
   \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
    c
    a
@@ -123,4 +123,4 @@ qrecord
    a
    a
    c
-  \x1b[0;33mrecord this change to 'a'? [Ynsfdaq?]\x1b[0m  (esc)
+  \x1b[0;33mrecord this change to 'a'? [Ynesfdaq?]\x1b[0m  (esc)

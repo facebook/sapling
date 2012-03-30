@@ -40,6 +40,7 @@ help record (record)
   
         y - record this change
         n - skip this change
+        e - edit this change manually
   
         s - skip remaining changes to this file
         f - record remaining changes to this file
@@ -245,22 +246,22 @@ qrecord a.patch
   > EOF
   diff --git a/1.txt b/1.txt
   2 hunks, 2 lines changed
-  examine changes to '1.txt'? [Ynsfdaq?] 
+  examine changes to '1.txt'? [Ynesfdaq?] 
   @@ -1,3 +1,3 @@
    1
   -2
   +2 2
    3
-  record change 1/4 to '1.txt'? [Ynsfdaq?] 
+  record change 1/4 to '1.txt'? [Ynesfdaq?] 
   @@ -3,3 +3,3 @@
    3
   -4
   +4 4
    5
-  record change 2/4 to '1.txt'? [Ynsfdaq?] 
+  record change 2/4 to '1.txt'? [Ynesfdaq?] 
   diff --git a/2.txt b/2.txt
   1 hunks, 1 lines changed
-  examine changes to '2.txt'? [Ynsfdaq?] 
+  examine changes to '2.txt'? [Ynesfdaq?] 
   @@ -1,5 +1,5 @@
    a
   -b
@@ -268,10 +269,10 @@ qrecord a.patch
    c
    d
    e
-  record change 3/4 to '2.txt'? [Ynsfdaq?] 
+  record change 3/4 to '2.txt'? [Ynesfdaq?] 
   diff --git a/dir/a.txt b/dir/a.txt
   1 hunks, 1 lines changed
-  examine changes to 'dir/a.txt'? [Ynsfdaq?] 
+  examine changes to 'dir/a.txt'? [Ynesfdaq?] 
 
 After qrecord a.patch 'tip'"
 
@@ -340,7 +341,7 @@ qrecord b.patch
   > EOF
   diff --git a/1.txt b/1.txt
   1 hunks, 1 lines changed
-  examine changes to '1.txt'? [Ynsfdaq?] 
+  examine changes to '1.txt'? [Ynesfdaq?] 
   @@ -1,5 +1,5 @@
    1
    2 2
@@ -348,17 +349,17 @@ qrecord b.patch
   -4
   +4 4
    5
-  record change 1/2 to '1.txt'? [Ynsfdaq?] 
+  record change 1/2 to '1.txt'? [Ynesfdaq?] 
   diff --git a/dir/a.txt b/dir/a.txt
   1 hunks, 1 lines changed
-  examine changes to 'dir/a.txt'? [Ynsfdaq?] 
+  examine changes to 'dir/a.txt'? [Ynesfdaq?] 
   @@ -1,4 +1,4 @@
   -hello world
   +hello world!
    
    someone
    up
-  record change 2/2 to 'dir/a.txt'? [Ynsfdaq?] 
+  record change 2/2 to 'dir/a.txt'? [Ynesfdaq?] 
 
 After qrecord b.patch 'tip'
 

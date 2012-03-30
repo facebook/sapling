@@ -338,18 +338,18 @@ record chunk
   > EOF
   diff --git a/a b/a
   2 hunks, 2 lines changed
-  examine changes to 'a'? [Ynsfdaq?] 
+  examine changes to 'a'? [Ynesfdaq?] 
   @@ -1,3 +1,4 @@
    expand $Id$
   +foo
    do not process $Id:
    xxx $
-  record change 1/2 to 'a'? [Ynsfdaq?] 
+  record change 1/2 to 'a'? [Ynesfdaq?] 
   @@ -2,2 +3,3 @@
    do not process $Id:
    xxx $
   +bar
-  record change 2/2 to 'a'? [Ynsfdaq?] 
+  record change 2/2 to 'a'? [Ynesfdaq?] 
 
   $ hg identify
   d17e03c92c97+ tip
@@ -395,18 +395,18 @@ Record all chunks in file a
   > EOF
   diff --git a/a b/a
   2 hunks, 2 lines changed
-  examine changes to 'a'? [Ynsfdaq?] 
+  examine changes to 'a'? [Ynesfdaq?] 
   @@ -1,3 +1,4 @@
    expand $Id$
   +foo
    do not process $Id:
    xxx $
-  record change 1/2 to 'a'? [Ynsfdaq?] 
+  record change 1/2 to 'a'? [Ynesfdaq?] 
   @@ -2,2 +3,3 @@
    do not process $Id:
    xxx $
   +bar
-  record change 2/2 to 'a'? [Ynsfdaq?] 
+  record change 2/2 to 'a'? [Ynesfdaq?] 
 
 File a should be clean
 
@@ -462,7 +462,7 @@ record added file alone
   > EOF
   diff --git a/r b/r
   new file mode 100644
-  examine changes to 'r'? [Ynsfdaq?] 
+  examine changes to 'r'? [Ynesfdaq?] 
   r
   committed changeset 3:899491280810
   overwriting r expanding keywords
@@ -486,7 +486,7 @@ record added keyword ignored file
   > EOF
   diff --git a/i b/i
   new file mode 100644
-  examine changes to 'i'? [Ynsfdaq?] 
+  examine changes to 'i'? [Ynesfdaq?] 
   i
   committed changeset 3:5f40fe93bbdc
   $ cat i

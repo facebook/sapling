@@ -261,7 +261,7 @@ def parsepatch(fp):
 def filterpatch(ui, headers):
     """Interactively filter patch chunks into applied-only chunks"""
 
-    def prompt(skipfile, skipall, query):
+    def prompt(skipfile, skipall, query, chunk):
         """prompt query, and process base inputs
 
         - y/n for the rest of file
@@ -271,14 +271,16 @@ def filterpatch(ui, headers):
 
         Return True/False and possibly updated skipfile and skipall.
         """
+        newpatches = None
         if skipall is not None:
-            return skipall, skipfile, skipall
+            return skipall, skipfile, skipall, newpatches
         if skipfile is not None:
-            return skipfile, skipfile, skipall
+            return skipfile, skipfile, skipall, newpatches
         while True:
-            resps = _('[Ynsfdaq?]')
+            resps = _('[Ynesfdaq?]')
             choices = (_('&Yes, record this change'),
                     _('&No, skip this change'),
+                    _('&Edit the change manually'),
                     _('&Skip remaining changes to this file'),
                     _('Record remaining changes to this &file'),
                     _('&Done, skip remaining changes and files'),
@@ -287,7 +289,7 @@ def filterpatch(ui, headers):
                     _('&?'))
             r = ui.promptchoice("%s %s" % (query, resps), choices)
             ui.write("\n")
-            if r == 7: # ?
+            if r == 8: # ?
                 doc = gettext(record.__doc__)
                 c = doc.find('::') + 2
                 for l in doc[c:].splitlines():
@@ -298,17 +300,69 @@ def filterpatch(ui, headers):
                 ret = True
             elif r == 1: # no
                 ret = False
-            elif r == 2: # Skip
+            elif r == 2: # Edit patch
+                if chunk is None:
+                    ui.write(_('cannot edit patch for whole file'))
+                    ui.write("\n")
+                    continue
+                if chunk.header.binary():
+                    ui.write(_('cannot edit patch for binary file'))
+                    ui.write("\n")
+                    continue
+                # Patch comment based on the Git one (based on comment at end of
+                # http://mercurial.selenic.com/wiki/RecordExtension)
+                phelp = '---' + _("""
+To remove '-' lines, make them ' ' lines (context).
+To remove '+' lines, delete them.
+Lines starting with # will be removed from the patch.
+
+If the patch applies cleanly, the edited hunk will immediately be
+added to the record list. If it does not apply cleanly, a rejects
+file will be generated: you can use that when you try again. If
+all lines of the hunk are removed, then the edit is aborted and
+the hunk is left unchanged.
+""")
+                (patchfd, patchfn) = tempfile.mkstemp(prefix="hg-editor-",
+                        suffix=".diff", text=True)
+                try:
+                    # Write the initial patch
+                    f = os.fdopen(patchfd, "w")
+                    chunk.header.write(f)
+                    chunk.write(f)
+                    f.write('\n'.join(['# ' + i for i in phelp.splitlines()]))
+                    f.close()
+                    # Start the editor and wait for it to complete
+                    editor = ui.geteditor()
+                    util.system("%s \"%s\"" % (editor, patchfn),
+                            environ={'HGUSER': ui.username()},
+                            onerr=util.Abort, errprefix=_("edit failed"),
+                            out=ui.fout)
+                    # Remove comment lines
+                    patchfp = open(patchfn)
+                    ncpatchfp = cStringIO.StringIO()
+                    for line in patchfp:
+                        if not line.startswith('#'):
+                            ncpatchfp.write(line)
+                    patchfp.close()
+                    ncpatchfp.seek(0)
+                    newpatches = parsepatch(ncpatchfp)
+                finally:
+                    os.unlink(patchfn)
+                    del ncpatchfp
+                # Signal that the chunk shouldn't be applied as-is, but
+                # provide the new patch to be used instead.
+                ret = False
+            elif r == 3: # Skip
                 ret = skipfile = False
-            elif r == 3: # file (Record remaining)
+            elif r == 4: # file (Record remaining)
                 ret = skipfile = True
-            elif r == 4: # done, skip remaining
+            elif r == 5: # done, skip remaining
                 ret = skipall = False
-            elif r == 5: # all
+            elif r == 6: # all
                 ret = skipall = True
-            elif r == 6: # quit
+            elif r == 7: # quit
                 raise util.Abort(_('user quit'))
-            return ret, skipfile, skipall
+            return ret, skipfile, skipall, newpatches
 
     seen = set()
     applied = {}        # 'filename' -> [] of chunks
@@ -326,7 +380,7 @@ def filterpatch(ui, headers):
             h.pretty(ui)
         msg = (_('examine changes to %s?') %
                _(' and ').join(map(repr, h.files())))
-        r, skipfile, skipall = prompt(skipfile, skipall, msg)
+        r, skipfile, skipall, np = prompt(skipfile, skipall, msg, None)
         if not r:
             continue
         applied[h.filename()] = [h]
@@ -342,12 +396,19 @@ def filterpatch(ui, headers):
                 idx = pos - len(h.hunks) + i
                 msg = _('record change %d/%d to %r?') % (idx, total,
                                                          chunk.filename())
-            r, skipfile, skipall = prompt(skipfile, skipall, msg)
+            r, skipfile, skipall, newpatches = prompt(skipfile,
+                    skipall, msg, chunk)
             if r:
                 if fixoffset:
                     chunk = copy.copy(chunk)
                     chunk.toline += fixoffset
                 applied[chunk.filename()].append(chunk)
+            elif newpatches is not None:
+                for newpatch in newpatches:
+                    for newhunk in newpatch.hunks:
+                        if fixoffset:
+                            newhunk.toline += fixoffset
+                        applied[newhunk.filename()].append(newhunk)
             else:
                 fixoffset += chunk.removed - chunk.added
     return sum([h for h in applied.itervalues()
@@ -372,6 +433,7 @@ def record(ui, repo, *pats, **opts):
 
       y - record this change
       n - skip this change
+      e - edit this change manually
 
       s - skip remaining changes to this file
       f - record remaining changes to this file
