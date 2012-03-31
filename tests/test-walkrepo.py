@@ -1,11 +1,12 @@
 import os
 from mercurial import hg, ui
 from mercurial.scmutil import walkrepos
+from mercurial.util import checklink
 from os import mkdir, chdir
 from os.path import join as pjoin
 
 u = ui.ui()
-sym = getattr(os, 'symlink', False) and getattr(os.path, 'samestat', False)
+sym = checklink('.')
 
 hg.repository(u, 'top1', create=1)
 mkdir('subdir')
