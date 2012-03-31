@@ -882,7 +882,7 @@ _hg_cmd_qdiff() {
 
 _hg_cmd_qfinish() {
   _arguments -s -w : $_hg_global_opts \
-  '(--all -a)'{-a,--all}'[finish all patches]' \
+  '(--applied -a)'{-a,--applied}'[finish all applied patches]' \
   '*:patch:_hg_qapplied'
 }
 
