@@ -1065,6 +1065,8 @@ class GitHandler(object):
                 if line == '':
                     continue
 
+                if ' : ' in line:
+                    break
                 command, data = line.split(" : ", 1)
 
                 if command == 'rename':
