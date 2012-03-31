@@ -26,7 +26,7 @@ commit()
 {
     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
+    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error" | sed 's/, 0 deletions(-)//'
     count=`expr $count + 1`
 }
 
@@ -58,10 +58,10 @@ clonefilt='s/Cloning into/Initialized empty Git repository in/;s/in .*/in .../'
 
 git clone ../gitrepo1 . | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
 git submodule add ../gitsubrepo subrepo | python -c "$rmpwd" | sed "$clonefilt" | egrep -v '^done\.$'
-git commit -m 'add subrepo'
+git commit -m 'add subrepo' | sed 's/, 0 deletions(-)//'
 git rm --cached subrepo
 git rm .gitmodules
-git commit -m 'rm subrepo'
+git commit -m 'rm subrepo' | sed 's/, 0 deletions(-)//' | sed 's/, 0 insertions(+)//'
 cd ..
 
 hg clone gitrepo2 hgrepo | grep -v '^updating'

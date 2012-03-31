@@ -7,13 +7,13 @@ Initialized empty Git repository in ...
 Initialized empty Git repository in ...
 
 [master e42b08b] add subrepo
- 2 files changed, 4 insertions(+), 0 deletions(-)
+ 2 files changed, 4 insertions(+)
  create mode 100644 .gitmodules
  create mode 160000 subrepo
 rm 'subrepo'
 rm '.gitmodules'
 [master 7e4c934] rm subrepo
- 2 files changed, 0 insertions(+), 4 deletions(-)
+ 2 files changed, 4 deletions(-)
  delete mode 100644 .gitmodules
  delete mode 160000 subrepo
 importing git objects into hg
