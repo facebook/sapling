@@ -4,7 +4,7 @@ if all features are there, non-zero otherwise. If a feature name is
 prefixed with "no-", the absence of feature is tested.
 """
 import optparse
-import os
+import os, stat
 import re
 import sys
 import tempfile
@@ -64,14 +64,21 @@ def has_eol_in_paths():
         return False
 
 def has_executablebit():
-    fd, path = tempfile.mkstemp(prefix=tempprefix)
-    os.close(fd)
     try:
-        s = os.lstat(path).st_mode
-        os.chmod(path, s | 0100)
-        return (os.lstat(path).st_mode & 0100 != 0)
-    finally:
-        os.remove(path)
+        EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        fh, fn = tempfile.mkstemp(dir=".", prefix='hg-checkexec-')
+        try:
+            os.close(fh)
+            m = os.stat(fn).st_mode & 0777
+            new_file_has_exec = m & EXECFLAGS
+            os.chmod(fn, m ^ EXECFLAGS)
+            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0777) == m)
+        finally:
+            os.unlink(fn)
+    except (IOError, OSError):
+        # we don't care, the user probably won't be able to commit anyway
+        return False
+    return not (new_file_has_exec or exec_flags_cannot_flip)
 
 def has_icasefs():
     # Stolen from mercurial.util
@@ -161,6 +168,15 @@ def has_p4():
     return matchoutput('p4 -V', r'Rev\. P4/') and matchoutput('p4d -V', r'Rev\. P4D/')
 
 def has_symlink():
+    if not hasattr(os, "symlink"):
+        return False
+    name = tempfile.mktemp(dir=".", prefix='hg-checklink-')
+    try:
+        os.symlink(".", name)
+        os.unlink(name)
+        return True
+    except (OSError, AttributeError):
+        return False
     return hasattr(os, "symlink") # FIXME: should also check file system and os
 
 def has_tla():
