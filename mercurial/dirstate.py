@@ -406,9 +406,10 @@ class dirstate(object):
                 # recursively normalize leading directory components
                 # against dirstate
                 if '/' in normed:
-                    d, f = normed.rsplit('/')
-                    d = self._root + "/" + self._normalize(d, isknown)
-                    folded = d + "/" + util.fspath(f, d)
+                    d, f = normed.rsplit('/', 1)
+                    d = self._normalize(d, isknown)
+                    r = self._root + "/" + d
+                    folded = d + "/" + util.fspath(f, r)
                 else:
                     folded = util.fspath(normed, self._root)
                 self._foldmap[normed] = folded

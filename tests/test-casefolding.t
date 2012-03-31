@@ -73,6 +73,17 @@ no clobbering of untracked files with wrong casing
 
   $ cd ..
 
+issue 3342: file in nested directory causes unexpected abort
+
+  $ hg init issue3342
+  $ cd issue3342
+
+  $ mkdir -p a/B/c/D
+  $ echo e > a/B/c/D/e
+  $ hg add a/B/c/D/e
+
+  $ cd ..
+
 issue 3340: mq does not handle case changes correctly
 
 in addition to reported case, 'hg qrefresh' is also tested against
