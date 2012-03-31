@@ -324,6 +324,7 @@ the hunk is left unchanged.
 """)
                 (patchfd, patchfn) = tempfile.mkstemp(prefix="hg-editor-",
                         suffix=".diff", text=True)
+                ncpatchfp = None
                 try:
                     # Write the initial patch
                     f = os.fdopen(patchfd, "w")

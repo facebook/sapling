@@ -919,7 +919,7 @@ Editing patch
 
   $ cat > editor << '__EOF__'
   > #!/bin/sh
-  > sed -i -e 7d -e '5s/^-/ /' "$1"
+  > sed -i.bak -e 7d -e '5s/^-/ /' "$1"
   > __EOF__
   $ chmod +x editor
   $ cat > editedfile << '__EOF__'
