@@ -919,7 +919,8 @@ Editing patch
 
   $ cat > editor << '__EOF__'
   > #!/bin/sh
-  > sed -i.bak -e 7d -e '5s/^-/ /' "$1"
+  > sed -e 7d -e '5s/^-/ /' "$1" > tmp
+  > mv tmp "$1"
   > __EOF__
   $ chmod +x editor
   $ cat > editedfile << '__EOF__'
@@ -980,7 +981,8 @@ Removing changes from patch
   $ echo "This line has been added" >> editedfile
   $ cat > editor << '__EOF__'
   > #!/bin/sh
-  > sed -i -e 's/^[-+]/ /' "$1"
+  > sed -e 's/^[-+]/ /' "$1" > tmp
+  > mv tmp "$1"
   > __EOF__
   $ chmod +x editor
   $ HGEDITOR="'`pwd`'"/editor hg record <<EOF
@@ -1011,11 +1013,13 @@ Removing changes from patch
 
 Invalid patch
 
-  $ sed -i -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile
+  $ sed -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile > tmp
+  $ mv tmp editedfile
   $ echo "This line has been added" >> editedfile
   $ cat > editor << '__EOF__'
   > #!/bin/sh
-  > sed -i s/This/That/ "$1"
+  > sed s/This/That/ "$1" > tmp
+  > mv tmp "$1"
   > __EOF__
   $ chmod +x editor
   $ HGEDITOR="'`pwd`'"/editor hg record <<EOF
