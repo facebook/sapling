@@ -977,7 +977,8 @@ Trying to edit patch for whole file
 
 Removing changes from patch
 
-  $ sed -i -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile
+  $ sed -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile > tmp
+  $ mv tmp editedfile
   $ echo "This line has been added" >> editedfile
   $ cat > editor << '__EOF__'
   > #!/bin/sh
