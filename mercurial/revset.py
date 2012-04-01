@@ -858,6 +858,84 @@ def rev(repo, subset, x):
         raise error.ParseError(_("rev expects a number"))
     return [r for r in subset if r == l]
 
+def matching(repo, subset, x):
+    """``matching(revision [, field])``
+    Changesets in which a given set of fields match the set of fields in the
+    selected revision or set.
+    To match more than one field pass the list of fields to match separated
+    by spaces (e.g. 'author description').
+    Valid fields are most regular revision fields and some special fields:
+    * regular fields:
+      - description, author, branch, date, files, phase, parents,
+      substate, user.
+      Note that author and user are synonyms.
+    * special fields: summary, metadata.
+      - summary: matches the first line of the description.
+      - metatadata: It is equivalent to matching 'description user date'
+        (i.e. it matches the main metadata fields).
+    metadata is the default field which is used when no fields are specified.
+    You can match more than one field at a time.
+    """
+    l = getargs(x, 1, 2, _("matching takes 1 or 2 arguments"))
+
+    revs = getset(repo, xrange(len(repo)), l[0])
+
+    fieldlist = ['metadata']
+    if len(l) > 1:
+            fieldlist = getstring(l[1],
+                _("matching requires a string "
+                "as its second argument")).split()
+
+    # Make sure that there are no repeated fields, and expand the
+    # 'special' 'metadata' field type
+    fields = []
+    for field in fieldlist:
+        if field == 'metadata':
+            fields += ['user', 'description', 'date']
+        else:
+            if field == 'author':
+                field = 'user'
+            fields.append(field)
+    fields = set(fields)
+
+    # We may want to match more than one field
+    # Each field will be matched with its own "getfield" function
+    # which will be added to the getfieldfuncs array of functions
+    getfieldfuncs = []
+    _funcs = {
+        'user': lambda r: repo[r].user(),
+        'branch': lambda r: repo[r].branch(),
+        'date': lambda r: repo[r].date(),
+        'description': lambda r: repo[r].description(),
+        'files': lambda r: repo[r].files(),
+        'parents': lambda r: repo[r].parents(),
+        'phase': lambda r: repo[r].phase(),
+        'substate': lambda r: repo[r].substate,
+        'summary': lambda r: repo[r].description().splitlines()[0],
+    }
+    for info in fields:
+        getfield = _funcs.get(info, None)
+        if getfield is None:
+            raise error.ParseError(
+                _("unexpected field name passed to matching: %s") % info)
+        getfieldfuncs.append(getfield)
+
+    # convert the getfield array of functions into a "getinfo" function
+    # which returns an array of field values (or a single value if there
+    # is only one field to match)
+    if len(getfieldfuncs) == 1:
+        getinfo = getfieldfuncs[0]
+    else:
+        getinfo = lambda r: [f(r) for f in getfieldfuncs]
+
+    matches = []
+    for rev in revs:
+        target = getinfo(rev)
+        matches += [r for r in subset if getinfo(r) == target]
+    if len(revs) > 1:
+        matches = sorted(set(matches))
+    return matches
+
 def reverse(repo, subset, x):
     """``reverse(set)``
     Reverse order of set.
@@ -1019,6 +1097,7 @@ symbols = {
     "roots": roots,
     "sort": sort,
     "secret": secret,
+    "matching": matching,
     "tag": tag,
     "tagged": tagged,
     "user": user,
