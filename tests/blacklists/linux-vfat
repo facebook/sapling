@@ -1,0 +1,35 @@
+# invalid filenames
+test-add.t
+test-init.t
+test-clone.t
+test-contrib.t
+test-hgweb-raw.t
+test-walk.t
+
+# no sockets or fifos
+test-hup.t
+test-inotify-debuginotify.t
+test-inotify-dirty-dirstate.t
+test-inotify-issue1208.t
+test-inotify-issue1371.t
+test-inotify-issue1542.t
+test-inotify-lookup.t
+test-inotify.t
+test-inotify-issue1556.t
+
+# no hardlinks
+test-hardlinks.t
+test-relink.t
+
+# exec bit problems
+test-convert-bzr-114.t
+test-convert-bzr-directories.t
+test-convert-bzr-merges.t
+test-convert-bzr-treeroot.t
+test-convert-darcs.t
+test-merge-tools.t
+
+# debugstate exec bit false positives
+test-dirstate.t
+test-filebranch.t
+test-merge-remove.t
