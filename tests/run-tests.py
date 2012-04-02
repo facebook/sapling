@@ -75,7 +75,7 @@ def Popen4(cmd, wd, timeout):
         def t():
             start = time.time()
             while time.time() - start < timeout and p.returncode is None:
-                time.sleep(1)
+                time.sleep(.1)
             p.timeout = True
             if p.returncode is None:
                 terminate(p)
@@ -360,7 +360,7 @@ def killdaemons():
                 os.kill(pid, 0)
                 vlog('# Killing daemon process %d' % pid)
                 os.kill(pid, signal.SIGTERM)
-                time.sleep(0.25)
+                time.sleep(0.1)
                 os.kill(pid, 0)
                 vlog('# Daemon process %d is stuck - really killing it' % pid)
                 os.kill(pid, signal.SIGKILL)
@@ -1275,7 +1275,7 @@ def main():
         else:
             runtests(options, tests)
     finally:
-        time.sleep(1)
+        time.sleep(.1)
         cleanup(options)
 
 if __name__ == '__main__':
