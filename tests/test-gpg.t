@@ -1,6 +1,10 @@
 Test the GPG extension
 
   $ "$TESTDIR/hghave" gpg || exit 80
+  $ if ! hg identify -q > /dev/null; then
+  >     echo "skipped: not a Mercurial working dir" >&2
+  >     exit 80
+  > fi
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > gpg=
