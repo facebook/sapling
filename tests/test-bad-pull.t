@@ -25,6 +25,3 @@
   abort: HTTP Error 404: * (glob)
   [255]
   $ wait $P
-  $ cat log
-  localhost - - [*] code 404, message File not found (glob)
-  localhost - - [*] "GET /foo?cmd=capabilities HTTP/1.1" 404 - (glob)
