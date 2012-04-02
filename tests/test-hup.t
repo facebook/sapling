@@ -15,7 +15,7 @@ Do test while holding fifo open
   > kill -HUP $P
   > ) > p
 
-  $ while kill -0 $P 2>/dev/null; do true; done
+  $ wait
   $ cat out
   0
   0
