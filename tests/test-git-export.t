@@ -96,7 +96,7 @@ Nonexistent in tip+chmod:
 
 Binary diff:
 
-  $ cp $TESTDIR/binfile.bin .
+  $ cp "$TESTDIR/binfile.bin" .
   $ hg add binfile.bin
   $ hg diff --git > b.diff
   $ cat b.diff
@@ -125,7 +125,7 @@ Import binary diff:
   $ rm binfile.bin
   $ hg import -mfoo b.diff
   applying b.diff
-  $ cmp binfile.bin $TESTDIR/binfile.bin
+  $ cmp binfile.bin "$TESTDIR/binfile.bin"
 
 Rename binary file:
 

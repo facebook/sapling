@@ -6,7 +6,7 @@ Test the GPG extension
   > gpg=
   > 
   > [gpg]
-  > cmd=gpg --no-permission-warning --no-secmem-warning --no-auto-check-trustdb --homedir $TESTDIR/gpg
+  > cmd=gpg --no-permission-warning --no-secmem-warning --no-auto-check-trustdb --homedir "$TESTDIR/gpg"
   > EOF
   $ hg init r
   $ cd r

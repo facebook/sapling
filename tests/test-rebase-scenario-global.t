@@ -13,7 +13,7 @@
 
   $ hg init a
   $ cd a
-  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  $ hg unbundle "$TESTDIR/bundles/rebase.hg"
   adding changesets
   adding manifests
   adding file changes
@@ -317,7 +317,7 @@ All destination are B
 
   $ hg init ah
   $ cd ah
-  $ hg unbundle $TESTDIR/bundles/rebase-revset.hg
+  $ hg unbundle "$TESTDIR/bundles/rebase-revset.hg"
   adding changesets
   adding manifests
   adding file changes

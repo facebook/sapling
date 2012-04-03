@@ -25,15 +25,15 @@ create source repository
   $ hg ci -Am addfile
   adding a
   adding b
-  $ cat $TESTDIR/binfile.bin >> a
-  $ cat $TESTDIR/binfile.bin >> b
+  $ cat "$TESTDIR/binfile.bin" >> a
+  $ cat "$TESTDIR/binfile.bin" >> b
   $ hg ci -Am changefiles
 
 make another commit to create files larger than 1 KB to test
 formatting of final byte count
 
-  $ cat $TESTDIR/binfile.bin >> a
-  $ cat $TESTDIR/binfile.bin >> b
+  $ cat "$TESTDIR/binfile.bin" >> a
+  $ cat "$TESTDIR/binfile.bin" >> b
   $ hg ci -m anotherchange
 
 don't sit forever trying to double-lock the source repo

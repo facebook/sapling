@@ -262,7 +262,7 @@ Enable progress extension for archive tests:
 Test archiving to a directory tree (the doubled lines in the output
 only show up in the test output, not in real usage):
 
-  $ hg archive --subrepos ../archive 2>&1 | $TESTDIR/filtercr.py
+  $ hg archive --subrepos ../archive 2>&1 | "$TESTDIR/filtercr.py"
   
   archiving [                                           ] 0/3
   archiving [                                           ] 0/3
@@ -302,7 +302,7 @@ only show up in the test output, not in real usage):
 
 Test archiving to zip file (unzip output is unstable):
 
-  $ hg archive --subrepos ../archive.zip 2>&1 | $TESTDIR/filtercr.py
+  $ hg archive --subrepos ../archive.zip 2>&1 | "$TESTDIR/filtercr.py"
   
   archiving [                                           ] 0/3
   archiving [                                           ] 0/3
@@ -333,7 +333,7 @@ cloned:
 
   $ hg clone -U . ../empty
   $ cd ../empty
-  $ hg archive --subrepos -r tip ../archive.tar.gz 2>&1 | $TESTDIR/filtercr.py
+  $ hg archive --subrepos -r tip ../archive.tar.gz 2>&1 | "$TESTDIR/filtercr.py"
   
   archiving [                                           ] 0/3
   archiving [                                           ] 0/3

@@ -195,13 +195,13 @@ now addremove should remove old files
   
   $ hg manifest --debug
   2564acbe54bbbedfbf608479340b359f04597f80 644 @ dangling
-  $ $TESTDIR/readlink.py dangling
+  $ "$TESTDIR/readlink.py" dangling
   dangling -> nothing
 
   $ rm dangling
   $ ln -s void dangling
   $ hg commit -m 'change symlink'
-  $ $TESTDIR/readlink.py dangling
+  $ "$TESTDIR/readlink.py" dangling
   dangling -> void
 
 
@@ -209,7 +209,7 @@ modifying link
 
   $ rm dangling
   $ ln -s empty dangling
-  $ $TESTDIR/readlink.py dangling
+  $ "$TESTDIR/readlink.py" dangling
   dangling -> empty
 
 
@@ -217,13 +217,13 @@ reverting to rev 0:
 
   $ hg revert -r 0 -a
   reverting dangling
-  $ $TESTDIR/readlink.py dangling
+  $ "$TESTDIR/readlink.py" dangling
   dangling -> nothing
 
 
 backups:
 
-  $ $TESTDIR/readlink.py *.orig
+  $ "$TESTDIR/readlink.py" *.orig
   dangling.orig -> empty
   $ rm *.orig
   $ hg up -C
@@ -236,7 +236,7 @@ copies
   $ hg st -Cmard
   A dangling2
     dangling
-  $ $TESTDIR/readlink.py dangling dangling2
+  $ "$TESTDIR/readlink.py" dangling dangling2
   dangling -> void
   dangling2 -> void
 
