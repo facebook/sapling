@@ -115,6 +115,9 @@ class config(object):
 
         for l in data.splitlines(True):
             line += 1
+            if line == 1 and l.startswith('\xef\xbb\xbf'):
+                # Someone set us up the BOM
+                l = l[3:]
             if cont:
                 if commentre.match(l):
                     continue
