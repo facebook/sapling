@@ -221,7 +221,7 @@ enable progress extension:
   > width = 60
   > EOF
 
-  $ hg archive ../with-progress 2>&1 | $TESTDIR/filtercr.py
+  $ hg archive ../with-progress 2>&1 | "$TESTDIR/filtercr.py"
   
   archiving [                                           ] 0/4
   archiving [                                           ] 0/4

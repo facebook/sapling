@@ -12,7 +12,7 @@
 
   $ hg init a
   $ cd a
-  $ hg unbundle $TESTDIR/bundles/rebase.hg
+  $ hg unbundle "$TESTDIR/bundles/rebase.hg"
   adding changesets
   adding manifests
   adding file changes

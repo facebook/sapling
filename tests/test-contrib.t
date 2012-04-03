@@ -1,6 +1,6 @@
 Set vars:
 
-  $ CONTRIBDIR=$TESTDIR/../contrib
+  $ CONTRIBDIR="$TESTDIR/../contrib"
 
 Prepare repo-a:
 
@@ -26,7 +26,7 @@ Prepare repo-a:
 
 Dumping revlog of file a to stdout:
 
-  $ python $CONTRIBDIR/dumprevlog .hg/store/data/a.i
+  $ python "$CONTRIBDIR/dumprevlog" .hg/store/data/a.i
   file: .hg/store/data/a.i
   node: 183d2312b35066fb6b3b449b84efc370d50993d0
   linkrev: 0
@@ -58,14 +58,14 @@ Dumping revlog of file a to stdout:
 
 Dump all revlogs to file repo.dump:
 
-  $ find .hg/store -name "*.i" | sort | xargs python $CONTRIBDIR/dumprevlog > ../repo.dump
+  $ find .hg/store -name "*.i" | sort | xargs python "$CONTRIBDIR/dumprevlog" > ../repo.dump
   $ cd ..
 
 Undumping into repo-b:
 
   $ hg init repo-b
   $ cd repo-b
-  $ python $CONTRIBDIR/undumprevlog < ../repo.dump
+  $ python "$CONTRIBDIR/undumprevlog" < ../repo.dump
   .hg/store/00changelog.i
   .hg/store/00manifest.i
   .hg/store/data/a.i
@@ -106,7 +106,7 @@ Compare repos:
 
 Test shrink-revlog:
   $ cd repo-a
-  $ hg --config extensions.shrink=$CONTRIBDIR/shrink-revlog.py shrink
+  $ hg --config extensions.shrink="$CONTRIBDIR/shrink-revlog.py" shrink
   shrinking $TESTTMP/repo-a/.hg/store/00manifest.i (glob)
   reading revs
   sorting revs

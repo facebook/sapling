@@ -4,7 +4,7 @@ creating 'remote
 
   $ hg init remote
   $ cd remote
-  $ hg unbundle $TESTDIR/bundles/remote.hg
+  $ hg unbundle "$TESTDIR/bundles/remote.hg"
   adding changesets
   adding manifests
   adding file changes

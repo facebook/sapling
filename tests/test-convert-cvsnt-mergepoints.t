@@ -101,7 +101,7 @@ return to trunk and merge MYBRANCH1_2
   Merging differences between 1.1 and 1.1.2.2.2.1 into foo.txt
   $ cvsci -m "merge2" foo.txt
   $ REALCVS=`which cvs`
-  $ echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat $TESTDIR/test-convert-cvsnt-mergepoints.rlog; exit 0; fi; done; $REALCVS \$*" > ../cvs
+  $ echo "for x in \$*; do if [ \"\$x\" = \"rlog\" ]; then echo \"RCS file: $CVSROOT/foo/foo.txt,v\"; cat \"$TESTDIR/test-convert-cvsnt-mergepoints.rlog\"; exit 0; fi; done; $REALCVS \$*" > ../cvs
   $ chmod +x ../cvs
   $ PATH=..:${PATH} hg debugcvsps --parents foo
   collecting CVS rlog
