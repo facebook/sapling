@@ -112,6 +112,7 @@ clone from invalid URL
   [255]
 
 test http authentication
++ use the same server to test server side streaming preference
 
   $ cd test
   $ cat << EOT > userpass.py
@@ -127,7 +128,8 @@ test http authentication
   > def extsetup():
   >     common.permhooks.insert(0, perform_authentication)
   > EOT
-  $ hg --config extensions.x=userpass.py serve -p $HGPORT2 -d --pid-file=pid
+  $ hg --config extensions.x=userpass.py serve -p $HGPORT2 -d --pid-file=pid \
+  >    --config server.preferuncompressed=True
   $ cat pid >> $DAEMON_PIDS
 
   $ hg id http://localhost:$HGPORT2/  
@@ -149,8 +151,13 @@ test http authentication
   5fed3813f7f5
   $ hg id http://user@localhost:$HGPORT2/ 
   5fed3813f7f5
-  $ hg id http://user:pass@localhost:$HGPORT2/
-  5fed3813f7f5
+  $ hg clone http://user:pass@localhost:$HGPORT2/ dest 2>&1
+  streaming all changes
+  7 files to transfer, 916 bytes of data
+  transferred * bytes in * seconds (*/sec) (glob)
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
   $ hg id http://user2@localhost:$HGPORT2/ 
   abort: http authorization required
   [255]

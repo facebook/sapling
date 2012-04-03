@@ -2290,6 +2290,10 @@ class localrepository(repo.repository):
         # and format flags on "stream" capability, and use
         # uncompressed only if compatible.
 
+        if not stream:
+            # if the server explicitely prefer to stream (for fast LANs)
+            stream = remote.capable('stream-preferred')
+
         if stream and not heads:
             # 'stream' means remote revlog format is revlogv1 only
             if remote.capable('stream'):

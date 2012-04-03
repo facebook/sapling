@@ -979,6 +979,10 @@ Controls generic server settings.
     the write lock while determining what data to transfer.
     Default is True.
 
+``preferuncompressed``
+    When set, clients will try to use the uncompressed streaming
+    protocol. Default is False.
+
 ``validate``
     Whether to validate the completeness of pushed changesets by
     checking that all new file revisions specified in manifests are

@@ -1198,10 +1198,10 @@ Static files
   	top: -1px;
   }
 
-Stop and restart with HGENCODING=cp932
+Stop and restart with HGENCODING=cp932 and preferuncompressed
 
   $ "$TESTDIR/killdaemons.py"
-  $ HGENCODING=cp932 hg serve --config server.uncompressed=False -n test \
+  $ HGENCODING=cp932 hg serve --config server.preferuncompressed=True -n test \
   >     -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -1215,6 +1215,15 @@ Graph json escape of multibyte character
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/' \
   >     | grep '^var data ='
   var data = [["548001d11f45", [0, 1], [[0, 0, 1, -1, ""]], "\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["ba87b23d29ca", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+
+capabilities
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
+  200 Script output follows
+  
+  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred stream unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+
+heads
 
 ERRORS ENCOUNTERED
 

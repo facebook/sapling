@@ -415,6 +415,8 @@ def capabilities(repo, proto):
     caps = ('lookup changegroupsubset branchmap pushkey known getbundle '
             'unbundlehash batch').split()
     if _allowstream(repo.ui):
+        if repo.ui.configbool('server', 'preferuncompressed', False):
+            caps.append('stream-preferred')
         requiredformats = repo.requirements & repo.supportedformats
         # if our local revlogs are just revlogv1, add 'stream' cap
         if not requiredformats - set(('revlogv1',)):
