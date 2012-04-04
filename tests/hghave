@@ -177,7 +177,6 @@ def has_symlink():
         return True
     except (OSError, AttributeError):
         return False
-    return hasattr(os, "symlink") # FIXME: should also check file system and os
 
 def has_tla():
     return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
