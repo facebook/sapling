@@ -480,7 +480,7 @@ class ui(object):
             if not getattr(self.ferr, 'closed', False):
                 self.ferr.flush()
         except IOError, inst:
-            if inst.errno not in (errno.EPIPE, errno.EIO):
+            if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                 raise
 
     def flush(self):
