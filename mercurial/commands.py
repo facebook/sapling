@@ -2413,9 +2413,9 @@ def export(ui, repo, *changesets, **opts):
     Returns 0 on success.
     """
     changesets += tuple(opts.get('rev', []))
-    if not changesets:
-        raise util.Abort(_("export requires at least one changeset"))
     revs = scmutil.revrange(repo, changesets)
+    if not revs:
+        raise util.Abort(_("export requires at least one changeset"))
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
