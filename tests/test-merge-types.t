@@ -89,7 +89,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    a: versions differ -> m
   preserving a for resolve of a
   updating: a 1/1 files (100.00%)
-  couldn't find merge tool hgmerge
+  (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool 'internal:prompt' for a (binary False symlink True)
    no tool found to merge a
   keep (l)ocal or take (o)ther? l
