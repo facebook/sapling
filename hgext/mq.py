@@ -950,6 +950,7 @@ class queue(object):
         inclsubs = self.checksubstate(repo)
         if inclsubs:
             inclsubs.append('.hgsubstate')
+            substatestate = repo.dirstate['.hgsubstate']
         if opts.get('include') or opts.get('exclude') or pats:
             if inclsubs:
                 pats = list(pats or []) + inclsubs
@@ -959,9 +960,11 @@ class queue(object):
                 if f != '.hgsubstate': # .hgsubstate is auto-created
                     raise util.Abort('%s: %s' % (f, msg))
             match.bad = badfn
-            m, a, r, d = repo.status(match=match)[:4]
+            changes = repo.status(match=match)
+            m, a, r, d = changes[:4]
         else:
-            m, a, r, d = self.checklocalchanges(repo, force=True)
+            changes = self.checklocalchanges(repo, force=True)
+            m, a, r, d = changes
         match = scmutil.matchfiles(repo, m + a + r + inclsubs)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
@@ -1010,8 +1013,15 @@ class queue(object):
                         p.write(msg)
                     if commitfiles:
                         parent = self.qparents(repo, n)
+                        if inclsubs:
+                            if substatestate in 'a?':
+                                changes[1].append('.hgsubstate')
+                            elif substatestate in 'r':
+                                changes[2].append('.hgsubstate')
+                            else: # modified
+                                changes[0].append('.hgsubstate')
                         chunks = patchmod.diff(repo, node1=parent, node2=n,
-                                            match=match, opts=diffopts)
+                                               changes=changes, opts=diffopts)
                         for chunk in chunks:
                             p.write(chunk)
                     p.close()
