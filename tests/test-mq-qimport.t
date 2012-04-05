@@ -28,6 +28,14 @@ qimport non-existing-file
   abort: unable to read file non-existing-file
   [255]
 
+qimport null revision
+
+  $ hg qimport -r null
+  abort: revision -1 is not mutable
+  (see "hg help phases" for details)
+  [255]
+  $ hg qseries
+
 import email
 
   $ hg qimport --push -n email - <<EOF

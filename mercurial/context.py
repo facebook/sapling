@@ -127,7 +127,7 @@ class changectx(object):
     def phasestr(self):
         return phases.phasenames[self.phase()]
     def mutable(self):
-        return self._repo._phaserev[self._rev] > phases.public
+        return self.phase() > phases.public
     def hidden(self):
         return self._rev in self._repo.changelog.hiddenrevs
 
