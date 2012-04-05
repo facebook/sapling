@@ -962,7 +962,7 @@ class queue(object):
             m, a, r, d = repo.status(match=match)[:4]
         else:
             m, a, r, d = self.checklocalchanges(repo, force=True)
-            match = scmutil.matchfiles(repo, m + a + r + inclsubs)
+        match = scmutil.matchfiles(repo, m + a + r + inclsubs)
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot manage merge changesets'))
         commitfiles = m + a + r
