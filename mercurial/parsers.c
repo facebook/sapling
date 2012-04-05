@@ -241,8 +241,40 @@ quit:
 	return ret;
 }
 
-const char nullid[20];
-const int nullrev = -1;
+/*
+ * A list-like object that decodes the contents of a RevlogNG index
+ * file on demand. It has limited support for insert and delete at the
+ * last element before the end.  The last entry is always a sentinel
+ * nullid.
+ */
+typedef struct {
+	PyObject_HEAD
+	/* Type-specific fields go here. */
+	PyObject *data;        /* raw bytes of index */
+	PyObject **cache;      /* cached tuples */
+	const char **offsets;  /* populated on demand */
+	Py_ssize_t raw_length; /* original number of elements */
+	Py_ssize_t length;     /* current number of elements */
+	PyObject *added;       /* populated on demand */
+	int inlined;
+} indexObject;
+
+static Py_ssize_t index_length(indexObject *self)
+{
+	if (self->added == NULL)
+		return self->length;
+	return self->length + PyList_GET_SIZE(self->added);
+}
+
+static PyObject *nullentry;
+
+static long inline_scan(indexObject *self, const char **offsets);
+
+#if LONG_MAX == 0x7fffffffL
+static const char *tuple_format = "Kiiiiiis#";
+#else
+static const char *tuple_format = "kiiiiiis#";
+#endif
 
 /* RevlogNG format (all in big endian, data may be inlined):
  *    6 bytes: offset
@@ -255,137 +287,388 @@ const int nullrev = -1;
  *    4 bytes: parent 2 revision
  *   32 bytes: nodeid (only 20 bytes used)
  */
-static int _parse_index_ng(const char *data, int size, int inlined,
-			   PyObject *index)
+static PyObject *index_get(indexObject *self, Py_ssize_t pos)
 {
-	PyObject *entry;
-	int n = 0, err;
+	uint32_t decode[8]; /* to enforce alignment with inline data */
 	uint64_t offset_flags;
 	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
 	const char *c_node_id;
-	const char *end = data + size;
-	uint32_t decode[8]; /* to enforce alignment with inline data */
+	const char *data;
+	Py_ssize_t length = index_length(self);
+	PyObject *entry;
 
-	while (data < end) {
-		unsigned int step;
+	if (pos >= length) {
+		PyErr_SetString(PyExc_IndexError, "revlog index out of range");
+		return NULL;
+	}
 
-		memcpy(decode, data, 32);
-		offset_flags = ntohl(decode[1]);
-		if (n == 0) /* mask out version number for the first entry */
-			offset_flags &= 0xFFFF;
-		else {
-			uint32_t offset_high =  ntohl(decode[0]);
-			offset_flags |= ((uint64_t)offset_high) << 32;
+	if (pos == length - 1) {
+		Py_INCREF(nullentry);
+		return nullentry;
+	}
+
+	if (pos >= self->length - 1) {
+		PyObject *obj;
+		obj = PyList_GET_ITEM(self->added, pos - self->length + 1);
+		Py_INCREF(obj);
+		return obj;
+	}
+
+	if (self->cache) {
+		if (self->cache[pos]) {
+			Py_INCREF(self->cache[pos]);
+			return self->cache[pos];
 		}
+	} else {
+		self->cache = calloc(self->raw_length, sizeof(PyObject *));
+		if (self->cache == NULL)
+			return PyErr_NoMemory();
+	}
 
-		comp_len = ntohl(decode[2]);
-		uncomp_len = ntohl(decode[3]);
-		base_rev = ntohl(decode[4]);
-		link_rev = ntohl(decode[5]);
-		parent_1 = ntohl(decode[6]);
-		parent_2 = ntohl(decode[7]);
-		c_node_id = data + 32;
+	if (self->inlined && pos > 0) {
+		if (self->offsets == NULL) {
+			self->offsets = malloc(self->raw_length *
+					       sizeof(*self->offsets));
+			if (self->offsets == NULL)
+				return PyErr_NoMemory();
+			inline_scan(self, self->offsets);
+		}
+		data = self->offsets[pos];
+	} else
+		data = PyString_AS_STRING(self->data) + pos * 64;
 
-		entry = Py_BuildValue("Liiiiiis#", offset_flags, comp_len,
+	memcpy(decode, data, 8 * sizeof(uint32_t));
+
+	offset_flags = ntohl(decode[1]);
+	if (pos == 0) /* mask out version number for the first entry */
+		offset_flags &= 0xFFFF;
+	else {
+		uint32_t offset_high = ntohl(decode[0]);
+		offset_flags |= ((uint64_t)offset_high) << 32;
+	}
+
+	comp_len = ntohl(decode[2]);
+	uncomp_len = ntohl(decode[3]);
+	base_rev = ntohl(decode[4]);
+	link_rev = ntohl(decode[5]);
+	parent_1 = ntohl(decode[6]);
+	parent_2 = ntohl(decode[7]);
+	c_node_id = data + 32;
+
+	entry = Py_BuildValue(tuple_format, offset_flags, comp_len,
 			      uncomp_len, base_rev, link_rev,
 			      parent_1, parent_2, c_node_id, 20);
 
-		if (!entry)
-			return 0;
+	if (entry)
+		PyObject_GC_UnTrack(entry);
 
-		PyObject_GC_UnTrack(entry); /* don't waste time with this */
+	self->cache[pos] = entry;
+	Py_INCREF(entry);
 
-		if (inlined) {
-			err = PyList_Append(index, entry);
-			Py_DECREF(entry);
-			if (err)
-				return 0;
-		} else
-			PyList_SET_ITEM(index, n, entry); /* steals reference */
-
-		n++;
-		step = 64 + (inlined ? comp_len : 0);
-		if (data + step > end || data + step < data)
-			break;
-		data += step;
-	}
-	if (data != end) {
-		if (!PyErr_Occurred())
-			PyErr_SetString(PyExc_ValueError, "corrupt index file");
-		return 0;
-	}
-
-	/* create the magic nullid entry in the index at [-1] */
-	entry = Py_BuildValue("Liiiiiis#", (uint64_t)0, 0, 0, -1, -1, -1, -1, nullid, 20);
-
-	if (!entry)
-		return 0;
-
-	PyObject_GC_UnTrack(entry); /* don't waste time with this */
-
-	if (inlined) {
-		err = PyList_Append(index, entry);
-		Py_DECREF(entry);
-		if (err)
-			return 0;
-	} else
-		PyList_SET_ITEM(index, n, entry); /* steals reference */
-
-	return 1;
+	return entry;
 }
 
-/* This function parses a index file and returns a Python tuple of the
- * following format: (index, cache)
+static PyObject *index_insert(indexObject *self, PyObject *args)
+{
+	PyObject *obj, *node;
+	long offset;
+	Py_ssize_t len;
+
+	if (!PyArg_ParseTuple(args, "lO", &offset, &obj))
+		return NULL;
+
+	if (!PyTuple_Check(obj) || PyTuple_GET_SIZE(obj) != 8) {
+		PyErr_SetString(PyExc_ValueError, "8-tuple required");
+		return NULL;
+	}
+
+	node = PyTuple_GET_ITEM(obj, 7);
+	if (!PyString_Check(node) || PyString_GET_SIZE(node) != 20) {
+		PyErr_SetString(PyExc_ValueError,
+				"20-byte hash required as last element");
+		return NULL;
+	}
+
+	len = index_length(self);
+
+	if (offset < 0)
+		offset += len;
+
+	if (offset != len - 1) {
+		PyErr_SetString(PyExc_IndexError,
+				"insert only supported at index -1");
+		return NULL;
+	}
+
+	if (self->added == NULL) {
+		self->added = PyList_New(0);
+		if (self->added == NULL)
+			return NULL;
+	}
+
+	if (PyList_Append(self->added, obj) == -1)
+		return NULL;
+
+	Py_RETURN_NONE;
+}
+
+static int index_assign_subscript(indexObject *self, PyObject *item,
+				  PyObject *value)
+{
+	Py_ssize_t start, stop, step, slicelength;
+	Py_ssize_t length = index_length(self);
+
+	if (!PySlice_Check(item) || value != NULL) {
+		PyErr_SetString(PyExc_TypeError,
+				"revlog index only supports slice deletion");
+		return -1;
+	}
+
+	if (PySlice_GetIndicesEx((PySliceObject*)item, length,
+				 &start, &stop, &step, &slicelength) < 0)
+		return -1;
+
+	if (slicelength <= 0)
+		return 0;
+
+	if ((step < 0 && start < stop) || (step > 0 && start > stop))
+		stop = start;
+
+	if (step < 0) {
+		stop = start + 1;
+		start = stop + step*(slicelength - 1) - 1;
+		step = -step;
+	}
+
+	if (step != 1) {
+		PyErr_SetString(PyExc_ValueError,
+				"revlog index delete requires step size of 1");
+		return -1;
+	}
+
+	if (stop != length - 1) {
+		PyErr_SetString(PyExc_IndexError,
+				"revlog index deletion indices are invalid");
+		return -1;
+	}
+
+	if (start < self->length) {
+		self->length = start + 1;
+		if (self->added) {
+			Py_DECREF(self->added);
+			self->added = NULL;
+		}
+		return 0;
+	}
+
+	return PyList_SetSlice(self->added, start - self->length + 1,
+			       PyList_GET_SIZE(self->added),
+			       NULL);
+}
+
+static long inline_scan(indexObject *self, const char **offsets)
+{
+	const char *data = PyString_AS_STRING(self->data);
+	const char *end = data + PyString_GET_SIZE(self->data);
+	const long hdrsize = 64;
+	long incr = hdrsize;
+	Py_ssize_t len = 0;
+
+	while (data + hdrsize <= end) {
+		uint32_t comp_len;
+		const char *old_data;
+		/* 3rd element of header is length of compressed inline data */
+		memcpy(&comp_len, data + 8, sizeof(uint32_t));
+		incr = hdrsize + ntohl(comp_len);
+		if (incr < hdrsize)
+			break;
+		if (offsets)
+			offsets[len] = data;
+		len++;
+		old_data = data;
+		data += incr;
+		if (data <= old_data)
+			break;
+	}
+
+	if (data != end && data + hdrsize != end) {
+		if (!PyErr_Occurred())
+			PyErr_SetString(PyExc_ValueError, "corrupt index file");
+		return -1;
+	}
+
+	return len;
+}
+
+static int index_real_init(indexObject *self, const char *data, int size,
+			   PyObject *inlined_obj, PyObject *data_obj)
+{
+	self->inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
+	self->data = data_obj;
+	self->cache = NULL;
+
+	self->added = NULL;
+	self->offsets = NULL;
+	Py_INCREF(self->data);
+
+	if (self->inlined) {
+		long len = inline_scan(self, NULL);
+		if (len == -1)
+			goto bail;
+		self->raw_length = len;
+		self->length = len + 1;
+	} else {
+		if (size % 64) {
+			PyErr_SetString(PyExc_ValueError, "corrupt index file");
+			goto bail;
+		}
+		self->raw_length = size / 64;
+		self->length = self->raw_length + 1;
+	}
+
+	return 0;
+bail:
+	return -1;
+}
+
+static int index_init(indexObject *self, PyObject *args, PyObject *kwds)
+{
+	const char *data;
+	int size;
+	PyObject *inlined_obj;
+
+	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
+		return -1;
+
+	return index_real_init(self, data, size, inlined_obj,
+			       PyTuple_GET_ITEM(args, 0));
+}
+
+static void index_dealloc(indexObject *self)
+{
+	Py_DECREF(self->data);
+	if (self->cache) {
+		Py_ssize_t i;
+
+		for (i = 0; i < self->raw_length; i++)
+			Py_XDECREF(self->cache[i]);
+	}
+	Py_XDECREF(self->added);
+	free(self->offsets);
+	PyObject_Del(self);
+}
+
+static PySequenceMethods index_sequence_methods = {
+	(lenfunc)index_length,   /* sq_length */
+	0,                       /* sq_concat */
+	0,                       /* sq_repeat */
+	(ssizeargfunc)index_get, /* sq_item */
+};
+
+static PyMappingMethods index_mapping_methods = {
+	(lenfunc)index_length,                 /* mp_length */
+	NULL,                                  /* mp_subscript */
+	(objobjargproc)index_assign_subscript, /* mp_ass_subscript */
+};
+
+static PyMethodDef index_methods[] = {
+	{"insert", (PyCFunction)index_insert, METH_VARARGS,
+	 "insert an index entry"},
+	{NULL} /* Sentinel */
+};
+
+static PyTypeObject indexType = {
+	PyObject_HEAD_INIT(NULL)
+	0,                         /* ob_size */
+	"parsers.index",           /* tp_name */
+	sizeof(indexObject),       /* tp_basicsize */
+	0,                         /* tp_itemsize */
+	(destructor)index_dealloc, /* tp_dealloc */
+	0,                         /* tp_print */
+	0,                         /* tp_getattr */
+	0,                         /* tp_setattr */
+	0,                         /* tp_compare */
+	0,                         /* tp_repr */
+	0,                         /* tp_as_number */
+	&index_sequence_methods,   /* tp_as_sequence */
+	&index_mapping_methods,    /* tp_as_mapping */
+	0,                         /* tp_hash */
+	0,                         /* tp_call */
+	0,                         /* tp_str */
+	0,                         /* tp_getattro */
+	0,                         /* tp_setattro */
+	0,                         /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT,        /* tp_flags */
+	"revlog index",            /* tp_doc */
+	0,                         /* tp_traverse */
+	0,                         /* tp_clear */
+	0,                         /* tp_richcompare */
+	0,                         /* tp_weaklistoffset */
+	0,                         /* tp_iter */
+	0,                         /* tp_iternext */
+	index_methods,             /* tp_methods */
+	0,                         /* tp_members */
+	0,                         /* tp_getset */
+	0,                         /* tp_base */
+	0,                         /* tp_dict */
+	0,                         /* tp_descr_get */
+	0,                         /* tp_descr_set */
+	0,                         /* tp_dictoffset */
+	(initproc)index_init,      /* tp_init */
+	0,                         /* tp_alloc */
+	PyType_GenericNew,         /* tp_new */
+};
+
+/*
+ * returns a tuple of the form (index, None, cache) with elements as
+ * follows:
  *
- * index: a list of tuples containing the RevlogNG records
- * cache: if data is inlined, a tuple (index_file_content, 0) else None
+ * index: an index object that lazily parses the RevlogNG records
+ * cache: if data is inlined, a tuple (index_file_content, 0), else None
+ *
+ * added complications are for backwards compatibility
  */
 static PyObject *parse_index2(PyObject *self, PyObject *args)
 {
 	const char *data;
-	int size, inlined;
-	PyObject *rval = NULL, *index = NULL, *cache = NULL;
-	PyObject *data_obj = NULL, *inlined_obj;
+	int size, ret;
+	PyObject *inlined_obj, *tuple = NULL, *cache = NULL;
+	indexObject *idx;
 
 	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
 		return NULL;
-	inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 
-	/* If no data is inlined, we know the size of the index list in
-	 * advance: size divided by the size of one revlog record (64 bytes)
-	 * plus one for nullid */
-	index = inlined ? PyList_New(0) : PyList_New(size / 64 + 1);
-	if (!index)
-		goto quit;
+	idx = PyObject_New(indexObject, &indexType);
 
-	/* set up the cache return value */
-	if (inlined) {
-		/* Note that the reference to data_obj is only borrowed */
-		data_obj = PyTuple_GET_ITEM(args, 0);
-		cache = Py_BuildValue("iO", 0, data_obj);
-		if (!cache)
-			goto quit;
+	if (idx == NULL)
+		goto bail;
+
+	ret = index_real_init(idx, data, size, inlined_obj,
+			      PyTuple_GET_ITEM(args, 0));
+	if (ret)
+		goto bail;
+
+	if (idx->inlined) {
+		Py_INCREF(idx->data);
+		cache = Py_BuildValue("iO", 0, idx->data);
+		if (cache == NULL)
+			goto bail;
 	} else {
 		cache = Py_None;
-		Py_INCREF(Py_None);
+		Py_INCREF(cache);
 	}
 
-	/* actually populate the index with data */
-	if (!_parse_index_ng(data, size, inlined, index))
-		goto quit;
+	tuple = Py_BuildValue("NN", idx, cache);
+	if (!tuple)
+		goto bail;
+	return tuple;
 
-	rval = Py_BuildValue("NN", index, cache);
-	if (!rval)
-		goto quit;
-	return rval;
-
-quit:
-	Py_XDECREF(index);
+bail:
+	Py_XDECREF(idx);
 	Py_XDECREF(cache);
-	Py_XDECREF(rval);
+	Py_XDECREF(tuple);
 	return NULL;
 }
-
 
 static char parsers_doc[] = "Efficient content parsing.";
 
@@ -395,6 +678,22 @@ static PyMethodDef methods[] = {
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
 	{NULL, NULL}
 };
+
+static void module_init(PyObject *mod)
+{
+	static const char nullid[20];
+
+	if (PyType_Ready(&indexType) < 0)
+		return;
+	Py_INCREF(&indexType);
+
+	PyModule_AddObject(mod, "index", (PyObject *)&indexType);
+
+	nullentry = Py_BuildValue("iiiiiiis#", 0, 0, 0,
+				  -1, -1, -1, -1, nullid, 20);
+	if (nullentry)
+		PyObject_GC_UnTrack(nullentry);
+}
 
 #ifdef IS_PY3K
 static struct PyModuleDef parsers_module = {
@@ -407,12 +706,15 @@ static struct PyModuleDef parsers_module = {
 
 PyMODINIT_FUNC PyInit_parsers(void)
 {
-	return PyModule_Create(&parsers_module);
+	PyObject *mod = PyModule_Create(&parsers_module);
+	module_init(mod);
+	return mod;
 }
 #else
 PyMODINIT_FUNC initparsers(void)
 {
-	Py_InitModule3("parsers", methods, parsers_doc);
+	PyObject *mod = Py_InitModule3("parsers", methods, parsers_doc);
+	module_init(mod);
 }
 #endif
 

@@ -52,7 +52,6 @@ def py_parseindex(data, inline) :
 
     return index, cache
 
-
 data_inlined = '\x00\x01\x00\x01\x00\x00\x00\x00\x00\x00\x01\x8c' \
     '\x00\x00\x04\x07\x00\x00\x00\x00\x00\x00\x15\x15\xff\xff\xff' \
     '\xff\xff\xff\xff\xff\xebG\x97\xb7\x1fB\x04\xcf\x13V\x81\tw\x1b' \
@@ -94,13 +93,16 @@ data_non_inlined = '\x00\x00\x00\x01\x00\x00\x00\x00\x00\x01D\x19' \
     '\xb6\r\x98B\xcb\x07\xbd`\x8f\x92\xd9\xc4\x84\xbdK\x00\x00\x00' \
     '\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
-def runtest() :
+def parse_index2(data, inline):
+    index, chunkcache = parsers.parse_index2(data, inline)
+    return list(index), chunkcache
 
+def runtest() :
     py_res_1 = py_parseindex(data_inlined, True)
-    c_res_1 = parsers.parse_index2(data_inlined, True)
+    c_res_1 = parse_index2(data_inlined, True)
 
     py_res_2 = py_parseindex(data_non_inlined, False)
-    c_res_2 = parsers.parse_index2(data_non_inlined, False)
+    c_res_2 = parse_index2(data_non_inlined, False)
 
     if py_res_1 != c_res_1:
         print "Parse index result (with inlined data) differs!"
