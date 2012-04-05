@@ -1286,7 +1286,6 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1,
                 current_file = None
             afile, bfile, first_hunk, gp = values
             if gp:
-                path = pstrip(gp.path)
                 gp.path = pstrip(gp.path)
                 if gp.oldpath:
                     gp.oldpath = pstrip(gp.oldpath)
