@@ -14,7 +14,7 @@
   >    else
   >        kill `cat hg.pid`
   >    fi
-  >    while kill -0 `cat hg.pid` 2>/dev/null; do true; done
+  >    while kill -0 `cat hg.pid` 2>/dev/null; do sleep 0; done
   > }
 
   $ hg init test

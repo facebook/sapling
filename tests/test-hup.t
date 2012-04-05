@@ -11,7 +11,7 @@ Do test while holding fifo open
   $ (
   > echo lock
   > echo addchangegroup
-  > while [ ! -s .hg/store/journal ]; do true; done
+  > while [ ! -s .hg/store/journal ]; do sleep 0; done
   > kill -HUP $P
   > ) > p
 
