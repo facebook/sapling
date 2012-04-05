@@ -140,3 +140,54 @@ invalid diff.unified
   +c3
   @@ -3,1 +4,0 @@ c4
   -c5
+
+  $ echo a > f1
+  $ hg ci -m movef2
+
+Test diff headers terminating with TAB when necessary (issue3357)
+Regular diff --nodates, file creation
+
+  $ hg mv f1 'f 1'
+  $ echo b > 'f 1'
+  $ hg diff --nodates 'f 1'
+  diff -r 7574207d0d15 f 1
+  --- /dev/null
+  +++ b/f 1	
+  @@ -0,0 +1,1 @@
+  +b
+
+Git diff, adding space
+
+  $ hg diff --git
+  diff --git a/f1 b/f 1
+  rename from f1
+  rename to f 1
+  --- a/f1
+  +++ b/f 1	
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
+Regular diff --nodates, file deletion
+
+  $ hg ci -m addspace
+  $ hg mv 'f 1' f1
+  $ echo a > f1
+  $ hg diff --nodates 'f 1'
+  diff -r ca50fe67c9c7 f 1
+  --- a/f 1	
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -b
+
+Git diff, removing space
+
+  $ hg diff --git
+  diff --git a/f 1 b/f1
+  rename from f 1
+  rename to f1
+  --- a/f 1	
+  +++ b/f1
+  @@ -1,1 +1,1 @@
+  -b
+  +a

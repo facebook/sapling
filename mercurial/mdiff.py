@@ -156,10 +156,10 @@ def diffline(revs, a, b, opts):
     return ' '.join(parts) + '\n'
 
 def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
-    def datetag(date, addtab=True):
+    def datetag(date, fn=None):
         if not opts.git and not opts.nodates:
             return '\t%s\n' % date
-        if addtab and ' ' in fn1:
+        if fn and ' ' in fn:
             return '\t\n'
         return '\n'
 
@@ -177,19 +177,19 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     elif not a:
         b = splitnewlines(b)
         if a is None:
-            l1 = '--- /dev/null%s' % datetag(epoch, False)
+            l1 = '--- /dev/null%s' % datetag(epoch)
         else:
-            l1 = "--- %s%s" % ("a/" + fn1, datetag(ad))
-        l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd))
+            l1 = "--- %s%s" % ("a/" + fn1, datetag(ad, fn1))
+        l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd, fn2))
         l3 = "@@ -0,0 +1,%d @@\n" % len(b)
         l = [l1, l2, l3] + ["+" + e for e in b]
     elif not b:
         a = splitnewlines(a)
-        l1 = "--- %s%s" % ("a/" + fn1, datetag(ad))
+        l1 = "--- %s%s" % ("a/" + fn1, datetag(ad, fn1))
         if b is None:
-            l2 = '+++ /dev/null%s' % datetag(epoch, False)
+            l2 = '+++ /dev/null%s' % datetag(epoch)
         else:
-            l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd))
+            l2 = "+++ %s%s" % ("b/" + fn2, datetag(bd, fn2))
         l3 = "@@ -1,%d +0,0 @@\n" % len(a)
         l = [l1, l2, l3] + ["-" + e for e in a]
     else:
@@ -199,8 +199,8 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
         if not l:
             return ""
 
-        l.insert(0, "--- a/%s%s" % (fn1, datetag(ad)))
-        l.insert(1, "+++ b/%s%s" % (fn2, datetag(bd)))
+        l.insert(0, "--- a/%s%s" % (fn1, datetag(ad, fn1)))
+        l.insert(1, "+++ b/%s%s" % (fn2, datetag(bd, fn2)))
 
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
