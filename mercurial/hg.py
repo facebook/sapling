@@ -404,6 +404,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         release(srclock, destlock)
         if dircleanup is not None:
             dircleanup.cleanup()
+        if srcrepo is not None:
+            srcrepo.close()
 
 def _showstats(repo, stats):
     repo.ui.status(_("%d files updated, %d files merged, "

@@ -5,7 +5,7 @@ Test character encoding
 
 we need a repo with some legacy latin-1 changesets
 
-  $ hg unbundle $TESTDIR/bundles/legacy-encoding.hg
+  $ hg unbundle "$TESTDIR/bundles/legacy-encoding.hg"
   adding changesets
   adding manifests
   adding file changes

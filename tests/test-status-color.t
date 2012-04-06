@@ -169,9 +169,9 @@ hg status -A:
 
 hg status -A (with terminfo color):
 
-  $ mkdir $TESTTMP/terminfo
-  $ TERMINFO=$TESTTMP/terminfo tic $TESTDIR/hgterm.ti
-  $ TERM=hgterm TERMINFO=$TESTTMP/terminfo hg status --config color.mode=terminfo --color=always -A
+  $ mkdir "$TESTTMP/terminfo"
+  $ TERMINFO="$TESTTMP/terminfo" tic "$TESTDIR/hgterm.ti"
+  $ TERM=hgterm TERMINFO="$TESTTMP/terminfo" hg status --config color.mode=terminfo --color=always -A
   \x1b[30m\x1b[32m\x1b[1mA added\x1b[30m (esc)
   \x1b[30m\x1b[32m\x1b[1mA copied\x1b[30m (esc)
   \x1b[30m\x1b[30m  modified\x1b[30m (esc)

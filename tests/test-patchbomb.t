@@ -154,7 +154,7 @@
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0 \
   > --config progress.width=60 2>&1 | \
-  > python $TESTDIR/filtercr.py
+  > python "$TESTDIR/filtercr.py"
   This patch series consists of 2 patches.
   
   

@@ -165,7 +165,7 @@ of just using revision numbers.
 
   $ hg init a
   $ cd a
-  $ cp $TESTDIR/binfile.bin .
+  $ cp "$TESTDIR/binfile.bin" .
   $ hg add binfile.bin
   $ hg ci -m 'add binfile.bin'
   $ hg grep "MaCam" --all

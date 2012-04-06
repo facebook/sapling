@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import osutil, util
+from mercurial import osutil, util, error
 import server
 import errno, os, select, stat, sys, time
 
@@ -431,7 +431,10 @@ class master(object):
 
     def shutdown(self):
         for obj in pollable.instances.itervalues():
-            obj.shutdown()
+            try:
+                obj.shutdown()
+            except error.SignalInterrupt:
+                pass
 
     def run(self):
         self.repowatcher.setup()

@@ -9,7 +9,7 @@ plain
   > --config progress.delay=0 --config progress.refresh=0 \
   > --config progress.format=topic,bar,number \
   > --config progress.width=60 2>&1 | \
-  > python $TESTDIR/filtercr.py
+  > python "$TESTDIR/filtercr.py"
   
   building [                                          ]  0/12
   building [                                          ]  0/12

@@ -173,7 +173,7 @@ Test convert progress bar'
   > width = 60
   > EOF
 
-  $ hg convert svn-repo hg-progress 2>&1 | $TESTDIR/filtercr.py
+  $ hg convert svn-repo hg-progress 2>&1 | "$TESTDIR/filtercr.py"
   
   scanning [ <=>                                          ] 1
   scanning [  <=>                                         ] 2
