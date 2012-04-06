@@ -54,7 +54,7 @@ def _collectbrokencsets(repo, files, striprev):
 
     return s
 
-def strip(ui, repo, nodelist, backup="all"):
+def strip(ui, repo, nodelist, backup="all", topic='backup'):
     cl = repo.changelog
     # TODO handle undo of merge sets
     if isinstance(nodelist, str):
@@ -105,7 +105,7 @@ def strip(ui, repo, nodelist, backup="all"):
     # create a changegroup for all the branches we need to keep
     backupfile = None
     if backup == "all":
-        backupfile = _bundle(repo, stripbases, cl.heads(), node, 'backup')
+        backupfile = _bundle(repo, stripbases, cl.heads(), node, topic)
         repo.ui.status(_("saved backup bundle to %s\n") % backupfile)
     if saveheads or savebases:
         # do not compress partial bundle if we remove it from disk later
