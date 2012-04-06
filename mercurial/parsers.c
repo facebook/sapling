@@ -412,6 +412,30 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 	Py_RETURN_NONE;
 }
 
+static void _index_clearcaches(indexObject *self)
+{
+	if (self->cache) {
+		Py_ssize_t i;
+
+		for (i = 0; i < self->raw_length; i++) {
+			Py_XDECREF(self->cache[i]);
+			self->cache[i] = NULL;
+		}
+		free(self->cache);
+		self->cache = NULL;
+	}
+	if (self->offsets) {
+		free(self->offsets);
+		self->offsets = NULL;
+	}
+}
+
+static PyObject *index_clearcaches(indexObject *self)
+{
+	_index_clearcaches(self);
+	Py_RETURN_NONE;
+}
+
 static int index_assign_subscript(indexObject *self, PyObject *item,
 				  PyObject *value)
 {
@@ -546,15 +570,9 @@ static int index_init(indexObject *self, PyObject *args, PyObject *kwds)
 
 static void index_dealloc(indexObject *self)
 {
+	_index_clearcaches(self);
 	Py_DECREF(self->data);
-	if (self->cache) {
-		Py_ssize_t i;
-
-		for (i = 0; i < self->raw_length; i++)
-			Py_XDECREF(self->cache[i]);
-	}
 	Py_XDECREF(self->added);
-	free(self->offsets);
 	PyObject_Del(self);
 }
 
@@ -572,6 +590,8 @@ static PyMappingMethods index_mapping_methods = {
 };
 
 static PyMethodDef index_methods[] = {
+	{"clearcaches", (PyCFunction)index_clearcaches, METH_NOARGS,
+	 "clear the index caches"},
 	{"insert", (PyCFunction)index_insert, METH_VARARGS,
 	 "insert an index entry"},
 	{NULL} /* Sentinel */
