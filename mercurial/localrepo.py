@@ -398,7 +398,15 @@ class localrepository(repo.repository):
 
     def tags(self):
         '''return a mapping of tag to node'''
-        return self._tagscache.tags
+        t = {}
+        for k, v in self._tagscache.tags.iteritems():
+            try:
+                # ignore tags to unknown nodes
+                self.changelog.rev(v)
+                t[k] = v
+            except error.LookupError:
+                pass
+        return t
 
     def _findtags(self):
         '''Do the hard work of finding tags.  Return a pair of dicts
@@ -427,12 +435,7 @@ class localrepository(repo.repository):
         tags = {}
         for (name, (node, hist)) in alltags.iteritems():
             if node != nullid:
-                try:
-                    # ignore tags to unknown nodes
-                    self.changelog.lookup(node)
-                    tags[encoding.tolocal(name)] = node
-                except error.LookupError:
-                    pass
+                tags[encoding.tolocal(name)] = node
         tags['tip'] = self.changelog.tip()
         tagtypes = dict([(encoding.tolocal(name), value)
                          for (name, value) in tagtypes.iteritems()])
@@ -464,7 +467,7 @@ class localrepository(repo.repository):
         '''return the tags associated with a node'''
         if not self._tagscache.nodetagscache:
             nodetagscache = {}
-            for t, n in self.tags().iteritems():
+            for t, n in self._tagscache.tags.iteritems():
                 nodetagscache.setdefault(n, []).append(t)
             for tags in nodetagscache.itervalues():
                 tags.sort()
