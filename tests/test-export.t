@@ -129,3 +129,17 @@ Checking if only alphanumeric characters are used in the file name (%m option):
   exporting patch:
   ____________0123456789_______ABCDEFGHIJKLMNOPQRSTUVWXYZ______abcdefghijklmnopqrstuvwxyz____.patch
 
+Catch exporting unknown revisions (especially empty revsets, see issue3353)
+
+  $ hg export
+  abort: export requires at least one changeset
+  [255]
+  $ hg export ""
+  hg: parse error: empty query
+  [255]
+  $ hg export 999
+  abort: unknown revision '999'!
+  [255]
+  $ hg export "not all()"
+  abort: export requires at least one changeset
+  [255]
