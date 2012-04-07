@@ -288,6 +288,13 @@ class revlog(object):
         self.rev(self.node(0))
         return self._nodecache
 
+    def hasnode(self, node):
+        try:
+            self.rev(node)
+            return True
+        except KeyError:
+            return False
+
     def rev(self, node):
         try:
             return self._nodecache[node]
