@@ -687,10 +687,17 @@ class ui(object):
 
     def geteditor(self):
         '''return editor to use'''
+        if sys.platform == 'plan9':
+            # vi is the MIPS instruction simulator on Plan 9. We
+            # instead default to E to plumb commit messages to
+            # avoid confusion.
+            editor = 'E'
+        else:
+            editor = 'vi'
         return (os.environ.get("HGEDITOR") or
                 self.config("ui", "editor") or
                 os.environ.get("VISUAL") or
-                os.environ.get("EDITOR", "vi"))
+                os.environ.get("EDITOR", editor))
 
     def progress(self, topic, pos, item="", unit="", total=None):
         '''show a progress message

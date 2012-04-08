@@ -333,6 +333,9 @@ def findexe(command):
     if os.sep in command:
         return findexisting(command)
 
+    if sys.platform == 'plan9':
+        return findexisting(os.path.join('/bin', command))
+
     for path in os.environ.get('PATH', '').split(os.pathsep):
         executable = findexisting(os.path.join(path, command))
         if executable is not None:

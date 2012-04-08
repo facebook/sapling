@@ -422,22 +422,29 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
         return str(val)
     origcmd = cmd
     cmd = quotecommand(cmd)
-    env = dict(os.environ)
-    env.update((k, py2shell(v)) for k, v in environ.iteritems())
-    env['HG'] = hgexecutable()
-    if out is None or out == sys.__stdout__:
-        rc = subprocess.call(cmd, shell=True, close_fds=closefds,
-                             env=env, cwd=cwd)
+    if sys.platform == 'plan9':
+        # subprocess kludge to work around issues in half-baked Python
+        # ports, notably bichued/python:
+        if not cwd is None:
+            os.chdir(cwd)
+        rc = os.system(cmd)
     else:
-        proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
-                                env=env, cwd=cwd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        for line in proc.stdout:
-            out.write(line)
-        proc.wait()
-        rc = proc.returncode
-    if sys.platform == 'OpenVMS' and rc & 1:
-        rc = 0
+        env = dict(os.environ)
+        env.update((k, py2shell(v)) for k, v in environ.iteritems())
+        env['HG'] = hgexecutable()
+        if out is None or out == sys.__stdout__:
+            rc = subprocess.call(cmd, shell=True, close_fds=closefds,
+                                 env=env, cwd=cwd)
+        else:
+            proc = subprocess.Popen(cmd, shell=True, close_fds=closefds,
+                                    env=env, cwd=cwd, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            for line in proc.stdout:
+                out.write(line)
+            proc.wait()
+            rc = proc.returncode
+        if sys.platform == 'OpenVMS' and rc & 1:
+            rc = 0
     if rc and onerr:
         errmsg = '%s %s' % (os.path.basename(origcmd.split(None, 1)[0]),
                             explainexit(rc)[0])

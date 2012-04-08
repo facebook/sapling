@@ -1,0 +1,5 @@
+[extensions]
+extdiff =
+
+[extdiff]
+9diff = 9diff -cm $parent $child $root

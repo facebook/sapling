@@ -1,0 +1,20 @@
+lib	- sys sys
+	mercurial	- sys sys
+		hgrc.d	- sys sys
+			9diff.rc	- sys sys
+			factotum.rc	- sys sys
+rc	- sys sys
+	bin	- sys sys
+		9diff	- sys sys
+		hg	- sys sys
+sys	- sys sys
+	lib	- sys sys
+		python	- sys sys
+			lib	- sys sys
+				python2.5	- sys sys
+					site-packages	- sys sys
+						hgext	- sys sys
+							+	- sys sys
+						mercurial	- sys sys
+							+	- sys sys
+						mercurial-2.1.1-py2.5.egg-info	- sys sys

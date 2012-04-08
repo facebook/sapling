@@ -28,16 +28,17 @@ alphabetical order, later ones overriding earlier ones. Where multiple
 paths are given below, settings from earlier paths override later
 ones.
 
-| (Unix, Windows) ``<repo>/.hg/hgrc``
+| (All) ``<repo>/.hg/hgrc``
 
     Per-repository configuration options that only apply in a
     particular repository. This file is not version-controlled, and
     will not get transferred during a "clone" operation. Options in
     this file override options in all other configuration files. On
-    Unix, most of this file will be ignored if it doesn't belong to a
-    trusted user or to a trusted group. See the documentation for the
-    ``[trusted]`` section below for more details.
+    Plan 9 and Unix, most of this file will be ignored if it doesn't
+    belong to a trusted user or to a trusted group. See the documentation
+    for the ``[trusted]`` section below for more details.
 
+| (Plan 9) ``$home/lib/hgrc``
 | (Unix) ``$HOME/.hgrc``
 | (Windows) ``%USERPROFILE%\.hgrc``
 | (Windows) ``%USERPROFILE%\Mercurial.ini``
@@ -50,6 +51,8 @@ ones.
     directory. Options in these files override per-system and per-installation
     options.
 
+| (Plan 9) ``/lib/mercurial/hgrc``
+| (Plan 9) ``/lib/mercurial/hgrc.d/*.rc``
 | (Unix) ``/etc/mercurial/hgrc``
 | (Unix) ``/etc/mercurial/hgrc.d/*.rc``
 
@@ -58,6 +61,8 @@ ones.
     executed by any user in any directory. Options in these files
     override per-installation options.
 
+| (Plan 9) ``<install-root>/lib/mercurial/hgrc``
+| (Plan 9) ``<install-root>/lib/mercurial/hgrc.d/*.rc``
 | (Unix) ``<install-root>/etc/mercurial/hgrc``
 | (Unix) ``<install-root>/etc/mercurial/hgrc.d/*.rc``
 

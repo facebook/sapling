@@ -1,0 +1,39 @@
+Mercurial for Plan 9 from Bell Labs
+===================================
+
+This directory contains support for Mercurial on Plan 9 from Bell Labs
+platforms. It is assumed that the version of Python running on these
+systems supports the ANSI/POSIX Environment (APE). At the time of this
+writing, the bichued/python port is the most commonly installed version
+of Python on these platforms. If a native port of Python is ever made,
+some minor modification will need to be made to support some of the more
+esoteric requirements of the platform rather than those currently made
+(cf. posix.py).
+
+By default, installations will have the factotum extension enabled; this
+extension permits factotum(4) to act as an authentication agent for
+HTTP repositories. Additionally, an extdiff command named 9diff is
+enabled which generates diff(1) compatible output suitable for use with
+the plumber(4).
+
+Commit messages are plumbed using E if no editor is defined; users must
+update the plumbed file to continue, otherwise the hg process must be
+interrupted.
+
+Some work remains with regard to documentation. Section 5 manual page
+references for hgignore and hgrc need to be re-numbered to section 6 (file
+formats) and a new man page writer should be written to support the
+Plan 9 man macro set. Until these issues can be resolved, manual pages
+are elided from the installation.
+
+Basic install:
+
+  % mk install      # do a system-wide install
+  % hg debuginstall # sanity-check setup
+  % hg              # see help
+
+A proto(2) file is included in this directory as an example of how a
+binary distribution could be packaged, ostensibly with contrib(1).
+
+See http://mercurial.selenic.com/ for detailed installation
+instructions, platform-specific notes, and Mercurial user information.

@@ -1,0 +1,42 @@
+#!/bin/rc
+# 9diff - Mercurial extdiff wrapper for diff(1)
+
+rfork e
+
+fn getfiles{
+	cd $1 && \
+	for(f in `{du -as | awk '{print $2}'})
+		test -f $f && echo `{cleanname $f}
+}
+
+fn usage{
+	echo >[1=2] usage: 9diff [diff options] parent child root
+	exit usage
+}
+
+opts=()
+while(~ $1 -*){
+	opts=($opts $1)
+	shift
+}
+if(! ~ $#* 3)
+	usage
+
+# extdiff will set the parent and child to a single file if there is
+# only one change. If there are multiple changes, directories will be
+# set. diff(1) does not cope particularly with directories; instead we
+# do the recursion ourselves and diff each file individually.
+if(test -f $1)
+	diff $opts $1 $2
+if not{
+	# extdiff will create a snapshot of the working copy to prevent
+	# conflicts during the diff. We circumvent this behavior by
+	# diffing against the repository root to produce plumbable
+	# output. This is antisocial.
+	for(f in `{sort -u <{getfiles $1} <{getfiles $2}}){
+		file1=$1/$f; test -f $file1 || file1=/dev/null
+		file2=$3/$f; test -f $file2 || file2=/dev/null
+		diff $opts $file1 $file2
+	}
+}
+exit ''

@@ -1,0 +1,37 @@
+APE=/sys/src/ape
+<$APE/config
+
+PYTHON=python
+PYTHONBIN=/rc/bin
+SH=ape/psh
+
+PURE=--pure
+ROOT=../..
+
+# This is slightly underhanded; Plan 9 does not support GNU gettext nor
+# does it support dynamically loaded extension modules. We work around
+# this by calling build_py and build_scripts directly; this avoids
+# additional platform hacks in setup.py.
+build:VQ:
+	@{
+		cd $ROOT
+		$SH -c '$PYTHON setup.py $PURE build_py build_scripts'
+	}
+
+clean:VQ:
+	@{
+		cd $ROOT
+		$SH -c '$PYTHON setup.py $PURE clean --all'
+	}
+
+install:VQ:	build
+	@{
+		cd $ROOT
+		$SH -c '$PYTHON setup.py $PURE install \
+			--install-scripts $PYTHONBIN \
+			--skip-build' \
+			--force
+	}
+	mkdir -p /lib/mercurial/hgrc.d
+	dircp hgrc.d /lib/mercurial/hgrc.d
+	cp 9diff /rc/bin

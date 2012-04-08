@@ -127,10 +127,16 @@ except ImportError:
     py2exeloaded = False
 
 def runcmd(cmd, env):
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, env=env)
-    out, err = p.communicate()
-    return out, err
+    if sys.platform == 'plan9':
+        # subprocess kludge to work around issues in half-baked Python
+        # ports, notably bichued/python:
+        _, out, err = os.popen3(cmd)
+        return str(out), str(err)
+    else:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, env=env)
+        out, err = p.communicate()
+        return out, err
 
 def runhg(cmd, env):
     out, err = runcmd(cmd, env)
