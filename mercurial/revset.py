@@ -323,13 +323,12 @@ def checkstatus(repo, subset, pat, field):
                     break
     return s
 
-def _children(repo, narrow, s):
+def _children(repo, narrow, parentset):
     cs = set()
     pr = repo.changelog.parentrevs
-    s = set(s)
     for r in narrow:
         for p in pr(r):
-            if p in s:
+            if p in parentset:
                 cs.add(r)
     return cs
 
@@ -337,7 +336,7 @@ def children(repo, subset, x):
     """``children(set)``
     Child changesets of changesets in set.
     """
-    s = getset(repo, range(len(repo)), x)
+    s = set(getset(repo, range(len(repo)), x))
     cs = _children(repo, subset, s)
     return [r for r in subset if r in cs]
 
