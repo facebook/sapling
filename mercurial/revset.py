@@ -814,8 +814,9 @@ def roots(repo, subset, x):
     Changesets in set with no parent changeset in set.
     """
     s = set(getset(repo, xrange(len(repo)), x))
+    subset = [r for r in subset if r in s]
     cs = _children(repo, subset, s)
-    return [r for r in subset if r in s and r not in cs]
+    return [r for r in subset if r not in cs]
 
 def secret(repo, subset, x):
     """``secret()``
