@@ -129,7 +129,7 @@ class changectx(object):
 
     @propertycache
     def _changeset(self):
-        return self._repo.changelog.read(self.node())
+        return self._repo.changelog.read(self.rev())
 
     @propertycache
     def _manifest(self):
