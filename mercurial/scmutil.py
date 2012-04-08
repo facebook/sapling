@@ -523,7 +523,7 @@ def revrange(repo, revs):
     def revfix(repo, val, defval):
         if not val and val != 0 and defval is not None:
             return defval
-        return repo.changelog.rev(repo.lookup(val))
+        return repo[val].rev()
 
     seen, l = set(), []
     for spec in revs:
