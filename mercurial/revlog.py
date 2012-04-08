@@ -858,8 +858,15 @@ class revlog(object):
         return mdiff.textdiff(self.revision(self.node(rev1)),
                               self.revision(self.node(rev2)))
 
-    def revision(self, node):
-        """return an uncompressed revision of a given node"""
+    def revision(self, nodeorrev):
+        """return an uncompressed revision of a given node or"""
+        if isinstance(nodeorrev, int):
+            rev = nodeorrev
+            node = self.node(rev)
+        else:
+            node = nodeorrev
+            rev = None
+
         cachedrev = None
         if node == nullid:
             return ""
@@ -870,7 +877,8 @@ class revlog(object):
 
         # look up what we need to read
         text = None
-        rev = self.rev(node)
+        if rev is None:
+            rev = self.rev(node)
 
         # check rev flags
         if self.flags(rev) & ~REVIDX_KNOWN_FLAGS:

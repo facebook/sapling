@@ -95,15 +95,21 @@ class bundlerevlog(revlog.revlog):
         return mdiff.textdiff(self.revision(self.node(rev1)),
                          self.revision(self.node(rev2)))
 
-    def revision(self, node):
+    def revision(self, nodeorrev):
         """return an uncompressed revision of a given"""
+        if isinstance(nodeorrev, int):
+            rev = nodeorrev
+            node = self.node(rev)
+        else:
+            node = nodeorrev
+            rev = self.rev(node)
+
         if node == nullid:
             return ""
 
         text = None
         chain = []
         iter_node = node
-        rev = self.rev(iter_node)
         # reconstruct the revision if it is from a changegroup
         while self.inbundle(rev):
             if self._cache and self._cache[0] == iter_node:
