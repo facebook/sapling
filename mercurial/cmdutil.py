@@ -1006,7 +1006,7 @@ def walkchangerevs(repo, match, opts, prepare):
         wanted = set(revs)
     copies = []
 
-    if not slowpath:
+    if not slowpath and match.files():
         # We only have to read through the filelog to find wanted revisions
 
         minrev, maxrev = min(revs), max(revs)
