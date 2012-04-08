@@ -593,37 +593,7 @@ class localrepository(repo.repository):
             partial[branch] = bheads
 
     def lookup(self, key):
-        if isinstance(key, int):
-            return self.changelog.node(key)
-        elif key == '.':
-            return self.dirstate.p1()
-        elif key == 'null':
-            return nullid
-        elif key == 'tip':
-            return self.changelog.tip()
-        n = self.changelog._match(key)
-        if n:
-            return n
-        if key in self._bookmarks:
-            return self._bookmarks[key]
-        if key in self.tags():
-            return self.tags()[key]
-        if key in self.branchtags():
-            return self.branchtags()[key]
-        n = self.changelog._partialmatch(key)
-        if n:
-            return n
-
-        # can't find key, check if it might have come from damaged dirstate
-        if key in self.dirstate.parents():
-            raise error.Abort(_("working directory has unknown parent '%s'!")
-                              % short(key))
-        try:
-            if len(key) == 20:
-                key = hex(key)
-        except TypeError:
-            pass
-        raise error.RepoLookupError(_("unknown revision '%s'") % key)
+        return self[key].node()
 
     def lookupbranch(self, key, remote=None):
         repo = remote or self
