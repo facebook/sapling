@@ -107,8 +107,9 @@ class validator(object):
             if hostfingerprint:
                 raise util.Abort(_("host fingerprint for %s can't be "
                                    "verified (Python too old)") % host)
-            self.ui.warn(_("warning: certificate for %s can't be verified "
-                           "(Python too old)\n") % host)
+            if self.ui.configbool('ui', 'reportoldssl', True):
+                self.ui.warn(_("warning: certificate for %s can't be verified "
+                               "(Python too old)\n") % host)
             return
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise util.Abort(_('%s ssl connection error') % host)
