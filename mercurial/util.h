@@ -101,5 +101,9 @@
 
 #endif /* PY_VERSION_HEX */
 
+#if (PY_VERSION_HEX < 0x02050000)
+typedef int Py_ssize_t;
+#endif
+
 #endif /* _HG_UTIL_H_ */
 
