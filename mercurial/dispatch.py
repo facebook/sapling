@@ -687,6 +687,59 @@ def _dispatch(req):
         if repo and repo != req.repo:
             repo.close()
 
+def lsprofile(ui, func, fp):
+    format = ui.config('profiling', 'format', default='text')
+    field = ui.config('profiling', 'sort', default='inlinetime')
+    climit = ui.configint('profiling', 'nested', default=5)
+
+    if not format in ['text', 'kcachegrind']:
+        ui.warn(_("unrecognized profiling format '%s'"
+                    " - Ignored\n") % format)
+        format = 'text'
+
+    try:
+        from mercurial import lsprof
+    except ImportError:
+        raise util.Abort(_(
+            'lsprof not available - install from '
+            'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
+    p = lsprof.Profiler()
+    p.enable(subcalls=True)
+    try:
+        return func()
+    finally:
+        p.disable()
+
+        if format == 'kcachegrind':
+            import lsprofcalltree
+            calltree = lsprofcalltree.KCacheGrind(p)
+            calltree.output(fp)
+        else:
+            # format == 'text'
+            stats = lsprof.Stats(p.getstats())
+            stats.sort(field)
+            stats.pprint(limit=30, file=fp, climit=climit)
+
+def statprofile(ui, func, fp):
+    try:
+        import statprof
+    except ImportError:
+        raise util.Abort(_(
+            'statprof not available - install using "easy_install statprof"'))
+
+    freq = ui.configint('profiling', 'freq', default=1000)
+    if freq > 0:
+        statprof.reset(freq)
+    else:
+        ui.warn(_("invalid sampling frequency '%s' - ignoring\n") % freq)
+
+    statprof.start()
+    try:
+        return func()
+    finally:
+        statprof.stop()
+        statprof.display(fp)
+
 def _runcommand(ui, options, cmd, cmdfunc):
     def checkargs():
         try:
@@ -695,47 +748,28 @@ def _runcommand(ui, options, cmd, cmdfunc):
             raise error.CommandError(cmd, _("invalid arguments"))
 
     if options['profile']:
-        format = ui.config('profiling', 'format', default='text')
-        field = ui.config('profiling', 'sort', default='inlinetime')
-        climit = ui.configint('profiling', 'nested', default=5)
-
-        if not format in ['text', 'kcachegrind']:
-            ui.warn(_("unrecognized profiling format '%s'"
-                        " - Ignored\n") % format)
-            format = 'text'
+        profiler = os.getenv('HGPROF')
+        if profiler is None:
+            profiler = ui.config('profiling', 'type', default='ls')
+        if profiler not in ('ls', 'stat'):
+            ui.warn(_("unrecognized profiler '%s' - ignored\n") % profiler)
+            profiler = 'ls'
 
         output = ui.config('profiling', 'output')
 
         if output:
             path = ui.expandpath(output)
-            ostream = open(path, 'wb')
+            fp = open(path, 'wb')
         else:
-            ostream = sys.stderr
+            fp = sys.stderr
 
         try:
-            from mercurial import lsprof
-        except ImportError:
-            raise util.Abort(_(
-                'lsprof not available - install from '
-                'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
-        p = lsprof.Profiler()
-        p.enable(subcalls=True)
-        try:
-            return checkargs()
-        finally:
-            p.disable()
-
-            if format == 'kcachegrind':
-                import lsprofcalltree
-                calltree = lsprofcalltree.KCacheGrind(p)
-                calltree.output(ostream)
+            if profiler == 'ls':
+                return lsprofile(ui, checkargs, fp)
             else:
-                # format == 'text'
-                stats = lsprof.Stats(p.getstats())
-                stats.sort(field)
-                stats.pprint(limit=30, file=ostream, climit=climit)
-
+                return statprofile(ui, checkargs, fp)
+        finally:
             if output:
-                ostream.close()
+                fp.close()
     else:
         return checkargs()

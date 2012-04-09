@@ -938,14 +938,31 @@ information about working with phases.
 ``profiling``
 """""""""""""
 
-Specifies profiling format and file output. In this section
-description, 'profiling data' stands for the raw data collected
-during profiling, while 'profiling report' stands for a statistical
-text report generated from the profiling data. The profiling is done
-using lsprof.
+Specifies profiling type, format, and file output. Two profilers are
+supported: an instrumenting profiler (named ``ls``), and a sampling
+profiler (named ``stat``).
+
+In this section description, 'profiling data' stands for the raw data
+collected during profiling, while 'profiling report' stands for a
+statistical text report generated from the profiling data. The
+profiling is done using lsprof.
+
+``type``
+    The type of profiler to use.
+    Default: ls.
+
+    ``ls``
+      Use Python's built-in instrumenting profiler. This profiler
+      works on all platforms, but each line number it reports is the
+      first line of a function. This restriction makes it difficult to
+      identify the expensive parts of a non-trivial function.
+    ``stat``
+      Use a third-party statistical profiler, statprof. This profiler
+      currently runs only on Unix systems, and is most useful for
+      profiling commands that run for longer than about 0.1 seconds.
 
 ``format``
-    Profiling format.
+    Profiling format.  Specific to the ``ls`` instrumenting profiler.
     Default: text.
 
     ``text``
@@ -956,6 +973,10 @@ using lsprof.
       Format profiling data for kcachegrind use: when saving to a
       file, the generated file can directly be loaded into
       kcachegrind.
+
+``frequency``
+    Sampling frequency.  Specific to the ``stat`` sampling profiler.
+    Default: 1000.
 
 ``output``
     File path where profiling data or report should be saved. If the
