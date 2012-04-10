@@ -534,6 +534,8 @@ def revrange(repo, revs):
 
     seen, l = set(), []
     for spec in revs:
+        if l and not seen:
+            seen = set(l)
         # attempt to parse old-style ranges first to deal with
         # things like old-tag which contain query metacharacters
         try:
@@ -547,11 +549,18 @@ def revrange(repo, revs):
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
                 step = start > end and -1 or 1
-                for rev in xrange(start, end + step, step):
-                    if rev in seen:
-                        continue
-                    seen.add(rev)
-                    l.append(rev)
+                if not seen and not l:
+                    # by far the most common case: revs = ["-1:0"]
+                    l = range(start, end + step, step)
+                    # defer syncing seen until next iteration
+                    continue
+                newrevs = set(xrange(start, end + step, step))
+                if seen:
+                    newrevs.difference_update(seen)
+                    seen.union(newrevs)
+                else:
+                    seen = newrevs
+                l.extend(sorted(newrevs, reverse=start > end))
                 continue
             elif spec and spec in repo: # single unquoted rev
                 rev = revfix(repo, spec, None)
