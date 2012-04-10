@@ -26,16 +26,6 @@
 
 #include "util.h"
 
-/* Definitions to get compatibility with python 2.4 and earlier which
-   does not have Py_ssize_t. See also PEP 353.
-   Note: msvc (8 or earlier) does not have ssize_t, so we use Py_ssize_t.
-*/
-#if PY_VERSION_HEX < 0x02050000 && !defined(PY_SSIZE_T_MIN)
-typedef int Py_ssize_t;
-#define PY_SSIZE_T_MAX INT_MAX
-#define PY_SSIZE_T_MIN INT_MIN
-#endif
-
 #ifdef _WIN32
 #ifdef _MSC_VER
 /* msvc 6.0 has problems */

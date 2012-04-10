@@ -102,8 +102,15 @@
 #endif /* PY_VERSION_HEX */
 
 #if (PY_VERSION_HEX < 0x02050000)
+/* Definitions to get compatibility with python 2.4 and earlier which
+   does not have Py_ssize_t. See also PEP 353.
+   Note: msvc (8 or earlier) does not have ssize_t, so we use Py_ssize_t.
+*/
 typedef int Py_ssize_t;
+#if !defined(PY_SSIZE_T_MIN)
+#define PY_SSIZE_T_MAX INT_MAX
+#define PY_SSIZE_T_MIN INT_MIN
+#endif
 #endif
 
 #endif /* _HG_UTIL_H_ */
-
