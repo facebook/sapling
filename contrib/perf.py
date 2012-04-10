@@ -133,6 +133,9 @@ def perftemplating(ui, repo):
                                ' {author|person}: {desc|firstline}\n'))
     ui.popbuffer()
 
+def perfcca(ui, repo):
+    timer(lambda: scmutil.casecollisionauditor(ui, False, repo[None]))
+
 def perfdiffwd(ui, repo):
     """Profile diff of working directory changes"""
     options = {
@@ -161,6 +164,7 @@ def perfrevlog(ui, repo, file_, **opts):
     timer(d)
 
 cmdtable = {
+    'perfcca': (perfcca, []),
     'perflookup': (perflookup, []),
     'perfnodelookup': (perfnodelookup, []),
     'perfparents': (perfparents, []),
