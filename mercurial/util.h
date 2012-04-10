@@ -107,6 +107,9 @@
    Note: msvc (8 or earlier) does not have ssize_t, so we use Py_ssize_t.
 */
 typedef int Py_ssize_t;
+typedef Py_ssize_t (*lenfunc)(PyObject *);
+typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
+
 #if !defined(PY_SSIZE_T_MIN)
 #define PY_SSIZE_T_MAX INT_MAX
 #define PY_SSIZE_T_MIN INT_MIN

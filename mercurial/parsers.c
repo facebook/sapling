@@ -244,9 +244,9 @@ static PyObject *nullentry;
 static long inline_scan(indexObject *self, const char **offsets);
 
 #if LONG_MAX == 0x7fffffffL
-static const char *tuple_format = "Kiiiiiis#";
+static char *tuple_format = "Kiiiiiis#";
 #else
-static const char *tuple_format = "kiiiiiis#";
+static char *tuple_format = "kiiiiiis#";
 #endif
 
 /* RevlogNG format (all in big endian, data may be inlined):
