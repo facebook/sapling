@@ -113,4 +113,39 @@ typedef int Py_ssize_t;
 #endif
 #endif
 
+#ifdef _WIN32
+#ifdef _MSC_VER
+/* msvc 6.0 has problems */
+#define inline __inline
+typedef unsigned long uint32_t;
+typedef unsigned __int64 uint64_t;
+#else
+#include <stdint.h>
+#endif
+static uint32_t ntohl(uint32_t x)
+{
+	return ((x & 0x000000ffUL) << 24) |
+	       ((x & 0x0000ff00UL) <<  8) |
+	       ((x & 0x00ff0000UL) >>  8) |
+	       ((x & 0xff000000UL) >> 24);
+}
+#else
+/* not windows */
+#include <sys/types.h>
+#if defined __BEOS__ && !defined __HAIKU__
+#include <ByteOrder.h>
+#else
+#include <arpa/inet.h>
+#endif
+#include <inttypes.h>
+#endif
+
+#if defined __hpux || defined __SUNPRO_C || defined _AIX
+#define inline
+#endif
+
+#ifdef __linux
+#define inline __inline
+#endif
+
 #endif /* _HG_UTIL_H_ */

@@ -14,38 +14,6 @@
 #include <string.h>
 #include <limits.h>
 
-#if defined __hpux || defined __SUNPRO_C || defined _AIX
-#define inline
-#endif
-
-#ifdef __linux
-#define inline __inline
-#endif
-
-#ifdef _WIN32
-#ifdef _MSC_VER
-#define inline __inline
-typedef unsigned long uint32_t;
-#else
-#include <stdint.h>
-#endif
-static uint32_t htonl(uint32_t x)
-{
-	return ((x & 0x000000ffUL) << 24) |
-		((x & 0x0000ff00UL) <<  8) |
-		((x & 0x00ff0000UL) >>  8) |
-		((x & 0xff000000UL) >> 24);
-}
-#else
-#include <sys/types.h>
-#if defined __BEOS__ && !defined __HAIKU__
-#include <ByteOrder.h>
-#else
-#include <arpa/inet.h>
-#endif
-#include <inttypes.h>
-#endif
-
 #include "util.h"
 
 struct line {
