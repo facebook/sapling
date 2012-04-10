@@ -2492,7 +2492,7 @@ def forget(ui, repo, *pats, **opts):
       _('record the current date as commit date')),
      ('U', 'currentuser', False,
       _('record the current user as committer'), _('DATE'))]
-    + commitopts2 + mergetoolopts,
+    + commitopts2 + mergetoolopts  + dryrunopts,
     _('[OPTION]... REVISION...'))
 def graft(ui, repo, *revs, **opts):
     '''copy changes from other branches onto the current branch
@@ -2611,7 +2611,10 @@ def graft(ui, repo, *revs, **opts):
 
     for pos, ctx in enumerate(repo.set("%ld", revs)):
         current = repo['.']
+
         ui.status(_('grafting revision %s\n') % ctx.rev())
+        if opts.get('dry_run'):
+            continue
 
         # we don't merge the first commit when continuing
         if not cont:
@@ -2654,7 +2657,7 @@ def graft(ui, repo, *revs, **opts):
                     date=date, extra=extra, editor=editor)
 
     # remove state when we complete successfully
-    if os.path.exists(repo.join('graftstate')):
+    if not opts.get('dry_run') and os.path.exists(repo.join('graftstate')):
         util.unlinkpath(repo.join('graftstate'))
 
     return 0

@@ -107,6 +107,14 @@ Look for extra:source
 
 Graft out of order, skipping a merge and a duplicate
 
+  $ hg graft 1 5 4 3 'merge()' 2 -n
+  skipping ungraftable merge revision 6
+  skipping already grafted revision 2
+  grafting revision 1
+  grafting revision 5
+  grafting revision 4
+  grafting revision 3
+
   $ hg graft 1 5 4 3 'merge()' 2 --debug
   skipping ungraftable merge revision 6
   scanning for duplicate grafts
