@@ -1538,13 +1538,13 @@ have 2 filelog topological heads in a linear changeset graph.
   $ cd ..
   $ hg init follow
   $ cd follow
+  $ testlog --follow
+  []
+  []
   $ echo a > a
   $ echo aa > aa
   $ echo f > f
-  $ hg ci -Am "add a"
-  adding a
-  adding aa
-  adding f
+  $ hg ci -Am "add a" a aa f
   $ hg cp a b
   $ hg cp f g
   $ hg ci -m "copy a b"
@@ -1925,3 +1925,54 @@ Test old-style --rev
   $ testlog -r 'foo-bar'
   ['foo-bar']
   []
+
+Test --follow and forward --rev
+
+  $ hg up -q 6
+  $ echo g > g
+  $ hg ci -Am 'add g' g
+  created new head
+  $ hg up -q 2
+  $ hg log -G --template "{rev} {desc|firstline}\n"
+  o  8 add g
+  |
+  | o  7 Added tag foo-bar for changeset fc281d8ff18d
+  |/
+  o    6 merge 5 and 4
+  |\
+  | o  5 add another e
+  | |
+  o |  4 mv dir/b e
+  |/
+  o  3 mv a b; add d
+  |
+  @  2 mv b dir/b
+  |
+  o  1 copy a b
+  |
+  o  0 add a
+  
+  $ testlog --follow -r6 -r8 -r5 -r7 -r4
+  ['6', '8', '5', '7', '4']
+  (group
+    (func
+      ('symbol', 'descendants')
+      ('symbol', '6')))
+  --- log.nodes	* (glob)
+  +++ glog.nodes	* (glob)
+  @@ -1,3 +1,3 @@
+  -nodetag 6
+   nodetag 8
+   nodetag 7
+  +nodetag 6
+  [1]
+
+Test --follow and backward --rev
+
+  $ testlog --follow -r6 -r5 -r7 -r8 -r4
+  ['6', '5', '7', '8', '4']
+  (group
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '6')))
+

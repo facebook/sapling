@@ -279,10 +279,11 @@ def _makelogrevset(repo, pats, opts, revs):
     the files to be detailed when displaying the revision.
     """
     opt2revset = {
-        'follow':           ('follow()', None),
         'follow_first':     ('_followfirst()', None),
         'no_merges':        ('not merge()', None),
         'only_merges':      ('merge()', None),
+        '_ancestors':       ('ancestors(%(val)s)', None),
+        '_descendants':     ('descendants(%(val)s)', None),
         '_matchfiles':      ('_matchfiles(%(val)s)', None),
         'date':             ('date(%(val)r)', None),
         'branch':           ('branch(%(val)r)', ' or '),
@@ -298,10 +299,11 @@ def _makelogrevset(repo, pats, opts, revs):
     # follow or not follow?
     follow = opts.get('follow') or opts.get('follow_first')
     followfirst = opts.get('follow_first')
-    if 'follow' in opts:
-        del opts['follow']
     if 'follow_first' in opts:
         del opts['follow_first']
+    # --follow with FILE behaviour depends on revs...
+    startrev = revs[0]
+    followdescendants = len(revs) > 1 and revs[0] < revs[1]
 
     # branch and only_branch are really aliases and must be handled at
     # the same time
@@ -359,7 +361,10 @@ def _makelogrevset(repo, pats, opts, revs):
                 if pats:
                     opts['_patsfollow'] = list(pats)
                 else:
-                    opts['follow'] = True
+                    if followdescendants:
+                        opts['_descendants'] = str(startrev)
+                    else:
+                        opts['_ancestors'] = str(startrev)
         else:
             opts['_patslog'] = list(pats)
 
@@ -402,10 +407,16 @@ def getlogrevs(repo, pats, opts):
     """
     if not len(repo):
         return [], None, None
+    # Default --rev value depends on --follow but --follow behaviour
+    # depends on revisions resolved from --rev...
+    follow = opts.get('follow') or opts.get('follow_first')
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
     else:
-        revs = range(len(repo))
+        if follow and len(repo) > 0:
+            revs = scmutil.revrange(repo, ['.:0'])
+        else:
+            revs = range(len(repo) - 1, -1, -1)
     if not revs:
         return [], None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
