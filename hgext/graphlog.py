@@ -17,8 +17,7 @@ from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions, scmutil
-from mercurial import hg, util, graphmod, templatekw
-from mercurial import revset as revsetmod
+from mercurial import hg, util, graphmod, templatekw, revset
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -243,7 +242,7 @@ def check_unsupported_flags(pats, opts):
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
 
-def makefilematcher(repo, pats, followfirst):
+def _makefilematcher(repo, pats, followfirst):
     # When displaying a revision with --patch --follow FILE, we have
     # to know which file of the revision must be diffed. With
     # --follow, we want the names of the ancestors of FILE in the
@@ -373,11 +372,11 @@ def _makelogrevset(repo, pats, opts, revs):
     filematcher = None
     if opts.get('patch') or opts.get('stat'):
         if follow:
-            filematcher = makefilematcher(repo, pats, followfirst)
+            filematcher = _makefilematcher(repo, pats, followfirst)
         else:
             filematcher = lambda rev: match
 
-    revset = []
+    expr = []
     for op, val in opts.iteritems():
         if not val:
             continue
@@ -385,19 +384,19 @@ def _makelogrevset(repo, pats, opts, revs):
             continue
         revop, andor = opt2revset[op]
         if '%(val)' not in revop:
-            revset.append(revop)
+            expr.append(revop)
         else:
             if not isinstance(val, list):
-                expr = revop % {'val': val}
+                e = revop % {'val': val}
             else:
-                expr = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
-            revset.append(expr)
+                e = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
+            expr.append(e)
 
-    if revset:
-        revset = '(' + ' and '.join(revset) + ')'
+    if expr:
+        expr = '(' + ' and '.join(expr) + ')'
     else:
-        revset = None
-    return revset, filematcher
+        expr = None
+    return expr, filematcher
 
 def getlogrevs(repo, pats, opts):
     """Return (revs, expr, filematcher) where revs is a list of
@@ -426,7 +425,7 @@ def getlogrevs(repo, pats, opts):
         # Evaluate revisions in changelog order for performance
         # reasons but preserve the original sequence order in the
         # filtered result.
-        matched = set(revsetmod.match(repo.ui, expr)(repo, sorted(revs)))
+        matched = set(revset.match(repo.ui, expr)(repo, sorted(revs)))
         revs = [r for r in revs if r in matched]
     return revs, expr, filematcher
 
