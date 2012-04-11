@@ -1003,10 +1003,9 @@ class workingctx(changectx):
         finally:
             wlock.release()
 
-    def ancestors(self, followfirst=False):
-        cut = followfirst and 1 or None
+    def ancestors(self):
         for a in self._repo.changelog.ancestors(
-            *[p.rev() for p in self._parents[:cut]]):
+            *[p.rev() for p in self._parents]):
             yield changectx(self._repo, a)
 
     def undelete(self, list):
