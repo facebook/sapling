@@ -1464,7 +1464,7 @@ glog always reorders nodes which explains the difference with log
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
-  $ testlog -b default -b branch --only-branch branch
+  $ testlog -b 35 -b 36 --only-branch branch
   []
   (group
     (group

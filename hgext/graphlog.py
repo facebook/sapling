@@ -306,6 +306,7 @@ def _makelogrevset(repo, pats, opts, revs):
     # branch and only_branch are really aliases and must be handled at
     # the same time
     opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
+    opts['branch'] = [repo.lookupbranch(b) for b in opts['branch']]
     # pats/include/exclude are passed to match.match() directly in
     # _matchfile() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
