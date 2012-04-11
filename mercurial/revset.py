@@ -559,13 +559,14 @@ def _matchfiles(repo, subset, x):
     # patterns and 'x:' for exclude patterns. Use 'r:' prefix to pass
     # a revision identifier, or the empty string to reference the
     # working directory, from which the match object is
-    # initialized. At most one 'r:' argument can be passed.
+    # initialized. Use 'd:' to set the default matching mode, default
+    # to 'glob'. At most one 'r:' and 'd:' argument can be passed.
 
     # i18n: "_matchfiles" is a keyword
     l = getargs(x, 1, -1, _("_matchfiles requires at least one argument"))
     pats, inc, exc = [], [], []
     hasset = False
-    rev = None
+    rev, default = None, None
     for arg in l:
         s = getstring(arg, _("_matchfiles requires string arguments"))
         prefix, value = s[:2], s[2:]
@@ -580,10 +581,17 @@ def _matchfiles(repo, subset, x):
                 raise error.ParseError(_('_matchfiles expected at most one '
                                          'revision'))
             rev = value
+        elif prefix == 'd:':
+            if default is not None:
+                raise error.ParseError(_('_matchfiles expected at most one '
+                                         'default mode'))
+            default = value
         else:
             raise error.ParseError(_('invalid _matchfiles prefix: %s') % prefix)
         if not hasset and matchmod.patkind(value) == 'set':
             hasset = True
+    if not default:
+        default = 'glob'
     m = None
     s = []
     for r in subset:
@@ -593,7 +601,7 @@ def _matchfiles(repo, subset, x):
             if rev is not None:
                 ctx = repo[rev or None]
             m = matchmod.match(repo.root, repo.getcwd(), pats, include=inc,
-                               exclude=exc, ctx=ctx)
+                               exclude=exc, ctx=ctx, default=default)
         for f in c.files():
             if m(f):
                 s.append(r)

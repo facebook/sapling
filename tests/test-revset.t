@@ -246,7 +246,7 @@ quoting needed
   7
   8
   9
-  $ log 'file(b)'
+  $ log 'file("b*")'
   1
   4
   $ log 'follow()'

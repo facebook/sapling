@@ -1600,7 +1600,9 @@ Test falling back to slow path for non-existing files
       ('symbol', '_matchfiles')
       (list
         (list
-          ('string', 'r:')
+          (list
+            ('string', 'r:')
+            ('string', 'd:relpath'))
           ('string', 'p:a'))
         ('string', 'p:c'))))
 
@@ -1617,7 +1619,9 @@ Test multiple --include/--exclude/paths
             (list
               (list
                 (list
-                  ('string', 'r:')
+                  (list
+                    ('string', 'r:')
+                    ('string', 'd:relpath'))
                   ('string', 'p:a'))
                 ('string', 'p:e'))
               ('string', 'i:a'))
@@ -1791,7 +1795,9 @@ Test "set:..." and parent revision
     (func
       ('symbol', '_matchfiles')
       (list
-        ('string', 'r:')
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
         ('string', 'p:set:copied()'))))
   $ testlog --include "set:copied()"
   []
@@ -1799,7 +1805,9 @@ Test "set:..." and parent revision
     (func
       ('symbol', '_matchfiles')
       (list
-        ('string', 'r:')
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
         ('string', 'i:set:copied()'))))
   $ testlog -r "sort(file('set:copied()'), -rev)"
   ["sort(file('set:copied()'), -rev)"]
@@ -1816,7 +1824,9 @@ Test --removed
     (func
       ('symbol', '_matchfiles')
       (list
-        ('string', 'r:')
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
         ('string', 'p:a'))))
   $ testlog --removed --follow a
   abort: can only follow copies/renames for explicit filenames
@@ -2001,3 +2011,18 @@ Test --follow-first and backward --rev
     (func
       ('symbol', '_firstancestors')
       ('symbol', '6')))
+
+Test subdir
+
+  $ hg up -q 3
+  $ cd dir
+  $ testlog .
+  []
+  (group
+    (func
+      ('symbol', '_matchfiles')
+      (list
+        (list
+          ('string', 'r:')
+          ('string', 'd:relpath'))
+        ('string', 'p:.'))))

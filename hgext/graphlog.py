@@ -340,7 +340,7 @@ def _makelogrevset(repo, pats, opts, revs):
         # "a" and "b" while "file(a) and not file(b)" does
         # not. Besides, filesets are evaluated against the working
         # directory.
-        matchargs = ['r:']
+        matchargs = ['r:', 'd:relpath']
         for p in pats:
             matchargs.append('p:' + p)
         for p in opts.get('include', []):
