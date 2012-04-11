@@ -409,7 +409,11 @@ def getlogrevs(repo, pats, opts):
         return [], None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        revs = revsetmod.match(repo.ui, expr)(repo, revs)
+        # Evaluate revisions in changelog order for performance
+        # reasons but preserve the original sequence order in the
+        # filtered result.
+        matched = set(revsetmod.match(repo.ui, expr)(repo, sorted(revs)))
+        revs = [r for r in revs if r in matched]
     return revs, expr, filematcher
 
 def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
