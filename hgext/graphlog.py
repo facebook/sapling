@@ -271,15 +271,12 @@ def makefilematcher(repo, pats, followfirst):
 
     return filematcher
 
-def revset(repo, pats, opts):
+def _makelogrevset(repo, pats, opts, revs):
     """Return (expr, filematcher) where expr is a revset string built
-    log options and file patterns, or None. Note that --rev options
-    are ignored when building expr because we do not know if they are
-    proper revsets or legacy expressions like a 'foo-bar' tags. If
-    --stat or --patch are not passed filematcher is None. Otherwise it
-    a a callable taking a revision number and returning a match
-    objects filtering the files to be detailed when displaying the
-    revision.
+    from log options and file patterns or None. If --stat or --patch
+    are not passed filematcher is None. Otherwise it is a callable
+    taking a revision number and returning a match objects filtering
+    the files to be detailed when displaying the revision.
     """
     opt2revset = {
         'follow':           ('follow()', None),
@@ -298,15 +295,17 @@ def revset(repo, pats, opts):
         }
 
     opts = dict(opts)
-    # branch and only_branch are really aliases and must be handled at
-    # the same time
-    opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
+    # follow or not follow?
     follow = opts.get('follow') or opts.get('follow_first')
     followfirst = opts.get('follow_first')
     if 'follow' in opts:
         del opts['follow']
     if 'follow_first' in opts:
         del opts['follow_first']
+
+    # branch and only_branch are really aliases and must be handled at
+    # the same time
+    opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
     # pats/include/exclude are passed to match.match() directly in
     # _matchfile() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
@@ -392,6 +391,27 @@ def revset(repo, pats, opts):
         revset = None
     return revset, filematcher
 
+def getlogrevs(repo, pats, opts):
+    """Return (revs, expr, filematcher) where revs is a list of
+    revision numbers, expr is a revset string built from log options
+    and file patterns or None, and used to filter 'revs'. If --stat or
+    --patch are not passed filematcher is None. Otherwise it is a
+    callable taking a revision number and returning a match objects
+    filtering the files to be detailed when displaying the revision.
+    """
+    if not len(repo):
+        return [], None, None
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts['rev'])
+    else:
+        revs = range(len(repo))
+    if not revs:
+        return [], None, None
+    expr, filematcher = _makelogrevset(repo, pats, opts, revs)
+    if expr:
+        revs = revsetmod.match(repo.ui, expr)(repo, revs)
+    return revs, expr, filematcher
+
 def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
              filematcher=None):
     seen, state = [], asciistate()
@@ -434,13 +454,7 @@ def graphlog(ui, repo, *pats, **opts):
 
     check_unsupported_flags(pats, opts)
 
-    expr, filematcher = revset(repo, pats, opts)
-    if opts.get('rev'):
-        revs = scmutil.revrange(repo, opts['rev'])
-    else:
-        revs = range(len(repo))
-    if expr:
-        revs = revsetmod.match(repo.ui, expr)(repo, revs)
+    revs, expr, filematcher = getlogrevs(repo, pats, opts)
     revs = sorted(revs, reverse=1)
     limit = cmdutil.loglimit(opts)
     if limit is not None:

@@ -90,7 +90,7 @@ o  (0) root
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
-  >             expr = graphlog.revset(repo, pats, opts)[0]
+  >             expr = graphlog.getlogrevs(repo, pats, opts)[1]
   >             if expr:
   >                 tree = revset.parse(expr)[0]
   >             else:
@@ -1461,12 +1461,7 @@ glog always reorders nodes which explains the difference with log
           ('symbol', 'user')
           ('string', 'not-a-user')))))
   $ testlog -b not-a-branch
-  []
-  (group
-    (group
-      (func
-        ('symbol', 'branch')
-        ('string', 'not-a-branch'))))
+  abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
   abort: unknown revision 'not-a-branch'!
   $ testlog -b default -b branch --only-branch branch
