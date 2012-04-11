@@ -1746,8 +1746,8 @@ Test --follow-first
   []
   (group
     (func
-      ('symbol', '_followfirst')
-      None))
+      ('symbol', '_firstancestors')
+      ('symbol', '6')))
 
 Cannot compare with log --follow-first FILE as it never worked
 
@@ -1967,6 +1967,23 @@ Test --follow and forward --rev
   +nodetag 6
   [1]
 
+Test --follow-first and forward --rev
+
+  $ testlog --follow-first -r6 -r8 -r5 -r7 -r4
+  ['6', '8', '5', '7', '4']
+  (group
+    (func
+      ('symbol', '_firstdescendants')
+      ('symbol', '6')))
+  --- log.nodes	* (glob)
+  +++ glog.nodes	* (glob)
+  @@ -1,3 +1,3 @@
+  -nodetag 6
+   nodetag 8
+   nodetag 7
+  +nodetag 6
+  [1]
+
 Test --follow and backward --rev
 
   $ testlog --follow -r6 -r5 -r7 -r8 -r4
@@ -1976,3 +1993,11 @@ Test --follow and backward --rev
       ('symbol', 'ancestors')
       ('symbol', '6')))
 
+Test --follow-first and backward --rev
+
+  $ testlog --follow-first -r6 -r5 -r7 -r8 -r4
+  ['6', '5', '7', '8', '4']
+  (group
+    (func
+      ('symbol', '_firstancestors')
+      ('symbol', '6')))

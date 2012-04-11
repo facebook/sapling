@@ -13,6 +13,39 @@ import match as matchmod
 from i18n import _
 import encoding
 
+def _revancestors(repo, revs, followfirst):
+    """Like revlog.ancestors(), but supports followfirst."""
+    cut = followfirst and 1 or None
+    cl = repo.changelog
+    visit = list(revs)
+    seen = set([nodemod.nullrev])
+    while visit:
+        for parent in cl.parentrevs(visit.pop(0))[:cut]:
+            if parent not in seen:
+                visit.append(parent)
+                seen.add(parent)
+                yield parent
+
+def _revdescendants(repo, revs, followfirst):
+    """Like revlog.descendants() but supports followfirst."""
+    cut = followfirst and 1 or None
+    cl = repo.changelog
+    first = min(revs)
+    if first == nodemod.nullrev:
+        # Are there nodes with a null first parent and a non-null
+        # second one? Maybe. Do we care? Probably not.
+        for i in cl:
+            yield i
+        return
+
+    seen = set(revs)
+    for i in xrange(first + 1, len(cl)):
+        for x in cl.parentrevs(i)[:cut]:
+            if x != nodemod.nullrev and x in seen:
+                seen.add(i)
+                yield i
+                break
+
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
     "~": (18, None, ("ancestor", 18)),
@@ -203,15 +236,23 @@ def ancestor(repo, subset, x):
 
     return [r for r in an if r in subset]
 
+def _ancestors(repo, subset, x, followfirst=False):
+    args = getset(repo, range(len(repo)), x)
+    if not args:
+        return []
+    s = set(_revancestors(repo, args, followfirst)) | set(args)
+    return [r for r in subset if r in s]
+
 def ancestors(repo, subset, x):
     """``ancestors(set)``
     Changesets that are ancestors of a changeset in set.
     """
-    args = getset(repo, range(len(repo)), x)
-    if not args:
-        return []
-    s = set(repo.changelog.ancestors(*args)) | set(args)
-    return [r for r in subset if r in s]
+    return _ancestors(repo, subset, x)
+
+def _firstancestors(repo, subset, x):
+    # ``_firstancestors(set)``
+    # Like ``ancestors(set)`` but follows only the first parents.
+    return _ancestors(repo, subset, x, followfirst=True)
 
 def ancestorspec(repo, subset, x, n):
     """``set~n``
@@ -395,15 +436,23 @@ def desc(repo, subset, x):
             l.append(r)
     return l
 
+def _descendants(repo, subset, x, followfirst=False):
+    args = getset(repo, range(len(repo)), x)
+    if not args:
+        return []
+    s = set(_revdescendants(repo, args, followfirst)) | set(args)
+    return [r for r in subset if r in s]
+
 def descendants(repo, subset, x):
     """``descendants(set)``
     Changesets which are descendants of changesets in set.
     """
-    args = getset(repo, range(len(repo)), x)
-    if not args:
-        return []
-    s = set(repo.changelog.descendants(*args)) | set(args)
-    return [r for r in subset if r in s]
+    return _descendants(repo, subset, x)
+
+def _firstdescendants(repo, subset, x):
+    # ``_firstdescendants(set)``
+    # Like ``descendants(set)`` but follows only the first parents.
+    return _descendants(repo, subset, x, followfirst=True)
 
 def draft(repo, subset, x):
     """``draft()``
@@ -454,16 +503,7 @@ def _follow(repo, subset, x, name, followfirst=False):
         else:
             return []
     else:
-        cut = followfirst and 1 or None
-        cl = repo.changelog
-        s = set()
-        visit = [c.rev()]
-        while visit:
-            for prev in cl.parentrevs(visit.pop(0))[:cut]:
-                if prev not in s and prev != nodemod.nullrev:
-                    visit.append(prev)
-                    s.add(prev)
-        s.add(c.rev())
+        s = set(_revancestors(repo, [c.rev()], followfirst)) | set([c.rev()])
 
     return [r for r in subset if r in s]
 
@@ -1055,6 +1095,7 @@ symbols = {
     "all": getall,
     "ancestor": ancestor,
     "ancestors": ancestors,
+    "_firstancestors": _firstancestors,
     "author": author,
     "bisect": bisect,
     "bisected": bisected,
@@ -1066,6 +1107,7 @@ symbols = {
     "date": date,
     "desc": desc,
     "descendants": descendants,
+    "_firstdescendants": _firstdescendants,
     "draft": draft,
     "file": hasfile,
     "filelog": filelog,

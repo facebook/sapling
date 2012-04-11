@@ -279,11 +279,12 @@ def _makelogrevset(repo, pats, opts, revs):
     the files to be detailed when displaying the revision.
     """
     opt2revset = {
-        'follow_first':     ('_followfirst()', None),
         'no_merges':        ('not merge()', None),
         'only_merges':      ('merge()', None),
         '_ancestors':       ('ancestors(%(val)s)', None),
+        '_fancestors':      ('_firstancestors(%(val)s)', None),
         '_descendants':     ('descendants(%(val)s)', None),
+        '_fdescendants':    ('_firstdescendants(%(val)s)', None),
         '_matchfiles':      ('_matchfiles(%(val)s)', None),
         'date':             ('date(%(val)r)', None),
         'branch':           ('branch(%(val)r)', ' or '),
@@ -299,8 +300,6 @@ def _makelogrevset(repo, pats, opts, revs):
     # follow or not follow?
     follow = opts.get('follow') or opts.get('follow_first')
     followfirst = opts.get('follow_first')
-    if 'follow_first' in opts:
-        del opts['follow_first']
     # --follow with FILE behaviour depends on revs...
     startrev = revs[0]
     followdescendants = len(revs) > 1 and revs[0] < revs[1]
@@ -356,7 +355,10 @@ def _makelogrevset(repo, pats, opts, revs):
                 if pats:
                     opts['_patsfollowfirst'] = list(pats)
                 else:
-                    opts['follow_first'] = True
+                    if followdescendants:
+                        opts['_fdescendants'] = str(startrev)
+                    else:
+                        opts['_fancestors'] = str(startrev)
             else:
                 if pats:
                     opts['_patsfollow'] = list(pats)
