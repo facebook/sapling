@@ -424,3 +424,57 @@ test with a win32ext like setup (differing EOLs)
   a\r (esc)
   b\r (esc)
   $ cd ..
+
+test transplant with merge changeset is skipped
+
+  $ hg init merge1a
+  $ cd merge1a
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+  $ hg branch b
+  marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m branchb
+  $ echo b > b
+  $ hg ci -Am b
+  adding b
+  $ hg update default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge b
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m mergeb
+  $ cd ..
+
+  $ hg init merge1b
+  $ cd merge1b
+  $ hg transplant -s ../merge1a tip
+
+test transplant with merge changeset accepts --parent
+
+  $ hg init merge2a
+  $ cd merge2a
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+  $ hg branch b
+  marked working directory as branch b
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m branchb
+  $ echo b > b
+  $ hg ci -Am b
+  adding b
+  $ hg update default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge b
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m mergeb
+  $ cd ..
+
+  $ hg init merge2b
+  $ cd merge2b
+  $ hg transplant -s ../merge2a --parent 0 tip
+  applying be9f9b39483f
+  be9f9b39483f transplanted to 9959e51f94d1
