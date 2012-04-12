@@ -174,7 +174,7 @@ class revlogio(object):
     def parseindex(self, data, inline):
         # call the C implementation to parse the index data
         index, cache = parsers.parse_index2(data, inline)
-        return index, None, cache
+        return index, getattr(index, 'nodemap', None), cache
 
     def packentry(self, entry, node, version, rev):
         p = _pack(indexformatng, *entry)
@@ -295,10 +295,21 @@ class revlog(object):
         except KeyError:
             return False
 
+    def clearcaches(self):
+        try:
+            self._nodecache.clearcaches()
+        except AttributeError:
+            self._nodecache = {nullid: nullrev}
+            self._nodepos = None
+
     def rev(self, node):
         try:
             return self._nodecache[node]
+        except RevlogError:
+            # parsers.c radix tree lookup failed
+            raise LookupError(node, self.indexfile, _('no node'))
         except KeyError:
+            # pure python cache lookup failed
             n = self._nodecache
             i = self.index
             p = self._nodepos

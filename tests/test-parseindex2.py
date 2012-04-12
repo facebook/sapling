@@ -110,6 +110,13 @@ def runtest() :
     if py_res_2 != c_res_2:
         print "Parse index result (no inlined data) differs!"
 
+    ix = parsers.parse_index2(data_inlined, True)[0]
+    for i, r in enumerate(ix):
+        if r[7] == nullid:
+            i = -1
+        if ix[r[7]] != i:
+            print 'Reverse lookup inconsistent for %r' % r[7].encode('hex')
+
     print "done"
 
 runtest()

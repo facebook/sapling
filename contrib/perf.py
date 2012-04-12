@@ -1,7 +1,7 @@
 # perf.py - performance test routines
 '''helper extension to measure performance'''
 
-from mercurial import cmdutil, scmutil, match, commands
+from mercurial import cmdutil, scmutil, util, match, commands
 import time, os, sys
 
 def timer(func, title=None):
@@ -118,6 +118,27 @@ def perfnodelookup(ui, repo, rev):
     def d():
         cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
         cl.rev(n)
+    timer(d)
+
+def perfnodelookup(ui, repo, rev):
+    import mercurial.revlog
+    mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
+    n = repo[rev].node()
+    cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
+    # behave somewhat consistently across internal API changes
+    if util.safehasattr(cl, 'clearcaches'):
+        clearcaches = cl.clearcaches
+    elif util.safehasattr(cl, '_nodecache'):
+        from mercurial.node import nullid, nullrev
+        def clearcaches():
+            cl._nodecache = {nullid: nullrev}
+            cl._nodepos = None
+    else:
+        def clearcaches():
+            pass
+    def d():
+        cl.rev(n)
+        clearcaches()
     timer(d)
 
 def perflog(ui, repo, **opts):
