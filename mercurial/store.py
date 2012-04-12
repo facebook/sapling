@@ -317,36 +317,36 @@ class fncache(object):
 
     def _load(self):
         '''fill the entries from the fncache file'''
-        self.entries = set()
         self._dirty = False
         try:
             fp = self.opener('fncache', mode='rb')
         except IOError:
             # skip nonexistent file
+            self.entries = set()
             return
-        for n, line in enumerate(fp):
-            if (len(line) < 2) or (line[-1] != '\n'):
-                t = _('invalid entry in fncache, line %s') % (n + 1)
-                raise util.Abort(t)
-            self.entries.add(decodedir(line[:-1]))
+        self.entries = set(map(decodedir, fp.read().splitlines()))
+        if '' in self.entries:
+            fp.seek(0)
+            for n, line in enumerate(fp):
+                if not line.rstrip('\n'):
+                    t = _('invalid entry in fncache, line %s') % (n + 1)
+                    raise util.Abort(t)
         fp.close()
+
+    def _write(self, files, atomictemp):
+        fp = self.opener('fncache', mode='wb', atomictemp=atomictemp)
+        if files:
+            fp.write('\n'.join(map(encodedir, files)) + '\n')
+        fp.close()
+        self._dirty = False
 
     def rewrite(self, files):
-        fp = self.opener('fncache', mode='wb')
-        for p in files:
-            fp.write(encodedir(p) + '\n')
-        fp.close()
+        self._write(files, False)
         self.entries = set(files)
-        self._dirty = False
 
     def write(self):
-        if not self._dirty:
-            return
-        fp = self.opener('fncache', mode='wb', atomictemp=True)
-        for p in self.entries:
-            fp.write(encodedir(p) + '\n')
-        fp.close()
-        self._dirty = False
+        if self._dirty:
+            self._write(self.entries, True)
 
     def add(self, fn):
         if self.entries is None:
