@@ -136,6 +136,22 @@ def perftemplating(ui, repo):
 def perfcca(ui, repo):
     timer(lambda: scmutil.casecollisionauditor(ui, False, repo[None]))
 
+def perffncacheload(ui, repo):
+    from mercurial import scmutil, store
+    s = store.store(set(['store','fncache']), repo.path, scmutil.opener)
+    def d():
+        s.fncache._load()
+    timer(d)
+
+def perffncachewrite(ui, repo):
+    from mercurial import scmutil, store
+    s = store.store(set(['store','fncache']), repo.path, scmutil.opener)
+    s.fncache._load()
+    def d():
+        s.fncache._dirty = True
+        s.fncache.write()
+    timer(d)
+
 def perfdiffwd(ui, repo):
     """Profile diff of working directory changes"""
     options = {
@@ -165,6 +181,8 @@ def perfrevlog(ui, repo, file_, **opts):
 
 cmdtable = {
     'perfcca': (perfcca, []),
+    'perffncacheload': (perffncacheload, []),
+    'perffncachewrite': (perffncachewrite, []),
     'perflookup': (perflookup, []),
     'perfnodelookup': (perfnodelookup, []),
     'perfparents': (perfparents, []),
