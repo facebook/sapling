@@ -3,6 +3,7 @@ import test_util
 import atexit
 import errno
 import os
+import sys
 import random
 import shutil
 import socket
@@ -133,8 +134,10 @@ class PushTests(test_util.TestBase):
             self.assertNotEqual('an_author', tip.user())
             self.assertEqual('(no author)', tip.user().rsplit('@', 1)[0])
         finally:
-            # TODO: use svnserve.kill() in Python >2.5
-            test_util.kill_process(svnserve)
+            if sys.version_info >= (2,6):
+                svnserve.kill()
+            else: 
+                test_util.kill_process(svnserve)
 
     def test_push_over_svnserve(self):
         self.internal_push_over_svnserve()
