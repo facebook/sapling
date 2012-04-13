@@ -945,6 +945,9 @@ def matching(repo, subset, x):
                 field = 'user'
             fields.append(field)
     fields = set(fields)
+    if 'summary' in fields and 'description' in fields:
+        # If a revision matches its description it also matches its summary
+        fields.discard('summary')
 
     # We may want to match more than one field
     # Each field will be matched with its own "getfield" function
