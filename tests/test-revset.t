@@ -411,6 +411,8 @@ issue2437
   2
   $ log 'roots(all()) or roots(all())'
   0
+  $ hg debugrevspec 'roots(all()) or roots(all())'
+  0
   $ log 'heads(branch(é)) or heads(branch(é))'
   9
   $ log 'ancestors(8) and (heads(branch("-a-b-c-")) or heads(branch(é)))'

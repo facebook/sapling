@@ -364,13 +364,12 @@ def checkstatus(repo, subset, pat, field):
                     break
     return s
 
-def _children(repo, narrow, s):
+def _children(repo, narrow, parentset):
     cs = set()
     pr = repo.changelog.parentrevs
-    s = set(s)
-    for r in xrange(len(repo)):
+    for r in narrow:
         for p in pr(r):
-            if p in s:
+            if p in parentset:
                 cs.add(r)
     return cs
 
@@ -378,7 +377,7 @@ def children(repo, subset, x):
     """``children(set)``
     Child changesets of changesets in set.
     """
-    s = getset(repo, range(len(repo)), x)
+    s = set(getset(repo, range(len(repo)), x))
     cs = _children(repo, subset, s)
     return [r for r in subset if r in cs]
 
@@ -994,11 +993,12 @@ def reverse(repo, subset, x):
 
 def roots(repo, subset, x):
     """``roots(set)``
-    Changesets with no parent changeset in set.
+    Changesets in set with no parent changeset in set.
     """
-    s = getset(repo, xrange(len(repo)), x)
-    cs = _children(repo, s, s)
-    return [r for r in s if r not in cs]
+    s = set(getset(repo, xrange(len(repo)), x))
+    subset = [r for r in subset if r in s]
+    cs = _children(repo, subset, s)
+    return [r for r in subset if r not in cs]
 
 def secret(repo, subset, x):
     """``secret()``
