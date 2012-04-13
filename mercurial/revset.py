@@ -970,19 +970,22 @@ def matching(repo, subset, x):
             raise error.ParseError(
                 _("unexpected field name passed to matching: %s") % info)
         getfieldfuncs.append(getfield)
-
     # convert the getfield array of functions into a "getinfo" function
     # which returns an array of field values (or a single value if there
     # is only one field to match)
-    if len(getfieldfuncs) == 1:
-        getinfo = getfieldfuncs[0]
-    else:
-        getinfo = lambda r: [f(r) for f in getfieldfuncs]
+    getinfo = lambda r: [f(r) for f in getfieldfuncs]
 
     matches = []
     for rev in revs:
         target = getinfo(rev)
-        matches += [r for r in subset if getinfo(r) == target]
+        for r in subset:
+            match = True
+            for n, f in enumerate(getfieldfuncs):
+                if target[n] != f(r):
+                    match = False
+                    break
+            if match:
+                matches.append(r)
     if len(revs) > 1:
         matches = sorted(set(matches))
     return matches
