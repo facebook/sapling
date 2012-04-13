@@ -95,7 +95,6 @@ test invalid bundle type
 
   $ cd t1
   $ hg bundle -a -t garbage ../bgarbage
-  1 changesets found
   abort: unknown bundle type specified with --type
   [255]
   $ cd ..

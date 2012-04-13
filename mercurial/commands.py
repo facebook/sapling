@@ -972,6 +972,12 @@ def bundle(ui, repo, fname, dest=None, **opts):
     if 'rev' in opts:
         revs = scmutil.revrange(repo, opts['rev'])
 
+    bundletype = opts.get('type', 'bzip2').lower()
+    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
+    bundletype = btypes.get(bundletype)
+    if bundletype not in changegroup.bundletypes:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+
     if opts.get('all'):
         base = ['null']
     else:
@@ -997,12 +1003,6 @@ def bundle(ui, repo, fname, dest=None, **opts):
     if not cg:
         scmutil.nochangesfound(ui, outgoing and outgoing.excluded)
         return 1
-
-    bundletype = opts.get('type', 'bzip2').lower()
-    btypes = {'none': 'HG10UN', 'bzip2': 'HG10BZ', 'gzip': 'HG10GZ'}
-    bundletype = btypes.get(bundletype)
-    if bundletype not in changegroup.bundletypes:
-        raise util.Abort(_('unknown bundle type specified with --type'))
 
     changegroup.writebundle(cg, fname, bundletype)
 
