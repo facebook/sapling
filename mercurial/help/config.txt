@@ -1293,26 +1293,27 @@ The full set of options is:
     authority certificates. Environment variables and ``~user``
     constructs are expanded in the filename. If specified on the
     client, then it will verify the identity of remote HTTPS servers
-    with these certificates. The form must be as follows::
-
-        -----BEGIN CERTIFICATE-----
-        ... (certificate in base64 PEM encoding) ...
-        -----END CERTIFICATE-----
-        -----BEGIN CERTIFICATE-----
-        ... (certificate in base64 PEM encoding) ...
-        -----END CERTIFICATE-----
+    with these certificates.
 
     This feature is only supported when using Python 2.6 or later. If you wish
     to use it with earlier versions of Python, install the backported
     version of the ssl library that is available from
     ``http://pypi.python.org``.
 
-    You can use OpenSSL's CA certificate file if your platform has one.
-    On most Linux systems this will be ``/etc/ssl/certs/ca-certificates.crt``.
-    Otherwise you will have to generate this file manually.
-
     To disable SSL verification temporarily, specify ``--insecure`` from
     command line.
+
+    You can use OpenSSL's CA certificate file if your platform has
+    one. On most Linux systems this will be
+    ``/etc/ssl/certs/ca-certificates.crt``. Otherwise you will have to
+    generate this file manually. The form must be as follows::
+
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
 
 ``cache``
     Whether to support caching in hgweb. Defaults to True.
