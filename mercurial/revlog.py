@@ -870,7 +870,9 @@ class revlog(object):
                               self.revision(rev2))
 
     def revision(self, nodeorrev):
-        """return an uncompressed revision of a given node or"""
+        """return an uncompressed revision of a given node or revision
+        number.
+        """
         if isinstance(nodeorrev, int):
             rev = nodeorrev
             node = self.node(rev)
