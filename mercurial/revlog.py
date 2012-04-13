@@ -818,7 +818,7 @@ class revlog(object):
         df.close()
         self._addchunk(offset, d)
         if readahead > length:
-            return d[:length]
+            return util.buffer(d, 0, length)
         return d
 
     def _getchunk(self, offset, length):
@@ -831,7 +831,7 @@ class revlog(object):
         if cachestart >= 0 and cacheend <= l:
             if cachestart == 0 and cacheend == l:
                 return d # avoid a copy
-            return d[cachestart:cacheend]
+            return util.buffer(d, cachestart, cacheend - cachestart)
 
         return self._loadchunk(offset, length)
 
@@ -864,7 +864,7 @@ class revlog(object):
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
         if rev1 != nullrev and self.deltaparent(rev2) == rev1:
-            return self._chunk(rev2)
+            return str(self._chunk(rev2))
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
                               self.revision(self.node(rev2)))
@@ -921,7 +921,7 @@ class revlog(object):
 
         self._chunkraw(base, rev)
         if text is None:
-            text = self._chunkbase(base)
+            text = str(self._chunkbase(base))
 
         bins = [self._chunk(r) for r in chain]
         text = mdiff.patches(text, bins)
