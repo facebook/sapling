@@ -950,6 +950,19 @@ def matching(repo, subset, x):
         fields.discard('summary')
 
     # We may want to match more than one field
+    # Not all fields take the same amount of time to be matched
+    # Sort the selected fields in order of increasing matching cost
+    fieldorder = ('phase', 'parents', 'user', 'date', 'branch', 'summary',
+        'files', 'description', 'substate',)
+    def fieldkeyfunc(f):
+        try:
+            return fieldorder.index(f)
+        except ValueError:
+            # assume an unknown field is very costly
+            return len(fieldorder)
+    fields = list(fields)
+    fields.sort(key=fieldkeyfunc)
+
     # Each field will be matched with its own "getfield" function
     # which will be added to the getfieldfuncs array of functions
     getfieldfuncs = []
