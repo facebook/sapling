@@ -7,7 +7,7 @@
 
 import re
 import parser, util, error, discovery, hbisect, phases
-import node as nodemod
+import node
 import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
@@ -18,7 +18,7 @@ def _revancestors(repo, revs, followfirst):
     cut = followfirst and 1 or None
     cl = repo.changelog
     visit = list(revs)
-    seen = set([nodemod.nullrev])
+    seen = set([node.nullrev])
     while visit:
         for parent in cl.parentrevs(visit.pop(0))[:cut]:
             if parent not in seen:
@@ -31,7 +31,8 @@ def _revdescendants(repo, revs, followfirst):
     cut = followfirst and 1 or None
     cl = repo.changelog
     first = min(revs)
-    if first == nodemod.nullrev:
+    nullrev = node.nullrev
+    if first == nullrev:
         # Are there nodes with a null first parent and a non-null
         # second one? Maybe. Do we care? Probably not.
         for i in cl:
@@ -41,7 +42,7 @@ def _revdescendants(repo, revs, followfirst):
     seen = set(revs)
     for i in xrange(first + 1, len(cl)):
         for x in cl.parentrevs(i)[:cut]:
-            if x != nodemod.nullrev and x in seen:
+            if x != nullrev and x in seen:
                 seen.add(i)
                 yield i
                 break
@@ -724,7 +725,7 @@ def modifies(repo, subset, x):
     pat = getstring(x, _("modifies requires a pattern"))
     return checkstatus(repo, subset, pat, 0)
 
-def node(repo, subset, x):
+def node_(repo, subset, x):
     """``id(string)``
     Revision non-ambiguously specified by the given hex string prefix.
     """
@@ -1125,7 +1126,7 @@ symbols = {
     "grep": grep,
     "head": head,
     "heads": heads,
-    "id": node,
+    "id": node_,
     "keyword": keyword,
     "last": last,
     "limit": limit,
@@ -1399,7 +1400,7 @@ def formatspec(expr, *args):
             parse(arg) # make sure syntax errors are confined
             return '(%s)' % arg
         elif c == 'n':
-            return quote(nodemod.hex(arg))
+            return quote(node.hex(arg))
         elif c == 'b':
             return quote(arg.branch())
 
@@ -1414,7 +1415,7 @@ def formatspec(expr, *args):
         elif t == 's':
             return "_list('%s')" % "\0".join(s)
         elif t == 'n':
-            return "_list('%s')" % "\0".join(nodemod.hex(a) for a in s)
+            return "_list('%s')" % "\0".join(node.hex(a) for a in s)
         elif t == 'b':
             return "_list('%s')" % "\0".join(a.branch() for a in s)
 
