@@ -177,7 +177,7 @@ pypats = [
      "comparison with singleton, use 'is' or 'is not' instead"),
     (r'^\s*(while|if) [01]:',
      "use True/False for constant Boolean expression"),
-    (r'(?<!def)\s+hasattr',
+    (r'(?:(?<!def)\s+|\()hasattr',
      'hasattr(foo, bar) is broken, use util.safehasattr(foo, bar) instead'),
     (r'opener\([^)]*\).read\(',
      "use opener.read() instead"),
