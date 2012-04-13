@@ -2224,7 +2224,9 @@ class localrepository(repo.repository):
                 except (ValueError, TypeError):
                     raise error.ResponseError(
                         _('Unexpected response from remote server:'), l)
-                self.ui.debug('adding %s (%s)\n' % (name, util.bytecount(size)))
+                if self.ui.debugflag:
+                    self.ui.debug('adding %s (%s)\n' %
+                                  (name, util.bytecount(size)))
                 # for backwards compat, name was partially encoded
                 ofp = self.sopener(store.decodedir(name), 'w')
                 for chunk in util.filechunkiter(fp, limit=size):
