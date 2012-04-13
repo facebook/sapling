@@ -227,7 +227,7 @@ cpats = [
     (r' ;', "no space before ;"),
     (r'\w+\* \w+', "use int *foo, not int* foo"),
     (r'\([^\)]+\) \w+', "use (int)foo, not (int) foo"),
-    (r'\S+ (\+\+|--)', "use foo++, not foo ++"),
+    (r'\w+ (\+\+|--)', "use foo++, not foo ++"),
     (r'\w,\w', "missing whitespace after ,"),
     (r'^[^#]\w[+/*]\w', "missing whitespace in expression"),
     (r'^#\s+\w', "use #foo, not # foo"),
