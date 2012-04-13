@@ -1167,23 +1167,23 @@ def ellipsis(text, maxlength=400):
     except (UnicodeDecodeError, UnicodeEncodeError):
         return _ellipsis(text, maxlength)[0]
 
+_byteunits = (
+    (100, 1 << 30, _('%.0f GB')),
+    (10, 1 << 30, _('%.1f GB')),
+    (1, 1 << 30, _('%.2f GB')),
+    (100, 1 << 20, _('%.0f MB')),
+    (10, 1 << 20, _('%.1f MB')),
+    (1, 1 << 20, _('%.2f MB')),
+    (100, 1 << 10, _('%.0f KB')),
+    (10, 1 << 10, _('%.1f KB')),
+    (1, 1 << 10, _('%.2f KB')),
+    (1, 1, _('%.0f bytes')),
+    )
+
 def bytecount(nbytes):
     '''return byte count formatted as readable string, with units'''
 
-    units = (
-        (100, 1 << 30, _('%.0f GB')),
-        (10, 1 << 30, _('%.1f GB')),
-        (1, 1 << 30, _('%.2f GB')),
-        (100, 1 << 20, _('%.0f MB')),
-        (10, 1 << 20, _('%.1f MB')),
-        (1, 1 << 20, _('%.2f MB')),
-        (100, 1 << 10, _('%.0f KB')),
-        (10, 1 << 10, _('%.1f KB')),
-        (1, 1 << 10, _('%.2f KB')),
-        (1, 1, _('%.0f bytes')),
-        )
-
-    for multiplier, divisor, format in units:
+    for multiplier, divisor, format in _byteunits:
         if nbytes >= divisor * multiplier:
             return format % (nbytes / float(divisor))
     return units[-1][2] % nbytes
