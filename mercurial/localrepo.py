@@ -1833,8 +1833,9 @@ class localrepository(repo.repository):
 
         # filter any nodes that claim to be part of the known set
         def prune(revlog, missing):
+            rr, rl = revlog.rev, revlog.linkrev
             return [n for n in missing
-                    if revlog.linkrev(revlog.rev(n)) not in commonrevs]
+                    if rl(rr(n)) not in commonrevs]
 
         progress = self.ui.progress
         _bundling = _('bundling')
