@@ -13,7 +13,6 @@ revision graph is also shown.
 '''
 
 from mercurial.cmdutil import show_changeset
-from mercurial.commands import templateopts
 from mercurial.i18n import _
 from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions, scmutil
@@ -457,12 +456,28 @@ def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
     displayer.close()
 
 @command('glog',
-    [('l', 'limit', '',
-     _('limit number of changes displayed'), _('NUM')),
-    ('p', 'patch', False, _('show patch')),
+    [('f', 'follow', None,
+     _('follow changeset history, or file history across copies and renames')),
+    ('', 'follow-first', None,
+     _('only follow the first parent of merge changesets (DEPRECATED)')),
+    ('d', 'date', '', _('show revisions matching date spec'), _('DATE')),
+    ('C', 'copies', None, _('show copied files')),
+    ('k', 'keyword', [],
+     _('do case-insensitive search for a given text'), _('TEXT')),
     ('r', 'rev', [], _('show the specified revision or range'), _('REV')),
-    ] + templateopts,
-    _('hg glog [OPTION]... [FILE]'))
+    ('', 'removed', None, _('include revisions where files were removed')),
+    ('m', 'only-merges', None, _('show only merges (DEPRECATED)')),
+    ('u', 'user', [], _('revisions committed by user'), _('USER')),
+    ('', 'only-branch', [],
+     _('show only changesets within the given named branch (DEPRECATED)'),
+     _('BRANCH')),
+    ('b', 'branch', [],
+     _('show changesets within the given named branch'), _('BRANCH')),
+    ('P', 'prune', [],
+     _('do not display revision or any of its ancestors'), _('REV')),
+    ('', 'hidden', False, _('show hidden changesets (DEPRECATED)')),
+    ] + commands.logopts + commands.walkopts,
+    _('[OPTION]... [FILE]'))
 def graphlog(ui, repo, *pats, **opts):
     """show revision history alongside an ASCII revision graph
 
@@ -472,8 +487,6 @@ def graphlog(ui, repo, *pats, **opts):
     Nodes printed as an @ character are parents of the working
     directory.
     """
-
-    check_unsupported_flags(pats, opts)
 
     revs, expr, filematcher = getlogrevs(repo, pats, opts)
     revs = sorted(revs, reverse=1)
