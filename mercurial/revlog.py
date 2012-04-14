@@ -866,8 +866,8 @@ class revlog(object):
         if rev1 != nullrev and self.deltaparent(rev2) == rev1:
             return str(self._chunk(rev2))
 
-        return mdiff.textdiff(self.revision(self.node(rev1)),
-                              self.revision(self.node(rev2)))
+        return mdiff.textdiff(self.revision(rev1),
+                              self.revision(rev2))
 
     def revision(self, nodeorrev):
         """return an uncompressed revision of a given node or"""
