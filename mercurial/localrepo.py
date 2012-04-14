@@ -1944,7 +1944,9 @@ class localrepository(repo.repository):
         revset = set([cl.rev(n) for n in nodes])
 
         def gennodelst(log):
-            return [log.node(r) for r in log if log.linkrev(r) in revset]
+            ln, llr = log.node, log.linkrev
+            return [ln(r) for r in log if llr(r) in revset]
+
         progress = self.ui.progress
         _bundling = _('bundling')
         _changesets = _('changesets')
