@@ -292,6 +292,11 @@ quoting needed
   6
   $ log 'limit(head(), 1)'
   0
+  $ log 'matching(6)'
+  6
+  $ log 'matching(6:7, "phase parents user date branch summary files description substate")'
+  6
+  7
   $ log 'max(contains(a))'
   5
   $ log 'min(contains(a))'
