@@ -2026,6 +2026,20 @@ Test subdir
           ('string', 'r:')
           ('string', 'd:relpath'))
         ('string', 'p:.'))))
+  $ testlog ../b
+  []
+  (group
+    (group
+      (func
+        ('symbol', 'filelog')
+        ('string', '../b'))))
+  $ testlog -f ../b
+  []
+  (group
+    (group
+      (func
+        ('symbol', 'follow')
+        ('string', 'b'))))
   $ cd ..
 
 Test --hidden

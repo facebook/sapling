@@ -353,7 +353,9 @@ def _makelogrevset(repo, pats, opts, revs):
             fnopats = (('_ancestors', '_fancestors'),
                        ('_descendants', '_fdescendants'))
             if pats:
-                opts[fpats[followfirst]] = list(pats)
+                # follow() revset inteprets its file argument as a
+                # manifest entry, so use match.files(), not pats.
+                opts[fpats[followfirst]] = list(match.files())
             else:
                 opts[fnopats[followdescendants][followfirst]] = str(startrev)
         else:
