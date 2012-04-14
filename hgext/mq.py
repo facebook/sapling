@@ -3315,7 +3315,7 @@ def reposetup(ui, repo):
         repo._phasedefaults.append(mqphasedefaults)
 
 def mqimport(orig, ui, repo, *args, **kwargs):
-    if (hasattr(repo, 'abortifwdirpatched')
+    if (util.safehasattr(repo, 'abortifwdirpatched')
         and not kwargs.get('no_commit', False)):
         repo.abortifwdirpatched(_('cannot import over an applied patch'),
                                    kwargs.get('force'))
