@@ -1820,7 +1820,7 @@ class localrepository(repo.repository):
         fnodes = {} # needed file nodes
         changedfiles = set()
         fstate = ['', {}]
-        count = [0]
+        count = [0, 0]
 
         # can we go through the fast path ?
         heads.sort()
@@ -1849,7 +1849,7 @@ class localrepository(repo.repository):
                 mfs.setdefault(c[0], x)
                 count[0] += 1
                 progress(_bundling, count[0],
-                         unit=_changesets, total=len(csets))
+                         unit=_changesets, total=count[1])
                 return x
             elif revlog == mf:
                 clnode = mfs[x]
@@ -1859,11 +1859,11 @@ class localrepository(repo.repository):
                         fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
                 count[0] += 1
                 progress(_bundling, count[0],
-                         unit=_manifests, total=len(mfs))
+                         unit=_manifests, total=count[1])
                 return mfs[x]
             else:
                 progress(_bundling, count[0], item=fstate[0],
-                         unit=_files, total=len(changedfiles))
+                         unit=_files, total=count[1])
                 return fstate[1][x]
 
         bundler = changegroup.bundle10(lookup)
@@ -1876,13 +1876,14 @@ class localrepository(repo.repository):
         def gengroup():
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
+            count[:] = [0, len(csets)]
             for chunk in cl.group(csets, bundler, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
-            count[0] = 0
+            count[:] = [0, len(mfs)]
             for chunk in mf.group(prune(mf, mfs), bundler, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
@@ -1890,7 +1891,7 @@ class localrepository(repo.repository):
             mfs.clear()
 
             # Go through all our files in order sorted by name.
-            count[0] = 0
+            count[:] = [0, len(changedfiles)]
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
@@ -1933,7 +1934,7 @@ class localrepository(repo.repository):
         mfs = {}
         changedfiles = set()
         fstate = ['']
-        count = [0]
+        count = [0, 0]
 
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(nodes, source)
@@ -1955,16 +1956,16 @@ class localrepository(repo.repository):
                 mfs.setdefault(c[0], x)
                 count[0] += 1
                 progress(_bundling, count[0],
-                         unit=_changesets, total=len(nodes))
+                         unit=_changesets, total=count[1])
                 return x
             elif revlog == mf:
                 count[0] += 1
                 progress(_bundling, count[0],
-                         unit=_manifests, total=len(mfs))
+                         unit=_manifests, total=count[1])
                 return cl.node(revlog.linkrev(revlog.rev(x)))
             else:
                 progress(_bundling, count[0], item=fstate[0],
-                    total=len(changedfiles), unit=_files)
+                    total=count[1], unit=_files)
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
         bundler = changegroup.bundle10(lookup)
@@ -1978,16 +1979,17 @@ class localrepository(repo.repository):
             '''yield a sequence of changegroup chunks (strings)'''
             # construct a list of all changed files
 
+            count[:] = [0, len(nodes)]
             for chunk in cl.group(nodes, bundler, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
-            count[0] = 0
+            count[:] = [0, len(mfs)]
             for chunk in mf.group(gennodelst(mf), bundler, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
-            count[0] = 0
+            count[:] = [0, len(changedfiles)]
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
