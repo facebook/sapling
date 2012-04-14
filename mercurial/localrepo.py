@@ -1836,14 +1836,20 @@ class localrepository(repo.repository):
             return [n for n in missing
                     if revlog.linkrev(revlog.rev(n)) not in commonrevs]
 
+        progress = self.ui.progress
+        _bundling = _('bundling')
+        _changesets = _('changesets')
+        _manifests = _('manifests')
+        _files = _('files')
+
         def lookup(revlog, x):
             if revlog == cl:
                 c = cl.read(x)
                 changedfiles.update(c[3])
                 mfs.setdefault(c[0], x)
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('changesets'), total=len(csets))
+                progress(_bundling, count[0],
+                         unit=_changesets, total=len(csets))
                 return x
             elif revlog == mf:
                 clnode = mfs[x]
@@ -1852,13 +1858,12 @@ class localrepository(repo.repository):
                     if f in changedfiles:
                         fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('manifests'), total=len(mfs))
+                progress(_bundling, count[0],
+                         unit=_manifests, total=len(mfs))
                 return mfs[x]
             else:
-                self.ui.progress(
-                    _('bundling'), count[0], item=fstate[0],
-                    unit=_('files'), total=len(changedfiles))
+                progress(_bundling, count[0], item=fstate[0],
+                         unit=_files, total=len(changedfiles))
                 return fstate[1][x]
 
         bundler = changegroup.bundle10(lookup)
@@ -1873,14 +1878,14 @@ class localrepository(repo.repository):
             # back to lookup the owning changenode and collect information.
             for chunk in cl.group(csets, bundler, reorder=reorder):
                 yield chunk
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
             count[0] = 0
             for chunk in mf.group(prune(mf, mfs), bundler, reorder=reorder):
                 yield chunk
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             mfs.clear()
 
@@ -1902,7 +1907,7 @@ class localrepository(repo.repository):
 
             # Signal that no more groups are left.
             yield bundler.close()
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             if csets:
                 self.hook('outgoing', node=hex(csets[0]), source=source)
@@ -1937,6 +1942,11 @@ class localrepository(repo.repository):
 
         def gennodelst(log):
             return [log.node(r) for r in log if log.linkrev(r) in revset]
+        progress = self.ui.progress
+        _bundling = _('bundling')
+        _changesets = _('changesets')
+        _manifests = _('manifests')
+        _files = _('files')
 
         def lookup(revlog, x):
             if revlog == cl:
@@ -1944,18 +1954,17 @@ class localrepository(repo.repository):
                 changedfiles.update(c[3])
                 mfs.setdefault(c[0], x)
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('changesets'), total=len(nodes))
+                progress(_bundling, count[0],
+                         unit=_changesets, total=len(nodes))
                 return x
             elif revlog == mf:
                 count[0] += 1
-                self.ui.progress(_('bundling'), count[0],
-                                 unit=_('manifests'), total=len(mfs))
+                progress(_bundling, count[0],
+                         unit=_manifests, total=len(mfs))
                 return cl.node(revlog.linkrev(revlog.rev(x)))
             else:
-                self.ui.progress(
-                    _('bundling'), count[0], item=fstate[0],
-                    total=len(changedfiles), unit=_('files'))
+                progress(_bundling, count[0], item=fstate[0],
+                    total=len(changedfiles), unit=_files)
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
         bundler = changegroup.bundle10(lookup)
@@ -1971,12 +1980,12 @@ class localrepository(repo.repository):
 
             for chunk in cl.group(nodes, bundler, reorder=reorder):
                 yield chunk
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             count[0] = 0
             for chunk in mf.group(gennodelst(mf), bundler, reorder=reorder):
                 yield chunk
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             count[0] = 0
             for fname in sorted(changedfiles):
@@ -1991,7 +2000,7 @@ class localrepository(repo.repository):
                     for chunk in filerevlog.group(nodelist, bundler, reorder):
                         yield chunk
             yield bundler.close()
-            self.ui.progress(_('bundling'), None)
+            progress(_bundling, None)
 
             if nodes:
                 self.hook('outgoing', node=hex(nodes[0]), source=source)
