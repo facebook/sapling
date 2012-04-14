@@ -427,6 +427,10 @@ def getlogrevs(repo, pats, opts):
         # filtered result.
         matched = set(revset.match(repo.ui, expr)(repo, sorted(revs)))
         revs = [r for r in revs if r in matched]
+    if not opts.get('hidden'):
+        # --hidden is still experimental and not worth a dedicated revset
+        # yet. Fortunately, filtering revision number is fast.
+        revs = [r for r in revs if r not in repo.changelog.hiddenrevs]
     return revs, expr, filematcher
 
 def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,

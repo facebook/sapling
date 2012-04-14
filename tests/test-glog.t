@@ -2026,3 +2026,22 @@ Test subdir
           ('string', 'r:')
           ('string', 'd:relpath'))
         ('string', 'p:.'))))
+  $ cd ..
+
+Test --hidden
+
+  $ cat > $HGTMP/testhidden.py << EOF
+  > def reposetup(ui, repo):
+  >     for line in repo.opener('hidden'):
+  >         ctx = repo[line.strip()]
+  >         repo.changelog.hiddenrevs.add(ctx.rev())
+  > EOF
+  $ echo '[extensions]' >> .hg/hgrc
+  $ echo "hidden=$HGTMP/testhidden.py" >> .hg/hgrc
+  $ hg id --debug -i -r 0 > .hg/hidden
+  $ testlog
+  []
+  []
+  $ testlog --hidden
+  []
+  []
