@@ -1848,8 +1848,8 @@ class localrepository(repo.repository):
             elif revlog == mf:
                 clnode = mfs[x]
                 mdata = mf.readfast(x)
-                for f in changedfiles:
-                    if f in mdata:
+                for f in mdata:
+                    if f in changedfiles:
                         fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
                 count[0] += 1
                 self.ui.progress(_('bundling'), count[0],
