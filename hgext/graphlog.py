@@ -297,10 +297,10 @@ def _makelogrevset(repo, pats, opts, revs):
     opts = dict(opts)
     # follow or not follow?
     follow = opts.get('follow') or opts.get('follow_first')
-    followfirst = opts.get('follow_first')
+    followfirst = opts.get('follow_first') and 1 or 0
     # --follow with FILE behaviour depends on revs...
     startrev = revs[0]
-    followdescendants = len(revs) > 1 and revs[0] < revs[1]
+    followdescendants = (len(revs) > 1 and revs[0] < revs[1]) and 1 or 0
 
     # branch and only_branch are really aliases and must be handled at
     # the same time
@@ -349,22 +349,13 @@ def _makelogrevset(repo, pats, opts, revs):
         opts['_matchfiles'] = matchargs
     else:
         if follow:
-            if followfirst:
-                if pats:
-                    opts['_patsfollowfirst'] = list(pats)
-                else:
-                    if followdescendants:
-                        opts['_fdescendants'] = str(startrev)
-                    else:
-                        opts['_fancestors'] = str(startrev)
+            fpats = ('_patsfollow', '_patsfollowfirst')
+            fnopats = (('_ancestors', '_fancestors'),
+                       ('_descendants', '_fdescendants'))
+            if pats:
+                opts[fpats[followfirst]] = list(pats)
             else:
-                if pats:
-                    opts['_patsfollow'] = list(pats)
-                else:
-                    if followdescendants:
-                        opts['_descendants'] = str(startrev)
-                    else:
-                        opts['_ancestors'] = str(startrev)
+                opts[fnopats[followdescendants][followfirst]] = str(startrev)
         else:
             opts['_patslog'] = list(pats)
 
