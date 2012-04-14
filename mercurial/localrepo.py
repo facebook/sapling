@@ -1854,13 +1854,13 @@ class localrepository(repo.repository):
             elif revlog == mf:
                 clnode = mfs[x]
                 mdata = mf.readfast(x)
-                for f in mdata:
+                for f, n in mdata.iteritems():
                     if f in changedfiles:
-                        fnodes.setdefault(f, {}).setdefault(mdata[f], clnode)
+                        fnodes[f].setdefault(n, clnode)
                 count[0] += 1
                 progress(_bundling, count[0],
                          unit=_manifests, total=count[1])
-                return mfs[x]
+                return clnode
             else:
                 progress(_bundling, count[0], item=fstate[0],
                          unit=_files, total=count[1])
@@ -1883,6 +1883,8 @@ class localrepository(repo.repository):
 
             # Create a generator for the manifestnodes that calls our lookup
             # and data collection functions back.
+            for f in changedfiles:
+                fnodes[f] = {}
             count[:] = [0, len(mfs)]
             for chunk in mf.group(prune(mf, mfs), bundler, reorder=reorder):
                 yield chunk
