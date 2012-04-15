@@ -110,10 +110,18 @@ def _checkcollision(mctx, wctx):
         folded[fold] = fn
 
     if wctx:
+        # class to delay looking up copy mapping
+        class pathcopies(object):
+            @util.propertycache
+            def map(self):
+                # {dst@mctx: src@wctx} copy mapping
+                return copies.pathcopies(wctx, mctx)
+        pc = pathcopies()
+
         for fn in wctx:
             fold = util.normcase(fn)
             mfn = folded.get(fold, None)
-            if mfn and (mfn != fn):
+            if mfn and mfn != fn and pc.map.get(mfn) != fn:
                 raise util.Abort(_("case-folding collision between %s and %s")
                                  % (mfn, fn))
 
@@ -568,7 +576,11 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         action = []
         folding = not util.checkcase(repo.path)
         if folding:
-            _checkcollision(p2, branchmerge and p1)
+            # collision check is not needed for clean update
+            if not branchmerge and force:
+                _checkcollision(p2, None)
+            else:
+                _checkcollision(p2, wc)
         if not force:
             _checkunknown(repo, wc, p2)
         action += _forgetremoved(wc, p2, branchmerge)
