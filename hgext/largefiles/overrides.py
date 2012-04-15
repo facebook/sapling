@@ -172,6 +172,11 @@ def removelargefiles(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
+# For overriding mercurial.hgweb.webcommands so that largefiles will
+# appear at their right place in the manifests.
+def decodepath(orig, path):
+    return lfutil.splitstandin(path) or path
+
 # -- Wrappers: modify existing commands --------------------------------
 
 # Add works by going through the files that the user wanted to add and

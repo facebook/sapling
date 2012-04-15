@@ -11,7 +11,7 @@
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
     httprepo, localrepo, merge, sshrepo, sshserver, wireproto
 from mercurial.i18n import _
-from mercurial.hgweb import hgweb_mod, protocol
+from mercurial.hgweb import hgweb_mod, protocol, webcommands
 
 import overrides
 import proto
@@ -108,6 +108,8 @@ def uisetup(ui):
     hgweb_mod.perms['putlfile'] = 'push'
     hgweb_mod.perms['getlfile'] = 'pull'
     hgweb_mod.perms['statlfile'] = 'pull'
+
+    extensions.wrapfunction(webcommands, 'decodepath', overrides.decodepath)
 
     # the hello wireproto command uses wireproto.capabilities, so it won't see
     # our largefiles capability unless we replace the actual function as well.
