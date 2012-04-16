@@ -1,3 +1,5 @@
+# The 9diff extdiff command generates diff(1) compatible output
+# suitable for use with the plumber(4).
 [extensions]
 extdiff =
 

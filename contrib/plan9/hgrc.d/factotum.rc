@@ -1,2 +1,4 @@
+# The factotum extension permits factotum(4) to act as an
+# authentication agent for HTTP repositories.
 [extensions]
 factotum =
