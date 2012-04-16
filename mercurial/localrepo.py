@@ -2329,7 +2329,10 @@ def aftertrans(files):
     renamefiles = [tuple(t) for t in files]
     def a():
         for src, dest in renamefiles:
-            util.rename(src, dest)
+            try:
+                util.rename(src, dest)
+            except OSError: # journal file does not yet exist
+                pass
     return a
 
 def undoname(fn):
