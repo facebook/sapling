@@ -125,13 +125,6 @@ typedef unsigned __int64 uint64_t;
 #else
 #include <stdint.h>
 #endif
-static uint32_t ntohl(uint32_t x)
-{
-	return ((x & 0x000000ffUL) << 24) |
-	       ((x & 0x0000ff00UL) <<  8) |
-	       ((x & 0x00ff0000UL) >>  8) |
-	       ((x & 0xff000000UL) >> 24);
-}
 #else
 /* not windows */
 #include <sys/types.h>
@@ -150,5 +143,23 @@ static uint32_t ntohl(uint32_t x)
 #ifdef __linux
 #define inline __inline
 #endif
+
+static inline uint32_t getbe32(const char *c)
+{
+	const unsigned char *d = (const unsigned char *)c;
+
+	return ((d[0] << 24) |
+		(d[1] << 16) |
+		(d[2] << 8) |
+		(d[3]));
+}
+
+static inline void putbe32(uint32_t x, char *c)
+{
+	c[0] = (x >> 24) & 0xff;
+	c[1] = (x >> 16) & 0xff;
+	c[2] = (x >> 8) & 0xff;
+	c[3] = (x) & 0xff;
+}
 
 #endif /* _HG_UTIL_H_ */

@@ -338,7 +338,6 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	PyObject *result = NULL;
 	struct line *al, *bl;
 	struct hunk l, *h;
-	uint32_t encode[3];
 	int an, bn, len = 0, la, lb, count;
 
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
@@ -375,10 +374,9 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
-			encode[0] = htonl(al[la].l - al->l);
-			encode[1] = htonl(al[h->a1].l - al->l);
-			encode[2] = htonl(len);
-			memcpy(rb, encode, 12);
+			putbe32(al[la].l - al->l, rb);
+			putbe32(al[h->a1].l - al->l, rb + 4);
+			putbe32(len, rb + 8);
 			memcpy(rb + 12, bl[lb].l, len);
 			rb += 12 + len;
 		}

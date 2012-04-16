@@ -143,7 +143,6 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	int state, mode, size, mtime;
 	unsigned int flen;
 	int len;
-	uint32_t decode[4]; /* for alignment */
 
 	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
 			      &PyDict_Type, &dmap,
@@ -166,11 +165,10 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	while (cur < end - 17) {
 		/* unpack header */
 		state = *cur;
-		memcpy(decode, cur + 1, 16);
-		mode = ntohl(decode[0]);
-		size = ntohl(decode[1]);
-		mtime = ntohl(decode[2]);
-		flen = ntohl(decode[3]);
+		mode = getbe32(cur + 1);
+		size = getbe32(cur + 5);
+		mtime = getbe32(cur + 9);
+		flen = getbe32(cur + 13);
 		cur += 17;
 		if (cur + flen > end || cur + flen < cur) {
 			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
@@ -308,7 +306,6 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
  */
 static PyObject *index_get(indexObject *self, Py_ssize_t pos)
 {
-	uint32_t decode[8]; /* to enforce alignment with inline data */
 	uint64_t offset_flags;
 	int comp_len, uncomp_len, base_rev, link_rev, parent_1, parent_2;
 	const char *c_node_id;
@@ -351,22 +348,20 @@ static PyObject *index_get(indexObject *self, Py_ssize_t pos)
 	if (data == NULL)
 		return NULL;
 
-	memcpy(decode, data, 8 * sizeof(uint32_t));
-
-	offset_flags = ntohl(decode[1]);
+	offset_flags = getbe32(data + 4);
 	if (pos == 0) /* mask out version number for the first entry */
 		offset_flags &= 0xFFFF;
 	else {
-		uint32_t offset_high = ntohl(decode[0]);
+		uint32_t offset_high = getbe32(data);
 		offset_flags |= ((uint64_t)offset_high) << 32;
 	}
 
-	comp_len = ntohl(decode[2]);
-	uncomp_len = ntohl(decode[3]);
-	base_rev = ntohl(decode[4]);
-	link_rev = ntohl(decode[5]);
-	parent_1 = ntohl(decode[6]);
-	parent_2 = ntohl(decode[7]);
+	comp_len = getbe32(data + 8);
+	uncomp_len = getbe32(data + 12);
+	base_rev = getbe32(data + 16);
+	link_rev = getbe32(data + 20);
+	parent_1 = getbe32(data + 24);
+	parent_2 = getbe32(data + 28);
 	c_node_id = data + 32;
 
 	entry = Py_BuildValue(tuple_format, offset_flags, comp_len,
@@ -940,8 +935,8 @@ static long inline_scan(indexObject *self, const char **offsets)
 		uint32_t comp_len;
 		const char *old_data;
 		/* 3rd element of header is length of compressed inline data */
-		memcpy(&comp_len, data + 8, sizeof(uint32_t));
-		incr = hdrsize + ntohl(comp_len);
+		comp_len = getbe32(data + 8);
+		incr = hdrsize + comp_len;
 		if (incr < hdrsize)
 			break;
 		if (offsets)
