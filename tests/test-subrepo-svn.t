@@ -535,3 +535,16 @@ First, create that condition in the repository.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ test -f recreated/somethingold
 
+Test archive
+
+  $ hg archive -S ../archive-all --debug
+  archiving: 0/2 files (0.00%)
+  archiving: .hgsub 1/2 files (50.00%)
+  archiving: .hgsubstate 2/2 files (100.00%)
+  archiving (obstruct): 0/1 files (0.00%)
+  archiving (obstruct): 1/1 files (100.00%)
+  archiving (s): 0/2 files (0.00%)
+  archiving (s): 1/2 files (50.00%)
+  archiving (s): 2/2 files (100.00%)
+  archiving (recreated): 0/1 files (0.00%)
+  archiving (recreated): 1/1 files (100.00%)

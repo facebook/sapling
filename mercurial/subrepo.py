@@ -786,12 +786,21 @@ class svnsubrepo(abstractsubrepo):
         return True
 
     def files(self):
-        output = self._svncommand(['list'])
-        # This works because svn forbids \n in filenames.
-        return output.splitlines()
+        output = self._svncommand(['list', '--recursive', '--xml'])[0]
+        doc = xml.dom.minidom.parseString(output)
+        paths = []
+        for e in doc.getElementsByTagName('entry'):
+            kind = str(e.getAttribute('kind'))
+            if kind != 'file':
+                continue
+            name = ''.join(c.data for c
+                           in e.getElementsByTagName('name')[0].childNodes
+                           if c.nodeType == c.TEXT_NODE)
+            paths.append(name)
+        return paths
 
     def filedata(self, name):
-        return self._svncommand(['cat'], name)
+        return self._svncommand(['cat'], name)[0]
 
 
 class gitsubrepo(abstractsubrepo):
