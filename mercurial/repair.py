@@ -10,6 +10,7 @@ from mercurial import changegroup, bookmarks, phases
 from mercurial.node import short
 from mercurial.i18n import _
 import os
+import errno
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
