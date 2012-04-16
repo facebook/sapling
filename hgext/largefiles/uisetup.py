@@ -64,6 +64,8 @@ def uisetup(ui):
                                    overrides.overrideupdate)
     entry = extensions.wrapcommand(commands.table, 'pull',
                                    overrides.overridepull)
+    entry = extensions.wrapcommand(commands.table, 'cat',
+                                   overrides.overridecat)
     entry = extensions.wrapfunction(merge, '_checkunknownfile',
                                     overrides.overridecheckunknownfile)
     entry = extensions.wrapfunction(merge, 'manifestmerge',

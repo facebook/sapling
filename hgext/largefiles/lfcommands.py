@@ -11,7 +11,7 @@
 import os
 import shutil
 
-from mercurial import util, match as match_, hg, node, context, error
+from mercurial import util, match as match_, hg, node, context, error, cmdutil
 from mercurial.i18n import _
 
 import lfutil
@@ -484,6 +484,23 @@ def _updatelfile(repo, lfdirstate, lfile):
     elif state == '?':
         lfdirstate.drop(lfile)
     return ret
+
+def catlfile(repo, lfile, rev, filename):
+    hash = lfutil.readstandin(repo, lfile, rev)
+    if not lfutil.inusercache(repo.ui, hash):
+        store = basestore._openstore(repo)
+        success, missing = store.get([(lfile, hash)])
+        if len(success) != 1:
+            raise util.Abort(
+                _('largefile %s is not in cache and could not be downloaded')
+                    % lfile)
+    path = lfutil.usercachepath(repo.ui, hash)
+    fpout = cmdutil.makefileobj(repo, filename)
+    fpin = open(path, "rb")
+    fpout.write(fpin.read())
+    fpout.close()
+    fpin.close()
+    return 0
 
 # -- hg commands declarations ------------------------------------------------
 

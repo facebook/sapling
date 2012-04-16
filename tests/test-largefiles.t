@@ -761,6 +761,19 @@ Test that transplanting a largefile change works correctly.
   $ cat sub2/large7
   large7
 
+Cat a largefile
+  $ hg cat normal3
+  normal3-modified
+  $ hg cat sub/large4
+  large4-modified
+  $ rm ${USERCACHE}/*
+  $ hg cat -r a381d2c8c80e -o cat.out sub/large4
+  $ cat cat.out
+  large4-modified
+  $ rm cat.out
+  $ hg cat -r a381d2c8c80e normal3
+  normal3-modified
+
 Test that renaming a largefile results in correct output for status
 
   $ hg rename sub/large4 large4-renamed

@@ -966,3 +966,10 @@ def overridetransplant(orig, ui, repo, *revs, **opts):
     finally:
         repo._istransplanting = False
     return result
+
+def overridecat(orig, ui, repo, file1, *pats, **opts):
+    rev = opts.get('rev')
+    if not lfutil.standin(file1) in repo[rev]:
+        result = orig(ui, repo, file1, *pats, **opts)
+        return result
+    return lfcommands.catlfile(repo, file1, opts.get('rev'), opts.get('output'))
