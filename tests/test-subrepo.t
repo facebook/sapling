@@ -38,10 +38,10 @@ Issue2232: committing a subrepo without .hgsub
   update: (current)
   $ hg ci -m1
 
-Revert subrepo:
+Revert subrepo and test subrepo fileset keyword:
 
   $ echo b > s/a
-  $ hg revert s
+  $ hg revert "set:subrepo('glob:s*')"
   reverting subrepo s
   reverting s/a
   $ rm s/a.orig
