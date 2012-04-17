@@ -535,7 +535,7 @@ def transplant(ui, repo, *revs, **opts):
     normally instead of transplanting them.
 
     Merge changesets may be transplanted directly by specifying the
-    proper parent changeset by calling :hg: `transplant --parent`.
+    proper parent changeset by calling :hg:`transplant --parent`.
 
     If no merges or revisions are provided, :hg:`transplant` will
     start an interactive changeset browser.
