@@ -21,6 +21,12 @@ from mercurial import util as hgutil
 from mercurial import httprepo
 import mercurial.repo
 
+try:
+    from mercurial import phases
+    phases.public # defeat demand import
+except ImportError:
+    phases = None
+
 import re
 import util
 import wrappers
@@ -77,7 +83,11 @@ def generate_repo_class(ui, repo):
     class svnlocalrepo(superclass):
         def svn_commitctx(self, ctx):
             """Commits a ctx, but defeats manifest recycling introduced in hg 1.9."""
-            return self.commitctx(ctxctx(ctx))
+            hash = self.commitctx(ctxctx(ctx))
+            if phases is not None:
+                # set phase to be public
+                self.pushkey('phases', self[hash].hex(), str(phases.draft), str(phases.public))
+            return hash
 
         # TODO use newbranch to allow branch creation in Subversion?
         @remotesvn
