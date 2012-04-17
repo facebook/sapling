@@ -13,21 +13,15 @@ import maps
 import editor
 
 
-def pickle_atomic(data, file_path, dir=None):
+def pickle_atomic(data, file_path):
     """pickle some data to a path atomically.
 
     This is present because I kept corrupting my revmap by managing to hit ^C
     during the pickle of that file.
     """
-    try:
-        f, path = tempfile.mkstemp(prefix='pickling', dir=dir)
-        f = os.fdopen(f, 'w')
-        pickle.dump(data, f)
-        f.close()
-    except: # pragma: no cover
-        raise
-    else:
-        hgutil.rename(path, file_path)
+    f = hgutil.atomictempfile(file_path, createmode=0644)
+    pickle.dump(data, f)
+    f.close()
 
 
 class SVNMeta(object):
@@ -77,8 +71,7 @@ class SVNMeta(object):
             self.repo.ui.setconfig('hgsubversion', 'layout', self._layout)
         else:
             self._layout = None
-        pickle_atomic(self.tag_locations, self.tag_locations_file,
-                      self.meta_data_dir)
+        pickle_atomic(self.tag_locations, self.tag_locations_file)
         # ensure nested paths are handled properly
         self.tag_locations.sort()
         self.tag_locations.reverse()
@@ -225,7 +218,7 @@ class SVNMeta(object):
         '''Save the Subversion metadata. This should really be called after
         every revision is created.
         '''
-        pickle_atomic(self.branches, self.branch_info_file, self.meta_data_dir)
+        pickle_atomic(self.branches, self.branch_info_file)
 
     def localname(self, path):
         """Compute the local name for a branch located at path.
