@@ -952,8 +952,8 @@ def matching(repo, subset, x):
     # We may want to match more than one field
     # Not all fields take the same amount of time to be matched
     # Sort the selected fields in order of increasing matching cost
-    fieldorder = ('phase', 'parents', 'user', 'date', 'branch', 'summary',
-        'files', 'description', 'substate',)
+    fieldorder = ('phase parents user date branch summary files description'
+                  ' substate').split()
     def fieldkeyfunc(f):
         try:
             return fieldorder.index(f)
