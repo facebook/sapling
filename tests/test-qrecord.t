@@ -59,6 +59,7 @@ help record (record)
                             committing
       --close-branch        mark a branch as closed, hiding it from the branch
                             list
+      --amend               amend the parent of the working dir
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
    -m --message TEXT        use text as commit message

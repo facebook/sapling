@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo
+import subrepo, context, repair, bookmarks
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -1284,6 +1284,123 @@ def commit(ui, repo, commitfunc, pats, opts):
 
     return commitfunc(ui, repo, message,
                       scmutil.match(repo[None], pats, opts), opts)
+
+def amend(ui, repo, commitfunc, old, extra, pats, opts):
+    ui.note(_('amending changeset %s\n') % old)
+    base = old.p1()
+
+    wlock = repo.wlock()
+    try:
+        # Fix up dirstate for copies and renames
+        duplicatecopies(repo, None, base.node())
+
+        # First, do a regular commit to record all changes in the working
+        # directory (if there are any)
+        node = commit(ui, repo, commitfunc, pats, opts)
+        ctx = repo[node]
+
+        # Participating changesets:
+        #
+        # node/ctx o - new (intermediate) commit that contains changes from
+        #          |   working dir to go into amending commit (or a workingctx
+        #          |   if there were no changes)
+        #          |
+        # old      o - changeset to amend
+        #          |
+        # base     o - parent of amending changeset
+
+        files = set(old.files())
+
+        # Second, we use either the commit we just did, or if there were no
+        # changes the parent of the working directory as the version of the
+        # files in the final amend commit
+        if node:
+            ui.note(_('copying changeset %s to %s\n') % (ctx, base))
+
+            user = ctx.user()
+            date = ctx.date()
+            message = ctx.description()
+            extra = ctx.extra()
+
+            # Prune files which were reverted by the updates: if old introduced
+            # file X and our intermediate commit, node, renamed that file, then
+            # those two files are the same and we can discard X from our list
+            # of files. Likewise if X was deleted, it's no longer relevant
+            files.update(ctx.files())
+
+            def samefile(f):
+                if f in ctx.manifest():
+                    a = ctx.filectx(f)
+                    if f in base.manifest():
+                        b = base.filectx(f)
+                        return (a.data() == b.data()
+                                and a.flags() == b.flags()
+                                and a.renamed() == b.renamed())
+                    else:
+                        return False
+                else:
+                    return f not in base.manifest()
+            files = [f for f in files if not samefile(f)]
+
+            def filectxfn(repo, ctx_, path):
+                try:
+                    return ctx.filectx(path)
+                except KeyError:
+                    raise IOError()
+        else:
+            ui.note(_('copying changeset %s to %s\n') % (old, base))
+
+            # Use version of files as in the old cset
+            def filectxfn(repo, ctx_, path):
+                try:
+                    return old.filectx(path)
+                except KeyError:
+                    raise IOError()
+
+            # See if we got a message from -m or -l, if not, open the editor
+            # with the message of the changeset to amend
+            user = opts.get('user') or old.user()
+            date = opts.get('date') or old.date()
+            message = logmessage(ui, opts)
+            if not message:
+                cctx = context.workingctx(repo, old.description(), user, date,
+                                          extra,
+                                          repo.status(base.node(), old.node()))
+                message = commitforceeditor(repo, cctx, [])
+
+        new = context.memctx(repo,
+                             parents=[base.node(), nullid],
+                             text=message,
+                             files=files,
+                             filectxfn=filectxfn,
+                             user=user,
+                             date=date,
+                             extra=extra)
+        newid = repo.commitctx(new)
+        if newid != old.node():
+            # Reroute the working copy parent to the new changeset
+            repo.dirstate.setparents(newid, nullid)
+
+            # Move bookmarks from old parent to amend commit
+            bms = repo.nodebookmarks(old.node())
+            if bms:
+                for bm in bms:
+                    repo._bookmarks[bm] = newid
+                bookmarks.write(repo)
+
+            # Strip the intermediate commit (if there was one) and the amended
+            # commit
+            lock = repo.lock()
+            try:
+                if node:
+                    ui.note(_('stripping intermediate changeset %s\n') % ctx)
+                ui.note(_('stripping amended changeset %s\n') % old)
+                repair.strip(ui, repo, old.node(), topic='amend-backup')
+            finally:
+                lock.release()
+    finally:
+        wlock.release()
+    return newid
 
 def commiteditor(repo, ctx, subs):
     if ctx.description():

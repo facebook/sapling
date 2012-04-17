@@ -1163,6 +1163,7 @@ def clone(ui, source, dest=None, **opts):
      _('mark new/missing files as added/removed before committing')),
     ('', 'close-branch', None,
      _('mark a branch as closed, hiding it from the branch list')),
+    ('', 'amend', None, _('amend the parent of the working dir')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'))
 def commit(ui, repo, *pats, **opts):
@@ -1183,6 +1184,20 @@ def commit(ui, repo, *pats, **opts):
     commit fails, you will find a backup of your message in
     ``.hg/last-message.txt``.
 
+    The --amend flag can be used to amend the parent of the
+    working directory with a new commit that contains the changes
+    in the parent in addition to those currently reported by :hg:`status`,
+    if there are any. The old commit is stored in a backup bundle in
+    ``.hg/strip-backup`` (see :hg:`help bundle` and :hg:`help unbundle`
+    on how to restore it).
+
+    Message, user and date are taken from the amended commit unless
+    specified. When a message isn't specified on the command line,
+    the editor will open with the message of the amended commit.
+
+    It is not possible to amend public changesets (see :hg:`help phases`)
+    or changesets that have children.
+
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     Returns 0 on success, 1 if nothing changed.
@@ -1198,31 +1213,70 @@ def commit(ui, repo, *pats, **opts):
             # current branch, so it's sufficient to test branchheads
             raise util.Abort(_('can only close branch heads'))
         extra['close'] = 1
-    e = cmdutil.commiteditor
-    if opts.get('force_editor'):
-        e = cmdutil.commitforceeditor
-
-    def commitfunc(ui, repo, message, match, opts):
-        return repo.commit(message, opts.get('user'), opts.get('date'), match,
-                           editor=e, extra=extra)
 
     branch = repo[None].branch()
     bheads = repo.branchheads(branch)
 
-    node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
-    if not node:
-        stat = repo.status(match=scmutil.match(repo[None], pats, opts))
-        if stat[3]:
-            ui.status(_("nothing changed (%d missing files, see 'hg status')\n")
-                      % len(stat[3]))
-        else:
+    if opts.get('amend'):
+        if ui.config('ui', 'commitsubrepos'):
+            raise util.Abort(_('cannot amend recursively'))
+
+        old = repo['.']
+        if old.phase() == phases.public:
+            raise util.Abort(_('cannot amend public changesets'))
+        if len(old.parents()) > 1:
+            raise util.Abort(_('cannot amend merge changesets'))
+        if len(repo[None].parents()) > 1:
+            raise util.Abort(_('cannot amend while merging'))
+        if old.children():
+            raise util.Abort(_('cannot amend changeset with children'))
+
+        e = cmdutil.commiteditor
+        if opts.get('force_editor'):
+            e = cmdutil.commitforceeditor
+
+        def commitfunc(ui, repo, message, match, opts):
+            editor = e
+            # message contains text from -m or -l, if it's empty,
+            # open the editor with the old message
+            if not message:
+                message = old.description()
+                editor = cmdutil.commitforceeditor
+            return repo.commit(message,
+                               opts.get('user') or old.user(),
+                               opts.get('date') or old.date(),
+                               match,
+                               editor=editor,
+                               extra=extra)
+
+        node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
+        if node == old.node():
             ui.status(_("nothing changed\n"))
-        return 1
+            return 1
+    else:
+        e = cmdutil.commiteditor
+        if opts.get('force_editor'):
+            e = cmdutil.commitforceeditor
+
+        def commitfunc(ui, repo, message, match, opts):
+            return repo.commit(message, opts.get('user'), opts.get('date'),
+                               match, editor=e, extra=extra)
+
+        node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
+
+        if not node:
+            stat = repo.status(match=scmutil.match(repo[None], pats, opts))
+            if stat[3]:
+                ui.status(_("nothing changed (%d missing files, see "
+                            "'hg status')\n") % len(stat[3]))
+            else:
+                ui.status(_("nothing changed\n"))
+            return 1
 
     ctx = repo[node]
     parents = ctx.parents()
 
-    if (bheads and node not in bheads and not
+    if (not opts.get('amend') and bheads and node not in bheads and not
         [x for x in parents if x.node() in bheads and x.branch() == branch]):
         ui.status(_('created new head\n'))
         # The message is not printed for initial roots. For the other
