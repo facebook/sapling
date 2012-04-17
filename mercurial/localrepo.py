@@ -743,28 +743,16 @@ class localrepository(repo.repository):
         return [undoname(x) for x in self._journalfiles()]
 
     def _writejournal(self, desc):
-        # save dirstate for rollback
-        try:
-            ds = self.opener.read("dirstate")
-        except IOError:
-            ds = ""
-        self.opener.write("journal.dirstate", ds)
+        self.opener.write("journal.dirstate",
+                          self.opener.tryread("dirstate"))
         self.opener.write("journal.branch",
                           encoding.fromlocal(self.dirstate.branch()))
         self.opener.write("journal.desc",
                           "%d\n%s\n" % (len(self), desc))
-
-        try:
-            bk = self.opener.read("bookmarks")
-        except IOError:
-            bk = ""
-        self.opener.write("journal.bookmarks", bk)
-
-        phasesname = self.sjoin('phaseroots')
-        if os.path.exists(phasesname):
-            util.copyfile(phasesname, self.sjoin('journal.phaseroots'))
-        else:
-            self.sopener.write('journal.phaseroots', '')
+        self.opener.write("journal.bookmarks",
+                          self.opener.tryread("bookmarks"))
+        self.sopener.write("journal.phaseroots",
+                           self.sopener.tryread("phaseroots"))
 
     def recover(self):
         lock = self.lock()
