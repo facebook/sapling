@@ -555,18 +555,20 @@ class svn_source(converter_source):
     def revnum(self, rev):
         return int(rev.split('@')[-1])
 
-    def latest(self, path, stop=0):
-        """Find the latest revid affecting path, up to stop. It may return
-        a revision in a different module, since a branch may be moved without
-        a change being reported. Return None if computed module does not
-        belong to rootmodule subtree.
+    def latest(self, path, stop=None):
+        """Find the latest revid affecting path, up to stop revision
+        number. If stop is None, default to repository latest
+        revision. It may return a revision in a different module,
+        since a branch may be moved without a change being
+        reported. Return None if computed module does not belong to
+        rootmodule subtree.
         """
         if not path.startswith(self.rootmodule):
             # Requests on foreign branches may be forbidden at server level
             self.ui.debug('ignoring foreign branch %r\n' % path)
             return None
 
-        if not stop:
+        if stop is None:
             stop = svn.ra.get_latest_revnum(self.ra)
         try:
             prevmodule = self.reparent('')
