@@ -563,6 +563,27 @@ class svn_source(converter_source):
         reported. Return None if computed module does not belong to
         rootmodule subtree.
         """
+        def findchanges(path, start, stop):
+            stream = self._getlog([path], start, stop)
+            try:
+                for entry in stream:
+                    paths, revnum, author, date, message = entry
+                    if revnum <= stop:
+                        break
+
+                    for p in paths:
+                        if (not path.startswith(p) or
+                            not paths[p].copyfrom_path):
+                            continue
+                        newpath = paths[p].copyfrom_path + path[len(p):]
+                        self.ui.debug("branch renamed from %s to %s at %d\n" %
+                                      (path, newpath, revnum))
+                        path = newpath
+                        break
+                return revnum, path
+            finally:
+                stream.close()
+
         if not path.startswith(self.rootmodule):
             # Requests on foreign branches may be forbidden at server level
             self.ui.debug('ignoring foreign branch %r\n' % path)
@@ -583,28 +604,11 @@ class svn_source(converter_source):
         # stat() gives us the previous revision on this line of
         # development, but it might be in *another module*. Fetch the
         # log and detect renames down to the latest revision.
-        stream = self._getlog([path], stop, dirent.created_rev)
-        try:
-            for entry in stream:
-                paths, revnum, author, date, message = entry
-                if revnum <= dirent.created_rev:
-                    break
-
-                for p in paths:
-                    if not path.startswith(p) or not paths[p].copyfrom_path:
-                        continue
-                    newpath = paths[p].copyfrom_path + path[len(p):]
-                    self.ui.debug("branch renamed from %s to %s at %d\n" %
-                                  (path, newpath, revnum))
-                    path = newpath
-                    break
-        finally:
-            stream.close()
-
-        if not path.startswith(self.rootmodule):
-            self.ui.debug('ignoring foreign branch %r\n' % path)
+        revnum, realpath = findchanges(path, stop, dirent.created_rev)
+        if not realpath.startswith(self.rootmodule):
+            self.ui.debug('ignoring foreign branch %r\n' % realpath)
             return None
-        return self.revid(dirent.created_rev, path)
+        return self.revid(revnum, realpath)
 
     def reparent(self, module):
         """Reparent the svn transport and return the previous parent."""
