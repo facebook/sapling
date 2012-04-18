@@ -563,11 +563,15 @@ class svn_source(converter_source):
         reported. Return None if computed module does not belong to
         rootmodule subtree.
         """
-        def findchanges(path, start, stop):
-            stream = self._getlog([path], start, stop)
+        def findchanges(path, start, stop=None):
+            stream = self._getlog([path], start, stop or 1)
             try:
                 for entry in stream:
                     paths, revnum, author, date, message = entry
+                    if stop is None and paths:
+                        # We do not know the latest changed revision,
+                        # keep the first one with changed paths.
+                        break
                     if revnum <= stop:
                         break
 
@@ -580,6 +584,8 @@ class svn_source(converter_source):
                                       (path, newpath, revnum))
                         path = newpath
                         break
+                if not paths:
+                    revnum = None
                 return revnum, path
             finally:
                 stream.close()
@@ -605,6 +611,19 @@ class svn_source(converter_source):
         # development, but it might be in *another module*. Fetch the
         # log and detect renames down to the latest revision.
         revnum, realpath = findchanges(path, stop, dirent.created_rev)
+        if revnum is None:
+            # Tools like svnsync can create empty revision, when
+            # synchronizing only a subtree for instance. These empty
+            # revisions created_rev still have their original values
+            # despite all changes having disappeared and can be
+            # returned by ra.stat(), at least when stating the root
+            # module. In that case, do not trust created_rev and scan
+            # the whole history.
+            revnum, realpath = findchanges(path, stop)
+            if revnum is None:
+                self.ui.debug('ignoring empty branch %r\n' % realpath)
+                return None
+
         if not realpath.startswith(self.rootmodule):
             self.ui.debug('ignoring foreign branch %r\n' % realpath)
             return None

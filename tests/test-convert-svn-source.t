@@ -187,3 +187,24 @@ This is also the only place testing more than one extra field in a revision.
   extra:       branch=default
   extra:       convert_revision=svn:........-....-....-....-............/proj B/mytrunk@1 (re)
   $ cd ..
+
+Test converting empty heads (issue3347)
+
+  $ svnadmin create svn-empty
+  $ svnadmin load -q svn-empty < "$TESTDIR/svn/empty.svndump"
+  $ hg --config convert.svn.trunk= convert svn-empty
+  assuming destination svn-empty-hg
+  initializing destination svn-empty-hg repository
+  scanning source...
+  sorting...
+  converting...
+  1 init projA
+  0 adddir
+  $ hg --config convert.svn.trunk= convert file://$svnpath/svn-empty/trunk
+  assuming destination trunk-hg
+  initializing destination trunk-hg repository
+  scanning source...
+  sorting...
+  converting...
+  1 init projA
+  0 adddir
