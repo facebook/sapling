@@ -160,7 +160,7 @@ class abstractopener(object):
         raise NotImplementedError('attempted instantiating ' + str(type(self)))
 
     def tryread(self, path):
-        'gracefully return an empty string for missing files'
+        '''gracefully return an empty string for missing files'''
         try:
             return self.read(path)
         except IOError, inst:
