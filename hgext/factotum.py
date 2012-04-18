@@ -35,13 +35,13 @@ A configuration section is available to customize runtime behavior. By
 default, these entries are::
 
   [factotum]
-  mount = /mnt/factotum
-  path = /bin/auth/factotum
+  executable = /bin/auth/factotum
+  mountpoint = /mnt/factotum
   service = hg
 
-The mount entry defines the mount point for the factotum file service. The
-path entry defines the full path to the factotum binary. Lastly, the service
-entry controls the service name used when reading keys.
+The executable entry defines the full path to the factotum binary. The
+mountpoint entry defines the path to the factotum file service. Lastly, the
+service entry controls the service name used when reading keys.
 
 '''
 
@@ -58,12 +58,12 @@ def auth_getkey(self, params):
     if 'user=' not in params:
         params = '%s user?' % params
     params = '%s !password?' % params
-    os.system("%s -g '%s'" % (_path, params))
+    os.system("%s -g '%s'" % (_executable, params))
 
 def auth_getuserpasswd(self, getkey, params):
     params = 'proto=pass %s' % params
     while True:
-        fd = os.open('%s/rpc' % _mount, os.O_RDWR)
+        fd = os.open('%s/rpc' % _mountpoint, os.O_RDWR)
         try:
             try:
                 os.write(fd, 'start %s' % params)
@@ -112,9 +112,9 @@ def find_user_password(self, realm, authuri):
     return (user, passwd)
 
 def uisetup(ui):
-    global _mount
-    _mount = ui.config('factotum', 'mount', '/mnt/factotum')
-    global _path
-    _path = ui.config('factotum', 'path', '/bin/auth/factotum')
+    global _executable
+    _executable = ui.config('factotum', 'executable', '/bin/auth/factotum')
+    global _mountpoint
+    _mountpoint = ui.config('factotum', 'mountpoint', '/mnt/factotum')
     global _service
     _service = ui.config('factotum', 'service', 'hg')
