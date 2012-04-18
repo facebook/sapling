@@ -57,7 +57,11 @@ def verify(ui, repo, args=None, **opts):
         if branchpath:
             fp = branchpath + '/' + fn
         data, mode = svn.get_file(posixpath.normpath(fp), srev)
-        fctx = ctx[fn]
+        try:
+            fctx = ctx[fn]
+        except error.LookupError:
+            result = 1
+            continue
         dmatch = fctx.data() == data
         mmatch = fctx.flags() == mode
         if not (dmatch and mmatch):
