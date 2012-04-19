@@ -12,39 +12,108 @@ import svnwrap
 import svnexternals
 import util
 
+# Here is a diff mixing content and property changes in svn >= 1.7
+#
+# Index: a
+# ===================================================================
+# --- a	(revision 12)
+# +++ a	(working copy)
+# @@ -1,2 +1,3 @@
+#  a
+#  a
+# +a
+# 
+# Property changes on: a
+# ___________________________________________________________________
+# Added: svn:executable
+# ## -0,0 +1 ##
+# +*
 
-binary_file_re = re.compile(r'''Index: ([^\n]*)
+class ParseError(Exception):
+    pass
+
+index_header = r'''Index: ([^\n]*)
 =*
-Cannot display: file marked as a binary type.''')
+'''
 
-property_exec_set_re = re.compile(r'''Property changes on: ([^\n]*)
+property_header = r'''Property changes on: ([^\n]*)
 _*
-(?:Added|Name): svn:executable
-   \+''')
+'''
 
-property_exec_removed_re = re.compile(r'''Property changes on: ([^\n]*)
-_*
-(?:Deleted|Name): svn:executable
-   -''')
+headers_re = re.compile('(?:' + '|'.join([
+            index_header,
+            property_header,
+            ]) + ')')
 
-empty_file_patch_wont_make_re = re.compile(r'''Index: ([^\n]*)\n=*\n(?=Index:)''')
+property_special_added = r'''(?:Added|Name): (svn:special)
+(?:   \+|## -0,0 \+1 ##
+\+)'''
 
-any_file_re = re.compile(r'''^Index: ([^\n]*)\n=*\n''', re.MULTILINE)
+property_special_deleted = r'''(?:Deleted|Name): (svn:special)
+(?:   \-|## -1 \+0,0 ##
+\-)'''
 
-property_special_set_re = re.compile(r'''Property changes on: ([^\n]*)
-_*
-(?:Added|Name): svn:special
-   \+''')
+property_exec_added = r'''(?:Added|Name): (svn:executable)
+(?:   \+|## -0,0 \+1 ##
+\+)'''
 
-property_special_removed_re = re.compile(r'''Property changes on: ([^\n]*)
-_*
-(?:Deleted|Name): svn:special
-   \-''')
+property_exec_deleted = r'''(?:Deleted|Name): (svn:executable)
+(?:   \-|## -1 \+0,0 ##
+\-)'''
+
+properties_re = re.compile('(?:' + '|'.join([
+            property_special_added,
+            property_special_deleted,
+            property_exec_added,
+            property_exec_deleted,
+            ]) + ')')
+
+class filediff:
+    def __init__(self, name):
+        self.name = name
+        self.diff = None
+        self.binary = False
+        self.executable = None
+        self.symlink = None
+        self.hasprops = False
+
+    def isempty(self):
+        return (not self.diff and not self.binary and not self.hasprops)
+
+def parsediff(diff):
+    changes = {}
+    headers = headers_re.split(diff)[1:]
+    if (len(headers) % 3) != 0:
+        # headers should be a sequence of (index file, property file, data)
+        raise ParseError('unexpected diff format')
+    files = []
+    for i in xrange(len(headers)/3):
+        iname, pname, data = headers[3*i:3*i+3]
+        fname = iname or pname
+        if fname not in changes:
+            changes[fname] = filediff(fname)
+            files.append(changes[fname])
+        f = changes[fname]
+        if iname is not None:
+            if data.strip():
+                f.binary = data.lstrip().startswith(
+                    'Cannot display: file marked as a binary type.')
+                if not f.binary and '@@' in data:
+                    # Non-empty diff
+                    f.diff = data
+        else:
+            f.hasprops = True
+            for m in properties_re.finditer(data):
+                p = m.group(1, 2, 3, 4)
+                if p[0] or p[1]:
+                    f.symlink = bool(p[0])
+                elif p[2] or p[3]:
+                    f.executable = bool(p[2])
+    return files
 
 
 class BadPatchApply(Exception):
     pass
-
 
 def print_your_svn_is_old_message(ui): # pragma: no cover
     ui.status("In light of that, I'll fall back and do diffs, but it won't do "
@@ -215,40 +284,18 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     if '\0' in d:
         raise BadPatchApply('binary diffs are not supported')
     files_data = {}
-    # we have to pull each binary file by hand as a fulltext,
-    # which sucks but we've got no choice
-    binary_files = set(binary_file_re.findall(d))
-    touched_files = set(binary_files)
-    d2 = empty_file_patch_wont_make_re.sub('', d)
-    d2 = property_exec_set_re.sub('', d2)
-    d2 = property_exec_removed_re.sub('', d2)
+    changed = parsediff(d)
     # Here we ensure that all files, including the new empty ones
     # are marked as touched. Content is loaded on demand.
-    touched_files.update(any_file_re.findall(d))
-    if d2.strip() and len(re.findall('\n[-+]', d2.strip())) > 0:
+    touched_files = set(f.name for f in changed)
+    d2 = '\n'.join(f.diff for f in changed if f.diff)
+    if changed:
         files_data = patchrepo(ui, meta, parentctx, cStringIO.StringIO(d2))
         for x in files_data.iterkeys():
             ui.note('M  %s\n' % x)
     else:
         ui.status('Not using patch for %s, diff had no hunks.\n' %
                   r.revnum)
-
-    exec_files = {}
-    for m in property_exec_removed_re.findall(d):
-        exec_files[m] = False
-    for m in property_exec_set_re.findall(d):
-        exec_files[m] = True
-    touched_files.update(exec_files)
-    link_files = {}
-    for m in property_special_set_re.findall(d):
-        # TODO(augie) when a symlink is removed, patching will fail.
-        # We're seeing that above - there's gotta be a better
-        # workaround than just bailing like that.
-        assert m in files_data
-        link_files[m] = True
-    for m in property_special_removed_re.findall(d):
-        assert m in files_data
-        link_files[m] = False
 
     unknown_files = set()
     for p in r.paths:
@@ -276,6 +323,11 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     copies = getcopies(svn, meta, branch, branchpath, r, touched_files,
                        parentctx)
 
+    binary_files = set(f.name for f in changed if f.binary)
+    exec_files = dict((f.name, f.executable) for f in changed
+                      if f.executable is not None)
+    link_files = dict((f.name, f.symlink) for f in changed
+                      if f.symlink is not None)
     def filectxfn(repo, memctx, path):
         if path in files_data and files_data[path] is None:
             raise IOError(errno.ENOENT, '%s is deleted' % path)

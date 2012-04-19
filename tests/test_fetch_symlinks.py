@@ -43,7 +43,9 @@ class TestFetchSymlinks(test_util.TestBase):
         for rev in repo:
             ctx = repo[rev]
             for f in ctx.manifest():
-                self.assertEqual(f in links[rev], 'l' in ctx[f].flags())
+                l = 'l' in ctx[f].flags()
+                lref = f in links[rev]
+                self.assertEqual(lref, l, '%r != %r for %s@%r' % (lref, l, f, rev))
                 if f in links[rev]:
                     self.assertEqual(links[rev][f], ctx[f].data())
             for f in links[rev]:
