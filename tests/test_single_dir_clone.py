@@ -152,11 +152,11 @@ class TestSingleDir(test_util.TestBase):
         # Pushes two outgoing over one incoming svn rev
         # (used to cause an "unknown revision")
         # This can happen if someone committed to svn since our last pull (race).
-        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
-                                            layout='single',
-                                            subdir='trunk')
-        self._add_svn_rev({'trunk/alpha': 'Changed'})
+        repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
+                                              stupid=False,
+                                              layout='single',
+                                              subdir='trunk')
+        self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         def file_callback(repo, memctx, path):
             return context.memfilectx(path=path,
                                       data='data of %s' % path,

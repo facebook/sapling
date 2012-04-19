@@ -304,12 +304,12 @@ class TestBase(unittest.TestCase):
         repo, repo_path = self.load_and_fetch(*args, **kwargs)
         return repo
 
-    def _add_svn_rev(self, changes):
+    def add_svn_rev(self, repo_path, changes):
         '''changes is a dict of filename -> contents'''
         if self.svn_wc is None:
             self.svn_wc = os.path.join(self.tmpdir, 'testsvn_wc')
             subprocess.call([
-                'svn', 'co', '-q', fileurl(self.repo_path),
+                'svn', 'co', '-q', fileurl(repo_path),
                 self.svn_wc
             ],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

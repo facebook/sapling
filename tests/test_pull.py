@@ -12,8 +12,9 @@ class TestPull(test_util.TestBase):
         super(TestPull, self).setUp()
 
     def _loadupdate(self, fixture_name):
-        return self._load_fixture_and_fetch(fixture_name, stupid=False,
-                                            noupdate=False)
+        repo, repo_path = self.load_and_fetch(fixture_name, stupid=False,
+                                              noupdate=False)
+        return repo, repo_path
 
     def test_nochanges(self):
         self._loadupdate('single_rev.svndump')
@@ -22,26 +23,26 @@ class TestPull(test_util.TestBase):
         self.assertEqual(state, self.repo.parents())
 
     def test_onerevision_noupdate(self):
-        repo = self._loadupdate('single_rev.svndump')
+        repo, repo_path = self._loadupdate('single_rev.svndump')
         state = repo.parents()
-        self._add_svn_rev({'trunk/alpha': 'Changed'})
+        self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo)
         self.assertEqual(state, repo.parents())
         self.assertTrue('tip' not in repo[None].tags())
 
     def test_onerevision_doupdate(self):
-        repo = self._loadupdate('single_rev.svndump')
+        repo, repo_path = self._loadupdate('single_rev.svndump')
         state = repo.parents()
-        self._add_svn_rev({'trunk/alpha': 'Changed'})
+        self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo, update=True)
         self.failIfEqual(state, repo.parents())
         self.assertTrue('tip' in repo[None].tags())
 
     def test_onerevision_divergent(self):
-        repo = self._loadupdate('single_rev.svndump')
+        repo, repo_path = self._loadupdate('single_rev.svndump')
         self.commitchanges((('alpha', 'alpha', 'Changed another way'),))
         state = repo.parents()
-        self._add_svn_rev({'trunk/alpha': 'Changed one way'})
+        self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed one way'})
         try:
             commands.pull(self.repo.ui, repo, update=True)
         except hgutil.Abort:
@@ -52,7 +53,7 @@ class TestPull(test_util.TestBase):
         self.assertEqual(len(repo.heads()), 2)
 
     def test_tag_repull_doesnt_happen(self):
-        repo = self._loadupdate('branchtagcollision.svndump')
+        repo = self._loadupdate('branchtagcollision.svndump')[0]
         oldheads = map(node.hex, repo.heads())
         commands.pull(repo.ui, repo)
         self.assertEqual(oldheads, map(node.hex, repo.heads()))
