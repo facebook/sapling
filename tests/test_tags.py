@@ -105,8 +105,8 @@ rename a tag
         self.test_most_recent_is_edited(True)
 
     def test_most_recent_is_edited(self, stupid=False):
-        repo = self._load_fixture_and_fetch('most-recent-is-edit-tag.svndump',
-                                            stupid=stupid)
+        repo, repo_path = self.load_and_fetch('most-recent-is-edit-tag.svndump',
+                                              stupid=stupid)
         self.repo.ui.status(
             "Note: this test failing may be because of a rebuildmeta failure.\n"
             "You should check that before assuming issues with this test.\n")
@@ -114,7 +114,7 @@ rename a tag
         src, dest = test_util.hgclone(repo.ui, self.wc_path, wc2_path, update=False)
         svncommands.rebuildmeta(repo.ui,
                                dest,
-                               args=[test_util.fileurl(self.repo_path), ])
+                               args=[test_util.fileurl(repo_path), ])
         commands.pull(self.repo.ui, self.repo, stupid=stupid)
         dtags, srctags = dest.tags(), self.repo.tags()
         dtags.pop('tip')

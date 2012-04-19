@@ -25,13 +25,12 @@ Last Changed Rev: %(rev)s
 Last Changed Date: %(date)s
 '''
 
-class UtilityTests(test_util.TestBase):
-    @property
-    def repourl(self):
-        return util.normalize_url(test_util.fileurl(self.repo_path))
+def repourl(repo_path):
+    return util.normalize_url(test_util.fileurl(repo_path))
 
+class UtilityTests(test_util.TestBase):
     def test_info_output(self):
-        self._load_fixture_and_fetch('two_heads.svndump')
+        repo, repo_path = self.load_and_fetch('two_heads.svndump')
         hg.update(self.repo, 'the_branch')
         u = self.ui()
         u.pushbuffer()
@@ -39,7 +38,7 @@ class UtilityTests(test_util.TestBase):
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
-                     'repourl': self.repourl,
+                     'repourl': repourl(repo_path),
                      'branch': 'branches/the_branch',
                      'rev': 5,
                      })
@@ -50,7 +49,7 @@ class UtilityTests(test_util.TestBase):
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
-                     'repourl': self.repourl,
+                     'repourl': repourl(repo_path),
                      'branch': 'trunk',
                      'rev': 6,
                      })
@@ -61,14 +60,14 @@ class UtilityTests(test_util.TestBase):
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:05 +0000 (Wed, 08 Oct 2008)',
-                     'repourl': self.repourl,
+                     'repourl': repourl(repo_path),
                      'branch': 'branches/the_branch',
                      'rev': 5,
                      })
         self.assertMultiLineEqual(actual, expected)
 
     def test_info_single(self):
-        self._load_fixture_and_fetch('two_heads.svndump', subdir='trunk')
+        repo, repo_path = self.load_and_fetch('two_heads.svndump', subdir='trunk')
         hg.update(self.repo, 'tip')
         u = self.ui()
         u.pushbuffer()
@@ -76,7 +75,7 @@ class UtilityTests(test_util.TestBase):
         actual = u.popbuffer()
         expected = (expected_info_output %
                     {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
-                     'repourl': self.repourl,
+                     'repourl': repourl(repo_path),
                      'branch': 'trunk',
                      'rev': 6,
                      })
@@ -153,7 +152,7 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(actual, '4:1083037b18d8\n')
 
     def test_outgoing_output(self):
-        self._load_fixture_and_fetch('two_heads.svndump')
+        repo, repo_path = self.load_and_fetch('two_heads.svndump')
         u = self.ui()
         parents = (self.repo['the_branch'].node(), revlog.nullid,)
         def filectxfn(repo, memctx, path):
@@ -173,13 +172,13 @@ class UtilityTests(test_util.TestBase):
         new = self.repo.commitctx(ctx)
         hg.update(self.repo, new)
         u.pushbuffer()
-        commands.outgoing(u, self.repo, self.repourl)
+        commands.outgoing(u, self.repo, repourl(repo_path))
         actual = u.popbuffer()
         self.assertTrue(node.hex(self.repo['localbranch'].node())[:8] in actual)
         self.assertEqual(actual.strip(), '5:6de15430fa20')
         hg.update(self.repo, 'default')
         u.pushbuffer()
-        commands.outgoing(u, self.repo, self.repourl)
+        commands.outgoing(u, self.repo, repourl(repo_path))
         actual = u.popbuffer()
         self.assertEqual(actual, '')
 

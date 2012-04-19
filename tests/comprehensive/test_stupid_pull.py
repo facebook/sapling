@@ -19,11 +19,12 @@ from hgsubversion import wrappers
 
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
-    self._load_fixture_and_fetch(name, subdir=subdir, stupid=False, layout=layout)
+    repo, repo_path = self.load_and_fetch(name, subdir=subdir, stupid=False,
+                                          layout=layout)
     assert len(self.repo) > 0, 'Repo had no changes, maybe you need to add a subdir entry in test_util?'
     wc2_path = self.wc_path + '_stupid'
     u = ui.ui()
-    checkout_path = self.repo_path
+    checkout_path = repo_path
     if subdir:
         checkout_path += '/' + subdir
     u.setconfig('hgsubversion', 'stupid', '1')

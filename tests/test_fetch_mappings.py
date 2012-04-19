@@ -67,7 +67,8 @@ class MapTests(test_util.TestBase):
         self.test_author_map_closing_author(True)
 
     def test_author_map_no_author(self, stupid=False):
-        self._load_fixture_and_fetch('no-author.svndump', stupid=stupid)
+        repo, repo_path = self.load_and_fetch('no-author.svndump',
+                                              stupid=stupid)
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['(no author)@%s' % self.repo.svnmeta().uuid]
         self.assertEqual(sorted(users), expected_users)
@@ -78,7 +79,7 @@ class MapTests(test_util.TestBase):
         authormap.close()
         ui = self.ui(stupid)
         ui.setconfig('hgsubversion', 'authormap', self.authors)
-        commands.clone(ui, test_util.fileurl(self.repo_path),
+        commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['Testy <test@example.com>']
@@ -327,8 +328,8 @@ class MapTests(test_util.TestBase):
         self.test_tagren_changed(True)
 
     def test_empty_log_message(self, stupid=False):
-        repo = self._load_fixture_and_fetch('empty-log-message.svndump',
-                                            stupid=stupid)
+        repo, repo_path = self.load_and_fetch('empty-log-message.svndump',
+                                              stupid=stupid)
 
         self.assertEqual(repo['tip'].description(), '')
 
@@ -336,7 +337,7 @@ class MapTests(test_util.TestBase):
 
         ui = self.ui(stupid)
         ui.setconfig('hgsubversion', 'defaultmessage', 'blyf')
-        commands.clone(ui, test_util.fileurl(self.repo_path), self.wc_path)
+        commands.clone(ui, test_util.fileurl(repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')
 

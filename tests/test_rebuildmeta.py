@@ -28,7 +28,8 @@ def _do_case(self, name, stupid, single):
     layout = 'auto'
     if single:
         layout = 'single'
-    self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid, layout=layout)
+    repo, repo_path = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
+                                          layout=layout)
     assert len(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
@@ -44,7 +45,7 @@ def _do_case(self, name, stupid, single):
 
     try:
         svncommands.rebuildmeta(u, dest,
-                                args=[test_util.fileurl(self.repo_path +
+                                args=[test_util.fileurl(repo_path +
                                                         subdir), ])
     finally:
         # remove the wrapper

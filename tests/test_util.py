@@ -269,9 +269,9 @@ class TestBase(unittest.TestCase):
         proc.communicate()
         return path
 
-    def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False,
-                                layout='auto', startrev=0, externals=None,
-                                noupdate=True):
+    def load_and_fetch(self, fixture_name, subdir=None, stupid=False,
+                       layout='auto', startrev=0, externals=None,
+                       noupdate=True):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
@@ -298,7 +298,11 @@ class TestBase(unittest.TestCase):
 
         dispatch(cmd)
 
-        return hg.repository(testui(), self.wc_path)
+        return hg.repository(testui(), self.wc_path), repo_path
+
+    def _load_fixture_and_fetch(self, *args, **kwargs):
+        repo, repo_path = self.load_and_fetch(*args, **kwargs)
+        return repo
 
     def _add_svn_rev(self, changes):
         '''changes is a dict of filename -> contents'''
