@@ -207,6 +207,20 @@ def hgclone(ui, source, dest, update=True):
         src, dest = hg.clone(ui, source, dest, update=update)
     return src, dest
 
+def svnls(repo_path, path, rev='HEAD'):
+    path = repo_path + '/' + path
+    path = util.normalize_url(fileurl(path))
+    args = ['svn', 'ls', '-r', rev, '-R', path]
+    p = subprocess.Popen(args,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+    stdout, stderr = p.communicate()
+    if p.returncode:
+        raise Exception('svn ls failed on %s: %r' % (path, stderr))
+    entries = [e.strip('/') for e in stdout.splitlines()]
+    entries.sort()
+    return entries
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         _verify_our_modules()
@@ -338,20 +352,6 @@ class TestBase(unittest.TestCase):
         after = len(self.repo)
         self.assertEqual(expected_extra_back, after - before)
         return res
-
-    def svnls(self, path, rev='HEAD'):
-        path = self.repo_path + '/' + path
-        path = util.normalize_url(fileurl(path))
-        args = ['svn', 'ls', '-r', rev, '-R', path]
-        p = subprocess.Popen(args,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        stdout, stderr = p.communicate()
-        if p.returncode:
-            raise Exception('svn ls failed on %s: %r' % (path, stderr))
-        entries = [e.strip('/') for e in stdout.splitlines()]
-        entries.sort()
-        return entries
 
     def svnco(self, svnpath, rev, path):
         path = os.path.join(self.wc_path, path)

@@ -329,8 +329,8 @@ class TestPushExternals(test_util.TestBase):
         if subrepo is None:
             return
 
-        self._load_fixture_and_fetch('pushexternals.svndump',
-                                     externals='subrepos')
+        repo, repo_path = self.load_and_fetch('pushexternals.svndump',
+                                              externals='subrepos')
         # Add a new reference on an existing and non-existing directory
         changes = [
             ('.hgsub', '.hgsub', """\
@@ -355,7 +355,7 @@ HEAD subdir2/deps/project2
 
         # Check .hgsub and .hgsubstate were not pushed
         self.assertEqual(['dir', 'subdir1', 'subdir1/a', 'subdir2',
-                          'subdir2/a'], self.svnls('trunk'))
+                          'subdir2/a'], test_util.svnls(repo_path, 'trunk'))
 
         # Remove all references from one directory, add a new one
         # to the other (test multiline entries)

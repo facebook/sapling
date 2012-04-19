@@ -108,9 +108,8 @@ class TestPushRenames(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        # print '\n'.join(sorted(self.svnls('trunk')))
         assert reduce(lambda x, y: x and y,
-                      ('geek' not in f for f in self.svnls('trunk'))), (
+                      ('geek' not in f for f in test_util.svnls(self.repo_path, 'trunk'))), (
             'This failure means rename of an entire tree is broken.'
             ' There is a print on the preceding line commented out '
             'that should help you.')

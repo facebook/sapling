@@ -80,10 +80,10 @@ class TestSingleDir(test_util.TestBase):
 
     def test_push_single_dir(self):
         # Tests simple pushing from default branch to a single dir repo
-        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
-                                            layout='single',
-                                            subdir='')
+        repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
+                                              stupid=False,
+                                              layout='single',
+                                              subdir='')
         def file_callback(repo, memctx, path):
             if path == 'adding_file':
                 return context.memfilectx(path=path,
@@ -109,7 +109,7 @@ class TestSingleDir(test_util.TestBase):
         repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions()
-        self.assertTrue('adding_file' in self.svnls(''))
+        self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
         self.assertEqual('application/octet-stream',
                          self.svnpropget('adding_binary', 'svn:mime-type'))
         # Now add another commit and test mime-type being reset
@@ -175,18 +175,18 @@ class TestSingleDir(test_util.TestBase):
             repo.commitctx(ctx)
         hg.update(repo, repo['tip'].node())
         self.pushrevisions(expected_extra_back=1)
-        self.assertTrue('trunk/one' in self.svnls(''))
-        self.assertTrue('trunk/two' in self.svnls(''))
+        self.assertTrue('trunk/one' in test_util.svnls(repo_path, ''))
+        self.assertTrue('trunk/two' in test_util.svnls(repo_path, ''))
 
     def test_push_single_dir_branch(self):
         # Tests local branches pushing to a single dir repo. Creates a fork at
         # tip. The default branch adds a file called default, while branch foo
         # adds a file called foo, then tries to push the foo branch and default
         # branch in that order.
-        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
-                                            layout='single',
-                                            subdir='')
+        repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
+                                              stupid=False,
+                                              layout='single',
+                                              subdir='')
         def file_callback(data):
             def cb(repo, memctx, path):
                 if path == data:
@@ -214,7 +214,7 @@ class TestSingleDir(test_util.TestBase):
         hg.update(repo, repo['foo'].node())
         self.pushrevisions()
         repo = self.repo # repo is outdated after the rebase happens, refresh
-        self.assertTrue('foo' in self.svnls(''))
+        self.assertTrue('foo' in test_util.svnls(repo_path, ''))
         self.assertEqual(repo.branchtags().keys(), ['default'])
         # Have to cross to another branch head, so hg.update doesn't work
         commands.update(ui.ui(),
@@ -222,7 +222,7 @@ class TestSingleDir(test_util.TestBase):
                         self.repo.branchheads('default')[1],
                         clean=True)
         self.pushrevisions()
-        self.assertTrue('default' in self.svnls(''))
+        self.assertTrue('default' in test_util.svnls(repo_path, ''))
         self.assertEquals(len(self.repo.branchheads('default')), 1)
 
     @test_util.requiresoption('branch')
@@ -255,7 +255,7 @@ class TestSingleDir(test_util.TestBase):
         self.repo.commitctx(ctx)
         hg.update(self.repo, self.repo['tip'].node())
         self.pushrevisions()
-        self.assertTrue('adding_file' in self.svnls(''))
+        self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
 
         self.assertEquals(set(['flaf']),
                           set(self.repo[i].branch() for i in self.repo))

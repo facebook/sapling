@@ -4,7 +4,7 @@ import unittest
 
 class TestPushDirectories(test_util.TestBase):
     def test_push_dirs(self):
-        self._load_fixture_and_fetch('emptyrepo.svndump')
+        repo_path = self.load_and_fetch('emptyrepo.svndump')[1]
 
         changes = [
             # Single file in single directory
@@ -18,7 +18,7 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('trunk'),
+        self.assertEqual(test_util.svnls(repo_path, 'trunk'),
                           ['d1', 'd1/a', 'd2', 'd2/a', 'd2/b', 'd31',
                            'd31/d32', 'd31/d32/a', 'd31/d32/d33',
                            'd31/d32/d33/d34', 'd31/d32/d33/d34/a'])
@@ -42,17 +42,17 @@ class TestPushDirectories(test_util.TestBase):
             ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('trunk'),
+        self.assertEqual(test_util.svnls(repo_path, 'trunk'),
                          ['d2', 'd2/b', 'd31', 'd31/d32', 'd31/d32/a', ])
 
     def test_push_new_dir_project_root_not_repo_root(self):
-        self._load_fixture_and_fetch('fetch_missing_files_subdir.svndump',
-                                     subdir='foo')
+        repo_path = self.load_and_fetch('fetch_missing_files_subdir.svndump',
+                                        subdir='foo')[1]
         changes = [('magic_new/a', 'magic_new/a', 'ohai',),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('foo/trunk'), ['bar',
+        self.assertEqual(test_util.svnls(repo_path, 'foo/trunk'), ['bar',
                                                    'bar/alpha',
                                                    'bar/beta',
                                                    'bar/delta',
@@ -62,38 +62,38 @@ class TestPushDirectories(test_util.TestBase):
                                                    'magic_new/a'])
 
     def test_push_new_file_existing_dir_root_not_repo_root(self):
-        self._load_fixture_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
-                                     subdir='project')
+        repo_path = self.load_and_fetch('empty_dir_in_trunk_not_repo_root.svndump',
+                                        subdir='project')[1]
         changes = [('narf/a', 'narf/a', 'ohai',),
                    ]
         self.commitchanges(changes)
-        self.assertEqual(self.svnls('project/trunk'), ['a',
+        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a',
                                                        'narf',
                                                        ])
         self.pushrevisions()
-        self.assertEqual(self.svnls('project/trunk'), ['a',
+        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a',
                                                        'narf',
                                                        'narf/a'])
         changes = [('narf/a', None, None,),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('project/trunk'), ['a'])
+        self.assertEqual(test_util.svnls(repo_path, 'project/trunk'), ['a'])
 
     def test_push_single_dir_change_in_subdir(self):
         # Tests simple pushing from default branch to a single dir repo
         # Changes a file in a subdir (regression).
-        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
-                                            layout='single',
-                                            subdir='tags')
+        repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
+                                              stupid=False,
+                                              layout='single',
+                                              subdir='tags')
         changes = [('tag_r3/alpha', 'tag_r3/alpha', 'foo'),
                    ('tag_r3/new', 'tag_r3/new', 'foo'),
                    ('new_dir/new', 'new_dir/new', 'foo'),
                    ]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual(self.svnls('tags'),
+        self.assertEqual(test_util.svnls(repo_path, 'tags'),
                          ['copied_tag',
                           'copied_tag/alpha',
                           'copied_tag/beta',
