@@ -2673,52 +2673,56 @@ def graft(ui, repo, *revs, **opts):
     if not revs:
         return -1
 
-    for pos, ctx in enumerate(repo.set("%ld", revs)):
-        current = repo['.']
+    wlock = repo.wlock()
+    try:
+        for pos, ctx in enumerate(repo.set("%ld", revs)):
+            current = repo['.']
 
-        ui.status(_('grafting revision %s\n') % ctx.rev())
-        if opts.get('dry_run'):
-            continue
+            ui.status(_('grafting revision %s\n') % ctx.rev())
+            if opts.get('dry_run'):
+                continue
 
-        # we don't merge the first commit when continuing
-        if not cont:
-            # perform the graft merge with p1(rev) as 'ancestor'
-            try:
-                # ui.forcemerge is an internal variable, do not document
-                repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                stats = mergemod.update(repo, ctx.node(), True, True, False,
-                                        ctx.p1().node())
-            finally:
-                ui.setconfig('ui', 'forcemerge', '')
-            # drop the second merge parent
-            repo.dirstate.setparents(current.node(), nullid)
-            repo.dirstate.write()
-            # fix up dirstate for copies and renames
-            cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
-            # report any conflicts
-            if stats and stats[3] > 0:
-                # write out state for --continue
-                nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                repo.opener.write('graftstate', ''.join(nodelines))
-                raise util.Abort(
-                    _("unresolved conflicts, can't continue"),
-                    hint=_('use hg resolve and hg graft --continue'))
-        else:
-            cont = False
+            # we don't merge the first commit when continuing
+            if not cont:
+                # perform the graft merge with p1(rev) as 'ancestor'
+                try:
+                    # ui.forcemerge is an internal variable, do not document
+                    repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                    stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                            ctx.p1().node())
+                finally:
+                    ui.setconfig('ui', 'forcemerge', '')
+                # drop the second merge parent
+                repo.dirstate.setparents(current.node(), nullid)
+                repo.dirstate.write()
+                # fix up dirstate for copies and renames
+                cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+                # report any conflicts
+                if stats and stats[3] > 0:
+                    # write out state for --continue
+                    nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
+                    repo.opener.write('graftstate', ''.join(nodelines))
+                    raise util.Abort(
+                        _("unresolved conflicts, can't continue"),
+                        hint=_('use hg resolve and hg graft --continue'))
+            else:
+                cont = False
 
-        # commit
-        source = ctx.extra().get('source')
-        if not source:
-            source = ctx.hex()
-        extra = {'source': source}
-        user = ctx.user()
-        if opts.get('user'):
-            user = opts['user']
-        date = ctx.date()
-        if opts.get('date'):
-            date = opts['date']
-        repo.commit(text=ctx.description(), user=user,
-                    date=date, extra=extra, editor=editor)
+            # commit
+            source = ctx.extra().get('source')
+            if not source:
+                source = ctx.hex()
+            extra = {'source': source}
+            user = ctx.user()
+            if opts.get('user'):
+                user = opts['user']
+            date = ctx.date()
+            if opts.get('date'):
+                date = opts['date']
+            repo.commit(text=ctx.description(), user=user,
+                        date=date, extra=extra, editor=editor)
+    finally:
+        wlock.release()
 
     # remove state when we complete successfully
     if not opts.get('dry_run') and os.path.exists(repo.join('graftstate')):
