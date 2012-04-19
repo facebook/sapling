@@ -58,7 +58,7 @@ def listdir(path, stat=False, skip=None):
 if os.name != 'nt':
     posixfile = open
 else:
-    import ctypes, ctypes.util
+    import ctypes, msvcrt
 
     _kernel32 = ctypes.windll.kernel32
 
@@ -67,15 +67,6 @@ else:
     _HANDLE = ctypes.c_void_p
 
     _INVALID_HANDLE_VALUE = _HANDLE(-1).value
-
-    def _crtname():
-        try:
-            # find_msvcrt was introduced in Python 2.6
-            return ctypes.util.find_msvcrt()
-        except AttributeError:
-            return 'msvcr71.dll' # CPython 2.5 and 2.4
-
-    _crt = ctypes.PyDLL(_crtname())
 
     # CreateFile 
     _FILE_SHARE_READ = 0x00000001
@@ -104,9 +95,6 @@ else:
     _kernel32.CreateFileA.argtypes = [_LPCSTR, _DWORD, _DWORD, ctypes.c_void_p,
         _DWORD, _DWORD, _HANDLE]
     _kernel32.CreateFileA.restype = _HANDLE
-
-    _crt._open_osfhandle.argtypes = [_HANDLE, ctypes.c_int]
-    _crt._open_osfhandle.restype = ctypes.c_int
 
     def _raiseioerror(name):
         err = ctypes.WinError()
@@ -156,10 +144,7 @@ else:
             if fh == _INVALID_HANDLE_VALUE:
                 _raiseioerror(name)
 
-            # for CPython we must use the same CRT as Python uses,
-            # or the os.fdopen call below will abort with
-            #   "OSError: [Errno 9] Bad file descriptor"
-            fd = _crt._open_osfhandle(fh, flags)
+            fd = msvcrt.open_osfhandle(fh, flags)
             if fd == -1:
                 _kernel32.CloseHandle(fh)
                 _raiseioerror(name)
