@@ -12,10 +12,6 @@ from hgsubversion import svncommands
 from hgsubversion import svnrepo
 
 class TestTags(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid=False):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=stupid)
-
     def test_tags(self, stupid=False):
         repo = self._load_fixture_and_fetch('basic_tag_tests.svndump',
                                             stupid=stupid)

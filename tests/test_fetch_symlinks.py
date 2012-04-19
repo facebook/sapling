@@ -3,12 +3,8 @@ import test_util
 import unittest
 
 class TestFetchSymlinks(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=stupid)
-
     def test_symlinks(self, stupid=False):
-        repo = self._load_fixture_and_fetch('symlinks.svndump', stupid)
+        repo = self._load_fixture_and_fetch('symlinks.svndump', stupid=stupid)
         # Check symlinks throughout history
         links = {
             0: {

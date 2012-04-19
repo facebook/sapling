@@ -278,9 +278,7 @@ d3/ext3 = [hgsubversion] d3:^/trunk/common/ext ext3
 
 class TestPushExternals(test_util.TestBase):
     def test_push_externals(self, stupid=False):
-        test_util.load_fixture_and_fetch('pushexternals.svndump',
-                                         self.repo_path,
-                                         self.wc_path)
+        repo = self._load_fixture_and_fetch('pushexternals.svndump')
         # Add a new reference on an existing and non-existing directory
         changes = [
             ('.hgsvnexternals', '.hgsvnexternals',
@@ -331,10 +329,8 @@ class TestPushExternals(test_util.TestBase):
         if subrepo is None:
             return
 
-        test_util.load_fixture_and_fetch('pushexternals.svndump',
-                                         self.repo_path,
-                                         self.wc_path,
-                                         externals='subrepos')
+        self._load_fixture_and_fetch('pushexternals.svndump',
+                                     externals='subrepos')
         # Add a new reference on an existing and non-existing directory
         changes = [
             ('.hgsub', '.hgsub', """\

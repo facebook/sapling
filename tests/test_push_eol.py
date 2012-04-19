@@ -5,9 +5,7 @@ import unittest
 class TestPushEol(test_util.TestBase):
     def setUp(self):
         test_util.TestBase.setUp(self)
-        test_util.load_fixture_and_fetch('emptyrepo.svndump',
-                                         self.repo_path,
-                                         self.wc_path)
+        self._load_fixture_and_fetch('emptyrepo.svndump')
 
     def _test_push_dirs(self, stupid):
         changes = [

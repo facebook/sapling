@@ -11,19 +11,18 @@ class TestPull(test_util.TestBase):
     def setUp(self):
         super(TestPull, self).setUp()
 
-    def _load_fixture_and_fetch(self, fixture_name):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=False,
-                                                noupdate=False)
+    def _loadupdate(self, fixture_name):
+        return self._load_fixture_and_fetch(fixture_name, stupid=False,
+                                            noupdate=False)
 
     def test_nochanges(self):
-        self._load_fixture_and_fetch('single_rev.svndump')
+        self._loadupdate('single_rev.svndump')
         state = self.repo.parents()
         commands.pull(self.repo.ui, self.repo)
         self.assertEqual(state, self.repo.parents())
 
     def test_onerevision_noupdate(self):
-        repo = self._load_fixture_and_fetch('single_rev.svndump')
+        repo = self._loadupdate('single_rev.svndump')
         state = repo.parents()
         self._add_svn_rev({'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo)
@@ -31,7 +30,7 @@ class TestPull(test_util.TestBase):
         self.assertTrue('tip' not in repo[None].tags())
 
     def test_onerevision_doupdate(self):
-        repo = self._load_fixture_and_fetch('single_rev.svndump')
+        repo = self._loadupdate('single_rev.svndump')
         state = repo.parents()
         self._add_svn_rev({'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo, update=True)
@@ -39,7 +38,7 @@ class TestPull(test_util.TestBase):
         self.assertTrue('tip' in repo[None].tags())
 
     def test_onerevision_divergent(self):
-        repo = self._load_fixture_and_fetch('single_rev.svndump')
+        repo = self._loadupdate('single_rev.svndump')
         self.commitchanges((('alpha', 'alpha', 'Changed another way'),))
         state = repo.parents()
         self._add_svn_rev({'trunk/alpha': 'Changed one way'})
@@ -53,7 +52,7 @@ class TestPull(test_util.TestBase):
         self.assertEqual(len(repo.heads()), 2)
 
     def test_tag_repull_doesnt_happen(self):
-        repo = self._load_fixture_and_fetch('branchtagcollision.svndump')
+        repo = self._loadupdate('branchtagcollision.svndump')
         oldheads = map(node.hex, repo.heads())
         commands.pull(repo.ui, repo)
         self.assertEqual(oldheads, map(node.hex, repo.heads()))

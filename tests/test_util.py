@@ -177,31 +177,6 @@ def dispatch(cmd):
     except AttributeError, e:
         dispatchmod.dispatch(cmd)
 
-def load_fixture_and_fetch(fixture_name, repo_path, wc_path, stupid=False,
-                           subdir='', noupdate=True, layout='auto',
-                           startrev=0, externals=None):
-    load_svndump_fixture(repo_path, fixture_name)
-    if subdir:
-        repo_path += '/' + subdir
-
-    cmd = [
-        'clone',
-        '--layout=%s' % layout,
-        '--startrev=%s' % startrev,
-        fileurl(repo_path),
-        wc_path,
-    ]
-    if stupid:
-        cmd.append('--stupid')
-    if noupdate:
-        cmd.append('--noupdate')
-    if externals:
-        cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
-
-    dispatch(cmd)
-
-    return hg.repository(testui(), wc_path)
-
 def rmtree(path):
     # Read-only files cannot be removed under Windows
     for root, dirs, files in os.walk(path):
@@ -292,16 +267,35 @@ class TestBase(unittest.TestCase):
         return testui(stupid, layout)
 
     def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False,
-                                layout='auto', startrev=0, externals=None):
+                                layout='auto', startrev=0, externals=None,
+                                noupdate=True):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
         elif subdir is None:
             subdir = ''
-        return load_fixture_and_fetch(fixture_name, self.repo_path,
-                                      self.wc_path, subdir=subdir,
-                                      stupid=stupid, layout=layout,
-                                      startrev=startrev, externals=externals)
+        load_svndump_fixture(self.repo_path, fixture_name)
+        projectpath = self.repo_path
+        if subdir:
+            projectpath += '/' + subdir
+
+        cmd = [
+            'clone',
+            '--layout=%s' % layout,
+            '--startrev=%s' % startrev,
+            fileurl(projectpath),
+            self.wc_path,
+            ]
+        if stupid:
+            cmd.append('--stupid')
+        if noupdate:
+            cmd.append('--noupdate')
+        if externals:
+            cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
+
+        dispatch(cmd)
+
+        return hg.repository(testui(), self.wc_path)
 
     def _add_svn_rev(self, changes):
         '''changes is a dict of filename -> contents'''

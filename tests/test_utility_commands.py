@@ -211,11 +211,10 @@ class UtilityTests(test_util.TestBase):
 
     def test_genignore(self):
         """ Test generation of .hgignore file. """
-        test_util.load_fixture_and_fetch('ignores.svndump', self.repo_path,
-                                         self.wc_path, noupdate=False)
+        repo = self._load_fixture_and_fetch('ignores.svndump', noupdate=False)
         u = self.ui()
         u.pushbuffer()
-        svncommands.genignore(u, self.repo, self.wc_path)
+        svncommands.genignore(u, repo, self.wc_path)
         self.assertMultiLineEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 

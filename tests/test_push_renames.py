@@ -6,10 +6,8 @@ import unittest
 class TestPushRenames(test_util.TestBase):
     def setUp(self):
         test_util.TestBase.setUp(self)
-        test_util.load_fixture_and_fetch('pushrenames.svndump',
-                                         self.repo_path,
-                                         self.wc_path,
-                                         True)
+        self._load_fixture_and_fetch('pushrenames.svndump',
+                                     stupid=True)
 
     def _debug_print_copies(self, ctx):
         w = sys.stderr.write

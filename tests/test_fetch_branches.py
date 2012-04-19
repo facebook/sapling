@@ -7,12 +7,6 @@ from mercurial import node
 from mercurial import util as hgutil
 
 class TestFetchBranches(test_util.TestBase):
-    def _load_fixture_and_fetch(self, fixture_name, stupid, noupdate=True,
-                                subdir=''):
-        return test_util.load_fixture_and_fetch(fixture_name, self.repo_path,
-                                                self.wc_path, stupid=stupid,
-                                                noupdate=noupdate, subdir=subdir)
-
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
         test_util.load_svndump_fixture(self.repo_path, fixture_name)
         source = '%s#%s' % (test_util.fileurl(self.repo_path), anchor)
@@ -31,7 +25,8 @@ class TestFetchBranches(test_util.TestBase):
         return self.branches(repo)[0]
 
     def test_rename_branch_parent(self, stupid=False):
-        repo = self._load_fixture_and_fetch('rename_branch_parent_dir.svndump', stupid)
+        repo = self._load_fixture_and_fetch('rename_branch_parent_dir.svndump',
+                                            stupid=stupid)
         heads = [repo[n] for n in repo.heads()]
         heads = dict([(ctx.branch(), ctx) for ctx in heads])
         # Let these tests disabled yet as the fix is not obvious
@@ -41,7 +36,8 @@ class TestFetchBranches(test_util.TestBase):
         self.test_rename_branch_parent(stupid=True)
 
     def test_unrelatedbranch(self, stupid=False):
-        repo = self._load_fixture_and_fetch('unrelatedbranch.svndump', stupid)
+        repo = self._load_fixture_and_fetch('unrelatedbranch.svndump',
+                                            stupid=stupid)
         heads = [repo[n] for n in repo.heads()]
         heads = dict([(ctx.branch(), ctx) for ctx in heads])
         # Let these tests disabled yet as the fix is not obvious
@@ -52,7 +48,8 @@ class TestFetchBranches(test_util.TestBase):
         self.test_unrelatedbranch(True)
 
     def test_unorderedbranch(self, stupid=False):
-        repo = self._load_fixture_and_fetch('unorderedbranch.svndump', stupid)
+        repo = self._load_fixture_and_fetch('unorderedbranch.svndump',
+                                            stupid=stupid)
         r = repo['branch']
         self.assertEqual(0, r.parents()[0].rev())
         self.assertEqual(['a', 'c', 'z'], sorted(r.manifest()))
@@ -62,7 +59,7 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_renamed_branch_to_trunk(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
-                                            stupid)
+                                            stupid=stupid)
         self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
         self.assert_('iota' in repo['default'])
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
@@ -75,14 +72,15 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_replace_trunk_with_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('replace_trunk_with_branch.svndump',
-                                            stupid)
+                                            stupid=stupid)
         self.assertEqual(repo['default'].parents()[0].branch(), 'test')
         self.assertEqual(repo['tip'].branch(), 'default')
         self.assertEqual(repo['tip'].extra().get('close'), '1')
         self.assertEqual(self.openbranches(repo), ['default'])
 
     def test_copybeforeclose(self, stupid=False):
-        repo = self._load_fixture_and_fetch('copybeforeclose.svndump', stupid)
+        repo = self._load_fixture_and_fetch('copybeforeclose.svndump',
+                                            stupid=stupid)
         self.assertEqual(repo['tip'].branch(), 'test')
         self.assertEqual(repo['test'].extra().get('close'), '1')
         self.assertEqual(repo['test']['b'].data(), 'a\n')
@@ -95,13 +93,13 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_branch_create_with_dir_delete_works(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_create_with_dir_delete.svndump',
-                                            stupid)
+                                            stupid=stupid)
         self.assertEqual(repo['tip'].manifest().keys(),
                          ['alpha', 'beta', 'iota', 'gamma', ])
 
     def test_branch_tip_update_to_default(self, stupid=False):
         repo = self._load_fixture_and_fetch('unorderedbranch.svndump',
-                                            stupid, noupdate=False)
+                                            stupid=stupid, noupdate=False)
         self.assertEqual(repo[None].branch(), 'default')
         self.assertTrue('tip' not in repo[None].tags())
 
@@ -117,7 +115,8 @@ class TestFetchBranches(test_util.TestBase):
         self.assertTrue('c' not in repo.branchtags())
 
     def test_branches_weird_moves(self, stupid=False):
-        repo = self._load_fixture_and_fetch('renamedproject.svndump', stupid,
+        repo = self._load_fixture_and_fetch('renamedproject.svndump',
+                                            stupid=stupid,
                                             subdir='project')
         heads = [repo[n] for n in repo.heads()]
         heads = dict((ctx.branch(), ctx) for ctx in heads)
@@ -131,7 +130,7 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_branch_delete_parent_dir(self, stupid=False):
         repo = self._load_fixture_and_fetch('branch_delete_parent_dir.svndump',
-                                            stupid)
+                                            stupid=stupid)
         openb, closedb = self.branches(repo)
         self.assertEqual(openb, [])
         self.assertEqual(closedb, ['dev_branch'])
@@ -139,7 +138,7 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_replace_branch_with_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('replace_branch_with_branch.svndump',
-                                            stupid)
+                                            stupid=stupid)
         self.assertEqual(7, len(repo))
         # tip is former topological branch1 being closed
         ctx = repo['tip']

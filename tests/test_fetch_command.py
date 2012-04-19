@@ -189,10 +189,7 @@ class TestBasicRepoLayout(test_util.TestBase):
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):
-        repo = test_util.load_fixture_and_fetch('two_heads.svndump',
-                                                self.repo_path,
-                                                self.wc_path,
-                                                True)
+        repo = self._load_fixture_and_fetch('two_heads.svndump', stupid=True)
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -210,12 +207,9 @@ class TestStupidPull(test_util.TestBase):
         self.assertEqual(len(repo.heads()), 2)
 
     def test_oldest_not_trunk_and_tag_vendor_branch(self):
-        repo = test_util.load_fixture_and_fetch(
+        repo = self._load_fixture_and_fetch(
             'tagged_vendor_and_oldest_not_trunk.svndump',
-            self.repo_path,
-            self.wc_path,
-            True)
-        repo = hg.repository(ui.ui(), self.wc_path)
+            stupid=True)
         self.assertEqual(node.hex(repo['oldest'].node()),
                          '926671740dec045077ab20f110c1595f935334fa')
         self.assertEqual(repo['tip'].parents()[0].parents()[0],
