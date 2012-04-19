@@ -806,7 +806,7 @@ def graph(web, req, tmpl):
 def _getdoc(e):
     doc = e[0].__doc__
     if doc:
-        doc = doc.split('\n')[0]
+        doc = _(doc).split('\n')[0]
     else:
         doc = _('(no help text available)')
     return doc
