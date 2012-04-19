@@ -353,12 +353,12 @@ class TestBase(unittest.TestCase):
         self.assertEqual(expected_extra_back, after - before)
         return res
 
-    def svnco(self, svnpath, rev, path):
+    def svnco(self, repo_path, svnpath, rev, path):
         path = os.path.join(self.wc_path, path)
         subpath = os.path.dirname(path)
         if not os.path.isdir(subpath):
             os.makedirs(subpath)
-        svnpath = fileurl(self.repo_path + '/' + svnpath)
+        svnpath = fileurl(repo_path + '/' + svnpath)
         args = ['svn', 'co', '-r', rev, svnpath, path]
         p = subprocess.Popen(args,
                              stdout=subprocess.PIPE,

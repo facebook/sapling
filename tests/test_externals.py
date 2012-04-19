@@ -346,9 +346,9 @@ HEAD subdir2/deps/project2
             ('subdir1/a', 'subdir1/a', 'a'),
             ('subdir2/a', 'subdir2/a', 'a'),
             ]
-        self.svnco('externals/project2', '2', 'dir/deps/project2')
-        self.svnco('externals/project1', '2', 'subdir1/deps/project1')
-        self.svnco('externals/project2', '2', 'subdir2/deps/project2')
+        self.svnco(repo_path, 'externals/project2', '2', 'dir/deps/project2')
+        self.svnco(repo_path, 'externals/project1', '2', 'subdir1/deps/project1')
+        self.svnco(repo_path, 'externals/project2', '2', 'subdir2/deps/project2')
         self.commitchanges(changes)
         self.pushrevisions(stupid)
         self.assertchanges(changes, self.repo['tip'])
@@ -371,8 +371,8 @@ HEAD subdir1/deps/project2
             # This removal used to trigger the parent directory removal
             ('subdir1/a', None, None),
             ]
-        self.svnco('externals/project1', '2', 'subdir1/deps/project1')
-        self.svnco('externals/project2', '2', 'subdir1/deps/project2')
+        self.svnco(repo_path, 'externals/project1', '2', 'subdir1/deps/project1')
+        self.svnco(repo_path, 'externals/project2', '2', 'subdir1/deps/project2')
         self.commitchanges(changes)
         self.pushrevisions(stupid)
         self.assertchanges(changes, self.repo['tip'])
