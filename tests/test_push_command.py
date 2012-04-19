@@ -23,7 +23,7 @@ import time
 class PushTests(test_util.TestBase):
     def setUp(self):
         test_util.TestBase.setUp(self)
-        self._load_fixture_and_fetch('simple_branch.svndump')
+        self.repo_path = self.load_and_fetch('simple_branch.svndump')[1]
 
     def test_cant_push_empty_ctx(self):
         repo = self.repo

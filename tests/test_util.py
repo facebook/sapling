@@ -252,7 +252,7 @@ class TestBase(unittest.TestCase):
         for l in '[extensions]', 'hgsubversion=':
             print >> rc, l
 
-        self.repo_path = '%s/testrepo' % self.tmpdir
+        self.repocount = 0
         self.wc_path = '%s/testrepo_wc' % self.tmpdir
         self.svn_wc = None
 
@@ -263,6 +263,10 @@ class TestBase(unittest.TestCase):
         # setups.
         self.patch = (ui.ui.write_err, ui.ui.write)
         setattr(ui.ui, self.patch[0].func_name, self.patch[1])
+
+    def _makerepopath(self):
+        self.repocount += 1
+        return '%s/testrepo-%d' % (self.tmpdir, self.repocount)
 
     def tearDown(self):
         for var, val in self.oldenv.iteritems():
@@ -284,9 +288,8 @@ class TestBase(unittest.TestCase):
         '''Loads an svnadmin dump into a fresh repo. Return the svn repo
         path.
         '''
-        path = self.repo_path
-        if os.path.exists(path):
-            rmtree(path)
+        path = self._makerepopath()
+        assert not os.path.exists(path)
         subprocess.call(['svnadmin', 'create', path,],
                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         inp = open(os.path.join(FIXTURES, fixture_name))
