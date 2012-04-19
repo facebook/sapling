@@ -291,7 +291,8 @@ def bisect(repo, subset, x):
     - ``ignored``            : csets ignored due to DAG topology
     """
     status = getstring(x, _("bisect requires a string")).lower()
-    return [r for r in subset if r in hbisect.get(repo, status)]
+    state = set(hbisect.get(repo, status))
+    return [r for r in subset if r in state]
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
