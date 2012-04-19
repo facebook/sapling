@@ -449,42 +449,46 @@ def backout(ui, repo, node=None, rev=None, **opts):
         parent = p1
 
     # the backout should appear on the same branch
-    branch = repo.dirstate.branch()
-    hg.clean(repo, node, show_stats=False)
-    repo.dirstate.setbranch(branch)
-    revert_opts = opts.copy()
-    revert_opts['date'] = None
-    revert_opts['all'] = True
-    revert_opts['rev'] = hex(parent)
-    revert_opts['no_backup'] = None
-    revert(ui, repo, **revert_opts)
-    if not opts.get('merge') and op1 != node:
-        try:
-            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-            return hg.update(repo, op1)
-        finally:
-            ui.setconfig('ui', 'forcemerge', '')
+    wlock = repo.wlock()
+    try:
+        branch = repo.dirstate.branch()
+        hg.clean(repo, node, show_stats=False)
+        repo.dirstate.setbranch(branch)
+        revert_opts = opts.copy()
+        revert_opts['date'] = None
+        revert_opts['all'] = True
+        revert_opts['rev'] = hex(parent)
+        revert_opts['no_backup'] = None
+        revert(ui, repo, **revert_opts)
+        if not opts.get('merge') and op1 != node:
+            try:
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                return hg.update(repo, op1)
+            finally:
+                ui.setconfig('ui', 'forcemerge', '')
 
-    commit_opts = opts.copy()
-    commit_opts['addremove'] = False
-    if not commit_opts['message'] and not commit_opts['logfile']:
-        # we don't translate commit messages
-        commit_opts['message'] = "Backed out changeset %s" % short(node)
-        commit_opts['force_editor'] = True
-    commit(ui, repo, **commit_opts)
-    def nice(node):
-        return '%d:%s' % (repo.changelog.rev(node), short(node))
-    ui.status(_('changeset %s backs out changeset %s\n') %
-              (nice(repo.changelog.tip()), nice(node)))
-    if opts.get('merge') and op1 != node:
-        hg.clean(repo, op1, show_stats=False)
-        ui.status(_('merging with changeset %s\n')
-                  % nice(repo.changelog.tip()))
-        try:
-            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-            return hg.merge(repo, hex(repo.changelog.tip()))
-        finally:
-            ui.setconfig('ui', 'forcemerge', '')
+        commit_opts = opts.copy()
+        commit_opts['addremove'] = False
+        if not commit_opts['message'] and not commit_opts['logfile']:
+            # we don't translate commit messages
+            commit_opts['message'] = "Backed out changeset %s" % short(node)
+            commit_opts['force_editor'] = True
+        commit(ui, repo, **commit_opts)
+        def nice(node):
+            return '%d:%s' % (repo.changelog.rev(node), short(node))
+        ui.status(_('changeset %s backs out changeset %s\n') %
+                  (nice(repo.changelog.tip()), nice(node)))
+        if opts.get('merge') and op1 != node:
+            hg.clean(repo, op1, show_stats=False)
+            ui.status(_('merging with changeset %s\n')
+                      % nice(repo.changelog.tip()))
+            try:
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+                return hg.merge(repo, hex(repo.changelog.tip()))
+            finally:
+                ui.setconfig('ui', 'forcemerge', '')
+    finally:
+        wlock.release()
     return 0
 
 @command('bisect',
