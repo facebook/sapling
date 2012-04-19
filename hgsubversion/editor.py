@@ -10,6 +10,18 @@ import svnwrap
 import util
 import svnexternals
 
+class NeverClosingStringIO(object):
+    def __init__(self):
+        self._fp = cStringIO.StringIO()
+
+    def __getattr__(self, name):
+        return getattr(self._fp, name)
+
+    def close(self):
+        # svn 1.7 apply_delta driver now calls close() on passed file
+        # object which prevent us from calling getvalue() afterwards.
+        pass
+
 class RevisionData(object):
 
     __slots__ = [
@@ -331,7 +343,7 @@ class HgEditor(svnwrap.Editor):
         if self.current.file in self.current.missing:
             return lambda x: None
         base = self.current.files[self.current.file]
-        target = cStringIO.StringIO()
+        target = NeverClosingStringIO()
         self.stream = target
 
         handler = svnwrap.apply_txdelta(base, target)
@@ -342,13 +354,10 @@ class HgEditor(svnwrap.Editor):
             try:
                 if not self.meta.is_path_valid(self.current.file):
                     return
-                # Already get and store the value here, because calling
-                # handler(window) seems to close the target in Subversion 1.7.
-                val = target.getvalue()
                 handler(window)
                 # window being None means commit this file
                 if not window:
-                    self.current.files[self.current.file] = val
+                    self.current.files[self.current.file] = target.getvalue()
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(self.current.file)
