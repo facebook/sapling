@@ -369,6 +369,8 @@ class abstractsubrepo(object):
         return []
 
     def revert(self, ui, substate, *pats, **opts):
+        ui.warn('%s: reverting %s subrepos is unsupported\n' \
+            % (substate[0], substate[2]))
         return []
 
 class hgsubrepo(abstractsubrepo):
