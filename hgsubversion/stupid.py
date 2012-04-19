@@ -711,7 +711,13 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                 deleted_branches[b] = parentctx.node()
             continue
 
-        incremental = (meta.revmap.oldest > 0)
+        # The nullrev check might not be necessary in theory but svn <
+        # 1.7 failed to diff branch creation so the diff_branchrev()
+        # path does not support this case with svn >= 1.7. We can fix
+        # it, or we can force the existing fetch_branchrev() path. Do
+        # the latter for now.
+        incremental = (meta.revmap.oldest > 0 and
+                       parentctx.rev() != node.nullrev)
 
         if incremental:
             try:
