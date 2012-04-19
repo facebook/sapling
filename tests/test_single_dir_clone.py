@@ -111,12 +111,14 @@ class TestSingleDir(test_util.TestBase):
         self.pushrevisions()
         self.assertTrue('adding_file' in test_util.svnls(repo_path, ''))
         self.assertEqual('application/octet-stream',
-                         self.svnpropget('adding_binary', 'svn:mime-type'))
+                         test_util.svnpropget(repo_path, 'adding_binary',
+                                              'svn:mime-type'))
         # Now add another commit and test mime-type being reset
         changes = [('adding_binary', 'adding_binary', 'no longer binary')]
         self.commitchanges(changes)
         self.pushrevisions()
-        self.assertEqual('', self.svnpropget('adding_binary', 'svn:mime-type'))
+        self.assertEqual('', test_util.svnpropget(repo_path, 'adding_binary',
+                                                  'svn:mime-type'))
 
     def test_push_single_dir_at_subdir(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',

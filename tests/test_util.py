@@ -221,6 +221,18 @@ def svnls(repo_path, path, rev='HEAD'):
     entries.sort()
     return entries
 
+def svnpropget(repo_path, path, prop, rev='HEAD'):
+    path = repo_path + '/' + path
+    path = util.normalize_url(fileurl(path))
+    args = ['svn', 'propget', '-r', str(rev), prop, path]
+    p = subprocess.Popen(args,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+    stdout, stderr = p.communicate()
+    if p.returncode:
+        raise Exception('svn ls failed on %s: %r' % (path, stderr))
+    return stdout.strip()
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         _verify_our_modules()
@@ -366,18 +378,6 @@ class TestBase(unittest.TestCase):
         stdout, stderr = p.communicate()
         if p.returncode:
             raise Exception('svn co failed on %s: %r' % (svnpath, stderr))
-
-    def svnpropget(self, path, prop, rev='HEAD'):
-        path = self.repo_path + '/' + path
-        path = util.normalize_url(fileurl(path))
-        args = ['svn', 'propget', '-r', str(rev), prop, path]
-        p = subprocess.Popen(args,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT)
-        stdout, stderr = p.communicate()
-        if p.returncode:
-            raise Exception('svn ls failed on %s: %r' % (path, stderr))
-        return stdout.strip()
 
     def commitchanges(self, changes, parent='tip', message='automated test'):
         """Commit changes to mercurial directory
