@@ -344,6 +344,10 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
     copies = getcopies(svn, meta, branch, branchpath, r, touched_files,
                        parentctx)
 
+    # We note binary files because svn's diff format doesn't describe
+    # what changed, only that a change occurred. This means we'll have
+    # to pull them as fulltexts from the server outside the diff
+    # apply.
     binary_files = set(f.name for f in changed if f.binary)
     exec_files = dict((f.name, f.executable) for f in changed
                       if f.executable is not None)
