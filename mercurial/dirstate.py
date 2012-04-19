@@ -244,7 +244,11 @@ class dirstate(object):
         if branch in ['tip', '.', 'null']:
             raise util.Abort(_('the name \'%s\' is reserved') % branch)
         self._branch = encoding.fromlocal(branch)
-        self._opener.write("branch", self._branch + '\n')
+        f = self._opener('branch', 'w', atomictemp=True)
+        try:
+            f.write(self._branch + '\n')
+        finally:
+            f.close()
 
     def _read(self):
         self._map = {}
