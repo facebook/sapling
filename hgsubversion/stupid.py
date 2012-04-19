@@ -80,6 +80,10 @@ class filediff:
     def isempty(self):
         return (not self.diff and not self.binary and not self.hasprops)
 
+    def maybedir(self):
+        return (not self.diff and not self.binary and self.hasprops
+                and self.symlink is None and self.executable is None)
+
 def parsediff(diff):
     changes = {}
     headers = headers_re.split(diff)[1:]
@@ -319,6 +323,23 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
 
     touched_files.update(files_data)
     touched_files.update(unknown_files)
+
+    # As of svn 1.7, diff may contain a lot of property changes for
+    # directories. We do not what to include these in our touched
+    # files list so we try to filter them while minimizing the number
+    # of svn API calls.
+    property_files = set(f.name for f in changed if f.maybedir())
+    property_files.discard('.')
+    touched_files.discard('.')
+    branchprefix = (branchpath and branchpath + '/') or branchpath
+    for f in list(property_files):
+        if f in parentctx:
+            continue
+        # We can be smarter here by checking if f is a subcomponent
+        # of a know path in parentctx or touched_files. KISS for now.
+        kind = svn.checkpath(branchprefix + f, r.revnum)
+        if kind == 'd':
+            touched_files.discard(f)
 
     copies = getcopies(svn, meta, branch, branchpath, r, touched_files,
                        parentctx)
