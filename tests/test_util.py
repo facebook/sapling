@@ -158,18 +158,6 @@ def testui(stupid=False, layout='auto', startrev=0):
     u.setconfig('hgsubversion', 'startrev', startrev)
     return u
 
-def load_svndump_fixture(path, fixture_name):
-    '''Loads an svnadmin dump into a fresh repo at path, which should not
-    already exist.
-    '''
-    if os.path.exists(path): rmtree(path)
-    subprocess.call(['svnadmin', 'create', path, ],
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    inp = open(os.path.join(FIXTURES, fixture_name))
-    proc = subprocess.Popen(['svnadmin', 'load', path, ], stdin=inp,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    proc.communicate()
-
 def dispatch(cmd):
     try:
         req = dispatchmod.request(cmd)
@@ -266,6 +254,21 @@ class TestBase(unittest.TestCase):
     def ui(self, stupid=False, layout='auto'):
         return testui(stupid, layout)
 
+    def load_svndump(self, fixture_name):
+        '''Loads an svnadmin dump into a fresh repo. Return the svn repo
+        path.
+        '''
+        path = self.repo_path
+        if os.path.exists(path):
+            rmtree(path)
+        subprocess.call(['svnadmin', 'create', path,],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        inp = open(os.path.join(FIXTURES, fixture_name))
+        proc = subprocess.Popen(['svnadmin', 'load', path,], stdin=inp,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        proc.communicate()
+        return path
+
     def _load_fixture_and_fetch(self, fixture_name, subdir=None, stupid=False,
                                 layout='auto', startrev=0, externals=None,
                                 noupdate=True):
@@ -274,8 +277,8 @@ class TestBase(unittest.TestCase):
                 subdir = 'trunk'
         elif subdir is None:
             subdir = ''
-        load_svndump_fixture(self.repo_path, fixture_name)
-        projectpath = self.repo_path
+        repo_path = self.load_svndump(fixture_name)
+        projectpath = repo_path
         if subdir:
             projectpath += '/' + subdir
 

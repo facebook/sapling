@@ -76,15 +76,15 @@ class PushTests(test_util.TestBase):
         self.assertEqual(new_hash, tip.node())
 
     def internal_push_over_svnserve(self, subdir='', commit=True):
-        test_util.load_svndump_fixture(self.repo_path, 'simple_branch.svndump')
-        open(os.path.join(self.repo_path, 'conf', 'svnserve.conf'),
+        repo_path = self.load_svndump('simple_branch.svndump')
+        open(os.path.join(repo_path, 'conf', 'svnserve.conf'),
              'w').write('[general]\nanon-access=write\n[sasl]\n')
         self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
         self.host = 'localhost'
         args = ['svnserve', '--daemon', '--foreground',
                 '--listen-port=%d' % self.port,
                 '--listen-host=%s' % self.host,
-                '--root=%s' % self.repo_path]
+                '--root=%s' % repo_path]
 
         svnserve = subprocess.Popen(args, stdout=subprocess.PIPE,
                                     stderr=subprocess.STDOUT)

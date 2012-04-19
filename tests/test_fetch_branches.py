@@ -8,8 +8,8 @@ from mercurial import util as hgutil
 
 class TestFetchBranches(test_util.TestBase):
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
-        test_util.load_svndump_fixture(self.repo_path, fixture_name)
-        source = '%s#%s' % (test_util.fileurl(self.repo_path), anchor)
+        repo_path = self.load_svndump(fixture_name)
+        source = '%s#%s' % (test_util.fileurl(repo_path), anchor)
         test_util.hgclone(self.ui(), source, self.wc_path)
         return hg.repository(self.ui(), self.wc_path)
 

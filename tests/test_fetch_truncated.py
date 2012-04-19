@@ -8,8 +8,8 @@ from mercurial import hg
 class TestFetchTruncatedHistory(test_util.TestBase):
     def test_truncated_history(self, stupid=False):
         # Test repository does not follow the usual layout
-        test_util.load_svndump_fixture(self.repo_path, 'truncatedhistory.svndump')
-        svn_url = test_util.fileurl(self.repo_path + '/project2')
+        repo_path = self.load_svndump('truncatedhistory.svndump')
+        svn_url = test_util.fileurl(repo_path + '/project2')
         commands.clone(self.ui(stupid), svn_url, self.wc_path, noupdate=True)
         repo = hg.repository(self.ui(stupid), self.wc_path)
 

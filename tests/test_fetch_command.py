@@ -152,12 +152,11 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.test_fetch_when_trunk_has_no_files(stupid=True)
 
     def test_path_quoting(self, stupid=False):
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'non_ascii_path_1.svndump')
+        repo_path = self.load_svndump('non_ascii_path_1.svndump')
         subdir = '/b\xC3\xB8b'
         quoted_subdir = urllib.quote(subdir)
 
-        repo_url = test_util.fileurl(self.repo_path)
+        repo_url = test_util.fileurl(repo_path)
         wc_path = self.wc_path
         wc2_path = wc_path + '-2'
 

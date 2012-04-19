@@ -228,24 +228,21 @@ class UtilityTests(test_util.TestBase):
                                '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
     def test_list_authors(self):
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'replace_trunk_with_branch.svndump')
+        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
         u = self.ui()
         u.pushbuffer()
         svncommands.listauthors(u,
-                                     args=[test_util.fileurl(self.repo_path)],
+                                     args=[test_util.fileurl(repo_path)],
                                      authors=None)
         actual = u.popbuffer()
         self.assertMultiLineEqual(actual, 'Augie\nevil\n')
 
-
     def test_list_authors_map(self):
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'replace_trunk_with_branch.svndump')
-        author_path = os.path.join(self.repo_path, 'authors')
+        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
+        author_path = os.path.join(repo_path, 'authors')
         svncommands.listauthors(self.ui(),
-                                     args=[test_util.fileurl(self.repo_path)],
-                                     authors=author_path)
+                                args=[test_util.fileurl(repo_path)],
+                                authors=author_path)
         self.assertMultiLineEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
 

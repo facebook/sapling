@@ -229,12 +229,11 @@ class TestSingleDir(test_util.TestBase):
     def test_push_single_dir_renamed_branch(self, stupid=False):
         # Tests pulling and pushing with a renamed branch
         # Based on test_push_single_dir
-        test_util.load_svndump_fixture(self.repo_path,
-                                       'branch_from_tag.svndump')
+        repo_path = self.load_svndump('branch_from_tag.svndump')
         cmd = ['clone', '--layout=single', '--branch=flaf']
         if stupid:
             cmd.append('--stupid')
-        cmd += [test_util.fileurl(self.repo_path), self.wc_path]
+        cmd += [test_util.fileurl(repo_path), self.wc_path]
         test_util.dispatch(cmd)
 
         def file_callback(repo, memctx, path):
