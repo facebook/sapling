@@ -19,9 +19,14 @@ def pickle_atomic(data, file_path):
     This is present because I kept corrupting my revmap by managing to hit ^C
     during the pickle of that file.
     """
-    f = hgutil.atomictempfile(file_path, createmode=0644)
+    f = hgutil.atomictempfile(file_path, 'w+b', 0644)
     pickle.dump(data, f)
-    f.close()
+    # Older versions of hg have .rename() instead of .close on
+    # atomictempfile.
+    if getattr(hgutil.atomictempfile, 'rename', False):
+        f.rename()
+    else:
+        f.close()
 
 
 class SVNMeta(object):
