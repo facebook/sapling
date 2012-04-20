@@ -3,20 +3,10 @@ import test_util
 import imp
 import os
 import subprocess
-import shutil
 import tempfile
 import unittest
 
 from hgsubversion import svnwrap
-
-import os
-import stat
-def force_rm(path):
-    os.chmod(
-        path,
-        os.stat(path).st_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
-    )
-    os.remove(path)
 
 class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
@@ -35,8 +25,7 @@ class TestBasicRepoLayout(unittest.TestCase):
 
     def tearDown(self):
         del self.repo
-        shutil.rmtree(self.tmpdir, onerror=lambda func, path, e: force_rm(path))
-
+        test_util.rmtree(self.tmpdir)
 
     def test_num_revs(self):
         revs = list(self.repo.revisions())
