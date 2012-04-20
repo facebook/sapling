@@ -230,7 +230,7 @@ def extract(ui, fileobj):
                         elif line.startswith("# Node ID "):
                             nodeid = line[10:]
                         elif line.startswith("# Parent "):
-                            parents.append(line[10:])
+                            parents.append(line[9:].lstrip())
                         elif not line.startswith("# "):
                             hgpatchheader = False
                     elif line == '---' and gitsendmail:

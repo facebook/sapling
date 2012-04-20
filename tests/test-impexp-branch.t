@@ -1,3 +1,6 @@
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo 'mq =' >> $HGRCPATH
+
   $ cat >findbranch.py <<EOF
   > import re, sys
   > 
@@ -55,3 +58,14 @@ Make sure import still works with branch information in patches.
   applying ../r0.patch
   $ hg import --exact ../r1.patch
   applying ../r1.patch
+
+Test --exact and patch header separators (issue3356)
+
+  $ hg strip --no-backup .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  >>> import re
+  >>> p = file('../r1.patch', 'rb').read()
+  >>> p = re.sub(r'Parent\s+', 'Parent ', p)
+  >>> file('../r1-ws.patch', 'wb').write(p)
+  $ hg import --exact ../r1-ws.patch
+  applying ../r1-ws.patch
