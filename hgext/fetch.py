@@ -23,10 +23,9 @@ def fetch(ui, repo, source='default', **opts):
     Otherwise, the working directory is updated to include the new
     changes.
 
-    When a merge occurs, the newly pulled changes are assumed to be
-    "authoritative". The head of the new changes is used as the first
-    parent, with local changes as the second. To switch the merge
-    order, use --switch-parent.
+    When a merge is needed, the working directory is first updated to
+    the newly pulled changes. Local changes are then merged into the
+    pulled changes. To switch the merge order, use --switch-parent.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
