@@ -17,11 +17,11 @@ check: check-demandimport check-subvertpy check-swig
 check-demandimport:
 	# verify that hgsubversion loads properly without bindings, but fails
 	# when actually used
-	! LC_ALL=C HGSUBVERSION_BINDINGS=none \
+	! LC_ALL=C HGSUBVERSION_BINDINGS=none HGRCPATH=/dev/null \
 	  hg --config extensions.hgsubversion=./hgsubversion \
 	  version 2>&1 \
 	  | egrep '(^abort:|failed to import extension)'
-	LC_ALL=C HGSUBVERSION_BINDINGS=none \
+	LC_ALL=C HGSUBVERSION_BINDINGS=none HGRCPATH=/dev/null \
 	  hg --config extensions.hgsubversion=./hgsubversion \
 	  version --svn 2>&1 \
 	  | egrep '(^abort:|failed to import extension)'
