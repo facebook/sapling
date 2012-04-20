@@ -1,6 +1,5 @@
 import test_util
 
-import imp
 import os
 import subprocess
 import tempfile

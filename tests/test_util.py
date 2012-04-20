@@ -2,7 +2,6 @@ import StringIO
 import difflib
 import errno
 import gettext
-import imp
 import os
 import shutil
 import stat
