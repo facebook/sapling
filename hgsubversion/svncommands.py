@@ -73,8 +73,16 @@ def verify(ui, repo, args=None, **opts):
 
     hgfiles = set(ctx) - util.ignoredfiles
     if hgfiles != svnfiles:
-        missing = set(hgfiles).symmetric_difference(svnfiles)
-        ui.write('missing files: %s\n' % (', '.join(sorted(missing))))
+        unexpected = hgfiles - svnfiles
+        if unexpected:
+            ui.write('unexpected files:\n')
+            for f in sorted(unexpected):
+                ui.write('  %s\n' % f)
+        missing = svnfiles - hgfiles
+        if missing:
+            ui.write('missing files:\n')
+            for f in sorted(missing):
+                ui.write('  %s\n' % f)
         result = 1
 
     return result

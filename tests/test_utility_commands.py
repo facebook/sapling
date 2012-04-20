@@ -261,7 +261,10 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual("""\
 verifying d51f46a715a1 against file://
 difference in file binary2
-missing files: binary1, binary3
+unexpected files:
+  binary1
+missing files:
+  binary3
 """, output)
 
 def suite():
