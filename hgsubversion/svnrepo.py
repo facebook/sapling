@@ -84,7 +84,7 @@ def generate_repo_class(ui, repo):
         def svn_commitctx(self, ctx):
             """Commits a ctx, but defeats manifest recycling introduced in hg 1.9."""
             hash = self.commitctx(ctxctx(ctx))
-            if phases is not None:
+            if phases is not None and getattr(self, 'pushkey', False):
                 # set phase to be public
                 self.pushkey('phases', self[hash].hex(), str(phases.draft), str(phases.public))
             return hash
