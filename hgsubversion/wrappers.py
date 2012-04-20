@@ -1,7 +1,11 @@
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
-from mercurial import discovery
+try:
+    from mercurial import discovery
+    discovery.nullid  # force demandimport to import the module
+except ImportError:
+    discovery = None
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -92,10 +96,11 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
     common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
-    outobj = getattr(discovery, 'outgoing', None)
-    if outobj is not None:
-        # Mercurial 2.1 and later
-        return outobj(repo.changelog, common, heads)
+    if discovery is not None:
+        outobj = getattr(discovery, 'outgoing', None)
+        if outobj is not None:
+            # Mercurial 2.1 and later
+            return outobj(repo.changelog, common, heads)
     # Mercurial 2.0 and earlier
     return common, heads
 
