@@ -1051,7 +1051,11 @@ class binhunk(object):
                 l = ord(l) - ord('A') + 1
             else:
                 l = ord(l) - ord('a') + 27
-            dec.append(base85.b85decode(line[1:-1])[:l])
+            try:
+                dec.append(base85.b85decode(line[1:-1])[:l])
+            except ValueError, e:
+                raise PatchError(_('could not decode binary patch: %s')
+                                 % str(e))
             line = lr.readline()
             self.hunk.append(line)
         text = zlib.decompress(''.join(dec))
