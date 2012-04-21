@@ -1228,7 +1228,7 @@ def commit(ui, repo, *pats, **opts):
     bheads = repo.branchheads(branch)
 
     if opts.get('amend'):
-        if ui.config('ui', 'commitsubrepos'):
+        if ui.configbool('ui', 'commitsubrepos'):
             raise util.Abort(_('cannot amend recursively'))
 
         old = repo['.']
