@@ -20,4 +20,5 @@ sys	- sys sys
 						mercurial-VERSION-py2.5.egg-info	- sys sys
 	src	- sys sys
 		cmd	- sys sys
-			mercurial	- sys sys
+			hg	- sys sys
+				+	- sys sys
