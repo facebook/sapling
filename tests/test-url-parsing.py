@@ -29,6 +29,12 @@ class TestUrlParsing(object):
         self.assertEquals(path, '/webjam/webjam.git')
         self.assertEquals(client.host, 'git@github.com')
 
+    def test_ssh_github_style_colon_number_starting_username(self):
+        url = "git+ssh://git@github.com:42qu/vps.git"
+        client, path = self.handler.get_transport_and_path(url)
+        self.assertEquals(path, '42qu/vps.git')
+        self.assertEquals(client.host, 'git@github.com')
+
     def test_ssh_github_style_colon(self):
         url = "git+ssh://git@github.com:webjam/webjam.git"
         client, path = self.handler.get_transport_and_path(url)
