@@ -89,14 +89,7 @@ class TestUrlParsing(object):
 
 if __name__ == '__main__':
     tc = TestUrlParsing()
-    for test in ['test_ssh_github_style_slash',
-                 'test_ssh_github_style_colon',
-                 'test_ssh_heroku_style',
-                 'test_ssh_heroku_style_with_trailing_slash',
-                 'test_heroku_style_with_port',
-                 'test_gitdaemon_style',
-                 'test_ssh_github_style_slash_with_port',
-                 'test_gitdaemon_style_with_port']:
+    for test in sorted([t for t in dir(tc) if t.startswith('test_')]):
         tc.setUp()
         getattr(tc, test)()
         tc.tearDown()
