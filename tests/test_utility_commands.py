@@ -2,6 +2,7 @@ import test_util
 
 import os
 import unittest
+import re
 
 from hgext import rebase
 from mercurial import hg
@@ -244,6 +245,24 @@ class UtilityTests(test_util.TestBase):
                                 authors=author_path)
         self.assertMultiLineEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
+    def test_svnverify(self):
+        repo, repo_path = self.load_and_fetch('binaryfiles.svndump',
+                                              noupdate=False)
+        ret = svncommands.verify(self.ui(), repo, [], rev=1)
+        self.assertEqual(0, ret)
+        repo_path = self.load_svndump('binaryfiles-broken.svndump')
+        u = self.ui()
+        u.pushbuffer()
+        ret = svncommands.verify(u, repo, [test_util.fileurl(repo_path)],
+                                 rev=1)
+        output = u.popbuffer()
+        self.assertEqual(1, ret)
+        output = re.sub(r'file://\S+', 'file://', output)
+        self.assertEqual("""\
+verifying d51f46a715a1 against file://
+difference in file binary2
+missing files: binary1, binary3
+""", output)
 
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),

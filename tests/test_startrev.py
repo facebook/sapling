@@ -36,6 +36,7 @@ def buildmethod(case, name, subdir, stupid):
 # these fixtures contain no files at HEAD and would result in empty clones
 nofiles = set([
     'binaryfiles.svndump',
+    'binaryfiles-broken.svndump',
     'emptyrepo.svndump',
 ])
 
