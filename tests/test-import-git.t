@@ -483,4 +483,28 @@ Copy and changes with existing destination
   ? b.rej
   ? linkb.rej
 
+Test corner case involving copies and multiple hunks (issue3384)
+
+  $ hg revert -qa
+  $ hg import --no-commit - <<EOF
+  > diff --git a/a b/c
+  > copy from a
+  > copy to c
+  > --- a/a
+  > +++ b/c
+  > @@ -1,1 +1,2 @@
+  >  a
+  > +a
+  > @@ -2,1 +2,2 @@
+  >  a
+  > +a
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -1,1 +1,2 @@
+  >  a
+  > +b
+  > EOF
+  applying patch from stdin
+
   $ cd ..

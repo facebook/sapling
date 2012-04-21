@@ -290,6 +290,19 @@ class patchmeta(object):
         other.binary = self.binary
         return other
 
+    def _ispatchinga(self, afile):
+        if afile == '/dev/null':
+            return self.op == 'ADD'
+        return afile == 'a/' + (self.oldpath or self.path)
+
+    def _ispatchingb(self, bfile):
+        if bfile == '/dev/null':
+            return self.op == 'DELETE'
+        return bfile == 'b/' + self.path
+
+    def ispatching(self, afile, bfile):
+        return self._ispatchinga(afile) and self._ispatchingb(bfile)
+
     def __repr__(self):
         return "<patchmeta %s %r>" % (self.op, self.path)
 
@@ -1180,8 +1193,8 @@ def iterhunks(fp):
             or x.startswith('GIT binary patch')):
             gp = None
             if (gitpatches and
-                (gitpatches[-1][0] == afile or gitpatches[-1][1] == bfile)):
-                gp = gitpatches.pop()[2]
+                gitpatches[-1].ispatching(afile, bfile)):
+                gp = gitpatches.pop()
             if x.startswith('GIT binary patch'):
                 h = binhunk(lr)
             else:
@@ -1197,22 +1210,21 @@ def iterhunks(fp):
             m = gitre.match(x)
             if not m:
                 continue
-            if not gitpatches:
+            if gitpatches is None:
                 # scan whole input for git metadata
-                gitpatches = [('a/' + gp.path, 'b/' + gp.path, gp) for gp
-                              in scangitpatch(lr, x)]
-                yield 'git', [g[2].copy() for g in gitpatches
-                              if g[2].op in ('COPY', 'RENAME')]
+                gitpatches = scangitpatch(lr, x)
+                yield 'git', [g.copy() for g in gitpatches
+                              if g.op in ('COPY', 'RENAME')]
                 gitpatches.reverse()
             afile = 'a/' + m.group(1)
             bfile = 'b/' + m.group(2)
-            while afile != gitpatches[-1][0] and bfile != gitpatches[-1][1]:
-                gp = gitpatches.pop()[2]
+            while gitpatches and not gitpatches[-1].ispatching(afile, bfile):
+                gp = gitpatches.pop()
                 yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp.copy())
-            gp = gitpatches[-1][2]
-            # copy/rename + modify should modify target, not source
-            if gp.op in ('COPY', 'DELETE', 'RENAME', 'ADD') or gp.mode:
-                afile = bfile
+            if not gitpatches:
+                raise PatchError(_('failed to synchronize metadata for "%s"')
+                                 % afile[2:])
+            gp = gitpatches[-1]
             newfile = True
         elif x.startswith('---'):
             # check for a unified diff
@@ -1247,7 +1259,7 @@ def iterhunks(fp):
             hunknum = 0
 
     while gitpatches:
-        gp = gitpatches.pop()[2]
+        gp = gitpatches.pop()
         yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp.copy())
 
 def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
