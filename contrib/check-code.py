@@ -74,6 +74,7 @@ testpats = [
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
     (r'^alias\b.*=', "don't use alias, use a function"),
     (r'if\s*!', "don't use '!' to negate exit status"),
+    (r'/dev/u?random', "don't use entropy, use /dev/zero"),
   ],
   # warnings
   []

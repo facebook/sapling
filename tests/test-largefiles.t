@@ -815,7 +815,7 @@ Test that renaming a largefile results in correct output for status
 
 Test --normal flag
 
-  $ dd if=/dev/urandom bs=2k count=11k > new-largefile 2> /dev/null
+  $ dd if=/dev/zero bs=2k count=11k > new-largefile 2> /dev/null
   $ hg add --normal --large new-largefile
   abort: --normal cannot be used with --large
   [255]
@@ -945,7 +945,7 @@ We have to simulate that here by setting $HOME and removing write permissions
   $ cd alice
   $ hg init pubrepo
   $ cd pubrepo
-  $ dd if=/dev/urandom bs=1k count=11k > a-large-file 2> /dev/null
+  $ dd if=/dev/zero bs=1k count=11k > a-large-file 2> /dev/null
   $ hg add --large a-large-file
   $ hg commit -m "Add a large file"
   Invoking status precommit hook
