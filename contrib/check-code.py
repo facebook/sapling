@@ -55,7 +55,7 @@ testpats = [
     (r'head -c', "don't use 'head -c', use 'dd'"),
     (r'sha1sum', "don't use sha1sum, use $TESTDIR/md5sum.py"),
     (r'ls.*-\w*R', "don't use 'ls -R', use 'find'"),
-    (r'printf.*\\\d{1,3}', "don't use 'printf \NNN', use Python"),
+    (r'printf.*\\([1-9]|0\d)', "don't use 'printf \NNN', use Python"),
     (r'printf.*\\x', "don't use printf \\x, use Python"),
     (r'\$\(.*\)', "don't use $(expr), use `expr`"),
     (r'rm -rf \*', "don't use naked rm -rf, target a directory"),
