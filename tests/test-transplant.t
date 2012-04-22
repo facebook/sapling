@@ -212,7 +212,9 @@ transplant --continue
   > baz
   > EOF
   $ echo toremove > toremove
+  $ echo baz > baz
   $ hg ci -Amfoo
+  adding baz
   adding foo
   adding toremove
   $ cat <<EOF > foo
@@ -226,17 +228,22 @@ transplant --continue
   adding added
   removing toremove
   $ echo bar > bar
+  $ cat > baz <<EOF
+  > before baz
+  > baz
+  > after baz
+  > EOF
   $ hg ci -Ambar
   adding bar
   $ echo bar2 >> bar
   $ hg ci -mbar2
   $ hg up 0
-  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo foobar > foo
   $ hg ci -mfoobar
   created new head
   $ hg transplant 1:3
-  applying a1e30dd1b8e7
+  applying 46ae92138f3c
   patching file foo
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
@@ -250,7 +257,7 @@ transplant -c shouldn't use an old changeset
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm added
   $ hg transplant 1
-  applying a1e30dd1b8e7
+  applying 46ae92138f3c
   patching file foo
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
@@ -258,17 +265,41 @@ transplant -c shouldn't use an old changeset
   abort: fix up the merge and run hg transplant --continue
   [255]
   $ hg transplant --continue
-  a1e30dd1b8e7 transplanted as f1563cf27039
+  46ae92138f3c transplanted as 9159dada197d
   $ hg transplant 1:3
-  skipping already applied revision 1:a1e30dd1b8e7
-  applying 1739ac5f6139
-  1739ac5f6139 transplanted to d649c221319f
-  applying 0282d5fbbe02
-  0282d5fbbe02 transplanted to 77418277ccb3
+  skipping already applied revision 1:46ae92138f3c
+  applying 9d6d6b5a8275
+  9d6d6b5a8275 transplanted to 2d17a10c922f
+  applying 1dab759070cf
+  1dab759070cf transplanted to e06a69927eb0
   $ hg locate
   added
   bar
+  baz
   foo
+
+test multiple revisions and --continue
+
+  $ hg up -qC 0
+  $ echo bazbaz > baz
+  $ hg ci -Am anotherbaz baz
+  created new head
+  $ hg transplant 1:3
+  applying 46ae92138f3c
+  46ae92138f3c transplanted to 1024233ea0ba
+  applying 9d6d6b5a8275
+  patching file baz
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file baz.rej
+  patch failed to apply
+  abort: fix up the merge and run hg transplant --continue
+  [255]
+  $ echo fixed > baz
+  $ hg transplant --continue
+  9d6d6b5a8275 transplanted as d80c49962290
+  applying 1dab759070cf
+  1dab759070cf transplanted to aa0ffe6bd5ae
+
   $ cd ..
 
 Issue1111: Test transplant --merge
