@@ -380,9 +380,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  @  8:secret 'H2'
-  |
-  o  7:draft 'H'
+  @  7:draft 'H'
   |
   | o  6:draft 'G'
   |/|
@@ -397,12 +395,4 @@ Ensure --continue restores a correct state (issue3046) and phase:
   | o  1:draft 'B'
   |/
   o  0:draft 'A'
-  
-  $ hg export --git 8
-  # HG changeset patch
-  # User test
-  # Date 0 0
-  # Node ID 248209b40064fe67181915fa7a4f3395520f700a
-  # Parent  02de42196ebee42ef284b6780a87cdc96e8eaab6
-  H2
   

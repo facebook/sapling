@@ -117,9 +117,7 @@ already has one local mq patch
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  9: 'r5' tags: 5.diff qtip tip
-  |
-  o  8: 'r4' tags: 4.diff
+  @  8: 'r5' tags: 5.diff qtip tip
   |
   o  7: 'r2' tags: 2.diff qbase
   |
@@ -136,12 +134,4 @@ already has one local mq patch
   o  1: 'branch2-r1' tags:
   |
   o  0: 'r0' tags:
-  
-  $ hg export --git 4.diff
-  # HG changeset patch
-  # User test
-  # Date 0 0
-  # Node ID 315eb21a13c2b06e787f5d0000e36f8f8f3a1768
-  # Parent  1660ab13ce9aea3da22ea54926bd49aeff8a4e20
-  r4
   

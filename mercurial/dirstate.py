@@ -238,7 +238,13 @@ class dirstate(object):
 
     def setparents(self, p1, p2=nullid):
         self._dirty = self._dirtypl = True
+        oldp2 = self._pl[1]
         self._pl = p1, p2
+        if oldp2 != nullid and p2 == nullid:
+            # Discard 'm' markers when moving away from a merge state
+            for f, s in self._map.iteritems():
+                if s[0] == 'm':
+                    self.normallookup(f)
 
     def setbranch(self, branch):
         if branch in ['tip', '.', 'null']:
@@ -386,6 +392,8 @@ class dirstate(object):
 
     def merge(self, f):
         '''Mark a file merged.'''
+        if self._pl[1] == nullid:
+            return self.normallookup(f)
         self._dirty = True
         s = os.lstat(self._join(f))
         self._addpath(f)

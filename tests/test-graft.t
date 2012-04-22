@@ -132,14 +132,11 @@ Graft out of order, skipping a merge and a duplicate
    b: local copied/moved to a -> m
   preserving b for resolve of b
   updating: b 1/1 files (100.00%)
-  b
-   b: searching for copy revision for a
-   b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
   grafting revision 5
     searching for copies back to rev 1
   resolving manifests
    overwrite: False, partial: False
-   ancestor: 4c60f11aa304, local: 6f5ea6ac8b70+, remote: 97f8bfe72746
+   ancestor: 4c60f11aa304, local: d2e44c99fd3f+, remote: 97f8bfe72746
    e: remote is newer -> g
   updating: e 1/1 files (100.00%)
   getting e
@@ -148,7 +145,7 @@ Graft out of order, skipping a merge and a duplicate
     searching for copies back to rev 1
   resolving manifests
    overwrite: False, partial: False
-   ancestor: 4c60f11aa304, local: 77eb504366ab+, remote: 9c233e8e184d
+   ancestor: 4c60f11aa304, local: 839a7e8fcf80+, remote: 9c233e8e184d
    e: versions differ -> m
    d: remote is newer -> g
   preserving e for resolve of e
@@ -157,7 +154,7 @@ Graft out of order, skipping a merge and a duplicate
   updating: e 2/2 files (100.00%)
   picked tool 'internal:merge' for e (binary False symlink False)
   merging e
-  my e@77eb504366ab+ other e@9c233e8e184d ancestor e@68795b066622
+  my e@839a7e8fcf80+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
@@ -203,13 +200,11 @@ Compare with original:
 View graph:
 
   $ hg --config extensions.graphlog= log -G --template '{author}@{rev}.{phase}: {desc}\n'
-  @  test@11.draft: 3
+  @  test@10.draft: 3
   |
-  o  test@10.draft: 4
+  o  test@9.draft: 4
   |
-  o  test@9.draft: 5
-  |
-  o  bar@8.draft: 1
+  o  test@8.draft: 5
   |
   o  foo@7.draft: 2
   |
@@ -227,14 +222,6 @@ View graph:
   |/
   o  test@0.public: 0
   
-  $ hg export --git 8
-  # HG changeset patch
-  # User bar
-  # Date 0 0
-  # Node ID 6f5ea6ac8b705521c6d5f49a04ed142e3f76645d
-  # Parent  d2e44c99fd3f31c176ea4efb9eca9f6306c81756
-  1
-  
 Graft again onto another branch should preserve the original source
   $ hg up -q 0
   $ echo 'g'>g
@@ -250,12 +237,12 @@ Graft again onto another branch should preserve the original source
   2:5c095ad7e90f871700f02dd1fa5012cb4498a2d4
 
   $ hg log --debug -r tip
-  changeset:   13:95adbe5de6b10f376b699ece9ed5a57cd7b4b0f6
+  changeset:   12:95adbe5de6b10f376b699ece9ed5a57cd7b4b0f6
   tag:         tip
   phase:       draft
-  parent:      12:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
+  parent:      11:b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    13:9944044f82a462bbaccc9bdf7e0ac5b811db7d1b
+  manifest:    12:9944044f82a462bbaccc9bdf7e0ac5b811db7d1b
   user:        foo
   date:        Thu Jan 01 00:00:00 1970 +0000
   files+:      b
@@ -273,7 +260,7 @@ Disallow grafting an already grafted cset onto its original branch
   [255]
 
 Disallow grafting already grafted csets with the same origin onto each other
-  $ hg up -q 13
+  $ hg up -q 12
   $ hg graft 2
   skipping already grafted revision 2
   [255]
@@ -286,5 +273,5 @@ Disallow grafting already grafted csets with the same origin onto each other
   skipping already grafted revision 2
   [255]
   $ hg graft tip
-  skipping already grafted revision 13 (same origin 2)
+  skipping already grafted revision 12 (same origin 2)
   [255]
