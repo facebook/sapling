@@ -44,7 +44,7 @@ for T in $TYPES ; do
    T2=`echo $T | tr [:upper:] [:lower:]`
    case $T in
       apple)
-	 ;;
+         ;;
       symlink*)
          echo "this is target $T" >target_$T2
          ln -s target_$T file_$T2
@@ -52,7 +52,7 @@ for T in $TYPES ; do
          p4 add -t $T file_$T2
          ;;
       binary*)
-	 python -c "file('file_$T2', 'wb').write('this is $T')"
+         python -c "file('file_$T2', 'wb').write('this is $T')"
          p4 add -t $T file_$T2
          ;;
       *)
