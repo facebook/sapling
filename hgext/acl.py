@@ -139,9 +139,9 @@ Example Configuration
   # under the "images" folder:
   images/** = jack, @designers
 
-  # Everyone (except for "user6" - see acl.deny above) will have write
-  # access to any file under the "resources" folder (except for 1
-  # file. See acl.deny):
+  # Everyone (except for "user6" and "@hg-denied" - see acl.deny above)
+  # will have write access to any file under the "resources" folder
+  # (except for 1 file. See acl.deny):
   src/main/resources/** = *
 
   .hgtags = release_engineer
