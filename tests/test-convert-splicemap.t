@@ -125,7 +125,7 @@ We want 2 to depend on 1 and 3. Since 3 is always converted after 2,
 the bug should be exhibited with all conversion orders.
 
   $ cat > ../splicemap <<EOF
-  > $(hg id -r 2 -i --debug) $(hg id -r 1 -i --debug), $(hg id -r 3 -i --debug)
+  > `(hg id -r 2 -i --debug)` `(hg id -r 1 -i --debug)`, `(hg id -r 3 -i --debug)`
   > EOF
   $ cd ..
   $ cat splicemap
@@ -169,9 +169,9 @@ and destination identifiers. Test unknown splicemap target.
   converting...
   0 addb
   $ cat > splicemap <<EOF
-  > $(hg -R ordered id -r 2 -i --debug) \
-  > $(hg -R ordered-hg2 id -r 1 -i --debug),\
-  > $(hg -R ordered-hg2 id -r 2 -i --debug)
+  > `(hg -R ordered id -r 2 -i --debug)` \
+  > `(hg -R ordered-hg2 id -r 1 -i --debug)`,\
+  > `(hg -R ordered-hg2 id -r 2 -i --debug)`
   > deadbeef102a90ea7b4a3361e4082ed620918c26 deadbeef102a90ea7b4a3361e4082ed620918c27
   > EOF
   $ hg convert --splicemap splicemap ordered ordered-hg2
@@ -211,9 +211,9 @@ Test clonebranches
 Test invalid dependency
 
   $ cat > splicemap <<EOF
-  > $(hg -R ordered id -r 2 -i --debug) \
+  > `(hg -R ordered id -r 2 -i --debug)` \
   > deadbeef102a90ea7b4a3361e4082ed620918c26,\
-  > $(hg -R ordered-hg2 id -r 2 -i --debug)
+  > `(hg -R ordered-hg2 id -r 2 -i --debug)`
   > EOF
   $ hg convert --splicemap splicemap ordered ordered-hg4
   initializing destination ordered-hg4 repository
