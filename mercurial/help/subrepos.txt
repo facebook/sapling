@@ -10,7 +10,8 @@ Subrepositories are made of three components:
 1. Nested repository checkouts. They can appear anywhere in the
    parent working directory.
 
-2. Nested repository references. They are defined in ``.hgsub`` and
+2. Nested repository references. They are defined in ``.hgsub``, which
+   should be placed in the root of working directory, and
    tell where the subrepository checkouts come from. Mercurial
    subrepositories are referenced like:
 
@@ -30,7 +31,8 @@ Subrepositories are made of three components:
    repositories, you have to create and add it to the parent
    repository before using subrepositories.
 
-3. Nested repository states. They are defined in ``.hgsubstate`` and
+3. Nested repository states. They are defined in ``.hgsubstate``, which
+   is placed in the root of working directory, and
    capture whatever information is required to restore the
    subrepositories to the state they were committed in a parent
    repository changeset. Mercurial automatically record the nested
