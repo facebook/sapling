@@ -37,26 +37,27 @@ use a hook to make the second pull start while the first one is still running
 
 start a pull...
 
-  $ hg pull ../source1 &
+  $ hg pull ../source1 > pull.out 2>&1 &
 
 ... and start another pull before the first one has finished
 
   $ sleep 1
-  pulling from ../source1
-  requesting all changes
   $ hg pull ../source2 2>/dev/null
   pulling from ../source2
-  adding changesets
-  adding manifests
-  adding file changes
-  added 10 changesets with 10 changes to 1 files
-  (run 'hg update' to get a working copy)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ cat pull.out
+  pulling from ../source1
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 10 changesets with 10 changes to 1 files
+  (run 'hg update' to get a working copy)
 
 see the result
 
