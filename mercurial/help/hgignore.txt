@@ -63,6 +63,10 @@ the form ``*.c`` will match a file ending in ``.c`` in any directory,
 and a regexp pattern of the form ``\.c$`` will do the same. To root a
 regexp pattern, start it with ``^``.
 
+.. note::
+  Patterns specified in other than ``.hgignore`` are always rooted.
+  Please see :hg:`help patterns` for details.
+
 Example
 -------
 
