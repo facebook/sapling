@@ -202,6 +202,13 @@ def overrideremove(orig, ui, repo, *pats, **opts):
     restorematchfn()
     removelargefiles(ui, repo, *pats, **opts)
 
+def overridestatusfn(orig, repo, rev2, **opts):
+    try:
+        repo._repo.lfstatus = True
+        return orig(repo, rev2, **opts)
+    finally:
+        repo._repo.lfstatus = False
+
 def overridestatus(orig, ui, repo, *pats, **opts):
     try:
         repo.lfstatus = True

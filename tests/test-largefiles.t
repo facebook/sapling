@@ -1050,5 +1050,29 @@ verify that largefiles doesn't break filesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add files
   
-
+verify that large files in subrepos handled properly
+  $ hg init subrepo
+  $ echo "subrepo = subrepo" > .hgsub
+  $ hg add .hgsub
+  $ hg ci -m "add subrepo"
+  Invoking status precommit hook
+  A .hgsub
+  ? .hgsubstate
+  $ echo "rev 1" > subrepo/large.txt
+  $ hg -R subrepo add --large subrepo/large.txt
+  $ hg st
+  $ hg st -S
+  A subrepo/large.txt
+# This is a workaround for not noticing the subrepo is dirty
+  $ hg -R subrepo ci -m "commit large file"
+  Invoking status precommit hook
+  A large.txt
+  $ hg ci -S -m "commit top repo"
+  Invoking status precommit hook
+  M .hgsubstate
+  $ hg st -S
+  $ echo "rev 2" > subrepo/large.txt
+  $ hg st -S
+  M subrepo/large.txt
+ 
   $ cd ..
