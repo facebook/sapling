@@ -23,7 +23,7 @@
   are being pushed, from the sending or receiving side.
   
   First, enable the extension as explained in "hg help extensions", and register
-  the hook you want to run. "incoming" and "outgoing" hooks are run by the
+  the hook you want to run. "incoming" and "changegroup" hooks are run by the
   changesets receiver while the "outgoing" one is for the sender:
   
     [hooks]
