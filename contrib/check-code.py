@@ -73,6 +73,7 @@ testpats = [
     (r'^stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
     (r'^alias\b.*=', "don't use alias, use a function"),
+    (r'if\s*!', "don't use '!' to negate exit status"),
   ],
   # warnings
   []
