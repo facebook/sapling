@@ -227,6 +227,14 @@ View graph:
   |/
   o  test@0.public: 0
   
+  $ hg export --git 8
+  # HG changeset patch
+  # User bar
+  # Date 0 0
+  # Node ID 6f5ea6ac8b705521c6d5f49a04ed142e3f76645d
+  # Parent  d2e44c99fd3f31c176ea4efb9eca9f6306c81756
+  1
+  
 Graft again onto another branch should preserve the original source
   $ hg up -q 0
   $ echo 'g'>g

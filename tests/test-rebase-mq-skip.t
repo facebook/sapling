@@ -137,3 +137,11 @@ already has one local mq patch
   |
   o  0: 'r0' tags:
   
+  $ hg export --git 4.diff
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID 315eb21a13c2b06e787f5d0000e36f8f8f3a1768
+  # Parent  1660ab13ce9aea3da22ea54926bd49aeff8a4e20
+  r4
+  

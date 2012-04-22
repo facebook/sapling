@@ -398,4 +398,11 @@ Ensure --continue restores a correct state (issue3046) and phase:
   |/
   o  0:draft 'A'
   
-
+  $ hg export --git 8
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID 248209b40064fe67181915fa7a4f3395520f700a
+  # Parent  02de42196ebee42ef284b6780a87cdc96e8eaab6
+  H2
+  
