@@ -273,7 +273,7 @@ Follow copies/renames:
   $ hg mv c d
   $ hg ci --amend -m 'b -> d'
   saved backup bundle to $TESTTMP/.hg/strip-backup/9c207120aa98-amend-backup.hg
-  $ hg st --rev .^ --copies d
+  $ hg st --rev '.^' --copies d
   A d
     b
   $ hg cp d e
@@ -281,7 +281,7 @@ Follow copies/renames:
   $ hg cp e f
   $ hg ci --amend -m 'f = d'
   saved backup bundle to $TESTTMP/.hg/strip-backup/fda2b3b27b22-amend-backup.hg
-  $ hg st --rev .^ --copies f
+  $ hg st --rev '.^' --copies f
   A f
     d
 
