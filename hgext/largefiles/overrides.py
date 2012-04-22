@@ -216,6 +216,13 @@ def overridestatus(orig, ui, repo, *pats, **opts):
     finally:
         repo.lfstatus = False
 
+def overridedirty(orig, repo, ignoreupdate=False):
+    try:
+        repo._repo.lfstatus = True
+        return orig(repo, ignoreupdate)
+    finally:
+        repo._repo.lfstatus = False
+
 def overridelog(orig, ui, repo, *pats, **opts):
     try:
         repo.lfstatus = True

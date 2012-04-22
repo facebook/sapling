@@ -81,6 +81,10 @@ def uisetup(ui):
     entry = extensions.wrapfunction(cmdutil, 'copy',
                                     overrides.overridecopy)
 
+    # Summary calls dirty on the subrepos
+    entry = extensions.wrapfunction(hgsubrepo, 'dirty',
+                                    overrides.overridedirty)
+
     # Backout calls revert so we need to override both the command and the
     # function
     entry = extensions.wrapcommand(commands.table, 'revert',

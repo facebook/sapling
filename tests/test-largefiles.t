@@ -1060,19 +1060,40 @@ verify that large files in subrepos handled properly
   ? .hgsubstate
   $ echo "rev 1" > subrepo/large.txt
   $ hg -R subrepo add --large subrepo/large.txt
+  $ hg sum
+  parent: 1:8ee150ea2e9c tip
+   add subrepo
+  branch: default
+  commit: 1 subrepos
+  update: (current)
   $ hg st
   $ hg st -S
   A subrepo/large.txt
-# This is a workaround for not noticing the subrepo is dirty
-  $ hg -R subrepo ci -m "commit large file"
+  $ hg ci -S -m "commit top repo"
+  committing subrepository subrepo
   Invoking status precommit hook
   A large.txt
-  $ hg ci -S -m "commit top repo"
   Invoking status precommit hook
   M .hgsubstate
+# No differences
   $ hg st -S
+  $ hg sum
+  parent: 2:ce4cd0c527a6 tip
+   commit top repo
+  branch: default
+  commit: (clean)
+  update: (current)
   $ echo "rev 2" > subrepo/large.txt
   $ hg st -S
   M subrepo/large.txt
- 
+  $ hg sum
+  parent: 2:ce4cd0c527a6 tip
+   commit top repo
+  branch: default
+  commit: 1 subrepos
+  update: (current)
+  $ hg ci -m "this commit should fail without -S"
+  abort: uncommitted changes in subrepo subrepo
+  (use --subrepos for recursive commit)
+  [255]
   $ cd ..
