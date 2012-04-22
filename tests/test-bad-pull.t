@@ -20,7 +20,7 @@
 
   $ python dumb.py 2> log &
   $ P=$!
-  $ while [ ! -f listening ]; do true; done
+  $ while [ ! -f listening ]; do sleep 0; done
   $ hg clone http://localhost:$HGPORT/foo copy2
   abort: HTTP Error 404: * (glob)
   [255]

@@ -75,6 +75,7 @@ testpats = [
     (r'^alias\b.*=', "don't use alias, use a function"),
     (r'if\s*!', "don't use '!' to negate exit status"),
     (r'/dev/u?random', "don't use entropy, use /dev/zero"),
+    (r'do\s*true;\s*done', "don't use true as loop body, use sleep 0"),
   ],
   # warnings
   []
@@ -98,8 +99,6 @@ utestpats = [
     (uprefix + r'set -e', "don't use set -e"),
     (uprefix + r'\s', "don't indent commands, use > for continued lines"),
     (uprefixc + r'( *)\t', "don't use tabs to indent"),
-    (uprefixc + r'.*do\s*true;\s*done',
-     "don't use true as loop body, use sleep 0"),
   ],
   # warnings
   []

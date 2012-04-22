@@ -9,7 +9,7 @@
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ "$TESTDIR/tinyproxy.py" $HGPORT1 localhost >proxy.log 2>&1 </dev/null &
-  $ while [ ! -f proxy.pid ]; do true; done
+  $ while [ ! -f proxy.pid ]; do sleep 0; done
   $ cat proxy.pid >> $DAEMON_PIDS
 
 url for proxy, stream
