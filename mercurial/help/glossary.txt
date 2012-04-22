@@ -237,6 +237,9 @@ Head, closed branch
     closed when all its heads are closed and consequently is not
     listed by :hg:`branches`.
 
+    Closed heads can be re-opened by committing new changeset as the
+    child of the changeset that marks a head as closed.
+
 Head, repository
     A topological head which has not been closed.
 
