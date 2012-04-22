@@ -135,7 +135,7 @@ Child changeset
     See 'Changeset, child'.
 
 Close changeset
-    See 'Changeset, close'.
+    See 'Head, closed branch'
 
 Closed branch
     See 'Branch, closed'.
