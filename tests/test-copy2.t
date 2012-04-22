@@ -100,7 +100,7 @@ copy --after on an added file
     bar
 
 foo was clean:
-  $  hg st -AC foo
+  $ hg st -AC foo
   C foo
 but it's considered modified after a copy --after --force
   $ hg copy -Af bar foo

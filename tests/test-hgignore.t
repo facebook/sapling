@@ -48,7 +48,7 @@ Should display baz only:
   [255]
 
   $ echo ".*\.o" > .hgignore
-  $  hg status
+  $ hg status
   A dir/b.o
   ? .hgignore
   ? a.c

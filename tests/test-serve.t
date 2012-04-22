@@ -28,9 +28,9 @@ Without -v
   $ hg serve -a localhost -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> "$DAEMON_PIDS"
   $ if [ -f access.log ]; then
-  $     echo 'access log created - .hg/hgrc respected'
+  >     echo 'access log created - .hg/hgrc respected'
+  > fi
   access log created - .hg/hgrc respected
-  $ fi
 
 errors
 

@@ -95,6 +95,7 @@ utestpats = [
     (uprefix + r'.*\|\| echo.*(fail|error)',
      "explicit exit code checks unnecessary"),
     (uprefix + r'set -e', "don't use set -e"),
+    (uprefix + r'\s', "don't indent commands, use > for continued lines"),
     (uprefixc + r'( *)\t', "don't use tabs to indent"),
     (uprefixc + r'.*do\s*true;\s*done',
      "don't use true as loop body, use sleep 0"),
