@@ -43,7 +43,7 @@ def rephere(m):
 
 testpats = [
   [
-    (r'(pushd|popd)', "don't use 'pushd' or 'popd', use 'cd'"),
+    (r'pushd|popd', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
     (r'^function', "don't use 'function', use old style"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
@@ -108,9 +108,9 @@ utestpats = [
 for i in [0, 1]:
     for p, m in testpats[i]:
         if p.startswith(r'^'):
-            p = uprefix + p[1:]
+            p = r"^  \$ (%s)" % p[1:]
         else:
-            p = uprefix + ".*" + p
+            p = r"^  \$ .*(%s)" % p
         utestpats[i].append((p, m))
 
 utestfilters = [
