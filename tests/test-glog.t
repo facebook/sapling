@@ -1428,7 +1428,7 @@ Test log -G options
   >     | sed 's/.*nodetag/nodetag/' > log.nodes
   >   hg log -G --template 'nodetag {rev}\n' "$@" | grep nodetag \
   >     | sed 's/.*nodetag/nodetag/' > glog.nodes
-  >   diff -u log.nodes glog.nodes
+  >   diff -u log.nodes glog.nodes | grep '^[-+@ ]' || :
   > }
 
 glog always reorders nodes which explains the difference with log
@@ -1448,7 +1448,6 @@ glog always reorders nodes which explains the difference with log
   +nodetag 27
   +nodetag 25
   +nodetag 21
-  [1]
   $ testlog -u test -u not-a-user
   []
   (group
@@ -1975,7 +1974,6 @@ Test --follow and forward --rev
    nodetag 8
    nodetag 7
   +nodetag 6
-  [1]
 
 Test --follow-first and forward --rev
 
@@ -1992,7 +1990,6 @@ Test --follow-first and forward --rev
    nodetag 8
    nodetag 7
   +nodetag 6
-  [1]
 
 Test --follow and backward --rev
 
