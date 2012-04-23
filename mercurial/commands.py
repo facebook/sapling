@@ -5660,9 +5660,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
         rev = cmdutil.finddate(ui, repo, date)
 
     if check:
-        # we could use dirty() but we can ignore merge and branch trivia
         c = repo[None]
-        if c.modified() or c.added() or c.removed():
+        if c.dirty(merge=False, branch=False):
             raise util.Abort(_("uncommitted local changes"))
         if rev is None:
             rev = repo[repo[None].branch()].rev()
