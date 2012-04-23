@@ -169,7 +169,7 @@ def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
         return s.encode('ascii').lower()
-    except UnicodeDecodeError:
+    except UnicodeError:
         pass
     try:
         if isinstance(s, localstr):
