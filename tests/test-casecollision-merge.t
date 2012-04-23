@@ -143,14 +143,14 @@ test for rename awareness of case-folding collision check:
   $ hg commit -m '#2'
 
   $ hg update 0
-  abort: case-folding collision between a and A
-  [255]
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg parents --template '{rev}\n'
-  2
+  0
   $ hg status -A
-  C A
+  C a
   $ cat A
-  A
+  a
+  $ hg up -qC 2
 
   $ hg update --check 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

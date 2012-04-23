@@ -577,7 +577,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         folding = not util.checkcase(repo.path)
         if folding:
             # collision check is not needed for clean update
-            if not branchmerge and force:
+            if (not branchmerge and
+                (force or not wc.dirty(missing=True, branch=False))):
                 _checkcollision(p2, None)
             else:
                 _checkcollision(p2, wc)
