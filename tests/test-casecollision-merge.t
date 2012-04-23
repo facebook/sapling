@@ -6,104 +6,204 @@ run only on case-insensitive filesystems
 test for branch merging
 ################################
 
-  $ hg init repo1
-  $ cd repo1
+test for rename awareness of case-folding collision check:
 
-create base revision
+(1) colliding file is one renamed from collided file:
+this is also case for issue3370.
 
-  $ echo base > base.txt
-  $ hg add base.txt
-  $ hg commit -m 'base'
+  $ hg init merge_renameaware_1
+  $ cd merge_renameaware_1
 
-add same file in different case on both heads
-
-  $ echo a > a.txt
-  $ hg add a.txt
-  $ hg commit -m 'add a.txt'
-
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg rename a tmp
+  $ hg rename tmp A
+  $ hg commit -m '#1'
   $ hg update 0
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-
-  $ echo A > A.TXT
-  $ hg add A.TXT
-  $ hg commit -m 'add A.TXT'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'modified at #2' > a
+  $ hg commit -m '#2'
   created new head
 
-merge another, and fail with case-folding collision
+  $ hg merge
+  merging a and A to A
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg status -A
+  M A
+    a
+  R a
+  $ cat A
+  modified at #2
+
+  $ hg update --clean 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge
+  merging A and a to A
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg status -A
+  M A
+    a
+  $ cat A
+  modified at #2
+
+  $ cd ..
+
+(2) colliding file is not related to collided file
+
+  $ hg init merge_renameaware_2
+  $ cd merge_renameaware_2
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg remove a
+  $ hg commit -m '#1'
+  $ echo A > A
+  $ hg add A
+  $ hg commit -m '#2'
+  $ hg update --clean 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'modified at #3' > a
+  $ hg commit -m '#3'
+  created new head
 
   $ hg merge
-  abort: case-folding collision between a.txt and A.TXT
+  abort: case-folding collision between A and a
   [255]
+  $ hg parents --template '{rev}\n'
+  3
+  $ hg status -A
+  C a
+  $ cat a
+  modified at #3
 
-check clean-ness of working directory
-
-  $ hg status
+  $ hg update --clean 2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge
+  abort: case-folding collision between a and A
+  [255]
   $ hg parents --template '{rev}\n'
   2
+  $ hg status -A
+  C A
+  $ cat A
+  A
+
   $ cd ..
+
 
 ################################
 test for linear updates
 ################################
 
-  $ hg init repo2
-  $ cd repo2
+test for rename awareness of case-folding collision check:
 
-create base revision (rev:0)
+(1) colliding file is one renamed from collided file
 
-  $ hg import --bypass --exact - <<EOF
-  > # HG changeset patch
-  > # User null
-  > # Date 1 0
-  > # Node ID e1bdf414b0ea9c831fd3a14e94a0a18e1410f98b
-  > # Parent  0000000000000000000000000000000000000000
-  > add a
-  > 
-  > diff --git a/a b/a
-  > new file mode 100644
-  > --- /dev/null
-  > +++ b/a
-  > @@ -0,0 +1,3 @@
-  > +this is line 1
-  > +this is line 2
-  > +this is line 3
-  > EOF
-  applying patch from stdin
+  $ hg init linearupdate_renameaware_1
+  $ cd linearupdate_renameaware_1
 
-create rename revision (rev:1)
-
-  $ hg import --bypass --exact - <<EOF
-  > # HG changeset patch
-  > # User null
-  > # Date 1 0
-  > # Node ID 9dca9f19bb91851bc693544b598b0740629edfad
-  > # Parent  e1bdf414b0ea9c831fd3a14e94a0a18e1410f98b
-  > rename a to A
-  > 
-  > diff --git a/a b/A
-  > rename from a
-  > rename to A
-  > EOF
-  applying patch from stdin
-
-update to base revision, and modify 'a'
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg rename a tmp
+  $ hg rename tmp A
+  $ hg commit -m '#1'
 
   $ hg update 0
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
   $ echo 'this is added line' >> a
-
-update to current tip linearly
-
   $ hg update 1
   merging a and A to A
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-
-check status and contents of file
-
   $ hg status -A
   M A
   $ cat A
-  this is line 1
-  this is line 2
-  this is line 3
+  a
   this is added line
+
+  $ cd ..
+
+(2) colliding file is not related to collided file
+
+  $ hg init linearupdate_renameaware_2
+  $ cd linearupdate_renameaware_2
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg remove a
+  $ hg commit -m '#1'
+  $ echo A > A
+  $ hg add A
+  $ hg commit -m '#2'
+
+  $ hg update 0
+  abort: case-folding collision between a and A
+  [255]
+  $ hg parents --template '{rev}\n'
+  2
+  $ hg status -A
+  C A
+  $ cat A
+  A
+
+  $ hg update --check 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg parents --template '{rev}\n'
+  0
+  $ hg status -A
+  C a
+  $ cat a
+  a
+
+  $ hg update --clean 2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg parents --template '{rev}\n'
+  2
+  $ hg status -A
+  C A
+  $ cat A
+  A
+
+  $ cd ..
+
+(3) colliding file is not related to collided file: added in working dir
+
+  $ hg init linearupdate_renameaware_3
+  $ cd linearupdate_renameaware_3
+
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m '#0'
+  $ hg rename a b
+  $ hg commit -m '#1'
+  $ hg update 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ echo B > B
+  $ hg add B
+  $ hg status
+  A B
+  $ hg update
+  abort: case-folding collision between b and B
+  [255]
+
+  $ hg update --check
+  abort: uncommitted local changes
+  [255]
+
+  $ hg update --clean
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg parents --template '{rev}\n'
+  1
+  $ hg status -A
+  C b
+  $ cat b
+  a
+
+  $ cd ..

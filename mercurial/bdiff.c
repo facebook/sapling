@@ -339,10 +339,12 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	struct line *al, *bl;
 	struct hunk l, *h;
 	int an, bn, len = 0, la, lb, count;
+	PyThreadState *_save;
 
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
 
+	_save = PyEval_SaveThread();
 	an = splitlines(sa, la, &al);
 	bn = splitlines(sb, lb, &bl);
 	if (!al || !bl)
@@ -361,6 +363,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 		la = h->a2;
 		lb = h->b2;
 	}
+	PyEval_RestoreThread(_save);
+	_save = NULL;
 
 	result = PyBytes_FromStringAndSize(NULL, len);
 
@@ -385,6 +389,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	}
 
 nomem:
+	if (_save)
+		PyEval_RestoreThread(_save);
 	free(al);
 	free(bl);
 	freehunks(l.next);
