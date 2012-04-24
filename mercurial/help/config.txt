@@ -211,7 +211,7 @@ An alias can start with an exclamation point (``!``) to make it a
 shell alias. A shell alias is executed with the shell and will let you
 run arbitrary commands. As an example, ::
 
-   echo = !echo
+   echo = !echo $@
 
 will let you do ``hg echo foo`` to have ``foo`` printed in your
 terminal. A better example might be::
@@ -221,11 +221,17 @@ terminal. A better example might be::
 which will make ``hg purge`` delete all unknown files in the
 repository in the same manner as the purge extension.
 
-Shell aliases are executed in an environment where ``$HG`` expand to
+Positional arguments like ``$1``, ``$2``, etc. in the alias definition
+expand to the command arguments. Unmatched arguments are
+removed. ``$0`` expands to the alias name and ``$@`` expands to all
+arguments separated by a space. These expansions happen before the
+command is passed to the shell.
+
+Shell aliases are executed in an environment where ``$HG`` expands to
 the path of the Mercurial that was used to execute the alias. This is
 useful when you want to call further Mercurial commands in a shell
 alias, as was done above for the purge alias. In addition,
-``$HG_ARGS`` expand to the arguments given to Mercurial. In the ``hg
+``$HG_ARGS`` expands to the arguments given to Mercurial. In the ``hg
 echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 
 .. note:: Some global configuration options such as ``-R`` are
