@@ -833,10 +833,18 @@ Discovery locally secret changeset on a remote repository:
   o  0 public a-A - 054250a37db4
   
 
-pushing a locally public and draft changesets remotly secret should make them appear on the remote side
+pushing a locally public and draft changesets remotly secret should make them
+appear on the remote side.
+
 
   $ hg -R ../mu phase --secret --force 967b449fbc94
   $ hg push -r 435b5d83910c ../mu
+  pushing to ../mu
+  searching for changes
+  abort: push creates new remote head 435b5d83910c!
+  (did you forget to merge? use push -f to force)
+  [255]
+  $ hg push -fr 435b5d83910c ../mu # because the push will create new visible head
   pushing to ../mu
   searching for changes
   adding changesets

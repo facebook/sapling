@@ -135,6 +135,39 @@ Test secret changeset are not pushed
   2 1 C
   1 0 B
   0 0 A
+
+(Issue3303)
+Check that remote secret changeset are ignore when checking creation of remote heads
+
+We add a secret head into the push destination.  This secreat head shadow a
+visible shared between the initial repo and the push destination.
+
+  $ hg up -q 4 # B'
+  $ mkcommit Z --config phases.new-commit=secret
+  $ hg phase .
+  5: secret
+
+# We now try to push a new public changeset that descend from the common public
+# head shadowed by the remote secret head.
+
+  $ cd ../initialrepo
+  $ hg up -q 6 #B'
+  $ mkcommit I
+  created new head
+  $ hg push ../push-dest
+  pushing to ../push-dest
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+
+:note: The "(+1 heads)" is wrong as we do not had any visible head
+
+
+Restore condition prior extra insertion.
+  $ hg -q --config extensions.mq= strip .
+  $ hg up -q 7
   $ cd ..
 
 Test secret changeset are not pull
