@@ -8,16 +8,13 @@
   > {
   >     (
   >        cd $1;
-  >        svn up;
-  >        svn st -v | fixpath | sed 's/  */ /g'
+  >        svn up -q;
+  >        svn st -v | fixpath | sed 's/  */ /g' | sort
   >        limit=''
   >        if [ $2 -gt 0 ]; then
   >            limit="--limit=$2"
   >        fi
-  >        svn log --xml -v $limit \
-  >            | fixpath \
-  >            | sed 's,<date>.*,<date/>,' \
-  >            | grep -v 'kind="'
+  >        svn log --xml -v $limit | python "$TESTDIR/svnxml.py"
   >     )
   > }
 
@@ -57,44 +54,24 @@ Modify
   1 add a file
   0 modify a file
   $ svnupanddisplay a-hg-wc 2
-  At revision 2.
-   2 2 test .
-   2 2 test a
    2 1 test d1
    2 1 test d1/d2
    2 1 test d1/d2/b
    2 1 test link
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="2">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="M">/a</path>
-  </paths>
-  <msg>modify a file</msg>
-  </logentry>
-  <logentry
-     revision="1">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/a</path>
-  <path
-     action="A">/d1</path>
-  <path
-     action="A">/d1/d2</path>
-  <path
-     action="A">/d1/d2/b</path>
-  <path
-     action="A">/link</path>
-  </paths>
-  <msg>add a file</msg>
-  </logentry>
-  </log>
+   2 2 test .
+   2 2 test a
+  revision: 2
+  author: test
+  msg: modify a file
+   M /a
+  revision: 1
+  author: test
+  msg: add a file
+   A /a
+   A /d1
+   A /d1/d2
+   A /d1/d2/b
+   A /link
   $ ls a a-hg-wc
   a:
   a
@@ -124,36 +101,19 @@ Rename
   converting...
   0 rename a file
   $ svnupanddisplay a-hg-wc 1
-  At revision 3.
-   3 3 test .
-   3 3 test b
    3 1 test d1
    3 1 test d1/d2
    3 1 test d1/d2/b
+   3 3 test .
+   3 3 test b
    3 3 test newlink
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="3">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="D">/a</path>
-  <path
-     copyfrom-path="/a"
-     copyfrom-rev="2"
-     action="A">/b</path>
-  <path
-     copyfrom-path="/link"
-     copyfrom-rev="2"
-     action="A">/newlink</path>
-  <path
-     action="D">/link</path>
-  </paths>
-  <msg>rename a file</msg>
-  </logentry>
-  </log>
+  revision: 3
+  author: test
+  msg: rename a file
+   D /a
+   A /b (from /a@2)
+   D /link
+   A /newlink (from /link@2)
   $ ls a a-hg-wc
   a:
   b
@@ -181,29 +141,17 @@ Copy
   converting...
   0 copy a file
   $ svnupanddisplay a-hg-wc 1
-  At revision 4.
-   4 4 test .
-   4 3 test b
-   4 4 test c
    4 1 test d1
    4 1 test d1/d2
    4 1 test d1/d2/b
+   4 3 test b
    4 3 test newlink
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="4">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     copyfrom-path="/b"
-     copyfrom-rev="3"
-     action="A">/c</path>
-  </paths>
-  <msg>copy a file</msg>
-  </logentry>
-  </log>
+   4 4 test .
+   4 4 test c
+  revision: 4
+  author: test
+  msg: copy a file
+   A /c (from /b@3)
   $ ls a a-hg-wc
   a:
   b
@@ -233,26 +181,16 @@ Remove
   converting...
   0 remove a file
   $ svnupanddisplay a-hg-wc 1
-  At revision 5.
-   5 5 test .
-   5 4 test c
    5 1 test d1
    5 1 test d1/d2
    5 1 test d1/d2/b
    5 3 test newlink
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="5">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="D">/b</path>
-  </paths>
-  <msg>remove a file</msg>
-  </logentry>
-  </log>
+   5 4 test c
+   5 5 test .
+  revision: 5
+  author: test
+  msg: remove a file
+   D /b
   $ ls a a-hg-wc
   a:
   c
@@ -279,26 +217,16 @@ Exectutable
   converting...
   0 make a file executable
   $ svnupanddisplay a-hg-wc 1
-  At revision 6.
-   6 6 test .
-   6 6 test c
    6 1 test d1
    6 1 test d1/d2
    6 1 test d1/d2/b
    6 3 test newlink
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="6">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="M">/c</path>
-  </paths>
-  <msg>make a file executable</msg>
-  </logentry>
-  </log>
+   6 6 test .
+   6 6 test c
+  revision: 6
+  author: test
+  msg: make a file executable
+   M /c
   $ test -x a-hg-wc/c
 
 Executable in new directory
@@ -321,25 +249,14 @@ Executable in new directory
   converting...
   0 add executable file in new directory
   $ svnupanddisplay a-hg-wc 1
-  At revision 1.
    1 1 test .
    1 1 test d1
    1 1 test d1/a
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="1">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/d1</path>
-  <path
-     action="A">/d1/a</path>
-  </paths>
-  <msg>add executable file in new directory</msg>
-  </logentry>
-  </log>
+  revision: 1
+  author: test
+  msg: add executable file in new directory
+   A /d1
+   A /d1/a
   $ test -x a-hg-wc/d1/a
 
 Copy to new directory
@@ -356,29 +273,16 @@ Copy to new directory
   converting...
   0 copy file to new directory
   $ svnupanddisplay a-hg-wc 1
-  At revision 2.
-   2 2 test .
    2 1 test d1
    2 1 test d1/a
+   2 2 test .
    2 2 test d2
    2 2 test d2/a
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="2">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/d2</path>
-  <path
-     copyfrom-path="/d1/a"
-     copyfrom-rev="1"
-     action="A">/d2/a</path>
-  </paths>
-  <msg>copy file to new directory</msg>
-  </logentry>
-  </log>
+  revision: 2
+  author: test
+  msg: copy file to new directory
+   A /d2
+   A /d2/a (from /d1/a@1)
 
 Branchy history
 
@@ -441,62 +345,31 @@ Expect 4 changes
   0 merge
 
   $ svnupanddisplay b-hg-wc 0
-  At revision 4.
-   4 4 test .
-   4 3 test b
    4 2 test left-1
+   4 3 test b
    4 3 test left-2
+   4 4 test .
    4 4 test right-1
    4 4 test right-2
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="4">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/right-1</path>
-  <path
-     action="A">/right-2</path>
-  </paths>
-  <msg>merge</msg>
-  </logentry>
-  <logentry
-     revision="3">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="M">/b</path>
-  <path
-     action="A">/left-2</path>
-  </paths>
-  <msg>left-2</msg>
-  </logentry>
-  <logentry
-     revision="2">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="M">/b</path>
-  <path
-     action="A">/left-1</path>
-  </paths>
-  <msg>left-1</msg>
-  </logentry>
-  <logentry
-     revision="1">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/b</path>
-  </paths>
-  <msg>base</msg>
-  </logentry>
-  </log>
+  revision: 4
+  author: test
+  msg: merge
+   A /right-1
+   A /right-2
+  revision: 3
+  author: test
+  msg: left-2
+   M /b
+   A /left-2
+  revision: 2
+  author: test
+  msg: left-1
+   M /b
+   A /left-1
+  revision: 1
+  author: test
+  msg: base
+   A /b
 
 Tags are not supported, but must not break conversion
 
@@ -518,31 +391,15 @@ Tags are not supported, but must not break conversion
   0 Tagged as v1.0
   writing Subversion tags is not yet implemented
   $ svnupanddisplay a-hg-wc 2
-  At revision 2.
-   2 2 test .
    2 1 test a
+   2 2 test .
    2 2 test .hgtags
-  <?xml version="1.0"?>
-  <log>
-  <logentry
-     revision="2">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/.hgtags</path>
-  </paths>
-  <msg>Tagged as v1.0</msg>
-  </logentry>
-  <logentry
-     revision="1">
-  <author>test</author>
-  <date/>
-  <paths>
-  <path
-     action="A">/a</path>
-  </paths>
-  <msg>Add file a</msg>
-  </logentry>
-  </log>
+  revision: 2
+  author: test
+  msg: Tagged as v1.0
+   A /.hgtags
+  revision: 1
+  author: test
+  msg: Add file a
+   A /a
   $ rm -rf a a-hg a-hg-wc
