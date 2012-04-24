@@ -613,12 +613,25 @@
   tests/test-commandserver.py:0:
    >     print '%c, %r' % (ch, re.sub('encoding: [a-zA-Z0-9-]+', 'encoding: ***', data))
    warning: line over 80 characters
+  tests/test-convert-mtn.t:0:
+   >   > function get_passphrase(keypair_id)
+   don't use 'function', use old style
   tests/test-filecache.py:0:
    >     except:
    warning: naked except clause
   tests/test-filecache.py:0:
    > if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'], 'cacheable']):
    warning: line over 80 characters
+  tests/test-import-git.t:0:
+   >   > Mc\${NkU|\`?^000jF3jhEB
+   ^ must be quoted
+  tests/test-import.t:0:
+   >   > diff -Naur proj-orig/foo proj-new/foo
+   don't use 'diff -N'
+   don't use 'diff -N'
+  tests/test-schemes.t:0:
+   >   > z = file:\$PWD/
+   don't use $PWD, use `pwd`
   tests/test-ui-color.py:0:
    > testui.warn('warning\n')
    warning: unwrapped ui message

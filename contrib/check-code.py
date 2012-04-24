@@ -45,12 +45,10 @@ testpats = [
   [
     (r'pushd|popd', "don't use 'pushd' or 'popd', use 'cd'"),
     (r'\W\$?\(\([^\)\n]*\)\)', "don't use (()) or $(()), use 'expr'"),
-    (r'^function', "don't use 'function', use old style"),
     (r'grep.*-q', "don't use 'grep -q', redirect to /dev/null"),
     (r'sed.*-i', "don't use 'sed -i', use a temporary file"),
     (r'echo.*\\n', "don't use 'echo \\n', use printf"),
     (r'echo -n', "don't use 'echo -n', use printf"),
-    (r'^diff.*-\w*N', "don't use 'diff -N'"),
     (r'(^| )wc[^|]*$\n(?!.*\(re\))', "filter wc output"),
     (r'head -c', "don't use 'head -c', use 'dd'"),
     (r'sha1sum', "don't use sha1sum, use $TESTDIR/md5sum.py"),
@@ -62,10 +60,8 @@ testpats = [
     (r'(^|\|\s*)grep (-\w\s+)*[^|]*[(|]\w',
      "use egrep for extended grep syntax"),
     (r'/bin/', "don't use explicit paths for tools"),
-    (r'\$PWD', "don't use $PWD, use `pwd`"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'export.*=', "don't export and assign at once"),
-    (r'^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\^', "^ must be quoted"),
     (r'^source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
     (r'ls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
@@ -79,7 +75,12 @@ testpats = [
     (r'^( *)\t', "don't use tabs to indent"),
   ],
   # warnings
-  []
+  [
+    (r'^function', "don't use 'function', use old style"),
+    (r'^diff.*-\w*N', "don't use 'diff -N'"),
+    (r'\$PWD', "don't use $PWD, use `pwd`"),
+    (r'^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\^', "^ must be quoted"),
+  ]
 ]
 
 testfilters = [
@@ -106,9 +107,9 @@ utestpats = [
 for i in [0, 1]:
     for p, m in testpats[i]:
         if p.startswith(r'^'):
-            p = r"^  \$ (%s)" % p[1:]
+            p = r"^  [$>] (%s)" % p[1:]
         else:
-            p = r"^  \$ .*(%s)" % p
+            p = r"^  [$>] .*(%s)" % p
         utestpats[i].append((p, m))
 
 utestfilters = [
