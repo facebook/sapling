@@ -2,16 +2,13 @@
 #
 # Copyright(C) 2007 Daniel Holth et al
 
-import os
-import re
-import sys
+import os, re, sys, tempfile, urllib, urllib2, xml.dom.minidom
 import cPickle as pickle
-import tempfile
-import urllib
-import urllib2
 
 from mercurial import strutil, scmutil, util, encoding
 from mercurial.i18n import _
+
+propertycache = util.propertycache
 
 # Subversion stuff. Works best with very recent Python SVN bindings
 # e.g. SVN 1.5 or backports. Thanks to the bzr folks for enhancing
@@ -1057,6 +1054,29 @@ class svn_sink(converter_sink, commandline):
     def wjoin(self, *names):
         return os.path.join(self.wc, *names)
 
+    @propertycache
+    def manifest(self):
+        # As of svn 1.7, the "add" command fails when receiving
+        # already tracked entries, so we have to track and filter them
+        # ourselves.
+        m = set()
+        output = self.run0('ls', recursive=True, xml=True)
+        doc = xml.dom.minidom.parseString(output)
+        for e in doc.getElementsByTagName('entry'):
+            for n in e.childNodes:
+                if n.nodeType != n.ELEMENT_NODE or n.tagName != 'name':
+                    continue
+                name = ''.join(c.data for c in n.childNodes
+                               if c.nodeType == c.TEXT_NODE)
+                # Entries are compared with names coming from
+                # mercurial, so bytes with undefined encoding. Our
+                # best bet is to assume they are in local
+                # encoding. They will be passed to command line calls
+                # later anyway, so they better be.
+                m.add(encoding.tolocal(name.encode('utf-8')))
+                break
+        return m
+
     def putfile(self, filename, flags, data):
         if 'l' in flags:
             self.wopener.symlink(data, filename)
@@ -1099,6 +1119,7 @@ class svn_sink(converter_sink, commandline):
         try:
             self.run0('copy', source, dest)
         finally:
+            self.manifest.add(dest)
             if exists:
                 try:
                     os.unlink(wdest)
@@ -1117,13 +1138,16 @@ class svn_sink(converter_sink, commandline):
 
     def add_dirs(self, files):
         add_dirs = [d for d in sorted(self.dirs_of(files))
-                    if not os.path.exists(self.wjoin(d, '.svn', 'entries'))]
+                    if d not in self.manifest]
         if add_dirs:
+            self.manifest.update(add_dirs)
             self.xargs(add_dirs, 'add', non_recursive=True, quiet=True)
         return add_dirs
 
     def add_files(self, files):
+        files = [f for f in files if f not in self.manifest]
         if files:
+            self.manifest.update(files)
             self.xargs(files, 'add', quiet=True)
         return files
 
@@ -1133,6 +1157,7 @@ class svn_sink(converter_sink, commandline):
             wd = self.wjoin(d)
             if os.listdir(wd) == '.svn':
                 self.run0('delete', d)
+                self.manifest.remove(d)
                 deleted.append(d)
         return deleted
 
@@ -1170,6 +1195,8 @@ class svn_sink(converter_sink, commandline):
             self.copies = []
         if self.delete:
             self.xargs(self.delete, 'delete')
+            for f in self.delete:
+                self.manifest.remove(f)
             self.delete = []
         entries.update(self.add_files(files.difference(entries)))
         entries.update(self.tidy_dirs(entries))
