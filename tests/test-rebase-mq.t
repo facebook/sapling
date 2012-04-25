@@ -247,30 +247,41 @@ Rebase with guards
 Create mq repo with guarded patches foo and bar and empty patch:
 
   $ hg qinit
-  $ hg qnew foo
-  $ hg qguard foo +baz
-  $ echo foo > foo
-  $ hg add foo
-  $ hg qref
-  $ hg qpop
-  popping foo
-  patch queue now empty
-
+  $ echo guarded > guarded
+  $ hg add guarded
+  $ hg qnew guarded
   $ hg qnew empty-important -m 'important commit message'
-
-  $ hg qnew bar
-  $ hg qguard bar +baz
   $ echo bar > bar
   $ hg add bar
-  $ hg qref
+  $ hg qnew bar
+  $ echo foo > foo
+  $ hg add foo
+  $ hg qnew foo
+  $ hg qpop -a
+  popping foo
+  popping bar
+  popping empty-important
+  popping guarded
+  patch queue now empty
+  $ hg qguard guarded +guarded
+  $ hg qguard bar +baz
+  $ hg qguard foo +baz
+  $ hg qselect baz
+  number of unguarded, unapplied patches has changed from 1 to 3
+  $ hg qpush bar
+  applying empty-important
+  patch empty-important is empty
+  applying bar
+  now at: bar
 
   $ hg qguard -l
+  guarded: +guarded
   empty-important: unguarded
   bar: +baz
   foo: +baz
 
   $ hg tglog
-  @  2: '[mq]: bar' tags: bar qtip tip
+  @  2: 'imported patch bar' tags: bar qtip tip
   |
   o  1: 'important commit message' tags: empty-important qbase
   |
@@ -303,18 +314,21 @@ Rebase bar (make sure series order is preserved and empty-important also is
 removed from the series):
 
   $ hg qseries
+  guarded
   empty-important
   bar
   foo
   $ [ -f .hg/patches/empty-important ]
   $ hg -q rebase -d 2
   $ hg qseries
+  guarded
   bar
   foo
   $ [ -f .hg/patches/empty-important ]
   [1]
 
   $ hg qguard -l
+  guarded: +guarded
   bar: +baz
   foo: +baz
 
