@@ -70,7 +70,7 @@ class convert_cvs(converter_source):
                 cs.author = self.recode(cs.author)
                 self.lastbranch[cs.branch] = id
                 cs.comment = self.recode(cs.comment)
-                date = util.datestr(cs.date)
+                date = util.datestr(cs.date, '%Y-%m-%d %H:%M:%S %1%2')
                 self.tags.update(dict.fromkeys(cs.tags, id))
 
                 files = {}

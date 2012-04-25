@@ -119,7 +119,8 @@ class p4_source(converter_source):
                 parents = []
 
             date = (int(d["time"]), 0)     # timezone not set
-            c = commit(author=self.recode(d["user"]), date=util.datestr(date),
+            c = commit(author=self.recode(d["user"]),
+                       date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
                        parents=parents, desc=desc, branch='',
                        extra={"p4": change})
 

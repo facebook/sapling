@@ -805,7 +805,7 @@ class svn_source(converter_source):
                 branch = None
 
             cset = commit(author=author,
-                          date=util.datestr(date),
+                          date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
                           desc=log,
                           parents=parents,
                           branch=branch,

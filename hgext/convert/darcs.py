@@ -139,7 +139,7 @@ class darcs_source(converter_source, commandline):
         # etree can return unicode objects for name, comment, and author,
         # so recode() is used to ensure str objects are emitted.
         return commit(author=self.recode(elt.get('author')),
-                      date=util.datestr(date),
+                      date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
                       desc=self.recode(desc).strip(),
                       parents=self.parents[rev])
 

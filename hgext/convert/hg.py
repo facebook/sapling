@@ -342,7 +342,8 @@ class mercurial_source(converter_source):
             crev = rev
         else:
             crev = None
-        return commit(author=ctx.user(), date=util.datestr(ctx.date()),
+        return commit(author=ctx.user(),
+                      date=util.datestr(ctx.date(), '%Y-%m-%d %H:%M:%S %1%2'),
                       desc=ctx.description(), rev=crev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra(),
                       sortkey=ctx.rev())
