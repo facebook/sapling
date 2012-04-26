@@ -1022,9 +1022,10 @@ class hunk(object):
 
 class binhunk(object):
     'A binary patch file. Only understands literals so far.'
-    def __init__(self, lr):
+    def __init__(self, lr, fname):
         self.text = None
         self.hunk = ['GIT binary patch\n']
+        self._fname = fname
         self._read(lr)
 
     def complete(self):
@@ -1040,7 +1041,8 @@ class binhunk(object):
             line = lr.readline()
             self.hunk.append(line)
         if not line:
-            raise PatchError(_('could not extract binary patch'))
+            raise PatchError(_('could not extract "%s" binary data')
+                             % self._fname)
         size = int(line[8:].rstrip())
         dec = []
         line = lr.readline()
@@ -1054,14 +1056,14 @@ class binhunk(object):
             try:
                 dec.append(base85.b85decode(line[1:-1])[:l])
             except ValueError, e:
-                raise PatchError(_('could not decode binary patch: %s')
-                                 % str(e))
+                raise PatchError(_('could not decode "%s" binary patch: %s')
+                                 % (self._fname, str(e)))
             line = lr.readline()
             self.hunk.append(line)
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
-            raise PatchError(_('binary patch is %d bytes, not %d') %
-                             len(text), size)
+            raise PatchError(_('"%s" length is %d bytes, should be %d')
+                             % (self._fname, len(text), size))
         self.text = text
 
 def parsefilename(str):
@@ -1200,7 +1202,7 @@ def iterhunks(fp):
                 gitpatches[-1].ispatching(afile, bfile)):
                 gp = gitpatches.pop()
             if x.startswith('GIT binary patch'):
-                h = binhunk(lr)
+                h = binhunk(lr, gp.path)
             else:
                 if context is None and x.startswith('***************'):
                     context = True

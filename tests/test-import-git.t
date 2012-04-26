@@ -364,6 +364,7 @@ Move text file and patch as binary
   R text2
 
 Invalid base85 content
+
   $ hg rollback
   repository tip rolled back to revision 15 (undo import)
   working directory now based on revision 15
@@ -379,8 +380,38 @@ Invalid base85 content
   > 
   > EOF
   applying patch from stdin
-  abort: could not decode binary patch: bad base85 character at position 6
+  abort: could not decode "binary2" binary patch: bad base85 character at position 6
   [255]
+
+  $ hg revert -aq
+  $ hg import -d "1000000 0" -m rename-as-binary - <<"EOF"
+  > diff --git a/text2 b/binary2
+  > rename from text2
+  > rename to binary2
+  > index 78981922613b2afb6025042ff6bd878ac1994e85..10efcb362e9f3b3420fcfbfc0e37f3dc16e29757
+  > GIT binary patch
+  > literal 6
+  > Mc$`b*O5$Pw00T?_*Z=?k
+  > 
+  > EOF
+  applying patch from stdin
+  abort: "binary2" length is 5 bytes, should be 6
+  [255]
+
+  $ hg revert -aq
+  $ hg import -d "1000000 0" -m rename-as-binary - <<"EOF"
+  > diff --git a/text2 b/binary2
+  > rename from text2
+  > rename to binary2
+  > index 78981922613b2afb6025042ff6bd878ac1994e85..10efcb362e9f3b3420fcfbfc0e37f3dc16e29757
+  > GIT binary patch
+  > Mc$`b*O5$Pw00T?_*Z=?k
+  > 
+  > EOF
+  applying patch from stdin
+  abort: could not extract "binary2" binary data
+  [255]
+
   $ cd ..
 
 Consecutive import with renames (issue2459)
