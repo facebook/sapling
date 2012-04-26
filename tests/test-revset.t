@@ -305,6 +305,13 @@ quoting needed
   6
   $ log 'modifies(b)'
   4
+  $ log 'modifies("path:b")'
+  4
+  $ log 'modifies("*")'
+  4
+  6
+  $ log 'modifies("set:modified()")'
+  4
   $ log 'id(5)'
   2
   $ log 'outgoing()'

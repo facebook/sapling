@@ -341,23 +341,26 @@ def branch(repo, subset, x):
 def checkstatus(repo, subset, pat, field):
     m = None
     s = []
-    fast = not matchmod.patkind(pat)
+    hasset = matchmod.patkind(pat) == 'set'
+    fname = None
     for r in subset:
         c = repo[r]
-        if fast:
-            if pat not in c.files():
+        if not m or hasset:
+            m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
+            if not m.anypats() and len(m.files()) == 1:
+                fname = m.files()[0]
+        if fname is not None:
+            if fname not in c.files():
                 continue
         else:
-            if not m or matchmod.patkind(pat) == 'set':
-                m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=c)
             for f in c.files():
                 if m(f):
                     break
             else:
                 continue
         files = repo.status(c.p1().node(), c.node())[field]
-        if fast:
-            if pat in files:
+        if fname is not None:
+            if fname in files:
                 s.append(r)
         else:
             for f in files:
