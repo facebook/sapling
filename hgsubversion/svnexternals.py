@@ -443,3 +443,9 @@ if subrepo:
             if self._state[1] == 'HEAD':
                 rev = 'HEAD'
             return rev
+
+        def basestate(self):
+            # basestate() was introduced by bcb973abcc0b in 2.2
+            if self._state[1] == 'HEAD':
+                return 'HEAD'
+            return super(svnsubrepo, self).basestate()
