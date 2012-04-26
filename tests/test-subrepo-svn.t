@@ -120,6 +120,15 @@ change file in svn and hg, commit
    source   file://*/svn-repo/src (glob)
    revision 2
 
+missing svn file, commit should fail
+
+  $ rm s/alpha
+  $ hg commit --subrepos -m 'abort on missing file'
+  committing subrepository s
+  abort: failed to commit svn changes
+  [255]
+  $ svn revert s/alpha > /dev/null
+
 add an unrelated revision in svn and update the subrepo to without
 bringing any changes.
 

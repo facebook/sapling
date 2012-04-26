@@ -726,6 +726,12 @@ class svnsubrepo(abstractsubrepo):
         self._ui.status(commitinfo)
         newrev = re.search('Committed revision ([0-9]+).', commitinfo)
         if not newrev:
+            if not commitinfo.strip():
+                # Sometimes, our definition of "changed" differs from
+                # svn one. For instance, svn ignores missing files
+                # when committing. If there are only missing files, no
+                # commit is made, no output and no error code.
+                raise util.Abort(_('failed to commit svn changes'))
             raise util.Abort(commitinfo.splitlines()[-1])
         newrev = newrev.groups()[0]
         self._ui.status(self._svncommand(['update', '-r', newrev])[0])
