@@ -125,7 +125,7 @@ missing svn file, commit should fail
   $ rm s/alpha
   $ hg commit --subrepos -m 'abort on missing file'
   committing subrepository s
-  abort: failed to commit svn changes
+  abort: cannot commit missing svn entries
   [255]
   $ svn revert s/alpha > /dev/null
 

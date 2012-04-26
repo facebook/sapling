@@ -680,12 +680,13 @@ class svnsubrepo(abstractsubrepo):
         return self._wcrevs()[0]
 
     def _wcchanged(self):
-        """Return (changes, extchanges) where changes is True
-        if the working directory was changed, and extchanges is
-        True if any of these changes concern an external entry.
+        """Return (changes, extchanges, missing) where changes is True
+        if the working directory was changed, extchanges is
+        True if any of these changes concern an external entry and missing
+        is True if any change is a missing entry.
         """
         output, err = self._svncommand(['status', '--xml'])
-        externals, changes = [], []
+        externals, changes, missing = [], [], []
         doc = xml.dom.minidom.parseString(output)
         for e in doc.getElementsByTagName('entry'):
             s = e.getElementsByTagName('wc-status')
@@ -696,14 +697,16 @@ class svnsubrepo(abstractsubrepo):
             path = e.getAttribute('path')
             if item == 'external':
                 externals.append(path)
+            elif item == 'missing':
+                missing.append(path)
             if (item not in ('', 'normal', 'unversioned', 'external')
                 or props not in ('', 'none', 'normal')):
                 changes.append(path)
         for path in changes:
             for ext in externals:
                 if path == ext or path.startswith(ext + os.sep):
-                    return True, True
-        return bool(changes), False
+                    return True, True, bool(missing)
+        return bool(changes), False, bool(missing)
 
     def dirty(self, ignoreupdate=False):
         if not self._wcchanged()[0]:
@@ -716,12 +719,16 @@ class svnsubrepo(abstractsubrepo):
 
     def commit(self, text, user, date):
         # user and date are out of our hands since svn is centralized
-        changed, extchanged = self._wcchanged()
+        changed, extchanged, missing = self._wcchanged()
         if not changed:
             return self._wcrev()
         if extchanged:
             # Do not try to commit externals
             raise util.Abort(_('cannot commit svn externals'))
+        if missing:
+            # svn can commit with missing entries but aborting like hg
+            # seems a better approach.
+            raise util.Abort(_('cannot commit missing svn entries'))
         commitinfo, err = self._svncommand(['commit', '-m', text])
         self._ui.status(commitinfo)
         newrev = re.search('Committed revision ([0-9]+).', commitinfo)
@@ -773,7 +780,7 @@ class svnsubrepo(abstractsubrepo):
         status, err = self._svncommand(args, failok=True)
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
-                and (self._wcchanged() == (False, False))):
+                and (self._wcchanged()[:2] == (False, False))):
                 # obstructed but clean working copy, so just blow it away.
                 self.remove()
                 self.get(state, overwrite=False)
