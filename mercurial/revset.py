@@ -914,19 +914,23 @@ def matching(repo, subset, x):
     """``matching(revision [, field])``
     Changesets in which a given set of fields match the set of fields in the
     selected revision or set.
+
     To match more than one field pass the list of fields to match separated
-    by spaces (e.g. 'author description').
-    Valid fields are most regular revision fields and some special fields:
-    * regular fields:
-      - description, author, branch, date, files, phase, parents,
-      substate, user.
-      Note that author and user are synonyms.
-    * special fields: summary, metadata.
-      - summary: matches the first line of the description.
-      - metatadata: It is equivalent to matching 'description user date'
-        (i.e. it matches the main metadata fields).
-    metadata is the default field which is used when no fields are specified.
-    You can match more than one field at a time.
+    by spaces (e.g. ``author description``).
+
+    Valid fields are most regular revision fields and some special fields.
+
+    Regular revision fields are ``description``, ``author``, ``branch``,
+    ``date``, ``files``, ``phase``, ``parents``, ``substate`` and ``user``.
+    Note that ``author`` and ``user`` are synonyms.
+
+    Special fields are ``summary`` and ``metadata``:
+    ``summary`` matches the first line of the description.
+    ``metatadata`` is equivalent to matching ``description user date``
+    (i.e. it matches the main metadata fields).
+
+    ``metadata`` is the default field which is used when no fields are
+    specified. You can match more than one field at a time.
     """
     l = getargs(x, 1, 2, _("matching takes 1 or 2 arguments"))
 
