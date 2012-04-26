@@ -412,6 +412,27 @@ Invalid base85 content
   abort: could not extract "binary2" binary data
   [255]
 
+Simulate a copy/paste turning LF into CRLF (issue2870)
+
+  $ hg revert -aq
+  $ cat > binary.diff <<"EOF"
+  > diff --git a/text2 b/binary2
+  > rename from text2
+  > rename to binary2
+  > index 78981922613b2afb6025042ff6bd878ac1994e85..10efcb362e9f3b3420fcfbfc0e37f3dc16e29757
+  > GIT binary patch
+  > literal 5
+  > Mc$`b*O5$Pw00T?_*Z=?k
+  > 
+  > EOF
+  >>> fp = file('binary.diff', 'rb')
+  >>> data = fp.read()
+  >>> fp.close()
+  >>> file('binary.diff', 'wb').write(data.replace('\n', '\r\n'))
+  $ rm binary2
+  $ hg import --no-commit binary.diff
+  applying binary.diff
+
   $ cd ..
 
 Consecutive import with renames (issue2459)

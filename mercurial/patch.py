@@ -1035,18 +1035,20 @@ class binhunk(object):
         return [self.text]
 
     def _read(self, lr):
-        line = lr.readline()
-        self.hunk.append(line)
+        def getline(lr, hunk):
+            l = lr.readline()
+            hunk.append(l)
+            return l.rstrip('\r\n')
+
+        line = getline(lr, self.hunk)
         while line and not line.startswith('literal '):
-            line = lr.readline()
-            self.hunk.append(line)
+            line = getline(lr, self.hunk)
         if not line:
             raise PatchError(_('could not extract "%s" binary data')
                              % self._fname)
         size = int(line[8:].rstrip())
         dec = []
-        line = lr.readline()
-        self.hunk.append(line)
+        line = getline(lr, self.hunk)
         while len(line) > 1:
             l = line[0]
             if l <= 'Z' and l >= 'A':
@@ -1054,12 +1056,11 @@ class binhunk(object):
             else:
                 l = ord(l) - ord('a') + 27
             try:
-                dec.append(base85.b85decode(line[1:-1])[:l])
+                dec.append(base85.b85decode(line[1:])[:l])
             except ValueError, e:
                 raise PatchError(_('could not decode "%s" binary patch: %s')
                                  % (self._fname, str(e)))
-            line = lr.readline()
-            self.hunk.append(line)
+            line = getline(lr, self.hunk)
         text = zlib.decompress(''.join(dec))
         if len(text) != size:
             raise PatchError(_('"%s" length is %d bytes, should be %d')
@@ -1213,7 +1214,7 @@ def iterhunks(fp):
                 yield 'file', (afile, bfile, h, gp and gp.copy() or None)
             yield 'hunk', h
         elif x.startswith('diff --git'):
-            m = gitre.match(x)
+            m = gitre.match(x.rstrip(' \r\n'))
             if not m:
                 continue
             if gitpatches is None:
