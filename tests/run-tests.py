@@ -209,7 +209,7 @@ def parseargs():
     if options.local:
         testdir = os.path.dirname(os.path.realpath(sys.argv[0]))
         hgbin = os.path.join(os.path.dirname(testdir), 'hg')
-        if not os.access(hgbin, os.X_OK):
+        if os.name != 'nt' and not os.access(hgbin, os.X_OK):
             parser.error('--local specified, but %r not found or not executable'
                          % hgbin)
         options.with_hg = hgbin
