@@ -34,10 +34,10 @@ Initial svn import
   $ cd ..
 
   $ svnurl="file://$svnpath/svn-repo/proj%20B"
-  $ svn import -m "init projB" projB "$svnurl" | fixpath
+  $ svn import -m "init projB" projB "$svnurl" | fixpath | sort
+  
   Adding         projB/mytrunk
   Adding         projB/tags
-  
   Committed revision 1.
 
 Update svn repository
