@@ -812,7 +812,7 @@ class revlog(object):
         else:
             df = self.opener(self.datafile)
 
-        readahead = max(_chunksize, length)
+        readahead = max(65536, length)
         df.seek(offset)
         d = df.read(readahead)
         df.close()
