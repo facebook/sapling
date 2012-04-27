@@ -272,13 +272,13 @@ Check hg update --clean
   Checked out revision 3.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd t/s
-  $ svn status
+  $ svn status | sort
+  
   ? *    a (glob)
-  X *    externals (glob)
   ? *    f1 (glob)
   ? *    f2 (glob)
-  
   Performing status on external item at 'externals'* (glob)
+  X *    externals (glob)
 
 Sticky subrepositories, no changes
   $ cd $TESTTMP/sub/t
