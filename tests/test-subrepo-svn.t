@@ -548,3 +548,10 @@ Test archive
   archiving (s): 2/2 files (100.00%)
   archiving (recreated): 0/1 files (0.00%)
   archiving (recreated): 1/1 files (100.00%)
+
+Test forgetting files, not implemented in svn subrepo, used to
+traceback
+
+  $ hg forget 'notafile*'
+  notafile*: No such file or directory
+  [1]

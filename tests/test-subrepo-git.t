@@ -507,3 +507,8 @@ Test subrepo already at intended revision:
   da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
   $ cd ..
 
+Test forgetting files, not implemented in git subrepo, used to
+traceback
+  $ hg forget 'notafile*'
+  notafile*: No such file or directory
+  [1]

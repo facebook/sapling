@@ -366,7 +366,7 @@ class abstractsubrepo(object):
         pass
 
     def forget(self, ui, match, prefix):
-        return []
+        return ([], [])
 
     def revert(self, ui, substate, *pats, **opts):
         ui.warn('%s: reverting %s subrepos is unsupported\n' \
