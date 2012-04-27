@@ -286,25 +286,25 @@ Check rebasing public changeset
 Check rebasing mutable changeset
 Source phase greater or equal to destination phase: new changeset get the phase of source:
   $ hg rebase -s9 -d0
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2b23e52411f4-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2b23e52411f4-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg rebase -s9 -d1
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2cb10d0cfc6c-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2cb10d0cfc6c-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 9
   draft
   $ hg phase --force --secret 9
   $ hg rebase -s9 -d0
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c5b12b67163a-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c5b12b67163a-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 9
   secret
   $ hg rebase -s9 -d1
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2a0524f868ac-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/2a0524f868ac-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 9
   secret
 Source phase lower than destination phase: new changeset get the phase of destination:
   $ hg rebase -s7 -d9
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c9659aac0000-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c9659aac0000-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 9
   secret
 

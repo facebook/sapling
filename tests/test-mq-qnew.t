@@ -111,7 +111,7 @@ plain headers
   abort: "#" cannot be used in the name of a patch
   abort: ":" cannot be used in the name of a patch
   % qnew with name containing slash
-  abort: path ends in directory separator: foo/
+  abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
   foo/bar.patch
   popping foo/bar.patch
@@ -178,7 +178,7 @@ hg headers
   abort: "#" cannot be used in the name of a patch
   abort: ":" cannot be used in the name of a patch
   % qnew with name containing slash
-  abort: path ends in directory separator: foo/
+  abort: path ends in directory separator: foo/ (glob)
   abort: "foo" already exists as a directory
   foo/bar.patch
   popping foo/bar.patch

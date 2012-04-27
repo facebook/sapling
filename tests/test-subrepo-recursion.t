@@ -197,7 +197,7 @@ Test explicit path commands within subrepos: add/forget
   $ hg status -S
   ? foo/bar/z2.txt
   $ hg forget foo/bar/z2.txt
-  not removing foo/bar/z2.txt: file is already untracked
+  not removing foo/bar/z2.txt: file is already untracked (glob)
   [1]
   $ hg status -S
   ? foo/bar/z2.txt

@@ -43,7 +43,7 @@ Revert subrepo and test subrepo fileset keyword:
   $ echo b > s/a
   $ hg revert "set:subrepo('glob:s*')"
   reverting subrepo s
-  reverting s/a
+  reverting s/a (glob)
   $ rm s/a.orig
 
 Revert subrepo with no backup. The "reverting s/a" line is gone since
