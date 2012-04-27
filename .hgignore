@@ -52,6 +52,6 @@ syntax: regexp
 ^\.(pydev)?project
 
 # hackable windows distribution additions
-^hg-python26/
+^hg-python
 ^hg.exe$
 ^hg.py$
