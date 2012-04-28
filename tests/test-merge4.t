@@ -16,5 +16,10 @@
   (branch merge, don't forget to commit)
   $ rm b
   $ echo This is file c22 > c
+
+Test hg behaves when committing with a missing file added by a merge
+
   $ hg commit -m "commit #3"
+  abort: cannot commit merge with missing files
+  [255]
 

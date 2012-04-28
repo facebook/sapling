@@ -1147,6 +1147,9 @@ class localrepository(repo.repository):
                 and wctx.branch() == wctx.p1().branch()):
                 return None
 
+            if merge and changes[3]:
+                raise util.Abort(_("cannot commit merge with missing files"))
+
             ms = mergemod.mergestate(self)
             for f in changes[0]:
                 if f in ms and ms[f] == 'u':
