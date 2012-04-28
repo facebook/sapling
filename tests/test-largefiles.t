@@ -881,7 +881,7 @@ used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py"
 
 vanilla clients locked out from largefiles ssh repos
-  $ hg --config extensions.largefiles=! clone -e 'python "$TESTDIR/dummyssh"' ssh://user@dummy/r4 r5
+  $ hg --config extensions.largefiles=! clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/r4 r5
   abort: remote error:
   
   This repository uses the largefiles extension.
