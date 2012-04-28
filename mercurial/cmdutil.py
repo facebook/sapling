@@ -268,6 +268,11 @@ def copy(ui, repo, pats, opts, rename=False):
     # otarget: ossep
     def copyfile(abssrc, relsrc, otarget, exact):
         abstarget = scmutil.canonpath(repo.root, cwd, otarget)
+        if '/' in abstarget:
+            # We cannot normalize abstarget itself, this would prevent
+            # case only renames, like a => A.
+            abspath, absname = abstarget.rsplit('/', 1)
+            abstarget = repo.dirstate.normalize(abspath) + '/' + absname
         reltarget = repo.pathto(abstarget, cwd)
         target = repo.wjoin(abstarget)
         src = repo.wjoin(abssrc)
