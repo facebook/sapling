@@ -73,6 +73,13 @@ These fail:
   abort: cannot specify both a source and a base
   [255]
 
+  $ hg rebase --rev 5 --source 4
+  abort: cannot specify both a revision and a source
+  [255]
+  $ hg rebase --base 5 --rev 4
+  abort: cannot specify both a revision and a base
+  [255]
+
   $ hg rebase
   nothing to rebase
   [1]
@@ -186,7 +193,7 @@ Specify only source (from 2 onto 8):
   $ hg clone -q -u . a a4
   $ cd a4
 
-  $ hg rebase --source 2
+  $ hg rebase --source 'desc("C")'
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -246,7 +253,7 @@ Specify only base (from 1 onto 8):
   $ hg clone -q -u . a a6
   $ cd a6
 
-  $ hg rebase --base 3
+  $ hg rebase --base 'desc("D")'
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -325,6 +332,36 @@ Specify base and dest (from 1 onto 7):
   o |  2: 'F'
   | |
   | o  1: 'E'
+  |/
+  o  0: 'A'
+  
+  $ cd ..
+
+
+Specify only revs (from 2 onto 8)
+
+  $ hg clone -q -u . a a9
+  $ cd a9
+
+  $ hg rebase --rev 'desc("C")::'
+  saved backup bundle to $TESTTMP/a9/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  @  8: 'D'
+  |
+  o    7: 'C'
+  |\
+  | o  6: 'I'
+  | |
+  | o  5: 'H'
+  | |
+  | | o  4: 'G'
+  | |/|
+  | o |  3: 'F'
+  | | |
+  | | o  2: 'E'
+  | |/
+  o |  1: 'B'
   |/
   o  0: 'A'
   
