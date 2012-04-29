@@ -1040,12 +1040,13 @@ class binhunk(object):
             hunk.append(l)
             return l.rstrip('\r\n')
 
-        line = getline(lr, self.hunk)
-        while line and not line.startswith('literal '):
+        while True:
             line = getline(lr, self.hunk)
-        if not line:
-            raise PatchError(_('could not extract "%s" binary data')
-                             % self._fname)
+            if not line:
+                raise PatchError(_('could not extract "%s" binary data')
+                                 % self._fname)
+            if line.startswith('literal '):
+                break
         size = int(line[8:].rstrip())
         dec = []
         line = getline(lr, self.hunk)
