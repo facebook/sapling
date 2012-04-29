@@ -118,7 +118,7 @@ def decompressor(fh, alg):
     elif alg == 'GZ':
         def generator(f):
             zd = zlib.decompressobj()
-            for chunk in f:
+            for chunk in util.filechunkiter(f):
                 yield zd.decompress(chunk)
     elif alg == 'BZ':
         def generator(f):
