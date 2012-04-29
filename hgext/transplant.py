@@ -274,7 +274,7 @@ class transplanter(object):
             files = None
         if merge:
             p1, p2 = repo.dirstate.parents()
-            repo.dirstate.setparents(p1, node)
+            repo.setparents(p1, node)
             m = match.always(repo.root, '')
         else:
             m = match.exact(repo.root, '', files)
@@ -340,7 +340,7 @@ class transplanter(object):
                     _('working dir not at transplant parent %s') %
                                  revlog.hex(parent))
             if merge:
-                repo.dirstate.setparents(p1, parents[1])
+                repo.setparents(p1, parents[1])
             n = repo.commit(message, user, date, extra=extra,
                             editor=self.editor)
             if not n:

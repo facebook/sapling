@@ -248,7 +248,7 @@ def _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap):
     mctx = context.memctx(rdst, parents, ctx.description(), dstfiles,
                           getfilectx, ctx.user(), ctx.date(), ctx.extra())
     ret = rdst.commitctx(mctx)
-    rdst.dirstate.setparents(ret)
+    rdst.setparents(ret)
     revmap[ctx.node()] = rdst.changelog.tip()
 
 # Generate list of changed files

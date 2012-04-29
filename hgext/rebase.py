@@ -277,7 +277,7 @@ def rebase(ui, repo, **opts):
                                           editor=editor)
                 else:
                     # Skip commit if we are collapsing
-                    repo.dirstate.setparents(repo[p1].node())
+                    repo.setparents(repo[p1].node())
                     newrev = None
                 # Update the state
                 if newrev is not None:
@@ -361,7 +361,7 @@ def checkexternal(repo, state, targetancestors):
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     'Commit the changes and store useful information in extra'
     try:
-        repo.dirstate.setparents(repo[p1].node(), repo[p2].node())
+        repo.setparents(repo[p1].node(), repo[p2].node())
         ctx = repo[rev]
         if commitmsg is None:
             commitmsg = ctx.description()

@@ -749,7 +749,7 @@ class queue(object):
                 for f in merged:
                     repo.dirstate.merge(f)
                 p1, p2 = repo.dirstate.parents()
-                repo.dirstate.setparents(p1, merge)
+                repo.setparents(p1, merge)
 
             match = scmutil.matchfiles(repo, files or [])
             oldtip = repo['tip']
@@ -1355,7 +1355,7 @@ class queue(object):
                     fctx = ctx[f]
                     repo.wwrite(f, fctx.data(), fctx.flags())
                     repo.dirstate.normal(f)
-                repo.dirstate.setparents(qp, nullid)
+                repo.setparents(qp, nullid)
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
@@ -1546,7 +1546,7 @@ class queue(object):
                 oldphase = repo[top].phase()
 
                 # assumes strip can roll itself back if interrupted
-                repo.dirstate.setparents(*cparents)
+                repo.setparents(*cparents)
                 self.applied.pop()
                 self.applieddirty = True
                 self.strip(repo, [top], update=False,

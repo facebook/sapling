@@ -237,14 +237,26 @@ class dirstate(object):
         return encoding.tolocal(self._branch)
 
     def setparents(self, p1, p2=nullid):
+        """Set dirstate parents to p1 and p2.
+
+        When moving from two parents to one, 'm' merged entries a
+        adjusted to normal and previous copy records discarded and
+        returned by the call.
+
+        See localrepo.setparents()
+        """
         self._dirty = self._dirtypl = True
         oldp2 = self._pl[1]
         self._pl = p1, p2
+        copies = {}
         if oldp2 != nullid and p2 == nullid:
             # Discard 'm' markers when moving away from a merge state
             for f, s in self._map.iteritems():
                 if s[0] == 'm':
+                    if f in self._copymap:
+                        copies[f] = self._copymap[f]
                     self.normallookup(f)
+        return copies
 
     def setbranch(self, branch):
         if branch in ['tip', '.', 'null']:

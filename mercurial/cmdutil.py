@@ -1384,7 +1384,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         newid = repo.commitctx(new)
         if newid != old.node():
             # Reroute the working copy parent to the new changeset
-            repo.dirstate.setparents(newid, nullid)
+            repo.setparents(newid, nullid)
 
             # Move bookmarks from old parent to amend commit
             bms = repo.nodebookmarks(old.node())

@@ -2270,7 +2270,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 
     wlock = repo.wlock()
     try:
-        repo.dirstate.setparents(r1, r2)
+        repo.setparents(r1, r2)
     finally:
         wlock.release()
 
@@ -2693,7 +2693,7 @@ def graft(ui, repo, *revs, **opts):
                 finally:
                     ui.setconfig('ui', 'forcemerge', '')
                 # drop the second merge parent
-                repo.dirstate.setparents(current.node(), nullid)
+                repo.setparents(current.node(), nullid)
                 repo.dirstate.write()
                 # fix up dirstate for copies and renames
                 cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
@@ -3635,7 +3635,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 if p1 != parents[0]:
                     hg.clean(repo, p1.node())
                 if p2 != parents[1]:
-                    repo.dirstate.setparents(p1.node(), p2.node())
+                    repo.setparents(p1.node(), p2.node())
 
                 if opts.get('exact') or opts.get('import_branch'):
                     repo.dirstate.setbranch(branch or 'default')

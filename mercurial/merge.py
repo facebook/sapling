@@ -596,7 +596,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
         stats = applyupdates(repo, action, wc, p2, pa, overwrite)
 
         if not partial:
-            repo.dirstate.setparents(fp1, fp2)
+            repo.setparents(fp1, fp2)
             recordupdates(repo, action, branchmerge)
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())

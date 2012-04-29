@@ -541,3 +541,52 @@ Interactions between collapse and keepbranches
   @@ -0,0 +1,2 @@
   +d
   +blah
+
+  $ cd ..
+
+Rebase, collapse and copies
+
+  $ hg init copies
+  $ cd copies
+  $ hg unbundle "$TESTDIR/bundles/renames.hg"
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 11 changes to 7 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up -q tip
+  $ hg tglog
+  @  3: 'move2'
+  |
+  o  2: 'move1'
+  |
+  | o  1: 'change'
+  |/
+  o  0: 'add'
+  
+  $ hg rebase --collapse -d 1
+  merging a and d to d
+  merging b and e to e
+  merging c and f to f
+  merging e and g to g
+  merging f and c to c
+  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
+  $ hg st
+  $ hg st --copies --change .
+  A d
+    a
+  A g
+    b
+  R b
+  $ cat c
+  c
+  c
+  $ cat d
+  a
+  a
+  $ cat g
+  b
+  b
+  $ hg log -r . --template "{file_copies}\n"
+  d (a)g (b)
+  $ cd ..

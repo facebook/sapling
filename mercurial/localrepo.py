@@ -633,6 +633,17 @@ class localrepository(repo.repository):
         '''get list of changectxs for parents of changeid'''
         return self[changeid].parents()
 
+    def setparents(self, p1, p2=nullid):
+        copies = self.dirstate.setparents(p1, p2)
+        if copies:
+            # Adjust copy records, the dirstate cannot do it, it
+            # requires access to parents manifests. Preserve them
+            # only for entries added to first parent.
+            pctx = self[p1]
+            for f in copies:
+                if f not in pctx and copies[f] in pctx:
+                    self.dirstate.copy(copies[f], f)
+
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.
            fileid can be a file revision or node."""
