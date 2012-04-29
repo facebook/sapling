@@ -3,13 +3,13 @@
 
 rfork e
 
-fn getfiles{
-	cd $1 && \
+fn getfiles {
+	cd $1 &&
 	for(f in `{du -as | awk '{print $2}'})
 		test -f $f && echo `{cleanname $f}
 }
 
-fn usage{
+fn usage {
 	echo >[1=2] usage: 9diff [diff options] parent child root
 	exit usage
 }
