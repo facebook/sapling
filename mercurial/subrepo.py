@@ -802,9 +802,10 @@ class svnsubrepo(abstractsubrepo):
     def merge(self, state):
         old = self._state[1]
         new = state[1]
-        if new != self._wcrev():
-            dirty = old == self._wcrev() or self._wcchanged()[0]
-            if _updateprompt(self._ui, self, dirty, self._wcrev(), new):
+        wcrev = self._wcrev()
+        if new != wcrev:
+            dirty = old == wcrev or self._wcchanged()[0]
+            if _updateprompt(self._ui, self, dirty, wcrev, new):
                 self.get(state, False)
 
     def push(self, opts):
