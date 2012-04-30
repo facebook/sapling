@@ -67,11 +67,11 @@ helptable = sorted([
     (['templating', 'templates'], _('Template Usage'),
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
-    (["extensions"], _("Using additional features"), extshelp),
+    (["extensions"], _("Using Additional Features"), extshelp),
    (["subrepo", "subrepos"], _("Subrepositories"), loaddoc('subrepos')),
    (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
    (["glossary"], _("Glossary"), loaddoc('glossary')),
-   (["hgignore", "ignore"], _("syntax for Mercurial ignore files"),
+   (["hgignore", "ignore"], _("Syntax for Mercurial Ignore Files"),
     loaddoc('hgignore')),
    (["phases"], _("Working with Phases"), loaddoc('phases')),
 ])

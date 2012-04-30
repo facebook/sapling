@@ -111,10 +111,10 @@ Short help:
    dates         Date Formats
    diffs         Diff Formats
    environment   Environment Variables
-   extensions    Using additional features
+   extensions    Using Additional Features
    filesets      Specifying File Sets
    glossary      Glossary
-   hgignore      syntax for Mercurial ignore files
+   hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
@@ -189,10 +189,10 @@ Short help:
    dates         Date Formats
    diffs         Diff Formats
    environment   Environment Variables
-   extensions    Using additional features
+   extensions    Using Additional Features
    filesets      Specifying File Sets
    glossary      Glossary
-   hgignore      syntax for Mercurial ignore files
+   hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
@@ -685,10 +685,10 @@ Test that default list of commands omits extension commands
    dates         Date Formats
    diffs         Diff Formats
    environment   Environment Variables
-   extensions    Using additional features
+   extensions    Using Additional Features
    filesets      Specifying File Sets
    glossary      Glossary
-   hgignore      syntax for Mercurial ignore files
+   hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions

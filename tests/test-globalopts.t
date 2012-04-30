@@ -339,10 +339,10 @@ Testing -h/--help:
    dates         Date Formats
    diffs         Diff Formats
    environment   Environment Variables
-   extensions    Using additional features
+   extensions    Using Additional Features
    filesets      Specifying File Sets
    glossary      Glossary
-   hgignore      syntax for Mercurial ignore files
+   hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
@@ -423,10 +423,10 @@ Testing -h/--help:
    dates         Date Formats
    diffs         Diff Formats
    environment   Environment Variables
-   extensions    Using additional features
+   extensions    Using Additional Features
    filesets      Specifying File Sets
    glossary      Glossary
-   hgignore      syntax for Mercurial ignore files
+   hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
