@@ -3,6 +3,7 @@ import posixpath
 import cPickle as pickle
 import sys
 import traceback
+import urlparse
 
 from mercurial import commands
 from mercurial import hg
@@ -140,19 +141,18 @@ def rebuildmeta(ui, repo, args, **opts):
     for rev in repo:
         util.progress(ui, 'prepare', rev, total=numrevs)
         ctx = repo[rev]
-        extra = ctx.extra()
-        convinfo = extra.get('convert_revision', None)
+        convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
             continue
         svnrevnum = int(convinfo.rsplit('@', 1)[1])
         youngest = max(youngest, svnrevnum)
 
-        if extra.get('close', None) is None:
+        if ctx.extra().get('close', None) is None:
             continue
 
         droprev = lambda x: x.rsplit('@', 1)[0]
         parentctx = ctx.parents()[0]
-        parentinfo = parentctx.extra().get('convert_revision', '@')
+        parentinfo = util.getsvnrev(parentctx, '@')
 
         if droprev(parentinfo) == droprev(convinfo):
             closed.add(parentctx.rev())
@@ -163,7 +163,7 @@ def rebuildmeta(ui, repo, args, **opts):
     for rev in repo:
         util.progress(ui, 'rebuild', rev, total=numrevs)
         ctx = repo[rev]
-        convinfo = ctx.extra().get('convert_revision', None)
+        convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
             continue
         if '.hgtags' in ctx.files():
@@ -174,7 +174,7 @@ def rebuildmeta(ui, repo, args, **opts):
             newdata = ctx.filectx('.hgtags').data()
             for newtag in newdata[len(parentdata):-1].split('\n'):
                 ha, tag = newtag.split(' ', 1)
-                tagged = repo[ha].extra().get('convert_revision', None)
+                tagged = util.getsvnrev(repo[ha], None)
                 if tagged is None:
                     tagged = -1
                 else:
@@ -252,7 +252,7 @@ def rebuildmeta(ui, repo, args, **opts):
             parent = ctx
             while parent.node() != node.nullid:
                 parentextra = parent.extra()
-                parentinfo = parentextra.get('convert_revision')
+                parentinfo = util.getsvnrev(parent)
                 assert parentinfo
                 parent = parent.parents()[0]
 
@@ -408,7 +408,7 @@ def info(ui, repo, **opts):
         ui.status('Not a child of an svn revision.\n')
         return 0
     r, br = hashes[pn]
-    subdir = parent.extra()['convert_revision'][40:].split('@')[0]
+    subdir = util.getsvnrev(parent)[40:].split('@')[0]
     if meta.layout == 'single':
         branchpath = ''
     elif br == None:

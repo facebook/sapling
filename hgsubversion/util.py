@@ -231,11 +231,17 @@ def issamefile(parentctx, childctx, f):
     # parentctx is not an ancestor of childctx, files are unrelated
     return False
 
+
+def getsvnrev(ctx, defval=None):
+    '''Extract SVN revision from commit metadata'''
+    return ctx.extra().get('convert_revision', defval)
+
+
 def _templatehelper(ctx, kw):
     '''
     Helper function for displaying information about converted changesets.
     '''
-    convertinfo = ctx.extra().get('convert_revision', '')
+    convertinfo = getsvnrev(ctx, '')
 
     if not convertinfo or not convertinfo.startswith('svn:'):
         return ''
