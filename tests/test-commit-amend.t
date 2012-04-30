@@ -293,11 +293,23 @@ Follow copies/renames:
   $ hg cp a f
   $ mv f.orig f
   $ hg ci --amend -m replacef
-  saved backup bundle to $TESTTMP/.hg/strip-backup/0ce2c92dc50d-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/20a7413547f9-amend-backup.hg
   $ hg st --change . --copies
-  M f
   $ hg log -r . --template "{file_copies}\n"
-  f (a)
+  
+
+Move added file (issue3410):
+
+  $ echo g >> g
+  $ hg ci -Am g
+  adding g
+  $ hg mv g h
+  $ hg ci --amend
+  saved backup bundle to $TESTTMP/.hg/strip-backup/5daa77a5d616-amend-backup.hg
+  $ hg st --change . --copies h
+  A h
+  $ hg log -r . --template "{file_copies}\n"
+  
 
 Can't rollback an amend:
 
