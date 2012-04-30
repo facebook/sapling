@@ -287,6 +287,18 @@ Follow copies/renames:
   A f
     d
 
+  $ mv f f.orig
+  $ hg rm -A f
+  $ hg ci -m removef
+  $ hg cp a f
+  $ mv f.orig f
+  $ hg ci --amend -m replacef
+  saved backup bundle to $TESTTMP/.hg/strip-backup/0ce2c92dc50d-amend-backup.hg
+  $ hg st --change . --copies
+  M f
+  $ hg log -r . --template "{file_copies}\n"
+  f (a)
+
 Can't rollback an amend:
 
   $ hg rollback
