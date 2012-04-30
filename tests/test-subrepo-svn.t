@@ -564,3 +564,42 @@ traceback
   $ hg forget 'notafile*'
   notafile*: No such file or directory
   [1]
+
+Test a subrepo referencing a just moved svn path. Last commit rev will
+be different from the revision, and the path will be different as
+well.
+
+  $ cd $WCROOT
+  $ svn up > /dev/null
+  $ mkdir trunk/subdir branches
+  $ echo a > trunk/subdir/a
+  $ svn add trunk/subdir branches
+  A         trunk/subdir
+  A         trunk/subdir/a
+  A         branches
+  $ svn ci -m addsubdir
+  Adding         branches
+  Adding         trunk/subdir
+  Adding         trunk/subdir/a
+  Transmitting file data .
+  Committed revision 14.
+  $ svn cp -m branchtrunk $SVNREPO/trunk $SVNREPO/branches/somebranch
+  
+  Committed revision 15.
+  $ cd ..
+
+  $ hg init repo2
+  $ cd repo2
+  $ svn co $SVNREPO/branches/somebranch/subdir
+  A    subdir/a
+  Checked out revision 15.
+  $ echo "subdir = [svn] $SVNREPO/branches/somebranch/subdir" > .hgsub
+  $ hg add .hgsub
+  $ hg ci -m addsub
+  $ hg up null
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg up
+  A    *subdir/a (glob)
+  Checked out revision 15.
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..

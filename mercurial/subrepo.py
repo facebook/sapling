@@ -715,13 +715,24 @@ class svnsubrepo(abstractsubrepo):
         return True
 
     def basestate(self):
-        return self._wcrev()
+        lastrev, rev = self._wcrevs()
+        if lastrev != rev:
+            # Last committed rev is not the same than rev. We would
+            # like to take lastrev but we do not know if the subrepo
+            # URL exists at lastrev.  Test it and fallback to rev it
+            # is not there.
+            try:
+                self._svncommand(['info', '%s@%s' % (self._state[0], lastrev)])
+                return lastrev
+            except error.Abort:
+                pass
+        return rev
 
     def commit(self, text, user, date):
         # user and date are out of our hands since svn is centralized
         changed, extchanged, missing = self._wcchanged()
         if not changed:
-            return self._wcrev()
+            return self.basestate()
         if extchanged:
             # Do not try to commit externals
             raise util.Abort(_('cannot commit svn externals'))
