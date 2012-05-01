@@ -158,12 +158,12 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
   $ cd ..
 
 
-Rebase with dest == `hg branch` => same as no arguments (from 3 onto 8):
+Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
 
   $ hg clone -q -u 3 a a3
   $ cd a3
 
-  $ hg rebase --dest `hg branch`
+  $ hg rebase --dest 'branch(.)'
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog

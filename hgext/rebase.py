@@ -182,7 +182,7 @@ def rebase(ui, repo, **opts):
                 branch = repo[None].branch()
                 dest = repo[branch]
             else:
-                dest = repo[destf]
+                dest = scmutil.revsingle(repo, destf)
 
             if revf:
                 rebaseset = repo.revs('%lr', revf)
