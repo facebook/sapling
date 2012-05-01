@@ -64,7 +64,7 @@ helptable = sorted([
     (['fileset', 'filesets'], _("Specifying File Sets"), loaddoc('filesets')),
     (['diffs'], _('Diff Formats'), loaddoc('diffs')),
     (['merge-tools'], _('Merge Tools'), loaddoc('merge-tools')),
-    (['templating', 'templates'], _('Template Usage'),
+    (['templating', 'templates', 'template', 'style'], _('Template Usage'),
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
     (["extensions"], _("Using Additional Features"), extshelp),
