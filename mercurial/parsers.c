@@ -470,8 +470,10 @@ static void _index_clearcaches(indexObject *self)
 		Py_ssize_t i;
 
 		for (i = 0; i < self->raw_length; i++) {
-			Py_XDECREF(self->cache[i]);
-			self->cache[i] = NULL;
+			if (self->cache[i]) {
+				Py_DECREF(self->cache[i]);
+				self->cache[i] = NULL;
+			}
 		}
 		free(self->cache);
 		self->cache = NULL;
@@ -957,9 +959,19 @@ static long inline_scan(indexObject *self, const char **offsets)
 	return len;
 }
 
-static int index_real_init(indexObject *self, const char *data, int size,
-			   PyObject *inlined_obj, PyObject *data_obj)
+static int index_init(indexObject *self, PyObject *args)
 {
+	PyObject *data_obj, *inlined_obj;
+	Py_ssize_t size;
+
+	if (!PyArg_ParseTuple(args, "OO", &data_obj, &inlined_obj))
+		return -1;
+	if (!PyString_Check(data_obj)) {
+		PyErr_SetString(PyExc_TypeError, "data is not a string");
+		return -1;
+	}
+	size = PyString_GET_SIZE(data_obj);
+
 	self->inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 	self->data = data_obj;
 	self->cache = NULL;
@@ -971,7 +983,6 @@ static int index_real_init(indexObject *self, const char *data, int size,
 	self->ntdepth = self->ntsplits = 0;
 	self->ntlookups = self->ntmisses = 0;
 	self->ntrev = -1;
-	Py_INCREF(self->data);
 
 	if (self->inlined) {
 		long len = inline_scan(self, NULL);
@@ -987,27 +998,16 @@ static int index_real_init(indexObject *self, const char *data, int size,
 		self->raw_length = size / 64;
 		self->length = self->raw_length + 1;
 	}
+	Py_INCREF(self->data);
 
 	return 0;
 bail:
 	return -1;
 }
 
-static int index_init(indexObject *self, PyObject *args, PyObject *kwds)
-{
-	const char *data;
-	int size;
-	PyObject *inlined_obj;
-
-	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
-		return -1;
-
-	return index_real_init(self, data, size, inlined_obj,
-			       PyTuple_GET_ITEM(args, 0));
-}
-
 static PyObject *index_nodemap(indexObject *self)
 {
+	Py_INCREF(self);
 	return (PyObject *)self;
 }
 
@@ -1106,26 +1106,19 @@ static PyTypeObject indexType = {
  */
 static PyObject *parse_index2(PyObject *self, PyObject *args)
 {
-	const char *data;
-	int size, ret;
-	PyObject *inlined_obj, *tuple = NULL, *cache = NULL;
+	PyObject *tuple = NULL, *cache = NULL;
 	indexObject *idx;
-
-	if (!PyArg_ParseTuple(args, "s#O", &data, &size, &inlined_obj))
-		return NULL;
+	int ret;
 
 	idx = PyObject_New(indexObject, &indexType);
-
 	if (idx == NULL)
 		goto bail;
 
-	ret = index_real_init(idx, data, size, inlined_obj,
-			      PyTuple_GET_ITEM(args, 0));
-	if (ret)
+	ret = index_init(idx, args);
+	if (ret == -1)
 		goto bail;
 
 	if (idx->inlined) {
-		Py_INCREF(idx->data);
 		cache = Py_BuildValue("iO", 0, idx->data);
 		if (cache == NULL)
 			goto bail;
@@ -1133,8 +1126,6 @@ static PyObject *parse_index2(PyObject *self, PyObject *args)
 		cache = Py_None;
 		Py_INCREF(cache);
 	}
-
-	Py_INCREF(idx);
 
 	tuple = Py_BuildValue("NN", idx, cache);
 	if (!tuple)
