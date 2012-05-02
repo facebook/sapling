@@ -201,7 +201,7 @@ def rebase(ui, repo, **opts):
                 root = None
 
             if not rebaseset:
-                repo.ui.debug('base is ancestor of destination')
+                repo.ui.debug('base is ancestor of destination\n')
                 result = None
             elif not keepf and list(repo.revs('first(children(%ld) - %ld)',
                                               rebaseset, rebaseset)):
@@ -618,7 +618,7 @@ def buildstate(repo, dest, rebaseset, detach):
     if commonbase == dest:
         samebranch = root.branch() == dest.branch()
         if samebranch and root in dest.children():
-           repo.ui.debug('source is a child of destination')
+           repo.ui.debug('source is a child of destination\n')
            return None
         # rebase on ancestor, force detach
         detach = True
