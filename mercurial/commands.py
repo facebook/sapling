@@ -3941,6 +3941,9 @@ def log(ui, repo, *pats, **opts):
     See :hg:`help revisions` and :hg:`help revsets` for more about
     specifying revisions.
 
+    See :hg:`help templates` for more about pre-packaged styles and
+    specifying custom templates.
+
     Returns 0 on success.
     """
 
