@@ -1328,6 +1328,15 @@ The full set of options is:
 ``cache``
     Whether to support caching in hgweb. Defaults to True.
 
+``collapse``
+    With ``descend`` enabled, repositories in subdirectories are shown at
+    a single level alongside repositories in the current path. With
+    ``collapse`` also enabled, repositories residing at a deeper level than
+    the current path are grouped behind navigable directory entries that
+    lead to the locations of these repositories. In effect, this setting
+    collapses each collection of repositories found within a subdirectory
+    into a single entry for that subdirectory. Default is False.
+
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
