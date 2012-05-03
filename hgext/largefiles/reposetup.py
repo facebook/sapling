@@ -398,10 +398,6 @@ def reposetup(ui, repo):
                     if not fstandin.endswith(os.sep):
                         fstandin += os.sep
 
-                    # prevalidate matching standin directories
-                    if util.any(st for st in match._files
-                                   if st.startswith(fstandin)):
-                        continue
                     actualfiles.append(f)
                 match._files = actualfiles
 
