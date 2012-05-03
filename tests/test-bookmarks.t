@@ -371,3 +371,8 @@ test wrongly formated bookmark
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
 
+test missing revisions
+
+  $ echo "925d80f479bc z" > .hg/bookmarks
+  $ hg book
+  no bookmarks set
