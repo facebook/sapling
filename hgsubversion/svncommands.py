@@ -86,6 +86,8 @@ def verify(ui, repo, args=None, **opts):
                 ui.write('  %s\n' % f)
         result = 1
 
+    util.progress(ui, 'verify', None)
+
     return result
 
 
