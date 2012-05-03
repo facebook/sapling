@@ -480,7 +480,8 @@ def recordupdates(repo, action, branchmerge):
                 if f:
                     repo.dirstate.drop(f)
 
-def update(repo, node, branchmerge, force, partial, ancestor=None):
+def update(repo, node, branchmerge, force, partial, ancestor=None,
+           mergeancestor=False):
     """
     Perform a merge between the working directory and the given node
 
@@ -488,6 +489,10 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
+    mergeancestor = if false, merging with an ancestor (fast-forward)
+      is only allowed between different named branches. This flag
+      is used by rebase extension as a temporary fix and should be
+      avoided in general.
 
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
@@ -548,7 +553,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None):
                 raise util.Abort(_("merging with a working directory ancestor"
                                    " has no effect"))
             elif pa == p1:
-                if p1.branch() == p2.branch():
+                if not mergeancestor and p1.branch() == p2.branch():
                     raise util.Abort(_("nothing to merge"),
                                      hint=_("use 'hg update' "
                                             "or check 'hg heads'"))

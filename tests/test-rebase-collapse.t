@@ -589,4 +589,44 @@ Rebase, collapse and copies
   b
   $ hg log -r . --template "{file_copies}\n"
   d (a)g (b)
+
+Test collapsing a middle revision in-place
+
+  $ hg tglog
+  @  2: 'Collapsed revision
+  |  * move1
+  |  * move2'
+  o  1: 'change'
+  |
+  o  0: 'add'
+  
+  $ hg rebase --collapse -r 1 -d 0
+  abort: can't remove original changesets with unrebased descendants
+  (use --keep to keep original changesets)
+  [255]
+
+Test collapsing in place
+
+  $ hg rebase --collapse -b . -d 0
+  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/1352765a01d4-backup.hg
+  $ hg st --change . --copies
+  M a
+  M c
+  A d
+    a
+  A g
+    b
+  R b
+  $ cat a
+  a
+  a
+  $ cat c
+  c
+  c
+  $ cat d
+  a
+  a
+  $ cat g
+  b
+  b
   $ cd ..

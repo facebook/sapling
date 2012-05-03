@@ -214,7 +214,7 @@ def rebase(ui, repo, **opts):
                                  % repo[root],
                                  hint=_('see hg help phases for details'))
             else:
-                result = buildstate(repo, dest, rebaseset, detachf)
+                result = buildstate(repo, dest, rebaseset, detachf, collapsef)
 
             if not result:
                 # Empty state built, nothing to rebase
@@ -265,7 +265,7 @@ def rebase(ui, repo, **opts):
                 else:
                     try:
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                        stats = rebasenode(repo, rev, p1, state)
+                        stats = rebasenode(repo, rev, p1, state, collapsef)
                         if stats and stats[3] > 0:
                             raise util.Abort(_('unresolved conflicts (see hg '
                                         'resolve, then hg rebase --continue)'))
@@ -383,7 +383,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         repo.dirstate.invalidate()
         raise
 
-def rebasenode(repo, rev, p1, state):
+def rebasenode(repo, rev, p1, state, collapse):
     'Rebase a single revision'
     # Merge phase
     # Update to target and merge it with local
@@ -397,7 +397,9 @@ def rebasenode(repo, rev, p1, state):
     base = None
     if repo[rev].rev() != repo[min(state)].rev():
         base = repo[rev].p1().node()
-    return merge.update(repo, rev, True, True, False, base)
+    # When collapsing in-place, the parent is the common ancestor, we
+    # have to allow merging with it.
+    return merge.update(repo, rev, True, True, False, base, collapse)
 
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
@@ -589,7 +591,7 @@ def abort(repo, originalwd, target, state):
         repo.ui.warn(_('rebase aborted\n'))
         return 0
 
-def buildstate(repo, dest, rebaseset, detach):
+def buildstate(repo, dest, rebaseset, detach, collapse):
     '''Define which revisions are going to be rebased and where
 
     repo: repo
@@ -617,9 +619,9 @@ def buildstate(repo, dest, rebaseset, detach):
         raise util.Abort(_('source is ancestor of destination'))
     if commonbase == dest:
         samebranch = root.branch() == dest.branch()
-        if samebranch and root in dest.children():
-           repo.ui.debug('source is a child of destination\n')
-           return None
+        if not collapse and samebranch and root in dest.children():
+            repo.ui.debug('source is a child of destination\n')
+            return None
         # rebase on ancestor, force detach
         detach = True
     if detach:
