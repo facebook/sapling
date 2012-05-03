@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex
-from mercurial import encoding, error, util
+from mercurial import encoding, util
 import errno, os
 
 def valid(mark):
@@ -36,7 +36,7 @@ def read(repo):
             refspec = encoding.tolocal(refspec)
             try:
                 bookmarks[refspec] = repo.changelog.lookup(sha)
-            except error.RepoLookupError:
+            except LookupError:
                 pass
     except IOError, inst:
         if inst.errno != errno.ENOENT:
