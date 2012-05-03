@@ -647,6 +647,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         try:
             while changesets:
                 # update state
+                hbisect.save_state(repo, state)
                 status = util.system(command, out=ui.fout)
                 if status == 125:
                     transition = "skip"
