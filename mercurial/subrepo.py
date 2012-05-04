@@ -44,6 +44,9 @@ def state(ctx, ui):
     if '.hgsubstate' in ctx:
         try:
             for l in ctx['.hgsubstate'].data().splitlines():
+                l = l.lstrip()
+                if not l:
+                    continue
                 revision, path = l.split(" ", 1)
                 rev[path] = revision
         except IOError, err:
