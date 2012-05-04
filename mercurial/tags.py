@@ -181,7 +181,7 @@ def _readtagcache(ui, repo):
             for line in cachelines:
                 if line == "\n":
                     break
-                line = line.rstrip().split()
+                line = line.split()
                 cacherevs.append(int(line[0]))
                 headnode = bin(line[1])
                 cacheheads.append(headnode)
