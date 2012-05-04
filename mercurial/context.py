@@ -634,20 +634,13 @@ class filectx(object):
 
         return zip(hist[base][0], hist[base][1].splitlines(True))
 
-    def ancestor(self, fc2, actx=None):
+    def ancestor(self, fc2, actx):
         """
         find the common ancestor file context, if any, of self, and fc2
 
-        If actx is given, it must be the changectx of the common ancestor
+        actx must be the changectx of the common ancestor
         of self's and fc2's respective changesets.
         """
-
-        if actx is None:
-            actx = self.changectx().ancestor(fc2.changectx())
-
-        # the trivial case: changesets are unrelated, files must be too
-        if not actx:
-            return None
 
         # the easy case: no (relevant) renames
         if fc2.path() == self.path() and self.path() in actx:
