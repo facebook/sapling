@@ -1109,21 +1109,21 @@ verify that large files in subrepos handled properly
   Invoking status precommit hook
   M .hgsubstate
   $ hg archive -S lf_subrepo_archive
-  $ find lf_subrepo_archive -print
+  $ find lf_subrepo_archive | sort
   lf_subrepo_archive
   lf_subrepo_archive/.hg_archival.txt
+  lf_subrepo_archive/.hgsub
   lf_subrepo_archive/.hgsubstate
-  lf_subrepo_archive/subrepo
-  lf_subrepo_archive/subrepo/large.txt
-  lf_subrepo_archive/subrepo/normal.txt
   lf_subrepo_archive/a
   lf_subrepo_archive/a/b
   lf_subrepo_archive/a/b/c
   lf_subrepo_archive/a/b/c/d
-  lf_subrepo_archive/a/b/c/d/e.normal.txt
   lf_subrepo_archive/a/b/c/d/e.large.txt
+  lf_subrepo_archive/a/b/c/d/e.normal.txt
   lf_subrepo_archive/a/b/c/x
   lf_subrepo_archive/a/b/c/x/y.normal.txt
-  lf_subrepo_archive/.hgsub
+  lf_subrepo_archive/subrepo
+  lf_subrepo_archive/subrepo/large.txt
+  lf_subrepo_archive/subrepo/normal.txt
 
   $ cd ..
