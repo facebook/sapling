@@ -1481,7 +1481,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         def badfn(path, msg):
             if path in names:
                 return
-            if path in repo[node].substate:
+            if path in ctx.substate:
                 return
             path_ = path + '/'
             for f in names:
@@ -1489,14 +1489,14 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     return
             ui.warn("%s: %s\n" % (m.rel(path), msg))
 
-        m = scmutil.match(repo[node], pats, opts)
+        m = scmutil.match(ctx, pats, opts)
         m.bad = badfn
-        for abs in repo[node].walk(m):
+        for abs in ctx.walk(m):
             if abs not in names:
                 names[abs] = m.rel(abs), m.exact(abs)
 
         # get the list of subrepos that must be reverted
-        targetsubs = [s for s in repo[node].substate if m(s)]
+        targetsubs = [s for s in ctx.substate if m(s)]
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(set, changes)
