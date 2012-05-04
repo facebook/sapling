@@ -118,6 +118,8 @@ class match(object):
         return self._files
     def anypats(self):
         return self._anypats
+    def always(self):
+        return False
 
 class exact(match):
     def __init__(self, root, cwd, files):
@@ -126,6 +128,8 @@ class exact(match):
 class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
+    def always(self):
+        return True
 
 class narrowmatcher(match):
     """Adapt a matcher to work on a subdirectory only.

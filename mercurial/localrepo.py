@@ -1333,6 +1333,8 @@ class localrepository(repo.repository):
 
         def mfmatches(ctx):
             mf = ctx.manifest().copy()
+            if match.always():
+                return mf
             for fn in mf.keys():
                 if not match(fn):
                     del mf[fn]
