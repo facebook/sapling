@@ -20,8 +20,10 @@ def putlfile(repo, proto, sha):
     user cache.'''
     proto.redirect()
 
-    tmpfp = util.atomictempfile(lfutil.storepath(repo, sha),
-                                createmode=repo.store.createmode)
+    path = lfutil.storepath(repo, sha)
+    util.makedirs(os.path.dirname(path))
+    tmpfp = util.atomictempfile(path, createmode=repo.store.createmode)
+
     try:
         try:
             proto.getfile(tmpfp)
