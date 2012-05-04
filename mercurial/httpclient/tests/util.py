@@ -29,7 +29,7 @@
 import difflib
 import socket
 
-import http
+import httpplus
 
 
 class MockSocket(object):
@@ -57,7 +57,7 @@ class MockSocket(object):
         self.remote_closed = self.closed = False
         self.close_on_empty = False
         self.sent = ''
-        self.read_wait_sentinel = http._END_HEADERS
+        self.read_wait_sentinel = httpplus._END_HEADERS
 
     def close(self):
         self.closed = True
@@ -86,7 +86,7 @@ class MockSocket(object):
 
     @property
     def ready_for_read(self):
-        return ((self.early_data and http._END_HEADERS in self.sent)
+        return ((self.early_data and httpplus._END_HEADERS in self.sent)
                 or (self.read_wait_sentinel in self.sent and self.data)
                 or self.closed or self.remote_closed)
 
@@ -132,7 +132,7 @@ class MockSSLSocket(object):
 
 
 def mocksslwrap(sock, keyfile=None, certfile=None,
-                server_side=False, cert_reqs=http.socketutil.CERT_NONE,
+                server_side=False, cert_reqs=httpplus.socketutil.CERT_NONE,
                 ssl_version=None, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
@@ -156,16 +156,16 @@ class HttpTestBase(object):
         self.orig_getaddrinfo = socket.getaddrinfo
         socket.getaddrinfo = mockgetaddrinfo
 
-        self.orig_select = http.select.select
-        http.select.select = mockselect
+        self.orig_select = httpplus.select.select
+        httpplus.select.select = mockselect
 
-        self.orig_sslwrap = http.socketutil.wrap_socket
-        http.socketutil.wrap_socket = mocksslwrap
+        self.orig_sslwrap = httpplus.socketutil.wrap_socket
+        httpplus.socketutil.wrap_socket = mocksslwrap
 
     def tearDown(self):
         socket.socket = self.orig_socket
-        http.select.select = self.orig_select
-        http.socketutil.wrap_socket = self.orig_sslwrap
+        httpplus.select.select = self.orig_select
+        httpplus.socketutil.wrap_socket = self.orig_sslwrap
         socket.getaddrinfo = self.orig_getaddrinfo
 
     def assertStringEqual(self, l, r):

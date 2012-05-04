@@ -26,43 +26,45 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""Tests against malformed responses.
 
-Server implementations that respond with only LF instead of CRLF have
-been observed. Checking against ones that use only CR is a hedge
-against that potential insanit.y
-"""
 import unittest
 
-import httpplus
+from httpplus import _readers
 
-# relative import to ease embedding the library
-import util
+def chunkedblock(x, eol='\r\n'):
+    r"""Make a chunked transfer-encoding block.
+
+    >>> chunkedblock('hi')
+    '2\r\nhi\r\n'
+    >>> chunkedblock('hi' * 10)
+    '14\r\nhihihihihihihihihihi\r\n'
+    >>> chunkedblock('hi', eol='\n')
+    '2\nhi\n'
+    """
+    return ''.join((hex(len(x))[2:], eol, x, eol))
+
+corpus = 'foo\r\nbar\r\nbaz\r\n'
 
 
-class SimpleHttpTest(util.HttpTestBase, unittest.TestCase):
+class ChunkedReaderTest(unittest.TestCase):
+    def test_many_block_boundaries(self):
+        for step in xrange(1, len(corpus)):
+            data = ''.join(chunkedblock(corpus[start:start+step]) for
+                           start in xrange(0, len(corpus), step))
+            for istep in xrange(1, len(data)):
+                rdr = _readers.ChunkedReader('\r\n')
+                print 'step', step, 'load', istep
+                for start in xrange(0, len(data), istep):
+                    rdr._load(data[start:start+istep])
+                rdr._load(chunkedblock(''))
+                self.assertEqual(corpus, rdr.read(len(corpus) + 1))
 
-    def bogusEOL(self, eol):
-        con = httpplus.HTTPConnection('1.2.3.4:80')
-        con._connect()
-        con.sock.data = ['HTTP/1.1 200 OK%s' % eol,
-                         'Server: BogusServer 1.0%s' % eol,
-                         'Content-Length: 10',
-                         eol * 2,
-                         '1234567890']
-        con.request('GET', '/')
-
-        expected_req = ('GET / HTTP/1.1\r\n'
-                        'Host: 1.2.3.4\r\n'
-                        'accept-encoding: identity\r\n\r\n')
-
-        self.assertEqual(('1.2.3.4', 80), con.sock.sa)
-        self.assertEqual(expected_req, con.sock.sent)
-        self.assertEqual('1234567890', con.getresponse().read())
-
-    def testOnlyLinefeed(self):
-        self.bogusEOL('\n')
-
-    def testOnlyCarriageReturn(self):
-        self.bogusEOL('\r')
+    def test_small_chunk_blocks_large_wire_blocks(self):
+        data = ''.join(map(chunkedblock, corpus)) + chunkedblock('')
+        rdr = _readers.ChunkedReader('\r\n')
+        for start in xrange(0, len(data), 4):
+            d = data[start:start + 4]
+            if d:
+                rdr._load(d)
+        self.assertEqual(corpus, rdr.read(len(corpus)+100))
 # no-check-code

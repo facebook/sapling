@@ -45,6 +45,7 @@ import rfc822
 import select
 import socket
 
+import _readers
 import socketutil
 
 logger = logging.getLogger(__name__)
@@ -53,8 +54,6 @@ __all__ = ['HTTPConnection', 'HTTPResponse']
 
 HTTP_VER_1_0 = 'HTTP/1.0'
 HTTP_VER_1_1 = 'HTTP/1.1'
-
-_LEN_CLOSE_IS_END = -1
 
 OUTGOING_BUFFER_SIZE = 1 << 15
 INCOMING_BUFFER_SIZE = 1 << 20
@@ -83,23 +82,19 @@ class HTTPResponse(object):
     The response will continue to load as available. If you need the
     complete response before continuing, check the .complete() method.
     """
-    def __init__(self, sock, timeout):
+    def __init__(self, sock, timeout, method):
         self.sock = sock
+        self.method = method
         self.raw_response = ''
-        self._body = None
         self._headers_len = 0
-        self._content_len = 0
         self.headers = None
         self.will_close = False
         self.status_line = ''
         self.status = None
+        self.continued = False
         self.http_version = None
         self.reason = None
-        self._chunked = False
-        self._chunked_done = False
-        self._chunked_until_next = 0
-        self._chunked_skip_bytes = 0
-        self._chunked_preloaded_block = None
+        self._reader = None
 
         self._read_location = 0
         self._eol = EOL
@@ -117,11 +112,12 @@ class HTTPResponse(object):
         socket is closed, this will nearly always return False, even
         in cases where all the data has actually been loaded.
         """
-        if self._chunked:
-            return self._chunked_done
-        if self._content_len == _LEN_CLOSE_IS_END:
-            return False
-        return self._body is not None and len(self._body) >= self._content_len
+        if self._reader:
+            return self._reader.done()
+
+    def _close(self):
+        if self._reader is not None:
+            self._reader._close()
 
     def readline(self):
         """Read a single line from the response body.
@@ -129,30 +125,34 @@ class HTTPResponse(object):
         This may block until either a line ending is found or the
         response is complete.
         """
-        eol = self._body.find('\n', self._read_location)
-        while eol == -1 and not self.complete():
+        # TODO: move this into the reader interface where it can be
+        # smarter (and probably avoid copies)
+        bytes = []
+        while not bytes:
+            try:
+                bytes = [self._reader.read(1)]
+            except _readers.ReadNotReady:
+                self._select()
+        while bytes[-1] != '\n' and not self.complete():
             self._select()
-            eol = self._body.find('\n', self._read_location)
-        if eol != -1:
-            eol += 1
-        else:
-            eol = len(self._body)
-        data = self._body[self._read_location:eol]
-        self._read_location = eol
-        return data
+            bytes.append(self._reader.read(1))
+        if bytes[-1] != '\n':
+            next = self._reader.read(1)
+            while next and next != '\n':
+                bytes.append(next)
+                next = self._reader.read(1)
+            bytes.append(next)
+        return ''.join(bytes)
 
     def read(self, length=None):
         # if length is None, unbounded read
         while (not self.complete()  # never select on a finished read
                and (not length  # unbounded, so we wait for complete()
-                    or (self._read_location + length) > len(self._body))):
+                    or length > self._reader.available_data)):
             self._select()
         if not length:
-            length = len(self._body) - self._read_location
-        elif len(self._body) < (self._read_location + length):
-            length = len(self._body) - self._read_location
-        r = self._body[self._read_location:self._read_location + length]
-        self._read_location += len(r)
+            length = self._reader.available_data
+        r = self._reader.read(length)
         if self.complete() and self.will_close:
             self.sock.close()
         return r
@@ -160,93 +160,35 @@ class HTTPResponse(object):
     def _select(self):
         r, _, _ = select.select([self.sock], [], [], self._timeout)
         if not r:
-            # socket was not readable. If the response is not complete
-            # and we're not a _LEN_CLOSE_IS_END response, raise a timeout.
-            # If we are a _LEN_CLOSE_IS_END response and we have no data,
-            # raise a timeout.
-            if not (self.complete() or
-                    (self._content_len == _LEN_CLOSE_IS_END and self._body)):
+            # socket was not readable. If the response is not
+            # complete, raise a timeout.
+            if not self.complete():
                 logger.info('timed out with timeout of %s', self._timeout)
                 raise HTTPTimeoutException('timeout reading data')
-            logger.info('cl: %r body: %r', self._content_len, self._body)
         try:
             data = self.sock.recv(INCOMING_BUFFER_SIZE)
-            # If the socket was readable and no data was read, that
-            # means the socket was closed. If this isn't a
-            # _CLOSE_IS_END socket, then something is wrong if we're
-            # here (we shouldn't enter _select() if the response is
-            # complete), so abort.
-            if not data and self._content_len != _LEN_CLOSE_IS_END:
-                raise HTTPRemoteClosedError(
-                    'server appears to have closed the socket mid-response')
         except socket.sslerror, e:
             if e.args[0] != socket.SSL_ERROR_WANT_READ:
                 raise
             logger.debug('SSL_WANT_READ in _select, should retry later')
             return True
         logger.debug('response read %d data during _select', len(data))
+        # If the socket was readable and no data was read, that means
+        # the socket was closed. Inform the reader (if any) so it can
+        # raise an exception if this is an invalid situation.
         if not data:
-            if self.headers and self._content_len == _LEN_CLOSE_IS_END:
-                self._content_len = len(self._body)
+            if self._reader:
+                self._reader._close()
             return False
         else:
             self._load_response(data)
             return True
 
-    def _chunked_parsedata(self, data):
-        if self._chunked_preloaded_block:
-            data = self._chunked_preloaded_block + data
-            self._chunked_preloaded_block = None
-        while data:
-            logger.debug('looping with %d data remaining', len(data))
-            # Slice out anything we should skip
-            if self._chunked_skip_bytes:
-                if len(data) <= self._chunked_skip_bytes:
-                    self._chunked_skip_bytes -= len(data)
-                    data = ''
-                    break
-                else:
-                    data = data[self._chunked_skip_bytes:]
-                    self._chunked_skip_bytes = 0
-
-            # determine how much is until the next chunk
-            if self._chunked_until_next:
-                amt = self._chunked_until_next
-                logger.debug('reading remaining %d of existing chunk', amt)
-                self._chunked_until_next = 0
-                body = data
-            else:
-                try:
-                    amt, body = data.split(self._eol, 1)
-                except ValueError:
-                    self._chunked_preloaded_block = data
-                    logger.debug('saving %r as a preloaded block for chunked',
-                                 self._chunked_preloaded_block)
-                    return
-                amt = int(amt, base=16)
-                logger.debug('reading chunk of length %d', amt)
-                if amt == 0:
-                    self._chunked_done = True
-
-            # read through end of what we have or the chunk
-            self._body += body[:amt]
-            if len(body) >= amt:
-                data = body[amt:]
-                self._chunked_skip_bytes = len(self._eol)
-            else:
-                self._chunked_until_next = amt - len(body)
-                self._chunked_skip_bytes = 0
-                data = ''
-
     def _load_response(self, data):
-        if self._chunked:
-            self._chunked_parsedata(data)
-            return
-        elif self._body is not None:
-            self._body += data
-            return
-
-        # We haven't seen end of headers yet
+        # Being here implies we're not at the end of the headers yet,
+        # since at the end of this method if headers were completely
+        # loaded we replace this method with the load() method of the
+        # reader we created.
         self.raw_response += data
         # This is a bogus server with bad line endings
         if self._eol not in self.raw_response:
@@ -270,6 +212,7 @@ class HTTPResponse(object):
         http_ver, status = hdrs.split(' ', 1)
         if status.startswith('100'):
             self.raw_response = body
+            self.continued = True
             logger.debug('continue seen, setting body to %r', body)
             return
 
@@ -289,23 +232,46 @@ class HTTPResponse(object):
         if self._eol != EOL:
             hdrs = hdrs.replace(self._eol, '\r\n')
         headers = rfc822.Message(cStringIO.StringIO(hdrs))
+        content_len = None
         if HDR_CONTENT_LENGTH in headers:
-            self._content_len = int(headers[HDR_CONTENT_LENGTH])
+            content_len = int(headers[HDR_CONTENT_LENGTH])
         if self.http_version == HTTP_VER_1_0:
             self.will_close = True
         elif HDR_CONNECTION_CTRL in headers:
             self.will_close = (
                 headers[HDR_CONNECTION_CTRL].lower() == CONNECTION_CLOSE)
-            if self._content_len == 0:
-                self._content_len = _LEN_CLOSE_IS_END
         if (HDR_XFER_ENCODING in headers
             and headers[HDR_XFER_ENCODING].lower() == XFER_ENCODING_CHUNKED):
-            self._body = ''
-            self._chunked_parsedata(body)
-            self._chunked = True
-        if self._body is None:
-            self._body = body
+            self._reader = _readers.ChunkedReader(self._eol)
+            logger.debug('using a chunked reader')
+        else:
+            # HEAD responses are forbidden from returning a body, and
+            # it's implausible for a CONNECT response to use
+            # close-is-end logic for an OK response.
+            if (self.method == 'HEAD' or
+                (self.method == 'CONNECT' and content_len is None)):
+                content_len = 0
+            if content_len is not None:
+                logger.debug('using a content-length reader with length %d',
+                             content_len)
+                self._reader = _readers.ContentLengthReader(content_len)
+            else:
+                # Response body had no length specified and is not
+                # chunked, so the end of the body will only be
+                # identifiable by the termination of the socket by the
+                # server. My interpretation of the spec means that we
+                # are correct in hitting this case if
+                # transfer-encoding, content-length, and
+                # connection-control were left unspecified.
+                self._reader = _readers.CloseIsEndReader()
+                logger.debug('using a close-is-end reader')
+                self.will_close = True
+
+        if body:
+            self._reader._load(body)
+        logger.debug('headers complete')
         self.headers = headers
+        self._load_response = self._reader._load
 
 
 class HTTPConnection(object):
@@ -382,13 +348,14 @@ class HTTPConnection(object):
                                          {}, HTTP_VER_1_0)
                 sock.send(data)
                 sock.setblocking(0)
-                r = self.response_class(sock, self.timeout)
+                r = self.response_class(sock, self.timeout, 'CONNECT')
                 timeout_exc = HTTPTimeoutException(
                     'Timed out waiting for CONNECT response from proxy')
                 while not r.complete():
                     try:
                         if not r._select():
-                            raise timeout_exc
+                            if not r.complete():
+                                raise timeout_exc
                     except HTTPTimeoutException:
                         # This raise/except pattern looks goofy, but
                         # _select can raise the timeout as well as the
@@ -527,7 +494,7 @@ class HTTPConnection(object):
             out = outgoing_headers or body
             blocking_on_continue = False
             if expect_continue and not outgoing_headers and not (
-                response and response.headers):
+                response and (response.headers or response.continued)):
                 logger.info(
                     'waiting up to %s seconds for'
                     ' continue response from server',
@@ -550,11 +517,6 @@ class HTTPConnection(object):
                                 'server, optimistically sending request body')
                 else:
                     raise HTTPTimeoutException('timeout sending data')
-            # TODO exceptional conditions with select? (what are those be?)
-            # TODO if the response is loading, must we finish sending at all?
-            #
-            # Certainly not if it's going to close the connection and/or
-            # the response is already done...I think.
             was_first = first
 
             # incoming data
@@ -572,11 +534,11 @@ class HTTPConnection(object):
                         logger.info('socket appears closed in read')
                         self.sock = None
                         self._current_response = None
+                        if response is not None:
+                            response._close()
                         # This if/elif ladder is a bit subtle,
                         # comments in each branch should help.
-                        if response is not None and (
-                            response.complete() or
-                            response._content_len == _LEN_CLOSE_IS_END):
+                        if response is not None and response.complete():
                             # Server responded completely and then
                             # closed the socket. We should just shut
                             # things down and let the caller get their
@@ -605,7 +567,7 @@ class HTTPConnection(object):
                                 'response was missing or incomplete!')
                     logger.debug('read %d bytes in request()', len(data))
                     if response is None:
-                        response = self.response_class(r[0], self.timeout)
+                        response = self.response_class(r[0], self.timeout, method)
                     response._load_response(data)
                     # Jump to the next select() call so we load more
                     # data if the server is still sending us content.
@@ -613,10 +575,6 @@ class HTTPConnection(object):
                 except socket.error, e:
                     if e[0] != errno.EPIPE and not was_first:
                         raise
-                    if (response._content_len
-                        and response._content_len != _LEN_CLOSE_IS_END):
-                        outgoing_headers = sent_data + outgoing_headers
-                        reconnect('read')
 
             # outgoing data
             if w and out:
@@ -661,7 +619,7 @@ class HTTPConnection(object):
         # close if the server response said to or responded before eating
         # the whole request
         if response is None:
-            response = self.response_class(self.sock, self.timeout)
+            response = self.response_class(self.sock, self.timeout, method)
         complete = response.complete()
         data_left = bool(outgoing_headers or body)
         if data_left:
@@ -679,7 +637,8 @@ class HTTPConnection(object):
             raise httplib.ResponseNotReady()
         r = self._current_response
         while r.headers is None:
-            r._select()
+            if not r._select() and not r.complete():
+                raise _readers.HTTPRemoteClosedError()
         if r.will_close:
             self.sock = None
             self._current_response = None
@@ -705,7 +664,7 @@ class HTTPProxyConnectFailedException(httplib.HTTPException):
 class HTTPStateError(httplib.HTTPException):
     """Invalid internal state encountered."""
 
-
-class HTTPRemoteClosedError(httplib.HTTPException):
-    """The server closed the remote socket in the middle of a response."""
+# Forward this exception type from _readers since it needs to be part
+# of the public API.
+HTTPRemoteClosedError = _readers.HTTPRemoteClosedError
 # no-check-code

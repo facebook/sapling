@@ -29,7 +29,7 @@
 import cStringIO
 import unittest
 
-import http
+import httpplus
 
 # relative import to ease embedding the library
 import util
@@ -50,7 +50,7 @@ def chunkedblock(x, eol='\r\n'):
 
 class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
     def testChunkedUpload(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         sock.read_wait_sentinel = '0\r\n\r\n'
@@ -77,7 +77,7 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
         self.assertEqual(sock.closed, False)
 
     def testChunkedDownload(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         sock.data = ['HTTP/1.1 200 OK\r\n',
@@ -85,14 +85,31 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
                      'transfer-encoding: chunked',
                      '\r\n\r\n',
                      chunkedblock('hi '),
-                     chunkedblock('there'),
+                     ] + list(chunkedblock('there')) + [
                      chunkedblock(''),
                      ]
         con.request('GET', '/')
         self.assertStringEqual('hi there', con.getresponse().read())
 
+    def testChunkedDownloadOddReadBoundaries(self):
+        con = httpplus.HTTPConnection('1.2.3.4:80')
+        con._connect()
+        sock = con.sock
+        sock.data = ['HTTP/1.1 200 OK\r\n',
+                     'Server: BogusServer 1.0\r\n',
+                     'transfer-encoding: chunked',
+                     '\r\n\r\n',
+                     chunkedblock('hi '),
+                     ] + list(chunkedblock('there')) + [
+                     chunkedblock(''),
+                     ]
+        con.request('GET', '/')
+        resp = con.getresponse()
+        for amt, expect in [(1, 'h'), (5, 'i the'), (100, 're')]:
+            self.assertEqual(expect, resp.read(amt))
+
     def testChunkedDownloadBadEOL(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         sock.data = ['HTTP/1.1 200 OK\n',
@@ -107,7 +124,7 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
         self.assertStringEqual('hi there', con.getresponse().read())
 
     def testChunkedDownloadPartialChunkBadEOL(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         sock.data = ['HTTP/1.1 200 OK\n',
@@ -122,7 +139,7 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
                                con.getresponse().read())
 
     def testChunkedDownloadPartialChunk(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         sock.data = ['HTTP/1.1 200 OK\r\n',
@@ -136,7 +153,7 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
                                con.getresponse().read())
 
     def testChunkedDownloadEarlyHangup(self):
-        con = http.HTTPConnection('1.2.3.4:80')
+        con = httpplus.HTTPConnection('1.2.3.4:80')
         con._connect()
         sock = con.sock
         broken = chunkedblock('hi'*20)[:-1]
@@ -149,5 +166,5 @@ class ChunkedTransferTest(util.HttpTestBase, unittest.TestCase):
         sock.close_on_empty = True
         con.request('GET', '/')
         resp = con.getresponse()
-        self.assertRaises(http.HTTPRemoteClosedError, resp.read)
+        self.assertRaises(httpplus.HTTPRemoteClosedError, resp.read)
 # no-check-code

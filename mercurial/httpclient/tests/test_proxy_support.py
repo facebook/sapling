@@ -29,13 +29,13 @@
 import unittest
 import socket
 
-import http
+import httpplus
 
 # relative import to ease embedding the library
 import util
 
 
-def make_preloaded_socket(data):
+def make_preloaded_socket(data, close=False):
     """Make a socket pre-loaded with data so it can be read during connect.
 
     Useful for https proxy tests because we have to read from the
@@ -44,6 +44,7 @@ def make_preloaded_socket(data):
     def s(*args, **kwargs):
         sock = util.MockSocket(*args, **kwargs)
         sock.early_data = data[:]
+        sock.close_on_empty = close
         return sock
     return s
 
@@ -51,7 +52,7 @@ def make_preloaded_socket(data):
 class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
 
     def _run_simple_test(self, host, server_data, expected_req, expected_data):
-        con = http.HTTPConnection(host)
+        con = httpplus.HTTPConnection(host)
         con._connect()
         con.sock.data = server_data
         con.request('GET', '/')
@@ -60,7 +61,7 @@ class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
         self.assertEqual(expected_data, con.getresponse().read())
 
     def testSimpleRequest(self):
-        con = http.HTTPConnection('1.2.3.4:80',
+        con = httpplus.HTTPConnection('1.2.3.4:80',
                                   proxy_hostport=('magicproxy', 4242))
         con._connect()
         con.sock.data = ['HTTP/1.1 200 OK\r\n',
@@ -88,7 +89,7 @@ class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
                          resp.headers.getheaders('server'))
 
     def testSSLRequest(self):
-        con = http.HTTPConnection('1.2.3.4:443',
+        con = httpplus.HTTPConnection('1.2.3.4:443',
                                   proxy_hostport=('magicproxy', 4242))
         socket.socket = make_preloaded_socket(
             ['HTTP/1.1 200 OK\r\n',
@@ -124,12 +125,47 @@ class ProxyHttpTest(util.HttpTestBase, unittest.TestCase):
         self.assertEqual(['BogusServer 1.0'],
                          resp.headers.getheaders('server'))
 
-    def testSSLProxyFailure(self):
-        con = http.HTTPConnection('1.2.3.4:443',
+    def testSSLRequestNoConnectBody(self):
+        con = httpplus.HTTPConnection('1.2.3.4:443',
                                   proxy_hostport=('magicproxy', 4242))
         socket.socket = make_preloaded_socket(
-            ['HTTP/1.1 407 Proxy Authentication Required\r\n\r\n'])
-        self.assertRaises(http.HTTPProxyConnectFailedException, con._connect)
-        self.assertRaises(http.HTTPProxyConnectFailedException,
+            ['HTTP/1.1 200 OK\r\n',
+             'Server: BogusServer 1.0\r\n',
+             '\r\n'])
+        con._connect()
+        con.sock.data = ['HTTP/1.1 200 OK\r\n',
+                         'Server: BogusServer 1.0\r\n',
+                         'Content-Length: 10\r\n',
+                         '\r\n'
+                         '1234567890'
+                         ]
+        connect_sent = con.sock.sent
+        con.sock.sent = ''
+        con.request('GET', '/')
+
+        expected_connect = ('CONNECT 1.2.3.4:443 HTTP/1.0\r\n'
+                            'Host: 1.2.3.4\r\n'
+                            'accept-encoding: identity\r\n'
+                            '\r\n')
+        expected_request = ('GET / HTTP/1.1\r\n'
+                            'Host: 1.2.3.4\r\n'
+                            'accept-encoding: identity\r\n\r\n')
+
+        self.assertEqual(('127.0.0.42', 4242), con.sock.sa)
+        self.assertStringEqual(expected_connect, connect_sent)
+        self.assertStringEqual(expected_request, con.sock.sent)
+        resp = con.getresponse()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual('1234567890', resp.read())
+        self.assertEqual(['BogusServer 1.0'],
+                         resp.headers.getheaders('server'))
+
+    def testSSLProxyFailure(self):
+        con = httpplus.HTTPConnection('1.2.3.4:443',
+                                  proxy_hostport=('magicproxy', 4242))
+        socket.socket = make_preloaded_socket(
+            ['HTTP/1.1 407 Proxy Authentication Required\r\n\r\n'], close=True)
+        self.assertRaises(httpplus.HTTPProxyConnectFailedException, con._connect)
+        self.assertRaises(httpplus.HTTPProxyConnectFailedException,
                           con.request, 'GET', '/')
 # no-check-code

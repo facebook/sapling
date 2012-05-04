@@ -28,7 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import unittest
 
-import http
+import httpplus
 
 # relative import to ease embedding the library
 import util
@@ -37,7 +37,7 @@ import util
 
 class HttpSslTest(util.HttpTestBase, unittest.TestCase):
     def testSslRereadRequired(self):
-        con = http.HTTPConnection('1.2.3.4:443')
+        con = httpplus.HTTPConnection('1.2.3.4:443')
         con._connect()
         # extend the list instead of assign because of how
         # MockSSLSocket works.
@@ -66,7 +66,7 @@ class HttpSslTest(util.HttpTestBase, unittest.TestCase):
                          resp.headers.getheaders('server'))
 
     def testSslRereadInEarlyResponse(self):
-        con = http.HTTPConnection('1.2.3.4:443')
+        con = httpplus.HTTPConnection('1.2.3.4:443')
         con._connect()
         con.sock.early_data = ['HTTP/1.1 200 OK\r\n',
                                'Server: BogusServer 1.0\r\n',
