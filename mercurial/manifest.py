@@ -19,6 +19,8 @@ class manifestdict(dict):
         self._flags = flags
     def flags(self, f):
         return self._flags.get(f, "")
+    def withflags(self):
+        return set(self._flags.keys())
     def set(self, f, flags):
         self._flags[f] = flags
     def copy(self):
