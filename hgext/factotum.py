@@ -18,11 +18,11 @@
 
 '''http authentication with factotum
 
-This extension allows the factotum facility on Plan 9 from Bell Labs platforms
-to provide authentication information for HTTP access. Configuration entries
-specified in the auth section as well as authentication information provided
-in the repository URL are fully supported. If no prefix is specified, a value
-of ``*`` will be assumed.
+This extension allows the factotum(4) facility on Plan 9 from Bell Labs
+platforms to provide authentication information for HTTP access. Configuration
+entries specified in the auth section as well as authentication information
+provided in the repository URL are fully supported. If no prefix is specified,
+a value of "*" will be assumed.
 
 By default, keys are specified as::
 
