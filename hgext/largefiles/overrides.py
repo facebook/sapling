@@ -781,6 +781,47 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     archiver.done()
 
+def hgsubrepoarchive(orig, repo, ui, archiver, prefix):
+    rev = repo._state[1]
+    ctx = repo._repo[rev]
+
+    lfcommands.cachelfiles(ui, repo._repo, ctx.node())
+
+    def write(name, mode, islink, getdata):
+        if lfutil.isstandin(name):
+            return
+        data = getdata()
+
+        archiver.addfile(prefix + repo._path + '/' + name, mode, islink, data)
+
+    for f in ctx:
+        ff = ctx.flags(f)
+        getdata = ctx[f].data
+        if lfutil.isstandin(f):
+            path = lfutil.findfile(repo._repo, getdata().strip())
+            if path is None:
+                raise util.Abort(
+                    _('largefile %s not found in repo store or system cache')
+                    % lfutil.splitstandin(f))
+            f = lfutil.splitstandin(f)
+
+            def getdatafn():
+                fd = None
+                try:
+                    fd = open(os.path.join(prefix, path), 'rb')
+                    return fd.read()
+                finally:
+                    if fd:
+                        fd.close()
+
+            getdata = getdatafn
+
+        write(f, 'x' in ff and 0755 or 0644, 'l' in ff, getdata)
+
+    for subpath in ctx.substate:
+        sub = ctx.sub(subpath)
+        sub.archive(repo.ui, archiver, prefix)
+
 # If a largefile is modified, the change is not reflected in its
 # standin until a commit. cmdutil.bailifchanged() raises an exception
 # if the repo has uncommitted changes. Wrap it to also check if

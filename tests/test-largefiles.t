@@ -1096,4 +1096,34 @@ verify that large files in subrepos handled properly
   abort: uncommitted changes in subrepo subrepo
   (use --subrepos for recursive commit)
   [255]
+
+# Add a normal file to the subrepo, then test archiving
+  $ echo 'normal file' > subrepo/normal.txt
+  $ hg -R subrepo add subrepo/normal.txt
+# Lock in subrepo, otherwise the change isn't archived
+  $ hg ci -S -m "add normal file to top level"
+  committing subrepository subrepo
+  Invoking status precommit hook
+  M large.txt
+  A normal.txt
+  Invoking status precommit hook
+  M .hgsubstate
+  $ hg archive -S lf_subrepo_archive
+  $ find lf_subrepo_archive -print
+  lf_subrepo_archive
+  lf_subrepo_archive/.hg_archival.txt
+  lf_subrepo_archive/.hgsubstate
+  lf_subrepo_archive/subrepo
+  lf_subrepo_archive/subrepo/large.txt
+  lf_subrepo_archive/subrepo/normal.txt
+  lf_subrepo_archive/a
+  lf_subrepo_archive/a/b
+  lf_subrepo_archive/a/b/c
+  lf_subrepo_archive/a/b/c/d
+  lf_subrepo_archive/a/b/c/d/e.normal.txt
+  lf_subrepo_archive/a/b/c/d/e.large.txt
+  lf_subrepo_archive/a/b/c/x
+  lf_subrepo_archive/a/b/c/x/y.normal.txt
+  lf_subrepo_archive/.hgsub
+
   $ cd ..
