@@ -1097,10 +1097,13 @@ verify that large files in subrepos handled properly
   (use --subrepos for recursive commit)
   [255]
 
-# Add a normal file to the subrepo, then test archiving
+Add a normal file to the subrepo, then test archiving
+
   $ echo 'normal file' > subrepo/normal.txt
   $ hg -R subrepo add subrepo/normal.txt
-# Lock in subrepo, otherwise the change isn't archived
+
+Lock in subrepo, otherwise the change isn't archived
+
   $ hg ci -S -m "add normal file to top level"
   committing subrepository subrepo
   Invoking status precommit hook
