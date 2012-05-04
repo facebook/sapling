@@ -113,7 +113,7 @@ def readroots(repo):
         f = repo.sopener('phaseroots')
         try:
             for line in f:
-                phase, nh = line.strip().split()
+                phase, nh = line.split()
                 roots[int(phase)].add(bin(nh))
         finally:
             f.close()
