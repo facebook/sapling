@@ -70,7 +70,7 @@ filelogentry = filelogentry.tmpl
 annotateline = '
   <tr class="parity{parity}">
     <td class="annotate">
-      <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}"
+      <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
     <td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td>
