@@ -5848,7 +5848,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     # with no argument, we also move the current bookmark, if any
     movemarkfrom = None
-    if rev is None or node == '':
+    if rev is None:
         movemarkfrom = repo['.'].node()
 
     # if we defined a bookmark, we have to remember the original bookmark name
