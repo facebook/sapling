@@ -9,6 +9,7 @@
   > # should clobber ci but not commit (issue2993)
   > ci = version
   > myinit = init
+  > optionalrepo = showconfig alias.myinit
   > cleanstatus = status -c
   > unknown = bargle
   > ambiguous = s
@@ -108,8 +109,17 @@ invalid options
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
 
-  $ cd alias
+optional repository
 
+  $ hg optionalrepo
+  init
+  $ cd alias
+  $ cat > .hg/hgrc <<EOF
+  > [alias]
+  > myinit = init -q
+  > EOF
+  $ hg optionalrepo
+  init -q
 
 no usage
 
