@@ -126,6 +126,23 @@ deactivate current bookmark while renaming
      X                         0:719295282060
      Z                         0:719295282060
 
+bare update moves the active bookmark forward
+
+  $ echo a > a
+  $ hg ci -Am1
+  adding a
+  $ hg update X
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg bookmarks
+   * X                         0:719295282060
+     Z                         0:719295282060
+  $ hg update
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating bookmark X
+  $ hg bookmarks
+   * X                         1:cc586d725fbe
+     Z                         0:719295282060
+
 test deleting .hg/bookmarks.current when explicitly updating
 to a revision
 
