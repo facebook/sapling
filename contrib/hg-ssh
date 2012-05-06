@@ -41,7 +41,7 @@ try:
     cmdargv = shlex.split(orig_cmd)
 except ValueError, e:
     sys.stderr.write('Illegal command "%s": %s\n' % (orig_cmd, e))
-    sys.exit(-1)
+    sys.exit(255)
 
 if cmdargv[:2] == ['hg', '-R'] and cmdargv[3:] == ['serve', '--stdio']:
     path = cmdargv[2]
@@ -50,8 +50,8 @@ if cmdargv[:2] == ['hg', '-R'] and cmdargv[3:] == ['serve', '--stdio']:
         dispatch.dispatch(dispatch.request(['-R', repo, 'serve', '--stdio']))
     else:
         sys.stderr.write('Illegal repository "%s"\n' % repo)
-        sys.exit(-1)
+        sys.exit(255)
 else:
     sys.stderr.write('Illegal command "%s"\n' % orig_cmd)
-    sys.exit(-1)
+    sys.exit(255)
 
