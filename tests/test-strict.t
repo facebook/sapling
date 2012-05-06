@@ -7,6 +7,9 @@
   $ hg an a
   0: a
 
+  $ hg --config ui.strict=False an a
+  0: a
+
   $ echo "[ui]" >> $HGRCPATH
   $ echo "strict=True" >> $HGRCPATH
 
