@@ -645,9 +645,16 @@ class filectx(object):
         # the easy case: no (relevant) renames
         if fc2.path() == self.path() and self.path() in actx:
             return actx[self.path()]
-        acache = {}
+
+        # the next easiest cases: unambiguous predecessor (name trumps
+        # history)
+        if self.path() in actx and fc2.path() not in actx:
+            return actx[self.path()]
+        if fc2.path() in actx and self.path() not in actx:
+            return actx[fc2.path()]
 
         # prime the ancestor cache for the working directory
+        acache = {}
         for c in (self, fc2):
             if c._filerev is None:
                 pl = [(n.path(), n.filenode()) for n in c.parents()]
