@@ -282,10 +282,12 @@ Test hg-ssh:
 
   $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP/a repo\"" "ssh://user@dummy/a repo"
   3fb238f49e8c
+
   $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
-  remote: Illegal repository '$TESTTMP/a repo' (glob)
+  remote: Illegal repository "$TESTTMP/a repo" (glob)
   abort: no suitable response from remote hg!
   [255]
+
   $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
   remote: Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
   abort: no suitable response from remote hg!
