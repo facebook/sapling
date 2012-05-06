@@ -278,19 +278,34 @@ Test remote paths with spaces (issue2983):
   $ hg id --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
   3fb238f49e8c
 
-Test hg-ssh:
+Test hg-ssh using a helper script that will restore PYTHONPATH (which might
+have been cleared by a hg.exe wrapper) and invoke hg-ssh with the right
+parameters:
 
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP/a repo\"" "ssh://user@dummy/a repo"
+  $ cat > ssh.sh << EOF
+  > userhost="\$1"
+  > SSH_ORIGINAL_COMMAND="\$2"
+  > export SSH_ORIGINAL_COMMAND
+  > PYTHONPATH="$PYTHONPATH"
+  > export PYTHONPATH
+  > python "$TESTDIR/../contrib/hg-ssh" "$TESTTMP/a repo"
+  > EOF
+
+  $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
   3fb238f49e8c
 
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
-  remote: Illegal repository "$TESTTMP/a repo" (glob)
+  $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a'repo"
+  remote: Illegal repository "$TESTTMP/a'repo" (glob)
   abort: no suitable response from remote hg!
   [255]
 
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" hg id --ssh "python \"$TESTDIR\"/../contrib/hg-ssh \"$TESTTMP\"" "ssh://user@dummy/a repo"
-  remote: Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
+  $ hg id --ssh "sh ssh.sh" --remotecmd hacking "ssh://user@dummy/a'repo"
+  remote: Illegal command "hacking -R 'a'\''repo' serve --stdio"
   abort: no suitable response from remote hg!
+  [255]
+
+  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" python "$TESTDIR/../contrib/hg-ssh"
+  Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
   [255]
 
   $ cat dummylog
