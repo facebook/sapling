@@ -132,6 +132,7 @@ Graft out of order, skipping a merge and a duplicate
    b: local copied/moved to a -> m
   preserving b for resolve of b
   updating: b 1/1 files (100.00%)
+  graft for revision 1 is empty
   grafting revision 5
     searching for copies back to rev 1
   resolving manifests

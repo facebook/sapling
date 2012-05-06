@@ -2719,8 +2719,10 @@ def graft(ui, repo, *revs, **opts):
             date = ctx.date()
             if opts.get('date'):
                 date = opts['date']
-            repo.commit(text=ctx.description(), user=user,
+            node = repo.commit(text=ctx.description(), user=user,
                         date=date, extra=extra, editor=editor)
+            if node is None:
+                ui.status(_('graft for revision %s is empty\n') % ctx.rev())
     finally:
         wlock.release()
 
