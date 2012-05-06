@@ -83,9 +83,7 @@ ones.
     keys contain PATH-like strings, every part of which must reference
     a ``Mercurial.ini`` file or be a directory where ``*.rc`` files will
     be read.  Mercurial checks each of these locations in the specified
-    order until one or more configuration files are detected.  If the
-    pywin32 extensions are not installed, Mercurial will only look for
-    site-wide configuration in ``C:\Mercurial\Mercurial.ini``.
+    order until one or more configuration files are detected.
 
 Syntax
 ------

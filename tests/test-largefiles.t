@@ -65,6 +65,21 @@ Commit preserved largefile contents.
   $ cat sub/large2
   large22
 
+Test status, subdir and unknown files
+
+  $ echo unknown > sub/unknown
+  $ hg st --all
+  ? sub/unknown
+  C large1
+  C normal1
+  C sub/large2
+  C sub/normal2
+  $ hg st --all sub
+  ? sub/unknown
+  C sub/large2
+  C sub/normal2
+  $ rm sub/unknown
+
 Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
