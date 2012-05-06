@@ -136,13 +136,22 @@ def reposetup(ui, repo):
 
                 # Create a copy of match that matches standins instead
                 # of largefiles.
-                def tostandin(file):
-                    if working:
-                        sf = lfutil.standin(file)
-                        dirstate = repo.dirstate
-                        if sf in dirstate or sf in dirstate.dirs():
-                            return sf
-                    return file
+                def tostandins(files):
+                    if not working:
+                        return files
+                    newfiles = []
+                    dirstate = repo.dirstate
+                    for f in files:
+                        sf = lfutil.standin(f)
+                        if sf in dirstate:
+                            newfiles.append(sf)
+                        elif sf in dirstate.dirs():
+                            # Directory entries could be regular or
+                            # standin, check both
+                            newfiles.extend((f, sf))
+                        else:
+                            newfiles.append(f)
+                    return newfiles
 
                 # Create a function that we can use to override what is
                 # normally the ignore matcher.  We've already checked
@@ -153,7 +162,7 @@ def reposetup(ui, repo):
                     return False
 
                 m = copy.copy(match)
-                m._files = [tostandin(f) for f in m._files]
+                m._files = tostandins(m._files)
 
                 # Get ignored files here even if we weren't asked for them; we
                 # must use the result here for filtering later
