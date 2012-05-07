@@ -336,9 +336,6 @@
    >             ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
    warning: unwrapped ui message
   mercurial/commands.py:0:
-   >         cmd, ext, mod = extensions.disabledcmd(ui, name, ui.config('ui', 'strict'))
-   warning: line over 80 characters
-  mercurial/commands.py:0:
    >         except:
    warning: naked except clause
   mercurial/commands.py:0:
@@ -431,9 +428,6 @@
    warning: line over 80 characters
   mercurial/dispatch.py:0:
    >                                                 " (.hg not found)") % os.getcwd())
-   warning: line over 80 characters
-  mercurial/dispatch.py:0:
-   >         aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
    warning: line over 80 characters
   mercurial/dispatch.py:0:
    >         except:

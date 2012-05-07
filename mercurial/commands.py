@@ -3299,7 +3299,8 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                        'extensions\n'))
 
     def helpextcmd(name):
-        cmd, ext, mod = extensions.disabledcmd(ui, name, ui.config('ui', 'strict'))
+        cmd, ext, mod = extensions.disabledcmd(ui, name,
+                                               ui.configbool('ui', 'strict'))
         doc = gettext(mod.__doc__).splitlines()[0]
 
         msg = help.listexts(_("'%s' is provided by the following "

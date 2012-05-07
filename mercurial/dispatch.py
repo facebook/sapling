@@ -383,7 +383,7 @@ def _parse(ui, args):
     if args:
         cmd, args = args[0], args[1:]
         aliases, entry = cmdutil.findcmd(cmd, commands.table,
-                                     ui.config("ui", "strict"))
+                                         ui.configbool("ui", "strict"))
         cmd = aliases[0]
         args = aliasargs(entry[0], args)
         defaults = ui.config("defaults", cmd)
@@ -511,7 +511,8 @@ def _checkshellalias(lui, ui, args):
 
     cmd = args[0]
     try:
-        aliases, entry = cmdutil.findcmd(cmd, cmdtable, lui.config("ui", "strict"))
+        aliases, entry = cmdutil.findcmd(cmd, cmdtable,
+                                         lui.configbool("ui", "strict"))
     except (error.AmbiguousCommand, error.UnknownCommand):
         commands.norepo = norepo
         return
