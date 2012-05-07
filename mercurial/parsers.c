@@ -983,6 +983,7 @@ static int index_init(indexObject *self, PyObject *args)
 	self->ntdepth = self->ntsplits = 0;
 	self->ntlookups = self->ntmisses = 0;
 	self->ntrev = -1;
+	Py_INCREF(self->data);
 
 	if (self->inlined) {
 		long len = inline_scan(self, NULL);
@@ -998,7 +999,6 @@ static int index_init(indexObject *self, PyObject *args)
 		self->raw_length = size / 64;
 		self->length = self->raw_length + 1;
 	}
-	Py_INCREF(self->data);
 
 	return 0;
 bail:
