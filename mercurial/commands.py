@@ -919,26 +919,26 @@ def branches(ui, repo, active=False, closed=False):
 
     for isactive, node, tag in branches:
         if (not active) or isactive:
+            hn = repo.lookup(node)
+            if isactive:
+                label = 'branches.active'
+                notice = ''
+            elif hn not in repo.branchheads(tag, closed=False):
+                if not closed:
+                    continue
+                label = 'branches.closed'
+                notice = _(' (closed)')
+            else:
+                label = 'branches.inactive'
+                notice = _(' (inactive)')
+            if tag == repo.dirstate.branch():
+                label = 'branches.current'
+            rev = str(node).rjust(31 - encoding.colwidth(tag))
+            rev = ui.label('%s:%s' % (rev, hexfunc(hn)), 'log.changeset')
+            tag = ui.label(tag, label)
             if ui.quiet:
                 ui.write("%s\n" % tag)
             else:
-                hn = repo.lookup(node)
-                if isactive:
-                    label = 'branches.active'
-                    notice = ''
-                elif hn not in repo.branchheads(tag, closed=False):
-                    if not closed:
-                        continue
-                    label = 'branches.closed'
-                    notice = _(' (closed)')
-                else:
-                    label = 'branches.inactive'
-                    notice = _(' (inactive)')
-                if tag == repo.dirstate.branch():
-                    label = 'branches.current'
-                rev = str(node).rjust(31 - encoding.colwidth(tag))
-                rev = ui.label('%s:%s' % (rev, hexfunc(hn)), 'log.changeset')
-                tag = ui.label(tag, label)
                 ui.write("%s %s%s\n" % (tag, rev, notice))
 
 @command('bundle',

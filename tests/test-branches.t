@@ -241,6 +241,11 @@
   default                        0:19709c5a4e75 (inactive)
   $ hg branches -a
   a branch name much longer than the default justification used by branches 7:10ff5895aa57
+  $ hg branches -q
+  a branch name much longer than the default justification used by branches
+  c
+  a
+  default
   $ hg heads b
   no open branch heads found on branches b
   [1]
