@@ -473,3 +473,40 @@ test bisecting command
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     msg 6
   
+
+
+test bisecting via a command without updating the working dir, and
+ensure that the bisect state file is updated before running a test
+command
+
+  $ hg update null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat > script.sh <<'EOF'
+  > #!/bin/sh
+  > test -n "$HG_NODE" || (echo HG_NODE missing; exit 127)
+  > current="`hg log -r \"bisect(current)\" --template {node}`"
+  > test "$current" = "$HG_NODE" || (echo current is bad: $current; exit 127)
+  > rev="`hg log -r $HG_NODE --template {rev}`"
+  > test "$rev" -ge 6
+  > EOF
+  $ chmod +x script.sh
+  $ hg bisect -r
+  $ hg bisect --good tip --noupdate
+  $ hg bisect --bad 0 --noupdate
+  Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)
+  $ hg bisect --command "'`pwd`/script.sh' and some params" --noupdate
+  Changeset 15:e7fa0811edb0: good
+  Changeset 7:03750880c6b5: good
+  Changeset 3:b53bea5e2fcb: bad
+  Changeset 5:7874a09ea728: bad
+  Changeset 6:a3d5c6fdf0d3: good
+  The first good revision is:
+  changeset:   6:a3d5c6fdf0d3
+  user:        test
+  date:        Thu Jan 01 00:00:06 1970 +0000
+  summary:     msg 6
+  
+
+ensure that we still don't have a working dir
+
+  $ hg parents

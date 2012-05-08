@@ -520,10 +520,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     revision as good or bad without checking it out first.
 
     If you supply a command, it will be used for automatic bisection.
-    Its exit status will be used to mark revisions as good or bad:
-    status 0 means good, 125 means to skip the revision, 127
-    (command not found) will abort the bisection, and any other
-    non-zero exit status means the revision is bad.
+    The environment variable HG_NODE will contain the ID of the
+    changeset being tested. The exit status of the command will be
+    used to mark revisions as good or bad: status 0 means good, 125
+    means to skip the revision, 127 (command not found) will abort the
+    bisection, and any other non-zero exit status means the revision
+    is bad.
 
     .. container:: verbose
 
@@ -665,7 +667,9 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 # update state
                 state['current'] = [node]
                 hbisect.save_state(repo, state)
-                status = util.system(command, out=ui.fout)
+                status = util.system(command,
+                                     environ={'HG_NODE': hex(node)},
+                                     out=ui.fout)
                 if status == 125:
                     transition = "skip"
                 elif status == 0:
