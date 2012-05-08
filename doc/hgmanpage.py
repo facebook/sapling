@@ -47,7 +47,10 @@ __docformat__ = 'reStructuredText'
 import re
 
 from docutils import nodes, writers, languages
-import roman
+try:
+    import roman
+except ImportError:
+    from docutils.utils import roman
 import inspect
 
 FIELD_LIST_INDENT = 7
