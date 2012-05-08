@@ -13,8 +13,10 @@
 
 #include "util.h"
 
-static int hexdigit(char c)
+static inline int hexdigit(const char *p, Py_ssize_t off)
 {
+	char c = p[off];
+
 	if (c >= '0' && c <= '9')
 		return c - '0';
 	if (c >= 'a' && c <= 'f')
@@ -32,8 +34,8 @@ static int hexdigit(char c)
 static PyObject *unhexlify(const char *str, int len)
 {
 	PyObject *ret;
-	const char *c;
 	char *d;
+	int i;
 
 	ret = PyBytes_FromStringAndSize(NULL, len / 2);
 
@@ -42,9 +44,9 @@ static PyObject *unhexlify(const char *str, int len)
 
 	d = PyBytes_AsString(ret);
 
-	for (c = str; c < str + len;) {
-		int hi = hexdigit(*c++);
-		int lo = hexdigit(*c++);
+	for (i = 0; i < len;) {
+		int hi = hexdigit(str, i++);
+		int lo = hexdigit(str, i++);
 		*d++ = (hi << 4) | lo;
 	}
 
