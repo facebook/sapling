@@ -636,6 +636,24 @@ static int nt_insert(indexObject *self, const char *node, int rev)
 	return -1;
 }
 
+static int nt_init(indexObject *self)
+{
+	if (self->nt == NULL) {
+		self->ntcapacity = self->raw_length < 4
+			? 4 : self->raw_length / 2;
+		self->nt = calloc(self->ntcapacity, sizeof(nodetree));
+		if (self->nt == NULL) {
+			PyErr_NoMemory();
+			return -1;
+		}
+		self->ntlength = 1;
+		self->ntrev = (int)index_length(self) - 1;
+		self->ntlookups = 1;
+		self->ntmisses = 0;
+	}
+	return 0;
+}
+
 /*
  * Return values:
  *
@@ -653,19 +671,8 @@ static int index_find_node(indexObject *self,
 	if (rev >= -1)
 		return rev;
 
-	if (self->nt == NULL) {
-		self->ntcapacity = self->raw_length < 4
-			? 4 : self->raw_length / 2;
-		self->nt = calloc(self->ntcapacity, sizeof(nodetree));
-		if (self->nt == NULL) {
-			PyErr_SetString(PyExc_MemoryError, "out of memory");
-			return -3;
-		}
-		self->ntlength = 1;
-		self->ntrev = (int)index_length(self) - 1;
-		self->ntlookups = 1;
-		self->ntmisses = 0;
-	}
+	if (nt_init(self) == -1)
+		return -3;
 
 	/*
 	 * For the first handful of lookups, we scan the entire index,
