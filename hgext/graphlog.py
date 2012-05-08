@@ -392,15 +392,41 @@ def _makelogrevset(repo, pats, opts, revs):
     return expr, filematcher
 
 def getlogrevs(repo, pats, opts):
-    """Return (revs, expr, filematcher) where revs is a list of
+    """Return (revs, expr, filematcher) where revs is an iterable of
     revision numbers, expr is a revset string built from log options
     and file patterns or None, and used to filter 'revs'. If --stat or
     --patch are not passed filematcher is None. Otherwise it is a
     callable taking a revision number and returning a match objects
     filtering the files to be detailed when displaying the revision.
     """
+    def increasingrevs(repo, revs, matcher):
+        # The sorted input rev sequence is chopped in sub-sequences
+        # which are sorted in ascending order and passed to the
+        # matcher. The filtered revs are sorted again as they were in
+        # the original sub-sequence. This achieve several things:
+        #
+        # - getlogrevs() now returns a generator which behaviour is
+        #   adapted to log need. First results come fast, last ones
+        #   are batched for performances.
+        #
+        # - revset matchers often operate faster on revision in
+        #   changelog order, because most filters deal with the
+        #   changelog.
+        #
+        # - revset matchers can reorder revisions. "A or B" typically
+        #   returns returns the revision matching A then the revision
+        #   matching B. We want to hide this internal implementation
+        #   detail from the caller, and sorting the filtered revision
+        #   again achieves this.
+        for i, window in cmdutil.increasingwindows(0, len(revs), windowsize=1):
+            orevs = revs[i:i + window]
+            nrevs = set(matcher(repo, sorted(orevs)))
+            for rev in orevs:
+                if rev in nrevs:
+                    yield rev
+
     if not len(repo):
-        return [], None, None
+        return iter([]), None, None
     # Default --rev value depends on --follow but --follow behaviour
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
@@ -412,18 +438,17 @@ def getlogrevs(repo, pats, opts):
         else:
             revs = range(len(repo) - 1, -1, -1)
     if not revs:
-        return [], None, None
+        return iter([]), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
-        # Evaluate revisions in changelog order for performance
-        # reasons but preserve the original sequence order in the
-        # filtered result.
-        matched = set(revset.match(repo.ui, expr)(repo, sorted(revs)))
-        revs = [r for r in revs if r in matched]
+        matcher = revset.match(repo.ui, expr)
+        revs = increasingrevs(repo, revs, matcher)
     if not opts.get('hidden'):
         # --hidden is still experimental and not worth a dedicated revset
         # yet. Fortunately, filtering revision number is fast.
-        revs = [r for r in revs if r not in repo.changelog.hiddenrevs]
+        revs = (r for r in revs if r not in repo.changelog.hiddenrevs)
+    else:
+        revs = iter(revs)
     return revs, expr, filematcher
 
 def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
