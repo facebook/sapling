@@ -43,8 +43,16 @@ def state(ctx, ui):
     rev = {}
     if '.hgsubstate' in ctx:
         try:
-            for l in ctx['.hgsubstate'].data().splitlines():
-                revision, path = l.split(" ", 1)
+            for i, l in enumerate(ctx['.hgsubstate'].data().splitlines()):
+                l = l.lstrip()
+                if not l:
+                    continue
+                try:
+                    revision, path = l.split(" ", 1)
+                except ValueError:
+                    raise util.Abort(_("invalid subrepository revision "
+                                       "specifier in .hgsubstate line %d")
+                                     % (i + 1))
                 rev[path] = revision
         except IOError, err:
             if err.errno != errno.ENOENT:

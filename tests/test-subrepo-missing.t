@@ -12,6 +12,22 @@
   adding b
   $ hg ci -m updatedsub
 
+ignore blanklines in .hgsubstate
+
+  >>> file('.hgsubstate', 'wb').write('\n\n   \t \n   \n')
+  $ hg st --subrepos
+  M .hgsubstate
+  $ hg revert -qC .hgsubstate
+
+abort more gracefully on .hgsubstate parsing error
+
+  $ cp .hgsubstate .hgsubstate.old
+  >>> file('.hgsubstate', 'wb').write('\ninvalid')
+  $ hg st --subrepos
+  abort: invalid subrepository revision specifier in .hgsubstate line 2
+  [255]
+  $ mv .hgsubstate.old .hgsubstate
+
 delete .hgsub and revert it
 
   $ rm .hgsub

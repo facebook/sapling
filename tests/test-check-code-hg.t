@@ -496,9 +496,6 @@
   mercurial/patch.py:0:
    >     except:
    warning: naked except clause
-  mercurial/pure/base85.py:0:
-   >             raise OverflowError('Base85 overflow in hunk starting at byte %d' % i)
-   warning: line over 80 characters
   mercurial/pure/mpatch.py:0:
    >         frags.extend(reversed(new))                    # what was left at the end
    warning: line over 80 characters
