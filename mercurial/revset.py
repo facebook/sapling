@@ -289,6 +289,7 @@ def bisect(repo, subset, x):
     - ``pruned``             : csets that are goods, bads or skipped
     - ``untested``           : csets whose fate is yet unknown
     - ``ignored``            : csets ignored due to DAG topology
+    - ``current``            : the cset currently being bisected
     """
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))

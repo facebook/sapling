@@ -563,6 +563,11 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
           hg log -r "bisect(pruned)"
 
+      - see the changeset currently being bisected (especially useful
+        if running with -U/--noupdate)::
+
+          hg log -r "bisect(current)"
+
       - see all changesets that took part in the current bisection::
 
           hg log -r "bisect(range)"
@@ -647,8 +652,18 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     if command:
         changesets = 1
         try:
+            node = state['current'][0]
+        except LookupError:
+            if noupdate:
+                raise util.Abort(_('current bisect revision is unknown - '
+                                   'start a new bisect to fix'))
+            node, p2 = repo.dirstate.parents()
+            if p2 != nullid:
+                raise util.Abort(_('current bisect revision is a merge'))
+        try:
             while changesets:
                 # update state
+                state['current'] = [node]
                 hbisect.save_state(repo, state)
                 status = util.system(command, out=ui.fout)
                 if status == 125:
@@ -662,7 +677,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     raise util.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
-                ctx = scmutil.revsingle(repo, rev)
+                ctx = scmutil.revsingle(repo, rev, node)
                 rev = None # clear for future iterations
                 state[transition].append(ctx.node())
                 ui.status(_('Changeset %d:%s: %s\n') % (ctx, ctx, transition))
@@ -670,9 +685,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 # bisect
                 nodes, changesets, good = hbisect.bisect(repo.changelog, state)
                 # update to next check
-                cmdutil.bailifchanged(repo)
-                hg.clean(repo, nodes[0], show_stats=False)
+                node = nodes[0]
+                if not noupdate:
+                    cmdutil.bailifchanged(repo)
+                    hg.clean(repo, node, show_stats=False)
         finally:
+            state['current'] = [node]
             hbisect.save_state(repo, state)
         print_result(nodes, good)
         return
@@ -704,6 +722,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             if extendnode is not None:
                 ui.write(_("Extending search to changeset %d:%s\n"
                          % (extendnode.rev(), extendnode)))
+                state['current'] = [extendnode.node()]
+                hbisect.save_state(repo, state)
                 if noupdate:
                     return
                 cmdutil.bailifchanged(repo)
@@ -723,6 +743,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         ui.write(_("Testing changeset %d:%s "
                    "(%d changesets remaining, ~%d tests)\n")
                  % (rev, short(node), changesets, tests))
+        state['current'] = [node]
+        hbisect.save_state(repo, state)
         if not noupdate:
             cmdutil.bailifchanged(repo)
             return hg.clean(repo, node)

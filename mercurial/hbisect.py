@@ -132,7 +132,7 @@ def bisect(changelog, state):
 
 
 def load_state(repo):
-    state = {'good': [], 'bad': [], 'skip': []}
+    state = {'current': [], 'good': [], 'bad': [], 'skip': []}
     if os.path.exists(repo.join("bisect.state")):
         for l in repo.opener("bisect.state"):
             kind, node = l[:-1].split()
@@ -164,10 +164,11 @@ def get(repo, status):
     - ``pruned``             : csets that are goods, bads or skipped
     - ``untested``           : csets whose fate is yet unknown
     - ``ignored``            : csets ignored due to DAG topology
+    - ``current``            : the cset currently being bisected
     """
     state = load_state(repo)
-    if status in ('good', 'bad', 'skip'):
-        return [repo.changelog.rev(n) for n in state[status]]
+    if status in ('good', 'bad', 'skip', 'current'):
+        return map(repo.changelog.rev, state[status])
     else:
         # In the floowing sets, we do *not* call 'bisect()' with more
         # than one level of recusrsion, because that can be very, very
@@ -233,7 +234,7 @@ def label(repo, node):
     if rev in get(repo, 'skip'):
         # i18n: bisect changeset status
         return _('skipped')
-    if rev in get(repo, 'untested'):
+    if rev in get(repo, 'untested') or rev in get(repo, 'current'):
         # i18n: bisect changeset status
         return _('untested')
     if rev in get(repo, 'ignored'):

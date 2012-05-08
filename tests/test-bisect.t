@@ -224,6 +224,7 @@ mark revsets instead of single revs
   Testing changeset 12:1941b52820a5 (23 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat .hg/bisect.state
+  current 1941b52820a544549596820a8ae006842b0e2c64
   skip 9d7d07bc967ca98ad0600c24953fd289ad5fa991
   skip ce8f0998e922c179e80819d5066fbe46e2998784
   skip e7fa0811edb063f6319531f0d0a865882138e180
@@ -395,6 +396,12 @@ reproduce AssertionError, issue1445
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     msg 6
+  
+  $ hg log -r "bisect(current)"
+  changeset:   5:7874a09ea728
+  user:        test
+  date:        Thu Jan 01 00:00:05 1970 +0000
+  summary:     msg 5
   
   $ hg log -r "bisect(skip)"
   changeset:   1:5cd978ea5149
