@@ -1187,6 +1187,7 @@ def main():
     os.environ['http_proxy'] = ''
     os.environ['no_proxy'] = ''
     os.environ['NO_PROXY'] = ''
+    os.environ['TERM'] = 'xterm'
 
     # unset env related to hooks
     for k in os.environ.keys():
