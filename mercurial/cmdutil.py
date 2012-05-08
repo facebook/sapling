@@ -958,6 +958,20 @@ def finddate(ui, repo, date):
 
     raise util.Abort(_("revision matching date not found"))
 
+def increasingwindows(start, end, windowsize=8, sizelimit=512):
+    if start < end:
+        while start < end:
+            yield start, min(windowsize, end - start)
+            start += windowsize
+            if windowsize < sizelimit:
+                windowsize *= 2
+    else:
+        while start > end:
+            yield start, min(windowsize, start - end - 1)
+            start -= windowsize
+            if windowsize < sizelimit:
+                windowsize *= 2
+
 def walkchangerevs(repo, match, opts, prepare):
     '''Iterate over files and the revs in which they changed.
 
@@ -972,20 +986,6 @@ def walkchangerevs(repo, match, opts, prepare):
     This function returns an iterator yielding contexts. Before
     yielding each context, the iterator will first call the prepare
     function on each context in the window in forward order.'''
-
-    def increasing_windows(start, end, windowsize=8, sizelimit=512):
-        if start < end:
-            while start < end:
-                yield start, min(windowsize, end - start)
-                start += windowsize
-                if windowsize < sizelimit:
-                    windowsize *= 2
-        else:
-            while start > end:
-                yield start, min(windowsize, start - end - 1)
-                start -= windowsize
-                if windowsize < sizelimit:
-                    windowsize *= 2
 
     follow = opts.get('follow') or opts.get('follow_first')
 
@@ -1176,7 +1176,7 @@ def walkchangerevs(repo, match, opts, prepare):
             def want(rev):
                 return rev in wanted
 
-        for i, window in increasing_windows(0, len(revs)):
+        for i, window in increasingwindows(0, len(revs)):
             nrevs = [rev for rev in revs[i:i + window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
