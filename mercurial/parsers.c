@@ -538,7 +538,7 @@ bail:
 	return NULL;
 }
 
-static inline int nt_level(const char *node, int level)
+static inline int nt_level(const char *node, Py_ssize_t level)
 {
 	int v = node[level>>1];
 	if (!(level & 1))
