@@ -1092,7 +1092,6 @@ static PyTypeObject indexType = {
 	0,                         /* tp_dictoffset */
 	(initproc)index_init,      /* tp_init */
 	0,                         /* tp_alloc */
-	PyType_GenericNew,         /* tp_new */
 };
 
 /*
@@ -1150,6 +1149,7 @@ static PyMethodDef methods[] = {
 
 static void module_init(PyObject *mod)
 {
+	indexType.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&indexType) < 0)
 		return;
 	Py_INCREF(&indexType);
