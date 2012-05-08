@@ -544,6 +544,13 @@ static inline int nt_level(const char *node, int level)
 	return v & 0xf;
 }
 
+/*
+ * Return values:
+ *
+ *   -4: match is ambiguous (multiple candidates)
+ *   -2: not found
+ * rest: valid rev
+ */
 static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen)
 {
 	int level, off;
@@ -572,7 +579,8 @@ static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen)
 			return -2;
 		off = v;
 	}
-	return -2;
+	/* multiple matches against an ambiguous prefix */
+	return -4;
 }
 
 static int nt_new(indexObject *self)
