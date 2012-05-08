@@ -697,7 +697,7 @@ class filectx(object):
             yield c
 
     def copies(self, c2):
-        if not util.hasattr(self, "_copycache"):
+        if not util.safehasattr(self, "_copycache"):
             self._copycache = {}
         sc2 = str(c2)
         if sc2 not in self._copycache:
