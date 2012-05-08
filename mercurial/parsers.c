@@ -690,10 +690,14 @@ static int index_find_node(indexObject *self,
 	} else {
 		for (rev = self->ntrev - 1; rev >= 0; rev--) {
 			const char *n = index_node(self, rev);
-			if (n == NULL)
+			if (n == NULL) {
+				self->ntrev = rev + 1;
 				return -2;
-			if (nt_insert(self, n, rev) == -1)
+			}
+			if (nt_insert(self, n, rev) == -1) {
+				self->ntrev = rev + 1;
 				return -3;
+			}
 			if (memcmp(node, n, nodelen > 20 ? 20 : nodelen) == 0) {
 				break;
 			}
