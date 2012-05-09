@@ -508,13 +508,13 @@ static PyObject *index_stats(indexObject *self)
 		return NULL;
 
 #define istat(__n, __d) \
-	if (PyDict_SetItemString(obj, __d, PyInt_FromLong(self->__n)) == -1) \
+	if (PyDict_SetItemString(obj, __d, PyInt_FromSsize_t(self->__n)) == -1) \
 		goto bail;
 
 	if (self->added) {
 		Py_ssize_t len = PyList_GET_SIZE(self->added);
 		if (PyDict_SetItemString(obj, "index entries added",
-					 PyInt_FromLong(len)) == -1)
+					 PyInt_FromSsize_t(len)) == -1)
 			goto bail;
 	}
 

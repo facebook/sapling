@@ -109,6 +109,7 @@
 typedef int Py_ssize_t;
 typedef Py_ssize_t (*lenfunc)(PyObject *);
 typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
+#define PyInt_FromSsize_t PyInt_FromLong
 
 #if !defined(PY_SSIZE_T_MIN)
 #define PY_SSIZE_T_MAX INT_MAX
