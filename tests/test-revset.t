@@ -410,6 +410,10 @@ quoting needed
   0
   $ log '4::8 - 8'
   4
+  $ log 'matching(1 or 2 or 3) and (2 or 3 or 1)'
+  2
+  3
+  1
 
 issue2437
 
