@@ -926,7 +926,7 @@ def matching(repo, subset, x):
 
     Special fields are ``summary`` and ``metadata``:
     ``summary`` matches the first line of the description.
-    ``metatadata`` is equivalent to matching ``description user date``
+    ``metadata`` is equivalent to matching ``description user date``
     (i.e. it matches the main metadata fields).
 
     ``metadata`` is the default field which is used when no fields are
