@@ -106,6 +106,24 @@ allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
 phasenames = ['public', 'draft', 'secret']
 
+def _filterunknown(ui, changelog, phaseroots):
+    """remove unknown nodes from the phase boundary
+
+    Nothing is lost as unknown nodes only hold data for their descendants
+    """
+    updated = False
+    nodemap = changelog.nodemap # to filter unknown nodes
+    for phase, nodes in enumerate(phaseroots):
+        missing = [node for node in nodes if node not in nodemap]
+        if missing:
+            for mnode in missing:
+                ui.debug(
+                    'removing unknown node %s from %i-phase boundary\n'
+                    % (short(mnode), phase))
+            nodes.symmetric_difference_update(missing)
+            updated = True
+    return updated
+
 def readroots(repo):
     """Read phase roots from disk"""
     roots = [set() for i in allphases]
@@ -123,6 +141,8 @@ def readroots(repo):
         for f in repo._phasedefaults:
             roots = f(repo, roots)
         repo._dirtyphases = True
+    if _filterunknown(repo.ui, repo.changelog, roots):
+        repo._dirtyphases = True
     return roots
 
 def writeroots(repo):
@@ -135,24 +155,6 @@ def writeroots(repo):
         repo._dirtyphases = False
     finally:
         f.close()
-
-def filterunknown(repo, phaseroots=None):
-    """remove unknown nodes from the phase boundary
-
-    no data is lost as unknown node only old data for their descentants
-    """
-    if phaseroots is None:
-        phaseroots = repo._phaseroots
-    nodemap = repo.changelog.nodemap # to filter unknown nodes
-    for phase, nodes in enumerate(phaseroots):
-        missing = [node for node in nodes if node not in nodemap]
-        if missing:
-            for mnode in missing:
-                repo.ui.debug(
-                    'removing unknown node %s from %i-phase boundary\n'
-                    % (short(mnode), phase))
-            nodes.symmetric_difference_update(missing)
-            repo._dirtyphases = True
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.

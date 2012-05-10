@@ -185,7 +185,6 @@ class localrepository(repo.repository):
     def _phaseroots(self):
         self._dirtyphases = False
         phaseroots = phases.readroots(self)
-        phases.filterunknown(self, phaseroots)
         return phaseroots
 
     @propertycache
