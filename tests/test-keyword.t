@@ -558,6 +558,7 @@ Commit and show expansion in original and copy
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
+  removing unknown node 40a904bbbe4c from 1-phase boundary
   overwriting c expanding keywords
   committed changeset 2:25736cf2f5cbe41f6be4e6784ef6ecf9f3bbcc7d
   $ cat a c
@@ -722,6 +723,7 @@ Commit with multiline message and custom expansion
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   a
+  removing unknown node 40a904bbbe4c from 1-phase boundary
   overwriting a expanding keywords
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
   $ rm log

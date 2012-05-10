@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import changegroup, bookmarks, phases
+from mercurial import changegroup, bookmarks
 from mercurial.node import short
 from mercurial.i18n import _
 import os
@@ -170,7 +170,3 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         raise
 
     repo.destroyed()
-
-    # remove potential unknown phase
-    # XXX using to_strip data would be faster
-    phases.filterunknown(repo)
