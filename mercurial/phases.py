@@ -156,14 +156,13 @@ def readroots(repo, phasedefaults=None):
         dirty = True
     return roots, dirty
 
-def writeroots(repo):
+def writeroots(repo, phaseroots):
     """Write phase roots from disk"""
     f = repo.sopener('phaseroots', 'w', atomictemp=True)
     try:
-        for phase, roots in enumerate(repo._phaseroots):
+        for phase, roots in enumerate(phaseroots):
             for h in roots:
                 f.write('%i %s\n' % (phase, hex(h)))
-        repo._dirtyphases = False
     finally:
         f.close()
 

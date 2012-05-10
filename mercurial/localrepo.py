@@ -932,7 +932,7 @@ class localrepository(repo.repository):
         def unlock():
             self.store.write()
             if self._dirtyphases:
-                phases.writeroots(self)
+                phases.writeroots(self, self._phaseroots)
                 self._dirtyphases = False
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
