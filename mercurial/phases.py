@@ -124,8 +124,18 @@ def _filterunknown(ui, changelog, phaseroots):
             updated = True
     return updated
 
-def readroots(repo):
-    """Read phase roots from disk"""
+def readroots(repo, phasedefaults=None):
+    """Read phase roots from disk
+
+    phasedefaults is a list of fn(repo, roots) callable, which are
+    executed if the phase roots file does not exist. When phases are
+    being initialized on an existing repository, this could be used to
+    set selected changesets phase to something else than public.
+
+    Return (roots, dirty) where dirty is true if roots differ from
+    what is being stored.
+    """
+    dirty = False
     roots = [set() for i in allphases]
     try:
         f = repo.sopener('phaseroots')
@@ -138,12 +148,13 @@ def readroots(repo):
     except IOError, inst:
         if inst.errno != errno.ENOENT:
             raise
-        for f in repo._phasedefaults:
-            roots = f(repo, roots)
-        repo._dirtyphases = True
+        if phasedefaults:
+            for f in phasedefaults:
+                roots = f(repo, roots)
+        dirty = True
     if _filterunknown(repo.ui, repo.changelog, roots):
-        repo._dirtyphases = True
-    return roots
+        dirty = True
+    return roots, dirty
 
 def writeroots(repo):
     """Write phase roots from disk"""

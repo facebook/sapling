@@ -183,8 +183,8 @@ class localrepository(repo.repository):
 
     @storecache('phaseroots')
     def _phaseroots(self):
-        self._dirtyphases = False
-        phaseroots = phases.readroots(self)
+        phaseroots, self._dirtyphases = phases.readroots(
+            self, self._phasedefaults)
         return phaseroots
 
     @propertycache
