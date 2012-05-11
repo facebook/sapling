@@ -157,10 +157,26 @@ def _readroots(repo, phasedefaults=None):
     return roots, dirty
 
 class phasecache(object):
-    def __init__(self, repo, phasedefaults):
-        self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-        self.opener = repo.sopener
-        self._phaserevs = None
+    def __init__(self, repo, phasedefaults, _load=True):
+        if _load:
+            # Cheap trick to allow shallow-copy without copy module
+            self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
+            self.opener = repo.sopener
+            self._phaserevs = None
+
+    def copy(self):
+        # Shallow copy meant to ensure isolation in
+        # advance/retractboundary(), nothing more.
+        ph = phasecache(None, None, _load=False)
+        ph.phaseroots = self.phaseroots[:]
+        ph.dirty = self.dirty
+        ph.opener = self.opener
+        ph._phaserevs = self._phaserevs
+        return ph
+
+    def replace(self, phcache):
+        for a in 'phaseroots dirty opener _phaserevs'.split():
+            setattr(self, a, getattr(phcache, a))
 
     def getphaserevs(self, repo, rebuild=False):
         if rebuild or self._phaserevs is None:
@@ -174,9 +190,6 @@ class phasecache(object):
                         revs[rev] = phase
             self._phaserevs = revs
         return self._phaserevs
-
-    def invalidatephaserevs(self):
-        self._phaserevs = None
 
     def phase(self, repo, rev):
         # We need a repo argument here to be able to build _phaserev
@@ -202,6 +215,47 @@ class phasecache(object):
             f.close()
         self.dirty = False
 
+    def _updateroots(self, phase, newroots):
+        self.phaseroots[phase] = newroots
+        self._phaserevs = None
+        self.dirty = True
+
+    def advanceboundary(self, repo, targetphase, nodes):
+        # Be careful to preserve shallow-copied values: do not update
+        # phaseroots values, replace them.
+
+        delroots = [] # set of root deleted by this path
+        for phase in xrange(targetphase + 1, len(allphases)):
+            # filter nodes that are not in a compatible phase already
+            nodes = [n for n in nodes
+                     if self.phase(repo, repo[n].rev()) >= phase]
+            if not nodes:
+                break # no roots to move anymore
+            olds = self.phaseroots[phase]
+            roots = set(ctx.node() for ctx in repo.set(
+                    'roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
+            if olds != roots:
+                self._updateroots(phase, roots)
+                # some roots may need to be declared for lower phases
+                delroots.extend(olds - roots)
+            # declare deleted root in the target phase
+            if targetphase != 0:
+                self.retractboundary(repo, targetphase, delroots)
+
+    def retractboundary(self, repo, targetphase, nodes):
+        # Be careful to preserve shallow-copied values: do not update
+        # phaseroots values, replace them.
+
+        currentroots = self.phaseroots[targetphase]
+        newroots = [n for n in nodes
+                    if self.phase(repo, repo[n].rev()) < targetphase]
+        if newroots:
+            currentroots = currentroots.copy()
+            currentroots.update(newroots)
+            ctxs = repo.set('roots(%ln::)', currentroots)
+            currentroots.intersection_update(ctx.node() for ctx in ctxs)
+            self._updateroots(targetphase, currentroots)
+
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
@@ -209,31 +263,9 @@ def advanceboundary(repo, targetphase, nodes):
     in the target phase or kept in a *lower* phase.
 
     Simplify boundary to contains phase roots only."""
-    phcache = repo._phasecache
-
-    delroots = [] # set of root deleted by this path
-    for phase in xrange(targetphase + 1, len(allphases)):
-        # filter nodes that are not in a compatible phase already
-        # XXX rev phase cache might have been invalidated by a previous loop
-        # XXX we need to be smarter here
-        nodes = [n for n in nodes if repo[n].phase() >= phase]
-        if not nodes:
-            break # no roots to move anymore
-        roots = phcache.phaseroots[phase]
-        olds = roots.copy()
-        ctxs = list(repo.set('roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
-        roots.clear()
-        roots.update(ctx.node() for ctx in ctxs)
-        if olds != roots:
-            # invalidate cache (we probably could be smarter here
-            phcache.invalidatephaserevs()
-            phcache.dirty = True
-            # some roots may need to be declared for lower phases
-            delroots.extend(olds - roots)
-        # declare deleted root in the target phase
-        if targetphase != 0:
-            retractboundary(repo, targetphase, delroots)
-
+    phcache = repo._phasecache.copy()
+    phcache.advanceboundary(repo, targetphase, nodes)
+    repo._phasecache.replace(phcache)
 
 def retractboundary(repo, targetphase, nodes):
     """Set nodes back to a phase changing other nodes phases if necessary.
@@ -242,17 +274,9 @@ def retractboundary(repo, targetphase, nodes):
     in the target phase or kept in a *higher* phase.
 
     Simplify boundary to contains phase roots only."""
-    phcache = repo._phasecache
-
-    currentroots = phcache.phaseroots[targetphase]
-    newroots = [n for n in nodes if repo[n].phase() < targetphase]
-    if newroots:
-        currentroots.update(newroots)
-        ctxs = repo.set('roots(%ln::)', currentroots)
-        currentroots.intersection_update(ctx.node() for ctx in ctxs)
-        phcache.invalidatephaserevs()
-        phcache.dirty = True
-
+    phcache = repo._phasecache.copy()
+    phcache.retractboundary(repo, targetphase, nodes)
+    repo._phasecache.replace(phcache)
 
 def listphases(repo):
     """List phases root for serialisation over pushkey"""
