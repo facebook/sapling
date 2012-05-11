@@ -153,6 +153,7 @@ class changelog(revlog.revlog):
         r = revlog.revlog(self.opener, file)
         self.index = r.index
         self.nodemap = r.nodemap
+        self._nodecache = r._nodecache
         self._chunkcache = r._chunkcache
 
     def writepending(self):

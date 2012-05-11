@@ -114,8 +114,12 @@ def runtest() :
     for i, r in enumerate(ix):
         if r[7] == nullid:
             i = -1
-        if ix[r[7]] != i:
-            print 'Reverse lookup inconsistent for %r' % r[7].encode('hex')
+        try:
+            if ix[r[7]] != i:
+                print 'Reverse lookup inconsistent for %r' % r[7].encode('hex')
+        except TypeError:
+            # pure version doesn't support this
+            break
 
     print "done"
 

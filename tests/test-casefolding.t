@@ -57,14 +57,14 @@ test changing case of path components
   A D/c
   $ hg ci -m addc D/c
   $ hg mv d/b d/e
-  moving D/b to D/e
+  moving D/b to D/e (glob)
   $ hg st
   A D/e
   R D/b
   $ hg revert -aq
   $ rm d/e
   $ hg mv d/b D/B
-  moving D/b to D/B
+  moving D/b to D/B (glob)
   $ hg st
   A D/B
   R D/b
