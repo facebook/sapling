@@ -40,7 +40,7 @@
   $ echo "progress=" >> $HGRCPATH
   $ echo "loop=`pwd`/loop.py" >> $HGRCPATH
   $ echo "[progress]" >> $HGRCPATH
-  $ echo  "format = topic bar number" >> $HGRCPATH
+  $ echo "format = topic bar number" >> $HGRCPATH
   $ echo "assume-tty=1" >> $HGRCPATH
   $ echo "width=60" >> $HGRCPATH
 
