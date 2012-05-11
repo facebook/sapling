@@ -56,12 +56,25 @@ def _collectbrokencsets(repo, files, striprev):
     return s
 
 def strip(ui, repo, nodelist, backup="all", topic='backup'):
+    # It simplifies the logic around updating the branchheads cache if we only
+    # have to consider the effect of the stripped revisions and not revisions
+    # missing because the cache is out-of-date.
+    repo.updatebranchcache()
+
     cl = repo.changelog
     # TODO handle undo of merge sets
     if isinstance(nodelist, str):
         nodelist = [nodelist]
     striplist = [cl.rev(node) for node in nodelist]
     striprev = min(striplist)
+
+    # Set of potential new heads resulting from the strip.  The parents of any
+    # node removed could be a new head because the node to be removed could have
+    # been the only child of the parent.
+    # Do a list->set->list conversion to remove duplicates.
+    stringstriplist = [str(rev) for rev in striplist]
+    newheadrevs = set(repo.revs("parents(%lr::) - %lr::", stringstriplist,
+                                stringstriplist))
 
     keeppartialbundle = backup == 'strip'
 
@@ -169,4 +182,4 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
                     % chgrpfile)
         raise
 
-    repo.destroyed()
+    repo.destroyed(newheadrevs)
