@@ -10,8 +10,8 @@
 
 '''command to display child changesets (DEPRECATED)
 
-This extension is deprecated. You should use `hg log -r "children($revision)"`
-instead.
+This extension is deprecated. You should use :hg:`log -r
+"children(REV)"` instead.
 '''
 
 from mercurial import cmdutil
