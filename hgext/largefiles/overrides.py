@@ -552,7 +552,8 @@ def overriderevert(orig, ui, repo, *pats, **opts):
         for lfile in modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
         for lfile in missing:
-            os.unlink(repo.wjoin(lfutil.standin(lfile)))
+            if (os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
+                os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
             ctx = repo[opts.get('rev')]
