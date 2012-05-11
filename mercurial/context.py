@@ -191,12 +191,7 @@ class changectx(object):
     def bookmarks(self):
         return self._repo.nodebookmarks(self._node)
     def phase(self):
-        if self._rev == -1:
-            return phases.public
-        if self._rev >= len(self._repo._phaserev):
-            # outdated cache
-            del self._repo._phaserev
-        return self._repo._phaserev[self._rev]
+        return self._repo._phasecache.phase(self._repo, self._rev)
     def phasestr(self):
         return phases.phasenames[self.phase()]
     def mutable(self):

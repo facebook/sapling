@@ -99,7 +99,7 @@ Note: old client behave as publish server with Draft only content
 """
 
 import errno
-from node import nullid, bin, hex, short
+from node import nullid, nullrev, bin, hex, short
 from i18n import _
 
 allphases = public, draft, secret = range(3)
@@ -124,7 +124,7 @@ def _filterunknown(ui, changelog, phaseroots):
             updated = True
     return updated
 
-def readroots(repo, phasedefaults=None):
+def _readroots(repo, phasedefaults=None):
     """Read phase roots from disk
 
     phasedefaults is a list of fn(repo, roots) callable, which are
@@ -156,15 +156,51 @@ def readroots(repo, phasedefaults=None):
         dirty = True
     return roots, dirty
 
-def writeroots(repo, phaseroots):
-    """Write phase roots from disk"""
-    f = repo.sopener('phaseroots', 'w', atomictemp=True)
-    try:
-        for phase, roots in enumerate(phaseroots):
-            for h in roots:
-                f.write('%i %s\n' % (phase, hex(h)))
-    finally:
-        f.close()
+class phasecache(object):
+    def __init__(self, repo, phasedefaults):
+        self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
+        self.opener = repo.sopener
+        self._phaserevs = None
+
+    def getphaserevs(self, repo, rebuild=False):
+        if rebuild or self._phaserevs is None:
+            revs = [public] * len(repo.changelog)
+            for phase in trackedphases:
+                roots = map(repo.changelog.rev, self.phaseroots[phase])
+                if roots:
+                    for rev in roots:
+                        revs[rev] = phase
+                    for rev in repo.changelog.descendants(*roots):
+                        revs[rev] = phase
+            self._phaserevs = revs
+        return self._phaserevs
+
+    def invalidatephaserevs(self):
+        self._phaserevs = None
+
+    def phase(self, repo, rev):
+        # We need a repo argument here to be able to build _phaserev
+        # if necessary. The repository instance is not stored in
+        # phasecache to avoid reference cycles. The changelog instance
+        # is not stored because it is a filecache() property and can
+        # be replaced without us being notified.
+        if rev == nullrev:
+            return public
+        if self._phaserevs is None or rev >= len(self._phaserevs):
+            self._phaserevs = self.getphaserevs(repo, rebuild=True)
+        return self._phaserevs[rev]
+
+    def write(self):
+        if not self.dirty:
+            return
+        f = self.opener('phaseroots', 'w', atomictemp=True)
+        try:
+            for phase, roots in enumerate(self.phaseroots):
+                for h in roots:
+                    f.write('%i %s\n' % (phase, hex(h)))
+        finally:
+            f.close()
+        self.dirty = False
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
@@ -173,6 +209,8 @@ def advanceboundary(repo, targetphase, nodes):
     in the target phase or kept in a *lower* phase.
 
     Simplify boundary to contains phase roots only."""
+    phcache = repo._phasecache
+
     delroots = [] # set of root deleted by this path
     for phase in xrange(targetphase + 1, len(allphases)):
         # filter nodes that are not in a compatible phase already
@@ -181,16 +219,15 @@ def advanceboundary(repo, targetphase, nodes):
         nodes = [n for n in nodes if repo[n].phase() >= phase]
         if not nodes:
             break # no roots to move anymore
-        roots = repo._phaseroots[phase]
+        roots = phcache.phaseroots[phase]
         olds = roots.copy()
         ctxs = list(repo.set('roots((%ln::) - (%ln::%ln))', olds, olds, nodes))
         roots.clear()
         roots.update(ctx.node() for ctx in ctxs)
         if olds != roots:
             # invalidate cache (we probably could be smarter here
-            if '_phaserev' in vars(repo):
-                del repo._phaserev
-            repo._dirtyphases = True
+            phcache.invalidatephaserevs()
+            phcache.dirty = True
             # some roots may need to be declared for lower phases
             delroots.extend(olds - roots)
         # declare deleted root in the target phase
@@ -205,22 +242,23 @@ def retractboundary(repo, targetphase, nodes):
     in the target phase or kept in a *higher* phase.
 
     Simplify boundary to contains phase roots only."""
-    currentroots = repo._phaseroots[targetphase]
+    phcache = repo._phasecache
+
+    currentroots = phcache.phaseroots[targetphase]
     newroots = [n for n in nodes if repo[n].phase() < targetphase]
     if newroots:
         currentroots.update(newroots)
         ctxs = repo.set('roots(%ln::)', currentroots)
         currentroots.intersection_update(ctx.node() for ctx in ctxs)
-        if '_phaserev' in vars(repo):
-            del repo._phaserev
-        repo._dirtyphases = True
+        phcache.invalidatephaserevs()
+        phcache.dirty = True
 
 
 def listphases(repo):
     """List phases root for serialisation over pushkey"""
     keys = {}
     value = '%i' % draft
-    for root in repo._phaseroots[draft]:
+    for root in repo._phasecache.phaseroots[draft]:
         keys[hex(root)] = value
 
     if repo.ui.configbool('phases', 'publish', True):
@@ -263,7 +301,7 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
 def visibleheads(repo):
     """return the set of visible head of this repo"""
     # XXX we want a cache on this
-    sroots = repo._phaseroots[secret]
+    sroots = repo._phasecache.phaseroots[secret]
     if sroots:
         # XXX very slow revset. storing heads or secret "boundary" would help.
         revset = repo.set('heads(not (%ln::))', sroots)
@@ -279,7 +317,7 @@ def visiblebranchmap(repo):
     """return a branchmap for the visible set"""
     # XXX Recomputing this data on the fly is very slow.  We should build a
     # XXX cached version while computin the standard branchmap version.
-    sroots = repo._phaseroots[secret]
+    sroots = repo._phasecache.phaseroots[secret]
     if sroots:
         vbranchmap = {}
         for branch, nodes in  repo.branchmap().iteritems():

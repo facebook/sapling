@@ -463,7 +463,8 @@ def draft(repo, subset, x):
     """``draft()``
     Changeset in draft phase."""
     getargs(x, 0, 0, _("draft takes no arguments"))
-    return [r for r in subset if repo._phaserev[r] == phases.draft]
+    pc = repo._phasecache
+    return [r for r in subset if pc.phase(repo, r) == phases.draft]
 
 def filelog(repo, subset, x):
     """``filelog(pattern)``
@@ -852,7 +853,8 @@ def public(repo, subset, x):
     """``public()``
     Changeset in public phase."""
     getargs(x, 0, 0, _("public takes no arguments"))
-    return [r for r in subset if repo._phaserev[r] == phases.public]
+    pc = repo._phasecache
+    return [r for r in subset if pc.phase(repo, r) == phases.public]
 
 def remote(repo, subset, x):
     """``remote([id [,path]])``
@@ -1031,7 +1033,8 @@ def secret(repo, subset, x):
     """``secret()``
     Changeset in secret phase."""
     getargs(x, 0, 0, _("secret takes no arguments"))
-    return [r for r in subset if repo._phaserev[r] == phases.secret]
+    pc = repo._phasecache
+    return [r for r in subset if pc.phase(repo, r) == phases.secret]
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``

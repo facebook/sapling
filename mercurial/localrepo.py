@@ -41,7 +41,6 @@ class localrepository(repo.repository):
         self.wopener = scmutil.opener(self.root)
         self.baseui = baseui
         self.ui = baseui.copy()
-        self._dirtyphases = False
         # A list of callback to shape the phase if no data were found.
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
@@ -182,22 +181,8 @@ class localrepository(repo.repository):
       bookmarks.write(self)
 
     @storecache('phaseroots')
-    def _phaseroots(self):
-        phaseroots, self._dirtyphases = phases.readroots(
-            self, self._phasedefaults)
-        return phaseroots
-
-    @propertycache
-    def _phaserev(self):
-        cache = [phases.public] * len(self)
-        for phase in phases.trackedphases:
-            roots = map(self.changelog.rev, self._phaseroots[phase])
-            if roots:
-                for rev in roots:
-                    cache[rev] = phase
-                for rev in self.changelog.descendants(*roots):
-                    cache[rev] = phase
-        return cache
+    def _phasecache(self):
+        return phases.phasecache(self, self._phasedefaults)
 
     @storecache('00changelog.i')
     def changelog(self):
@@ -604,10 +589,11 @@ class localrepository(repo.repository):
 
     def known(self, nodes):
         nm = self.changelog.nodemap
+        pc = self._phasecache
         result = []
         for n in nodes:
             r = nm.get(n)
-            resp = not (r is None or self._phaserev[r] >= phases.secret)
+            resp = not (r is None or pc.phase(self, r) >= phases.secret)
             result.append(resp)
         return result
 
@@ -863,7 +849,6 @@ class localrepository(repo.repository):
                 pass
 
         delcache('_tagscache')
-        delcache('_phaserev')
 
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
@@ -931,9 +916,8 @@ class localrepository(repo.repository):
 
         def unlock():
             self.store.write()
-            if self._dirtyphases:
-                phases.writeroots(self, self._phaseroots)
-                self._dirtyphases = False
+            if '_phasecache' in vars(self):
+                self._phasecache.write()
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue

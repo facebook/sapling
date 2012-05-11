@@ -105,7 +105,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None)
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing
-    if not repo._phaseroots[phases.secret]:
+    if not repo._phasecache.phaseroots[phases.secret]:
         og.missingheads = onlyheads or repo.heads()
     elif onlyheads is None:
         # use visible heads as it should be cached

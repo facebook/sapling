@@ -4378,7 +4378,7 @@ def phase(ui, repo, *revs, **opts):
             nodes = [ctx.node() for ctx in repo.set('%ld', revs)]
             if not nodes:
                 raise util.Abort(_('empty revision set'))
-            olddata = repo._phaserev[:]
+            olddata = repo._phasecache.getphaserevs(repo)[:]
             phases.advanceboundary(repo, targetphase, nodes)
             if opts['force']:
                 phases.retractboundary(repo, targetphase, nodes)
@@ -4386,7 +4386,7 @@ def phase(ui, repo, *revs, **opts):
             lock.release()
         if olddata is not None:
             changes = 0
-            newdata = repo._phaserev
+            newdata = repo._phasecache.getphaserevs(repo)
             changes = sum(o != newdata[i] for i, o in enumerate(olddata))
             rejected = [n for n in nodes
                         if newdata[repo[n].rev()] < targetphase]
