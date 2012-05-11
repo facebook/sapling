@@ -120,7 +120,25 @@ rebase b onto r1, skipping b2
   1  r2
   0  r1
 
+test same-parent transplant with --log
 
+  $ hg clone -r 1 ../t ../sameparent
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ../sameparent
+  $ hg transplant --log -s ../prune 5
+  searching for changes
+  applying e234d668f844
+  e234d668f844 transplanted to e07aea8ecf9c
+  $ hg log --template '{rev} {parents} {desc}\n'
+  2  b1
+  (transplanted from e234d668f844e1b1a765f01db83a32c0c7bfa170)
+  1  r2
+  0  r1
 remote transplant
 
   $ hg clone -r 1 ../t ../remote
