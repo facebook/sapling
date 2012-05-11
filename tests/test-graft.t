@@ -277,3 +277,13 @@ Disallow grafting already grafted csets with the same origin onto each other
   $ hg graft tip
   skipping already grafted revision 13 (same origin 2)
   [255]
+
+Graft with --log
+
+  $ hg up -Cq 1
+  $ hg graft 3 --log -u foo
+  grafting revision 3
+  warning: can't find ancestor for 'c' copied from 'b'!
+  $ hg log --template '{rev} {parents} {desc}\n' -r tip
+  14 1:5d205f8b35b6  3
+  (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)

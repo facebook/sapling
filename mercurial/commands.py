@@ -2581,6 +2581,7 @@ def forget(ui, repo, *pats, **opts):
     'graft',
     [('c', 'continue', False, _('resume interrupted graft')),
      ('e', 'edit', False, _('invoke editor on commit messages')),
+     ('', 'log', None, _('append graft info to log message')),
      ('D', 'currentdate', False,
       _('record the current date as commit date')),
      ('U', 'currentuser', False,
@@ -2598,6 +2599,11 @@ def graft(ui, repo, *revs, **opts):
 
     Changesets that are ancestors of the current revision, that have
     already been grafted, or that are merges will be skipped.
+
+    If --log is specified, log messages will have a comment appended
+    of the form::
+
+      (grafted from CHANGESETHASH)
 
     If a graft merge results in conflicts, the graft process is
     interrupted so that the current merge can be manually resolved.
@@ -2748,7 +2754,10 @@ def graft(ui, repo, *revs, **opts):
             date = ctx.date()
             if opts.get('date'):
                 date = opts['date']
-            node = repo.commit(text=ctx.description(), user=user,
+            message = ctx.description()
+            if opts.get('log'):
+                message += '\n(grafted from %s)' % ctx.hex()
+            node = repo.commit(text=message, user=user,
                         date=date, extra=extra, editor=editor)
             if node is None:
                 ui.status(_('graft for revision %s is empty\n') % ctx.rev())
