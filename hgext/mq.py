@@ -2525,7 +2525,8 @@ def fold(ui, repo, *files, **opts):
         wlock.release()
 
 @command("qgoto",
-         [('f', 'force', None, _('overwrite any local changes')),
+         [('c', 'check', None, _('tolerate non-conflicting local changes')),
+          ('f', 'force', None, _('overwrite any local changes')),
           ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qgoto [OPTION]... PATCH'))
 def goto(ui, repo, patch, **opts):
@@ -2535,10 +2536,13 @@ def goto(ui, repo, patch, **opts):
     q = repo.mq
     patch = q.lookup(patch)
     nobackup = opts.get('no_backup')
+    check = opts.get('check')
     if q.isapplied(patch):
-        ret = q.pop(repo, patch, force=opts.get('force'), nobackup=nobackup)
+        ret = q.pop(repo, patch, force=opts.get('force'), nobackup=nobackup,
+                    check=check)
     else:
-        ret = q.push(repo, patch, force=opts.get('force'), nobackup=nobackup)
+        ret = q.push(repo, patch, force=opts.get('force'), nobackup=nobackup,
+                     check=check)
     q.savedirty()
     return ret
 

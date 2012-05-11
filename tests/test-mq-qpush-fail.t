@@ -368,3 +368,22 @@ test qpush --check
   $ cat b
   b
   b
+
+test qgoto --check
+
+  $ hg revert -aq b
+  $ rm e
+  $ hg qgoto --check --force p3
+  abort: cannot use both --force and --check
+  [255]
+  $ echo a >> a
+  $ hg qgoto --check p3
+  applying p3
+  now at: p3
+  $ hg st a
+  M a
+  $ hg qgoto --check p2
+  popping p3
+  now at: p2
+  $ hg st a
+  M a
