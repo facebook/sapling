@@ -13,7 +13,7 @@
 Cannot change null revision phase
 
   $ hg phase --force --secret null
-  abort: unknown revision '-1'!
+  abort: cannot change null revision phase
   [255]
   $ hg phase null
   -1: public

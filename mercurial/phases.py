@@ -101,6 +101,7 @@ Note: old client behave as publish server with Draft only content
 import errno
 from node import nullid, nullrev, bin, hex, short
 from i18n import _
+import util
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
@@ -250,6 +251,8 @@ class phasecache(object):
         newroots = [n for n in nodes
                     if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
+            if nullid in newroots:
+                raise util.Abort(_('cannot change null revision phase'))
             currentroots = currentroots.copy()
             currentroots.update(newroots)
             ctxs = repo.set('roots(%ln::)', currentroots)

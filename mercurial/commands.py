@@ -4375,9 +4375,9 @@ def phase(ui, repo, *revs, **opts):
         lock = repo.lock()
         try:
             # set phase
-            nodes = [ctx.node() for ctx in repo.set('%ld', revs)]
-            if not nodes:
-                raise util.Abort(_('empty revision set'))
+            if not revs:
+                 raise util.Abort(_('empty revision set'))
+            nodes = [repo[r].node() for r in revs]
             olddata = repo._phasecache.getphaserevs(repo)[:]
             phases.advanceboundary(repo, targetphase, nodes)
             if opts['force']:
