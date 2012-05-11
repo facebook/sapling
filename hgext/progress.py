@@ -237,7 +237,7 @@ class progbar(object):
             # truncate the list of topics assuming all topics within
             # this one are also closed
             if topic in self.topics:
-              self.topics = self.topics[:self.topics.index(topic)]
+                self.topics = self.topics[:self.topics.index(topic)]
         else:
             if topic not in self.topics:
                 self.starttimes[topic] = now
