@@ -912,6 +912,8 @@ def overridesummary(orig, ui, repo, *pats, **opts):
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
 def overrideaddremove(orig, ui, repo, *pats, **opts):
+    if not lfutil.islfilesrepo(repo):
+        return orig(ui, repo, *pats, **opts)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(ui, repo)
     s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [], False,
