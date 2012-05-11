@@ -554,6 +554,15 @@ class queue(object):
         except OSError, inst:
             self.ui.warn(_('error removing undo: %s\n') % str(inst))
 
+    def backup(self, repo, files):
+        # backup local changes in --force case
+        for f in sorted(files):
+            absf = repo.wjoin(f)
+            if os.path.lexists(absf):
+                self.ui.note(_('saving current version of %s as %s\n') %
+                             (f, f + '.orig'))
+                util.rename(absf, absf + '.orig')
+
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
         stat = opts.get('stat')
@@ -1313,8 +1322,10 @@ class queue(object):
                         break
                 update = needupdate
 
-            if not force and update:
-                self.checklocalchanges(repo)
+            tobackup = set()
+            if update:
+                m, a, r, d = self.checklocalchanges(repo, force=force)
+                tobackup.update(m + a)
 
             self.applieddirty = True
             end = len(self.applied)
@@ -1344,6 +1355,10 @@ class queue(object):
                 m, a, r, d = repo.status(qp, top)[:4]
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
+
+                # backup local changes in --force case
+                self.backup(repo, set(a + m + r) & tobackup)
+
                 for f in a:
                     try:
                         util.unlinkpath(repo.wjoin(f))

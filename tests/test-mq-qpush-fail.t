@@ -150,3 +150,41 @@ and now we try it one more time with a unguarded, while we're not at the top of 
   abort: cannot push to a previous patch: a
   [255]
 
+test qpop --force and backup files
+
+  $ hg qpop -a
+  popping b
+  patch queue now empty
+  $ hg qq --create force
+  $ echo a > a
+  $ echo b > b
+  $ echo c > c
+  $ hg ci -Am add a b c
+  $ echo a >> a
+  $ hg rm b
+  $ hg rm c
+  $ hg qnew p1
+  $ echo a >> a
+  $ echo bb > b
+  $ hg add b
+  $ echo cc > c
+  $ hg add c
+  $ hg qpop --force --verbose
+  saving current version of a as a.orig
+  saving current version of b as b.orig
+  saving current version of c as c.orig
+  popping p1
+  patch queue now empty
+  $ hg st
+  ? a.orig
+  ? b.orig
+  ? c.orig
+  ? untracked-file
+  $ cat a.orig
+  a
+  a
+  a
+  $ cat b.orig
+  bb
+  $ cat c.orig
+  cc
