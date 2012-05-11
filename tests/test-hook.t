@@ -579,3 +579,30 @@ new tags must be visible in pretxncommit (issue3210)
   $ hg tag -f foo
   ['a', 'foo', 'tip']
 
+new commits must be visible in pretxnchangegroup (issue3428)
+
+  $ cd ..
+  $ hg init to
+  $ echo '[hooks]' >> to/.hg/hgrc
+  $ echo 'pretxnchangegroup = hg --traceback tip' >> to/.hg/hgrc
+  $ echo a >> to/a
+  $ hg --cwd to ci -Ama
+  adding a
+  $ hg clone to from
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo aa >> from/a
+  $ hg --cwd from ci -mb
+  $ hg --cwd from push
+  pushing to $TESTTMP/to
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  changeset:   1:9836a07b9b9d
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
