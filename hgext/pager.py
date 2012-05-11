@@ -22,12 +22,6 @@ To set the pager that should be used, set the application variable::
 If no pager is set, the pager extensions uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, no pager is used.
 
-If you notice "BROKEN PIPE" error messages, you can disable them by
-setting::
-
-  [pager]
-  quiet = True
-
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::
 
@@ -53,37 +47,27 @@ used. Use a boolean value like yes, no, on, off, or use auto for
 normal behavior.
 '''
 
-import sys, os, signal, shlex, errno
+import atexit, sys, os, signal, subprocess
 from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
 def _runpager(p):
-    if not util.safehasattr(os, 'fork'):
-        sys.stdout = util.popen(p, 'wb')
-        if util.isatty(sys.stderr):
-            sys.stderr = sys.stdout
-        return
-    fdin, fdout = os.pipe()
-    pid = os.fork()
-    if pid == 0:
-        os.close(fdin)
-        os.dup2(fdout, sys.stdout.fileno())
-        if util.isatty(sys.stderr):
-            os.dup2(fdout, sys.stderr.fileno())
-        os.close(fdout)
-        return
-    os.dup2(fdin, sys.stdin.fileno())
-    os.close(fdin)
-    os.close(fdout)
-    try:
-        os.execvp('/bin/sh', ['/bin/sh', '-c', p])
-    except OSError, e:
-        if e.errno == errno.ENOENT:
-            # no /bin/sh, try executing the pager directly
-            args = shlex.split(p)
-            os.execvp(args[0], args)
-        else:
-            raise
+    pager = subprocess.Popen(p, shell=True, bufsize=-1,
+                             close_fds=util.closefds, stdin=subprocess.PIPE,
+                             stdout=sys.stdout, stderr=sys.stderr)
+
+    stdout = os.dup(sys.stdout.fileno())
+    stderr = os.dup(sys.stderr.fileno())
+    os.dup2(pager.stdin.fileno(), sys.stdout.fileno())
+    if util.isatty(sys.stderr):
+        os.dup2(pager.stdin.fileno(), sys.stderr.fileno())
+
+    @atexit.register
+    def killpager():
+        pager.stdin.close()
+        os.dup2(stdout, sys.stdout.fileno())
+        os.dup2(stderr, sys.stderr.fileno())
+        pager.wait()
 
 def uisetup(ui):
     if ui.plain() or '--debugger' in sys.argv or not util.isatty(sys.stdout):
@@ -101,9 +85,11 @@ def uisetup(ui):
                  (cmd not in ui.configlist('pager', 'ignore') and not attend))):
                 ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
-                _runpager(p)
-                if ui.configbool('pager', 'quiet'):
+                try:
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+                except ValueError:
+                    pass
+                _runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)

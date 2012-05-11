@@ -552,7 +552,8 @@ def overriderevert(orig, ui, repo, *pats, **opts):
         for lfile in modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
         for lfile in missing:
-            os.unlink(repo.wjoin(lfutil.standin(lfile)))
+            if (os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
+                os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
             ctx = repo[opts.get('rev')]
@@ -953,6 +954,8 @@ def overridesummary(orig, ui, repo, *pats, **opts):
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
 def overrideaddremove(orig, ui, repo, *pats, **opts):
+    if not lfutil.islfilesrepo(repo):
+        return orig(ui, repo, *pats, **opts)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(ui, repo)
     s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [], False,

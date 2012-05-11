@@ -150,3 +150,134 @@ and now we try it one more time with a unguarded, while we're not at the top of 
   abort: cannot push to a previous patch: a
   [255]
 
+test qpop --force and backup files
+
+  $ hg qpop -a
+  popping b
+  patch queue now empty
+  $ hg qq --create force
+  $ echo a > a
+  $ echo b > b
+  $ echo c > c
+  $ hg ci -Am add a b c
+  $ echo a >> a
+  $ hg rm b
+  $ hg rm c
+  $ hg qnew p1
+  $ echo a >> a
+  $ echo bb > b
+  $ hg add b
+  $ echo cc > c
+  $ hg add c
+  $ hg qpop --force --verbose
+  saving current version of a as a.orig
+  saving current version of b as b.orig
+  saving current version of c as c.orig
+  popping p1
+  patch queue now empty
+  $ hg st
+  ? a.orig
+  ? b.orig
+  ? c.orig
+  ? untracked-file
+  $ cat a.orig
+  a
+  a
+  a
+  $ cat b.orig
+  bb
+  $ cat c.orig
+  cc
+
+test qpop --force --no-backup
+
+  $ hg qpush
+  applying p1
+  now at: p1
+  $ rm a.orig
+  $ echo a >> a
+  $ hg qpop --force --no-backup --verbose
+  popping p1
+  patch queue now empty
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]
+
+test qpush --force and backup files
+
+  $ echo a >> a
+  $ hg qnew p2
+  $ echo b >> b
+  $ echo d > d
+  $ echo e > e
+  $ hg add d e
+  $ hg rm c
+  $ hg qnew p3
+  $ hg qpop -a
+  popping p3
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ echo b1 >> b
+  $ echo d1 > d
+  $ hg add d
+  $ echo e1 > e
+  $ hg qpush -a --force --verbose
+  applying p2
+  saving current version of a as a.orig
+  patching file a
+  a
+  applying p3
+  saving current version of b as b.orig
+  saving current version of d as d.orig
+  patching file b
+  patching file c
+  patching file d
+  file d already exists
+  1 out of 1 hunks FAILED -- saving rejects to file d.rej
+  patching file e
+  file e already exists
+  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  patch failed to apply
+  b
+  patch failed, rejects left in working dir
+  errors during apply, please fix and refresh p3
+  [2]
+  $ cat a.orig
+  a
+  a
+  $ cat b.orig
+  b
+  b1
+  $ cat d.orig
+  d1
+
+test qpush --force --no-backup
+
+  $ hg revert -qa
+  $ hg qpop -a
+  popping p3
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ rm a.orig
+  $ hg qpush --force --no-backup --verbose
+  applying p2
+  patching file a
+  a
+  now at: p2
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]
+
+test qgoto --force --no-backup
+
+  $ hg qpop
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ hg qgoto --force --no-backup p2 --verbose
+  applying p2
+  patching file a
+  a
+  now at: p2
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]

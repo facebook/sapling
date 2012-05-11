@@ -1356,11 +1356,15 @@ qpush should fail, local changes
 
 apply force, should discard changes in hello, but not bye
 
-  $ hg qpush -f
+  $ hg qpush -f --verbose
   applying empty
+  saving current version of hello.txt as hello.txt.orig
+  patching file hello.txt
+  hello.txt
   now at: empty
   $ hg st
   M bye.txt
+  ? hello.txt.orig
   $ hg diff --config diff.nodates=True
   diff -r ba252371dbc1 bye.txt
   --- a/bye.txt
