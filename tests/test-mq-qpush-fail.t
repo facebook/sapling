@@ -317,3 +317,54 @@ test qgoto --force --no-backup
   now at: p2
   $ test -f a.orig && echo 'error: backup with --no-backup'
   [1]
+
+test qpush --check
+
+  $ hg qpush --check --force
+  abort: cannot use both --force and --check
+  [255]
+  $ hg qpush --check --exact
+  abort: cannot use --exact and --check together
+  [255]
+  $ echo b >> b
+  $ hg qpush --check
+  applying p3
+  errors during apply, please fix and refresh p2
+  [2]
+  $ rm b
+  $ hg qpush --check
+  applying p3
+  errors during apply, please fix and refresh p2
+  [2]
+  $ hg rm -A b
+  $ hg qpush --check
+  applying p3
+  errors during apply, please fix and refresh p2
+  [2]
+  $ hg revert -aq b
+  $ echo d > d
+  $ hg add d
+  $ hg qpush --check
+  applying p3
+  errors during apply, please fix and refresh p2
+  [2]
+  $ hg forget d
+  $ rm d
+  $ hg qpop
+  popping p2
+  patch queue now empty
+  $ echo b >> b
+  $ hg qpush -a --check
+  applying p2
+  applying p3
+  errors during apply, please fix and refresh p2
+  [2]
+  $ hg qtop
+  p2
+  $ hg parents --template "{rev} {desc}\n"
+  2 imported patch p2
+  $ hg st b
+  M b
+  $ cat b
+  b
+  b
