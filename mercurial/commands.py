@@ -196,6 +196,8 @@ def addremove(ui, repo, *pats, **opts):
     be identical) as its parameter. Detecting renamed files this way
     can be expensive. After using this option, :hg:`status -C` can be
     used to check which files were identified as moved or renamed.
+    If this option is not specified, only renames of identical files
+    are detected.
 
     Returns 0 if all files are successfully added.
     """
