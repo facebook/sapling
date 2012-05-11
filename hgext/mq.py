@@ -1157,7 +1157,7 @@ class queue(object):
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False,
-             mergeq=None, all=False, move=False, exact=False):
+             mergeq=None, all=False, move=False, exact=False, nobackup=False):
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
@@ -1257,7 +1257,7 @@ class queue(object):
                 end = self.series.index(patch, start) + 1
 
             tobackup = set()
-            if force:
+            if not nobackup and force:
                 m, a, r, d = self.checklocalchanges(repo, force=True)
                 tobackup.update(m + a)
 
@@ -1298,7 +1298,8 @@ class queue(object):
         finally:
             wlock.release()
 
-    def pop(self, repo, patch=None, force=False, update=True, all=False):
+    def pop(self, repo, patch=None, force=False, update=True, all=False,
+            nobackup=False):
         wlock = repo.wlock()
         try:
             if patch:
@@ -1346,7 +1347,8 @@ class queue(object):
             tobackup = set()
             if update:
                 m, a, r, d = self.checklocalchanges(repo, force=force)
-                tobackup.update(m + a)
+                if not nobackup and force:
+                    tobackup.update(m + a)
 
             self.applieddirty = True
             end = len(self.applied)
@@ -2496,7 +2498,8 @@ def fold(ui, repo, *files, **opts):
         wlock.release()
 
 @command("qgoto",
-         [('f', 'force', None, _('overwrite any local changes'))],
+         [('f', 'force', None, _('overwrite any local changes')),
+          ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qgoto [OPTION]... PATCH'))
 def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
@@ -2504,10 +2507,11 @@ def goto(ui, repo, patch, **opts):
     Returns 0 on success.'''
     q = repo.mq
     patch = q.lookup(patch)
+    nobackup = opts.get('no_backup')
     if q.isapplied(patch):
-        ret = q.pop(repo, patch, force=opts.get('force'))
+        ret = q.pop(repo, patch, force=opts.get('force'), nobackup=nobackup)
     else:
-        ret = q.push(repo, patch, force=opts.get('force'))
+        ret = q.push(repo, patch, force=opts.get('force'), nobackup=nobackup)
     q.savedirty()
     return ret
 
@@ -2634,7 +2638,9 @@ def savename(path):
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
           ('n', 'name', '',
            _('merge queue name (DEPRECATED)'), _('NAME')),
-          ('', 'move', None, _('reorder patch series and apply only the patch'))],
+          ('', 'move', None,
+           _('reorder patch series and apply only the patch')),
+          ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qpush [-f] [-l] [-a] [--move] [PATCH | INDEX]'))
 def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
@@ -2659,14 +2665,15 @@ def push(ui, repo, patch=None, **opts):
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
-                 exact=opts.get('exact'))
+                 exact=opts.get('exact'), nobackup=opts.get('no_backup'))
     return ret
 
 @command("^qpop",
          [('a', 'all', None, _('pop all patches')),
           ('n', 'name', '',
            _('queue name to pop (DEPRECATED)'), _('NAME')),
-          ('f', 'force', None, _('forget any local changes to patched files'))],
+          ('f', 'force', None, _('forget any local changes to patched files')),
+          ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qpop [-a] [-f] [PATCH | INDEX]'))
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
@@ -2685,7 +2692,7 @@ def pop(ui, repo, patch=None, **opts):
     else:
         q = repo.mq
     ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
-                all=opts.get('all'))
+                all=opts.get('all'), nobackup=opts.get('no_backup'))
     q.savedirty()
     return ret
 

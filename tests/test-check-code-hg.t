@@ -220,9 +220,6 @@
    >             raise util.Abort(_('qfold cannot fold already applied patch %s') % p)
    warning: line over 80 characters
   hgext/mq.py:0:
-   >           ('', 'move', None, _('reorder patch series and apply only the patch'))],
-   warning: line over 80 characters
-  hgext/mq.py:0:
    >           ('U', 'noupdate', None, _('do not update the new working directories')),
    warning: line over 80 characters
   hgext/mq.py:0:

@@ -189,6 +189,19 @@ test qpop --force and backup files
   $ cat c.orig
   cc
 
+test qpop --force --no-backup
+
+  $ hg qpush
+  applying p1
+  now at: p1
+  $ rm a.orig
+  $ echo a >> a
+  $ hg qpop --force --no-backup --verbose
+  popping p1
+  patch queue now empty
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]
+
 test qpush --force and backup files
 
   $ echo a >> a
@@ -237,3 +250,34 @@ test qpush --force and backup files
   b1
   $ cat d.orig
   d1
+
+test qpush --force --no-backup
+
+  $ hg revert -qa
+  $ hg qpop -a
+  popping p3
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ rm a.orig
+  $ hg qpush --force --no-backup --verbose
+  applying p2
+  patching file a
+  a
+  now at: p2
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]
+
+test qgoto --force --no-backup
+
+  $ hg qpop
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ hg qgoto --force --no-backup p2 --verbose
+  applying p2
+  patching file a
+  a
+  now at: p2
+  $ test -f a.orig && echo 'error: backup with --no-backup'
+  [1]
