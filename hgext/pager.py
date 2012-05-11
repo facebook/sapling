@@ -22,12 +22,6 @@ To set the pager that should be used, set the application variable::
 If no pager is set, the pager extensions uses the environment variable
 $PAGER. If neither pager.pager, nor $PAGER is set, no pager is used.
 
-If you notice "BROKEN PIPE" error messages, you can disable them by
-setting::
-
-  [pager]
-  quiet = True
-
 You can disable the pager for certain commands by adding them to the
 pager.ignore list::
 
@@ -91,9 +85,11 @@ def uisetup(ui):
                  (cmd not in ui.configlist('pager', 'ignore') and not attend))):
                 ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
-                _runpager(p)
-                if ui.configbool('pager', 'quiet'):
+                try:
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+                except ValueError:
+                    pass
+                _runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
