@@ -432,11 +432,21 @@ tests update).
   large11
   $ cat sub/large2
   large22
+  $ cd ..
+
+Test cloning with --all-largefiles flag
+
+  $ rm -Rf ${USERCACHE}/*
+  $ hg clone --all-largefiles a a-backup
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  8 additional largefiles cached
 
 Rebasing between two repositories does not revert largefiles to old
 revisions (this was a very bad bug that took a lot of work to fix).
 
-  $ cd ..
   $ hg clone a d
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
