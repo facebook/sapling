@@ -202,6 +202,42 @@ test qpop --force --no-backup
   $ test -f a.orig && echo 'error: backup with --no-backup'
   [1]
 
+test qpop --check
+
+  $ hg qpush
+  applying p1
+  now at: p1
+  $ hg qpop --check --force
+  abort: cannot use both --force and --check
+  [255]
+  $ echo a >> a
+  $ hg qpop --check
+  abort: local changes found, refresh first
+  [255]
+  $ hg revert -qa a
+  $ rm a
+  $ hg qpop --check
+  abort: local changes found, refresh first
+  [255]
+  $ hg rm -A a
+  $ hg qpop --check
+  abort: local changes found, refresh first
+  [255]
+  $ hg revert -qa a
+  $ echo b > b
+  $ hg add b
+  $ hg qpop --check
+  abort: local changes found, refresh first
+  [255]
+  $ hg forget b
+  $ echo d > d
+  $ hg add d
+  $ hg qpop --check
+  popping p1
+  patch queue now empty
+  $ hg forget d
+  $ rm d
+
 test qpush --force and backup files
 
   $ echo a >> a

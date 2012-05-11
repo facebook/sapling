@@ -1299,7 +1299,9 @@ class queue(object):
             wlock.release()
 
     def pop(self, repo, patch=None, force=False, update=True, all=False,
-            nobackup=False):
+            nobackup=False, check=False):
+        if force and check:
+            raise util.Abort(_('cannot use both --force and --check'))
         wlock = repo.wlock()
         try:
             if patch:
@@ -1346,9 +1348,12 @@ class queue(object):
 
             tobackup = set()
             if update:
-                m, a, r, d = self.checklocalchanges(repo, force=force)
-                if not nobackup and force:
-                    tobackup.update(m + a)
+                m, a, r, d = self.checklocalchanges(repo, force=force or check)
+                if force:
+                    if not nobackup:
+                        tobackup.update(m + a)
+                elif check:
+                    tobackup.update(m + a + r + d)
 
             self.applieddirty = True
             end = len(self.applied)
@@ -1379,8 +1384,10 @@ class queue(object):
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
 
-                # backup local changes in --force case
-                self.backup(repo, set(a + m + r) & tobackup)
+                tobackup = set(a + m + r) & tobackup
+                if check and tobackup:
+                    self.localchangesfound()
+                self.backup(repo, tobackup)
 
                 for f in a:
                     try:
@@ -2672,15 +2679,21 @@ def push(ui, repo, patch=None, **opts):
          [('a', 'all', None, _('pop all patches')),
           ('n', 'name', '',
            _('queue name to pop (DEPRECATED)'), _('NAME')),
+          ('c', 'check', None, _('tolerate non-conflicting local changes')),
           ('f', 'force', None, _('forget any local changes to patched files')),
           ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qpop [-a] [-f] [PATCH | INDEX]'))
 def pop(ui, repo, patch=None, **opts):
     """pop the current patch off the stack
 
-    By default, pops off the top of the patch stack. If given a patch
-    name, keeps popping off patches until the named patch is at the
-    top of the stack.
+    Without argument, pops off the top of the patch stack. If given a
+    patch name, keeps popping off patches until the named patch is at
+    the top of the stack.
+
+    By default, abort if the working directory contains uncommitted
+    changes. With -c/--check, abort only if the uncommitted files
+    overlap with patched files. With -f/--force, backup and discard
+    changes made to such files.
 
     Return 0 on success.
     """
@@ -2692,7 +2705,8 @@ def pop(ui, repo, patch=None, **opts):
     else:
         q = repo.mq
     ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
-                all=opts.get('all'), nobackup=opts.get('no_backup'))
+                all=opts.get('all'), nobackup=opts.get('no_backup'),
+                check=opts.get('check'))
     q.savedirty()
     return ret
 
