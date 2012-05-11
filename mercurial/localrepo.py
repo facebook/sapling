@@ -504,7 +504,7 @@ class localrepository(repo.repository):
             partial = self._branchcache
 
         self._branchtags(partial, lrev)
-        # this private cache holds all heads (not just tips)
+        # this private cache holds all heads (not just the branch tips)
         self._branchcache = partial
 
     def branchmap(self):
@@ -584,8 +584,8 @@ class localrepository(repo.repository):
                 latest = newnodes.pop()
                 if latest not in bheads:
                     continue
-                minbhrev = self[bheads[0]].node()
-                reachable = self.changelog.reachable(latest, minbhrev)
+                minbhnode = self[bheads[0]].node()
+                reachable = self.changelog.reachable(latest, minbhnode)
                 reachable.remove(latest)
                 if reachable:
                     bheads = [b for b in bheads if b not in reachable]
@@ -1693,7 +1693,7 @@ class localrepository(repo.repository):
                     # * missingheads part of comon (::commonheads)
                     common = set(outgoing.common)
                     cheads = [node for node in revs if node in common]
-                    # and 
+                    # and
                     # * commonheads parents on missing
                     revset = self.set('%ln and parents(roots(%ln))',
                                      outgoing.commonheads,
