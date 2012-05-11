@@ -188,3 +188,52 @@ test qpop --force and backup files
   bb
   $ cat c.orig
   cc
+
+test qpush --force and backup files
+
+  $ echo a >> a
+  $ hg qnew p2
+  $ echo b >> b
+  $ echo d > d
+  $ echo e > e
+  $ hg add d e
+  $ hg rm c
+  $ hg qnew p3
+  $ hg qpop -a
+  popping p3
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ echo b1 >> b
+  $ echo d1 > d
+  $ hg add d
+  $ echo e1 > e
+  $ hg qpush -a --force --verbose
+  applying p2
+  saving current version of a as a.orig
+  patching file a
+  a
+  applying p3
+  saving current version of b as b.orig
+  saving current version of d as d.orig
+  patching file b
+  patching file c
+  patching file d
+  file d already exists
+  1 out of 1 hunks FAILED -- saving rejects to file d.rej
+  patching file e
+  file e already exists
+  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  patch failed to apply
+  b
+  patch failed, rejects left in working dir
+  errors during apply, please fix and refresh p3
+  [2]
+  $ cat a.orig
+  a
+  a
+  $ cat b.orig
+  b
+  b1
+  $ cat d.orig
+  d1

@@ -554,14 +554,17 @@ class queue(object):
         except OSError, inst:
             self.ui.warn(_('error removing undo: %s\n') % str(inst))
 
-    def backup(self, repo, files):
+    def backup(self, repo, files, copy=False):
         # backup local changes in --force case
         for f in sorted(files):
             absf = repo.wjoin(f)
             if os.path.lexists(absf):
                 self.ui.note(_('saving current version of %s as %s\n') %
                              (f, f + '.orig'))
-                util.rename(absf, absf + '.orig')
+                if copy:
+                    util.copyfile(absf, absf + '.orig')
+                else:
+                    util.rename(absf, absf + '.orig')
 
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):
@@ -677,7 +680,8 @@ class queue(object):
             return (False, list(files), False)
 
     def apply(self, repo, series, list=False, update_status=True,
-              strict=False, patchdir=None, merge=None, all_files=None):
+              strict=False, patchdir=None, merge=None, all_files=None,
+              tobackup=None):
         wlock = lock = tr = None
         try:
             wlock = repo.wlock()
@@ -685,7 +689,8 @@ class queue(object):
             tr = repo.transaction("qpush")
             try:
                 ret = self._apply(repo, series, list, update_status,
-                                  strict, patchdir, merge, all_files=all_files)
+                                  strict, patchdir, merge, all_files=all_files,
+                                  tobackup=tobackup)
                 tr.close()
                 self.savedirty()
                 return ret
@@ -702,9 +707,14 @@ class queue(object):
             self.removeundo(repo)
 
     def _apply(self, repo, series, list=False, update_status=True,
-               strict=False, patchdir=None, merge=None, all_files=None):
-        '''returns (error, hash)
-        error = 1 for unable to read, 2 for patch failed, 3 for patch fuzz'''
+               strict=False, patchdir=None, merge=None, all_files=None,
+               tobackup=None):
+        """returns (error, hash)
+
+        error = 1 for unable to read, 2 for patch failed, 3 for patch
+        fuzz. tobackup is None or a set of files to backup before they
+        are modified by a patch.
+        """
         # TODO unify with commands.py
         if not patchdir:
             patchdir = self.path
@@ -736,6 +746,11 @@ class queue(object):
                 message = '\n'.join(message)
 
             if ph.haspatch:
+                if tobackup:
+                    touched = patchmod.changedfiles(self.ui, repo, pf)
+                    touched = set(touched) & tobackup
+                    self.backup(repo, touched, copy=True)
+                    tobackup = tobackup - touched
                 (patcherr, files, fuzz) = self.patch(repo, pf)
                 if all_files is not None:
                     all_files.update(files)
@@ -1241,13 +1256,19 @@ class queue(object):
             else:
                 end = self.series.index(patch, start) + 1
 
+            tobackup = set()
+            if force:
+                m, a, r, d = self.checklocalchanges(repo, force=True)
+                tobackup.update(m + a)
+
             s = self.series[start:end]
             all_files = set()
             try:
                 if mergeq:
                     ret = self.mergepatch(repo, mergeq, s, diffopts)
                 else:
-                    ret = self.apply(repo, s, list, all_files=all_files)
+                    ret = self.apply(repo, s, list, all_files=all_files,
+                                     tobackup=tobackup)
             except:
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.p1()
