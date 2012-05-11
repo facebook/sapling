@@ -1311,6 +1311,12 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         #          |
         # base     o - parent of amending changeset
 
+        # Update extra dict from amended commit (e.g. to preserve graft source)
+        extra.update(old.extra())
+
+        # Also update it from the intermediate commit or from the wctx
+        extra.update(ctx.extra())
+
         files = set(old.files())
 
         # Second, we use either the commit we just did, or if there were no
@@ -1322,7 +1328,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             user = ctx.user()
             date = ctx.date()
             message = ctx.description()
-            extra = ctx.extra()
             # Recompute copies (avoid recording a -> b -> a)
             copied = copies.pathcopies(base, ctx)
 

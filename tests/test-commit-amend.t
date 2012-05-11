@@ -316,3 +316,37 @@ Can't rollback an amend:
   $ hg rollback
   no rollback information available
   [1]
+
+Preserve extra dict (issue3430):
+
+  $ hg branch a
+  marked working directory as branch a
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo a >> a
+  $ hg ci -ma
+  $ hg ci --amend -m "a'"
+  saved backup bundle to $TESTTMP/.hg/strip-backup/167f8e3031df-amend-backup.hg
+  $ hg log -r . --template "{branch}\n"
+  a
+  $ hg ci --amend -m "a''"
+  saved backup bundle to $TESTTMP/.hg/strip-backup/ceac1a44c806-amend-backup.hg
+  $ hg log -r . --template "{branch}\n"
+  a
+
+Also preserve other entries in the dict that are in the old commit,
+first graft something so there's an additional entry:
+
+  $ hg up 0 -q
+  $ echo z > z
+  $ hg ci -Am 'fork'
+  adding z
+  created new head
+  $ hg up 11
+  5 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg graft 12
+  grafting revision 12
+  $ hg ci --amend -m 'graft amend'
+  saved backup bundle to $TESTTMP/.hg/strip-backup/18a5124daf7a-amend-backup.hg
+  $ hg log -r . --debug | grep extra
+  extra:       branch=a
+  extra:       source=2647734878ef0236dda712fae9c1651cf694ea8a
