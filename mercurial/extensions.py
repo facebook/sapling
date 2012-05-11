@@ -301,7 +301,7 @@ def disabledext(name):
 
 def disabledcmd(ui, cmd, strict=False):
     '''import disabled extensions until cmd is found.
-    returns (cmdname, extname, doc)'''
+    returns (cmdname, extname, module)'''
 
     paths = _disabledpaths(strip_init=True)
     if not paths:
@@ -329,18 +329,19 @@ def disabledcmd(ui, cmd, strict=False):
             cmd = aliases[0]
         return (cmd, name, mod)
 
+    ext = None
     # first, search for an extension with the same name as the command
     path = paths.pop(cmd, None)
     if path:
         ext = findcmd(cmd, cmd, path)
-        if ext:
-            return ext
-
-    # otherwise, interrogate each extension until there's a match
-    for name, path in paths.iteritems():
-        ext = findcmd(cmd, name, path)
-        if ext:
-            return ext
+    if not ext:
+        # otherwise, interrogate each extension until there's a match
+        for name, path in paths.iteritems():
+            ext = findcmd(cmd, name, path)
+            if ext:
+                break
+    if ext and 'DEPRECATED' not in ext.__doc__:
+        return ext
 
     raise error.UnknownCommand(cmd)
 

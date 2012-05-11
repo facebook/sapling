@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''pull, update and merge in one command'''
+'''pull, update and merge in one command (DEPRECATED)'''
 
 from mercurial.i18n import _
 from mercurial.node import nullid, short
