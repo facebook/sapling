@@ -46,6 +46,17 @@ It may be desirable for mq changesets to be kept in the secret phase (see
 
 You will by default be managing a patch queue named "patches". You can
 create other, independent patch queues with the :hg:`qqueue` command.
+
+If the working directory contains uncommitted files, qpush, qpop and
+qgoto abort immediately. If -f/--force is used, the changes are
+discarded. Setting:
+
+  [mq]
+  check = True
+
+make them behave as if -c/--check were passed, and non-conflicting
+local changes will be tolerated and preserved. If incompatible options
+such as -f/--force or --exact are passed, this setting is ignored.
 '''
 
 from mercurial.i18n import _
@@ -1986,6 +1997,14 @@ class queue(object):
         self.removeundo(repo)
         return imported
 
+def fixcheckopts(ui, opts):
+    if (not ui.configbool('mq', 'check') or opts.get('force')
+        or opts.get('exact')):
+        return opts
+    opts = dict(opts)
+    opts['check'] = True
+    return opts
+
 @command("qdelete|qremove|qrm",
          [('k', 'keep', None, _('keep patch file')),
           ('r', 'rev', [],
@@ -2533,6 +2552,7 @@ def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
 
     Returns 0 on success.'''
+    opts = fixcheckopts(ui, opts)
     q = repo.mq
     patch = q.lookup(patch)
     nobackup = opts.get('no_backup')
@@ -2687,6 +2707,7 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
+    opts = fixcheckopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
             newpath = repo.join(opts.get('name'))
@@ -2725,6 +2746,7 @@ def pop(ui, repo, patch=None, **opts):
 
     Return 0 on success.
     """
+    opts = fixcheckopts(ui, opts)
     localupdate = True
     if opts.get('name'):
         q = queue(ui, repo.path, repo.join(opts.get('name')))

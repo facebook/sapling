@@ -387,3 +387,38 @@ test qgoto --check
   now at: p2
   $ hg st a
   M a
+
+test mq.check setting
+
+  $ hg --config mq.check=1 qpush
+  applying p3
+  now at: p3
+  $ hg st a
+  M a
+  $ hg --config mq.check=1 qpop
+  popping p3
+  now at: p2
+  $ hg st a
+  M a
+  $ hg --config mq.check=1 qgoto p3
+  applying p3
+  now at: p3
+  $ hg st a
+  M a
+  $ echo b >> b
+  $ hg --config mq.check=1 qpop --force
+  popping p3
+  now at: p2
+  $ hg st b
+  $ hg --config mq.check=1 qpush --exact
+  abort: local changes found, refresh first
+  [255]
+  $ hg revert -qa a
+  $ hg qpop
+  popping p2
+  patch queue now empty
+  $ echo a >> a
+  $ hg --config mq.check=1 qpush --force
+  applying p2
+  now at: p2
+  $ hg st a
