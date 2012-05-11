@@ -301,7 +301,7 @@ def disabledext(name):
 
 def disabledcmd(ui, cmd, strict=False):
     '''import disabled extensions until cmd is found.
-    returns (cmdname, extname, doc)'''
+    returns (cmdname, extname, module)'''
 
     paths = _disabledpaths(strip_init=True)
     if not paths:
