@@ -1,5 +1,6 @@
 ''' Module for self-contained maps. '''
 
+import errno
 import os
 from mercurial import util as hgutil
 from mercurial import node
@@ -182,7 +183,8 @@ class RevMap(dict):
 
     def __init__(self, repo):
         dict.__init__(self)
-        self.path = os.path.join(repo.path, 'svn', 'rev_map')
+        self.path = self.mappath(repo)
+        self.repo = repo
         self.ypath = os.path.join(repo.path, 'svn', 'lastpulled')
         # TODO(durin42): Consider moving management of the youngest
         # file to svnmeta itself rather than leaving it here.
@@ -212,13 +214,26 @@ class RevMap(dict):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.iteritems()), reverse=True)
 
-    def _load(self):
-        f = open(self.path)
+    @staticmethod
+    def mappath(repo):
+        return os.path.join(repo.path, 'svn', 'rev_map')
+
+    @classmethod
+    def readmapfile(cls, repo, missingok=True):
+        try:
+            f = open(cls.mappath(repo))
+        except IOError, err:
+            if not missingok or err.errno != errno.ENOENT:
+                raise
+            return iter([])
         ver = int(f.readline())
-        if ver != self.VERSION:
+        if ver != cls.VERSION:
             print 'revmap too new -- please upgrade'
             raise NotImplementedError
-        for l in f:
+        return f
+
+    def _load(self):
+        for l in self.readmapfile(self.repo):
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None
@@ -230,7 +245,6 @@ class RevMap(dict):
             if revnum < self.oldest or not self.oldest:
                 self.oldest = revnum
             dict.__setitem__(self, (revnum, branch), node.bin(ha))
-        f.close()
 
     def _write(self):
         f = open(self.path, 'w')

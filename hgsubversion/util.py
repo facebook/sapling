@@ -1,3 +1,4 @@
+import errno
 import re
 import os
 import urllib
@@ -12,6 +13,8 @@ try:
     from mercurial import revset
 except ImportError:
     pass
+
+import maps
 
 ignoredfiles = set(['.hgtags', '.hgsvnexternals', '.hgsub', '.hgsubstate'])
 
@@ -279,11 +282,17 @@ def revset_fromsvn(repo, subset, x):
     '''
     args = revset.getargs(x, 0, 0, "fromsvn takes no arguments")
 
-    def matches(r):
-        convertinfo = repo[r].extra().get('convert_revision', '')
-        return convertinfo[:4] == 'svn:'
-
-    return [r for r in subset if matches(r)]
+    rev = repo.changelog.rev
+    bin = node.bin
+    try:
+        svnrevs = set(rev(bin(l.split(' ', 2)[1]))
+                      for l in maps.RevMap.readmapfile(repo, missingok=False))
+        return filter(svnrevs.__contains__, subset)
+    except IOError, err:
+        if err.errno != errno.ENOENT:
+            raise
+        raise hgutil.Abort("svn metadata is missing - "
+                           "run 'hg svn rebuildmeta' to reconstruct it")
 
 def revset_svnrev(repo, subset, x):
     '''``svnrev(number)``
@@ -294,17 +303,25 @@ def revset_svnrev(repo, subset, x):
     rev = revset.getstring(args[0],
                            "the argument to svnrev() must be a number")
     try:
-        rev = int(rev)
+        revnum = int(rev)
     except ValueError:
         raise error.ParseError("the argument to svnrev() must be a number")
 
-    def matches(r):
-        convertinfo = repo[r].extra().get('convert_revision', '')
-        if convertinfo[:4] != 'svn:':
-            return False
-        return int(convertinfo[40:].rsplit('@', 1)[-1]) == rev
-
-    return [r for r in subset if matches(r)]
+    rev = rev + ' '
+    revs = []
+    try:
+        for l in maps.RevMap.readmapfile(repo, missingok=False):
+            if l.startswith(rev):
+                n = l.split(' ', 2)[1]
+                r = repo[node.bin(n)].rev()
+                if r in subset:
+                    revs.append(r)
+        return revs
+    except IOError, err:
+        if err.errno != errno.ENOENT:
+            raise
+        raise hgutil.Abort("svn metadata is missing - "
+                           "run 'hg svn rebuildmeta' to reconstruct it")
 
 revsets = {
     'fromsvn': revset_fromsvn,
