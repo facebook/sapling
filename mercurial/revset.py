@@ -466,6 +466,24 @@ def draft(repo, subset, x):
     pc = repo._phasecache
     return [r for r in subset if pc.phase(repo, r) == phases.draft]
 
+def extra(repo, subset, x):
+    """``extra(label, [value])``
+    Changesets with the given label in the extra metadata, with the given
+    optional value."""
+
+    l = getargs(x, 1, 2, _('extra takes at least 1 and at most 2 arguments'))
+    label = getstring(l[0], _('first argument to extra must be a string'))
+    value = None
+
+    if len(l) > 1:
+        value = getstring(l[1], _('second argument to extra must be a string'))
+
+    def _matchvalue(r):
+        extra = repo[r].extra()
+        return label in extra and (value is None or value == extra[label])
+
+    return [r for r in subset if _matchvalue(r)]
+
 def filelog(repo, subset, x):
     """``filelog(pattern)``
     Changesets connected to the specified filelog.
@@ -1147,6 +1165,7 @@ symbols = {
     "descendants": descendants,
     "_firstdescendants": _firstdescendants,
     "draft": draft,
+    "extra": extra,
     "file": hasfile,
     "filelog": filelog,
     "first": first,

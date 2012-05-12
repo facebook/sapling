@@ -32,6 +32,13 @@
   (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm2 -u Bob
 
+  $ hg log -r "extra('branch', 'a-b-c-')" --template '{rev}\n'
+  2
+  $ hg log -r "extra('branch')" --template '{rev}\n'
+  0
+  1
+  2
+
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch +a+b+c+
