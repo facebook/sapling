@@ -553,8 +553,10 @@ static inline int nt_level(const char *node, Py_ssize_t level)
  *   -2: not found
  * rest: valid rev
  */
-static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen)
+static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen,
+		   int hex)
 {
+	int (*getnybble)(const char *, Py_ssize_t) = hex ? hexdigit : nt_level;
 	int level, maxlevel, off;
 
 	if (nodelen == 20 && node[0] == '\0' && memcmp(node, nullid, 20) == 0)
@@ -563,21 +565,28 @@ static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen)
 	if (self->nt == NULL)
 		return -2;
 
-	maxlevel = nodelen > 20 ? 40 : ((int)nodelen * 2);
+	if (hex)
+		maxlevel = nodelen > 40 ? 40 : nodelen;
+	else
+		maxlevel = nodelen > 20 ? 40 : ((int)nodelen * 2);
 
 	for (level = off = 0; level < maxlevel; level++) {
-		int k = nt_level(node, level);
+		int k = getnybble(node, level);
 		nodetree *n = &self->nt[off];
 		int v = n->children[k];
 
 		if (v < 0) {
 			const char *n;
+			Py_ssize_t i;
+
 			v = -v - 1;
 			n = index_node(self, v);
 			if (n == NULL)
 				return -2;
-			return memcmp(node, n, nodelen > 20 ? 20 : nodelen)
-				? -2 : v;
+			for (i = level; i < maxlevel; i++)
+				if (getnybble(node, i) != nt_level(n, i))
+					return -2;
+			return v;
 		}
 		if (v == 0)
 			return -2;
@@ -679,7 +688,7 @@ static int index_find_node(indexObject *self,
 	int rev;
 
 	self->ntlookups++;
-	rev = nt_find(self, node, nodelen);
+	rev = nt_find(self, node, nodelen, 0);
 	if (rev >= -1)
 		return rev;
 
