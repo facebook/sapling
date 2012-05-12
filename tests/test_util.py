@@ -237,6 +237,9 @@ class TestBase(unittest.TestCase):
     def setUp(self):
         _verify_our_modules()
 
+        # the Python 2.7 default of 640 is obnoxiously low
+        self.maxDiff = 4096
+
         self.oldenv = dict([(k, os.environ.get(k, None),) for k in
                            ('LANG', 'LC_ALL', 'HGRCPATH',)])
         self.oldt = i18n.t
