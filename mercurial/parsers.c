@@ -387,7 +387,7 @@ static const char *index_node(indexObject *self, Py_ssize_t pos)
 	Py_ssize_t length = index_length(self);
 	const char *data;
 
-	if (pos == length - 1)
+	if (pos == length - 1 || pos == INT_MAX)
 		return nullid;
 
 	if (pos >= length)
@@ -671,6 +671,8 @@ static int nt_init(indexObject *self)
 		self->ntrev = (int)index_length(self) - 1;
 		self->ntlookups = 1;
 		self->ntmisses = 0;
+		if (nt_insert(self, nullid, INT_MAX) == -1)
+			return -1;
 	}
 	return 0;
 }
