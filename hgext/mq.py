@@ -322,7 +322,7 @@ class queue(object):
         try:
             gitmode = ui.configbool('mq', 'git', None)
             if gitmode is None:
-                raise error.ConfigError()
+                raise error.ConfigError
             self.gitmode = gitmode and 'yes' or 'no'
         except error.ConfigError:
             self.gitmode = ui.config('mq', 'git', 'auto').lower()

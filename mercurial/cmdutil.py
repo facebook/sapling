@@ -1360,7 +1360,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                               copied=copied.get(path))
                     return mctx
                 except KeyError:
-                    raise IOError()
+                    raise IOError
         else:
             ui.note(_('copying changeset %s to %s\n') % (old, base))
 
@@ -1369,7 +1369,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 try:
                     return old.filectx(path)
                 except KeyError:
-                    raise IOError()
+                    raise IOError
 
             # See if we got a message from -m or -l, if not, open the editor
             # with the message of the changeset to amend

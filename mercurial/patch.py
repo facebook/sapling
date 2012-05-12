@@ -534,7 +534,7 @@ class filestore(object):
         if fname in self.data:
             return self.data[fname]
         if not self.opener or fname not in self.files:
-            raise IOError()
+            raise IOError
         fn, mode, copied = self.files[fname]
         return self.opener.read(fn), mode, copied
 
@@ -560,7 +560,7 @@ class repobackend(abstractbackend):
         try:
             fctx = self.ctx[fname]
         except error.LookupError:
-            raise IOError()
+            raise IOError
         flags = fctx.flags()
         return fctx.data(), ('l' in flags, 'x' in flags)
 
@@ -1628,7 +1628,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
         try:
             def losedata(fn):
                 if not losedatafn or not losedatafn(fn=fn):
-                    raise GitDiffRequired()
+                    raise GitDiffRequired
             # Buffer the whole output until we are sure it can be generated
             return list(difffn(opts.copy(git=False), losedata))
         except GitDiffRequired:

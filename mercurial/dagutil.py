@@ -26,25 +26,25 @@ class basedag(object):
 
     def nodeset(self):
         '''set of all node idxs'''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def heads(self):
         '''list of head ixs'''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def parents(self, ix):
         '''list of parents ixs of ix'''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def inverse(self):
         '''inverse DAG, where parents becomes children, etc.'''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def ancestorset(self, starts, stops=None):
         '''
         set of all ancestors of starts (incl), but stop walk at stops (excl)
         '''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def descendantset(self, starts, stops=None):
         '''
@@ -59,7 +59,7 @@ class basedag(object):
         By "connected list" we mean that if an ancestor and a descendant are in
         the list, then so is at least one path connecting them.
         '''
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def externalize(self, ix):
         '''return a list of (or set if given a set) of node ids'''

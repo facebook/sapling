@@ -305,7 +305,7 @@ def executablepath():
     buf = ctypes.create_string_buffer(size + 1)
     len = _kernel32.GetModuleFileNameA(None, ctypes.byref(buf), size)
     if len == 0:
-        raise ctypes.WinError()
+        raise ctypes.WinError
     elif len == size:
         raise ctypes.WinError(_ERROR_INSUFFICIENT_BUFFER)
     return buf.value
@@ -315,7 +315,7 @@ def getuser():
     size = _DWORD(300)
     buf = ctypes.create_string_buffer(size.value + 1)
     if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
-        raise ctypes.WinError()
+        raise ctypes.WinError
     return buf.value
 
 _signalhandler = []
@@ -333,7 +333,7 @@ def setsignalhandler():
     h = _SIGNAL_HANDLER(handler)
     _signalhandler.append(h) # needed to prevent garbage collection
     if not _kernel32.SetConsoleCtrlHandler(h, True):
-        raise ctypes.WinError()
+        raise ctypes.WinError
 
 def hidewindow():
 
@@ -396,7 +396,7 @@ def spawndetached(args):
         None, args, None, None, False, _DETACHED_PROCESS,
         env, os.getcwd(), ctypes.byref(si), ctypes.byref(pi))
     if not res:
-        raise ctypes.WinError()
+        raise ctypes.WinError
 
     return pi.dwProcessId
 

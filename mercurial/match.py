@@ -276,7 +276,7 @@ def _buildregexmatch(pats, tail):
     try:
         pat = '(?:%s)' % '|'.join([_regex(k, p, tail) for (k, p) in pats])
         if len(pat) > 20000:
-            raise OverflowError()
+            raise OverflowError
         return pat, re.compile(pat).match
     except OverflowError:
         # We're using a Python with a tiny regex engine and we

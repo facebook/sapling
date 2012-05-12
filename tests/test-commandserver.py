@@ -18,7 +18,7 @@ def writeblock(server, data):
 def readchannel(server):
     data = server.stdout.read(5)
     if not data:
-        raise EOFError()
+        raise EOFError
     channel, length = struct.unpack('>cI', data)
     if channel in 'IL':
         return channel, length

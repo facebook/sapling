@@ -94,7 +94,7 @@ class Merge3Text(object):
             elif self.a[0].endswith('\r'):
                 newline = '\r'
         if base_marker and reprocess:
-            raise CantReprocessAndShowBase()
+            raise CantReprocessAndShowBase
         if name_a:
             start_marker = start_marker + ' ' + name_a
         if name_b:

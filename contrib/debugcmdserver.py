@@ -24,7 +24,7 @@ else:
 def read(size):
     data = sys.stdin.read(size)
     if not data:
-        raise EOFError()
+        raise EOFError
     sys.stdout.write(data)
     sys.stdout.flush()
     return data

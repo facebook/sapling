@@ -95,7 +95,7 @@ class continuereader(object):
     def __getattr__(self, attr):
         if attr in ('close', 'readline', 'readlines', '__iter__'):
             return getattr(self.f, attr)
-        raise AttributeError()
+        raise AttributeError
 
 def _statusmessage(code):
     from BaseHTTPServer import BaseHTTPRequestHandler

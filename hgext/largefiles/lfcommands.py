@@ -129,7 +129,7 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
             try:
                 fctx = ctx.filectx(lfutil.standin(f))
             except error.LookupError:
-                raise IOError()
+                raise IOError
             renamed = fctx.renamed()
             if renamed:
                 renamed = lfutil.splitstandin(renamed[0])
@@ -229,7 +229,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
             try:
                 fctx = ctx.filectx(srcfname)
             except error.LookupError:
-                raise IOError()
+                raise IOError
             renamed = fctx.renamed()
             if renamed:
                 # standin is always a largefile because largefile-ness
@@ -278,7 +278,7 @@ def _getnormalcontext(ui, ctx, f, revmap):
     try:
         fctx = ctx.filectx(f)
     except error.LookupError:
-        raise IOError()
+        raise IOError
     renamed = fctx.renamed()
     if renamed:
         renamed = renamed[0]

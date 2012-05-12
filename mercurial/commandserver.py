@@ -166,7 +166,7 @@ class server(object):
 
         # is the other end closed?
         if not data:
-            raise EOFError()
+            raise EOFError
 
         return data
 

@@ -534,7 +534,7 @@ def safesend(self, str):
         if self.auto_open:
             self.connect()
         else:
-            raise httplib.NotConnected()
+            raise httplib.NotConnected
 
     # send the data to the server. if we get a broken pipe, then close
     # the socket. we want to reconnect when somebody tries to send again.

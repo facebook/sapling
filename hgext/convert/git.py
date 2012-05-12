@@ -69,7 +69,7 @@ class convert_git(converter_source):
 
     def catfile(self, rev, type):
         if rev == hex(nullid):
-            raise IOError()
+            raise IOError
         data, ret = self.gitread("git cat-file %s %s" % (type, rev))
         if ret:
             raise util.Abort(_('cannot read %r object at %s') % (type, rev))

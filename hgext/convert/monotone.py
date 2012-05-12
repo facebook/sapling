@@ -283,11 +283,11 @@ class monotone_source(converter_source, commandline):
 
     def getfile(self, name, rev):
         if not self.mtnisfile(name, rev):
-            raise IOError() # file was deleted or renamed
+            raise IOError # file was deleted or renamed
         try:
             data = self.mtnrun("get_file_of", name, r=rev)
         except:
-            raise IOError() # file was deleted or renamed
+            raise IOError # file was deleted or renamed
         self.mtnloadmanifest(rev)
         node, attr = self.files.get(name, (None, ""))
         return data, attr
@@ -317,7 +317,7 @@ class monotone_source(converter_source, commandline):
     def getchangedfiles(self, rev, i):
         # This function is only needed to support --filemap
         # ... and we don't support that
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def before(self):
         # Check if we have a new enough version to use automate stdio

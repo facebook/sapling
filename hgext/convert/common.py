@@ -76,7 +76,7 @@ class converter_source(object):
 
     def getheads(self):
         """Return a list of this repository's heads"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def getfile(self, name, rev):
         """Return a pair (data, mode) where data is the file content
@@ -84,7 +84,7 @@ class converter_source(object):
         identifier returned by a previous call to getchanges(). Raise
         IOError to indicate that name was deleted in rev.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def getchanges(self, version):
         """Returns a tuple of (files, copies).
@@ -95,18 +95,18 @@ class converter_source(object):
 
         copies is a dictionary of dest: source
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def getcommit(self, version):
         """Return the commit object for version"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def gettags(self):
         """Return the tags as a dictionary of name: revision
 
         Tag names must be UTF-8 strings.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def recode(self, s, encoding=None):
         if not encoding:
@@ -133,7 +133,7 @@ class converter_source(object):
 
         This function is only needed to support --filemap
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def converted(self, rev, sinkrev):
         '''Notify the source that a revision has been converted.'''
@@ -175,13 +175,13 @@ class converter_sink(object):
 
     def getheads(self):
         """Return a list of this repository's heads"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def revmapfile(self):
         """Path to a file that will contain lines
         source_rev_id sink_rev_id
         mapping equivalent revision identifiers for each system."""
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def authorfile(self):
         """Path to a file that will contain lines
@@ -203,7 +203,7 @@ class converter_sink(object):
         a particular revision (or even what that revision would be)
         before it receives the file data.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def puttags(self, tags):
         """Put tags into sink.
@@ -212,7 +212,7 @@ class converter_sink(object):
         Return a pair (tag_revision, tag_parent_revision), or (None, None)
         if nothing was changed.
         """
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def setbranch(self, branch, pbranches):
         """Set the current branch name. Called before the first putcommit
@@ -247,7 +247,7 @@ class converter_sink(object):
 
     def hascommit(self, rev):
         """Return True if the sink contains rev"""
-        raise NotImplementedError()
+        raise NotImplementedError
 
 class commandline(object):
     def __init__(self, ui, command):

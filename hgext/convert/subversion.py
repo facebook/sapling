@@ -870,7 +870,7 @@ class svn_source(converter_source):
     def getfile(self, file, rev):
         # TODO: ra.get_file transmits the whole file instead of diffs.
         if file in self.removed:
-            raise IOError()
+            raise IOError
         mode = ''
         try:
             new_module, revnum = revsplit(rev)[1:]
@@ -891,7 +891,7 @@ class svn_source(converter_source):
             notfound = (svn.core.SVN_ERR_FS_NOT_FOUND,
                 svn.core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
             if e.apr_err in notfound: # File not found
-                raise IOError()
+                raise IOError
             raise
         if mode == 'l':
             link_prefix = "link "
