@@ -57,6 +57,12 @@ fix_newline(PyObject *self, PyObject *args)
 	return Py_BuildValue("l", 0);
 }
 
+#if (PY_VERSION_HEX < 0x02050000)
+static const char *addlines_format = "OOiiOO";
+#else
+static const char *addlines_format = "OOnnOO";
+#endif
+
 /*
  * read lines from fp into the hunk.  The hunk is parsed into two arrays
  * a and b.  a gets the old state of the text, b gets the new state
@@ -68,13 +74,14 @@ addlines(PyObject *self, PyObject *args)
 {
 
 	PyObject *fp, *hunk, *a, *b, *x;
-	int i;
-	int lena, lenb;
-	int num;
-	int todoa, todob;
+	Py_ssize_t i;
+	Py_ssize_t lena, lenb;
+	Py_ssize_t num;
+	Py_ssize_t todoa, todob;
 	char *s, c;
 	PyObject *l;
-	if (!PyArg_ParseTuple(args, "OOiiOO", &fp, &hunk, &lena, &lenb, &a, &b))
+	if (!PyArg_ParseTuple(args, addlines_format,
+			      &fp, &hunk, &lena, &lenb, &a, &b))
 		return NULL;
 
 	while (1) {
