@@ -42,7 +42,8 @@ def perfwalk(ui, repo, *pats):
 
 def perfstatus(ui, repo, *pats):
     #m = match.always(repo.root, repo.getcwd())
-    #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False, False))))
+    #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False,
+    #                                                False))))
     timer(lambda: sum(map(len, repo.status())))
 
 def perfheads(ui, repo):

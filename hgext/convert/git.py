@@ -181,8 +181,8 @@ class convert_git(converter_source):
                 m, f = l[:-1].split("\t")
                 changes.append(f)
         else:
-            fh = self.gitopen('git diff-tree --name-only --root -r %s "%s^%s" --'
-                             % (version, version, i + 1))
+            fh = self.gitopen('git diff-tree --name-only --root -r %s '
+                              '"%s^%s" --' % (version, version, i + 1))
             changes = [f.rstrip('\n') for f in fh]
         if fh.close():
             raise util.Abort(_('cannot read changes in %s') % version)

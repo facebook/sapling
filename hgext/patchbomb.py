@@ -109,7 +109,8 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
         msg = email.MIMEMultipart.MIMEMultipart()
         if body:
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
-        p = mail.mimetextpatch('\n'.join(patchlines), 'x-patch', opts.get('test'))
+        p = mail.mimetextpatch('\n'.join(patchlines), 'x-patch',
+                               opts.get('test'))
         binnode = bin(node)
         # if node is mq patch, it will have the patch file's name as a tag
         if not patchname:
@@ -119,7 +120,8 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
                 patchname = patchtags[0]
             elif total > 1:
                 patchname = cmdutil.makefilename(repo, '%b-%n.patch',
-                                                  binnode, seqno=idx, total=total)
+                                                 binnode, seqno=idx,
+                                                 total=total)
             else:
                 patchname = cmdutil.makefilename(repo, '%b.patch', binnode)
         disposition = 'inline'

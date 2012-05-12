@@ -200,7 +200,8 @@ def _updateprompt(ui, sub, dirty, local, remote):
                  'use (l)ocal source (%s) or (r)emote source (%s)?\n')
                % (subrelpath(sub), local, remote))
     else:
-        msg = (_(' subrepository sources for %s differ (in checked out version)\n'
+        msg = (_(' subrepository sources for %s differ (in checked out '
+                 'version)\n'
                  'use (l)ocal source (%s) or (r)emote source (%s)?\n')
                % (subrelpath(sub), local, remote))
     return ui.promptchoice(msg, (_('&Local'), _('&Remote')), 0)
@@ -498,8 +499,9 @@ class hgsubrepo(abstractsubrepo):
                                      % (subrelpath(self), srcurl))
                 parentrepo = self._repo._subparent
                 shutil.rmtree(self._repo.path)
-                other, self._repo = hg.clone(self._repo._subparent.ui, {}, other,
-                                         self._repo.root, update=False)
+                other, self._repo = hg.clone(self._repo._subparent.ui, {},
+                                             other, self._repo.root,
+                                             update=False)
                 self._initrepo(parentrepo, source, create=True)
             else:
                 self._repo.ui.status(_('pulling subrepo %s from %s\n')

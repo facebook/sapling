@@ -363,7 +363,8 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             removed += 1
         elif m == "m": # merge
             if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx), overwrite)
+                subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
+                                 overwrite)
                 continue
             f2, fd, flags, move = a[2:]
             repo.wopener.audit(fd)

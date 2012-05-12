@@ -353,8 +353,8 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
                     author = repo[rev].user()
             else:
                 data += ui.popbuffer()
-                ui.note(_('notify: suppressing notification for merge %d:%s\n') %
-                        (rev, repo[rev].hex()[:12]))
+                ui.note(_('notify: suppressing notification for merge %d:%s\n')
+                        % (rev, repo[rev].hex()[:12]))
                 ui.pushbuffer()
         if count:
             n.diff(ctx, repo['tip'])

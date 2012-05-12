@@ -294,7 +294,8 @@ class mercurial_source(converter_source):
         if not parents:
             files = sorted(ctx.manifest())
             # getcopies() is not needed for roots, but it is a simple way to
-            # detect missing revlogs and abort on errors or populate self.ignored
+            # detect missing revlogs and abort on errors or populate
+            # self.ignored
             self.getcopies(ctx, parents, files)
             return [(f, rev) for f in files if f not in self.ignored], {}
         if self._changescache and self._changescache[0] == rev:

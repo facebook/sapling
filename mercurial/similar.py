@@ -44,7 +44,8 @@ def _findsimilarmatches(repo, added, removed, threshold):
     '''
     copies = {}
     for i, r in enumerate(removed):
-        repo.ui.progress(_('searching for similar files'), i, total=len(removed))
+        repo.ui.progress(_('searching for similar files'), i,
+                         total=len(removed))
 
         # lazily load text
         @util.cachefunc

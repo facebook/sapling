@@ -336,7 +336,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                 else:
                     myrev = '.'.join(myrev[:-2] + ['0', myrev[-2]])
                     branches = [b for b in branchmap if branchmap[b] == myrev]
-                    assert len(branches) == 1, 'unknown branch: %s' % e.mergepoint
+                    assert len(branches) == 1, ('unknown branch: %s'
+                                                % e.mergepoint)
                     e.mergepoint = branches[0]
             else:
                 e.mergepoint = None

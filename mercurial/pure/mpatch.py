@@ -85,10 +85,10 @@ def patches(a, bins):
             p1, p2, l = struct.unpack(">lll", m.read(12))
             pull(new, frags, p1 - last) # what didn't change
             pull([], frags, p2 - p1)    # what got deleted
-            new.append((l, pos + 12))        # what got added
+            new.append((l, pos + 12))   # what got added
             pos += l + 12
             last = p2
-        frags.extend(reversed(new))                    # what was left at the end
+        frags.extend(reversed(new))     # what was left at the end
 
     t = collect(b2, frags)
 

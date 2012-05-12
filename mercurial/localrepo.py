@@ -280,7 +280,8 @@ class localrepository(repo.repository):
                 fp.write('\n')
             for name in names:
                 m = munge and munge(name) or name
-                if self._tagscache.tagtypes and name in self._tagscache.tagtypes:
+                if (self._tagscache.tagtypes and
+                    name in self._tagscache.tagtypes):
                     old = self.tags().get(name, nullid)
                     fp.write('%s %s\n' % (hex(old), m))
                 fp.write('%s %s\n' % (hex(node), m))
@@ -360,7 +361,8 @@ class localrepository(repo.repository):
 
     @propertycache
     def _tagscache(self):
-        '''Returns a tagscache object that contains various tags related caches.'''
+        '''Returns a tagscache object that contains various tags related
+        caches.'''
 
         # This simplifies its cache management by having one decorated
         # function (this one) and the rest simply fetch things from it.
@@ -1173,7 +1175,8 @@ class localrepository(repo.repository):
             p1, p2 = self.dirstate.parents()
             hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or '')
             try:
-                self.hook("precommit", throw=True, parent1=hookp1, parent2=hookp2)
+                self.hook("precommit", throw=True, parent1=hookp1,
+                          parent2=hookp2)
                 ret = self.commitctx(cctx, True)
             except:
                 if edited:
@@ -1309,7 +1312,8 @@ class localrepository(repo.repository):
     def status(self, node1='.', node2=None, match=None,
                ignored=False, clean=False, unknown=False,
                listsubrepos=False):
-        """return status of files between two nodes or node and working directory
+        """return status of files between two nodes or node and working
+        directory.
 
         If node1 is None, use the first dirstate parent instead.
         If node2 is None, compare node1 with working directory.
@@ -1654,7 +1658,8 @@ class localrepository(repo.repository):
                         # http: return remote's addchangegroup() or 0 for error
                         ret = remote.unbundle(cg, remoteheads, 'push')
                     else:
-                        # we return an integer indicating remote head count change
+                        # we return an integer indicating remote head count
+                        # change
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
                 if ret:
@@ -1886,7 +1891,8 @@ class localrepository(repo.repository):
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
-                    raise util.Abort(_("empty or missing revlog for %s") % fname)
+                    raise util.Abort(_("empty or missing revlog for %s")
+                                     % fname)
                 fstate[0] = fname
                 fstate[1] = fnodes.pop(fname, {})
 
@@ -1986,7 +1992,8 @@ class localrepository(repo.repository):
             for fname in sorted(changedfiles):
                 filerevlog = self.file(fname)
                 if not len(filerevlog):
-                    raise util.Abort(_("empty or missing revlog for %s") % fname)
+                    raise util.Abort(_("empty or missing revlog for %s")
+                                     % fname)
                 fstate[0] = fname
                 nodelist = gennodelst(filerevlog)
                 if nodelist:
@@ -2243,7 +2250,8 @@ class localrepository(repo.repository):
                            (util.bytecount(total_bytes), elapsed,
                             util.bytecount(total_bytes / elapsed)))
 
-            # new requirements = old non-format requirements + new format-related
+            # new requirements = old non-format requirements +
+            #                    new format-related
             # requirements from the streamed-in repository
             requirements.update(set(self.requirements) - self.supportedformats)
             self._applyrequirements(requirements)

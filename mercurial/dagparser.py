@@ -268,7 +268,8 @@ def parsedag(desc):
                 s += c
                 i += 1
                 c = nextch()
-            raise util.Abort(_("invalid character in dag description: %s...") % s)
+            raise util.Abort(_('invalid character in dag description: '
+                               '%s...') % s)
 
 def dagtextlines(events,
                  addspaces=True,
@@ -436,7 +437,9 @@ def dagtext(dag,
         >>> dagtext([('n', (0, [-1])), ('a', 'ann'), ('n', (1, [0]))])
         '+1 @ann +1'
 
-        >>> dagtext([('n', (0, [-1])), ('a', 'my annotation'), ('n', (1, [0]))])
+        >>> dagtext([('n', (0, [-1])),
+        ...          ('a', 'my annotation'),
+        ...          ('n', (1, [0]))])
         '+1 @"my annotation" +1'
 
     Commands:
@@ -447,7 +450,9 @@ def dagtext(dag,
         >>> dagtext([('n', (0, [-1])), ('c', 'my command'), ('n', (1, [0]))])
         '+1 !"my command" +1'
 
-        >>> dagtext([('n', (0, [-1])), ('C', 'my command line'), ('n', (1, [0]))])
+        >>> dagtext([('n', (0, [-1])),
+        ...          ('C', 'my command line'),
+        ...          ('n', (1, [0]))])
         '+1 !!my command line\\n+1'
 
     Comments:

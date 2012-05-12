@@ -12,7 +12,8 @@ import cmdutil, encoding
 import ui as uimod
 
 class request(object):
-    def __init__(self, args, ui=None, repo=None, fin=None, fout=None, ferr=None):
+    def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
+                 ferr=None):
         self.args = args
         self.ui = ui
         self.repo = repo
@@ -532,7 +533,8 @@ def _checkshellalias(lui, ui, args):
 
     if cmd and util.safehasattr(fn, 'shell'):
         d = lambda: fn(ui, *args[1:])
-        return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d, [], {})
+        return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
+                                  [], {})
 
     restorecommands()
 
@@ -680,7 +682,8 @@ def _dispatch(req):
                             return _dispatch(req)
                     if not path:
                         raise error.RepoError(_("no repository found in '%s'"
-                                                " (.hg not found)") % os.getcwd())
+                                                " (.hg not found)")
+                                              % os.getcwd())
                     raise
         if repo:
             ui = repo.ui

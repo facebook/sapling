@@ -71,7 +71,8 @@ def unknowncommand(server):
 def hellomessage(server):
     ch, data = readchannel(server)
     # escaping python tests output not supported
-    print '%c, %r' % (ch, re.sub('encoding: [a-zA-Z0-9-]+', 'encoding: ***', data))
+    print '%c, %r' % (ch, re.sub('encoding: [a-zA-Z0-9-]+', 'encoding: ***',
+                                 data))
 
     # run an arbitrary command to make sure the next thing the server sends
     # isn't part of the hello message
@@ -142,7 +143,8 @@ def localhgrc(server):
     is used """
     readchannel(server)
 
-    # the cached repo local hgrc contains ui.foo=bar, so showconfig should show it
+    # the cached repo local hgrc contains ui.foo=bar, so showconfig should
+    # show it
     runcommand(server, ['showconfig'])
 
     # but not for this repo
@@ -157,7 +159,8 @@ def hook(**args):
 def hookoutput(server):
     readchannel(server)
     runcommand(server, ['--config',
-                        'hooks.pre-identify=python:test-commandserver.hook', 'id'],
+                        'hooks.pre-identify=python:test-commandserver.hook',
+                        'id'],
                input=cStringIO.StringIO('some input'))
 
 def outsidechanges(server):

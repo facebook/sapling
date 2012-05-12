@@ -134,11 +134,16 @@ def findcommonheads(ui, local, remote,
         return (ownheadhashes, True, srvheadhashes,)
 
     # full blown discovery
-    undecided = dag.nodeset() # own nodes where I don't know if remote knows them
-    common = set() # own nodes I know we both know
-    missing = set() # own nodes I know remote lacks
 
-    # treat remote heads (and maybe own heads) as a first implicit sample response
+    # own nodes where I don't know if remote knows them
+    undecided = dag.nodeset()
+    # own nodes I know we both know
+    common = set()
+    # own nodes I know remote lacks
+    missing = set()
+
+    # treat remote heads (and maybe own heads) as a first implicit sample
+    # response
     common.update(dag.ancestorset(srvheads))
     undecided.difference_update(common)
 

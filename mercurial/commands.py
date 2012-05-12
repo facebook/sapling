@@ -1687,7 +1687,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         revs = set((int(r) for r in revs))
         def events():
             for r in rlog:
-                yield 'n', (r, list(set(p for p in rlog.parentrevs(r) if p != -1)))
+                yield 'n', (r, list(set(p for p in rlog.parentrevs(r)
+                                        if p != -1)))
                 if r in revs:
                     yield 'l', (r, "r%i" % r)
     elif repo:
@@ -1706,7 +1707,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                     if newb != b:
                         yield 'a', newb
                         b = newb
-                yield 'n', (r, list(set(p for p in cl.parentrevs(r) if p != -1)))
+                yield 'n', (r, list(set(p for p in cl.parentrevs(r)
+                                        if p != -1)))
                 if tags:
                     ls = labels.get(r)
                     if ls:
@@ -1764,7 +1766,8 @@ def debugdate(ui, date, range=None, **opts):
     _('[-l REV] [-r REV] [-b BRANCH]... [OTHER]'))
 def debugdiscovery(ui, repo, remoteurl="default", **opts):
     """runs the changeset discovery protocol in isolation"""
-    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl), opts.get('branch'))
+    remoteurl, branches = hg.parseurl(ui.expandpath(remoteurl),
+                                      opts.get('branch'))
     remote = hg.peer(repo, opts, remoteurl)
     ui.status(_('comparing with %s\n') % util.hidepassword(remoteurl))
 
@@ -1774,7 +1777,8 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     def doit(localheads, remoteheads):
         if opts.get('old'):
             if localheads:
-                raise util.Abort('cannot use localheads with old style discovery')
+                raise util.Abort('cannot use localheads with old style '
+                                 'discovery')
             common, _in, hds = treediscovery.findcommonincoming(repo, remote,
                                                                 force=True)
             common = set(common)
@@ -1901,7 +1905,8 @@ def debugindex(ui, repo, file_ = None, **opts):
                  " nodeid       p1           p2\n")
     elif format == 1:
         ui.write("   rev flag   offset   length"
-                 "     size " + basehdr + "   link     p1     p2       nodeid\n")
+                 "     size " + basehdr + "   link     p1     p2"
+                 "       nodeid\n")
 
     for i in r:
         node = r.node(i)
@@ -2026,8 +2031,8 @@ def debuginstall(ui):
 def debugknown(ui, repopath, *ids, **opts):
     """test whether node ids are known to a repo
 
-    Every ID must be a full-length hex node id string. Returns a list of 0s and 1s
-    indicating unknown/known.
+    Every ID must be a full-length hex node id string. Returns a list of 0s
+    and 1s indicating unknown/known.
     """
     repo = hg.peer(ui, opts, repopath)
     if not repo.capable('known'):
@@ -2259,13 +2264,17 @@ def debugrevlog(ui, repo, file_ = None, **opts):
         fmt2 = pcfmtstr(numdeltas, 4)
         ui.write('deltas against prev  : ' + fmt % pcfmt(numprev, numdeltas))
         if numprev > 0:
-            ui.write('    where prev = p1  : ' + fmt2 % pcfmt(nump1prev, numprev))
-            ui.write('    where prev = p2  : ' + fmt2 % pcfmt(nump2prev, numprev))
-            ui.write('    other            : ' + fmt2 % pcfmt(numoprev, numprev))
+            ui.write('    where prev = p1  : ' + fmt2 % pcfmt(nump1prev,
+                                                              numprev))
+            ui.write('    where prev = p2  : ' + fmt2 % pcfmt(nump2prev,
+                                                              numprev))
+            ui.write('    other            : ' + fmt2 % pcfmt(numoprev,
+                                                              numprev))
         if gdelta:
             ui.write('deltas against p1    : ' + fmt % pcfmt(nump1, numdeltas))
             ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
-            ui.write('deltas against other : ' + fmt % pcfmt(numother, numdeltas))
+            ui.write('deltas against other : ' + fmt % pcfmt(numother,
+                                                             numdeltas))
 
 @command('debugrevspec', [], ('REVSPEC'))
 def debugrevspec(ui, repo, expr):
@@ -4433,7 +4442,8 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
         if currentbranchheads == modheads:
             ui.status(_("(run 'hg heads' to see heads, 'hg merge' to merge)\n"))
         elif currentbranchheads > 1:
-            ui.status(_("(run 'hg heads .' to see heads, 'hg merge' to merge)\n"))
+            ui.status(_("(run 'hg heads .' to see heads, 'hg merge' to "
+                        "merge)\n"))
         else:
             ui.status(_("(run 'hg heads' to see heads)\n"))
     else:
@@ -5405,7 +5415,8 @@ def summary(ui, repo, **opts):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))
         other = hg.peer(repo, {}, source)
-        revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
+        revs, checkout = hg.addbranchrevs(repo, other, branches,
+                                          opts.get('rev'))
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
         commoninc = discovery.findcommonincoming(repo, other)

@@ -165,7 +165,8 @@ def has_svn_bindings():
         return False
 
 def has_p4():
-    return matchoutput('p4 -V', r'Rev\. P4/') and matchoutput('p4d -V', r'Rev\. P4D/')
+    return (matchoutput('p4 -V', r'Rev\. P4/') and
+            matchoutput('p4d -V', r'Rev\. P4D/'))
 
 def has_symlink():
     if not hasattr(os, "symlink"):

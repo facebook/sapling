@@ -858,7 +858,8 @@ class hunk(object):
             self.lenb = int(self.lenb)
         self.starta = int(self.starta)
         self.startb = int(self.startb)
-        diffhelpers.addlines(lr, self.hunk, self.lena, self.lenb, self.a, self.b)
+        diffhelpers.addlines(lr, self.hunk, self.lena, self.lenb, self.a,
+                             self.b)
         # if we hit eof before finishing out the hunk, the last line will
         # be zero length.  Lets try to fix it up.
         while len(self.hunk[-1]) == 0:
@@ -1620,8 +1621,9 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if opts.git or opts.upgrade:
         copy = copies.pathcopies(ctx1, ctx2)
 
-    difffn = lambda opts, losedata: trydiff(repo, revs, ctx1, ctx2,
-                 modified, added, removed, copy, getfilectx, opts, losedata, prefix)
+    difffn = (lambda opts, losedata:
+                  trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
+                          copy, getfilectx, opts, losedata, prefix))
     if opts.upgrade and not opts.git:
         try:
             def losedata(fn):
@@ -1862,7 +1864,8 @@ def diffstat(lines, width=80, git=False):
                        countwidth, count, pluses, minuses))
 
     if stats:
-        output.append(_(' %d files changed, %d insertions(+), %d deletions(-)\n')
+        output.append(_(' %d files changed, %d insertions(+), '
+                        '%d deletions(-)\n')
                       % (len(stats), totaladds, totalremoves))
 
     return ''.join(output)

@@ -126,8 +126,8 @@ class manifest(revlog.revlog):
                     addlist[start:end] = array.array('c', content)
                 else:
                     del addlist[start:end]
-            return "".join(struct.pack(">lll", start, end, len(content)) + content
-                           for start, end, content in x)
+            return "".join(struct.pack(">lll", start, end, len(content))
+                           + content for start, end, content in x)
 
         def checkforbidden(l):
             for f in l:

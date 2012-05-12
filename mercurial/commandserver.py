@@ -142,8 +142,8 @@ class server(object):
             else:
                 logfile = open(logpath, 'a')
 
-        # the ui here is really the repo ui so take its baseui so we don't end up
-        # with its local configuration
+        # the ui here is really the repo ui so take its baseui so we don't end
+        # up with its local configuration
         self.ui = repo.baseui
         self.repo = repo
         self.repoui = repo.ui

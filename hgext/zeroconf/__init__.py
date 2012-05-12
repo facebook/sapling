@@ -119,7 +119,8 @@ class hgwebdirzc(hgwebdir_mod.hgwebdir):
             name = os.path.basename(repo)
             path = (prefix + repo).strip('/')
             desc = u.config('web', 'description', name)
-            publish(name, desc, path, util.getport(u.config("web", "port", 8000)))
+            publish(name, desc, path,
+                    util.getport(u.config("web", "port", 8000)))
 
 # listen
 

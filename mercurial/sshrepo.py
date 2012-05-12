@@ -86,7 +86,8 @@ class sshrepository(wireproto.wirerepository):
             lines.append(l)
             max_noise -= 1
         else:
-            self._abort(error.RepoError(_("no suitable response from remote hg")))
+            self._abort(error.RepoError(_('no suitable response from '
+                                          'remote hg')))
 
         self.capabilities = set()
         for l in reversed(lines):

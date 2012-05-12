@@ -108,7 +108,8 @@ def tokenize(program):
                 pos += 1
             else:
                 raise error.ParseError(_("unterminated string"), s)
-        elif c.isalnum() or c in '._' or ord(c) > 127: # gather up a symbol/keyword
+        # gather up a symbol/keyword
+        elif c.isalnum() or c in '._' or ord(c) > 127:
             s = pos
             pos += 1
             while pos < l: # find end of symbol
@@ -257,7 +258,8 @@ def _firstancestors(repo, subset, x):
 
 def ancestorspec(repo, subset, x, n):
     """``set~n``
-    Changesets that are the Nth ancestor (first parents only) of a changeset in set.
+    Changesets that are the Nth ancestor (first parents only) of a changeset
+    in set.
     """
     try:
         n = int(n[1])

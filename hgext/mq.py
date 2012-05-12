@@ -1246,9 +1246,11 @@ class queue(object):
                     raise util.Abort(
                         _("cannot use --exact and --check together"))
                 if move:
-                    raise util.Abort(_("cannot use --exact and --move together"))
+                    raise util.Abort(_('cannot use --exact and --move '
+                                       'together'))
                 if self.applied:
-                    raise util.Abort(_("cannot push --exact with applied patches"))
+                    raise util.Abort(_('cannot push --exact with applied '
+                                       'patches'))
                 root = self.series[start]
                 target = patchheader(self.join(root), self.plainmode).parent
                 if not target:
@@ -2187,7 +2189,8 @@ def init(ui, repo, **opts):
 
 @command("qclone",
          [('', 'pull', None, _('use pull protocol to copy metadata')),
-          ('U', 'noupdate', None, _('do not update the new working directories')),
+          ('U', 'noupdate', None,
+           _('do not update the new working directories')),
           ('', 'uncompressed', None,
            _('use uncompressed transfer (fast over LAN)')),
           ('p', 'patches', '',
@@ -2289,7 +2292,8 @@ def series(ui, repo, **opts):
     """print the entire series file
 
     Returns 0 on success."""
-    repo.mq.qseries(repo, missing=opts.get('missing'), summary=opts.get('summary'))
+    repo.mq.qseries(repo, missing=opts.get('missing'),
+                    summary=opts.get('summary'))
     return 0
 
 @command("qtop", seriesopts, _('hg qtop [-s]'))
@@ -2510,7 +2514,8 @@ def fold(ui, repo, *files, **opts):
         if p in patches or p == parent:
             ui.warn(_('Skipping already folded patch %s\n') % p)
         if q.isapplied(p):
-            raise util.Abort(_('qfold cannot fold already applied patch %s') % p)
+            raise util.Abort(_('qfold cannot fold already applied patch %s')
+                             % p)
         patches.append(p)
 
     for p in patches:
@@ -2618,7 +2623,8 @@ def guard(ui, repo, *args, **opts):
     args = list(args)
     if opts.get('list'):
         if args or opts.get('none'):
-            raise util.Abort(_('cannot mix -l/--list with options or arguments'))
+            raise util.Abort(_('cannot mix -l/--list with options or '
+                               'arguments'))
         for i in xrange(len(q.series)):
             status(i)
         return
@@ -2684,7 +2690,8 @@ def savename(path):
 @command("^qpush",
          [('c', 'check', None, _('tolerate non-conflicting local changes')),
           ('f', 'force', None, _('apply on top of local changes')),
-          ('e', 'exact', None, _('apply the target patch to its recorded parent')),
+          ('e', 'exact', None,
+           _('apply the target patch to its recorded parent')),
           ('l', 'list', None, _('list patch name in commit text')),
           ('a', 'all', None, _('apply all patches')),
           ('m', 'merge', None, _('merge from another queue (DEPRECATED)')),
@@ -3374,8 +3381,8 @@ def reposetup(ui, repo):
             tags = result[0]
             for patch in mqtags:
                 if patch[1] in tags:
-                    self.ui.warn(_('Tag %s overrides mq patch of the same name\n')
-                                 % patch[1])
+                    self.ui.warn(_('Tag %s overrides mq patch of the same '
+                                   'name\n') % patch[1])
                 else:
                     tags[patch[1]] = patch[0]
 

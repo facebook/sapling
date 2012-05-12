@@ -377,7 +377,8 @@ if has_https:
                 keyfile = self.auth['key']
                 certfile = self.auth['cert']
 
-            conn = httpsconnection(host, port, keyfile, certfile, *args, **kwargs)
+            conn = httpsconnection(host, port, keyfile, certfile, *args,
+                                   **kwargs)
             conn.ui = self.ui
             return conn
 

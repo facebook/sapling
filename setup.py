@@ -39,7 +39,8 @@ except:
 # The base IronPython distribution (as of 2.7.1) doesn't support bz2
 isironpython = False
 try:
-    isironpython = platform.python_implementation().lower().find("ironpython") != -1
+    isironpython = (platform.python_implementation()
+                    .lower().find("ironpython") != -1)
 except:
     pass
 
@@ -211,10 +212,12 @@ class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
     # when build_py is run next.
     sub_commands = [('build_mo', None),
-    # We also need build_ext before build_py. Otherwise, when 2to3 is called (in
-    # build_py), it will not find osutil & friends, thinking that those modules are
-    # global and, consequently, making a mess, now that all module imports are
-    # global.
+
+    # We also need build_ext before build_py. Otherwise, when 2to3 is
+    # called (in build_py), it will not find osutil & friends,
+    # thinking that those modules are global and, consequently, making
+    # a mess, now that all module imports are global.
+
                     ('build_ext', build.has_ext_modules),
                    ] + build.sub_commands
 
@@ -292,7 +295,8 @@ class hgbuildpy(build_py):
             self.distribution.ext_modules = []
         else:
             if not os.path.exists(os.path.join(get_python_inc(), 'Python.h')):
-                raise SystemExit("Python headers are required to build Mercurial")
+                raise SystemExit('Python headers are required to build '
+                                 'Mercurial')
 
     def find_modules(self):
         modules = build_py.find_modules(self)

@@ -102,9 +102,9 @@ def show_doc(ui):
         ui.write("\n")
 
     section(ui, _("Extensions"))
-    ui.write(_("This section contains help for extensions that are distributed "
-               "together with Mercurial. Help for other extensions is available "
-               "in the help system."))
+    ui.write(_("This section contains help for extensions that are "
+               "distributed together with Mercurial. Help for other "
+               "extensions is available in the help system."))
     ui.write("\n\n"
              ".. contents::\n"
              "   :class: htmlonly\n"

@@ -222,7 +222,8 @@ class Merge3Text(object):
         # section a[0:ia] has been disposed of, etc
         iz = ia = ib = 0
 
-        for zmatch, zend, amatch, aend, bmatch, bend in self.find_sync_regions():
+        for region in self.find_sync_regions():
+            zmatch, zend, amatch, aend, bmatch, bend = region
             #print 'match base [%d:%d]' % (zmatch, zend)
 
             matchlen = zend - zmatch

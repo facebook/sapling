@@ -141,8 +141,9 @@ class pathauditor(object):
                 elif (stat.S_ISDIR(st.st_mode) and
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     if not self.callback or not self.callback(curpath):
-                        raise util.Abort(_("path '%s' is inside nested repo %r") %
-                                         (path, prefix))
+                        raise util.Abort(_("path '%s' is inside nested "
+                                           "repo %r")
+                                         % (path, prefix))
             prefixes.append(normprefix)
             parts.pop()
             normparts.pop()
@@ -654,8 +655,9 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             unknown.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif repo.dirstate[abs] != 'r' and (not good or not os.path.lexists(target)
-            or (os.path.isdir(target) and not os.path.islink(target))):
+        elif (repo.dirstate[abs] != 'r' and
+              (not good or not os.path.lexists(target) or
+               (os.path.isdir(target) and not os.path.islink(target)))):
             deleted.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
@@ -764,8 +766,9 @@ def readrequires(opener, supported):
             missings.append(r)
     missings.sort()
     if missings:
-        raise error.RequirementError(_("unknown repository format: "
-            "requires features '%s' (upgrade Mercurial)") % "', '".join(missings))
+        raise error.RequirementError(
+            _("unknown repository format: requires features '%s' (upgrade "
+              "Mercurial)") % "', '".join(missings))
     return requirements
 
 class filecacheentry(object):

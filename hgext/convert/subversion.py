@@ -85,8 +85,8 @@ class changedpath(object):
         self.copyfrom_rev = p.copyfrom_rev
         self.action = p.action
 
-def get_log_child(fp, url, paths, start, end, limit=0, discover_changed_paths=True,
-                    strict_node_history=False):
+def get_log_child(fp, url, paths, start, end, limit=0,
+                  discover_changed_paths=True, strict_node_history=False):
     protocol = -1
     def receiver(orig_paths, revnum, author, date, message, pool):
         if orig_paths is not None:
@@ -276,7 +276,8 @@ class svn_source(converter_source):
             except ValueError:
                 raise util.Abort(_('svn: revision %s is not an integer') % rev)
 
-        self.trunkname = self.ui.config('convert', 'svn.trunk', 'trunk').strip('/')
+        self.trunkname = self.ui.config('convert', 'svn.trunk',
+                                        'trunk').strip('/')
         self.startrev = self.ui.config('convert', 'svn.startrev', default=0)
         try:
             self.startrev = int(self.startrev)
@@ -862,7 +863,8 @@ class svn_source(converter_source):
                     pass
         except SubversionException, (inst, num):
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
-                raise util.Abort(_('svn: branch has no revision %s') % to_revnum)
+                raise util.Abort(_('svn: branch has no revision %s')
+                                 % to_revnum)
             raise
 
     def getfile(self, file, rev):
@@ -949,8 +951,8 @@ class svn_source(converter_source):
             if not p.startswith('/'):
                 p = self.module + '/' + p
             relpaths.append(p.strip('/'))
-        args = [self.baseurl, relpaths, start, end, limit, discover_changed_paths,
-                strict_node_history]
+        args = [self.baseurl, relpaths, start, end, limit,
+                discover_changed_paths, strict_node_history]
         arg = encodeargs(args)
         hgexe = util.hgexecutable()
         cmd = '%s debugsvnlog' % util.shellquote(hgexe)

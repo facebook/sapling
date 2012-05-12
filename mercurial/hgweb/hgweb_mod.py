@@ -73,7 +73,8 @@ class hgweb(object):
             self.repo = hg.repository(self.repo.ui, self.repo.root)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))
-            self.maxshortchanges = int(self.config("web", "maxshortchanges", 60))
+            self.maxshortchanges = int(self.config("web", "maxshortchanges",
+                                                   60))
             self.maxfiles = int(self.config("web", "maxfiles", 10))
             self.allowpull = self.configbool("web", "allowpull", True)
             encoding.encoding = self.config("web", "encoding",
