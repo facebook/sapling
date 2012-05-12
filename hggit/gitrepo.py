@@ -15,6 +15,9 @@ class gitrepo(repo.repository):
         self.ui = ui
         self.path = path
 
+    def url(self):
+        return self.path
+
     def lookup(self, key):
         if isinstance(key, str):
             return key
