@@ -258,7 +258,7 @@ class UtilityTests(test_util.TestBase):
         output = u.popbuffer()
         self.assertEqual(1, ret)
         output = re.sub(r'file://\S+', 'file://', output)
-        self.assertEqual("""\
+        self.assertMultiLineEqual("""\
 verifying d51f46a715a1 against file://
 difference in file binary2
 unexpected files:
