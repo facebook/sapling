@@ -221,6 +221,11 @@ def updatefromremote(ui, repo, remote, path):
                     repo._bookmarks[n] = cr.node()
                     changed = True
                     ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
+        elif rb[k] in repo:
+            # add remote bookmarks for changes we already have
+            repo._bookmarks[k] = repo[rb[k]].node()
+            changed = True
+            ui.status(_("adding remote bookmark %s\n") % k)
 
     if changed:
         write(repo)
