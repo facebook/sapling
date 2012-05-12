@@ -85,10 +85,8 @@ def uisetup(ui):
                  (cmd not in ui.configlist('pager', 'ignore') and not attend))):
                 ui.setconfig('ui', 'formatted', ui.formatted())
                 ui.setconfig('ui', 'interactive', False)
-                try:
+                if util.safehasattr(signal, "SIGPIPE"):
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-                except ValueError:
-                    pass
                 _runpager(p)
         return orig(ui, options, cmd, cmdfunc)
 
