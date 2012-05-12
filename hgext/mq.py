@@ -1084,7 +1084,7 @@ class queue(object):
                 patchpath = self.join(patchfn)
                 try:
                     os.unlink(patchpath)
-                except:
+                except OSError:
                     self.ui.warn(_('error unlinking %s\n') % patchpath)
                 raise
             self.removeundo(repo)

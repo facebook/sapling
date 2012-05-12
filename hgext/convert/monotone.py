@@ -30,7 +30,7 @@ class monotone_source(converter_source, commandline):
                 f = file(path, 'rb')
                 header = f.read(16)
                 f.close()
-            except:
+            except IOError:
                 header = ''
             if header != 'SQLite format 3\x00':
                 raise norepo

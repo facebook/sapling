@@ -304,7 +304,7 @@ def patchbomb(ui, repo, *revs, **opts):
         finally:
             try:
                 os.unlink(tmpfn)
-            except:
+            except OSError:
                 pass
             os.rmdir(tmpdir)
 

@@ -17,26 +17,11 @@
   contrib/setup3k.py:0:
    >         except:
    warning: naked except clause
-  contrib/setup3k.py:0:
-   >     except:
-   warning: naked except clause
-  contrib/setup3k.py:0:
-   > except:
-   warning: naked except clause
-   warning: naked except clause
-   warning: naked except clause
   contrib/shrink-revlog.py:0:
    >         except:
    warning: naked except clause
   hgext/convert/bzr.py:0:
    >         except:
-   warning: naked except clause
-  hgext/convert/common.py:0:
-   >             except:
-   warning: naked except clause
-  hgext/convert/common.py:0:
-   >         except:
-   warning: naked except clause
    warning: naked except clause
   hgext/convert/convcmd.py:0:
    >         except:
@@ -50,9 +35,6 @@
   hgext/convert/cvsps.py:0:
    >                     ui.write('Parents: %s\n' %
    warning: unwrapped ui message
-  hgext/convert/cvsps.py:0:
-   >                 except:
-   warning: naked except clause
   hgext/convert/cvsps.py:0:
    >                 ui.write('Branchpoints: %s \n' % ', '.join(branchpoints))
    warning: unwrapped ui message
@@ -88,22 +70,10 @@
    >         except:
    warning: naked except clause
   hgext/convert/monotone.py:0:
-   >             except:
-   warning: naked except clause
-  hgext/convert/monotone.py:0:
    >         except:
    warning: naked except clause
   hgext/convert/subversion.py:0:
-   >             except:
-   warning: naked except clause
-  hgext/convert/subversion.py:0:
    >     except:
-   warning: naked except clause
-  hgext/gpg.py:0:
-   >                 except:
-   warning: naked except clause
-  hgext/hgcia.py:0:
-   > except:
    warning: naked except clause
   hgext/hgk.py:0:
    >         ui.write("parent %s\n" % p)
@@ -126,18 +96,11 @@
   hgext/hgk.py:0:
    >     ui.write("tree %s\n" % short(ctx.changeset()[0]))
    warning: unwrapped ui message
-  hgext/inotify/server.py:0:
-   >                     except:
-   warning: naked except clause
-  hgext/inotify/server.py:0:
-   >             except:
-   warning: naked except clause
   hgext/keyword.py:0:
    >     ui.note("hg ci -m '%s'\n" % msg)
    warning: unwrapped ui message
   hgext/mq.py:0:
    >                 except:
-   warning: naked except clause
    warning: naked except clause
   hgext/mq.py:0:
    >             except:
@@ -152,18 +115,11 @@
    >         ui.write("mq:     %s\n" % ', '.join(m))
    warning: unwrapped ui message
   hgext/patchbomb.py:0:
-   >             except:
-   warning: naked except clause
-  hgext/patchbomb.py:0:
    >             ui.write('Subject: %s\n' % subj)
    warning: unwrapped ui message
   hgext/patchbomb.py:0:
    >         ui.write('From: %s\n' % sender)
    warning: unwrapped ui message
-  hgext/zeroconf/__init__.py:0:
-   >     except:
-   warning: naked except clause
-   warning: naked except clause
   mercurial/commands.py:0:
    >                 ui.note('branch %s\n' % data)
    warning: unwrapped ui message
@@ -270,9 +226,6 @@
   mercurial/keepalive.py:0:
    >         except:
    warning: naked except clause
-  mercurial/keepalive.py:0:
-   >     except:
-   warning: naked except clause
   mercurial/localrepo.py:0:
    >             except:
    warning: naked except clause
@@ -285,13 +238,7 @@
   mercurial/repair.py:0:
    >     except:
    warning: naked except clause
-  mercurial/sshrepo.py:0:
-   >         except:
-   warning: naked except clause
   mercurial/transaction.py:0:
-   >             except:
-   warning: naked except clause
-  mercurial/util.py:0:
    >             except:
    warning: naked except clause
   mercurial/util.py:0:
@@ -306,27 +253,12 @@
   setup.py:0:
    >         except:
    warning: naked except clause
-  setup.py:0:
-   >     except:
-   warning: naked except clause
-   warning: naked except clause
-  setup.py:0:
-   > except:
-   warning: naked except clause
-   warning: naked except clause
-   warning: naked except clause
   tests/autodiff.py:0:
    >         ui.write('data lost for: %s\n' % fn)
    warning: unwrapped ui message
-  tests/run-tests.py:0:
-   >     except:
-   warning: naked except clause
   tests/test-convert-mtn.t:0:
    >   > function get_passphrase(keypair_id)
    don't use 'function', use old style
-  tests/test-filecache.py:0:
-   >     except:
-   warning: naked except clause
   tests/test-import-git.t:0:
    >   > Mc\${NkU|\`?^000jF3jhEB
    ^ must be quoted

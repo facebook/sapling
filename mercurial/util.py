@@ -1079,7 +1079,7 @@ def matchdate(date):
             try:
                 d["d"] = days
                 return parsedate(date, extendeddateformats, d)[0]
-            except:
+            except Abort:
                 pass
         d["d"] = "28"
         return parsedate(date, extendeddateformats, d)[0]

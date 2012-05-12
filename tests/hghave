@@ -60,7 +60,7 @@ def has_eol_in_paths():
         os.close(fd)
         os.remove(path)
         return True
-    except:
+    except (IOError, OSError):
         return False
 
 def has_executablebit():
@@ -93,7 +93,7 @@ def has_icasefs():
         try:
             s2 = os.stat(p2)
             return s2 == s1
-        except:
+        except OSError:
             return False
     finally:
         os.remove(path)

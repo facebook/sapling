@@ -43,7 +43,7 @@ class gpg(object):
                 try:
                     if f:
                         os.unlink(f)
-                except:
+                except OSError:
                     pass
         keys = []
         key, fingerprint = None, None

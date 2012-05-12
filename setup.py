@@ -23,16 +23,16 @@ else:
 try:
     import hashlib
     sha = hashlib.sha1()
-except:
+except ImportError:
     try:
         import sha
-    except:
+    except ImportError:
         raise SystemExit(
             "Couldn't import standard hashlib (incomplete Python install).")
 
 try:
     import zlib
-except:
+except ImportError:
     raise SystemExit(
         "Couldn't import standard zlib (incomplete Python install).")
 
@@ -41,7 +41,7 @@ isironpython = False
 try:
     isironpython = (platform.python_implementation()
                     .lower().find("ironpython") != -1)
-except:
+except AttributeError:
     pass
 
 if isironpython:
@@ -49,7 +49,7 @@ if isironpython:
 else:
     try:
         import bz2
-    except:
+    except ImportError:
         raise SystemExit(
             "Couldn't import standard bz2 (incomplete Python install).")
 

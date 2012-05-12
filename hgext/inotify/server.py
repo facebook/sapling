@@ -355,7 +355,7 @@ class socketlistener(object):
                 except (OSError, socket.error), inst:
                     try:
                         os.unlink(self.realsockpath)
-                    except:
+                    except OSError:
                         pass
                     os.rmdir(tempdir)
                     if inst.errno == errno.EEXIST:
@@ -416,7 +416,7 @@ class socketlistener(object):
                 # try to send back our version to the client
                 # this way, the client too is informed of the mismatch
                 sock.sendall(chr(common.version))
-            except:
+            except socket.error:
                 pass
             return
 

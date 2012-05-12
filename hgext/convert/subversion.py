@@ -139,7 +139,7 @@ class logstream(object):
                                    ' hg executable is in PATH'))
             try:
                 orig_paths, revnum, author, date, message = entry
-            except:
+            except (TypeError, ValueError):
                 if entry is None:
                     break
                 raise util.Abort(_("log stream exception '%s'") % entry)

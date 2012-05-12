@@ -706,11 +706,11 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         if mergeto:
             m = mergeto.search(c.comment)
             if m:
-                try:
+                if m.groups():
                     m = m.group(1)
                     if m == 'HEAD':
                         m = None
-                except:
+                else:
                     m = None   # if no group found then merge to HEAD
                 if m in branches and c.branch != m:
                     # insert empty changeset for merge

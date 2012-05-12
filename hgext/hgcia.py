@@ -46,17 +46,14 @@ from mercurial.node import bin, short
 from mercurial import cmdutil, patch, templater, util, mail
 import email.Parser
 
-import xmlrpclib
+import socket, xmlrpclib
 from xml.sax import saxutils
 
 socket_timeout = 30 # seconds
-try:
+if util.safehasattr(socket, 'setdefaulttimeout'):
     # set a timeout for the socket so you don't have to wait so looooong
     # when cia.vc is having problems. requires python >= 2.3:
-    import socket
     socket.setdefaulttimeout(socket_timeout)
-except:
-    pass
 
 HGCIA_VERSION = '0.1'
 HGCIA_URL = 'http://hg.kublai.com/mercurial/hgcia'

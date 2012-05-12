@@ -860,7 +860,7 @@ def runone(options, test):
         tf = open(testpath)
         firstline = tf.readline().rstrip()
         tf.close()
-    except:
+    except IOError:
         firstline = ''
     lctest = test.lower()
 

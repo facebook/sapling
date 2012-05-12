@@ -78,7 +78,7 @@ def fakeuncacheable():
 
     try:
         os.remove('x')
-    except:
+    except OSError:
         pass
 
     basic(fakerepo())

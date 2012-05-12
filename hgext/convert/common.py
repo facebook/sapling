@@ -116,10 +116,10 @@ class converter_source(object):
             return s.encode("utf-8")
         try:
             return s.decode(encoding).encode("utf-8")
-        except:
+        except UnicodeError:
             try:
                 return s.decode("latin-1").encode("utf-8")
-            except:
+            except UnicodeError:
                 return s.decode(encoding, "replace").encode("utf-8")
 
     def getchangedfiles(self, rev, i):
@@ -333,7 +333,7 @@ class commandline(object):
         argmax = 4096
         try:
             argmax = os.sysconf("SC_ARG_MAX")
-        except:
+        except (AttributeError, ValueError):
             pass
 
         # Windows shells impose their own limits on command line length,

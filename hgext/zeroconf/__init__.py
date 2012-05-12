@@ -44,7 +44,7 @@ def getip():
         s.connect(('1.0.0.1', 0))
         ip = s.getsockname()[0]
         return ip
-    except:
+    except socket.error:
         pass
 
     # Generic method, sometimes gives useless results
@@ -61,7 +61,7 @@ def getip():
         s.connect(('1.0.0.1', 1))
         ip = s.getsockname()[0]
         return ip
-    except:
+    except socket.error:
         pass
 
     return dumbip
