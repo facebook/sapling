@@ -444,6 +444,33 @@ Test cloning with --all-largefiles flag
   3 largefiles updated, 0 removed
   8 additional largefiles cached
 
+Test pulling with --all-largefiles flag
+
+  $ rm -Rf a-backup
+  $ hg clone -r 1 a a-backup
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 8 changes to 4 files
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  $ rm -Rf ${USERCACHE}/*
+  $ cd a-backup
+  $ hg pull --all-largefiles
+  pulling from $TESTTMP/a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 16 changes to 8 files
+  (run 'hg update' to get a working copy)
+  caching new largefiles
+  3 largefiles cached
+  3 additional largefiles cached
+  $ cd ..
+
 Rebasing between two repositories does not revert largefiles to old
 revisions (this was a very bad bug that took a lot of work to fix).
 

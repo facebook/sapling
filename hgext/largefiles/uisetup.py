@@ -70,6 +70,9 @@ def uisetup(ui):
                                    overrides.overrideupdate)
     entry = extensions.wrapcommand(commands.table, 'pull',
                                    overrides.overridepull)
+    pullopt = [('', 'all-largefiles', None,
+                 _('download all pulled versions of largefiles'))]
+    entry[1].extend(pullopt)
     entry = extensions.wrapcommand(commands.table, 'clone',
                                    overrides.overrideclone)
     cloneopt = [('', 'all-largefiles', None,

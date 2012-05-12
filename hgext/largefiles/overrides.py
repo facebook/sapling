@@ -651,6 +651,7 @@ def hgmerge(orig, repo, node, force=None, remind=True):
 # take some extra care so that the largefiles are correctly updated in the
 # working copy
 def overridepull(orig, ui, repo, source=None, **opts):
+    revsprepull = len(repo)
     if opts.get('rebase', False):
         repo._isrebasing = True
         try:
@@ -660,7 +661,6 @@ def overridepull(orig, ui, repo, source=None, **opts):
                           'the update flag\n')
             del opts['rebase']
             cmdutil.bailifchanged(repo)
-            revsprepull = len(repo)
             origpostincoming = commands.postincoming
             def _dummy(*args, **kwargs):
                 pass
@@ -695,6 +695,12 @@ def overridepull(orig, ui, repo, source=None, **opts):
             (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
             numcached += len(cached)
         ui.status(_("%d largefiles cached\n") % numcached)
+    if opts.get('all_largefiles'):
+        revspostpull = len(repo)
+        revs = []
+        for rev in xrange(revsprepull + 1, revspostpull):
+            revs.append(repo[rev].rev())
+        lfcommands.downloadlfiles(ui, repo, revs)
     return result
 
 def overrideclone(orig, ui, source, dest=None, **opts):
