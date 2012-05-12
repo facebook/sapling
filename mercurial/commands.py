@@ -4443,25 +4443,23 @@ def phase(ui, repo, *revs, **opts):
                 phases.retractboundary(repo, targetphase, nodes)
         finally:
             lock.release()
-        if olddata is not None:
-            changes = 0
-            newdata = repo._phasecache.getphaserevs(repo)
-            changes = sum(o != newdata[i] for i, o in enumerate(olddata))
-            rejected = [n for n in nodes
-                        if newdata[repo[n].rev()] < targetphase]
-            if rejected:
-                ui.warn(_('cannot move %i changesets to a more permissive '
-                          'phase, use --force\n') % len(rejected))
-                ret = 1
-            if changes:
-                msg = _('phase changed for %i changesets\n') % changes
-                if ret:
-                    ui.status(msg)
-                else:
-                    ui.note(msg)
+        newdata = repo._phasecache.getphaserevs(repo)
+        changes = sum(o != newdata[i] for i, o in enumerate(olddata))
+        rejected = [n for n in nodes
+                    if newdata[repo[n].rev()] < targetphase]
+        if rejected:
+            ui.warn(_('cannot move %i changesets to a more permissive '
+                      'phase, use --force\n') % len(rejected))
+            ret = 1
+        if changes:
+            msg = _('phase changed for %i changesets\n') % changes
+            if ret:
+                ui.status(msg)
             else:
-                ui.warn(_('no phases changed\n'))
-                ret = 1
+                ui.note(msg)
+        else:
+            ui.warn(_('no phases changed\n'))
+            ret = 1
     return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout):
