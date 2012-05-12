@@ -90,10 +90,25 @@ def verify(ui, repo, args=None, **opts):
 
     return result
 
+def updatemeta(ui, repo, args, **opts):
+    """Do a partial rebuild of the subversion metadata.
+
+    Assumes that the metadata that currently exists is valid, but that
+    some is missing, e.g. because you have pulled some revisions via a
+    native mercurial method.
+
+    """
+
+    return _buildmeta(ui, repo, args, partial=True)
+
 
 def rebuildmeta(ui, repo, args, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
+
+    return _buildmeta(ui, repo, args, partial=False)
+
+def _buildmeta(ui, repo, args, partial=False):
 
     if repo is None:
         raise error.RepoError("There is no Mercurial repository"
@@ -113,14 +128,32 @@ def rebuildmeta(ui, repo, args, **opts):
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
 
+    youngest = 0
+    startrev = 0
+    sofar = []
+    branchinfo = {}
+    if partial:
+        try:
+            youngestpath = os.path.join(svnmetadir, 'lastpulled')
+            youngest = int(util.load_string(youngestpath).strip())
+            sofar = list(maps.RevMap.readmapfile(repo))
+            lasthash = sofar[-1].split(' ', 2)[1]
+            startrev = repo[lasthash].rev() + 1
+            branchinfo = pickle.load(open(os.path.join(svnmetadir,
+                                                       'branch_info')))
+        except IOError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            ui.status('missing some metadata -- doing a full rebuild')
+
+
     lastpulled = open(os.path.join(svnmetadir, 'lastpulled'), 'wb')
     revmap = open(os.path.join(svnmetadir, 'rev_map'), 'w')
     revmap.write('1\n')
+    revmap.writelines(sofar)
     last_rev = -1
-    branchinfo = {}
-    noderevnums = {}
     tagfile = os.path.join(svnmetadir, 'tagmap')
-    if os.path.exists(maps.Tags.filepath(repo)):
+    if not partial and os.path.exists(maps.Tags.filepath(repo)) :
         os.unlink(maps.Tags.filepath(repo))
     tags = maps.Tags(repo)
 
@@ -129,7 +162,7 @@ def rebuildmeta(ui, repo, args, **opts):
     skipped = set()
     closed = set()
 
-    numrevs = len(repo)
+    numrevs = len(repo) - startrev
 
     subdirfile = open(os.path.join(svnmetadir, 'subdir'), 'w')
     subdirfile.write(subdir.strip('/'))
@@ -139,9 +172,8 @@ def rebuildmeta(ui, repo, args, **opts):
     # it would make us use O(revisions^2) time, so we perform an extra traversal
     # of the repository instead. During this traversal, we find all converted
     # changesets that close a branch, and store their first parent
-    youngest = 0
-    for rev in repo:
-        util.progress(ui, 'prepare', rev, total=numrevs)
+    for rev in xrange(startrev, len(repo)):
+        util.progress(ui, 'prepare', rev - startrev, total=numrevs)
         ctx = repo[rev]
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
@@ -157,13 +189,19 @@ def rebuildmeta(ui, repo, args, **opts):
         parentinfo = util.getsvnrev(parentctx, '@')
 
         if droprev(parentinfo) == droprev(convinfo):
-            closed.add(parentctx.rev())
+            if parentctx.rev() < startrev:
+                parentbranch = parentctx.branch()
+                if parentbranch == 'default':
+                    parentbranch = None
+                branchinfo.pop(parentbranch)
+            else:
+                closed.add(parentctx.rev())
 
     lastpulled.write(str(youngest) + '\n')
     util.progress(ui, 'prepare', None, total=numrevs)
 
-    for rev in repo:
-        util.progress(ui, 'rebuild', rev, total=numrevs)
+    for rev in xrange(startrev, len(repo)):
+        util.progress(ui, 'rebuild', rev-startrev, total=numrevs)
         ctx = repo[rev]
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
@@ -241,7 +279,6 @@ def rebuildmeta(ui, repo, args, **opts):
         revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
 
         revision = int(revision)
-        noderevnums[ctx.node()] = revision
         if revision > last_rev:
             last_rev = revision
 
@@ -279,15 +316,19 @@ def rebuildmeta(ui, repo, args, **opts):
             pass
         elif branch not in branchinfo:
             parent = ctx.parents()[0]
-            if (parent.node() in noderevnums
+            if (parent.node() not in skipped
+                and util.getsvnrev(parent, '').startswith('svn:')
                 and parent.branch() != ctx.branch()):
                 parentbranch = parent.branch()
                 if parentbranch == 'default':
                     parentbranch = None
             else:
                 parentbranch = None
+            # branchinfo is a map from mercurial branch to a
+            # (svn branch, svn parent revision, svn revision) tuple
+            parentrev = util.getsvnrev(parent, '@').split('@')[1] or 0
             branchinfo[branch] = (parentbranch,
-                                  noderevnums.get(parent.node(), 0),
+                                  int(parentrev),
                                   revision)
 
     util.progress(ui, 'rebuild', None, total=numrevs)
@@ -522,6 +563,7 @@ table = {
     'listauthors': listauthors,
     'update': update,
     'help': help_,
+    'updatemeta': updatemeta,
     'rebuildmeta': rebuildmeta,
     'updateexternals': svnexternals.updateexternals,
     'verify': verify,
