@@ -286,7 +286,7 @@ class monotone_source(converter_source, commandline):
             raise IOError # file was deleted or renamed
         try:
             data = self.mtnrun("get_file_of", name, r=rev)
-        except:
+        except Exception:
             raise IOError # file was deleted or renamed
         self.mtnloadmanifest(rev)
         node, attr = self.files.get(name, (None, ""))

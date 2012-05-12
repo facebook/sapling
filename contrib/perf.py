@@ -33,11 +33,11 @@ def perfwalk(ui, repo, *pats):
     try:
         m = scmutil.match(repo[None], pats, {})
         timer(lambda: len(list(repo.dirstate.walk(m, [], True, False))))
-    except:
+    except Exception:
         try:
             m = scmutil.match(repo[None], pats, {})
             timer(lambda: len([b for a, b, c in repo.dirstate.statwalk([], m)]))
-        except:
+        except Exception:
             timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
 
 def perfstatus(ui, repo, *pats):

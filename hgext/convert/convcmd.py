@@ -462,7 +462,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     if not revmapfile:
         try:
             revmapfile = destc.revmapfile()
-        except:
+        except Exception:
             revmapfile = os.path.join(destc, "map")
 
     c = converter(ui, srcc, destc, revmapfile, opts)

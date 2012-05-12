@@ -176,7 +176,7 @@ def httpcheck(ui, path, proto):
                       'know better.\n'))
             return True
         data = inst.fp.read()
-    except:
+    except Exception:
         # Could be urllib2.URLError if the URL is invalid or anything else.
         return False
     return '<m:human-readable errcode="160013">' in data

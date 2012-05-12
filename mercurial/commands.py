@@ -1917,7 +1917,7 @@ def debugindex(ui, repo, file_ = None, **opts):
         if format == 0:
             try:
                 pp = r.parents(node)
-            except:
+            except Exception:
                 pp = [nullid, nullid]
             ui.write("% 6d % 9d % 7d % 6d % 7d %s %s %s\n" % (
                     i, r.start(i), r.length(i), base, r.linkrev(i),

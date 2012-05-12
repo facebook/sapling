@@ -72,7 +72,7 @@ class bzr_source(converter_source):
                 self.ui.warn(_('warning: lightweight checkouts may cause '
                                'conversion failures, try with a regular '
                                'branch instead.\n'))
-        except:
+        except Exception:
             self.ui.note(_('bzr source type could not be determined\n'))
 
     def before(self):

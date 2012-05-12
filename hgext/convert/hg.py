@@ -95,7 +95,7 @@ class mercurial_sink(converter_sink):
             self.after()
             try:
                 self.repo = hg.repository(self.ui, branchpath)
-            except:
+            except Exception:
                 self.repo = hg.repository(self.ui, branchpath, create=True)
             self.before()
 
@@ -105,7 +105,7 @@ class mercurial_sink(converter_sink):
         for b in pbranches:
             try:
                 self.repo.lookup(b[0])
-            except:
+            except Exception:
                 missings.setdefault(b[1], []).append(b[0])
 
         if missings:
@@ -192,7 +192,7 @@ class mercurial_sink(converter_sink):
 
         try:
             oldlines = sorted(parentctx['.hgtags'].data().splitlines(True))
-        except:
+        except Exception:
             oldlines = []
 
         newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])

@@ -87,7 +87,7 @@ def _verify(repo):
                         # attempt to filter down to real linkrevs
                         linkrevs = [l for l in linkrevs
                                     if lrugetctx(l)[f].filenode() == node]
-                    except:
+                    except Exception:
                         pass
                 warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
             lr = None # can't be trusted
@@ -189,7 +189,7 @@ def _verify(repo):
                 try:
                     fl = repo.file(f)
                     lr = min([fl.linkrev(fl.rev(n)) for n in filenodes[f]])
-                except:
+                except Exception:
                     lr = None
                 err(lr, _("in manifest but not in changeset"), f)
 

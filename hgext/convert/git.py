@@ -211,7 +211,7 @@ class convert_git(converter_source):
                         continue
                     name = '%s%s' % (reftype, name[prefixlen:])
                     bookmarks[name] = rev
-            except:
+            except Exception:
                 pass
 
         return bookmarks

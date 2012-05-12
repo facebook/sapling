@@ -8,22 +8,7 @@
   $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 || true
-  contrib/perf.py:0:
-   >         except:
-   warning: naked except clause
-  contrib/perf.py:0:
-   >     except:
-   warning: naked except clause
-  contrib/setup3k.py:0:
-   >         except:
-   warning: naked except clause
   contrib/shrink-revlog.py:0:
-   >         except:
-   warning: naked except clause
-  hgext/convert/bzr.py:0:
-   >         except:
-   warning: naked except clause
-  hgext/convert/convcmd.py:0:
    >         except:
    warning: naked except clause
   hgext/convert/cvsps.py:0:
@@ -59,22 +44,6 @@
   hgext/convert/cvsps.py:0:
    >             ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
    warning: unwrapped ui message
-  hgext/convert/git.py:0:
-   >             except:
-   warning: naked except clause
-  hgext/convert/hg.py:0:
-   >             except:
-   warning: naked except clause
-   warning: naked except clause
-  hgext/convert/hg.py:0:
-   >         except:
-   warning: naked except clause
-  hgext/convert/monotone.py:0:
-   >         except:
-   warning: naked except clause
-  hgext/convert/subversion.py:0:
-   >     except:
-   warning: naked except clause
   hgext/hgk.py:0:
    >         ui.write("parent %s\n" % p)
    warning: unwrapped ui message
@@ -109,9 +78,6 @@
    warning: naked except clause
    warning: naked except clause
   hgext/mq.py:0:
-   >         except:
-   warning: naked except clause
-  hgext/mq.py:0:
    >         ui.write("mq:     %s\n" % ', '.join(m))
    warning: unwrapped ui message
   hgext/patchbomb.py:0:
@@ -132,9 +98,6 @@
   mercurial/commands.py:0:
    >                 ui.write("unpruned common: %s\n" % " ".join([short(n)
    warning: unwrapped ui message
-  mercurial/commands.py:0:
-   >             except:
-   warning: naked except clause
   mercurial/commands.py:0:
    >             ui.write("format: id, p1, p2, cset, delta base, len(delta)\n")
    warning: unwrapped ui message
@@ -238,20 +201,8 @@
   mercurial/repair.py:0:
    >     except:
    warning: naked except clause
-  mercurial/transaction.py:0:
-   >             except:
-   warning: naked except clause
   mercurial/util.py:0:
    >     except:
-   warning: naked except clause
-  mercurial/verify.py:0:
-   >                     except:
-   warning: naked except clause
-  mercurial/verify.py:0:
-   >                 except:
-   warning: naked except clause
-  setup.py:0:
-   >         except:
    warning: naked except clause
   tests/autodiff.py:0:
    >         ui.write('data lost for: %s\n' % fn)

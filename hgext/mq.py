@@ -613,7 +613,7 @@ class queue(object):
             raise util.Abort(_("repo commit failed"))
         try:
             ph = patchheader(mergeq.join(patch), self.plainmode)
-        except:
+        except Exception:
             raise util.Abort(_("unable to read %s") % patch)
 
         diffopts = self.patchopts(diffopts, patch)
