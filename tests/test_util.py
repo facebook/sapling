@@ -199,12 +199,12 @@ def _verify_our_modules():
             'from the wrong path!'
         )
 
-def hgclone(ui, source, dest, update=True):
+def hgclone(ui, source, dest, update=True, rev=None):
     if getattr(hg, 'peer', None):
         # Since 1.9 (d976542986d2)
-        src, dest = hg.clone(ui, {}, source, dest, update=update)
+        src, dest = hg.clone(ui, {}, source, dest, update=update, rev=rev)
     else:
-        src, dest = hg.clone(ui, source, dest, update=update)
+        src, dest = hg.clone(ui, source, dest, update=update, rev=rev)
     return src, dest
 
 def svnls(repo_path, path, rev='HEAD'):

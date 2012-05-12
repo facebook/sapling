@@ -51,6 +51,43 @@ def _do_case(self, name, stupid, single):
         # remove the wrapper
         context.changectx.children = origchildren
 
+    self._run_assertions(name, stupid, single, src, dest, u)
+
+    wc3_path = self.wc_path + '_partial'
+    src, dest = test_util.hgclone(u,
+                                  self.wc_path,
+                                  wc3_path,
+                                  update=False,
+                                  rev=[0])
+
+    # insert a wrapper that prevents calling changectx.children()
+    extensions.wrapfunction(context.changectx, 'children', failfn)
+
+    try:
+        svncommands.rebuildmeta(u, dest,
+                                args=[test_util.fileurl(repo_path +
+                                                        subdir), ])
+    finally:
+        # remove the wrapper
+        context.changectx.children = origchildren
+
+    dest.pull(src)
+
+    # insert a wrapper that prevents calling changectx.children()
+    extensions.wrapfunction(context.changectx, 'children', failfn)
+    try:
+        svncommands.updatemeta(u, dest,
+                               args=[test_util.fileurl(repo_path +
+                                                        subdir), ])
+    finally:
+        # remove the wrapper
+        context.changectx.children = origchildren
+
+    self._run_assertions(name, stupid, single, src, dest, u)
+
+
+def _run_assertions(self, name, stupid, single, src, dest, u):
+
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the source!')
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
@@ -68,7 +105,7 @@ def _do_case(self, name, stupid, single):
             self.assertNotEqual(old, new,
                                 'rebuildmeta unexpected match on youngest rev!')
             continue
-        self.assertMultiLineEqual(old, new)
+        self.assertMultiLineEqual(old, new, tf + ' differs')
         self.assertEqual(src.branchtags(), dest.branchtags())
     srcbi = pickle.load(open(os.path.join(src.path, 'svn', 'branch_info')))
     destbi = pickle.load(open(os.path.join(dest.path, 'svn', 'branch_info')))
@@ -107,6 +144,7 @@ skip = set([
 ])
 
 attrs = {'_do_case': _do_case,
+         '_run_assertions': _run_assertions,
          }
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
     # this fixture results in an empty repository, don't use it
