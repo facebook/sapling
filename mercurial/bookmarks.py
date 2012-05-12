@@ -150,13 +150,20 @@ def updatecurrentbookmark(repo, oldnode, curbranch):
 def update(repo, parents, node):
     marks = repo._bookmarks
     update = False
-    mark = repo._bookmarkcurrent
-    if mark and marks[mark] in parents:
-        old = repo[marks[mark]]
-        new = repo[node]
-        if new in old.descendants():
-            marks[mark] = new.node()
-            update = True
+    cur = repo._bookmarkcurrent
+    if not cur:
+        return False
+
+    toupdate = [b for b in marks if b.split('@', 1)[0] == cur.split('@', 1)[0]]
+    for mark in toupdate:
+        if mark and marks[mark] in parents:
+            old = repo[marks[mark]]
+            new = repo[node]
+            if new in old.descendants() and mark == cur:
+                marks[cur] = new.node()
+                update = True
+            if mark != cur:
+                del marks[mark]
     if update:
         repo._writebookmarks(marks)
     return update

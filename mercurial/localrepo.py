@@ -1187,7 +1187,7 @@ class localrepository(repo.repository):
                 raise
 
             # update bookmarks, dirstate and mergestate
-            bookmarks.update(self, p1, ret)
+            bookmarks.update(self, [p1, p2], ret)
             for f in changes[0] + changes[1]:
                 self.dirstate.normal(f)
             for f in changes[2]:
