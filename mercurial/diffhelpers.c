@@ -20,14 +20,14 @@ static PyObject *diffhelpers_Error;
 /* fixup the last lines of a and b when the patch has no newline at eof */
 static void _fix_newline(PyObject *hunk, PyObject *a, PyObject *b)
 {
-	int hunksz = PyList_Size(hunk);
+	Py_ssize_t hunksz = PyList_Size(hunk);
 	PyObject *s = PyList_GET_ITEM(hunk, hunksz-1);
 	char *l = PyBytes_AsString(s);
-	int alen = PyList_Size(a);
-	int blen = PyList_Size(b);
+	Py_ssize_t alen = PyList_Size(a);
+	Py_ssize_t blen = PyList_Size(b);
 	char c = l[0];
 	PyObject *hline;
-	int sz = PyBytes_GET_SIZE(s);
+	Py_ssize_t sz = PyBytes_GET_SIZE(s);
 
 	if (sz > 1 && l[sz-2] == '\r')
 		/* tolerate CRLF in last line */
