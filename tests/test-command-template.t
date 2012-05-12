@@ -45,6 +45,15 @@ Second branch starting at nullrev:
   $ hg mv second fourth
   $ hg commit -m third -d "2020-01-01 10:01"
 
+Quoting for ui.logtemplate
+
+  $ hg tip --config "ui.logtemplate={rev}\n"
+  8
+  $ hg tip --config "ui.logtemplate='{rev}\n'"
+  8
+  $ hg tip --config 'ui.logtemplate="{rev}\n"'
+  8
+
 Make sure user/global hgrc does not affect tests
 
   $ echo '[ui]' > .hg/hgrc
