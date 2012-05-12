@@ -1014,9 +1014,9 @@ class hunk(object):
         oldstart = self.starta + top
         newstart = self.startb + top
         # zero length hunk ranges already have their start decremented
-        if self.lena:
+        if self.lena and oldstart > 0:
             oldstart -= 1
-        if self.lenb:
+        if self.lenb and newstart > 0:
             newstart -= 1
         return old, oldstart, new, newstart
 
