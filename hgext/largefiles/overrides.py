@@ -706,23 +706,11 @@ def overrideclone(orig, ui, source, dest=None, **opts):
                       branch=opts.get('branch'))
     if result is None:
         return True
-    totalsuccess = 0
-    totalmissing = 0
     if opts.get('all_largefiles'):
         sourcerepo, destrepo = result
-        matchfn = scmutil.match(destrepo[None],
-                                [destrepo.wjoin(lfutil.shortname)], {})
-        def prepare(ctx, fns):
-            pass
-        for ctx in cmdutil.walkchangerevs(destrepo, matchfn, {'rev' : None},
-                                          prepare):
-            success, missing = lfcommands.cachelfiles(ui, destrepo, ctx.node())
-            totalsuccess += len(success)
-            totalmissing += len(missing)
-        ui.status(_("%d additional largefiles cached\n") % totalsuccess)
-        if totalmissing > 0:
-            ui.status(_("%d largefiles failed to download\n") % totalmissing)
-    return totalmissing != 0
+        success, missing = lfcommands.downloadlfiles(ui, destrepo, None)
+        return missing != 0
+    return result is None
 
 def overriderebase(orig, ui, repo, **opts):
     repo._isrebasing = True
