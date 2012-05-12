@@ -5634,9 +5634,9 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             f = url.open(ui, fname)
             gen = changegroup.readbundle(f, fname)
             modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
-        bookmarks.updatecurrentbookmark(repo, wc.node(), wc.branch())
     finally:
         lock.release()
+    bookmarks.updatecurrentbookmark(repo, wc.node(), wc.branch())
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
 @command('^update|up|checkout|co',
