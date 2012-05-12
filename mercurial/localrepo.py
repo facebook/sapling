@@ -404,7 +404,7 @@ class localrepository(repo.repository):
                 # ignore tags to unknown nodes
                 self.changelog.rev(v)
                 t[k] = v
-            except error.LookupError:
+            except (error.LookupError, ValueError):
                 pass
         return t
 

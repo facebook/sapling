@@ -753,7 +753,7 @@ static PyObject *index_getitem(indexObject *self, PyObject *value)
 	if (PyInt_Check(value))
 		return index_get(self, PyInt_AS_LONG(value));
 
-	if (PyString_AsStringAndSize(value, &node, &nodelen) == -1)
+	if (node_check(value, &node, &nodelen) == -1)
 		return NULL;
 	rev = index_find_node(self, node, nodelen);
 	if (rev >= -1)
@@ -765,12 +765,15 @@ static PyObject *index_getitem(indexObject *self, PyObject *value)
 
 static PyObject *index_m_get(indexObject *self, PyObject *args)
 {
+	Py_ssize_t nodelen;
+	PyObject *val;
 	char *node;
-	int nodelen, rev;
+	int rev;
 
-	if (!PyArg_ParseTuple(args, "s#", &node, &nodelen))
+	if (!PyArg_ParseTuple(args, "O", &val))
 		return NULL;
-
+	if (node_check(val, &node, &nodelen) == -1)
+		return NULL;
 	rev = index_find_node(self, node, nodelen);
 	if (rev ==  -3)
 		return NULL;
@@ -789,11 +792,8 @@ static int index_contains(indexObject *self, PyObject *value)
 		return rev >= -1 && rev < index_length(self);
 	}
 
-	if (!PyString_Check(value))
-		return 0;
-
-	node = PyString_AS_STRING(value);
-	nodelen = PyString_GET_SIZE(value);
+	if (node_check(value, &node, &nodelen) == -1)
+		return -1;
 
 	switch (index_find_node(self, node, nodelen)) {
 	case -3:
