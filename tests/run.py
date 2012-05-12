@@ -25,7 +25,6 @@ def tests():
     import test_push_eol
     import test_rebuildmeta
     import test_single_dir_clone
-    import test_startrev
     import test_svnwrap
     import test_tags
     import test_template_keywords
@@ -37,7 +36,7 @@ def tests():
     sys.path.append(os.path.join(os.path.dirname(__file__), 'comprehensive'))
 
     import test_stupid_pull
-    import test_verify
+    import test_verify_and_startrev
 
     return locals()
 

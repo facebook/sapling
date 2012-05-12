@@ -16,13 +16,44 @@ from mercurial import ui
 
 from hgsubversion import svncommands
 
+# these fixtures contain no files at HEAD and would result in empty clones
+_skipshallow = set([
+    'binaryfiles.svndump',
+    'binaryfiles-broken.svndump',
+    'emptyrepo.svndump',
+])
+
 def _do_case(self, name, stupid, layout):
     subdir = test_util.subdir.get(name, '')
-    repo = self._load_fixture_and_fetch(name, subdir=subdir, stupid=stupid, layout=layout)
+    repo, svnpath = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
+                                        layout=layout)
     assert len(self.repo) > 0
     for i in repo:
         ctx = repo[i]
         self.assertEqual(svncommands.verify(repo.ui, repo, rev=ctx.node()), 0)
+
+    # check a startrev clone
+    if layout == 'single' and name not in _skipshallow:
+        self.wc_path += '_shallow'
+        shallowrepo = self.fetch(svnpath, subdir=subdir, stupid=stupid,
+                                 layout='single', startrev='HEAD')
+
+        self.assertEqual(len(shallowrepo), 1,
+                         "shallow clone should have just one revision, not %d"
+                         % len(shallowrepo))
+
+        fulltip = repo['tip']
+        shallowtip = shallowrepo['tip']
+
+        self.assertEqual(0, svncommands.verify(repo.ui, shallowrepo,
+                                               rev=shallowtip.node()))
+
+        # viewing diff's of lists of files is easier on the eyes
+        self.assertMultiLineEqual('\n'.join(fulltip), '\n'.join(shallowtip))
+
+        for f in fulltip:
+            self.assertMultiLineEqual(fulltip[f].data(), shallowtip[f].data())
+
 
 def buildmethod(case, name, stupid, layout):
     m = lambda self: self._do_case(case, stupid, layout)
