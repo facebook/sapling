@@ -135,7 +135,7 @@ testhunk(PyObject *self, PyObject *args)
 		return NULL;
 	alen = PyList_Size(a);
 	blen = PyList_Size(b);
-	if (alen > blen - bstart) {
+	if (alen > blen - bstart || bstart < 0) {
 		return Py_BuildValue("l", -1);
 	}
 	for (i = 0; i < alen; i++) {

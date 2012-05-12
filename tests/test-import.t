@@ -997,6 +997,26 @@ import a unified diff with no lines of context (diff -U0)
   c3
   c4
 
+no segfault while importing a unified diff which start line is zero but chunk
+size is non-zero
+
+  $ hg init startlinezero
+  $ cd startlinezero
+  $ echo foo > foo
+  $ hg commit -Amfoo
+  adding foo
+
+  $ hg import --no-commit - << EOF
+  > diff a/foo b/foo
+  > --- a/foo
+  > +++ b/foo
+  > @@ -0,1 +0,1 @@
+  >  foo
+  > EOF
+  applying patch from stdin
+
+  $ cd ..
+
 Test corner case involving fuzz and skew
 
   $ hg init morecornercases
