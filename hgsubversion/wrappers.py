@@ -380,7 +380,7 @@ def pull(repo, source, heads=[], force=False):
                             ui.traceback()
                             raise hgutil.Abort(*e.args)
         except KeyboardInterrupt:
-            pass
+            ui.traceback()
     finally:
         util.progress(ui, 'pull', None, total=total)
         util.swap_out_encoding(old_encoding)
