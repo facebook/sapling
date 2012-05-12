@@ -260,7 +260,7 @@ def person(author):
     >>> person('"Foo Bar <foo@bar>')
     'Foo Bar'
     """
-    if not '@' in author:
+    if '@' not in author:
         return author
     f = author.find('<')
     if f != -1:

@@ -706,7 +706,7 @@ def lsprofile(ui, func, fp):
     field = ui.config('profiling', 'sort', default='inlinetime')
     climit = ui.configint('profiling', 'nested', default=5)
 
-    if not format in ['text', 'kcachegrind']:
+    if format not in ['text', 'kcachegrind']:
         ui.warn(_("unrecognized profiling format '%s'"
                     " - Ignored\n") % format)
         format = 'text'

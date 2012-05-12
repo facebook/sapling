@@ -88,7 +88,7 @@ def snapshot(ui, repo, files, node, tmproot):
     ctx = repo[node]
     for fn in files:
         wfn = util.pconvert(fn)
-        if not wfn in ctx:
+        if wfn not in ctx:
             # File doesn't exist; could be a bogus modify
             continue
         ui.note('  %s\n' % wfn)

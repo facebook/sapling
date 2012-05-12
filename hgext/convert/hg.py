@@ -224,7 +224,7 @@ class mercurial_sink(converter_sink):
             bookmarks.write(self.repo)
 
     def hascommit(self, rev):
-        if not rev in self.repo and self.clonebranches:
+        if rev not in self.repo and self.clonebranches:
             raise util.Abort(_('revision %s not found in destination '
                                'repository (lookups with clonebranches=true '
                                'are not implemented)') % rev)

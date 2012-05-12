@@ -119,7 +119,7 @@ else:
                 flags = _O_TEXT
 
             m0 = mode[0]
-            if m0 == 'r' and not '+' in mode:
+            if m0 == 'r' and '+' not in mode:
                 flags |= _O_RDONLY
                 access = _GENERIC_READ
             else:

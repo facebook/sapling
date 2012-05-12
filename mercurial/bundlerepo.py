@@ -54,7 +54,7 @@ class bundlerevlog(revlog.revlog):
                 continue
 
             for p in (p1, p2):
-                if not p in self.nodemap:
+                if p not in self.nodemap:
                     raise error.LookupError(p, self.indexfile,
                                             _("unknown parent"))
             # start, size, full unc. size, base (unused), link, p1, p2, node

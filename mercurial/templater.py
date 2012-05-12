@@ -312,7 +312,7 @@ class templater(object):
 
     def load(self, t):
         '''Get the template for the given template name. Use a local cache.'''
-        if not t in self.cache:
+        if t not in self.cache:
             try:
                 self.cache[t] = util.readfile(self.map[t][1])
             except KeyError, inst:

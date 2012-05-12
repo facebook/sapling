@@ -190,7 +190,7 @@ class converter(object):
                 children.setdefault(n, [])
                 hasparent = False
                 for p in parents[n]:
-                    if not p in self.map:
+                    if p not in self.map:
                         visit.append(p)
                         hasparent = True
                     children.setdefault(p, []).append(n)

@@ -14,7 +14,7 @@ class wirestore(remotestore.remotestore):
         if not cap:
             raise lfutil.storeprotonotcapable([])
         storetypes = cap.split(',')
-        if not 'serve' in storetypes:
+        if 'serve' not in storetypes:
             raise lfutil.storeprotonotcapable(storetypes)
         self.remote = remote
         super(wirestore, self).__init__(ui, repo, remote.url())

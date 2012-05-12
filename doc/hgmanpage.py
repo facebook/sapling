@@ -582,7 +582,7 @@ class Translator(nodes.NodeVisitor):
                                     self._docinfo[name],
                                     self.defs['indent'][1],
                                     self.defs['indent'][1]))
-            elif not name in skip:
+            elif name not in skip:
                 if name in self._docinfo_names:
                     label = self._docinfo_names[name]
                 else:

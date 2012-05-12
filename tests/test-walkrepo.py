@@ -43,7 +43,7 @@ def runtest():
         print "reposet = %r" % (reposet,)
         print "sub1set and reposet should have exactly one path in common."
     sub3 = pjoin('.', 'circle', 'top1')
-    if sym and not (sub3 in reposet):
+    if sym and sub3 not in reposet:
         print "reposet = %r" % (reposet,)
         print "Symbolic links are supported and %s is not in reposet" % (sub3,)
 
