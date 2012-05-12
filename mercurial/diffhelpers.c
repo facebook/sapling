@@ -134,8 +134,8 @@ testhunk(PyObject *self, PyObject *args)
 
 	PyObject *a, *b;
 	long bstart;
-	int alen, blen;
-	int i;
+	Py_ssize_t alen, blen;
+	Py_ssize_t i;
 	char *sa, *sb;
 
 	if (!PyArg_ParseTuple(args, "OOl", &a, &b, &bstart))
