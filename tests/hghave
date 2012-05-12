@@ -106,7 +106,7 @@ def has_inotify():
         return False
 
 def has_fifo():
-    return hasattr(os, "mkfifo")
+    return getattr(os, "mkfifo", None) is not None
 
 def has_cacheable_fs():
     from mercurial import util
@@ -169,7 +169,7 @@ def has_p4():
             matchoutput('p4d -V', r'Rev\. P4D/'))
 
 def has_symlink():
-    if not hasattr(os, "symlink"):
+    if getattr(os, "symlink", None) is None:
         return False
     name = tempfile.mktemp(dir=".", prefix='hg-checklink-')
     try:
