@@ -756,6 +756,15 @@ class revlog(object):
                 pass
 
     def _partialmatch(self, id):
+        try:
+            return self.index.partialmatch(id)
+        except RevlogError:
+            # parsers.c radix tree lookup gave multiple matches
+            raise LookupError(id, self.indexfile, _("ambiguous identifier"))
+        except (AttributeError, ValueError):
+            # we are pure python, or key was too short to search radix tree
+            pass
+
         if id in self._pcache:
             return self._pcache[id]
 

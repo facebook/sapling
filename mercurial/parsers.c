@@ -566,7 +566,7 @@ static int nt_find(indexObject *self, const char *node, Py_ssize_t nodelen,
 		return -2;
 
 	if (hex)
-		maxlevel = nodelen > 40 ? 40 : nodelen;
+		maxlevel = nodelen > 40 ? 40 : (int)nodelen;
 	else
 		maxlevel = nodelen > 20 ? 40 : ((int)nodelen * 2);
 
@@ -793,6 +793,77 @@ static PyObject *index_getitem(indexObject *self, PyObject *value)
 	if (rev == -2)
 		raise_revlog_error();
 	return NULL;
+}
+
+static int nt_partialmatch(indexObject *self, const char *node,
+			   Py_ssize_t nodelen)
+{
+	int rev;
+
+	if (nt_init(self) == -1)
+		return -3;
+
+	if (self->ntrev > 0) {
+		/* ensure that the radix tree is fully populated */
+		for (rev = self->ntrev - 1; rev >= 0; rev--) {
+			const char *n = index_node(self, rev);
+			if (n == NULL)
+				return -2;
+			if (nt_insert(self, n, rev) == -1)
+				return -3;
+		}
+		self->ntrev = rev;
+	}
+
+	return nt_find(self, node, nodelen, 1);
+}
+
+static PyObject *index_partialmatch(indexObject *self, PyObject *args)
+{
+	const char *fullnode;
+	int nodelen;
+	char *node;
+	int rev, i;
+
+	if (!PyArg_ParseTuple(args, "s#", &node, &nodelen))
+		return NULL;
+
+	if (nodelen < 4) {
+		PyErr_SetString(PyExc_ValueError, "key too short");
+		return NULL;
+	}
+
+	if (nodelen > 40)
+		nodelen = 40;
+
+	for (i = 0; i < nodelen; i++)
+		hexdigit(node, i);
+	if (PyErr_Occurred()) {
+		/* input contains non-hex characters */
+		PyErr_Clear();
+		Py_RETURN_NONE;
+	}
+
+	rev = nt_partialmatch(self, node, nodelen);
+
+	switch (rev) {
+	case -4:
+		raise_revlog_error();
+	case -3:
+		return NULL;
+	case -2:
+		Py_RETURN_NONE;
+	case -1:
+		return PyString_FromStringAndSize(nullid, 20);
+	}
+
+	fullnode = index_node(self, rev);
+	if (fullnode == NULL) {
+		PyErr_Format(PyExc_IndexError,
+			     "could not access rev %d", rev);
+		return NULL;
+	}
+	return PyString_FromStringAndSize(fullnode, 20);
 }
 
 static PyObject *index_m_get(indexObject *self, PyObject *args)
@@ -1077,6 +1148,8 @@ static PyMethodDef index_methods[] = {
 	 "get an index entry"},
 	{"insert", (PyCFunction)index_insert, METH_VARARGS,
 	 "insert an index entry"},
+	{"partialmatch", (PyCFunction)index_partialmatch, METH_VARARGS,
+	 "match a potentially ambiguous node ID"},
 	{"stats", (PyCFunction)index_stats, METH_NOARGS,
 	 "stats for the index"},
 	{NULL} /* Sentinel */
