@@ -300,3 +300,16 @@ tagging on an uncommitted merge (issue2542)
   t3                                 1:c3adabd1a5f4 local
 
   $ cd ..
+
+commit hook on tag used to be run without write lock - issue3344
+
+  $ hg init repo-tag
+  $ hg init repo-tag-target
+  $ hg -R repo-tag --config hooks.commit="hg push \"`pwd`/repo-tag-target\"" tag tag
+  pushing to $TESTTMP/repo-tag-target
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
