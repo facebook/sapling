@@ -365,7 +365,7 @@ def verifylfiles(ui, repo, all=False, contents=False):
     store = basestore._openstore(repo)
     return store.verify(revs, contents=contents)
 
-def cachelfiles(ui, repo, node):
+def cachelfiles(ui, repo, node, filelist=None):
     '''cachelfiles ensures that all largefiles needed by the specified revision
     are present in the repository's largefile cache.
 
@@ -373,6 +373,8 @@ def cachelfiles(ui, repo, node):
     by this operation; missing is the list of files that were needed but could
     not be found.'''
     lfiles = lfutil.listlfiles(repo, node)
+    if filelist:
+        lfiles = set(lfiles) & set(filelist)
     toget = []
 
     for lfile in lfiles:
@@ -431,7 +433,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if printmessage and lfiles:
             ui.status(_('getting changed largefiles\n'))
             printed = True
-            cachelfiles(ui, repo, '.')
+            cachelfiles(ui, repo, '.', lfiles)
 
         updated, removed = 0, 0
         for i in map(lambda f: _updatelfile(repo, lfdirstate, f), lfiles):
