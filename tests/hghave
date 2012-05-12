@@ -31,14 +31,14 @@ def has_baz():
 def has_bzr():
     try:
         import bzrlib
-        return bzrlib.__doc__ != None
+        return bzrlib.__doc__ is not None
     except ImportError:
         return False
 
 def has_bzr114():
     try:
         import bzrlib
-        return (bzrlib.__doc__ != None
+        return (bzrlib.__doc__ is not None
                 and bzrlib.version_info[:2] >= (1, 14))
     except ImportError:
         return False
