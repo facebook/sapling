@@ -57,11 +57,13 @@ def _do_case(self, name, stupid, layout):
         fulltip = repo['tip']
         shallowtip = shallowrepo['tip']
 
+        repo.ui.pushbuffer()
         self.assertEqual(0, svncommands.verify(repo.ui, shallowrepo,
                                                rev=shallowtip.node()))
 
         # viewing diff's of lists of files is easier on the eyes
-        self.assertMultiLineEqual('\n'.join(fulltip), '\n'.join(shallowtip))
+        self.assertMultiLineEqual('\n'.join(fulltip), '\n'.join(shallowtip),
+                                  repo.ui.popbuffer())
 
         for f in fulltip:
             self.assertMultiLineEqual(fulltip[f].data(), shallowtip[f].data())
