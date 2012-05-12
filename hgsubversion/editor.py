@@ -364,7 +364,6 @@ class HgEditor(svnwrap.Editor):
                 else: # pragma: no cover
                     raise hgutil.Abort(*e.args)
             except: # pragma: no cover
-                print len(base), self.current.file
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window

@@ -135,8 +135,7 @@ class Tags(dict):
             svncommands.rebuildmeta(repo.ui, repo, ())
             return
         elif ver != self.VERSION:
-            print 'tagmap too new -- please upgrade'
-            raise NotImplementedError
+            raise hgutil.Abort('tagmap too new -- please upgrade')
         for l in f:
             ha, revision, tag = l.split(' ', 2)
             revision = int(revision)
@@ -228,8 +227,7 @@ class RevMap(dict):
             return iter([])
         ver = int(f.readline())
         if ver != cls.VERSION:
-            print 'revmap too new -- please upgrade'
-            raise NotImplementedError
+            raise hgutil.Abort('revmap too new -- please upgrade')
         return f
 
     def _load(self):
@@ -361,8 +359,7 @@ class FileMap(object):
         f = open(self.path)
         ver = int(f.readline())
         if ver != self.VERSION:
-            print 'filemap too new -- please upgrade'
-            raise NotImplementedError
+            raise hgutil.Abort('filemap too new -- please upgrade')
         self.load_fd(f, self.path)
         f.close()
 
