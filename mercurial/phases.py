@@ -6,8 +6,8 @@
                    Logilab SA        <contact@logilab.fr>
                    Augie Fackler     <durin42@gmail.com>
 
-    This software may be used and distributed according to the terms of the
-    GNU General Public License version 2 or any later version.
+    This software may be used and distributed according to the terms
+    of the GNU General Public License version 2 or any later version.
 
     ---
 
@@ -18,16 +18,16 @@ Basic Concept
 =============
 
 A 'changeset phase' is an indicator that tells us how a changeset is
-manipulated and communicated. The details of each phase is described below,
-here we describe the properties they have in common.
+manipulated and communicated. The details of each phase is described
+below, here we describe the properties they have in common.
 
-Like bookmarks, phases are not stored in history and thus are not permanent and
-leave no audit trail.
+Like bookmarks, phases are not stored in history and thus are not
+permanent and leave no audit trail.
 
-First, no changeset can be in two phases at once. Phases are ordered, so they
-can be considered from lowest to highest. The default, lowest phase is 'public'
-- this is the normal phase of existing changesets. A child changeset can not be
-in a lower phase than its parents.
+First, no changeset can be in two phases at once. Phases are ordered,
+so they can be considered from lowest to highest. The default, lowest
+phase is 'public' - this is the normal phase of existing changesets. A
+child changeset can not be in a lower phase than its parents.
 
 These phases share a hierarchy of traits:
 
@@ -41,18 +41,21 @@ Local commits are draft by default.
 Phase Movement and Exchange
 ===========================
 
-Phase data is exchanged by pushkey on pull and push. Some servers have a
-publish option set, we call such a server a "publishing server". Pushing a
-draft changeset to a publishing server changes the phase to public.
+Phase data is exchanged by pushkey on pull and push. Some servers have
+a publish option set, we call such a server a "publishing server".
+Pushing a draft changeset to a publishing server changes the phase to
+public.
 
 A small list of fact/rules define the exchange of phase:
 
 * old client never changes server states
 * pull never changes server states
 * publish and old server changesets are seen as public by client
-* any secret changeset seen in another repository is lowered to at least draft
+* any secret changeset seen in another repository is lowered to at
+  least draft
 
-Here is the final table summing up the 49 possible use cases of phase exchange:
+Here is the final table summing up the 49 possible use cases of phase
+exchange:
 
                            server
                   old     publish      non-publish
@@ -79,16 +82,17 @@ Legend:
     * N = new/not present,
     * P = public,
     * D = draft,
-    * X = not tracked (i.e., the old client or server has no internal way of
-          recording the phase.)
+    * X = not tracked (i.e., the old client or server has no internal
+          way of recording the phase.)
 
     passive = only pushes
 
 
     A cell here can be read like this:
 
-    "When a new client pushes a draft changeset (D) to a publishing server
-    where it's not present (N), it's marked public on both sides (P/P)."
+    "When a new client pushes a draft changeset (D) to a publishing
+    server where it's not present (N), it's marked public on both
+    sides (P/P)."
 
 Note: old client behave as a publishing server with draft only content
 - other people see it as public
@@ -260,8 +264,8 @@ class phasecache(object):
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
 
-    This function move boundary *forward* this means that all nodes are set
-    in the target phase or kept in a *lower* phase.
+    This function move boundary *forward* this means that all nodes
+    are set in the target phase or kept in a *lower* phase.
 
     Simplify boundary to contains phase roots only."""
     phcache = repo._phasecache.copy()
@@ -269,10 +273,11 @@ def advanceboundary(repo, targetphase, nodes):
     repo._phasecache.replace(phcache)
 
 def retractboundary(repo, targetphase, nodes):
-    """Set nodes back to a phase changing other nodes phases if necessary.
+    """Set nodes back to a phase changing other nodes phases if
+    necessary.
 
-    This function move boundary *backward* this means that all nodes are set
-    in the target phase or kept in a *higher* phase.
+    This function move boundary *backward* this means that all nodes
+    are set in the target phase or kept in a *higher* phase.
 
     Simplify boundary to contains phase roots only."""
     phcache = repo._phasecache.copy()
@@ -287,21 +292,22 @@ def listphases(repo):
         keys[hex(root)] = value
 
     if repo.ui.configbool('phases', 'publish', True):
-        # Add an extra data to let remote know we are a publishing repo.
-        # Publishing repo can't just pretend they are old repo. When pushing to
-        # a publishing repo, the client still need to push phase boundary
+        # Add an extra data to let remote know we are a publishing
+        # repo. Publishing repo can't just pretend they are old repo.
+        # When pushing to a publishing repo, the client still need to
+        # push phase boundary
         #
-        # Push do not only push changeset. It also push phase data. New
-        # phase data may apply to common changeset which won't be push (as they
-        # are common).  Here is a very simple example:
+        # Push do not only push changeset. It also push phase data.
+        # New phase data may apply to common changeset which won't be
+        # push (as they are common). Here is a very simple example:
         #
         # 1) repo A push changeset X as draft to repo B
         # 2) repo B make changeset X public
-        # 3) repo B push to repo A. X is not pushed but the data that X as now
-        #    public should
+        # 3) repo B push to repo A. X is not pushed but the data that
+        #    X as now public should
         #
-        # The server can't handle it on it's own as it has no idea of client
-        # phase data.
+        # The server can't handle it on it's own as it has no idea of
+        # client phase data.
         keys['publishing'] = 'True'
     return keys
 
