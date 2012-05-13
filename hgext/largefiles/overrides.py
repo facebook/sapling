@@ -169,6 +169,8 @@ def removelargefiles(ui, repo, *pats, **opts):
         # function handle this.
         if not getattr(repo, "_isaddremove", False):
             lfutil.reporemove(repo, remove, unlink=True)
+        else:
+            lfutil.reporemove(repo, remove, unlink=False)
     finally:
         wlock.release()
 

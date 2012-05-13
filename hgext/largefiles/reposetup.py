@@ -340,8 +340,9 @@ def reposetup(ui, repo):
                                     lfdirstate.normal(lfile)
                     for lfile in lfdirstate:
                         if lfile in modifiedfiles:
-                            if not os.path.exists(
-                                    repo.wjoin(lfutil.standin(lfile))):
+                            if (not os.path.exists(repo.wjoin(
+                               lfutil.standin(lfile)))) or \
+                               (not os.path.exists(repo.wjoin(lfile))):
                                 lfdirstate.drop(lfile)
 
                     result = orig(text=text, user=user, date=date, match=match,
