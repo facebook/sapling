@@ -444,6 +444,10 @@ Test cloning with --all-largefiles flag
   3 largefiles updated, 0 removed
   8 additional largefiles cached
 
+  $ hg clone --all-largefiles a ssh://localhost/a
+  abort: --all-largefiles is incompatible with non-local destination ssh://localhost/a
+  [255]
+
 Test pulling with --all-largefiles flag
 
   $ rm -Rf a-backup
