@@ -430,3 +430,37 @@ stripping many nodes on a complex graph (issue3299)
   $ hg strip 'not ancestors(x)'
   saved backup bundle to $TESTTMP/issue3299/.hg/strip-backup/*-backup.hg (glob)
 
+test hg strip -B bookmark
+
+  $ cd ..
+  $ hg init bookmarks
+  $ cd bookmarks
+  $ hg debugbuilddag '..<2.*1/2:m<2+3:c<m+3:a<2.:b'
+  $ hg bookmark -r 'a' 'todelete'
+  $ hg bookmark -r 'b' 'B'
+  $ hg bookmark -r 'b' 'nostrip'
+  $ hg bookmark -r 'c' 'delete'
+  $ hg up -C todelete
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg strip -B nostrip
+  bookmark 'nostrip' deleted
+  abort: empty revision set
+  [255]
+  $ hg strip -B todelete
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
+  bookmark 'todelete' deleted
+  $ hg id -ir dcbb326fdec2
+  abort: unknown revision 'dcbb326fdec2'!
+  [255]
+  $ hg id -ir d62d843c9a01
+  d62d843c9a01
+  $ hg bookmarks
+     B                         9:ff43616e5d0f
+     delete                    6:2702dd0c91e7
+  $ hg strip -B delete
+  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
+  bookmark 'delete' deleted
+  $ hg id -ir 6:2702dd0c91e7
+  abort: unknown revision '2702dd0c91e7'!
+  [255]

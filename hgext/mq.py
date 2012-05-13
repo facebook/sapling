@@ -2890,8 +2890,10 @@ def save(ui, repo, **opts):
           ('', 'no-backup', None, _('no backups')),
           ('', 'nobackup', None, _('no backups (DEPRECATED)')),
           ('n', '', None, _('ignored  (DEPRECATED)')),
-          ('k', 'keep', None, _("do not modify working copy during strip"))],
-          _('hg strip [-k] [-f] [-n] REV...'))
+          ('k', 'keep', None, _("do not modify working copy during strip")),
+          ('B', 'bookmark', '', _("remove revs only reachable from given"
+                                  " bookmark"))],
+          _('hg strip [-k] [-f] [-n] [-B bookmark] REV...'))
 def strip(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
@@ -2926,6 +2928,32 @@ def strip(ui, repo, *revs, **opts):
     cl = repo.changelog
     revs = list(revs) + opts.get('rev')
     revs = set(scmutil.revrange(repo, revs))
+
+    if opts.get('bookmark'):
+        mark = opts.get('bookmark')
+        marks = repo._bookmarks
+        if mark not in marks:
+            raise util.Abort(_("bookmark '%s' not found") % mark)
+
+        # If the requested bookmark is not the only one pointing to a
+        # a revision we have to only delete the bookmark and not strip
+        # anything. revsets cannot detect that case.
+        uniquebm = True
+        for m, n in marks.iteritems():
+            if m != mark and n == repo[mark].node():
+                uniquebm = False
+                break
+        if uniquebm:
+            rsrevs = repo.revs("ancestors(bookmark(%s)) - "
+                               "ancestors(head() and not bookmark(%s)) - "
+                               "ancestors(bookmark() and not bookmark(%s))",
+                               mark, mark, mark)
+            revs.update(set(rsrevs))
+        if not revs:
+            del marks[mark]
+            repo._writebookmarks(mark)
+            ui.write(_("bookmark '%s' deleted\n") % mark)
+
     if not revs:
         raise util.Abort(_('empty revision set'))
 
@@ -2973,6 +3001,12 @@ def strip(ui, repo, *revs, **opts):
 
     repo.mq.strip(repo, revs, backup=backup, update=update,
                   force=opts.get('force'))
+
+    if opts.get('bookmark'):
+        del marks[mark]
+        repo._writebookmarks(marks)
+        ui.write(_("bookmark '%s' deleted\n") % mark)
+
     return 0
 
 @command("qselect",
