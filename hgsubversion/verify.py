@@ -38,9 +38,12 @@ def verify(ui, repo, args=None, **opts):
     svnfiles = set()
     result = 0
 
+    hgfiles = set(ctx) - util.ignoredfiles
+
     svndata = svn.list_files(branchpath, srev)
     for i, (fn, type) in enumerate(svndata):
-        util.progress(ui, 'verify', i)
+        util.progress(ui, 'verify', i, total=len(hgfiles))
+
         if type != 'f':
             continue
         svnfiles.add(fn)
@@ -60,7 +63,6 @@ def verify(ui, repo, args=None, **opts):
             ui.write('wrong flags for: %s\n' % fn)
             result = 1
 
-    hgfiles = set(ctx) - util.ignoredfiles
     if hgfiles != svnfiles:
         unexpected = hgfiles - svnfiles
         for f in sorted(unexpected):
@@ -70,6 +72,6 @@ def verify(ui, repo, args=None, **opts):
             ui.write('missing file: %s\n' % f)
         result = 1
 
-    util.progress(ui, 'verify', None)
+    util.progress(ui, 'verify', None, total=len(hgfiles))
 
     return result
