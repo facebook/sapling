@@ -25,7 +25,7 @@ class NeverClosingStringIO(object):
 class RevisionData(object):
 
     __slots__ = [
-        'file', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
+        'file', 'added', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
         'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
         'exception',
     ]
@@ -36,6 +36,7 @@ class RevisionData(object):
 
     def clear(self):
         self.file = None
+        self.added = set()
         self.files = {}
         self.deleted = {}
         self.rev = None
@@ -194,6 +195,7 @@ class HgEditor(svnwrap.Editor):
         self.current.file = path
         if not copyfrom_path:
             self.ui.note('A %s\n' % path)
+            self.current.added.add(path)
             self.current.set(path, '', False, False)
             return
         self.ui.note('A+ %s\n' % path)

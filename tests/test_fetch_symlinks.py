@@ -50,7 +50,17 @@ class TestFetchSymlinks(test_util.TestBase):
     def test_symlinks_stupid(self):
         self.test_symlinks(True)
 
+class TestMergeSpecial(test_util.TestBase):
+    def test_special(self):
+        repo = self._load_fixture_and_fetch('addspecial.svndump',
+                                            subdir='trunk')
+        ctx = repo['tip']
+        self.assertEqual(ctx['fnord'].flags(), 'l')
+        self.assertEqual(ctx['exe'].flags(), 'x')
+
 def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchSymlinks),
-          ]
+    all_tests = [
+        unittest.TestLoader().loadTestsFromTestCase(TestFetchSymlinks),
+        unittest.TestLoader().loadTestsFromTestCase(TestMergeSpecial),
+        ]
     return unittest.TestSuite(all_tests)

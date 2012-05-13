@@ -415,6 +415,19 @@ class SubversionRepo(object):
             else:
                 raise
 
+        # if we're not pulling the whole repo, svn fails to report
+        # file properties for files merged from subtrees outside ours
+        if self.svn_url != self.root:
+            links, execs = editor.current.symlinks, editor.current.execfiles
+            l = len(self.subdir) - 1
+            for f in editor.current.added:
+                sf = f[l:]
+                if links[f] or execs[f]:
+                    continue
+                props = self.list_props(sf, revision)
+                links[f] = props.get('svn:special') == '*'
+                execs[f] = props.get('svn:executable') == '*'
+
     def get_revision(self, revision, editor):
         ''' feed the contents of the given revision to the given editor '''
 
