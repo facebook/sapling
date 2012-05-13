@@ -14,6 +14,7 @@ from mercurial import util as hgutil
 
 from hgsubversion import util
 from hgsubversion import svncommands
+from hgsubversion import verify
 from hgsubversion import wrappers
 
 expected_info_output = '''URL: %(repourl)s/%(branch)s
@@ -248,13 +249,12 @@ class UtilityTests(test_util.TestBase):
     def test_svnverify(self):
         repo, repo_path = self.load_and_fetch('binaryfiles.svndump',
                                               noupdate=False)
-        ret = svncommands.verify(self.ui(), repo, [], rev=1)
+        ret = verify.verify(self.ui(), repo, [], rev=1)
         self.assertEqual(0, ret)
         repo_path = self.load_svndump('binaryfiles-broken.svndump')
         u = self.ui()
         u.pushbuffer()
-        ret = svncommands.verify(u, repo, [test_util.fileurl(repo_path)],
-                                 rev=1)
+        ret = verify.verify(u, repo, [test_util.fileurl(repo_path)], rev=1)
         output = u.popbuffer()
         self.assertEqual(1, ret)
         output = re.sub(r'file://\S+', 'file://', output)
@@ -274,14 +274,14 @@ missing file: binary3
 
         ui = self.ui()
 
-        self.assertEqual(SUCCESS, svncommands.verify(ui, self.repo, rev='tip'))
+        self.assertEqual(SUCCESS, verify.verify(ui, self.repo, rev='tip'))
 
         corrupt_source = test_util.fileurl(self.load_svndump('corrupt.svndump'))
 
         repo.ui.setconfig('paths', 'default', corrupt_source)
 
         ui.pushbuffer()
-        code = svncommands.verify(ui, repo, rev='tip')
+        code = verify.verify(ui, repo, rev='tip')
         actual = ui.popbuffer()
 
         actual = actual.replace(corrupt_source, '$REPO')

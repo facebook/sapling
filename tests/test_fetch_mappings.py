@@ -12,6 +12,7 @@ from mercurial import util as hgutil
 
 from hgsubversion import maps
 from hgsubversion import svncommands
+from hgsubversion import verify
 from hgsubversion import util
 
 class MapTests(test_util.TestBase):
@@ -270,7 +271,7 @@ class MapTests(test_util.TestBase):
         repo = self.repo
 
         for r in repo:
-            self.assertEquals(svncommands.verify(ui, repo, rev=r), 0)
+            self.assertEquals(verify.verify(ui, repo, rev=r), 0)
 
     def test_branchmap_verify_stupid(self):
         '''test verify on a branchmapped clone (stupid)'''

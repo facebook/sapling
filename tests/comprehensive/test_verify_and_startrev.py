@@ -14,7 +14,7 @@ except ImportError:
 from mercurial import hg
 from mercurial import ui
 
-from hgsubversion import svncommands
+from hgsubversion import verify
 
 # these fixtures contain no files at HEAD and would result in empty clones
 _skipshallow = set([
@@ -42,7 +42,7 @@ def _do_case(self, name, stupid, layout):
     assert len(self.repo) > 0
     for i in repo:
         ctx = repo[i]
-        self.assertEqual(svncommands.verify(repo.ui, repo, rev=ctx.node()), 0)
+        self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node()), 0)
 
     # check a startrev clone
     if layout == 'single' and name not in _skipshallow:
@@ -58,8 +58,8 @@ def _do_case(self, name, stupid, layout):
         shallowtip = shallowrepo['tip']
 
         repo.ui.pushbuffer()
-        self.assertEqual(0, svncommands.verify(repo.ui, shallowrepo,
-                                               rev=shallowtip.node()))
+        self.assertEqual(0, verify.verify(repo.ui, shallowrepo,
+                                          rev=shallowtip.node()))
 
         # viewing diff's of lists of files is easier on the eyes
         self.assertMultiLineEqual('\n'.join(fulltip), '\n'.join(shallowtip),
