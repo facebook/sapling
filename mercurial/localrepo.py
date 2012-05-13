@@ -390,7 +390,7 @@ class localrepository(repo.repository):
                 # ignore tags to unknown nodes
                 self.changelog.rev(v)
                 t[k] = v
-            except error.LookupError:
+            except (error.LookupError, ValueError):
                 pass
         return t
 
@@ -906,6 +906,8 @@ class localrepository(repo.repository):
         l = self._lockref and self._lockref()
         if l:
             l.postrelease.append(callback)
+        else:
+            callback()
 
     def lock(self, wait=True):
         '''Lock the repository store (.hg/store) and return a weak reference
@@ -1195,7 +1197,9 @@ class localrepository(repo.repository):
         finally:
             wlock.release()
 
-        self.hook("commit", node=hex(ret), parent1=hookp1, parent2=hookp2)
+        def commithook(node=hex(ret), parent1=hookp1, parent2=hookp2):
+            self.hook("commit", node=node, parent1=parent1, parent2=parent2)
+        self._afterlock(commithook)
         return ret
 
     def commitctx(self, ctx, error=False):

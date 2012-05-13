@@ -2137,12 +2137,11 @@ def qimport(ui, repo, *filename, **opts):
                 rev=opts.get('rev'), git=opts.get('git'))
         finally:
             q.savedirty()
-
-
-        if imported and opts.get('push') and not opts.get('rev'):
-            return q.push(repo, imported[-1])
     finally:
         lock.release()
+
+    if imported and opts.get('push') and not opts.get('rev'):
+        return q.push(repo, imported[-1])
     return 0
 
 def qinit(ui, repo, create):

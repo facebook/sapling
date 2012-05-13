@@ -910,7 +910,10 @@ def show_changeset(ui, repo, opts, buffered=False):
     if not (tmpl or style):
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl:
-            tmpl = templater.parsestring(tmpl)
+            try:
+                tmpl = templater.parsestring(tmpl)
+            except SyntaxError:
+                tmpl = templater.parsestring(tmpl, quoted=False)
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
 
