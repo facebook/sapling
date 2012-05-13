@@ -511,7 +511,7 @@ class localrepository(repo.repository):
         '''return the tipmost branch head in heads'''
         tip = heads[-1]
         for h in reversed(heads):
-            if 'close' not in self.changelog.read(h)[5]:
+            if not self[h].closesbranch():
                 tip = h
                 break
         return tip
@@ -1555,8 +1555,7 @@ class localrepository(repo.repository):
             fbheads = set(self.changelog.nodesbetween([start], bheads)[2])
             bheads = [h for h in bheads if h in fbheads]
         if not closed:
-            bheads = [h for h in bheads if
-                      ('close' not in self.changelog.read(h)[5])]
+            bheads = [h for h in bheads if not self[h].closesbranch()]
         return bheads
 
     def branches(self, nodes):
@@ -2206,7 +2205,7 @@ class localrepository(repo.repository):
                 heads = cl.heads()
                 dh = len(heads) - len(oldheads)
                 for h in heads:
-                    if h not in oldheads and 'close' in self[h].extra():
+                    if h not in oldheads and self[h].closesbranch():
                         dh -= 1
             htext = ""
             if dh:

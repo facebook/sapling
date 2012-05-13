@@ -395,7 +395,7 @@ def closed(repo, subset, x):
     """
     # i18n: "closed" is a keyword
     getargs(x, 0, 0, _("closed takes no arguments"))
-    return [r for r in subset if repo[r].extra().get('close')]
+    return [r for r in subset if repo[r].closesbranch()]
 
 def contains(repo, subset, x):
     """``contains(pattern)``

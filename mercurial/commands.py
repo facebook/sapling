@@ -1349,7 +1349,7 @@ def commit(ui, repo, *pats, **opts):
 
     if not opts.get('close_branch'):
         for r in parents:
-            if r.extra().get('close') and r.branch() == branch:
+            if r.closesbranch() and r.branch() == branch:
                 ui.status(_('reopening closed branch head %d\n') % r)
 
     if ui.debugflag:
@@ -5414,7 +5414,7 @@ def summary(ui, repo, **opts):
         t += _(' (merge)')
     elif branch != parents[0].branch():
         t += _(' (new branch)')
-    elif (parents[0].extra().get('close') and
+    elif (parents[0].closesbranch() and
           pnode in repo.branchheads(branch, closed=True)):
         t += _(' (head closed)')
     elif not (st[0] or st[1] or st[2] or st[3] or st[4] or st[9]):

@@ -441,7 +441,7 @@ def branches(web, req, tmpl):
     tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
     heads = web.repo.heads()
     parity = paritygen(web.stripecount)
-    sortkey = lambda ctx: ('close' not in ctx.extra(), ctx.rev())
+    sortkey = lambda ctx: (not ctx.closesbranch(), ctx.rev())
 
     def entries(limit, **map):
         count = 0

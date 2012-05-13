@@ -186,6 +186,8 @@ class changectx(object):
         return self._changeset[4]
     def branch(self):
         return encoding.tolocal(self._changeset[5].get("branch"))
+    def closesbranch(self):
+        return 'close' in self._changeset[5]
     def extra(self):
         return self._changeset[5]
     def tags(self):
@@ -895,6 +897,8 @@ class workingctx(changectx):
         return self._clean
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
+    def closesbranch(self):
+        return 'close' in self._extra
     def extra(self):
         return self._extra
 
