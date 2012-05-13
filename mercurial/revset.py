@@ -490,6 +490,27 @@ def contains(repo, subset, x):
                     break
     return s
 
+def converted(repo, subset, x):
+    """``converted([id])``
+    Changesets converted from the given identifier in the old repository if
+    present, or all converted changesets if no identifier is specified.
+    """
+
+    # There is exactly no chance of resolving the revision, so do a simple
+    # string compare and hope for the best
+
+    # i18n: "converted" is a keyword
+    rev = None
+    l = getargs(x, 0, 1, _('converted takes one or no arguments'))
+    if l:
+        rev = getstring(l[0], _('converted requires a revision'))
+
+    def _matchvalue(r):
+        source = repo[r].extra().get('convert_revision', None)
+        return source is not None and (rev is None or source.startswith(rev))
+
+    return [r for r in subset if _matchvalue(r)]
+
 def date(repo, subset, x):
     """``date(interval)``
     Changesets within the interval, see :hg:`help dates`.
@@ -1302,6 +1323,7 @@ symbols = {
     "children": children,
     "closed": closed,
     "contains": contains,
+    "converted": converted,
     "date": date,
     "desc": desc,
     "descendants": descendants,
