@@ -17,7 +17,7 @@ This module implements most phase logic in mercurial.
 Basic Concept
 =============
 
-A 'changeset phases' is an indicator that tells us how a changeset is
+A 'changeset phase' is an indicator that tells us how a changeset is
 manipulated and communicated. The details of each phase is described below,
 here we describe the properties they have in common.
 
@@ -36,25 +36,23 @@ These phases share a hierarchy of traits:
     draft:               X
     secret:
 
-local commits are draft by default
+Local commits are draft by default.
 
-Phase movement and exchange
-============================
+Phase Movement and Exchange
+===========================
 
-Phase data are exchanged by pushkey on pull and push. Some server have a
-publish option set, we call them publishing server. Pushing to such server make
-draft changeset publish.
+Phase data is exchanged by pushkey on pull and push. Some servers have a
+publish option set, we call such a server a "publishing server". Pushing a
+draft changeset to a publishing server changes the phase to public.
 
 A small list of fact/rules define the exchange of phase:
 
 * old client never changes server states
 * pull never changes server states
-* publish and old server csets are seen as public by client
+* publish and old server changesets are seen as public by client
+* any secret changeset seen in another repository is lowered to at least draft
 
-* Any secret changeset seens in another repository is lowered to at least draft
-
-
-Here is the final table summing up the 49 possible usecase of phase exchange:
+Here is the final table summing up the 49 possible use cases of phase exchange:
 
                            server
                   old     publish      non-publish
@@ -81,7 +79,7 @@ Legend:
     * N = new/not present,
     * P = public,
     * D = draft,
-    * X = not tracked (ie: the old client or server has no internal way of
+    * X = not tracked (i.e., the old client or server has no internal way of
           recording the phase.)
 
     passive = only pushes
@@ -92,7 +90,7 @@ Legend:
     "When a new client pushes a draft changeset (D) to a publishing server
     where it's not present (N), it's marked public on both sides (P/P)."
 
-Note: old client behave as publish server with Draft only content
+Note: old client behave as a publishing server with draft only content
 - other people see it as public
 - content is pushed as draft
 
@@ -110,7 +108,7 @@ phasenames = ['public', 'draft', 'secret']
 def _filterunknown(ui, changelog, phaseroots):
     """remove unknown nodes from the phase boundary
 
-    Nothing is lost as unknown nodes only hold data for their descendants
+    Nothing is lost as unknown nodes only hold data for their descendants.
     """
     updated = False
     nodemap = changelog.nodemap # to filter unknown nodes
@@ -282,7 +280,7 @@ def retractboundary(repo, targetphase, nodes):
     repo._phasecache.replace(phcache)
 
 def listphases(repo):
-    """List phases root for serialisation over pushkey"""
+    """List phases root for serialization over pushkey"""
     keys = {}
     value = '%i' % draft
     for root in repo._phasecache.phaseroots[draft]:
