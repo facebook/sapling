@@ -32,7 +32,7 @@ initialize darcs repo
 
 branch and update
 
-  $ darcs get darcs-repo darcs-clone >/dev/null
+  $ darcs get -q darcs-repo darcs-clone >/dev/null
   $ cd darcs-clone
   $ echo c >> a
   $ echo c > c
@@ -48,11 +48,10 @@ update source
   $ darcs record -a -l -m p1.2
   Finished recording patch 'p1.2'
 
-  $ darcs pull -a --no-set-default ../darcs-clone
-  Backing up ./a(-darcs-backup0)
+  $ darcs pull -q -a --no-set-default ../darcs-clone
+  Backing up ./a(*) (glob)
   We have conflicts in the following files:
   ./a
-  Finished pulling and applying.
   $ sleep 1
   $ echo e > a
   $ echo f > f
