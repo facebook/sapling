@@ -19,7 +19,7 @@
   $ hg ci -m 'make bar and baz copies of foo' -d '2 0'
   created new head
   $ hg bookmark premerge1
-  $ hg merge
+  $ hg merge -r 1
   merging baz and foo to baz
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

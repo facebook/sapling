@@ -4168,17 +4168,43 @@ def merge(ui, repo, node=None, **opts):
     if not node:
         node = opts.get('rev')
 
-    if not node:
+    if node:
+        node = scmutil.revsingle(repo, node).node()
+
+    if not node and repo._bookmarkcurrent:
+        bmheads = repo.bookmarkheads(repo._bookmarkcurrent)
+        curhead = repo[repo._bookmarkcurrent]
+        if len(bmheads) == 2:
+            if curhead == bmheads[0]:
+                node = bmheads[1]
+            else:
+                node = bmheads[0]
+        elif len(bmheads) > 2:
+            raise util.Abort(_("multiple matching bookmarks to merge - "
+                "please merge with an explicit rev or bookmark"),
+                hint=_("run 'hg heads' to see all heads"))
+        elif len(bmheads) <= 1:
+            raise util.Abort(_("no matching bookmark to merge - "
+                "please merge with an explicit rev or bookmark"),
+                hint=_("run 'hg heads' to see all heads"))
+
+    if not node and not repo._bookmarkcurrent:
         branch = repo[None].branch()
         bheads = repo.branchheads(branch)
-        if len(bheads) > 2:
+        nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
+
+        if len(nbhs) > 2:
             raise util.Abort(_("branch '%s' has %d heads - "
                                "please merge with an explicit rev")
                              % (branch, len(bheads)),
                              hint=_("run 'hg heads .' to see heads"))
 
         parent = repo.dirstate.p1()
-        if len(bheads) == 1:
+        if len(nbhs) == 1:
+            if len(bheads) > 1:
+                raise util.Abort(_("heads are bookmarked - "
+                                   "please merge with an explicit rev"),
+                                 hint=_("run 'hg heads' to see all heads"))
             if len(repo.heads()) > 1:
                 raise util.Abort(_("branch '%s' has one head - "
                                    "please merge with an explicit rev")
@@ -4193,9 +4219,10 @@ def merge(ui, repo, node=None, **opts):
             raise util.Abort(_('working directory not at a head revision'),
                              hint=_("use 'hg update' or merge with an "
                                     "explicit revision"))
-        node = parent == bheads[0] and bheads[-1] or bheads[0]
-    else:
-        node = scmutil.revsingle(repo, node).node()
+        if parent == nbhs[0]:
+            node = nbhs[-1]
+        else:
+            node = nbhs[0]
 
     if opts.get('preview'):
         # find nodes that are ancestors of p2 but not of p1
