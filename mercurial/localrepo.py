@@ -180,6 +180,14 @@ class localrepository(repo.repository):
     def _writebookmarks(self, marks):
       bookmarks.write(self)
 
+    def bookmarkheads(self, bookmark):
+        name = bookmark.split('@', 1)[0]
+        heads = []
+        for mark, n in self._bookmarks.iteritems():
+            if mark.split('@', 1)[0] == name:
+                heads.append(n)
+        return heads
+
     @storecache('phaseroots')
     def _phasecache(self):
         return phases.phasecache(self, self._phasedefaults)
