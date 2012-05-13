@@ -228,6 +228,11 @@ def _readtagcache(ui, repo):
 
     # N.B. in case 4 (nodes destroyed), "new head" really means "newly
     # exposed".
+    if not len(repo.file('.hgtags')):
+        # No tags have ever been committed, so we can avoid a
+        # potentially expensive search.
+        return (repoheads, cachefnode, None, True)
+
     newheads = [head
                 for head in repoheads
                 if head not in set(cacheheads)]
