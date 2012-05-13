@@ -206,7 +206,7 @@ pypats = [
   ],
   # warnings
   [
-    (r'^\s*except:$', "warning: naked except clause"),
+    (r'^\s*except\s*:', "warning: naked except clause"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
   ]
