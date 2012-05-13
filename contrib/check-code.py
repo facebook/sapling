@@ -135,7 +135,7 @@ pypats = [
     (r'^\s+\w+=\w+[^,)\n]$', "missing whitespace in assignment"),
     (r'(\s+)try:\n((?:\n|\1\s.*\n)+?)\1except.*?:\n'
      r'((?:\n|\1\s.*\n)+?)\1finally:', 'no try/except/finally in Py2.4'),
-    (r'.{85}', "line too long"),
+    (r'.{81}', "line too long"),
     (r' x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
@@ -206,7 +206,6 @@ pypats = [
   ],
   # warnings
   [
-    (r'.{81}', "warning: line over 80 characters"),
     (r'^\s*except:$', "warning: naked except clause"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
@@ -226,7 +225,7 @@ cpats = [
     (r'^  ', "don't use spaces to indent"),
     (r'\S\t', "don't use tabs except for indent"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
-    (r'.{85}', "line too long"),
+    (r'.{81}', "line too long"),
     (r'(while|if|do|for)\(', "use space after while/if/do/for"),
     (r'return\(', "return is not a function"),
     (r' ;', "no space before ;"),
