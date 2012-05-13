@@ -149,6 +149,45 @@ divergent bookmarks
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
 
+update a remote bookmark from a non-head to a head
+
+  $ hg up -q Y
+  $ echo c3 > f2
+  $ hg ci -Am3
+  adding f2
+  created new head
+  $ hg push ../a
+  pushing to ../a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  updating bookmark Y
+  $ hg -R ../a book
+   * X                         1:0d2164f0ce0d
+     Y                         3:f6fc62dde3c0
+     Z                         1:0d2164f0ce0d
+
+diverging a remote bookmark fails
+
+  $ hg up -q 4e3505fd9583
+  $ echo c4 > f2
+  $ hg ci -Am4
+  adding f2
+  created new head
+  $ hg book -f Y
+  $ hg push ../a
+  pushing to ../a
+  searching for changes
+  abort: push creates new remote head 4efff6d98829!
+  (did you forget to merge? use push -f to force)
+  [255]
+  $ hg -R ../a book
+   * X                         1:0d2164f0ce0d
+     Y                         3:f6fc62dde3c0
+     Z                         1:0d2164f0ce0d
+
 hgweb
 
   $ cat <<EOF > .hg/hgrc
@@ -166,7 +205,7 @@ hgweb
   phases	
   namespaces	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
-  Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
+  Y	4efff6d98829d9c824c621afd6e3f01865f5439f
   foobar	9b140be1080824d768c5a4691a564088eede71f9
   Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
   foo	0000000000000000000000000000000000000000
@@ -202,12 +241,12 @@ hgweb
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files (+1 heads)
+  added 5 changesets with 5 changes to 3 files (+3 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
      X                         1:9b140be10808
-     Y                         0:4e3505fd9583
+     Y                         4:4efff6d98829
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
      foobar                    1:9b140be10808
