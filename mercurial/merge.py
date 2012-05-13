@@ -248,10 +248,7 @@ class mergestate(object):
         return self._state[dfile][0]
 
     def __iter__(self):
-        l = self._state.keys()
-        l.sort()
-        for f in l:
-            yield f
+        return iter(sorted(self._state))
 
     def files(self):
         return self._state.keys()
