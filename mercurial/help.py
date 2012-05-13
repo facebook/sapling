@@ -69,7 +69,7 @@ def topicmatch(kw):
         if lowercontains(name) or lowercontains(docs):
             results['extensions'].append((name, _(docs).splitlines()[0]))
         for cmd, entry in getattr(mod, 'cmdtable', {}).iteritems():
-            if kw in cmd or lowercontains(entry[2]):
+            if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
                 cmdname = cmd.split('|')[0].lstrip('^')
                 results['extensioncommands'].append(
                     (cmdname, _(getattr(cmd, '__doc__', ''))))

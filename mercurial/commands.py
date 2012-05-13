@@ -3063,7 +3063,9 @@ def heads(ui, repo, *branchrevs, **opts):
 
 @command('help',
     [('e', 'extension', None, _('show only help for extensions')),
-     ('c', 'command', None, _('show only help for commands'))],
+     ('c', 'command', None, _('show only help for commands')),
+     ('k', 'keyword', '', _('show topics matching keyword')),
+     ],
     _('[-ec] [TOPIC]'))
 def help_(ui, name=None, unknowncmd=False, full=True, **opts):
     """show help for a given topic or a help overview
@@ -3309,7 +3311,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             doc = doc()
 
         ui.write("%s\n\n" % header)
-        ui.write("%s" % minirst.format(doc, textwidth, indent=4))
+        ui.write(minirst.format(doc, textwidth, indent=4))
         try:
             cmdutil.findcmd(name, table)
             ui.write(_('\nuse "hg help -c %s" to see help for '
@@ -3358,6 +3360,18 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         ui.write('\n')
         ui.write(_('use "hg help extensions" for information on enabling '
                    'extensions\n'))
+
+    kw = opts.get('keyword')
+    if kw:
+        matches = help.topicmatch(kw)
+        for t, title in (('topics', _('Topics')),
+                         ('commands', _('Commands')),
+                         ('extensions', _('Extensions')),
+                         ('extensioncommands', _('Extension Commands'))):
+            if matches[t]:
+                ui.write('%s:\n' % title)
+                ui.write(minirst.format(minirst.maketable(matches[t])))
+        return
 
     if name and name != 'shortlist':
         i = None
