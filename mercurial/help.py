@@ -6,9 +6,9 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import gettext, _
-import sys, os
+import itertools, sys, os
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
-import util
+import encoding, util
 
 def listexts(header, exts, indent=1):
     '''return a text listing of the given extensions'''
@@ -26,6 +26,54 @@ def extshelp():
     doc += listexts(_('enabled extensions:'), extensions.enabled())
     doc += listexts(_('disabled extensions:'), extensions.disabled())
     return doc
+
+def topicmatch(kw):
+    """Return help topics matching kw.
+
+    Returns {'section': [(name, summary), ...], ...} where section is
+    one of topics, commands, extensions, or extensioncommands.
+    """
+    kw = encoding.lower(kw)
+    def lowercontains(container):
+        return kw in encoding.lower(_(container))
+    results = {'topics': [],
+               'commands': [],
+               'extensions': [],
+               'extensioncommands': [],
+               }
+    for names, header, doc in helptable:
+        if (sum(map(lowercontains, names))
+            or lowercontains(header)
+            or lowercontains(doc())):
+            results['topics'].append((names[0], header))
+    import commands # avoid cycle
+    for cmd, entry in commands.table.iteritems():
+        if cmd.startswith('debug'):
+            continue
+        if len(entry) == 3:
+            summary = entry[2]
+        else:
+            summary = ''
+        docs = getattr(entry[0], '__doc__', None) or ''
+        if kw in cmd or lowercontains(summary) or lowercontains(docs):
+            doclines = _(docs).splitlines()
+            if doclines:
+                summary = doclines[0]
+            cmdname = cmd.split('|')[0].lstrip('^')
+            results['commands'].append((cmdname, summary))
+    for name, docs in itertools.chain(
+        extensions.enabled().iteritems(),
+        extensions.disabled().iteritems()):
+        # extensions.load ignores the UI argument
+        mod = extensions.load(None, name, '')
+        if lowercontains(name) or lowercontains(docs):
+            results['extensions'].append((name, _(docs).splitlines()[0]))
+        for cmd, entry in getattr(mod, 'cmdtable', {}).iteritems():
+            if kw in cmd or lowercontains(entry[2]):
+                cmdname = cmd.split('|')[0].lstrip('^')
+                results['extensioncommands'].append(
+                    (cmdname, _(getattr(cmd, '__doc__', ''))))
+    return results
 
 def loaddoc(topic):
     """Return a delayed loader for help/topic.txt."""
