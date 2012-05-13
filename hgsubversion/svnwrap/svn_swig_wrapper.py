@@ -165,7 +165,7 @@ class SubversionRepo(object):
         # --username and --password override URL credentials
         self.username = parsed[0]
         self.password = parsed[1]
-        self.svn_url = parsed[2]
+        self.svn_url = core.svn_path_canonicalize(parsed[2])
         self.auth_baton_pool = core.Pool()
         self.auth_baton = _create_auth_baton(self.auth_baton_pool, password_stores)
         # self.init_ra_and_client() assumes that a pool already exists
