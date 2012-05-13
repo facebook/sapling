@@ -274,7 +274,7 @@ def disabled():
 
     paths = _disabledpaths()
     if not paths:
-        return None
+        return {}
 
     exts = {}
     for name, path in paths.iteritems():
