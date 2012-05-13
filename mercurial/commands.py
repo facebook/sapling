@@ -936,22 +936,29 @@ def branches(ui, repo, active=False, closed=False):
     """
 
     hexfunc = ui.debugflag and hex or short
-    activebranches = [repo[n].branch() for n in repo.heads()]
-    def testactive(tag, node):
-        realhead = tag in activebranches
-        open = node in repo.branchheads(tag, closed=False)
-        return realhead and open
-    branches = sorted([(testactive(tag, node), repo.changelog.rev(node), tag)
-                          for tag, node in repo.branchtags().items()],
-                      reverse=True)
 
-    for isactive, node, tag in branches:
+    activebranches = set([repo[n].branch() for n in repo.heads()])
+    branches = []
+    for tag, heads in repo.branchmap().iteritems():
+        for h in reversed(heads):
+            ctx = repo[h]
+            isopen = not ctx.closesbranch()
+            if isopen:
+                tip = ctx
+                break
+        else:
+            tip = repo[heads[-1]]
+        isactive = tag in activebranches and isopen
+        branches.append((tip, isactive, isopen))
+    branches.sort(key=lambda i: (i[1], i[0].rev(), i[0].branch(), i[2]),
+                  reverse=True)
+
+    for ctx, isactive, isopen in branches:
         if (not active) or isactive:
-            hn = repo.lookup(node)
             if isactive:
                 label = 'branches.active'
                 notice = ''
-            elif hn not in repo.branchheads(tag, closed=False):
+            elif not isopen:
                 if not closed:
                     continue
                 label = 'branches.closed'
@@ -959,11 +966,12 @@ def branches(ui, repo, active=False, closed=False):
             else:
                 label = 'branches.inactive'
                 notice = _(' (inactive)')
-            if tag == repo.dirstate.branch():
+            if ctx.branch() == repo.dirstate.branch():
                 label = 'branches.current'
-            rev = str(node).rjust(31 - encoding.colwidth(tag))
-            rev = ui.label('%s:%s' % (rev, hexfunc(hn)), 'log.changeset')
-            tag = ui.label(tag, label)
+            rev = str(ctx.rev()).rjust(31 - encoding.colwidth(ctx.branch()))
+            rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
+                           'log.changeset')
+            tag = ui.label(ctx.branch(), label)
             if ui.quiet:
                 ui.write("%s\n" % tag)
             else:
