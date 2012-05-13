@@ -471,12 +471,8 @@ static void _index_clearcaches(indexObject *self)
 	if (self->cache) {
 		Py_ssize_t i;
 
-		for (i = 0; i < self->raw_length; i++) {
-			if (self->cache[i]) {
-				Py_DECREF(self->cache[i]);
-				self->cache[i] = NULL;
-			}
-		}
+		for (i = 0; i < self->raw_length; i++)
+			Py_CLEAR(self->cache[i]);
 		free(self->cache);
 		self->cache = NULL;
 	}
@@ -922,10 +918,8 @@ static void nt_invalidate_added(indexObject *self, Py_ssize_t start)
 		nt_insert(self, PyString_AS_STRING(node), -1);
 	}
 
-	if (start == 0) {
-		Py_DECREF(self->added);
-		self->added = NULL;
-	}
+	if (start == 0)
+		Py_CLEAR(self->added);
 }
 
 /*
