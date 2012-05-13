@@ -608,7 +608,7 @@ Test collapsing a middle revision in-place
 Test collapsing in place
 
   $ hg rebase --collapse -b . -d 0
-  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/1352765a01d4-backup.hg
+  saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
   $ hg st --change . --copies
   M a
   M c
