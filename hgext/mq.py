@@ -49,12 +49,12 @@ create other, independent patch queues with the :hg:`qqueue` command.
 
 If the working directory contains uncommitted files, qpush, qpop and
 qgoto abort immediately. If -f/--force is used, the changes are
-discarded. Setting:
+discarded. Setting::
 
   [mq]
-  check = True
+  keepchanges = True
 
-make them behave as if -c/--check were passed, and non-conflicting
+make them behave as if --keep-changes were passed, and non-conflicting
 local changes will be tolerated and preserved. If incompatible options
 such as -f/--force or --exact are passed, this setting is ignored.
 '''
@@ -695,7 +695,7 @@ class queue(object):
 
     def apply(self, repo, series, list=False, update_status=True,
               strict=False, patchdir=None, merge=None, all_files=None,
-              tobackup=None, check=False):
+              tobackup=None, keepchanges=False):
         wlock = lock = tr = None
         try:
             wlock = repo.wlock()
@@ -704,7 +704,7 @@ class queue(object):
             try:
                 ret = self._apply(repo, series, list, update_status,
                                   strict, patchdir, merge, all_files=all_files,
-                                  tobackup=tobackup, check=check)
+                                  tobackup=tobackup, keepchanges=keepchanges)
                 tr.close()
                 self.savedirty()
                 return ret
@@ -726,7 +726,7 @@ class queue(object):
 
     def _apply(self, repo, series, list=False, update_status=True,
                strict=False, patchdir=None, merge=None, all_files=None,
-               tobackup=None, check=False):
+               tobackup=None, keepchanges=False):
         """returns (error, hash)
 
         error = 1 for unable to read, 2 for patch failed, 3 for patch
@@ -767,7 +767,7 @@ class queue(object):
                 if tobackup:
                     touched = patchmod.changedfiles(self.ui, repo, pf)
                     touched = set(touched) & tobackup
-                    if touched and check:
+                    if touched and keepchanges:
                         raise AbortNoCleanup(
                             _("local changes found, refresh first"))
                     self.backup(repo, touched, copy=True)
@@ -980,9 +980,9 @@ class queue(object):
             else:
                 raise util.Abort(_('patch "%s" already exists') % name)
 
-    def checkforcecheck(self, check, force):
-        if force and check:
-            raise util.Abort(_('cannot use both --force and --check'))
+    def checkkeepchanges(self, keepchanges, force):
+        if force and keepchanges:
+            raise util.Abort(_('cannot use both --force and --keep-changes'))
 
     def new(self, repo, patchfn, *pats, **opts):
         """options:
@@ -1182,8 +1182,9 @@ class queue(object):
         raise util.Abort(_("patch %s not in series") % patch)
 
     def push(self, repo, patch=None, force=False, list=False, mergeq=None,
-             all=False, move=False, exact=False, nobackup=False, check=False):
-        self.checkforcecheck(check, force)
+             all=False, move=False, exact=False, nobackup=False,
+             keepchanges=False):
+        self.checkkeepchanges(keepchanges, force)
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
@@ -1238,13 +1239,13 @@ class queue(object):
             if start == len(self.series):
                 self.ui.warn(_('patch series already fully applied\n'))
                 return 1
-            if not force and not check:
+            if not force and not keepchanges:
                 self.checklocalchanges(repo, refresh=self.applied)
 
             if exact:
-                if check:
+                if keepchanges:
                     raise util.Abort(
-                        _("cannot use --exact and --check together"))
+                        _("cannot use --exact and --keep-changes together"))
                 if move:
                     raise util.Abort(_('cannot use --exact and --move '
                                        'together'))
@@ -1288,9 +1289,9 @@ class queue(object):
                 end = self.series.index(patch, start) + 1
 
             tobackup = set()
-            if (not nobackup and force) or check:
+            if (not nobackup and force) or keepchanges:
                 m, a, r, d = self.checklocalchanges(repo, force=True)
-                if check:
+                if keepchanges:
                     tobackup.update(m + a + r + d)
                 else:
                     tobackup.update(m + a)
@@ -1302,7 +1303,7 @@ class queue(object):
                     ret = self.mergepatch(repo, mergeq, s, diffopts)
                 else:
                     ret = self.apply(repo, s, list, all_files=all_files,
-                                     tobackup=tobackup, check=check)
+                                     tobackup=tobackup, keepchanges=keepchanges)
             except: # re-raises
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.p1()
@@ -1333,8 +1334,8 @@ class queue(object):
             wlock.release()
 
     def pop(self, repo, patch=None, force=False, update=True, all=False,
-            nobackup=False, check=False):
-        self.checkforcecheck(check, force)
+            nobackup=False, keepchanges=False):
+        self.checkkeepchanges(keepchanges, force)
         wlock = repo.wlock()
         try:
             if patch:
@@ -1381,11 +1382,12 @@ class queue(object):
 
             tobackup = set()
             if update:
-                m, a, r, d = self.checklocalchanges(repo, force=force or check)
+                m, a, r, d = self.checklocalchanges(
+                    repo, force=force or keepchanges)
                 if force:
                     if not nobackup:
                         tobackup.update(m + a)
-                elif check:
+                elif keepchanges:
                     tobackup.update(m + a + r + d)
 
             self.applieddirty = True
@@ -1418,7 +1420,7 @@ class queue(object):
                     raise util.Abort(_("deletions found between repo revs"))
 
                 tobackup = set(a + m + r) & tobackup
-                if check and tobackup:
+                if keepchanges and tobackup:
                     self.localchangesfound()
                 self.backup(repo, tobackup)
 
@@ -1999,12 +2001,12 @@ class queue(object):
         self.removeundo(repo)
         return imported
 
-def fixcheckopts(ui, opts):
-    if (not ui.configbool('mq', 'check') or opts.get('force')
+def fixkeepchangesopts(ui, opts):
+    if (not ui.configbool('mq', 'keepchanges') or opts.get('force')
         or opts.get('exact')):
         return opts
     opts = dict(opts)
-    opts['check'] = True
+    opts['keep_changes'] = True
     return opts
 
 @command("qdelete|qremove|qrm",
@@ -2548,7 +2550,8 @@ def fold(ui, repo, *files, **opts):
         wlock.release()
 
 @command("qgoto",
-         [('c', 'check', None, _('tolerate non-conflicting local changes')),
+         [('', 'keep-changes', None,
+           _('tolerate non-conflicting local changes')),
           ('f', 'force', None, _('overwrite any local changes')),
           ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qgoto [OPTION]... PATCH'))
@@ -2556,17 +2559,17 @@ def goto(ui, repo, patch, **opts):
     '''push or pop patches until named patch is at top of stack
 
     Returns 0 on success.'''
-    opts = fixcheckopts(ui, opts)
+    opts = fixkeepchangesopts(ui, opts)
     q = repo.mq
     patch = q.lookup(patch)
     nobackup = opts.get('no_backup')
-    check = opts.get('check')
+    keepchanges = opts.get('keep_changes')
     if q.isapplied(patch):
         ret = q.pop(repo, patch, force=opts.get('force'), nobackup=nobackup,
-                    check=check)
+                    keepchanges=keepchanges)
     else:
         ret = q.push(repo, patch, force=opts.get('force'), nobackup=nobackup,
-                     check=check)
+                     keepchanges=keepchanges)
     q.savedirty()
     return ret
 
@@ -2687,7 +2690,8 @@ def savename(path):
     return newpath
 
 @command("^qpush",
-         [('c', 'check', None, _('tolerate non-conflicting local changes')),
+         [('', 'keep-changes', None,
+           _('tolerate non-conflicting local changes')),
           ('f', 'force', None, _('apply on top of local changes')),
           ('e', 'exact', None,
            _('apply the target patch to its recorded parent')),
@@ -2704,7 +2708,7 @@ def push(ui, repo, patch=None, **opts):
     """push the next patch onto the stack
 
     By default, abort if the working directory contains uncommitted
-    changes. With -c/--check, abort only if the uncommitted files
+    changes. With --keep-changes, abort only if the uncommitted files
     overlap with patched files. With -f/--force, backup and patch over
     uncommitted changes.
 
@@ -2713,7 +2717,7 @@ def push(ui, repo, patch=None, **opts):
     q = repo.mq
     mergeq = None
 
-    opts = fixcheckopts(ui, opts)
+    opts = fixkeepchangesopts(ui, opts)
     if opts.get('merge'):
         if opts.get('name'):
             newpath = repo.join(opts.get('name'))
@@ -2727,14 +2731,15 @@ def push(ui, repo, patch=None, **opts):
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
                  exact=opts.get('exact'), nobackup=opts.get('no_backup'),
-                 check=opts.get('check'))
+                 keepchanges=opts.get('keep_changes'))
     return ret
 
 @command("^qpop",
          [('a', 'all', None, _('pop all patches')),
           ('n', 'name', '',
            _('queue name to pop (DEPRECATED)'), _('NAME')),
-          ('c', 'check', None, _('tolerate non-conflicting local changes')),
+          ('', 'keep-changes', None,
+           _('tolerate non-conflicting local changes')),
           ('f', 'force', None, _('forget any local changes to patched files')),
           ('', 'no-backup', None, _('do not save backup copies of files'))],
          _('hg qpop [-a] [-f] [PATCH | INDEX]'))
@@ -2746,13 +2751,13 @@ def pop(ui, repo, patch=None, **opts):
     the top of the stack.
 
     By default, abort if the working directory contains uncommitted
-    changes. With -c/--check, abort only if the uncommitted files
+    changes. With --keep-changes, abort only if the uncommitted files
     overlap with patched files. With -f/--force, backup and discard
     changes made to such files.
 
     Return 0 on success.
     """
-    opts = fixcheckopts(ui, opts)
+    opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
         q = queue(ui, repo.path, repo.join(opts.get('name')))
@@ -2762,7 +2767,7 @@ def pop(ui, repo, patch=None, **opts):
         q = repo.mq
     ret = q.pop(repo, patch, force=opts.get('force'), update=localupdate,
                 all=opts.get('all'), nobackup=opts.get('no_backup'),
-                check=opts.get('check'))
+                keepchanges=opts.get('keep_changes'))
     q.savedirty()
     return ret
 

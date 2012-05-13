@@ -62,9 +62,10 @@ help
   If the working directory contains uncommitted files, qpush, qpop and qgoto
   abort immediately. If -f/--force is used, the changes are discarded. Setting:
   
-    [mq] check = True
+    [mq]
+    keepchanges = True
   
-  make them behave as if -c/--check were passed, and non-conflicting local
+  make them behave as if --keep-changes were passed, and non-conflicting local
   changes will be tolerated and preserved. If incompatible options such as
   -f/--force or --exact are passed, this setting is ignored.
   
