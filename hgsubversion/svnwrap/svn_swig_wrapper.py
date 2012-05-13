@@ -572,6 +572,9 @@ class SubversionRepo(object):
         if not path or path == '.':
             return self.svn_url
         assert path[0] != '/', path
-        return '/'.join((self.svn_url,
-                         urllib.quote(path).rstrip('/'),
-                         ))
+        path = path.rstrip('/')
+        try:
+            # new in svn 1.7
+            return core.svn_uri_canonicalize(self.svn_url + '/' + path)
+        except AttributeError:
+            return self.svn_url + '/' + urllib.quote(path)

@@ -22,6 +22,14 @@ cd branches/foo
 ln -s a fnord
 svn add fnord
 svn ci -msymlink fnord
+mkdir 'spacy name'
+echo a > 'spacy name/spacy file'
+svn add 'spacy name'
+svn ci -mspacy 'spacy name'
+svn up
+echo b > 'spacy name/surprise ~'
+svn add 'spacy name/surprise ~'
+svn ci -mtilde 'spacy name'
 svn up ../..
 echo foo > exe
 chmod +x exe
