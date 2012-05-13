@@ -488,9 +488,9 @@ class ui(object):
 
     def flush(self):
         try: self.fout.flush()
-        except: pass
+        except (IOError, ValueError): pass
         try: self.ferr.flush()
-        except: pass
+        except (IOError, ValueError): pass
 
     def interactive(self):
         '''is interactive input allowed?

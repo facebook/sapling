@@ -762,7 +762,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
         ofp.close()
     except:
         try: os.unlink(temp)
-        except: pass
+        except OSError: pass
         raise
     return temp
 
