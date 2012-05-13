@@ -78,10 +78,12 @@ class changectx(object):
             self._node = repo._tagscache.tags[changeid]
             self._rev = repo.changelog.rev(self._node)
             return
-        if changeid in repo.branchtags():
-            self._node = repo.branchtags()[changeid]
+        try:
+            self._node = repo.branchtip(changeid)
             self._rev = repo.changelog.rev(self._node)
             return
+        except error.RepoLookupError:
+            pass
 
         self._node = repo.changelog._partialmatch(changeid)
         if self._node is not None:

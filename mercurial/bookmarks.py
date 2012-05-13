@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex
-from mercurial import encoding, util
+from mercurial import encoding, error, util
 import errno, os
 
 def valid(mark):
@@ -140,8 +140,8 @@ def unsetcurrent(repo):
 
 def updatecurrentbookmark(repo, oldnode, curbranch):
     try:
-        return update(repo, oldnode, repo.branchtags()[curbranch])
-    except KeyError:
+        return update(repo, oldnode, repo.branchtip(curbranch))
+    except error.RepoLookupError:
         if curbranch == "default": # no default branch!
             return update(repo, oldnode, repo.lookup("tip"))
         else:

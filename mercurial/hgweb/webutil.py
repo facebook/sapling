@@ -98,16 +98,23 @@ def nodebranchdict(repo, ctx):
     branches = []
     branch = ctx.branch()
     # If this is an empty repo, ctx.node() == nullid,
-    # ctx.branch() == 'default', but branchtags() is
-    # an empty dict. Using dict.get avoids a traceback.
-    if repo.branchtags().get(branch) == ctx.node():
+    # ctx.branch() == 'default'.
+    try:
+        branchnode = repo.branchtip(branch)
+    except error.RepoLookupError:
+        branchnode = None
+    if branchnode == ctx.node():
         branches.append({"name": branch})
     return branches
 
 def nodeinbranch(repo, ctx):
     branches = []
     branch = ctx.branch()
-    if branch != 'default' and repo.branchtags().get(branch) != ctx.node():
+    try:
+        branchnode = repo.branchtip(branch)
+    except error.RepoLookupError:
+        branchnode = None
+    if branch != 'default' and branchnode != ctx.node():
         branches.append({"name": branch})
     return branches
 

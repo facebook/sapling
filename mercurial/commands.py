@@ -827,7 +827,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if mark in marks and not force:
             raise util.Abort(_("bookmark '%s' already exists "
                                "(use -f to force)") % mark)
-        if ((mark in repo.branchtags() or mark == repo.dirstate.branch())
+        if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
             and not force):
             raise util.Abort(
                 _("a bookmark cannot have the name of an existing branch"))
@@ -903,7 +903,7 @@ def branch(ui, repo, label=None, **opts):
             repo.dirstate.setbranch(label)
             ui.status(_('reset working directory to branch %s\n') % label)
         elif label:
-            if not opts.get('force') and label in repo.branchtags():
+            if not opts.get('force') and label in repo.branchmap():
                 if label not in [p.branch() for p in repo.parents()]:
                     raise util.Abort(_('a branch of the same name already'
                                        ' exists'),

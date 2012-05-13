@@ -38,7 +38,10 @@ def fetch(ui, repo, source='default', **opts):
 
     parent, p2 = repo.dirstate.parents()
     branch = repo.dirstate.branch()
-    branchnode = repo.branchtags().get(branch)
+    try:
+        branchnode = repo.branchtip(branch)
+    except error.RepoLookupError:
+        branchnode = None
     if parent != branchnode:
         raise util.Abort(_('working dir not at branch tip '
                            '(use "hg update" to check out branch tip)'))

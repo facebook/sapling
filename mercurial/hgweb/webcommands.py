@@ -794,7 +794,11 @@ def graph(web, req, tmpl):
         desc = cgi.escape(templatefilters.nonempty(desc))
         user = cgi.escape(templatefilters.person(ctx.user()))
         branch = ctx.branch()
-        branch = branch, web.repo.branchtags().get(branch) == ctx.node()
+        try:
+            branchnode = web.repo.branchtip(branch)
+        except error.RepoLookupError:
+            branchnode = None
+        branch = branch, branchnode == ctx.node()
         data.append((node, vtx, edges, desc, user, age, branch, ctx.tags(),
                      ctx.bookmarks()))
 

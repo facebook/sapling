@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import scmutil, util, filemerge, copies, subrepo
+import error, scmutil, util, filemerge, copies, subrepo
 import errno, os, shutil
 
 class mergestate(object):
@@ -529,8 +529,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         if node is None:
             # tip of current branch
             try:
-                node = repo.branchtags()[wc.branch()]
-            except KeyError:
+                node = repo.branchtip(wc.branch())
+            except error.RepoLookupError:
                 if wc.branch() == "default": # no default branch!
                     node = repo.lookup("tip") # update to tip
                 else:

@@ -507,17 +507,27 @@ class localrepository(repo.repository):
         self.updatebranchcache()
         return self._branchcache
 
+    def _branchtip(self, heads):
+        '''return the tipmost branch head in heads'''
+        tip = heads[-1]
+        for h in reversed(heads):
+            if 'close' not in self.changelog.read(h)[5]:
+                tip = h
+                break
+        return tip
+
+    def branchtip(self, branch):
+        '''return the tip node for a given branch'''
+        if branch not in self.branchmap():
+            raise error.RepoLookupError(_("unknown branch '%s'") % branch)
+        return self._branchtip(self.branchmap()[branch])
+
     def branchtags(self):
         '''return a dict where branch names map to the tipmost head of
         the branch, open heads come before closed'''
         bt = {}
         for bn, heads in self.branchmap().iteritems():
-            tip = heads[-1]
-            for h in reversed(heads):
-                if 'close' not in self.changelog.read(h)[5]:
-                    tip = h
-                    break
-            bt[bn] = tip
+            bt[bn] = self._branchtip(heads)
         return bt
 
     def _readbranchcache(self):
