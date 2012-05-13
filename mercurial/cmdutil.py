@@ -1345,7 +1345,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     a = ctx.filectx(f)
                     if f in base.manifest():
                         b = base.filectx(f)
-                        return (a.data() == b.data()
+                        return (not a.cmp(b)
                                 and a.flags() == b.flags())
                     else:
                         return False
