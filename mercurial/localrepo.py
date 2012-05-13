@@ -1180,7 +1180,7 @@ class localrepository(repo.repository):
                 self.hook("precommit", throw=True, parent1=hookp1,
                           parent2=hookp2)
                 ret = self.commitctx(cctx, True)
-            except:
+            except: # re-raises
                 if edited:
                     self.ui.write(
                         _('note: commit message saved in %s\n') % msgfn)

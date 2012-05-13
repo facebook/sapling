@@ -760,7 +760,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
             ofp.write(chunk)
         ifp.close()
         ofp.close()
-    except:
+    except: # re-raises
         try: os.unlink(temp)
         except OSError: pass
         raise

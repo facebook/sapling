@@ -8,9 +8,6 @@
   $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 || true
-  contrib/shrink-revlog.py:0:
-   >         except:
-   warning: naked except clause
   hgext/convert/cvsps.py:0:
    >                     ui.write('Ancestors: %s\n' % (','.join(r)))
    warning: unwrapped ui message
@@ -69,15 +66,6 @@
    >     ui.note("hg ci -m '%s'\n" % msg)
    warning: unwrapped ui message
   hgext/mq.py:0:
-   >                 except:
-   warning: naked except clause
-  hgext/mq.py:0:
-   >             except:
-   warning: naked except clause
-   warning: naked except clause
-   warning: naked except clause
-   warning: naked except clause
-  hgext/mq.py:0:
    >         ui.write("mq:     %s\n" % ', '.join(m))
    warning: unwrapped ui message
   hgext/patchbomb.py:0:
@@ -116,9 +104,6 @@
   mercurial/commands.py:0:
    >             ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
    warning: unwrapped ui message
-  mercurial/commands.py:0:
-   >         except:
-   warning: naked except clause
   mercurial/commands.py:0:
    >         ui.write("common heads: %s\n" % " ".join([short(n) for n in common]))
    warning: unwrapped ui message
@@ -177,33 +162,6 @@
   mercurial/commands.py:0:
    >     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
    warning: unwrapped ui message
-  mercurial/dispatch.py:0:
-   >         except:
-   warning: naked except clause
-  mercurial/dispatch.py:0:
-   >     except:
-   warning: naked except clause
-  mercurial/hg.py:0:
-   >     except:
-   warning: naked except clause
-  mercurial/keepalive.py:0:
-   >         except:
-   warning: naked except clause
-  mercurial/localrepo.py:0:
-   >             except:
-   warning: naked except clause
-  mercurial/patch.py:0:
-   >     except:
-   warning: naked except clause
-  mercurial/repair.py:0:
-   >         except:
-   warning: naked except clause
-  mercurial/repair.py:0:
-   >     except:
-   warning: naked except clause
-  mercurial/util.py:0:
-   >     except:
-   warning: naked except clause
   tests/autodiff.py:0:
    >         ui.write('data lost for: %s\n' % fn)
    warning: unwrapped ui message

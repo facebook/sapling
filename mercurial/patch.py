@@ -245,7 +245,7 @@ def extract(ui, fileobj):
                         tmpfp.write('\n')
             elif not diffs_seen and message and content_type == 'text/plain':
                 message += '\n' + payload
-    except:
+    except: # re-raises
         tmpfp.close()
         os.unlink(tmpname)
         raise

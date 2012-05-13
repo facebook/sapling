@@ -712,7 +712,7 @@ class queue(object):
                 tr.close()
                 self.savedirty()
                 return 2, repo.dirstate.p1()
-            except:
+            except: # re-raises
                 try:
                     tr.abort()
                 finally:
@@ -1077,7 +1077,7 @@ class queue(object):
                     r = self.qrepo()
                     if r:
                         r[None].add([patchfn])
-                except:
+                except: # re-raises
                     repo.rollback()
                     raise
             except Exception:
@@ -1303,7 +1303,7 @@ class queue(object):
                 else:
                     ret = self.apply(repo, s, list, all_files=all_files,
                                      tobackup=tobackup, check=check)
-            except:
+            except: # re-raises
                 self.ui.warn(_('cleaning up working directory...'))
                 node = repo.dirstate.p1()
                 hg.revert(repo, node, None)
@@ -1629,7 +1629,7 @@ class queue(object):
                 self.applieddirty = True
                 self.strip(repo, [top], update=False,
                            backup='strip')
-            except:
+            except: # re-raises
                 repo.dirstate.invalidate()
                 raise
 
@@ -1643,7 +1643,7 @@ class queue(object):
                 # only write patch after a successful commit
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))
-            except:
+            except: # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
                 self.savedirty()

@@ -3775,7 +3775,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 tr.close()
             if msgs:
                 repo.savecommitmessage('\n* * *\n'.join(msgs))
-        except:
+        except: # re-raises
             # wlock.release() indirectly calls dirstate.write(): since
             # we're crashing, we do not want to change the working dir
             # parent after all, so make sure it writes nothing

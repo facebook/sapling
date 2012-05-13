@@ -131,7 +131,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
                 file, troffset, ignore = tr.entries[i]
                 repo.sopener(file, 'a').truncate(troffset)
             tr.close()
-        except:
+        except: # re-raises
             tr.abort()
             raise
 
@@ -160,7 +160,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         for m in updatebm:
             bm[m] = repo['.'].node()
         bookmarks.write(repo)
-    except:
+    except: # re-raises
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
                     % backupfile)

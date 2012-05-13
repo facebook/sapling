@@ -203,10 +203,10 @@ pypats = [
     (r'(?i)descendent', "the proper spelling is descendAnt"),
     (r'\.debug\(\_', "don't mark debug messages for translation"),
     (r'\.strip\(\)\.split\(\)', "no need to strip before splitting"),
+    (r'^\s*except\s*:', "warning: naked except clause", r'#.*re-raises'),
   ],
   # warnings
   [
-    (r'^\s*except\s*:', "warning: naked except clause"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "warning: unwrapped ui message"),
   ]
@@ -355,7 +355,13 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
         prelines = None
         errors = []
-        for p, msg in pats:
+        for pat in pats:
+            if len(pat) == 3:
+                p, msg, ignore = pat
+            else:
+                p, msg = pat
+                ignore = None
+
             # fix-up regexes for multiline searches
             po = p
             # \s doesn't match \n
@@ -385,6 +391,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                     if debug:
                         print "Skipping %s for %s:%s (check-code -ignore)" % (
                             name, f, n)
+                    continue
+                elif ignore and re.search(ignore, l, re.MULTILINE):
                     continue
                 bd = ""
                 if blame:

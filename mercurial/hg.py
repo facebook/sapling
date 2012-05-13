@@ -203,7 +203,7 @@ def copystore(ui, srcrepo, destpath):
         else:
             ui.debug("copied %d files\n" % num)
         return destlock
-    except:
+    except: # re-raises
         release(destlock)
         raise
 

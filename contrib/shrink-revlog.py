@@ -240,7 +240,7 @@ def shrink(ui, repo, **opts):
             writerevs(ui, r1, r2, order, tr)
             report(ui, r1, r2)
             tr.close()
-        except:
+        except: # re-raises
             # Abort transaction first, so we truncate the files before
             # deleting them.
             tr.abort()

@@ -88,7 +88,7 @@ def _runcatch(req):
                 return _dispatch(req)
             finally:
                 ui.flush()
-        except:
+        except: # re-raises
             # enter the debugger when we hit an exception
             if '--debugger' in req.args:
                 traceback.print_exc()
@@ -204,7 +204,7 @@ def _runcatch(req):
         return inst.code
     except socket.error, inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
-    except:
+    except: # re-raises
         ui.warn(_("** unknown exception encountered,"
                   " please report by visiting\n"))
         ui.warn(_("**  http://mercurial.selenic.com/wiki/BugTracker\n"))
