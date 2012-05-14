@@ -558,6 +558,7 @@ def filediff(web, req, tmpl):
     if fctx is not None:
         n = fctx.node()
         path = fctx.path()
+        ctx = fctx.changectx()
     else:
         n = ctx.node()
         # path already defined in except clause
@@ -567,7 +568,7 @@ def filediff(web, req, tmpl):
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    diffs = webutil.diffs(web.repo, tmpl, fctx or ctx, [path], parity, style)
+    diffs = webutil.diffs(web.repo, tmpl, ctx, [path], parity, style)
     rename = fctx and webutil.renamelink(fctx) or []
     ctx = fctx and fctx or ctx
     return tmpl("filediff",

@@ -13,6 +13,7 @@ setting up repo
 change permissions for git diffs
 
   $ chmod +x a
+  $ hg rm b
   $ hg ci -Amb
 
 set up hgweb
@@ -90,7 +91,7 @@ revision
   </tr>
   <tr>
    <th class="author">children</th>
-   <td class="author"> <a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td>
+   <td class="author"> <a href="/rev/559edbd9ed20">559edbd9ed20</a></td>
   </tr>
   <tr>
    <th class="files">files</th>
@@ -177,7 +178,7 @@ raw revision
 
 diff removed file
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/b'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -188,7 +189,7 @@ diff removed file
   <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
   <script type="text/javascript" src="/static/mercurial.js"></script>
   
-  <title>test: a diff</title>
+  <title>test: b diff</title>
   </head>
   <body>
   
@@ -199,23 +200,23 @@ diff removed file
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
-  <li><a href="/graph/78e4ebad7cdf">graph</a></li>
+  <li><a href="/shortlog/559edbd9ed20">log</a></li>
+  <li><a href="/graph/559edbd9ed20">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/78e4ebad7cdf">changeset</a></li>
-  <li><a href="/file/78e4ebad7cdf">browse</a></li>
+  <li><a href="/rev/559edbd9ed20">changeset</a></li>
+  <li><a href="/file/559edbd9ed20">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/78e4ebad7cdf/a">file</a></li>
-  <li><a href="/file/tip/a">latest</a></li>
+  <li><a href="/file/559edbd9ed20/b">file</a></li>
+  <li><a href="/file/tip/b">latest</a></li>
   <li class="active">diff</li>
-  <li><a href="/annotate/78e4ebad7cdf/a">annotate</a></li>
-  <li><a href="/log/78e4ebad7cdf/a">file log</a></li>
-  <li><a href="/raw-file/78e4ebad7cdf/a">raw</a></li>
+  <li><a href="/annotate/559edbd9ed20/b">annotate</a></li>
+  <li><a href="/log/559edbd9ed20/b">file log</a></li>
+  <li><a href="/raw-file/559edbd9ed20/b">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -224,7 +225,7 @@ diff removed file
   
   <div class="main">
   <h2><a href="/">test</a></h2>
-  <h3>diff a @ 1:78e4ebad7cdf</h3>
+  <h3>diff b @ 1:559edbd9ed20</h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -246,7 +247,7 @@ diff removed file
   </tr>
   <tr>
    <th>parents</th>
-   <td></td>
+   <td><a href="/file/0cd96de13884/b">0cd96de13884</a> </td>
   </tr>
   <tr>
    <th>children</th>
@@ -258,10 +259,10 @@ diff removed file
   <div class="overflow">
   <div class="sourcefirst">   line diff</div>
   
-  <div class="source bottomline parity0"><pre><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ b/a	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -0,0 +1,1 @@
-  </span><a href="#l1.4" id="l1.4">     1.4</a> <span class="plusline">+a
+  <div class="source bottomline parity0"><pre><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- a/b	Thu Jan 01 00:00:00 1970 +0000
+  </span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  </span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -1,1 +0,0 @@
+  </span><a href="#l1.4" id="l1.4">     1.4</a> <span class="minusline">-b
   </span></pre></div>
   </div>
   </div>
@@ -350,7 +351,7 @@ revision
   </tr>
   <tr>
    <th class="author">children</th>
-   <td class="author"> <a href="/rev/78e4ebad7cdf">78e4ebad7cdf</a></td>
+   <td class="author"> <a href="/rev/559edbd9ed20">559edbd9ed20</a></td>
   </tr>
   <tr>
    <th class="files">files</th>
@@ -463,23 +464,23 @@ diff removed file
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/78e4ebad7cdf">log</a></li>
-  <li><a href="/graph/78e4ebad7cdf">graph</a></li>
+  <li><a href="/shortlog/559edbd9ed20">log</a></li>
+  <li><a href="/graph/559edbd9ed20">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/78e4ebad7cdf">changeset</a></li>
-  <li><a href="/file/78e4ebad7cdf">browse</a></li>
+  <li><a href="/rev/559edbd9ed20">changeset</a></li>
+  <li><a href="/file/559edbd9ed20">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/78e4ebad7cdf/a">file</a></li>
+  <li><a href="/file/559edbd9ed20/a">file</a></li>
   <li><a href="/file/tip/a">latest</a></li>
   <li class="active">diff</li>
-  <li><a href="/annotate/78e4ebad7cdf/a">annotate</a></li>
-  <li><a href="/log/78e4ebad7cdf/a">file log</a></li>
-  <li><a href="/raw-file/78e4ebad7cdf/a">raw</a></li>
+  <li><a href="/annotate/559edbd9ed20/a">annotate</a></li>
+  <li><a href="/log/559edbd9ed20/a">file log</a></li>
+  <li><a href="/raw-file/559edbd9ed20/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -488,7 +489,7 @@ diff removed file
   
   <div class="main">
   <h2><a href="/">test</a></h2>
-  <h3>diff a @ 1:78e4ebad7cdf</h3>
+  <h3>diff a @ 1:559edbd9ed20</h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -522,12 +523,9 @@ diff removed file
   <div class="overflow">
   <div class="sourcefirst">   line diff</div>
   
-  <div class="source bottomline parity0"><pre><a href="#l1.1" id="l1.1">     1.1</a> new file mode 100755
-  <a href="#l1.2" id="l1.2">     1.2</a> <span class="minusline">--- /dev/null
-  </span><a href="#l1.3" id="l1.3">     1.3</a> <span class="plusline">+++ b/a
-  </span><a href="#l1.4" id="l1.4">     1.4</a> <span class="atline">@@ -0,0 +1,1 @@
-  </span><a href="#l1.5" id="l1.5">     1.5</a> <span class="plusline">+a
-  </span></pre></div>
+  <div class="source bottomline parity0"><pre><a href="#l1.1" id="l1.1">     1.1</a> old mode 100644
+  <a href="#l1.2" id="l1.2">     1.2</a> new mode 100755
+  </pre></div>
   </div>
   </div>
   </div>
