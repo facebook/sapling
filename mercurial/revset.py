@@ -740,7 +740,11 @@ def node_(repo, subset, x):
     if len(n) == 40:
         rn = repo[n].rev()
     else:
-        rn = repo.changelog.rev(repo.changelog._partialmatch(n))
+        rn = None
+        pm = repo.changelog._partialmatch(n)
+        if pm is not None:
+            rn = repo.changelog.rev(pm)
+
     return [r for r in subset if r == rn]
 
 def outgoing(repo, subset, x):
