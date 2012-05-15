@@ -9,6 +9,7 @@
  Based roughly on Python difflib
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,8 @@
 #include "util.h"
 
 struct line {
-	int hash, len, n, e;
+	int hash, n, e;
+	Py_ssize_t len;
 	const char *l;
 };
 
@@ -31,7 +33,7 @@ struct hunk {
 	struct hunk *next;
 };
 
-static int splitlines(const char *a, int len, struct line **lr)
+static int splitlines(const char *a, Py_ssize_t len, struct line **lr)
 {
 	unsigned hash;
 	int i;
@@ -338,7 +340,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	PyObject *result = NULL;
 	struct line *al, *bl;
 	struct hunk l, *h;
-	int an, bn, len = 0, la, lb, count;
+	int an, bn, count;
+	Py_ssize_t len = 0, la, lb;
 	PyThreadState *_save;
 
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
@@ -407,7 +410,7 @@ static PyObject *fixws(PyObject *self, PyObject *args)
 	PyObject *s, *result = NULL;
 	char allws, c;
 	const char *r;
-	int i, rlen, wlen = 0;
+	Py_ssize_t i, rlen, wlen = 0;
 	char *w;
 
 	if (!PyArg_ParseTuple(args, "Sb:fixws", &s, &allws))
