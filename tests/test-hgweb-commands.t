@@ -663,15 +663,24 @@ File-related
   </body>
   </html>
   
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/filediff/1/foo/?style=raw'
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/filediff/0/foo/?style=raw'
   200 Script output follows
   
   
-  diff -r 000000000000 -r a4f92ed23982 foo
+  diff -r 000000000000 -r 2ef0ac749a14 foo
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +foo
+  
+  
+  
+  
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/filediff/1/foo/?style=raw'
+  200 Script output follows
+  
+  
   
   
   

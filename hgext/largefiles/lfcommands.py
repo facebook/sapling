@@ -14,6 +14,7 @@ import shutil
 from mercurial import util, match as match_, hg, node, context, error, \
     cmdutil, scmutil
 from mercurial.i18n import _
+from mercurial.lock import release
 
 import lfutil
 import basestore
@@ -55,10 +56,12 @@ def lfconvert(ui, src, dest, *pats, **opts):
     rdst = hg.repository(ui, dest, create=True)
 
     success = False
+    dstwlock = dstlock = None
     try:
         # Lock destination to prevent modification while it is converted to.
         # Don't need to lock src because we are just reading from its history
         # which can't change.
+        dstwlock = rdst.wlock()
         dstlock = rdst.lock()
 
         # Get a list of all changesets in the source.  The easy way to do this
@@ -111,10 +114,11 @@ def lfconvert(ui, src, dest, *pats, **opts):
             ui.progress(_('converting revisions'), None)
         success = True
     finally:
+        rdst.dirstate.clear()
+        release(dstlock, dstwlock)
         if not success:
             # we failed, remove the new directory
             shutil.rmtree(rdst.root)
-        dstlock.release()
 
 def _addchangeset(ui, rsrc, rdst, ctx, revmap):
  # Convert src parents to dst parents
