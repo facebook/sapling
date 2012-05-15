@@ -71,6 +71,13 @@ def perftags(ui, repo):
         return len(repo.tags())
     timer(t)
 
+def perfancestors(ui, repo):
+    heads = repo.changelog.headrevs()
+    def d():
+        for a in repo.changelog.ancestors(*heads):
+            pass
+    timer(d)
+
 def perfdirstate(ui, repo):
     "a" in repo.dirstate
     def d():
@@ -226,6 +233,7 @@ cmdtable = {
     'perfindex': (perfindex, []),
     'perfheads': (perfheads, []),
     'perftags': (perftags, []),
+    'perfancestors': (perfancestors, []),
     'perfdirstate': (perfdirstate, []),
     'perfdirstatedirs': (perfdirstate, []),
     'perfdirstatewrite': (perfdirstatewrite, []),
