@@ -12,7 +12,7 @@ import tempfile, zlib, shutil
 from i18n import _
 from node import hex, nullid, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
-import context
+import collections, context
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -1588,12 +1588,12 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     def lrugetfilectx():
         cache = {}
-        order = []
+        order = collections.deque()
         def getfilectx(f, ctx):
             fctx = ctx.filectx(f, filelog=cache.get(f))
             if f not in cache:
                 if len(cache) > 20:
-                    del cache[order.pop(0)]
+                    del cache[order.popleft()]
                 cache[f] = fctx.filelog()
             else:
                 order.remove(f)

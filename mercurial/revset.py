@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re
+import re, collections
 import parser, util, error, discovery, hbisect, phases
 import node
 import bookmarks as bookmarksmod
@@ -17,10 +17,10 @@ def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
     cut = followfirst and 1 or None
     cl = repo.changelog
-    visit = list(revs)
+    visit = collections.deque(revs)
     seen = set([node.nullrev])
     while visit:
-        for parent in cl.parentrevs(visit.pop(0))[:cut]:
+        for parent in cl.parentrevs(visit.popleft())[:cut]:
             if parent not in seen:
                 visit.append(parent)
                 seen.add(parent)

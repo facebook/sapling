@@ -14,7 +14,7 @@ hide platform-specific details from the core.
 """
 
 from i18n import _
-import error, osutil, encoding
+import error, osutil, encoding, collections
 import errno, re, shutil, sys, tempfile, traceback
 import os, time, datetime, calendar, textwrap, signal
 import imp, socket, urllib
@@ -205,12 +205,12 @@ def cachefunc(func):
 def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}
-    order = []
+    order = collections.deque()
     if func.func_code.co_argcount == 1:
         def f(arg):
             if arg not in cache:
                 if len(cache) > 20:
-                    del cache[order.pop(0)]
+                    del cache[order.popleft()]
                 cache[arg] = func(arg)
             else:
                 order.remove(arg)
@@ -220,7 +220,7 @@ def lrucachefunc(func):
         def f(*args):
             if args not in cache:
                 if len(cache) > 20:
-                    del cache[order.pop(0)]
+                    del cache[order.popleft()]
                 cache[args] = func(*args)
             else:
                 order.remove(args)
@@ -865,7 +865,7 @@ class chunkbuffer(object):
         Returns less than L bytes if the iterator runs dry."""
         left = l
         buf = ''
-        queue = self._queue
+        queue = collections.deque(self._queue)
         while left > 0:
             # refill the queue
             if not queue:
@@ -878,13 +878,14 @@ class chunkbuffer(object):
                 if not queue:
                     break
 
-            chunk = queue.pop(0)
+            chunk = queue.popleft()
             left -= len(chunk)
             if left < 0:
-                queue.insert(0, chunk[left:])
+                queue.appendleft(chunk[left:])
                 buf += chunk[:left]
             else:
                 buf += chunk
+        self._queue = list(queue)
 
         return buf
 

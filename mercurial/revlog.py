@@ -15,7 +15,7 @@ and O(changes) merge between branches.
 from node import bin, hex, nullid, nullrev
 from i18n import _
 import ancestor, mdiff, parsers, error, util, dagutil
-import struct, zlib, errno
+import struct, zlib, errno, collections
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -362,13 +362,13 @@ class revlog(object):
         """return the set of all nodes ancestral to a given node, including
          the node itself, stopping when stop is matched"""
         reachable = set((node,))
-        visit = [node]
+        visit = collections.deque([node])
         if stop:
             stopn = self.rev(stop)
         else:
             stopn = 0
         while visit:
-            n = visit.pop(0)
+            n = visit.popleft()
             if n == stop:
                 continue
             if n == nullid:
@@ -389,10 +389,10 @@ class revlog(object):
         an ancestor of itself.  Results are in breadth-first order:
         parents of each rev in revs, then parents of those, etc.  Result
         does not include the null revision."""
-        visit = list(revs)
+        visit = collections.deque(revs)
         seen = set([nullrev])
         while visit:
-            for parent in self.parentrevs(visit.pop(0)):
+            for parent in self.parentrevs(visit.popleft()):
                 if parent not in seen:
                     visit.append(parent)
                     seen.add(parent)
@@ -447,9 +447,9 @@ class revlog(object):
 
         # take all ancestors from heads that aren't in has
         missing = set()
-        visit = [r for r in heads if r not in has]
+        visit = collections.deque(r for r in heads if r not in has)
         while visit:
-            r = visit.pop(0)
+            r = visit.popleft()
             if r in missing:
                 continue
             else:
