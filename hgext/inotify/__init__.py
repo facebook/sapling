@@ -15,6 +15,8 @@ from mercurial import util
 import server
 from client import client, QueryFailed
 
+testedwith = 'internal'
+
 def serve(ui, repo, **opts):
     '''start an inotify server for this repository'''
     server.start(ui, repo.dirstate, repo.root, opts)

@@ -48,6 +48,7 @@ import email.Parser
 
 import socket, xmlrpclib
 from xml.sax import saxutils
+testedwith = 'internal'
 
 socket_timeout = 30 # seconds
 if util.safehasattr(socket, 'setdefaulttimeout'):

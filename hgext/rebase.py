@@ -26,6 +26,7 @@ nullmerge = -2
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 @command('rebase',
     [('s', 'source', '',

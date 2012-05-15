@@ -32,6 +32,8 @@ from mercurial import extensions
 from mercurial.hgweb import hgweb_mod
 from mercurial.hgweb import hgwebdir_mod
 
+testedwith = 'internal'
+
 # publish
 
 server = None

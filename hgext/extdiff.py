@@ -66,6 +66,8 @@ from mercurial.node import short, nullid
 from mercurial import scmutil, scmutil, util, commands, encoding
 import os, shlex, shutil, tempfile, re
 
+testedwith = 'internal'
+
 def snapshot(ui, repo, files, node, tmproot):
     '''snapshot files as of some revision
     if not using snapshot, -I/-X does not work and recursive diff

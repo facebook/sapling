@@ -282,6 +282,8 @@ from mercurial.node import short
 from mercurial import cmdutil, mail, templater, util
 import re, time, urlparse, xmlrpclib
 
+testedwith = 'internal'
+
 class bzaccess(object):
     '''Base class for access to Bugzilla.'''
 
@@ -910,4 +912,3 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
             bz.notify(bugs, util.email(ctx.user()))
     except Exception, e:
         raise util.Abort(_('Bugzilla error: %s') % e)
-

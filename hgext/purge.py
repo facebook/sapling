@@ -30,6 +30,7 @@ import os, stat
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 @command('purge|clean',
     [('a', 'abort-on-err', None, _('abort if an error occurs')),

@@ -92,6 +92,7 @@ commands.optionalrepo += ' kwdemo'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 # hg commands that do not act on keywords
 nokwcommands = ('add addremove annotate bundle export grep incoming init log'

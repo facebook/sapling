@@ -44,6 +44,8 @@ import os, re
 from mercurial import extensions, hg, templater, util
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 
 class ShortRepository(object):
     def __init__(self, url, scheme, templater):

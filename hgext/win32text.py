@@ -46,6 +46,8 @@ from mercurial.node import short
 from mercurial import util
 import re
 
+testedwith = 'internal'
+
 # regexp for single LF without CR preceding.
 re_single_lf = re.compile('(^|[^\r])\n', re.MULTILINE)
 

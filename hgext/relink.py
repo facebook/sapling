@@ -11,6 +11,8 @@ from mercurial import hg, util
 from mercurial.i18n import _
 import os, stat
 
+testedwith = 'internal'
+
 def relink(ui, repo, origin=None, **opts):
     """recreate hardlinks between two repositories
 

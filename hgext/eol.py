@@ -94,6 +94,8 @@ from mercurial.i18n import _
 from mercurial import util, config, extensions, match, error
 import re, os
 
+testedwith = 'internal'
+
 # Matches a lone LF, i.e., one that is not part of CRLF.
 singlelf = re.compile('(^|[^\r])\n')
 # Matches a single EOL which can either be a CRLF where repeated CR

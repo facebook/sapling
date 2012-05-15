@@ -28,6 +28,8 @@ from mercurial.hgweb import hgweb_mod
 from mercurial import templatefilters, extensions
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 interhg_table = []
 
 def uisetup(ui):

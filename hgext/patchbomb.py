@@ -55,6 +55,7 @@ from mercurial.node import bin
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 def prompt(ui, prompt, default=None, rest=':'):
     if default:

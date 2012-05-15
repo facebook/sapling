@@ -18,6 +18,7 @@ from mercurial import cmdutil
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 
+testedwith = 'internal'
 
 def children(ui, repo, file_=None, **opts):
     """show the children of the given or working directory revision

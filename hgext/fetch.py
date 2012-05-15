@@ -12,6 +12,8 @@ from mercurial.node import nullid, short
 from mercurial import commands, cmdutil, hg, util, error
 from mercurial.lock import release
 
+testedwith = 'internal'
+
 def fetch(ui, repo, source='default', **opts):
     '''pull changes from a remote repository, merge new changes if needed.
 

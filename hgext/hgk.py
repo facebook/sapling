@@ -39,6 +39,8 @@ from mercurial import commands, util, patch, revlog, scmutil
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 def difftree(ui, repo, node1=None, node2=None, *files, **opts):
     """diff trees from two commits"""
     def __difftree(repo, node1, node2, files=[]):

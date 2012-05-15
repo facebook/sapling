@@ -48,6 +48,7 @@ It is useful for the users who want to commit with UTF-8 log message.
 import os, sys
 from mercurial.i18n import _
 from mercurial import util, encoding
+testedwith = 'internal'
 
 _encoding = None                                # see extsetup
 
@@ -164,4 +165,3 @@ def extsetup(ui):
         if '--debug' in sys.argv:
             ui.write("[win32mbcs] activated with encoding: %s\n"
                      % _encoding)
-

@@ -20,6 +20,7 @@ from mercurial import hg, util, graphmod, templatekw, revset
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 ASCIIDATA = 'ASC'
 

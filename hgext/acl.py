@@ -152,6 +152,8 @@ from mercurial.i18n import _
 from mercurial import util, match
 import getpass, urllib
 
+testedwith = 'internal'
+
 def _getusers(ui, group):
 
     # First, try to use group definition from section [acl.groups]

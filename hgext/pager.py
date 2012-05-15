@@ -51,6 +51,8 @@ import atexit, sys, os, signal, subprocess
 from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 def _runpager(p):
     pager = subprocess.Popen(p, shell=True, bufsize=-1,
                              close_fds=util.closefds, stdin=subprocess.PIPE,

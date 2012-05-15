@@ -12,6 +12,7 @@ from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 class gpg(object):
     def __init__(self, path, key=None):
@@ -286,4 +287,3 @@ def node2txt(repo, node, ver):
         return "%s\n" % hgnode.hex(node)
     else:
         raise util.Abort(_("unknown signature version"))
-

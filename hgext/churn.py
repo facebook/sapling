@@ -13,6 +13,8 @@ from mercurial import patch, cmdutil, scmutil, util, templater, commands
 import os
 import time, datetime
 
+testedwith = 'internal'
+
 def maketemplater(ui, repo, tmpl):
     tmpl = templater.parsestring(tmpl, quoted=False)
     try:

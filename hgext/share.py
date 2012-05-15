@@ -8,6 +8,8 @@
 from mercurial.i18n import _
 from mercurial import hg, commands, util
 
+testedwith = 'internal'
+
 def share(ui, source, dest=None, noupdate=False):
     """create a new shared repository
 

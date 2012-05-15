@@ -13,6 +13,8 @@ import subversion
 from mercurial import commands, templatekw
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 # Commands definition was moved elsewhere to ease demandload job.
 
 def convert(ui, src, dest=None, revmapfile=None, **opts):

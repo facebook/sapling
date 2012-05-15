@@ -73,6 +73,7 @@ seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.

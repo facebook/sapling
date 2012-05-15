@@ -25,6 +25,7 @@ class TransplantError(error.Abort):
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 class transplantentry(object):
     def __init__(self, lnode, rnode):

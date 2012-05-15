@@ -128,6 +128,8 @@ from mercurial.i18n import _
 from mercurial import patch, cmdutil, templater, util, mail
 import email.Parser, email.Errors, fnmatch, socket, time
 
+testedwith = 'internal'
+
 # template for single changeset can include email headers.
 single_template = '''
 Subject: changeset in {webroot}: {desc|firstline|strip}

@@ -105,6 +105,8 @@ import os
 from mercurial import commands, dispatch, extensions, ui as uimod, util
 from mercurial.i18n import _
 
+testedwith = 'internal'
+
 # start and stop parameters for effects
 _effects = {'none': 0, 'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
             'blue': 34, 'magenta': 35, 'cyan': 36, 'white': 37, 'bold': 1,

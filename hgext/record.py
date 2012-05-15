@@ -14,6 +14,7 @@ import copy, cStringIO, errno, os, re, shutil, tempfile
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 lines_re = re.compile(r'@@ -(\d+),(\d+) \+(\d+),(\d+) @@\s*(.*)')
 

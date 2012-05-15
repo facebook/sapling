@@ -24,6 +24,7 @@ The default is 'colorful'.
 import highlight
 from mercurial.hgweb import webcommands, webutil, common
 from mercurial import extensions, encoding
+testedwith = 'internal'
 
 def filerevision_highlight(orig, web, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))

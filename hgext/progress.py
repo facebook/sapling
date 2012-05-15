@@ -40,6 +40,7 @@ import time
 
 from mercurial import util
 from mercurial.i18n import _
+testedwith = 'internal'
 
 def spacejoin(*args):
     return ' '.join(s for s in args if s)
