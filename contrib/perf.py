@@ -85,6 +85,14 @@ def perfdirstatedirs(ui, repo):
         del repo.dirstate._dirs
     timer(d)
 
+def perfdirstatewrite(ui, repo):
+    ds = repo.dirstate
+    "a" in ds
+    def d():
+        ds._dirty = True
+        ds.write()
+    timer(d)
+
 def perfmanifest(ui, repo):
     def d():
         t = repo.manifest.tip()
@@ -220,6 +228,7 @@ cmdtable = {
     'perftags': (perftags, []),
     'perfdirstate': (perfdirstate, []),
     'perfdirstatedirs': (perfdirstate, []),
+    'perfdirstatewrite': (perfdirstatewrite, []),
     'perflog': (perflog,
                 [('', 'rename', False, 'ask log to follow renames')]),
     'perftemplating': (perftemplating, []),
