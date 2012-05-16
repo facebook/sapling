@@ -705,7 +705,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
 
 def overrideclone(orig, ui, source, dest=None, **opts):
     if dest is None:
-        dest = defaultdest(source)
+        dest = hg.defaultdest(source)
     if opts.get('all_largefiles') and not hg.islocal(dest):
             raise util.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s' %
