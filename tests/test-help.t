@@ -733,13 +733,13 @@ Test a help topic
       short-form identifier is only valid if it is the prefix of exactly one
       full-length identifier.
   
-      Any other string is treated as a tag or branch name. A tag name is a
-      symbolic name associated with a revision identifier. A branch name denotes
-      the tipmost revision of that branch. Tag and branch names must not contain
-      the ":" character.
+      Any other string is treated as a bookmark, tag, or branch name. A bookmark
+      is a movable pointer to a revision. A tag is a permanent name associated
+      with a revision. A branch name denotes the tipmost revision of that
+      branch. Bookmark, tag, and branch names must not contain the ":"
+      character.
   
-      The reserved name "tip" is a special tag that always identifies the most
-      recent revision.
+      The reserved name "tip" always identifies the most recent revision.
   
       The reserved name "null" indicates the null revision. This is the revision
       of an empty repository, and the parent of revision 0.
