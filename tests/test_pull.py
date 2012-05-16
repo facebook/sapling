@@ -6,14 +6,16 @@ from mercurial import node
 from mercurial import ui
 from mercurial import util as hgutil
 from mercurial import commands
+from hgsubversion import verify
 
 class TestPull(test_util.TestBase):
     def setUp(self):
         super(TestPull, self).setUp()
 
-    def _loadupdate(self, fixture_name):
-        repo, repo_path = self.load_and_fetch(fixture_name, stupid=False,
-                                              noupdate=False)
+    def _loadupdate(self, fixture_name, *args, **kwargs):
+        kwargs = kwargs.copy()
+        kwargs.update(stupid=False, noupdate=False)
+        repo, repo_path = self.load_and_fetch(fixture_name, *args, **kwargs)
         return repo, repo_path
 
     def test_nochanges(self):
@@ -57,6 +59,26 @@ class TestPull(test_util.TestBase):
         oldheads = map(node.hex, repo.heads())
         commands.pull(repo.ui, repo)
         self.assertEqual(oldheads, map(node.hex, repo.heads()))
+
+    def test_skip_basic(self):
+        repo, repo_path = self._loadupdate('single_rev.svndump')
+        self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
+        self.add_svn_rev(repo_path, {'trunk/beta': 'More changed'})
+        self.add_svn_rev(repo_path, {'trunk/gamma': 'Even more changeder'})
+        repo.ui.setconfig('hgsubversion', 'unsafeskip', '3 4')
+        commands.pull(repo.ui, repo)
+        tip = repo['tip'].rev()
+        self.assertEqual(tip, 1)
+        self.assertEquals(verify.verify(repo.ui, repo, rev=tip), 1)
+
+    def test_skip_delete_restore(self):
+        repo, repo_path = self._loadupdate('delete_restore_trunk.svndump',
+                                           rev=2)
+        repo.ui.setconfig('hgsubversion', 'unsafeskip', '3 4')
+        commands.pull(repo.ui, repo)
+        tip = repo['tip'].rev()
+        self.assertEqual(tip, 1)
+        self.assertEquals(verify.verify(repo.ui, repo, rev=tip), 0)
 
 def suite():
     import unittest, sys

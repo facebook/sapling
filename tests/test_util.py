@@ -302,7 +302,7 @@ class TestBase(unittest.TestCase):
         return path
 
     def fetch(self, repo_path, subdir=None, stupid=False, layout='auto', startrev=0,
-              externals=None, noupdate=True, dest=None):
+              externals=None, noupdate=True, dest=None, rev=None):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
@@ -323,6 +323,8 @@ class TestBase(unittest.TestCase):
             cmd.append('--stupid')
         if noupdate:
             cmd.append('--noupdate')
+        if rev is not None:
+            cmd.append('--rev=%s' % rev)
         if externals:
             cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
 

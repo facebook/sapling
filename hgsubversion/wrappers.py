@@ -317,6 +317,13 @@ def pull(repo, source, heads=[], force=False):
         if start < 0:
             start = 0
 
+    skiprevs = repo.ui.configlist('hgsubversion', 'unsafeskip', '')
+    try:
+        skiprevs = set(map(int, skiprevs))
+    except ValueError:
+        raise hgutil.Abort('unrecognised Subversion revisions %r: '
+                           'only numbers work.' % checkout)
+
     oldrevisions = len(meta.revmap)
     if stopat_rev:
         total = stopat_rev - start
@@ -328,6 +335,9 @@ def pull(repo, source, heads=[], force=False):
             # start converting revisions
             firstrun = True
             for r in svn.revisions(start=start, stop=stopat_rev):
+                if r.revnum in skiprevs:
+                    ui.status('[r%d SKIPPED]\n' % r.revnum)
+                    continue
                 lastpulled = r.revnum
                 if (r.author is None and
                     r.message == 'This is an empty revision for padding.'):

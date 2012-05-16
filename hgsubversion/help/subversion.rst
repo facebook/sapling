@@ -352,6 +352,24 @@ The following options only have an effect on the initial clone of a repository:
     contain tags. The default is to only look in ``tags``. This option has no
     effect for single-directory clones.
 
+  ``hgsubversion.unsafeskip``
+
+    A space or comma separated list of Subversion revision numbers to
+    skip over when pulling or cloning.  This can be useful for
+    troublesome commits, such as someone accidentally deleting trunk
+    and then restoring it.  (In delete-and-restore cases, you may also
+    need to clone or pull in multiple steps, to help hgsubversion
+    track history correctly.)
+
+    NOTE: this option is dangerous.  Careless use can make it
+    impossible to pull later Subversion revisions cleanly, e.g. if the
+    content of a file depends on changes made in a skipped rev.
+    Skipping a rev may also prevent future invocations of ``hg svn
+    verify`` from succeeding (if the contents of the Mercurial repo
+    become out of step with the contents of the Subversion repo).  If
+    you use this option, be sure to carefully check the result of a
+    pull afterwards.
+
 Please note that some of these options may be specified as command line options
 as well, and when done so, will override the configuration. If an authormap,
 filemap or branchmap is specified, its contents will be read and stored for use
