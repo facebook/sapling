@@ -478,3 +478,60 @@ Broken disabled extension and command:
   hg: unknown command 'foo'
   warning: error finding commands in $TESTTMP/hgext/forest.py (glob)
   [255]
+
+  $ cat > throw.py <<EOF
+  > from mercurial import cmdutil, commands
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > class Bogon(Exception): pass
+  > 
+  > @command('throw', [], 'hg throw')
+  > def throw(ui, **opts):
+  >     """throws an exception"""
+  >     raise Bogon()
+  > commands.norepo += " throw"
+  > EOF
+No declared supported version, extension complains:
+  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension throw
+  ** which supports versions unknown of Mercurial.
+  ** Please disable throw and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM * (glob)
+  ** Extensions loaded: throw
+If the extension specifies a buglink, show that:
+  $ echo 'buglink = "http://example.com/bts"' >> throw.py
+  $ rm -f throw.pyc throw.pyo
+  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension throw
+  ** which supports versions unknown of Mercurial.
+  ** Please disable throw and try your action again.
+  ** If that fixes the bug please report it to http://example.com/bts
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw
+If the extensions declare outdated versions, accuse the older extension first:
+  $ echo "testedwith = '1.9.3'" >> older.py
+  $ echo "testedwith = '2.1.1'" >> throw.py
+  $ rm -f throw.pyc throw.pyo
+  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
+  >   throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension older
+  ** which supports versions 1.9.3 of Mercurial.
+  ** Please disable older and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw, older
+
+Declare the version as supporting this hg version, show regular bts link:
+  $ hgver=`python -c 'from mercurial import util; print util.version().split("+")[0]'`
+  $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
+  $ rm -f throw.pyc throw.pyo
+  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
+  ** unknown exception encountered, please report by visiting
+  ** http://mercurial.selenic.com/wiki/BugTracker
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw

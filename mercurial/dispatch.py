@@ -205,17 +205,55 @@ def _runcatch(req):
     except socket.error, inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
     except: # re-raises
-        ui.warn(_("** unknown exception encountered,"
-                  " please report by visiting\n"))
-        ui.warn(_("**  http://mercurial.selenic.com/wiki/BugTracker\n"))
-        ui.warn(_("** Python %s\n") % sys.version.replace('\n', ''))
-        ui.warn(_("** Mercurial Distributed SCM (version %s)\n")
-               % util.version())
-        ui.warn(_("** Extensions loaded: %s\n")
-               % ", ".join([x[0] for x in extensions.extensions()]))
+        myver = util.version()
+        # For compatibility checking, we discard the portion of the hg
+        # version after the + on the assumption that if a "normal
+        # user" is running a build with a + in it the packager
+        # probably built from fairly close to a tag and anyone with a
+        # 'make local' copy of hg (where the version number can be out
+        # of date) will be clueful enough to notice the implausible
+        # version number and try updating.
+        compare = myver.split('+')[0]
+        ct = tuplever(compare)
+        worst = None, ct, ''
+        for name, mod in extensions.extensions():
+            testedwith = getattr(mod, 'testedwith', 'unknown')
+            report = getattr(mod, 'buglink', _('the extension author.'))
+            if testedwith == 'unknown':
+                # We found an untested extension. It's likely the culprit.
+                worst = name, testedwith, report
+                break
+            if compare not in testedwith.split() and testedwith != 'internal':
+                tested = [tuplever(v) for v in testedwith.split()]
+                nearest = max([t for t in tested if t < ct])
+                if nearest < worst[1]:
+                    worst = name, nearest, report
+        if worst[0] is not None:
+            name, testedwith, report = worst
+            if not isinstance(testedwith, str):
+                testedwith = '.'.join([str(c) for c in testedwith])
+            warning = (_('** Unknown exception encountered with '
+                         'possibly-broken third-party extension %s\n'
+                         '** which supports versions %s of Mercurial.\n'
+                         '** Please disable %s and try your action again.\n'
+                         '** If that fixes the bug please report it to %s\n')
+                       % (name, testedwith, name, report))
+        else:
+            warning = (_("** unknown exception encountered, "
+                         "please report by visiting\n") +
+                       _("** http://mercurial.selenic.com/wiki/BugTracker\n"))
+        warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
+                    (_("** Mercurial Distributed SCM (version %s)\n") % myver) +
+                    (_("** Extensions loaded: %s\n") %
+                     ", ".join([x[0] for x in extensions.extensions()])))
+        ui.warn(warning)
         raise
 
     return -1
+
+def tuplever(v):
+    return tuple([int(i) for i in v.split('.')])
+
 
 def aliasargs(fn, givenargs):
     args = getattr(fn, 'args', [])
