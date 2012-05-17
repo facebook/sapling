@@ -539,32 +539,36 @@ bundle single branch
   $ hg init branchy
   $ cd branchy
   $ echo a >a
+  $ echo x >x
   $ hg ci -Ama
   adding a
-  $ echo b >b
-  $ hg ci -Amb
-  adding b
-  $ echo b1 >b1
-  $ hg ci -Amb1
-  adding b1
-  $ hg up 0
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  adding x
   $ echo c >c
+  $ echo xx >x
   $ hg ci -Amc
   adding c
-  created new head
   $ echo c1 >c1
   $ hg ci -Amc1
   adding c1
-  $ hg clone -q .#tip part
+  $ hg up 0
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo b >b
+  $ hg ci -Amb
+  adding b
+  created new head
+  $ echo b1 >b1
+  $ echo xx >x
+  $ hg ci -Amb1
+  adding b1
+  $ hg clone -q -r2 . part
 
 == bundling via incoming
 
   $ hg in -R part --bundle incoming.hg --template "{node}\n" .
   comparing with .
   searching for changes
-  d2ae7f538514cd87c17547b0de4cea71fe1af9fb
-  5ece8e77363e2b5269e27c66828b72da29e4341a
+  1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
+  057f4db07f61970e1c11e83be79e9d08adc4dc31
 
 == bundling
 
@@ -574,12 +578,23 @@ bundle single branch
   all remote heads known locally
   2 changesets found
   list of changesets:
-  d2ae7f538514cd87c17547b0de4cea71fe1af9fb
-  5ece8e77363e2b5269e27c66828b72da29e4341a
+  1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
+  057f4db07f61970e1c11e83be79e9d08adc4dc31
   bundling: 1/2 changesets (50.00%)
   bundling: 2/2 changesets (100.00%)
   bundling: 1/2 manifests (50.00%)
   bundling: 2/2 manifests (100.00%)
-  bundling: b 1/2 files (50.00%)
-  bundling: b1 2/2 files (100.00%)
+  bundling: b 1/3 files (33.33%)
+  bundling: b1 2/3 files (66.67%)
+  bundling: x 3/3 files (100.00%)
 
+== Test for issue3441
+
+  $ hg clone -q -r0 . part2
+  $ hg -q -R part2 pull bundle.hg
+  $ hg -R part2 verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  4 files, 3 changesets, 5 total revisions

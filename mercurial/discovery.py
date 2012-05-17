@@ -87,7 +87,7 @@ class outgoing(object):
         return self._missing
 
 def findcommonoutgoing(repo, other, onlyheads=None, force=False,
-                       commoninc=None):
+                       commoninc=None, portable=False):
     '''Return an outgoing instance to identify the nodes present in repo but
     not in other.
 
@@ -96,7 +96,10 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     passing them in onlyheads is faster than letting them be recomputed here.
 
     If commoninc is given, it must the the result of a prior call to
-    findcommonincoming(repo, other, force) to avoid recomputing it here.'''
+    findcommonincoming(repo, other, force) to avoid recomputing it here.
+
+    If portable is given, compute more conservative common and missingheads,
+    to make bundles created from the instance more portable.'''
     # declare an empty outgoing object to be filled later
     og = outgoing(repo.changelog, None, None)
 
@@ -129,6 +132,17 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         else:
             missingheads = onlyheads
         og.missingheads = missingheads
+
+    if portable:
+        # recompute common and missingheads as if -r<rev> had been given for
+        # each head of missing, and --base <rev> for each head of the proper
+        # ancestors of missing
+        og._computecommonmissing()
+        cl = repo.changelog
+        missingrevs = set(cl.rev(n) for n in og._missing)
+        og._common = set(cl.ancestors(*missingrevs)) - missingrevs
+        commonheads = set(og.commonheads)
+        og.missingheads = [h for h in og.missingheads if h not in commonheads]
 
     return og
 
