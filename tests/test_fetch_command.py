@@ -175,7 +175,8 @@ class TestBasicRepoLayout(test_util.TestBase):
             self.assertEqual(repo[r].hex(), repo2[r].hex())
 
     def test_path_quoting_stupid(self):
-        self.test_path_quoting(True)
+        repo = self.test_path_quoting(True)
+
 
     def test_identical_fixtures(self):
         '''ensure that the non_ascii_path_N fixtures are identical'''
@@ -185,6 +186,12 @@ class TestBasicRepoLayout(test_util.TestBase):
         ]
         self.assertMultiLineEqual(open(fixturepaths[0]).read(),
                                   open(fixturepaths[1]).read())
+
+    def test_invalid_message(self):
+        repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz')
+        self.assertEqual(repo[0].description().decode('utf8'),
+                         u'bl\xe5b\xe6rgr\xf8d')
+
 
 class TestStupidPull(test_util.TestBase):
     def test_stupid(self):

@@ -52,6 +52,17 @@ def updateexternals(ui, meta, current):
             else:
                 current.delete(path)
 
+
+def _safe_message(msg):
+  if msg:
+      try:
+          msg.decode('utf-8')
+      except UnicodeDecodeError:
+          # ancient svn failed to enforce utf8 encoding
+          return msg.decode('iso-8859-1').encode('utf-8')
+  return msg
+
+
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     editor = meta.editor
@@ -164,10 +175,11 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                                       islink=is_link, isexec=is_exec,
                                       copied=copied)
 
+        message = _safe_message(rev.message)
         meta.mapbranch(extra)
         current_ctx = context.memctx(meta.repo,
                                      parents,
-                                     rev.message or util.default_commit_msg(ui),
+                                     message or util.default_commit_msg(ui),
                                      files.keys(),
                                      filectxfn,
                                      meta.authors[rev.author],
@@ -203,7 +215,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         current_ctx = context.memctx(meta.repo,
                                      (ha, node.nullid),
-                                     rev.message or ' ',
+                                     _safe_message(rev.message) or ' ',
                                      [],
                                      del_all_files,
                                      meta.authors[rev.author],

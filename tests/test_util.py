@@ -7,6 +7,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 import urllib
@@ -301,6 +302,23 @@ class TestBase(unittest.TestCase):
         proc.communicate()
         return path
 
+    def load_repo_tarball(self, fixture_name):
+        '''Extracts a tarball of an svn repo and returns the svn repo path.'''
+        path = self._makerepopath()
+        assert not os.path.exists(path)
+        os.mkdir(path)
+        tarball = tarfile.open(os.path.join(FIXTURES, fixture_name))
+        # This is probably somewhat fragile, but I'm not sure how to
+        # do better in particular, I think it assumes that the tar
+        # entries are in the right order and that directories appear
+        # before their contents.  This is a valid assummption for sane
+        # tarballs, from what I can tell.  In particular, for a simple
+        # tarball of a svn repo with paths relative to the repo root,
+        # it seems to work
+        for entry in tarball:
+            tarball.extract(entry, path)
+        return path
+
     def fetch(self, repo_path, subdir=None, stupid=False, layout='auto', startrev=0,
               externals=None, noupdate=True, dest=None, rev=None):
         if layout == 'single':
@@ -333,7 +351,12 @@ class TestBase(unittest.TestCase):
         return hg.repository(testui(), self.wc_path)
 
     def load_and_fetch(self, fixture_name, *args, **opts):
-        repo_path = self.load_svndump(fixture_name)
+        if fixture_name.endswith('.svndump'):
+            repo_path = self.load_svndump(fixture_name)
+        elif fixture_name.endswith('tar.gz'):
+            repo_path = self.load_repo_tarball(fixture_name)
+        else:
+            assert False, 'Unknown fixture type'
 
         return self.fetch(repo_path, *args, **opts), repo_path
 
