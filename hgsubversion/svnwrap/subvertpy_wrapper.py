@@ -411,10 +411,14 @@ class SubversionRepo(object):
 
             return pathidx
 
-        rooteditor = commiteditor.open_root()
-        visitdir(rooteditor, '', paths, 0)
-        rooteditor.close()
-        commiteditor.close()
+        try:
+            rooteditor = commiteditor.open_root()
+            visitdir(rooteditor, '', paths, 0)
+            rooteditor.close()
+            commiteditor.close()
+        except:
+            commiteditor.abort()
+            raise
 
     def get_replay(self, revision, editor, oldestrev=0):
 
