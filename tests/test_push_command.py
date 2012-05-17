@@ -134,7 +134,7 @@ class PushTests(test_util.TestBase):
         finally:
             if sys.version_info >= (2,6):
                 svnserve.kill()
-            else: 
+            else:
                 test_util.kill_process(svnserve)
 
     def test_push_over_svnserve(self):
@@ -487,7 +487,9 @@ class PushTests(test_util.TestBase):
                              'Outgoing changesets parent is not at subversion '
                              'HEAD\n'
                              '(pull again and rebase on a newer revision)')
-
+            # verify that any pending transactions on the server got cleaned up
+            self.assertEqual([], os.listdir(
+                os.path.join(self.tmpdir, 'testrepo-1', 'db', 'transactions')))
 
 def suite():
     test_classes = [PushTests, ]
