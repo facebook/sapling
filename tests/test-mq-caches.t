@@ -36,8 +36,7 @@ mq patch on an empty repo
   $ hg qrefresh -m 'patch 1'
   $ show_branch_cache
   tip: 0
-  d986d5caac23a7d44a46efc0ddaf5eb9665844cf 0
-  d986d5caac23a7d44a46efc0ddaf5eb9665844cf default
+  No branch cache
 
 some regular revisions
 
@@ -76,8 +75,8 @@ add some mq patches
   $ hg qrefresh -m 'patch 2'
   $ show_branch_cache 1
   tip: 3
-  982611f6955f9c48d3365decea203217c945ef0d 2
-  982611f6955f9c48d3365decea203217c945ef0d bar
+  c229711f16da3d7591f89b1b8d963b79bda22714 1
+  c229711f16da3d7591f89b1b8d963b79bda22714 bar
   dc25e3827021582e979f600811852e36cbe57341 foo
   branch foo: 3
   branch bar: 2

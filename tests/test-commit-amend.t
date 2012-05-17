@@ -247,7 +247,6 @@ Same thing, different code path:
 
   $ echo b >> b
   $ hg ci -m 'reopen branch'
-  created new head
   reopening closed branch head 4
   $ echo b >> b
   $ hg ci --amend --close-branch
