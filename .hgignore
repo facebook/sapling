@@ -17,4 +17,5 @@ nbproject
 .pydevproject
 .settings
 *.orig
+.noseids
 tests/fixtures/temp
