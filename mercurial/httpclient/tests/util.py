@@ -58,6 +58,7 @@ class MockSocket(object):
         self.close_on_empty = False
         self.sent = ''
         self.read_wait_sentinel = httpplus._END_HEADERS
+        self.blocking = True
 
     def close(self):
         self.closed = True
@@ -66,9 +67,11 @@ class MockSocket(object):
         self.sa = sa
 
     def setblocking(self, timeout):
-        assert timeout == 0
+        self.blocking = bool(timeout)
 
     def recv(self, amt=-1):
+        # we only properly emulate non-blocking sockets
+        assert not self.blocking
         if self.early_data:
             datalist = self.early_data
         elif not self.data:
@@ -136,6 +139,8 @@ def mocksslwrap(sock, keyfile=None, certfile=None,
                 ssl_version=None, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
+    assert sock.blocking, ('wrapping a socket with ssl requires that '
+                           'it be in blocking mode.')
     return MockSSLSocket(sock)
 
 

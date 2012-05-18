@@ -372,6 +372,10 @@ class HTTPConnection(object):
         else:
             sock = socketutil.create_connection((self.host, self.port))
         if self.ssl:
+            # This is the default, but in the case of proxied SSL
+            # requests the proxy logic above will have cleared
+            # blocking mode, so reenable it just to be safe.
+            sock.setblocking(1)
             logger.debug('wrapping socket for ssl with options %r',
                          self.ssl_opts)
             sock = socketutil.wrap_socket(sock, **self.ssl_opts)
