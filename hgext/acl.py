@@ -193,7 +193,11 @@ def buildmatch(ui, repo, user, key):
     # Branch-based ACL
     if not repo:
         if pats:
-            return lambda b: '*' in pats or b in pats
+            # If there's an asterisk (meaning "any branch"), always return True;
+            # Otherwise, test if b is in pats
+            if '*' in pats:
+                return util.always
+            return lambda b: b in pats
         return util.never
 
     # Path-based ACL
