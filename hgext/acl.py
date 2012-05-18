@@ -174,7 +174,7 @@ def _usermatch(ui, user, usersorgroups):
         return True
 
     for ug in usersorgroups.replace(',', ' ').split():
-        if user == ug or ug.find('@') == 0 and user in _getusers(ui, ug[1:]):
+        if user == ug or ug.startswith('@') and user in _getusers(ui, ug[1:]):
             return True
 
     return False
