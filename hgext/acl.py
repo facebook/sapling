@@ -203,8 +203,7 @@ def buildmatch(ui, repo, user, key):
     # Path-based ACL
     if pats:
         return match.match(repo.root, '', pats)
-    return match.exact(repo.root, '', [])
-
+    return util.never
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if hooktype not in ['pretxnchangegroup', 'pretxncommit']:
