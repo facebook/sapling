@@ -550,6 +550,9 @@ class localrepository(repo.repository):
                     continue
                 node, label = l.split(" ", 1)
                 label = encoding.tolocal(label.strip())
+                if not node in self:
+                    raise ValueError('invalidating branch cache because node '+
+                                     '%s does not exist' % node)
                 partial.setdefault(label, []).append(bin(node))
         except KeyboardInterrupt:
             raise
@@ -571,22 +574,46 @@ class localrepository(repo.repository):
             pass
 
     def _updatebranchcache(self, partial, ctxgen):
+        """Given a branchhead cache, partial, that may have extra nodes or be
+        missing heads, and a generator of nodes that are at least a superset of
+        heads missing, this function updates partial to be correct.
+        """
         # collect new branch entries
         newbranches = {}
         for c in ctxgen:
-            newbranches.setdefault(c.branch(), []).append(c.rev())
+            newbranches.setdefault(c.branch(), []).append(c.node())
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-        for branch, newrevs in newbranches.iteritems():
-            bheadrevs = [self.changelog.rev(node) for node in
-                         partial.setdefault(branch, [])]
-            bheadrevs.extend(newrevs)
-            bheadrevs.sort()
-            # starting from tip means fewer passes over ancestors
-            newrevs.sort()
-            while newrevs:
-                latest = newrevs.pop()
+        for branch, newnodes in newbranches.iteritems():
+            bheads = partial.setdefault(branch, [])
+            # Remove candidate heads that no longer are in the repo (e.g., as
+            # the result of a strip that just happened).  Avoid using 'node in
+            # self' here because that dives down into branchcache code somewhat
+            # recrusively.
+            bheadrevs = [self.changelog.rev(node) for node in bheads
+                         if self.changelog.hasnode(node)]
+            newheadrevs = [self.changelog.rev(node) for node in newnodes
+                           if self.changelog.hasnode(node)]
+            ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
+            # Remove duplicates - nodes that are in newheadrevs and are already
+            # in bheadrevs.  This can happen if you strip a node whose parent
+            # was already a head (because they're on different branches).
+            bheadrevs = sorted(set(bheadrevs).union(newheadrevs))
+
+            # Starting from tip means fewer passes over reachable.  If we know
+            # the new candidates are not ancestors of existing heads, we don't
+            # have to examine ancestors of existing heads
+            if ctxisnew:
+                iterrevs = sorted(newheadrevs)
+            else:
+                iterrevs = list(bheadrevs)
+
+            # This loop prunes out two kinds of heads - heads that are
+            # superceded by a head in newheadrevs, and newheadrevs that are not
+            # heads because an existing head is their descendant.
+            while iterrevs:
+                latest = iterrevs.pop()
                 if latest not in bheadrevs:
                     continue
                 ancestors = set(self.changelog.ancestors([latest],
@@ -594,6 +621,17 @@ class localrepository(repo.repository):
                 if ancestors:
                     bheadrevs = [b for b in bheadrevs if b not in ancestors]
             partial[branch] = [self.changelog.node(rev) for rev in bheadrevs]
+
+        # There may be branches that cease to exist when the last commit in the
+        # branch was stripped.  This code filters them out.  Note that the
+        # branch that ceased to exist may not be in newbranches because
+        # newbranches is the set of candidate heads, which when you strip the
+        # last commit in a branch will be the parent branch.
+        for branch in partial:
+            nodes = [head for head in partial[branch]
+                     if self.changelog.hasnode(head)]
+            if not nodes:
+                del partial[branch]
 
     def lookup(self, key):
         return self[key].node()
@@ -857,6 +895,9 @@ class localrepository(repo.repository):
             else:
                 ui.status(_('working directory now based on '
                             'revision %d\n') % parents)
+        # TODO: if we know which new heads may result from this rollback, pass
+        # them to destroy(), which will prevent the branchhead cache from being
+        # invalidated.
         self.destroyed()
         return 0
 
@@ -1303,12 +1344,27 @@ class localrepository(repo.repository):
                 tr.release()
             lock.release()
 
-    def destroyed(self):
+    def destroyed(self, newheadnodes=None):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
-        place for anything that has to be done after destroying history.'''
-        # XXX it might be nice if we could take the list of destroyed
-        # nodes, but I don't see an easy way for rollback() to do that
+        place for anything that has to be done after destroying history.
+
+        If you know the branchheadcache was uptodate before nodes were removed
+        and you also know the set of candidate new heads that may have resulted
+        from the destruction, you can set newheadnodes.  This will enable the
+        code to update the branchheads cache, rather than having future code
+        decide it's invalid and regenrating it from scratch.
+        '''
+        # If we have info, newheadnodes, on how to update the branch cache, do
+        # it, Otherwise, since nodes were destroyed, the cache is stale and this
+        # will be caught the next time it is read.
+        if newheadnodes:
+            tiprev = len(self) - 1
+            ctxgen = (self[node] for node in newheadnodes
+                      if self.changelog.hasnode(node))
+            self._updatebranchcache(self._branchcache, ctxgen)
+            self._writebranchcache(self._branchcache, self.changelog.tip(),
+                                   tiprev)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed

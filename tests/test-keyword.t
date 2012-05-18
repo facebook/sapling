@@ -502,7 +502,6 @@ amend
   $ hg -q commit -d '1 14' -m 'prepare amend'
 
   $ hg --debug commit --amend -d '1 15' -m 'amend without changes' | grep keywords
-  invalidating branch cache (tip differs)
   overwriting a expanding keywords
   $ hg -q id
   a71343332ea9

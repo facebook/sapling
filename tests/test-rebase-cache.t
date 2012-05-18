@@ -2,6 +2,7 @@
   > [extensions]
   > graphlog=
   > rebase=
+  > mq=
   > 
   > [phases]
   > publish=False
@@ -262,4 +263,125 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   
   $ hg verify -q
 
+Stripping multiple branches in one go bypasses the fast-case code to
+update the branch cache.
+
+  $ hg strip 2
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  o  3: 'C' branch2
+  |
+  o  2: 'branch2' branch2
+  |
+  | @  1: 'branch1' branch1
+  |/
+  o  0: 'A'
+  
+
+  $ hg branches
+  branch2                        3:e4fdb121d036
+  branch1                        1:63379ac49655
+  default                        0:1994f17a630e (inactive)
+
+  $ hg theads
+  3: 'C' branch2
+  1: 'branch1' branch1
+  0: 'A' 
+
+Fast path branchcache code should not be invoked if branches stripped is not
+the same as branches remaining.
+
+  $ hg init b
+  $ cd b
+
+  $ hg branch branch1
+  marked working directory as branch branch1
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m 'branch1'
+
+  $ hg branch branch2
+  marked working directory as branch branch2
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m 'branch2'
+
+  $ hg branch -f branch1
+  marked working directory as branch branch1
+  (branches are permanent and global, did you want a bookmark?)
+
+  $ echo a > A
+  $ hg ci -Am A
+  adding A
+  created new head
+
+  $ hg tglog
+  @  2: 'A' branch1
+  |
+  o  1: 'branch2' branch2
+  |
+  o  0: 'branch1' branch1
+  
+
+  $ hg theads
+  2: 'A' branch1
+  1: 'branch2' branch2
+
+  $ hg strip 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/a3/b/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg theads
+  1: 'branch2' branch2
+  0: 'branch1' branch1
+
+
+Make sure requesting to strip a revision already stripped does not confuse things.
+Try both orders.
+
   $ cd ..
+
+  $ hg init c
+  $ cd c
+
+  $ echo a > a
+  $ hg ci -Am A
+  adding a
+  $ echo b > b
+  $ hg ci -Am B
+  adding b
+  $ echo c > c
+  $ hg ci -Am C
+  adding c
+  $ echo d > d
+  $ hg ci -Am D
+  adding d
+  $ echo e > e
+  $ hg ci -Am E
+  adding e
+
+  $ hg tglog
+  @  4: 'E'
+  |
+  o  3: 'D'
+  |
+  o  2: 'C'
+  |
+  o  1: 'B'
+  |
+  o  0: 'A'
+  
+
+  $ hg strip 3 4
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg theads
+  2: 'C' 
+
+  $ hg strip 2 1
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/a3/c/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg theads
+  0: 'A' 
