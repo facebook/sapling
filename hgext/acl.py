@@ -190,11 +190,13 @@ def buildmatch(ui, repo, user, key):
     ui.debug('acl: %s enabled, %d entries for user %s\n' %
              (key, len(pats), user))
 
+    # Branch-based ACL
     if not repo:
         if pats:
             return lambda b: '*' in pats or b in pats
         return util.never
 
+    # Path-based ACL
     if pats:
         return match.match(repo.root, '', pats)
     return match.exact(repo.root, '', [])
