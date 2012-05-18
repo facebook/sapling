@@ -193,7 +193,7 @@ def buildmatch(ui, repo, user, key):
     if not repo:
         if pats:
             return lambda b: '*' in pats or b in pats
-        return lambda b: False
+        return util.never
 
     if pats:
         return match.match(repo.root, '', pats)
