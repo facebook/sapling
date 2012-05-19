@@ -20,6 +20,7 @@
  of the GNU General Public License, incorporated herein by reference.
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stdlib.h>
 #include <string.h>
@@ -355,7 +356,7 @@ static PyObject *
 patchedsize(PyObject *self, PyObject *args)
 {
 	long orig, start, end, len, outlen = 0, last = 0;
-	int patchlen;
+	Py_ssize_t patchlen;
 	char *bin, *binend, *data;
 
 	if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
