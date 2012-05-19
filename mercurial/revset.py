@@ -1377,16 +1377,15 @@ def _expandaliases(aliases, tree, expanding):
             raise error.ParseError(_('infinite expansion of revset alias "%s" '
                                      'detected') % alias.name)
         expanding.append(alias)
-        result = alias.replacement
+        result = _expandaliases(aliases, alias.replacement, expanding)
+        expanding.pop()
         if alias.args is not None:
             l = getlist(tree[2])
             if len(l) != len(alias.args):
                 raise error.ParseError(
                     _('invalid number of arguments: %s') % len(l))
+            l = [_expandaliases(aliases, a, []) for a in l]
             result = _expandargs(result, dict(zip(alias.args, l)))
-        # Recurse in place, the base expression may have been rewritten
-        result = _expandaliases(aliases, result, expanding)
-        expanding.pop()
     else:
         result = tuple(_expandaliases(aliases, t, expanding)
                        for t in tree)
