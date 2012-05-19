@@ -388,8 +388,7 @@ cmdclass = {'build': hgbuild,
             'build_hgextindex': buildhgextindex,
             'install_scripts': hginstallscripts}
 
-packages = ['mercurial', 'mercurial.hgweb',
-            'mercurial.httpclient', 'mercurial.httpclient.tests',
+packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
             'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
             'hgext.largefiles']
 
