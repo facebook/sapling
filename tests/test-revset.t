@@ -558,6 +558,19 @@ far away.
   abort: unknown revision '$1'!
   [255]
 
+  $ echo 'injectparamasstring2 = max(_aliasarg("$1"))' >> .hg/hgrc
+  $ echo 'callinjection2($1) = descendants(injectparamasstring2)' >> .hg/hgrc
+  $ try 'callinjection2(2:5)'
+  (func
+    ('symbol', 'callinjection2')
+    (range
+      ('symbol', '2')
+      ('symbol', '5')))
+  hg: parse error: not a function: _aliasarg
+  [255]
+  >>> data = file('.hg/hgrc', 'rb').read()
+  >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
+
   $ try 'd(2:5)'
   (func
     ('symbol', 'd')

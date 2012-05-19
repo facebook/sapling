@@ -1283,6 +1283,27 @@ def optimize(x, small):
         return w + wa, (op, x[1], ta)
     return 1, x
 
+_aliasarg = ('func', ('symbol', '_aliasarg'))
+def _getaliasarg(tree):
+    """If tree matches ('func', ('symbol', '_aliasarg'), ('string', X))
+    return X, None otherwise.
+    """
+    if (len(tree) == 3 and tree[:2] == _aliasarg
+        and tree[2][0] == 'string'):
+        return tree[2][1]
+    return None
+
+def _checkaliasarg(tree, known=None):
+    """Check tree contains no _aliasarg construct or only ones which
+    value is in known. Used to avoid alias placeholders injection.
+    """
+    if isinstance(tree, tuple):
+        arg = _getaliasarg(tree)
+        if arg is not None and (not known or arg not in known):
+            raise error.ParseError(_("not a function: %s") % '_aliasarg')
+        for t in tree:
+            _checkaliasarg(t, known)
+
 class revsetalias(object):
     funcre = re.compile('^([^(]+)\(([^)]+)\)$')
     args = None
@@ -1299,7 +1320,9 @@ class revsetalias(object):
             self.tree = ('func', ('symbol', m.group(1)))
             self.args = [x.strip() for x in m.group(2).split(',')]
             for arg in self.args:
-                value = value.replace(arg, repr(arg))
+                # _aliasarg() is an unknown symbol only used separate
+                # alias argument placeholders from regular strings.
+                value = value.replace(arg, '_aliasarg(%r)' % (arg,))
         else:
             self.name = name
             self.tree = ('symbol', name)
@@ -1307,6 +1330,8 @@ class revsetalias(object):
         self.replacement, pos = parse(value)
         if pos != len(value):
             raise error.ParseError(_('invalid token'), pos)
+        # Check for placeholder injection
+        _checkaliasarg(self.replacement, self.args)
 
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
@@ -1327,13 +1352,14 @@ def _getalias(aliases, tree):
     return None
 
 def _expandargs(tree, args):
-    """Replace all occurences of ('string', name) with the
-    substitution value of the same name in args, recursively.
+    """Replace _aliasarg instances with the substitution value of the
+    same name in args, recursively.
     """
-    if not isinstance(tree, tuple):
+    if not tree or not isinstance(tree, tuple):
         return tree
-    if len(tree) == 2 and tree[0] == 'string':
-        return args.get(tree[1], tree)
+    arg = _getaliasarg(tree)
+    if arg is not None:
+        return args[arg]
     return tuple(_expandargs(t, args) for t in tree)
 
 def _expandaliases(aliases, tree, expanding):
@@ -1367,6 +1393,7 @@ def _expandaliases(aliases, tree, expanding):
     return result
 
 def findaliases(ui, tree):
+    _checkaliasarg(tree)
     aliases = {}
     for k, v in ui.configitems('revsetalias'):
         alias = revsetalias(k, v)
