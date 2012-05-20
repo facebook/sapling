@@ -38,7 +38,6 @@ characters.
 import sys
 import time
 
-from mercurial import util
 from mercurial.i18n import _
 testedwith = 'internal'
 
@@ -46,7 +45,7 @@ def spacejoin(*args):
     return ' '.join(s for s in args if s)
 
 def shouldprint(ui):
-    return util.isatty(sys.stderr) or ui.configbool('progress', 'assume-tty')
+    return ui._isatty(sys.stderr) or ui.configbool('progress', 'assume-tty')
 
 def fmtremaining(seconds):
     if seconds < 60:
