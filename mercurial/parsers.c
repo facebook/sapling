@@ -534,6 +534,81 @@ bail:
 	return NULL;
 }
 
+static PyObject *index_headrevs(indexObject *self)
+{
+	Py_ssize_t i, len, addlen;
+	char *nothead = NULL;
+	PyObject *heads;
+
+	len = index_length(self) - 1;
+	heads = PyList_New(0);
+	if (heads == NULL)
+		goto bail;
+	if (len == 0) {
+		PyObject *nullid = PyInt_FromLong(-1);
+		if (nullid == NULL || PyList_Append(heads, nullid) == -1) {
+			Py_XDECREF(nullid);
+			goto bail;
+		}
+		goto done;
+	}
+
+	nothead = calloc(len, 1);
+	if (nothead == NULL)
+		goto bail;
+
+	for (i = 0; i < self->raw_length; i++) {
+		const char *data = index_deref(self, i);
+		int parent_1 = getbe32(data + 24);
+		int parent_2 = getbe32(data + 28);
+		if (parent_1 >= 0)
+			nothead[parent_1] = 1;
+		if (parent_2 >= 0)
+			nothead[parent_2] = 1;
+	}
+
+	addlen = self->added ? PyList_GET_SIZE(self->added) : 0;
+
+	for (i = 0; i < addlen; i++) {
+		PyObject *rev = PyList_GET_ITEM(self->added, i);
+		PyObject *p1 = PyTuple_GET_ITEM(rev, 5);
+		PyObject *p2 = PyTuple_GET_ITEM(rev, 6);
+		long parent_1, parent_2;
+
+		if (!PyInt_Check(p1) || !PyInt_Check(p2)) {
+			PyErr_SetString(PyExc_TypeError,
+					"revlog parents are invalid");
+			goto bail;
+		}
+		parent_1 = PyInt_AS_LONG(p1);
+		parent_2 = PyInt_AS_LONG(p2);
+		if (parent_1 >= 0)
+			nothead[parent_1] = 1;
+		if (parent_2 >= 0)
+			nothead[parent_2] = 1;
+	}
+
+	for (i = 0; i < len; i++) {
+		PyObject *head;
+
+		if (nothead[i])
+			continue;
+		head = PyInt_FromLong(i);
+		if (head == NULL || PyList_Append(heads, head) == -1) {
+			Py_XDECREF(head);
+			goto bail;
+		}
+	}
+
+done:
+	free(nothead);
+	return heads;
+bail:
+	Py_XDECREF(heads);
+	free(nothead);
+	return NULL;
+}
+
 static inline int nt_level(const char *node, Py_ssize_t level)
 {
 	int v = node[level>>1];
@@ -1144,6 +1219,8 @@ static PyMethodDef index_methods[] = {
 	 "clear the index caches"},
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,
 	 "get an index entry"},
+	{"headrevs", (PyCFunction)index_headrevs, METH_NOARGS,
+	 "get head revisions"},
 	{"insert", (PyCFunction)index_insert, METH_VARARGS,
 	 "insert an index entry"},
 	{"partialmatch", (PyCFunction)index_partialmatch, METH_VARARGS,

@@ -635,6 +635,10 @@ class revlog(object):
         return (orderedout, roots, heads)
 
     def headrevs(self):
+        try:
+            return self.index.headrevs()
+        except AttributeError:
+            pass
         count = len(self)
         if not count:
             return [nullrev]
