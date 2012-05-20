@@ -36,7 +36,7 @@ class hgweb(object):
             self.repo = repo
 
         self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
-        self.repo.ui.setconfig('ui', 'interactive', 'off')
+        self.repo.ui.setconfig('ui', 'nontty', 'true')
         hook.redirect(True)
         self.mtime = -1
         self.size = -1
