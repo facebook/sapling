@@ -46,8 +46,21 @@ def perfstatus(ui, repo, *pats):
     #                                                False))))
     timer(lambda: sum(map(len, repo.status())))
 
+def clearcaches(cl):
+    # behave somewhat consistently across internal API changes
+    if util.safehasattr(cl, 'clearcaches'):
+        cl.clearcaches()
+    elif util.safehasattr(cl, '_nodecache'):
+        from mercurial.node import nullid, nullrev
+        cl._nodecache = {nullid: nullrev}
+        cl._nodepos = None
+
 def perfheads(ui, repo):
-    timer(lambda: len(repo.changelog.headrevs()))
+    cl = repo.changelog
+    def d():
+        len(cl.headrevs())
+        clearcaches(cl)
+    timer(d)
 
 def perftags(ui, repo):
     import mercurial.changelog, mercurial.manifest
@@ -126,20 +139,9 @@ def perfnodelookup(ui, repo, rev):
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
     cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
-    # behave somewhat consistently across internal API changes
-    if util.safehasattr(cl, 'clearcaches'):
-        clearcaches = cl.clearcaches
-    elif util.safehasattr(cl, '_nodecache'):
-        from mercurial.node import nullid, nullrev
-        def clearcaches():
-            cl._nodecache = {nullid: nullrev}
-            cl._nodepos = None
-    else:
-        def clearcaches():
-            pass
     def d():
         cl.rev(n)
-        clearcaches()
+        clearcaches(cl)
     timer(d)
 
 def perflog(ui, repo, **opts):
