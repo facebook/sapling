@@ -246,6 +246,7 @@ typedef struct {
 	Py_ssize_t raw_length; /* original number of elements */
 	Py_ssize_t length;     /* current number of elements */
 	PyObject *added;       /* populated on demand */
+	PyObject *headrevs;    /* cache, invalidated on changes */
 	nodetree *nt;          /* base-16 trie */
 	int ntlength;          /* # nodes in use */
 	int ntcapacity;        /* # nodes allocated */
@@ -463,6 +464,7 @@ static PyObject *index_insert(indexObject *self, PyObject *args)
 	if (self->nt)
 		nt_insert(self, node, (int)offset);
 
+	Py_CLEAR(self->headrevs);
 	Py_RETURN_NONE;
 }
 
@@ -484,6 +486,7 @@ static void _index_clearcaches(indexObject *self)
 		free(self->nt);
 		self->nt = NULL;
 	}
+	Py_CLEAR(self->headrevs);
 }
 
 static PyObject *index_clearcaches(indexObject *self)
@@ -534,11 +537,36 @@ bail:
 	return NULL;
 }
 
+/*
+ * When we cache a list, we want to be sure the caller can't mutate
+ * the cached copy.
+ */
+static PyObject *list_copy(PyObject *list)
+{
+	Py_ssize_t len = PyList_GET_SIZE(list);
+	PyObject *newlist = PyList_New(len);
+	Py_ssize_t i;
+
+	if (newlist == NULL)
+		return NULL;
+
+	for (i = 0; i < len; i++) {
+		PyObject *obj = PyList_GET_ITEM(list, i);
+		Py_INCREF(obj);
+		PyList_SET_ITEM(newlist, i, obj);
+	}
+
+	return newlist;
+}
+
 static PyObject *index_headrevs(indexObject *self)
 {
 	Py_ssize_t i, len, addlen;
 	char *nothead = NULL;
 	PyObject *heads;
+
+	if (self->headrevs)
+		return list_copy(self->headrevs);
 
 	len = index_length(self) - 1;
 	heads = PyList_New(0);
@@ -601,8 +629,9 @@ static PyObject *index_headrevs(indexObject *self)
 	}
 
 done:
+	self->headrevs = heads;
 	free(nothead);
-	return heads;
+	return list_copy(self->headrevs);
 bail:
 	Py_XDECREF(heads);
 	free(nothead);
@@ -1065,6 +1094,7 @@ static int index_slice_del(indexObject *self, PyObject *item)
 		ret = PyList_SetSlice(self->added, start - self->length + 1,
 				      PyList_GET_SIZE(self->added), NULL);
 done:
+	Py_CLEAR(self->headrevs);
 	return ret;
 }
 
@@ -1155,6 +1185,7 @@ static int index_init(indexObject *self, PyObject *args)
 	self->cache = NULL;
 
 	self->added = NULL;
+	self->headrevs = NULL;
 	self->offsets = NULL;
 	self->nt = NULL;
 	self->ntlength = self->ntcapacity = 0;
