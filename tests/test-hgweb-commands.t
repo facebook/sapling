@@ -1047,6 +1047,55 @@ Overviews
   </body>
   </html>
   
+raw graph
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/graph/?style=raw'
+  200 Script output follows
+  
+  
+  # HG graph
+  # Node ID ba87b23d29ca67a305625d81a20ac279c1e3f444
+  # Rows shown 4
+  
+  changeset:   ba87b23d29ca
+  user:        test
+  date:        1970-01-01
+  summary:     branch
+  branch:      unstable
+  tag:         tip
+  bookmark:    something
+  
+  node:        (0, 0) (color 1)
+  edge:        (0, 0) -> (0, 1) (color 1)
+  
+  changeset:   1d22e65f027e
+  user:        test
+  date:        1970-01-01
+  summary:     branch
+  branch:      stable
+  
+  node:        (0, 1) (color 1)
+  edge:        (0, 1) -> (0, 2) (color 1)
+  
+  changeset:   a4f92ed23982
+  user:        test
+  date:        1970-01-01
+  summary:     Added tag 1.0 for changeset 2ef0ac749a14
+  branch:      default
+  
+  node:        (0, 2) (color 1)
+  edge:        (0, 2) -> (0, 3) (color 1)
+  
+  changeset:   2ef0ac749a14
+  user:        test
+  date:        1970-01-01
+  summary:     base
+  tag:         1.0
+  bookmark:    anotherthing
+  
+  node:        (0, 3) (color 1)
+  
+  
 
 capabilities
 
