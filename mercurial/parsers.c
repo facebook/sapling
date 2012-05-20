@@ -930,6 +930,7 @@ static int index_slice_del(indexObject *self, PyObject *item)
 {
 	Py_ssize_t start, stop, step, slicelength;
 	Py_ssize_t length = index_length(self);
+	int ret = 0;
 
 	if (PySlice_GetIndicesEx((PySliceObject*)item, length,
 				 &start, &stop, &step, &slicelength) < 0)
@@ -975,7 +976,9 @@ static int index_slice_del(indexObject *self, PyObject *item)
 				self->ntrev = (int)start;
 		}
 		self->length = start + 1;
-		return 0;
+		if (start < self->raw_length)
+			self->raw_length = start;
+		goto done;
 	}
 
 	if (self->nt) {
@@ -983,10 +986,11 @@ static int index_slice_del(indexObject *self, PyObject *item)
 		if (self->ntrev > start)
 			self->ntrev = (int)start;
 	}
-	return self->added
-		? PyList_SetSlice(self->added, start - self->length + 1,
-				  PyList_GET_SIZE(self->added), NULL)
-		: 0;
+	if (self->added)
+		ret = PyList_SetSlice(self->added, start - self->length + 1,
+				      PyList_GET_SIZE(self->added), NULL);
+done:
+	return ret;
 }
 
 /*
