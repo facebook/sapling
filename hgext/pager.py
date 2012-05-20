@@ -53,7 +53,7 @@ from mercurial.i18n import _
 
 testedwith = 'internal'
 
-def _runpager(p):
+def _runpager(ui, p):
     pager = subprocess.Popen(p, shell=True, bufsize=-1,
                              close_fds=util.closefds, stdin=subprocess.PIPE,
                              stdout=sys.stdout, stderr=sys.stderr)
@@ -61,7 +61,7 @@ def _runpager(p):
     stdout = os.dup(sys.stdout.fileno())
     stderr = os.dup(sys.stderr.fileno())
     os.dup2(pager.stdin.fileno(), sys.stdout.fileno())
-    if util.isatty(sys.stderr):
+    if ui._isatty(sys.stderr):
         os.dup2(pager.stdin.fileno(), sys.stderr.fileno())
 
     @atexit.register
@@ -72,7 +72,7 @@ def _runpager(p):
         pager.wait()
 
 def uisetup(ui):
-    if ui.plain() or '--debugger' in sys.argv or not util.isatty(sys.stdout):
+    if '--debugger' in sys.argv or not ui.formatted():
         return
 
     def pagecmd(orig, ui, options, cmd, cmdfunc):
@@ -89,7 +89,7 @@ def uisetup(ui):
                 ui.setconfig('ui', 'interactive', False)
                 if util.safehasattr(signal, "SIGPIPE"):
                     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-                _runpager(p)
+                _runpager(ui, p)
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
