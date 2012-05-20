@@ -867,6 +867,10 @@ def present(repo, subset, x):
     """``present(set)``
     An empty set, if any revision in set isn't found; otherwise,
     all revisions in set.
+
+    If any of specified revisions is not present in the local repository,
+    the query is normally aborted. But this predicate allows the query
+    to continue even in such cases.
     """
     try:
         return getset(repo, subset, x)

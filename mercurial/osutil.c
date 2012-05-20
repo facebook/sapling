@@ -331,6 +331,9 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 			err = lstat(fullpath, &st);
 #endif
 			if (err == -1) {
+				/* race with file deletion? */
+				if (errno == ENOENT)
+					continue;
 				strncpy(fullpath + pathlen + 1, ent->d_name,
 					PATH_MAX - pathlen);
 				fullpath[PATH_MAX] = 0;
