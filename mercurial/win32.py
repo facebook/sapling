@@ -5,7 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import encoding
 import ctypes, errno, os, struct, subprocess, random
 
 _kernel32 = ctypes.windll.kernel32
@@ -290,8 +289,8 @@ def lookupreg(key, valname=None, scope=None):
             if res != _ERROR_SUCCESS:
                 continue
             if type.value == _REG_SZ:
-                # never let a Unicode string escape into the wild
-                return encoding.tolocal(buf.value.encode('UTF-8'))
+                # string is in ANSI code page, aka local encoding
+                return buf.value
             elif type.value == _REG_DWORD:
                 fmt = '<L'
                 s = ctypes.string_at(byref(buf), struct.calcsize(fmt))

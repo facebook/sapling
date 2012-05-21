@@ -27,6 +27,8 @@ class changectx(object):
             self._rev = changeid
             self._node = repo.changelog.node(changeid)
             return
+        if isinstance(changeid, long):
+            changeid = str(changeid)
         if changeid == '.':
             self._node = repo.dirstate.p1()
             self._rev = repo.changelog.rev(self._node)
