@@ -1186,7 +1186,7 @@ def bytecount(nbytes):
     for multiplier, divisor, format in _byteunits:
         if nbytes >= divisor * multiplier:
             return format % (nbytes / float(divisor))
-    return units[-1][2] % nbytes
+    return _byteunits[-1][2] % nbytes
 
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
