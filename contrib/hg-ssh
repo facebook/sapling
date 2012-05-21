@@ -33,25 +33,31 @@ from mercurial import dispatch
 
 import sys, os, shlex
 
-cwd = os.getcwd()
-allowed_paths = [os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
-                 for path in sys.argv[1:]]
-orig_cmd = os.getenv('SSH_ORIGINAL_COMMAND', '?')
-try:
-    cmdargv = shlex.split(orig_cmd)
-except ValueError, e:
-    sys.stderr.write('Illegal command "%s": %s\n' % (orig_cmd, e))
-    sys.exit(255)
-
-if cmdargv[:2] == ['hg', '-R'] and cmdargv[3:] == ['serve', '--stdio']:
-    path = cmdargv[2]
-    repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
-    if repo in allowed_paths:
-        dispatch.dispatch(dispatch.request(['-R', repo, 'serve', '--stdio']))
-    else:
-        sys.stderr.write('Illegal repository "%s"\n' % repo)
+def main():
+    cwd = os.getcwd()
+    allowed_paths = [os.path.normpath(os.path.join(cwd,
+                                                   os.path.expanduser(path)))
+                     for path in sys.argv[1:]]
+    orig_cmd = os.getenv('SSH_ORIGINAL_COMMAND', '?')
+    try:
+        cmdargv = shlex.split(orig_cmd)
+    except ValueError, e:
+        sys.stderr.write('Illegal command "%s": %s\n' % (orig_cmd, e))
         sys.exit(255)
-else:
-    sys.stderr.write('Illegal command "%s"\n' % orig_cmd)
-    sys.exit(255)
 
+    if cmdargv[:2] == ['hg', '-R'] and cmdargv[3:] == ['serve', '--stdio']:
+        path = cmdargv[2]
+        repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
+        if repo in allowed_paths:
+            dispatch.dispatch(dispatch.request(['-R', repo,
+                                                'serve',
+                                                '--stdio']))
+        else:
+            sys.stderr.write('Illegal repository "%s"\n' % repo)
+            sys.exit(255)
+    else:
+        sys.stderr.write('Illegal command "%s"\n' % orig_cmd)
+        sys.exit(255)
+
+if __name__ == '__main__':
+    main()
