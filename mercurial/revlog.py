@@ -722,7 +722,7 @@ class revlog(object):
         return self.node(c)
 
     def _match(self, id):
-        if isinstance(id, (long, int)):
+        if isinstance(id, int):
             # rev
             return self.node(id)
         if len(id) == 20:
