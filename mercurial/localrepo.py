@@ -2246,6 +2246,8 @@ class localrepository(repo.repository):
                     _('Unexpected response from remote server:'), l)
             self.ui.status(_('%d files to transfer, %s of data\n') %
                            (total_files, util.bytecount(total_bytes)))
+            handled_bytes = 0
+            self.ui.progress(_('clone'), 0, total=total_bytes)
             start = time.time()
             for i in xrange(total_files):
                 # XXX doesn't support '\n' or '\r' in filenames
@@ -2262,11 +2264,15 @@ class localrepository(repo.repository):
                 # for backwards compat, name was partially encoded
                 ofp = self.sopener(store.decodedir(name), 'w')
                 for chunk in util.filechunkiter(fp, limit=size):
+                    handled_bytes += len(chunk)
+                    self.ui.progress(_('clone'), handled_bytes,
+                                     total=total_bytes)
                     ofp.write(chunk)
                 ofp.close()
             elapsed = time.time() - start
             if elapsed <= 0:
                 elapsed = 0.001
+            self.ui.progress(_('clone'), None)
             self.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                            (util.bytecount(total_bytes), elapsed,
                             util.bytecount(total_bytes / elapsed)))
