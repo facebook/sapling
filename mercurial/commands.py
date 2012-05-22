@@ -3089,7 +3089,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    def optrst(options):
+    def optrst(options, verbose):
         data = []
         multioccur = False
         for option in options:
@@ -3099,7 +3099,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 shortopt, longopt, default, desc = option
                 optlabel = _("VALUE") # default label
 
-            if _("DEPRECATED") in desc and not ui.verbose:
+            if _("DEPRECATED") in desc and not verbose:
                 continue
 
             so = ''
@@ -3125,7 +3125,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         return rst
 
     # list all option lists
-    def opttext(optlist, width):
+    def opttext(optlist, width, verbose):
         rst = ''
         if not optlist:
             return ''
@@ -3134,7 +3134,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             rst += '\n%s\n' % title
             if options:
                 rst += "\n"
-                rst += optrst(options)
+                rst += optrst(options, verbose)
                 rst += '\n'
 
         return '\n' + minirst.format(rst, width)
@@ -3223,13 +3223,13 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             rst += '\n'
             rst += _("options:")
             rst += '\n\n'
-            rst += optrst(entry[1])
+            rst += optrst(entry[1], ui.verbose)
 
         if ui.verbose:
             rst += '\n'
             rst += _("global options:")
             rst += '\n\n'
-            rst += optrst(globalopts)
+            rst += optrst(globalopts, ui.verbose)
 
         keep = ui.verbose and ['verbose'] or []
         formatted, pruned = minirst.format(rst, textwidth, keep=keep)
@@ -3304,7 +3304,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
         optlist = []
         addglobalopts(optlist, True)
-        ui.write(opttext(optlist, textwidth))
+        ui.write(opttext(optlist, textwidth, ui.verbose))
 
     def helptopic(name):
         for names, header, doc in help.helptable:
