@@ -3089,26 +3089,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    def addglobalopts(optlist):
-        if ui.quiet:
-            return []
-
-        if ui.verbose:
-            optlist.append((_("global options:"), globalopts))
-            if name == 'shortlist':
-                optlist.append((_('use "hg help" for the full list '
-                                       'of commands'), ()))
-        else:
-            if name == 'shortlist':
-                msg = _('use "hg help" for the full list of commands '
-                        'or "hg -v" for details')
-            elif name and not full:
-                msg = _('use "hg help %s" to show the full help text') % name
-            else:
-                msg = _('use "hg -v help%s" to show builtin aliases and '
-                        'global options') % (name and " " + name or "")
-            optlist.append((msg, ()))
-
     def helpcmd(name):
         try:
             aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
@@ -3251,7 +3231,24 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 ui.write(" %-*s   %s\n" % (topics_len, t, desc))
 
         optlist = []
-        addglobalopts(optlist)
+        if not ui.quiet:
+            if ui.verbose:
+                optlist.append((_("global options:"), globalopts))
+                if name == 'shortlist':
+                    optlist.append((_('use "hg help" for the full list '
+                                           'of commands'), ()))
+            else:
+                if name == 'shortlist':
+                    msg = _('use "hg help" for the full list of commands '
+                            'or "hg -v" for details')
+                elif name and not full:
+                    msg = _('use "hg help %s" to show the full help '
+                            'text') % name
+                else:
+                    msg = _('use "hg -v help%s" to show builtin aliases and '
+                            'global options') % (name and " " + name or "")
+                optlist.append((msg, ()))
+
         ui.write(help.opttext(optlist, textwidth, ui.verbose))
 
     def helptopic(name):
