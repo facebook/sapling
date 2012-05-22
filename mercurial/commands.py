@@ -3089,7 +3089,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    def addglobalopts(optlist, aliases):
+    def addglobalopts(optlist):
         if ui.quiet:
             return []
 
@@ -3104,11 +3104,9 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                         'or "hg -v" for details')
             elif name and not full:
                 msg = _('use "hg help %s" to show the full help text') % name
-            elif aliases:
+            else:
                 msg = _('use "hg -v help%s" to show builtin aliases and '
                         'global options') % (name and " " + name or "")
-            else:
-                msg = _('use "hg -v help %s" to show more info') % name
             optlist.append((msg, ()))
 
     def helpcmd(name):
@@ -3253,7 +3251,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 ui.write(" %-*s   %s\n" % (topics_len, t, desc))
 
         optlist = []
-        addglobalopts(optlist, True)
+        addglobalopts(optlist)
         ui.write(help.opttext(optlist, textwidth, ui.verbose))
 
     def helptopic(name):
