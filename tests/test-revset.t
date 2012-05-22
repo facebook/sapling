@@ -527,6 +527,27 @@ test infinite recursion
   hg: parse error: infinite expansion of revset alias "recurse1" detected
   [255]
 
+  $ echo 'level1($1, $2) = $1 or $2' >> .hg/hgrc
+  $ echo 'level2($1, $2) = level1($2, $1)' >> .hg/hgrc
+  $ try "level2(level1(1, 2), 3)"
+  (func
+    ('symbol', 'level2')
+    (list
+      (func
+        ('symbol', 'level1')
+        (list
+          ('symbol', '1')
+          ('symbol', '2')))
+      ('symbol', '3')))
+  (or
+    ('symbol', '3')
+    (or
+      ('symbol', '1')
+      ('symbol', '2')))
+  3
+  1
+  2
+
 test nesting and variable passing
 
   $ echo 'nested($1) = nested2($1)' >> .hg/hgrc
@@ -564,6 +585,19 @@ far away.
       ('string', '$1')))
   abort: unknown revision '$1'!
   [255]
+
+  $ echo 'injectparamasstring2 = max(_aliasarg("$1"))' >> .hg/hgrc
+  $ echo 'callinjection2($1) = descendants(injectparamasstring2)' >> .hg/hgrc
+  $ try 'callinjection2(2:5)'
+  (func
+    ('symbol', 'callinjection2')
+    (range
+      ('symbol', '2')
+      ('symbol', '5')))
+  hg: parse error: not a function: _aliasarg
+  [255]
+  >>> data = file('.hg/hgrc', 'rb').read()
+  >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
 
   $ try 'd(2:5)'
   (func
