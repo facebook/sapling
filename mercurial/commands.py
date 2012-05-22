@@ -3089,56 +3089,6 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    def optrst(options, verbose):
-        data = []
-        multioccur = False
-        for option in options:
-            if len(option) == 5:
-                shortopt, longopt, default, desc, optlabel = option
-            else:
-                shortopt, longopt, default, desc = option
-                optlabel = _("VALUE") # default label
-
-            if _("DEPRECATED") in desc and not verbose:
-                continue
-
-            so = ''
-            if shortopt:
-                so = '-' + shortopt
-            lo = '--' + longopt
-            if default:
-                desc += _(" (default: %s)") % default
-
-            if isinstance(default, list):
-                lo += " %s [+]" % optlabel
-                multioccur = True
-            elif (default is not None) and not isinstance(default, bool):
-                lo += " %s" % optlabel
-
-            data.append((so, lo, desc))
-
-        rst = minirst.maketable(data, 1)
-
-        if multioccur:
-            rst += _("\n[+] marked option can be specified multiple times\n")
-
-        return rst
-
-    # list all option lists
-    def opttext(optlist, width, verbose):
-        rst = ''
-        if not optlist:
-            return ''
-
-        for title, options in optlist:
-            rst += '\n%s\n' % title
-            if options:
-                rst += "\n"
-                rst += optrst(options, verbose)
-                rst += '\n'
-
-        return '\n' + minirst.format(rst, width)
-
     def addglobalopts(optlist, aliases):
         if ui.quiet:
             return []
@@ -3223,13 +3173,13 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             rst += '\n'
             rst += _("options:")
             rst += '\n\n'
-            rst += optrst(entry[1], ui.verbose)
+            rst += help.optrst(entry[1], ui.verbose)
 
         if ui.verbose:
             rst += '\n'
             rst += _("global options:")
             rst += '\n\n'
-            rst += optrst(globalopts, ui.verbose)
+            rst += help.optrst(globalopts, ui.verbose)
 
         keep = ui.verbose and ['verbose'] or []
         formatted, pruned = minirst.format(rst, textwidth, keep=keep)
@@ -3304,7 +3254,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
         optlist = []
         addglobalopts(optlist, True)
-        ui.write(opttext(optlist, textwidth, ui.verbose))
+        ui.write(help.opttext(optlist, textwidth, ui.verbose))
 
     def helptopic(name):
         for names, header, doc in help.helptable:

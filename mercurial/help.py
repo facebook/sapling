@@ -8,7 +8,7 @@
 from i18n import gettext, _
 import itertools, sys, os
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
-import encoding, util
+import encoding, util, minirst
 
 def listexts(header, exts, indent=1):
     '''return a text listing of the given extensions'''
@@ -26,6 +26,56 @@ def extshelp():
     doc += listexts(_('enabled extensions:'), extensions.enabled())
     doc += listexts(_('disabled extensions:'), extensions.disabled())
     return doc
+
+def optrst(options, verbose):
+    data = []
+    multioccur = False
+    for option in options:
+        if len(option) == 5:
+            shortopt, longopt, default, desc, optlabel = option
+        else:
+            shortopt, longopt, default, desc = option
+            optlabel = _("VALUE") # default label
+
+        if _("DEPRECATED") in desc and not verbose:
+            continue
+
+        so = ''
+        if shortopt:
+            so = '-' + shortopt
+        lo = '--' + longopt
+        if default:
+            desc += _(" (default: %s)") % default
+
+        if isinstance(default, list):
+            lo += " %s [+]" % optlabel
+            multioccur = True
+        elif (default is not None) and not isinstance(default, bool):
+            lo += " %s" % optlabel
+
+        data.append((so, lo, desc))
+
+    rst = minirst.maketable(data, 1)
+
+    if multioccur:
+        rst += _("\n[+] marked option can be specified multiple times\n")
+
+    return rst
+
+# list all option lists
+def opttext(optlist, width, verbose):
+    rst = ''
+    if not optlist:
+        return ''
+
+    for title, options in optlist:
+        rst += '\n%s\n' % title
+        if options:
+            rst += "\n"
+            rst += optrst(options, verbose)
+            rst += '\n'
+
+    return '\n' + minirst.format(rst, width)
 
 def topicmatch(kw):
     """Return help topics matching kw.
