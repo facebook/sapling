@@ -24,6 +24,9 @@ command="cd path/to/my/repositories && hg-ssh repo1 subdir/repo2"
 
 You can use pattern matching of your normal shell, e.g.:
 command="cd repos && hg-ssh user/thomas/* projects/{mercurial,foo}"
+
+You can also add a --read-only flag to allow read-only access to a key, e.g.:
+command="hg-ssh --read-only repos/*"
 """
 
 # enable importing on demand to reduce startup time
@@ -35,9 +38,17 @@ import sys, os, shlex
 
 def main():
     cwd = os.getcwd()
+    readonly = False
+    args = sys.argv[1:]
+    while len(args):
+        if args[0] == '--read-only':
+            readonly = True
+            args.pop(0)
+        else:
+            break
     allowed_paths = [os.path.normpath(os.path.join(cwd,
                                                    os.path.expanduser(path)))
-                     for path in sys.argv[1:]]
+                     for path in args]
     orig_cmd = os.getenv('SSH_ORIGINAL_COMMAND', '?')
     try:
         cmdargv = shlex.split(orig_cmd)
@@ -49,15 +60,27 @@ def main():
         path = cmdargv[2]
         repo = os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
         if repo in allowed_paths:
-            dispatch.dispatch(dispatch.request(['-R', repo,
-                                                'serve',
-                                                '--stdio']))
+            cmd = ['-R', repo, 'serve', '--stdio']
+            if readonly:
+                cmd += [
+                    '--config',
+                    'hooks.prechangegroup.hg-ssh=python:__main__.rejectpush',
+                    '--config',
+                    'hooks.prepushkey.hg-ssh=python:__main__.rejectpush'
+                    ]
+            dispatch.dispatch(dispatch.request(cmd))
         else:
             sys.stderr.write('Illegal repository "%s"\n' % repo)
             sys.exit(255)
     else:
         sys.stderr.write('Illegal command "%s"\n' % orig_cmd)
         sys.exit(255)
+
+def rejectpush(ui, **kwargs):
+    ui.warn("Permission denied\n")
+    # mercurial hooks use unix process conventions for hook return values
+    # so a truthy return means failure
+    return True
 
 if __name__ == '__main__':
     main()
