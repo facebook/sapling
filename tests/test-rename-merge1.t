@@ -156,3 +156,26 @@ Check for issue2089
   c2
 
   $ cd ..
+
+Check for issue3074
+
+  $ hg init repo3074
+  $ cd repo3074
+  $ echo foo > file
+  $ hg add file
+  $ hg commit -m "added file"
+  $ hg mv file newfile
+  $ hg commit -m "renamed file"
+  $ hg update 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg rm file
+  $ hg commit -m "deleted file"
+  created new head
+  $ hg merge
+  note: possible conflict - file was deleted and renamed to:
+   newfile
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg status
+  M newfile
+  $ cd ..

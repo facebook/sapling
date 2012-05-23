@@ -198,9 +198,11 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     elif pa == p2: # backwards
         pa = p1.p1()
     elif pa and repo.ui.configbool("merge", "followcopies", True):
-        copy, diverge = copies.mergecopies(repo, p1, p2, pa)
+        copy, diverge, renamedelete = copies.mergecopies(repo, p1, p2, pa)
         for of, fl in diverge.iteritems():
             act("divergent renames", "dr", of, fl)
+        for of, fl in renamedelete.iteritems():
+            act("rename and delete", "rd", of, fl)
 
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" overwrite: %s, partial: %s\n"
@@ -407,6 +409,12 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             fl = a[2]
             repo.ui.warn(_("note: possible conflict - %s was renamed "
                            "multiple times to:\n") % f)
+            for nf in fl:
+                repo.ui.warn(" %s\n" % nf)
+        elif m == "rd": # rename and delete
+            fl = a[2]
+            repo.ui.warn(_("note: possible conflict - %s was deleted "
+                           "and renamed to:\n") % f)
             for nf in fl:
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
