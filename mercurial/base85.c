@@ -9,6 +9,7 @@
  Largely based on git's implementation
 */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include "util.h"
@@ -33,7 +34,7 @@ b85encode(PyObject *self, PyObject *args)
 	const unsigned char *text;
 	PyObject *out;
 	char *dst;
-	int len, olen, i;
+	Py_ssize_t len, olen, i;
 	unsigned int acc, val, ch;
 	int pad = 0;
 
@@ -81,7 +82,8 @@ b85decode(PyObject *self, PyObject *args)
 	PyObject *out;
 	const char *text;
 	char *dst;
-	int len, i, j, olen, c, cap;
+	Py_ssize_t len, i, j, olen, cap;
+	int c;
 	unsigned int acc;
 
 	if (!PyArg_ParseTuple(args, "s#", &text, &len))
