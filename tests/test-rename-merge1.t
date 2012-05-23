@@ -123,6 +123,8 @@ Check for issue2642
   $ cat f2
   c0
 
+  $ cd ..
+
 Check for issue2089
 
   $ hg init repo2089
@@ -152,3 +154,5 @@ Check for issue2089
 
   $ cat f2
   c2
+
+  $ cd ..
