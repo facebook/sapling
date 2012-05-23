@@ -95,9 +95,6 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
   $ hg up c761c6948de0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up
-  note: possible conflict - b was renamed multiple times to:
-   b3
-   b4
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Check for issue2642

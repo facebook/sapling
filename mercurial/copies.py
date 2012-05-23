@@ -285,7 +285,7 @@ def mergecopies(repo, c1, c2, ca):
 
     diverge2 = set()
     for of, fl in diverge.items():
-        if len(fl) == 1 or of in c2:
+        if len(fl) == 1 or of in c1 or of in c2:
             del diverge[of] # not actually divergent, or not a rename
         else:
             diverge2.update(fl) # reverse map for below
