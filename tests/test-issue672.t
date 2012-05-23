@@ -28,7 +28,7 @@ http://mercurial.selenic.com/bts/issue672
     searching for copies back to rev 1
     unmatched files in other:
      1a
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      1a -> 1 
     checking for directory renames
   resolving manifests
@@ -59,7 +59,7 @@ http://mercurial.selenic.com/bts/issue672
     searching for copies back to rev 1
     unmatched files in local:
      1a
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      1a -> 1 *
     checking for directory renames
   resolving manifests
@@ -82,7 +82,7 @@ http://mercurial.selenic.com/bts/issue672
     searching for copies back to rev 1
     unmatched files in other:
      1a
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      1a -> 1 *
     checking for directory renames
   resolving manifests

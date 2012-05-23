@@ -287,6 +287,7 @@ def mergecopies(repo, c1, c2, ca):
         checkcopies(f, m2, m1)
 
     renamedelete = {}
+    renamedelete2 = set()
     diverge2 = set()
     for of, fl in diverge.items():
         if len(fl) == 1 or of in c1 or of in c2:
@@ -295,17 +296,21 @@ def mergecopies(repo, c1, c2, ca):
                 # renamed on one side, deleted on the other side, but filter
                 # out files that have been renamed and then deleted
                 renamedelete[of] = [f for f in fl if f in c1 or f in c2]
+                renamedelete2.update(fl) # reverse map for below
         else:
             diverge2.update(fl) # reverse map for below
 
     if fullcopy:
-        repo.ui.debug("  all copies found (* = to merge, ! = divergent):\n")
+        repo.ui.debug("  all copies found (* = to merge, ! = divergent, "
+                      "% = renamed and deleted):\n")
         for f in fullcopy:
             note = ""
             if f in copy:
                 note += "*"
             if f in diverge2:
                 note += "!"
+            if f in renamedelete2:
+                note += "%"
             repo.ui.debug("   %s -> %s %s\n" % (f, fullcopy[f], note))
     del diverge2
 

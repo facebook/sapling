@@ -28,7 +28,7 @@
     unmatched files in other:
      b
      b2
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      c2 -> a2 !
      b -> a *
      b2 -> a2 !
@@ -171,9 +171,23 @@ Check for issue3074
   $ hg rm file
   $ hg commit -m "deleted file"
   created new head
-  $ hg merge
+  $ hg merge --debug
+    searching for copies back to rev 1
+    unmatched files in other:
+     newfile
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     newfile -> file %
+    checking for directory renames
+   file: rename and delete -> rd
+  resolving manifests
+   overwrite: False, partial: False
+   ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
+   newfile: remote created -> g
+  updating: file 1/2 files (50.00%)
   note: possible conflict - file was deleted and renamed to:
    newfile
+  updating: newfile 2/2 files (100.00%)
+  getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg status

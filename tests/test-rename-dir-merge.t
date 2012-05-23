@@ -30,7 +30,7 @@
     unmatched files in other:
      b/a
      b/b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b/a -> a/a 
      b/b -> a/b 
     checking for directory renames
@@ -81,7 +81,7 @@
      b/b
     unmatched files in other:
      a/c
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b/a -> a/a 
      b/b -> a/b 
     checking for directory renames

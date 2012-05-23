@@ -118,7 +118,7 @@ Graft out of order, skipping a merge and a duplicate
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests

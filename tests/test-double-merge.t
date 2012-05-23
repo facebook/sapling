@@ -29,7 +29,7 @@ we get conflicts that shouldn't be there
     searching for copies back to rev 1
     unmatched files in other:
      bar
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      bar -> foo *
     checking for directory renames
   resolving manifests
