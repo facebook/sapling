@@ -1481,7 +1481,7 @@ def _expandargs(tree, args):
         return args[arg]
     return tuple(_expandargs(t, args) for t in tree)
 
-def _expandaliases(aliases, tree, expanding):
+def _expandaliases(aliases, tree, expanding, cache):
     """Expand aliases in tree, recursively.
 
     'aliases' is a dictionary mapping user defined aliases to
@@ -1496,17 +1496,20 @@ def _expandaliases(aliases, tree, expanding):
             raise error.ParseError(_('infinite expansion of revset alias "%s" '
                                      'detected') % alias.name)
         expanding.append(alias)
-        result = _expandaliases(aliases, alias.replacement, expanding)
+        if alias.name not in cache:
+            cache[alias.name] = _expandaliases(aliases, alias.replacement,
+                                               expanding, cache)
+        result = cache[alias.name]
         expanding.pop()
         if alias.args is not None:
             l = getlist(tree[2])
             if len(l) != len(alias.args):
                 raise error.ParseError(
                     _('invalid number of arguments: %s') % len(l))
-            l = [_expandaliases(aliases, a, []) for a in l]
+            l = [_expandaliases(aliases, a, [], cache) for a in l]
             result = _expandargs(result, dict(zip(alias.args, l)))
     else:
-        result = tuple(_expandaliases(aliases, t, expanding)
+        result = tuple(_expandaliases(aliases, t, expanding, cache)
                        for t in tree)
     return result
 
@@ -1516,7 +1519,7 @@ def findaliases(ui, tree):
     for k, v in ui.configitems('revsetalias'):
         alias = revsetalias(k, v)
         aliases[alias.name] = alias
-    return _expandaliases(aliases, tree, [])
+    return _expandaliases(aliases, tree, [], {})
 
 parse = parser.parser(tokenize, elements).parse
 
