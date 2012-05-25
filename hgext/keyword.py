@@ -188,7 +188,7 @@ class kwtemplater(object):
         self.repo = repo
         self.match = match.match(repo.root, '', [], inc, exc)
         self.restrict = kwtools['hgcmd'] in restricted.split()
-        self.record = False
+        self.postcommit = False
 
         kwmaps = self.ui.configitems('keywordmaps')
         if kwmaps: # override default templates
@@ -243,7 +243,7 @@ class kwtemplater(object):
 
     def overwrite(self, ctx, candidates, lookup, expand, rekw=False):
         '''Overwrites selected files expanding/shrinking keywords.'''
-        if self.restrict or lookup or self.record: # exclude kw_copy
+        if self.restrict or lookup or self.postcommit: # exclude kw_copy
             candidates = self.iskwfile(candidates, ctx)
         if not candidates:
             return
@@ -280,7 +280,7 @@ class kwtemplater(object):
                 fp.close()
                 if kwcmd:
                     self.repo.dirstate.normal(f)
-                elif self.record:
+                elif self.postcommit:
                     self.repo.dirstate.normallookup(f)
 
     def shrink(self, fname, text):
@@ -583,7 +583,7 @@ def reposetup(ui, repo):
         def kwcommitctx(self, ctx, error=False):
             n = super(kwrepo, self).commitctx(ctx, error)
             # no lock needed, only called from repo.commit() which already locks
-            if not kwt.record:
+            if not kwt.postcommit:
                 restrict = kwt.restrict
                 kwt.restrict = True
                 kwt.overwrite(self[n], sorted(ctx.added() + ctx.modified()),
@@ -661,7 +661,7 @@ def reposetup(ui, repo):
         try:
             # record returns 0 even when nothing has changed
             # therefore compare nodes before and after
-            kwt.record = True
+            kwt.postcommit = True
             ctx = repo['.']
             wstatus = repo[None].status()
             ret = orig(ui, repo, commitfunc, *pats, **opts)
