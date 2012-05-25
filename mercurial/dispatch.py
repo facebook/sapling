@@ -252,8 +252,10 @@ def _runcatch(req):
     return -1
 
 def tuplever(v):
-    return tuple([int(i) for i in v.split('.')])
-
+    try:
+        return tuple([int(i) for i in v.split('.')])
+    except ValueError:
+        return tuple()
 
 def aliasargs(fn, givenargs):
     args = getattr(fn, 'args', [])
