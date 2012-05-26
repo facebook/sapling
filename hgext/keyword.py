@@ -625,6 +625,21 @@ def reposetup(ui, repo):
         kwt.match = util.never
         return orig(web, req, tmpl)
 
+    def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
+        '''Wraps cmdutil.amend expanding keywords after amend.'''
+        wlock = repo.wlock()
+        try:
+            kwt.postcommit = True
+            newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
+            if newid != old.node():
+                ctx = repo[newid]
+                kwt.restrict = True
+                kwt.overwrite(ctx, ctx.files(), False, True)
+                kwt.restrict = False
+            return newid
+        finally:
+            wlock.release()
+
     def kw_copy(orig, ui, repo, pats, opts, rename=False):
         '''Wraps cmdutil.copy so that copy/rename destinations do not
         contain expanded keywords.
@@ -690,6 +705,7 @@ def reposetup(ui, repo):
     extensions.wrapfunction(context.filectx, 'cmp', kwfilectx_cmp)
     extensions.wrapfunction(patch.patchfile, '__init__', kwpatchfile_init)
     extensions.wrapfunction(patch, 'diff', kw_diff)
+    extensions.wrapfunction(cmdutil, 'amend', kw_amend)
     extensions.wrapfunction(cmdutil, 'copy', kw_copy)
     for c in 'annotate changeset rev filediff diff'.split():
         extensions.wrapfunction(webcommands, c, kwweb_skip)

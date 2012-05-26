@@ -495,6 +495,22 @@ record added keyword ignored file
   $ hg forget i
   $ rm i
 
+amend
+
+  $ echo amend >> a
+  $ echo amend >> b
+  $ hg -q commit -d '1 14' -m 'prepare amend'
+
+  $ hg --debug commit --amend -d '1 15' -m 'amend without changes' | grep keywords
+  invalidating branch cache (tip differs)
+  overwriting a expanding keywords
+  $ hg -q id
+  a71343332ea9
+  $ head -1 a
+  expand $Id: a,v a71343332ea9 1970/01/01 00:00:01 test $
+
+  $ hg -q strip -n tip
+
 Test patch queue repo
 
   $ hg init --mq
