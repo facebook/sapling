@@ -650,25 +650,29 @@ def reposetup(ui, repo):
         For the latter we have to follow the symlink to find out whether its
         target is configured for expansion and we therefore must unexpand the
         keywords in the destination.'''
-        orig(ui, repo, pats, opts, rename)
-        if opts.get('dry_run'):
-            return
-        wctx = repo[None]
-        cwd = repo.getcwd()
+        wlock = repo.wlock()
+        try:
+            orig(ui, repo, pats, opts, rename)
+            if opts.get('dry_run'):
+                return
+            wctx = repo[None]
+            cwd = repo.getcwd()
 
-        def haskwsource(dest):
-            '''Returns true if dest is a regular file and configured for
-            expansion or a symlink which points to a file configured for
-            expansion. '''
-            source = repo.dirstate.copied(dest)
-            if 'l' in wctx.flags(source):
-                source = scmutil.canonpath(repo.root, cwd,
-                                           os.path.realpath(source))
-            return kwt.match(source)
+            def haskwsource(dest):
+                '''Returns true if dest is a regular file and configured for
+                expansion or a symlink which points to a file configured for
+                expansion. '''
+                source = repo.dirstate.copied(dest)
+                if 'l' in wctx.flags(source):
+                    source = scmutil.canonpath(repo.root, cwd,
+                                               os.path.realpath(source))
+                return kwt.match(source)
 
-        candidates = [f for f in repo.dirstate.copies() if
-                      'l' not in wctx.flags(f) and haskwsource(f)]
-        kwt.overwrite(wctx, candidates, False, False)
+            candidates = [f for f in repo.dirstate.copies() if
+                          'l' not in wctx.flags(f) and haskwsource(f)]
+            kwt.overwrite(wctx, candidates, False, False)
+        finally:
+            wlock.release()
 
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
         '''Wraps record.dorecord expanding keywords after recording.'''
