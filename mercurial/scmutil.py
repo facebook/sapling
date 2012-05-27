@@ -465,7 +465,7 @@ if os.name != 'nt':
 
 else:
 
-    _HKEY_LOCAL_MACHINE = 0x80000002L
+    import _winreg
 
     def systemrcpath():
         '''return default os-specific hgrc search path'''
@@ -485,7 +485,7 @@ else:
             return rcpath
         # else look for a system rcpath in the registry
         value = util.lookupreg('SOFTWARE\\Mercurial', None,
-                               _HKEY_LOCAL_MACHINE)
+                               _winreg.HKEY_LOCAL_MACHINE)
         if not isinstance(value, str) or not value:
             return rcpath
         value = util.localpath(value)
