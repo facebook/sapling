@@ -202,7 +202,7 @@ def has_unix_permissions():
         os.rmdir(d)
 
 def has_pyflakes():
-    return matchoutput('echo "import re" 2>&1 | pyflakes',
+    return matchoutput("sh -c \"echo 'import re' 2>&1 | pyflakes\"",
                        r"<stdin>:1: 're' imported but unused",
                        True)
 
