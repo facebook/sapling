@@ -5,8 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import encoding
-import ctypes, errno, os, subprocess, random, _winreg
+import ctypes, errno, os, subprocess, random
 
 _kernel32 = ctypes.windll.kernel32
 _advapi32 = ctypes.windll.advapi32
@@ -243,27 +242,6 @@ def testpid(pid):
         finally:
             _kernel32.CloseHandle(h)
     return _kernel32.GetLastError() != _ERROR_INVALID_PARAMETER
-
-def lookupreg(key, valname=None, scope=None):
-    ''' Look up a key/value name in the Windows registry.
-
-    valname: value name. If unspecified, the default value for the key
-    is used.
-    scope: optionally specify scope for registry lookup, this can be
-    a sequence of scopes to look up in order. Default (CURRENT_USER,
-    LOCAL_MACHINE).
-    '''
-    if scope is None:
-        scope = (_winreg.HKEY_CURRENT_USER, _winreg.HKEY_LOCAL_MACHINE)
-    elif not isinstance(scope, (list, tuple)):
-        scope = (scope,)
-    for s in scope:
-        try:
-            val = _winreg.QueryValueEx(_winreg.OpenKey(s, key), valname)[0]
-            # never let a Unicode string escape into the wild
-            return encoding.tolocal(val.encode('UTF-8'))
-        except EnvironmentError:
-            pass
 
 def executablepath():
     '''return full path of hg.exe'''
