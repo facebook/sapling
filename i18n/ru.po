@@ -172,7 +172,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-05-14 13:32+0400\n"
+"POT-Creation-Date: 2012-05-27 18:16+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -5151,6 +5151,10 @@ msgid "error removing undo: %s\n"
 msgstr "ошибка при удалении страховки (undo): %s\n"
 
 #, python-format
+msgid "saving current version of %s as %s\n"
+msgstr "текущая версия %s сохраняется как %s\n"
+
+#, python-format
 msgid "apply failed for patch %s"
 msgstr "не удалось наложить патч %s"
 
@@ -6008,6 +6012,9 @@ msgstr "ошибка при подшивке патча %s"
 
 msgid "overwrite any local changes"
 msgstr "перезаписывать все локальные изменения"
+
+msgid "do not save backup copies of files"
+msgstr "не сохранять резервные копии файлов"
 
 msgid "hg qgoto [OPTION]... PATCH"
 msgstr "hg qgoto [ПАРАМЕТР]... ПАТЧ"
@@ -6942,20 +6949,6 @@ msgstr ""
 "Если программа просмотра не задана, расширение pager использует переменную\n"
 "окружения $PAGER. Если не заданы ни pager.pager, ни $PAGER, программа\n"
 "просмотра не используется."
-
-msgid ""
-"If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
-"setting::"
-msgstr ""
-"Если вы замечаете сообщение об ошибке \"BROKEN PIPE\" (\"ОБРЫВ КАНАЛА\")\n"
-"его можно отключить с помощью следующего параметра::"
-
-msgid ""
-"  [pager]\n"
-"  quiet = True"
-msgstr ""
-"  [pager]\n"
-"  quiet = True"
 
 msgid ""
 "You can disable the pager for certain commands by adding them to the\n"
@@ -9233,10 +9226,6 @@ msgid "undeleting %s\n"
 msgstr "отмена удаления %s\n"
 
 #, python-format
-msgid "saving current version of %s as %s\n"
-msgstr "текущая версия %s сохраняется как %s\n"
-
-#, python-format
 msgid "file not managed: %s\n"
 msgstr "файл не под контролем версий: %s\n"
 
@@ -9466,7 +9455,9 @@ msgid ""
 "    option takes a percentage between 0 (disabled) and 100 (files must\n"
 "    be identical) as its parameter. Detecting renamed files this way\n"
 "    can be expensive. After using this option, :hg:`status -C` can be\n"
-"    used to check which files were identified as moved or renamed."
+"    used to check which files were identified as moved or renamed.\n"
+"    If this option is not specified, only renames of identical files\n"
+"    are detected."
 msgstr ""
 "    Используйте параметр -s/--similarity, чтобы найти переименованные\n"
 "    файлы. Если этот параметр больше 0, то производится сравнение\n"
@@ -9477,7 +9468,8 @@ msgstr ""
 "    переименованных файлов может оказать дорогим. После использования\n"
 "    этого параметра можно использовать :hg:`status -C` чтобы проверить,\n"
 "    какие файлы были идентифицированы как перемещенные или\n"
-"    переименованные."
+"    переименованные. Если этот параметр не задан, обнаруживаются только\n"
+"    переименования идентичных файлов."
 
 msgid "similarity must be a number"
 msgstr "параметр \"similarity\" должен быть числом"
@@ -13133,9 +13125,6 @@ msgstr "максимальная ревизия не позднее ДАТЫ"
 
 msgid "revert to the specified revision"
 msgstr "вернуть состояние на момент указанной ревизии"
-
-msgid "do not save backup copies of files"
-msgstr "не сохранять резервные копии файлов"
 
 msgid "[OPTION]... [-r REV] [NAME]..."
 msgstr "[ПАРАМЕТР]... [-r РЕВИЗИЯ] [ИМЯ]..."
@@ -22169,10 +22158,10 @@ msgid "_matchfiles requires string arguments"
 msgstr "_matchfiles требует строковых аргументов"
 
 msgid "_matchfiles expected at most one revision"
-msgstr ""
+msgstr "_matchfiles ожидает не более одной ревизии"
 
 msgid "_matchfiles expected at most one default mode"
-msgstr ""
+msgstr "_matchfiles ожидает не более одного режима сравнения по умолчанию"
 
 #, python-format
 msgid "invalid _matchfiles prefix: %s"
@@ -22364,6 +22353,15 @@ msgstr ""
 "    Иначе все ревизии из множества."
 
 msgid ""
+"    If any of specified revisions is not present in the local repository,\n"
+"    the query is normally aborted. But this predicate allows the query\n"
+"    to continue even in such cases."
+msgstr ""
+"    Если любая из заданных ревизий отсутствует в локальном хранилище,\n"
+"    выполнение запроса обычно прерывается. Этот же предикат позволяет\n"
+"    продолжить выполнение запроса даже в таких случаях."
+
+msgid ""
 "``public()``\n"
 "    Changeset in public phase."
 msgstr ""
@@ -22464,7 +22462,7 @@ msgstr ""
 msgid ""
 "    Special fields are ``summary`` and ``metadata``:\n"
 "    ``summary`` matches the first line of the description.\n"
-"    ``metatadata`` is equivalent to matching ``description user date``\n"
+"    ``metadata`` is equivalent to matching ``description user date``\n"
 "    (i.e. it matches the main metadata fields)."
 msgstr ""
 "    Особыми полями являются ``summary`` and ``metadata``: ``summary``\n"
@@ -23687,6 +23685,20 @@ msgstr "поиск отдаленных изменений"
 
 msgid "push failed:"
 msgstr "ошибка при проталкивании:"
+
+#~ msgid ""
+#~ "If you notice \"BROKEN PIPE\" error messages, you can disable them by\n"
+#~ "setting::"
+#~ msgstr ""
+#~ "Если вы замечаете сообщение об ошибке \"BROKEN PIPE\" (\"ОБРЫВ КАНАЛА\")\n"
+#~ "его можно отключить с помощью следующего параметра::"
+
+#~ msgid ""
+#~ "  [pager]\n"
+#~ "  quiet = True"
+#~ msgstr ""
+#~ "  [pager]\n"
+#~ "  quiet = True"
 
 #~ msgid "The hook does not change bug status."
 #~ msgstr "Хук не изменяет статус бага."
