@@ -35,6 +35,10 @@ class sortdict(dict):
     def __delitem__(self, key):
         dict.__delitem__(self, key)
         self._list.remove(key)
+    def keys(self):
+        return self._list
+    def iterkeys(self):
+        return self._list.__iter__()
 
 class config(object):
     def __init__(self, data=None):
