@@ -233,6 +233,16 @@ quoting needed
   $ log 'branch(é)'
   8
   9
+  $ log 'branch(a)'
+  0
+  $ hg log -r 'branch("re:a")' --template '{rev} {branch}\n'
+  0 a
+  2 a-b-c-
+  3 +a+b+c+
+  4 -a-b-c-
+  5 /a/b/c/
+  6 _a_b_c_
+  7 .a.b.c.
   $ log 'children(ancestor(4,5))'
   2
   3

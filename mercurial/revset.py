@@ -325,14 +325,25 @@ def branch(repo, subset, x):
     """``branch(string or set)``
     All changesets belonging to the given branch or the branches of the given
     changesets.
+
+    If `string` starts with `re:`, the remainder of the name is treated as
+    a regular expression. To match a branch that actually starts with `re:`,
+    use the prefix `literal:`.
     """
     try:
         b = getstring(x, '')
-        if b in repo.branchmap():
-            return [r for r in subset if repo[r].branch() == b]
     except error.ParseError:
         # not a string, but another revspec, e.g. tip()
         pass
+    else:
+        kind, pattern, matcher = _stringmatcher(b)
+        if kind == 'literal':
+            # note: falls through to the revspec case if no branch with
+            # this name exists
+            if pattern in repo.branchmap():
+                return [r for r in subset if matcher(repo[r].branch())]
+        else:
+            return [r for r in subset if matcher(repo[r].branch())]
 
     s = getset(repo, range(len(repo)), x)
     b = set()
