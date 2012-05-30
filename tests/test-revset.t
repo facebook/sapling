@@ -369,6 +369,22 @@ quoting needed
   6
   $ log 'tag(tip)'
   9
+
+we can use patterns when searching for tags
+
+  $ log 'tag("1..*")'
+  abort: tag '1..*' does not exist
+  [255]
+  $ log 'tag("re:1..*")'
+  6
+  $ log 'tag("re:[0-9].[0-9]")'
+  6
+  $ log 'tag("literal:1.0")'
+  6
+  $ log 'tag("re:0..*")'
+  abort: no tags exist that match '0..*'
+  [255]
+
   $ log 'tag(unknown)'
   abort: tag 'unknown' does not exist
   [255]

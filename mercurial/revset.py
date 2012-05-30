@@ -1167,12 +1167,18 @@ def tag(repo, subset, x):
     args = getargs(x, 0, 1, _("tag takes one or no arguments"))
     cl = repo.changelog
     if args:
-        tn = getstring(args[0],
-                       # i18n: "tag" is a keyword
-                       _('the argument to tag must be a string'))
-        if not repo.tags().get(tn, None):
-            raise util.Abort(_("tag '%s' does not exist") % tn)
-        s = set([cl.rev(n) for t, n in repo.tagslist() if t == tn])
+        pattern = getstring(args[0],
+                            # i18n: "tag" is a keyword
+                            _('the argument to tag must be a string'))
+        kind, pattern, matcher = _stringmatcher(pattern)
+        if kind == 'literal':
+            if not repo.tags().get(pattern, None):
+                raise util.Abort(_("tag '%s' does not exist") % pattern)
+            s = set([cl.rev(n) for t, n in repo.tagslist() if t == pattern])
+        else:
+            s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
+            if not s:
+                raise util.Abort(_("no tags exist that match '%s'") % pattern)
     else:
         s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
     return [r for r in subset if r in s]
