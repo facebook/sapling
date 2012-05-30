@@ -617,7 +617,7 @@ def tsttest(test, wd, options, replacements):
                 script.append('%s -m heredoctest <<EOF\n' % PYTHON)
             addsalt(n, True)
             script.append(l[2:])
-        if l.startswith('  ... '): # python inlines
+        elif l.startswith('  ... '): # python inlines
             after.setdefault(prepos, []).append(l)
             script.append(l[2:])
         elif l.startswith('  $ '): # commands
