@@ -62,7 +62,10 @@ class match(object):
             pats = _normalize(exclude, 'glob', root, cwd, auditor)
             self.excludepat, em = _buildmatch(ctx, pats, '(?:/|$)')
         if exact:
-            self._files = patterns
+            if isinstance(patterns, list):
+                self._files = patterns
+            else:
+                self._files = list(patterns)
             pm = self.exact
         elif patterns:
             pats = _normalize(patterns, default, root, cwd, auditor)
