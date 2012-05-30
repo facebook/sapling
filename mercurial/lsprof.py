@@ -38,8 +38,8 @@ class Stats(object):
             d = d[:top]
         cols = "% 12s %12s %11.4f %11.4f   %s\n"
         hcols = "% 12s %12s %12s %12s %s\n"
-        file.write(hcols % ("CallCount", "Recursive", "Total(ms)",
-                            "Inline(ms)", "module:lineno(function)"))
+        file.write(hcols % ("CallCount", "Recursive", "Total(s)",
+                            "Inline(s)", "module:lineno(function)"))
         count = 0
         for e in d:
             file.write(cols % (e.callcount, e.reccallcount, e.totaltime,
