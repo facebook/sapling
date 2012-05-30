@@ -84,6 +84,20 @@ bookmarks revset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
+  $ hg log -r 'bookmark("re:X")'
+  changeset:   0:f7b1eb17ad24
+  bookmark:    X
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0
+  
+  changeset:   1:925d80f479bb
+  bookmark:    X2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
   $ hg log -r 'bookmark(unknown)'
   abort: bookmark 'unknown' does not exist
   [255]

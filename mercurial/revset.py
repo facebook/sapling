@@ -305,6 +305,10 @@ def bisected(repo, subset, x):
 def bookmark(repo, subset, x):
     """``bookmark([name])``
     The named bookmark or all bookmarks.
+
+    If `name` starts with `re:`, the remainder of the name is treated as
+    a regular expression. To match a bookmark that actually starts with `re:`,
+    use the prefix `literal:`.
     """
     # i18n: "bookmark" is a keyword
     args = getargs(x, 0, 1, _('bookmark takes one or no arguments'))
@@ -312,11 +316,26 @@ def bookmark(repo, subset, x):
         bm = getstring(args[0],
                        # i18n: "bookmark" is a keyword
                        _('the argument to bookmark must be a string'))
-        bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
-        if not bmrev:
-            raise util.Abort(_("bookmark '%s' does not exist") % bm)
-        bmrev = repo[bmrev].rev()
-        return [r for r in subset if r == bmrev]
+        kind, pattern, matcher = _stringmatcher(bm)
+        if kind == 'literal':
+            bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
+            if not bmrev:
+                raise util.Abort(_("bookmark '%s' does not exist") % bm)
+            bmrev = repo[bmrev].rev()
+            return [r for r in subset if r == bmrev]
+        else:
+            matchrevs = set()
+            for name, bmrev in bookmarksmod.listbookmarks(repo).iteritems():
+                if matcher(name):
+                    matchrevs.add(bmrev)
+            if not matchrevs:
+                raise util.Abort(_("no bookmarks exist that match '%s'")
+                                 % pattern)
+            bmrevs = set()
+            for bmrev in matchrevs:
+                bmrevs.add(repo[bmrev].rev())
+            return [r for r in subset if r in bmrevs]
+
     bms = set([repo[r].rev()
                for r in bookmarksmod.listbookmarks(repo).values()])
     return [r for r in subset if r in bms]
