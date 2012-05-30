@@ -28,7 +28,7 @@
     unmatched files in other:
      b
      b2
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      c2 -> a2 !
      b -> a *
      b2 -> a2 !
@@ -95,9 +95,6 @@ We'd rather not warn on divergent renames done in the same changeset (issue2113)
   $ hg up c761c6948de0
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg up
-  note: possible conflict - b was renamed multiple times to:
-   b3
-   b4
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Check for issue2642
@@ -125,6 +122,8 @@ Check for issue2642
 
   $ cat f2
   c0
+
+  $ cd ..
 
 Check for issue2089
 
@@ -155,3 +154,42 @@ Check for issue2089
 
   $ cat f2
   c2
+
+  $ cd ..
+
+Check for issue3074
+
+  $ hg init repo3074
+  $ cd repo3074
+  $ echo foo > file
+  $ hg add file
+  $ hg commit -m "added file"
+  $ hg mv file newfile
+  $ hg commit -m "renamed file"
+  $ hg update 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg rm file
+  $ hg commit -m "deleted file"
+  created new head
+  $ hg merge --debug
+    searching for copies back to rev 1
+    unmatched files in other:
+     newfile
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
+     newfile -> file %
+    checking for directory renames
+   file: rename and delete -> rd
+  resolving manifests
+   overwrite: False, partial: False
+   ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
+   newfile: remote created -> g
+  updating: file 1/2 files (50.00%)
+  note: possible conflict - file was deleted and renamed to:
+   newfile
+  updating: newfile 2/2 files (100.00%)
+  getting newfile
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg status
+  M newfile
+  $ cd ..

@@ -177,19 +177,22 @@ def mergecopies(repo, c1, c2, ca):
 
     "diverge" is a mapping of source name -> list of destination names
     for divergent renames.
+
+    "renamedelete" is a mapping of source name -> list of destination
+    names for files deleted in c1 that were renamed in c2 or vice-versa.
     """
     # avoid silly behavior for update from empty dir
     if not c1 or not c2 or c1 == c2:
-        return {}, {}
+        return {}, {}, {}
 
     # avoid silly behavior for parent -> working dir
     if c2.node() is None and c1.node() == repo.dirstate.p1():
-        return repo.dirstate.copies(), {}
+        return repo.dirstate.copies(), {}, {}
 
     limit = _findlimit(repo, c1.rev(), c2.rev())
     if limit is None:
         # no common ancestor, no copies
-        return {}, {}
+        return {}, {}, {}
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
@@ -283,26 +286,36 @@ def mergecopies(repo, c1, c2, ca):
     for f in u2:
         checkcopies(f, m2, m1)
 
+    renamedelete = {}
+    renamedelete2 = set()
     diverge2 = set()
     for of, fl in diverge.items():
-        if len(fl) == 1 or of in c2:
+        if len(fl) == 1 or of in c1 or of in c2:
             del diverge[of] # not actually divergent, or not a rename
+            if of not in c1 and of not in c2:
+                # renamed on one side, deleted on the other side, but filter
+                # out files that have been renamed and then deleted
+                renamedelete[of] = [f for f in fl if f in c1 or f in c2]
+                renamedelete2.update(fl) # reverse map for below
         else:
             diverge2.update(fl) # reverse map for below
 
     if fullcopy:
-        repo.ui.debug("  all copies found (* = to merge, ! = divergent):\n")
+        repo.ui.debug("  all copies found (* = to merge, ! = divergent, "
+                      "% = renamed and deleted):\n")
         for f in fullcopy:
             note = ""
             if f in copy:
                 note += "*"
             if f in diverge2:
                 note += "!"
+            if f in renamedelete2:
+                note += "%"
             repo.ui.debug("   %s -> %s %s\n" % (f, fullcopy[f], note))
     del diverge2
 
     if not fullcopy:
-        return copy, diverge
+        return copy, diverge, renamedelete
 
     repo.ui.debug("  checking for directory renames\n")
 
@@ -337,7 +350,7 @@ def mergecopies(repo, c1, c2, ca):
     del d1, d2, invalid
 
     if not dirmove:
-        return copy, diverge
+        return copy, diverge, renamedelete
 
     for d in dirmove:
         repo.ui.debug("  dir %s -> %s\n" % (d, dirmove[d]))
@@ -354,4 +367,4 @@ def mergecopies(repo, c1, c2, ca):
                         repo.ui.debug("  file %s -> %s\n" % (f, copy[f]))
                     break
 
-    return copy, diverge
+    return copy, diverge, renamedelete

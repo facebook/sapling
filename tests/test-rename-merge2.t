@@ -80,7 +80,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in other:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -115,7 +115,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -153,7 +153,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in other:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -188,7 +188,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -222,7 +222,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in other:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a 
     checking for directory renames
   resolving manifests
@@ -252,7 +252,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a 
     checking for directory renames
   resolving manifests
@@ -279,7 +279,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in other:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a 
     checking for directory renames
   resolving manifests
@@ -311,7 +311,7 @@ $4 = expected result
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a 
     checking for directory renames
   resolving manifests
@@ -369,7 +369,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      b
     unmatched files in other:
      c
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      c -> a !
      b -> a !
     checking for directory renames
@@ -648,7 +648,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     searching for copies back to rev 1
     unmatched files in other:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -682,7 +682,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     searching for copies back to rev 1
     unmatched files in local:
      b
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
@@ -720,7 +720,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
      b
     unmatched files in other:
      c
-    all copies found (* = to merge, ! = divergent):
+    all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      b -> a *
     checking for directory renames
   resolving manifests
