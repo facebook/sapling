@@ -29,6 +29,12 @@ Testing diff --change
   -first
   +second
 
+Test dumb revspecs (issue3474)
+
+  $ hg diff -r 2:2
+  $ hg diff -r "2 and 1"
+  abort: empty revision range
+  [255]
 
 Testing diff --change when merge:
 
