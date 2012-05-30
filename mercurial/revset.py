@@ -279,7 +279,8 @@ def author(repo, subset, x):
     """
     # i18n: "author" is a keyword
     n = encoding.lower(getstring(x, _("author requires a string")))
-    return [r for r in subset if n in encoding.lower(repo[r].user())]
+    kind, pattern, matcher = _substringmatcher(n)
+    return [r for r in subset if matcher(encoding.lower(repo[r].user()))]
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -1188,6 +1189,11 @@ def _stringmatcher(pattern):
         pattern = pattern[8:]
     return 'literal', pattern, pattern.__eq__
 
+def _substringmatcher(pattern):
+    kind, pattern, matcher = _stringmatcher(pattern)
+    if kind == 'literal':
+        matcher = lambda s: pattern in s
+    return kind, pattern, matcher
 
 def tag(repo, subset, x):
     """``tag([name])``
@@ -1219,6 +1225,10 @@ def tagged(repo, subset, x):
 def user(repo, subset, x):
     """``user(string)``
     User name contains string. The match is case-insensitive.
+
+    If `string` starts with `re:`, the remainder of the string is treated as
+    a regular expression. To match a user that actually contains `re:`, use
+    the prefix `literal:`.
     """
     return author(repo, subset, x)
 

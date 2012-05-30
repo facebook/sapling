@@ -230,6 +230,17 @@ quoting needed
   5
   $ log 'author(bob)'
   2
+  $ log 'author("re:bob|test")'
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
   $ log 'branch(é)'
   8
   9
