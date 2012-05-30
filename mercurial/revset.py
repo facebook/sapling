@@ -502,7 +502,12 @@ def draft(repo, subset, x):
 def extra(repo, subset, x):
     """``extra(label, [value])``
     Changesets with the given label in the extra metadata, with the given
-    optional value."""
+    optional value.
+
+    If `value` starts with `re:`, the remainder of the value is treated as
+    a regular expression. To match a value that actually starts with `re:`,
+    use the prefix `literal:`.
+    """
 
     l = getargs(x, 1, 2, _('extra takes at least 1 and at most 2 arguments'))
     label = getstring(l[0], _('first argument to extra must be a string'))
@@ -510,10 +515,11 @@ def extra(repo, subset, x):
 
     if len(l) > 1:
         value = getstring(l[1], _('second argument to extra must be a string'))
+        kind, value, matcher = _stringmatcher(value)
 
     def _matchvalue(r):
         extra = repo[r].extra()
-        return label in extra and (value is None or value == extra[label])
+        return label in extra and (value is None or matcher(extra[label]))
 
     return [r for r in subset if _matchvalue(r)]
 
