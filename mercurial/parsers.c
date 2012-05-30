@@ -214,6 +214,154 @@ quit:
 	return ret;
 }
 
+static inline int getintat(PyObject *tuple, int off, uint32_t *v)
+{
+	PyObject *o = PyTuple_GET_ITEM(tuple, off);
+	long val;
+
+	if (PyInt_Check(o))
+		val = PyInt_AS_LONG(o);
+	else if (PyLong_Check(o)) {
+		val = PyLong_AsLong(o);
+		if (val == -1 && PyErr_Occurred())
+			return -1;
+	} else {
+		PyErr_SetString(PyExc_TypeError, "expected an int or long");
+		return -1;
+	}
+	if (LONG_MAX > INT_MAX && (val > INT_MAX || val < INT_MIN)) {
+		PyErr_SetString(PyExc_OverflowError,
+				"Python value to large to convert to uint32_t");
+		return -1;
+	}
+	*v = (uint32_t)val;
+	return 0;
+}
+
+static PyObject *dirstate_unset;
+
+/*
+ * Efficiently pack a dirstate object into its on-disk format.
+ */
+static PyObject *pack_dirstate(PyObject *self, PyObject *args)
+{
+	PyObject *packobj = NULL;
+	PyObject *map, *copymap, *pl;
+	Py_ssize_t nbytes, pos, l;
+	PyObject *k, *v, *pn;
+	char *p, *s;
+	double now;
+
+	if (!PyArg_ParseTuple(args, "O!O!Od:pack_dirstate",
+			      &PyDict_Type, &map, &PyDict_Type, &copymap,
+			      &pl, &now))
+		return NULL;
+
+	if (!PySequence_Check(pl) || PySequence_Size(pl) != 2) {
+		PyErr_SetString(PyExc_TypeError, "expected 2-element sequence");
+		return NULL;
+	}
+
+	/* Figure out how much we need to allocate. */
+	for (nbytes = 40, pos = 0; PyDict_Next(map, &pos, &k, &v);) {
+		PyObject *c;
+		if (!PyString_Check(k)) {
+			PyErr_SetString(PyExc_TypeError, "expected string key");
+			goto bail;
+		}
+		nbytes += PyString_GET_SIZE(k) + 17;
+		c = PyDict_GetItem(copymap, k);
+		if (c) {
+			if (!PyString_Check(c)) {
+				PyErr_SetString(PyExc_TypeError,
+						"expected string key");
+				goto bail;
+			}
+			nbytes += PyString_GET_SIZE(c) + 1;
+		}
+	}
+
+	packobj = PyString_FromStringAndSize(NULL, nbytes);
+	if (packobj == NULL)
+		goto bail;
+
+	p = PyString_AS_STRING(packobj);
+
+	pn = PySequence_ITEM(pl, 0);
+	if (PyString_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
+		PyErr_SetString(PyExc_TypeError, "expected a 20-byte hash");
+		goto bail;
+	}
+	memcpy(p, s, l);
+	p += 20;
+	pn = PySequence_ITEM(pl, 1);
+	if (PyString_AsStringAndSize(pn, &s, &l) == -1 || l != 20) {
+		PyErr_SetString(PyExc_TypeError, "expected a 20-byte hash");
+		goto bail;
+	}
+	memcpy(p, s, l);
+	p += 20;
+
+	for (pos = 0; PyDict_Next(map, &pos, &k, &v); ) {
+		uint32_t mode, size, mtime;
+		Py_ssize_t len, l;
+		PyObject *o;
+		char *s, *t;
+		int err;
+
+		if (!PyTuple_Check(v) || PyTuple_GET_SIZE(v) != 4) {
+			PyErr_SetString(PyExc_TypeError, "expected a 4-tuple");
+			goto bail;
+		}
+		o = PyTuple_GET_ITEM(v, 0);
+		if (PyString_AsStringAndSize(o, &s, &l) == -1 || l != 1) {
+			PyErr_SetString(PyExc_TypeError, "expected one byte");
+			goto bail;
+		}
+		*p++ = *s;
+		err = getintat(v, 1, &mode);
+		err |= getintat(v, 2, &size);
+		err |= getintat(v, 3, &mtime);
+		if (err)
+			goto bail;
+		if (*s == 'n' && mtime == (uint32_t)now) {
+			/* See dirstate.py:write for why we do this. */
+			if (PyDict_SetItem(map, k, dirstate_unset) == -1)
+				goto bail;
+			mode = 0, size = -1, mtime = -1;
+		}
+		putbe32(mode, p);
+		putbe32(size, p + 4);
+		putbe32(mtime, p + 8);
+		t = p + 12;
+		p += 16;
+		len = PyString_GET_SIZE(k);
+		memcpy(p, PyString_AS_STRING(k), len);
+		p += len;
+		o = PyDict_GetItem(copymap, k);
+		if (o) {
+			*p++ = '\0';
+			l = PyString_GET_SIZE(o);
+			memcpy(p, PyString_AS_STRING(o), l);
+			p += l;
+			len += l + 1;
+		}
+		putbe32((uint32_t)len, t);
+	}
+
+	pos = p - PyString_AS_STRING(packobj);
+	if (pos != nbytes) {
+		PyErr_Format(PyExc_SystemError, "bad dirstate size: %ld != %ld",
+                             (long)pos, (long)nbytes);
+		goto bail;
+	}
+
+	return packobj;
+bail:
+	Py_XDECREF(packobj);
+	return NULL;
+}
+
 /*
  * A base-16 trie for fast node->rev mapping.
  *
@@ -1356,6 +1504,7 @@ bail:
 static char parsers_doc[] = "Efficient content parsing.";
 
 static PyMethodDef methods[] = {
+	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
@@ -1375,6 +1524,8 @@ static void module_init(PyObject *mod)
 				  -1, -1, -1, -1, nullid, 20);
 	if (nullentry)
 		PyObject_GC_UnTrack(nullentry);
+
+	dirstate_unset = Py_BuildValue("ciii", 'n', 0, -1, -1);
 }
 
 #ifdef IS_PY3K
