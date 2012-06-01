@@ -574,29 +574,26 @@ class localrepository(repo.repository):
         # collect new branch entries
         newbranches = {}
         for c in ctxgen:
-            newbranches.setdefault(c.branch(), []).append(c.node())
+            newbranches.setdefault(c.branch(), []).append(c.rev())
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-        for branch, newnodes in newbranches.iteritems():
-            bheads = partial.setdefault(branch, [])
-            bheads.extend(newnodes)
-            if len(bheads) <= 1:
-                continue
-            bheads = sorted(bheads, key=lambda x: self[x].rev())
-            # starting from tip means fewer passes over reachable
-            while newnodes:
-                latest = newnodes.pop()
-                if latest not in bheads:
+        for branch, newrevs in newbranches.iteritems():
+            bheadrevs = [self.changelog.rev(node) for node in
+                         partial.setdefault(branch, [])]
+            bheadrevs.extend(newrevs)
+            bheadrevs.sort()
+            # starting from tip means fewer passes over ancestors
+            newrevs.sort()
+            while newrevs:
+                latest = newrevs.pop()
+                if latest not in bheadrevs:
                     continue
-                minbhnode = self[bheads[0]].node()
-                cl = self.changelog
-                ancestors = cl.ancestors([cl.rev(latest)],
-                                          cl.rev(minbhnode))
-                reachable = [cl.node(rev) for rev in ancestors]
-                if reachable:
-                    bheads = [b for b in bheads if b not in reachable]
-            partial[branch] = bheads
+                ancestors = set(self.changelog.ancestors([latest],
+                                                         bheadrevs[0]))
+                if ancestors:
+                    bheadrevs = [b for b in bheadrevs if b not in ancestors]
+            partial[branch] = [self.changelog.node(rev) for rev in bheadrevs]
 
     def lookup(self, key):
         return self[key].node()
