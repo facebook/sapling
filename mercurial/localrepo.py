@@ -1791,7 +1791,7 @@ class localrepository(repo.repository):
             bases = [nullid]
         csets, bases, heads = cl.nodesbetween(bases, heads)
         # We assume that all ancestors of bases are known
-        common = set(cl.ancestors(*[cl.rev(n) for n in bases]))
+        common = set(cl.ancestors([cl.rev(n) for n in bases]))
         return self._changegroupsubset(common, csets, heads, source)
 
     def getlocalbundle(self, source, outgoing):

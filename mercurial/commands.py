@@ -5396,12 +5396,12 @@ def summary(ui, repo, **opts):
     cl = repo.changelog
     for a in [cl.rev(n) for n in bheads]:
         new[a] = 1
-    for a in cl.ancestors(*[cl.rev(n) for n in bheads]):
+    for a in cl.ancestors([cl.rev(n) for n in bheads]):
         new[a] = 1
     for a in [p.rev() for p in parents]:
         if a >= 0:
             new[a] = 0
-    for a in cl.ancestors(*[p.rev() for p in parents]):
+    for a in cl.ancestors([p.rev() for p in parents]):
         new[a] = 0
     new = sum(new)
 

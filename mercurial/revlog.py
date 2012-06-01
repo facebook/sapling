@@ -381,7 +381,7 @@ class revlog(object):
                     visit.append(p)
         return reachable
 
-    def ancestors(self, *revs):
+    def ancestors(self, revs):
         """Generate the ancestors of 'revs' in reverse topological order.
 
         Yield a sequence of revision numbers starting with the parents
@@ -441,7 +441,7 @@ class revlog(object):
         heads = [self.rev(n) for n in heads]
 
         # we want the ancestors, but inclusive
-        has = set(self.ancestors(*common))
+        has = set(self.ancestors(common))
         has.add(nullrev)
         has.update(common)
 

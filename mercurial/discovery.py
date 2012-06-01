@@ -140,7 +140,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         og._computecommonmissing()
         cl = repo.changelog
         missingrevs = set(cl.rev(n) for n in og._missing)
-        og._common = set(cl.ancestors(*missingrevs)) - missingrevs
+        og._common = set(cl.ancestors(missingrevs)) - missingrevs
         commonheads = set(og.commonheads)
         og.missingheads = [h for h in og.missingheads if h not in commonheads]
 

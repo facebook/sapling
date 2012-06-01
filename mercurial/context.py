@@ -223,7 +223,7 @@ class changectx(object):
         return [changectx(self._repo, x) for x in c]
 
     def ancestors(self):
-        for a in self._repo.changelog.ancestors(self._rev):
+        for a in self._repo.changelog.ancestors([self._rev]):
             yield changectx(self._repo, a)
 
     def descendants(self):
@@ -1019,7 +1019,7 @@ class workingctx(changectx):
 
     def ancestors(self):
         for a in self._repo.changelog.ancestors(
-            *[p.rev() for p in self._parents]):
+            [p.rev() for p in self._parents]):
             yield changectx(self._repo, a)
 
     def undelete(self, list):

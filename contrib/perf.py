@@ -74,7 +74,7 @@ def perftags(ui, repo):
 def perfancestors(ui, repo):
     heads = repo.changelog.headrevs()
     def d():
-        for a in repo.changelog.ancestors(*heads):
+        for a in repo.changelog.ancestors(heads):
             pass
     timer(d)
 
