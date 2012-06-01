@@ -381,8 +381,9 @@ class revlog(object):
                     visit.append(p)
         return reachable
 
-    def ancestors(self, revs):
+    def ancestors(self, revs, stoprev=0):
         """Generate the ancestors of 'revs' in reverse topological order.
+        Does not generate revs lower than stoprev.
 
         Yield a sequence of revision numbers starting with the parents
         of each revision in revs, i.e., each revision is *not* considered
@@ -393,6 +394,8 @@ class revlog(object):
         seen = set([nullrev])
         while visit:
             for parent in self.parentrevs(visit.popleft()):
+                if parent < stoprev:
+                    continue
                 if parent not in seen:
                     visit.append(parent)
                     seen.add(parent)
