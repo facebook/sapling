@@ -629,6 +629,30 @@ def checkcase(path):
     except OSError:
         return True
 
+try:
+    import re2
+    _re2 = None
+except ImportError:
+    _re2 = False
+
+def compilere(pat):
+    '''Compile a regular expression, using re2 if possible
+
+    For best performance, use only re2-compatible regexp features.'''
+    global _re2
+    if _re2 is None:
+        try:
+            re2.compile
+            _re2 = True
+        except ImportError:
+            _re2 = False
+    if _re2:
+        try:
+            return re2.compile(pat)
+        except re2.error:
+            pass
+    return re.compile(pat)
+
 _fspathcache = {}
 def fspath(name, root):
     '''Get name in the case stored in the filesystem
