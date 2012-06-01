@@ -3268,20 +3268,20 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         else:
             raise error.UnknownCommand(name)
 
+        rst = ["%s\n\n" % header]
         # description
         if not doc:
-            doc = _("(no help text available)")
+            rst.append("    %s\n" % _("(no help text available)"))
         if util.safehasattr(doc, '__call__'):
-            doc = doc()
+            rst += ["    %s\n" % l for l in doc().splitlines()]
 
-        ui.write("%s\n\n" % header)
-        ui.write(minirst.format(doc, textwidth, indent=4))
         try:
             cmdutil.findcmd(name, table)
-            ui.write(_('\nuse "hg help -c %s" to see help for '
+            rst.append(_('\nuse "hg help -c %s" to see help for '
                        'the %s command\n') % (name, name))
         except error.UnknownCommand:
             pass
+        ui.write(minirst.format(''.join(rst), textwidth))
 
     def helpext(name):
         try:
