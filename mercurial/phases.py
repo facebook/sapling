@@ -189,7 +189,7 @@ class phasecache(object):
                 if roots:
                     for rev in roots:
                         revs[rev] = phase
-                    for rev in repo.changelog.descendants(*roots):
+                    for rev in repo.changelog.descendants(roots):
                         revs[rev] = phase
             self._phaserevs = revs
         return self._phaserevs

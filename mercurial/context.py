@@ -227,7 +227,7 @@ class changectx(object):
             yield changectx(self._repo, a)
 
     def descendants(self):
-        for d in self._repo.changelog.descendants(self._rev):
+        for d in self._repo.changelog.descendants([self._rev]):
             yield changectx(self._repo, d)
 
     def _fileinfo(self, path):

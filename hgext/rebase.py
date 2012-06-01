@@ -321,7 +321,7 @@ def rebase(ui, repo, **opts):
             # Remove no more useful revisions
             rebased = [rev for rev in state if state[rev] != nullmerge]
             if rebased:
-                if set(repo.changelog.descendants(min(rebased))) - set(state):
+                if set(repo.changelog.descendants([min(rebased)])) - set(state):
                     ui.warn(_("warning: new changesets detected "
                               "on source branch, not stripping\n"))
                 else:
@@ -575,7 +575,7 @@ def abort(repo, originalwd, target, state):
 
     descendants = set()
     if dstates:
-        descendants = set(repo.changelog.descendants(*dstates))
+        descendants = set(repo.changelog.descendants(dstates))
     if descendants - set(dstates):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
                        "can't abort\n"))

@@ -2963,7 +2963,7 @@ def strip(ui, repo, *revs, **opts):
     if not revs:
         raise util.Abort(_('empty revision set'))
 
-    descendants = set(cl.descendants(*revs))
+    descendants = set(cl.descendants(revs))
     strippedrevs = revs.union(descendants)
     roots = revs.difference(descendants)
 

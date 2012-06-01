@@ -398,7 +398,7 @@ class revlog(object):
                     seen.add(parent)
                     yield parent
 
-    def descendants(self, *revs):
+    def descendants(self, revs):
         """Generate the descendants of 'revs' in revision order.
 
         Yield a sequence of revision numbers starting with a child of
@@ -700,7 +700,7 @@ class revlog(object):
     def descendant(self, start, end):
         if start == nullrev:
             return True
-        for i in self.descendants(start):
+        for i in self.descendants([start]):
             if i == end:
                 return True
             elif i > end:

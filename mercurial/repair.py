@@ -74,7 +74,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     #  base = revision in the set that has no ancestor in the set)
     tostrip = set(striplist)
     for rev in striplist:
-        for desc in cl.descendants(rev):
+        for desc in cl.descendants([rev]):
             tostrip.add(desc)
 
     files = _collectfiles(repo, striprev)
@@ -91,7 +91,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
 
     # compute base nodes
     if saverevs:
-        descendants = set(cl.descendants(*saverevs))
+        descendants = set(cl.descendants(saverevs))
         saverevs.difference_update(descendants)
     savebases = [cl.node(r) for r in saverevs]
     stripbases = [cl.node(r) for r in tostrip]

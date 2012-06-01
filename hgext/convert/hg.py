@@ -259,7 +259,7 @@ class mercurial_source(converter_source):
                                  % startnode)
             startrev = self.repo.changelog.rev(startnode)
             children = {startnode: 1}
-            for rev in self.repo.changelog.descendants(startrev):
+            for rev in self.repo.changelog.descendants([startrev]):
                 children[self.repo.changelog.node(rev)] = 1
             self.keep = children.__contains__
         else:
