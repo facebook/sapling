@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
 No local source
 
   $ hg clone a b
@@ -9,9 +7,12 @@ No local source
 No remote source
 
   $ hg clone http://127.0.0.1:3121/a b
-  abort: error: Connection refused
+  abort: error: *refused* (glob)
   [255]
   $ rm -rf b # work around bug with http clone
+
+
+#if unix-permissions
 
 Inaccessible source
 
@@ -31,6 +32,9 @@ Inaccessible destination
   $ cd ..
   $ chmod 700 a
   $ rm -r a b
+
+#endif
+
 
 Source of wrong type
 
@@ -59,6 +63,9 @@ destination directory not empty
   abort: destination 'a' is not empty
   [255]
 
+
+#if unix-permissions
+
 leave existing directory in place after clone failure
 
   $ hg init c
@@ -78,3 +85,5 @@ leave existing directory in place after clone failure
 reenable perm to allow deletion
 
   $ chmod +rx c/.hg/store/data
+
+#endif
