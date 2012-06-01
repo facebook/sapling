@@ -58,9 +58,9 @@ def optrst(options, verbose):
     rst = minirst.maketable(data, 1)
 
     if multioccur:
-        rst += _("\n[+] marked option can be specified multiple times\n")
+        rst.append(_("\n[+] marked option can be specified multiple times\n"))
 
-    return rst
+    return ''.join(rst)
 
 # list all option lists
 def opttext(optlist, width, verbose):

@@ -237,7 +237,8 @@ data = [['a', 'b', 'c'],
          ['1', '2', '3'],
          ['foo', 'bar', 'baz this list is very very very long man']]
 
-table = minirst.maketable(data, 2, True)
+rst = minirst.maketable(data, 2, True)
+table = ''.join(rst)
 
 print table
 

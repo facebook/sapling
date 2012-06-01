@@ -658,7 +658,7 @@ def decorateblocks(blocks, width):
     return lines
 
 def maketable(data, indent=0, header=False):
-    '''Generate an RST table for the given table data'''
+    '''Generate an RST table for the given table data as a list of lines'''
 
     widths = [max(encoding.colwidth(e) for e in c) for c in zip(*data)]
     indent = ' ' * indent
@@ -674,4 +674,4 @@ def maketable(data, indent=0, header=False):
     if header and len(data) > 1:
         out.insert(2, div)
     out.append(div)
-    return ''.join(out)
+    return out
