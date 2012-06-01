@@ -3249,7 +3249,17 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                             'global options') % (name and " " + name or "")
                 optlist.append((msg, ()))
 
-        ui.write(help.opttext(optlist, textwidth, ui.verbose))
+        if not optlist:
+            return
+
+        rst = ''
+        for title, options in optlist:
+            rst += '\n%s\n' % title
+            if options:
+                rst += "\n"
+                rst += help.optrst(options, ui.verbose)
+                rst += '\n'
+        ui.write('\n' + minirst.format(rst, textwidth))
 
     def helptopic(name):
         for names, header, doc in help.helptable:

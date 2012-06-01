@@ -62,21 +62,6 @@ def optrst(options, verbose):
 
     return ''.join(rst)
 
-# list all option lists
-def opttext(optlist, width, verbose):
-    rst = ''
-    if not optlist:
-        return ''
-
-    for title, options in optlist:
-        rst += '\n%s\n' % title
-        if options:
-            rst += "\n"
-            rst += optrst(options, verbose)
-            rst += '\n'
-
-    return '\n' + minirst.format(rst, width)
-
 def topicmatch(kw):
     """Return help topics matching kw.
 
