@@ -7,7 +7,7 @@
 
 from i18n import _
 import error, util
-import re, os, errno
+import os, errno
 
 class sortdict(dict):
     'a simple sorted dictionary'
@@ -105,13 +105,13 @@ class config(object):
             self._source.pop((section, item), None)
 
     def parse(self, src, data, sections=None, remap=None, include=None):
-        sectionre = re.compile(r'\[([^\[]+)\]')
-        itemre = re.compile(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
-        contre = re.compile(r'\s+(\S|\S.*\S)\s*$')
-        emptyre = re.compile(r'(;|#|\s*$)')
-        commentre = re.compile(r'(;|#)')
-        unsetre = re.compile(r'%unset\s+(\S+)')
-        includere = re.compile(r'%include\s+(\S|\S.*\S)\s*$')
+        sectionre = util.compilere(r'\[([^\[]+)\]')
+        itemre = util.compilere(r'([^=\s][^=]*?)\s*=\s*(.*\S|)')
+        contre = util.compilere(r'\s+(\S|\S.*\S)\s*$')
+        emptyre = util.compilere(r'(;|#|\s*$)')
+        commentre = util.compilere(r'(;|#)')
+        unsetre = util.compilere(r'%unset\s+(\S+)')
+        includere = util.compilere(r'%include\s+(\S|\S.*\S)\s*$')
         section = ""
         item = None
         line = 0
