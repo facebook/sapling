@@ -140,6 +140,10 @@ def perfparents(ui, repo):
 def perflookup(ui, repo, rev):
     timer(lambda: len(repo.lookup(rev)))
 
+def perfrevrange(ui, repo, *specs):
+    revrange = scmutil.revrange
+    timer(lambda: len(revrange(repo, specs)))
+
 def perfnodelookup(ui, repo, rev):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
@@ -223,6 +227,7 @@ cmdtable = {
     'perffncacheload': (perffncacheload, []),
     'perffncachewrite': (perffncachewrite, []),
     'perflookup': (perflookup, []),
+    'perfrevrange': (perfrevrange, []),
     'perfnodelookup': (perfnodelookup, []),
     'perfparents': (perfparents, []),
     'perfstartup': (perfstartup, []),
