@@ -70,9 +70,6 @@
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'acl =' >> $HGRCPATH
-
   $ config=b/.hg/hgrc
 
 Extension disabled for lack of a hook
