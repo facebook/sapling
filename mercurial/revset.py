@@ -47,6 +47,36 @@ def _revdescendants(repo, revs, followfirst):
                 yield i
                 break
 
+def _revsbetween(repo, roots, heads):
+    """Return all paths between roots and heads, inclusive of both endpoint
+    sets."""
+    if not roots:
+        return []
+    parentrevs = repo.changelog.parentrevs
+    visit = heads[:]
+    reachable = set()
+    seen = {}
+    minroot = min(roots)
+    roots = set(roots)
+    # open-code the post-order traversal due to the tiny size of
+    # sys.getrecursionlimit()
+    while visit:
+        rev = visit.pop()
+        if rev in roots:
+            reachable.add(rev)
+        parents = parentrevs(rev)
+        seen[rev] = parents
+        for parent in parents:
+            if parent >= minroot and parent not in seen:
+                visit.append(parent)
+    if not reachable:
+        return []
+    for rev in sorted(seen):
+        for parent in seen[rev]:
+            if parent in reachable:
+                reachable.add(rev)
+    return sorted(reachable)
+
 elements = {
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
     "~": (18, None, ("ancestor", 18)),
@@ -194,10 +224,7 @@ def rangeset(repo, subset, x, y):
 def dagrange(repo, subset, x, y):
     if subset:
         r = range(len(repo))
-        m = getset(repo, r, x)
-        n = getset(repo, r, y)
-        cl = repo.changelog
-        xs = map(cl.rev, cl.nodesbetween(map(cl.node, m), map(cl.node, n))[0])
+        xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
         s = set(subset)
         return [r for r in xs if r in s]
     return []
