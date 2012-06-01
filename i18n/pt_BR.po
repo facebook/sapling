@@ -22581,6 +22581,9 @@ msgstr "o caminho %r percorre o link simbólico %r"
 msgid "could not symlink to %r: %s"
 msgstr "impossível criar link simbólico para %r: %s"
 
+msgid "empty revision range"
+msgstr "faixa de revisões vazia"
+
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
 msgstr "gravando remoção de %s como renomeação para %s (%d%% de similaridade)\n"

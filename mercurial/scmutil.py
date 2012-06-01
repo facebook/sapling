@@ -569,7 +569,7 @@ def revrange(repo, revs):
                 newrevs = set(xrange(start, end + step, step))
                 if seen:
                     newrevs.difference_update(seen)
-                    seen.union(newrevs)
+                    seen.update(newrevs)
                 else:
                     seen = newrevs
                 l.extend(sorted(newrevs, reverse=start > end))
