@@ -192,9 +192,15 @@ def rangeset(repo, subset, x, y):
     return [x for x in r if x in s]
 
 def dagrange(repo, subset, x, y):
-    return andset(repo, subset,
-                  ('func', ('symbol', 'descendants'), x),
-                  ('func', ('symbol', 'ancestors'), y))
+    if subset:
+        r = range(len(repo))
+        m = getset(repo, r, x)
+        n = getset(repo, r, y)
+        cl = repo.changelog
+        xs = map(cl.rev, cl.nodesbetween(map(cl.node, m), map(cl.node, n))[0])
+        s = set(subset)
+        return [r for r in xs if r in s]
+    return []
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
