@@ -73,6 +73,53 @@ Display rejections:
   +c
   +c
 
+Test missing renamed file
+
+  $ hg qpop
+  popping changeb
+  patch queue now empty
+  $ hg up -qC 0
+  $ echo a > a
+  $ hg mv b bb
+  $ python ../writelines.py bb 2 'b\n' 10 'a\n' 2 'c\n'
+  $ echo c > c
+  $ hg add a c
+  $ hg qnew changebb
+  $ hg qpop
+  popping changebb
+  patch queue now empty
+  $ hg up -qC 1
+  $ hg qpush
+  applying changebb
+  patching file bb
+  Hunk #1 FAILED at 0
+  Hunk #2 FAILED at 7
+  2 out of 2 hunks FAILED -- saving rejects to file bb.rej
+  b not tracked!
+  patch failed, unable to continue (try -v)
+  patch failed, rejects left in working dir
+  errors during apply, please fix and refresh changebb
+  [2]
+  $ cat a
+  a
+  $ cat c
+  c
+  $ cat bb.rej
+  --- bb
+  +++ bb
+  @@ -1,3 +1,5 @@
+  +b
+  +b
+   a
+   a
+   a
+  @@ -8,3 +10,5 @@
+   a
+   a
+   a
+  +c
+  +c
+
   $ cd ..
 
 
