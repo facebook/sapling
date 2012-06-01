@@ -3106,20 +3106,20 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 entry[0](ui)
             return
 
-        rst = ""
+        rst = []
 
         # synopsis
         if len(entry) > 2:
             if entry[2].startswith('hg'):
-                rst += "%s\n" % entry[2]
+                rst.append("%s\n" % entry[2])
             else:
-                rst += 'hg %s %s\n' % (aliases[0], entry[2])
+                rst.append('hg %s %s\n' % (aliases[0], entry[2]))
         else:
-            rst += 'hg %s\n' % aliases[0]
-
+            rst.append('hg %s\n' % aliases[0])
         # aliases
         if full and not ui.quiet and len(aliases) > 1:
-            rst += _("\naliases: %s\n") % ', '.join(aliases[1:])
+            rst.append(_("\naliases: %s\n") % ', '.join(aliases[1:]))
+        rst.append('\n')
 
         # description
         doc = gettext(entry[0].__doc__)
@@ -3130,9 +3130,12 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
             else:
                 doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
+        doc = doc.splitlines(True)
         if ui.quiet or not full:
-            doc = doc.splitlines()[0]
-        rst += "\n" + doc + "\n"
+            rst.append(doc[0])
+        else:
+            rst.extend(doc)
+        rst.append('\n')
 
         # check if this command shadows a non-trivial (multi-line)
         # extension help text
@@ -3142,33 +3145,30 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             if '\n' in doc.strip():
                 msg = _('use "hg help -e %s" to show help for '
                         'the %s extension') % (name, name)
-                rst += '\n%s\n' % msg
+                rst.append('\n%s\n' % msg)
         except KeyError:
             pass
 
         # options
         if not ui.quiet and entry[1]:
-            rst += '\n'
-            rst += _("options:")
-            rst += '\n\n'
-            rst += help.optrst(entry[1], ui.verbose)
+            rst.append('\n%s\n\n' % _("options:"))
+            rst.append(help.optrst(entry[1], ui.verbose))
 
         if ui.verbose:
-            rst += '\n'
-            rst += _("global options:")
-            rst += '\n\n'
-            rst += help.optrst(globalopts, ui.verbose)
-
-        keep = ui.verbose and ['verbose'] or []
-        formatted, pruned = minirst.format(rst, textwidth, keep=keep)
-        ui.write(formatted)
+            rst.append('\n%s\n\n' % _("global options:"))
+            rst.append(help.optrst(globalopts, ui.verbose))
 
         if not ui.verbose:
             if not full:
-                ui.write(_('\nuse "hg help %s" to show the full help text\n')
+                rst.append(_('\nuse "hg help %s" to show the full help text\n')
                            % name)
             elif not ui.quiet:
-                ui.write(_('\nuse "hg -v help %s" to show more info\n') % name)
+                rst.append(_('\nuse "hg -v help %s" to show more info\n')
+                           % name)
+
+        keep = ui.verbose and ['verbose'] or []
+        formatted, pruned = minirst.format(''.join(rst), textwidth, keep=keep)
+        ui.write(formatted)
 
 
     def helplist(select=None):
