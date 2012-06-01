@@ -191,6 +191,11 @@ def rangeset(repo, subset, x, y):
     s = set(subset)
     return [x for x in r if x in s]
 
+def dagrange(repo, subset, x, y):
+    return andset(repo, subset,
+                  ('func', ('symbol', 'descendants'), x),
+                  ('func', ('symbol', 'ancestors'), y))
+
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
 
@@ -1309,6 +1314,7 @@ symbols = {
 
 methods = {
     "range": rangeset,
+    "dagrange": dagrange,
     "string": stringset,
     "symbol": symbolset,
     "and": andset,
@@ -1332,9 +1338,6 @@ def optimize(x, small):
     op = x[0]
     if op == 'minus':
         return optimize(('and', x[1], ('not', x[2])), small)
-    elif op == 'dagrange':
-        return optimize(('and', ('func', ('symbol', 'descendants'), x[1]),
-                         ('func', ('symbol', 'ancestors'), x[2])), small)
     elif op == 'dagrangepre':
         return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
     elif op == 'dagrangepost':
@@ -1369,7 +1372,7 @@ def optimize(x, small):
         return o[0], (op, o[1])
     elif op == 'group':
         return optimize(x[1], small)
-    elif op in 'range list parent ancestorspec':
+    elif op in 'dagrange range list parent ancestorspec':
         if op == 'parent':
             # x^:y means (x^) : y, not x ^ (:y)
             post = ('parentpost', x[1])
