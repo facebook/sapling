@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
 commit date test
 
   $ hg init test
@@ -75,10 +73,14 @@ commit added file that has been deleted
   $ hg commit -m commit-14 does-not-exist
   abort: does-not-exist: * (glob)
   [255]
+
+#if symlink
   $ ln -s foo baz
   $ hg commit -m commit-15 baz
   abort: baz: file not tracked!
   [255]
+#endif
+
   $ touch quux
   $ hg commit -m commit-16 quux
   abort: quux: file not tracked!

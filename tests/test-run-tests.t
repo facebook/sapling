@@ -52,6 +52,15 @@ Literal match ending in " (re)":
   $ echo 'foo (re)'
   foo (re)
 
+Conditional sections based on hghave:
+
+#if fifo no-fifo
+  $ echo skipped
+#else
+  $ echo tested
+  tested
+#endif
+
 Exit code:
 
   $ (exit 1) 

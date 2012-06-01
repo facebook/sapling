@@ -594,6 +594,19 @@ def tsttest(test, wd, options, replacements):
     # can generate the surrounding doctest magic
     inpython = False
 
+    # True or False when in a true or false conditional section
+    skipping = None
+
+    def hghave(reqs):
+        # TODO: do something smarter when all other uses of hghave is gone
+        proc = Popen4('%s -c "%s/hghave %s"' %
+                      (options.shell, TESTDIR, ' '.join(reqs)), TESTDIR, 0)
+        proc.communicate()
+        ret = proc.wait()
+        if wifexited(ret):
+            ret = os.WEXITSTATUS(ret)
+        return ret == 0
+
     f = open(test)
     t = f.readlines()
     f.close()
@@ -606,7 +619,24 @@ def tsttest(test, wd, options, replacements):
     for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
-        if l.startswith('  >>> '): # python inlines
+        if l.startswith('#if'):
+            if skipping is not None:
+                after.setdefault(pos, []).append('  !!! nested #if\n')
+            skipping = not hghave(l.split()[1:])
+            after.setdefault(pos, []).append(l)
+        elif l.startswith('#else'):
+            if skipping is None:
+                after.setdefault(pos, []).append('  !!! missing #if\n')
+            skipping = not skipping
+            after.setdefault(pos, []).append(l)
+        elif l.startswith('#endif'):
+            if skipping is None:
+                after.setdefault(pos, []).append('  !!! missing #if\n')
+            skipping = None
+            after.setdefault(pos, []).append(l)
+        elif skipping:
+            after.setdefault(pos, []).append(l)
+        elif l.startswith('  >>> '): # python inlines
             after.setdefault(pos, []).append(l)
             prepos = pos
             pos = n
@@ -644,6 +674,8 @@ def tsttest(test, wd, options, replacements):
 
     if inpython:
         script.append("EOF\n")
+    if skipping is not None:
+        after.setdefault(pos, []).append('  !!! missing #endif\n')
     addsalt(n + 1, False)
 
     # Write out the script and execute it
