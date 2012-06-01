@@ -1214,9 +1214,11 @@ def tag(repo, subset, x):
                             _('the argument to tag must be a string'))
         kind, pattern, matcher = _stringmatcher(pattern)
         if kind == 'literal':
-            if not repo.tags().get(pattern, None):
+            # avoid resolving all tags
+            tn = repo._tagscache.tags.get(pattern, None)
+            if tn is None:
                 raise util.Abort(_("tag '%s' does not exist") % pattern)
-            s = set([cl.rev(n) for t, n in repo.tagslist() if t == pattern])
+            s = set([repo[tn].rev()])
         else:
             s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
             if not s:
