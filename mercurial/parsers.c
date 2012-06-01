@@ -276,6 +276,9 @@ static char *tuple_format = "Kiiiiiis#";
 static char *tuple_format = "kiiiiiis#";
 #endif
 
+/* A RevlogNG v1 index entry is 64 bytes long. */
+static const long v1_hdrsize = 64;
+
 /*
  * Return a pointer to the beginning of a RevlogNG record.
  */
@@ -292,7 +295,7 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 		return self->offsets[pos];
 	}
 
-	return PyString_AS_STRING(self->data) + pos * 64;
+	return PyString_AS_STRING(self->data) + pos * v1_hdrsize;
 }
 
 /*
@@ -1137,17 +1140,16 @@ static long inline_scan(indexObject *self, const char **offsets)
 {
 	const char *data = PyString_AS_STRING(self->data);
 	const char *end = data + PyString_GET_SIZE(self->data);
-	const long hdrsize = 64;
-	long incr = hdrsize;
+	long incr = v1_hdrsize;
 	Py_ssize_t len = 0;
 
-	while (data + hdrsize <= end) {
+	while (data + v1_hdrsize <= end) {
 		uint32_t comp_len;
 		const char *old_data;
 		/* 3rd element of header is length of compressed inline data */
 		comp_len = getbe32(data + 8);
-		incr = hdrsize + comp_len;
-		if (incr < hdrsize)
+		incr = v1_hdrsize + comp_len;
+		if (incr < v1_hdrsize)
 			break;
 		if (offsets)
 			offsets[len] = data;
@@ -1158,7 +1160,7 @@ static long inline_scan(indexObject *self, const char **offsets)
 			break;
 	}
 
-	if (data != end && data + hdrsize != end) {
+	if (data != end && data + v1_hdrsize != end) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(PyExc_ValueError, "corrupt index file");
 		return -1;
@@ -1201,11 +1203,11 @@ static int index_init(indexObject *self, PyObject *args)
 		self->raw_length = len;
 		self->length = len + 1;
 	} else {
-		if (size % 64) {
+		if (size % v1_hdrsize) {
 			PyErr_SetString(PyExc_ValueError, "corrupt index file");
 			goto bail;
 		}
-		self->raw_length = size / 64;
+		self->raw_length = size / v1_hdrsize;
 		self->length = self->raw_length + 1;
 	}
 
