@@ -12,19 +12,18 @@ import encoding, util, minirst
 
 def listexts(header, exts, indent=1):
     '''return a text listing of the given extensions'''
-    if not exts:
-        return ''
-    maxlength = max(len(e) for e in exts)
-    result = '\n%s\n\n' % header
-    for name, desc in sorted(exts.iteritems()):
-        result += '%s%-*s %s\n' % (' ' * indent, maxlength + 2,
-                                   ':%s:' % name, desc)
-    return result
+    rst = []
+    if exts:
+        rst.append('\n%s\n\n' % header)
+        for name, desc in sorted(exts.iteritems()):
+            rst.append('%s:%s: %s\n' % (' ' * indent, name, desc))
+    return rst
 
 def extshelp():
-    doc = loaddoc('extensions')()
-    doc += listexts(_('enabled extensions:'), extensions.enabled())
-    doc += listexts(_('disabled extensions:'), extensions.disabled())
+    rst = loaddoc('extensions')().splitlines(True)
+    rst.extend(listexts(_('enabled extensions:'), extensions.enabled()))
+    rst.extend(listexts(_('disabled extensions:'), extensions.disabled()))
+    doc = ''.join(rst)
     return doc
 
 def optrst(options, verbose):

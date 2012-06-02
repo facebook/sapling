@@ -3218,9 +3218,9 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                                              hangindent=' ' * (m + 4))))
 
         if not name:
-            text = help.listexts(_('enabled extensions:'), extensions.enabled())
-            if text:
-                ui.write("\n%s" % minirst.format(text, textwidth))
+            rst = help.listexts(_('enabled extensions:'), extensions.enabled())
+            if rst:
+                ui.write("\n%s" % minirst.format('\n'.join(rst), textwidth))
 
             ui.write(_("\nadditional help topics:\n\n"))
             topics = []
@@ -3318,12 +3318,12 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                                                ui.configbool('ui', 'strict'))
         doc = gettext(mod.__doc__).splitlines()[0]
 
-        msg = help.listexts(_("'%s' is provided by the following "
+        rst = help.listexts(_("'%s' is provided by the following "
                               "extension:") % cmd, {ext: doc}, indent=4)
-        ui.write(minirst.format(msg, textwidth))
-        ui.write('\n')
-        ui.write(_('use "hg help extensions" for information on enabling '
+        rst.append('\n')
+        rst.append(_('use "hg help extensions" for information on enabling '
                    'extensions\n'))
+        ui.write(minirst.format(''.join(rst), textwidth))
 
     kw = opts.get('keyword')
     if kw:
