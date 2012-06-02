@@ -838,9 +838,6 @@ class localrepository(repo.repository):
                         self.sjoin('phaseroots'))
         self.invalidate()
 
-        # Discard all cache entries to force reloading everything.
-        self._filecache.clear()
-
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
@@ -904,6 +901,9 @@ class localrepository(repo.repository):
             except AttributeError:
                 pass
         self.invalidatecaches()
+
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
