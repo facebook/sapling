@@ -3005,13 +3005,13 @@ def strip(ui, repo, *revs, **opts):
         finally:
             wlock.release()
 
-    repo.mq.strip(repo, revs, backup=backup, update=update,
-                  force=opts.get('force'))
-
     if opts.get('bookmark'):
         del marks[mark]
         repo._writebookmarks(marks)
         ui.write(_("bookmark '%s' deleted\n") % mark)
+
+    repo.mq.strip(repo, revs, backup=backup, update=update,
+                  force=opts.get('force'))
 
     return 0
 

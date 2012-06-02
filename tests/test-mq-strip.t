@@ -447,9 +447,9 @@ test hg strip -B bookmark
   abort: empty revision set
   [255]
   $ hg strip -B todelete
+  bookmark 'todelete' deleted
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
-  bookmark 'todelete' deleted
   $ hg id -ir dcbb326fdec2
   abort: unknown revision 'dcbb326fdec2'!
   [255]
@@ -459,8 +459,8 @@ test hg strip -B bookmark
      B                         9:ff43616e5d0f
      delete                    6:2702dd0c91e7
   $ hg strip -B delete
-  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   bookmark 'delete' deleted
+  saved backup bundle to $TESTTMP/bookmarks/.hg/strip-backup/*-backup.hg (glob)
   $ hg id -ir 6:2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
   [255]
