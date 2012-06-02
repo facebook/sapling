@@ -3205,30 +3205,29 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             ui.status(_('no commands defined\n'))
             return
 
-        ui.status(header)
+        rst = []
+        if not ui.quiet:
+            rst.append(header)
         fns = sorted(h)
-        m = max(map(len, fns))
         for f in fns:
             if ui.verbose:
                 commands = cmds[f].replace("|",", ")
-                ui.write(" %s:\n      %s\n"%(commands, h[f]))
+                rst.append(" :%s: %s\n" % (commands, h[f]))
             else:
-                ui.write('%s\n' % (util.wrap(h[f], textwidth,
-                                             initindent=' %-*s    ' % (m, f),
-                                             hangindent=' ' * (m + 4))))
+                rst.append(' :%s: %s\n' % (f, h[f]))
 
         if not name:
-            rst = help.listexts(_('enabled extensions:'), extensions.enabled())
-            if rst:
-                ui.write("\n%s" % minirst.format('\n'.join(rst), textwidth))
+            exts = help.listexts(_('enabled extensions:'), extensions.enabled())
+            if exts:
+                rst.append('\n')
+                rst.extend(exts)
 
-            ui.write(_("\nadditional help topics:\n\n"))
+            rst.append(_("\nadditional help topics:\n\n"))
             topics = []
             for names, header, doc in help.helptable:
                 topics.append((sorted(names, key=len, reverse=True)[0], header))
-            topics_len = max([len(s[0]) for s in topics])
             for t, desc in topics:
-                ui.write(" %-*s   %s\n" % (topics_len, t, desc))
+                rst.append(" :%s: %s\n" % (t, desc))
 
         optlist = []
         if not ui.quiet:
@@ -3249,17 +3248,12 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                             'global options') % (name and " " + name or "")
                 optlist.append((msg, ()))
 
-        if not optlist:
-            return
-
-        rst = ''
-        for title, options in optlist:
-            rst += '\n%s\n' % title
-            if options:
-                rst += "\n"
-                rst += help.optrst(options, ui.verbose)
-                rst += '\n'
-        ui.write('\n' + minirst.format(rst, textwidth))
+        if optlist:
+            for title, options in optlist:
+                rst.append('\n%s\n' % title)
+                if options:
+                    rst.append('\n%s\n' % help.optrst(options, ui.verbose))
+        ui.write(minirst.format(''.join(rst), textwidth))
 
     def helptopic(name):
         for names, header, doc in help.helptable:

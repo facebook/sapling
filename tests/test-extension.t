@@ -178,8 +178,7 @@ Check hgweb's load order:
   
   list of commands:
   
-   foo:
-        yet another foo command
+   foo           yet another foo command
   
   global options:
   
@@ -208,10 +207,8 @@ Check hgweb's load order:
   
   list of commands:
   
-   debugfoobar:
-        yet another debug command
-   foo:
-        yet another foo command
+   debugfoobar   yet another debug command
+   foo           yet another foo command
   
   global options:
   
@@ -328,7 +325,7 @@ Extension module help vs command help:
   
   list of commands:
   
-   extdiff    use external program to diff repository (or selected files)
+   extdiff       use external program to diff repository (or selected files)
   
   use "hg -v help extdiff" to show builtin aliases and global options
 
