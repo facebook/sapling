@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import util, error, collections
+import util, error
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, fetch, heads) used to identify the common
@@ -56,7 +56,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     # a 'branch' here is a linear segment of history, with four parts:
     # head, root, first parent, second parent
     # (a branch always has two parents (or none) by definition)
-    unknown = collections.deque(remote.branches(unknown))
+    unknown = util.deque(remote.branches(unknown))
     while unknown:
         r = []
         while unknown:

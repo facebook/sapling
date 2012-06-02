@@ -8,7 +8,7 @@
 
 from node import nullid
 from i18n import _
-import random, collections, util, dagutil
+import random, util, dagutil
 import phases
 
 def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
@@ -18,7 +18,7 @@ def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
     else:
         heads = dag.heads()
     dist = {}
-    visit = collections.deque(heads)
+    visit = util.deque(heads)
     seen = set()
     factor = 1
     while visit:

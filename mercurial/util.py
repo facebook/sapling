@@ -202,10 +202,22 @@ def cachefunc(func):
 
     return f
 
+try:
+    collections.deque.remove
+    deque = collections.deque
+except AttributeError:
+    # python 2.4 lacks deque.remove
+    class deque(collections.deque):
+        def remove(self, val):
+            for i, v in enumerate(self):
+                if v == val:
+                    del self[i]
+                    break
+
 def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}
-    order = collections.deque()
+    order = deque()
     if func.func_code.co_argcount == 1:
         def f(arg):
             if arg not in cache:
@@ -865,7 +877,7 @@ class chunkbuffer(object):
         Returns less than L bytes if the iterator runs dry."""
         left = l
         buf = ''
-        queue = collections.deque(self._queue)
+        queue = deque(self._queue)
         while left > 0:
             # refill the queue
             if not queue:

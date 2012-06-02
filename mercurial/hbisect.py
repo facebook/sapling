@@ -11,7 +11,7 @@
 import os, error
 from i18n import _
 from node import short, hex
-import collections, util
+import util
 
 def bisect(changelog, state):
     """find the next node (if any) for testing during a bisect search.
@@ -69,7 +69,7 @@ def bisect(changelog, state):
 
     # build children dict
     children = {}
-    visit = collections.deque([badrev])
+    visit = util.deque([badrev])
     candidates = []
     while visit:
         rev = visit.popleft()
