@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate /a/b/c/ as if it was a real file path
-
   $ HGENCODING=utf-8
   $ export HGENCODING
 
@@ -59,8 +57,8 @@
 
   $ hg co 3
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg branch /a/b/c/
-  marked working directory as branch /a/b/c/
+  $ hg branch !a/b/c/
+  marked working directory as branch !a/b/c/
   (branches are permanent and global, did you want a bookmark?)
   $ hg ci -Aqm"5 bug"
 
@@ -254,7 +252,7 @@ quoting needed
   2 a-b-c-
   3 +a+b+c+
   4 -a-b-c-
-  5 /a/b/c/
+  5 !a/b/c/
   6 _a_b_c_
   7 .a.b.c.
   $ log 'children(ancestor(4,5))'
