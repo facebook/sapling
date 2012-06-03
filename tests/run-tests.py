@@ -1197,7 +1197,7 @@ def main():
             del os.environ[k]
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
-    TESTDIR = os.environ["TESTDIR"] = os.getcwd()
+    TESTDIR = os.environ["TESTDIR"] = os.getcwd().replace('\\', '/')
     if options.tmpdir:
         options.keep_tmpdir = True
         tmpdir = options.tmpdir
