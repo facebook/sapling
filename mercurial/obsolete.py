@@ -163,6 +163,9 @@ class obsstore(object):
         self.precursors = {}
         self.successors = {}
 
+    def __iter__(self):
+        return iter(self._all)
+
     def create(self, prec, succs=(), flag=0, metadata=None):
         """obsolete: add a new obsolete marker
 
@@ -218,3 +221,11 @@ class obsstore(object):
             data.extend(sucs)
             stream.write(_pack(format, *data))
             stream.write(metadata)
+
+
+
+def allmarkers(repo):
+    """all obsolete markers known in a repository"""
+    for markerdata in repo.obsstore:
+        yield marker(repo, markerdata)
+
