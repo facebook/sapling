@@ -107,8 +107,8 @@ def topicmatch(kw):
         for cmd, entry in getattr(mod, 'cmdtable', {}).iteritems():
             if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
                 cmdname = cmd.split('|')[0].lstrip('^')
-                results['extensioncommands'].append(
-                    (cmdname, _(getattr(cmd, '__doc__', ''))))
+                cmddoc=getattr(mod, '__doc__', '').splitlines()[0]
+                results['extensioncommands'].append((cmdname, _(cmddoc)))
     return results
 
 def loaddoc(topic):
