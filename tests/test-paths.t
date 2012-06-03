@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" no-msys || exit 80 # MSYS will translate /foo/bar as if it was a real file path
-
   $ hg init a
   $ hg clone a b
   updating to branch default
@@ -24,9 +22,15 @@
   $ SOMETHING=foo hg paths
   dupe = $TESTTMP/b (glob)
   expand = $TESTTMP/a/foo/bar (glob)
+#if msys
+  $ SOMETHING=//foo hg paths
+  dupe = $TESTTMP/b (glob)
+  expand = /foo/bar
+#else
   $ SOMETHING=/foo hg paths
   dupe = $TESTTMP/b (glob)
   expand = /foo/bar
+#endif
   $ hg paths -q
   dupe
   expand
