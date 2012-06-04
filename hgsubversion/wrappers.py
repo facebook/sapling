@@ -275,7 +275,11 @@ def pull(repo, source, heads=[], force=False):
 
     layout = repo.ui.config('hgsubversion', 'layout', 'auto')
     if layout == 'auto':
-        rootlist = svn.list_dir('', revision=(stopat_rev or None))
+        try:
+            rootlist = svn.list_dir('', revision=(stopat_rev or None))
+        except svnwrap.SubversionException, e:
+            err = "%s (subversion error: %d)" % (e.args[0], e.args[1])
+            raise hgutil.Abort(err)
         if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
             layout = 'standard'
         else:
