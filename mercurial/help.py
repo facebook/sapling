@@ -70,7 +70,7 @@ def topicmatch(kw):
     """
     kw = encoding.lower(kw)
     def lowercontains(container):
-        return kw in encoding.lower(_(container))
+        return kw in encoding.lower(container)  # translated in helptable
     results = {'topics': [],
                'commands': [],
                'extensions': [],
@@ -89,9 +89,10 @@ def topicmatch(kw):
             summary = entry[2]
         else:
             summary = ''
-        docs = getattr(entry[0], '__doc__', None) or ''
+        # translate docs *before* searching there
+        docs = _(getattr(entry[0], '__doc__', None)) or ''
         if kw in cmd or lowercontains(summary) or lowercontains(docs):
-            doclines = _(docs).splitlines()
+            doclines = docs.splitlines()
             if doclines:
                 summary = doclines[0]
             cmdname = cmd.split('|')[0].lstrip('^')
@@ -102,7 +103,8 @@ def topicmatch(kw):
         # extensions.load ignores the UI argument
         mod = extensions.load(None, name, '')
         if lowercontains(name) or lowercontains(docs):
-            results['extensions'].append((name, _(docs).splitlines()[0]))
+            # extension docs are already translated
+            results['extensions'].append((name, docs.splitlines()[0]))
         for cmd, entry in getattr(mod, 'cmdtable', {}).iteritems():
             if kw in cmd or (len(entry) > 2 and lowercontains(entry[2])):
                 cmdname = cmd.split('|')[0].lstrip('^')
