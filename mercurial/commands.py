@@ -2695,7 +2695,7 @@ def graft(ui, repo, *revs, **opts):
                     stats = mergemod.update(repo, ctx.node(), True, True, False,
                                             ctx.p1().node())
                 finally:
-                    ui.setconfig('ui', 'forcemerge', '')
+                    repo.ui.setconfig('ui', 'forcemerge', '')
                 # drop the second merge parent
                 repo.setparents(current.node(), nullid)
                 repo.dirstate.write()
