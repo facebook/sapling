@@ -3004,7 +3004,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     ('a', 'active', False, _('show active branchheads only (DEPRECATED)')),
     ('c', 'closed', False, _('show normal and closed branch heads')),
     ] + templateopts,
-    _('[-ac] [-r STARTREV] [REV]...'))
+    _('[-ct] [-r STARTREV] [REV]...'))
 def heads(ui, repo, *branchrevs, **opts):
     """show current repository heads or show branch heads
 
