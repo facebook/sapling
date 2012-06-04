@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
 Helper functions:
 
   $ cacheexists() {
@@ -77,11 +75,13 @@ Repeat with cold tag cache:
 
 And again, but now unable to write tag cache:
 
+#if unix-permissions
   $ rm -f .hg/cache/tags
   $ chmod 555 .hg
   $ hg identify
   b9154636be93 tip
   $ chmod 755 .hg
+#endif
 
 Create a branch:
 
