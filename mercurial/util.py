@@ -870,14 +870,14 @@ class chunkbuffer(object):
                 else:
                     yield chunk
         self.iter = splitbig(in_iter)
-        self._queue = []
+        self._queue = deque()
 
     def read(self, l):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
         left = l
         buf = ''
-        queue = deque(self._queue)
+        queue = self._queue
         while left > 0:
             # refill the queue
             if not queue:
@@ -897,7 +897,6 @@ class chunkbuffer(object):
                 buf += chunk[:left]
             else:
                 buf += chunk
-        self._queue = list(queue)
 
         return buf
 
