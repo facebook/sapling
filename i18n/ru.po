@@ -172,7 +172,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-05-27 18:16+0400\n"
+"POT-Creation-Date: 2012-06-05 10:52+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -22619,6 +22619,9 @@ msgstr "путь %r проходит символическую ссылку %r"
 #, python-format
 msgid "could not symlink to %r: %s"
 msgstr "не удается создать символическую ссылку на %r: %s"
+
+msgid "empty revision range"
+msgstr "пустой диапазон ревизий"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
