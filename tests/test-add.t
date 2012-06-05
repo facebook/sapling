@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" no-windows || exit 80
-
   $ hg init a
   $ cd a
   $ echo a > a
@@ -35,6 +33,7 @@ should fail
   A a
   A b
 
+#if no-windows
   $ echo foo > con.xml
   $ hg --config ui.portablefilenames=jump add con.xml
   abort: ui.portablefilenames value is invalid ('jump')
@@ -69,6 +68,7 @@ should fail
   A b
   A con.xml
   A hello:world
+#endif
 
   $ hg ci -m 0 --traceback
 
