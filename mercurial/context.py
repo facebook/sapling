@@ -230,6 +230,10 @@ class changectx(object):
         for d in self._repo.changelog.descendants([self._rev]):
             yield changectx(self._repo, d)
 
+    def obsolete(self):
+        """True if the changeset is obsolete"""
+        return self.node() in self._repo.obsstore.obsoleted
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
