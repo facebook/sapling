@@ -5643,6 +5643,11 @@ def tag(ui, repo, name1, *names, **opts):
         if opts.get('edit'):
             message = ui.edit(message, ui.username())
 
+        # don't allow tagging the null rev
+        if (not opts.get('remove') and
+            scmutil.revsingle(repo, rev_).rev() == nullrev):
+            raise util.Abort(_("null revision specified"))
+
         repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
     finally:
         release(lock, wlock)

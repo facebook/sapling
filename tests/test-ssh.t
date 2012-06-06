@@ -278,9 +278,12 @@ hide outer repo
 Test remote paths with spaces (issue2983):
 
   $ hg init --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
+  $ touch "$TESTTMP/a repo/test"
+  $ hg -R 'a repo' commit -A -m "test"
+  adding test
   $ hg -R 'a repo' tag tag
   $ hg id --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
-  3fb238f49e8c
+  73649e48688a
 
 Test hg-ssh using a helper script that will restore PYTHONPATH (which might
 have been cleared by a hg.exe wrapper) and invoke hg-ssh with the right
@@ -296,7 +299,7 @@ parameters:
   > EOF
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a repo"
-  3fb238f49e8c
+  73649e48688a
 
   $ hg id --ssh "sh ssh.sh" "ssh://user@dummy/a'repo"
   remote: Illegal repository "$TESTTMP/a'repo" (glob)

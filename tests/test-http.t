@@ -176,7 +176,10 @@ test http authentication
 clone of serve with repo in root and unserved subrepo (issue2970)
 
   $ hg --cwd test init sub
-  $ hg --cwd test/sub tag something
+  $ echo empty > test/sub/empty
+  $ hg --cwd test/sub add empty
+  $ hg --cwd test/sub commit -qm 'add empty'
+  $ hg --cwd test/sub tag -r 0 something
   $ echo sub = sub > test/.hgsub
   $ hg --cwd test add .hgsub
   $ hg --cwd test commit -qm 'add subrepo'
