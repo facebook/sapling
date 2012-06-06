@@ -654,8 +654,9 @@ class bzxmlrpc(bzaccess):
         if self.bzvermajor >= 4:
             args['ids'] = [bugid]
             args['comment'] = {'body' : text}
-            args['status'] = self.fixstatus
-            args['resolution'] = self.fixresolution
+            if 'fix' in newstate:
+                args['status'] = self.fixstatus
+                args['resolution'] = self.fixresolution
             self.bzproxy.Bug.update(args)
         else:
             if 'fix' in newstate:
