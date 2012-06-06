@@ -186,6 +186,16 @@ def getset(repo, subset, x):
         raise error.ParseError(_("missing argument"))
     return methods[x[0]](repo, subset, *x[1:])
 
+def _getrevsource(repo, r):
+    extra = repo[r].extra()
+    for label in ('source', 'transplant_source', 'rebase_source'):
+        if label in extra:
+            try:
+                return repo[extra[label]].rev()
+            except error.RepoLookupError:
+                pass
+    return None
+
 # operator methods
 
 def stringset(repo, subset, x):
