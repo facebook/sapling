@@ -775,3 +775,30 @@ Test help hooks
   $ hg help revsets | grep helphook
       helphook1
       helphook2
+
+Test keyword search help
+
+  $ hg help -k clone
+  Topics:
+  
+   config     Configuration Files
+   extensions Using Additional Features
+   glossary   Glossary
+   phases     Working with Phases
+   subrepo    Subrepositories
+   urls       URL Paths
+  
+  Commands:
+  
+   update update working directory (or switch revisions)
+   paths  show aliases for remote repositories
+   clone  make a copy of an existing repository
+  
+  Extensions:
+  
+   relink recreates hardlinks between repository clones
+  
+  Extension Commands:
+  
+   qclone clone main and patch repository at same time
+
