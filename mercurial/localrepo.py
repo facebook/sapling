@@ -4,12 +4,11 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
 import repo, changegroup, subrepo, discovery, pushkey, obsolete
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
-import lock, transaction, store, encoding
+import lock, transaction, store, encoding, base85
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
@@ -1674,6 +1673,11 @@ class localrepository(repo.repository):
                 # Remote is old or publishing all common changesets
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
+
+            remoteobs = remote.listkeys('obsolete')
+            if 'dump' in remoteobs:
+                data = base85.b85decode(remoteobs['dump'])
+                self.obsstore.mergemarkers(data)
         finally:
             lock.release()
 
@@ -1814,6 +1818,12 @@ class localrepository(repo.repository):
                         if not r:
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
+                if 'obsolete' in self.listkeys('namespaces') and self.obsstore:
+                    data = self.obsstore._writemarkers()
+                    r = remote.pushkey('obsolete', 'dump', '',
+                                       base85.b85encode(data))
+                    if not r:
+                        self.ui.warn(_('failed to push obsolete markers!\n'))
             finally:
                 if lock is not None:
                     lock.release()

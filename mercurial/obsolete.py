@@ -52,7 +52,7 @@ The header is followed by the markers. Each marker is made of:
   cannot contain '\0'.
 """
 import struct
-from mercurial import util
+from mercurial import util, base85
 from i18n import _
 
 _pack = struct.pack
@@ -166,6 +166,9 @@ class obsstore(object):
     def __iter__(self):
         return iter(self._all)
 
+    def __nonzero__(self):
+        return bool(self._all)
+
     def create(self, prec, succs=(), flag=0, metadata=None):
         """obsolete: add a new obsolete marker
 
@@ -195,6 +198,13 @@ class obsstore(object):
         for marker in _readmarkers(data):
             self._load(marker)
 
+    def mergemarkers(self, data):
+        other = set(_readmarkers(data))
+        local = set(self._all)
+        new = other - local
+        for marker in new:
+            self.add(marker)
+
     def flushmarkers(self, stream):
         """Write all markers to a stream
 
@@ -209,20 +219,48 @@ class obsstore(object):
         for suc in sucs:
             self.successors.setdefault(suc, set()).add(marker)
 
-    def _writemarkers(self, stream):
+    def _writemarkers(self, stream=None):
         # Kept separate from flushmarkers(), it will be reused for
         # markers exchange.
-        stream.write(_pack('>B', _fmversion))
+        if stream is None:
+            final = []
+            w = final.append
+        else:
+            w = stream.write
+        w(_pack('>B', _fmversion))
         for marker in self._all:
             pre, sucs, flags, metadata = marker
             nbsuc = len(sucs)
             format = _fmfixed + (_fmnode * nbsuc)
             data = [nbsuc, len(metadata), flags, pre]
             data.extend(sucs)
-            stream.write(_pack(format, *data))
-            stream.write(metadata)
+            w(_pack(format, *data))
+            w(metadata)
+        if stream is None:
+            return ''.join(final)
 
+def listmarkers(repo):
+    """List markers over pushkey"""
+    if not repo.obsstore:
+        return {}
+    data = repo.obsstore._writemarkers()
+    return {'dump': base85.b85encode(data)}
 
+def pushmarker(repo, key, old, new):
+    """Push markers over pushkey"""
+    if key != 'dump':
+        repo.ui.warn(_('unknown key: %r') % key)
+        return 0
+    if old:
+        repo.ui.warn(_('unexpected old value') % key)
+        return 0
+    data = base85.b85decode(new)
+    lock = repo.lock()
+    try:
+        repo.obsstore.mergemarkers(data)
+        return 1
+    finally:
+        lock.release()
 
 def allmarkers(repo):
     """all obsolete markers known in a repository"""

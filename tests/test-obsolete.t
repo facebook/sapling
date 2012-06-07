@@ -59,3 +59,85 @@ Register two markers with a missing node
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+  $ cd ..
+
+Exchange Test
+============================
+
+Destination repo does not have any data
+---------------------------------------
+
+Try to pull markers
+
+  $ hg init tmpc
+  $ cd tmpc
+  $ hg pull ../tmpb
+  pulling from ../tmpb
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 6 files (+3 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg debugobsolete
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+  $ cd ..
+
+Try to pull markers
+
+  $ hg init tmpd
+  $ hg -R tmpb push tmpd
+  pushing to tmpd
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 6 files (+3 heads)
+  $ hg -R tmpd debugobsolete
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+
+Destination repo have existing data
+---------------------------------------
+
+On pull
+
+  $ hg init tmpe
+  $ cd tmpe
+  $ hg debugobsolete -d '1339 0' 2448244824482448244824482448244824482448 1339133913391339133913391339133913391339
+  $ hg pull ../tmpb
+  pulling from ../tmpb
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 6 files (+3 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg debugobsolete
+  2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 {'date': '1339 0', 'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+On push
+
+  $ hg push ../tmpc
+  pushing to ../tmpc
+  searching for changes
+  no changes found
+  [1]
+  $ hg -R ../tmpc debugobsolete
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 {'date': '1339 0', 'user': 'test'}

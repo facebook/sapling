@@ -40,6 +40,7 @@ import bookmark by name
   bookmarks	
   phases	
   namespaces	
+  obsolete	
   $ hg debugpushkey ../a bookmarks
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   X	4e3505fd95835d721066b76e75dbb8cc554d7f77
@@ -214,6 +215,7 @@ hgweb
   bookmarks	
   phases	
   namespaces	
+  obsolete	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
   Y	4efff6d98829d9c824c621afd6e3f01865f5439f
   foobar	9b140be1080824d768c5a4691a564088eede71f9

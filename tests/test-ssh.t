@@ -167,6 +167,7 @@ test pushkeys and bookmarks
   bookmarks	
   phases	
   namespaces	
+  obsolete	
   $ hg book foo -r 0
   $ hg out -B
   comparing with ssh://user@dummy/remote
