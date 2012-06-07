@@ -598,6 +598,15 @@ Test command with no help text
   
   use "hg -v help nohelp" to show more info
 
+  $ hg help -k nohelp
+  Commands:
+  
+   nohelp hg nohelp
+  
+  Extension Commands:
+  
+   nohelp (no help text available)
+
 Test that default list of commands omits extension commands
 
   $ hg help
