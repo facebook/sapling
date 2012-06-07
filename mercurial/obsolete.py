@@ -120,6 +120,34 @@ def decodemeta(data):
             d[key] = value
     return d
 
+class marker(object):
+    """Wrap obsolete marker raw data"""
+
+    def __init__(self, repo, data):
+        # the repo argument will be used to create changectx in later version
+        self._repo = repo
+        self._data = data
+        self._decodedmeta = None
+
+    def precnode(self):
+        """Precursor changeset node identifier"""
+        return self._data[0]
+
+    def succnodes(self):
+        """List of successor changesets node identifiers"""
+        return self._data[1]
+
+    def metadata(self):
+        """Decoded metadata dictionary"""
+        if self._decodedmeta is None:
+            self._decodedmeta = decodemeta(self._data[3])
+        return self._decodedmeta
+
+    def date(self):
+        """Creation date as (unixtime, offset)"""
+        parts = self.metadata()['date'].split(' ')
+        return (float(parts[0]), int(parts[1]))
+
 class obsstore(object):
     """Store obsolete markers
 
