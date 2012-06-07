@@ -5657,10 +5657,10 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     current named branch and move the current bookmark (see :hg:`help
     bookmarks`).
 
-    If the changeset is not a descendant of the working directory's
-    parent, the update is aborted. With the -c/--check option, the
-    working directory is checked for uncommitted changes; if none are
-    found, the working directory is updated to the specified
+    If the changeset is not a descendant or ancestor of the working
+    directory's parent, the update is aborted. With the -c/--check
+    option, the working directory is checked for uncommitted changes; if
+    none are found, the working directory is updated to the specified
     changeset.
 
     Update sets the working directory's parent revison to the specified
