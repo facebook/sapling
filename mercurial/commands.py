@@ -17,7 +17,7 @@ import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge
 import random, setdiscovery, treediscovery, dagutil, pvec
-import phases
+import phases, obsolete
 
 table = {}
 
@@ -2050,19 +2050,29 @@ def debugknown(ui, repopath, *ids, **opts):
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
 @command('debugobsolete', [] + commitopts2,
-         _('OBSOLETED [REPLACEMENT] [REPL...'))
-def debugobsolete(ui, repo, precursor, *successors, **opts):
+         _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
+def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker"""
-    metadata = {}
-    if 'date' in opts:
-        metadata['date'] = opts['date']
-    metadata['user'] = opts['user'] or ui.username()
-    succs = tuple(bin(succ) for succ in successors)
-    l = repo.lock()
-    try:
-        repo.obsstore.create(bin(precursor), succs, 0, metadata)
-    finally:
-        l.release()
+    if precursor is not None:
+        metadata = {}
+        if 'date' in opts:
+            metadata['date'] = opts['date']
+        metadata['user'] = opts['user'] or ui.username()
+        succs = tuple(bin(succ) for succ in successors)
+        l = repo.lock()
+        try:
+            repo.obsstore.create(bin(precursor), succs, 0, metadata)
+        finally:
+            l.release()
+    else:
+        for mctx in obsolete.allmarkers(repo):
+            ui.write(hex(mctx.precnode()))
+            for repl in mctx.succnodes():
+                ui.write(' ')
+                ui.write(hex(repl))
+            ui.write(' %X ' % mctx._data[2])
+            ui.write(mctx.metadata())
+            ui.write('\n')
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
