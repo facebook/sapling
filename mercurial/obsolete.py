@@ -135,6 +135,23 @@ class obsstore(object):
         self.precursors = {}
         self.successors = {}
 
+    def create(self, prec, succs=(), flag=0, metadata=None):
+        """obsolete: add a new obsolete marker
+
+        * ensuring it is hashable
+        * check mandatory metadata
+        * encode metadata
+        """
+        if metadata is None:
+            metadata = {}
+        if len(prec) != 20:
+            raise ValueError(prec)
+        for succ in succs:
+            if len(succ) != 20:
+                raise ValueError(prec)
+        marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
+        self.add(marker)
+
     def add(self, marker):
         """Add a new marker to the store
 
