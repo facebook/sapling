@@ -118,7 +118,7 @@ setup(
     long_description=open(os.path.join(os.path.dirname(__file__),
                                          'README')).read(),
     keywords='mercurial',
-    packages=('hgsubversion', 'hgsubversion.svnwrap'),
+    packages=('hgsubversion', 'hgsubversion.hooks', 'hgsubversion.svnwrap'),
     package_data={ 'hgsubversion': ['help/subversion.rst'] },
     platforms='any',
     install_requires=requires,
