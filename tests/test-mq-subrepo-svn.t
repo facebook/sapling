@@ -24,7 +24,7 @@ handle svn subrepos safely
   $ svnurl="file://$curpath/svn-repo-2499/project"
   $ mkdir -p svn-project-2499/trunk
   $ svn import -m 'init project' svn-project-2499 "$svnurl"
-  Adding         svn-project-2499/trunk
+  Adding         svn-project-2499/trunk (glob)
   
   Committed revision 1.
 
