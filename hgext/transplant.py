@@ -89,24 +89,21 @@ class transplanter(object):
 
     def applied(self, repo, node, parent):
         '''returns True if a node is already an ancestor of parent
-        or has already been transplanted'''
+        or is parent or has already been transplanted'''
+        if hasnode(repo, parent):
+            parentrev = repo.changelog.rev(parent)
         if hasnode(repo, node):
-            reachablerevs = repo.changelog.incancestors(
-                [repo.changelog.rev(parent)],
-                stoprev=repo.changelog.rev(node))
-            reachable = (repo.changelog.node(rev) for rev in reachablerevs)
-            if node in reachable:
+            rev = repo.changelog.rev(node)
+            reachable = repo.changelog.incancestors([parentrev], rev)
+            if rev in reachable:
                 return True
         for t in self.transplants.get(node):
             # it might have been stripped
             if not hasnode(repo, t.lnode):
                 self.transplants.remove(t)
                 return False
-            reachablerevs = repo.changelog.incancestors(
-                [repo.changelog.rev(parent)],
-                stoprev=repo.changelog.rev(t.lnode))
-            reachable = (repo.changelog.node(rev) for rev in reachablerevs)
-            if t.lnode in reachable:
+            lnoderev = repo.changelog.rev(t.lnode)
+            if lnoderev in repo.changelog.incancestors([parentrev], lnoderev):
                 return True
         return False
 
