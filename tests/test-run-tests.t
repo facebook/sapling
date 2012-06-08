@@ -52,9 +52,27 @@ Literal match ending in " (re)":
   $ echo 'foo (re)'
   foo (re)
 
+testing hghave
+
+  $ "$TESTDIR/hghave" true
+  $ "$TESTDIR/hghave" false
+  skipped: missing feature: nail clipper
+  [1]
+  $ "$TESTDIR/hghave" no-true
+  skipped: system supports yak shaving
+  [1]
+  $ "$TESTDIR/hghave" no-false
+
 Conditional sections based on hghave:
 
-#if fifo no-fifo
+#if true
+  $ echo tested
+  tested
+#else
+  $ echo skipped
+#endif
+
+#if false
   $ echo skipped
 #else
   $ echo tested

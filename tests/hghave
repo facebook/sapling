@@ -241,6 +241,8 @@ def has_msys():
     return os.getenv('MSYSTEM')
 
 checks = {
+    "true": (lambda: True, "yak shaving"),
+    "false": (lambda: False, "nail clipper"),
     "baz": (has_baz, "GNU Arch baz client"),
     "bzr": (has_bzr, "Canonical's Bazaar client"),
     "bzr114": (has_bzr114, "Canonical's Bazaar client >= 1.14"),
