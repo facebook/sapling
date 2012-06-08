@@ -1246,7 +1246,12 @@ def main():
             #shutil.rmtree(tmpdir)
         os.makedirs(tmpdir)
     else:
-        tmpdir = tempfile.mkdtemp('', 'hgtests.')
+        d = None
+        if os.name == 'nt':
+            # without this, we get the default temp dir location, but
+            # in all lowercase, which causes troubles with paths (issue3490)
+            d = os.getenv('TMP')
+        tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
     DAEMON_PIDS = None
     HGRCPATH = None
