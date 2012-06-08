@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
   $ hg init a
   $ mkdir a/d1
   $ mkdir a/d1/d2
@@ -631,7 +629,7 @@ test paths outside repo root
   > rename to bar
   > EOF
   applying patch from stdin
-  abort: path contains illegal component: ../outside/foo
+  abort: path contains illegal component: ../outside/foo (glob)
   [255]
   $ cd ..
 
@@ -906,12 +904,16 @@ Issue2102: hg export and hg import speak different languages
   > new mode 100755
   > EOF
   applying patch from stdin
+
+#if execbit
+
   $ hg sum
   parent: 1:d59915696727 tip
    help management of empty pkg and lib directories in perforce
   branch: default
   commit: (clean)
   update: (current)
+
   $ hg diff --git -c tip
   diff --git a/lib/place-holder b/lib/place-holder
   new file mode 100644
@@ -930,6 +932,39 @@ Issue2102: hg export and hg import speak different languages
   diff --git a/src/cmd/gc/mksys.bash b/src/cmd/gc/mksys.bash
   old mode 100644
   new mode 100755
+
+#else
+
+  $ hg sum
+  parent: 1:28f089cc9ccc tip
+   help management of empty pkg and lib directories in perforce
+  branch: default
+  commit: (clean)
+  update: (current)
+
+  $ hg diff --git -c tip
+  diff --git a/lib/place-holder b/lib/place-holder
+  new file mode 100644
+  --- /dev/null
+  +++ b/lib/place-holder
+  @@ -0,0 +1,2 @@
+  +perforce does not maintain empty directories.
+  +this file helps.
+  diff --git a/pkg/place-holder b/pkg/place-holder
+  new file mode 100644
+  --- /dev/null
+  +++ b/pkg/place-holder
+  @@ -0,0 +1,2 @@
+  +perforce does not maintain empty directories.
+  +this file helps.
+
+/* The mode change for mksys.bash is missing here, because on platforms  */
+/* that don't support execbits, mode changes in patches are ignored when */
+/* they are imported. This is obviously also the reason for why the hash */
+/* in the created changeset is different to the one you see above the    */
+/* #else clause */
+
+#endif
   $ cd ..
 
 
