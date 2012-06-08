@@ -2,6 +2,8 @@
   $ "$TESTDIR/hghave" git || exit 80
   $ echo "[core]" >> $HOME/.gitconfig
   $ echo "autocrlf = false" >> $HOME/.gitconfig
+  $ echo "[core]" >> $HOME/.gitconfig
+  $ echo "autocrlf = false" >> $HOME/.gitconfig
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
