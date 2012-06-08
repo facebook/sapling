@@ -15,6 +15,13 @@ Tests discovery against servers without getbundle support:
   $ cp $HGRCPATH $HGRCPATH-nocap
   $ cp $HGRCPATH-withcap $HGRCPATH
 
+Prep for test server without branchmap support
+
+  $ CAP="branchmap"
+  $ . "$TESTDIR/notcapable"
+  $ cp $HGRCPATH $HGRCPATH-nocap-branchmap
+  $ cp $HGRCPATH-withcap $HGRCPATH
+
 Setup HTTP server control:
 
   $ remote=http://localhost:$HGPORT/
@@ -314,3 +321,51 @@ Partial pull:
 
   $ tstop
 
+Exercise pushing to server without branchmap capability
+
+  $ cp $HGRCPATH-nocap-branchmap $HGRCPATH-nocap
+  $ hg init rlocal
+  $ cd rlocal
+  $ echo A > A
+  $ hg ci -Am A
+  adding A
+  $ cd ..
+  $ hg clone rlocal rremote  
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd rlocal
+  $ echo B > B
+  $ hg ci -Am B
+  adding B
+  $ cd ..
+  $ tstart rremote
+
+  $ cd rlocal
+  $ hg incoming $remote 
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  1 27547f69f254: B 
+  $ hg pull $remote
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  $ hg push $remote
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  $ hg outgoing $remote
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+
+  $ tstop
