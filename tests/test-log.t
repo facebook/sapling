@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
 The g is crafted to have 2 filelog topological heads in a linear
 changeset graph
 
@@ -275,10 +273,12 @@ log copies, non-linear manifest
 
 log copies, execute bit set
 
+#if execbit
   $ chmod +x e
   $ hg ci -me3 -d '7 0'
   $ hg log -v --template '{rev} {file_copies}\n' -r 6
   6 
+#endif
 
 
 log -p d
