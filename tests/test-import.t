@@ -54,7 +54,6 @@ import exported patch with external patcher
   > print 'patching file a'
   > file('a', 'wb').write('line2\n')
   > EOF
-  $ chmod +x dummypatch.py
   $ hg clone -r0 a b
   adding changesets
   adding manifests
