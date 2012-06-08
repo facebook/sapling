@@ -22,3 +22,15 @@ Different encoding:
   $ HGENCODING=Latin-1 LANGUAGE=pt_BR hg tip
   abortado: n\xe3o foi encontrado um reposit\xf3rio em '$TESTTMP' (.hg n\xe3o encontrado)! (esc)
   [255]
+
+Test keyword search in translated help text:
+
+  $ HGENCODING=UTF-8 LANGUAGE=de hg help -k blättern
+  Topics:
+  
+   extensions Using Additional Features
+  
+  Erweiterungen:
+  
+   pager Verwendet einen externen Pager zum Bl\xc3\xa4ttern in der Ausgabe von Befehlen (esc)
+
