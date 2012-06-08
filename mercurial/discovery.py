@@ -214,8 +214,8 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                 if latest not in newheads:
                     continue
                 minhrev = min(cl.rev(h) for h in newheads)
-                reachable = cl.reachable(latest, cl.node(minhrev))
-                reachable.remove(latest)
+                reachable = [cl.node(rev) for rev in
+                             cl.ancestors([cl.rev(latest)], minhrev)]
                 newheads.difference_update(reachable)
         branches = set([None])
         newmap = {None: newheads}

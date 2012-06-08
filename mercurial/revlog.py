@@ -361,29 +361,6 @@ class revlog(object):
         return len(t)
     size = rawsize
 
-    def reachable(self, node, stop=None):
-        """return the set of all nodes ancestral to a given node, including
-         the node itself, stopping when stop is matched"""
-        reachable = set((node,))
-        visit = util.deque([node])
-        if stop:
-            stopn = self.rev(stop)
-        else:
-            stopn = 0
-        while visit:
-            n = visit.popleft()
-            if n == stop:
-                continue
-            if n == nullid:
-                continue
-            for p in self.parents(n):
-                if self.rev(p) < stopn:
-                    continue
-                if p not in reachable:
-                    reachable.add(p)
-                    visit.append(p)
-        return reachable
-
     def ancestors(self, revs, stoprev=0):
         """Generate the ancestors of 'revs' in reverse topological order.
         Does not generate revs lower than stoprev.

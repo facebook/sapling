@@ -590,8 +590,10 @@ class localrepository(repo.repository):
                 if latest not in bheads:
                     continue
                 minbhnode = self[bheads[0]].node()
-                reachable = self.changelog.reachable(latest, minbhnode)
-                reachable.remove(latest)
+                cl = self.changelog
+                ancestors = cl.ancestors([cl.rev(latest)],
+                                          cl.rev(minbhnode))
+                reachable = [cl.node(rev) for rev in ancestors]
                 if reachable:
                     bheads = [b for b in bheads if b not in reachable]
             partial[branch] = bheads
