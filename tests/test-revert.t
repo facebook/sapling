@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
   $ hg init repo
   $ cd repo
   $ echo 123 > a
@@ -155,6 +153,7 @@ should silently keep d removed
 
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#if execbit
   $ chmod +x c
   $ hg revert --all
   reverting c
@@ -175,6 +174,7 @@ should print executable
 
   $ test -x c && echo executable
   executable
+#endif
 
   $ cd ..
 
