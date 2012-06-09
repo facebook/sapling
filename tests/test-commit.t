@@ -222,7 +222,6 @@ subdir log
 
 Issue1049: Hg permits partial commit of merge without warning
 
-  $ cd ..
   $ hg init issue1049
   $ cd issue1049
   $ echo a > a
