@@ -3537,13 +3537,12 @@ def revsetmq(repo, subset, x):
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
     return [r for r in subset if r in applied]
 
-def extsetup(ui):
-    revset.symbols['mq'] = revsetmq
-
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsetmq]
 
-def uisetup(ui):
+def extsetup(ui):
+    # Ensure mq wrappers are called first, regardless of extension load order by
+    # NOT wrapping in uisetup() and instead deferring to init stage two here.
     mqopt = [('', 'mq', None, _("operate on patch repository"))]
 
     extensions.wrapcommand(commands.table, 'import', mqimport)
@@ -3568,6 +3567,7 @@ def uisetup(ui):
         if extmodule.__file__ != __file__:
             dotable(getattr(extmodule, 'cmdtable', {}))
 
+    revset.symbols['mq'] = revsetmq
 
 colortable = {'qguard.negative': 'red',
               'qguard.positive': 'yellow',
