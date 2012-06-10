@@ -1,6 +1,5 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 New file:
 
@@ -41,14 +40,19 @@ chmod +x:
   > EOF
   applying patch from stdin
 
+#if execbit
   $ hg tip -q
   2:3a34410f282e
-
   $ test -x new
+  $ hg rollback -q
+#else
+  $ hg tip -q
+  1:ab199dc869b5
+#endif
 
-Copy:
+Copy and removing x bit:
 
-  $ hg import -d "1000000 0" -mcopy - <<EOF
+  $ hg import -f -d "1000000 0" -mcopy - <<EOF
   > diff --git a/new b/copy
   > old mode 100755
   > new mode 100644
@@ -62,16 +66,37 @@ Copy:
   > EOF
   applying patch from stdin
 
-  $ hg tip -q
-  3:37bacb7ca14d
-
-#if execbit
   $ test -f copy
+#if execbit
   $ test ! -x copy
   $ test -x copyx
+  $ hg tip -q
+  2:21dfaae65c71
 #else
-  $ test -f copy
+  $ hg tip -q
+  2:0efdaa8e3bf3
 #endif
+
+  $ hg up -qCr1
+  $ hg rollback -q
+
+Copy (like above but independent of execbit):
+
+  $ hg import -d "1000000 0" -mcopy - <<EOF
+  > diff --git a/new b/copy
+  > similarity index 100%
+  > copy from new
+  > copy to copy
+  > diff --git a/new b/copyx
+  > similarity index 100%
+  > copy from new
+  > copy to copyx
+  > EOF
+  applying patch from stdin
+
+  $ hg tip -q
+  2:0efdaa8e3bf3
+  $ test -f copy
 
   $ cat copy
   a
@@ -90,7 +115,7 @@ Rename:
   applying patch from stdin
 
   $ hg tip -q
-  4:47b81a94361d
+  3:b1f57753fad2
 
   $ hg locate
   copyx
@@ -112,7 +137,7 @@ Delete:
   applying patch from stdin
 
   $ hg tip -q
-  5:d9b001d98336
+  4:1bd1da94b9b2
 
   $ hg locate
   empty
@@ -139,7 +164,7 @@ Regular diff:
   applying patch from stdin
 
   $ hg tip -q
-  6:ebe901e7576b
+  5:46fe99cb3035
 
 Copy and modify:
 
@@ -162,7 +187,7 @@ Copy and modify:
   applying patch from stdin
 
   $ hg tip -q
-  7:18f368958ecd
+  6:ffeb3197c12d
 
   $ hg cat copy2
   a
@@ -192,7 +217,7 @@ Rename and modify:
   applying patch from stdin
 
   $ hg tip -q
-  8:c32b0d7e6f44
+  7:401aede9e6bb
 
   $ hg locate copy2
   [1]
@@ -216,10 +241,10 @@ One file renamed multiple times:
   applying patch from stdin
 
   $ hg tip -q
-  9:034a6bf95330
+  8:2ef727e684e8
 
   $ hg log -vr. --template '{rev} {files} / {file_copies}\n'
-  9 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
+  8 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
 
   $ hg locate rename2 rename3 rename3-2
   rename3
@@ -260,7 +285,7 @@ Binary files and regular patch hunks:
   applying patch from stdin
 
   $ hg tip -q
-  11:c39bce63e786
+  10:27377172366e
 
   $ cat foo2
   foo
@@ -289,7 +314,7 @@ Multiple binary files:
   applying patch from stdin
 
   $ hg tip -q
-  12:30b530085242
+  11:18b73a84b4ab
 
   $ hg manifest --debug | grep mbinary
   045c85ba38952325e126c70962cc0f9d9077bc67 644   mbinary1
@@ -309,7 +334,7 @@ Filenames with spaces:
   applying patch from stdin
 
   $ hg tip -q
-  13:04750ef42fb3
+  12:47500ce1614e
 
   $ cat "foo bar"
   foo
@@ -332,7 +357,7 @@ Copy then modify the original file:
   applying patch from stdin
 
   $ hg tip -q
-  14:c4cd9cdeaa74
+  13:6757efb07ea9
 
   $ cat foo3
   foo
@@ -367,8 +392,8 @@ Move text file and patch as binary
 Invalid base85 content
 
   $ hg rollback
-  repository tip rolled back to revision 15 (undo import)
-  working directory now based on revision 15
+  repository tip rolled back to revision 14 (undo import)
+  working directory now based on revision 14
   $ hg revert -aq
   $ hg import -d "1000000 0" -m invalid-binary - <<"EOF"
   > diff --git a/text2 b/binary2
@@ -533,6 +558,8 @@ Copy and changes with existing destination
   $ cat b
   b
 
+#if symlink
+
   $ ln -s b linkb
   $ hg add linkb
   $ hg ci -m addlinkb
@@ -554,6 +581,8 @@ Copy and changes with existing destination
   $ hg st
   ? b.rej
   ? linkb.rej
+
+#endif
 
 Test corner case involving copies and multiple hunks (issue3384)
 
