@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink unix-permissions serve || exit 80
+  $ "$TESTDIR/hghave" unix-permissions serve || exit 80
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
@@ -658,6 +658,8 @@ Status after rollback:
   $ hg update --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+#if symlink
+
 cp symlink file; hg cp -A symlink file (part2)
 - copied symlink points to kw ignored file: do not overwrite
 
@@ -678,6 +680,8 @@ cp symlink file; hg cp -A symlink file (part2)
   $ hg update --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm i symignored
+
+#endif
 
 Custom keywordmaps as argument to kwdemo
 

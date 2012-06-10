@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles =
@@ -33,6 +31,7 @@
   adding sub/normal2
   $ hg commit -m"add large, normal1" large normal1
   $ hg commit -m"add sub/*" sub
+
 Test tag parsing
   $ cat >> .hgtags <<EOF
   > IncorrectlyFormattedTag!
@@ -41,10 +40,8 @@ Test tag parsing
   > EOF
   $ hg add .hgtags
   $ hg commit -m"add large2" large2 .hgtags
-  $ hg rename large2 large3
+
 Test link+rename largefile codepath
-  $ ln -sf large large3
-  $ hg commit -m"make large2 a symlink" large2 large3
   $ [ -d .hg/largefiles ] && echo fail || echo pass
   pass
   $ cd ..
@@ -53,13 +50,24 @@ Test link+rename largefile codepath
   skipping incorrectly formatted tag IncorrectlyFormattedTag!
   skipping incorrectly formatted id invalidhash
   no mapping for id 0123456789abcdef
+#if symlink
+  $ hg --cwd bigfile-repo rename large2 large3
+  $ ln -sf large bigfile-repo/large3
+  $ hg --cwd bigfile-repo commit -m"make large2 a symlink" large2 large3
+  $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo-symlink
+  initializing destination largefiles-repo-symlink
+  skipping incorrectly formatted tag IncorrectlyFormattedTag!
+  skipping incorrectly formatted id invalidhash
+  no mapping for id 0123456789abcdef
   abort: renamed/copied largefile large3 becomes symlink
   [255]
+#endif
   $ cd bigfile-repo
   $ hg strip --no-backup 2
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ cd ..
-  $ rm -rf largefiles-repo
+  $ rm -rf largefiles-repo largefiles-repo-symlink
+
   $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
 

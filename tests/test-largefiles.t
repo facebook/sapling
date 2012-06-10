@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" symlink unix-permissions serve || exit 80
+  $ "$TESTDIR/hghave" unix-permissions serve || exit 80
   $ USERCACHE=`pwd`/cache; export USERCACHE
   $ mkdir -p ${USERCACHE}
   $ cat >> $HGRCPATH <<EOF
@@ -1051,6 +1051,8 @@ We have to simulate that here by setting $HOME and removing write permissions
   $ chmod -R u+w alice/pubrepo
   $ HOME="$ORIGHOME"
 
+#if symlink
+
 Symlink to a large largefile should behave the same as a symlink to a normal file
   $ hg init largesymlink
   $ cd largesymlink
@@ -1075,6 +1077,8 @@ Symlink to a large largefile should behave the same as a symlink to a normal fil
   $ test -f largelink
   $ test -L largelink
   $ cd ..
+
+#endif
 
 test for pattern matching on 'hg status':
 to boost performance, largefiles checks whether specified patterns are
