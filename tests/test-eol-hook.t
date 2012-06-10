@@ -214,3 +214,5 @@ Test multiple files/revisions output
     d.txt in a7040e68714f should not have CRLF line endings
     b.txt in fbcf9b1025f5 should not have CRLF line endings
   [255]
+
+  $ cd ..

@@ -42,3 +42,5 @@ test crashed merge with empty mergestate
 resolve -l, should be empty
 
   $ hg resolve -l
+
+  $ cd ..

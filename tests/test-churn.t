@@ -158,3 +158,5 @@ Ignore trailing or leading spaces in emails
   user4@x.com      2 *****************************
   user2            2 *****************************
   with space       1 **************
+
+  $ cd ..

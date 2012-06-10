@@ -89,3 +89,4 @@ move b content
   src/b
   tst/a
 
+  $ cd ..

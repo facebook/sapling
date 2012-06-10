@@ -32,3 +32,4 @@ pushing
   adding file changes
   added 1 changesets with 0 changes to 0 files (+1 heads)
 
+  $ cd ..

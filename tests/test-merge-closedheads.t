@@ -84,3 +84,4 @@ hg merge some-branch
 hg commit (no reopening of some-branch)
   $ hgcommit -m 'merge with closed branch'
 
+  $ cd ..

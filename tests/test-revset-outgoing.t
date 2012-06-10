@@ -91,3 +91,4 @@
   $ hg tlog -r 'outgoing("green")'
   3:f0461977a3db: '4' 
 
+  $ cd ..

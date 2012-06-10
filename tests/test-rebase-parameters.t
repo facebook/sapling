@@ -427,3 +427,4 @@ Test --tool parameter:
   tool option will be ignored
   saved backup bundle to $TESTTMP/b3/.hg/strip-backup/*-backup.hg (glob)
 
+  $ cd ..

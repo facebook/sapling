@@ -372,3 +372,4 @@ Case HH: no msg
   $ hg merge -q 3
   $ hg ci -m "b12 (HH): merging two heads"
 
+  $ cd ..

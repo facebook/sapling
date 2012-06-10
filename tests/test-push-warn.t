@@ -727,3 +727,5 @@ outgoing:
   searching for changes
   no changes found
   [1]
+
+  $ cd ..

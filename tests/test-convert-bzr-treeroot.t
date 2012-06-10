@@ -31,3 +31,5 @@ change the id of the tree root
   $ manifest source-hg tip
   % manifest of tip
   644   file
+
+  $ cd ..

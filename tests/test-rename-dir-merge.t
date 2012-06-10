@@ -155,3 +155,5 @@ Second scenario with two repos:
     a/aa/g
   R a/aa/g
   R a/f
+
+  $ cd ..

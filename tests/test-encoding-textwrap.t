@@ -255,3 +255,5 @@ define commands to display help text
       \xd0\x9d\xd0\xb0\xd1\x81\xd1\x82\xd1\x80\xd0\xbe\xd0\xb9\xd0\xba\xd0\xb8 (esc)
   
   use "hg -v help show_ambig_ru" to show more info
+
+  $ cd ..

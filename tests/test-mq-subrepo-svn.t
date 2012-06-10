@@ -48,3 +48,5 @@ qnew on repo w/svn subrepo
   $ hg qnew -m1 1.diff
   abort: uncommitted changes in subrepository sub
   [255]
+
+  $ cd ..

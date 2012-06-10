@@ -65,3 +65,5 @@ Test copying onto an unknown file
   applying ../unknown.diff
   abort: cannot create copied: destination already exists
   [255]
+
+  $ cd ..

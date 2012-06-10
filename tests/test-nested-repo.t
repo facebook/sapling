@@ -38,3 +38,4 @@ Should fail:
   [255]
   $ hg st
 
+  $ cd ..

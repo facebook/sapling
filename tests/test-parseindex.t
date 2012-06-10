@@ -57,3 +57,5 @@ We approximate that by reducing the read buffer to 1 byte.
   2 revisions:
   7c31755bf9b5
   26333235a41c
+
+  $ cd ..

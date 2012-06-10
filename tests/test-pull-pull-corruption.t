@@ -68,3 +68,5 @@ see the result
   crosschecking files in changesets and manifests
   checking files
   1 files, 11 changesets, 11 total revisions
+
+  $ cd ..

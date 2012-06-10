@@ -142,3 +142,4 @@ with a destination repo... i.e. it's wrong too
   $ hg bundle --base 3 foo.bundle
   5 changesets found
 
+  $ cd ..

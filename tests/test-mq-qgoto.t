@@ -75,3 +75,4 @@ Detect ambiguous non-index:
   abort: patch 14 not in series
   [255]
 
+  $ cd ..

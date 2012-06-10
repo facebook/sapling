@@ -113,3 +113,4 @@ pull --rebase doesn't update if nothing has been pulled:
   o  2: 'R1'
   |
 
+  $ cd ..

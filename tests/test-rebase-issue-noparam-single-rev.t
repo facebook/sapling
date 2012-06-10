@@ -124,3 +124,5 @@ Rebase with no arguments - single revision in target branch:
   |
   o  0: 'c1'
   
+
+  $ cd ..

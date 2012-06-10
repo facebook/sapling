@@ -125,3 +125,5 @@ check that a change does not propagate
   $ cd ../repo1
   $ hg id -r tip
   c2e0ac586386 tip
+
+  $ cd ..

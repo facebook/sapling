@@ -43,3 +43,4 @@ http://mercurial.selenic.com/bts/issue1877
   $ hg book
      main                      2:d36c0562f908
 
+  $ cd ..

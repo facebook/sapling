@@ -422,3 +422,5 @@ Disable warning:
   $ hg st -q
   $ cat linefeed
   % just linefeed\r (esc)
+
+  $ cd ..

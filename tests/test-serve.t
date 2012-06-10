@@ -80,3 +80,5 @@ With --prefix /foo/
   $ hgserve --prefix /foo/
   listening at http://localhost/foo/ (bound to 127.0.0.1:HGPORT1)
   % errors
+
+  $ cd ..

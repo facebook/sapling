@@ -274,3 +274,5 @@ should silently revert the named files
 
   $ hg revert --no-backup ignored removed
   $ hg st -mardi
+
+  $ cd ..

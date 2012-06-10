@@ -512,3 +512,5 @@ traceback
   $ hg forget 'notafile*'
   notafile*: No such file or directory
   [1]
+
+  $ cd ..

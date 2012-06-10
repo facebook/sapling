@@ -36,3 +36,5 @@ zip
   $ cd zip
   $ "$TESTDIR/readlink.py" dangling
   dangling -> nothing
+
+  $ cd ..

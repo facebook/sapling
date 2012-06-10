@@ -123,3 +123,4 @@ What's in a
   $ python ../cat.py d
   'A\nA\nA\nA\n'
 
+  $ cd ..

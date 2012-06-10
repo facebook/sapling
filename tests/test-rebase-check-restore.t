@@ -146,3 +146,5 @@ Solve the conflict and go on:
   |/
   o  0:draft 'A'
   
+
+  $ cd ..

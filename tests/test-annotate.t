@@ -319,3 +319,4 @@ Annotate with --ignore-blank-lines (similar to no options case)
   1:  
   1: b  b
 
+  $ cd ..

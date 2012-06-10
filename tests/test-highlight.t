@@ -603,3 +603,5 @@ errors encountered
   % hgweb filerevision, html
   <div class="parity0 source"><a href="#l1" id="l1">     1</a> ??</div>
   % errors encountered
+
+  $ cd ..

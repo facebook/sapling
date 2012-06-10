@@ -88,3 +88,5 @@ successful push, SHA1 hash of heads (unbundlehash capability)
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 1 files
+
+  $ cd ..

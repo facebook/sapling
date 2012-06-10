@@ -396,3 +396,5 @@ Ensure --continue restores a correct state (issue3046) and phase:
   |/
   o  0:draft 'A'
   
+
+  $ cd ..

@@ -490,3 +490,5 @@ The subrepo must sorts after the explicit filename.
   $ hg add .hgsub
   $ touch a x/a
   $ hg add a x/a
+
+  $ cd ..

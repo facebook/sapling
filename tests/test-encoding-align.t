@@ -141,3 +141,5 @@ check alignment of tags
   \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d                       4:9259be597f19 (esc)
   MIDDLE_                            3:b06c5b6def9e
   \xe7\x9f\xad\xe5\x90\x8d                               2:64a70663cee8 (esc)
+
+  $ cd ..

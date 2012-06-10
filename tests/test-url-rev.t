@@ -206,3 +206,5 @@ Test handling of invalid urls
   $ hg id http://foo/?bar
   abort: unsupported URL component: "bar"
   [255]
+
+  $ cd ..

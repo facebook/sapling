@@ -464,3 +464,5 @@ test hg strip -B bookmark
   $ hg id -ir 6:2702dd0c91e7
   abort: unknown revision '2702dd0c91e7'!
   [255]
+
+  $ cd ..

@@ -194,3 +194,4 @@ more complex state 'both known and unknown patches
   revision 2b1c98802260 refers to unknown patches: 5.diff
   revision 33a6861311c0 refers to unknown patches: 4.diff
 
+  $ cd ..

@@ -422,3 +422,5 @@ test mq.keepchanges setting
   applying p2
   now at: p2
   $ hg st a
+
+  $ cd ..

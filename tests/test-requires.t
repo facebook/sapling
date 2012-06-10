@@ -15,3 +15,5 @@
   $ hg tip
   abort: unknown repository format: requires features 'indoor-pool', 'outdoor-pool' (upgrade Mercurial)!
   [255]
+
+  $ cd ..

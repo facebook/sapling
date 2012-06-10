@@ -173,3 +173,5 @@ qdiff when file deleted (but not removed) in working dir:
   $ hg qrefresh
   $ rm newfile
   $ hg qdiff
+
+  $ cd ..

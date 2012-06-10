@@ -66,3 +66,5 @@ bar should remain deleted.
 bar should remain deleted.
   $ hg manifest --debug
   f9b0e817f6a48de3564c6b2957687c5e7297c5a0 644   foo
+
+  $ cd ..

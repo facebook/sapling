@@ -68,3 +68,5 @@ Write a valid string to the placeholder:
   $ hg manifest tip --verbose
   644   a
   644 @ b
+
+  $ cd ..

@@ -126,3 +126,5 @@ qrecord
   \x1b[0;33mrecord this change to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
 
 #endif
+
+  $ cd ..

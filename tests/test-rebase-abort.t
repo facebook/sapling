@@ -154,3 +154,5 @@ Rebase and abort without generating new changesets:
   |/
   o  0:public 'A'
   
+
+  $ cd ..

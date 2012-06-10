@@ -56,3 +56,4 @@ Test raw style of hgweb
   $ cat access.log error.log
   127.0.0.1 - - [*] "GET /?f=a23bf1310f6e;file=sub/some%20%22text%22.txt;style=raw HTTP/1.1" 200 - (glob)
 
+  $ cd ..

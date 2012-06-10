@@ -1286,3 +1286,5 @@ heads
 ERRORS ENCOUNTERED
 
   $ cat errors.log
+
+  $ cd ..

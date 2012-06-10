@@ -52,3 +52,5 @@ Test that new changesets are visible to repo.lookup():
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     one more commit to demonstrate the bug
   
+
+  $ cd ..

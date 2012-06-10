@@ -234,3 +234,5 @@ test a local add
   added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
+
+  $ cd ..

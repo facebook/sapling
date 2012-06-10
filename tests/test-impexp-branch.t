@@ -69,3 +69,5 @@ Test --exact and patch header separators (issue3356)
   >>> file('../r1-ws.patch', 'wb').write(p)
   $ hg import --exact ../r1-ws.patch
   applying ../r1-ws.patch
+
+  $ cd ..

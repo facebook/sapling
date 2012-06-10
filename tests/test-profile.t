@@ -27,3 +27,5 @@ test --profile
   $ grep 'events: Ticks' ../out > /dev/null || cat ../out
 
 #endif
+
+  $ cd ..

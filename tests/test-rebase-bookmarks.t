@@ -86,3 +86,5 @@ Keep bookmarks to the correct rebased changeset
   |
   o  0: 'A' bookmarks:
   
+
+  $ cd ..

@@ -318,3 +318,5 @@ Test listfile and listfile0
   f  mammals/skunk  ../t/mammals/skunk  exact
   $ hg debugwalk --cwd ../t mammals/skunk
   f  mammals/skunk  mammals/skunk  exact
+
+  $ cd ..

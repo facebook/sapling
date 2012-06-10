@@ -29,3 +29,5 @@ log
 errors
 
   $ cat errors.log
+
+  $ cd ..

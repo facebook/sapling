@@ -200,3 +200,5 @@ return to trunk and merge MYBRANCH1_2
   Members: 
   	foo.txt:1.1.4.1->1.1.4.2 
   
+
+  $ cd ..

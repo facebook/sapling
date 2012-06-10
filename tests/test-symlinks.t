@@ -253,3 +253,4 @@ Issue995: hg copy -A incorrectly handles symbolic links
   $ mv dirlink newdir/dirlink
   $ hg mv -A dirlink newdir/dirlink
 
+  $ cd ..

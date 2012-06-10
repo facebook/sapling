@@ -98,3 +98,5 @@ copies here
   $ hg addremove -s80
   adding c
   recording removal of d/a as rename to c (100% similar) (glob)
+
+  $ cd ..

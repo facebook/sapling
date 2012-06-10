@@ -37,3 +37,4 @@
 
   $ hg diff --git -r 0 -r 2
 
+  $ cd ..

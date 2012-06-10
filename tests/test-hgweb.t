@@ -443,3 +443,5 @@ static file
 errors
 
   $ cat errors.log
+
+  $ cd ..

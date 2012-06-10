@@ -43,3 +43,4 @@
   -bar
   +foobar
 
+  $ cd ..

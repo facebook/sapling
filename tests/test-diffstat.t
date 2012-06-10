@@ -69,3 +69,4 @@ Filename with spaces git diffstat:
    file with spaces |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
 	
+  $ cd ..

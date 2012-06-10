@@ -61,3 +61,5 @@
   rollback completed
   abort: empty username!
   [255]
+
+  $ cd ..

@@ -1217,3 +1217,5 @@ Ignore win32text deprecation warning for now:
    c
   +d
   
+
+  $ cd ..

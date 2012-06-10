@@ -324,3 +324,4 @@ One with >200 heads, which used to use up all of the sample:
   5 total queries
   common heads: 3ee37d65064a
 
+  $ cd ..

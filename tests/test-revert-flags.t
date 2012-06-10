@@ -19,3 +19,5 @@ reverting to rev 0
   diff --git a/foo b/foo
   old mode 100755
   new mode 100644
+
+  $ cd ..

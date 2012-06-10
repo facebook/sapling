@@ -16,3 +16,5 @@ Minimal hgk check
   branch default
   
   adda
+
+  $ cd ..

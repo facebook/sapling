@@ -30,3 +30,5 @@ verify that this test has not modified the trustdb.gpg file back in
 the main hg working dir
   $ "$TESTDIR/md5sum.py" "$TESTDIR/gpg/trustdb.gpg"
   f6b9c78c65fa9536e7512bb2ceb338ae  */gpg/trustdb.gpg (glob)
+
+  $ cd ..

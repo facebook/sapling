@@ -61,3 +61,5 @@ Updating to the branch:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Create a branch with the same name as a tag.
   
+
+  $ cd ..

@@ -129,3 +129,5 @@ Do a size-preserving modification outside of that process
   5  fix 2  bugfix file1
   6  x  bugfix file1
   7  y  file1
+
+  $ cd ..

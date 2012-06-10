@@ -2056,3 +2056,5 @@ Test --hidden
   $ testlog --hidden
   []
   []
+
+  $ cd ..

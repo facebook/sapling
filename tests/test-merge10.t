@@ -49,3 +49,5 @@ but then local changes are added in the same directory)
   @@ -1,1 +1,1 @@
   -a
   +alpha
+
+  $ cd ..

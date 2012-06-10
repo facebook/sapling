@@ -50,3 +50,4 @@ Expected to fail:
   abort: missing file data for beta:dddc47b3ba30e54484720ce0f4f768a0f4b6efb9 - run hg verify
   [255]
 
+  $ cd ..

@@ -183,3 +183,5 @@ same again, but emulate an old client that doesn't write undo.desc
   rolling back unknown transaction
   $ cat a
   a
+
+  $ cd ..

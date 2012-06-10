@@ -172,3 +172,5 @@ Test for issue2364
   $ hg ci -md
   $ hg revert -r -2 b
   $ hg up -q -- -2
+
+  $ cd ..

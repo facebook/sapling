@@ -66,3 +66,5 @@ test multiple merges at once
   644   file-branch1
   644   file-branch2
   644   file-parent
+
+  $ cd ..

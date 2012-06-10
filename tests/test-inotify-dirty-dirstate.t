@@ -68,3 +68,5 @@ st should not output anything
   $ hg status
   $ hg qrefresh
   $ hg status
+
+  $ cd ..

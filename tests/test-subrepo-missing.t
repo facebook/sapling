@@ -67,3 +67,5 @@ delete .hgsubstate and update
   $ hg st
   $ ls subrepo
   a
+
+  $ cd ..

@@ -286,3 +286,4 @@ qpush --exact a patch without a parent recorded
   abort: p0 does not have a parent recorded
   [255]
 
+  $ cd ..

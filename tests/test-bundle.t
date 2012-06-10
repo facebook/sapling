@@ -596,3 +596,5 @@ bundle single branch
   crosschecking files in changesets and manifests
   checking files
   4 files, 3 changesets, 5 total revisions
+
+  $ cd ..

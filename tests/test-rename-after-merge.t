@@ -118,3 +118,4 @@ Commit issue 1476 with a rename on the other side:
   $ hg log -r tip -C -v | grep copies
   copies:      b2 (b1)
 
+  $ cd ..

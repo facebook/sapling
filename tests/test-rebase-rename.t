@@ -168,3 +168,4 @@ Test rebase across repeating renames:
    unrelated.txt |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
+  $ cd ..

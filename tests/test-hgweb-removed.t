@@ -231,3 +231,5 @@ diff removed file
   </body>
   </html>
   
+
+  $ cd ..

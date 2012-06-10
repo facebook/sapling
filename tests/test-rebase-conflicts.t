@@ -118,3 +118,4 @@ Check correctness:
   $ hg cat -r 5 common
   resolved merge
 
+  $ cd ..

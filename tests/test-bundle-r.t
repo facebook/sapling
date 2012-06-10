@@ -324,3 +324,5 @@ revision 9
   crosschecking files in changesets and manifests
   checking files
   4 files, 10 changesets, 7 total revisions
+
+  $ cd ..

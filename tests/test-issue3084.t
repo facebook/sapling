@@ -106,3 +106,5 @@ Largefile in the working copy, keeping the largefile version:
 
   $ cat foo
   large
+
+  $ cd ..

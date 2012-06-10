@@ -147,3 +147,5 @@ the changelog should mention file a:
      rev    offset  length   base linkrev nodeid       p1           p2
        0         0       0      0       0 b80de5d13875 000000000000 000000000000
        1         0       5      1       1 7fe919cc0336 b80de5d13875 000000000000
+
+  $ cd ..

@@ -49,3 +49,5 @@
   $ hg commit -A -m "commit #2"
   adding b
   created new head
+
+  $ cd ..

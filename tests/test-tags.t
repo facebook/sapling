@@ -380,3 +380,5 @@ to remove a tag of type X which actually only exists as a type Y:
   tip                                1:a0b6fe111088
   localtag                           0:bbd179dfa0a7 local
   globaltag                          0:bbd179dfa0a7
+
+  $ cd ..

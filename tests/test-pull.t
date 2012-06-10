@@ -88,3 +88,5 @@ regular shell commands.
 
   $ URL=`python -c "import os; print 'file://localhost' + ('/' + os.getcwd().replace(os.sep, '/')).replace('//', '/') + '/../test'"`
   $ hg pull -q "$URL"
+
+  $ cd ..

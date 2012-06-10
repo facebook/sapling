@@ -112,3 +112,4 @@ Test with --bypass and --exact
   3:102a90ea7b4a addb
   $ hg strip --no-backup tip
 
+  $ cd ..

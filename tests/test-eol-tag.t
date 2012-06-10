@@ -35,3 +35,5 @@ Rewrite .hgtags file as it would look on a new checkout:
 Touch .hgtags file again:
 
   $ hg tag 2.0
+
+  $ cd ..

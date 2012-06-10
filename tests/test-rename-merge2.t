@@ -750,3 +750,5 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   M c
   --------------
   
+
+  $ cd ..

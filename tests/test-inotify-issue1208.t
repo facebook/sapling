@@ -34,3 +34,5 @@ if we try to start twice the server, make sure we get a correct error
   abort: child process failed to start
   [255]
   $ kill `cat hg.pid`
+
+  $ cd ..

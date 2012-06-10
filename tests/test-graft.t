@@ -287,3 +287,5 @@ Graft with --log
   $ hg log --template '{rev} {parents} {desc}\n' -r tip
   14 1:5d205f8b35b6  3
   (grafted from 4c60f11aa304a54ae1c199feb94e7fc771e51ed8)
+
+  $ cd ..

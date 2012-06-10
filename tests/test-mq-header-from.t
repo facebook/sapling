@@ -967,3 +967,5 @@
   2: Three (again) - maria
   1: imported patch 2.patch - jane
   0: imported patch 1.patch - mary
+
+  $ cd ..

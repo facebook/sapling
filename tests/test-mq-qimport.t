@@ -270,3 +270,5 @@ check qimport phase:
   $ hg qimport -r qparent
   $ hg phase qbase
   1: secret
+
+  $ cd ..

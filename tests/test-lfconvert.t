@@ -268,3 +268,5 @@ round-trip: converting back to a normal (non-largefiles) repo with
   stuff/normal2
   $ [ -d .hg/largefiles ] && echo fail || echo pass
   pass
+
+  $ cd ..

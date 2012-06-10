@@ -44,3 +44,4 @@ empty file that came from rev 1:
   b80de5d138758541c5f05265ad144ab9fa86d1db 644   empty2
   b80de5d138758541c5f05265ad144ab9fa86d1db 644   empty3
 
+  $ cd ..

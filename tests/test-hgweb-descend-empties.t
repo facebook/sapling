@@ -140,3 +140,5 @@ manifest with descending
   
 
   $ cat errors.log
+
+  $ cd ..

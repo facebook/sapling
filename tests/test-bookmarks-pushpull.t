@@ -252,3 +252,5 @@ hgweb
      foobar                    1:9b140be10808
 
   $ kill `cat ../hg.pid`
+
+  $ cd ..

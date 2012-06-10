@@ -249,3 +249,4 @@ Test roundtrip encoding of lookup tables when not using UTF-8 (issue2763)
   $ HGENCODING=latin-1 hg up `cat latin-1-tag`
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
  
+  $ cd ..

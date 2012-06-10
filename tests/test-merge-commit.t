@@ -181,3 +181,4 @@ This should use bar@rev2 as the ancestor:
        2       153       7      2       4 ff4b45017382 d35118874825 000000000000
        3       160      13      3       5 3701b4893544 ff4b45017382 5345f5ab8abd
 
+  $ cd ..

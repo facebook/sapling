@@ -353,3 +353,5 @@ correctly handle subrepos with patch queues
   $ echo sub = sub >> .hgsub
   $ hg add .hgsub
   $ hg qnew 0.diff
+
+  $ cd ..

@@ -53,3 +53,5 @@ Verify should succeed:
   1 files, 1 changesets, 1 total revisions
 
 At the end...
+
+  $ cd ..

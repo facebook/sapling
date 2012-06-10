@@ -143,3 +143,5 @@ Catch exporting unknown revisions (especially empty revsets, see issue3353)
   $ hg export "not all()"
   abort: export requires at least one changeset
   [255]
+
+  $ cd ..

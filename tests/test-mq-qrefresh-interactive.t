@@ -346,3 +346,5 @@ After final qrefresh 'tip'
 After qrefresh 'diff'
 
   $ hg diff --nodates
+
+  $ cd ..

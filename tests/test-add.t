@@ -134,3 +134,4 @@ Issue683: peculiarity with hg revert of an removed then added file
   A c
   ? a.orig
 
+  $ cd ..

@@ -122,3 +122,5 @@ Check it does not ignore the current directory '.':
 
   $ hg debugignore
   (?:(?:|.*/)[^/]*(?:/|$))
+
+  $ cd ..

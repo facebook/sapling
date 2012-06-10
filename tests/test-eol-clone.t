@@ -72,3 +72,5 @@ Test clone of revision with .hgeol
   first\r (esc)
   second\r (esc)
   third\r (esc)
+
+  $ cd ..

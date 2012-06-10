@@ -395,3 +395,5 @@ Some tests for hgweb in an empty repository
   </body>
   </html>
   
+
+  $ cd ..

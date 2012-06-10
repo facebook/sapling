@@ -75,3 +75,5 @@ compare imported changes against reference file
 
   $ python ../writepatterns.py aref 34X 10A 1B 1a 9A 1C 10A 1B 10A 1D 10A 1B 1a 9A 1E 10A 1B 1a 9A
   $ diff aref a
+
+  $ cd ..

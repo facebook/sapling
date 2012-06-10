@@ -78,3 +78,5 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   []
   ---- request.ENVIRON wsgi variables
   ['wsgi.errors', 'wsgi.input', 'wsgi.multiprocess', 'wsgi.multithread', 'wsgi.run_once', 'wsgi.url_scheme', 'wsgi.version']
+
+  $ cd ..

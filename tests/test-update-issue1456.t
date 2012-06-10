@@ -33,3 +33,4 @@ Validate update of standalone execute bit change:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
 
+  $ cd ..

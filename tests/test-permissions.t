@@ -69,3 +69,4 @@ Reenable perm to allow deletion:
 
   $ chmod +rx dir
 
+  $ cd ..

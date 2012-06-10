@@ -88,3 +88,5 @@ attack /tmp/test
   $ hg update -Cr4
   abort: *: $TESTTMP/target//tmp/test (glob)
   [255]
+
+  $ cd ..

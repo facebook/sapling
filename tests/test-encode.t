@@ -59,3 +59,5 @@ check hg cat operation
   this is a test
   $ hg -R .. cat --decode ../a.gz | gunzip
   this is a test
+
+  $ cd ..

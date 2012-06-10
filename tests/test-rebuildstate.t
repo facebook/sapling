@@ -27,3 +27,4 @@ status
   ? baz
   C foo
 
+  $ cd ..

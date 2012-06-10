@@ -119,3 +119,5 @@ expect authorization error: some users denied, users must be authenticated
   searching for changes
   abort: authorization failed
   % serve errors
+
+  $ cd ..

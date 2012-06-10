@@ -21,3 +21,5 @@ Create a short file history including a merge.
   	2 -> 3
   	1 -> 3
   }
+
+  $ cd ..

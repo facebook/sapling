@@ -50,3 +50,5 @@ see what happened
   crosschecking files in changesets and manifests
   checking files
   1 files, 2 changesets, 2 total revisions
+
+  $ cd ..

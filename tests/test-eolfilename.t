@@ -68,3 +68,5 @@ test issue2039
   \x1b[0;35;1;4mbar\x1b[0m (esc)
   \x1b[0;35;1;4m? foo\x1b[0m (esc)
   \x1b[0;35;1;4mbar.baz\x1b[0m (esc)
+
+  $ cd ..

@@ -1127,3 +1127,5 @@ Now disable keyword expansion
   $Xinfo$
   ignore $Id$
   a
+
+  $ cd ..

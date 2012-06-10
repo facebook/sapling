@@ -90,3 +90,4 @@ must be similar to 'hg diff --change 5':
    9
    10
 
+  $ cd ..

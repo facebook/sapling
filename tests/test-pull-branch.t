@@ -212,3 +212,5 @@ Pull from tt
   adding file changes
   added 2 changesets with 2 changes to 2 files (+2 heads)
   (run 'hg heads .' to see heads, 'hg merge' to merge)
+
+  $ cd ..

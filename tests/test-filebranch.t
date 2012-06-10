@@ -146,3 +146,4 @@ Everything should be clean now:
   checking files
   4 files, 4 changesets, 10 total revisions
 
+  $ cd ..

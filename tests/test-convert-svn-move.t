@@ -247,3 +247,5 @@ Test convert progress bar'
   1 branch
   0 clobberdir
   
+
+  $ cd ..

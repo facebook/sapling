@@ -90,3 +90,5 @@ Test the CIA extension
     </body>
     <timestamp>0</timestamp>
   </message>
+
+  $ cd ..

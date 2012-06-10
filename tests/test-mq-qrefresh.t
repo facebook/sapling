@@ -543,3 +543,4 @@ Refresh with phase data:
   $ hg phase p2.diff
   2: secret
 
+  $ cd ..

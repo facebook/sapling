@@ -398,3 +398,5 @@ After qrecord b.patch 'tip'
 After qrecord b.patch 'diff'
 
   $ hg diff --nodates
+
+  $ cd ..

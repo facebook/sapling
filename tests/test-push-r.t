@@ -146,3 +146,4 @@
   checking files
   4 files, 9 changesets, 7 total revisions
 
+  $ cd ..

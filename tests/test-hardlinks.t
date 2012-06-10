@@ -344,3 +344,4 @@ Test tags hardlinking:
   $ cat ../b/.hg/localtags
   4e7abb4840c46a910f6d7b4d3c3fc7e5209e684c lfoo
 
+  $ cd ..

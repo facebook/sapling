@@ -296,3 +296,5 @@ hg resolve with one unresolved, one resolved:
   $ hg resolve --color=always -l
   \x1b[0;31;1mU a\x1b[0m (esc)
   \x1b[0;32;1mR b\x1b[0m (esc)
+
+  $ cd ..

@@ -150,3 +150,5 @@ merge working dir with 1 parent, hg parents c
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     c2
   
+
+  $ cd ..

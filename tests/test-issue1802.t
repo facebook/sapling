@@ -69,3 +69,5 @@ Simulate a Windows commit:
   $ hg manifest -v
   755 * a
   644   b
+
+  $ cd ..

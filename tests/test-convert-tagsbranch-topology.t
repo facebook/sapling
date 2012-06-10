@@ -84,3 +84,5 @@ Print the log
    /
   o  0 "rev1" files: a
   
+
+  $ cd ..

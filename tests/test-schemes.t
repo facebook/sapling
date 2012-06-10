@@ -46,3 +46,5 @@ check that paths are expanded
 errors
 
   $ cat errors.log
+
+  $ cd ..

@@ -34,3 +34,4 @@ Update --clean to revision 1 to simulate a failed merge:
   $ hg update --clean 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+  $ cd ..

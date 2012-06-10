@@ -61,3 +61,5 @@ expect error, pulling not allowed
   searching for changes
   abort: authorization failed
   % serve errors
+
+  $ cd ..

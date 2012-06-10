@@ -57,3 +57,5 @@ test bad subpaths pattern
   $ hg debugsub
   abort: bad subrepository pattern in $TESTTMP/outer/.hg/hgrc:2: invalid group reference (glob)
   [255]
+
+  $ cd ..

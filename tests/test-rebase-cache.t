@@ -262,3 +262,4 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   
   $ hg verify -q
 
+  $ cd ..

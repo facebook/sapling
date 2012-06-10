@@ -214,3 +214,5 @@ skip patterns
   $ touch directory/.svn/foo
   $ hg purge -p -X .svn -X '*/.svn'
   $ hg purge -p -X re:.*.svn
+
+  $ cd ..

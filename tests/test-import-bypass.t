@@ -266,3 +266,5 @@ data. If not, diff both heads to debug it.
   o  0:a0e19e636a43 test 0 0 - default - t
   
 #endif
+
+  $ cd ..

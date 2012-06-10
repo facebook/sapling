@@ -158,3 +158,5 @@ build/x & build/y shouldn't appear in "hg st"
 
   $ hg st
   $ kill `cat hg.pid`
+
+  $ cd ..

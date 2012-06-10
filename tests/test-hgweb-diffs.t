@@ -598,3 +598,5 @@ raw revision with diff block numbers
 errors
 
   $ cat ../test/errors.log
+
+  $ cd ..

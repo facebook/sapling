@@ -34,3 +34,5 @@ ghost revisions
   |
   o  0@source "Initial layout setup" files: somefile
   
+
+  $ cd ..

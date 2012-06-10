@@ -29,3 +29,4 @@
   checking files
   1 files, 1 changesets, 1 total revisions
 
+  $ cd ..

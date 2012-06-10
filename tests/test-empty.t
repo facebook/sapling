@@ -51,3 +51,5 @@ Poke at a clone:
 Should be empty:
 
   $ ls .hg/store
+
+  $ cd ..

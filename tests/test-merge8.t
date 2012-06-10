@@ -25,3 +25,5 @@ Test for changeset ba7c74081861
   (run 'hg update' to get a working copy)
   $ hg update
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+  $ cd ..

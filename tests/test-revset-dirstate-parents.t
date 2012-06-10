@@ -56,3 +56,5 @@ merge in progress
   $ log 'parents()'
   1
   2
+
+  $ cd ..

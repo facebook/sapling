@@ -522,3 +522,4 @@ append a line without trailing newline
   fourth
   fifth
 
+  $ cd ..

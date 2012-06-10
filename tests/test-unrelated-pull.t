@@ -41,3 +41,5 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
+
+  $ cd ..

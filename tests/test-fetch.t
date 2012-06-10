@@ -410,3 +410,5 @@ test issue2047
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+
+  $ cd ..

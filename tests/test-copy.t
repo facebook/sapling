@@ -212,3 +212,5 @@ but it's considered modified after a copy --after --force
   $ hg st -AC foo
   M foo
     bar
+
+  $ cd ..

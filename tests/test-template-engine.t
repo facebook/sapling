@@ -35,3 +35,5 @@
   adding mymap
   $ hg log --style=./mymap
   0 97e5f848f0936960273bbf75be6388cd0350a32b test
+
+  $ cd ..

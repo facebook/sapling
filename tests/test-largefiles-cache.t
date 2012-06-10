@@ -119,3 +119,5 @@ Test permission of files created by push:
 
   $ ../ls-l.py ../src/.hg/largefiles/b734e14a0971e370408ab9bce8d56d8485e368a9
   640
+
+  $ cd ..

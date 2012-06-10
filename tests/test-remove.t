@@ -264,3 +264,5 @@ test that commit does not crash if the user removes a newly added file
   removing f1
   nothing changed
   [1]
+
+  $ cd ..

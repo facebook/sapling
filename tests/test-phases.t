@@ -475,3 +475,5 @@ test complete failure
   cannot move 1 changesets to a more permissive phase, use --force
   no phases changed
   [1]
+
+  $ cd ..

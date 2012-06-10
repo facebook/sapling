@@ -23,3 +23,4 @@ Relative delete:
 
   $ hg ci -m m ../a
 
+  $ cd ..
