@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
   $ cat > echo.py <<EOF
   > #!/usr/bin/env python
   > import os, sys

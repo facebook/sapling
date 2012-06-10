@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
 Source bundle was generated with the following script:
 
 # hg init
