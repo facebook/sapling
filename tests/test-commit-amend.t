@@ -29,7 +29,7 @@ Amending changeset with changes in working dir:
 
   $ echo a >> a
   $ hg ci --amend -m 'amend base1'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg (glob)
   $ hg diff -c .
   diff -r ad120869acf0 -r 9cd25b479c51 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
@@ -56,13 +56,13 @@ Add new file:
   $ echo b > b
   $ hg ci --amend -Am 'amend base1 new file'
   adding b
-  saved backup bundle to $TESTTMP/.hg/strip-backup/9cd25b479c51-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/9cd25b479c51-amend-backup.hg (glob)
 
 Remove file that was added in amended commit:
 
   $ hg rm b
   $ hg ci --amend -m 'amend base1 remove new file'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/e2bb3ecffd2f-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/e2bb3ecffd2f-amend-backup.hg (glob)
 
   $ hg cat b
   b: no such file in rev 664a9b2d60cd
@@ -76,7 +76,7 @@ No changes, just a different message:
   a
   stripping amended changeset 664a9b2d60cd
   1 changesets found
-  saved backup bundle to $TESTTMP/.hg/strip-backup/664a9b2d60cd-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/664a9b2d60cd-amend-backup.hg (glob)
   1 changesets found
   adding branch
   adding changesets
@@ -113,10 +113,10 @@ Disable default date on commit so when -d isn't given, the old date is preserved
 Test -u/-d:
 
   $ hg ci --amend -u foo -d '1 0'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/ea6e356ff2ad-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/ea6e356ff2ad-amend-backup.hg (glob)
   $ echo a >> a
   $ hg ci --amend -u foo -d '1 0'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/377b91ce8b56-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/377b91ce8b56-amend-backup.hg (glob)
   $ hg log -r .
   changeset:   1:2c94e4a5756f
   tag:         tip
@@ -148,7 +148,7 @@ Open editor with old commit message if a message isn't given otherwise:
   a
   stripping amended changeset 2c94e4a5756f
   1 changesets found
-  saved backup bundle to $TESTTMP/.hg/strip-backup/2c94e4a5756f-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/2c94e4a5756f-amend-backup.hg (glob)
   1 changesets found
   adding branch
   adding changesets
@@ -177,7 +177,7 @@ Same, but with changes in working dir (different code path):
   stripping intermediate changeset 27f3aacd3011
   stripping amended changeset ffb49186f961
   2 changesets found
-  saved backup bundle to $TESTTMP/.hg/strip-backup/ffb49186f961-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/ffb49186f961-amend-backup.hg (glob)
   1 changesets found
   adding branch
   adding changesets
@@ -200,13 +200,13 @@ Moving bookmarks, preserve active bookmark:
   $ hg book book1
   $ hg book book2
   $ hg ci --amend -m 'move bookmarks'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/fb6cca43446f-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/fb6cca43446f-amend-backup.hg (glob)
   $ hg book
      book1                     1:0cf1c7a51bcf
    * book2                     1:0cf1c7a51bcf
   $ echo a >> a
   $ hg ci --amend -m 'move bookmarks'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/0cf1c7a51bcf-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/0cf1c7a51bcf-amend-backup.hg (glob)
   $ hg book
      book1                     1:7344472bd951
    * book2                     1:7344472bd951
@@ -225,7 +225,7 @@ Moving branches:
   marked working directory as branch default
   (branches are permanent and global, did you want a bookmark?)
   $ hg ci --amend -m 'back to default'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/1661ca36a2db-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/1661ca36a2db-amend-backup.hg (glob)
   $ hg branches
   default                        2:f24ee5961967
 
@@ -241,7 +241,7 @@ Close branch:
   $ echo b >> b
   $ hg ci -mb
   $ hg ci --amend --close-branch -m 'closing branch foo'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/c962248fa264-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/c962248fa264-amend-backup.hg (glob)
 
 Same thing, different code path:
 
@@ -250,7 +250,7 @@ Same thing, different code path:
   reopening closed branch head 4
   $ echo b >> b
   $ hg ci --amend --close-branch
-  saved backup bundle to $TESTTMP/.hg/strip-backup/5e302dcc12b8-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/5e302dcc12b8-amend-backup.hg (glob)
   $ hg branches
   default                        2:f24ee5961967
 
@@ -274,7 +274,7 @@ Follow copies/renames:
   $ hg ci -m 'b -> c'
   $ hg mv c d
   $ hg ci --amend -m 'b -> d'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/9c207120aa98-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/9c207120aa98-amend-backup.hg (glob)
   $ hg st --rev '.^' --copies d
   A d
     b
@@ -282,7 +282,7 @@ Follow copies/renames:
   $ hg ci -m 'e = d'
   $ hg cp e f
   $ hg ci --amend -m 'f = d'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/fda2b3b27b22-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/fda2b3b27b22-amend-backup.hg (glob)
   $ hg st --rev '.^' --copies f
   A f
     d
@@ -293,7 +293,7 @@ Follow copies/renames:
   $ hg cp a f
   $ mv f.orig f
   $ hg ci --amend -m replacef
-  saved backup bundle to $TESTTMP/.hg/strip-backup/20a7413547f9-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/20a7413547f9-amend-backup.hg (glob)
   $ hg st --change . --copies
   $ hg log -r . --template "{file_copies}\n"
   
@@ -305,7 +305,7 @@ Move added file (issue3410):
   adding g
   $ hg mv g h
   $ hg ci --amend
-  saved backup bundle to $TESTTMP/.hg/strip-backup/5daa77a5d616-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/5daa77a5d616-amend-backup.hg (glob)
   $ hg st --change . --copies h
   A h
   $ hg log -r . --template "{file_copies}\n"
@@ -325,11 +325,11 @@ Preserve extra dict (issue3430):
   $ echo a >> a
   $ hg ci -ma
   $ hg ci --amend -m "a'"
-  saved backup bundle to $TESTTMP/.hg/strip-backup/167f8e3031df-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/167f8e3031df-amend-backup.hg (glob)
   $ hg log -r . --template "{branch}\n"
   a
   $ hg ci --amend -m "a''"
-  saved backup bundle to $TESTTMP/.hg/strip-backup/ceac1a44c806-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/ceac1a44c806-amend-backup.hg (glob)
   $ hg log -r . --template "{branch}\n"
   a
 
@@ -346,7 +346,7 @@ first graft something so there's an additional entry:
   $ hg graft 12
   grafting revision 12
   $ hg ci --amend -m 'graft amend'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/18a5124daf7a-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/18a5124daf7a-amend-backup.hg (glob)
   $ hg log -r . --debug | grep extra
   extra:       branch=a
   extra:       source=2647734878ef0236dda712fae9c1651cf694ea8a
