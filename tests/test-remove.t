@@ -254,3 +254,13 @@ test remove dropping empty trees (issue1861)
   $ hg ci -m remove
   $ ls issue1861
   x
+
+test that commit does not crash if the user removes a newly added file
+
+  $ touch f1
+  $ hg add f1
+  $ rm f1
+  $ hg ci -A -mx
+  removing f1
+  nothing changed
+  [1]
