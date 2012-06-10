@@ -3,9 +3,6 @@ Let commit recurse into subrepos by default to match pre-2.0 behavior:
   $ echo "[ui]" >> $HGRCPATH
   $ echo "commitsubrepos = Yes" >> $HGRCPATH
 
-  $ rm -rf sub
-  $ mkdir sub
-  $ cd sub
   $ hg init t
   $ cd t
 
@@ -266,9 +263,9 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  cloning subrepo s from $TESTTMP/sub/t/s (glob)
-  cloning subrepo s/ss from $TESTTMP/sub/t/s/ss (glob)
-  cloning subrepo t from $TESTTMP/sub/t/t (glob)
+  cloning subrepo s from $TESTTMP/t/s (glob)
+  cloning subrepo s/ss from $TESTTMP/t/s/ss (glob)
+  cloning subrepo t from $TESTTMP/t/t (glob)
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd tc
   $ hg debugsub
@@ -285,14 +282,14 @@ push
   $ hg ci -m11
   committing subrepository t
   $ hg push
-  pushing to $TESTTMP/sub/t (glob)
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
+  pushing to $TESTTMP/t (glob)
+  pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s (glob)
   searching for changes
   no changes found
-  pushing subrepo t to $TESTTMP/sub/t/t (glob)
+  pushing subrepo t to $TESTTMP/t/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -310,27 +307,27 @@ push -f
   $ hg ci -m12
   committing subrepository s
   $ hg push
-  pushing to $TESTTMP/sub/t (glob)
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
+  pushing to $TESTTMP/t (glob)
+  pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s (glob)
   searching for changes
   abort: push creates new remote head 12a213df6fa9!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg push -f
-  pushing to $TESTTMP/sub/t (glob)
-  pushing subrepo s/ss to $TESTTMP/sub/t/s/ss (glob)
+  pushing to $TESTTMP/t (glob)
+  pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/sub/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  pushing subrepo t to $TESTTMP/sub/t/t (glob)
+  pushing subrepo t to $TESTTMP/t/t (glob)
   searching for changes
   no changes found
   searching for changes
@@ -352,7 +349,7 @@ pull
 
   $ cd ../tc
   $ hg pull
-  pulling from $TESTTMP/sub/t (glob)
+  pulling from $TESTTMP/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -363,7 +360,7 @@ pull
 should pull t
 
   $ hg up
-  pulling subrepo t from $TESTTMP/sub/t/t (glob)
+  pulling subrepo t from $TESTTMP/t/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -552,9 +549,9 @@ test repository cloning
   $ cat mercurial2/main/nested_absolute/.hg/hgrc \
   >     mercurial2/main/nested_relative/.hg/hgrc
   [paths]
-  default = $TESTTMP/sub/mercurial/nested_absolute
+  default = $TESTTMP/mercurial/nested_absolute
   [paths]
-  default = $TESTTMP/sub/mercurial/nested_relative
+  default = $TESTTMP/mercurial/nested_relative
   $ rm -rf mercurial mercurial2
 
 Issue1977: multirepo push should fail if subrepo push fails
@@ -569,7 +566,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   adding .hgsub
   $ hg clone repo repo2
   updating to branch default
-  cloning subrepo s from $TESTTMP/sub/repo/s (glob)
+  cloning subrepo s from $TESTTMP/repo/s (glob)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R repo2 pull -u
   $ echo 1 > repo2/s/a
@@ -645,8 +642,8 @@ Try the same, but with pull -u
 Try to push from the other side
 
   $ hg -R issue1852a push `pwd`/issue1852c
-  pushing to $TESTTMP/sub/issue1852c
-  pushing subrepo sub/repo to $TESTTMP/sub/issue1852c/sub/repo (glob)
+  pushing to $TESTTMP/issue1852c
+  pushing subrepo sub/repo to $TESTTMP/issue1852c/sub/repo (glob)
   searching for changes
   no changes found
   searching for changes
@@ -694,7 +691,7 @@ subrepository:
   $ hg st subrepo-2/file
 
 Check hg update --clean
-  $ cd $TESTTMP/sub/t
+  $ cd $TESTTMP/t
   $ rm -r t/t.orig
   $ hg status -S --all
   C .hgsub
@@ -722,7 +719,7 @@ Check hg update --clean
   ? s/c
 
 Sticky subrepositories, no changes
-  $ cd $TESTTMP/sub/t
+  $ cd $TESTTMP/t
   $ hg id
   925c17564ef8 tip
   $ hg -R s id
@@ -1017,3 +1014,4 @@ Forgetting an explicit path in a subrepo untracks the file
   $ hg st -S
   ? s/f19
   $ rm s/f19
+  $ cd ..

@@ -18,8 +18,8 @@
   dir/bar_2
   foo_2
   committed changeset 1:e65414bf35c5
+  $ cd ../..
 
-  $ cd ..
   $ hg init sim
   $ cd sim
   $ echo a > a
@@ -45,3 +45,4 @@
   adding d
   recording removal of a as rename to b (100% similar)
   $ hg commit -mb
+  $ cd ..

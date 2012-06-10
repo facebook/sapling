@@ -58,6 +58,7 @@ introduce some bugs in repo
   (first damaged changeset appears to be 0)
   [1]
 
+  $ cd ../../..
   $ cd ..
 
 test revlog corruption
@@ -99,3 +100,4 @@ test revlog format 0
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
+  $ cd ..

@@ -754,6 +754,7 @@ some people have patches like the following too
   $ cat foo
   a
 
+  $ cd ..
 
 Issue1859: first line mistaken for email headers
 
@@ -788,7 +789,7 @@ Issue1859: first line mistaken for email headers
   $ cd ..
 
 
---- in commit message
+in commit message
 
   $ hg init commitconfusion
   $ cd commitconfusion
@@ -1031,6 +1032,8 @@ import a unified diff with no lines of context (diff -U0)
   c3
   c4
 
+  $ cd ..
+
 no segfault while importing a unified diff which start line is zero but chunk
 size is non-zero
 
@@ -1149,3 +1152,4 @@ Test corner case involving fuzz and skew
   4
   line
 
+  $ cd ..

@@ -163,6 +163,8 @@ of just using revision numbers.
   color:3:-:red
   color:1:+:red
 
+  $ cd ..
+
   $ hg init a
   $ cd a
   $ cp "$TESTDIR/binfile.bin" .
@@ -170,3 +172,5 @@ of just using revision numbers.
   $ hg ci -m 'add binfile.bin'
   $ hg grep "MaCam" --all
   binfile.bin:0:+: Binary file matches
+
+  $ cd ..

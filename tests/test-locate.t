@@ -1,5 +1,5 @@
-  $ hg init t
-  $ cd t
+  $ hg init repo
+  $ cd repo
   $ echo 0 > a
   $ echo 0 > b
   $ echo 0 > t.h
@@ -118,3 +118,4 @@ Issue294: hg remove --after dir fails when dir.* also exists
   ../t.h (glob)
   ../t/e.h (glob)
 
+  $ cd ../..

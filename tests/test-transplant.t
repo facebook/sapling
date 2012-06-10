@@ -441,6 +441,7 @@ test transplant with filter handles invalid changelog
   filtering * (glob)
   abort: filter corrupted changeset (no user or date)
   [255]
+  $ cd ..
 
 test with a win32ext like setup (differing EOLs)
 
@@ -499,6 +500,7 @@ test transplant with merge changeset is skipped
   $ hg init merge1b
   $ cd merge1b
   $ hg transplant -s ../merge1a tip
+  $ cd ..
 
 test transplant with merge changeset accepts --parent
 
@@ -527,3 +529,4 @@ test transplant with merge changeset accepts --parent
   $ hg transplant -s ../merge2a --parent 0 tip
   applying be9f9b39483f
   be9f9b39483f transplanted to 9959e51f94d1
+  $ cd ..

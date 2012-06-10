@@ -424,3 +424,5 @@ This should show id:
 This shouldn't:
 
   $ hg --config alias.log='id' history
+
+  $ cd ../..

@@ -331,12 +331,12 @@ log --removed revrange file
   a
   
   
-
+  $ cd ..
 
 log --follow tests
 
-  $ hg init ../follow
-  $ cd ../follow
+  $ hg init follow
+  $ cd follow
 
   $ echo base > base
   $ hg ci -Ambase -d '1 0'
@@ -613,6 +613,9 @@ log -r tip --stat
   
 
   $ cd ..
+
+
+User
 
   $ hg init usertest
   $ cd usertest
@@ -898,11 +901,10 @@ log -p -R repo
   +a
   
 
+  $ cd ../..
 
-  $ cd ..
   $ hg init follow2
   $ cd follow2
-
 
 # Build the following history:
 # tip - o - x - o - x - x
@@ -1077,6 +1079,7 @@ Also check when maxrev < lastrevfilelog
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo, related
   
+  $ cd ..
 
 Issue2383: hg log showing _less_ differences than hg diff
 
@@ -1153,7 +1156,8 @@ Diff here should be the same:
 
 'hg log -r rev fn' when last(filelog(fn)) != rev
 
-  $ hg init simplelog; cd simplelog
+  $ hg init simplelog
+  $ cd simplelog
   $ echo f > a
   $ hg ci -Am'a' -d '0 0'
   adding a

@@ -89,6 +89,9 @@ invalid diff.unified
   abort: diff context lines count must be an integer, not 'foo'
   [255]
 
+  $ cd ..
+
+
 0 lines of context hunk header matches gnu diff hunk header
 
   $ hg init diffzero
@@ -191,3 +194,5 @@ Git diff, removing space
   @@ -1,1 +1,1 @@
   -b
   +a
+
+  $ cd ..

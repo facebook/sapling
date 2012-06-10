@@ -117,6 +117,8 @@ check line 1 is back
   line 2
   line 3
 
+  $ cd ..
+
 backout should not back out subsequent changesets
 
   $ hg init onecs
@@ -288,3 +290,5 @@ on branch1, so no file1 and file2:
   $ hg st -A
   C default
   C file1
+
+  $ cd ..

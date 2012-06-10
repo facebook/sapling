@@ -146,4 +146,7 @@ just check that directories have the same mode.
   $ dirmode=`python ../mode.py .hg/store/data/dir`
   $ if [ "$storemode" != "$dirmode" ]; then
   >  echo "$storemode != $dirmode"
-  $ fi
+  > fi
+  $ cd ..
+
+  $ cd .. # g-s dir

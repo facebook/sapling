@@ -235,6 +235,7 @@ Rebase the applied mq patches:
   -mq1
   +mq2
 
+  $ cd ..
 
 Rebase with guards
 
@@ -339,3 +340,4 @@ removed from the series):
   |
   o  0:* 'a' tags: (glob)
   
+  $ cd ..
