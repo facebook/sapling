@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" svn13 no-outer-repo symlink execbit || exit 80
+  $ "$TESTDIR/hghave" svn13 no-outer-repo symlink || exit 80
 
   $ fixpath()
   > {
@@ -202,12 +202,21 @@ Remove
   d1
   newlink
 
-Exectutable
+Executable
 
+#if execbit
   $ chmod +x a/c
+#else
+  $ echo fake >> a/c
+#endif
   $ hg --cwd a ci -d '5 0' -m 'make a file executable'
+#if execbit
   $ hg --cwd a tip -q
   5:31093672760b
+#else
+  $ hg --cwd a tip -q
+  5:034971d37224
+#endif
 
   $ hg convert -d svn a
   assuming destination a-hg
@@ -227,16 +236,22 @@ Exectutable
   author: test
   msg: make a file executable
    M /c
+#if execbit
   $ test -x a-hg-wc/c
+#endif
+  $ rm -rf a a-hg a-hg-wc
 
 Executable in new directory
 
-  $ rm -rf a a-hg a-hg-wc
   $ hg init a
 
   $ mkdir a/d1
   $ echo a > a/d1/a
+#if execbit
   $ chmod +x a/d1/a
+#else
+  $ echo fake >> a/d1/a
+#endif
   $ hg --cwd a ci -d '0 0' -A -m 'add executable file in new directory'
   adding d1/a
 
@@ -257,7 +272,9 @@ Executable in new directory
   msg: add executable file in new directory
    A /d1
    A /d1/a
+#if execbit
   $ test -x a-hg-wc/d1/a
+#endif
 
 Copy to new directory
 

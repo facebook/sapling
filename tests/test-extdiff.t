@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink execbit || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "extdiff=" >> $HGRCPATH
 
@@ -94,6 +92,8 @@ Check diff are made from the first parent:
   diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob)
   diff-like tools yield a non-zero exit code
 
+#if execbit
+
 Test extdiff of multiple files in tmp dir:
 
   $ hg update -C 0 > /dev/null
@@ -182,6 +182,10 @@ Test with revsets:
 
   $ cd ..
 
+#endif
+
+#if symlink
+
 Test symlinks handling (issue1909)
 
   $ hg init testsymlinks
@@ -196,3 +200,5 @@ Test symlinks handling (issue1909)
   diffing testsymlinks.07f494440405 testsymlinks
   [1]
   $ cd ..
+
+#endif

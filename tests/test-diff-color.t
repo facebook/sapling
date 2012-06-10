@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
 Setup
 
   $ echo "[color]" >> $HGRCPATH
@@ -74,6 +72,8 @@ diffstat
   $ echo "[diff]" >> $HGRCPATH
   $ echo "git=True" >> $HGRCPATH
 
+#if execbit
+
 record
 
   $ chmod +x a
@@ -124,3 +124,5 @@ qrecord
    a
    c
   \x1b[0;33mrecord this change to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
+
+#endif

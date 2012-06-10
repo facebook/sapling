@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
   $ checkundo()
   > {
   >     if [ -f .hg/store/undo ]; then
@@ -918,9 +916,12 @@ bad node in status
 
   $ hg qnew -m'new file' new
   $ echo foo > new
+#if execbit
   $ chmod +x new
+#endif
   $ hg add new
   $ hg qrefresh
+#if execbit
   $ cat .hg/patches/new
   new file
   
@@ -930,6 +931,17 @@ bad node in status
   +++ b/new
   @@ -0,0 +1,1 @@
   +foo
+#else
+  $ cat .hg/patches/new
+  new file
+  
+  diff --git a/new b/new
+  new file mode 100644
+  --- /dev/null
+  +++ b/new
+  @@ -0,0 +1,1 @@
+  +foo
+#endif
 
   $ hg qnew -m'copy file' copy
   $ hg cp new copy

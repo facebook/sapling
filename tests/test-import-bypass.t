@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink execbit || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "purge=" >> $HGRCPATH
   $ echo "graphlog=" >> $HGRCPATH
@@ -218,6 +216,8 @@ Test applying multiple patches with --exact
 
   $ cd ..
 
+#if symlink execbit
+
 Test complicated patch with --exact
 
   $ hg init repo-exact
@@ -265,3 +265,4 @@ data. If not, diff both heads to debug it.
   |
   o  0:a0e19e636a43 test 0 0 - default - t
   
+#endif

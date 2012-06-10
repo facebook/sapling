@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert=
@@ -33,7 +31,11 @@
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge remote copy' -d '4 0'
   created new head
+#if execbit
   $ chmod +x baz
+#else
+  $ echo some other change to make sure we get a rev 5 > baz
+#endif
   $ hg ci -m 'mark baz executable' -d '5 0'
   $ cd ..
   $ hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
@@ -54,9 +56,16 @@
   searching for changes
   no changes found
   [1]
+#if execbit
   $ hg bookmarks
      premerge1                 3:973ef48a98a4
      premerge2                 5:13d9b87cf8f8
+#else
+Different hash because no x bit
+  $ hg bookmarks
+     premerge1                 3:973ef48a98a4
+     premerge2                 5:df0779bcf33c
+#endif
   $ cd ..
 
 check shamap LF and CRLF handling

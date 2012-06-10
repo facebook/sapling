@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
   $ hg init
   $ echo start > start
   $ hg ci -Amstart
@@ -58,6 +56,8 @@ Delete:
   $ hg ci -Amsrc
   adding src
 
+#if execbit
+
 chmod 644:
 
   $ chmod +x src
@@ -93,6 +93,17 @@ Nonexistent in tip+chmod:
   diff --git a/src b/src
   old mode 100644
   new mode 100755
+
+#else
+
+Dummy changes when no exec bit, mocking the execbit commit structure
+
+  $ echo change >> src
+  $ hg ci -munexec
+  $ hg mv src dst
+  $ hg ci -mrenamemod
+
+#endif
 
 Binary diff:
 
