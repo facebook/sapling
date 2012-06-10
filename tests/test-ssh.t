@@ -332,7 +332,7 @@ Test hg-ssh in read-only mode:
   $ echo "baz" > bar
   $ hg ci -A -m "unpushable commit" bar
   $ hg push --ssh "sh ../ssh.sh"
-  pushing to ssh://user@dummy/$TESTTMP/remote
+  pushing to ssh://user@dummy/*/remote (glob)
   searching for changes
   remote: Permission denied
   remote: abort: prechangegroup.hg-ssh hook failed

@@ -599,8 +599,9 @@ def tsttest(test, wd, options, replacements):
 
     def hghave(reqs):
         # TODO: do something smarter when all other uses of hghave is gone
+        tdir = TESTDIR.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
-                      (options.shell, TESTDIR, ' '.join(reqs)), TESTDIR, 0)
+                      (options.shell, tdir, ' '.join(reqs)), TESTDIR, 0)
         proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
@@ -909,7 +910,7 @@ def runone(options, test):
 
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
-        os.path.join(HGTMP, os.path.basename(test)).replace('\\', '/')
+        os.path.join(HGTMP, os.path.basename(test))
 
     replacements = [
         (r':%s\b' % options.port, ':$HGPORT'),
@@ -1229,7 +1230,7 @@ def main():
             del os.environ[k]
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
-    TESTDIR = os.environ["TESTDIR"] = os.getcwd().replace('\\', '/')
+    TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
         options.keep_tmpdir = True
         tmpdir = options.tmpdir
