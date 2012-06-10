@@ -65,12 +65,13 @@ Copy:
   $ hg tip -q
   3:37bacb7ca14d
 
-  $ if "$TESTDIR/hghave" -q execbit; then
-  >     test -f copy -a ! -x copy || echo bad
-  >     test -x copyx || echo bad
-  > else
-  >     test -f copy || echo bad
-  > fi
+#if execbit
+  $ test -f copy
+  $ test ! -x copy
+  $ test -x copyx
+#else
+  $ test -f copy
+#endif
 
   $ cat copy
   a

@@ -503,16 +503,17 @@ Inaccessible destination
 #endif
 
 
+#if fifo
+
 Source of wrong type
 
-  $ if "$TESTDIR/hghave" -q fifo; then
-  >     mkfifo a
-  >     hg clone a b
-  >     rm a
-  > else
-  >     echo "abort: repository a not found!"
-  > fi
+  $ mkfifo a
+  $ hg clone a b
   abort: repository a not found!
+  [255]
+  $ rm a
+
+#endif
 
 Default destination, same directory
 

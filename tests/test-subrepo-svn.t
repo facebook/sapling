@@ -456,9 +456,7 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   
   Checked out revision 5.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ if "$TESTDIR/hghave" -q svn15; then
-  > hg up 2 >/dev/null 2>&1 || echo update failed
-  > fi
+  $ hg up -q 2
 
 Modify one of the externals to point to a different path so we can
 test having obstructions when switching branches on checkout:
