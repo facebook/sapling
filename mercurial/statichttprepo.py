@@ -26,7 +26,8 @@ class httprangereader(object):
         end = ''
         if bytes:
             end = self.pos + bytes - 1
-        req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
+        if self.pos or end:
+            req.add_header('Range', 'bytes=%d-%s' % (self.pos, end))
 
         try:
             f = self.opener.open(req)
