@@ -659,6 +659,9 @@ def tsttest(test, wd, options, replacements):
             prepos = pos
             pos = n
             addsalt(n, False)
+            cmd = l[4:].split()
+            if len(cmd) == 2 and cmd[0] == 'cd':
+                l = '  $ cd %s || exit 1\n' % cmd[1]
             script.append(l[4:])
         elif l.startswith('  > '): # continuations
             after.setdefault(prepos, []).append(l)
