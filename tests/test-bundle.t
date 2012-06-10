@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
 Setting up test
 
   $ hg init test
@@ -207,8 +205,8 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
 
 Pull ../full.hg into empty (with hook)
 
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
+  $ echo "[hooks]" >> .hg/hgrc
+  $ echo "changegroup = python \"$TESTDIR\"/printenv.py changegroup" >> .hg/hgrc
 
 doesn't work (yet ?)
 
@@ -386,7 +384,7 @@ Outgoing -R full.hg vs partial2 in partial
 Outgoing -R does-not-exist.hg vs partial2 in partial
 
   $ hg -R bundle://../does-not-exist.hg outgoing ../partial2
-  abort: *: ../does-not-exist.hg (glob)
+  abort: *../does-not-exist.hg* (glob)
   [255]
   $ cd ..
 
