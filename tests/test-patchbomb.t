@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "patchbomb=" >> $HGRCPATH
 
@@ -141,12 +139,10 @@
 
 .hg/last-email.txt
 
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > echo "a precious introductory message" > "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg email -n -t foo -s test -r 0:tip > /dev/null
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg email -n -t foo -s test -r 0:tip > /dev/null
   $ cat .hg/last-email.txt
   a precious introductory message
 

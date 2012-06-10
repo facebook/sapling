@@ -110,12 +110,10 @@ rollback by pretxncommit saves commit message (issue 1635)
 
 same thing, but run $EDITOR
 
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > echo "another precious commit message" > "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg --config hooks.pretxncommit=false commit 2>&1
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg --config hooks.pretxncommit=false commit 2>&1
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt

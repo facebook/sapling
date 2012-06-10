@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
   $ hg init test
   $ cd test
 
@@ -214,13 +212,11 @@ tag and branch using same name
 
 test custom commit messages
 
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > echo "custom tag message" > "$1"
   > echo "second line" >> "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg tag custom-tag -e
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg tag custom-tag -e
   $ hg log -l1 --template "{desc}\n"
   custom tag message
   second line
@@ -235,7 +231,7 @@ local tag with .hgtags modified
   $ hg st
   M .hgtags
   ? .hgtags.orig
-  ? editor
+  ? editor.sh
   $ hg tag --local baz
   $ hg revert --no-backup .hgtags
 
@@ -305,7 +301,7 @@ commit hook on tag used to be run without write lock - issue3344
 
   $ hg init repo-tag
   $ hg init repo-tag-target
-  $ hg -R repo-tag --config hooks.commit="hg push \"`pwd`/repo-tag-target\"" tag tag
+  $ hg -R repo-tag --config hooks.commit="\"hg\" push \"`pwd`/repo-tag-target\"" tag tag
   pushing to $TESTTMP/repo-tag-target
   searching for changes
   adding changesets

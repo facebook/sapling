@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
   $ hg init
 
 Setup:
@@ -127,13 +125,12 @@ Test -u/-d:
 
 Open editor with old commit message if a message isn't given otherwise:
 
-  $ cat > editor << '__EOF__'
+  $ cat > editor.sh << '__EOF__'
   > #!/bin/sh
   > cat $1
   > echo "another precious commit message" > "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg commit --amend -v
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
   amending changeset 2c94e4a5756f
   copying changeset 2c94e4a5756f to ad120869acf0
   no changes, new message
@@ -160,7 +157,7 @@ Open editor with old commit message if a message isn't given otherwise:
 Same, but with changes in working dir (different code path):
 
   $ echo a >> a
-  $ HGEDITOR="'`pwd`'"/editor hg commit --amend -v
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
   amending changeset ffb49186f961
   another precious commit message
   
@@ -186,7 +183,7 @@ Same, but with changes in working dir (different code path):
   added 1 changesets with 1 changes to 1 files
   committed changeset 1:fb6cca43446f
 
-  $ rm editor
+  $ rm editor.sh
   $ hg log -r .
   changeset:   1:fb6cca43446f
   tag:         tip

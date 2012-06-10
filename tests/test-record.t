@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" execbit || exit 80
-
 Set up a repo
 
   $ echo "[ui]" >> $HGRCPATH
@@ -1031,12 +1029,10 @@ Abort early when a merge is in progress
 
 Editing patch
 
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > sed -e 7d -e '5s/^-/ /' "$1" > tmp
   > mv tmp "$1"
   > __EOF__
-  $ chmod +x editor
   $ cat > editedfile << '__EOF__'
   > This is the first line
   > This is the second line
@@ -1049,7 +1045,7 @@ Editing patch
   > This change will be committed
   > This is the third line
   > __EOF__
-  $ HGEDITOR="'`pwd`'"/editor hg record -d '23 0' -medit-patch-2 <<EOF
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record -d '23 0' -medit-patch-2 <<EOF
   > y
   > e
   > EOF
@@ -1094,13 +1090,11 @@ Removing changes from patch
   $ sed -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile > tmp
   $ mv tmp editedfile
   $ echo "This line has been added" >> editedfile
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > sed -e 's/^[-+]/ /' "$1" > tmp
   > mv tmp "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg record <<EOF
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record <<EOF
   > y
   > e
   > EOF
@@ -1131,13 +1125,11 @@ Invalid patch
   $ sed -e '3s/third/second/' -e '2s/will/will not/' -e 1d editedfile > tmp
   $ mv tmp editedfile
   $ echo "This line has been added" >> editedfile
-  $ cat > editor << '__EOF__'
-  > #!/bin/sh
+  $ cat > editor.sh << '__EOF__'
   > sed s/This/That/ "$1" > tmp
   > mv tmp "$1"
   > __EOF__
-  $ chmod +x editor
-  $ HGEDITOR="'`pwd`'"/editor hg record <<EOF
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record <<EOF
   > y
   > e
   > EOF
