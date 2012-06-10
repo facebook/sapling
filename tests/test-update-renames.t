@@ -25,6 +25,3 @@ Update with local changes across a file rename
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
-
-  $ cd ..
-

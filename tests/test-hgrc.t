@@ -117,7 +117,6 @@ showconfig with multiple arguments
 
 HGPLAIN
 
-  $ cd ..
   $ p=`pwd`
   $ echo "[ui]" > $HGRC
   $ echo "debug=true" >> $HGRC
