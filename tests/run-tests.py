@@ -601,7 +601,7 @@ def tsttest(test, wd, options, replacements):
         # TODO: do something smarter when all other uses of hghave is gone
         tdir = TESTDIR.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
-                      (options.shell, tdir, ' '.join(reqs)), TESTDIR, 0)
+                      (options.shell, tdir, ' '.join(reqs)), wd, 0)
         proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
