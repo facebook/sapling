@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" symlink || exit 80
-
   $ hg init
   $ mkdir d1 d1/d11 d2
   $ echo d1/a > d1/a
@@ -390,6 +388,7 @@ forced overwrite of an existing file
 
 attempt to overwrite an existing broken symlink
 
+#if symlink
   $ ln -s ba d1/ca
   $ hg rename --traceback d1/ba d1/ca
   d1/ca: not overwriting - file exists
@@ -410,6 +409,7 @@ replace a symlink with a file
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d1/ca
+#endif
 
 do not copy more than one source file to the same destination file
 
