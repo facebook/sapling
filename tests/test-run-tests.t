@@ -79,6 +79,20 @@ Conditional sections based on hghave:
   tested
 #endif
 
+#if no-false
+  $ echo tested
+  tested
+#else
+  $ echo skipped
+#endif
+
+#if no-true
+  $ echo skipped
+#else
+  $ echo tested
+  tested
+#endif
+
 Exit code:
 
   $ (exit 1) 
