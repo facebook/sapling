@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
   $ hg init a
   $ cd a
   $ echo a > a
@@ -444,11 +442,13 @@ Test xml styles:
 
 Error if style not readable:
 
+#if unix-permissions
   $ touch q
   $ chmod 0 q
   $ hg log --style ./q
   abort: Permission denied: ./q
   [255]
+#endif
 
 Error if no style:
 
@@ -466,13 +466,15 @@ Error if style missing key:
 Error if include fails:
 
   $ echo 'changeset = q' >> t
+#if unix-permissions
   $ hg log --style ./t
   abort: template file ./q: Permission denied
   [255]
+  $ rm q
+#endif
 
 Include works:
 
-  $ rm q
   $ echo '{rev}' > q
   $ hg log --style ./t
   8
