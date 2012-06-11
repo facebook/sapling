@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" no-windows || exit 80
-
 This test tries to exercise the ssh functionality with a dummy script
 
   $ checknewrepo()
@@ -124,7 +122,7 @@ comparing repositories
 
 check names for repositories (clashes with URL schemes, special chars)
 
-  $ for i in bundle file hg http https old-http ssh static-http " " "with space"; do
+  $ for i in bundle file hg http https old-http ssh static-http "with space"; do
   >   printf "hg init \"$i\"... "
   >   hg init "$i"
   >   test -d "$i" -a -d "$i/.hg" && echo "ok" || echo "failed"
@@ -137,8 +135,13 @@ check names for repositories (clashes with URL schemes, special chars)
   hg init "old-http"... ok
   hg init "ssh"... ok
   hg init "static-http"... ok
-  hg init " "... ok
   hg init "with space"... ok
+#if no-windows
+/* " " is not a valid name for a directory on Windows */
+  $ hg init " "
+  $ test -d " "
+  $ test -d " /.hg"
+#endif
 
 creating 'local/sub/repo'
 
