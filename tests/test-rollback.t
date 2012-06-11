@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" serve || exit 80
-
 setup repo
   $ hg init t
   $ cd t
@@ -124,6 +122,7 @@ same thing, but run $EDITOR
 
 test rollback on served repository
 
+#if serve
   $ hg commit -m "precious commit message"
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
@@ -148,6 +147,7 @@ presents the correct tip changeset:
   working directory now based on revision 0
   $ hg id default
   791dd2169706
+#endif
 
 update to older changeset and then refuse rollback, because
 that would lose data (issue2998)
