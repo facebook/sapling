@@ -549,18 +549,6 @@ log -d -1
 
   $ hg log -d -1
 
-log -d ">"
-
-  $ hg log -d ">"
-  abort: invalid day spec, use '>DATE'
-  [255]
-
-log -d "<"
-
-  $ hg log -d "<"
-  abort: invalid day spec, use '<DATE'
-  [255]
-
 Negative ranges
   $ hg log -d "--2"
   abort: -2 must be nonnegative (see 'hg help dates')
