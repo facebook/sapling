@@ -93,6 +93,22 @@ Test 12-hours times
   standard: Wed Feb 01 13:00:30 2006 +0000
   $ hg debugdate "1:00:30PM" > /dev/null
 
+Normal range
+
+  $ hg log -d -1
+
+Negative range
+
+  $ hg log -d "--2"
+  abort: -2 must be nonnegative (see 'hg help dates')
+  [255]
+
+Whitespace only
+
+  $ hg log -d " "
+  abort: dates cannot consist entirely of whitespace
+  [255]
+
 Test date formats with '>' or '<' accompanied by space characters
 
   $ hg log -d '>' --template '{date|date}\n'
