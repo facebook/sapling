@@ -98,8 +98,8 @@ Test date formats with '>' or '<' accompanied by space characters
   $ hg log -d '>' --template '{date|date}\n'
   abort: invalid day spec, use '>DATE'
   [255]
-  $ hg log -d '<' hg log -d '>' --template '{date|date}\n'
-  abort: invalid day spec, use '>DATE'
+  $ hg log -d '<' --template '{date|date}\n'
+  abort: invalid day spec, use '<DATE'
   [255]
 
   $ hg log -d ' >' --template '{date|date}\n'
