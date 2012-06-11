@@ -2371,11 +2371,14 @@ def debugwalk(ui, repo, *pats, **opts):
     items = list(repo.walk(m))
     if not items:
         return
+    f = lambda fn: fn
+    if ui.configbool('ui', 'slash') and os.sep != '/':
+        f = lambda fn: util.normpath(fn)
     fmt = 'f  %%-%ds  %%-%ds  %%s' % (
         max([len(abs) for abs in items]),
         max([len(m.rel(abs)) for abs in items]))
     for abs in items:
-        line = fmt % (abs, m.rel(abs), m.exact(abs) and 'exact' or '')
+        line = fmt % (abs, f(m.rel(abs)), m.exact(abs) and 'exact' or '')
         ui.write("%s\n" % line.rstrip())
 
 @command('debugwireargs',
