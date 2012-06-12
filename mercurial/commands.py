@@ -5035,7 +5035,7 @@ def serve(ui, repo, **opts):
 
     def checkrepo():
         if repo is None:
-            raise error.RepoError(_("There is no Mercurial repository here"
+            raise error.RepoError(_("there is no Mercurial repository here"
                               " (.hg not found)"))
 
     if opts["stdio"]:
@@ -5066,7 +5066,7 @@ def serve(ui, repo, **opts):
     o = opts.get('web_conf') or opts.get('webdir_conf')
     if not o:
         if not repo:
-            raise error.RepoError(_("There is no Mercurial repository"
+            raise error.RepoError(_("there is no Mercurial repository"
                                     " here (.hg not found)"))
         o = repo.root
 

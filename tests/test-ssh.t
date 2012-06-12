@@ -21,14 +21,14 @@ creating 'remote' repo
 repo not found error
 
   $ hg clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/nonexistent local
-  remote: abort: There is no Mercurial repository here (.hg not found)!
+  remote: abort: there is no Mercurial repository here (.hg not found)!
   abort: no suitable response from remote hg!
   [255]
 
 non-existent absolute path
 
   $ hg clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy//`pwd`/nonexistent local
-  remote: abort: There is no Mercurial repository here (.hg not found)!
+  remote: abort: there is no Mercurial repository here (.hg not found)!
   abort: no suitable response from remote hg!
   [255]
 
