@@ -24,7 +24,7 @@ delete an empty directory
   $ hg purge -p
   empty_dir
   $ hg purge -v
-  Removing directory empty_dir
+  removing directory empty_dir
   $ ls
   directory
   r1
@@ -38,9 +38,9 @@ delete an untracked directory
   untracked_dir/untracked_file1
   untracked_dir/untracked_file2
   $ hg purge -v
-  Removing file untracked_dir/untracked_file1
-  Removing file untracked_dir/untracked_file2
-  Removing directory untracked_dir
+  removing file untracked_dir/untracked_file1
+  removing file untracked_dir/untracked_file2
+  removing directory untracked_dir
   $ ls
   directory
   r1
@@ -58,8 +58,8 @@ delete an untracked file
   untracked_file
   untracked_file_readonly
   $ hg purge -v
-  Removing file untracked_file
-  Removing file untracked_file_readonly
+  removing file untracked_file
+  removing file untracked_file_readonly
   $ ls
   directory
   r1
@@ -70,7 +70,7 @@ delete an untracked file in a tracked directory
   $ hg purge -p
   directory/untracked_file
   $ hg purge -v
-  Removing file directory/untracked_file
+  removing file directory/untracked_file
   $ ls
   directory
   r1
@@ -81,8 +81,8 @@ delete nested directories
   $ hg purge -p
   untracked_directory/nested_directory
   $ hg purge -v
-  Removing directory untracked_directory/nested_directory
-  Removing directory untracked_directory
+  removing directory untracked_directory/nested_directory
+  removing directory untracked_directory
   $ ls
   directory
   r1
@@ -94,8 +94,8 @@ delete nested directories from a subdir
   $ hg purge -p
   untracked_directory/nested_directory
   $ hg purge -v
-  Removing directory untracked_directory/nested_directory
-  Removing directory untracked_directory
+  removing directory untracked_directory/nested_directory
+  removing directory untracked_directory
   $ cd ..
   $ ls
   directory
@@ -109,8 +109,8 @@ delete only part of the tree
   $ hg purge -p ../untracked_directory
   untracked_directory/nested_directory
   $ hg purge -v ../untracked_directory
-  Removing directory untracked_directory/nested_directory
-  Removing directory untracked_directory
+  removing directory untracked_directory/nested_directory
+  removing directory untracked_directory
   $ cd ..
   $ ls
   directory
@@ -131,7 +131,7 @@ skip ignored files if --all not specified
   $ hg purge -p --all
   ignored
   $ hg purge -v --all
-  Removing file ignored
+  removing file ignored
   $ ls
   directory
   r1
@@ -152,7 +152,7 @@ hide error messages to avoid changing the output when the text changes
   $ hg purge -p
   untracked_file
   $ hg purge -v 2> /dev/null
-  Removing file untracked_file
+  removing file untracked_file
   $ hg st
   ! r1
 
@@ -168,7 +168,7 @@ tracked file in ignored directory (issue621)
   $ hg purge -p
   untracked_file
   $ hg purge -v
-  Removing file untracked_file
+  removing file untracked_file
 
 skip excluded files
 

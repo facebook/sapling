@@ -207,7 +207,7 @@ status --mq with color (issue2096)
 try the --mq option on a command provided by an extension
 
   $ hg purge --mq --verbose --config extensions.purge=
-  Removing file flaf
+  removing file flaf
 
   $ cd ..
 

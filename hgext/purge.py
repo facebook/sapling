@@ -101,10 +101,10 @@ def purge(ui, repo, *dirs, **opts):
     status = repo.status(match=match, ignored=opts['all'], unknown=True)
 
     for f in sorted(status[4] + status[5]):
-        ui.note(_('Removing file %s\n') % f)
+        ui.note(_('removing file %s\n') % f)
         remove(removefile, f)
 
     for f in sorted(directories, reverse=True):
         if match(f) and not os.listdir(repo.wjoin(f)):
-            ui.note(_('Removing directory %s\n') % f)
+            ui.note(_('removing directory %s\n') % f)
             remove(os.rmdir, f)
