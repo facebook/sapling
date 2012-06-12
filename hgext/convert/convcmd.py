@@ -280,7 +280,7 @@ class converter(object):
     def writeauthormap(self):
         authorfile = self.authorfile
         if authorfile:
-            self.ui.status(_('Writing author map file %s\n') % authorfile)
+            self.ui.status(_('writing author map file %s\n') % authorfile)
             ofile = open(authorfile, 'w+')
             for author in self.authors:
                 ofile.write("%s=%s\n" % (author, self.authors[author]))
@@ -297,7 +297,7 @@ class converter(object):
             try:
                 srcauthor, dstauthor = line.split('=', 1)
             except ValueError:
-                msg = _('Ignoring bad line in author map file %s: %s\n')
+                msg = _('ignoring bad line in author map file %s: %s\n')
                 self.ui.warn(msg % (authorfile, line.rstrip()))
                 continue
 

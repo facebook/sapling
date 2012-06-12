@@ -227,7 +227,7 @@ class svn_source(converter_source):
             raise NoRepo(_("%s does not look like a Subversion repository")
                          % url)
         if svn is None:
-            raise MissingTool(_('Could not load Subversion python bindings'))
+            raise MissingTool(_('could not load Subversion python bindings'))
 
         try:
             version = svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR

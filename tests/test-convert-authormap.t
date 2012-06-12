@@ -22,12 +22,12 @@ Explicit --authors
   > EOF
   $ hg convert --authors authormap.txt orig new
   initializing destination new repository
-  Ignoring bad line in author map file authormap.txt: this line is ignored
+  ignoring bad line in author map file authormap.txt: this line is ignored
   scanning source...
   sorting...
   converting...
   0 foo
-  Writing author map file $TESTTMP/new/.hg/authormap (glob)
+  writing author map file $TESTTMP/new/.hg/authormap
   $ cat new/.hg/authormap
   user name=Long User Name
   $ hg -Rnew log
@@ -44,7 +44,7 @@ Implicit .hg/authormap
   $ hg init new
   $ mv authormap.txt new/.hg/authormap
   $ hg convert orig new
-  Ignoring bad line in author map file $TESTTMP/new/.hg/authormap: this line is ignored (glob)
+  ignoring bad line in author map file $TESTTMP/new/.hg/authormap: this line is ignored
   scanning source...
   sorting...
   converting...
