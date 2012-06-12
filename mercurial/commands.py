@@ -684,7 +684,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 ctx = scmutil.revsingle(repo, rev, node)
                 rev = None # clear for future iterations
                 state[transition].append(ctx.node())
-                ui.status(_('Changeset %d:%s: %s\n') % (ctx, ctx, transition))
+                ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 check_state(state, interactive=False)
                 # bisect
                 nodes, changesets, good = hbisect.bisect(repo.changelog, state)

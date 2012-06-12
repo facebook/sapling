@@ -462,11 +462,11 @@ test bisecting command
   Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --command "'`pwd`/script.py' and some parameters"
-  Changeset 15:e7fa0811edb0: good
-  Changeset 7:03750880c6b5: good
-  Changeset 3:b53bea5e2fcb: bad
-  Changeset 5:7874a09ea728: bad
-  Changeset 6:a3d5c6fdf0d3: good
+  changeset 15:e7fa0811edb0: good
+  changeset 7:03750880c6b5: good
+  changeset 3:b53bea5e2fcb: bad
+  changeset 5:7874a09ea728: bad
+  changeset 6:a3d5c6fdf0d3: good
   The first good revision is:
   changeset:   6:a3d5c6fdf0d3
   user:        test
@@ -495,11 +495,11 @@ command
   $ hg bisect --bad 0 --noupdate
   Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)
   $ hg bisect --command "'`pwd`/script.sh' and some params" --noupdate
-  Changeset 15:e7fa0811edb0: good
-  Changeset 7:03750880c6b5: good
-  Changeset 3:b53bea5e2fcb: bad
-  Changeset 5:7874a09ea728: bad
-  Changeset 6:a3d5c6fdf0d3: good
+  changeset 15:e7fa0811edb0: good
+  changeset 7:03750880c6b5: good
+  changeset 3:b53bea5e2fcb: bad
+  changeset 5:7874a09ea728: bad
+  changeset 6:a3d5c6fdf0d3: good
   The first good revision is:
   changeset:   6:a3d5c6fdf0d3
   user:        test
