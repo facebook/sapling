@@ -1,6 +1,6 @@
 test --time
 
-  $ hg --time help -q help 2>&1 | grep Time > /dev/null
+  $ hg --time help -q help 2>&1 | grep time > /dev/null
   $ hg init a
   $ cd a
 

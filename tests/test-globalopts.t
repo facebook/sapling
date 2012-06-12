@@ -265,7 +265,7 @@ Testing --time:
 
   $ hg --cwd a --time id
   8580ff50825a tip
-  Time: real * (glob)
+  time: real * (glob)
 
 Testing --version:
 
