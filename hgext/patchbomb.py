@@ -361,7 +361,7 @@ def patchbomb(ui, repo, *revs, **opts):
     def getpatchmsgs(patches, patchnames=None):
         msgs = []
 
-        ui.write(_('This patch series consists of %d patches.\n\n')
+        ui.write(_('this patch series consists of %d patches.\n\n')
                  % len(patches))
 
         # build the intro message, or skip it if the user declines
@@ -526,7 +526,7 @@ def patchbomb(ui, repo, *revs, **opts):
         if replyto:
             m['Reply-To'] = ', '.join(replyto)
         if opts.get('test'):
-            ui.status(_('Displaying '), subj, ' ...\n')
+            ui.status(_('displaying '), subj, ' ...\n')
             ui.flush()
             if 'PAGER' in os.environ and not ui.plain():
                 fp = util.popen(os.environ['PAGER'], 'w')
@@ -544,7 +544,7 @@ def patchbomb(ui, repo, *revs, **opts):
         else:
             if not sendmail:
                 sendmail = mail.connect(ui, mbox=mbox)
-            ui.status(_('Sending '), subj, ' ...\n')
+            ui.status(_('sending '), subj, ' ...\n')
             ui.progress(_('sending'), i, item=subj, total=len(msgs))
             if not mbox:
                 # Exim does not remove the Bcc field
