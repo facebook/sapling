@@ -86,7 +86,7 @@ class ui(object):
         except error.ConfigError, inst:
             if trusted:
                 raise
-            self.warn(_("Ignored: %s\n") % str(inst))
+            self.warn(_("ignored: %s\n") % str(inst))
 
         if self.plain():
             for k in ('debug', 'fallbackencoding', 'quiet', 'slash',
