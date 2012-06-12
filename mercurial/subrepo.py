@@ -840,7 +840,6 @@ class svnsubrepo(abstractsubrepo):
 
 class gitsubrepo(abstractsubrepo):
     def __init__(self, ctx, path, state):
-        # TODO add git version check.
         self._state = state
         self._ctx = ctx
         self._path = path
@@ -848,6 +847,22 @@ class gitsubrepo(abstractsubrepo):
         self._abspath = ctx._repo.wjoin(path)
         self._subparent = ctx._repo
         self._ui = ctx._repo.ui
+        self._ensuregit()
+
+    def _ensuregit(self):
+        out, err = self._gitnodir(['--version'])
+        m = re.search(r'^git version (\d+)\.(\d+)\.(\d+)', out)
+        if not m:
+            self._ui.warn(_('cannot retrieve git version'))
+            return
+        version = (int(m.group(1)), m.group(2), m.group(3))
+        # git 1.4.0 can't work at all, but 1.5.X can in at least some cases,
+        # despite the docstring comment.  For now, error on 1.4.0, warn on
+        # 1.5.0 but attempt to continue.
+        if version < (1, 5, 0):
+            raise util.Abort(_('git subrepo requires at least 1.6.0 or later'))
+        elif version < (1, 6, 0):
+            self._ui.warn(_('git subrepo requires at least 1.6.0 or later'))
 
     def _gitcommand(self, commands, env=None, stream=False):
         return self._gitdir(commands, env=env, stream=stream)[0]
