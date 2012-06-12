@@ -180,7 +180,7 @@ def check(ui, repo, rev):
                 keys.extend(k)
 
     if not keys:
-        ui.write(_("No valid signature for %s\n") % hgnode.short(rev))
+        ui.write(_("no valid signature for %s\n") % hgnode.short(rev))
         return
 
     # print summary
@@ -237,7 +237,7 @@ def sign(ui, repo, *revs, **opts):
 
     for n in nodes:
         hexnode = hgnode.hex(n)
-        ui.write(_("Signing %d:%s\n") % (repo.changelog.rev(n),
+        ui.write(_("signing %d:%s\n") % (repo.changelog.rev(n),
                                          hgnode.short(n)))
         # build data
         data = node2txt(repo, n, sigver)

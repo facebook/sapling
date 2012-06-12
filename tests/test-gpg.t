@@ -17,7 +17,7 @@ Test the GPG extension
   $ hg sigs
 
   $ hg sign 0
-  Signing 0:e63c23eaa88a
+  signing 0:e63c23eaa88a
 
   $ hg sigs
   hgtest                             0:e63c23eaa88ae77967edcf4ea194d31167c478b0
