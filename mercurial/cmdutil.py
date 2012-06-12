@@ -952,7 +952,7 @@ def finddate(ui, repo, date):
     for ctx in walkchangerevs(repo, m, {'rev': None}, prep):
         rev = ctx.rev()
         if rev in results:
-            ui.status(_("Found revision %s from %s\n") %
+            ui.status(_("found revision %s from %s\n") %
                       (rev, util.datestr(results[rev])))
             return str(rev)
 
