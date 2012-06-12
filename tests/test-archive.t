@@ -102,7 +102,10 @@ invalid arch type should give 404
   test/baz/bletch
   test/foo
 
-  $ hg archive -t tbz2 -X baz test.tar.bz2
+  $ hg archive --debug -t tbz2 -X baz test.tar.bz2
+  archiving: 0/2 files (0.00%)
+  archiving: bar 1/2 files (50.00%)
+  archiving: foo 2/2 files (100.00%)
   $ bunzip2 -dc test.tar.bz2 | tar tf - 2>/dev/null
   test/.hg_archival.txt
   test/bar
