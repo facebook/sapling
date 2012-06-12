@@ -1973,7 +1973,7 @@ def debuginstall(ui):
     problems = 0
 
     # encoding
-    ui.status(_("Checking encoding (%s)...\n") % encoding.encoding)
+    ui.status(_("checking encoding (%s)...\n") % encoding.encoding)
     try:
         encoding.fromlocal("test")
     except util.Abort, inst:
@@ -1982,7 +1982,7 @@ def debuginstall(ui):
         problems += 1
 
     # compiled modules
-    ui.status(_("Checking installed modules (%s)...\n")
+    ui.status(_("checking installed modules (%s)...\n")
               % os.path.dirname(__file__))
     try:
         import bdiff, mpatch, base85, osutil
@@ -1996,7 +1996,7 @@ def debuginstall(ui):
     # templates
     import templater
     p = templater.templatepath()
-    ui.status(_("Checking templates (%s)...\n") % ' '.join(p))
+    ui.status(_("checking templates (%s)...\n") % ' '.join(p))
     try:
         templater.templater(templater.templatepath("map-cmdline.default"))
     except Exception, inst:
@@ -2005,7 +2005,7 @@ def debuginstall(ui):
         problems += 1
 
     # editor
-    ui.status(_("Checking commit editor...\n"))
+    ui.status(_("checking commit editor...\n"))
     editor = ui.geteditor()
     cmdpath = util.findexe(editor) or util.findexe(editor.split()[0])
     if not cmdpath:
@@ -2020,7 +2020,7 @@ def debuginstall(ui):
             problems += 1
 
     # check username
-    ui.status(_("Checking username...\n"))
+    ui.status(_("checking username...\n"))
     try:
         ui.username()
     except util.Abort, e:
@@ -2029,7 +2029,7 @@ def debuginstall(ui):
         problems += 1
 
     if not problems:
-        ui.status(_("No problems detected\n"))
+        ui.status(_("no problems detected\n"))
     else:
         ui.write(_("%s problems detected,"
                    " please check your install!\n") % problems)
