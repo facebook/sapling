@@ -850,7 +850,14 @@ class gitsubrepo(abstractsubrepo):
         self._ensuregit()
 
     def _ensuregit(self):
-        out, err = self._gitnodir(['--version'])
+        try:
+            self._gitexecutable = 'git'
+            out, err = self._gitnodir(['--version'])
+        except OSError, e:
+            if e.errno != 2 or os.name != 'nt':
+                raise
+            self._gitexecutable = 'git.cmd'
+            out, err = self._gitnodir(['--version'])
         m = re.search(r'^git version (\d+)\.(\d+)\.(\d+)', out)
         if not m:
             self._ui.warn(_('cannot retrieve git version'))
@@ -883,8 +890,8 @@ class gitsubrepo(abstractsubrepo):
         errpipe = None
         if self._ui.quiet:
             errpipe = open(os.devnull, 'w')
-        p = subprocess.Popen(['git'] + commands, bufsize=-1, cwd=cwd, env=env,
-                             close_fds=util.closefds,
+        p = subprocess.Popen([self._gitexecutable] + commands, bufsize=-1,
+                             cwd=cwd, env=env, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=errpipe)
         if stream:
             return p.stdout, None
