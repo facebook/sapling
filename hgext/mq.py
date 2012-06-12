@@ -1773,7 +1773,7 @@ class queue(object):
                 else:
                     series.append(l)
         if datastart is None:
-            self.ui.warn(_("No saved patch data found\n"))
+            self.ui.warn(_("no saved patch data found\n"))
             return 1
         self.ui.warn(_("restoring status: %s\n") % lines[0])
         self.fullseries = series
@@ -1800,7 +1800,7 @@ class queue(object):
                 self.ui.status(_("updating queue directory\n"))
                 r = self.qrepo()
                 if not r:
-                    self.ui.warn(_("Unable to load queue repository\n"))
+                    self.ui.warn(_("unable to load queue repository\n"))
                     return 1
                 hg.clean(r, qpp[0])
 
@@ -2514,7 +2514,7 @@ def fold(ui, repo, *files, **opts):
     for f in files:
         p = q.lookup(f)
         if p in patches or p == parent:
-            ui.warn(_('Skipping already folded patch %s\n') % p)
+            ui.warn(_('skipping already folded patch %s\n') % p)
         if q.isapplied(p):
             raise util.Abort(_('qfold cannot fold already applied patch %s')
                              % p)
@@ -3420,7 +3420,7 @@ def reposetup(ui, repo):
             tags = result[0]
             for patch in mqtags:
                 if patch[1] in tags:
-                    self.ui.warn(_('Tag %s overrides mq patch of the same '
+                    self.ui.warn(_('tag %s overrides mq patch of the same '
                                    'name\n') % patch[1])
                 else:
                     tags[patch[1]] = patch[0]
