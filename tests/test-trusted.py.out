@@ -15,7 +15,7 @@ untrusted
 . . local = /another/path
 
 # different user, same group
-Not trusting file .hg/hgrc from untrusted user abc, group bar
+not trusting file .hg/hgrc from untrusted user abc, group bar
 trusted
     global = /some/path
 untrusted
@@ -31,7 +31,7 @@ untrusted
 . . local = /another/path
 
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
     global = /some/path
 untrusted
@@ -91,7 +91,7 @@ untrusted
 
 # we don't get confused by users and groups with the same name
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
     global = /some/path
 untrusted
@@ -118,7 +118,7 @@ untrusted
 
 # Can't figure out the name of the user running this process
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
     global = /some/path
 untrusted
@@ -127,7 +127,7 @@ untrusted
 
 # prints debug warnings
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
 ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
@@ -146,7 +146,7 @@ untrusted
 
 # report_untrusted enabled with debug shows warnings
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 trusted
 ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
@@ -159,7 +159,7 @@ untrusted
 quux
 
 # read trusted, untrusted, new ui, trusted
-Not trusting file foobar from untrusted user abc, group def
+not trusting file foobar from untrusted user abc, group def
 trusted:
 ignoring untrusted configuration option foobar.baz = quux
 None
@@ -173,7 +173,7 @@ quux
 
 # parse error
 # different user, different group
-Not trusting file .hg/hgrc from untrusted user abc, group def
+not trusting file .hg/hgrc from untrusted user abc, group def
 ('foo', '.hg/hgrc:1')
 # same user, same group
 ('foo', '.hg/hgrc:1')

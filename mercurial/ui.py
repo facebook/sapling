@@ -64,7 +64,7 @@ class ui(object):
             return True
 
         if self._reportuntrusted:
-            self.warn(_('Not trusting file %s from untrusted '
+            self.warn(_('not trusting file %s from untrusted '
                         'user %s, group %s\n') % (f, user, group))
         return False
 
