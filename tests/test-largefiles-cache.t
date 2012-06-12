@@ -49,7 +49,7 @@ but there is no cache file for it.  So, hg must treat it as
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
-  large: Can't get file locally
+  large: can't get file locally
   (no default or default-push path set in hgrc)
   0 largefiles updated, 0 removed
   $ hg status
@@ -67,7 +67,7 @@ Update working directory to tip, again.
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
-  large: Can't get file locally
+  large: can't get file locally
   (no default or default-push path set in hgrc)
   0 largefiles updated, 0 removed
   $ hg status

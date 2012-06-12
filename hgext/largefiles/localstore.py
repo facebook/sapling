@@ -43,7 +43,7 @@ class localstore(basestore.basestore):
             path = lfutil.usercachepath(self.ui, hash)
         else:
             raise basestore.StoreError(filename, hash, '',
-                _("Can't get file locally"))
+                _("can't get file locally"))
         fd = open(path, 'rb')
         try:
             return lfutil.copyandhash(fd, tmpfile)
