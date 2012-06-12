@@ -234,8 +234,6 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         prefix = tidyprefix(dest, kind, prefix)
 
     def write(name, mode, islink, getdata):
-        if matchfn and not matchfn(name):
-            return
         data = getdata()
         if decode:
             data = repo.wwritedata(name, data)
@@ -265,11 +263,18 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
             return base + tags
 
-        write('.hg_archival.txt', 0644, False, metadata)
+        name = '.hg_archival.txt'
+        if not matchfn or matchfn(name):
+            write(name, 0644, False, metadata)
 
-    total = len(ctx.manifest())
+    if matchfn:
+        files = [f for f in ctx.manifest().keys() if matchfn(f)]
+    else:
+        files = ctx.manifest().keys()
+    files.sort()
+    total = len(files)
     repo.ui.progress(_('archiving'), 0, unit=_('files'), total=total)
-    for i, f in enumerate(ctx):
+    for i, f in enumerate(files):
         ff = ctx.flags(f)
         write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
         repo.ui.progress(_('archiving'), i + 1, item=f,
