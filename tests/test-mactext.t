@@ -26,7 +26,7 @@
 
   $ python unix2mac.py f
   $ hg ci -m 2
-  Attempt to commit or push text file(s) using CR line endings
+  attempt to commit or push text file(s) using CR line endings
   in dea860dc51ec: f
   transaction abort!
   rollback completed

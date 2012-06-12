@@ -33,7 +33,7 @@ commit should succeed
 commit should fail
 
   $ hg ci -m 2.1
-  Attempt to commit or push text file(s) using CRLF line endings
+  attempt to commit or push text file(s) using CRLF line endings
   in f583ea08d42a: f
   transaction abort!
   rollback completed
@@ -57,7 +57,7 @@ push should fail
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  Attempt to commit or push text file(s) using CRLF line endings
+  attempt to commit or push text file(s) using CRLF line endings
   in bc2d09796734: g
   in b1aa5cde7ff4: f
   
@@ -105,7 +105,7 @@ and now for something completely different
   $ python unix2dos.py d/f2
   $ hg add d/f2
   $ hg ci -m 3
-  Attempt to commit or push text file(s) using CRLF line endings
+  attempt to commit or push text file(s) using CRLF line endings
   in 053ba1a3035a: d/f2
   transaction abort!
   rollback completed
@@ -266,7 +266,7 @@ and now for something completely different
   adding manifests
   adding file changes
   added 3 changesets with 4 changes to 4 files
-  Attempt to commit or push text file(s) using CRLF line endings
+  attempt to commit or push text file(s) using CRLF line endings
   in 67ac5962ab43: d
   in 68c127d1834e: b
   in 68c127d1834e: c
