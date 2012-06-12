@@ -409,7 +409,7 @@ class ui(object):
         if user is None and not self.interactive():
             try:
                 user = '%s@%s' % (util.getuser(), socket.getfqdn())
-                self.warn(_("No username found, using '%s' instead\n") % user)
+                self.warn(_("no username found, using '%s' instead\n") % user)
             except KeyError:
                 pass
         if not user:
