@@ -1058,8 +1058,11 @@ def matching(repo, subset, x):
     Valid fields are most regular revision fields and some special fields.
 
     Regular revision fields are ``description``, ``author``, ``branch``,
-    ``date``, ``files``, ``phase``, ``parents``, ``substate`` and ``user``.
-    Note that ``author`` and ``user`` are synonyms.
+    ``date``, ``files``, ``phase``, ``parents``, ``substate``, ``user``
+    and ``diff``.
+    Note that ``author`` and ``user`` are synonyms. ``diff`` refers to the
+    contents of the revision. Two revisions matching their ``diff`` will
+    also match their ``files``.
 
     Special fields are ``summary`` and ``metadata``:
     ``summary`` matches the first line of the description.
@@ -1079,12 +1082,18 @@ def matching(repo, subset, x):
                 _("matching requires a string "
                 "as its second argument")).split()
 
-    # Make sure that there are no repeated fields, and expand the
-    # 'special' 'metadata' field type
+    # Make sure that there are no repeated fields,
+    # expand the 'special' 'metadata' field type
+    # and check the 'files' whenever we check the 'diff'
     fields = []
     for field in fieldlist:
         if field == 'metadata':
             fields += ['user', 'description', 'date']
+        elif field == 'diff':
+            # a revision matching the diff must also match the files
+            # since matching the diff is very costly, make sure to
+            # also match the files first
+            fields += ['files', 'diff']
         else:
             if field == 'author':
                 field = 'user'
@@ -1098,7 +1107,7 @@ def matching(repo, subset, x):
     # Not all fields take the same amount of time to be matched
     # Sort the selected fields in order of increasing matching cost
     fieldorder = ['phase', 'parents', 'user', 'date', 'branch', 'summary',
-        'files', 'description', 'substate']
+        'files', 'description', 'substate', 'diff']
     def fieldkeyfunc(f):
         try:
             return fieldorder.index(f)
@@ -1121,6 +1130,7 @@ def matching(repo, subset, x):
         'phase': lambda r: repo[r].phase(),
         'substate': lambda r: repo[r].substate,
         'summary': lambda r: repo[r].description().splitlines()[0],
+        'diff': lambda r: list(repo[r].diff(git=True),)
     }
     for info in fields:
         getfield = _funcs.get(info, None)
