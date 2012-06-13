@@ -790,9 +790,9 @@ Test keyword search help
   
   Commands:
   
-   update update working directory (or switch revisions)
-   paths  show aliases for remote repositories
    clone  make a copy of an existing repository
+   paths  show aliases for remote repositories
+   update update working directory (or switch revisions)
   
   Extensions:
   

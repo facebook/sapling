@@ -3331,7 +3331,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                          ('extensioncommands', _('Extension Commands'))):
             if matches[t]:
                 rst.append('%s:\n\n' % title)
-                rst.extend(minirst.maketable(matches[t], 1))
+                rst.extend(minirst.maketable(sorted(matches[t]), 1))
                 rst.append('\n')
     elif name and name != 'shortlist':
         i = None
