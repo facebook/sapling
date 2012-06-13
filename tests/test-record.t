@@ -1036,10 +1036,10 @@ Abort early when a merge is in progress
   $ hg up -C
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-Editing patch
+Editing patch (and ignoring trailing text)
 
   $ cat > editor.sh << '__EOF__'
-  > sed -e 7d -e '5s/^-/ /' "$1" > tmp
+  > sed -e 7d -e '5s/^-/ /' -e '/^# ---/itrailing\nditto' "$1" > tmp
   > mv tmp "$1"
   > __EOF__
   $ cat > editedfile << '__EOF__'
@@ -1201,6 +1201,8 @@ Malformed patch - error handling
   abort: error parsing patch: unhandled transition: range -> range
   [255]
 
+random text in random positions is still an error
+
   $ cat > editor.sh << '__EOF__'
   > sed -e '/^@/iother' "$1" > tmp
   > mv tmp "$1"
@@ -1220,7 +1222,7 @@ Malformed patch - error handling
   +This is the second line
   +This line has been added
   record this change to 'editedfile'? [Ynesfdaq?] 
-  abort: error parsing patch: unknown patch content: 'other\n'
+  abort: error parsing patch: unhandled transition: file -> other
   [255]
 
   $ hg up -C

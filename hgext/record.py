@@ -76,7 +76,7 @@ def scanpatch(fp):
             if m:
                 yield 'range', m.groups()
             else:
-                raise patch.PatchError('unknown patch content: %r' % line)
+                yield 'other', line
 
 class header(object):
     """patch header
@@ -228,6 +228,9 @@ def parsepatch(fp):
             self.headers.append(h)
             self.header = h
 
+        def addother(self, line):
+            pass # 'other' lines are ignored
+
         def finished(self):
             self.addcontext([])
             return self.headers
@@ -239,12 +242,14 @@ def parsepatch(fp):
                      'range': addrange},
             'context': {'file': newfile,
                         'hunk': addhunk,
-                        'range': addrange},
+                        'range': addrange,
+                        'other': addother},
             'hunk': {'context': addcontext,
                      'file': newfile,
                      'range': addrange},
             'range': {'context': addcontext,
                       'hunk': addhunk},
+            'other': {'other': addother},
             }
 
     p = parser()
