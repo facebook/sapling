@@ -48,8 +48,13 @@ Invalid dest '' must abort:
 
 No update, with debug option:
 
+#if hardlink
   $ hg --debug clone -U . ../c
   linked 8 files
+#else
+  $ hg --debug clone -U . ../c
+  copied 8 files
+#endif
   $ cd ../c
   $ cat a 2>/dev/null || echo "a not present"
   a not present

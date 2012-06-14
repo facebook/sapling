@@ -189,6 +189,21 @@ def has_symlink():
     except (OSError, AttributeError):
         return False
 
+def has_hardlink():
+    from mercurial import util
+    fh, fn = tempfile.mkstemp(dir='.', prefix=tempprefix)
+    os.close(fh)
+    name = tempfile.mktemp(dir='.', prefix=tempprefix)
+    try:
+        try:
+            util.oslink(fn, name)
+            os.unlink(name)
+            return True
+        except OSError:
+            return False
+    finally:
+        os.unlink(fn)
+
 def has_tla():
     return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
 
@@ -266,6 +281,7 @@ checks = {
     "gettext": (has_gettext, "GNU Gettext (msgfmt)"),
     "git": (has_git, "git command line client"),
     "gpg": (has_gpg, "gpg client"),
+    "hardlink": (has_hardlink, "hardlinks"),
     "icasefs": (has_icasefs, "case insensitive file system"),
     "inotify": (has_inotify, "inotify extension support"),
     "lsprof": (has_lsprof, "python lsprof module"),

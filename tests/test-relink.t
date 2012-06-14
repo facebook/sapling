@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" hardlink || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "relink=" >> $HGRCPATH
 

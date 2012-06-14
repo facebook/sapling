@@ -1,3 +1,5 @@
+  $ "$TESTDIR/hghave" hardlink || exit 80
+
   $ cat > nlinks.py <<EOF
   > import sys
   > from mercurial import util

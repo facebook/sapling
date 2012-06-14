@@ -104,6 +104,8 @@ Compare repos:
   [1]
 
 
+#if hardlink
+
 Test shrink-revlog:
   $ cd repo-a
   $ hg --config extensions.shrink="$CONTRIBDIR/shrink-revlog.py" shrink
@@ -126,6 +128,8 @@ Test shrink-revlog:
   checking files
   1 files, 3 changesets, 3 total revisions
   $ cd ..
+
+#endif
 
 Test simplemerge command:
 
