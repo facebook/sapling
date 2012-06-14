@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
   $ hg init
   $ echo a > a
   $ hg ci -Am0
@@ -24,6 +22,7 @@
 
 Check that zero-size journals are correctly aborted:
 
+#if unix-permissions
   $ hg bundle -qa repo.hg
   $ chmod -w foo/.hg/store/00changelog.i
 
@@ -33,4 +32,5 @@ Check that zero-size journals are correctly aborted:
   [255]
 
   $ if test -f foo/.hg/store/journal; then echo 'journal exists :-('; fi
+#endif
 
