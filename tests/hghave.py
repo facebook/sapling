@@ -1,4 +1,4 @@
-import os, stat
+import os, stat, socket
 import re
 import sys
 import tempfile
@@ -95,9 +95,17 @@ def has_icasefs():
 def has_inotify():
     try:
         import hgext.inotify.linux.watcher
-        return True
     except ImportError:
         return False
+    name = tempfile.mktemp(dir='.', prefix=tempprefix)
+    sock = socket.socket(socket.AF_UNIX)
+    try:
+        sock.bind(name)
+    except socket.error, err:
+        return False
+    sock.close()
+    os.unlink(name)
+    return True
 
 def has_fifo():
     if getattr(os, "mkfifo", None) is None:
