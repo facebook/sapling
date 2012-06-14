@@ -59,6 +59,8 @@ _FILE_SHARE_DELETE = 0x00000004
 
 _OPEN_EXISTING = 3
 
+_FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
+
 # SetFileAttributes
 _FILE_ATTRIBUTE_NORMAL = 0x80
 _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED = 0x2000
@@ -192,7 +194,7 @@ def _raiseoserror(name):
 def _getfileinfo(name):
     fh = _kernel32.CreateFileA(name, 0,
             _FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE,
-            None, _OPEN_EXISTING, 0, None)
+            None, _OPEN_EXISTING, _FILE_FLAG_BACKUP_SEMANTICS, None)
     if fh == _INVALID_HANDLE_VALUE:
         _raiseoserror(name)
     try:
@@ -214,20 +216,18 @@ def nlinks(name):
     '''return number of hardlinks for the given file'''
     return _getfileinfo(name).nNumberOfLinks
 
-def samefile(fpath1, fpath2):
-    '''Returns whether fpath1 and fpath2 refer to the same file. This is only
-    guaranteed to work for files, not directories.'''
-    res1 = _getfileinfo(fpath1)
-    res2 = _getfileinfo(fpath2)
+def samefile(path1, path2):
+    '''Returns whether path1 and path2 refer to the same file or directory.'''
+    res1 = _getfileinfo(path1)
+    res2 = _getfileinfo(path2)
     return (res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
         and res1.nFileIndexHigh == res2.nFileIndexHigh
         and res1.nFileIndexLow == res2.nFileIndexLow)
 
-def samedevice(fpath1, fpath2):
-    '''Returns whether fpath1 and fpath2 are on the same device. This is only
-    guaranteed to work for files, not directories.'''
-    res1 = _getfileinfo(fpath1)
-    res2 = _getfileinfo(fpath2)
+def samedevice(path1, path2):
+    '''Returns whether path1 and path2 are on the same device.'''
+    res1 = _getfileinfo(path1)
+    res2 = _getfileinfo(path2)
     return res1.dwVolumeSerialNumber == res2.dwVolumeSerialNumber
 
 def testpid(pid):
