@@ -50,7 +50,7 @@ def has_mtn():
 
 def has_eol_in_paths():
     try:
-        fd, path = tempfile.mkstemp(prefix=tempprefix, suffix='\n\r')
+        fd, path = tempfile.mkstemp(dir='.', prefix=tempprefix, suffix='\n\r')
         os.close(fd)
         os.remove(path)
         return True
@@ -60,7 +60,7 @@ def has_eol_in_paths():
 def has_executablebit():
     try:
         EXECFLAGS = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
-        fh, fn = tempfile.mkstemp(dir=".", prefix='hg-checkexec-')
+        fh, fn = tempfile.mkstemp(dir='.', prefix=tempprefix)
         try:
             os.close(fh)
             m = os.stat(fn).st_mode & 0777
@@ -76,7 +76,7 @@ def has_executablebit():
 
 def has_icasefs():
     # Stolen from mercurial.util
-    fd, path = tempfile.mkstemp(prefix=tempprefix, dir='.')
+    fd, path = tempfile.mkstemp(dir='.', prefix=tempprefix)
     os.close(fd)
     try:
         s1 = os.stat(path)
@@ -105,7 +105,7 @@ def has_fifo():
 def has_cacheable_fs():
     from mercurial import util
 
-    fd, path = tempfile.mkstemp(prefix=tempprefix)
+    fd, path = tempfile.mkstemp(dir='.', prefix=tempprefix)
     os.close(fd)
     try:
         return util.cachestat(path).cacheable()
@@ -165,7 +165,7 @@ def has_p4():
 def has_symlink():
     if getattr(os, "symlink", None) is None:
         return False
-    name = tempfile.mktemp(dir=".", prefix='hg-checklink-')
+    name = tempfile.mktemp(dir='.', prefix=tempprefix)
     try:
         os.symlink(".", name)
         os.unlink(name)
@@ -180,7 +180,7 @@ def has_gpg():
     return matchoutput('gpg --version 2>&1', r'GnuPG')
 
 def has_unix_permissions():
-    d = tempfile.mkdtemp(prefix=tempprefix, dir=".")
+    d = tempfile.mkdtemp(dir='.', prefix=tempprefix)
     try:
         fname = os.path.join(d, 'foo')
         for umask in (077, 007, 022):
