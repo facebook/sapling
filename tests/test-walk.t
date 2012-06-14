@@ -276,9 +276,11 @@ Test patterns:
   $ hg debugwalk NOEXIST
   NOEXIST: * (glob)
 
+#if fifo
   $ mkfifo fifo
   $ hg debugwalk fifo
   fifo: unsupported file type (type is fifo)
+#endif
 
   $ rm fenugreek
   $ hg debugwalk fenugreek

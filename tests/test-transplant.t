@@ -356,6 +356,8 @@ test transplant into empty repository
   $ cd ..
 
 
+#if unix-permissions system-sh
+
 test filter
 
   $ hg init filter
@@ -442,6 +444,9 @@ test transplant with filter handles invalid changelog
   abort: filter corrupted changeset (no user or date)
   [255]
   $ cd ..
+
+#endif
+
 
 test with a win32ext like setup (differing EOLs)
 

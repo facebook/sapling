@@ -277,6 +277,8 @@ and true.executable set to cat with path works:
   # hg stat
   M f
 
+#if unix-permissions
+
 environment variables in true.executable are handled:
 
   $ echo 'echo "custom merge tool"' > "$HGTMP/merge.sh"
@@ -299,6 +301,8 @@ environment variables in true.executable are handled:
   space
   # hg stat
   M f
+
+#endif
 
 Tool selection and merge-patterns
 

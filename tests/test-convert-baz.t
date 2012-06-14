@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" baz || exit 80
+  $ "$TESTDIR/hghave" baz symlink || exit 80
 
   $ baz my-id "mercurial <mercurial@selenic.com>"
 

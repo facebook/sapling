@@ -91,6 +91,8 @@ script)
   $ echo xyzzy > foo.txt
   $ cvsci -m "merge1+clobber" foo.txt
 
+#if unix-permissions
+
 return to trunk and merge MYBRANCH1_2
 
   $ cvscall -Q update -P -A
@@ -200,5 +202,6 @@ return to trunk and merge MYBRANCH1_2
   Members: 
   	foo.txt:1.1.4.1->1.1.4.2 
   
+#endif
 
   $ cd ..
