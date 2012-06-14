@@ -136,7 +136,7 @@ check names for repositories (clashes with URL schemes, special chars)
   hg init "ssh"... ok
   hg init "static-http"... ok
   hg init "with space"... ok
-#if no-windows
+#if eol-in-paths
 /* " " is not a valid name for a directory on Windows */
   $ hg init " "
   $ test -d " "

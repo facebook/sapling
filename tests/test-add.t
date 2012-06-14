@@ -51,6 +51,11 @@ should fail
   A a
   A b
   A con.xml
+  $ hg forget con.xml
+  $ rm con.xml
+#endif
+
+#if eol-in-paths
   $ echo bla > 'hello:world'
   $ hg --config ui.portablefilenames=abort add
   adding hello:world
@@ -59,14 +64,12 @@ should fail
   $ hg st
   A a
   A b
-  A con.xml
   ? hello:world
   $ hg --config ui.portablefilenames=ignore add
   adding hello:world
   $ hg st
   A a
   A b
-  A con.xml
   A hello:world
 #endif
 
