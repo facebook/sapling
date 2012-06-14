@@ -324,18 +324,16 @@ def canonpath(root, cwd, myname, auditor=None):
     else:
         # Determine whether `name' is in the hierarchy at or beneath `root',
         # by iterating name=dirname(name) until that causes no change (can't
-        # check name == '/', because that doesn't work on windows).  For each
-        # `name', compare dev/inode numbers.  If they match, the list `rel'
-        # holds the reversed list of components making up the relative file
-        # name we want.
-        root_st = os.stat(root)
+        # check name == '/', because that doesn't work on windows). The list
+        # `rel' holds the reversed list of components making up the relative
+        # file name we want.
         rel = []
         while True:
             try:
-                name_st = os.stat(name)
+                s = util.samefile(name, root)
             except OSError:
-                name_st = None
-            if name_st and util.samestat(name_st, root_st):
+                s = False
+            if s:
                 if not rel:
                     # name was actually the same as root (maybe a symlink)
                     return ''
