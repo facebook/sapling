@@ -100,7 +100,15 @@ def has_inotify():
         return False
 
 def has_fifo():
-    return getattr(os, "mkfifo", None) is not None
+    if getattr(os, "mkfifo", None) is None:
+        return False
+    name = tempfile.mktemp(dir='.', prefix=tempprefix)
+    try:
+        os.mkfifo(name)
+        os.unlink(name)
+        return True
+    except OSError:
+        return False
 
 def has_cacheable_fs():
     from mercurial import util
