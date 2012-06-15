@@ -1,18 +1,18 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
 commit hooks can see env vars
 
   $ hg init a
   $ cd a
-  $ echo "[hooks]" > .hg/hgrc
-  $ echo 'commit = unset HG_LOCAL HG_TAG; python "$TESTDIR"/printenv.py commit' >> .hg/hgrc
-  $ echo 'commit.b = unset HG_LOCAL HG_TAG; python "$TESTDIR"/printenv.py commit.b' >> .hg/hgrc
-  $ echo 'precommit = unset HG_LOCAL HG_NODE HG_TAG; python "$TESTDIR"/printenv.py precommit' >> .hg/hgrc
-  $ echo 'pretxncommit = unset HG_LOCAL HG_TAG; python "$TESTDIR"/printenv.py pretxncommit' >> .hg/hgrc
-  $ echo 'pretxncommit.tip = hg -q tip' >> .hg/hgrc
-  $ echo 'pre-identify = python "$TESTDIR"/printenv.py pre-identify 1' >> .hg/hgrc
-  $ echo 'pre-cat = python "$TESTDIR"/printenv.py pre-cat' >> .hg/hgrc
-  $ echo 'post-cat = python "$TESTDIR"/printenv.py post-cat' >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [hooks]
+  > commit = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" commit"
+  > commit.b = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" commit.b"
+  > precommit = sh -c  "HG_LOCAL= HG_NODE= HG_TAG= python \"$TESTDIR/printenv.py\" precommit"
+  > pretxncommit = sh -c "HG_LOCAL= HG_TAG= python \"$TESTDIR/printenv.py\" pretxncommit"
+  > pretxncommit.tip = hg -q tip
+  > pre-identify = python "$TESTDIR/printenv.py" pre-identify 1
+  > pre-cat = python "$TESTDIR/printenv.py" pre-cat
+  > post-cat = python "$TESTDIR/printenv.py" post-cat
+  > EOF
   $ echo a > a
   $ hg add a
   $ hg commit -m a
@@ -29,10 +29,12 @@ commit hooks can see env vars
 
 changegroup hooks can see env vars
 
-  $ echo '[hooks]' > .hg/hgrc
-  $ echo 'prechangegroup = python "$TESTDIR"/printenv.py prechangegroup' >> .hg/hgrc
-  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
-  $ echo 'incoming = python "$TESTDIR"/printenv.py incoming' >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [hooks]
+  > prechangegroup = python "$TESTDIR/printenv.py" prechangegroup
+  > changegroup = python "$TESTDIR/printenv.py" changegroup
+  > incoming = python "$TESTDIR/printenv.py" incoming
+  > EOF
 
 pretxncommit and commit hooks can see both parents of merge
 
@@ -94,8 +96,10 @@ test generic hooks
 tag hooks can see env vars
 
   $ cd ../a
-  $ echo 'pretag = python "$TESTDIR"/printenv.py pretag' >> .hg/hgrc
-  $ echo 'tag = unset HG_PARENT1 HG_PARENT2; python "$TESTDIR"/printenv.py tag' >> .hg/hgrc
+  $ cat >> .hg/hgrc <<EOF
+  > pretag = python "$TESTDIR/printenv.py" pretag
+  > tag = sh -c "HG_PARENT1= HG_PARENT2= python \"$TESTDIR/printenv.py\" tag"
+  > EOF
   $ hg tag -d '3 0' a
   pretag hook: HG_LOCAL=0 HG_NODE=07f3376c1e655977439df2a814e3cc14b27abac2 HG_TAG=a 
   precommit hook: HG_PARENT1=07f3376c1e655977439df2a814e3cc14b27abac2 
@@ -110,7 +114,7 @@ tag hooks can see env vars
 
 pretag hook can forbid tagging
 
-  $ echo 'pretag.forbid = python "$TESTDIR"/printenv.py pretag.forbid 1' >> .hg/hgrc
+  $ echo "pretag.forbid = python \"$TESTDIR/printenv.py\" pretag.forbid 1" >> .hg/hgrc
   $ hg tag -d '4 0' fa
   pretag hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
   pretag.forbid hook: HG_LOCAL=0 HG_NODE=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 HG_TAG=fa 
@@ -125,8 +129,8 @@ pretag hook can forbid tagging
 pretxncommit hook can see changeset, can roll back txn, changeset no
 more there after
 
-  $ echo 'pretxncommit.forbid0 = hg tip -q' >> .hg/hgrc
-  $ echo 'pretxncommit.forbid1 = python "$TESTDIR"/printenv.py pretxncommit.forbid 1' >> .hg/hgrc
+  $ echo "pretxncommit.forbid0 = hg tip -q" >> .hg/hgrc
+  $ echo "pretxncommit.forbid1 = python \"$TESTDIR/printenv.py\" pretxncommit.forbid 1" >> .hg/hgrc
   $ echo z > z
   $ hg add z
   $ hg -q tip
@@ -146,7 +150,7 @@ more there after
 
 precommit hook can prevent commit
 
-  $ echo 'precommit.forbid = python "$TESTDIR"/printenv.py precommit.forbid 1' >> .hg/hgrc
+  $ echo "precommit.forbid = python \"$TESTDIR/printenv.py\" precommit.forbid 1" >> .hg/hgrc
   $ hg commit -m 'fail' -d '4 0'
   precommit hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
   precommit.forbid hook: HG_PARENT1=539e4b31b6dc99b3cfbaa6b53cbc1c1f9a1e3a10 
@@ -157,14 +161,14 @@ precommit hook can prevent commit
 
 preupdate hook can prevent update
 
-  $ echo 'preupdate = python "$TESTDIR"/printenv.py preupdate' >> .hg/hgrc
+  $ echo "preupdate = python \"$TESTDIR/printenv.py\" preupdate" >> .hg/hgrc
   $ hg update 1
   preupdate hook: HG_PARENT1=ab228980c14d 
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 update hook
 
-  $ echo 'update = python "$TESTDIR"/printenv.py update' >> .hg/hgrc
+  $ echo "update = python \"$TESTDIR/printenv.py\" update" >> .hg/hgrc
   $ hg update
   preupdate hook: HG_PARENT1=539e4b31b6dc 
   update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc 
@@ -172,7 +176,7 @@ update hook
 
 pushkey hook
 
-  $ echo 'pushkey = python "$TESTDIR"/printenv.py pushkey' >> .hg/hgrc
+  $ echo "pushkey = python \"$TESTDIR/printenv.py\" pushkey" >> .hg/hgrc
   $ cd ../b
   $ hg bookmark -r null foo
   $ hg push -B foo ../a
@@ -186,7 +190,7 @@ pushkey hook
 
 listkeys hook
 
-  $ echo 'listkeys = python "$TESTDIR"/printenv.py listkeys' >> .hg/hgrc
+  $ echo "listkeys = python \"$TESTDIR/printenv.py\" listkeys" >> .hg/hgrc
   $ hg bookmark -r null bar
   $ cd ../b
   $ hg pull -B bar ../a
@@ -201,7 +205,7 @@ listkeys hook
 
 test that prepushkey can prevent incoming keys
 
-  $ echo 'prepushkey = python "$TESTDIR"/printenv.py prepushkey.forbid 1' >> .hg/hgrc
+  $ echo "prepushkey = python \"$TESTDIR/printenv.py\" prepushkey.forbid 1" >> .hg/hgrc
   $ cd ../b
   $ hg bookmark -r null baz
   $ hg push -B baz ../a
@@ -219,7 +223,7 @@ test that prepushkey can prevent incoming keys
 
 test that prelistkeys can prevent listing keys
 
-  $ echo 'prelistkeys = python "$TESTDIR"/printenv.py prelistkeys.forbid 1' >> .hg/hgrc
+  $ echo "prelistkeys = python \"$TESTDIR/printenv.py\" prelistkeys.forbid 1" >> .hg/hgrc
   $ hg bookmark -r null quux
   $ cd ../b
   $ hg pull -B quux ../a
@@ -234,8 +238,10 @@ prechangegroup hook can prevent incoming changes
   $ cd ../b
   $ hg -q tip
   3:07f3376c1e65
-  $ echo '[hooks]' > .hg/hgrc
-  $ echo 'prechangegroup.forbid = python "$TESTDIR"/printenv.py prechangegroup.forbid 1' >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [hooks]
+  > prechangegroup.forbid = python "$TESTDIR/printenv.py" prechangegroup.forbid 1
+  > EOF
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -246,9 +252,11 @@ prechangegroup hook can prevent incoming changes
 pretxnchangegroup hook can see incoming changes, can roll back txn,
 incoming changes no longer there after
 
-  $ echo '[hooks]' > .hg/hgrc
-  $ echo 'pretxnchangegroup.forbid0 = hg tip -q' >> .hg/hgrc
-  $ echo 'pretxnchangegroup.forbid1 = python "$TESTDIR"/printenv.py pretxnchangegroup.forbid 1' >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [hooks]
+  > pretxnchangegroup.forbid0 = hg tip -q
+  > pretxnchangegroup.forbid1 = python "$TESTDIR/printenv.py" pretxnchangegroup.forbid 1
+  > EOF
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -268,9 +276,11 @@ incoming changes no longer there after
 outgoing hooks can see env vars
 
   $ rm .hg/hgrc
-  $ echo '[hooks]' > ../a/.hg/hgrc
-  $ echo 'preoutgoing = python "$TESTDIR"/printenv.py preoutgoing' >> ../a/.hg/hgrc
-  $ echo 'outgoing = python "$TESTDIR"/printenv.py outgoing' >> ../a/.hg/hgrc
+  $ cat > ../a/.hg/hgrc <<EOF
+  > [hooks]
+  > preoutgoing = python "$TESTDIR/printenv.py" preoutgoing
+  > outgoing = python "$TESTDIR/printenv.py" outgoing
+  > EOF
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -287,7 +297,7 @@ outgoing hooks can see env vars
 
 preoutgoing hook can prevent outgoing changes
 
-  $ echo 'preoutgoing.forbid = python "$TESTDIR"/printenv.py preoutgoing.forbid 1' >> ../a/.hg/hgrc
+  $ echo "preoutgoing.forbid = python \"$TESTDIR/printenv.py\" preoutgoing.forbid 1" >> ../a/.hg/hgrc
   $ hg pull ../a
   pulling from ../a
   searching for changes
@@ -299,9 +309,11 @@ preoutgoing hook can prevent outgoing changes
 outgoing hooks work for local clones
 
   $ cd ..
-  $ echo '[hooks]' > a/.hg/hgrc
-  $ echo 'preoutgoing = python "$TESTDIR"/printenv.py preoutgoing' >> a/.hg/hgrc
-  $ echo 'outgoing = python "$TESTDIR"/printenv.py outgoing' >> a/.hg/hgrc
+  $ cat > a/.hg/hgrc <<EOF
+  > [hooks]
+  > preoutgoing = python "$TESTDIR/printenv.py" preoutgoing
+  > outgoing = python "$TESTDIR/printenv.py" outgoing
+  > EOF
   $ hg clone a c
   preoutgoing hook: HG_SOURCE=clone 
   outgoing hook: HG_NODE=0000000000000000000000000000000000000000 HG_SOURCE=clone 
@@ -311,13 +323,14 @@ outgoing hooks work for local clones
 
 preoutgoing hook can prevent outgoing changes for local clones
 
-  $ echo 'preoutgoing.forbid = python "$TESTDIR"/printenv.py preoutgoing.forbid 1' >> a/.hg/hgrc
+  $ echo "preoutgoing.forbid = python \"$TESTDIR/printenv.py\" preoutgoing.forbid 1" >> a/.hg/hgrc
   $ hg clone a zzz
   preoutgoing hook: HG_SOURCE=clone 
   preoutgoing.forbid hook: HG_SOURCE=clone 
   abort: preoutgoing.forbid hook exited with status 1
   [255]
-  $ cd b
+
+  $ cd "$TESTTMP/b"
 
   $ cat > hooktests.py <<EOF
   > from mercurial import util
@@ -364,7 +377,11 @@ preoutgoing hook can prevent outgoing changes for local clones
 
 test python hooks
 
-  $ PYTHONPATH="`pwd`:$PYTHONPATH"
+#if windows
+  $ PYTHONPATH="$TESTTMP/b;$PYTHONPATH"
+#else
+  $ PYTHONPATH="$TESTTMP/b:$PYTHONPATH"
+#endif
   $ export PYTHONPATH
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -597,7 +614,7 @@ new commits must be visible in pretxnchangegroup (issue3428)
   $ echo aa >> from/a
   $ hg --cwd from ci -mb
   $ hg --cwd from push
-  pushing to $TESTTMP/to
+  pushing to $TESTTMP/to (glob)
   searching for changes
   adding changesets
   adding manifests
