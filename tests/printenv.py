@@ -32,13 +32,15 @@ if len(sys.argv) > 2:
 
 # variables with empty values may not exist on all platforms, filter
 # them now for portability sake.
-env = [k for k, v in os.environ.iteritems()
+env = [(k, v) for k, v in os.environ.iteritems()
        if k.startswith("HG_") and v]
 env.sort()
 
 out.write("%s hook: " % name)
-for v in env:
-    out.write("%s=%s " % (v, os.environ[v]))
+for k, v in env:
+    if os.name == 'nt':
+        v = v.replace('\\', '/')
+    out.write("%s=%s " % (k, v))
 out.write("\n")
 out.close()
 
