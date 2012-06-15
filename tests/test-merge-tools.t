@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
 test merge-tools configuration - mostly exercising filemerge.py
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with the test
@@ -281,18 +279,16 @@ and true.executable set to cat with path works:
 
 environment variables in true.executable are handled:
 
-  $ cat > $HGTMP/merge.sh <<EOF
-  > #!/bin/sh
-  > echo 'custom merge tool'
-  > EOF
-  $ chmod +x $HGTMP/merge.sh
+  $ echo 'echo "custom merge tool"' > "$HGTMP/merge.sh"
   $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=$HGTMP/merge.sh
+  $ hg --config merge-tools.true.executable='sh' \
+  >    --config merge-tools.true.args="$HGTMP/merge.sh" \
+  >    merge -r 2
   merging f
   custom merge tool
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -753,11 +749,11 @@ Merge using tool with a path that must be quoted:
   true.executable=cat
   # hg update -C 1
   $ cat <<EOF > 'my merge tool'
-  > #!/bin/sh
   > cat "\$1" "\$2" "\$3" > "\$4"
   > EOF
-  $ chmod +x 'my merge tool'
-  $ hg merge -r 2 --config merge-tools.true.executable='./my merge tool' --config merge-tools.true.args='$base $local $other $output'
+  $ hg --config merge-tools.true.executable='sh' \
+  >    --config merge-tools.true.args='"./my merge tool" $base $local $other $output' \
+  >    merge -r 2
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
