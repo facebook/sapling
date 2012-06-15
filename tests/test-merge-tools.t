@@ -46,12 +46,6 @@ revision 3 - simple to merge
   >   hg stat
   >   rm -f f.orig
   > }
-  $ domerge() {
-  >   beforemerge
-  >   echo "# hg merge $*"
-  >   hg merge $*
-  >   aftermerge
-  > }
 
 Tool selection
 
@@ -87,15 +81,17 @@ running from a devel copy, not a temp installation
 simplest hgrc using false for merge:
 
   $ echo "false.whatever=" >> .hg/hgrc
-  $ domerge -r 2
+  $ beforemerge
   [merge-tools]
   false.whatever=
   # hg update -C 1
-  # hg merge -r 2
+  $ hg merge -r 2
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -132,15 +128,16 @@ executable directory in $PATH shouldn't be found:
 true with higher .priority gets precedence:
 
   $ echo "true.priority=1" >> .hg/hgrc
-  $ domerge -r 2
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   # hg update -C 1
-  # hg merge -r 2
+  $ hg merge -r 2
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -149,16 +146,18 @@ true with higher .priority gets precedence:
 
 unless lowered on command line:
 
-  $ domerge -r 2 --config merge-tools.true.priority=-7
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.true.priority=-7
+  $ hg merge -r 2 --config merge-tools.true.priority=-7
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -168,16 +167,18 @@ unless lowered on command line:
 
 or false set higher on command line:
 
-  $ domerge -r 2 --config merge-tools.false.priority=117
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.false.priority=117
+  $ hg merge -r 2 --config merge-tools.false.priority=117
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -187,16 +188,18 @@ or false set higher on command line:
 
 or true.executable not found in PATH:
 
-  $ domerge -r 2 --config merge-tools.true.executable=nonexistingmergetool
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.true.executable=nonexistingmergetool
+  $ hg merge -r 2 --config merge-tools.true.executable=nonexistingmergetool
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -206,16 +209,18 @@ or true.executable not found in PATH:
 
 or true.executable with bogus path:
 
-  $ domerge -r 2 --config merge-tools.true.executable=/nonexisting/mergetool
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.true.executable=/nonexisting/mergetool
+  $ hg merge -r 2 --config merge-tools.true.executable=/nonexisting/mergetool
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -226,13 +231,13 @@ or true.executable with bogus path:
 but true.executable set to cat found in PATH works:
 
   $ echo "true.executable=cat" >> .hg/hgrc
-  $ domerge -r 2
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2
+  $ hg merge -r 2
   merging f
   revision 1
   space
@@ -242,6 +247,7 @@ but true.executable set to cat found in PATH works:
   space
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -250,13 +256,13 @@ but true.executable set to cat found in PATH works:
 
 and true.executable set to cat with path works:
 
-  $ domerge -r 2 --config merge-tools.true.executable=cat
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.true.executable=cat
+  $ hg merge -r 2 --config merge-tools.true.executable=cat
   merging f
   revision 1
   space
@@ -266,6 +272,7 @@ and true.executable set to cat with path works:
   space
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -279,17 +286,18 @@ environment variables in true.executable are handled:
   > echo 'custom merge tool'
   > EOF
   $ chmod +x $HGTMP/merge.sh
-  $ domerge -r 2 --config merge-tools.true.executable='$HGTMP/merge.sh'
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config merge-tools.true.executable=$HGTMP/merge.sh
+  $ hg merge -r 2 --config merge-tools.true.executable=$HGTMP/merge.sh
   merging f
   custom merge tool
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -300,17 +308,19 @@ Tool selection and merge-patterns
 
 merge-patterns specifies new tool false:
 
-  $ domerge -r 2 --config merge-patterns.f=false
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config merge-patterns.f=false
+  $ hg merge -r 2 --config merge-patterns.f=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -320,18 +330,20 @@ merge-patterns specifies new tool false:
 
 merge-patterns specifies executable not found in PATH and gets warning:
 
-  $ domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool
+  $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistingmergetool
   couldn't find merge tool true specified for f
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -341,18 +353,20 @@ merge-patterns specifies executable not found in PATH and gets warning:
 
 merge-patterns specifies executable with bogus path and gets warning:
 
-  $ domerge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexisting/mergetool
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexisting/mergetool
+  $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexisting/mergetool
   couldn't find merge tool true specified for f
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -364,17 +378,19 @@ ui.merge overrules priority
 
 ui.merge specifies false:
 
-  $ domerge -r 2 --config ui.merge=false
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=false
+  $ hg merge -r 2 --config ui.merge=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -384,15 +400,17 @@ ui.merge specifies false:
 
 ui.merge specifies internal:fail:
 
-  $ domerge -r 2 --config ui.merge=internal:fail
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:fail
+  $ hg merge -r 2 --config ui.merge=internal:fail
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -401,15 +419,16 @@ ui.merge specifies internal:fail:
 
 ui.merge specifies internal:local:
 
-  $ domerge -r 2 --config ui.merge=internal:local
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:local
+  $ hg merge -r 2 --config ui.merge=internal:local
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -418,15 +437,16 @@ ui.merge specifies internal:local:
 
 ui.merge specifies internal:other:
 
-  $ domerge -r 2 --config ui.merge=internal:other
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:other
+  $ hg merge -r 2 --config ui.merge=internal:other
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 2
   space
@@ -435,17 +455,18 @@ ui.merge specifies internal:other:
 
 ui.merge specifies internal:prompt:
 
-  $ domerge -r 2 --config ui.merge=internal:prompt
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:prompt
+  $ hg merge -r 2 --config ui.merge=internal:prompt
    no tool found to merge f
   keep (l)ocal or take (o)ther? l
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -454,16 +475,18 @@ ui.merge specifies internal:prompt:
 
 ui.merge specifies internal:dump:
 
-  $ domerge -r 2 --config ui.merge=internal:dump
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:dump
+  $ hg merge -r 2 --config ui.merge=internal:dump
   merging f
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -495,17 +518,19 @@ f.other:
 
 ui.merge specifies internal:other but is overruled by pattern for false:
 
-  $ domerge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
+  $ hg merge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -517,17 +542,19 @@ Premerge
 
 ui.merge specifies internal:other but is overruled by --tool=false
 
-  $ domerge -r 2 --config ui.merge=internal:other --tool=false
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --config ui.merge=internal:other --tool=false
+  $ hg merge -r 2 --config ui.merge=internal:other --tool=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -538,17 +565,19 @@ ui.merge specifies internal:other but is overruled by --tool=false
 HGMERGE specifies internal:other but is overruled by --tool=false
 
   $ HGMERGE=internal:other ; export HGMERGE
-  $ domerge -r 2 --tool=false
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 2 --tool=false
+  $ hg merge -r 2 --tool=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -560,16 +589,17 @@ HGMERGE specifies internal:other but is overruled by --tool=false
 
 Default is silent simplemerge:
 
-  $ domerge -r 3
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 3
+  $ hg merge -r 3
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -579,16 +609,17 @@ Default is silent simplemerge:
 
 .premerge=True is same:
 
-  $ domerge -r 3 --config merge-tools.true.premerge=True
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 3 --config merge-tools.true.premerge=True
+  $ hg merge -r 3 --config merge-tools.true.premerge=True
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -598,13 +629,13 @@ Default is silent simplemerge:
 
 .premerge=False executes merge-tool:
 
-  $ domerge -r 3 --config merge-tools.true.premerge=False
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -r 3 --config merge-tools.true.premerge=False
+  $ hg merge -r 3 --config merge-tools.true.premerge=False
   merging f
   revision 1
   space
@@ -615,6 +646,7 @@ Default is silent simplemerge:
   revision 3
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ aftermerge
   # cat f
   revision 1
   space
@@ -745,13 +777,13 @@ Merge post-processing
 
 cat is a bad merge-tool and doesn't change:
 
-  $ domerge -y -r 2 --config merge-tools.true.checkchanged=1
+  $ beforemerge
   [merge-tools]
   false.whatever=
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  # hg merge -y -r 2 --config merge-tools.true.checkchanged=1
+  $ hg merge -y -r 2 --config merge-tools.true.checkchanged=1
   merging f
   revision 1
   space
@@ -764,6 +796,8 @@ cat is a bad merge-tool and doesn't change:
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
   # cat f
   revision 1
   space
