@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
 Corrupt an hg repo with a pull started during an aborted commit
 Create two repos, so that one of them can pull from the other one.
 
@@ -17,8 +15,8 @@ Create two repos, so that one of them can pull from the other one.
 Add a hook to wait 5 seconds and then abort the commit
 
   $ cd ../corrupted
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'pretxncommit = sleep 5; exit 1' >> .hg/hgrc
+  $ echo "[hooks]" >> .hg/hgrc
+  $ echo "pretxncommit = sh -c 'sleep 5; exit 1'" >> .hg/hgrc
 
 start a commit...
 
