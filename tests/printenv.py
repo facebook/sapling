@@ -37,10 +37,12 @@ env = [(k, v) for k, v in os.environ.iteritems()
 env.sort()
 
 out.write("%s hook: " % name)
-for k, v in env:
-    if os.name == 'nt':
-        v = v.replace('\\', '/')
-    out.write("%s=%s " % (k, v))
+if os.name == 'nt':
+    filter = lambda x: x.replace('\\', '/')
+else:
+    filter = lambda x: x
+vars = ["%s=%s" % (k, filter(v)) for k, v in env]
+out.write(" ".join(vars))
 out.write("\n")
 out.close()
 

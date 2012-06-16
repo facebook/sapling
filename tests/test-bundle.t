@@ -219,7 +219,7 @@ hg -R bundle://../full.hg verify
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files (+1 heads)
-  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:../full.hg 
+  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:../full.hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Rollback empty
@@ -242,7 +242,7 @@ Pull full.hg into empty again (using -R; with hook)
   adding manifests
   adding file changes
   added 9 changesets with 7 changes to 4 files (+1 heads)
-  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:empty+full.hg 
+  changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_URL=bundle:empty+full.hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
 Create partial clones

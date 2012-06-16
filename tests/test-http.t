@@ -101,7 +101,7 @@ pull
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT1/ 
+  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=http://localhost:$HGPORT1/
   (run 'hg update' to get a working copy)
   $ cd ..
 

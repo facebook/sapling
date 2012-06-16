@@ -147,7 +147,7 @@ pull without cacert
   adding file changes
   added 1 changesets with 1 changes to 1 files
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
-  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=https://localhost:$HGPORT/ 
+  changegroup hook: HG_NODE=5fed3813f7f5e1824344fdc9cf8f63bb662c292d HG_SOURCE=pull HG_URL=https://localhost:$HGPORT/
   (run 'hg update' to get a working copy)
   $ cd ..
 
