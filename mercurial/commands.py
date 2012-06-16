@@ -2696,11 +2696,6 @@ def graft(ui, repo, *revs, **opts):
                                             ctx.p1().node())
                 finally:
                     repo.ui.setconfig('ui', 'forcemerge', '')
-                # drop the second merge parent
-                repo.setparents(current.node(), nullid)
-                repo.dirstate.write()
-                # fix up dirstate for copies and renames
-                cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
                 # report any conflicts
                 if stats and stats[3] > 0:
                     # write out state for --continue
@@ -2711,6 +2706,12 @@ def graft(ui, repo, *revs, **opts):
                         hint=_('use hg resolve and hg graft --continue'))
             else:
                 cont = False
+
+            # drop the second merge parent
+            repo.setparents(current.node(), nullid)
+            repo.dirstate.write()
+            # fix up dirstate for copies and renames
+            cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
 
             # commit
             source = ctx.extra().get('source')

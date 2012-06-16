@@ -275,3 +275,58 @@ Disallow grafting already grafted csets with the same origin onto each other
   $ hg graft tip
   skipping already grafted revision 12 (same origin 2)
   [255]
+
+Resolve conflicted graft
+  $ hg up -q 0
+  $ echo b > a
+  $ hg ci -m 8
+  created new head
+  $ echo a > a
+  $ hg ci -m 9
+  $ hg graft 1 --tool internal:fail
+  grafting revision 1
+  abort: unresolved conflicts, can't continue
+  (use hg resolve and hg graft --continue)
+  [255]
+  $ hg resolve --all
+  merging a
+  $ hg graft -c
+  grafting revision 1
+  $ hg export tip --git
+  # HG changeset patch
+  # User bar
+  # Date 0 0
+  # Node ID 64ecd9071ce83c6e62f538d8ce7709d53f32ebf7
+  # Parent  4bdb9a9d0b84ffee1d30f0dfc7744cade17aa19c
+  1
+  
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
+Resolve conflicted graft with rename
+  $ echo c > a
+  $ hg ci -m 10
+  $ hg graft 2 --tool internal:fail
+  grafting revision 2
+  abort: unresolved conflicts, can't continue
+  (use hg resolve and hg graft --continue)
+  [255]
+  $ hg resolve --all
+  merging a and b to b
+  $ hg graft -c
+  grafting revision 2
+  $ hg export tip --git
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID 2e80e1351d6ed50302fe1e05f8bd1d4d412b6e11
+  # Parent  e5a51ae854a8bbaaf25cc5c6a57ff46042dadbb4
+  2
+  
+  diff --git a/a b/b
+  rename from a
+  rename to b
