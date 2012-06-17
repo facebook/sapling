@@ -270,6 +270,16 @@ archive subrepos
   gg
   ggg
 
+  $ hg -R ../tc archive --subrepo -r 5 -X ../tc/**f ../archive_x 2>/dev/null
+  $ find ../archive_x | sort
+  ../archive_x
+  ../archive_x/.hg_archival.txt
+  ../archive_x/.hgsub
+  ../archive_x/.hgsubstate
+  ../archive_x/a
+  ../archive_x/s
+  ../archive_x/s/g
+
 create nested repo
 
   $ cd ..

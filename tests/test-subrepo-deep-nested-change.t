@@ -99,12 +99,64 @@ debugsub output for main and sub1
    source   ../sub2
    revision 53dd3430bcaf5ab4a7c48262bcad6d441f510487
 
+Check that deep archiving works
+ 
+  $ cd cloned
+  $ echo 'test' > sub1/sub2/test.txt
+  $ hg --config extensions.largefiles=! add sub1/sub2/test.txt
+  $ mkdir sub1/sub2/folder
+  $ echo 'subfolder' > sub1/sub2/folder/test.txt
+  $ hg --config extensions.largefiles=! add sub1/sub2/folder/test.txt
+  $ hg ci -Sm "add test.txt"
+  committing subrepository sub1
+  committing subrepository sub1/sub2
+  $ hg --config extensions.largefiles=! archive -S ../archive_all
+  $ find ../archive_all | sort
+  ../archive_all
+  ../archive_all/.hg_archival.txt
+  ../archive_all/.hgsub
+  ../archive_all/.hgsubstate
+  ../archive_all/main
+  ../archive_all/sub1
+  ../archive_all/sub1/.hgsub
+  ../archive_all/sub1/.hgsubstate
+  ../archive_all/sub1/sub1
+  ../archive_all/sub1/sub2
+  ../archive_all/sub1/sub2/folder
+  ../archive_all/sub1/sub2/folder/test.txt
+  ../archive_all/sub1/sub2/sub2
+  ../archive_all/sub1/sub2/test.txt
+
+Check that archive -X works in deep subrepos
+
+  $ hg --config extensions.largefiles=! archive -S -X '**test*' ../archive_exclude
+  $ find ../archive_exclude | sort
+  ../archive_exclude
+  ../archive_exclude/.hg_archival.txt
+  ../archive_exclude/.hgsub
+  ../archive_exclude/.hgsubstate
+  ../archive_exclude/main
+  ../archive_exclude/sub1
+  ../archive_exclude/sub1/.hgsub
+  ../archive_exclude/sub1/.hgsubstate
+  ../archive_exclude/sub1/sub1
+  ../archive_exclude/sub1/sub2
+  ../archive_exclude/sub1/sub2/sub2
+
+  $ hg --config extensions.largefiles=! archive -S -I '**test*' ../archive_include
+  $ find ../archive_include | sort
+  ../archive_include
+  ../archive_include/sub1
+  ../archive_include/sub1/sub2
+  ../archive_include/sub1/sub2/folder
+  ../archive_include/sub1/sub2/folder/test.txt
+  ../archive_include/sub1/sub2/test.txt
+
 Check that deep archive works with largefiles (which overrides hgsubrepo impl)
 This also tests the repo.ui regression in 43fb170a23bd, and that lf subrepo
 subrepos are archived properly.
 Note that add --large through a subrepo currently adds the file as a normal file
 
-  $ cd cloned
   $ echo "large" > sub1/sub2/large.bin
   $ hg --config extensions.largefiles= add --large -R sub1/sub2 sub1/sub2/large.bin
   $ echo "large" > large.bin
@@ -126,7 +178,88 @@ Note that add --large through a subrepo currently adds the file as a normal file
   ../archive_lf/sub1/.hgsubstate
   ../archive_lf/sub1/sub1
   ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/folder
+  ../archive_lf/sub1/sub2/folder/test.txt
   ../archive_lf/sub1/sub2/large.bin
   ../archive_lf/sub1/sub2/sub2
+  ../archive_lf/sub1/sub2/test.txt
+  $ rm -rf ../archive_lf
+
+Exclude large files from main and sub-sub repo
+
+  $ hg --config extensions.largefiles= archive -S -X '**.bin' ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/.hg_archival.txt
+  ../archive_lf/.hgsub
+  ../archive_lf/.hgsubstate
+  ../archive_lf/main
+  ../archive_lf/sub1
+  ../archive_lf/sub1/.hgsub
+  ../archive_lf/sub1/.hgsubstate
+  ../archive_lf/sub1/sub1
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/folder
+  ../archive_lf/sub1/sub2/folder/test.txt
+  ../archive_lf/sub1/sub2/sub2
+  ../archive_lf/sub1/sub2/test.txt
+  $ rm -rf ../archive_lf
+
+Exclude normal files from main and sub-sub repo
+
+  $ hg --config extensions.largefiles= archive -S -X '**.txt' ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/.hgsub
+  ../archive_lf/.hgsubstate
+  ../archive_lf/large.bin
+  ../archive_lf/main
+  ../archive_lf/sub1
+  ../archive_lf/sub1/.hgsub
+  ../archive_lf/sub1/.hgsubstate
+  ../archive_lf/sub1/sub1
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/large.bin
+  ../archive_lf/sub1/sub2/sub2
+  $ rm -rf ../archive_lf
+
+Include normal files from within a largefiles subrepo
+
+  $ hg --config extensions.largefiles= archive -S -I '**.txt' ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/.hg_archival.txt
+  ../archive_lf/sub1
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/folder
+  ../archive_lf/sub1/sub2/folder/test.txt
+  ../archive_lf/sub1/sub2/test.txt
+  $ rm -rf ../archive_lf
+
+Include large files from within a largefiles subrepo
+
+  $ hg --config extensions.largefiles= archive -S -I '**.bin' ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/large.bin
+  ../archive_lf/sub1
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/large.bin
+  $ rm -rf ../archive_lf
+
+Find an exact largefile match in a largefiles subrepo
+
+  $ hg --config extensions.largefiles= archive -S -I 'sub1/sub2/large.bin' ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/sub1
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/large.bin
+  $ rm -rf ../archive_lf
+
+Find an exact match to a standin (should archive nothing)
+  $ hg --config extensions.largefiles= archive -S -I 'sub/sub2/.hglf/large.bin' ../archive_lf
+  $ find ../archive_lf | sort
+  find: `../archive_lf': No such file or directory
 
   $ cd ..

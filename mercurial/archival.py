@@ -7,6 +7,7 @@
 
 from i18n import _
 from node import hex
+import match as matchmod
 import cmdutil
 import scmutil, util, encoding
 import cStringIO, os, tarfile, time, zipfile
@@ -284,6 +285,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in ctx.substate:
             sub = ctx.sub(subpath)
-            sub.archive(repo.ui, archiver, prefix)
+            submatch = matchmod.narrowmatcher(subpath, matchfn)
+            sub.archive(repo.ui, archiver, prefix, submatch)
 
     archiver.done()
