@@ -98,3 +98,35 @@ debugsub output for main and sub1
   path sub2
    source   ../sub2
    revision 53dd3430bcaf5ab4a7c48262bcad6d441f510487
+
+Check that deep archive works with largefiles (which overrides hgsubrepo impl)
+This also tests the repo.ui regression in 43fb170a23bd, and that lf subrepo
+subrepos are archived properly.
+Note that add --large through a subrepo currently adds the file as a normal file
+
+  $ cd cloned
+  $ echo "large" > sub1/sub2/large.bin
+  $ hg --config extensions.largefiles= add --large -R sub1/sub2 sub1/sub2/large.bin
+  $ echo "large" > large.bin
+  $ hg --config extensions.largefiles= add --large large.bin
+  $ hg --config extensions.largefiles= ci -S -m "add large files"
+  committing subrepository sub1
+  committing subrepository sub1/sub2
+
+  $ hg --config extensions.largefiles= archive -S ../archive_lf
+  $ find ../archive_lf | sort
+  ../archive_lf
+  ../archive_lf/.hg_archival.txt
+  ../archive_lf/.hgsub
+  ../archive_lf/.hgsubstate
+  ../archive_lf/large.bin
+  ../archive_lf/main
+  ../archive_lf/sub1
+  ../archive_lf/sub1/.hgsub
+  ../archive_lf/sub1/.hgsubstate
+  ../archive_lf/sub1/sub1
+  ../archive_lf/sub2
+  ../archive_lf/sub2/large.bin
+  ../archive_lf/sub2/sub2
+
+  $ cd ..
