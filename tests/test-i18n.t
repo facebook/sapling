@@ -28,7 +28,7 @@ Test keyword search in translated help text:
   $ HGENCODING=UTF-8 LANGUAGE=de hg help -k blättern
   Topics:
   
-   extensions Using Additional Features
+   extensions Benutzung erweiterter Funktionen
   
   Erweiterungen:
   
