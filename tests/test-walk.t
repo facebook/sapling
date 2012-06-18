@@ -230,6 +230,12 @@ Test patterns:
   f  fenugreek   fenugreek
   f  fiddlehead  fiddlehead
   f  glob:glob   glob:glob
+  $ hg debugwalk glob:glob
+  glob: No such file or directory
+  $ hg debugwalk glob:glob:glob
+  f  glob:glob  glob:glob  exact
+  $ hg debugwalk path:glob:glob
+  f  glob:glob  glob:glob  exact
   $ rm glob:glob
   $ hg addremove
   removing glob:glob
