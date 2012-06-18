@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" unix-permissions serve || exit 80
+  $ "$TESTDIR/hghave" serve || exit 80
   $ USERCACHE=`pwd`/cache; export USERCACHE
   $ mkdir -p ${USERCACHE}
   $ cat >> $HGRCPATH <<EOF
@@ -1018,6 +1018,8 @@ Push a largefiles repository to a served empty repository
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py"
 
+#if unix-permissions
+
 Clone a local repository owned by another user
 We have to simulate that here by setting $HOME and removing write permissions
   $ ORIGHOME="$HOME"
@@ -1050,6 +1052,8 @@ We have to simulate that here by setting $HOME and removing write permissions
   $ cd ..
   $ chmod -R u+w alice/pubrepo
   $ HOME="$ORIGHOME"
+
+#endif
 
 #if symlink
 

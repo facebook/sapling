@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert=
@@ -293,24 +291,27 @@
   pulling from ../a
   searching for changes
   no changes found
+
+conversion to existing file should fail
+
   $ touch bogusfile
-
-should fail
-
   $ hg convert a bogusfile
   initializing destination bogusfile repository
   abort: cannot create new bundle repository
   [255]
+
+#if unix-permissions
+
+conversion to dir without permissions should fail
+
   $ mkdir bogusdir
   $ chmod 000 bogusdir
-
-should fail
 
   $ hg convert a bogusdir
   abort: Permission denied: bogusdir
   [255]
 
-should succeed
+user permissions should succeed
 
   $ chmod 700 bogusdir
   $ hg convert a bogusdir
@@ -323,6 +324,8 @@ should succeed
   2 c
   1 d
   0 e
+
+#endif
 
 test pre and post conversion actions
 

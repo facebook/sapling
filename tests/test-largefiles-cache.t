@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
 Create user cache directory
 
   $ USERCACHE=`pwd`/cache; export USERCACHE
@@ -72,10 +70,12 @@ Update working directory to tip, again.
   0 largefiles updated, 0 removed
   $ hg status
   ! large
+  $ cd ..
+
+#if unix-permissions
 
 Portable way to print file permissions:
 
-  $ cd ..
   $ cat > ls-l.py <<EOF
   > #!/usr/bin/env python
   > import sys, os
@@ -121,3 +121,5 @@ Test permission of files created by push:
   640
 
   $ cd ..
+
+#endif

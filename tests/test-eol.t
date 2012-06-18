@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
 Test EOL extension
 
   $ cat >> $HGRCPATH <<EOF
@@ -386,10 +384,13 @@ Mixed tests
   % hg status
   $ rm -r mixed
 
-Test issue2569 -- eol extension takes write lock on reading:
-
   $ echo '[extensions]' >> $HGRCPATH
   $ echo 'eol =' >> $HGRCPATH
+
+#if unix-permissions
+
+Test issue2569 -- eol extension takes write lock on reading:
+
   $ hg init repo
   $ cd repo
   $ touch .hgeol
@@ -402,6 +403,8 @@ Test issue2569 -- eol extension takes write lock on reading:
   ? .hgeol
   $ chmod -R u+w .hg
   $ cd ..
+
+#endif
 
 Test cleverencode: and cleverdecode: aliases for win32text extension
 
