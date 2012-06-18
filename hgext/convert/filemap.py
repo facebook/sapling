@@ -294,23 +294,34 @@ class filemap_source(converter_source):
         # A parent p is interesting if its mapped version (self.parentmap[p]):
         # - is not SKIPREV
         # - is still not in the list of parents (we don't want duplicates)
-        # - is not an ancestor of the mapped versions of the other parents
+        # - is not an ancestor of the mapped versions of the other parents or
+        #   there is no parent in the same branch than the current revision.
         mparents = []
-        wp = None
+        knownparents = set()
+        branch = self.commits[rev].branch
+        hasbranchparent = False
         for i, p1 in enumerate(parents):
             mp1 = self.parentmap[p1]
-            if mp1 == SKIPREV or mp1 in mparents:
+            if mp1 == SKIPREV or mp1 in knownparents:
                 continue
-            for p2 in parents:
-                if p1 == p2 or mp1 == self.parentmap[p2]:
-                    continue
-                if mp1 in self.wantedancestors[p2]:
-                    break
-            else:
-                mparents.append(mp1)
-                wp = i
-
-        if wp is None and parents:
+            isancestor = util.any(p2 for p2 in parents
+                                  if p1 != p2 and mp1 != self.parentmap[p2]
+                                  and mp1 in self.wantedancestors[p2])
+            if not isancestor and not hasbranchparent and len(parents) > 1:
+                # This could be expensive, avoid unnecessary calls.
+                if self._cachedcommit(p1).branch == branch:
+                    hasbranchparent = True
+            mparents.append((p1, mp1, i, isancestor))
+            knownparents.add(mp1)
+        # Discard parents ancestors of other parents if there is a
+        # non-ancestor one on the same branch than current revision.
+        if hasbranchparent:
+            mparents = [p for p in mparents if not p[3]]
+        wp = None
+        if mparents:
+            wp = max(p[2] for p in mparents)
+            mparents = [p[1] for p in mparents]
+        elif parents:
             wp = 0
 
         self.origparents[rev] = parents
@@ -319,7 +330,6 @@ class filemap_source(converter_source):
         if 'close' in self.commits[rev].extra:
             # A branch closing revision is only useful if one of its
             # parents belong to the branch being closed
-            branch = self.commits[rev].branch
             pbranches = [self._cachedcommit(p).branch for p in mparents]
             if branch in pbranches:
                 closed = True

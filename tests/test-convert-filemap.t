@@ -375,3 +375,189 @@ exercise incremental conversion at the same time
   |
   o  0 "addb" files: b
   
+
+test merge parents/empty merges pruning
+
+  $ glog()
+  > {
+  >     hg glog --template '{rev}:{node|short}@{branch} "{desc}" files: {files}\n' "$@"
+  > }
+
+test anonymous branch pruning
+
+  $ hg init anonymousbranch
+  $ cd anonymousbranch
+  $ echo a > a
+  $ echo b > b
+  $ hg ci -Am add
+  adding a
+  adding b
+  $ echo a >> a
+  $ hg ci -m changea
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo b >> b
+  $ hg ci -m changeb
+  created new head
+  $ hg up 1
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ cd ..
+
+  $ cat > filemap <<EOF
+  > include a
+  > EOF
+  $ hg convert --filemap filemap anonymousbranch anonymousbranch-hg
+  initializing destination anonymousbranch-hg repository
+  scanning source...
+  sorting...
+  converting...
+  3 add
+  2 changea
+  1 changeb
+  0 merge
+  $ glog -R anonymousbranch
+  @    3:c71d5201a498@default "merge" files:
+  |\
+  | o  2:607eb44b17f9@default "changeb" files: b
+  | |
+  o |  1:1f60ea617824@default "changea" files: a
+  |/
+  o  0:0146e6129113@default "add" files: a b
+  
+  $ glog -R anonymousbranch-hg
+  o  1:cda818e7219b@default "changea" files: a
+  |
+  o  0:c334dc3be0da@default "add" files: a
+  
+  $ cat anonymousbranch-hg/.hg/shamap
+  0146e6129113dba9ac90207cfdf2d7ed35257ae5 c334dc3be0daa2a4e9ce4d2e2bdcba40c09d4916
+  1f60ea61782421edf8d051ff4fcb61b330f26a4a cda818e7219b5f7f3fb9f49780054ed6a1905ec3
+  607eb44b17f9348cd5cbd26e16af87ba77b0b037 c334dc3be0daa2a4e9ce4d2e2bdcba40c09d4916
+  c71d5201a498b2658d105a6bf69d7a0df2649aea cda818e7219b5f7f3fb9f49780054ed6a1905ec3
+
+  $ cat > filemap <<EOF
+  > include b
+  > EOF
+  $ hg convert --filemap filemap anonymousbranch anonymousbranch-hg2
+  initializing destination anonymousbranch-hg2 repository
+  scanning source...
+  sorting...
+  converting...
+  3 add
+  2 changea
+  1 changeb
+  0 merge
+  $ glog -R anonymousbranch
+  @    3:c71d5201a498@default "merge" files:
+  |\
+  | o  2:607eb44b17f9@default "changeb" files: b
+  | |
+  o |  1:1f60ea617824@default "changea" files: a
+  |/
+  o  0:0146e6129113@default "add" files: a b
+  
+  $ glog -R anonymousbranch-hg2
+  o  1:62dd350b0df6@default "changeb" files: b
+  |
+  o  0:4b9ced861657@default "add" files: b
+  
+  $ cat anonymousbranch-hg2/.hg/shamap
+  0146e6129113dba9ac90207cfdf2d7ed35257ae5 4b9ced86165703791653059a1db6ed864630a523
+  1f60ea61782421edf8d051ff4fcb61b330f26a4a 4b9ced86165703791653059a1db6ed864630a523
+  607eb44b17f9348cd5cbd26e16af87ba77b0b037 62dd350b0df695f7d2c82a02e0499b16fd790f22
+  c71d5201a498b2658d105a6bf69d7a0df2649aea 62dd350b0df695f7d2c82a02e0499b16fd790f22
+
+test named branch pruning
+
+  $ hg init namedbranch
+  $ cd namedbranch
+  $ echo a > a
+  $ echo b > b
+  $ hg ci -Am add
+  adding a
+  adding b
+  $ echo a >> a
+  $ hg ci -m changea
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo b >> b
+  $ hg ci -m changeb
+  $ hg up default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ cd ..
+
+  $ cat > filemap <<EOF
+  > include a
+  > EOF
+  $ hg convert --filemap filemap namedbranch namedbranch-hg
+  initializing destination namedbranch-hg repository
+  scanning source...
+  sorting...
+  converting...
+  3 add
+  2 changea
+  1 changeb
+  0 merge
+  $ glog -R namedbranch
+  @    3:73899bcbe45c@default "merge" files:
+  |\
+  | o  2:8097982d19fc@foo "changeb" files: b
+  | |
+  o |  1:1f60ea617824@default "changea" files: a
+  |/
+  o  0:0146e6129113@default "add" files: a b
+  
+  $ glog -R namedbranch-hg
+  o  1:cda818e7219b@default "changea" files: a
+  |
+  o  0:c334dc3be0da@default "add" files: a
+  
+
+  $ cd namedbranch
+  $ hg --config extensions.mq= strip tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/namedbranch/.hg/strip-backup/73899bcbe45c-backup.hg
+  $ hg up foo
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m merge
+  $ cd ..
+
+  $ hg convert --filemap filemap namedbranch namedbranch-hg2
+  initializing destination namedbranch-hg2 repository
+  scanning source...
+  sorting...
+  converting...
+  3 add
+  2 changea
+  1 changeb
+  0 merge
+  $ glog -R namedbranch
+  @    3:e1959de76e1b@foo "merge" files:
+  |\
+  | o  2:8097982d19fc@foo "changeb" files: b
+  | |
+  o |  1:1f60ea617824@default "changea" files: a
+  |/
+  o  0:0146e6129113@default "add" files: a b
+  
+  $ glog -R namedbranch-hg2
+  o    2:dcf314454667@foo "merge" files:
+  |\
+  | o  1:cda818e7219b@default "changea" files: a
+  |/
+  o  0:c334dc3be0da@default "add" files: a
+  
