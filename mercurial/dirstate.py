@@ -312,7 +312,8 @@ class dirstate(object):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
             _decdirs(self._dirs, f)
 
-    def _addpath(self, f, check=False):
+    def _addpath(self, f, state, mode, size, mtime, check=False):
+        assert state not in "?r"
         oldstate = self[f]
         if check or oldstate == "r":
             scmutil.checkfilename(f)
@@ -327,14 +328,14 @@ class dirstate(object):
                         _('file %r in dirstate clashes with %r') % (d, f))
         if oldstate in "?r" and "_dirs" in self.__dict__:
             _incdirs(self._dirs, f)
+        self._dirty = True
+        self._map[f] = (state, mode, size, mtime)
 
     def normal(self, f):
         '''Mark a file normal and clean.'''
-        self._dirty = True
-        self._addpath(f)
         s = os.lstat(self._join(f))
         mtime = int(s.st_mtime)
-        self._map[f] = ('n', s.st_mode, s.st_size, mtime)
+        self._addpath(f, 'n', s.st_mode, s.st_size, mtime)
         if f in self._copymap:
             del self._copymap[f]
         if mtime > self._lastnormaltime:
@@ -361,9 +362,7 @@ class dirstate(object):
                 return
             if entry[0] == 'm' or entry[0] == 'n' and entry[2] == -2:
                 return
-        self._dirty = True
-        self._addpath(f)
-        self._map[f] = ('n', 0, -1, -1)
+        self._addpath(f, 'n', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -372,17 +371,13 @@ class dirstate(object):
         if self._pl[1] == nullid:
             raise util.Abort(_("setting %r to other parent "
                                "only allowed in merges") % f)
-        self._dirty = True
-        self._addpath(f)
-        self._map[f] = ('n', 0, -2, -1)
+        self._addpath(f, 'n', 0, -2, -1)
         if f in self._copymap:
             del self._copymap[f]
 
     def add(self, f):
         '''Mark a file added.'''
-        self._dirty = True
-        self._addpath(f, True)
-        self._map[f] = ('a', 0, -1, -1)
+        self._addpath(f, 'a', 0, -1, -1, True)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -406,10 +401,8 @@ class dirstate(object):
         '''Mark a file merged.'''
         if self._pl[1] == nullid:
             return self.normallookup(f)
-        self._dirty = True
         s = os.lstat(self._join(f))
-        self._addpath(f)
-        self._map[f] = ('m', s.st_mode, s.st_size, int(s.st_mtime))
+        self._addpath(f, 'm', s.st_mode, s.st_size, int(s.st_mtime))
         if f in self._copymap:
             del self._copymap[f]
 
