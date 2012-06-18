@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" system-sh || exit 80
-
 Verify that pending changesets are seen by pretxn* hooks but not by other
 processes that access the destination repo while the hooks are running.
 
@@ -62,7 +60,6 @@ python hook
 external hook
 
   $ cat <<EOF > reject.sh
-  > #! /bin/sh
   > printf 'hook '; hg tip --template '{node}\\n'
   > # create the notify file so caller knows we're running
   > fpath=$d/notify
@@ -75,7 +72,6 @@ external hook
   > done
   > exit 1 # reject the changesets
   > EOF
-  $ chmod +x reject.sh
 
 create repos
 
@@ -107,7 +103,7 @@ test external hook
 
   $ cat <<EOF > parent/.hg/hgrc
   > [hooks]
-  > pretxnchangegroup = $d/reject.sh
+  > pretxnchangegroup = sh $d/reject.sh
   > EOF
 
   $ dotest
