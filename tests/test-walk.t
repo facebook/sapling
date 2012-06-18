@@ -14,7 +14,6 @@
   $ echo fennel > fennel
   $ echo fenugreek > fenugreek
   $ echo fiddlehead > fiddlehead
-  $ echo glob:glob > glob:glob
   $ hg addremove
   adding beans/black
   adding beans/borlotti
@@ -25,12 +24,10 @@
   adding fennel
   adding fenugreek
   adding fiddlehead
-  adding glob:glob
   adding mammals/Procyonidae/cacomistle
   adding mammals/Procyonidae/coatimundi
   adding mammals/Procyonidae/raccoon
   adding mammals/skunk
-  warning: filename contains ':', which is reserved on Windows: 'glob:glob'
   $ hg commit -m "commit #0"
 
   $ hg debugwalk
@@ -43,7 +40,6 @@
   f  fennel                          fennel
   f  fenugreek                       fenugreek
   f  fiddlehead                      fiddlehead
-  f  glob:glob                       glob:glob
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
@@ -58,7 +54,6 @@
   f  fennel                          fennel
   f  fenugreek                       fenugreek
   f  fiddlehead                      fiddlehead
-  f  glob:glob                       glob:glob
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
@@ -75,7 +70,6 @@
   f  fennel                          ../fennel
   f  fenugreek                       ../fenugreek
   f  fiddlehead                      ../fiddlehead
-  f  glob:glob                       ../glob:glob
   f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
@@ -84,7 +78,6 @@
   f  fennel                          ../fennel
   f  fenugreek                       ../fenugreek
   f  fiddlehead                      ../fiddlehead
-  f  glob:glob                       ../glob:glob
   f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
@@ -227,7 +220,20 @@ Test patterns:
   f  fennel      fennel
   f  fenugreek   fenugreek
   f  fiddlehead  fiddlehead
+#if eol-in-paths
+  $ echo glob:glob > glob:glob
+  $ hg addremove
+  adding glob:glob
+  warning: filename contains ':', which is reserved on Windows: 'glob:glob'
+  $ hg debugwalk glob:\*
+  f  fennel      fennel
+  f  fenugreek   fenugreek
+  f  fiddlehead  fiddlehead
   f  glob:glob   glob:glob
+  $ rm glob:glob
+  $ hg addremove
+  removing glob:glob
+#endif
 
   $ hg debugwalk 'glob:**e'
   f  beans/turtle                    beans/turtle
@@ -236,7 +242,6 @@ Test patterns:
   $ hg debugwalk 're:.*[kb]$'
   f  beans/black    beans/black
   f  fenugreek      fenugreek
-  f  glob:glob      glob:glob
   f  mammals/skunk  mammals/skunk
 
   $ hg debugwalk path:beans/black
