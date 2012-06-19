@@ -818,8 +818,6 @@ def hgsubrepoarchive(orig, repo, ui, archiver, prefix):
     lfcommands.cachelfiles(ui, repo._repo, ctx.node())
 
     def write(name, mode, islink, getdata):
-        if lfutil.isstandin(name):
-            return
         data = getdata()
 
         archiver.addfile(prefix + repo._path + '/' + name, mode, islink, data)
