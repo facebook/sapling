@@ -125,8 +125,8 @@ Note that add --large through a subrepo currently adds the file as a normal file
   ../archive_lf/sub1/.hgsub
   ../archive_lf/sub1/.hgsubstate
   ../archive_lf/sub1/sub1
-  ../archive_lf/sub2
-  ../archive_lf/sub2/large.bin
-  ../archive_lf/sub2/sub2
+  ../archive_lf/sub1/sub2
+  ../archive_lf/sub1/sub2/large.bin
+  ../archive_lf/sub1/sub2/sub2
 
   $ cd ..
