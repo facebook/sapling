@@ -1,8 +1,14 @@
   $ "$TESTDIR/hghave" serve || exit 80
 
+#if windows
+  $ hg clone http://localhost:$HGPORT/ copy
+  abort: * (glob)
+  [255]
+#else
   $ hg clone http://localhost:$HGPORT/ copy
   abort: error: Connection refused
   [255]
+#endif
 
   $ test -d copy
   [1]
