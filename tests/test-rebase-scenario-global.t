@@ -52,19 +52,19 @@ D onto H - simple rebase:
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    7: 'D'
-  |\
-  | o  6: 'H'
+  @  7: 'D'
+  |
+  o  6: 'H'
+  |
+  | o  5: 'G'
+  |/|
+  o |  4: 'F'
   | |
-  | | o  5: 'G'
-  | |/|
-  | o |  4: 'F'
-  | | |
-  | | o  3: 'E'
-  | |/
-  o |  2: 'C'
+  | o  3: 'E'
+  |/
+  | o  2: 'C'
   | |
-  o |  1: 'B'
+  | o  1: 'B'
   |/
   o  0: 'A'
   
@@ -80,19 +80,19 @@ D onto F - intermediate point:
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    7: 'D'
-  |\
-  | | o  6: 'H'
-  | |/
-  | | o  5: 'G'
-  | |/|
-  | o |  4: 'F'
-  | | |
-  | | o  3: 'E'
-  | |/
-  o |  2: 'C'
+  @  7: 'D'
+  |
+  | o  6: 'H'
+  |/
+  | o  5: 'G'
+  |/|
+  o |  4: 'F'
   | |
-  o |  1: 'B'
+  | o  3: 'E'
+  |/
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
   |/
   o  0: 'A'
   
@@ -303,9 +303,9 @@ Source phase greater or equal to destination phase: new changeset get the phase 
   $ hg log --template "{phase}\n" -r 9
   secret
 Source phase lower than destination phase: new changeset get the phase of destination:
-  $ hg rebase -s7 -d9
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/c9659aac0000-backup.hg (glob)
-  $ hg log --template "{phase}\n" -r 9
+  $ hg rebase -s8 -d9
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6d4f22462821-backup.hg
+  $ hg log --template "{phase}\n" -r 'rev(9)'
   secret
 
   $ cd ..
@@ -404,20 +404,20 @@ Base on have one descendant heads we ask for but common ancestor have two
   |
   o  10: 'G'
   |
-  o    9: 'D'
-  |\
-  | | o  8: 'I'
+  o  9: 'D'
+  |
+  | o  8: 'I'
+  | |
+  | o  7: 'H'
+  | |
+  | o  6: 'G'
+  | |
+  | | o  5: 'F'
   | | |
-  | | o  7: 'H'
-  | | |
-  | | o  6: 'G'
-  | | |
-  | | | o  5: 'F'
-  | | | |
-  | | | o  4: 'E'
-  | | |/
-  | | o  3: 'D'
+  | | o  4: 'E'
   | |/
+  | o  3: 'D'
+  | |
   | o  2: 'C'
   | |
   o |  1: 'B'
@@ -441,20 +441,20 @@ rebase subset
   |
   o  10: 'G'
   |
-  o    9: 'D'
-  |\
-  | | o  8: 'I'
+  o  9: 'D'
+  |
+  | o  8: 'I'
+  | |
+  | o  7: 'H'
+  | |
+  | o  6: 'G'
+  | |
+  | | o  5: 'F'
   | | |
-  | | o  7: 'H'
-  | | |
-  | | o  6: 'G'
-  | | |
-  | | | o  5: 'F'
-  | | | |
-  | | | o  4: 'E'
-  | | |/
-  | | o  3: 'D'
+  | | o  4: 'E'
   | |/
+  | o  3: 'D'
+  | |
   | o  2: 'C'
   | |
   o |  1: 'B'
@@ -482,20 +482,20 @@ rebase subset with multiple head
   | |
   | o  10: 'E'
   |/
-  o    9: 'D'
-  |\
-  | | o  8: 'I'
+  o  9: 'D'
+  |
+  | o  8: 'I'
+  | |
+  | o  7: 'H'
+  | |
+  | o  6: 'G'
+  | |
+  | | o  5: 'F'
   | | |
-  | | o  7: 'H'
-  | | |
-  | | o  6: 'G'
-  | | |
-  | | | o  5: 'F'
-  | | | |
-  | | | o  4: 'E'
-  | | |/
-  | | o  3: 'D'
+  | | o  4: 'E'
   | |/
+  | o  3: 'D'
+  | |
   | o  2: 'C'
   | |
   o |  1: 'B'

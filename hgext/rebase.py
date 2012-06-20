@@ -48,8 +48,7 @@ testedwith = 'internal'
      _('read collapse commit message from file'), _('FILE')),
     ('', 'keep', False, _('keep original changesets')),
     ('', 'keepbranches', False, _('keep original branch names')),
-    ('D', 'detach', False, _('force detaching of source from its original '
-                            'branch')),
+    ('D', 'detach', False, _('(DEPRECATED)')),
     ('t', 'tool', '', _('specify merge tool')),
     ('c', 'continue', False, _('continue an interrupted rebase')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
@@ -131,7 +130,6 @@ def rebase(ui, repo, **opts):
         extrafn = opts.get('extrafn') # internal, used by e.g. hgsubversion
         keepf = opts.get('keep', False)
         keepbranchesf = opts.get('keepbranches', False)
-        detachf = opts.get('detach', False)
         # keepopen is not meant for use on the command line, but by
         # other extensions
         keepopen = opts.get('keepopen', False)
@@ -146,8 +144,6 @@ def rebase(ui, repo, **opts):
             if collapsef:
                 raise util.Abort(
                     _('cannot use collapse with continue or abort'))
-            if detachf:
-                raise util.Abort(_('cannot use detach with continue or abort'))
             if srcf or basef or destf:
                 raise util.Abort(
                     _('abort and continue do not allow specifying revisions'))
@@ -168,12 +164,6 @@ def rebase(ui, repo, **opts):
             if revf and srcf:
                 raise util.Abort(_('cannot specify both a '
                                    'revision and a source'))
-            if detachf:
-                if not (srcf or revf):
-                    raise util.Abort(
-                        _('detach requires a revision to be specified'))
-                if basef:
-                    raise util.Abort(_('cannot specify a base with detach'))
 
             cmdutil.bailifchanged(repo)
 
@@ -215,7 +205,7 @@ def rebase(ui, repo, **opts):
                                  % repo[root],
                                  hint=_('see hg help phases for details'))
             else:
-                result = buildstate(repo, dest, rebaseset, detachf, collapsef)
+                result = buildstate(repo, dest, rebaseset, collapsef)
 
             if not result:
                 # Empty state built, nothing to rebase
@@ -592,13 +582,13 @@ def abort(repo, originalwd, target, state):
         repo.ui.warn(_('rebase aborted\n'))
         return 0
 
-def buildstate(repo, dest, rebaseset, detach, collapse):
+def buildstate(repo, dest, rebaseset, collapse):
     '''Define which revisions are going to be rebased and where
 
     repo: repo
     dest: context
     rebaseset: set of rev
-    detach: boolean'''
+    '''
 
     # This check isn't strictly necessary, since mq detects commits over an
     # applied patch. But it prevents messing up the working directory when
@@ -607,7 +597,6 @@ def buildstate(repo, dest, rebaseset, detach, collapse):
                             [s.node for s in repo.mq.applied]):
         raise util.Abort(_('cannot rebase onto an applied mq patch'))
 
-    detachset = set()
     roots = list(repo.set('roots(%ld)', rebaseset))
     if not roots:
         raise util.Abort(_('no matching revisions'))
@@ -623,14 +612,50 @@ def buildstate(repo, dest, rebaseset, detach, collapse):
         if not collapse and samebranch and root in dest.children():
             repo.ui.debug('source is a child of destination\n')
             return None
-        # rebase on ancestor, force detach
-        detach = True
-    if detach:
-        detachset = repo.revs('::%d - ::%d - %d', root, commonbase, root)
 
     repo.ui.debug('rebase onto %d starting from %d\n' % (dest, root))
     state = dict.fromkeys(rebaseset, nullrev)
-    state.update(dict.fromkeys(detachset, nullmerge))
+    # Rebase tries to turn <dest> into a parent of <root> while
+    # preserving the number of parents of rebased changesets:
+    #
+    # - A changeset with a single parent will always be rebased as a
+    #   changeset with a single parent.
+    #
+    # - A merge will be rebased as merge unless its parents are both
+    #   ancestors of <dest> or are themselves in the rebased set and
+    #   pruned while rebased.
+    #
+    # If one parent of <root> is an ancestor of <dest>, the rebased
+    # version of this parent will be <dest>. This is always true with
+    # --base option.
+    #
+    # Otherwise, we need to *replace* the original parents with
+    # <dest>. This "detaches" the rebased set from its former location
+    # and rebases it onto <dest>. Changes introduced by ancestors of
+    # <root> not common with <dest> (the detachset, marked as
+    # nullmerge) are "removed" from the rebased changesets.
+    #
+    # - If <root> has a single parent, set it to <dest>.
+    #
+    # - If <root> is a merge, we cannot decide which parent to
+    #   replace, the rebase operation is not clearly defined.
+    #
+    # The table below sums up this behavior:
+    #
+    # +--------------------+----------------------+-------------------------+
+    # |                    |     one parent       |  merge                  |
+    # +--------------------+----------------------+-------------------------+
+    # | parent in ::<dest> | new parent is <dest> | parents in ::<dest> are |
+    # |                    |                      | remapped to <dest>      |
+    # +--------------------+----------------------+-------------------------+
+    # | unrelated source   | new parent is <dest> | ambiguous, abort        |
+    # +--------------------+----------------------+-------------------------+
+    #
+    # The actual abort is handled by `defineparents`
+    if len(root.parents()) <= 1:
+        # (strict) ancestors of <root> not ancestors of <dest>
+        detachset = repo.revs('::%d - ::%d - %d', root, commonbase, root)
+        state.update(dict.fromkeys(detachset, nullmerge))
     return repo['.'].rev(), dest.rev(), state
 
 def pullrebase(orig, ui, repo, *args, **opts):

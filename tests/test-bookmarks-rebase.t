@@ -39,11 +39,10 @@ rebase
   saved backup bundle to $TESTTMP/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg log
-  changeset:   3:9163974d1cb5
+  changeset:   3:42e5ed2cdcf4
   bookmark:    two
   tag:         tip
   parent:      1:925d80f479bb
-  parent:      2:db815d6d32e6
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3

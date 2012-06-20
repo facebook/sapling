@@ -104,7 +104,7 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg rebase --detach -s 5 -d 8
+  $ hg rebase -s 5 -d 8
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches
@@ -165,7 +165,7 @@ Rebase head of branch3 (8) onto branch2 (6):
   |/
   o  0: 'A'
   
-  $ hg rebase --detach -s 8 -d 6
+  $ hg rebase -s 8 -d 6
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches
@@ -229,7 +229,7 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   |/
   o  0: 'A'
   
-  $ hg rebase --detach -s 7 -d 6
+  $ hg rebase -s 7 -d 6
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg branches

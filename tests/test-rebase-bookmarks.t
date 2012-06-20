@@ -54,7 +54,7 @@ Move only rebased bookmarks
   $ cd a1
   $ hg up -q Z
 
-  $ hg rebase --detach -s Y -d 3
+  $ hg rebase -s Y -d 3
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog 

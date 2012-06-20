@@ -230,7 +230,7 @@ Rebase and collapse - more than one external (fail):
 
 Rebase and collapse - E onto H:
 
-  $ hg rebase -s 4 --collapse
+  $ hg rebase -s 4 --collapse # root (4) is not a merge
   saved backup bundle to $TESTTMP/b1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -250,7 +250,6 @@ Rebase and collapse - E onto H:
   
   $ hg manifest
   A
-  B
   C
   D
   E
@@ -340,7 +339,7 @@ Rebase and collapse - E onto I:
   $ hg clone -q -u . c c1
   $ cd c1
 
-  $ hg rebase -s 4 --collapse
+  $ hg rebase -s 4 --collapse # root (4) is not a merge
   merging E
   saved backup bundle to $TESTTMP/c1/.hg/strip-backup/*-backup.hg (glob)
 
@@ -362,7 +361,6 @@ Rebase and collapse - E onto I:
   
   $ hg manifest
   A
-  B
   C
   D
   E
