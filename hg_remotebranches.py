@@ -195,6 +195,15 @@ def pushed(repo, subset, x):
     args = revset.getargs(x, 0, 0, "pushed takes no arguments")
     return upstream_revs(lambda x: True, repo, subset, x)
 
+def remotebranchesrevset(repo, subset, x):
+    """``remotebranches()``
+    All remote branches heads.
+    """
+    args = revset.getargs(x, 0, 0, "remotebranches takes no arguments")
+    remoterevs = set(repo[n].rev() for n in repo._remotebranches.itervalues())
+    return [r for r in subset if r in remoterevs]
+
 if revset is not None:
     revset.symbols.update({'upstream': upstream,
-                           'pushed': pushed})
+                           'pushed': pushed,
+                           'remotebranches': remotebranchesrevset})

@@ -198,3 +198,11 @@ but configured, it'll do the expected thing:
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     add d
   | |
+
+Test remotebranches revset
+
+  $ hg log -r 'remotebranches()' --template '{rev}:{node|short} {tags}\n'
+  1:7c3bad9141dc alpha/default
+  2:95cb4ab9fe1d alpha/stable
+  3:78f83396d79e beta/default
+  4:8948da77173b beta/stable

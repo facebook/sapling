@@ -33,10 +33,12 @@ included with Mercurial 1.4 and later. Other extensions which perform varying
 kinds of manipulation on the repository path may not function as expected.
 
 When revsets are available (Mercurial 1.7 and later), remotebranches
-makes two new revsets available: ``pushed()`` and ``upstream()``. The
-``pushed()`` revset returns all revisions that are have been pushed to
-any repository tracked by remotebranches. The ``upstream()`` set is
-those revisions which are in a repository whose path is listed in the
-``upstream`` field of the ``[remotebranches]`` configuration
-section. If there is no ``remotebranches.upstream`` setting, it
-defaults to behaving identically to ``pushed()``.
+makes three new revsets available: ``pushed()``, ``upstream()`` and
+``remotebranches()``. The ``pushed()`` revset returns all revisions
+that are have been pushed to any repository tracked by
+remotebranches. The ``upstream()`` set is those revisions which are in
+a repository whose path is listed in the ``upstream`` field of the
+``[remotebranches]`` configuration section. If there is no
+``remotebranches.upstream`` setting, it defaults to behaving
+identically to ``pushed()``. The ``remotebranches()`` revset simply
+returns all remote branches head changesets.
