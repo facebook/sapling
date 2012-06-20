@@ -271,6 +271,9 @@ results here)
 
   $ cd ..
 
+hide outer repo
+  $ hg init
+
 Test remote paths with spaces (issue2983):
 
   $ hg init --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"

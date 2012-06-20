@@ -14,11 +14,15 @@ skip if we can't import elementtree
   >     exit 80
   > fi
 
+#if no-outer-repo
+
 try converting darcs1 repository
 
   $ hg clone -q "$TESTDIR/bundles/darcs1.hg" darcs
   $ hg convert -s darcs darcs/darcs1 2>&1 | grep darcs-1.0
   darcs-1.0 repository format is unsupported, please upgrade
+
+#endif
 
 initialize darcs repo
 

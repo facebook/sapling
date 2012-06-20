@@ -1,5 +1,8 @@
   $ "$TESTDIR/hghave" serve || exit 80
 
+hide outer repo
+  $ hg init
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
   $ mkdir webdir

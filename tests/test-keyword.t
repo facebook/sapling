@@ -11,6 +11,9 @@
   > interactive = true
   > EOF
 
+hide outer repo
+  $ hg init
+
 Run kwdemo before [keyword] files are set up
 as it would succeed without uisetup otherwise
 

@@ -109,8 +109,10 @@ invalid options
 
 optional repository
 
+#if no-outer-repo
   $ hg optionalrepo
   init
+#endif
   $ cd alias
   $ cat > .hg/hgrc <<EOF
   > [alias]

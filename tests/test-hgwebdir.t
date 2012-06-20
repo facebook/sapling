@@ -1,5 +1,10 @@
   $ "$TESTDIR/hghave" serve || exit 80
 
+hide outer repo and work in dir without '.hg'
+  $ hg init
+  $ mkdir dir
+  $ cd dir
+
 Tests some basic hgwebdir functionality. Tests setting up paths and
 collection, different forms of 404s and the subdirectory support.
 
@@ -59,6 +64,8 @@ create repository without .hg/store
   $ rm -R nostore/.hg/store
   $ root=`pwd`
   $ cd ..
+
+serve
   $ cat > paths.conf <<EOF
   > [paths]
   > a=$root/a

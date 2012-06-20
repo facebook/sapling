@@ -388,6 +388,9 @@ Outgoing -R does-not-exist.hg vs partial2 in partial
   [255]
   $ cd ..
 
+hide outer repo
+  $ hg init
+
 Direct clone from bundle (all-history)
 
   $ hg clone full.hg full-clone

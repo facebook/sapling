@@ -29,6 +29,9 @@ Cleaning both repositories, just as a clone -U
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ rm -rf main/sub
 
+hide outer repo
+  $ hg init
+
 Serving them both using hgweb
 
   $ printf '[paths]\n/main = main\nsub = sub\n' > webdir.conf

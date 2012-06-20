@@ -143,9 +143,9 @@ convert full repository (issue1649)
   sorting...
   converting...
   updating tags
-  $ hg cat -r tip srcfull-hg/src/a
+  $ hg cat -r tip --cwd srcfull-hg src/a
   a
-  $ hg cat -r tip srcfull-hg/src/b/c
+  $ hg cat -r tip --cwd srcfull-hg src/b/c
   c
   c
 
