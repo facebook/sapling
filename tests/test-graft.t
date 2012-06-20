@@ -54,6 +54,18 @@ Can't graft ancestor:
   skipping ancestor revision 2
   [255]
 
+Specify revisions with -r:
+
+  $ hg graft -r 1 -r 2
+  skipping ancestor revision 1
+  skipping ancestor revision 2
+  [255]
+
+  $ hg graft -r 1 2
+  skipping ancestor revision 2
+  skipping ancestor revision 1
+  [255]
+
 Can't graft with dirty wd:
 
   $ hg up -q 0
@@ -176,6 +188,10 @@ Fix up:
 Continue with a revision should fail:
 
   $ hg graft -c 6
+  abort: can't specify --continue and revisions
+  [255]
+
+  $ hg graft -c -r 6
   abort: can't specify --continue and revisions
   [255]
 

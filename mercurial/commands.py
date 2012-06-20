@@ -2600,7 +2600,8 @@ def forget(ui, repo, *pats, **opts):
 
 @command(
     'graft',
-    [('c', 'continue', False, _('resume interrupted graft')),
+    [('r', 'rev', [], _('revisions to graft'), _('REV')),
+     ('c', 'continue', False, _('resume interrupted graft')),
      ('e', 'edit', False, _('invoke editor on commit messages')),
      ('', 'log', None, _('append graft info to log message')),
      ('D', 'currentdate', False,
@@ -2608,7 +2609,7 @@ def forget(ui, repo, *pats, **opts):
      ('U', 'currentuser', False,
       _('record the current user as committer'), _('DATE'))]
     + commitopts2 + mergetoolopts  + dryrunopts,
-    _('[OPTION]... REV...'))
+    _('[OPTION]... [-r] REV...'))
 def graft(ui, repo, *revs, **opts):
     '''copy changes from other branches onto the current branch
 
@@ -2657,6 +2658,9 @@ def graft(ui, repo, *revs, **opts):
 
     Returns 0 on successful completion.
     '''
+
+    revs = list(revs)
+    revs.extend(opts['rev'])
 
     if not opts.get('user') and opts.get('currentuser'):
         opts['user'] = ui.username()
