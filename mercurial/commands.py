@@ -2492,7 +2492,7 @@ def diff(ui, repo, *pats, **opts):
     ('', 'switch-parent', None, _('diff against the second parent')),
     ('r', 'rev', [], _('revisions to export'), _('REV')),
     ] + diffopts,
-    _('[OPTION]... [-o OUTFILESPEC] REV...'))
+    _('[OPTION]... [-o OUTFILESPEC] [-r] REV...'))
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
 
