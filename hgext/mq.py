@@ -2098,7 +2098,7 @@ def unapplied(ui, repo, patch=None, **opts):
            _('place existing revisions under mq control'), _('REV')),
           ('g', 'git', None, _('use git extended diff format')),
           ('P', 'push', None, _('qpush after importing'))],
-         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE...'))
+         _('hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... [FILE]...'))
 def qimport(ui, repo, *filename, **opts):
     """import a patch or existing changeset
 
