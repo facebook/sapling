@@ -102,7 +102,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2012-06-15 19:14+0200\n"
-"PO-Revision-Date: 2012-06-18 19:59+0100\n"
+"PO-Revision-Date: 2012-06-19 16:07+0100\n"
 "Last-Translator: Martin Schröder <martinschroeder@vcp-sh.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -8027,8 +8027,8 @@ msgid ""
 "      e - edit this change manually"
 msgstr ""
 "      j - Diese Änderung übernehmen\n"
-"      n - Diese Änderung überspringen      b - Diese Änderung manuell "
-"bearbeiten"
+"      n - Diese Änderung überspringen\n"
+"      b - Diese Änderung manuell bearbeiten"
 
 msgid ""
 "      s - skip remaining changes to this file\n"
@@ -13923,7 +13923,7 @@ msgstr "** Python %s\n"
 
 #, python-format
 msgid "** Mercurial Distributed SCM (version %s)\n"
-msgstr "** Mercurial Distributed SCM (version %s)\n"
+msgstr "** Mercurial Distributed SCM (Version %s)\n"
 
 #, python-format
 msgid "** Extensions loaded: %s\n"
