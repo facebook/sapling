@@ -1,9 +1,5 @@
 test command parsing and dispatch
 
-  $ "$TESTDIR/hghave" no-outer-repo || exit 80
-
-  $ dir=`pwd`
-
   $ hg init a
   $ cd a
 
@@ -48,6 +44,10 @@ Missing arg:
   a: no such file in rev 000000000000
   [1]
 
+  $ cd "$TESTTMP"
+
+#if no-outer-repo
+
 No repo:
 
   $ cd $dir
@@ -55,3 +55,4 @@ No repo:
   abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
 
+#endif

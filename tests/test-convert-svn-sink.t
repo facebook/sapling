@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" svn13 no-outer-repo || exit 80
+  $ "$TESTDIR/hghave" svn13 || exit 80
 
   $ fixpath()
   > {
@@ -356,7 +356,7 @@ Branchy history
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg --cwd b revert -r 2 b
-  $ hg resolve -m b
+  $ hg --cwd b resolve -m b
   $ hg --cwd b ci -d '5 0' -m 'merge'
 
 Expect 4 changes

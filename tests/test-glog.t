@@ -69,8 +69,6 @@ o /  (1) collapse
 o  (0) root
 
 
-  $ "$TESTDIR/hghave" no-outer-repo || exit 80
-
   $ commit()
   > {
   >   rev=$1
@@ -1136,8 +1134,11 @@ File glog per revset (only merges):
 Empty revision range - display nothing:
   $ hg glog -r 1..0
 
-From outer space:
   $ cd ..
+
+#if no-outer-repo
+
+From outer space:
   $ hg glog -l1 repo
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
@@ -1155,6 +1156,8 @@ From outer space:
   |  summary:     (34) head
   |
   $ hg glog -l1 repo/missing
+
+#endif
 
 File log with revs != cset revs:
   $ hg init flog
