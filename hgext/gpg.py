@@ -164,7 +164,7 @@ def sigs(ui, repo):
             r = "%5d:%s" % (rev, hgnode.hex(repo.changelog.node(rev)))
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
 
-@command("sigcheck", [], _('hg sigcheck REVISION'))
+@command("sigcheck", [], _('hg sigcheck REV'))
 def check(ui, repo, rev):
     """verify all the signatures there may be for a particular revision"""
     mygpg = newgpg(ui)
@@ -206,7 +206,7 @@ def keystr(ui, key):
           ('m', 'message', '',
            _('commit message'), _('TEXT')),
          ] + commands.commitopts2,
-         _('hg sign [OPTION]... [REVISION]...'))
+         _('hg sign [OPTION]... [REV]...'))
 def sign(ui, repo, *revs, **opts):
     """add a signature for the current or given revision
 

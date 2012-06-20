@@ -2608,7 +2608,7 @@ def forget(ui, repo, *pats, **opts):
      ('U', 'currentuser', False,
       _('record the current user as committer'), _('DATE'))]
     + commitopts2 + mergetoolopts  + dryrunopts,
-    _('[OPTION]... REVISION...'))
+    _('[OPTION]... REV...'))
 def graft(ui, repo, *revs, **opts):
     '''copy changes from other branches onto the current branch
 

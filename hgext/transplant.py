@@ -535,7 +535,7 @@ def transplant(ui, repo, *revs, **opts):
     transplanted, otherwise you will be prompted to select the
     changesets you want.
 
-    :hg:`transplant --branch REVISION --all` will transplant the
+    :hg:`transplant --branch REV --all` will transplant the
     selected branch (up to the named revision) onto your current
     working directory.
 
