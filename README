@@ -42,3 +42,7 @@ a repository whose path is listed in the ``upstream`` field of the
 ``remotebranches.upstream`` setting, it defaults to behaving
 identically to ``pushed()``. The ``remotebranches()`` revset simply
 returns all remote branches head changesets.
+
+When template keywords can be registered (Mercurial 1.5 and later),
+remotebranches adds a ``remotebranches`` keyword returning a space
+separated list of all names of remote branches heads on a changeset.

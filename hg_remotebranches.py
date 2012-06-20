@@ -15,6 +15,13 @@ try:
 except ImportError:
    revset = None
 
+try:
+    from mercurial import templatekw
+    # force demandimport to load templatekw
+    templatekw.keywords
+except ImportError:
+    templatekw = None
+
 from hgext import schemes
 
 def reposetup(ui, repo):
@@ -207,3 +214,19 @@ if revset is not None:
     revset.symbols.update({'upstream': upstream,
                            'pushed': pushed,
                            'remotebranches': remotebranchesrevset})
+
+def remotebrancheskw(**args):
+    """:remotebranches: List of strings. Any remote branch associated
+    with the changeset.
+    """
+    repo, ctx = args['repo'], args['ctx']
+    remotenodes = {}
+    for name, node in repo._remotebranches.iteritems():
+        remotenodes.setdefault(node, []).append(name)
+    if ctx.node() in remotenodes:
+        names = sorted(remotenodes[ctx.node()])
+        return templatekw.showlist('remotebranch', names,
+                                   plural='remotebranches', **args)
+
+if templatekw is not None:
+    templatekw.keywords['remotebranches'] = remotebrancheskw

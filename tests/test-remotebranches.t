@@ -199,9 +199,10 @@ but configured, it'll do the expected thing:
   | |  summary:     add d
   | |
 
-Test remotebranches revset
+Test remotebranches revset and keyword
 
-  $ hg log -r 'remotebranches()' --template '{rev}:{node|short} {tags}\n'
+  $ hg log -r 'remotebranches()' \
+  >   --template '{rev}:{node|short} {remotebranches}\n'
   1:7c3bad9141dc alpha/default
   2:95cb4ab9fe1d alpha/stable
   3:78f83396d79e beta/default
