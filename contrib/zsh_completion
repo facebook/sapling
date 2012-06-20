@@ -514,6 +514,7 @@ _hg_cmd_commit() {
   '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt' \
   '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
   '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
+  '--amend[amend the parent of the working dir]' \
   '*:file:_hg_files'
 }
 
@@ -549,6 +550,20 @@ _hg_cmd_export() {
   _arguments -s -w : $_hg_global_opts $_hg_diff_opts \
   '(--outout -o)'{-o+,--output}'[print output to file with formatted name]:filespec:' \
   '--switch-parent[diff against the second parent]' \
+  '*:revision:_hg_labels'
+}
+
+_hg_cmd_graft() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--continue -c)'{-c,--continue}'[resume interrupted graft]' \
+  '(--edit -e)'{-e,--edit}'[invoke editor on commit messages]' \
+  '--log[append graft info to log message]' \
+  '(--currentdate -D)'{-D,--currentdate}'[record the current date as commit date]' \
+  '(--currentuser -U)'{-U,--currentuser}'[record the current user as committer]' \
+  '(--date -d)'{-d,--date}'[record the specified date as commit date]' \
+  '(--user -u)'{-u,--user}'[record the specified user as committer]' \
+  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
+  '(--dry-run -n)'{-n,--dry-run}'[do not perform actions, just print output]' \
   '*:revision:_hg_labels'
 }
 
@@ -590,6 +605,7 @@ _hg_cmd_import() {
   '(--strip -p)'{-p+,--strip}'[directory strip option for patch (default: 1)]:count:' \
   '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
   '(--force -f)'{-f,--force}'[skip check for outstanding uncommitted changes]' \
+  '--bypass[apply patch without touching the working directory]' \
   '*:patch:_files'
 }
 
@@ -635,6 +651,7 @@ _hg_cmd_log() {
 
 _hg_cmd_manifest() {
   _arguments -s -w : $_hg_global_opts \
+  '--all[list files from all revisions]' \
   ':revision:_hg_labels'
 }
 
@@ -643,6 +660,7 @@ _hg_cmd_merge() {
   '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
   '(--rev -r 1)'{-r,--rev}'[revision to merge]:revision:_hg_mergerevs' \
   '(--preview -P)'{-P,--preview}'[review revisions to merge (no merge is performed)]' \
+  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
   ':revision:_hg_mergerevs'
 }
 
@@ -665,6 +683,16 @@ _hg_cmd_parents() {
 _hg_cmd_paths() {
   _arguments -s -w : $_hg_global_opts \
   ':path:_hg_paths'
+}
+
+_hg_cmd_phase() {
+  _arguments -s -w : $_hg_global_opts \
+  '(--public -p)'{-p,--public}'[set changeset phase to public]' \
+  '(--draft -d)'{-d,--draft}'[set changeset phase to draft]' \
+  '(--secret -s)'{-s,--secret}'[set changeset phase to secret]' \
+  '(--force -f)'{-f,--force}'[allow to move boundary backward]' \
+  '(--rev -r)'{-r+,--rev}'[target revision]:revision:_hg_labels' \
+  ':revision:_hg_labels'
 }
 
 _hg_cmd_pull() {
@@ -720,7 +748,7 @@ _hg_cmd_revert() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
   '(--all -a :)'{-a,--all}'[revert all changes when no arguments given]' \
   '(--rev -r)'{-r+,--rev}'[revision to revert to]:revision:_hg_labels' \
-  '--no-backup[do not save backup copies of files]' \
+  '(--no-backup -C)'{-C,--no-backup}'[do not save backup copies of files]' \
   '*:file:->diff_files'
 
   if [[ $state == 'diff_files' ]]
@@ -949,6 +977,7 @@ _hg_cmd_qpush() {
   '(--merge -m)'{-m+,--merge}'[merge from another queue]:' \
   '(--name -n)'{-n+,--name}'[merge queue name]:' \
   '(--force -f)'{-f,--force}'[apply if the patch has rejects]' \
+  '(--exact -e)'{-e,--exact}'[apply the target patch to its recorded parent]' \
   '--move[reorder patch series and apply only the patch]' \
   ':patch:_hg_qunapplied'
 }
@@ -1001,6 +1030,7 @@ _hg_cmd_email() {
   _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--git -g)'{-g,--git}'[use git extended diff format]' \
   '--plain[omit hg patch header]' \
+  '--body[send patches as inline message text (default)]' \
   '(--outgoing -o)'{-o,--outgoing}'[send changes not found in the target repository]' \
   '(--bundle -b)'{-b,--bundle}'[send changes not in target as a binary bundle]' \
   '--bundlename[name of the bundle attachment file (default: bundle)]:' \
@@ -1024,6 +1054,24 @@ _hg_cmd_email() {
   '*--flag[flags to add in subject prefixes]:flag:' \
   '*'{-t,--to}'[email addresses of recipients]:email:' \
   ':revision:_hg_revrange'
+}
+
+# Rebase
+_hg_cmd_rebase() {
+  _arguments -s -w : $_hg_global_opts \
+  '*'{-r,--rev}'[rebase these revisions]:revision:_hg_revrange' \
+  '(--source -s)'{-s,--source}'[rebase from the specified changeset]:revision:_hg_labels' \
+  '(--base -b)'{-b,--base}'[rebase from the base of the specified changeset]:revision:_hg_labels' \
+  '(--dest -d)'{-d,--dest}'[rebase onto the specified changeset]' \
+  '--collapse[collapse the rebased changeset]' \
+  '(--message -m)'{-m+,--message}'[use <text> as collapse commit message]:text:' \
+  '(--edit -e)'{-e,--edit}'[invoke editor on commit messages]' \
+  '(--logfile -l)'{-l+,--logfile}'[read collapse commit message from <file>]:log file:_files -g \*.txt' \
+  '--keep[keep original changeset]' \
+  '--keepbranches[keep original branch name]' \
+  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
+  '(--continue -c)'{-c,--continue}'[continue an interrupted rebase]' \
+  '(--abort -a)'{-a,--abort}'[abort an interrupted rebase]' \
 }
 
 _hg "$@"
