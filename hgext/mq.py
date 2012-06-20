@@ -2901,7 +2901,7 @@ def save(ui, repo, **opts):
           ('k', 'keep', None, _("do not modify working copy during strip")),
           ('B', 'bookmark', '', _("remove revs only reachable from given"
                                   " bookmark"))],
-          _('hg strip [-k] [-f] [-n] [-B bookmark] REV...'))
+          _('hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...'))
 def strip(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
