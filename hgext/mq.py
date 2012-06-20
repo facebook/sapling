@@ -1885,6 +1885,8 @@ class queue(object):
                                    'files'))
             rev = scmutil.revrange(repo, rev)
             rev.sort(reverse=True)
+        elif not files:
+            raise util.Abort(_('no files or revisions specified'))
         if (len(files) > 1 or len(rev) > 1) and patchname:
             raise util.Abort(_('option "-n" not valid when importing multiple '
                                'patches'))
