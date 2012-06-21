@@ -12,91 +12,10 @@
 #
 # Übersetzungshilfen
 # ==================
-#
-# Der Benutzer sollte mit formeller Anrede angesprochen werden. Je nach
-# Fall kann aber auch eine unpersönliche Anrede ("man") verwendet werden.
-#
-# Die Übersetzung der Handbuchseiten hat zwei Ziele:
-#  a) Die ohnehin komplexen Zusammenhänge der Funktion von Mercurial für
-#     Benutzer, die im Englischen wenig versiert sind, verständlicher zu
-#     erklären.
-#  b) Basisbegriffe auf Deutsch zu schaffen, damit nicht jeder in
-#     der Kommunikation eigene erfinden oder eine D-E-Mischung nutzen muss.
-#
-# Für a) ist es wichtig, dass eine gute, erklärende Übersetzung mit deutscher
-# Grammatik verwendet wird und keine direkte Wort-für-Wort Übersetzung, die
-# auch ein Programm hinkriegt. Eine Übersetzung nur zum Zwecke der Füllung
-# von msgstr Werten ist letzlich nicht hilfreich.
-#
-# b) ist besonders schwierig, da es viele Begriffe im Deutschen noch nicht gibt
-# und Neudefinitionen am Anfang sehr ungewöhnlich und gedrückt klingen.  Wer
-# jedoch die englischen Begriffe bevorzugt, bzw. gegen eine Definition von
-# deutschen Äquivalenten ist, muss die Übersetzung ja nicht einschalten.
-# Englische Begriffe müssen zuweilen einbezogen werden, sollten dann aber als
-# eingebundenes Fremdwort und nicht anstelle eines deutschen Substantivs oder
-# Verbs verwendet werden:
-#
-# Gut:
-#   Synchronisieren Sie ihr Projektarchiv (mit pull).
-#   Im Verlaufe einer Zusammenführung mit :hg:`merge` wird...
-#   Falls es während der 'push'-Operation zu Verbindungsfehlern kommt...
-#
-# Schlecht:
-#   Mergen Sie zunächst die Branche.
-#   Falls der Tag im Filelog nicht gecheckt werden kann...
-#
-# Übersetzungen:
-#  backup        Sicherheitskopie (gewinnt in google-fight gegen Sicherungsk.)
-#  branch        Zweig/Verzweigung/Entwicklungszweig
-#  bookmark      Lesezeichen
-#  bundle        Bündel
-#  change        Änderung
-#  changeset     Änderungssatz
-#  commit        Commit/Übernahme
-#  commit (v)    übernehmen
-#  comm. message Versionsmeldung
-#  committer     Autor
-#  corrupt       beschädigt (nicht korrumpiert)
-#  default       Voreinstellung, Vorgabe- (siehe www.dwds.de/?qu=standard&view=1)
-#  deprecated    veraltet
-#  force (v)     erzwingen
-#  history       Historie
-#  merge         zusammenführen
-#  notation      Schreibweise
-#  queue         Reihe
-#  repository    (Projekt)archiv
-#  manage/track  versionieren
-#  pull          abrufen
-#  push          übertragen
-#  rebase        Verschiebung (Pfropfung)
-#  section       Abschnitt (nicht Sektion)
-#  tag           Etikett    (svn verwendet "Marke")
-#
-# Nicht übersetzt bleiben
-#  Hook  (m) mangels guter Übersetzung (Einhängeaktion?)
-#  Token (n) Fachbegriff auch im Deutschen
-#  Parser(m) Fachbegriff auch im Deutschen
-#  Patch (m) Bezieht sich auf ein sehr altes Programm mit demselben Namen und
-#           Dateien in dessen Syntax/Format
-#           Die ursprüngliche Bedeutung des englischen Wortes (Flicken) trifft
-#           heute eh nicht mehr zu.
-#  Diff  (n) Siehe patch, ausserdem Abkürzung eines auch deutschen Worts
-#  glob  (n)
-#  dirstate Nur für Entwickler interessant. Im sonstigen Handbuch umschreiben!
-#  .. note:: Dies ist spezielle reStructured-Syntax und darf nicht geändert
-#           werden
-#  Pager (m) mangels guter Übersetzung (Theoretisch "Verseitener" :)
-#
-# Weiteres:
-#  graft/transplant: Da graft eine Reimplementierung von transplant als
-#         Kernfunktion ist, kann in beiden Fällen "Transplantation" als
-#         Übersetzung verwendet werden.
-#  keyword ist manchmal ein Schlüsselwort, manchmal ein Platzhalter.
-#         Übersetzungen müssen zum Kontext passen.
-#  commit: wird manchmal anstelle von revision verwendet. In solchen Fällen
-#         kann die Übersetzung "Revision" lauten.
-#  largefile: Binärriese (neues Wort, vielleicht fällt jemandem ein besseres
-#             ein. Dies ist zur Zeit konsequent verwendet)
+# Die Übersetzungshilfen wurden in das Wiki verlegt
+# und sind auf jeden Fall einen Blick wert!
+# http://mercurial.selenic.com/wiki/GermanTranslation
+# 
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
