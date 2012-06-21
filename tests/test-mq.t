@@ -211,6 +211,8 @@ try the --mq option on a command provided by an extension
 
   $ cd ..
 
+#if no-outer-repo
+
 init --mq without repo
 
   $ mkdir f
@@ -219,6 +221,8 @@ init --mq without repo
   abort: there is no Mercurial repository here (.hg not found)
   [255]
   $ cd ..
+
+#endif
 
 init --mq with repo path
 

@@ -23,7 +23,7 @@ set up hgweb
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rev/0'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rev/0'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -153,7 +153,7 @@ revision
 
 raw revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/raw-rev/0'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   
@@ -178,7 +178,7 @@ raw revision
 
 diff removed file
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/b'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/b'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -283,7 +283,7 @@ set up hgweb with git diffs
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rev/0'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rev/0'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -415,7 +415,7 @@ revision
 
 revision
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/raw-rev/0'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   
@@ -442,7 +442,7 @@ revision
 
 diff removed file
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/diff/tip/a'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'diff/tip/a'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -572,7 +572,7 @@ raw revision with diff block numbers
   > EOF
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/raw-rev/0'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-rev/0'
   200 Script output follows
   
   Block: 1

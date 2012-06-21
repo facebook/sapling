@@ -206,7 +206,7 @@ Make sure bundlerepo doesn't leak tempfiles (issue2491)
 Pull ../full.hg into empty (with hook)
 
   $ echo "[hooks]" >> .hg/hgrc
-  $ echo "changegroup = python \"$TESTDIR\"/printenv.py changegroup" >> .hg/hgrc
+  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
 
 doesn't work (yet ?)
 
@@ -387,6 +387,9 @@ Outgoing -R does-not-exist.hg vs partial2 in partial
   abort: *../does-not-exist.hg* (glob)
   [255]
   $ cd ..
+
+hide outer repo
+  $ hg init
 
 Direct clone from bundle (all-history)
 

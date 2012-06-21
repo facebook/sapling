@@ -2,6 +2,8 @@
 
 make git commits repeatable
 
+  $ echo "[core]" >> $HOME/.gitconfig
+  $ echo "autocrlf = false" >> $HOME/.gitconfig
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
   $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
   $ GIT_AUTHOR_DATE='1234567891 +0000'; export GIT_AUTHOR_DATE
@@ -133,7 +135,7 @@ clone root separately, make different local change
 user b push changes
 
   $ hg push 2>/dev/null
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   pushing branch testing of subrepo s
   searching for changes
   adding changesets
@@ -145,7 +147,7 @@ user a pulls, merges, commits
 
   $ cd ../ta
   $ hg pull
-  pulling from $TESTTMP/t
+  pulling from $TESTTMP/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -173,7 +175,7 @@ user a pulls, merges, commits
    source   ../gitroot
    revision f47b465e1bce645dbf37232a00574aa1546ca8d3
   $ hg push 2>/dev/null
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   pushing branch testing of subrepo s
   searching for changes
   adding changesets
@@ -205,7 +207,7 @@ make and push changes to hg without updating the subrepo
   $ echo aa >> a
   $ hg commit -m aa
   $ hg push
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -292,7 +294,7 @@ nested commit
   M inner/s/f
   $ hg commit --subrepos -m nested
   committing subrepository inner
-  committing subrepository inner/s
+  committing subrepository inner/s (glob)
 
 nested archive
 
@@ -509,8 +511,14 @@ Test subrepo already at intended revision:
 
 Test forgetting files, not implemented in git subrepo, used to
 traceback
+#if no-windows
   $ hg forget 'notafile*'
   notafile*: No such file or directory
   [1]
+#else
+  $ hg forget 'notafile'
+  notafile: * (glob)
+  [1]
+#endif
 
   $ cd ..

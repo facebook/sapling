@@ -99,7 +99,7 @@ hg serve shared clone
 
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/raw-file/'
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'raw-file/'
   200 Script output follows
   
   

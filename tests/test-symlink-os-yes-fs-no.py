@@ -8,8 +8,11 @@ BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
 if not getattr(os, "symlink", False):
     sys.exit(80) # SKIPPED_STATUS defined in run-tests.py
 
-# clone with symlink support
 u = ui.ui()
+# hide outer repo
+hg.peer(u, {}, '.', create=True)
+
+# clone with symlink support
 hg.clone(u, {}, BUNDLEPATH, 'test0')
 
 repo = hg.repository(u, 'test0')

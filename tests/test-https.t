@@ -104,9 +104,15 @@ cacert not found
 
 Test server address cannot be reused
 
+#if windows
+  $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
+  abort: cannot start server at ':$HGPORT': (glob)
+  [255]
+#else
   $ hg serve -p $HGPORT --certificate=$PRIV 2>&1
   abort: cannot start server at ':$HGPORT': Address already in use
   [255]
+#endif
   $ cd ..
 
 clone via pull
@@ -137,7 +143,7 @@ pull without cacert
 
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo "changegroup = python '$TESTDIR'/printenv.py changegroup" >> .hg/hgrc
+  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
   $ hg pull
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
   pulling from https://localhost:$HGPORT/

@@ -239,7 +239,9 @@ def has_pygments():
         return False
 
 def has_outer_repo():
-    return matchoutput('hg root 2>&1', r'')
+    # failing for other reasons than 'no repo' imply that there is a repo
+    return not matchoutput('hg root 2>&1',
+                           r'abort: no repository found', True)
 
 def has_ssl():
     try:

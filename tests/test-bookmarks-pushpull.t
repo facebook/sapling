@@ -121,7 +121,7 @@ divergent bookmarks
      foobar                    1:9b140be10808
 
   $ hg pull --config paths.foo=../a foo
-  pulling from $TESTTMP/a
+  pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -250,7 +250,5 @@ hgweb
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
      foobar                    1:9b140be10808
-
-  $ kill `cat ../hg.pid`
 
   $ cd ..

@@ -558,10 +558,11 @@ def restorestatus(repo):
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
     dstates = [s for s in state.values() if s != nullrev]
-    if [d for d in dstates if not repo[d].mutable()]:
-        repo.ui.warn(_("warning: immutable rebased changeset detected, "
-                       "can't abort\n"))
-        return -1
+    immutable = [d for d in dstates if not repo[d].mutable()]
+    if immutable:
+        raise util.Abort(_("can't abort rebase due to immutable changesets %s")
+                         % ', '.join(str(repo[r]) for r in immutable),
+                         hint=_('see hg help phases for details'))
 
     descendants = set()
     if dstates:

@@ -1,7 +1,5 @@
 Test basic extension support
 
-  $ "$TESTDIR/hghave" no-outer-repo || exit 80
-
   $ cat > foobar.py <<EOF
   > import os
   > from mercurial import commands
@@ -131,6 +129,9 @@ Check hgweb's load order:
   $ echo 'bar = !' >> $HGRCPATH
 
   $ cd ..
+
+hide outer repo
+  $ hg init
 
   $ cat > empty.py <<EOF
   > '''empty cmdtable

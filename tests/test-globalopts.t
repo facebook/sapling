@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" no-outer-repo || exit 80
-
   $ hg init a
   $ cd a
   $ echo a > a
@@ -77,6 +75,8 @@ Testing -R/--repository:
   8580ff50825a tip
   $ cd ..
 
+#if no-outer-repo
+
 Implicit -R:
 
   $ hg ann a/a
@@ -92,6 +92,8 @@ Implicit -R:
   $ hg log
   abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
+
+#endif
 
 Abbreviation of long option:
 
@@ -271,6 +273,9 @@ Testing --version:
 
   $ hg --version -q
   Mercurial Distributed SCM * (glob)
+
+hide outer repo
+  $ hg init
 
 Testing -h/--help:
 

@@ -1,10 +1,14 @@
-  $ "$TESTDIR/hghave" no-outer-repo serve || exit 80
+  $ "$TESTDIR/hghave" serve || exit 80
+
+#if no-outer-repo
 
 no repo
 
   $ hg id
   abort: there is no Mercurial repository here (.hg not found)
   [255]
+
+#endif
 
 create repo
 
@@ -51,8 +55,10 @@ other local repo
   $ cd ..
   $ hg -R test id
   cb9a9f314b8b+ tip
+#if no-outer-repo
   $ hg id test
   cb9a9f314b8b+ tip
+#endif
 
 with remote http repo
 
@@ -111,7 +117,8 @@ Make sure we do not obscure unknown requires file entries (issue2649)
   [255]
 
   $ cd ..
+#if no-outer-repo
   $ hg id test
   abort: unknown repository format: requires features 'fake' (upgrade Mercurial)!
   [255]
-
+#endif

@@ -1,8 +1,14 @@
   $ "$TESTDIR/hghave" serve || exit 80
 
+#if windows
+  $ hg clone http://localhost:$HGPORT/ copy
+  abort: * (glob)
+  [255]
+#else
   $ hg clone http://localhost:$HGPORT/ copy
   abort: error: Connection refused
   [255]
+#endif
   $ test -d copy
   [1]
 
@@ -66,7 +72,7 @@ check for HTTP opener failures when cachefile does not exist
   $ rm .hg/cache/*
   $ cd ../local
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup' >> .hg/hgrc
+  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup" >> .hg/hgrc
   $ hg pull
   pulling from static-http://localhost:$HGPORT/remote
   searching for changes

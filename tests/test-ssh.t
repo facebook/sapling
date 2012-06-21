@@ -14,7 +14,7 @@ creating 'remote' repo
   > uncompressed = True
   > 
   > [hooks]
-  > changegroup = python "$TESTDIR"/printenv.py changegroup-in-remote 0 ../dummylog
+  > changegroup = python "$TESTDIR/printenv.py" changegroup-in-remote 0 ../dummylog
   > EOF
   $ cd ..
 
@@ -70,7 +70,7 @@ verify
   checking files
   2 files, 1 changesets, 2 total revisions
   $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'changegroup = python "$TESTDIR"/printenv.py changegroup-in-local 0 ../dummylog' >> .hg/hgrc
+  $ echo "changegroup = python \"$TESTDIR/printenv.py\" changegroup-in-local 0 ../dummylog" >> .hg/hgrc
 
 empty default pull
 
@@ -270,6 +270,9 @@ results here)
   [255]
 
   $ cd ..
+
+hide outer repo
+  $ hg init
 
 Test remote paths with spaces (issue2983):
 

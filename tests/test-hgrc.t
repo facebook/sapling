@@ -1,3 +1,6 @@
+hide outer repo
+  $ hg init
+
 Use hgrc within $TESTTMP
 
   $ HGRCPATH=`pwd`/hgrc
@@ -63,6 +66,7 @@ issue1829: wrong indentation
 make sure global options given on the cmdline take precedence
 
   $ hg showconfig --config ui.verbose=True --quiet
+  bundle.mainreporoot=$TESTTMP
   ui.verbose=False
   ui.debug=False
   ui.quiet=True
@@ -93,6 +97,7 @@ username expansion
   $ cd ..
 
   $ hg showconfig
+  bundle.mainreporoot=$TESTTMP
   ui.username=$FAKEUSER
 
   $ unset FAKEUSER
@@ -117,7 +122,6 @@ showconfig with multiple arguments
 
 HGPLAIN
 
-  $ p=`pwd`
   $ echo "[ui]" > $HGRC
   $ echo "debug=true" >> $HGRC
   $ echo "fallbackencoding=ASCII" >> $HGRC
@@ -137,6 +141,7 @@ customized hgrc
   $ hg showconfig
   read config from: $TESTTMP/hgrc
   $TESTTMP/hgrc:13: alias.log=log -g
+  none: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:11: defaults.identify=-n
   $TESTTMP/hgrc:2: ui.debug=true
   $TESTTMP/hgrc:3: ui.fallbackencoding=ASCII
@@ -152,6 +157,7 @@ plain hgrc
   $ HGPLAIN=; export HGPLAIN
   $ hg showconfig --config ui.traceback=True --debug
   read config from: $TESTTMP/hgrc
+  none: bundle.mainreporoot=$TESTTMP
   none: ui.traceback=True
   none: ui.verbose=False
   none: ui.debug=True
@@ -169,6 +175,7 @@ plain mode with exceptions
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
+  none: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
   none: ui.verbose=False
@@ -178,6 +185,7 @@ plain mode with exceptions
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
+  none: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
   none: ui.verbose=False
@@ -187,6 +195,7 @@ plain mode with exceptions
   $ hg showconfig --config ui.traceback=True --debug
   plain: True
   read config from: $TESTTMP/hgrc
+  none: bundle.mainreporoot=$TESTTMP
   $TESTTMP/hgrc:15: extensions.plain=./plain.py
   none: ui.traceback=True
   none: ui.verbose=False

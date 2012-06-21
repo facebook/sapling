@@ -21,14 +21,14 @@ reasons = {'Not modified': 'Not Modified'} # python 2.4
 
 tag = None
 def request(host, path, show):
-
+    assert not path.startswith('/'), path
     global tag
     headers = {}
     if tag:
         headers['If-None-Match'] = tag
 
     conn = httplib.HTTPConnection(host)
-    conn.request("GET", path, None, headers)
+    conn.request("GET", '/' + path, None, headers)
     response = conn.getresponse()
     print response.status, reasons.get(response.reason, response.reason)
     for h in [h.lower() for h in show]:

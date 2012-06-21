@@ -2,6 +2,8 @@ Translations are optional:
 
   $ "$TESTDIR/hghave" gettext || exit 80
 
+#if no-outer-repo
+
 Test that translations are compiled and installed correctly.
 
 Default encoding in tests is "ascii" and the translation is encoded
@@ -22,6 +24,8 @@ Different encoding:
   $ HGENCODING=Latin-1 LANGUAGE=pt_BR hg tip
   abortado: n\xe3o foi encontrado um reposit\xf3rio em '$TESTTMP' (.hg n\xe3o encontrado)! (esc)
   [255]
+
+#endif
 
 Test keyword search in translated help text:
 
