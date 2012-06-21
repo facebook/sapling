@@ -304,7 +304,7 @@ Source phase greater or equal to destination phase: new changeset get the phase 
   secret
 Source phase lower than destination phase: new changeset get the phase of destination:
   $ hg rebase -s8 -d9
-  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6d4f22462821-backup.hg
+  saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6d4f22462821-backup.hg (glob)
   $ hg log --template "{phase}\n" -r 'rev(9)'
   secret
 
