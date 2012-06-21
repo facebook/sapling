@@ -109,7 +109,7 @@
 
 tip - two revisions
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/tip/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/tip/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -210,7 +210,7 @@ tip - two revisions
 
 second version - two revisions
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/3/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/3/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -311,7 +311,7 @@ second version - two revisions
 
 first deleted - one revision
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/2/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/2/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -407,7 +407,7 @@ first deleted - one revision
 
 first version - one revision
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/1/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/1/a')
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -503,7 +503,7 @@ first version - one revision
 
 before addition - error
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/0/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/0/a')
   404 Not Found
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -567,7 +567,7 @@ before addition - error
 
 should show base link, use spartan because it shows it
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/log/tip/c?style=spartan')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/tip/c?style=spartan')
   200 Script output follows
   
   <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
@@ -676,7 +676,7 @@ should show base link, use spartan because it shows it
 
 rss log
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/rss-log/tip/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'rss-log/tip/a')
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>
@@ -707,7 +707,7 @@ rss log
 
 atom log
 
-  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '/atom-log/tip/a')
+  $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'atom-log/tip/a')
   200 Script output follows
   
   <?xml version="1.0" encoding="ascii"?>

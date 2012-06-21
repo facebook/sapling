@@ -29,7 +29,7 @@ Set up the repo
 
 manifest with descending
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '/file'
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file'
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">

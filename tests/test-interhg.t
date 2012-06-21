@@ -23,7 +23,7 @@
 
 log
 
-  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '/' | grep bts
+  $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT '' | grep bts
     <td class="description"><a href="/rev/1b0e7ece6bd6"><a href="http://bts.example.org/issue123">Issue123</a>: fixed the <i class="x">bug</i>!</a><span class="branchhead">default</span> <span class="tag">tip</span> </td>
 
 errors
