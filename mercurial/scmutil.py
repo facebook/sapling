@@ -350,7 +350,8 @@ def canonpath(root, cwd, myname, auditor=None):
         raise util.Abort('%s not under root' % myname)
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
-    '''yield every hg repository under path, recursively.'''
+    '''yield every hg repository under path, always recursively.
+    The recurse flag will only control recursion into repo working dirs'''
     def errhandler(err):
         if err.filename == path:
             raise err

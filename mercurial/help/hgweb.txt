@@ -1,47 +1,50 @@
 Mercurial's internal web server, hgweb, can serve either a single
-repository, or a collection of them. In the latter case, a special
-configuration file can be used to specify the repository paths to use
-and global web configuration options.
+repository, or a tree of repositories. In the second case, repository
+paths and global options can be defined using a dedicated
+configuration file common to :hg:`serve`, ``hgweb.wsgi``,
+``hgweb.cgi`` and ``hgweb.fcgi``.
 
-This file uses the same syntax as other Mercurial configuration files,
-but only the following sections are recognized:
+This file uses the same syntax as other Mercurial configuration files
+but recognizes only the following sections:
 
   - web
   - paths
   - collections
 
-The ``web`` section can specify all the settings described in the web
-section of the hgrc(5) documentation. See :hg:`help config` for
-information on where to find the manual page.
+The ``web`` options are thorougly described in :hg:`help config`.
 
-The ``paths`` section provides mappings of physical repository
-paths to virtual ones. For instance::
+The ``paths`` section maps URL paths to paths of repositories in the
+filesystem. hgweb will not expose the filesystem directly - only
+Mercurial repositories can be published and only according to the
+configuration.
+
+The left hand side is the path in the URL. Note that hgweb reserves
+subpaths like ``rev`` or ``file``, try using different names for
+nested repositories to avoid confusing effects.
+
+The right hand side is the path in the filesystem. If the specified
+path ends with ``*`` or ``**`` the filesystem will be searched
+recursively for repositories below that point.
+With ``*`` it will not recurse into the repositories it finds (except for
+``.hg/patches``).
+With ``**`` it will also search inside repository working directories
+and possibly find subrepositories.
+
+In this example::
 
   [paths]
-  projects/a = /foo/bar
-  projects/b = /baz/quux
-  web/root = /real/root/*
-  / = /real/root2/*
-  virtual/root2 = /real/root2/**
+  /projects/a = /srv/tmprepos/a
+  /projects/b = c:/repos/b
+  / = /srv/repos/*
+  /user/bob = /home/bob/repos/**
 
 - The first two entries make two repositories in different directories
   appear under the same directory in the web interface
-- The third entry maps every Mercurial repository found in '/real/root'
-  into 'web/root'. This format is preferred over the [collections] one,
-  since using absolute paths as configuration keys is not supported on every
-  platform (especially on Windows).
-- The fourth entry is a special case mapping all repositories in
-  '/real/root2' in the root of the virtual directory.
-- The fifth entry recursively finds all repositories under the real
-  root, and maps their relative paths under the virtual root.
+- The third entry will publish every Mercurial repository found in
+  ``/srv/repos/``, for instance the repository ``/srv/repos/quux/``
+  will appear as ``http://server/quux/``
+- The fourth entry will publish both ``http://server/user/bob/quux/``
+  and ``http://server/user/bob/quux/testsubrepo/``
 
-The ``collections`` section provides mappings of trees of physical
-repositories paths to virtual ones, though the paths syntax is generally
-preferred. For instance::
-
-  [collections]
-  /foo = /foo
-
-Here, the left side will be stripped off all repositories found in the
-right side. Thus ``/foo/bar`` and ``foo/quux/baz`` will be listed as
-``bar`` and ``quux/baz`` respectively.
+The ``collections`` section is deprecated and has been superseeded by
+``paths``.

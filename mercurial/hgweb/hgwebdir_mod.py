@@ -23,10 +23,10 @@ def findrepos(paths):
     repos = []
     for prefix, root in cleannames(paths):
         roothead, roottail = os.path.split(root)
-        # "foo = /bar/*" makes every subrepo of /bar/ to be
-        # mounted as foo/subrepo
-        # and "foo = /bar/**" also recurses into the subdirectories,
-        # remember to use it without working dir.
+        # "foo = /bar/*" or "foo = /bar/**" lets every repo /bar/N in or below
+        # /bar/ be served as as foo/N .
+        # '*' will not search inside dirs with .hg (except .hg/patches),
+        # '**' will search inside dirs with .hg (and thus also find subrepos).
         try:
             recurse = {'*': False, '**': True}[roottail]
         except KeyError:
