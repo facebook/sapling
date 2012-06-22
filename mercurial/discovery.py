@@ -207,18 +207,16 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         # 1-4b. old servers: Check for new topological heads.
         # Construct {old,new}map with branch = None (topological branch).
         # (code based on _updatebranchcache)
-        oldheadrevs = set(cl.rev(h) for h in remoteheads if h in cl.nodemap)
-        missingrevs = [cl.rev(node) for node in outgoing.missing]
-        newheadrevs = oldheadrevs.union(missingrevs)
-        if len(newheadrevs) > 1:
-            for latest in sorted(missingrevs, reverse=True):
-                if latest not in newheadrevs:
-                    continue
-                reachable = cl.ancestors([latest], min(newheadrevs))
-                newheadrevs.difference_update(reachable)
+        oldheads = set(h for h in remoteheads if h in cl.nodemap)
+        # all nodes in outgoing.missing are children of either:
+        # - an element of oldheads
+        # - another element of outgoing.missing
+        # - nullrev
+        # This explains why the new head are very simple to compute.
+        r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
         branches = set([None])
-        newmap = {None: [cl.node(rev) for rev in newheadrevs]}
-        oldmap = {None: [cl.node(rev) for rev in oldheadrevs]}
+        newmap = {None: list(c.node() for c in r)}
+        oldmap = {None: oldheads}
         unsynced = inc and branches or set()
 
     # 5. Check for new heads.
