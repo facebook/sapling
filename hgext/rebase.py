@@ -247,6 +247,9 @@ def rebase(ui, repo, **opts):
 
         # Keep track of the current bookmarks in order to reset them later
         currentbookmarks = repo._bookmarks.copy()
+        activebookmark = repo._bookmarkcurrent
+        if activebookmark:
+            bookmarks.unsetcurrent(repo)
 
         sortedstate = sorted(state)
         total = len(sortedstate)
@@ -336,6 +339,11 @@ def rebase(ui, repo, **opts):
             util.unlinkpath(repo.sjoin('undo'))
         if skipped:
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
+
+        if (activebookmark and
+            repo['tip'].node() == repo._bookmarks[activebookmark]):
+                bookmarks.setcurrent(repo, activebookmark)
+
     finally:
         release(lock, wlock)
 
@@ -483,13 +491,11 @@ def updatemq(repo, state, skipped, **opts):
 
 def updatebookmarks(repo, nstate, originalbookmarks, **opts):
     'Move bookmarks to their correct changesets'
-    current = repo._bookmarkcurrent
     for k, v in originalbookmarks.iteritems():
         if v in nstate:
             if nstate[v] != nullmerge:
-                # reset the pointer if the bookmark was moved incorrectly
-                if k != current:
-                    repo._bookmarks[k] = nstate[v]
+                # update the bookmarks for revs that have moved
+                repo._bookmarks[k] = nstate[v]
 
     bookmarks.write(repo)
 
