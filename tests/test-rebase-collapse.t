@@ -280,7 +280,7 @@ also, the parent of a node that is a child of the node stripped becomes a head
   c65502d4178782309ce0574c5ae6ee9485a9bafa default
 
   $ hg strip 4
-  saved backup bundle to $TESTTMP/b2/.hg/strip-backup/8a5212ebc852-backup.hg
+  saved backup bundle to $TESTTMP/b2/.hg/strip-backup/8a5212ebc852-backup.hg (glob)
 
   $ cat $TESTTMP/b2/.hg/cache/branchheads
   c65502d4178782309ce0574c5ae6ee9485a9bafa 4
