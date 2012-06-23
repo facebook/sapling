@@ -138,6 +138,9 @@ def redirect(state):
     _redirect = state
 
 def hook(ui, repo, name, throw=False, **args):
+    if not ui.callhooks:
+        return False
+
     r = False
 
     oldstdout = -1

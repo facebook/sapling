@@ -19,6 +19,7 @@ class ui(object):
         self._ucfg = config.config() # untrusted
         self._trustusers = set()
         self._trustgroups = set()
+        self.callhooks = True
 
         if src:
             self.fout = src.fout
@@ -31,6 +32,7 @@ class ui(object):
             self._trustusers = src._trustusers.copy()
             self._trustgroups = src._trustgroups.copy()
             self.environ = src.environ
+            self.callhooks = src.callhooks
             self.fixconfig()
         else:
             self.fout = sys.stdout
