@@ -24,17 +24,17 @@ create subversion repo
   $ echo alpha > src/alpha
   $ svn add src
   A         src
-  A         src/alpha
+  A         src/alpha (glob)
   $ mkdir externals
   $ echo other > externals/other
   $ svn add externals
   A         externals
-  A         externals/other
+  A         externals/other (glob)
   $ svn ci -m 'Add alpha'
   Adding         externals
-  Adding         externals/other
+  Adding         externals/other (glob)
   Adding         src
-  Adding         src/alpha
+  Adding         src/alpha (glob)
   Transmitting file data ..
   Committed revision 1.
   $ svn up -q
@@ -174,7 +174,7 @@ this commit from hg will fail
 this commit fails because of meta changes
 
   $ svn propset svn:mime-type 'text/html' s/alpha
-  property 'svn:mime-type' set on 's/alpha'
+  property 'svn:mime-type' set on 's/alpha' (glob)
   $ (hg ci --subrepos -m 'amend alpha from hg' 2>&1; echo "[$?]") | grep -vi 'out of date'
   committing subrepository s
   abort: svn:*Commit failed (details follow): (glob)
@@ -205,7 +205,7 @@ this commit fails because of externals changes
 this commit fails because of externals meta changes
 
   $ svn propset svn:mime-type 'text/html' s/externals/other
-  property 'svn:mime-type' set on 's/externals/other'
+  property 'svn:mime-type' set on 's/externals/other' (glob)
   $ hg ci --subrepos -m 'amend externals from hg'
   committing subrepository s
   abort: cannot commit svn externals
@@ -389,7 +389,7 @@ Sticky subrepository, file changes and revision updates
   $ cd ..
 
 Sticky repository, update --clean
-  $ hg update --clean tip | grep -v s/externals/other
+  $ hg update --clean tip | grep -v 's[/\]externals[/\]other'
   U    *s/alpha (glob)
    U   *s (glob)
   
@@ -426,7 +426,7 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ echo epsilon.py > dir/epsilon.py
   $ svn add dir
   A         dir
-  A         dir/epsilon.py
+  A         dir/epsilon.py (glob)
   $ svn ci -m 'Add dir/epsilon.py'
   Adding         *dir (glob)
   Adding         *dir/epsilon.py (glob)
@@ -491,7 +491,7 @@ First, create that condition in the repository.
 
   $ hg ci --subrepos -m cleanup | grep -v Updating
   committing subrepository obstruct
-  Sending        obstruct/other
+  Sending        obstruct/other (glob)
   Transmitting file data .
   Committed revision 7.
   At revision 7.
@@ -527,7 +527,7 @@ First, create that condition in the repository.
   $ cd ..
   $ rm -rf tempwc
   $ svn co "$SVNREPO/branch"@10 recreated
-  A    recreated/somethingold
+  A    recreated/somethingold (glob)
   Checked out revision 10.
   $ echo "recreated =        [svn]       $SVNREPO/branch" >> .hgsub
   $ hg ci -m addsub
@@ -559,9 +559,15 @@ Test archive
 Test forgetting files, not implemented in svn subrepo, used to
 traceback
 
+#if no-windows
   $ hg forget 'notafile*'
   notafile*: No such file or directory
   [1]
+#else
+  $ hg forget 'notafile'
+  notafile: * (glob)
+  [1]
+#endif
 
 Test a subrepo referencing a just moved svn path. Last commit rev will
 be different from the revision, and the path will be different as
@@ -572,13 +578,13 @@ well.
   $ mkdir trunk/subdir branches
   $ echo a > trunk/subdir/a
   $ svn add trunk/subdir branches
-  A         trunk/subdir
-  A         trunk/subdir/a
+  A         trunk/subdir (glob)
+  A         trunk/subdir/a (glob)
   A         branches
   $ svn ci -m addsubdir
   Adding         branches
-  Adding         trunk/subdir
-  Adding         trunk/subdir/a
+  Adding         trunk/subdir (glob)
+  Adding         trunk/subdir/a (glob)
   Transmitting file data .
   Committed revision 14.
   $ svn cp -m branchtrunk $SVNREPO/trunk $SVNREPO/branches/somebranch
@@ -589,7 +595,7 @@ well.
   $ hg init repo2
   $ cd repo2
   $ svn co $SVNREPO/branches/somebranch/subdir
-  A    subdir/a
+  A    subdir/a (glob)
   Checked out revision 15.
   $ echo "subdir = [svn] $SVNREPO/branches/somebranch/subdir" > .hgsub
   $ hg add .hgsub
