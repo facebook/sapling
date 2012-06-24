@@ -7,6 +7,7 @@ import os
 import urllib2
 
 from mercurial import error, httprepo, util, wireproto
+from mercurial.wireproto import batchable, future
 from mercurial.i18n import _
 
 import lfutil
@@ -119,15 +120,19 @@ def wirereposetup(ui, repo):
                                                 length))
             return (length, stream)
 
+        @batchable
         def statlfile(self, sha):
+            f = future()
+            result = {'sha': sha}
+            yield result, f
             try:
-                return int(self._call("statlfile", sha=sha))
+                yield int(f.value)
             except (ValueError, urllib2.HTTPError):
                 # If the server returns anything but an integer followed by a
                 # newline, newline, it's not speaking our language; if we get
                 # an HTTP error, we can't be sure the largefile is present;
                 # either way, consider it missing.
-                return 2
+                yield 2
 
     repo.__class__ = lfileswirerepository
 

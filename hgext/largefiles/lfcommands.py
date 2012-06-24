@@ -340,7 +340,11 @@ def uploadlfiles(ui, rsrc, rdst, files):
     store = basestore._openstore(rsrc, rdst, put=True)
 
     at = 0
-    files = filter(lambda h: not store.exists(h), files)
+    ui.debug("sending statlfile command for %d largefiles\n" % len(files))
+    retval = store.exists(files)
+    files = filter(lambda h: not retval[h], files)
+    ui.debug("%d largefiles need to be uploaded\n" % len(files))
+
     for hash in files:
         ui.progress(_('uploading largefiles'), at, unit='largefile',
                     total=len(files))

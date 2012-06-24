@@ -10,6 +10,7 @@ import urllib2
 
 from mercurial import util
 from mercurial.i18n import _
+from mercurial.wireproto import remotebatch
 
 import lfutil
 import basestore
@@ -20,8 +21,6 @@ class remotestore(basestore.basestore):
         super(remotestore, self).__init__(ui, repo, url)
 
     def put(self, source, hash):
-        if self._verify(hash):
-            return
         if self.sendfile(source, hash):
             raise util.Abort(
                 _('remotestore: could not put %s to remote store %s')
@@ -29,8 +28,8 @@ class remotestore(basestore.basestore):
         self.ui.debug(
             _('remotestore: put %s to remote store %s') % (source, self.url))
 
-    def exists(self, hash):
-        return self._verify(hash)
+    def exists(self, hashes):
+        return self._verify(hashes)
 
     def sendfile(self, filename, hash):
         self.ui.debug('remotestore: sendfile(%s, %s)\n' % (filename, hash))
@@ -74,8 +73,8 @@ class remotestore(basestore.basestore):
             infile = lfutil.limitreader(infile, length)
         return lfutil.copyandhash(lfutil.blockstream(infile), tmpfile)
 
-    def _verify(self, hash):
-        return not self._stat(hash)
+    def _verify(self, hashes):
+        return self._stat(hashes)
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)
@@ -104,3 +103,8 @@ class remotestore(basestore.basestore):
         else:
             raise RuntimeError('verify failed: unexpected response from '
                                'statlfile (%r)' % stat)
+
+    def batch(self):
+        '''Support for remote batching.'''
+        return remotebatch(self)
+
