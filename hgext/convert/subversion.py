@@ -1091,20 +1091,13 @@ class svn_sink(converter_sink, commandline):
             self.wopener.write(filename, data)
 
             if self.is_exec:
-                was_exec = self.is_exec(self.wjoin(filename))
-            else:
-                # On filesystems not supporting execute-bit, there is no way
-                # to know if it is set but asking subversion. Setting it
-                # systematically is just as expensive and much simpler.
-                was_exec = 'x' not in flags
-
-            util.setflags(self.wjoin(filename), False, 'x' in flags)
-            if was_exec:
-                if 'x' not in flags:
-                    self.delexec.append(filename)
-            else:
-                if 'x' in flags:
-                    self.setexec.append(filename)
+                if self.is_exec(self.wjoin(filename)):
+                    if 'x' not in flags:
+                        self.delexec.append(filename)
+                else:
+                    if 'x' in flags:
+                        self.setexec.append(filename)
+                util.setflags(self.wjoin(filename), False, 'x' in flags)
 
     def _copyfile(self, source, dest):
         # SVN's copy command pukes if the destination file exists, but
