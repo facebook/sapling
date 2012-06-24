@@ -48,7 +48,7 @@ hgrc(5) for details.
 import os, errno, socket, tempfile, cStringIO
 import email.MIMEMultipart, email.MIMEBase
 import email.Utils, email.Encoders, email.Generator
-from mercurial import cmdutil, commands, hg, mail, patch, util, discovery
+from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial import scmutil
 from mercurial.i18n import _
 from mercurial.node import bin
@@ -273,20 +273,18 @@ def patchbomb(ui, repo, *revs, **opts):
 
     def getoutgoing(dest, revs):
         '''Return the revisions present locally but not in dest'''
-        dest = ui.expandpath(dest or 'default-push', dest or 'default')
-        dest, branches = hg.parseurl(dest)
-        revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
-        if revs:
-            revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
-        other = hg.peer(repo, opts, dest)
-        ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-        repo.ui.pushbuffer()
-        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs)
-        repo.ui.popbuffer()
-        if not outgoing.missing:
+        url = ui.expandpath(dest or 'default-push', dest or 'default')
+        url = hg.parseurl(url)[0]
+        ui.status(_('comparing with %s\n') % util.hidepassword(url))
+
+        revs = [r for r in scmutil.revrange(repo, revs) if r >= 0]
+        if not revs:
+            revs = [len(repo) - 1]
+        revs = repo.revs('outgoing(%s) and ::%ld', dest or '', revs)
+        if not revs:
             ui.status(_("no changes found\n"))
             return []
-        return [str(repo.changelog.rev(r)) for r in outgoing.missing]
+        return [str(r) for r in revs]
 
     def getpatches(revs):
         for r in scmutil.revrange(repo, revs):
