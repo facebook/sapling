@@ -2103,7 +2103,7 @@ test outgoing:
   o  0:8580ff50825a a
   
   $ hg phase --force --secret -r 10
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t -r 6 -r 10
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t -r 'rev(10) or rev(6)'
   comparing with ../t
   From [test]: test
   this patch series consists of 6 patches.

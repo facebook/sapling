@@ -277,7 +277,7 @@ def patchbomb(ui, repo, *revs, **opts):
         dest, branches = hg.parseurl(dest)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         if revs:
-            revs = [repo.lookup(rev) for rev in revs]
+            revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
         other = hg.peer(repo, opts, dest)
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
         repo.ui.pushbuffer()
