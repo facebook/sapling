@@ -75,35 +75,6 @@ def hash(text, p1, p2):
     s.update(text)
     return s.digest()
 
-def compress(text):
-    """ generate a possibly-compressed representation of text """
-    if not text:
-        return ("", text)
-    l = len(text)
-    bin = None
-    if l < 44:
-        pass
-    elif l > 1000000:
-        # zlib makes an internal copy, thus doubling memory usage for
-        # large files, so lets do this in pieces
-        z = zlib.compressobj()
-        p = []
-        pos = 0
-        while pos < l:
-            pos2 = pos + 2**20
-            p.append(z.compress(text[pos:pos2]))
-            pos = pos2
-        p.append(z.flush())
-        if sum(map(len, p)) < l:
-            bin = "".join(p)
-    else:
-        bin = _compress(text)
-    if bin is None or len(bin) > l:
-        if text[0] == '\0':
-            return ("", text)
-        return ('u', text)
-    return ("", bin)
-
 def decompress(bin):
     """ decompress the given input """
     if not bin:
@@ -1008,6 +979,35 @@ class revlog(object):
                 dfh.close()
             ifh.close()
 
+    def compress(self, text):
+        """ generate a possibly-compressed representation of text """
+        if not text:
+            return ("", text)
+        l = len(text)
+        bin = None
+        if l < 44:
+            pass
+        elif l > 1000000:
+            # zlib makes an internal copy, thus doubling memory usage for
+            # large files, so lets do this in pieces
+            z = zlib.compressobj()
+            p = []
+            pos = 0
+            while pos < l:
+                pos2 = pos + 2**20
+                p.append(z.compress(text[pos:pos2]))
+                pos = pos2
+            p.append(z.flush())
+            if sum(map(len, p)) < l:
+                bin = "".join(p)
+        else:
+            bin = _compress(text)
+        if bin is None or len(bin) > l:
+            if text[0] == '\0':
+                return ("", text)
+            return ('u', text)
+        return ("", bin)
+
     def _addrevision(self, node, text, transaction, link, p1, p2,
                      cachedelta, ifh, dfh):
         """internal function to add revisions to the log
@@ -1040,7 +1040,7 @@ class revlog(object):
                 t = buildtext()
                 ptext = self.revision(self.node(rev))
                 delta = mdiff.textdiff(ptext, t)
-            data = compress(delta)
+            data = self.compress(delta)
             l = len(data[1]) + len(data[0])
             if basecache[0] == rev:
                 chainbase = basecache[1]
@@ -1084,7 +1084,7 @@ class revlog(object):
             textlen = len(text)
         if d is None or dist > textlen * 2:
             text = buildtext()
-            data = compress(text)
+            data = self.compress(text)
             l = len(data[1]) + len(data[0])
             base = chainbase = curr
 
