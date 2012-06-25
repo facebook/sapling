@@ -264,7 +264,8 @@ class basicstore(object):
                         l.append((decodedir(n), n, st.st_size))
                     elif kind == stat.S_IFDIR and recurse:
                         visit.append(fp)
-        return sorted(l)
+        l.sort()
+        return l
 
     def datafiles(self):
         return self._walk('data', True)
