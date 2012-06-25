@@ -97,7 +97,7 @@ class _PROCESS_INFORMATION(ctypes.Structure):
                 ('dwProcessId', _DWORD),
                 ('dwThreadId', _DWORD)]
 
-_DETACHED_PROCESS = 0x00000008
+_CREATE_NO_WINDOW = 0x08000000
 _STARTF_USESHOWWINDOW = 0x00000001
 _SW_HIDE = 0
 
@@ -337,7 +337,7 @@ def spawndetached(args):
     args = comspec + " /c " + args
 
     res = _kernel32.CreateProcessA(
-        None, args, None, None, False, _DETACHED_PROCESS,
+        None, args, None, None, False, _CREATE_NO_WINDOW,
         env, os.getcwd(), ctypes.byref(si), ctypes.byref(pi))
     if not res:
         raise ctypes.WinError
