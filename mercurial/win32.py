@@ -98,7 +98,6 @@ class _PROCESS_INFORMATION(ctypes.Structure):
                 ('dwThreadId', _DWORD)]
 
 _CREATE_NO_WINDOW = 0x08000000
-_STARTF_USESHOWWINDOW = 0x00000001
 _SW_HIDE = 0
 
 class _COORD(ctypes.Structure):
@@ -318,8 +317,6 @@ def spawndetached(args):
     # which makes really detached processes impossible.
     si = _STARTUPINFO()
     si.cb = ctypes.sizeof(_STARTUPINFO)
-    si.dwFlags = _STARTF_USESHOWWINDOW
-    si.wShowWindow = _SW_HIDE
 
     pi = _PROCESS_INFORMATION()
 
