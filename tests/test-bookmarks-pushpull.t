@@ -177,8 +177,18 @@ diverging a remote bookmark fails
   adding f2
   created new head
   $ hg book -f Y
-  $ hg push ../a
-  pushing to ../a
+
+  $ cat <<EOF > ../a/.hg/hgrc
+  > [web]
+  > push_ssl = false
+  > allow_push = *
+  > EOF
+
+  $ hg -R ../a serve -p $HGPORT2 -d --pid-file=../hg2.pid
+  $ cat ../hg2.pid >> $DAEMON_PIDS
+
+  $ hg push http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/
   searching for changes
   abort: push creates new remote head 4efff6d98829!
   (did you forget to merge? use push -f to force)

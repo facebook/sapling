@@ -225,7 +225,6 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     error = None
-    remotebookmarks = remote.listkeys('bookmarks')
     localbookmarks = repo._bookmarks
 
     for branch in branches:
@@ -234,9 +233,14 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         dhs = None
         if len(newhs) > len(oldhs):
             # strip updates to existing remote heads from the new heads list
-            bookmarkedheads = set([repo[bm].node() for bm in localbookmarks
-                                   if bm in remotebookmarks and
-                                   remote[bm] == repo[bm].ancestor(remote[bm])])
+            remotebookmarks = remote.listkeys('bookmarks')
+            bookmarkedheads = set()
+            for bm in localbookmarks:
+                rnode = remotebookmarks.get(bm)
+                if rnode and rnode in repo:
+                    lctx, rctx = repo[bm], repo[rnode]
+                    if rctx == lctx.ancestor(rctx):
+                        bookmarkedheads.add(lctx.node())
             dhs = list(newhs - bookmarkedheads - oldhs)
         if dhs:
             if error is None:
