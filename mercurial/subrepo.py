@@ -730,7 +730,7 @@ class svnsubrepo(abstractsubrepo):
             # URL exists at lastrev.  Test it and fallback to rev it
             # is not there.
             try:
-                self._svncommand(['info', '%s@%s' % (self._state[0], lastrev)])
+                self._svncommand(['list', '%s@%s' % (self._state[0], lastrev)])
                 return lastrev
             except error.Abort:
                 pass
