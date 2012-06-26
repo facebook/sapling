@@ -1,10 +1,6 @@
 
   $ "$TESTDIR/hghave" svn svn-bindings || exit 80
 
-  $ fixpath()
-  > {
-  >     tr '\\' /
-  > }
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert = 
@@ -13,20 +9,16 @@
 
   $ svnadmin create svn-repo
   $ svnadmin load -q svn-repo < "$TESTDIR/svn/move.svndump"
-  $ svnpath=`pwd | fixpath`
-
-SVN wants all paths to start with a slash. Unfortunately,
-Windows ones don't. Handle that.
-
-  $ expr "$svnpath" : "\/" > /dev/null
-  > if [ $? -ne 0 ]; then
-  >   svnpath="/$svnpath"
-  > fi
-  > svnurl="file://$svnpath/svn-repo"
+  $ SVNREPOPATH=`pwd`/svn-repo
+#if windows
+  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#else
+  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#endif
 
 Convert trunk and branches
 
-  $ hg convert --datesort "$svnurl"/subproject A-hg
+  $ hg convert --datesort "$SVNREPOURL"/subproject A-hg
   initializing destination A-hg repository
   scanning source...
   sorting...

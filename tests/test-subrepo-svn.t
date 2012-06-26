@@ -1,23 +1,17 @@
   $ "$TESTDIR/hghave" svn15 || exit 80
 
-  $ fix_path()
-  > {
-  >     tr '\\' /
-  > }
-
-SVN wants all paths to start with a slash. Unfortunately, Windows ones
-don't. Handle that.
-
-  $ escapedwd=`pwd | fix_path`
-  $ expr "$escapedwd" : '\/' > /dev/null || escapedwd="/$escapedwd"
-  $ escapedwd=`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$escapedwd"`
+  $ SVNREPOPATH=`pwd`/svn-repo
+#if windows
+  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#else
+  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#endif
 
 create subversion repo
 
-  $ SVNREPO="file://$escapedwd/svn-repo"
   $ WCROOT="`pwd`/svn-wc"
   $ svnadmin create svn-repo
-  $ svn co "$SVNREPO" svn-wc
+  $ svn co "$SVNREPOURL" svn-wc
   Checked out revision 0.
   $ cd svn-wc
   $ mkdir src
@@ -38,7 +32,7 @@ create subversion repo
   Transmitting file data ..
   Committed revision 1.
   $ svn up -q
-  $ echo "externals -r1 $SVNREPO/externals" > extdef
+  $ echo "externals -r1 $SVNREPOURL/externals" > extdef
   $ svn propset -F extdef svn:externals src
   property 'svn:externals' set on 'src'
   $ svn ci -m 'Setting externals'
@@ -62,11 +56,11 @@ first revision, no sub
 
 add first svn sub with leading whitespaces
 
-  $ echo "s =        [svn]       $SVNREPO/src" >> .hgsub
-  $ echo "subdir/s = [svn]       $SVNREPO/src" >> .hgsub
-  $ svn co --quiet "$SVNREPO"/src s
+  $ echo "s =        [svn]       $SVNREPOURL/src" >> .hgsub
+  $ echo "subdir/s = [svn]       $SVNREPOURL/src" >> .hgsub
+  $ svn co --quiet "$SVNREPOURL"/src s
   $ mkdir subdir
-  $ svn co --quiet "$SVNREPO"/src subdir/s
+  $ svn co --quiet "$SVNREPOURL"/src subdir/s
   $ hg add .hgsub
   $ hg ci -m1
 
@@ -132,7 +126,7 @@ missing svn file, commit should fail
 add an unrelated revision in svn and update the subrepo to without
 bringing any changes.
 
-  $ svn mkdir "$SVNREPO/unrelated" -m 'create unrelated'
+  $ svn mkdir "$SVNREPOURL/unrelated" -m 'create unrelated'
   
   Committed revision 4.
   $ svn up -q s
@@ -151,7 +145,7 @@ should be empty despite change to s/a
 
 add a commit from svn
 
-  $ cd "$WCROOT"/src
+  $ cd "$WCROOT/src"
   $ svn up -q
   $ echo xyz >> alpha
   $ svn propset svn:mime-type 'text/xml' alpha
@@ -215,21 +209,21 @@ this commit fails because of externals meta changes
 clone
 
   $ cd ..
-  $ hg clone t tc | fix_path
+  $ hg clone t tc
   updating to branch default
-  A    tc/s/alpha
-   U   tc/s
+  A    tc/s/alpha (glob)
+   U   tc/s (glob)
   
   Fetching external item into 'tc/s/externals'* (glob)
-  A    tc/s/externals/other
+  A    tc/s/externals/other (glob)
   Checked out external at revision 1.
   
   Checked out revision 3.
-  A    tc/subdir/s/alpha
-   U   tc/subdir/s
+  A    tc/subdir/s/alpha (glob)
+   U   tc/subdir/s (glob)
   
   Fetching external item into 'tc/subdir/s/externals'* (glob)
-  A    tc/subdir/s/externals/other
+  A    tc/subdir/s/externals/other (glob)
   Checked out external at revision 1.
   
   Checked out revision 2.
@@ -258,7 +252,7 @@ update to nullrev (must delete the subrepo)
   $ ls
 
 Check hg update --clean
-  $ cd $TESTTMP/sub/t
+  $ cd "$TESTTMP/sub/t"
   $ cd s
   $ echo c0 > alpha
   $ echo c1 > f1
@@ -290,7 +284,7 @@ Check hg update --clean
   X *    externals (glob)
 
 Sticky subrepositories, no changes
-  $ cd $TESTTMP/sub/t
+  $ cd "$TESTTMP/sub/t"
   $ hg id -n
   2
   $ cd s
@@ -421,7 +415,7 @@ Test subrepo already at intended revision:
 Test case where subversion would fail to update the subrepo because there
 are unknown directories being replaced by tracked ones (happens with rebase).
 
-  $ cd $WCROOT/src
+  $ cd "$WCROOT/src"
   $ mkdir dir
   $ echo epsilon.py > dir/epsilon.py
   $ svn add dir
@@ -435,8 +429,8 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ cd ../..
   $ hg init rebaserepo
   $ cd rebaserepo
-  $ svn co -r5 --quiet "$SVNREPO"/src s
-  $ echo "s =        [svn]       $SVNREPO/src" >> .hgsub
+  $ svn co -r5 --quiet "$SVNREPOURL"/src s
+  $ echo "s =        [svn]       $SVNREPOURL/src" >> .hgsub
   $ hg add .hgsub
   $ hg ci -m addsub
   $ echo a > a
@@ -462,14 +456,14 @@ Modify one of the externals to point to a different path so we can
 test having obstructions when switching branches on checkout:
   $ hg checkout tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo "obstruct =        [svn]       $SVNREPO/externals" >> .hgsub
-  $ svn co -r5 --quiet "$SVNREPO"/externals obstruct
+  $ echo "obstruct =        [svn]       $SVNREPOURL/externals" >> .hgsub
+  $ svn co -r5 --quiet "$SVNREPOURL"/externals obstruct
   $ hg commit -m 'Start making obstructed working copy'
   $ hg book other
   $ hg co -r 'p1(tip)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo "obstruct =        [svn]       $SVNREPO/src" >> .hgsub
-  $ svn co -r5 --quiet "$SVNREPO"/src obstruct
+  $ echo "obstruct =        [svn]       $SVNREPOURL/src" >> .hgsub
+  $ svn co -r5 --quiet "$SVNREPOURL"/src obstruct
   $ hg commit -m 'Other branch which will be obstructed'
   created new head
 
@@ -495,13 +489,13 @@ First, create that condition in the repository.
   Transmitting file data .
   Committed revision 7.
   At revision 7.
-  $ svn mkdir -m "baseline" $SVNREPO/trunk
+  $ svn mkdir -m "baseline" $SVNREPOURL/trunk
   
   Committed revision 8.
-  $ svn copy -m "initial branch" $SVNREPO/trunk $SVNREPO/branch
+  $ svn copy -m "initial branch" $SVNREPOURL/trunk $SVNREPOURL/branch
   
   Committed revision 9.
-  $ svn co --quiet "$SVNREPO"/branch tempwc
+  $ svn co --quiet "$SVNREPOURL"/branch tempwc
   $ cd tempwc
   $ echo "something old" > somethingold
   $ svn add somethingold
@@ -510,10 +504,10 @@ First, create that condition in the repository.
   Adding         somethingold
   Transmitting file data .
   Committed revision 10.
-  $ svn rm -m "remove branch" $SVNREPO/branch
+  $ svn rm -m "remove branch" $SVNREPOURL/branch
   
   Committed revision 11.
-  $ svn copy -m "recreate branch" $SVNREPO/trunk $SVNREPO/branch
+  $ svn copy -m "recreate branch" $SVNREPOURL/trunk $SVNREPOURL/branch
   
   Committed revision 12.
   $ svn up -q
@@ -526,10 +520,10 @@ First, create that condition in the repository.
   Committed revision 13.
   $ cd ..
   $ rm -rf tempwc
-  $ svn co "$SVNREPO/branch"@10 recreated
+  $ svn co "$SVNREPOURL/branch"@10 recreated
   A    recreated/somethingold (glob)
   Checked out revision 10.
-  $ echo "recreated =        [svn]       $SVNREPO/branch" >> .hgsub
+  $ echo "recreated =        [svn]       $SVNREPOURL/branch" >> .hgsub
   $ hg ci -m addsub
   $ cd recreated
   $ svn up -q
@@ -573,7 +567,7 @@ Test a subrepo referencing a just moved svn path. Last commit rev will
 be different from the revision, and the path will be different as
 well.
 
-  $ cd $WCROOT
+  $ cd "$WCROOT"
   $ svn up > /dev/null
   $ mkdir trunk/subdir branches
   $ echo a > trunk/subdir/a
@@ -587,17 +581,17 @@ well.
   Adding         trunk/subdir/a (glob)
   Transmitting file data .
   Committed revision 14.
-  $ svn cp -m branchtrunk $SVNREPO/trunk $SVNREPO/branches/somebranch
+  $ svn cp -m branchtrunk $SVNREPOURL/trunk $SVNREPOURL/branches/somebranch
   
   Committed revision 15.
   $ cd ..
 
   $ hg init repo2
   $ cd repo2
-  $ svn co $SVNREPO/branches/somebranch/subdir
+  $ svn co $SVNREPOURL/branches/somebranch/subdir
   A    subdir/a (glob)
   Checked out revision 15.
-  $ echo "subdir = [svn] $SVNREPO/branches/somebranch/subdir" > .hgsub
+  $ echo "subdir = [svn] $SVNREPOURL/branches/somebranch/subdir" > .hgsub
   $ hg add .hgsub
   $ hg ci -m addsub
   $ hg up null

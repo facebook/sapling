@@ -1,15 +1,18 @@
 
   $ "$TESTDIR/hghave" svn svn-bindings || exit 80
-  $ fix_path()
-  > {
-  >     tr '\\' /
-  > }
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
   $ echo "mq = " >> $HGRCPATH
-  $ svnpath=`pwd | fix_path`/svn-repo
-  $ svnadmin create "$svnpath"
-  $ cat > "$svnpath"/hooks/pre-revprop-change <<EOF
+
+  $ SVNREPOPATH=`pwd`/svn-repo
+#if windows
+  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#else
+  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#endif
+
+  $ svnadmin create "$SVNREPOPATH"
+  $ cat > "$SVNREPOPATH"/hooks/pre-revprop-change <<EOF
   > #!/bin/sh
   > 
   > REPOS="$1"
@@ -25,16 +28,10 @@
   > echo "Changing prohibited revision property" >&2
   > exit 1
   > EOF
-  $ chmod +x "$svnpath"/hooks/pre-revprop-change
-  $ 
-  $ # SVN wants all paths to start with a slash. Unfortunately,
-  $ # Windows ones don't. Handle that.
-  $ svnurl="$svnpath"
-  $ expr "$svnurl" : "\/" > /dev/null || svnurl="/$svnurl"
-  $ svnurl="file://$svnurl"
-  $ svn co "$svnurl" "$svnpath"-wc
+  $ chmod +x "$SVNREPOPATH"/hooks/pre-revprop-change
+  $ svn co "$SVNREPOURL" "$SVNREPOPATH"-wc
   Checked out revision 0.
-  $ cd "$svnpath"-wc
+  $ cd "$SVNREPOPATH"-wc
   $ echo a > a
   $ svn add a
   A         a
@@ -46,33 +43,33 @@
 
 initial roundtrip
 
-  $ hg convert -s svn -d hg "$svnpath"-wc "$svnpath"-hg | grep -v initializing
+  $ hg convert -s svn -d hg "$SVNREPOPATH"-wc "$SVNREPOPATH"-hg | grep -v initializing
   scanning source...
   sorting...
   converting...
   0 added a
-  $ hg convert -s hg -d svn "$svnpath"-hg "$svnpath"-wc
+  $ hg convert -s hg -d svn "$SVNREPOPATH"-hg "$SVNREPOPATH"-wc
   scanning source...
   sorting...
   converting...
 
 second roundtrip should do nothing
 
-  $ hg convert -s svn -d hg "$svnpath"-wc "$svnpath"-hg
+  $ hg convert -s svn -d hg "$SVNREPOPATH"-wc "$SVNREPOPATH"-hg
   scanning source...
   sorting...
   converting...
-  $ hg convert -s hg -d svn "$svnpath"-hg "$svnpath"-wc
+  $ hg convert -s hg -d svn "$SVNREPOPATH"-hg "$SVNREPOPATH"-wc
   scanning source...
   sorting...
   converting...
 
 new hg rev
 
-  $ hg clone "$svnpath"-hg "$svnpath"-work
+  $ hg clone "$SVNREPOPATH"-hg "$SVNREPOPATH"-work
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd "$svnpath"-work
+  $ cd "$SVNREPOPATH"-work
   $ echo b > b
   $ hg add b
   $ hg ci -mb
@@ -85,8 +82,8 @@ adding an empty revision
 
 echo hg to svn
 
-  $ hg --cwd "$svnpath"-hg pull -q "$svnpath"-work
-  $ hg convert -s hg -d svn "$svnpath"-hg "$svnpath"-wc
+  $ hg --cwd "$SVNREPOPATH"-hg pull -q "$SVNREPOPATH"-work
+  $ hg convert -s hg -d svn "$SVNREPOPATH"-hg "$SVNREPOPATH"-wc
   scanning source...
   sorting...
   converting...
@@ -95,14 +92,14 @@ echo hg to svn
 
 svn back to hg should do nothing
 
-  $ hg convert -s svn -d hg "$svnpath"-wc "$svnpath"-hg
+  $ hg convert -s svn -d hg "$SVNREPOPATH"-wc "$SVNREPOPATH"-hg
   scanning source...
   sorting...
   converting...
 
 hg back to svn should do nothing
 
-  $ hg convert -s hg -d svn "$svnpath"-hg "$svnpath"-wc
+  $ hg convert -s hg -d svn "$SVNREPOPATH"-hg "$SVNREPOPATH"-wc
   scanning source...
   sorting...
   converting...

@@ -1,15 +1,11 @@
   $ "$TESTDIR/hghave" svn13 || exit 80
 
-  $ fixpath()
-  > {
-  >     tr '\\' /
-  > }
   $ svnupanddisplay()
   > {
   >     (
   >        cd $1;
   >        svn up -q;
-  >        svn st -v | fixpath | sed 's/  */ /g' | sort
+  >        svn st -v | sed 's/  */ /g' | sort
   >        limit=''
   >        if [ $2 -gt 0 ]; then
   >            limit="--limit=$2"

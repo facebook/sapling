@@ -16,21 +16,23 @@ fn to create new repository, and cd into it
 handle svn subrepos safely
 
   $ svnadmin create svn-repo-2499
-  $ curpath=`pwd | tr '\\\\' /`
-  $ expr "$svnpath" : "\/" > /dev/null
-  > if [ $? -ne 0 ]; then
-  >   curpath="/$curpath"
-  > fi
-  $ svnurl="file://$curpath/svn-repo-2499/project"
+
+  $ SVNREPOPATH=`pwd`/svn-repo-2499/project
+#if windows
+  $ SVNREPOURL=file:///`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#else
+  $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
+#endif
+
   $ mkdir -p svn-project-2499/trunk
-  $ svn import -m 'init project' svn-project-2499 "$svnurl"
+  $ svn import -m 'init project' svn-project-2499 "$SVNREPOURL"
   Adding         svn-project-2499/trunk (glob)
   
   Committed revision 1.
 
 qnew on repo w/svn subrepo
   $ mkrepo repo-2499-svn-subrepo
-  $ svn co "$svnurl"/trunk sub
+  $ svn co "$SVNREPOURL"/trunk sub
   Checked out revision 1.
   $ echo 'sub = [svn]sub' >> .hgsub
   $ hg add .hgsub
