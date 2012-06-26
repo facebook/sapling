@@ -7704,9 +7704,10 @@ msgstr "não se pode usar a revisão %d como base, o resultado teria 3 pais"
 msgid "no rebase in progress"
 msgstr "nenhum rebaseamento em progresso"
 
-msgid "warning: immutable rebased changeset detected, can't abort\n"
+#, python-format
+msgid "can't abort rebase due to immutable changesets %s"
 msgstr ""
-"aviso: detectada uma revisão imutável rebaseada, não é possível abortar\n"
+"as seguintes revisões imutáveis impedem que o rebaseamento seja abortado: %s"
 
 msgid "warning: new changesets detected on target branch, can't abort\n"
 msgstr ""
@@ -22867,6 +22868,12 @@ msgstr "falha ao consolidar mudanças do svn"
 #, python-format
 msgid "not removing repo %s because it has changes.\n"
 msgstr "repositório %s não removido por possuir mudanças.\n"
+
+msgid "cannot retrieve git version"
+msgstr "não é possível obter a versão do git"
+
+msgid "git subrepo requires at least 1.6.0 or later"
+msgstr "sub-repositórios do git exigem a versão 1.6.0 ou posterior"
 
 #, python-format
 msgid "revision %s does not exist in subrepo %s\n"
