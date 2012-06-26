@@ -31,13 +31,13 @@ def updatemeta(ui, repo, args, **opts):
     return _buildmeta(ui, repo, args, partial=True)
 
 
-def rebuildmeta(ui, repo, args, **opts):
+def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     """rebuild hgsubversion metadata using values stored in revisions
     """
+    return _buildmeta(ui, repo, args, partial=False,
+                      skipuuid=unsafe_skip_uuid_check)
 
-    return _buildmeta(ui, repo, args, partial=False)
-
-def _buildmeta(ui, repo, args, partial=False):
+def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     if repo is None:
         raise error.RepoError("There is no Mercurial repository"
@@ -183,9 +183,12 @@ def _buildmeta(ui, repo, args, partial=False):
         # write repository uuid if required
         if uuid is None:
             uuid = convinfo[4:40]
-            assert uuid == svn.uuid, 'UUIDs did not match!'
+            if not skipuuid:
+                if uuid != svn.uuid:
+                    raise hgutil.Abort('remote svn repository identifier '
+                                       'does not match')
             uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
-            uuidfile.write(uuid)
+            uuidfile.write(svn.uuid)
             uuidfile.close()
 
         # don't reflect closed branches

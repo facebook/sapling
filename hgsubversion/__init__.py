@@ -206,6 +206,8 @@ cmdtable = {
           ('', 'username', '', 'username for authentication'),
           ('', 'password', '', 'password for authentication'),
           ('r', 'rev', '', 'Mercurial revision'),
+          ('', 'unsafe-skip-uuid-check', False,
+           'skip repository uuid check in rebuildmeta'),
           ],
          'hg svn <subcommand> ...',
          ),

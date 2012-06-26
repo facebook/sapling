@@ -308,6 +308,20 @@ missing file: binary3
     def test_corruption_stupid(self):
         self.test_corruption(True)
 
+    def test_svnrebuildmeta(self):
+        otherpath = self.load_svndump('binaryfiles-broken.svndump')
+        otherurl = test_util.fileurl(otherpath)
+        self.load_and_fetch('replace_trunk_with_branch.svndump')
+        # rebuildmeta with original repo
+        svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[])
+        # rebuildmeta with unrelated repo
+        self.assertRaises(hgutil.Abort,
+                          svncommands.rebuildmeta,
+                          self.ui(), repo=self.repo, args=[otherurl])
+        # rebuildmeta --unsafe-skip-uuid-check with unrelated repo
+        svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[otherurl],
+                                unsafe_skip_uuid_check=True)
+        
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
           ]
