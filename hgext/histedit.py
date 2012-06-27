@@ -8,7 +8,6 @@
 
 Inspired by git rebase --interactive.
 """
-from inspect import getargspec
 try:
     import cPickle as pickle
 except ImportError:
@@ -25,7 +24,6 @@ from mercurial import node
 from mercurial import patch
 from mercurial import repair
 from mercurial import scmutil
-from mercurial import url
 from mercurial import util
 from mercurial.i18n import _
 
@@ -44,7 +42,7 @@ editcomment = """
 """
 
 def between(repo, old, new, keep):
-    revs = [old, ]
+    revs = [old]
     current = old
     while current != new:
         ctx = repo[current]
@@ -89,12 +87,12 @@ def pick(ui, repo, ctx, ha, opts):
                 return ctx, [], [], []
         finally:
             os.unlink(patchfile)
-    except Exception, inst:
+    except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
-    n = repo.commit(text=oldctx.description(), user=oldctx.user(), date=oldctx.date(),
-                    extra=oldctx.extra())
-    return repo[n], [n, ], [oldctx.node(), ], []
+    n = repo.commit(text=oldctx.description(), user=oldctx.user(),
+                    date=oldctx.date(), extra=oldctx.extra())
+    return repo[n], [n], [oldctx.node()], []
 
 
 def edit(ui, repo, ctx, ha, opts):
@@ -117,7 +115,7 @@ def edit(ui, repo, ctx, ha, opts):
             patch.patch(ui, repo, patchfile, files=files, eolmode=None)
         finally:
             os.unlink(patchfile)
-    except Exception, inst:
+    except Exception:
         pass
     raise util.Abort(_('Make changes as needed, you may commit or record as '
                        'needed now.\nWhen you are finished, run hg'
@@ -147,11 +145,11 @@ def fold(ui, repo, ctx, ha, opts):
                 return ctx, [], [], []
         finally:
             os.unlink(patchfile)
-    except Exception, inst:
+    except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
-    n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(), date=oldctx.date(),
-                    extra=oldctx.extra())
+    n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
+                    date=oldctx.date(), extra=oldctx.extra())
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
@@ -174,21 +172,21 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     finally:
         os.unlink(patchfile)
     newmessage = '\n***\n'.join(
-        [ctx.description(), ] +
+        [ctx.description()] +
         [repo[r].description() for r in internalchanges] +
-        [oldctx.description(), ])
+        [oldctx.description()])
     # If the changesets are from the same author, keep it.
     if ctx.user() == oldctx.user():
         username = ctx.user()
     else:
         username = ui.username()
     newmessage = ui.edit(newmessage, username)
-    n = repo.commit(text=newmessage, user=username, date=max(ctx.date(), oldctx.date()),
-                    extra=oldctx.extra())
-    return repo[n], [n, ], [oldctx.node(), ctx.node() ], [newnode, ]
+    n = repo.commit(text=newmessage, user=username,
+                    date=max(ctx.date(), oldctx.date()), extra=oldctx.extra())
+    return repo[n], [n], [oldctx.node(), ctx.node()], [newnode]
 
 def drop(ui, repo, ctx, ha, opts):
-    return ctx, [], [repo[ha].node(), ], []
+    return ctx, [], [repo[ha].node()], []
 
 
 def message(ui, repo, ctx, ha, opts):
@@ -211,7 +209,7 @@ def message(ui, repo, ctx, ha, opts):
             patch.patch(ui, repo, patchfile, files=files, eolmode=None)
         finally:
             os.unlink(patchfile)
-    except Exception, inst:
+    except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     message = oldctx.description()
@@ -255,7 +253,8 @@ def histedit(ui, repo, *parent, **opts):
     parent = list(parent) + opts.get('rev', [])
     if opts.get('outgoing'):
         if len(parent) > 1:
-            raise util.Abort(_('only one repo argument allowed with --outgoing'))
+            raise util.Abort(
+                _('only one repo argument allowed with --outgoing'))
         elif parent:
             parent = parent[0]
 
@@ -279,7 +278,7 @@ def histedit(ui, repo, *parent, **opts):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --continue'))
         (parentctxnode, created, replaced,
-         tmpnodes, existing, rules, keep, tip, replacemap ) = readstate(repo)
+         tmpnodes, existing, rules, keep, tip, replacemap) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
         # discover any nodes the user has added in the interim
@@ -287,7 +286,7 @@ def histedit(ui, repo, *parent, **opts):
                        if c.node() not in existing]
         action, currentnode = rules.pop(0)
         while newchildren:
-            if action in ['f', 'fold', ]:
+            if action in ('f', 'fold'):
                 tmpnodes.extend([n.node() for n in newchildren])
             else:
                 created.extend([n.node() for n in newchildren])
@@ -300,22 +299,20 @@ def histedit(ui, repo, *parent, **opts):
         message = oldctx.description()
         if action in ('e', 'edit', 'm', 'mess'):
             message = ui.edit(message, ui.username())
-        elif action in ('f', 'fold', ):
+        elif action in ('f', 'fold'):
             message = 'fold-temp-revision %s' % currentnode
         new = None
         if m or a or r or d:
-            new = repo.commit(text=message, user=oldctx.user(), date=oldctx.date(),
-                              extra=oldctx.extra())
+            new = repo.commit(text=message, user=oldctx.user(),
+                              date=oldctx.date(), extra=oldctx.extra())
 
         if action in ('f', 'fold'):
             if new:
                 tmpnodes.append(new)
             else:
                 new = newchildren[-1]
-            (parentctx, created_,
-             replaced_, tmpnodes_, ) = finishfold(ui, repo,
-                                                  parentctx, oldctx, new,
-                                                  opts, newchildren)
+            (parentctx, created_, replaced_, tmpnodes_) = finishfold(
+                ui, repo, parentctx, oldctx, new, opts, newchildren)
             replaced.extend(replaced_)
             created.extend(created_)
             tmpnodes.extend(tmpnodes_)
@@ -338,7 +335,7 @@ def histedit(ui, repo, *parent, **opts):
                  ', '.join([node.hex(n)[:12] for n in created]))
         ui.debug('should strip temp nodes %s\n' %
                  ', '.join([node.hex(n)[:12] for n in tmpnodes]))
-        for nodes in (created, tmpnodes, ):
+        for nodes in (created, tmpnodes):
             for n in reversed(nodes):
                 try:
                     repair.strip(ui, repo, n)
@@ -367,7 +364,7 @@ def histedit(ui, repo, *parent, **opts):
         rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
-            rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12], )
+            rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12])
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -392,13 +389,11 @@ def histedit(ui, repo, *parent, **opts):
 
 
     while rules:
-        writestate(repo, parentctx.node(), created, replaced, tmpnodes, existing,
-                   rules, keep, tip, replacemap)
+        writestate(repo, parentctx.node(), created, replaced,
+                   tmpnodes, existing, rules, keep, tip, replacemap)
         action, ha = rules.pop(0)
-        (parentctx, created_,
-         replaced_, tmpnodes_, ) = actiontable[action](ui, repo,
-                                                       parentctx, ha,
-                                                       opts)
+        (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
+            ui, repo, parentctx, ha, opts)
 
         hexshort = lambda x: node.hex(x)[:12]
 
@@ -415,8 +410,8 @@ def histedit(ui, repo, *parent, **opts):
                 # made more changesets than we're replacing
                 # TODO synthesize patch names for created patches
                 replacemap[replaced_[0]] = created_[-1]
-                ui.debug('histedit: created many, assuming %s replaced by %s' % (
-                    hexshort(replaced_[0]), hexshort(created_[-1])))
+                ui.debug('histedit: created many, assuming %s replaced by %s' %
+                         (hexshort(replaced_[0]), hexshort(created_[-1])))
             elif rlen > clen:
                 if not created_:
                     # This must be a drop. Try and put our metadata on
@@ -451,8 +446,8 @@ def histedit(ui, repo, *parent, **opts):
 
     if not keep:
         if replacemap:
-            ui.note('histedit: Should update metadata for the following '
-                    'changes:\n')
+            ui.note(_('histedit: Should update metadata for the following '
+                      'changes:\n'))
 
             def copybms(old, new):
                 if old in tmpnodes or old in created:
@@ -460,12 +455,13 @@ def histedit(ui, repo, *parent, **opts):
                     return
                 while new in replacemap:
                     new = replacemap[new]
-                ui.note('histedit:  %s to %s\n' % (hexshort(old), hexshort(new)))
+                ui.note(_('histedit:  %s to %s\n') % (hexshort(old),
+                                                      hexshort(new)))
                 octx = repo[old]
                 marks = octx.bookmarks()
                 if marks:
-                    ui.note('histedit:     moving bookmarks %s\n' %
-                            ', '.join(marks))
+                    ui.note(_('histedit:     moving bookmarks %s\n') %
+                              ', '.join(marks))
                     for mark in marks:
                         repo._bookmarks[mark] = new
                     bookmarks.write(repo)
@@ -526,7 +522,6 @@ def verifyrules(rules, repo, ctxs):
     or a rule on a changeset outside of the user-given range.
     """
     parsed = []
-    first = True
     if len(rules) != len(ctxs):
         raise util.Abort(_('must specify a rule for each changeset once'))
     for r in rules:
@@ -539,7 +534,8 @@ def verifyrules(rules, repo, ctxs):
             ha = r.strip()
         try:
             if repo[ha] not in ctxs:
-                raise util.Abort(_('may not use changesets other than the ones listed'))
+                raise util.Abort(
+                    _('may not use changesets other than the ones listed'))
         except error.RepoError:
             raise util.Abort(_('unknown changeset %s listed') % ha)
         if action not in actiontable:
@@ -551,12 +547,15 @@ def verifyrules(rules, repo, ctxs):
 cmdtable = {
     "histedit":
         (histedit,
-         [('', 'commands', '', _('Read history edits from the specified file.')),
+         [('', 'commands', '', _(
+             'Read history edits from the specified file.')),
           ('c', 'continue', False, _('continue an edit already in progress')),
-          ('k', 'keep', False, _("don't strip old nodes after edit is complete")),
+          ('k', 'keep', False, _(
+              "don't strip old nodes after edit is complete")),
           ('', 'abort', False, _('abort an edit in progress')),
           ('o', 'outgoing', False, _('changesets not found in destination')),
-          ('f', 'force', False, _('force outgoing even for unrelated repositories')),
+          ('f', 'force', False, _(
+              'force outgoing even for unrelated repositories')),
           ('r', 'rev', [], _('first revision to be edited')),
           ],
          __doc__,
