@@ -933,16 +933,20 @@ class queue(object):
             return top, patch
         return None, None
 
-    def checksubstate(self, repo):
+    def checksubstate(self, repo, baserev=None):
         '''return list of subrepos at a different revision than substate.
         Abort if any subrepos have uncommitted changes.'''
         inclsubs = []
         wctx = repo[None]
+        if baserev:
+            bctx = repo[baserev]
+        else:
+            bctx = wctx.parents()[0]
         for s in wctx.substate:
             if wctx.sub(s).dirty(True):
                 raise util.Abort(
                     _("uncommitted changes in subrepository %s") % s)
-            elif wctx.sub(s).dirty():
+            elif s not in bctx.substate or bctx.sub(s).dirty():
                 inclsubs.append(s)
         return inclsubs
 
@@ -1488,13 +1492,14 @@ class queue(object):
                 raise util.Abort(_("cannot refresh immutable revision"),
                                  hint=_('see "hg help phases" for details'))
 
-            inclsubs = self.checksubstate(repo)
+            cparents = repo.changelog.parents(top)
+            patchparent = self.qparents(repo, top)
+
+            inclsubs = self.checksubstate(repo, hex(patchparent))
             if inclsubs:
                 inclsubs.append('.hgsubstate')
                 substatestate = repo.dirstate['.hgsubstate']
 
-            cparents = repo.changelog.parents(top)
-            patchparent = self.qparents(repo, top)
             ph = patchheader(self.join(patchfn), self.plainmode)
             diffopts = self.diffopts({'git': opts.get('git')}, patchfn)
             if msg:
