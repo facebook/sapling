@@ -14,6 +14,21 @@
   moving a/b/c/d/x to z/b/c/d/x (glob)
   moving a/b/c/d/y to z/b/c/d/y (glob)
   moving a/b/c/d/z to z/b/c/d/z (glob)
+
+Test name collisions
+
+  $ rm z/b/c/d/x
+  $ mkdir z/b/c/d/x
+  $ touch z/b/c/d/x/y
+  $ hg add z/b/c/d/x/y
+  abort: file 'z/b/c/d/x' in dirstate clashes with 'z/b/c/d/x/y'
+  [255]
+  $ rm -rf z/b/c/d
+  $ touch z/b/c/d
+  $ hg add z/b/c/d
+  abort: directory 'z/b/c/d' already in dirstate
+  [255]
+
   $ cd ..
 
 Issue1790: dirstate entry locked into unset if file mtime is set into
