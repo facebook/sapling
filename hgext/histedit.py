@@ -290,10 +290,10 @@ def histedit(ui, repo, *parent, **opts):
                 tmpnodes.extend([n.node() for n in newchildren])
             else:
                 created.extend([n.node() for n in newchildren])
-            newchildren = filter(lambda x: x.node() not in existing,
-                                 reduce(lambda x, y: x + y,
-                                        map(lambda r: r.children(),
-                                            newchildren)))
+            filtered = []
+            for r in newchildren:
+                filtered += [c for c in r.children() if c.node not in existing]
+            newchildren = filtered
         m, a, r, d = repo.status()[:4]
         oldctx = repo[currentnode]
         message = oldctx.description()
