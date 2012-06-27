@@ -44,7 +44,7 @@ Repo setup.
   
 
 Run a dummy edit to make sure we get tip^^ correctly via revsingle.
-  $ HGEDITOR=cat hg histedit tip^^
+  $ HGEDITOR=cat hg histedit "tip^^"
   pick eb57da33312f 2 three
   pick c8e68270e35a 3 four
   pick 08d98a8350f3 4 five

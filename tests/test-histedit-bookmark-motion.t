@@ -1,6 +1,6 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $  cat >> $HGRCPATH <<EOF
+  $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > graphlog=
   > histedit=
@@ -8,10 +8,7 @@
 
   $ hg init r
   $ cd r
-See if bookmarks are in core. If not, then we don't support bookmark
-motion on this version of hg.
-  $ hg bookmarks || exit 80
-  no bookmarks set
+
   $ for x in a b c d e f ; do
   >     echo $x > $x
   >     hg add $x
