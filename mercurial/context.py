@@ -1054,7 +1054,7 @@ class workingctx(changectx):
                 wlock.release()
 
     def dirs(self):
-        return self._repo.dirstate.dirs()
+        return set(self._repo.dirstate.dirs())
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular

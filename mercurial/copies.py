@@ -321,7 +321,9 @@ def mergecopies(repo, c1, c2, ca):
 
     # generate a directory move map
     d1, d2 = c1.dirs(), c2.dirs()
-    invalid = set([""])
+    d1.add('')
+    d2.add('')
+    invalid = set()
     dirmove = {}
 
     # examine each file copy for a potential directory move, which is
