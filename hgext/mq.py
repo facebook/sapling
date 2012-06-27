@@ -1064,12 +1064,17 @@ class queue(object):
                     if commitfiles:
                         parent = self.qparents(repo, n)
                         if inclsubs:
-                            if substatestate in 'a?':
-                                changes[1].append('.hgsubstate')
-                            elif substatestate in 'r':
-                                changes[2].append('.hgsubstate')
-                            else: # modified
-                                changes[0].append('.hgsubstate')
+                            for files in changes[:3]:
+                                if '.hgsubstate' in files:
+                                    break # already listed up
+                            else:
+                                # not yet listed up
+                                if substatestate in 'a?':
+                                    changes[1].append('.hgsubstate')
+                                elif substatestate in 'r':
+                                    changes[2].append('.hgsubstate')
+                                else: # modified
+                                    changes[0].append('.hgsubstate')
                         chunks = patchmod.diff(repo, node1=parent, node2=n,
                                                changes=changes, opts=diffopts)
                         for chunk in chunks:

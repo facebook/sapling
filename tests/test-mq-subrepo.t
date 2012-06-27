@@ -355,3 +355,63 @@ correctly handle subrepos with patch queues
   $ hg qnew 0.diff
 
   $ cd ..
+
+check whether MQ operations can import updated .hgsubstate correctly
+both into 'revision' and 'patch file under .hg/patches':
+
+  $ hg init importing-hgsubstate
+  $ cd importing-hgsubstate
+
+  $ echo a > a
+  $ hg commit -u test -d '0 0' -Am '#0 in parent'
+  adding a
+  $ hg init sub
+  $ echo sa > sub/sa
+  $ hg -R sub commit -u test -d '0 0' -Am '#0 in sub'
+  adding sa
+  $ echo 'sub = sub' > .hgsub
+  $ touch .hgsubstate
+  $ hg add .hgsub .hgsubstate
+
+  $ hg qnew -u test -d '0 0' import-at-qnew
+  $ hg -R sub parents --template '{node} sub\n'
+  b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  $ cat .hgsubstate
+  b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  $ hg diff -c tip
+  diff -r f499373e340c -r b20ffac88564 .hgsub
+  --- /dev/null
+  +++ b/.hgsub
+  @@ -0,0 +1,1 @@
+  +sub = sub
+  diff -r f499373e340c -r b20ffac88564 .hgsubstate
+  --- /dev/null
+  +++ b/.hgsubstate
+  @@ -0,0 +1,1 @@
+  +b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  $ cat .hg/patches/import-at-qnew
+  # HG changeset patch
+  # Parent f499373e340cdca5d01dee904aeb42dd2a325e71
+  # User test
+  # Date 0 0
+  
+  diff -r f499373e340c -r b20ffac88564 .hgsub
+  --- /dev/null
+  +++ b/.hgsub
+  @@ -0,0 +1,1 @@
+  +sub = sub
+  diff -r f499373e340c -r b20ffac88564 .hgsubstate
+  --- /dev/null
+  +++ b/.hgsubstate
+  @@ -0,0 +1,1 @@
+  +b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  $ hg qpop
+  popping import-at-qnew
+  patch queue now empty
+  $ hg qpush
+  applying import-at-qnew
+  now at: import-at-qnew
+
+  $ cd ..
+
+  $ cd ..
