@@ -412,6 +412,35 @@ both into 'revision' and 'patch file under .hg/patches':
   applying import-at-qnew
   now at: import-at-qnew
 
+  $ hg qnew import-at-qrefresh
+  $ echo sb > sub/sb
+  $ hg -R sub commit -u test -d '0 0' -Am '#1 in sub'
+  adding sb
+  $ hg qrefresh -u test -d '0 0'
+  $ hg -R sub parents --template '{node} sub\n'
+  88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ cat .hgsubstate
+  88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ hg diff -c tip
+  diff -r 44f846335325 -r b3e8c5fa3aaa .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,1 @@
+  -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+  $ cat .hg/patches/import-at-qrefresh
+  # HG changeset patch
+  # Date 0 0
+  # User test
+  # Parent 44f846335325209be6be35dc2c9a4be107278c09
+  
+  diff -r 44f846335325 .hgsubstate
+  --- a/.hgsubstate
+  +++ b/.hgsubstate
+  @@ -1,1 +1,1 @@
+  -b6f6e9c41f3dfd374a6d2ed4535c87951cf979cf sub
+  +88ac1bef5ed43b689d1d200b59886b675dec474b sub
+
   $ cd ..
 
   $ cd ..

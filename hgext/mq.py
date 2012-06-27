@@ -946,6 +946,18 @@ class queue(object):
                 inclsubs.append(s)
         return inclsubs
 
+    def putsubstate2changes(self, substatestate, changes):
+        for files in changes[:3]:
+            if '.hgsubstate' in files:
+                return # already listed up
+        # not yet listed up
+        if substatestate in 'a?':
+            changes[1].append('.hgsubstate')
+        elif substatestate in 'r':
+            changes[2].append('.hgsubstate')
+        else: # modified
+            changes[0].append('.hgsubstate')
+
     def localchangesfound(self, refresh=True):
         if refresh:
             raise util.Abort(_("local changes found, refresh first"))
@@ -1064,17 +1076,7 @@ class queue(object):
                     if commitfiles:
                         parent = self.qparents(repo, n)
                         if inclsubs:
-                            for files in changes[:3]:
-                                if '.hgsubstate' in files:
-                                    break # already listed up
-                            else:
-                                # not yet listed up
-                                if substatestate in 'a?':
-                                    changes[1].append('.hgsubstate')
-                                elif substatestate in 'r':
-                                    changes[2].append('.hgsubstate')
-                                else: # modified
-                                    changes[0].append('.hgsubstate')
+                            self.putsubstate2changes(substatestate, changes)
                         chunks = patchmod.diff(repo, node1=parent, node2=n,
                                                changes=changes, opts=diffopts)
                         for chunk in chunks:
@@ -1487,6 +1489,9 @@ class queue(object):
                                  hint=_('see "hg help phases" for details'))
 
             inclsubs = self.checksubstate(repo)
+            if inclsubs:
+                inclsubs.append('.hgsubstate')
+                substatestate = repo.dirstate['.hgsubstate']
 
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
@@ -1567,10 +1572,6 @@ class queue(object):
             a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
             match = scmutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
-            chunks = patchmod.diff(repo, patchparent, match=match,
-                                changes=c, opts=diffopts)
-            for chunk in chunks:
-                patchf.write(chunk)
 
             try:
                 if diffopts.git or diffopts.upgrade:
@@ -1649,6 +1650,12 @@ class queue(object):
                 n = newcommit(repo, oldphase, message, user, ph.date,
                               match=match, force=True)
                 # only write patch after a successful commit
+                if inclsubs:
+                    self.putsubstate2changes(substatestate, c)
+                chunks = patchmod.diff(repo, patchparent,
+                                       changes=c, opts=diffopts)
+                for chunk in chunks:
+                    patchf.write(chunk)
                 patchf.close()
                 self.applied.append(statusentry(n, patchfn))
             except: # re-raises
