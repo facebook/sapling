@@ -1,0 +1,71 @@
+% log before edit
+@  changeset:   5:652413bf663e
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     f
+|
+o  changeset:   4:e860deea161a
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     e
+|
+o  changeset:   3:055a42cdd887
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+o  changeset:   2:177f92b77385
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     c
+|
+o  changeset:   1:d2ae7f538514
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:cb9a9f314b8b
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% edit the history
+0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% log after edit
+@  changeset:   4:708943196e52
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+o  changeset:   3:75cbdffecadb
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     f
+|
+o  changeset:   2:493dc0964412
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     e
+|
+o  changeset:   1:d2ae7f538514
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:cb9a9f314b8b
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% manifest after edit
+a
+b
+d
+e
+f
+% EOF

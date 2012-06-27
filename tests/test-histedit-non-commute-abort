@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. "$TESTDIR/histedit-helpers.sh"
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog=
+histedit=
+EOF
+
+EDITED=`pwd`/editedhistory
+cat > $EDITED <<EOF
+pick 177f92b77385 c
+pick 055a42cdd887 d
+pick bfa474341cc9 does not commute with e
+pick e860deea161a e
+pick 652413bf663e f
+EOF
+initrepo ()
+{
+    hg init r
+    cd r
+    for x in a b c d e f ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+    echo a >> e
+    hg ci -m 'does not commute with e'
+}
+
+initrepo
+
+echo % log before edit
+hg log --graph
+
+echo % edit the history
+HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+
+echo '% fix up (pre abort)'
+echo a > e
+hg add e
+hg histedit --continue 2>&1 | fixbundle
+
+echo % abort the edit
+hg histedit --abort 2>&1 | fixbundle
+
+echo % log after abort
+hg log --graph
+echo % EOF

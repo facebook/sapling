@@ -1,0 +1,79 @@
+#!/bin/sh
+
+. "$TESTDIR/histedit-helpers.sh"
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog=
+histedit=
+EOF
+
+EDITED=`pwd`/editedhistory
+cat > $EDITED <<EOF
+pick 177f92b77385 c
+pick 055a42cdd887 d
+edit e860deea161a e
+pick 652413bf663e f
+EOF
+initrepo ()
+{
+    hg init r
+    cd r
+    for x in a b c d e f ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+}
+
+initrepo
+
+echo % log before edit
+hg log --graph
+
+echo % edit the history
+HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+
+echo % edit the revision
+echo a > e
+HGEDITOR='echo "foobaz" > ' hg histedit --continue 2>&1 | fixbundle
+
+hg log --graph
+
+echo '% contents of e:'
+hg cat e
+
+cat > $EDITED <<EOF
+edit c38516e9ed62 f
+EOF
+HGEDITOR="cat $EDITED > " hg histedit tip 2>&1 | fixbundle
+hg status
+HGEDITOR='true' hg histedit --continue
+hg status
+
+echo % log after edit
+hg log --limit 1
+
+echo "% say we'll change the message, but don't."
+cat > ../edit.sh <<EOF
+#!/bin/sh
+cat \$1 | sed s/pick/mess/ > tmp
+mv tmp \$1
+EOF
+chmod +x ../edit.sh
+HGEDITOR="../edit.sh" hg histedit tip 2>&1 | fixbundle
+hg status
+hg log --limit 1
+
+echo % modify the message
+cat > $EDITED <<EOF
+mess c38516e9ed62 f
+EOF
+HGEDITOR="cat $EDITED > " hg histedit tip 2>&1 | fixbundle
+hg status
+hg log --limit 1
+
+echo % rollback should not work after a histedit
+hg rollback
+
+echo % EOF

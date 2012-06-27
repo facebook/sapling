@@ -1,0 +1,94 @@
+% test editing with no change
+-----------------------------
+% log before editing
+@  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+|
+o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+|
+o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+|
+o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+|
+o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+|
+o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+
+% start editing the history (not changing anything)
+| pick 055a42cdd887 3 d
+| edit e860deea161a 4 e
+| pick 652413bf663e 5 f
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+abort: Make changes as needed, you may commit or record as needed now.
+When you are finished, run hg histedit --continue to resume.
+% finalize changeset editing (leaving commit message unaltered)
+1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% check state of working copy
+652413bf663e tip
+% log after history editing
+@  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+|
+o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+|
+o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+|
+o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+|
+o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+|
+o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+
+% test editing with no change, then abort
+-----------------------------------------
+% log before editing
+@  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+|
+o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+|
+o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+|
+o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+|
+o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+|
+o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+
+% start editing the history (not changing anything)
+| edit 055a42cdd887 3 d
+| edit e860deea161a 4 e
+| pick 652413bf663e 5 f
+0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+abort: Make changes as needed, you may commit or record as needed now.
+When you are finished, run hg histedit --continue to resume.
+% finalize changeset editing (leaving commit message unaltered)
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+abort: Make changes as needed, you may commit or record as needed now.
+When you are finished, run hg histedit --continue to resume.
+% log after first edit
+o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+|
+o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+|
+@  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+|
+o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+|
+o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+|
+o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+
+% abort editing session
+2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% log after abort
+@  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+|
+o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+|
+o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+|
+o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+|
+o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+|
+o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+
+% EOF

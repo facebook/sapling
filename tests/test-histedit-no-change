@@ -1,0 +1,110 @@
+#!/bin/sh
+
+# test for issue #6:
+# editing a changeset without any actual change would corrupt the repository
+
+. "$TESTDIR/histedit-helpers.sh"
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog=
+histedit=
+EOF
+
+initrepo ()
+{
+    dir="$1"
+    comment="$2"
+
+    if [ -n "${comment}" ]; then
+        echo % ${comment}
+        echo % ${comment} | sed 's:.:-:g'
+    fi
+
+    hg init ${dir}
+    cd ${dir}
+    for x in a b c d e f ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+}
+
+geneditor ()
+{
+    # generate an editor script for selecting changesets to be edited
+
+    choice=$1  # changesets that should be edited (using sed line ranges)
+
+    cat <<EOF | sed 's:^....::'
+    #!/bin/sh
+
+    # editing the rules, replacing 'pick' with 'edit' for the chosen lines
+    sed '${choice}s:^pick:edit:' \$1 > \${1}.tmp
+    mv \${1}.tmp \$1
+
+    # displaying the resulting rules, minus comments and empty lines
+    sed '/^#/d;/^$/d;s:^:| :' \$1 >&2
+EOF
+}
+
+startediting ()
+{
+    # begin an editing session
+
+    choice="$1"  # changesets that should be edited
+    number="$2"  # number of changesets considered (from tip)
+    comment="$3"
+
+    geneditor "${choice}" > edit.sh
+    chmod +x edit.sh
+
+    echo % start editing the history ${comment}
+    HGEDITOR=./edit.sh hg histedit -- -${number} 2>&1 | fixbundle
+}
+
+continueediting ()
+{
+    # continue an edit already in progress
+
+    editor="$1"  # message editor when finalizing editing
+    comment="$2"
+
+    echo % finalize changeset editing ${comment}
+    HGEDITOR=${editor} hg histedit --continue 2>&1 | fixbundle
+}
+
+graphlog ()
+{
+    comment="${1:-log}"
+
+    echo % "${comment}"
+    hg glog --template '{rev} {node} \"{desc|firstline}\"\n'
+}
+
+
+
+initrepo r1 "test editing with no change"
+graphlog "log before editing"
+startediting 2 3 "(not changing anything)" # edit the 2nd of 3 changesets
+continueediting true "(leaving commit message unaltered)"
+
+echo "% check state of working copy"
+hg id
+
+graphlog "log after history editing"
+
+
+cd ..
+initrepo r2 "test editing with no change, then abort"
+graphlog "log before editing"
+startediting 1,2 3 "(not changing anything)" # edit the 1st two of 3 changesets
+continueediting true "(leaving commit message unaltered)"
+graphlog "log after first edit"
+
+echo % abort editing session
+hg histedit --abort 2>&1 | fixbundle
+
+graphlog "log after abort"
+
+echo % EOF

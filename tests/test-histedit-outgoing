@@ -1,0 +1,61 @@
+#!/bin/sh
+
+cat >> $HGRCPATH <<EOF
+[extensions]
+graphlog=
+histedit=
+EOF
+
+EDITED=`pwd`/editedhistory
+cat > $EDITED <<EOF
+pick 177f92b77385 c
+pick e860deea161a e
+pick 652413bf663e f
+pick 055a42cdd887 d
+EOF
+initrepo ()
+{
+    hg init r
+    cd r
+    for x in a b c ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+
+    cd ..
+    hg clone r r2 | grep -v updating
+    cd r2
+    for x in d e f ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+
+    cd ..
+    hg init r3
+    cd r3
+    for x in g h i ; do
+        echo $x > $x
+        hg add $x
+        hg ci -m $x
+    done
+    cd ..
+}
+
+initrepo
+
+echo % show the edit commands offered by outgoing
+cd r2
+HGEDITOR=cat hg histedit --outgoing ../r | grep -v comparing | grep -v searching
+cd ..
+
+echo % show the error from unrelated repos
+cd r3
+HGEDITOR=cat hg histedit --outgoing ../r | grep -v comparing | grep -v searching
+cd ..
+
+echo % show the error from unrelated repos
+cd r3
+HGEDITOR=cat hg histedit --force --outgoing ../r
+cd ..

@@ -1,0 +1,105 @@
+% log before edit
+@  changeset:   5:652413bf663e
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     f
+|
+o  changeset:   4:e860deea161a
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     e
+|
+o  changeset:   3:055a42cdd887
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+o  changeset:   2:177f92b77385
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     c
+|
+o  changeset:   1:d2ae7f538514
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:cb9a9f314b8b
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% edit the history
+0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+abort: Make changes as needed, you may commit or record as needed now.
+When you are finished, run hg histedit --continue to resume.
+% edit the revision
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+@  changeset:   5:c38516e9ed62
+|  tag:         tip
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     f
+|
+o  changeset:   4:1da62d13177d
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     foobaz
+|
+o  changeset:   3:055a42cdd887
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     d
+|
+o  changeset:   2:177f92b77385
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     c
+|
+o  changeset:   1:d2ae7f538514
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     b
+|
+o  changeset:   0:cb9a9f314b8b
+   user:        test
+   date:        Thu Jan 01 00:00:00 1970 +0000
+   summary:     a
+
+% contents of e:
+a
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+abort: Make changes as needed, you may commit or record as needed now.
+When you are finished, run hg histedit --continue to resume.
+A f
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+% log after edit
+changeset:   5:c38516e9ed62
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     f
+
+% say we'll change the message, but don't.
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   5:c38516e9ed62
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     f
+
+% modify the message
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+changeset:   5:4d6a10bcf3e3
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     mess c38516e9ed62 f
+
+% rollback should not work after a histedit
+no rollback information available
+% EOF
