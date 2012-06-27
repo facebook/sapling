@@ -34,19 +34,25 @@ o  changeset:   0:cb9a9f314b8b
 0 files updated, 0 files merged, 2 files removed, 0 files unresolved
 abort: Make changes as needed, you may commit or record as needed now.
 When you are finished, run hg histedit --continue to resume.
-% edit the revision
+% commit, then edit the revision
+created new head
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-@  changeset:   5:c38516e9ed62
+@  changeset:   6:bf757c081cd0
 |  tag:         tip
 |  user:        test
 |  date:        Thu Jan 01 00:00:00 1970 +0000
 |  summary:     f
 |
-o  changeset:   4:1da62d13177d
+o  changeset:   5:d6b15fed32d4
 |  user:        test
 |  date:        Thu Jan 01 00:00:00 1970 +0000
 |  summary:     foobaz
+|
+o  changeset:   4:1a60820cd1f6
+|  user:        test
+|  date:        Thu Jan 01 00:00:00 1970 +0000
+|  summary:     wat
 |
 o  changeset:   3:055a42cdd887
 |  user:        test
@@ -76,7 +82,7 @@ When you are finished, run hg histedit --continue to resume.
 A f
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 % log after edit
-changeset:   5:c38516e9ed62
+changeset:   6:bf757c081cd0
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -85,7 +91,7 @@ summary:     f
 % say we'll change the message, but don't.
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-changeset:   5:c38516e9ed62
+changeset:   6:bf757c081cd0
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
@@ -94,11 +100,11 @@ summary:     f
 % modify the message
 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-changeset:   5:4d6a10bcf3e3
+changeset:   6:0b16746f8e89
 tag:         tip
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-summary:     mess c38516e9ed62 f
+summary:     mess bf757c081cd0 f
 
 % rollback should not work after a histedit
 no rollback information available
