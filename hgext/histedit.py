@@ -27,6 +27,7 @@ from mercurial import scmutil
 from mercurial import util
 from mercurial.i18n import _
 
+testedwith = 'internal'
 
 editcomment = """
 
