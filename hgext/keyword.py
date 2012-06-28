@@ -505,11 +505,18 @@ def files(ui, repo, *pats, **opts):
         showfiles += ([f for f in files if f not in kwfiles],
                       [f for f in unknown if f not in kwunknown])
     kwlabels = 'enabled deleted enabledunknown ignored ignoredunknown'.split()
-    kwstates = zip('K!kIi', showfiles, kwlabels)
-    for char, filenames, kwstate in kwstates:
-        fmt = (opts.get('all') or ui.verbose) and '%s %%s\n' % char or '%s\n'
+    kwstates = zip(kwlabels, 'K!kIi', showfiles)
+    fm = ui.formatter('kwfiles', opts)
+    fmt = '%.0s%s\n'
+    if opts.get('all') or ui.verbose:
+        fmt = '%s %s\n'
+    for kwstate, char, filenames in kwstates:
+        label = 'kwfiles.' + kwstate
         for f in filenames:
-            ui.write(fmt % repo.pathto(f, cwd), label='kwfiles.' + kwstate)
+            fm.startitem()
+            fm.write('kwstatus path', fmt, char,
+                     repo.pathto(f, cwd), label=label)
+    fm.end()
 
 @command('kwshrink', commands.walkopts, _('hg kwshrink [OPTION]... [FILE]...'))
 def shrink(ui, repo, *pats, **opts):
