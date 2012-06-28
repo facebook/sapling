@@ -189,6 +189,9 @@ def issvnurl(ui, url):
     try:
         proto, path = url.split('://', 1)
         if proto == 'file':
+            if (os.name == 'nt' and path[:1] == '/' and path[1:2].isalpha()
+                and path[2:6].lower() == '%3a/'):
+                path = path[:2] + ':/' + path[6:]
             path = urllib.url2pathname(path)
     except ValueError:
         proto = 'file'
