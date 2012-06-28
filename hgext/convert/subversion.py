@@ -120,6 +120,10 @@ def debugsvnlog(ui, **opts):
     """Fetch SVN log in a subprocess and channel them back to parent to
     avoid memory collection issues.
     """
+    if svn is None:
+        raise util.Abort(_('debugsvnlog could not load Subversion python '
+                           'bindings'))
+
     util.setbinary(sys.stdin)
     util.setbinary(sys.stdout)
     args = decodeargs(sys.stdin.read())
