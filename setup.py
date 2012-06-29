@@ -335,6 +335,19 @@ class buildhgextindex(Command):
         f.write(out)
         f.close()
 
+class buildhgexe(build_ext):
+    description = 'compile hg.exe from mercurial/exewrapper.c'
+
+    def build_extensions(self):
+        if os.name != 'nt':
+            return
+        objects = self.compiler.compile(['mercurial/exewrapper.c'],
+                                         output_dir=self.build_temp)
+        dir = os.path.dirname(self.get_ext_fullpath('dummy'))
+        target = os.path.join(dir, 'hg')
+        self.compiler.link_executable(objects, target,
+                                      output_dir=self.build_temp)
+
 class hginstallscripts(install_scripts):
     '''
     This is a specialization of install_scripts that replaces the @LIBDIR@ with
@@ -386,7 +399,9 @@ cmdclass = {'build': hgbuild,
             'build_ext': hgbuildext,
             'build_py': hgbuildpy,
             'build_hgextindex': buildhgextindex,
-            'install_scripts': hginstallscripts}
+            'install_scripts': hginstallscripts,
+            'build_hgexe': buildhgexe,
+            }
 
 packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
             'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
