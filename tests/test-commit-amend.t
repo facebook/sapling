@@ -23,8 +23,10 @@ Nothing to amend:
   nothing changed
   [1]
 
-  $ echo '[hooks]' >> $HGRCPATH
-  $ echo 'pretxncommit.foo = echo "pretxncommit $HG_NODE"; hg id -r $HG_NODE' >> $HGRCPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [hooks]
+  > pretxncommit.foo = sh -c "echo \"pretxncommit \$HG_NODE\"; hg id -r \$HG_NODE"
+  > EOF
 
 Amending changeset with changes in working dir:
 
@@ -32,7 +34,7 @@ Amending changeset with changes in working dir:
   $ hg ci --amend -m 'amend base1'
   pretxncommit 9cd25b479c51be2f4ed2c38e7abdf7ce67d8e0dc
   9cd25b479c51 tip
-  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg
+  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg (glob)
   $ echo 'pretxncommit.foo = ' >> $HGRCPATH
   $ hg diff -c .
   diff -r ad120869acf0 -r 9cd25b479c51 a
