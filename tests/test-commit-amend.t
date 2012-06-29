@@ -23,11 +23,17 @@ Nothing to amend:
   nothing changed
   [1]
 
+  $ echo '[hooks]' >> $HGRCPATH
+  $ echo 'pretxncommit.foo = echo "pretxncommit $HG_NODE"; hg id -r $HG_NODE' >> $HGRCPATH
+
 Amending changeset with changes in working dir:
 
   $ echo a >> a
   $ hg ci --amend -m 'amend base1'
-  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg (glob)
+  pretxncommit 9cd25b479c51be2f4ed2c38e7abdf7ce67d8e0dc
+  9cd25b479c51 tip
+  saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg
+  $ echo 'pretxncommit.foo = ' >> $HGRCPATH
   $ hg diff -c .
   diff -r ad120869acf0 -r 9cd25b479c51 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000

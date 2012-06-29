@@ -2925,6 +2925,10 @@ def strip(ui, repo, *revs, **opts):
     Use the --no-backup option to discard the backup bundle once the
     operation completes.
 
+    Strip is not a history-rewriting operation and can be used on
+    changesets in the public phase. But if the stripped changesets have
+    been pushed to a remote repository you will likely pull them again.
+
     Return 0 on success.
     """
     backup = 'all'

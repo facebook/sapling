@@ -1301,7 +1301,11 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     try:
         # First, do a regular commit to record all changes in the working
         # directory (if there are any)
-        node = commit(ui, repo, commitfunc, pats, opts)
+        ui.callhooks = False
+        try:
+            node = commit(ui, repo, commitfunc, pats, opts)
+        finally:
+            ui.callhooks = True
         ctx = repo[node]
 
         # Participating changesets:

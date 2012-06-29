@@ -36,8 +36,10 @@ Create a repo with several bookmarks
   adding d
   created new head
 
+  $ hg book W
+
   $ hg tglog 
-  @  3: 'D' bookmarks:
+  @  3: 'D' bookmarks: W
   |
   | o  2: 'C' bookmarks: Y Z
   | |
@@ -60,7 +62,7 @@ Move only rebased bookmarks
   $ hg tglog 
   @  3: 'C' bookmarks: Y Z
   |
-  o  2: 'D' bookmarks:
+  o  2: 'D' bookmarks: W
   |
   | o  1: 'B' bookmarks: X
   |/
@@ -82,7 +84,28 @@ Keep bookmarks to the correct rebased changeset
   |
   o  2: 'B' bookmarks: X
   |
-  o  1: 'D' bookmarks:
+  o  1: 'D' bookmarks: W
+  |
+  o  0: 'A' bookmarks:
+  
+
+Keep active bookmark on the correct changeset
+
+  $ cd ..
+  $ hg clone -q a a3
+
+  $ cd a3
+  $ hg up -q X
+
+  $ hg rebase -d W
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
+
+  $ hg tglog
+  @  3: 'C' bookmarks: Y Z
+  |
+  o  2: 'B' bookmarks: X
+  |
+  o  1: 'D' bookmarks: W
   |
   o  0: 'A' bookmarks:
   
