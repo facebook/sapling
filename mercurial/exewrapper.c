@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 	/*
 	Only add the pyscript to the args, if it's not already there. It may
-	already be there, if Mercurial spawned a child process of itself, in
+	already be there, if the script spawned a child process of itself, in
 	the same way as it got called, that is, with the pyscript already in
 	place. So we optionally accept the pyscript as the first argument
 	(argv[1]), letting our exe taking the role of the python interpreter.
