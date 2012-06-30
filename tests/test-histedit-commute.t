@@ -79,7 +79,7 @@ show the edit commands offered
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 edit the history
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -134,7 +134,7 @@ put things back
   > pick b069cc29fb22 e
   > pick 26f6a030ae82 f
   > EOF
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -181,7 +181,7 @@ slightly different this time
   > pick e860deea161a e
   > pick 177f92b77385 c
   > EOF
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -227,7 +227,7 @@ keep prevents stripping dead revs
   > pick 99a62755c625 c
   > pick 7c6fdd608667 e
   > EOF
-  $ HGEDITOR="cat $EDITED > " hg histedit bfe4a5a76b37 --keep 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit bfe4a5a76b37 --keep 2>&1 | fixbundle
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

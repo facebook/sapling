@@ -71,7 +71,7 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   1 out of 1 hunks FAILED -- saving rejects to file e.rej
   abort: Fix up the change and run hg histedit --continue

@@ -61,7 +61,7 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

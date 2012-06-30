@@ -32,12 +32,11 @@ editing a changeset without any actual change would corrupt the repository
   >     # generate an editor script for selecting changesets to be edited
   >     choice=$1  # changesets that should be edited (using sed line ranges)
   >     cat <<EOF | sed 's:^....::'
-  >     #!/bin/sh
   >     # editing the rules, replacing 'pick' with 'edit' for the chosen lines
-  >     sed '${choice}s:^pick:edit:' \$1 > \${1}.tmp
-  >     mv \${1}.tmp \$1
+  >     sed '${choice}s:^pick:edit:' "\$1" > "\${1}.tmp"
+  >     mv "\${1}.tmp" "\$1"
   >     # displaying the resulting rules, minus comments and empty lines
-  >     sed '/^#/d;/^$/d;s:^:| :' \$1 >&2
+  >     sed '/^#/d;/^$/d;s:^:| :' "\$1" >&2
   > EOF
   > }
 
@@ -48,9 +47,8 @@ editing a changeset without any actual change would corrupt the repository
   >     number="$2"  # number of changesets considered (from tip)
   >     comment="$3"
   >     geneditor "${choice}" > edit.sh
-  >     chmod +x edit.sh
   >     echo % start editing the history ${comment}
-  >     HGEDITOR=./edit.sh hg histedit -- -${number} 2>&1 | fixbundle
+  >     HGEDITOR="sh ./edit.sh" hg histedit -- -${number} 2>&1 | fixbundle
   > }
 
   $ continueediting ()

@@ -61,7 +61,7 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat $EDITED > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   abort: Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
@@ -118,7 +118,7 @@ commit, then edit the revision
   $ cat > $EDITED <<EOF
   > edit bf757c081cd0 f
   > EOF
-  $ HGEDITOR="cat $EDITED > " hg histedit tip 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   abort: Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
@@ -139,12 +139,10 @@ log after edit
 
 say we'll change the message, but don't.
   $ cat > ../edit.sh <<EOF
-  > #!/bin/sh
-  > cat \$1 | sed s/pick/mess/ > tmp
-  > mv tmp \$1
+  > cat "\$1" | sed s/pick/mess/ > tmp
+  > mv tmp "\$1"
   > EOF
-  $ chmod +x ../edit.sh
-  $ HGEDITOR="../edit.sh" hg histedit tip 2>&1 | fixbundle
+  $ HGEDITOR="sh ../edit.sh" hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
@@ -160,7 +158,7 @@ modify the message
   $ cat > $EDITED <<EOF
   > mess bf757c081cd0 f
   > EOF
-  $ HGEDITOR="cat $EDITED > " hg histedit tip 2>&1 | fixbundle
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
