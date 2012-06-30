@@ -476,7 +476,7 @@ def histedit(ui, repo, *parent, **opts):
             newtip = sorted(replacemap.values(), key=repo.changelog.rev)[-1]
             copybms(oldtip, newtip)
 
-            for old, new in replacemap.iteritems():
+            for old, new in sorted(replacemap.iteritems()):
                 copybms(old, new)
                 # TODO update mq state
 
