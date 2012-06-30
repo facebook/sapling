@@ -1,5 +1,5 @@
   $ "$TESTDIR/hghave" serve || exit 80
-  $ USERCACHE=`pwd`/cache; export USERCACHE
+  $ USERCACHE="$TESTTMP/cache"; export USERCACHE
   $ mkdir -p ${USERCACHE}
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -14,7 +14,7 @@
   > patterns=glob:**.dat
   > usercache=${USERCACHE}
   > [hooks]
-  > precommit=echo "Invoking status precommit hook"; hg status
+  > precommit=sh -c "echo \"Invoking status precommit hook\"; hg status"
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
@@ -463,7 +463,7 @@ Test pulling with --all-largefiles flag
   $ rm -Rf ${USERCACHE}/*
   $ cd a-backup
   $ hg pull --all-largefiles
-  pulling from $TESTTMP/a
+  pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -989,7 +989,7 @@ Corrupt the cached largefile in r7
   pushing to http://localhost:$HGPORT1/
   searching for changes
   remote: largefiles: failed to put 4cdac4d8b084d0b599525cf732437fb337d422a8 into store: largefile contents do not match hash
-  abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/
+  abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/ (glob)
   [255]
   $ rm -rf empty
 
