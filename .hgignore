@@ -8,6 +8,7 @@ syntax: glob
 *.o
 *.so
 *.dll
+*.exe
 *.pyd
 *.pyc
 *.pyo
@@ -31,7 +32,6 @@ MANIFEST.in
 patches
 mercurial/__version__.py
 mercurial.egg-info
-Output/Mercurial-*.exe
 .DS_Store
 tags
 cscope.*
@@ -53,5 +53,4 @@ syntax: regexp
 
 # hackable windows distribution additions
 ^hg-python
-^hg.exe$
 ^hg.py$
