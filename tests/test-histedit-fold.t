@@ -6,7 +6,7 @@
   > histedit=
   > EOF
 
-  $ EDITED=`pwd`/editedhistory
+  $ EDITED="$TESTTMP/editedhistory"
   $ cat > $EDITED <<EOF
   > pick e860deea161a e
   > pick 652413bf663e f

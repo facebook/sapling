@@ -6,7 +6,7 @@
   > histedit=
   > EOF
 
-  $ EDITED=`pwd`/editedhistory
+  $ EDITED="$TESTTMP/editedhistory"
   $ cat > $EDITED <<EOF
   > pick 177f92b77385 c
   > pick 055a42cdd887 d
@@ -70,7 +70,7 @@ commit, then edit the revision
   $ hg ci -m 'wat'
   created new head
   $ echo a > e
-  $ HGEDITOR='echo "foobaz" > ' hg histedit --continue 2>&1 | fixbundle
+  $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

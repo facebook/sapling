@@ -95,8 +95,8 @@
   histedit:     moving bookmarks will-move-backwards
   histedit:  e860deea161a to ae467701c500
   histedit:     moving bookmarks four
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg (glob)
   $ hg log --graph
   @  changeset:   3:0efacef7cb48
   |  bookmark:    five
@@ -152,7 +152,7 @@
   histedit:  0efacef7cb48 to 7c044e3e33a9
   histedit:  ae467701c500 to 1be9c35b4cb2
   histedit:     moving bookmarks four, three
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg (glob)
 
 We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.
