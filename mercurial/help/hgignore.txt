@@ -33,6 +33,11 @@ To control Mercurial's handling of files that it manages, many
 commands support the ``-I`` and ``-X`` options; see
 :hg:`help <command>` and :hg:`help patterns` for details.
 
+Files that are already tracked are not affected by .hgignore, even
+if they appear in .hgignore. An untracked file X can be explicitly
+added with :hg:`add X`, even if X would be excluded by a pattern
+in .hgignore.
+
 Syntax
 ------
 
