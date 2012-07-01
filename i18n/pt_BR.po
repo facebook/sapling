@@ -6138,6 +6138,16 @@ msgstr ""
 "    Use a opção --no-backup para descartar o bundle de backup assim\n"
 "    que a operação terminar."
 
+msgid ""
+"    Strip is not a history-rewriting operation and can be used on\n"
+"    changesets in the public phase. But if the stripped changesets have\n"
+"    been pushed to a remote repository you will likely pull them again."
+msgstr ""
+"    A operação strip não reescreve o histórico, e pode ser usada em\n"
+"    revisões na fase pública. Mas se revisões removidas por strip\n"
+"    tiverem sido enviadas para um repositório remoto, um comando pull\n"
+"    subsequente poderá trazê-las de volta."
+
 msgid "empty revision set"
 msgstr "conjunto vazio de revisões"
 
