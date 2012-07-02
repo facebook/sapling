@@ -381,7 +381,7 @@ the hunk is left unchanged.
         if skipall is None:
             h.pretty(ui)
         msg = (_('examine changes to %s?') %
-               _(' and ').join(map(repr, h.files())))
+               _(' and ').join("'%s'" % f for f in h.files()))
         r, skipfile, skipall, np = prompt(skipfile, skipall, msg, None)
         if not r:
             continue
