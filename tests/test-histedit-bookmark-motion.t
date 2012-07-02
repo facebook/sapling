@@ -87,16 +87,16 @@
   histedit: Should update metadata for the following changes:
   histedit:  055a42cdd887 to ae467701c500
   histedit:     moving bookmarks three
+  histedit:  177f92b77385 to d36c0562f908
+  histedit:     moving bookmarks also-two, two
   histedit:  652413bf663e to 0efacef7cb48
   histedit:     moving bookmarks five
   histedit:  d2ae7f538514 to cb9a9f314b8b
   histedit:     moving bookmarks will-move-backwards
   histedit:  e860deea161a to ae467701c500
   histedit:     moving bookmarks four
-  histedit:  177f92b77385 to d36c0562f908
-  histedit:     moving bookmarks also-two, two
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg (glob)
   $ hg log --graph
   @  changeset:   3:0efacef7cb48
   |  bookmark:    five
@@ -149,10 +149,10 @@
   histedit: Should update metadata for the following changes:
   histedit:  0efacef7cb48 to 1be9c35b4cb2
   histedit:     moving bookmarks five
+  histedit:  0efacef7cb48 to 7c044e3e33a9
   histedit:  ae467701c500 to 1be9c35b4cb2
   histedit:     moving bookmarks four, three
-  histedit:  0efacef7cb48 to 7c044e3e33a9
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg (glob)
 
 We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.

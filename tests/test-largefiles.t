@@ -1,6 +1,5 @@
-  $ "$TESTDIR/hghave" serve || exit 80
-  $ USERCACHE=`pwd`/cache; export USERCACHE
-  $ mkdir -p ${USERCACHE}
+  $ USERCACHE="$TESTTMP/cache"; export USERCACHE
+  $ mkdir -p "${USERCACHE}"
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles=
@@ -14,7 +13,7 @@
   > patterns=glob:**.dat
   > usercache=${USERCACHE}
   > [hooks]
-  > precommit=echo "Invoking status precommit hook"; hg status
+  > precommit=sh -c "echo \"Invoking status precommit hook\"; hg status"
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
@@ -142,6 +141,7 @@ Test moving largefiles and verify that normal files are also unaffected.
   $ cat sub/large4
   large22
 
+#if hgweb
 Test display of largefiles in hgweb
 
   $ hg serve -d -p $HGPORT --pid-file ../hg.pid
@@ -164,6 +164,7 @@ Test display of largefiles in hgweb
   
   
   $ "$TESTDIR/killdaemons.py"
+#endif
 
 Test archiving the various revisions.  These hit corner cases known with
 archiving.
@@ -436,7 +437,7 @@ tests update).
 
 Test cloning with --all-largefiles flag
 
-  $ rm -Rf ${USERCACHE}/*
+  $ rm -Rf "${USERCACHE}"/*
   $ hg clone --all-largefiles a a-backup
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -460,10 +461,10 @@ Test pulling with --all-largefiles flag
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
-  $ rm -Rf ${USERCACHE}/*
+  $ rm -Rf "${USERCACHE}"/*
   $ cd a-backup
   $ hg pull --all-largefiles
-  pulling from $TESTTMP/a
+  pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -727,7 +728,7 @@ correctly.
   3 largefiles updated, 0 removed
 # Delete the largefiles in the largefiles system cache so that we have an
 # opportunity to test that caching after a pull works.
-  $ rm ${USERCACHE}/*
+  $ rm "${USERCACHE}"/*
   $ cd f
   $ echo "large4-merge-test" > sub/large4
   $ hg commit -m "Modify large4 to test merge"
@@ -845,7 +846,7 @@ Cat a largefile
   normal3-modified
   $ hg cat sub/large4
   large4-modified
-  $ rm ${USERCACHE}/*
+  $ rm "${USERCACHE}"/*
   $ hg cat -r a381d2c8c80e -o cat.out sub/large4
   $ cat cat.out
   large4-modified
@@ -880,6 +881,7 @@ Test --normal flag
   (use 'hg revert new-largefile' to cancel the pending addition)
   $ cd ..
 
+#if serve
 vanilla clients not locked out from largefiles servers on vanilla repos
   $ mkdir r1
   $ cd r1
@@ -912,6 +914,8 @@ largefiles clients still work with vanilla servers
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+#endif
+
 
 vanilla clients locked out from largefiles http repos
   $ mkdir r4
@@ -923,6 +927,8 @@ vanilla clients locked out from largefiles http repos
   Invoking status precommit hook
   A f1
   $ cd ..
+
+#if serve
   $ hg serve -R r4 -d -p $HGPORT2 --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg --config extensions.largefiles=! clone http://localhost:$HGPORT2 r5
@@ -935,6 +941,7 @@ vanilla clients locked out from largefiles http repos
 
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py"
+#endif
 
 vanilla clients locked out from largefiles ssh repos
   $ hg --config extensions.largefiles=! clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/r4 r5
@@ -944,6 +951,8 @@ vanilla clients locked out from largefiles ssh repos
   
   Please enable it in your Mercurial config file.
   [255]
+
+#if serve
 
 largefiles clients refuse to push largefiles repos to vanilla servers
   $ mkdir r6
@@ -980,7 +989,7 @@ largefiles clients refuse to push largefiles repos to vanilla servers
 
 putlfile errors are shown (issue3123)
 Corrupt the cached largefile in r7
-  $ echo corruption > $USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ echo corruption > "$USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8"
   $ hg init empty
   $ hg serve -R empty -d -p $HGPORT1 --pid-file hg.pid \
   >   --config 'web.allow_push=*' --config web.push_ssl=False
@@ -989,7 +998,7 @@ Corrupt the cached largefile in r7
   pushing to http://localhost:$HGPORT1/
   searching for changes
   remote: largefiles: failed to put 4cdac4d8b084d0b599525cf732437fb337d422a8 into store: largefile contents do not match hash
-  abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/
+  abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/ (glob)
   [255]
   $ rm -rf empty
 
@@ -1004,7 +1013,7 @@ Push a largefiles repository to a served empty repository
   $ hg serve -R empty -d -p $HGPORT2 --pid-file hg.pid \
   >   --config 'web.allow_push=*' --config web.push_ssl=False
   $ cat hg.pid >> $DAEMON_PIDS
-  $ rm ${USERCACHE}/*
+  $ rm "${USERCACHE}"/*
   $ hg push -R r8 http://localhost:$HGPORT2
   pushing to http://localhost:$HGPORT2/
   searching for changes
@@ -1017,6 +1026,9 @@ Push a largefiles repository to a served empty repository
 
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py"
+
+#endif
+
 
 #if unix-permissions
 
