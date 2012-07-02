@@ -1,5 +1,5 @@
   $ USERCACHE="$TESTTMP/cache"; export USERCACHE
-  $ mkdir -p "${USERCACHE}"
+  $ mkdir "${USERCACHE}"
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles=
@@ -437,7 +437,7 @@ tests update).
 
 Test cloning with --all-largefiles flag
 
-  $ rm -Rf "${USERCACHE}"/*
+  $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles a a-backup
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -461,7 +461,7 @@ Test pulling with --all-largefiles flag
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
-  $ rm -Rf "${USERCACHE}"/*
+  $ rm "${USERCACHE}"/*
   $ cd a-backup
   $ hg pull --all-largefiles
   pulling from $TESTTMP/a (glob)
