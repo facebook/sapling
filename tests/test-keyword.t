@@ -1,5 +1,3 @@
-  $ "$TESTDIR/hghave" unix-permissions serve || exit 80
-
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > keyword =
@@ -297,16 +295,20 @@ Check whether expansion is filewise and file mode is preserved
 
   $ echo '$Id$' > c
   $ echo 'tests for different changenodes' >> c
+#if unix-permissions
   $ chmod 600 c
   $ ls -l c | cut -b 1-10
   -rw-------
+#endif
 
 commit file c
 
   $ hg commit -A -mcndiff -d '1 0' -u 'User Name <user@example.com>'
   adding c
+#if unix-permissions
   $ ls -l c | cut -b 1-10
   -rw-------
+#endif
 
 force expansion
 
@@ -330,10 +332,10 @@ record
 
 record chunk
 
-  >>> lines = open('a').readlines()
+  >>> lines = open('a', 'rb').readlines()
   >>> lines.insert(1, 'foo\n')
   >>> lines.append('bar\n')
-  >>> open('a', 'w').writelines(lines)
+  >>> open('a', 'wb').writelines(lines)
   $ hg record -d '10 1' -m rectest a<<EOF
   > y
   > y
@@ -612,6 +614,7 @@ Copy ignored file to ignored file: no overwriting
 cp symlink file; hg cp -A symlink file (part1)
 - copied symlink points to kwfile: overwrite
 
+#if symlink
   $ cp sym i
   $ ls -l i
   -rw-r--r--* (glob)
@@ -624,6 +627,7 @@ cp symlink file; hg cp -A symlink file (part1)
   expand $Id$
   $ hg forget i
   $ rm i
+#endif
 
 Test different options of hg kwfiles
 
@@ -924,6 +928,7 @@ kwexpand nonexistent
   nonexistent:* (glob)
 
 
+#if serve
 hg serve
  - expand with hgweb file
  - no expansion with hgweb annotate/changeset/filediff
@@ -987,6 +992,7 @@ hg serve
   
   
   $ cat errors.log
+#endif
 
 Prepare merge and resolve tests
 
