@@ -225,6 +225,7 @@ Multiple branches
   $ bzr switch -b branch
   Tree is up to date at revision 1.
   Switched to branch: *repo/branch/ (glob)
+  $ sleep 1
   $ echo b > b
   $ bzr add -q b
   $ bzr ci -qm addb
@@ -233,6 +234,7 @@ Multiple branches
   $ bzr switch --force ../repo/trunk
   Updated to revision 1.
   Switched to branch: */repo/trunk/ (glob)
+  $ sleep 1
   $ echo a >> a
   $ bzr ci -qm changea
   $ cd ..
