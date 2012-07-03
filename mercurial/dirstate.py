@@ -312,10 +312,10 @@ class dirstate(object):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
             _decdirs(self._dirs, f)
 
-    def _addpath(self, f, state, mode, size, mtime, check=False):
+    def _addpath(self, f, state, mode, size, mtime):
         assert state not in "?r"
         oldstate = self[f]
-        if check or oldstate == "r":
+        if state == 'a' or oldstate == 'r':
             scmutil.checkfilename(f)
             if f in self._dirs:
                 raise util.Abort(_('directory %r already in dirstate') % f)
@@ -377,7 +377,7 @@ class dirstate(object):
 
     def add(self, f):
         '''Mark a file added.'''
-        self._addpath(f, 'a', 0, -1, -1, True)
+        self._addpath(f, 'a', 0, -1, -1)
         if f in self._copymap:
             del self._copymap[f]
 
