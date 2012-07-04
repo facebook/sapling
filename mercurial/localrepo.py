@@ -987,8 +987,6 @@ class localrepository(repo.repository):
             self.store.write()
             if '_phasecache' in vars(self):
                 self._phasecache.write()
-            if 'obsstore' in vars(self):
-                self.obsstore.flushmarkers()
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
@@ -1607,6 +1605,10 @@ class localrepository(repo.repository):
         return r
 
     def pull(self, remote, heads=None, force=False):
+        # don't open transaction for nothing or you break future useful
+        # rollback call
+        tr = None
+        trname = 'pull\n' + util.hidepassword(remote.url())
         lock = self.lock()
         try:
             tmp = discovery.findcommonincoming(self, remote, heads=heads,
@@ -1617,6 +1619,7 @@ class localrepository(repo.repository):
                 added = []
                 result = 0
             else:
+                tr = self.transaction(trname)
                 if heads is None and list(common) == [nullid]:
                     self.ui.status(_("requesting all changes\n"))
                 elif heads is None and remote.capable('changegroupsubset'):
@@ -1665,9 +1668,15 @@ class localrepository(repo.repository):
 
             remoteobs = remote.listkeys('obsolete')
             if 'dump' in remoteobs:
+                if tr is None:
+                    tr = self.transaction(trname)
                 data = base85.b85decode(remoteobs['dump'])
-                self.obsstore.mergemarkers(data)
+                self.obsstore.mergemarkers(tr, data)
+            if tr is not None:
+                tr.close()
         finally:
+            if tr is not None:
+                tr.release()
             lock.release()
 
         return result

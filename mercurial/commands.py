@@ -2061,7 +2061,12 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         succs = tuple(bin(succ) for succ in successors)
         l = repo.lock()
         try:
-            repo.obsstore.create(bin(precursor), succs, 0, metadata)
+            tr = repo.transaction('debugobsolete')
+            try:
+                repo.obsstore.create(tr, bin(precursor), succs, 0, metadata)
+                tr.close()
+            finally:
+                tr.release()
         finally:
             l.release()
     else:
