@@ -1808,9 +1808,8 @@ class localrepository(repo.repository):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
                 if 'obsolete' in self.listkeys('namespaces') and self.obsstore:
-                    data = self.obsstore._writemarkers()
-                    r = remote.pushkey('obsolete', 'dump', '',
-                                       base85.b85encode(data))
+                    data = self.listkeys('obsolete')['dump']
+                    r = remote.pushkey('obsolete', 'dump', '', data)
                     if not r:
                         self.ui.warn(_('failed to push obsolete markers!\n'))
             finally:

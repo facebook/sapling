@@ -209,12 +209,14 @@ class obsstore(object):
         """Write all markers on disk
 
         After this operation, "new" markers are considered "known"."""
+        # XXX: transaction logic should be used
         if self._new:
-            # XXX: transaction logic should be used here. But for
-            # now rewriting the whole file is good enough.
-            f = self.sopener('obsstore', 'wb', atomictemp=True)
+            f = self.sopener('obsstore', 'ab')
             try:
-                self._writemarkers(f)
+                if f.tell() == 0:
+                    # plain new obsstore
+                    f.write(_pack('>B', _fmversion))
+                _writemarkers(f.write, self._new)
                 f.close()
                 self._new[:] = []
             except: # re-raises
@@ -228,32 +230,25 @@ class obsstore(object):
         for suc in sucs:
             self.successors.setdefault(suc, set()).add(marker)
 
-    def _writemarkers(self, stream=None):
-        # Kept separate from flushmarkers(), it will be reused for
-        # markers exchange.
-        if stream is None:
-            final = []
-            w = final.append
-        else:
-            w = stream.write
-        w(_pack('>B', _fmversion))
-        for marker in self._all:
-            pre, sucs, flags, metadata = marker
-            nbsuc = len(sucs)
-            format = _fmfixed + (_fmnode * nbsuc)
-            data = [nbsuc, len(metadata), flags, pre]
-            data.extend(sucs)
-            w(_pack(format, *data))
-            w(metadata)
-        if stream is None:
-            return ''.join(final)
+def _writemarkers(write, markers):
+    # Kept separate from flushmarkers(), it will be reused for
+    # markers exchange.
+    for marker in markers:
+        pre, sucs, flags, metadata = marker
+        nbsuc = len(sucs)
+        format = _fmfixed + (_fmnode * nbsuc)
+        data = [nbsuc, len(metadata), flags, pre]
+        data.extend(sucs)
+        write(_pack(format, *data))
+        write(metadata)
 
 def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    data = repo.obsstore._writemarkers()
-    return {'dump': base85.b85encode(data)}
+    data = [_pack('>B', _fmversion)]
+    _writemarkers(data.append, repo.obsstore)
+    return {'dump': base85.b85encode(''.join(data))}
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
