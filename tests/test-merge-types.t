@@ -72,9 +72,11 @@ Symlink is other parent, executable is local:
 
 Update to link without local change should get us a symlink (issue3316):
 
- $ hg up -C 0
- $ hg up
- $ hg st
+  $ hg up -C 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st
 
 Update to link with local change should cause a merge prompt (issue3200):
 
