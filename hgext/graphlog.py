@@ -455,7 +455,11 @@ def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
              filematcher=None):
     seen, state = [], asciistate()
     for rev, type, ctx, parents in dag:
-        char = ctx.node() in showparents and '@' or 'o'
+        char = 'o'
+        if ctx.node() in showparents:
+            char = '@'
+        elif ctx.obsolete():
+            char = 'x'
         copies = None
         if getrenamed and ctx.rev():
             copies = []
