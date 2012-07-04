@@ -100,6 +100,8 @@ utestpats = [
      "explicit exit code checks unnecessary"),
     (uprefix + r'set -e', "don't use set -e"),
     (uprefix + r'\s', "don't indent commands, use > for continued lines"),
+    (r'^  saved backup bundle to \$TESTTMP.*\.hg$',
+     "use (glob) to match Windows paths too"),
   ],
   # warnings
   []

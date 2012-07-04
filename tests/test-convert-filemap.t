@@ -527,7 +527,7 @@ test named branch pruning
   $ cd namedbranch
   $ hg --config extensions.mq= strip tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  saved backup bundle to $TESTTMP/namedbranch/.hg/strip-backup/73899bcbe45c-backup.hg
+  saved backup bundle to $TESTTMP/namedbranch/.hg/strip-backup/73899bcbe45c-backup.hg (glob)
   $ hg up foo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge default
