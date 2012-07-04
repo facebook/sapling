@@ -259,7 +259,6 @@ Find an exact largefile match in a largefiles subrepo
 
 Find an exact match to a standin (should archive nothing)
   $ hg --config extensions.largefiles= archive -S -I 'sub/sub2/.hglf/large.bin' ../archive_lf
-  $ find ../archive_lf | sort
-  find: `../archive_lf': No such file or directory
+  $ find ../archive_lf 2> /dev/null | sort
 
   $ cd ..
