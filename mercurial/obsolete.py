@@ -182,7 +182,7 @@ class obsstore(object):
             raise ValueError(prec)
         for succ in succs:
             if len(succ) != 20:
-                raise ValueError(prec)
+                raise ValueError(succ)
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
         self.add(marker)
 
