@@ -334,7 +334,7 @@ record chunk
   >>> lines.insert(1, 'foo\n')
   >>> lines.append('bar\n')
   >>> open('a', 'w').writelines(lines)
-  $ hg record -d '1 10' -m rectest a<<EOF
+  $ hg record -d '10 1' -m rectest a<<EOF
   > y
   > y
   > n
@@ -355,7 +355,7 @@ record chunk
   record change 2/2 to 'a'? [Ynesfdaq?] 
 
   $ hg identify
-  d17e03c92c97+ tip
+  5f5eb23505c3+ tip
   $ hg status
   M a
   A r
@@ -363,7 +363,7 @@ record chunk
 Cat modified file a
 
   $ cat a
-  expand $Id: a,v d17e03c92c97 1970/01/01 00:00:01 test $
+  expand $Id: a,v 5f5eb23505c3 1970/01/01 00:00:10 test $
   foo
   do not process $Id:
   xxx $
@@ -372,8 +372,8 @@ Cat modified file a
 Diff remaining chunk
 
   $ hg diff a
-  diff -r d17e03c92c97 a
-  --- a/a	Wed Dec 31 23:59:51 1969 -0000
+  diff -r 5f5eb23505c3 a
+  --- a/a	Thu Jan 01 00:00:09 1970 -0000
   +++ b/a	* (glob)
   @@ -2,3 +2,4 @@
    foo
@@ -391,7 +391,7 @@ Record all chunks in file a
 
  - do not use "hg record -m" here!
 
-  $ hg record -l msg -d '1 11' a<<EOF
+  $ hg record -l msg -d '11 1' a<<EOF
   > y
   > y
   > y
@@ -419,7 +419,7 @@ File a should be clean
 rollback and revert expansion
 
   $ cat a
-  expand $Id: a,v 59f969a3b52c 1970/01/01 00:00:01 test $
+  expand $Id: a,v 78e0a02d76aa 1970/01/01 00:00:11 test $
   foo
   do not process $Id:
   xxx $
@@ -460,14 +460,14 @@ Only z should be overwritten
 
 record added file alone
 
-  $ hg -v record -l msg -d '1 12' r<<EOF
+  $ hg -v record -l msg -d '12 2' r<<EOF
   > y
   > EOF
   diff --git a/r b/r
   new file mode 100644
   examine changes to 'r'? [Ynesfdaq?] 
   r
-  committed changeset 3:899491280810
+  committed changeset 3:82a2f715724d
   overwriting r expanding keywords
  - status call required for dirstate.normallookup() check
   $ hg status r
@@ -484,14 +484,14 @@ record added keyword ignored file
 
   $ echo '$Id$' > i
   $ hg add i
-  $ hg --verbose record -d '1 13' -m recignored<<EOF
+  $ hg --verbose record -d '13 1' -m recignored<<EOF
   > y
   > EOF
   diff --git a/i b/i
   new file mode 100644
   examine changes to 'i'? [Ynesfdaq?] 
   i
-  committed changeset 3:5f40fe93bbdc
+  committed changeset 3:9f40ceb5a072
   $ cat i
   $Id$
   $ hg -q rollback
@@ -502,14 +502,14 @@ amend
 
   $ echo amend >> a
   $ echo amend >> b
-  $ hg -q commit -d '1 14' -m 'prepare amend'
+  $ hg -q commit -d '14 1' -m 'prepare amend'
 
-  $ hg --debug commit --amend -d '1 15' -m 'amend without changes' | grep keywords
+  $ hg --debug commit --amend -d '15 1' -m 'amend without changes' | grep keywords
   overwriting a expanding keywords
   $ hg -q id
-  a71343332ea9
+  577e60613a88
   $ head -1 a
-  expand $Id: a,v a71343332ea9 1970/01/01 00:00:01 test $
+  expand $Id: a,v 577e60613a88 1970/01/01 00:00:15 test $
 
   $ hg -q strip -n tip
 
