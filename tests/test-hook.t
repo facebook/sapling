@@ -543,7 +543,7 @@ make sure --traceback works on hook import failure
   $ echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
   $ echo a >> a
-  $ hg --traceback commit -ma 2>&1 | egrep '^(exception|Traceback|ImportError)'
+  $ hg --traceback commit -ma 2>&1 | egrep -v '^( +File| {4}[a-zA-Z(])'
   exception from first failed import attempt:
   Traceback (most recent call last):
   ImportError: No module named somebogusmodule
@@ -551,6 +551,8 @@ make sure --traceback works on hook import failure
   Traceback (most recent call last):
   ImportError: No module named hgext_importfail
   Traceback (most recent call last):
+  Abort: precommit.importfail hook is invalid (import of "importfail" failed)
+  abort: precommit.importfail hook is invalid (import of "importfail" failed)
 
 Issue1827: Hooks Update & Commit not completely post operation
 
