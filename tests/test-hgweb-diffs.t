@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve execbit || exit 80
+  $ "$TESTDIR/hghave" serve || exit 80
 
 setting up repo
 
@@ -12,9 +12,22 @@ setting up repo
 
 change permissions for git diffs
 
-  $ chmod +x a
-  $ hg rm b
-  $ hg ci -Amb
+  $ hg import -q --bypass - <<EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > b
+  > 
+  > diff --git a/a b/a
+  > old mode 100644
+  > new mode 100755
+  > diff --git a/b b/b
+  > deleted file mode 100644
+  > --- a/b
+  > +++ /dev/null
+  > @@ -1,1 +0,0 @@
+  > -b
+  > EOF
 
 set up hgweb
 
@@ -548,7 +561,7 @@ test import rev as raw-rev
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd test1
-  $ hg import -q --exact http://localhost:$HGPORT/rev/1
+  $ hg import -q --bypass --exact http://localhost:$HGPORT/rev/1
 
 raw revision with diff block numbers
 
