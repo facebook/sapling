@@ -232,7 +232,8 @@ class changectx(object):
 
     def obsolete(self):
         """True if the changeset is obsolete"""
-        return self.node() in self._repo.obsstore.obsoleted
+        return (self.node() in self._repo.obsstore.precursors
+                and self.phase() > phases.public)
 
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
