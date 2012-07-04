@@ -109,7 +109,7 @@ Check that deep archiving works
   $ hg --config extensions.largefiles=! add sub1/sub2/folder/test.txt
   $ hg ci -Sm "add test.txt"
   committing subrepository sub1
-  committing subrepository sub1/sub2
+  committing subrepository sub1/sub2 (glob)
   $ hg --config extensions.largefiles=! archive -S ../archive_all
   $ find ../archive_all | sort
   ../archive_all
@@ -163,7 +163,7 @@ Note that add --large through a subrepo currently adds the file as a normal file
   $ hg --config extensions.largefiles= add --large large.bin
   $ hg --config extensions.largefiles= ci -S -m "add large files"
   committing subrepository sub1
-  committing subrepository sub1/sub2
+  committing subrepository sub1/sub2 (glob)
 
   $ hg --config extensions.largefiles= archive -S ../archive_lf
   $ find ../archive_lf | sort
