@@ -1151,6 +1151,8 @@ def reverse(repo, subset, x):
     Reverse order of set.
     """
     l = getset(repo, subset, x)
+    if not isinstance(l, list):
+        l = list(l)
     l.reverse()
     return l
 

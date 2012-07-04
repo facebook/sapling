@@ -372,6 +372,17 @@ quoting needed
   4
   3
   2
+  $ log 'reverse(all())'
+  9
+  8
+  7
+  6
+  5
+  4
+  3
+  2
+  1
+  0
   $ log 'rev(5)'
   5
   $ log 'sort(limit(reverse(all()), 3))'
