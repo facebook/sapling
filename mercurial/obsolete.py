@@ -156,12 +156,17 @@ class obsstore(object):
     - successors: new -> set(old)
     """
 
-    def __init__(self):
+    def __init__(self, sopener):
         self._all = []
         # new markers to serialize
         self._new = []
         self.precursors = {}
         self.successors = {}
+        self.sopener = sopener
+        data = sopener.tryread('obsstore')
+        if data:
+            for marker in _readmarkers(data):
+                self._load(marker)
 
     def __iter__(self):
         return iter(self._all)
@@ -193,11 +198,6 @@ class obsstore(object):
         self._new.append(marker)
         self._load(marker)
 
-    def loadmarkers(self, data):
-        """Load all markers in data, mark them as known."""
-        for marker in _readmarkers(data):
-            self._load(marker)
-
     def mergemarkers(self, data):
         other = set(_readmarkers(data))
         local = set(self._all)
@@ -205,12 +205,21 @@ class obsstore(object):
         for marker in new:
             self.add(marker)
 
-    def flushmarkers(self, stream):
-        """Write all markers to a stream
+    def flushmarkers(self):
+        """Write all markers on disk
 
         After this operation, "new" markers are considered "known"."""
-        self._writemarkers(stream)
-        self._new[:] = []
+        if self._new:
+            # XXX: transaction logic should be used here. But for
+            # now rewriting the whole file is good enough.
+            f = self.sopener('obsstore', 'wb', atomictemp=True)
+            try:
+                self._writemarkers(f)
+                f.close()
+                self._new[:] = []
+            except: # re-raises
+                f.discard()
+                raise
 
     def _load(self, marker):
         self._all.append(marker)

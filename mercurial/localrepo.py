@@ -193,10 +193,7 @@ class localrepository(repo.repository):
 
     @storecache('obsstore')
     def obsstore(self):
-        store = obsolete.obsstore()
-        data = self.sopener.tryread('obsstore')
-        if data:
-            store.loadmarkers(data)
+        store = obsolete.obsstore(self.sopener)
         return store
 
     @storecache('00changelog.i')
@@ -990,16 +987,8 @@ class localrepository(repo.repository):
             self.store.write()
             if '_phasecache' in vars(self):
                 self._phasecache.write()
-            if 'obsstore' in vars(self) and self.obsstore._new:
-                # XXX: transaction logic should be used here. But for
-                # now rewriting the whole file is good enough.
-                f = self.sopener('obsstore', 'wb', atomictemp=True)
-                try:
-                    self.obsstore.flushmarkers(f)
-                    f.close()
-                except: # re-raises
-                    f.discard()
-                    raise
+            if 'obsstore' in vars(self):
+                self.obsstore.flushmarkers()
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
