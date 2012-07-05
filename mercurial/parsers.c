@@ -307,7 +307,6 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		Py_ssize_t len, l;
 		PyObject *o;
 		char *s, *t;
-		int err;
 
 		if (!PyTuple_Check(v) || PyTuple_GET_SIZE(v) != 4) {
 			PyErr_SetString(PyExc_TypeError, "expected a 4-tuple");
@@ -319,10 +318,11 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 			goto bail;
 		}
 		*p++ = *s;
-		err = getintat(v, 1, &mode);
-		err |= getintat(v, 2, &size);
-		err |= getintat(v, 3, &mtime);
-		if (err)
+		if (getintat(v, 1, &mode) == -1)
+			goto bail;
+		if (getintat(v, 2, &size) == -1)
+			goto bail;
+		if (getintat(v, 3, &mtime) == -1)
 			goto bail;
 		if (*s == 'n' && mtime == (uint32_t)now) {
 			/* See dirstate.py:write for why we do this. */
