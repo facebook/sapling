@@ -2060,4 +2060,30 @@ Test --hidden
   []
   []
 
+A template without trailing newline should do something sane
+
+  $ hg glog -r ::2 --template '{rev} {desc}'
+  o  2 mv b dir/b
+  |
+  o  1 copy a b
+  |
+
+Extra newlines must be preserved
+
+  $ hg glog -r ::2 --template '\n{rev} {desc}\n\n'
+  o
+  |  2 mv b dir/b
+  |
+  o
+  |  1 copy a b
+  |
+
+The almost-empty template should do something sane too ...
+
+  $ hg glog -r ::2 --template '\n'
+  o
+  |
+  o
+  |
+
   $ cd ..

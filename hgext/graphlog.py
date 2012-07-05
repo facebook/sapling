@@ -471,7 +471,9 @@ def generate(ui, dag, displayer, showparents, edgefn, getrenamed=None,
         if filematcher is not None:
             revmatchfn = filematcher(ctx.rev())
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
-        lines = displayer.hunk.pop(rev).split('\n')[:-1]
+        lines = displayer.hunk.pop(rev).split('\n')
+        if not lines[-1]:
+            del lines[-1]
         displayer.flush(rev)
         edges = edgefn(type, char, lines, seen, rev, parents)
         for type, char, lines, coldata in edges:
