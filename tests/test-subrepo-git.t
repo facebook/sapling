@@ -271,7 +271,7 @@ archive subrepos
   ggg
 
   $ hg -R ../tc archive --subrepo -r 5 -X ../tc/**f ../archive_x 2>/dev/null
-  $ find ../archive_x | sort
+  $ find ../archive_x | sort | grep -v pax_global_header
   ../archive_x
   ../archive_x/.hg_archival.txt
   ../archive_x/.hgsub
