@@ -4620,7 +4620,7 @@ def push(ui, repo, dest=None, **opts):
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.peer(repo, opts, dest)
     if revs:
-        revs = [repo.lookup(rev) for rev in revs]
+        revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
 
     repo._subtoppath = dest
     try:
