@@ -1317,6 +1317,14 @@ def tag(repo, subset, x):
 def tagged(repo, subset, x):
     return tag(repo, subset, x)
 
+def unstable(repo, subset, x):
+    """``unstable()``
+    Unstable changesets are non-obsolete with obsolete descendants."""
+    getargs(x, 0, 0, _("obsolete takes no arguments"))
+    unstableset = set(repo.revs('(obsolete()::) - obsolete()'))
+    return [r for r in subset if r in unstableset]
+
+
 def user(repo, subset, x):
     """``user(string)``
     User name contains string. The match is case-insensitive.
@@ -1393,6 +1401,7 @@ symbols = {
     "tag": tag,
     "tagged": tagged,
     "user": user,
+    "unstable": unstable,
     "_list": _list,
 }
 

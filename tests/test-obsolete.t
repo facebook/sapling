@@ -1,4 +1,10 @@
-
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > graphlog=
+  > [phases]
+  > # public changeset are not obsolete
+  > publish=false
+  > EOF
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -62,7 +68,7 @@ Register two markers with a missing node
 
 Check that graphlog detect that a changeset is obsolete:
 
-  $ hg --config 'extensions.graphlog=' glog
+  $ hg glog
   @  changeset:   5:5601fb93a350
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
@@ -230,6 +236,7 @@ On pull
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
 
+
 On push
 
   $ hg push ../tmpc
@@ -243,3 +250,68 @@ On push
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
   2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 {'date': '1339 0', 'user': 'test'}
+
+detect outgoing obsolete and unstable
+---------------------------------------
+
+  $ hg glog
+  o  changeset:   5:5601fb93a350
+  |  tag:         tip
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add new_3_c
+  |
+  | x  changeset:   4:ca819180edb9
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_2_c
+  |
+  | x  changeset:   3:cdbce2fbb163
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_c
+  |
+  | o  changeset:   2:245bde4270cd
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add original_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+  $ hg up -q 'desc("new_2_c")'
+  $ mkcommit original_d
+  $ hg glog -r '::unstable()'
+  @  changeset:   6:7878242aeece
+  |  tag:         tip
+  |  parent:      4:ca819180edb9
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add original_d
+  |
+  x  changeset:   4:ca819180edb9
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add new_2_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  

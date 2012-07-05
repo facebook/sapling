@@ -235,6 +235,21 @@ class changectx(object):
         return (self.node() in self._repo.obsstore.precursors
                 and self.phase() > phases.public)
 
+    def unstable(self):
+        """True if the changeset is not obsolete but it's ancestor are"""
+        # We should just compute /(obsolete()::) - obsolete()/
+        # and keep it in a cache.
+        #
+        # But this naive implementation does not require cache
+        if self.phase() <= phases.public:
+            return False
+        if self.obsolete():
+            return False
+        for anc in self.ancestors():
+            if anc.obsolete():
+                return True
+        return False
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
