@@ -4630,6 +4630,10 @@ def push(ui, repo, dest=None, **opts):
     If -r/--rev is used, the specified revision and all its ancestors
     will be pushed to the remote repository.
 
+    If -B/--bookmark is used, the specified bookmarked revision, its
+    ancestors, and the bookmark will be pushed to the remote
+    repository.
+
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
 
