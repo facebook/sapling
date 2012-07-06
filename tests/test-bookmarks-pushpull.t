@@ -262,5 +262,39 @@ hgweb
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
      foobar                    1:9b140be10808
+ 
+  $ cd ..
+
+Pushing a bookmark should only push the changes required by that
+bookmark, not all outgoing changes:
+  $ hg clone http://localhost:$HGPORT/ addmarks
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 5 changes to 3 files (+3 heads)
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd addmarks
+  $ echo foo > foo
+  $ hg add foo
+  $ hg commit -m 'add foo'
+  $ echo bar > bar
+  $ hg add bar
+  $ hg commit -m 'add bar'
+  $ hg co "tip^"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg book add-foo
+  $ hg book -r tip add-bar
+Note: this push *must* push only a single changeset, as that's the point
+of this test.
+  $ hg push -B add-foo
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  exporting bookmark add-foo
 
   $ cd ..
