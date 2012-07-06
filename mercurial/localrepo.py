@@ -72,7 +72,7 @@ class localrepository(repo.repository):
                         if self.ui.configbool('format', 'dotencode', True):
                             requirements.append('dotencode')
                     # create an invalid changelog
-                    self.opener.append(
+                    self.vfs.append(
                         "00changelog.i",
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
@@ -86,7 +86,7 @@ class localrepository(repo.repository):
             raise error.RepoError(_("repository %s already exists") % path)
         else:
             try:
-                requirements = scmutil.readrequires(self.opener, self.supported)
+                requirements = scmutil.readrequires(self.vfs, self.supported)
             except IOError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
