@@ -263,6 +263,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     dest = util.urllocalpath(dest)
     source = util.urllocalpath(source)
 
+    if not dest:
+        raise util.Abort(_("empty destination path is not valid"))
     if os.path.exists(dest):
         if not os.path.isdir(dest):
             raise util.Abort(_("destination '%s' already exists") % dest)

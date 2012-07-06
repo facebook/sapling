@@ -60,8 +60,8 @@ class localrepository(repo.repository):
 
         if not os.path.isdir(self.path):
             if create:
-                if not os.path.exists(path):
-                    util.makedirs(path)
+                if not os.path.exists(self.root):
+                    util.makedirs(self.root)
                 util.makedir(self.path, notindexed=True)
                 requirements = self._baserequirements(create)
                 if self.ui.configbool('format', 'usestore', True):

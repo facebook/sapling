@@ -420,7 +420,7 @@ When cloning from a non-copiable repository into '', do not
 recurse infinitely (issue 2528)
 
   $ hg clone full.hg ''
-  abort: * (glob)
+  abort: empty destination path is not valid
   [255]
 
 test for http://mercurial.selenic.com/bts/issue216

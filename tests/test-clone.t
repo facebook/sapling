@@ -43,7 +43,7 @@ Default operation:
 Invalid dest '' must abort:
 
   $ hg clone . ''
-  abort: * (glob)
+  abort: empty destination path is not valid
   [255]
 
 No update, with debug option:
@@ -112,7 +112,7 @@ Use --pull:
 Invalid dest '' with --pull must abort (issue2528):
 
   $ hg clone --pull a ''
-  abort: * (glob)
+  abort: empty destination path is not valid
   [255]
 
 Clone to '.':
