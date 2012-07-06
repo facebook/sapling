@@ -87,6 +87,7 @@ class statichttprepository(localrepo.localrepository):
 
         opener = build_opener(ui, authinfo)
         self.opener = opener(self.path)
+        self.vfs = self.opener
         self._phasedefaults = []
 
         try:
@@ -112,6 +113,7 @@ class statichttprepository(localrepo.localrepository):
         self.store = store.store(requirements, self.path, opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
+        self.svfs = self.sopener
         self.sjoin = self.store.join
         self._filecache = {}
 

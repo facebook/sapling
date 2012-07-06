@@ -42,7 +42,9 @@ class localrepository(repo.repository):
         self.origroot = path
         self.auditor = scmutil.pathauditor(self.root, self._checknested)
         self.opener = scmutil.opener(self.path)
+        self.vfs = self.opener
         self.wopener = scmutil.opener(self.root)
+        self.wvfs = self.wopener
         self.baseui = baseui
         self.ui = baseui.copy()
         # A list of callback to shape the phase if no data were found.
@@ -104,6 +106,7 @@ class localrepository(repo.repository):
         self.store = store.store(requirements, self.sharedpath, scmutil.opener)
         self.spath = self.store.path
         self.sopener = self.store.opener
+        self.svfs = self.sopener
         self.sjoin = self.store.join
         self.opener.createmode = self.store.createmode
         self._applyrequirements(requirements)
