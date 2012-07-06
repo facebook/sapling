@@ -40,7 +40,7 @@ class localrepository(repo.repository):
         self.wopener = scmutil.opener(path, expand=True)
         self.wvfs = self.wopener
         self.root = self.wvfs.base
-        self.path = os.path.join(self.root, ".hg")
+        self.path = self.wvfs.join(".hg")
         self.origroot = path
         self.auditor = scmutil.pathauditor(self.root, self._checknested)
         self.opener = scmutil.opener(self.path)
