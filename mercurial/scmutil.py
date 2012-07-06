@@ -49,22 +49,27 @@ def checkportabilityalert(ui):
     return abort, warn
 
 class casecollisionauditor(object):
-    def __init__(self, ui, abort, existingiter):
+    def __init__(self, ui, abort, dirstate):
         self._ui = ui
         self._abort = abort
-        self._map = {}
-        for f in existingiter:
-            self._map[encoding.lower(f)] = f
+        allfiles = '\0'.join(dirstate._map)
+        self._loweredfiles = set(encoding.lower(allfiles).split('\0'))
+        self._dirstate = dirstate
+        # The purpose of _newfiles is so that we don't complain about
+        # case collisions if someone were to call this object with the
+        # same filename twice.
+        self._newfiles = set()
 
     def __call__(self, f):
         fl = encoding.lower(f)
-        map = self._map
-        if fl in map and map[fl] != f:
+        if (fl in self._loweredfiles and f not in self._dirstate and
+            f not in self._newfiles):
             msg = _('possible case-folding collision for %s') % f
             if self._abort:
                 raise util.Abort(msg)
             self._ui.warn(_("warning: %s\n") % msg)
-        map[fl] = f
+        self._loweredfiles.add(fl)
+        self._newfiles.add(f)
 
 class pathauditor(object):
     '''ensure that a filesystem path contains no banned components.
