@@ -4,10 +4,142 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-"""Interactive history editing.
+"""interactive history editing
 
-Inspired by git rebase --interactive.
+With this extension installed, Mercurial gains one new command: histedit. Usage
+is as follows, assuming the following history::
+
+ @  3[tip]   7c2fd3b9020c   2009-04-27 18:04 -0500   durin42
+ |    Add delta
+ |
+ o  2   030b686bedc4   2009-04-27 18:04 -0500   durin42
+ |    Add gamma
+ |
+ o  1   c561b4e977df   2009-04-27 18:04 -0500   durin42
+ |    Add beta
+ |
+ o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
+      Add alpha
+
+If you were to run ``hg histedit c561b4e977df``, you would see the following
+file open in your editor::
+
+ pick c561b4e977df Add beta
+ pick 030b686bedc4 Add gamma
+ pick 7c2fd3b9020c Add delta
+
+ # Edit history between 633536316234 and 7c2fd3b9020c
+ #
+ # Commands:
+ #  p, pick = use commit
+ #  e, edit = use commit, but stop for amending
+ #  f, fold = use commit, but fold into previous commit
+ #  d, drop = remove commit from history
+ #  m, mess = edit message without changing commit content
+ #
+ 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+In this file, lines beginning with ``#`` are ignored. You must specify a rule
+for each revision in your history. For example, if you had meant to add gamma
+before beta, and then wanted to add delta in the same revision as beta, you
+would reorganize the file to look like this::
+
+ pick 030b686bedc4 Add gamma
+ pick c561b4e977df Add beta
+ fold 7c2fd3b9020c Add delta
+
+ # Edit history between 633536316234 and 7c2fd3b9020c
+ #
+ # Commands:
+ #  p, pick = use commit
+ #  e, edit = use commit, but stop for amending
+ #  f, fold = use commit, but fold into previous commit
+ #  d, drop = remove commit from history
+ #  m, mess = edit message without changing commit content
+ #
+ 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+At which point you close the editor and ``histedit`` starts working. When you
+specify a ``fold`` operation, ``histedit`` will open an editor when it folds
+those revisions together, offering you a chance to clean up the commit message::
+
+ Add beta
+ ***
+ Add delta
+
+Edit the commit message to your liking, then close the editor. For
+this example, let's assume that the commit message was changed to
+``Add beta and delta.`` After histedit has run and had a chance to
+remove any old or temporary revisions it needed, the history looks
+like this::
+
+ @  2[tip]   989b4d060121   2009-04-27 18:04 -0500   durin42
+ |    Add beta and delta.
+ |
+ o  1   081603921c3f   2009-04-27 18:04 -0500   durin42
+ |    Add gamma
+ |
+ o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
+      Add alpha
+
+Note that ``histedit`` does *not* remove any revisions (even its own temporary
+ones) until after it has completed all the editing operations, so it will
+probably perform several strip operations when it's done. For the above example,
+it had to run strip twice. Strip can be slow depending on a variety of factors,
+so you might need to be a little patient. You can choose to keep the original
+revisions by passing the ``--keep`` flag.
+
+The ``edit`` operation will drop you back to a command prompt,
+allowing you to edit files freely, or even use ``hg record`` to commit
+some changes as a separate commit. When you're done, any remaining
+uncommitted changes will be committed as well. When done, run ``hg
+histedit --continue`` to finish this step. You'll be prompted for a
+new commit message, but the default commit message will be the
+original message for the ``edit`` ed revision.
+
+The ``message`` operation will give you a chance to revise a commit
+message without changing the contents. It's a shortcut for doing
+``edit`` immediately followed by `hg histedit --continue``.
+
+If ``histedit`` encounters a conflict when moving a revision (while
+handling ``pick`` or ``fold``), it'll stop in a similar manner to
+``edit`` with the difference that it won't prompt you for a commit
+message when done. If you decide at this point that you don't like how
+much work it will be to rearrange history, or that you made a mistake,
+you can use ``hg histedit --abort`` to abandon the new changes you
+have made and return to the state before you attempted to edit your
+history.
+
+If we clone the example repository above and add three more changes, such that
+we have the following history::
+
+   @  6[tip]   038383181893   2009-04-27 18:04 -0500   stefan
+   |    Add theta
+   |
+   o  5   140988835471   2009-04-27 18:04 -0500   stefan
+   |    Add eta
+   |
+   o  4   122930637314   2009-04-27 18:04 -0500   stefan
+   |    Add zeta
+   |
+   o  3   836302820282   2009-04-27 18:04 -0500   stefan
+   |    Add epsilon
+   |
+   o  2   989b4d060121   2009-04-27 18:04 -0500   durin42
+   |    Add beta and delta.
+   |
+   o  1   081603921c3f   2009-04-27 18:04 -0500   durin42
+   |    Add gamma
+   |
+   o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
+        Add alpha
+
+If you run ``hg histedit --outgoing`` on the clone then it is the same
+as running ``hg histedit 836302820282``. If you need plan to push to a
+repository that Mercurial does not detect to be related to the source
+repo, you can add a ``--force`` option.
 """
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -243,7 +375,7 @@ actiontable = {'p': pick,
                'mess': message,
                }
 def histedit(ui, repo, *parent, **opts):
-    """hg histedit <parent>
+    """interactively edit changeset history
     """
     # TODO only abort if we try and histedit mq patches, not just
     # blanket if mq patches are applied somewhere
@@ -561,6 +693,6 @@ cmdtable = {
               'force outgoing even for unrelated repositories')),
           ('r', 'rev', [], _('first revision to be edited')),
           ],
-         __doc__,
+         _("[PARENT]"),
          ),
 }
