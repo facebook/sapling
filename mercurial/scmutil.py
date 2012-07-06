@@ -196,7 +196,9 @@ class opener(abstractopener):
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
     '''
-    def __init__(self, base, audit=True):
+    def __init__(self, base, audit=True, expand=False):
+        if expand:
+            base = os.path.realpath(util.expandpath(base))
         self.base = base
         self._audit = audit
         if audit:
