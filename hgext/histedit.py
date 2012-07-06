@@ -159,6 +159,9 @@ from mercurial import scmutil
 from mercurial import util
 from mercurial.i18n import _
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 testedwith = 'internal'
 
 editcomment = """
@@ -374,6 +377,19 @@ actiontable = {'p': pick,
                'm': message,
                'mess': message,
                }
+
+@command('histedit',
+    [('', 'commands', '',
+      _('Read history edits from the specified file.')),
+     ('c', 'continue', False, _('continue an edit already in progress')),
+     ('k', 'keep', False,
+      _("don't strip old nodes after edit is complete")),
+     ('', 'abort', False, _('abort an edit in progress')),
+     ('o', 'outgoing', False, _('changesets not found in destination')),
+     ('f', 'force', False,
+      _('force outgoing even for unrelated repositories')),
+     ('r', 'rev', [], _('first revision to be edited'))],
+     _("[PARENT]"))
 def histedit(ui, repo, *parent, **opts):
     """interactively edit changeset history
     """
@@ -677,22 +693,3 @@ def verifyrules(rules, repo, ctxs):
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     return parsed
-
-
-cmdtable = {
-    "histedit":
-        (histedit,
-         [('', 'commands', '', _(
-             'Read history edits from the specified file.')),
-          ('c', 'continue', False, _('continue an edit already in progress')),
-          ('k', 'keep', False, _(
-              "don't strip old nodes after edit is complete")),
-          ('', 'abort', False, _('abort an edit in progress')),
-          ('o', 'outgoing', False, _('changesets not found in destination')),
-          ('f', 'force', False, _(
-              'force outgoing even for unrelated repositories')),
-          ('r', 'rev', [], _('first revision to be edited')),
-          ],
-         _("[PARENT]"),
-         ),
-}
