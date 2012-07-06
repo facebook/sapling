@@ -190,6 +190,21 @@ class abstractopener(object):
         finally:
             fp.close()
 
+    def mkdir(self, path=None):
+        return os.mkdir(self.join(path))
+
+    def exists(self, path=None):
+        return os.path.exists(self.join(path))
+
+    def isdir(self, path=None):
+        return os.path.isdir(self.join(path))
+
+    def makedir(self, path=None, notindexed=True):
+        return util.makedir(self.join(path), notindexed)
+
+    def makedirs(self, path=None, mode=None):
+        return util.makedirs(self.join(path), mode)
+
 class opener(abstractopener):
     '''Open files relative to a base directory
 
@@ -293,7 +308,10 @@ class opener(abstractopener):
         self.auditor(path)
 
     def join(self, path):
-        return os.path.join(self.base, path)
+        if path:
+            return os.path.join(self.base, path)
+        else:
+            return self.base
 
 class filteropener(abstractopener):
     '''Wrapper opener for filtering filenames with a function.'''

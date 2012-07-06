@@ -58,14 +58,14 @@ class localrepository(repo.repository):
         except IOError:
             pass
 
-        if not os.path.isdir(self.path):
+        if not self.vfs.isdir():
             if create:
-                if not os.path.exists(self.root):
-                    util.makedirs(self.root)
-                util.makedir(self.path, notindexed=True)
+                if not self.wvfs.exists():
+                    self.wvfs.makedirs()
+                self.vfs.makedir(notindexed=True)
                 requirements = self._baserequirements(create)
                 if self.ui.configbool('format', 'usestore', True):
-                    os.mkdir(os.path.join(self.path, "store"))
+                    self.vfs.mkdir("store")
                     requirements.append("store")
                     if self.ui.configbool('format', 'usefncache', True):
                         requirements.append("fncache")
