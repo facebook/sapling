@@ -568,6 +568,13 @@ def draft(repo, subset, x):
     pc = repo._phasecache
     return [r for r in subset if pc.phase(repo, r) == phases.draft]
 
+def extinct(repo, subset, x):
+    """``extinct()``
+    obsolete changeset with obsolete descendant only."""
+    getargs(x, 0, 0, _("obsolete takes no arguments"))
+    extinctset = set(repo.revs('(obsolete()::) - (::(not obsolete()))'))
+    return [r for r in subset if r in extinctset]
+
 def extra(repo, subset, x):
     """``extra(label, [value])``
     Changesets with the given label in the extra metadata, with the given
@@ -1365,6 +1372,7 @@ symbols = {
     "descendants": descendants,
     "_firstdescendants": _firstdescendants,
     "draft": draft,
+    "extinct": extinct,
     "extra": extra,
     "file": hasfile,
     "filelog": filelog,

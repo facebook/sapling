@@ -320,3 +320,13 @@ detect outgoing obsolete and unstable
   searching for changes
   abort: push includes an unstable changeset: 7878242aeece!
   [255]
+
+Test that extinct changeset are properly detected
+
+  $ hg log -r 'extinct()'
+  changeset:   3:cdbce2fbb163
+  parent:      1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add new_c
+  

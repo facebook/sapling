@@ -235,6 +235,21 @@ class changectx(object):
         return (self.node() in self._repo.obsstore.precursors
                 and self.phase() > phases.public)
 
+    def extinct(self):
+        """True if the changeset is extinct"""
+        # We should just compute a cache a check againts it.
+        # see revset implementation for details
+        #
+        # But this naive implementation does not require cache
+        if self.phase() <= phases.public:
+            return False
+        if not self.obsolete():
+            return False
+        for desc in self.descendants():
+            if not desc.obsolete():
+                return False
+        return True
+
     def unstable(self):
         """True if the changeset is not obsolete but it's ancestor are"""
         # We should just compute /(obsolete()::) - obsolete()/
