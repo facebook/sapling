@@ -875,6 +875,12 @@ def node_(repo, subset, x):
 
     return [r for r in subset if r == rn]
 
+def obsolete(repo, subset, x):
+    """``obsolete()``
+    Mutable changeset with a newer version."""
+    getargs(x, 0, 0, _("obsolete takes no arguments"))
+    return [r for r in subset if repo[r].obsolete()]
+
 def outgoing(repo, subset, x):
     """``outgoing([path])``
     Changesets not found in the specified destination repository, or the
@@ -1369,6 +1375,7 @@ symbols = {
     "merge": merge,
     "min": minrev,
     "modifies": modifies,
+    "obsolete": obsolete,
     "outgoing": outgoing,
     "p1": p1,
     "p2": p2,

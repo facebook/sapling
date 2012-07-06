@@ -193,7 +193,7 @@ Try to pull markers
   abort: push includes an obsolete changeset: cdbce2fbb163!
   [255]
   $ hg -R tmpd debugobsolete
-  $ hg -R tmpb push tmpd --rev 5601fb93a350 --rev 245bde4270cd
+  $ hg -R tmpb push tmpd --rev 'not obsolete()'
   pushing to tmpd
   searching for changes
   adding changesets
