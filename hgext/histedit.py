@@ -307,7 +307,11 @@ def histedit(ui, repo, *parent, **opts):
             new = repo.commit(text=message, user=oldctx.user(),
                               date=oldctx.date(), extra=oldctx.extra())
 
-        if action in ('f', 'fold'):
+        # If we're resuming a fold and we have new changes, mark the
+        # replacements and finish the fold. If not, it's more like a
+        # drop of the changesets that disappeared, and we can skip
+        # this step.
+        if action in ('f', 'fold') and (new or newchildren):
             if new:
                 tmpnodes.append(new)
             else:
