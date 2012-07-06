@@ -396,13 +396,11 @@ def histedit(ui, repo, *parent, **opts):
         (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
             ui, repo, parentctx, ha, opts)
 
-        hexshort = lambda x: node.hex(x)[:12]
-
         if replaced_:
             clen, rlen = len(created_), len(replaced_)
             if clen == rlen == 1:
                 ui.debug('histedit: exact replacement of %s with %s\n' % (
-                    hexshort(replaced_[0]), hexshort(created_[0])))
+                    node.short(replaced_[0]), node.short(created_[0])))
 
                 replacemap[replaced_[0]] = created_[0]
             elif clen > rlen:
@@ -412,7 +410,7 @@ def histedit(ui, repo, *parent, **opts):
                 # TODO synthesize patch names for created patches
                 replacemap[replaced_[0]] = created_[-1]
                 ui.debug('histedit: created many, assuming %s replaced by %s' %
-                         (hexshort(replaced_[0]), hexshort(created_[-1])))
+                         (node.short(replaced_[0]), node.short(created_[-1])))
             elif rlen > clen:
                 if not created_:
                     # This must be a drop. Try and put our metadata on
@@ -420,7 +418,7 @@ def histedit(ui, repo, *parent, **opts):
                     assert rlen == 1
                     r = replaced_[0]
                     ui.debug('histedit: %s seems replaced with nothing, '
-                            'finding a parent\n' % (hexshort(r)))
+                            'finding a parent\n' % (node.short(r)))
                     pctx = repo[r].parents()[0]
                     if pctx.node() in replacemap:
                         ui.debug('histedit: parent is already replaced\n')
@@ -428,12 +426,12 @@ def histedit(ui, repo, *parent, **opts):
                     else:
                         replacemap[r] = pctx.node()
                     ui.debug('histedit: %s best replaced by %s\n' % (
-                        hexshort(r), hexshort(replacemap[r])))
+                        node.short(r), node.short(replacemap[r])))
                 else:
                     assert len(created_) == 1
                     for r in replaced_:
                         ui.debug('histedit: %s replaced by %s\n' % (
-                            hexshort(r), hexshort(created_[0])))
+                            node.short(r), node.short(created_[0])))
                         replacemap[r] = created_[0]
             else:
                 assert False, (
@@ -456,8 +454,8 @@ def histedit(ui, repo, *parent, **opts):
                     return
                 while new in replacemap:
                     new = replacemap[new]
-                ui.note(_('histedit:  %s to %s\n') % (hexshort(old),
-                                                      hexshort(new)))
+                ui.note(_('histedit:  %s to %s\n') % (node.short(old),
+                                                      node.short(new)))
                 octx = repo[old]
                 marks = octx.bookmarks()
                 if marks:
