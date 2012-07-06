@@ -530,6 +530,20 @@ test python hook configured with python:[file]:[hook] syntax
   nothing changed
   [1]
 
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo "update.ne = python:`pwd`/nonexisting.py:testhook" >> .hg/hgrc
+  $ echo "pre-identify.npmd = python:`pwd`/:no_python_module_dir" >> .hg/hgrc
+
+  $ hg up null
+  loading update.ne hook failed:
+  abort: No such file or directory: $TESTTMP/d/repo/nonexisting.py
+  [255]
+
+  $ hg id
+  loading pre-identify.npmd hook failed:
+  abort: No module named repo!
+  [255]
+
   $ cd ../../b
 
 make sure --traceback works on hook import failure

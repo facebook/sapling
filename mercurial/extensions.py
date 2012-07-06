@@ -42,7 +42,12 @@ def loadpath(path, module_name):
         fd, fpath, desc = imp.find_module(f, [d])
         return imp.load_module(module_name, fd, fpath, desc)
     else:
-        return imp.load_source(module_name, path)
+        try:
+            return imp.load_source(module_name, path)
+        except IOError, exc:
+            if not exc.filename:
+                exc.filename = path # python does not fill this
+            raise
 
 def load(ui, name, path):
     # unused ui argument kept for backwards compatibility

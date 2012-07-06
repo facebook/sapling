@@ -169,7 +169,11 @@ def hook(ui, repo, name, throw=False, **args):
                     path = util.expandpath(path)
                     if repo:
                         path = os.path.join(repo.root, path)
-                    mod = extensions.loadpath(path, 'hghook.%s' % hname)
+                    try:
+                        mod = extensions.loadpath(path, 'hghook.%s' % hname)
+                    except Exception:
+                        ui.write(_("loading %s hook failed:\n") % hname)
+                        raise
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
