@@ -405,3 +405,131 @@ Now transplant a graft to test following through copies
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
+Test simple destination
+  $ hg log -r 'destination()'
+  changeset:   7:ef0ef43d49e7
+  parent:      0:68795b066622
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   8:6b9e5368ca4e
+  user:        bar
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  changeset:   9:1905859650ec
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     5
+  
+  changeset:   10:52dc0b4c6907
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     4
+  
+  changeset:   11:882b35362a6b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3
+  
+  changeset:   13:9db0f28fd374
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   14:f64defefacee
+  parent:      1:5d205f8b35b6
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3
+  
+  changeset:   17:64ecd9071ce8
+  user:        bar
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  changeset:   19:2e80e1351d6e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   21:7e61b508e709
+  branch:      dev
+  tag:         tip
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  $ hg log -r 'destination(2)'
+  changeset:   7:ef0ef43d49e7
+  parent:      0:68795b066622
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   13:9db0f28fd374
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   19:2e80e1351d6e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   21:7e61b508e709
+  branch:      dev
+  tag:         tip
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+Transplants of grafts can find a destination...
+  $ hg log -r 'destination(7)'
+  changeset:   21:7e61b508e709
+  branch:      dev
+  tag:         tip
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+... grafts of grafts unfortunately can't
+  $ hg graft -q 13
+  $ hg log -r 'destination(13)'
+All copies of a cset
+  $ hg log -r 'origin(13) or destination(origin(13))'
+  changeset:   2:5c095ad7e90f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   7:ef0ef43d49e7
+  parent:      0:68795b066622
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   13:9db0f28fd374
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   19:2e80e1351d6e
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   21:7e61b508e709
+  branch:      dev
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   22:1313d0a825e2
+  branch:      dev
+  tag:         tip
+  user:        foo
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  

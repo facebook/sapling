@@ -83,6 +83,74 @@ test tranplanted keyword
   1 
   0 
 
+test destination() revset predicate with a transplant of a transplant; new
+clone so subsequent rollback isn't affected
+  $ hg clone -q . ../destination
+  $ cd ../destination
+  $ hg up -Cq 0
+  $ hg branch -q b4
+  $ hg ci -qm "b4"
+  $ hg transplant 7
+  applying ffd6818a3975
+  ffd6818a3975 transplanted to 502236fa76bb
+
+
+  $ hg log -r 'destination()'
+  changeset:   5:e234d668f844
+  parent:      1:d11e3596cc1a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b1
+  
+  changeset:   6:539f377d78df
+  user:        test
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     b2
+  
+  changeset:   7:ffd6818a3975
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+  changeset:   9:502236fa76bb
+  branch:      b4
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+  $ hg log -r 'destination(a53251cdf717)'
+  changeset:   7:ffd6818a3975
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+  changeset:   9:502236fa76bb
+  branch:      b4
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+
+test subset parameter in reverse order
+  $ hg log -r 'reverse(all()) and destination(a53251cdf717)'
+  changeset:   9:502236fa76bb
+  branch:      b4
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+  changeset:   7:ffd6818a3975
+  user:        test
+  date:        Thu Jan 01 00:00:02 1970 +0000
+  summary:     b3
+  
+
+back to the original dir
+  $ cd ../rebase
+
 rollback the transplant
   $ hg rollback
   repository tip rolled back to revision 4 (undo transplant)

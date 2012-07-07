@@ -561,6 +561,50 @@ def _firstdescendants(repo, subset, x):
     # Like ``descendants(set)`` but follows only the first parents.
     return _descendants(repo, subset, x, followfirst=True)
 
+def destination(repo, subset, x):
+    """``destination([set])``
+    Changesets that were created by a graft, transplant or rebase operation,
+    with the given revisions specified as the source.  Omitting the optional set
+    is the same as passing all().
+    """
+    if x is not None:
+        args = set(getset(repo, range(len(repo)), x))
+    else:
+        args = set(getall(repo, range(len(repo)), x))
+
+    dests = set()
+
+    # subset contains all of the possible destinations that can be returned, so
+    # iterate over them and see if their source(s) were provided in the args.
+    # Even if the immediate src of r is not in the args, src's source (or
+    # further back) may be.  Scanning back further than the immediate src allows
+    # transitive transplants and rebases to yield the same results as transitive
+    # grafts.
+    for r in subset:
+        src = _getrevsource(repo, r)
+        lineage = None
+
+        while src is not None:
+            if lineage is None:
+                lineage = list()
+
+            lineage.append(r)
+
+            # The visited lineage is a match if the current source is in the arg
+            # set.  Since every candidate dest is visited by way of iterating
+            # subset, any dests futher back in the lineage will be tested by a
+            # different iteration over subset.  Likewise, if the src was already
+            # selected, the current lineage can be selected without going back
+            # further.
+            if src in args or src in dests:
+                dests.update(lineage)
+                break
+
+            r = src
+            src = _getrevsource(repo, r)
+
+    return [r for r in subset if r in dests]
+
 def draft(repo, subset, x):
     """``draft()``
     Changeset in draft phase."""
@@ -1399,6 +1443,7 @@ symbols = {
     "desc": desc,
     "descendants": descendants,
     "_firstdescendants": _firstdescendants,
+    "destination": destination,
     "draft": draft,
     "extinct": extinct,
     "extra": extra,
