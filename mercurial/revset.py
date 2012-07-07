@@ -888,6 +888,34 @@ def obsolete(repo, subset, x):
     getargs(x, 0, 0, _("obsolete takes no arguments"))
     return [r for r in subset if repo[r].obsolete()]
 
+def origin(repo, subset, x):
+    """``origin([set])``
+    Changesets that were specified as a source for the grafts, transplants or
+    rebases that created the given revisions.  Omitting the optional set is the
+    same as passing all().  If a changeset created by these operations is itself
+    specified as a source for one of these operations, only the source changeset
+    for the first operation is selected.
+    """
+    if x is not None:
+        args = set(getset(repo, range(len(repo)), x))
+    else:
+        args = set(getall(repo, range(len(repo)), x))
+
+    def _firstsrc(rev):
+        src = _getrevsource(repo, rev)
+        if src is None:
+            return None
+
+        while True:
+            prev = _getrevsource(repo, src)
+
+            if prev is None:
+                return src
+            src = prev
+
+    o = set([_firstsrc(r) for r in args])
+    return [r for r in subset if r in o]
+
 def outgoing(repo, subset, x):
     """``outgoing([path])``
     Changesets not found in the specified destination repository, or the
@@ -1392,6 +1420,7 @@ symbols = {
     "min": minrev,
     "modifies": modifies,
     "obsolete": obsolete,
+    "origin": origin,
     "outgoing": outgoing,
     "p1": p1,
     "p2": p2,

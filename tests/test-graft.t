@@ -358,3 +358,50 @@ Resolve conflicted graft with rename
   diff --git a/a b/b
   rename from a
   rename to b
+
+Test simple origin(), with and without args
+  $ hg log -r 'origin()'
+  changeset:   1:5d205f8b35b6
+  user:        bar
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  changeset:   2:5c095ad7e90f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+  changeset:   3:4c60f11aa304
+  user:        baz
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     3
+  
+  changeset:   4:9c233e8e184d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     4
+  
+  changeset:   5:97f8bfe72746
+  branch:      stable
+  parent:      3:4c60f11aa304
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     5
+  
+  $ hg log -r 'origin(7)'
+  changeset:   2:5c095ad7e90f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
+Now transplant a graft to test following through copies
+  $ hg up -q 0
+  $ hg branch -q dev
+  $ hg ci -qm "dev branch"
+  $ hg --config extensions.transplant= transplant -q 7
+  $ hg log -r 'origin(.)'
+  changeset:   2:5c095ad7e90f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     2
+  
