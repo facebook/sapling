@@ -65,6 +65,7 @@ from distutils.command.build_py import build_py
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
 from distutils.ccompiler import new_compiler
+from distutils import cygwinccompiler
 from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.sysconfig import get_python_inc
 from distutils.version import StrictVersion
@@ -428,6 +429,20 @@ if sys.platform == 'win32' and sys.version_info < (2, 5, 0, 'final'):
 else:
     extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c'],
                                 extra_link_args=osutil_ldflags))
+
+# the -mno-cygwin option has been deprecated for years
+Mingw32CCompiler = cygwinccompiler.Mingw32CCompiler
+
+class HackedMingw32CCompiler(cygwinccompiler.Mingw32CCompiler):
+    def __init__(self, *args, **kwargs):
+        Mingw32CCompiler.__init__(self, *args, **kwargs)
+        for i in 'compiler compiler_so linker_exe linker_so'.split():
+            try:
+                getattr(self, i).remove('-mno-cygwin')
+            except ValueError:
+                pass
+
+cygwinccompiler.Mingw32CCompiler = HackedMingw32CCompiler
 
 if sys.platform.startswith('linux') and os.uname()[2] > '2.6':
     # The inotify extension is only usable with Linux 2.6 kernels.
