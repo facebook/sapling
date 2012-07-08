@@ -45,6 +45,7 @@ def generate_repo_subclass(baseclass):
                 tags[tag] = bin(rev)
                 tagtypes[tag] = 'git'
 
+            tags.update(self.gitrefs())
             return (tags, tagtypes)
 
         def gitrefs(self):
