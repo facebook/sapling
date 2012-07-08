@@ -6,10 +6,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, copy
+import os, mimetypes, copy
 from mercurial import match, patch, scmutil, error, ui, util
 from mercurial.i18n import _
 from mercurial.node import hex, nullid
+import difflib
 
 def up(p):
     if p[0] != "/":
@@ -219,6 +220,92 @@ def diffs(repo, tmpl, ctx, files, parity, style):
     blockno = blockcount.next()
     yield tmpl('diffblock', parity=parity.next(), blockno=blockno,
                lines=prettyprintlines(''.join(block), blockno))
+
+def compare(tmpl, ctx, path, context):
+    '''Generator function that provides side-by-side comparison data.'''
+
+    def filelines(f):
+        if util.binary(f.data()):
+            mt = mimetypes.guess_type(f.path())[0]
+            if not mt:
+                mt = 'application/octet-stream'
+            return [_('(binary file %s, hash: %s)') % (mt, hex(f.filenode()))]
+        return f.data().splitlines()
+
+    def compline(type, leftlineno, leftline, rightlineno, rightline):
+        lineid = leftlineno and ("l%s" % leftlineno) or ''
+        lineid += rightlineno and ("r%s" % rightlineno) or ''
+        return tmpl('comparisonline',
+                    type=type,
+                    lineid=lineid,
+                    leftlinenumber="% 6s" % (leftlineno or ''),
+                    leftline=leftline or '',
+                    rightlinenumber="% 6s" % (rightlineno or ''),
+                    rightline=rightline or '')
+
+    def getblock(opcodes):
+        for type, llo, lhi, rlo, rhi in opcodes:
+            len1 = lhi - llo
+            len2 = rhi - rlo
+            count = min(len1, len2)
+            for i in xrange(count):
+                yield compline(type=type,
+                               leftlineno=llo + i + 1,
+                               leftline=leftlines[llo + i],
+                               rightlineno=rlo + i + 1,
+                               rightline=rightlines[rlo + i])
+            if len1 > len2:
+                for i in xrange(llo + count, lhi):
+                    yield compline(type=type,
+                                   leftlineno=i + 1,
+                                   leftline=leftlines[i],
+                                   rightlineno=None,
+                                   rightline=None)
+            elif len2 > len1:
+                for i in xrange(rlo + count, rhi):
+                    yield compline(type=type,
+                                   leftlineno=None,
+                                   leftline=None,
+                                   rightlineno=i + 1,
+                                   rightline=rightlines[i])
+
+    if path in ctx:
+        fctx = ctx[path]
+        rightrev = fctx.filerev()
+        rightnode = fctx.filenode()
+        rightlines = filelines(fctx)
+        parents = fctx.parents()
+        if not parents:
+            leftrev = -1
+            leftnode = nullid
+            leftlines = ()
+        else:
+            pfctx = parents[0]
+            leftrev = pfctx.filerev()
+            leftnode = pfctx.filenode()
+            leftlines = filelines(pfctx)
+    else:
+        rightrev = -1
+        rightnode = nullid
+        rightlines = ()
+        fctx = ctx.parents()[0][path]
+        leftrev = fctx.filerev()
+        leftnode = fctx.filenode()
+        leftlines = filelines(fctx)
+
+    s = difflib.SequenceMatcher(None, leftlines, rightlines)
+    if context < 0:
+        blocks = [tmpl('comparisonblock', lines=getblock(s.get_opcodes()))]
+    else:
+        blocks = (tmpl('comparisonblock', lines=getblock(oc))
+                     for oc in s.get_grouped_opcodes(n=context))
+
+    yield tmpl('comparison',
+               leftrev=leftrev,
+               leftnode=hex(leftnode),
+               rightrev=rightrev,
+               rightnode=hex(rightnode),
+               blocks=blocks)
 
 def diffstatgen(ctx):
     '''Generator function that provides the diffstat data.'''

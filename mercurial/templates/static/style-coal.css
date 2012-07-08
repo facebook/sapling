@@ -286,3 +286,40 @@ ul#graphnodes li .info {
 	position: relative;
 	top: -3px;
 }
+
+/* Comparison */
+.legend {
+    padding: 1.5% 0 1.5% 0;
+}
+
+.legendinfo {
+    border: 1px solid #999;
+    font-size: 80%;
+    text-align: center;
+    padding: 0.5%;
+}
+
+.equal {
+    background-color: #ffffff;
+}
+
+.delete {
+    background-color: black;
+    color: white;
+}
+
+.insert {
+    background-color: #d0d0d0;
+}
+
+.replace {
+    background-color: #f9f9f9;
+}
+
+.header {
+    text-align: center;
+}
+
+.block {
+    border-top: 1px solid #999;
+}

@@ -63,6 +63,7 @@ fileentry = '
 filerevision = ../paper/filerevision.tmpl
 fileannotate = ../paper/fileannotate.tmpl
 filediff = ../paper/filediff.tmpl
+filecomparison = ../paper/filecomparison.tmpl
 filelog = ../paper/filelog.tmpl
 fileline = '
   <div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
@@ -82,6 +83,26 @@ difflineplus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="
 difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="minusline">{line|escape}</span>'
 difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
 diffline = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
+
+comparison = '
+  <table class="bigtable">
+    <thead class="header">
+      <tr>
+        <th>{leftrev}:{leftnode|short}</th>
+        <th>{rightrev}:{rightnode|short}</th>
+      </tr>
+    </thead>
+    {blocks}
+  </table>'
+comparisonblock ='
+  <tbody class="block">
+  {lines}
+  </tbody>'
+comparisonline = '
+  <tr>
+    <td class="source {type}"><a href="#{lineid}" id="{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
+    <td class="source {type}"><a href="#{lineid}" id="{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
+  </tr>'
 
 changelogparent = '
   <tr>

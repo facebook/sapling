@@ -26,6 +26,7 @@ filenodelink = '
       <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
       <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> |
       <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
+      <a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a> |
       <a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
     </td>
   </tr>'
@@ -37,6 +38,7 @@ filenolink = '
       file |
       annotate |
       <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
+      <a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a> |
       <a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
     </td>
   </tr>'
@@ -74,6 +76,7 @@ fileentry = '
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
 filediff = filediff.tmpl
+filecomparison = filecomparison.tmpl
 filelog = filelog.tmpl
 fileline = '
   <div style="font-family:monospace" class="parity{parity}">
@@ -94,6 +97,27 @@ difflineplus = '<span style="color:#008800;"><a class="linenr" href="#{lineid}" 
 difflineminus = '<span style="color:#cc0000;"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
 difflineat = '<span style="color:#990099;"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
 diffline = '<span><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
+
+comparison = '
+  <table class="bigtable">
+    <thead class="header">
+      <tr>
+        <th>{leftrev}:{leftnode|short}</th>
+        <th>{rightrev}:{rightnode|short}</th>
+      </tr>
+    </thead>
+    {blocks}
+  </table>'
+comparisonblock ='
+  <tbody class="block">
+  {lines}
+  </tbody>'
+comparisonline = '
+  <tr>
+    <td class="source {type}"><a class="linenr" href="#{lineid}" id="{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
+    <td class="source {type}"><a class="linenr" href="#{lineid}" id="{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
+  </tr>'
+
 changelogparent = '
   <tr>
     <th class="parent">parent {rev}:</th>
@@ -176,6 +200,9 @@ diffblock = '<pre>{lines}</pre>'
 filediffparent = '
   <dt>parent {rev}</dt>
   <dd><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
+filecompparent = '
+  <dt>parent {rev}</dt>
+  <dd><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
 filelogparent = '
   <tr>
     <td align="right">parent {rev}:&nbsp;</td>
@@ -184,6 +211,9 @@ filelogparent = '
 filediffchild = '
   <dt>child {rev}</dt>
   <dd><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
+filecompchild = '
+  <dt>child {rev}</dt>
+  <dd><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></dd>'
 filelogchild = '
   <tr>
     <td align="right">child {rev}:&nbsp;</td>

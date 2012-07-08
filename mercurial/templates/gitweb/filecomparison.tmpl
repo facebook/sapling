@@ -1,5 +1,5 @@
 {header}
-<title>{repo|escape}: diff {file|escape}</title>
+<title>{repo|escape}: comparison {file|escape}</title>
 <link rel="alternate" type="application/atom+xml"
    href="{url}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
@@ -8,7 +8,7 @@
 <body>
 
 <div class="page_header">
-<a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / diff
+<a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / comparison
 </div>
 
 <div class="page_nav">
@@ -25,8 +25,8 @@
 <a href="{url}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a> |
 <a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
 <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> |
-diff |
-<a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a> |
+<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
+comparison |
 <a href="{url}raw-diff/{node|short}/{file|urlescape}">raw</a> |
 <a href="{url}help{sessionvars%urlparameter}">help</a>
 <br/>
@@ -39,14 +39,25 @@ diff |
 <tr>
  <td>changeset {rev}</td>
  <td style="font-family:monospace"><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
-{parent%filediffparent}
-{child%filediffchild}
+{parent%filecompparent}
+{child%filecompchild}
 </table>
 
 <div class="list_head"></div>
 
 <div class="page_body">
-{diff}
+
+<div class="legend">
+  <span class="legendinfo equal">equal</span>
+  <span class="legendinfo delete">deleted</span>
+  <span class="legendinfo insert">inserted</span>
+  <span class="legendinfo replace">replaced</span>
+</div>
+
+<div class="comparison">
+{comparison}
+</div>
+
 </div>
 
 {footer}

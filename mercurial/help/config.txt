@@ -1377,6 +1377,12 @@ The full set of options is:
 ``errorlog``
     Where to output the error log. Default is stderr.
 
+``comparisoncontext``
+    Number of lines of context to show in side-by-side file comparison. If
+    negative or the value ``full``, whole files are shown. Default is 5.
+    This setting can be overridden by a ``context`` request parameter to the
+    ``comparison`` command, taking the same values.
+
 ``hidden``
     Whether to hide the repository in the hgwebdir index.
     Default is False.

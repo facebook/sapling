@@ -477,3 +477,49 @@ ul#graphnodes li .info {
 	position: relative;
 }
 /** end of canvas **/
+
+/** comparison **/
+.legend {
+    margin-left: 20px;
+    padding: 1.5% 0 1.5% 0;
+}
+
+.legendinfo {
+    border: 1px solid #999;
+    font-size: 80%;
+    text-align: center;
+    padding: 0.5%;
+}
+
+.equal {
+    background-color: #ffffff;
+}
+
+.delete {
+    background-color: #ffc5ce;
+}
+
+.insert {
+    background-color: #c5ffc4;
+}
+
+.replace {
+    background-color: #ffff99;
+}
+
+.comparison {
+    overflow-x: auto;
+}
+
+.comparison table td {
+    padding: 0px 5px;
+}
+
+.header th {
+    font-weight: bold;
+}
+
+.block {
+    border-top: 1px solid #999;
+}
+/** end of comparison **/

@@ -605,6 +605,7 @@ File-related
   <li class="active">file</li>
   <li><a href="/file/tip/foo">latest</a></li>
   <li><a href="/diff/a4f92ed23982/foo">diff</a></li>
+  <li><a href="/comparison/a4f92ed23982/foo">comparison</a></li>
   <li><a href="/annotate/a4f92ed23982/foo">annotate</a></li>
   <li><a href="/log/a4f92ed23982/foo">file log</a></li>
   <li><a href="/raw-file/a4f92ed23982/foo">raw</a></li>

@@ -22,7 +22,7 @@ from mercurial.i18n import _
 __all__ = [
    'log', 'rawfile', 'file', 'changelog', 'shortlog', 'changeset', 'rev',
    'manifest', 'tags', 'bookmarks', 'branches', 'summary', 'filediff', 'diff',
-   'annotate', 'filelog', 'archive', 'static', 'graph', 'help',
+   'comparison', 'annotate', 'filelog', 'archive', 'static', 'graph', 'help',
 ]
 
 def log(web, req, tmpl):
@@ -585,6 +585,31 @@ def filediff(web, req, tmpl):
                 diff=diffs)
 
 diff = filediff
+
+def comparison(web, req, tmpl):
+    ctx = webutil.changectx(web.repo, req)
+    path = webutil.cleanpath(web.repo, req.form['file'][0])
+    rename = path in ctx and webutil.renamelink(ctx[path]) or []
+
+    parsecontext = lambda v: v == 'full' and -1 or int(v)
+    if 'context' in req.form:
+        context = parsecontext(req.form['context'][0])
+    else:
+        context = parsecontext(web.config('web', 'comparisoncontext', '5'))
+
+    comparison = webutil.compare(tmpl, ctx, path, context)
+    return tmpl('filecomparison',
+                file=path,
+                node=hex(ctx.node()),
+                rev=ctx.rev(),
+                date=ctx.date(),
+                desc=ctx.description(),
+                author=ctx.user(),
+                rename=rename,
+                branch=webutil.nodebranchnodefault(ctx),
+                parent=webutil.parents(ctx),
+                child=webutil.children(ctx),
+                comparison=comparison)
 
 def annotate(web, req, tmpl):
     fctx = webutil.filectx(web.repo, req)

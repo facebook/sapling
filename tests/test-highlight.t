@@ -92,6 +92,7 @@ hgweb filerevision, html
   <li class="active">file</li>
   <li><a href="/file/tip/primes.py">latest</a></li>
   <li><a href="/diff/853dcd4de2a6/primes.py">diff</a></li>
+  <li><a href="/comparison/853dcd4de2a6/primes.py">comparison</a></li>
   <li><a href="/annotate/853dcd4de2a6/primes.py">annotate</a></li>
   <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
   <li><a href="/raw-file/853dcd4de2a6/primes.py">raw</a></li>
@@ -222,6 +223,7 @@ hgweb fileannotate, html
   <li><a href="/file/853dcd4de2a6/primes.py">file</a></li>
   <li><a href="/file/tip/primes.py">latest</a></li>
   <li><a href="/diff/853dcd4de2a6/primes.py">diff</a></li>
+  <li><a href="/comparison/853dcd4de2a6/primes.py">comparison</a></li>
   <li class="active">annotate</li>
   <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
   <li><a href="/raw-annotate/853dcd4de2a6/primes.py">raw</a></li>

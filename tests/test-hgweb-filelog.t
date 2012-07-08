@@ -148,6 +148,7 @@ tip - two revisions
   <ul>
   <li><a href="/file/01de2d66a28d/a">file</a></li>
   <li><a href="/diff/01de2d66a28d/a">diff</a></li>
+  <li><a href="/comparison/01de2d66a28d/a">comparison</a></li>
   <li><a href="/annotate/01de2d66a28d/a">annotate</a></li>
   <li class="active">file log</li>
   <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
@@ -249,6 +250,7 @@ second version - two revisions
   <ul>
   <li><a href="/file/01de2d66a28d/a">file</a></li>
   <li><a href="/diff/01de2d66a28d/a">diff</a></li>
+  <li><a href="/comparison/01de2d66a28d/a">comparison</a></li>
   <li><a href="/annotate/01de2d66a28d/a">annotate</a></li>
   <li class="active">file log</li>
   <li><a href="/raw-file/01de2d66a28d/a">raw</a></li>
@@ -350,6 +352,7 @@ first deleted - one revision
   <ul>
   <li><a href="/file/5ed941583260/a">file</a></li>
   <li><a href="/diff/5ed941583260/a">diff</a></li>
+  <li><a href="/comparison/5ed941583260/a">comparison</a></li>
   <li><a href="/annotate/5ed941583260/a">annotate</a></li>
   <li class="active">file log</li>
   <li><a href="/raw-file/5ed941583260/a">raw</a></li>
@@ -446,6 +449,7 @@ first version - one revision
   <ul>
   <li><a href="/file/5ed941583260/a">file</a></li>
   <li><a href="/diff/5ed941583260/a">diff</a></li>
+  <li><a href="/comparison/5ed941583260/a">comparison</a></li>
   <li><a href="/annotate/5ed941583260/a">annotate</a></li>
   <li class="active">file log</li>
   <li><a href="/raw-file/5ed941583260/a">raw</a></li>

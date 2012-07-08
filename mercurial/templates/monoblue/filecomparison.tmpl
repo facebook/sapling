@@ -1,5 +1,5 @@
 {header}
-<title>{repo|escape}: diff {file|escape}</title>
+<title>{repo|escape}: comparison {file|escape}</title>
     <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
     <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
@@ -7,7 +7,7 @@
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / file diff</h1>
+        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / file comparison</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}
@@ -34,24 +34,31 @@
         <li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
         <li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
         <li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
-        <li class="current">diff</li>
-        <li><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
+        <li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
+        <li class="current">comparison</li>
         <li><a href="{url}raw-diff/{node|short}/{file|urlescape}">raw</a></li>
     </ul>
 
-    <h2 class="no-link no-border">diff: {file|escape}</h2>
+    <h2 class="no-link no-border">comparison: {file|escape}</h2>
     <h3 class="changeset">{file|escape}</h3>
 
     <dl class="overview">
         {branch%filerevbranch}
         <dt>changeset {rev}</dt>
         <dd><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
-        {parent%filediffparent}
-        {child%filediffchild}
+        {parent%filecompparent}
+        {child%filecompchild}
     </dl>
 
-    <div class="diff">
-    {diff}
+    <div class="legend">
+      <span class="legendinfo equal">equal</span>
+      <span class="legendinfo delete">deleted</span>
+      <span class="legendinfo insert">inserted</span>
+      <span class="legendinfo replace">replaced</span>
+    </div>
+
+    <div class="comparison">
+    {comparison}
     </div>
 
 {footer}

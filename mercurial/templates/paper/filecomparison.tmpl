@@ -1,5 +1,5 @@
 {header}
-<title>{repo|escape}: {file|escape} annotate</title>
+<title>{repo|escape}: {file|escape} comparison</title>
 </head>
 <body>
 
@@ -16,7 +16,6 @@
 <li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
 <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
-
 <ul>
 <li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
 <li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
@@ -25,10 +24,10 @@
 <li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
 <li><a href="{url}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a></li>
 <li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
-<li><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
-<li class="active">annotate</li>
+<li class="active">comparison</li>
+<li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
 <li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file log</a></li>
-<li><a href="{url}raw-annotate/{node|short}/{file|urlescape}">raw</a></li>
+<li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
 </ul>
 <ul>
 <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
@@ -37,10 +36,10 @@
 
 <div class="main">
 <h2><a href="{url}{sessionvars%urlparameter}">{repo|escape}</a></h2>
-<h3>annotate {file|escape} @ {rev}:{node|short}</h3>
+<h3>comparison {file|escape} @ {rev}:{node|short}</h3>
 
 <form class="search" action="{url}log">
-{sessionvars%hiddenformentry}
+<p>{sessionvars%hiddenformentry}</p>
 <p><input name="rev" id="search1" type="text" size="30" /></p>
 <div id="hint">find changesets by author, revision,
 files, or words in the commit message</div>
@@ -50,32 +49,35 @@ files, or words in the commit message</div>
 
 <table id="changesetEntry">
 <tr>
- <th class="author">author</th>
- <td class="author">{author|obfuscate}</td>
+ <th>author</th>
+ <td>{author|obfuscate}</td>
 </tr>
 <tr>
- <th class="date">date</th>
+ <th>date</th>
  <td class="date age">{date|rfc822date}</td>
 </tr>
 <tr>
- <th class="author">parents</th>
- <td class="author">{parent%filerevparent}</td>
+ <th>parents</th>
+ <td>{parent%filerevparent}</td>
 </tr>
 <tr>
- <th class="author">children</th>
- <td class="author">{child%filerevchild}</td>
+ <th>children</th>
+ <td>{child%filerevchild}</td>
 </tr>
 {changesettag}
 </table>
 
 <div class="overflow">
-<table class="bigtable">
-<tr>
- <th class="annotate">rev</th>
- <th class="line">&nbsp;&nbsp;line source</th>
-</tr>
-{annotate%annotateline}
-</table>
+<div class="sourcefirst">   comparison</div>
+<div class="legend">
+  <span class="legendinfo equal">equal</span>
+  <span class="legendinfo delete">deleted</span>
+  <span class="legendinfo insert">inserted</span>
+  <span class="legendinfo replace">replaced</span>
+</div>
+
+{comparison}
+
 </div>
 </div>
 </div>

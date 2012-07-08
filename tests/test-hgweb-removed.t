@@ -171,6 +171,7 @@ diff removed file
   <li><a href="/file/c78f6c5cbea9/a">file</a></li>
   <li><a href="/file/tip/a">latest</a></li>
   <li class="active">diff</li>
+  <li><a href="/comparison/c78f6c5cbea9/a">comparison</a></li>
   <li><a href="/annotate/c78f6c5cbea9/a">annotate</a></li>
   <li><a href="/log/c78f6c5cbea9/a">file log</a></li>
   <li><a href="/raw-file/c78f6c5cbea9/a">raw</a></li>

@@ -437,6 +437,46 @@ static file
   	top: -3px;
   	font-style: italic;
   }
+  
+  /* Comparison */
+  .legend {
+      padding: 1.5% 0 1.5% 0;
+  }
+  
+  .legendinfo {
+      border: 1px solid #d9d8d1;
+      font-size: 80%;
+      text-align: center;
+      padding: 0.5%;
+  }
+  
+  .equal {
+      background-color: #ffffff;
+  }
+  
+  .delete {
+      background-color: #ffc5ce;
+  }
+  
+  .insert {
+      background-color: #c5ffc4;
+  }
+  
+  .replace {
+      background-color: #ffff99;
+  }
+  
+  .comparison {
+      overflow-x: auto;
+  }
+  
+  .header th {
+      text-align: center;
+  }
+  
+  .block {
+      border-top: 1px solid #d9d8d1;
+  }
   304 Not Modified
   
 
