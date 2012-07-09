@@ -190,10 +190,16 @@ Try to pull markers
   $ hg -R tmpb push tmpd
   pushing to tmpd
   searching for changes
+  abort: push includes an obsolete changeset: cdbce2fbb163!
+  [255]
+  $ hg -R tmpd debugobsolete
+  $ hg -R tmpb push tmpd --rev 5601fb93a350 --rev 245bde4270cd
+  pushing to tmpd
+  searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 6 changes to 6 files (+3 heads)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
   $ hg -R tmpd debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}

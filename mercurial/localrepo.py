@@ -1737,6 +1737,15 @@ class localrepository(repo.repository):
                 else:
                     # something to push
                     if not force:
+                        # if self.obsstore == False --> no obsolete
+                        # then, save the iteration
+                        if self.obsstore:
+                            # this message are here for 80 char limit reason
+                            msg = _("push includes an obsolete changeset: %s!")
+                            for node in outgoing.missing:
+                                ctx = self[node]
+                                if ctx.obsolete():
+                                    raise util.Abort(msg % ctx)
                         discovery.checkheads(self, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))
