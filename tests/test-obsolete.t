@@ -196,7 +196,7 @@ Try to pull markers
   $ hg -R tmpb push tmpd
   pushing to tmpd
   searching for changes
-  abort: push includes an obsolete changeset: cdbce2fbb163!
+  abort: push includes an obsolete changeset: ca819180edb9!
   [255]
   $ hg -R tmpd debugobsolete
   $ hg -R tmpb push tmpd --rev 'not obsolete()'
@@ -315,3 +315,8 @@ detect outgoing obsolete and unstable
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
   
+  $ hg push ../tmpc/
+  pushing to ../tmpc/
+  searching for changes
+  abort: push includes an unstable changeset: 7878242aeece!
+  [255]

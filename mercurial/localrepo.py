@@ -1741,11 +1741,18 @@ class localrepository(repo.repository):
                         # then, save the iteration
                         if self.obsstore:
                             # this message are here for 80 char limit reason
-                            msg = _("push includes an obsolete changeset: %s!")
-                            for node in outgoing.missing:
+                            mso = _("push includes an obsolete changeset: %s!")
+                            msu = _("push includes an unstable changeset: %s!")
+                            # If we are to push if there is at least one
+                            # obsolete or unstable changeset in missing, at
+                            # least one of the missinghead will be obsolete or
+                            # unstable. So checking heads only is ok
+                            for node in outgoing.missingheads:
                                 ctx = self[node]
                                 if ctx.obsolete():
-                                    raise util.Abort(msg % ctx)
+                                    raise util.Abort(_(mso) % ctx)
+                                elif ctx.unstable():
+                                    raise util.Abort(_(msu) % ctx)
                         discovery.checkheads(self, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))
