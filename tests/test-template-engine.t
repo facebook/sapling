@@ -36,4 +36,12 @@
   $ hg log --style=./mymap
   0 97e5f848f0936960273bbf75be6388cd0350a32b test
 
+  $ cat > changeset.txt << EOF
+  > {{parent1}} {{parent1node}} {{parent2}} {{parent2node}}
+  > EOF
+  $ hg ci -Ama
+  $ hg log --style=./mymap
+  0 97e5f848f0936960273bbf75be6388cd0350a32b -1 0000000000000000000000000000000000000000
+  -1 0000000000000000000000000000000000000000 -1 0000000000000000000000000000000000000000
+
   $ cd ..
