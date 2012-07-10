@@ -902,6 +902,7 @@ def help(web, req, tmpl):
 
     u = webutil.wsgiui()
     u.pushbuffer()
+    u.verbose = True
     try:
         commands.help_(u, topicname)
     except error.UnknownCommand:
