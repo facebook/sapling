@@ -326,5 +326,16 @@ keywords = {
     'tags': showtags,
 }
 
+def _showparents(**args):
+    """:parents: List of strings. The parents of the changeset in "rev:node"
+    format. If the changeset has only one "natural" parent (the predecessor
+    revision) nothing is shown."""
+    pass
+
+dockeywords = {
+    'parents': _showparents,
+}
+dockeywords.update(keywords)
+
 # tell hggettext to extract docstrings from these functions:
-i18nfunctions = keywords.values()
+i18nfunctions = dockeywords.values()

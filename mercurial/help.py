@@ -199,5 +199,5 @@ def addtopicsymbols(topic, marker, symbols):
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)
 addtopicsymbols('merge-tools', '.. internaltoolsmarker', filemerge.internals)
 addtopicsymbols('revsets', '.. predicatesmarker', revset.symbols)
-addtopicsymbols('templates', '.. keywordsmarker', templatekw.keywords)
+addtopicsymbols('templates', '.. keywordsmarker', templatekw.dockeywords)
 addtopicsymbols('templates', '.. filtersmarker', templatefilters.filters)
