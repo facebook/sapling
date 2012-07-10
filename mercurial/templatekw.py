@@ -275,6 +275,28 @@ def shownode(repo, ctx, templ, **args):
     """
     return ctx.hex()
 
+def showp1rev(repo, ctx, templ, **args):
+    """:p1rev: Integer. The repository-local revision number of the changeset's
+    first parent, or -1 if the changeset has no parents."""
+    return ctx.p1().rev()
+
+def showp2rev(repo, ctx, templ, **args):
+    """:p2rev: Integer. The repository-local revision number of the changeset's
+    second parent, or -1 if the changeset has no second parent."""
+    return ctx.p2().rev()
+
+def showp1node(repo, ctx, templ, **args):
+    """:p1node: String. The identification hash of the changeset's first parent,
+    as a 40 digit hexadecimal string. If the changeset has no parents, all
+    digits are 0."""
+    return ctx.p1().hex()
+
+def showp2node(repo, ctx, templ, **args):
+    """:p2node: String. The identification hash of the changeset's second
+    parent, as a 40 digit hexadecimal string. If the changeset has no second
+    parent, all digits are 0."""
+    return ctx.p2().hex()
+
 def showphase(repo, ctx, templ, **args):
     """:phase: String. The changeset phase name."""
     return ctx.phasestr()
@@ -320,6 +342,10 @@ keywords = {
     'latesttagdistance': showlatesttagdistance,
     'manifest': showmanifest,
     'node': shownode,
+    'p1rev': showp1rev,
+    'p1node': showp1node,
+    'p2rev': showp2rev,
+    'p2node': showp2node,
     'phase': showphase,
     'phaseidx': showphaseidx,
     'rev': showrev,
