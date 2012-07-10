@@ -5639,6 +5639,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     3. With the -C/--clean option, uncommitted changes are discarded and
        the working directory is updated to the requested changeset.
 
+    To cancel an uncommitted merge (and lose your changes), use
+    :hg:`update --clean .`.
+
     Use null as the changeset to remove the working directory (like
     :hg:`clone -U`).
 
