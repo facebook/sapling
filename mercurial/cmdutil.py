@@ -1450,6 +1450,19 @@ def graphlog(ui, repo, *pats, **opts):
     displaygraph(ui, revdag, displayer, showparents,
                  graphmod.asciiedges, getrenamed, filematcher)
 
+def checkunsupportedgraphflags(pats, opts):
+    for op in ["newest_first"]:
+        if op in opts and opts[op]:
+            raise util.Abort(_("-G/--graph option is incompatible with --%s")
+                             % op.replace("_", "-"))
+
+def graphrevs(repo, nodes, opts):
+    limit = loglimit(opts)
+    nodes.reverse()
+    if limit is not None:
+        nodes = nodes[:limit]
+    return graphmod.nodes(repo, nodes)
+
 def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
     bad = []

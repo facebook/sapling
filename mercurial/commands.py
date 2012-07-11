@@ -15,7 +15,7 @@ import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
 import merge as mergemod
 import minirst, revset, fileset
-import dagparser, context, simplemerge
+import dagparser, context, simplemerge, graphmod
 import random, setdiscovery, treediscovery, dagutil, pvec
 import phases, obsolete
 
@@ -98,6 +98,7 @@ logopts = [
      _('limit number of changes displayed'), _('NUM')),
     ('M', 'no-merges', None, _('do not show merges')),
     ('', 'stat', None, _('output diffstat-style summary of changes')),
+    ('G', 'graph', None, _("show the revision DAG")),
 ] + templateopts
 
 diffopts = [
@@ -3828,6 +3829,17 @@ def incoming(ui, repo, source="default", **opts):
 
     Returns 0 if there are incoming changes, 1 otherwise.
     """
+    if opts.get('graph'):
+        cmdutil.checkunsupportedgraphflags([], opts)
+        def display(other, chlist, displayer):
+            revdag = cmdutil.graphrevs(other, chlist, opts)
+            showparents = [ctx.node() for ctx in repo[None].parents()]
+            cmdutil.displaygraph(ui, revdag, displayer, showparents,
+                                 graphmod.asciiedges)
+
+        hg._incoming(display, lambda: 1, ui, repo, source, opts, buffered=True)
+        return 0
+
     if opts.get('bundle') and opts.get('subrepos'):
         raise util.Abort(_('cannot combine --bundle and --subrepos'))
 
@@ -3928,7 +3940,6 @@ def locate(ui, repo, *pats, **opts):
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
     ('', 'hidden', False, _('show hidden changesets (DEPRECATED)')),
-    ('G', 'graph', None, _("show the revision DAG")),
     ] + logopts + walkopts,
     _('[OPTION]... [FILE]'))
 def log(ui, repo, *pats, **opts):
@@ -4283,6 +4294,18 @@ def outgoing(ui, repo, dest=None, **opts):
 
     Returns 0 if there are outgoing changes, 1 otherwise.
     """
+    if opts.get('graph'):
+        cmdutil.checkunsupportedgraphflags([], opts)
+        o = hg._outgoing(ui, repo, dest, opts)
+        if o is None:
+            return
+
+        revdag = cmdutil.graphrevs(repo, o, opts)
+        displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+        showparents = [ctx.node() for ctx in repo[None].parents()]
+        cmdutil.displaygraph(ui, revdag, displayer, showparents,
+                             graphmod.asciiedges)
+        return 0
 
     if opts.get('bookmarks'):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
