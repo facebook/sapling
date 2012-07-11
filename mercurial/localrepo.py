@@ -29,6 +29,11 @@ class localrepository(repo.repository):
     supportedformats = set(('revlogv1', 'generaldelta'))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
+    openerreqs = set(('revlogv1', 'generaldelta'))
+    requirements = ['revlogv1']
+
+    def _baserequirements(self, create):
+        return self.requirements[:]
 
     def __init__(self, baseui, path=None, create=False):
         repo.repository.__init__(self)
@@ -56,7 +61,7 @@ class localrepository(repo.repository):
                 if not os.path.exists(path):
                     util.makedirs(path)
                 util.makedir(self.path, notindexed=True)
-                requirements = ["revlogv1"]
+                requirements = self._baserequirements(create)
                 if self.ui.configbool('format', 'usestore', True):
                     os.mkdir(os.path.join(self.path, "store"))
                     requirements.append("store")
@@ -120,9 +125,8 @@ class localrepository(repo.repository):
 
     def _applyrequirements(self, requirements):
         self.requirements = requirements
-        openerreqs = set(('revlogv1', 'generaldelta'))
         self.sopener.options = dict((r, 1) for r in requirements
-                                           if r in openerreqs)
+                                           if r in self.openerreqs)
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")
