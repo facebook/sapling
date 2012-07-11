@@ -66,12 +66,12 @@ def asciiedges(type, char, lines, seen, rev, parents):
     seen[:] = nextseen
     yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
 
-def fix_long_right_edges(edges):
+def _fixlongrightedges(edges):
     for (i, (start, end)) in enumerate(edges):
         if end > start:
             edges[i] = (start, end + 1)
 
-def get_nodeline_edges_tail(
+def _getnodelineedgestail(
         node_index, p_node_index, n_columns, n_columns_diff, p_diff, fix_tail):
     if fix_tail and n_columns_diff == p_diff and n_columns_diff != 0:
         # Still going in the same non-vertical direction.
@@ -85,7 +85,7 @@ def get_nodeline_edges_tail(
     else:
         return ["|", " "] * (n_columns - node_index - 1)
 
-def draw_edges(edges, nodeline, interline):
+def _drawedges(edges, nodeline, interline):
     for (start, end) in edges:
         if start == end + 1:
             interline[2 * end + 1] = "/"
@@ -103,7 +103,7 @@ def draw_edges(edges, nodeline, interline):
                 if nodeline[i] != "+":
                     nodeline[i] = "-"
 
-def get_padding_line(ni, n_columns, edges):
+def _getpaddingline(ni, n_columns, edges):
     line = []
     line.extend(["|", " "] * ni)
     if (ni, ni - 1) in edges or (ni, ni) in edges:
@@ -154,7 +154,7 @@ def ascii(ui, state, type, char, text, coldata):
         #     o | |  into  o---+
         #     |X /         |/ /
         #     | |          | |
-        fix_long_right_edges(edges)
+        _fixlongrightedges(edges)
 
     # add_padding_line says whether to rewrite
     #
@@ -180,8 +180,8 @@ def ascii(ui, state, type, char, text, coldata):
     nodeline.extend([char, " "])
 
     nodeline.extend(
-        get_nodeline_edges_tail(idx, state[1], ncols, coldiff,
-                                state[0], fix_nodeline_tail))
+        _getnodelineedgestail(idx, state[1], ncols, coldiff,
+                              state[0], fix_nodeline_tail))
 
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
@@ -199,12 +199,12 @@ def ascii(ui, state, type, char, text, coldata):
     shift_interline.extend([edge_ch, " "] * (ncols - idx - 1))
 
     # draw edges from the current node to its parents
-    draw_edges(edges, nodeline, shift_interline)
+    _drawedges(edges, nodeline, shift_interline)
 
     # lines is the list of all graph lines to print
     lines = [nodeline]
     if add_padding_line:
-        lines.append(get_padding_line(idx, ncols, edges))
+        lines.append(_getpaddingline(idx, ncols, edges))
     lines.append(shift_interline)
 
     # make sure that there are as many graph lines as there are
@@ -226,7 +226,7 @@ def ascii(ui, state, type, char, text, coldata):
     state[0] = coldiff
     state[1] = idx
 
-def check_unsupported_flags(pats, opts):
+def _checkunsupportedflags(pats, opts):
     for op in ["newest_first"]:
         if op in opts and opts[op]:
             raise util.Abort(_("-G/--graph option is incompatible with --%s")
@@ -538,7 +538,7 @@ def goutgoing(ui, repo, dest=None, **opts):
     directory.
     """
 
-    check_unsupported_flags([], opts)
+    _checkunsupportedflags([], opts)
     o = hg._outgoing(ui, repo, dest, opts)
     if o is None:
         return
@@ -560,7 +560,7 @@ def gincoming(ui, repo, source="default", **opts):
     def subreporecurse():
         return 1
 
-    check_unsupported_flags([], opts)
+    _checkunsupportedflags([], opts)
     def display(other, chlist, displayer):
         revdag = graphrevs(other, chlist, opts)
         showparents = [ctx.node() for ctx in repo[None].parents()]
