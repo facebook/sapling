@@ -4898,18 +4898,20 @@ def rollback(ui, repo, **opts):
     that create new changesets or propagate existing changesets into a
     repository.
 
-    For example, the following commands are transactional, and their
-    effects can be rolled back:
+    .. container:: verbose
 
-    - commit
-    - import
-    - pull
-    - push (with this repository as the destination)
-    - unbundle
+      For example, the following commands are transactional, and their
+      effects can be rolled back:
 
-    To avoid permanent data loss, rollback will refuse to rollback a
-    commit transaction if it isn't checked out. Use --force to
-    override this protection.
+      - commit
+      - import
+      - pull
+      - push (with this repository as the destination)
+      - unbundle
+
+      To avoid permanent data loss, rollback will refuse to rollback a
+      commit transaction if it isn't checked out. Use --force to
+      override this protection.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
