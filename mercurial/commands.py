@@ -2245,6 +2245,11 @@ def debugrevlog(ui, repo, file_ = None, **opts):
             elif delta != nullrev:
                 numother += 1
 
+    # Adjust size min value for empty cases
+    for size in (datasize, fullsize, deltasize):
+        if size[0] is None:
+            size[0] = 0
+
     numdeltas = numrevs - numfull
     numoprev = numprev - nump1prev - nump2prev
     totalrawsize = datasize[2]
@@ -2252,7 +2257,8 @@ def debugrevlog(ui, repo, file_ = None, **opts):
     fulltotal = fullsize[2]
     fullsize[2] /= numfull
     deltatotal = deltasize[2]
-    deltasize[2] /= numrevs - numfull
+    if numrevs - numfull > 0:
+        deltasize[2] /= numrevs - numfull
     totalsize = fulltotal + deltatotal
     avgchainlen = sum(chainlengths) / numrevs
     compratio = totalrawsize / totalsize
