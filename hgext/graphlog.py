@@ -14,7 +14,6 @@ revision graph is also shown.
 
 from mercurial.cmdutil import show_changeset
 from mercurial.i18n import _
-from mercurial.node import nullrev
 from mercurial import cmdutil, commands, extensions, scmutil
 from mercurial import hg, util, graphmod, templatekw, revset
 
@@ -226,15 +225,6 @@ def ascii(ui, state, type, char, text, coldata):
     # ... and start over
     state[0] = coldiff
     state[1] = idx
-
-def get_revs(repo, rev_opt):
-    if rev_opt:
-        revs = scmutil.revrange(repo, rev_opt)
-        if len(revs) == 0:
-            return (nullrev, nullrev)
-        return (max(revs), min(revs))
-    else:
-        return (len(repo) - 1, 0)
 
 def check_unsupported_flags(pats, opts):
     for op in ["newest_first"]:
