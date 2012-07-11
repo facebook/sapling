@@ -138,14 +138,14 @@ the changelog should mention file a:
   -rwxr-x---
 
   $ hg debugindex a
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       0      0       0 b80de5d13875 000000000000 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
   $ hg debugindex -R ../test2 a
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       0      0       0 b80de5d13875 000000000000 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
   $ hg debugindex -R ../test1 a
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       0      0       0 b80de5d13875 000000000000 000000000000
-       1         0       5      1       1 7fe919cc0336 b80de5d13875 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       0  .....       0 b80de5d13875 000000000000 000000000000 (re)
+       1         0       5  .....       1 7fe919cc0336 b80de5d13875 000000000000 (re)
 
   $ cd ..

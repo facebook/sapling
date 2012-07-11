@@ -76,11 +76,11 @@ We shouldn't have anything but foo in merge state here:
 main: we should have a merge here:
 
   $ hg debugindex --changelog
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      73      0       0 cdca01651b96 000000000000 000000000000
-       1        73      68      1       1 f6718a9cb7f3 cdca01651b96 000000000000
-       2       141      68      2       2 bdd988058d16 cdca01651b96 000000000000
-       3       209      66      3       3 d8a521142a3c f6718a9cb7f3 bdd988058d16
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      73  .....       0 cdca01651b96 000000000000 000000000000 (re)
+       1        73      68  .....       1 f6718a9cb7f3 cdca01651b96 000000000000 (re)
+       2       141      68  .....       2 bdd988058d16 cdca01651b96 000000000000 (re)
+       3       209      66  .....       3 d8a521142a3c f6718a9cb7f3 bdd988058d16 (re)
 
 log should show foo and quux changed:
 
@@ -100,32 +100,32 @@ log should show foo and quux changed:
 foo: we should have a merge here:
 
   $ hg debugindex foo
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 b8e02f643373 000000000000 000000000000
-       1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
-       2         7       4      2       2 33d1fb69067a b8e02f643373 000000000000
-       3        11       4      3       3 aa27919ee430 2ffeddde1b65 33d1fb69067a
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       3  .....       0 b8e02f643373 000000000000 000000000000 (re)
+       1         3       4  .....       1 2ffeddde1b65 b8e02f643373 000000000000 (re)
+       2         7       4  .....       2 33d1fb69067a b8e02f643373 000000000000 (re)
+       3        11       4  .....       3 aa27919ee430 2ffeddde1b65 33d1fb69067a (re)
 
 bar: we should not have a merge here:
 
   $ hg debugindex bar
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 b8e02f643373 000000000000 000000000000
-       1         3       4      1       2 33d1fb69067a b8e02f643373 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       3  .....       0 b8e02f643373 000000000000 000000000000 (re)
+       1         3       4  .....       2 33d1fb69067a b8e02f643373 000000000000 (re)
 
 baz: we should not have a merge here:
 
   $ hg debugindex baz
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 b8e02f643373 000000000000 000000000000
-       1         3       4      1       1 2ffeddde1b65 b8e02f643373 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       3  .....       0 b8e02f643373 000000000000 000000000000 (re)
+       1         3       4  .....       1 2ffeddde1b65 b8e02f643373 000000000000 (re)
 
 quux: we should not have a merge here:
 
   $ hg debugindex quux
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       3      0       0 b8e02f643373 000000000000 000000000000
-       1         3       5      1       3 6128c0f33108 b8e02f643373 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       3  .....       0 b8e02f643373 000000000000 000000000000 (re)
+       1         3       5  .....       3 6128c0f33108 b8e02f643373 000000000000 (re)
 
 Manifest entries should match tips of all files:
 
