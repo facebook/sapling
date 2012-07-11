@@ -21,8 +21,6 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-ASCIIDATA = 'ASC'
-
 def asciiedges(type, char, lines, seen, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
     if rev not in seen:
@@ -132,7 +130,7 @@ def ascii(ui, state, type, char, text, coldata):
       - ui to write to
       - Somewhere to keep the needed state in (init to asciistate())
       - Column of the current node in the set of ongoing edges.
-      - Type indicator of node data == ASCIIDATA.
+      - Type indicator of node data, usually 'C' for changesets.
       - Payload: (char, lines):
         - Character to use as node's symbol.
         - List of lines to display as the node's text.
