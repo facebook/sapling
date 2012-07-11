@@ -4896,8 +4896,10 @@ def rollback(ui, repo, **opts):
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
-    repository. For example, the following commands are transactional,
-    and their effects can be rolled back:
+    repository.
+
+    For example, the following commands are transactional, and their
+    effects can be rolled back:
 
     - commit
     - import
