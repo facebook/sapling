@@ -2065,13 +2065,13 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         finally:
             l.release()
     else:
-        for mctx in obsolete.allmarkers(repo):
-            ui.write(hex(mctx.precnode()))
-            for repl in mctx.succnodes():
+        for m in obsolete.allmarkers(repo):
+            ui.write(hex(m.precnode()))
+            for repl in m.succnodes():
                 ui.write(' ')
                 ui.write(hex(repl))
-            ui.write(' %X ' % mctx._data[2])
-            ui.write(mctx.metadata())
+            ui.write(' %X ' % m._data[2])
+            ui.write(m.metadata())
             ui.write('\n')
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
