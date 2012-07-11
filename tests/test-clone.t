@@ -449,8 +449,9 @@ iterable in addbranchrevs()
   $ rm -r ua
 
   $ cat <<EOF > branchclone.py
-  > from mercurial import ui, hg
+  > from mercurial import ui, hg, extensions
   > myui = ui.ui()
+  > extensions.loadall(myui)
   > repo = hg.repository(myui, 'a')
   > hg.clone(myui, {}, repo, dest="ua", branch=["stable",])
   > EOF
