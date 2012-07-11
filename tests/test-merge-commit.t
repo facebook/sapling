@@ -35,17 +35,17 @@ Test with the merge on 3 having the rename on the local parent
   $ hg ci -m '3: merge with local rename'
 
   $ hg debugindex bar
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      77      0       2 d35118874825 000000000000 000000000000
-       1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
+       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
 
   $ hg debugrename bar
   bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
 
   $ hg debugindex foo
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       7      0       0 690b295714ae 000000000000 000000000000
-       1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       7  .....       0 690b295714ae 000000000000 000000000000 (re)
+       1         7      13  .....       1 9e25c27b8757 690b295714ae 000000000000 (re)
 
 
 Revert the content change from rev 2:
@@ -88,11 +88,11 @@ This should use bar@rev2 as the ancestor:
   $ hg ci -m '5: merge'
 
   $ hg debugindex bar
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      77      0       2 d35118874825 000000000000 000000000000
-       1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
-       2       153       7      2       4 ff4b45017382 d35118874825 000000000000
-       3       160      13      3       5 3701b4893544 ff4b45017382 5345f5ab8abd
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
+       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
+       2       153       7  .....       4 ff4b45017382 d35118874825 000000000000 (re)
+       3       160      13  .....       5 3701b4893544 ff4b45017382 5345f5ab8abd (re)
 
 
 Same thing, but with the merge on 3 having the rename
@@ -122,17 +122,17 @@ on the remote parent:
   $ hg ci -m '3: merge with remote rename'
 
   $ hg debugindex bar
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      77      0       2 d35118874825 000000000000 000000000000
-       1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
+       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
 
   $ hg debugrename bar
   bar renamed from foo:9e25c27b87571a1edee5ae4dddee5687746cc8e2
 
   $ hg debugindex foo
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       7      0       0 690b295714ae 000000000000 000000000000
-       1         7      13      1       1 9e25c27b8757 690b295714ae 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       7  .....       0 690b295714ae 000000000000 000000000000 (re)
+       1         7      13  .....       1 9e25c27b8757 690b295714ae 000000000000 (re)
 
 
 Revert the content change from rev 2:
@@ -175,10 +175,10 @@ This should use bar@rev2 as the ancestor:
   $ hg ci -m '5: merge'
 
   $ hg debugindex bar
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      77      0       2 d35118874825 000000000000 000000000000
-       1        77      76      0       3 5345f5ab8abd 000000000000 d35118874825
-       2       153       7      2       4 ff4b45017382 d35118874825 000000000000
-       3       160      13      3       5 3701b4893544 ff4b45017382 5345f5ab8abd
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      77  .....       2 d35118874825 000000000000 000000000000 (re)
+       1        77      76  .....       3 5345f5ab8abd 000000000000 d35118874825 (re)
+       2       153       7  .....       4 ff4b45017382 d35118874825 000000000000 (re)
+       3       160      13  .....       5 3701b4893544 ff4b45017382 5345f5ab8abd (re)
 
   $ cd ..

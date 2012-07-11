@@ -64,12 +64,12 @@
   summary:     test
   
   $ hg debugindex --changelog
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      60      0       0 5e0375449e74 000000000000 000000000000
-       1        60      62      1       1 96155394af80 5e0375449e74 000000000000
-       2       122      62      2       2 92cc4c306b19 5e0375449e74 000000000000
-       3       184      69      3       3 e16a66a37edd 92cc4c306b19 96155394af80
-       4       253      29      3       4 2ee31f665a86 96155394af80 92cc4c306b19
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0      60  .....       0 5e0375449e74 000000000000 000000000000 (re)
+       1        60      62  .....       1 96155394af80 5e0375449e74 000000000000 (re)
+       2       122      62  .....       2 92cc4c306b19 5e0375449e74 000000000000 (re)
+       3       184      69  .....       3 e16a66a37edd 92cc4c306b19 96155394af80 (re)
+       4       253      29  .....       4 2ee31f665a86 96155394af80 92cc4c306b19 (re)
 
 revision 1
   $ hg manifest --debug 1
@@ -89,9 +89,9 @@ revision 4
   79d7492df40aa0fa093ec4209be78043c181f094 644   b
 
   $ hg debugindex a
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0       5      0       0 2ed2a3912a0b 000000000000 000000000000
-       1         5       6      1       1 79d7492df40a 2ed2a3912a0b 000000000000
+     rev    offset  length  ..... linkrev nodeid       p1           p2 (re)
+       0         0       5  .....       0 2ed2a3912a0b 000000000000 000000000000 (re)
+       1         5       6  .....       1 79d7492df40a 2ed2a3912a0b 000000000000 (re)
 
   $ hg verify
   checking changesets
