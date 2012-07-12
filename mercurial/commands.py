@@ -4982,18 +4982,22 @@ def rollback(ui, repo, **opts):
 
     Transactions are used to encapsulate the effects of all commands
     that create new changesets or propagate existing changesets into a
-    repository. For example, the following commands are transactional,
-    and their effects can be rolled back:
+    repository.
 
-    - commit
-    - import
-    - pull
-    - push (with this repository as the destination)
-    - unbundle
+    .. container:: verbose
 
-    To avoid permanent data loss, rollback will refuse to rollback a
-    commit transaction if it isn't checked out. Use --force to
-    override this protection.
+      For example, the following commands are transactional, and their
+      effects can be rolled back:
+
+      - commit
+      - import
+      - pull
+      - push (with this repository as the destination)
+      - unbundle
+
+      To avoid permanent data loss, rollback will refuse to rollback a
+      commit transaction if it isn't checked out. Use --force to
+      override this protection.
 
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
@@ -5695,14 +5699,14 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     current named branch and move the current bookmark (see :hg:`help
     bookmarks`).
 
+    Update sets the working directory's parent revison to the specified
+    changeset (see :hg:`help parents`).
+
     If the changeset is not a descendant or ancestor of the working
     directory's parent, the update is aborted. With the -c/--check
     option, the working directory is checked for uncommitted changes; if
     none are found, the working directory is updated to the specified
     changeset.
-
-    Update sets the working directory's parent revison to the specified
-    changeset (see :hg:`help parents`).
 
     The following rules apply when the working directory contains
     uncommitted changes:
@@ -5721,6 +5725,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     3. With the -C/--clean option, uncommitted changes are discarded and
        the working directory is updated to the requested changeset.
+
+    To cancel an uncommitted merge (and lose your changes), use
+    :hg:`update --clean .`.
 
     Use null as the changeset to remove the working directory (like
     :hg:`clone -U`).

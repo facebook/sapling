@@ -1185,7 +1185,7 @@ class gitsubrepo(abstractsubrepo):
             return True
         else:
             self._ui.warn(_('no branch checked out in subrepo %s\n'
-                            'cannot push revision %s') %
+                            'cannot push revision %s\n') %
                           (self._relpath, self._state[1]))
             return False
 
