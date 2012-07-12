@@ -203,10 +203,9 @@ class obsstore(object):
                 f.seek(0, 2) # os.SEEK_END
                 offset = f.tell()
                 transaction.add('obsstore', offset)
-                if offset == 0:
-                    # new file add version header
-                    f.write(_pack('>B', _fmversion))
-                _writemarkers(f.write, [marker])
+                # offset == 0: new file - add the version header
+                for bytes in _encodemarkers([marker], offset == 0):
+                    f.write(bytes)
             finally:
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
                 # call 'filecacheentry.refresh()'  here
@@ -229,25 +228,26 @@ class obsstore(object):
         for suc in sucs:
             self.successors.setdefault(suc, set()).add(marker)
 
-def _writemarkers(write, markers):
+def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
+    if addheader:
+        yield _pack('>B', _fmversion)
     for marker in markers:
         pre, sucs, flags, metadata = marker
         nbsuc = len(sucs)
         format = _fmfixed + (_fmnode * nbsuc)
         data = [nbsuc, len(metadata), flags, pre]
         data.extend(sucs)
-        write(_pack(format, *data))
-        write(metadata)
+        yield _pack(format, *data)
+        yield metadata
 
 def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    data = [_pack('>B', _fmversion)]
-    _writemarkers(data.append, repo.obsstore)
-    return {'dump': base85.b85encode(''.join(data))}
+    markers = _encodemarkers(repo.obsstore, True)
+    return {'dump': base85.b85encode(''.join(markers))}
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
