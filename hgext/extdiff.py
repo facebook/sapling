@@ -63,6 +63,7 @@ pretty fast (at least faster than having to compare the entire tree).
 from mercurial.i18n import _
 from mercurial.node import short, nullid
 from mercurial import cmdutil, scmutil, util, commands, encoding, filemerge
+from mercurial import archival
 import os, shlex, shutil, tempfile, re
 
 cmdtable = {}
@@ -84,33 +85,34 @@ def snapshot(ui, repo, files, node, tmproot):
         dirname = '%s.%s' % (dirname, short(node))
     base = os.path.join(tmproot, dirname)
     os.mkdir(base)
+    fns_and_mtime = []
+
     if node is not None:
         ui.note(_('making snapshot of %d files from rev %s\n') %
                 (len(files), short(node)))
     else:
         ui.note(_('making snapshot of %d files from working directory\n') %
             (len(files)))
-    wopener = scmutil.opener(base)
-    fns_and_mtime = []
-    ctx = repo[node]
-    for fn in sorted(files):
-        wfn = util.pconvert(fn)
-        if wfn not in ctx:
-            # File doesn't exist; could be a bogus modify
-            continue
-        ui.note('  %s\n' % wfn)
-        dest = os.path.join(base, wfn)
-        fctx = ctx[wfn]
-        data = repo.wwritedata(wfn, fctx.data())
-        if 'l' in fctx.flags():
-            wopener.symlink(data, wfn)
-        else:
-            wopener.write(wfn, data)
-            if 'x' in fctx.flags():
-                util.setflags(dest, False, True)
-        if node is None:
-            fns_and_mtime.append((dest, repo.wjoin(fn),
-                                  os.lstat(dest).st_mtime))
+
+    if files:
+        repo.ui.setconfig("ui", "archivemeta", False)
+
+        archival.archive(repo, base, node, 'files',
+                         matchfn=scmutil.matchfiles(repo, files))
+
+        ctx = repo[node]
+        for fn in sorted(files):
+            wfn = util.pconvert(fn)
+            if wfn not in ctx:
+                # File doesn't exist; could be a bogus modify
+                continue
+            ui.note('  %s\n' % wfn)
+
+            if node is None:
+                dest = os.path.join(base, wfn)
+
+                fns_and_mtime.append((dest, repo.wjoin(fn),
+                                      os.lstat(dest).st_mtime))
     return dirname, fns_and_mtime
 
 def dodiff(ui, repo, cmdline, pats, opts):

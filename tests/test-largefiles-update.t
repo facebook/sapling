@@ -20,6 +20,20 @@ directory (and ".hg/largefiles/dirstate")
   $ echo 'large1 in #1' > large1
   $ echo 'normal1 in #1' > normal1
   $ hg commit -m '#1'
+  $ hg extdiff -r '.^' --config extensions.extdiff=
+  diff -Npru repo.0d9d9b8dc9a3/.hglf/large1 repo/.hglf/large1
+  --- repo.0d9d9b8dc9a3/.hglf/large1	* (glob)
+  +++ repo/.hglf/large1	* (glob)
+  @@ -1 +1 @@
+  -4669e532d5b2c093a78eca010077e708a071bb64
+  +58e24f733a964da346e2407a2bee99d9001184f5
+  diff -Npru repo.0d9d9b8dc9a3/normal1 repo/normal1
+  --- repo.0d9d9b8dc9a3/normal1	* (glob)
+  +++ repo/normal1	* (glob)
+  @@ -1 +1 @@
+  -normal1
+  +normal1 in #1
+  [1]
   $ hg update -q -C 0
   $ echo 'large2 in #2' > large2
   $ hg commit -m '#2'
