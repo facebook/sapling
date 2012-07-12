@@ -1839,7 +1839,8 @@ class localrepository(repo.repository):
                         if not r:
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
-                if 'obsolete' in self.listkeys('namespaces') and self.obsstore:
+                if ('obsolete' in remote.listkeys('namespaces')
+                    and self.obsstore):
                     data = self.listkeys('obsolete')['dump']
                     r = remote.pushkey('obsolete', 'dump', '', data)
                     if not r:

@@ -214,6 +214,7 @@ test that prepushkey can prevent incoming keys
   searching for changes
   no changes found
   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
+  listkeys hook: HG_NAMESPACE=namespaces HG_VALUES={'bookmarks': '', 'namespaces': '', 'obsolete': '', 'phases': ''}
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   exporting bookmark baz
