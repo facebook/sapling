@@ -4908,8 +4908,10 @@ def revert(ui, repo, *pats, **opts):
     """restore files to their checkout state
 
     .. note::
+
        To check out earlier revisions, you should use :hg:`update REV`.
-       To cancel a merge (and lose your changes), use :hg:`update --clean .`.
+       To cancel an uncommitted merge (and lose your changes), use
+       :hg:`update --clean .`.
 
     With no revision specified, revert the specified files or directories
     to the contents they had in the parent of the working directory.
