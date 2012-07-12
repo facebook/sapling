@@ -48,8 +48,8 @@ class basestore(object):
         '''Put source file into the store under <filename>/<hash>.'''
         raise NotImplementedError('abstract method')
 
-    def exists(self, hash):
-        '''Check to see if the store contains the given hash.'''
+    def exists(self, hashes):
+        '''Check to see if the store contains the given hashes.'''
         raise NotImplementedError('abstract method')
 
     def get(self, files):

@@ -108,3 +108,78 @@ post-fold manifest
   f
 
   $ cd ..
+
+folding and creating no new change doesn't break:
+  $ mkdir fold-to-empty-test
+  $ cd fold-to-empty-test
+  $ hg init
+  $ printf "1\n2\n3\n" > file
+  $ hg add file
+  $ hg commit -m '1+2+3'
+  $ echo 4 >> file
+  $ hg commit -m '+4'
+  $ echo 5 >> file
+  $ hg commit -m '+5'
+  $ echo 6 >> file
+  $ hg commit -m '+6'
+  $ hg log --graph
+  @  changeset:   3:251d831eeec5
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +6
+  |
+  o  changeset:   2:888f9082bf99
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +5
+  |
+  o  changeset:   1:617f94f13c0f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +4
+  |
+  o  changeset:   0:0189ba417d34
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1+2+3
+  
+
+  $ cat > editor.py <<EOF
+  > import re, sys
+  > rules = sys.argv[1]
+  > data = open(rules).read()
+  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+5)', r'drop \1', data)
+  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+6)', r'fold \1', data)
+  > open(rules, 'w').write(data)
+  > EOF
+
+  $ HGEDITOR='python editor.py' hg histedit 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  patching file file
+  Hunk #1 FAILED at 2
+  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  abort: Fix up the change and run hg histedit --continue
+  [255]
+There were conflicts, but we'll continue without resolving. This
+should effectively drop the changes from +6.
+  $ hg status
+  ? editor.py
+  ? file.rej
+  $ hg histedit --continue
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/*-backup.hg (glob)
+  $ hg log --graph
+  @  changeset:   1:617f94f13c0f
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +4
+  |
+  o  changeset:   0:0189ba417d34
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1+2+3
+  
+
+  $ cd ..

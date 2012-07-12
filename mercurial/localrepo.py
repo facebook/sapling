@@ -197,10 +197,7 @@ class localrepository(repo.repository):
 
     @storecache('obsstore')
     def obsstore(self):
-        store = obsolete.obsstore()
-        data = self.sopener.tryread('obsstore')
-        if data:
-            store.loadmarkers(data)
+        store = obsolete.obsstore(self.sopener)
         return store
 
     @storecache('00changelog.i')
@@ -994,16 +991,6 @@ class localrepository(repo.repository):
             self.store.write()
             if '_phasecache' in vars(self):
                 self._phasecache.write()
-            if 'obsstore' in vars(self) and self.obsstore._new:
-                # XXX: transaction logic should be used here. But for
-                # now rewriting the whole file is good enough.
-                f = self.sopener('obsstore', 'wb', atomictemp=True)
-                try:
-                    self.obsstore.flushmarkers(f)
-                    f.close()
-                except: # re-raises
-                    f.discard()
-                    raise
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
                     continue
@@ -1622,6 +1609,10 @@ class localrepository(repo.repository):
         return r
 
     def pull(self, remote, heads=None, force=False):
+        # don't open transaction for nothing or you break future useful
+        # rollback call
+        tr = None
+        trname = 'pull\n' + util.hidepassword(remote.url())
         lock = self.lock()
         try:
             tmp = discovery.findcommonincoming(self, remote, heads=heads,
@@ -1632,6 +1623,7 @@ class localrepository(repo.repository):
                 added = []
                 result = 0
             else:
+                tr = self.transaction(trname)
                 if heads is None and list(common) == [nullid]:
                     self.ui.status(_("requesting all changes\n"))
                 elif heads is None and remote.capable('changegroupsubset'):
@@ -1680,9 +1672,15 @@ class localrepository(repo.repository):
 
             remoteobs = remote.listkeys('obsolete')
             if 'dump' in remoteobs:
+                if tr is None:
+                    tr = self.transaction(trname)
                 data = base85.b85decode(remoteobs['dump'])
-                self.obsstore.mergemarkers(data)
+                self.obsstore.mergemarkers(tr, data)
+            if tr is not None:
+                tr.close()
         finally:
+            if tr is not None:
+                tr.release()
             lock.release()
 
         return result
@@ -1823,9 +1821,8 @@ class localrepository(repo.repository):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
                 if 'obsolete' in self.listkeys('namespaces') and self.obsstore:
-                    data = self.obsstore._writemarkers()
-                    r = remote.pushkey('obsolete', 'dump', '',
-                                       base85.b85encode(data))
+                    data = self.listkeys('obsolete')['dump']
+                    r = remote.pushkey('obsolete', 'dump', '', data)
                     if not r:
                         self.ui.warn(_('failed to push obsolete markers!\n'))
             finally:

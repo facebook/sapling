@@ -156,12 +156,16 @@ class obsstore(object):
     - successors: new -> set(old)
     """
 
-    def __init__(self):
+    def __init__(self, sopener):
         self._all = []
         # new markers to serialize
-        self._new = []
         self.precursors = {}
         self.successors = {}
+        self.sopener = sopener
+        data = sopener.tryread('obsstore')
+        if data:
+            for marker in _readmarkers(data):
+                self._load(marker)
 
     def __iter__(self):
         return iter(self._all)
@@ -169,7 +173,7 @@ class obsstore(object):
     def __nonzero__(self):
         return bool(self._all)
 
-    def create(self, prec, succs=(), flag=0, metadata=None):
+    def create(self, transaction, prec, succs=(), flag=0, metadata=None):
         """obsolete: add a new obsolete marker
 
         * ensuring it is hashable
@@ -184,33 +188,33 @@ class obsstore(object):
             if len(succ) != 20:
                 raise ValueError(succ)
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
-        self.add(marker)
+        self.add(transaction, marker)
 
-    def add(self, marker):
-        """Add a new marker to the store
-
-        This marker still needs to be written to disk"""
-        self._new.append(marker)
-        self._load(marker)
-
-    def loadmarkers(self, data):
-        """Load all markers in data, mark them as known."""
-        for marker in _readmarkers(data):
+    def add(self, transaction, marker):
+        """Add a new marker to the store"""
+        if marker not in self._all:
+            f = self.sopener('obsstore', 'ab')
+            try:
+                offset = f.tell()
+                transaction.add('obsstore', offset)
+                if offset == 0:
+                    # new file add version header
+                    f.write(_pack('>B', _fmversion))
+                _writemarkers(f.write, [marker])
+            finally:
+                # XXX: f.close() == filecache invalidation == obsstore rebuilt.
+                # call 'filecacheentry.refresh()'  here
+                f.close()
             self._load(marker)
 
-    def mergemarkers(self, data):
-        other = set(_readmarkers(data))
+    def mergemarkers(self, transation, data):
+        other = _readmarkers(data)
         local = set(self._all)
-        new = other - local
+        new = [m for m in other if m not in local]
         for marker in new:
-            self.add(marker)
-
-    def flushmarkers(self, stream):
-        """Write all markers to a stream
-
-        After this operation, "new" markers are considered "known"."""
-        self._writemarkers(stream)
-        self._new[:] = []
+            # XXX: N marker == N x (open, write, close)
+            # we should write them all at once
+            self.add(transation, marker)
 
     def _load(self, marker):
         self._all.append(marker)
@@ -219,32 +223,25 @@ class obsstore(object):
         for suc in sucs:
             self.successors.setdefault(suc, set()).add(marker)
 
-    def _writemarkers(self, stream=None):
-        # Kept separate from flushmarkers(), it will be reused for
-        # markers exchange.
-        if stream is None:
-            final = []
-            w = final.append
-        else:
-            w = stream.write
-        w(_pack('>B', _fmversion))
-        for marker in self._all:
-            pre, sucs, flags, metadata = marker
-            nbsuc = len(sucs)
-            format = _fmfixed + (_fmnode * nbsuc)
-            data = [nbsuc, len(metadata), flags, pre]
-            data.extend(sucs)
-            w(_pack(format, *data))
-            w(metadata)
-        if stream is None:
-            return ''.join(final)
+def _writemarkers(write, markers):
+    # Kept separate from flushmarkers(), it will be reused for
+    # markers exchange.
+    for marker in markers:
+        pre, sucs, flags, metadata = marker
+        nbsuc = len(sucs)
+        format = _fmfixed + (_fmnode * nbsuc)
+        data = [nbsuc, len(metadata), flags, pre]
+        data.extend(sucs)
+        write(_pack(format, *data))
+        write(metadata)
 
 def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    data = repo.obsstore._writemarkers()
-    return {'dump': base85.b85encode(data)}
+    data = [_pack('>B', _fmversion)]
+    _writemarkers(data.append, repo.obsstore)
+    return {'dump': base85.b85encode(''.join(data))}
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
@@ -257,8 +254,13 @@ def pushmarker(repo, key, old, new):
     data = base85.b85decode(new)
     lock = repo.lock()
     try:
-        repo.obsstore.mergemarkers(data)
-        return 1
+        tr = repo.transaction('pushkey: obsolete markers')
+        try:
+            repo.obsstore.mergemarkers(tr, data)
+            tr.close()
+            return 1
+        finally:
+            tr.release()
     finally:
         lock.release()
 
