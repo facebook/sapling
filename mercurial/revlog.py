@@ -320,15 +320,6 @@ class revlog(object):
             rev = base
             base = index[rev][3]
         return base
-    def chainlength(self, rev):
-        index = self.index
-        base = index[rev][3]
-        length = index[rev][1]
-        while base != rev:
-            rev = base
-            base = index[rev][3]
-            length = length + index[rev][1]
-        return length
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
@@ -1055,11 +1046,10 @@ class revlog(object):
                 chainbase = basecache[1]
             else:
                 chainbase = self.chainbase(rev)
+            dist = l + offset - self.start(chainbase)
             if self._generaldelta:
-                dist = l + self.chainlength(rev)
                 base = rev
             else:
-                dist = l + offset - self.start(chainbase)
                 base = chainbase
             return dist, l, data, base, chainbase
 
