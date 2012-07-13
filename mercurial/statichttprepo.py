@@ -79,6 +79,8 @@ def build_opener(ui, authinfo):
 class statichttppeer(localrepo.localpeer):
     def local(self):
         return None
+    def canpush(self):
+        return False
 
 class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):

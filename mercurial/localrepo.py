@@ -49,6 +49,9 @@ class localpeer(peer.peerrepository):
     def cancopy(self):
         return self._repo.cancopy() # so bundlerepo can override
 
+    def canpush(self):
+        return True
+
     def url(self):
         return self._repo.url()
 
@@ -1804,6 +1807,8 @@ class localrepository(object):
         # unbundle assumes local user cannot lock remote repo (new ssh
         # servers, http servers).
 
+        if not remote.canpush():
+            raise util.Abort(_("destination does not support push"))
         # get local lock as we might write phase data
         locallock = self.lock()
         try:

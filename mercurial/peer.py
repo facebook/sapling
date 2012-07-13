@@ -45,5 +45,8 @@ class peerrepository(object):
     def cancopy(self):
         return False
 
+    def canpush(self):
+        return True
+
     def close(self):
         pass

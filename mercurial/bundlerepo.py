@@ -167,6 +167,10 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
     def _file(self, f):
         self._repo.file(f)
 
+class bundlepeer(localrepo.localpeer):
+    def canpush(self):
+        return False
+
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
         self._tempparent = None
@@ -271,6 +275,9 @@ class bundlerepository(localrepo.localrepository):
 
     def cancopy(self):
         return False
+
+    def peer(self):
+        return bundlepeer(self)
 
     def getcwd(self):
         return os.getcwd() # always outside the repo

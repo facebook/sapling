@@ -91,7 +91,7 @@ trying to push
   $ hg commit -m"test"
   $ hg push
   pushing to static-http://localhost:$HGPORT/remote
-  abort: cannot lock static-http repository
+  abort: destination does not support push
   [255]
 
 trying clone -r
