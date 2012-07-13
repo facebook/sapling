@@ -46,9 +46,6 @@ class localpeer(peer.peerrepository):
     def local(self):
         return self._repo
 
-    def cancopy(self):
-        return self._repo.cancopy() # so bundlerepo can override
-
     def canpush(self):
         return True
 

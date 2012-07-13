@@ -302,7 +302,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             dircleanup = DirCleanup(dest)
 
         copy = False
-        if srcpeer.cancopy() and islocal(dest) and not srcrepo.revs("secret()"):
+        if (srcrepo and srcrepo.cancopy() and islocal(dest)
+            and not srcrepo.revs("secret()")):
             copy = not pull and not rev
 
         if copy:

@@ -42,9 +42,6 @@ class peerrepository(object):
     def peer(self):
         return self
 
-    def cancopy(self):
-        return False
-
     def canpush(self):
         return True
 
