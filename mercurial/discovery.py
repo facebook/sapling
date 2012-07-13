@@ -109,11 +109,13 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     og.commonheads, _any, _hds = commoninc
 
     # compute outgoing
-    if not repo._phasecache.phaseroots[phases.secret]:
+    mayexclude = (repo._phasecache.phaseroots[phases.secret] or repo.obsstore)
+    if not mayexclude:
         og.missingheads = onlyheads or repo.heads()
     elif onlyheads is None:
         # use visible heads as it should be cached
         og.missingheads = visibleheads(repo)
+        # extinct changesets are silently ignored
         og.excluded = [ctx.node() for ctx in repo.set('secret()')]
     else:
         # compute common, missing and exclude secret stuff
@@ -122,17 +124,18 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         og._missing = missing = []
         og.excluded = excluded = []
         for node in allmissing:
-            if repo[node].phase() >= phases.secret:
-                excluded.append(node)
-            else:
-                missing.append(node)
-        if excluded:
-            # update missing heads
-            missingheads = phases.newheads(repo, onlyheads, excluded)
-        else:
+            ctx = repo[node]
+            if not ctx.extinct():
+                # extinct changesets are silently ignored
+                if ctx.phase() >= phases.secret:
+                    excluded.append(node)
+                else:
+                    missing.append(node)
+        if len(missing) == len(allmissing):
             missingheads = onlyheads
+        else: # update missing heads
+            missingheads = phases.newheads(repo, onlyheads, excluded)
         og.missingheads = missingheads
-
     if portable:
         # recompute common and missingheads as if -r<rev> had been given for
         # each head of missing, and --base <rev> for each head of the proper
@@ -266,9 +269,10 @@ def visibleheads(repo):
     """return the set of visible head of this repo"""
     # XXX we want a cache on this
     sroots = repo._phasecache.phaseroots[phases.secret]
-    if sroots:
-        # XXX very slow revset. storing heads or secret "boundary" would help.
-        revset = repo.set('heads(not (%ln::))', sroots)
+    if sroots or repo.obsstore:
+        # XXX very slow revset. storing heads or secret "boundary"
+        # would help.
+        revset = repo.set('heads(not (%ln:: + extinct()))', sroots)
 
         vheads = [ctx.node() for ctx in revset]
         if not vheads:
@@ -277,12 +281,13 @@ def visibleheads(repo):
         vheads = repo.heads()
     return vheads
 
+
 def visiblebranchmap(repo):
     """return a branchmap for the visible set"""
     # XXX Recomputing this data on the fly is very slow.  We should build a
     # XXX cached version while computin the standard branchmap version.
     sroots = repo._phasecache.phaseroots[phases.secret]
-    if sroots:
+    if sroots or repo.obsstore:
         vbranchmap = {}
         for branch, nodes in  repo.branchmap().iteritems():
             # search for secret heads.
@@ -290,12 +295,12 @@ def visiblebranchmap(repo):
                 if repo[n].phase() >= phases.secret:
                     nodes = None
                     break
-            # if secreat heads where found we must compute them again
+            # if secret heads were found we must compute them again
             if nodes is None:
-                s = repo.set('heads(branch(%s) - secret())', branch)
+                s = repo.set('heads(branch(%s) - secret() - extinct())',
+                             branch)
                 nodes = [c.node() for c in s]
             vbranchmap[branch] = nodes
     else:
         vbranchmap = repo.branchmap()
     return vbranchmap
-

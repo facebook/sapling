@@ -152,6 +152,7 @@ Destination repo does not have any data
 ---------------------------------------
 
 Try to pull markers
+(extinct changeset are excluded but marker are pushed)
 
   $ hg init tmpc
   $ cd tmpc
@@ -161,7 +162,7 @@ Try to pull markers
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 6 changes to 6 files (+3 heads)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
@@ -179,9 +180,9 @@ Rollback//Transaction support
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 0 {'date': '1340 0', 'user': 'test'}
   $ hg rollback -n
-  repository tip rolled back to revision 5 (undo debugobsolete)
+  repository tip rolled back to revision 3 (undo debugobsolete)
   $ hg rollback
-  repository tip rolled back to revision 5 (undo debugobsolete)
+  repository tip rolled back to revision 3 (undo debugobsolete)
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
@@ -194,12 +195,6 @@ Try to pull markers
 
   $ hg init tmpd
   $ hg -R tmpb push tmpd
-  pushing to tmpd
-  searching for changes
-  abort: push includes an obsolete changeset: ca819180edb9!
-  [255]
-  $ hg -R tmpd debugobsolete
-  $ hg -R tmpb push tmpd --rev 'not obsolete()'
   pushing to tmpd
   searching for changes
   adding changesets
@@ -227,7 +222,7 @@ On pull
   adding changesets
   adding manifests
   adding file changes
-  added 6 changesets with 6 changes to 6 files (+3 heads)
+  added 4 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg debugobsolete
   2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 {'date': '1339 0', 'user': 'test'}
@@ -254,25 +249,14 @@ On push
 detect outgoing obsolete and unstable
 ---------------------------------------
 
+
   $ hg glog
-  o  changeset:   5:5601fb93a350
+  o  changeset:   3:5601fb93a350
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add new_3_c
-  |
-  | x  changeset:   4:ca819180edb9
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_2_c
-  |
-  | x  changeset:   3:cdbce2fbb163
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_c
   |
   | o  changeset:   2:245bde4270cd
   |/   user:        test
@@ -289,21 +273,34 @@ detect outgoing obsolete and unstable
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
   
-  $ hg up -q 'desc("new_2_c")'
+  $ hg up 'desc("new_3_c")'
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit original_d
+  $ mkcommit original_e
+  $ hg debugobsolete `getid original_d` -d '0 0'
+  $ hg log -r 'obsolete()'
+  changeset:   4:7c694bff0650
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_d
+  
   $ hg glog -r '::unstable()'
-  @  changeset:   6:7878242aeece
+  @  changeset:   5:6e572121998e
   |  tag:         tip
-  |  parent:      4:ca819180edb9
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add original_e
+  |
+  x  changeset:   4:7c694bff0650
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add original_d
   |
-  x  changeset:   4:ca819180edb9
+  o  changeset:   3:5601fb93a350
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_2_c
+  |  summary:     add new_3_c
   |
   o  changeset:   1:7c3bad9141dc
   |  user:        test
@@ -315,18 +312,77 @@ detect outgoing obsolete and unstable
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
   
+
+refuse to push obsolete changeset
+
+  $ hg push ../tmpc/ -r 'desc("original_d")'
+  pushing to ../tmpc/
+  searching for changes
+  abort: push includes an obsolete changeset: 7c694bff0650!
+  [255]
+
+refuse to push unstable changeset
+
   $ hg push ../tmpc/
   pushing to ../tmpc/
   searching for changes
-  abort: push includes an unstable changeset: 7878242aeece!
+  abort: push includes an unstable changeset: 6e572121998e!
   [255]
 
 Test that extinct changeset are properly detected
 
   $ hg log -r 'extinct()'
-  changeset:   3:cdbce2fbb163
+
+Don't try to push extinct changeset
+
+  $ hg init ../tmpf
+  $ hg out  ../tmpf
+  comparing with ../tmpf
+  searching for changes
+  changeset:   0:1f0dee641bb7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a
+  
+  changeset:   1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add b
+  
+  changeset:   2:245bde4270cd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_c
+  
+  changeset:   3:5601fb93a350
   parent:      1:7c3bad9141dc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_c
+  summary:     add new_3_c
   
+  changeset:   4:7c694bff0650
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_d
+  
+  changeset:   5:6e572121998e
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_e
+  
+  $ hg push ../tmpf -f # -f because be push unstable too
+  pushing to ../tmpf
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 6 files (+1 heads)
+
+no warning displayed
+
+  $ hg push ../tmpf
+  pushing to ../tmpf
+  searching for changes
+  no changes found
+  [1]
