@@ -344,8 +344,8 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
 
     bundle = None
     bundlerepo = None
-    localrepo = other
-    if bundlename or not other.local():
+    localrepo = other.local()
+    if bundlename or not localrepo:
         # create a bundle (uncompressed if other repo is not local)
 
         if other.capable('getbundle'):
@@ -356,12 +356,12 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             rheads = None
         else:
             cg = other.changegroupsubset(incoming, rheads, 'incoming')
-        bundletype = other.local() and "HG10BZ" or "HG10UN"
+        bundletype = localrepo and "HG10BZ" or "HG10UN"
         fname = bundle = changegroup.writebundle(cg, bundlename, bundletype)
         # keep written bundle?
         if bundlename:
             bundle = None
-        if not other.local():
+        if not localrepo:
             # use the created uncompressed bundlerepo
             localrepo = bundlerepo = bundlerepository(ui, repo.root, fname)
             # this repo contains local and other now, so filter out local again

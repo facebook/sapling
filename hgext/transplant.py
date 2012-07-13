@@ -139,7 +139,7 @@ class transplanter(object):
                         continue
                     if pulls:
                         if source != repo:
-                            repo.pull(source, heads=pulls)
+                            repo.pull(source.peer(), heads=pulls)
                         merge.update(repo, pulls[-1], False, False, None)
                         p1, p2 = repo.dirstate.parents()
                         pulls = []
@@ -203,7 +203,7 @@ class transplanter(object):
                             os.unlink(patchfile)
             tr.close()
             if pulls:
-                repo.pull(source, heads=pulls)
+                repo.pull(source.peer(), heads=pulls)
                 merge.update(repo, pulls[-1], False, False, None)
         finally:
             self.saveseries(revmap, merges)
@@ -614,9 +614,9 @@ def transplant(ui, repo, *revs, **opts):
 
     sourcerepo = opts.get('source')
     if sourcerepo:
-        source = hg.peer(ui, opts, ui.expandpath(sourcerepo))
-        branches = map(source.lookup, opts.get('branch', ()))
-        source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, source,
+        peer = hg.peer(ui, opts, ui.expandpath(sourcerepo))
+        branches = map(peer.lookup, opts.get('branch', ()))
+        source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, peer,
                                     onlyheads=branches, force=True)
     else:
         source = repo

@@ -100,7 +100,7 @@ def findcommonheads(ui, local, remote,
     sample = ownheads
     if remote.local():
         # stopgap until we have a proper localpeer that supports batch()
-        srvheadhashes = phases.visibleheads(remote)
+        srvheadhashes = phases.visibleheads(remote.local())
         yesno = remote.known(dag.externalizeall(sample))
     elif remote.capable('batch'):
         batch = remote.batch()

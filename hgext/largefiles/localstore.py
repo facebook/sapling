@@ -22,9 +22,9 @@ class localstore(basestore.basestore):
     the user cache.'''
 
     def __init__(self, ui, repo, remote):
-        url = os.path.join(remote.path, '.hg', lfutil.longname)
+        url = os.path.join(remote.local().path, '.hg', lfutil.longname)
         super(localstore, self).__init__(ui, repo, util.expandpath(url))
-        self.remote = remote
+        self.remote = remote.local()
 
     def put(self, source, hash):
         util.makedirs(os.path.dirname(lfutil.storepath(self.remote, hash)))

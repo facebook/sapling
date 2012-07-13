@@ -20,21 +20,22 @@ def _local(path):
     path = util.expandpath(util.urllocalpath(path))
     return (os.path.isfile(path) and bundlerepo or localrepo)
 
-def addbranchrevs(lrepo, repo, branches, revs):
+def addbranchrevs(lrepo, other, branches, revs):
+    peer = other.peer() # a courtesy to callers using a localrepo for other
     hashbranch, branches = branches
     if not hashbranch and not branches:
         return revs or None, revs and revs[0] or None
     revs = revs and list(revs) or []
-    if not repo.capable('branchmap'):
+    if not peer.capable('branchmap'):
         if branches:
             raise util.Abort(_("remote branch lookup not supported"))
         revs.append(hashbranch)
         return revs, revs[0]
-    branchmap = repo.branchmap()
+    branchmap = peer.branchmap()
 
     def primary(branch):
         if branch == '.':
-            if not lrepo or not lrepo.local():
+            if not lrepo:
                 raise util.Abort(_("dirstate branch not accessible"))
             branch = lrepo.dirstate.branch()
         if branch in branchmap:
@@ -88,20 +89,29 @@ def islocal(repo):
             return False
     return repo.local()
 
-def repository(ui, path='', create=False):
+def _peerorrepo(ui, path, create=False):
     """return a repository object for the specified path"""
-    repo = _peerlookup(path).instance(ui, path, create)
-    ui = getattr(repo, "ui", ui)
+    obj = _peerlookup(path).instance(ui, path, create)
+    ui = getattr(obj, "ui", ui)
     for name, module in extensions.extensions():
         hook = getattr(module, 'reposetup', None)
         if hook:
-            hook(ui, repo)
+            hook(ui, obj)
+    return obj
+
+def repository(ui, path='', create=False):
+    """return a repository object for the specified path"""
+    peer = _peerorrepo(ui, path, create)
+    repo = peer.local()
+    if not repo:
+        raise util.Abort(_("repository '%s' is not local") %
+                         (path or peer.url()))
     return repo
 
 def peer(uiorrepo, opts, path, create=False):
     '''return a repository peer for the specified path'''
     rui = remoteui(uiorrepo, opts)
-    return repository(rui, path, create)
+    return _peerorrepo(rui, path, create).peer()
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
@@ -124,7 +134,7 @@ def share(ui, source, dest=None, update=True):
         srcrepo = repository(ui, source)
         rev, checkout = addbranchrevs(srcrepo, srcrepo, branches, None)
     else:
-        srcrepo = source
+        srcrepo = source.local()
         origsource = source = srcrepo.url()
         checkout = None
 
@@ -213,7 +223,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
     Create a copy of an existing repository in a new directory.  The
     source and destination are URLs, as passed to the repository
-    function.  Returns a pair of repository objects, the source and
+    function.  Returns a pair of repository peers, the source and
     newly created destination.
 
     The location of the source is added to the new repository's
@@ -247,12 +257,12 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     if isinstance(source, str):
         origsource = ui.expandpath(source)
         source, branch = parseurl(origsource, branch)
-        srcrepo = repository(remoteui(ui, peeropts), source)
+        srcpeer = peer(ui, peeropts, source)
     else:
-        srcrepo = source
+        srcpeer = source.peer() # in case we were called with a localrepo
         branch = (None, branch or [])
-        origsource = source = srcrepo.url()
-    rev, checkout = addbranchrevs(srcrepo, srcrepo, branch, rev)
+        origsource = source = srcpeer.url()
+    rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
 
     if dest is None:
         dest = defaultdest(source)
@@ -282,6 +292,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 self.rmtree(self.dir_, True)
 
     srclock = destlock = dircleanup = None
+    srcrepo = srcpeer.local()
     try:
         abspath = origsource
         if islocal(origsource):
@@ -291,7 +302,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             dircleanup = DirCleanup(dest)
 
         copy = False
-        if srcrepo.cancopy() and islocal(dest) and not srcrepo.revs("secret()"):
+        if srcpeer.cancopy() and islocal(dest) and not srcrepo.revs("secret()"):
             copy = not pull and not rev
 
         if copy:
@@ -326,13 +337,12 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             # we need to re-init the repo after manually copying the data
             # into it
-            destrepo = repository(remoteui(ui, peeropts), dest)
+            destpeer = peer(ui, peeropts, dest)
             srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
             try:
-                destrepo = repository(remoteui(ui, peeropts), dest,
-                                      create=True)
+                destpeer = peer(ui, peeropts, dest, create=True)
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
                     dircleanup.close()
@@ -342,16 +352,16 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             revs = None
             if rev:
-                if not srcrepo.capable('lookup'):
+                if not srcpeer.capable('lookup'):
                     raise util.Abort(_("src repository does not support "
                                        "revision lookup and so doesn't "
                                        "support clone by revision"))
-                revs = [srcrepo.lookup(r) for r in rev]
+                revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
-            if destrepo.local():
-                destrepo.clone(srcrepo, heads=revs, stream=stream)
-            elif srcrepo.local():
-                srcrepo.push(destrepo, revs=revs)
+            if destpeer.local():
+                destpeer.local().clone(srcpeer, heads=revs, stream=stream)
+            elif srcrepo:
+                srcrepo.push(destpeer, revs=revs)
             else:
                 raise util.Abort(_("clone from remote to remote not supported"))
 
@@ -359,8 +369,9 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             dircleanup.close()
 
         # clone all bookmarks except divergent ones
-        if destrepo.local() and srcrepo.capable("pushkey"):
-            rb = srcrepo.listkeys('bookmarks')
+        destrepo = destpeer.local()
+        if destrepo and srcpeer.capable("pushkey"):
+            rb = srcpeer.listkeys('bookmarks')
             for k, n in rb.iteritems():
                 try:
                     m = destrepo.lookup(n)
@@ -369,11 +380,11 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                     pass
             if rb:
                 bookmarks.write(destrepo)
-        elif srcrepo.local() and destrepo.capable("pushkey"):
+        elif srcrepo and destpeer.capable("pushkey"):
             for k, n in srcrepo._bookmarks.iteritems():
-                destrepo.pushkey('bookmarks', k, '', hex(n))
+                destpeer.pushkey('bookmarks', k, '', hex(n))
 
-        if destrepo.local():
+        if destrepo:
             fp = destrepo.opener("hgrc", "w", text=True)
             fp.write("[paths]\n")
             u = util.url(abspath)
@@ -386,9 +397,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             if update:
                 if update is not True:
-                    checkout = update
-                    if srcrepo.local():
-                        checkout = srcrepo.lookup(update)
+                    checkout = srcrepo.lookup(update)
                 for test in (checkout, 'default', 'tip'):
                     if test is None:
                         continue
@@ -401,13 +410,13 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 destrepo.ui.status(_("updating to branch %s\n") % bn)
                 _update(destrepo, uprev)
 
-        return srcrepo, destrepo
+        return srcpeer, destpeer
     finally:
         release(srclock, destlock)
         if dircleanup is not None:
             dircleanup.cleanup()
-        if srcrepo is not None:
-            srcrepo.close()
+        if srcpeer is not None:
+            srcpeer.close()
 
 def _showstats(repo, stats):
     repo.ui.status(_("%d files updated, %d files merged, "

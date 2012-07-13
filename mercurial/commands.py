@@ -1784,7 +1784,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     # make sure tests are repeatable
     random.seed(12323)
 
-    def doit(localheads, remoteheads):
+    def doit(localheads, remoteheads, remote=remote):
         if opts.get('old'):
             if localheads:
                 raise util.Abort('cannot use localheads with old style '
@@ -3463,10 +3463,11 @@ def identify(ui, repo, source=None, rev=None,
 
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
-        repo = hg.peer(ui, opts, source)
-        revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
+        peer = hg.peer(ui, opts, source)
+        repo = peer.local()
+        revs, checkout = hg.addbranchrevs(repo, peer, branches, None)
 
-    if not repo.local():
+    if not repo:
         if num or branch or tags:
             raise util.Abort(
                 _("can't query remote revision number, branch, or tags"))
@@ -3475,16 +3476,16 @@ def identify(ui, repo, source=None, rev=None,
         if not rev:
             rev = "tip"
 
-        remoterev = repo.lookup(rev)
+        remoterev = peer.lookup(rev)
         if default or id:
             output = [hexfunc(remoterev)]
 
         def getbms():
             bms = []
 
-            if 'bookmarks' in repo.listkeys('namespaces'):
+            if 'bookmarks' in peer.listkeys('namespaces'):
                 hexremoterev = hex(remoterev)
-                bms = [bm for bm, bmr in repo.listkeys('bookmarks').iteritems()
+                bms = [bm for bm, bmr in peer.listkeys('bookmarks').iteritems()
                        if bmr == hexremoterev]
 
             return bms

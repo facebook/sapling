@@ -722,7 +722,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
         return True
     if opts.get('all_largefiles'):
         sourcerepo, destrepo = result
-        success, missing = lfcommands.downloadlfiles(ui, destrepo, None)
+        success, missing = lfcommands.downloadlfiles(ui, destrepo.local(), None)
         return missing != 0
     return result is None
 

@@ -2245,7 +2245,7 @@ def clone(ui, source, dest=None, **opts):
     # main repo (destination and sources)
     if dest is None:
         dest = hg.defaultdest(source)
-    sr = hg.repository(hg.remoteui(ui, opts), ui.expandpath(source))
+    sr = hg.peer(ui, opts, ui.expandpath(source))
 
     # patches repo (source only)
     if opts.get('patches'):
@@ -2253,18 +2253,19 @@ def clone(ui, source, dest=None, **opts):
     else:
         patchespath = patchdir(sr)
     try:
-        hg.repository(ui, patchespath)
+        hg.peer(ui, opts, patchespath)
     except error.RepoError:
         raise util.Abort(_('versioned patch repository not found'
                            ' (see init --mq)'))
     qbase, destrev = None, None
     if sr.local():
-        if sr.mq.applied and sr[qbase].phase() != phases.secret:
-            qbase = sr.mq.applied[0].node
+        repo = sr.local()
+        if repo.mq.applied and repo[qbase].phase() != phases.secret:
+            qbase = repo.mq.applied[0].node
             if not hg.islocal(dest):
-                heads = set(sr.heads())
-                destrev = list(heads.difference(sr.heads(qbase)))
-                destrev.append(sr.changelog.parents(qbase)[0])
+                heads = set(repo.heads())
+                destrev = list(heads.difference(repo.heads(qbase)))
+                destrev.append(repo.changelog.parents(qbase)[0])
     elif sr.capable('lookup'):
         try:
             qbase = sr.lookup('qbase')
@@ -2284,13 +2285,14 @@ def clone(ui, source, dest=None, **opts):
              stream=opts.get('uncompressed'))
 
     if dr.local():
+        repo = dr.local()
         if qbase:
             ui.note(_('stripping applied patches from destination '
                       'repository\n'))
-            dr.mq.strip(dr, [qbase], update=False, backup=None)
+            repo.mq.strip(repo, [qbase], update=False, backup=None)
         if not opts.get('noupdate'):
             ui.note(_('updating destination repository\n'))
-            hg.update(dr, dr.changelog.tip())
+            hg.update(repo, repo.changelog.tip())
 
 @command("qcommit|qci",
          commands.table["^commit|ci"][1],

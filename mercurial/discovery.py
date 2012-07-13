@@ -169,7 +169,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
 
         # 2. Check for new branches on the remote.
         if remote.local():
-            remotemap = phases.visiblebranchmap(remote)
+            remotemap = phases.visiblebranchmap(remote.local())
         else:
             remotemap = remote.branchmap()
         newbranches = branches - set(remotemap)

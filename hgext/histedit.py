@@ -412,7 +412,7 @@ def histedit(ui, repo, *parent, **opts):
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
 
         revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
-        other = hg.repository(hg.remoteui(repo, opts), dest)
+        other = hg.peer(repo, opts, dest)
 
         if revs:
             revs = [repo.lookup(rev) for rev in revs]

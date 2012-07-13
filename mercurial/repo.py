@@ -33,6 +33,9 @@ class repository(object):
     def local(self):
         return False
 
+    def peer(self):
+        return self
+
     def cancopy(self):
         return self.local()
 
