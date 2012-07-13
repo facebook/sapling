@@ -9,7 +9,7 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httprepo, localrepo, merge, sshrepo, sshserver, wireproto
+    httppeer, localrepo, merge, sshpeer, sshserver, wireproto
 from mercurial.i18n import _
 from mercurial.hgweb import hgweb_mod, protocol, webcommands
 from mercurial.subrepo import hgsubrepo
@@ -143,10 +143,10 @@ def uisetup(ui):
 
     # can't do this in reposetup because it needs to have happened before
     # wirerepo.__init__ is called
-    proto.ssholdcallstream = sshrepo.sshrepository._callstream
-    proto.httpoldcallstream = httprepo.httprepository._callstream
-    sshrepo.sshrepository._callstream = proto.sshrepocallstream
-    httprepo.httprepository._callstream = proto.httprepocallstream
+    proto.ssholdcallstream = sshpeer.sshpeer._callstream
+    proto.httpoldcallstream = httppeer.httppeer._callstream
+    sshpeer.sshpeer._callstream = proto.sshrepocallstream
+    httppeer.httppeer._callstream = proto.httprepocallstream
 
     # don't die on seeing a repo with the largefiles requirement
     localrepo.localrepository.supported |= set(['largefiles'])

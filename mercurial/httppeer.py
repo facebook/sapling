@@ -1,4 +1,4 @@
-# httprepo.py - HTTP repository proxy classes for mercurial
+# httppeer.py - HTTP repository proxy classes for mercurial
 #
 # Copyright 2005, 2006 Matt Mackall <mpm@selenic.com>
 # Copyright 2006 Vadim Gelfer <vadim.gelfer@gmail.com>
@@ -23,7 +23,7 @@ def zgenerator(f):
         raise IOError(None, _('connection ended unexpectedly'))
     yield zd.flush()
 
-class httprepository(wireproto.wirerepository):
+class httppeer(wireproto.wirepeer):
     def __init__(self, ui, path):
         self.path = path
         self.caps = None
@@ -56,7 +56,7 @@ class httprepository(wireproto.wirerepository):
     def _fetchcaps(self):
         self.caps = set(self._call('capabilities').split())
 
-    def get_caps(self):
+    def _capabilities(self):
         if self.caps is None:
             try:
                 self._fetchcaps()
@@ -65,8 +65,6 @@ class httprepository(wireproto.wirerepository):
             self.ui.debug('capabilities: %s\n' %
                           (' '.join(self.caps or ['none'])))
         return self.caps
-
-    capabilities = property(get_caps)
 
     def lock(self):
         raise util.Abort(_('operation not supported over http'))
@@ -215,21 +213,21 @@ class httprepository(wireproto.wirerepository):
     def _decompress(self, stream):
         return util.chunkbuffer(zgenerator(stream))
 
-class httpsrepository(httprepository):
+class httpspeer(httppeer):
     def __init__(self, ui, path):
         if not url.has_https:
             raise util.Abort(_('Python support for SSL and HTTPS '
                                'is not installed'))
-        httprepository.__init__(self, ui, path)
+        httppeer.__init__(self, ui, path)
 
 def instance(ui, path, create):
     if create:
         raise util.Abort(_('cannot create new http repository'))
     try:
         if path.startswith('https:'):
-            inst = httpsrepository(ui, path)
+            inst = httpspeer(ui, path)
         else:
-            inst = httprepository(ui, path)
+            inst = httppeer(ui, path)
         try:
             # Try to do useful work when checking compatibility.
             # Usually saves a roundtrip since we want the caps anyway.

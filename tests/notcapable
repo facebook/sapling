@@ -6,13 +6,18 @@ then
 fi
 
 cat > notcapable-$CAP.py << EOF
-from mercurial import extensions, repo
+from mercurial import extensions, peer, localrepo
 def extsetup():
-    extensions.wrapfunction(repo.repository, 'capable', wrapper)
-def wrapper(orig, self, name, *args, **kwargs):
+    extensions.wrapfunction(peer.peerrepository, 'capable', wrapcapable)
+    extensions.wrapfunction(localrepo.localrepository, 'peer', wrappeer)
+def wrapcapable(orig, self, name, *args, **kwargs):
     if name in '$CAP'.split(' '):
         return False
     return orig(self, name, *args, **kwargs)
+def wrappeer(orig, self):
+    # Since we're disabling some newer features, we need to make sure local
+    # repos add in the legacy features again.
+    return localrepo.locallegacypeer(self)
 EOF
 
 echo '[extensions]' >> $HGRCPATH

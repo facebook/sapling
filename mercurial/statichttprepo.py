@@ -76,6 +76,10 @@ def build_opener(ui, authinfo):
 
     return statichttpopener
 
+class statichttppeer(localrepo.localpeer):
+    def local(self):
+        return None
+
 class statichttprepository(localrepo.localrepository):
     def __init__(self, ui, path):
         self._url = path
@@ -116,6 +120,7 @@ class statichttprepository(localrepo.localrepository):
         self.svfs = self.sopener
         self.sjoin = self.store.join
         self._filecache = {}
+        self.requirements = requirements
 
         self.manifest = manifest.manifest(self.sopener)
         self.changelog = changelog.changelog(self.sopener)
@@ -125,13 +130,18 @@ class statichttprepository(localrepo.localrepository):
         self._branchcachetip = None
         self.encodepats = None
         self.decodepats = None
-        self.capabilities.difference_update(["pushkey"])
+
+    def _restrictcapabilities(self, caps):
+        return caps.difference(["pushkey"])
 
     def url(self):
         return self._url
 
     def local(self):
         return False
+
+    def peer(self):
+        return statichttppeer(self)
 
     def lock(self, wait=True):
         raise util.Abort(_('cannot lock static-http repository'))

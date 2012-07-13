@@ -16,7 +16,7 @@ import sshserver, hgweb, hgweb.server, commandserver
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod
-import random, setdiscovery, treediscovery, dagutil, pvec
+import random, setdiscovery, treediscovery, dagutil, pvec, localrepo
 import phases, obsolete
 
 table = {}
@@ -1789,6 +1789,9 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
             if localheads:
                 raise util.Abort('cannot use localheads with old style '
                                  'discovery')
+            if not util.safehasattr(remote, 'branches'):
+                # enable in-client legacy support
+                remote = localrepo.locallegacypeer(remote.local())
             common, _in, hds = treediscovery.findcommonincoming(repo, remote,
                                                                 force=True)
             common = set(common)

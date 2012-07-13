@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import repo, changegroup, subrepo, discovery, pushkey, obsolete
+import peer, changegroup, subrepo, discovery, pushkey, obsolete
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock, transaction, store, encoding, base85
 import scmutil, util, extensions, hook, error, revset
@@ -23,9 +23,90 @@ class storecache(filecache):
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
-class localrepository(repo.repository):
-    capabilities = set(('lookup', 'changegroupsubset', 'branchmap', 'pushkey',
-                        'known', 'getbundle'))
+MODERNCAPS = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle'))
+LEGACYCAPS = MODERNCAPS.union(set(['changegroupsubset']))
+
+class localpeer(peer.peerrepository):
+    '''peer for a local repo; reflects only the most recent API'''
+
+    def __init__(self, repo, caps=MODERNCAPS):
+        peer.peerrepository.__init__(self)
+        self._repo = repo
+        self.ui = repo.ui
+        self._caps = repo._restrictcapabilities(caps)
+        self.requirements = repo.requirements
+        self.supportedformats = repo.supportedformats
+
+    def close(self):
+        self._repo.close()
+
+    def _capabilities(self):
+        return self._caps
+
+    def local(self):
+        return self._repo
+
+    def cancopy(self):
+        return self._repo.cancopy() # so bundlerepo can override
+
+    def url(self):
+        return self._repo.url()
+
+    def lookup(self, key):
+        return self._repo.lookup(key)
+
+    def branchmap(self):
+        return self._repo.branchmap()
+
+    def heads(self):
+        return self._repo.heads()
+
+    def known(self, nodes):
+        return self._repo.known(nodes)
+
+    def getbundle(self, source, heads=None, common=None):
+        return self._repo.getbundle(source, heads=heads, common=common)
+
+    # TODO We might want to move the next two calls into legacypeer and add
+    # unbundle instead.
+
+    def lock(self):
+        return self._repo.lock()
+
+    def addchangegroup(self, cg, source, url):
+        return self._repo.addchangegroup(cg, source, url)
+
+    def pushkey(self, namespace, key, old, new):
+        return self._repo.pushkey(namespace, key, old, new)
+
+    def listkeys(self, namespace):
+        return self._repo.listkeys(namespace)
+
+    def debugwireargs(self, one, two, three=None, four=None, five=None):
+        '''used to test argument passing over the wire'''
+        return "%s %s %s %s %s" % (one, two, three, four, five)
+
+class locallegacypeer(localpeer):
+    '''peer extension which implements legacy methods too; used for tests with
+    restricted capabilities'''
+
+    def __init__(self, repo):
+        localpeer.__init__(self, repo, caps=LEGACYCAPS)
+
+    def branches(self, nodes):
+        return self._repo.branches(nodes)
+
+    def between(self, pairs):
+        return self._repo.between(pairs)
+
+    def changegroup(self, basenodes, source):
+        return self._repo.changegroup(basenodes, source)
+
+    def changegroupsubset(self, bases, heads, source):
+        return self._repo.changegroupsubset(bases, heads, source)
+
+class localrepository(object):
+
     supportedformats = set(('revlogv1', 'generaldelta'))
     supported = supportedformats | set(('store', 'fncache', 'shared',
                                         'dotencode'))
@@ -36,7 +117,6 @@ class localrepository(repo.repository):
         return self.requirements[:]
 
     def __init__(self, baseui, path=None, create=False):
-        repo.repository.__init__(self)
         self.wopener = scmutil.opener(path, expand=True)
         self.wvfs = self.wopener
         self.root = self.wvfs.base
@@ -126,6 +206,12 @@ class localrepository(repo.repository):
         # Maps a property name to its util.filecacheentry
         self._filecache = {}
 
+    def close(self):
+        pass
+
+    def _restrictcapabilities(self, caps):
+        return caps
+
     def _applyrequirements(self, requirements):
         self.requirements = requirements
         self.sopener.options = dict((r, 1) for r in requirements
@@ -174,6 +260,9 @@ class localrepository(repo.repository):
             else:
                 parts.pop()
         return False
+
+    def peer(self):
+        return localpeer(self) # not cached to avoid reference cycle
 
     @filecache('bookmarks')
     def _bookmarks(self):
@@ -667,6 +756,9 @@ class localrepository(repo.repository):
 
     def local(self):
         return self
+
+    def cancopy(self):
+        return self.local() # so statichttprepo's override of local() works
 
     def join(self, f):
         return os.path.join(self.path, f)

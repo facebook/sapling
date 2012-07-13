@@ -6,7 +6,7 @@
 import os
 import urllib2
 
-from mercurial import error, httprepo, util, wireproto
+from mercurial import error, httppeer, util, wireproto
 from mercurial.wireproto import batchable, future
 from mercurial.i18n import _
 
@@ -82,7 +82,7 @@ def wirereposetup(ui, repo):
             # unfortunately, httprepository._callpush tries to convert its
             # input file-like into a bundle before sending it, so we can't use
             # it ...
-            if issubclass(self.__class__, httprepo.httprepository):
+            if issubclass(self.__class__, httppeer.httppeer):
                 res = None
                 try:
                     res = self._call('putlfile', data=fd, sha=sha,

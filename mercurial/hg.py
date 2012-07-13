@@ -9,7 +9,7 @@
 from i18n import _
 from lock import release
 from node import hex, nullid
-import localrepo, bundlerepo, httprepo, sshrepo, statichttprepo, bookmarks
+import localrepo, bundlerepo, httppeer, sshpeer, statichttprepo, bookmarks
 import lock, util, extensions, error, node, scmutil
 import cmdutil, discovery
 import merge as mergemod
@@ -65,9 +65,9 @@ def parseurl(path, branches=None):
 schemes = {
     'bundle': bundlerepo,
     'file': _local,
-    'http': httprepo,
-    'https': httprepo,
-    'ssh': sshrepo,
+    'http': httppeer,
+    'https': httppeer,
+    'ssh': sshpeer,
     'static-http': statichttprepo,
 }
 

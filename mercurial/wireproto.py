@@ -9,7 +9,7 @@ import urllib, tempfile, os, sys
 from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
-import repo, error, encoding, util, store
+import peer, error, encoding, util, store
 import phases
 
 # abstract batching support
@@ -149,7 +149,7 @@ def unescapearg(escaped):
 def todict(**args):
     return args
 
-class wirerepository(repo.repository):
+class wirepeer(peer.peerrepository):
 
     def batch(self):
         return remotebatch(self)

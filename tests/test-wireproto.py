@@ -9,7 +9,7 @@ class proto(object):
         names = spec.split()
         return [args[n] for n in names]
 
-class clientrepo(wireproto.wirerepository):
+class clientpeer(wireproto.wirepeer):
     def __init__(self, serverrepo):
         self.serverrepo = serverrepo
     def _call(self, cmd, **args):
@@ -36,7 +36,7 @@ def greet(repo, proto, name):
 wireproto.commands['greet'] = (greet, 'name',)
 
 srv = serverrepo()
-clt = clientrepo(srv)
+clt = clientpeer(srv)
 
 print clt.greet("Foobar")
 b = clt.batch()
