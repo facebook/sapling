@@ -483,6 +483,10 @@ def _updatelfile(repo, lfdirstate, lfile):
                 # recognition that such cache missing files are REMOVED.
                 lfdirstate.normallookup(lfile)
                 return None # don't try to set the mode
+            else:
+                # Synchronize largefile dirstate to the last modified time of
+                # the file
+                lfdirstate.normal(lfile)
             ret = 1
         mode = os.stat(absstandin).st_mode
         if mode != os.stat(abslfile).st_mode:
