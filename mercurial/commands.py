@@ -5750,23 +5750,25 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     none are found, the working directory is updated to the specified
     changeset.
 
-    The following rules apply when the working directory contains
-    uncommitted changes:
+    .. container:: verbose
 
-    1. If neither -c/--check nor -C/--clean is specified, and if
-       the requested changeset is an ancestor or descendant of
-       the working directory's parent, the uncommitted changes
-       are merged into the requested changeset and the merged
-       result is left uncommitted. If the requested changeset is
-       not an ancestor or descendant (that is, it is on another
-       branch), the update is aborted and the uncommitted changes
-       are preserved.
+      The following rules apply when the working directory contains
+      uncommitted changes:
 
-    2. With the -c/--check option, the update is aborted and the
-       uncommitted changes are preserved.
+      1. If neither -c/--check nor -C/--clean is specified, and if
+         the requested changeset is an ancestor or descendant of
+         the working directory's parent, the uncommitted changes
+         are merged into the requested changeset and the merged
+         result is left uncommitted. If the requested changeset is
+         not an ancestor or descendant (that is, it is on another
+         branch), the update is aborted and the uncommitted changes
+         are preserved.
 
-    3. With the -C/--clean option, uncommitted changes are discarded and
-       the working directory is updated to the requested changeset.
+      2. With the -c/--check option, the update is aborted and the
+         uncommitted changes are preserved.
+
+      3. With the -C/--clean option, uncommitted changes are discarded and
+         the working directory is updated to the requested changeset.
 
     To cancel an uncommitted merge (and lose your changes), use
     :hg:`update --clean .`.
