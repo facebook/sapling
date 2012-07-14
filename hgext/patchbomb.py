@@ -276,15 +276,17 @@ def patchbomb(ui, repo, *revs, **opts):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest)
         revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
+        if revs:
+            revs = [repo.lookup(rev) for rev in revs]
         other = hg.peer(repo, opts, dest)
         ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-        common, _anyinc, _heads = discovery.findcommonincoming(repo, other)
-        nodes = revs and map(repo.lookup, revs) or revs
-        o = repo.changelog.findmissing(common, heads=nodes)
-        if not o:
+        repo.ui.pushbuffer()
+        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs)
+        repo.ui.popbuffer()
+        if not outgoing.missing:
             ui.status(_("no changes found\n"))
             return []
-        return [str(repo.changelog.rev(r)) for r in o]
+        return [str(repo.changelog.rev(r)) for r in outgoing.missing]
 
     def getpatches(revs):
         for r in scmutil.revrange(repo, revs):
