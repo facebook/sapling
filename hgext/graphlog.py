@@ -14,8 +14,8 @@ revision graph is also shown.
 
 from mercurial.cmdutil import show_changeset
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, extensions, scmutil
-from mercurial import hg, util, graphmod, templatekw
+from mercurial import cmdutil, commands, extensions
+from mercurial import hg, util, graphmod
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -59,24 +59,7 @@ def graphlog(ui, repo, *pats, **opts):
     Nodes printed as an @ character are parents of the working
     directory.
     """
-
-    revs, expr, filematcher = cmdutil.getgraphlogrevs(repo, pats, opts)
-    revs = sorted(revs, reverse=1)
-    limit = cmdutil.loglimit(opts)
-    if limit is not None:
-        revs = revs[:limit]
-    revdag = graphmod.dagwalker(repo, revs)
-
-    getrenamed = None
-    if opts.get('copies'):
-        endrev = None
-        if opts.get('rev'):
-            endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
-        getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
-    displayer = show_changeset(ui, repo, opts, buffered=True)
-    showparents = [ctx.node() for ctx in repo[None].parents()]
-    cmdutil.displaygraph(ui, revdag, displayer, showparents,
-                         graphmod.asciiedges, getrenamed, filematcher)
+    return cmdutil.graphlog(ui, repo, *pats, **opts)
 
 def graphrevs(repo, nodes, opts):
     limit = cmdutil.loglimit(opts)
@@ -129,7 +112,6 @@ def gincoming(ui, repo, source="default", **opts):
 
 def uisetup(ui):
     '''Initialize the extension.'''
-    _wrapcmd('log', commands.table, graphlog)
     _wrapcmd('incoming', commands.table, gincoming)
     _wrapcmd('outgoing', commands.table, goutgoing)
 

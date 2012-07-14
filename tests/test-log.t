@@ -941,7 +941,7 @@ log -p -R repo
   $ hg resolve -m foo
   $ hg ci -m "Last merge, related"
 
-  $ hg --config "extensions.graphlog=" glog
+  $ hg log --graph
   @    changeset:   10:4dae8563d2c5
   |\   tag:         tip
   | |  parent:      9:7b35701b003e

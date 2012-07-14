@@ -3928,6 +3928,7 @@ def locate(ui, repo, *pats, **opts):
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
     ('', 'hidden', False, _('show hidden changesets (DEPRECATED)')),
+    ('G', 'graph', None, _("show the revision DAG")),
     ] + logopts + walkopts,
     _('[OPTION]... [FILE]'))
 def log(ui, repo, *pats, **opts):
@@ -4012,6 +4013,8 @@ def log(ui, repo, *pats, **opts):
 
     Returns 0 on success.
     """
+    if opts.get('graph'):
+        return cmdutil.graphlog(ui, repo, *pats, **opts)
 
     matchfn = scmutil.match(repo[None], pats, opts)
     limit = cmdutil.loglimit(opts)

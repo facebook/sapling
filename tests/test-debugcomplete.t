@@ -199,7 +199,7 @@ Show all commands + options
   export: output, switch-parent, rev, text, git, nodates
   forget: include, exclude
   init: ssh, remotecmd, insecure
-  log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, patch, git, limit, no-merges, stat, style, template, include, exclude
+  log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, graph, patch, git, limit, no-merges, stat, style, template, include, exclude
   merge: force, rev, preview, tool
   phase: public, draft, secret, force, rev
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure

@@ -1430,6 +1430,26 @@ def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
             graphmod.ascii(ui, state, type, char, lines, coldata)
     displayer.close()
 
+def graphlog(ui, repo, *pats, **opts):
+    # Parameters are identical to log command ones
+    revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
+    revs = sorted(revs, reverse=1)
+    limit = loglimit(opts)
+    if limit is not None:
+        revs = revs[:limit]
+    revdag = graphmod.dagwalker(repo, revs)
+
+    getrenamed = None
+    if opts.get('copies'):
+        endrev = None
+        if opts.get('rev'):
+            endrev = max(scmutil.revrange(repo, opts.get('rev'))) + 1
+        getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
+    displayer = show_changeset(ui, repo, opts, buffered=True)
+    showparents = [ctx.node() for ctx in repo[None].parents()]
+    displaygraph(ui, revdag, displayer, showparents,
+                 graphmod.asciiedges, getrenamed, filematcher)
+
 def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
     bad = []
