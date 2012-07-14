@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, bookmarks
+import subrepo, context, repair, bookmarks, graphmod, revset
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -1191,6 +1191,244 @@ def walkchangerevs(repo, match, opts, prepare):
             for rev in nrevs:
                 yield change(rev)
     return iterate()
+
+def _makegraphfilematcher(repo, pats, followfirst):
+    # When displaying a revision with --patch --follow FILE, we have
+    # to know which file of the revision must be diffed. With
+    # --follow, we want the names of the ancestors of FILE in the
+    # revision, stored in "fcache". "fcache" is populated by
+    # reproducing the graph traversal already done by --follow revset
+    # and relating linkrevs to file names (which is not "correct" but
+    # good enough).
+    fcache = {}
+    fcacheready = [False]
+    pctx = repo['.']
+    wctx = repo[None]
+
+    def populate():
+        for fn in pats:
+            for i in ((pctx[fn],), pctx[fn].ancestors(followfirst=followfirst)):
+                for c in i:
+                    fcache.setdefault(c.linkrev(), set()).add(c.path())
+
+    def filematcher(rev):
+        if not fcacheready[0]:
+            # Lazy initialization
+            fcacheready[0] = True
+            populate()
+        return scmutil.match(wctx, fcache.get(rev, []), default='path')
+
+    return filematcher
+
+def _makegraphlogrevset(repo, pats, opts, revs):
+    """Return (expr, filematcher) where expr is a revset string built
+    from log options and file patterns or None. If --stat or --patch
+    are not passed filematcher is None. Otherwise it is a callable
+    taking a revision number and returning a match objects filtering
+    the files to be detailed when displaying the revision.
+    """
+    opt2revset = {
+        'no_merges':        ('not merge()', None),
+        'only_merges':      ('merge()', None),
+        '_ancestors':       ('ancestors(%(val)s)', None),
+        '_fancestors':      ('_firstancestors(%(val)s)', None),
+        '_descendants':     ('descendants(%(val)s)', None),
+        '_fdescendants':    ('_firstdescendants(%(val)s)', None),
+        '_matchfiles':      ('_matchfiles(%(val)s)', None),
+        'date':             ('date(%(val)r)', None),
+        'branch':           ('branch(%(val)r)', ' or '),
+        '_patslog':         ('filelog(%(val)r)', ' or '),
+        '_patsfollow':      ('follow(%(val)r)', ' or '),
+        '_patsfollowfirst': ('_followfirst(%(val)r)', ' or '),
+        'keyword':          ('keyword(%(val)r)', ' or '),
+        'prune':            ('not (%(val)r or ancestors(%(val)r))', ' and '),
+        'user':             ('user(%(val)r)', ' or '),
+        }
+
+    opts = dict(opts)
+    # follow or not follow?
+    follow = opts.get('follow') or opts.get('follow_first')
+    followfirst = opts.get('follow_first') and 1 or 0
+    # --follow with FILE behaviour depends on revs...
+    startrev = revs[0]
+    followdescendants = (len(revs) > 1 and revs[0] < revs[1]) and 1 or 0
+
+    # branch and only_branch are really aliases and must be handled at
+    # the same time
+    opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
+    opts['branch'] = [repo.lookupbranch(b) for b in opts['branch']]
+    # pats/include/exclude are passed to match.match() directly in
+    # _matchfile() revset but walkchangerevs() builds its matcher with
+    # scmutil.match(). The difference is input pats are globbed on
+    # platforms without shell expansion (windows).
+    pctx = repo[None]
+    match, pats = scmutil.matchandpats(pctx, pats, opts)
+    slowpath = match.anypats() or (match.files() and opts.get('removed'))
+    if not slowpath:
+        for f in match.files():
+            if follow and f not in pctx:
+                raise util.Abort(_('cannot follow file not in parent '
+                                   'revision: "%s"') % f)
+            filelog = repo.file(f)
+            if not len(filelog):
+                # A zero count may be a directory or deleted file, so
+                # try to find matching entries on the slow path.
+                if follow:
+                    raise util.Abort(
+                        _('cannot follow nonexistent file: "%s"') % f)
+                slowpath = True
+    if slowpath:
+        # See walkchangerevs() slow path.
+        #
+        if follow:
+            raise util.Abort(_('can only follow copies/renames for explicit '
+                               'filenames'))
+        # pats/include/exclude cannot be represented as separate
+        # revset expressions as their filtering logic applies at file
+        # level. For instance "-I a -X a" matches a revision touching
+        # "a" and "b" while "file(a) and not file(b)" does
+        # not. Besides, filesets are evaluated against the working
+        # directory.
+        matchargs = ['r:', 'd:relpath']
+        for p in pats:
+            matchargs.append('p:' + p)
+        for p in opts.get('include', []):
+            matchargs.append('i:' + p)
+        for p in opts.get('exclude', []):
+            matchargs.append('x:' + p)
+        matchargs = ','.join(('%r' % p) for p in matchargs)
+        opts['_matchfiles'] = matchargs
+    else:
+        if follow:
+            fpats = ('_patsfollow', '_patsfollowfirst')
+            fnopats = (('_ancestors', '_fancestors'),
+                       ('_descendants', '_fdescendants'))
+            if pats:
+                # follow() revset inteprets its file argument as a
+                # manifest entry, so use match.files(), not pats.
+                opts[fpats[followfirst]] = list(match.files())
+            else:
+                opts[fnopats[followdescendants][followfirst]] = str(startrev)
+        else:
+            opts['_patslog'] = list(pats)
+
+    filematcher = None
+    if opts.get('patch') or opts.get('stat'):
+        if follow:
+            filematcher = _makegraphfilematcher(repo, pats, followfirst)
+        else:
+            filematcher = lambda rev: match
+
+    expr = []
+    for op, val in opts.iteritems():
+        if not val:
+            continue
+        if op not in opt2revset:
+            continue
+        revop, andor = opt2revset[op]
+        if '%(val)' not in revop:
+            expr.append(revop)
+        else:
+            if not isinstance(val, list):
+                e = revop % {'val': val}
+            else:
+                e = '(' + andor.join((revop % {'val': v}) for v in val) + ')'
+            expr.append(e)
+
+    if expr:
+        expr = '(' + ' and '.join(expr) + ')'
+    else:
+        expr = None
+    return expr, filematcher
+
+def getgraphlogrevs(repo, pats, opts):
+    """Return (revs, expr, filematcher) where revs is an iterable of
+    revision numbers, expr is a revset string built from log options
+    and file patterns or None, and used to filter 'revs'. If --stat or
+    --patch are not passed filematcher is None. Otherwise it is a
+    callable taking a revision number and returning a match objects
+    filtering the files to be detailed when displaying the revision.
+    """
+    def increasingrevs(repo, revs, matcher):
+        # The sorted input rev sequence is chopped in sub-sequences
+        # which are sorted in ascending order and passed to the
+        # matcher. The filtered revs are sorted again as they were in
+        # the original sub-sequence. This achieve several things:
+        #
+        # - getlogrevs() now returns a generator which behaviour is
+        #   adapted to log need. First results come fast, last ones
+        #   are batched for performances.
+        #
+        # - revset matchers often operate faster on revision in
+        #   changelog order, because most filters deal with the
+        #   changelog.
+        #
+        # - revset matchers can reorder revisions. "A or B" typically
+        #   returns returns the revision matching A then the revision
+        #   matching B. We want to hide this internal implementation
+        #   detail from the caller, and sorting the filtered revision
+        #   again achieves this.
+        for i, window in increasingwindows(0, len(revs), windowsize=1):
+            orevs = revs[i:i + window]
+            nrevs = set(matcher(repo, sorted(orevs)))
+            for rev in orevs:
+                if rev in nrevs:
+                    yield rev
+
+    if not len(repo):
+        return iter([]), None, None
+    # Default --rev value depends on --follow but --follow behaviour
+    # depends on revisions resolved from --rev...
+    follow = opts.get('follow') or opts.get('follow_first')
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts['rev'])
+    else:
+        if follow and len(repo) > 0:
+            revs = scmutil.revrange(repo, ['.:0'])
+        else:
+            revs = range(len(repo) - 1, -1, -1)
+    if not revs:
+        return iter([]), None, None
+    expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)
+    if expr:
+        matcher = revset.match(repo.ui, expr)
+        revs = increasingrevs(repo, revs, matcher)
+    if not opts.get('hidden'):
+        # --hidden is still experimental and not worth a dedicated revset
+        # yet. Fortunately, filtering revision number is fast.
+        revs = (r for r in revs if r not in repo.changelog.hiddenrevs)
+    else:
+        revs = iter(revs)
+    return revs, expr, filematcher
+
+def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
+                 filematcher=None):
+    seen, state = [], graphmod.asciistate()
+    for rev, type, ctx, parents in dag:
+        char = 'o'
+        if ctx.node() in showparents:
+            char = '@'
+        elif ctx.obsolete():
+            char = 'x'
+        copies = None
+        if getrenamed and ctx.rev():
+            copies = []
+            for fn in ctx.files():
+                rename = getrenamed(fn, ctx.rev())
+                if rename:
+                    copies.append((fn, rename[0]))
+        revmatchfn = None
+        if filematcher is not None:
+            revmatchfn = filematcher(ctx.rev())
+        displayer.show(ctx, copies=copies, matchfn=revmatchfn)
+        lines = displayer.hunk.pop(rev).split('\n')
+        if not lines[-1]:
+            del lines[-1]
+        displayer.flush(rev)
+        edges = edgefn(type, char, lines, seen, rev, parents)
+        for type, char, lines, coldata in edges:
+            graphmod.ascii(ui, state, type, char, lines, coldata)
+    displayer.close()
 
 def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
     join = lambda f: os.path.join(prefix, f)
