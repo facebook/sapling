@@ -358,12 +358,13 @@ class filemap_source(converter_source):
         # original filename in the rev part of the return value.
         changes, copies = self.base.getchanges(rev)
         newnames = {}
-        files = []
+        files = {}
         for f, r in changes:
             newf = self.filemapper(f)
-            if newf:
-                files.append((newf, (f, r)))
+            if newf and (newf != f or newf not in files):
+                files[newf] = (f, r)
                 newnames[f] = newf
+        files = sorted(files.items())
 
         ncopies = {}
         for c in copies:

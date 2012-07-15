@@ -376,6 +376,39 @@ exercise incremental conversion at the same time
   o  0 "addb" files: b
   
 
+filemap rename undoing revision rename
+
+  $ hg init renameundo
+  $ cd renameundo
+  $ echo 1 > a
+  $ echo 1 > c
+  $ hg ci -qAm add
+  $ hg mv -q a b/a
+  $ hg mv -q c b/c
+  $ hg ci -qm rename
+  $ echo 2 > b/a
+  $ echo 2 > b/c
+  $ hg ci -qm modify
+  $ cd ..
+
+  $ echo "rename b ." > renameundo.fmap
+  $ hg convert --filemap renameundo.fmap renameundo renameundo2
+  initializing destination renameundo2 repository
+  scanning source...
+  sorting...
+  converting...
+  2 add
+  1 rename
+  filtering out empty revision
+  repository tip rolled back to revision 0 (undo commit)
+  0 modify
+  $ glog -R renameundo2
+  o  1 "modify" files: a c
+  |
+  o  0 "add" files: a c
+  
+
+
 test merge parents/empty merges pruning
 
   $ glog()
