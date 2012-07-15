@@ -48,6 +48,7 @@ Should diff cloned directories:
    -c --change REV          change made by revision
    -I --include PATTERN [+] include names matching the given patterns
    -X --exclude PATTERN [+] exclude names matching the given patterns
+   -S --subrepos            recurse into subrepositories
   
   (some details hidden, use --verbose to show complete help)
 

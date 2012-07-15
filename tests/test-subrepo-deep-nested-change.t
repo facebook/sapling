@@ -709,4 +709,96 @@ Restore the trashed subrepo tracking
   $ hg rollback -q
   $ hg update -Cq .
 
+Interaction with extdiff, largefiles and subrepos
+
+  $ hg --config extensions.extdiff= extdiff -S
+
+  $ hg --config extensions.extdiff= extdiff -r '.^' -S
+  diff -Npru cloned.*/.hgsub cloned/.hgsub (glob)
+  --- cloned.*/.hgsub	* +0000 (glob)
+  +++ cloned/.hgsub	* +0000 (glob)
+  @@ -1,2 +1 @@
+   sub1 = ../sub1
+  -sub3 = sub3
+  diff -Npru cloned.*/.hgsubstate cloned/.hgsubstate (glob)
+  --- cloned.*/.hgsubstate	* +0000 (glob)
+  +++ cloned/.hgsubstate	* +0000 (glob)
+  @@ -1,2 +1 @@
+   7a36fa02b66e61f27f3d4a822809f159479b8ab2 sub1
+  -b1a26de6f2a045a9f079323693614ee322f1ff7e sub3
+  [1]
+
+  $ hg --config extensions.extdiff= extdiff -r 0 -r '.^' -S
+  diff -Npru cloned.*/.hglf/b.dat cloned.*/.hglf/b.dat (glob)
+  --- cloned.*/.hglf/b.dat	* (glob)
+  +++ cloned.*/.hglf/b.dat	* (glob)
+  @@ -0,0 +1 @@
+  +da39a3ee5e6b4b0d3255bfef95601890afd80709
+  diff -Npru cloned.*/.hglf/foo/bar/large.dat cloned.*/.hglf/foo/bar/large.dat (glob)
+  --- cloned.*/.hglf/foo/bar/large.dat	* (glob)
+  +++ cloned.*/.hglf/foo/bar/large.dat	* (glob)
+  @@ -0,0 +1 @@
+  +2f6933b5ee0f5fdd823d9717d8729f3c2523811b
+  diff -Npru cloned.*/.hglf/large.bin cloned.*/.hglf/large.bin (glob)
+  --- cloned.*/.hglf/large.bin	* (glob)
+  +++ cloned.*/.hglf/large.bin	* (glob)
+  @@ -0,0 +1 @@
+  +7f7097b041ccf68cc5561e9600da4655d21c6d18
+  diff -Npru cloned.*/.hgsub cloned.*/.hgsub (glob)
+  --- cloned.*/.hgsub	* (glob)
+  +++ cloned.*/.hgsub	* (glob)
+  @@ -1 +1,2 @@
+   sub1 = ../sub1
+  +sub3 = sub3
+  diff -Npru cloned.*/.hgsubstate cloned.*/.hgsubstate (glob)
+  --- cloned.*/.hgsubstate	* (glob)
+  +++ cloned.*/.hgsubstate	* (glob)
+  @@ -1 +1,2 @@
+  -fc3b4ce2696f7741438c79207583768f2ce6b0dd sub1
+  +7a36fa02b66e61f27f3d4a822809f159479b8ab2 sub1
+  +b1a26de6f2a045a9f079323693614ee322f1ff7e sub3
+  diff -Npru cloned.*/foo/bar/def cloned.*/foo/bar/def (glob)
+  --- cloned.*/foo/bar/def	* (glob)
+  +++ cloned.*/foo/bar/def	* (glob)
+  @@ -0,0 +1 @@
+  +changed
+  diff -Npru cloned.*/main cloned.*/main (glob)
+  --- cloned.*/main	* (glob)
+  +++ cloned.*/main	* (glob)
+  @@ -1 +1 @@
+  -main
+  +foo
+  diff -Npru cloned.*/sub1/.hgsubstate cloned.*/sub1/.hgsubstate (glob)
+  --- cloned.*/sub1/.hgsubstate	* (glob)
+  +++ cloned.*/sub1/.hgsubstate	* (glob)
+  @@ -1 +1 @@
+  -c57a0840e3badd667ef3c3ef65471609acb2ba3c sub2
+  +c77908c81ccea3794a896c79e98b0e004aee2e9e sub2
+  diff -Npru cloned.*/sub1/sub2/folder/test.txt cloned.*/sub1/sub2/folder/test.txt (glob)
+  --- cloned.*/sub1/sub2/folder/test.txt	* (glob)
+  +++ cloned.*/sub1/sub2/folder/test.txt	* (glob)
+  @@ -0,0 +1 @@
+  +subfolder
+  diff -Npru cloned.*/sub1/sub2/sub2 cloned.*/sub1/sub2/sub2 (glob)
+  --- cloned.*/sub1/sub2/sub2	* (glob)
+  +++ cloned.*/sub1/sub2/sub2	* (glob)
+  @@ -1 +1 @@
+  -sub2
+  +modified
+  diff -Npru cloned.*/sub3/a.txt cloned.*/sub3/a.txt (glob)
+  --- cloned.*/sub3/a.txt	* (glob)
+  +++ cloned.*/sub3/a.txt	* (glob)
+  @@ -0,0 +1 @@
+  +xyz
+  [1]
+
+  $ echo mod > sub1/sub2/sub2
+  $ hg --config extensions.extdiff= extdiff -S
+  --- */cloned.*/sub1/sub2/sub2	* (glob)
+  +++ */cloned/sub1/sub2/sub2	* (glob)
+  @@ -1 +1 @@
+  -modified
+  +mod
+  [1]
+
   $ cd ..
