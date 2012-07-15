@@ -188,7 +188,7 @@ Pushing applied patch with branchhash, without --force
 
 Pushing revs excluding applied patch
 
-  $ hg push --new-branch -r branch -r 2 ../forcepush2
+  $ hg push --new-branch -r 'branch(branch)' -r 2 ../forcepush2
   pushing to ../forcepush2
   searching for changes
   adding changesets
