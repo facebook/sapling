@@ -518,7 +518,7 @@ def _outgoing(ui, repo, dest, opts):
     ui.status(_('comparing with %s\n') % util.hidepassword(dest))
     revs, checkout = addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
-        revs = [repo.lookup(rev) for rev in revs]
+        revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
 
     other = peer(repo, opts, dest)
     outgoing = discovery.findcommonoutgoing(repo, other, revs,
