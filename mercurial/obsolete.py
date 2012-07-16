@@ -51,7 +51,7 @@ The header is followed by the markers. Each marker is made of:
   additional encoding. Keys cannot contain '\0' or ':' and values
   cannot contain '\0'.
 """
-import struct
+import os, struct
 from mercurial import util, base85
 from i18n import _
 
@@ -195,6 +195,12 @@ class obsstore(object):
         if marker not in self._all:
             f = self.sopener('obsstore', 'ab')
             try:
+                # Whether the file's current position is at the begin or at
+                # the end after opening a file for appending is implementation
+                # defined. So we must seek to the end before calling tell(),
+                # or we may get a zero offset for non-zero sized files on
+                # some platforms (issue3543).
+                f.seek(0, os.SEEK_END)
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 if offset == 0:
