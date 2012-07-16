@@ -113,7 +113,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         og.missingheads = onlyheads or repo.heads()
     elif onlyheads is None:
         # use visible heads as it should be cached
-        og.missingheads = phases.visibleheads(repo)
+        og.missingheads = visibleheads(repo)
         og.excluded = [ctx.node() for ctx in repo.set('secret()')]
     else:
         # compute common, missing and exclude secret stuff
@@ -261,3 +261,41 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     # 6. Check for unsynced changes on involved branches.
     if unsynced:
         repo.ui.warn(_("note: unsynced remote changes!\n"))
+
+def visibleheads(repo):
+    """return the set of visible head of this repo"""
+    # XXX we want a cache on this
+    sroots = repo._phasecache.phaseroots[phases.secret]
+    if sroots:
+        # XXX very slow revset. storing heads or secret "boundary" would help.
+        revset = repo.set('heads(not (%ln::))', sroots)
+
+        vheads = [ctx.node() for ctx in revset]
+        if not vheads:
+            vheads.append(nullid)
+    else:
+        vheads = repo.heads()
+    return vheads
+
+def visiblebranchmap(repo):
+    """return a branchmap for the visible set"""
+    # XXX Recomputing this data on the fly is very slow.  We should build a
+    # XXX cached version while computin the standard branchmap version.
+    sroots = repo._phasecache.phaseroots[phases.secret]
+    if sroots:
+        vbranchmap = {}
+        for branch, nodes in  repo.branchmap().iteritems():
+            # search for secret heads.
+            for n in nodes:
+                if repo[n].phase() >= phases.secret:
+                    nodes = None
+                    break
+            # if secreat heads where found we must compute them again
+            if nodes is None:
+                s = repo.set('heads(branch(%s) - secret())', branch)
+                nodes = [c.node() for c in s]
+            vbranchmap[branch] = nodes
+    else:
+        vbranchmap = repo.branchmap()
+    return vbranchmap
+

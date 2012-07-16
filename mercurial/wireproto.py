@@ -10,7 +10,7 @@ from i18n import _
 from node import bin, hex
 import changegroup as changegroupmod
 import peer, error, encoding, util, store
-import phases
+import discovery, phases
 
 # abstract batching support
 
@@ -397,7 +397,7 @@ def between(repo, proto, pairs):
     return "".join(r)
 
 def branchmap(repo, proto):
-    branchmap = phases.visiblebranchmap(repo)
+    branchmap = discovery.visiblebranchmap(repo)
     heads = []
     for branch, nodes in branchmap.iteritems():
         branchname = urllib.quote(encoding.fromlocal(branch))
@@ -453,7 +453,7 @@ def getbundle(repo, proto, others):
     return streamres(proto.groupchunks(cg))
 
 def heads(repo, proto):
-    h = phases.visibleheads(repo)
+    h = discovery.visibleheads(repo)
     return encodelist(h) + "\n"
 
 def hello(repo, proto):
@@ -556,7 +556,7 @@ def unbundle(repo, proto, heads):
     their_heads = decodelist(heads)
 
     def check_heads():
-        heads = phases.visibleheads(repo)
+        heads = discovery.visibleheads(repo)
         heads_hash = util.sha1(''.join(sorted(heads))).digest()
         return (their_heads == ['force'] or their_heads == heads or
                 their_heads == ['hashed', heads_hash])

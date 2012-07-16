@@ -56,10 +56,10 @@ class localpeer(peer.peerrepository):
         return self._repo.lookup(key)
 
     def branchmap(self):
-        return phases.visiblebranchmap(self._repo)
+        return discovery.visiblebranchmap(self._repo)
 
     def heads(self):
-        return phases.visibleheads(self._repo)
+        return discovery.visibleheads(self._repo)
 
     def known(self, nodes):
         return self._repo.known(nodes)
