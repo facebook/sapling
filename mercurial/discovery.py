@@ -168,10 +168,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         branches = set(repo[n].branch() for n in outgoing.missing)
 
         # 2. Check for new branches on the remote.
-        if remote.local():
-            remotemap = phases.visiblebranchmap(remote.local())
-        else:
-            remotemap = remote.branchmap()
+        remotemap = remote.branchmap()
         newbranches = branches - set(remotemap)
         if newbranches and not newbranch: # new branch requires --new-branch
             branchnames = ', '.join(sorted(newbranches))
