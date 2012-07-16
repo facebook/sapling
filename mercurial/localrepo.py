@@ -131,7 +131,12 @@ class localrepository(object):
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
-
+        # hiddenrevs: revs that should be hidden by command and tools
+        #
+        # This set is carried on the repo to ease initialisation and lazy
+        # loading it'll probably move back to changelog for efficienty and
+        # consistency reason
+        self.hiddenrevs = set()
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
             extensions.loadall(self.ui)

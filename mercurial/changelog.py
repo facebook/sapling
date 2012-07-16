@@ -120,8 +120,6 @@ class changelog(revlog.revlog):
         self._realopener = opener
         self._delayed = False
         self._divert = False
-        # hiddenrevs: revs that should be hidden by command and tools
-        self.hiddenrevs = set()
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"

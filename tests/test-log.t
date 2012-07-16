@@ -1146,7 +1146,7 @@ Diff here should be the same:
   > def reposetup(ui, repo):
   >     for line in repo.opener('hidden'):
   >         ctx = repo[line.strip()]
-  >         repo.changelog.hiddenrevs.add(ctx.rev())
+  >         repo.hiddenrevs.add(ctx.rev())
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "hidden=$HGTMP/testhidden.py" >> $HGRCPATH

@@ -2047,7 +2047,7 @@ Test --hidden
   > def reposetup(ui, repo):
   >     for line in repo.opener('hidden'):
   >         ctx = repo[line.strip()]
-  >         repo.changelog.hiddenrevs.add(ctx.rev())
+  >         repo.hiddenrevs.add(ctx.rev())
   > EOF
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "hidden=$HGTMP/testhidden.py" >> .hg/hgrc
