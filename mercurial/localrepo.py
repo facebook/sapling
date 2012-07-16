@@ -131,12 +131,6 @@ class localrepository(object):
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
-        # hiddenrevs: revs that should be hidden by command and tools
-        #
-        # This set is carried on the repo to ease initialisation and lazy
-        # loading it'll probably move back to changelog for efficienty and
-        # consistency reason
-        self.hiddenrevs = set()
         try:
             self.ui.readconfig(self.join("hgrc"), self.root)
             extensions.loadall(self.ui)
@@ -296,6 +290,25 @@ class localrepository(object):
     def obsstore(self):
         store = obsolete.obsstore(self.sopener)
         return store
+
+    @propertycache
+    def hiddenrevs(self):
+        """hiddenrevs: revs that should be hidden by command and tools
+
+        This set is carried on the repo to ease initialisation and lazy
+        loading it'll probably move back to changelog for efficienty and
+        consistency reason
+
+        Note that the hiddenrevs will needs invalidations when
+        - a new changesets is added (possible unstable above extinct)
+        - a new obsolete marker is added (possible new extinct changeset)
+        """
+        hidden = set()
+        if self.obsstore:
+            ### hide extinct changeset that are not accessible by any mean
+            hiddenquery = 'extinct() - ::(. + bookmark() + tagged())'
+            hidden.update(self.revs(hiddenquery))
+        return hidden
 
     @storecache('00changelog.i')
     def changelog(self):

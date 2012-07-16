@@ -76,23 +76,6 @@ Check that graphlog detect that a changeset is obsolete:
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add new_3_c
   |
-  | x  changeset:   4:ca819180edb9
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_2_c
-  |
-  | x  changeset:   3:cdbce2fbb163
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_c
-  |
-  | x  changeset:   2:245bde4270cd
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add original_c
-  |
   o  changeset:   1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
@@ -114,18 +97,6 @@ Check that public changeset are not accounted as obsolete:
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add new_3_c
-  |
-  | x  changeset:   4:ca819180edb9
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_2_c
-  |
-  | x  changeset:   3:cdbce2fbb163
-  |/   parent:      1:7c3bad9141dc
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     add new_c
   |
   | o  changeset:   2:245bde4270cd
   |/   user:        test
