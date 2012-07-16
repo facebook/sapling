@@ -313,7 +313,6 @@ class dirstate(object):
             _decdirs(self._dirs, f)
 
     def _addpath(self, f, state, mode, size, mtime):
-        assert state not in "?r"
         oldstate = self[f]
         if state == 'a' or oldstate == 'r':
             scmutil.checkfilename(f)
