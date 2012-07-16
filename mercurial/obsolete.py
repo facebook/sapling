@@ -51,7 +51,7 @@ The header is followed by the markers. Each marker is made of:
   additional encoding. Keys cannot contain '\0' or ':' and values
   cannot contain '\0'.
 """
-import os, struct
+import struct
 from mercurial import util, base85
 from i18n import _
 
@@ -200,7 +200,7 @@ class obsstore(object):
                 # defined. So we must seek to the end before calling tell(),
                 # or we may get a zero offset for non-zero sized files on
                 # some platforms (issue3543).
-                f.seek(0, os.SEEK_END)
+                f.seek(0, 2) # os.SEEK_END
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 if offset == 0:
