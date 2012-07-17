@@ -745,7 +745,7 @@ class localrepository(object):
         # branch that ceased to exist may not be in newbranches because
         # newbranches is the set of candidate heads, which when you strip the
         # last commit in a branch will be the parent branch.
-        for branch in partial:
+        for branch in partial.keys():
             nodes = [head for head in partial[branch]
                      if self.changelog.hasnode(head)]
             if not nodes:
