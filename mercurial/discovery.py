@@ -249,12 +249,22 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                          hint=_("use 'hg push --new-branch' to create"
                                 " new remote branches"))
 
-    # 2. Check for new heads.
+    # 2 compute newly pushed bookmarks. We
+    # we don't warned about bookmarked heads.
+    localbookmarks = repo._bookmarks
+    remotebookmarks = remote.listkeys('bookmarks')
+    bookmarkedheads = set()
+    for bm in localbookmarks:
+        rnode = remotebookmarks.get(bm)
+        if rnode and rnode in repo:
+            lctx, rctx = repo[bm], repo[rnode]
+            if rctx == lctx.ancestor(rctx):
+                bookmarkedheads.add(lctx.node())
+
+    # 3. Check for new heads.
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     error = None
-    localbookmarks = repo._bookmarks
-
     unsynced = False
     for branch, heads in headssum.iteritems():
         if heads[0] is None:
@@ -267,14 +277,6 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         newhs = set(heads[1])
         dhs = None
         if len(newhs) > len(oldhs):
-            remotebookmarks = remote.listkeys('bookmarks')
-            bookmarkedheads = set()
-            for bm in localbookmarks:
-                rnode = remotebookmarks.get(bm)
-                if rnode and rnode in repo:
-                    lctx, rctx = repo[bm], repo[rnode]
-                    if rctx == lctx.ancestor(rctx):
-                        bookmarkedheads.add(lctx.node())
             # strip updates to existing remote heads from the new heads list
             dhs = list(newhs - bookmarkedheads - oldhs)
         if dhs:
