@@ -149,77 +149,96 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
 
     return og
 
+def _branchmapsummary(repo, remote, outgoing):
+    """compute a summary of branch and heads status before and after push
+
+    - oldmap:      {'branch': [heads]} mapping for remote
+    - newmap:      {'branch': [heads]} mapping for local
+    - unsynced:    set of branch that have unsynced remote changes
+    - branches:    set of all common branch pushed
+    - newbranches: list of plain new pushed branch
+    """
+    cl = repo.changelog
+
+    # A. Create set of branches involved in the push.
+    branches = set(repo[n].branch() for n in outgoing.missing)
+    remotemap = remote.branchmap()
+    newbranches = branches - set(remotemap)
+    branches.difference_update(newbranches)
+
+    # B. Construct the initial oldmap and newmap dicts.
+    # They contain information about the remote heads before and
+    # after the push, respectively.
+    # Heads not found locally are not included in either dict,
+    # since they won't be affected by the push.
+    # unsynced contains all branches with incoming changesets.
+    oldmap = {}
+    newmap = {}
+    unsynced = set()
+    for branch in branches:
+        remotebrheads = remotemap[branch]
+
+        prunedbrheads = [h for h in remotebrheads if h in cl.nodemap]
+        oldmap[branch] = prunedbrheads
+        newmap[branch] = list(prunedbrheads)
+        if len(remotebrheads) > len(prunedbrheads):
+            unsynced.add(branch)
+
+    # C. Update newmap with outgoing changes.
+    # This will possibly add new heads and remove existing ones.
+    ctxgen = (repo[n] for n in outgoing.missing)
+    repo._updatebranchcache(newmap, ctxgen)
+    return oldmap, newmap, unsynced, branches, newbranches
+
+def _oldbranchmapsummary(repo, remoteheads, outgoing, inc=False):
+    """Compute branchmapsummary for repo without branchmap support"""
+
+    cl = repo.changelog
+    # 1-4b. old servers: Check for new topological heads.
+    # Construct {old,new}map with branch = None (topological branch).
+    # (code based on _updatebranchcache)
+    oldheads = set(h for h in remoteheads if h in cl.nodemap)
+    # all nodes in outgoing.missing are children of either:
+    # - an element of oldheads
+    # - another element of outgoing.missing
+    # - nullrev
+    # This explains why the new head are very simple to compute.
+    r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
+    branches = set([None])
+    newmap = {None: list(c.node() for c in r)}
+    oldmap = {None: oldheads}
+    unsynced = inc and branches or set()
+    return oldmap, newmap, unsynced, branches, set()
+
 def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     """Check that a push won't add any outgoing head
 
     raise Abort error and display ui message as needed.
     """
+    # Check for each named branch if we're creating new remote heads.
+    # To be a remote head after push, node must be either:
+    # - unknown locally
+    # - a local outgoing head descended from update
+    # - a remote head that's known locally and not
+    #   ancestral to an outgoing head
     if remoteheads == [nullid]:
         # remote is empty, nothing to check.
         return
 
-    cl = repo.changelog
     if remote.capable('branchmap'):
-        # Check for each named branch if we're creating new remote heads.
-        # To be a remote head after push, node must be either:
-        # - unknown locally
-        # - a local outgoing head descended from update
-        # - a remote head that's known locally and not
-        #   ancestral to an outgoing head
-
-        # 1. Create set of branches involved in the push.
-        branches = set(repo[n].branch() for n in outgoing.missing)
-
-        # 2. Check for new branches on the remote.
-        remotemap = remote.branchmap()
-        newbranches = branches - set(remotemap)
-        if newbranches and not newbranch: # new branch requires --new-branch
-            branchnames = ', '.join(sorted(newbranches))
-            raise util.Abort(_("push creates new remote branches: %s!")
-                               % branchnames,
-                             hint=_("use 'hg push --new-branch' to create"
-                                    " new remote branches"))
-        branches.difference_update(newbranches)
-
-        # 3. Construct the initial oldmap and newmap dicts.
-        # They contain information about the remote heads before and
-        # after the push, respectively.
-        # Heads not found locally are not included in either dict,
-        # since they won't be affected by the push.
-        # unsynced contains all branches with incoming changesets.
-        oldmap = {}
-        newmap = {}
-        unsynced = set()
-        for branch in branches:
-            remotebrheads = remotemap[branch]
-            prunedbrheads = [h for h in remotebrheads if h in cl.nodemap]
-            oldmap[branch] = prunedbrheads
-            newmap[branch] = list(prunedbrheads)
-            if len(remotebrheads) > len(prunedbrheads):
-                unsynced.add(branch)
-
-        # 4. Update newmap with outgoing changes.
-        # This will possibly add new heads and remove existing ones.
-        ctxgen = (repo[n] for n in outgoing.missing)
-        repo._updatebranchcache(newmap, ctxgen)
-
+        bms = _branchmapsummary(repo, remote, outgoing)
     else:
-        # 1-4b. old servers: Check for new topological heads.
-        # Construct {old,new}map with branch = None (topological branch).
-        # (code based on _updatebranchcache)
-        oldheads = set(h for h in remoteheads if h in cl.nodemap)
-        # all nodes in outgoing.missing are children of either:
-        # - an element of oldheads
-        # - another element of outgoing.missing
-        # - nullrev
-        # This explains why the new head are very simple to compute.
-        r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
-        branches = set([None])
-        newmap = {None: list(c.node() for c in r)}
-        oldmap = {None: oldheads}
-        unsynced = inc and branches or set()
+        bms = _oldbranchmapsummary(repo, remoteheads, outgoing, inc)
+    oldmap, newmap, unsynced, branches, newbranches = bms
+    # 1. Check for new branches on the remote.
+    if newbranches and not newbranch:  # new branch requires --new-branch
+        branchnames = ', '.join(sorted(newbranches))
+        raise util.Abort(_("push creates new remote branches: %s!")
+                           % branchnames,
+                         hint=_("use 'hg push --new-branch' to create"
+                                " new remote branches"))
 
-    # 5. Check for new heads.
+    # 2. Check for new heads.
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
     error = None
