@@ -149,48 +149,60 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
 
     return og
 
-def _branchmapsummary(repo, remote, outgoing):
+def _headssummary(repo, remote, outgoing):
     """compute a summary of branch and heads status before and after push
 
-    - oldmap:      {'branch': [heads]} mapping for remote
-    - newmap:      {'branch': [heads]} mapping for local
-    - unsynced:    set of branch that have unsynced remote changes
-    - branches:    set of all common branch pushed
-    - newbranches: list of plain new pushed branch
+    return {'branch': ([remoteheads], [newheads], [unsyncedheads])} mapping
+
+    - branch: the branch name
+    - remoteheads: the list of remote heads known locally
+                   None is the branch is new
+    - newheads: the new remote heads (known locally) with outgoing pushed
+    - unsyncedheads: the list of remote heads unknown locally.
     """
     cl = repo.changelog
-
+    headssum = {}
     # A. Create set of branches involved in the push.
     branches = set(repo[n].branch() for n in outgoing.missing)
     remotemap = remote.branchmap()
     newbranches = branches - set(remotemap)
     branches.difference_update(newbranches)
 
-    # B. Construct the initial oldmap and newmap dicts.
-    # They contain information about the remote heads before and
-    # after the push, respectively.
-    # Heads not found locally are not included in either dict,
-    # since they won't be affected by the push.
-    # unsynced contains all branches with incoming changesets.
-    oldmap = {}
-    newmap = {}
-    unsynced = set()
-    for branch in branches:
-        remotebrheads = remotemap[branch]
+    # A. register remote heads
+    remotebranches = set()
+    for branch, heads in remote.branchmap().iteritems():
+        remotebranches.add(branch)
+        known = []
+        unsynced = []
+        for h in heads:
+            if h in cl.nodemap:
+                known.append(h)
+            else:
+                unsynced.append(h)
+        headssum[branch] = (known, list(known), unsynced)
+    # B. add new branch data
+    missingctx = list(repo[n] for n in outgoing.missing)
+    touchedbranches = set()
+    for ctx in missingctx:
+        branch = ctx.branch()
+        touchedbranches.add(branch)
+        if branch not in headssum:
+            headssum[branch] = (None, [], [])
 
-        prunedbrheads = [h for h in remotebrheads if h in cl.nodemap]
-        oldmap[branch] = prunedbrheads
-        newmap[branch] = list(prunedbrheads)
-        if len(remotebrheads) > len(prunedbrheads):
-            unsynced.add(branch)
+    # C drop data about untouched branches:
+    for branch in remotebranches - touchedbranches:
+        del headssum[branch]
 
-    # C. Update newmap with outgoing changes.
+    # D. Update newmap with outgoing changes.
     # This will possibly add new heads and remove existing ones.
-    ctxgen = (repo[n] for n in outgoing.missing)
-    repo._updatebranchcache(newmap, ctxgen)
-    return oldmap, newmap, unsynced, branches, newbranches
+    newmap = dict((branch, heads[1]) for branch, heads in headssum.iteritems()
+                  if heads[0] is not None)
+    repo._updatebranchcache(newmap, missingctx)
+    for branch, newheads in newmap.iteritems():
+        headssum[branch][1][:] = newheads
+    return headssum
 
-def _oldbranchmapsummary(repo, remoteheads, outgoing, inc=False):
+def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     """Compute branchmapsummary for repo without branchmap support"""
 
     cl = repo.changelog
@@ -204,11 +216,9 @@ def _oldbranchmapsummary(repo, remoteheads, outgoing, inc=False):
     # - nullrev
     # This explains why the new head are very simple to compute.
     r = repo.set('heads(%ln + %ln)', oldheads, outgoing.missing)
-    branches = set([None])
-    newmap = {None: list(c.node() for c in r)}
-    oldmap = {None: oldheads}
-    unsynced = inc and branches or set()
-    return oldmap, newmap, unsynced, branches, set()
+    newheads = list(c.node() for c in r)
+    unsynced = inc and set([None]) or set()
+    return {None: (oldheads, newheads, unsynced)}
 
 def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     """Check that a push won't add any outgoing head
@@ -226,10 +236,11 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         return
 
     if remote.capable('branchmap'):
-        bms = _branchmapsummary(repo, remote, outgoing)
+        headssum = _headssummary(repo, remote, outgoing)
     else:
-        bms = _oldbranchmapsummary(repo, remoteheads, outgoing, inc)
-    oldmap, newmap, unsynced, branches, newbranches = bms
+        headssum = _oldheadssummary(repo, remoteheads, outgoing, inc)
+    newbranches = [branch for branch, heads in headssum.iteritems()
+                   if heads[0] is None]
     # 1. Check for new branches on the remote.
     if newbranches and not newbranch:  # new branch requires --new-branch
         branchnames = ', '.join(sorted(newbranches))
@@ -244,12 +255,18 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     error = None
     localbookmarks = repo._bookmarks
 
-    for branch in branches:
-        newhs = set(newmap[branch])
-        oldhs = set(oldmap[branch])
+    unsynced = False
+    for branch, heads in headssum.iteritems():
+        if heads[0] is None:
+            # Maybe we should abort if we push more that one head
+            # for new branches ?
+            continue
+        if heads[2]:
+            unsynced = True
+        oldhs = set(heads[0])
+        newhs = set(heads[1])
         dhs = None
         if len(newhs) > len(oldhs):
-            # strip updates to existing remote heads from the new heads list
             remotebookmarks = remote.listkeys('bookmarks')
             bookmarkedheads = set()
             for bm in localbookmarks:
@@ -258,6 +275,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                     lctx, rctx = repo[bm], repo[rnode]
                     if rctx == lctx.ancestor(rctx):
                         bookmarkedheads.add(lctx.node())
+            # strip updates to existing remote heads from the new heads list
             dhs = list(newhs - bookmarkedheads - oldhs)
         if dhs:
             if error is None:
@@ -267,7 +285,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                 else:
                     error = _("push creates new remote head %s!"
                               ) % short(dhs[0])
-                if branch in unsynced:
+                if heads[2]: # unsynced
                     hint = _("you should pull and merge or "
                              "use push -f to force")
                 else:
