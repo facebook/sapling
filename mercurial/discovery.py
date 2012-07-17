@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import util, setdiscovery, treediscovery, phases
+import util, setdiscovery, treediscovery, phases, obsolete
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
@@ -266,6 +266,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     # error message, depending on unsynced status, is displayed.
     error = None
     unsynced = False
+    allmissing = set(outgoing.missing)
     for branch, heads in headssum.iteritems():
         if heads[0] is None:
             # Maybe we should abort if we push more that one head
@@ -274,8 +275,34 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         if heads[2]:
             unsynced = True
         oldhs = set(heads[0])
-        newhs = set(heads[1])
+        candidate_newhs = set(heads[1])
+        # add unsynced data
+        oldhs.update(heads[2])
+        candidate_newhs.update(heads[2])
         dhs = None
+        if repo.obsstore:
+            # remove future heads which are actually obsolete by another
+            # pushed element:
+            #
+            # XXX There is several case this case does not handle properly
+            #
+            # (1) if <nh> is public, it won't be affected by obsolete marker
+            #     and a new is created
+            #
+            # (2) if the new heads have ancestors which are not obsolete and
+            #     not ancestors of any other heads we will have a new head too.
+            #
+            # This two case will be easy to handle for know changeset but much
+            # more tricky for unsynced changes.
+            newhs = set()
+            for nh in candidate_newhs:
+                for suc in obsolete.anysuccessors(repo.obsstore, nh):
+                    if suc != nh and suc in allmissing:
+                        break
+                else:
+                    newhs.add(nh)
+        else:
+            newhs = candidate_newhs
         if len(newhs) > len(oldhs):
             # strip updates to existing remote heads from the new heads list
             dhs = list(newhs - bookmarkedheads - oldhs)

@@ -357,3 +357,50 @@ no warning displayed
   searching for changes
   no changes found
   [1]
+
+Do not warn about new head when the new head is a successors of a remote one
+
+  $ hg glog
+  @  changeset:   5:6e572121998e
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add original_e
+  |
+  x  changeset:   4:7c694bff0650
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add original_d
+  |
+  o  changeset:   3:5601fb93a350
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add new_3_c
+  |
+  | o  changeset:   2:245bde4270cd
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add original_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+  $ hg up -q 'desc(new_3_c)'
+  $ mkcommit obsolete_e
+  created new head
+  $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'`
+  $ hg push ../tmpf
+  pushing to ../tmpf
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
