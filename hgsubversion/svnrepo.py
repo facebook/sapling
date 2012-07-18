@@ -18,8 +18,13 @@ import errno
 
 from mercurial import error
 from mercurial import util as hgutil
-from mercurial import httprepo
-import mercurial.repo
+
+try:
+    from mercurial.peer import peerrepository
+    from mercurial import httppeer
+except ImportError:
+    from mercurial.repo import repository as peerrepository
+    from mercurial import httprepo as httppeer
 
 try:
     from mercurial import phases
@@ -107,7 +112,7 @@ def generate_repo_class(ui, repo):
 
     repo.__class__ = svnlocalrepo
 
-class svnremoterepo(mercurial.repo.repository):
+class svnremoterepo(peerrepository):
     """ the dumb wrapper for actual Subversion repositories """
 
     def __init__(self, ui, path=None):
@@ -177,7 +182,7 @@ def instance(ui, url, create):
     if url.startswith('http://') or url.startswith('https://'):
         try:
             # may yield a bogus 'real URL...' message
-            return httprepo.instance(ui, url, create)
+            return httppeer.instance(ui, url, create)
         except error.RepoError:
             ui.traceback()
             ui.note('(falling back to Subversion support)\n')
