@@ -130,11 +130,8 @@ def localpath(path):
 def normpath(path):
     return pconvert(os.path.normpath(path))
 
-encodinglower = None
-encodingupper = None
-
 def normcase(path):
-    return encodingupper(path)
+    return encoding.upper(path)
 
 def realpath(path):
     '''

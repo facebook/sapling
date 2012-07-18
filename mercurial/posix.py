@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
+import encoding
 import os, sys, errno, stat, getpass, pwd, grp, tempfile, unicodedata
 
 posixfile = open
@@ -164,9 +165,6 @@ def samedevice(fpath1, fpath2):
     st2 = os.lstat(fpath2)
     return st1.st_dev == st2.st_dev
 
-encodinglower = None
-encodingupper = None
-
 # os.path.normcase is a no-op, which doesn't help us on non-native filesystems
 def normcase(path):
     return path.lower()
@@ -255,7 +253,7 @@ if sys.platform == 'cygwin':
         pathlen = len(path)
         if (pathlen == 0) or (path[0] != os.sep):
             # treat as relative
-            return encodingupper(path)
+            return encoding.upper(path)
 
         # to preserve case of mountpoint part
         for mp in cygwinmountpoints:
@@ -266,9 +264,9 @@ if sys.platform == 'cygwin':
             if mplen == pathlen: # mount point itself
                 return mp
             if path[mplen] == os.sep:
-                return mp + encodingupper(path[mplen:])
+                return mp + encoding.upper(path[mplen:])
 
-        return encodingupper(path)
+        return encoding.upper(path)
 
     # Cygwin translates native ACLs to POSIX permissions,
     # but these translations are not supported by native

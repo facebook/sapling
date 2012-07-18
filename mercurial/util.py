@@ -24,9 +24,6 @@ if os.name == 'nt':
 else:
     import posix as platform
 
-platform.encodinglower = encoding.lower
-platform.encodingupper = encoding.upper
-
 cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink
