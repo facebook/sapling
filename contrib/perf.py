@@ -177,7 +177,7 @@ def perftemplating(ui, repo):
     ui.popbuffer()
 
 def perfcca(ui, repo):
-    timer(lambda: scmutil.casecollisionauditor(ui, False, repo[None]))
+    timer(lambda: scmutil.casecollisionauditor(ui, False, repo.dirstate))
 
 def perffncacheload(ui, repo):
     from mercurial import scmutil, store
