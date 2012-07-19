@@ -510,6 +510,8 @@ If the extension specifies a buglink, show that:
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: throw
 If the extensions declare outdated versions, accuse the older extension first:
+  $ echo "from mercurial import util" >> older.py
+  $ echo "util.version = lambda:'2.2'" >> older.py
   $ echo "testedwith = '1.9.3'" >> older.py
   $ echo "testedwith = '2.1.1'" >> throw.py
   $ rm -f throw.pyc throw.pyo
