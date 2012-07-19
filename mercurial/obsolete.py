@@ -164,8 +164,7 @@ class obsstore(object):
         self.sopener = sopener
         data = sopener.tryread('obsstore')
         if data:
-            for marker in _readmarkers(data):
-                self._load(marker)
+            self._load(_readmarkers(data))
 
     def __iter__(self):
         return iter(self._all)
@@ -188,11 +187,15 @@ class obsstore(object):
             if len(succ) != 20:
                 raise ValueError(succ)
         marker = (str(prec), tuple(succs), int(flag), encodemeta(metadata))
-        self.add(transaction, marker)
+        self.add(transaction, [marker])
 
-    def add(self, transaction, marker):
-        """Add a new marker to the store"""
-        if marker not in self._all:
+    def add(self, transaction, markers):
+        """Add new markers to the store
+
+        Take care of filtering duplicate.
+        Return the number of new marker."""
+        new = [m for m in markers if m not in self._all]
+        if new:
             f = self.sopener('obsstore', 'ab')
             try:
                 # Whether the file's current position is at the begin or at
@@ -203,51 +206,48 @@ class obsstore(object):
                 f.seek(0, 2) # os.SEEK_END
                 offset = f.tell()
                 transaction.add('obsstore', offset)
-                if offset == 0:
-                    # new file add version header
-                    f.write(_pack('>B', _fmversion))
-                _writemarkers(f.write, [marker])
+                # offset == 0: new file - add the version header
+                for bytes in _encodemarkers(new, offset == 0):
+                    f.write(bytes)
             finally:
                 # XXX: f.close() == filecache invalidation == obsstore rebuilt.
                 # call 'filecacheentry.refresh()'  here
                 f.close()
-            self._load(marker)
+            self._load(new)
+        return len(new)
 
     def mergemarkers(self, transation, data):
-        other = _readmarkers(data)
-        local = set(self._all)
-        new = [m for m in other if m not in local]
-        for marker in new:
-            # XXX: N marker == N x (open, write, close)
-            # we should write them all at once
-            self.add(transation, marker)
+        markers = _readmarkers(data)
+        self.add(transation, markers)
 
-    def _load(self, marker):
-        self._all.append(marker)
-        pre, sucs = marker[:2]
-        self.precursors.setdefault(pre, set()).add(marker)
-        for suc in sucs:
-            self.successors.setdefault(suc, set()).add(marker)
+    def _load(self, markers):
+        for mark in markers:
+            self._all.append(mark)
+            pre, sucs = mark[:2]
+            self.precursors.setdefault(pre, set()).add(mark)
+            for suc in sucs:
+                self.successors.setdefault(suc, set()).add(mark)
 
-def _writemarkers(write, markers):
+def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for
     # markers exchange.
+    if addheader:
+        yield _pack('>B', _fmversion)
     for marker in markers:
         pre, sucs, flags, metadata = marker
         nbsuc = len(sucs)
         format = _fmfixed + (_fmnode * nbsuc)
         data = [nbsuc, len(metadata), flags, pre]
         data.extend(sucs)
-        write(_pack(format, *data))
-        write(metadata)
+        yield _pack(format, *data)
+        yield metadata
 
 def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    data = [_pack('>B', _fmversion)]
-    _writemarkers(data.append, repo.obsstore)
-    return {'dump': base85.b85encode(''.join(data))}
+    markers = _encodemarkers(repo.obsstore, True)
+    return {'dump': base85.b85encode(''.join(markers))}
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
