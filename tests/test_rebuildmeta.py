@@ -34,6 +34,8 @@ def _do_case(self, name, stupid, single):
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
     src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
+    src = getattr(src, 'local', lambda: src)()
+    dest = getattr(dest, 'local', lambda: dest)()
 
     # insert a wrapper that prevents calling changectx.children()
     def failfn(orig, ctx):
@@ -59,6 +61,8 @@ def _do_case(self, name, stupid, single):
                                   wc3_path,
                                   update=False,
                                   rev=[0])
+    srcrepo = getattr(src, 'local', lambda: src)()
+    dest = getattr(dest, 'local', lambda: dest)()
 
     # insert a wrapper that prevents calling changectx.children()
     extensions.wrapfunction(context.changectx, 'children', failfn)
@@ -83,7 +87,7 @@ def _do_case(self, name, stupid, single):
         # remove the wrapper
         context.changectx.children = origchildren
 
-    self._run_assertions(name, stupid, single, src, dest, u)
+    self._run_assertions(name, stupid, single, srcrepo, dest, u)
 
 
 def _run_assertions(self, name, stupid, single, src, dest, u):

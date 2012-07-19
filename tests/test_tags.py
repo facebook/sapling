@@ -112,6 +112,7 @@ rename a tag
             "You should check that before assuming issues with this test.\n")
         wc2_path = self.wc_path + '2'
         src, dest = test_util.hgclone(repo.ui, self.wc_path, wc2_path, update=False)
+        dest = getattr(dest, 'local', lambda: dest)()
         svncommands.rebuildmeta(repo.ui,
                                dest,
                                args=[test_util.fileurl(repo_path), ])
