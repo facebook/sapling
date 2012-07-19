@@ -370,6 +370,25 @@ accident.
   removing normal3
   adding normaladdremove
 
+Test addremove with -R
+
+  $ hg up -C
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  $ rm normal3
+  $ rm sub/large4
+  $ echo "testing addremove with patterns" > testaddremove.dat
+  $ echo "normaladdremove" > normaladdremove
+  $ cd ..
+  $ hg -R a addremove
+  removing sub/large4
+  adding a/.hglf/testaddremove.dat as a largefile (glob)
+  adding a/testaddremove.dat as a largefile (glob)
+  removing normal3
+  adding normaladdremove
+  $ cd a
+
 Clone a largefiles repo.
 
   $ hg clone . ../b

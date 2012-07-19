@@ -1001,8 +1001,9 @@ def overrideaddremove(orig, ui, repo, *pats, **opts):
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
     if missing:
+        m = [repo.wjoin(f) for f in missing]
         repo._isaddremove = True
-        removelargefiles(ui, repo, *missing, **opts)
+        removelargefiles(ui, repo, *m, **opts)
         repo._isaddremove = False
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
