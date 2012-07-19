@@ -225,8 +225,9 @@ def _runcatch(req):
                 break
             if compare not in testedwith.split() and testedwith != 'internal':
                 tested = [tuplever(v) for v in testedwith.split()]
-                nearest = max([t for t in tested if t < ct])
-                if nearest < worst[1]:
+                lower = [t for t in tested if t < ct]
+                nearest = max(lower or tested)
+                if worst[0] is None or nearest < worst[1]:
                     worst = name, nearest, report
         if worst[0] is not None:
             name, testedwith, report = worst

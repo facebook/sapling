@@ -522,7 +522,31 @@ If the extensions declare outdated versions, accuse the older extension first:
   ** Please disable older and try your action again.
   ** If that fixes the bug please report it to the extension author.
   ** Python * (glob)
-  ** Mercurial Distributed SCM (*) (glob)
+  ** Mercurial Distributed SCM (version 2.2)
+  ** Extensions loaded: throw, older
+One extension only tested with older, one only with newer versions:
+  $ echo "util.version = lambda:'2.1.0'" >> older.py
+  $ rm -f older.pyc older.pyo
+  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
+  >   throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension older
+  ** which supports versions 1.9.3 of Mercurial.
+  ** Please disable older and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (version 2.1.0)
+  ** Extensions loaded: throw, older
+Older extension is tested with current version, the other only with newer:
+  $ echo "util.version = lambda:'1.9.3'" >> older.py
+  $ rm -f older.pyc older.pyo
+  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
+  >   throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension throw
+  ** which supports versions 2.1.1 of Mercurial.
+  ** Please disable throw and try your action again.
+  ** If that fixes the bug please report it to http://example.com/bts
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (version 1.9.3)
   ** Extensions loaded: throw, older
 
 Declare the version as supporting this hg version, show regular bts link:
