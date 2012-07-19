@@ -440,6 +440,55 @@ hmm.. no precommit invoked, but there is a postcommit??
   C sub2/large6
   C sub2/large7
   $ hg st
+
+Test 3507 (both normal files and largefiles were a problem)
+
+  $ touch normal
+  $ touch large
+  $ hg add normal
+  $ hg add --large large
+  $ hg ci -m "added"
+  Invoking status precommit hook
+  A large
+  A normal
+  Invoking status postcommit hook
+  C large
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ hg remove normal
+  $ hg addremove --traceback
+  $ hg ci -m "addremoved normal"
+  Invoking status precommit hook
+  R normal
+  Invoking status postcommit hook
+  C large
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ hg up -C '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  0 largefiles updated, 0 removed
+  $ hg remove large
+  $ hg addremove --traceback
+  $ hg ci -m "removed large"
+  Invoking status precommit hook
+  R large
+  created new head
+  Invoking status postcommit hook
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+
   $ cd ../a
 
 Clone a largefiles repo.
