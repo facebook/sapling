@@ -389,6 +389,59 @@ Test addremove with -R
   adding normaladdremove
   $ cd a
 
+Test 3364
+  $ hg clone . ../addrm
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  $ cd ../addrm
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > post-commit.stat=sh -c "echo \"Invoking status postcommit hook\"; hg status -A"
+  > EOF
+  $ touch foo
+  $ hg add --large foo
+  $ hg ci -m "add foo"
+  Invoking status precommit hook
+  A foo
+  Invoking status postcommit hook
+  C foo
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ rm foo
+  $ hg st
+  ! foo
+hmm.. no precommit invoked, but there is a postcommit??
+  $ hg ci -m "will not checkin"
+  nothing changed
+  Invoking status postcommit hook
+  ! foo
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  [1]
+  $ hg addremove
+  removing foo
+  $ hg st
+  R foo
+  $ hg ci -m "used to say nothing changed"
+  Invoking status precommit hook
+  R foo
+  Invoking status postcommit hook
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ hg st
+  $ cd ../a
+
 Clone a largefiles repo.
 
   $ hg clone . ../b

@@ -338,15 +338,18 @@ def reposetup(ui, repo):
                                     lfutil.updatestandin(self,
                                         lfutil.standin(lfile))
                                     lfdirstate.normal(lfile)
-                    for lfile in lfdirstate:
-                        if lfile in modifiedfiles:
-                            if (not os.path.exists(repo.wjoin(
-                               lfutil.standin(lfile)))) or \
-                               (not os.path.exists(repo.wjoin(lfile))):
-                                lfdirstate.drop(lfile)
 
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
+
+                    if result is not None:
+                        for lfile in lfdirstate:
+                            if lfile in modifiedfiles:
+                                if (not os.path.exists(repo.wjoin(
+                                   lfutil.standin(lfile)))) or \
+                                   (not os.path.exists(repo.wjoin(lfile))):
+                                    lfdirstate.drop(lfile)
+
                     # This needs to be after commit; otherwise precommit hooks
                     # get the wrong status
                     lfdirstate.write()
