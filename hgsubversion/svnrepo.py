@@ -132,6 +132,9 @@ class svnremoterepo(peerrepository):
         else:
             self.password_stores = None
 
+    def _capabilities(self):
+        return self.capabilities
+
     @propertycache
     def svnauth(self):
         # DO NOT default the user to hg's getuser(). If you provide
