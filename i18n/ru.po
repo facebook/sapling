@@ -14211,7 +14211,7 @@ msgstr ""
 
 #, python-format
 msgid "parent: %d:%s "
-msgstr "родитель: %d:%s"
+msgstr "родитель: %d:%s "
 
 msgid " (empty repository)"
 msgstr " (пустое хранилище)"
