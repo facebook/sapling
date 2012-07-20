@@ -5,13 +5,13 @@ except ImportError:
     from mercurial.repo import RepoError
 
 try:
-    from mercurial.peer import PeerRepository
+    from mercurial.peer import peerrepository
 except ImportError:
-    from mercurial.repo import Repository as PeerRepository
+    from mercurial.repo import Repository as peerrepository
 
 from git_handler import GitHandler
 
-class gitrepo(PeerRepository):
+class gitrepo(peerrepository):
     capabilities = ['lookup']
 
     def __init__(self, ui, path, create):
