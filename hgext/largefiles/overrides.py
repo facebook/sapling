@@ -1075,8 +1075,8 @@ def overridetransplant(orig, ui, repo, *revs, **opts):
     return result
 
 def overridecat(orig, ui, repo, file1, *pats, **opts):
-    rev = opts.get('rev')
-    if not lfutil.standin(file1) in repo[rev]:
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
+    if not lfutil.standin(file1) in ctx:
         result = orig(ui, repo, file1, *pats, **opts)
         return result
-    return lfcommands.catlfile(repo, file1, opts.get('rev'), opts.get('output'))
+    return lfcommands.catlfile(repo, file1, ctx.rev(), opts.get('output'))

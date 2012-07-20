@@ -1032,6 +1032,10 @@ Cat a largefile
   $ rm cat.out
   $ hg cat -r a381d2c8c80e normal3
   normal3-modified
+  $ hg cat -r '.^' normal3
+  normal3-modified
+  $ hg cat -r '.^' sub/large4
+  large4-modified
 
 Test that renaming a largefile results in correct output for status
 
