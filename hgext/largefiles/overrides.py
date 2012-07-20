@@ -81,7 +81,7 @@ def addlargefiles(ui, repo, *pats, **opts):
                 ui.warn(_('%s already a largefile\n') % f)
             continue
 
-        if exact or not exists:
+        if (exact or not exists) and not lfutil.isstandin(f):
             wfile = repo.wjoin(f)
 
             # In case the file was removed previously, but not committed

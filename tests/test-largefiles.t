@@ -383,7 +383,6 @@ Test addremove with -R
   $ cd ..
   $ hg -R a addremove
   removing sub/large4
-  adding a/.hglf/testaddremove.dat as a largefile (glob)
   adding a/testaddremove.dat as a largefile (glob)
   removing normal3
   adding normaladdremove
@@ -488,6 +487,26 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub/normal4
   C sub2/large6
   C sub2/large7
+
+Test that a standin can't be added as a large file
+
+  $ touch large
+  $ hg add --large large
+  $ hg ci -m "add"
+  Invoking status precommit hook
+  A large
+  Invoking status postcommit hook
+  C large
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ hg remove large
+  $ touch large
+  $ hg addremove --config largefiles.patterns=**large --traceback
+  adding large as a largefile
 
   $ cd ../a
 
