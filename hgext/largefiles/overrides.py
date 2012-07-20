@@ -932,7 +932,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
-        revs = [repo.lookup(rev) for rev in revs]
+        revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
 
     remoteui = hg.remoteui
 

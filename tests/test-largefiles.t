@@ -545,8 +545,8 @@ Test that a standin can't be added as a large file
   $ hg addremove --config largefiles.patterns=**large --traceback
   adding large as a largefile
 
-Test that outgoing --large works
-  $ hg outgoing --rev 12 --large
+Test that outgoing --large works (with revsets too)
+  $ hg outgoing --rev '.^' --large
   comparing with $TESTTMP/a (glob)
   searching for changes
   changeset:   8:c02fd3b77ec4
