@@ -567,7 +567,7 @@ def overriderevert(orig, ui, repo, *pats, **opts):
                 os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
-            ctx = repo[opts.get('rev')]
+            ctx = scmutil.revsingle(repo, opts.get('rev'))
             oldmatch = None # for the closure
             def overridematch(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
