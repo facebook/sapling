@@ -92,6 +92,8 @@ import lfcommands
 import reposetup
 import uisetup
 
+testedwith = 'internal'
+
 reposetup = reposetup.reposetup
 uisetup = uisetup.uisetup
 
