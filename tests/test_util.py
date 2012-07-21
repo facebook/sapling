@@ -161,11 +161,8 @@ def testui(stupid=False, layout='auto', startrev=0):
     return u
 
 def dispatch(cmd):
-    try:
-        req = dispatchmod.request(cmd)
-        dispatchmod.dispatch(req)
-    except AttributeError, e:
-        dispatchmod.dispatch(cmd)
+    cmd = getattr(dispatchmod, 'request', lambda x: x)(cmd)
+    dispatchmod.dispatch(cmd)
 
 def rmtree(path):
     # Read-only files cannot be removed under Windows

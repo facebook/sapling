@@ -65,13 +65,26 @@ def parents(orig, ui, repo, *args, **opts):
     return 0
 
 
+def getpeer(ui, opts, source):
+    # Since 2.3 (1ac628cd7113)
+    peer = getattr(hg, 'peer', None)
+    if peer:
+        return peer(ui, opts, source)
+    return hg.repository(ui, source)
+
+
+def getcaps(other):
+    return (getattr(other, 'caps', None) or
+            getattr(other, 'capabilities', None) or set())
+
+
 def incoming(orig, ui, repo, origsource='default', **opts):
     """show incoming revisions from Subversion
     """
 
     source, revs, checkout = util.parseurl(ui.expandpath(origsource))
-    other = hg.repository(ui, source)
-    if 'subversion' not in other.capabilities:
+    other = getpeer(ui, opts, source)
+    if 'subversion' not in getcaps(other):
         return orig(ui, repo, origsource, **opts)
 
     svn = other.svn
@@ -235,7 +248,8 @@ def push(repo, dest, force, revs):
                    svnsourcerev=needs_transplant)
             # Reload the repo after the rebase. Do not reuse contexts across this.
             newtip = newtipctx.node()
-            repo = hg.repository(ui, meta.path)
+            repo = getpeer(ui, {}, meta.path)
+            repo = getattr(repo, 'local', lambda: repo)()
             newtipctx = repo[newtip]
             # Rewrite the node ids in outgoing to their rebased versions.
             rebasemap = dict()
@@ -490,7 +504,7 @@ def clone(orig, ui, source, dest=None, **opts):
         if isinstance(origsource, str):
             source, branch, checkout = util.parseurl(ui.expandpath(origsource),
                                          opts.get('branch'))
-            srcrepo = hg.repository(ui, source)
+            srcrepo = getpeer(ui, opts, source)
         else:
             srcrepo = origsource
 
@@ -522,7 +536,8 @@ def clone(orig, ui, source, dest=None, **opts):
     srcrepo = data.get('srcrepo')
 
     if dstrepo.local() and srcrepo.capable('subversion'):
-        fd = dstrepo.opener("hgrc", "a", text=True)
+        dst = dstrepo.local()
+        fd = dst.opener("hgrc", "a", text=True)
         for section in set(s for s, v in optionmap.itervalues()):
             config = dict(ui.configitems(section))
             for name in dontretain[section]:
