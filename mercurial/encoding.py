@@ -168,8 +168,9 @@ def getcols(s, start, c):
 def lower(s):
     "best-effort encoding-aware case-folding of local string s"
     try:
-        return s.encode('ascii').lower()
-    except UnicodeError:
+        s.decode('ascii') # throw exception for non-ASCII character
+        return s.lower()
+    except UnicodeDecodeError:
         pass
     try:
         if isinstance(s, localstr):
