@@ -816,6 +816,8 @@ class atomictempfile(object):
 
         # delegated methods
         self.write = self._fp.write
+        self.seek = self._fp.seek
+        self.tell = self._fp.tell
         self.fileno = self._fp.fileno
 
     def close(self):
