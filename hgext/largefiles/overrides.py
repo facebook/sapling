@@ -515,14 +515,16 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                     dest.startswith(repo.wjoin(lfutil.shortname))):
                     srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
                     destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
-                    destlfiledir = os.path.dirname(destlfile) or '.'
+                    destlfiledir = os.path.dirname(repo.wjoin(destlfile)) or '.'
                     if not os.path.isdir(destlfiledir):
                         os.makedirs(destlfiledir)
                     if rename:
                         os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
                         lfdirstate.remove(srclfile)
                     else:
-                        util.copyfile(srclfile, destlfile)
+                        util.copyfile(repo.wjoin(srclfile),
+                                      repo.wjoin(destlfile))
+
                     lfdirstate.add(destlfile)
             lfdirstate.write()
         except util.Abort, e:

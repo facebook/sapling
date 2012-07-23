@@ -141,6 +141,43 @@ Test moving largefiles and verify that normal files are also unaffected.
   $ cat sub/large4
   large22
 
+Test copies and moves from a directory other than root (issue3516)
+
+  $ cd ..
+  $ hg init lf_cpmv
+  $ cd lf_cpmv
+  $ mkdir dira
+  $ mkdir dira/dirb
+  $ touch dira/dirb/largefile
+  $ hg add --large dira/dirb/largefile
+  $ hg commit -m "added"
+  Invoking status precommit hook
+  A dira/dirb/largefile
+  $ cd dira
+  $ hg cp dirb/largefile foo/largefile
+  $ hg ci -m "deep copy"
+  Invoking status precommit hook
+  A dira/foo/largefile
+  $ find . | sort
+  .
+  ./dirb
+  ./dirb/largefile
+  ./foo
+  ./foo/largefile
+  $ hg mv foo/largefile baz/largefile
+  $ hg ci -m "moved"
+  Invoking status precommit hook
+  A dira/baz/largefile
+  R dira/foo/largefile
+  $ find . | sort
+  .
+  ./baz
+  ./baz/largefile
+  ./dirb
+  ./dirb/largefile
+  ./foo
+  $ cd ../../a
+
 #if hgweb
 Test display of largefiles in hgweb
 
