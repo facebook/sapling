@@ -14,6 +14,16 @@
   >    hg id --debug -ir "desc('$1')"
   > }
 
+  $ cat > debugkeys.py <<EOF
+  > def reposetup(ui, repo):
+  >     class debugkeysrepo(repo.__class__):
+  >         def listkeys(self, namespace):
+  >             ui.write('listkeys %s\n' % (namespace,))
+  >             return super(debugkeysrepo, self).listkeys(namespace)
+  > 
+  >     if repo.local():
+  >         repo.__class__ = debugkeysrepo
+  > EOF
 
   $ hg init tmpa
   $ cd tmpa
@@ -177,6 +187,16 @@ Try to pull markers
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+Check obsolete keys are exchanged only if source has an obsolete store
+
+  $ hg init empty
+  $ hg --config extensions.debugkeys=debugkeys.py -R empty push tmpd
+  pushing to tmpd
+  no changes found
+  listkeys phases
+  listkeys bookmarks
+  [1]
 
 clone support
 (markers are copied and extinct changesets are included to allow hardlinks)
