@@ -138,7 +138,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     repository from "default" to a named branch.
 
     Mercurial Source
-    ''''''''''''''''
+    ################
 
     The Mercurial source recognizes the following configuration
     options, which you can set on the command line with ``--config``:
@@ -155,7 +155,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         It takes a hg revision identifier and defaults to 0.
 
     CVS Source
-    ''''''''''
+    ##########
 
     CVS source will use a sandbox (i.e. a checked-out copy) from CVS
     to indicate the starting point of what will be converted. Direct
@@ -207,7 +207,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     the command help for more details.
 
     Subversion Source
-    '''''''''''''''''
+    #################
 
     Subversion source detects classical trunk/branches/tags layouts.
     By default, the supplied ``svn://repo/path/`` source URL is
@@ -239,7 +239,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         The default is 0.
 
     Perforce Source
-    '''''''''''''''
+    ###############
 
     The Perforce (P4) importer can be given a p4 depot path or a
     client specification as source. It will convert all files in the
@@ -255,7 +255,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         Perforce changelist number).
 
     Mercurial Destination
-    '''''''''''''''''''''
+    #####################
 
     The following options are supported:
 

@@ -18,16 +18,16 @@ Mercurial source code management system
 
 
 Synopsis
---------
+""""""""
 **hg** *command* [*option*]... [*argument*]...
 
 Description
------------
+"""""""""""
 The **hg** command provides a command line interface to the Mercurial
 system.
 
 Command Elements
-----------------
+""""""""""""""""
 
 files...
     indicates one or more filename or relative path filenames; see
@@ -48,7 +48,7 @@ repository path
 .. include:: hg.1.gendoc.txt
 
 Files
------
+"""""
 
 ``/etc/mercurial/hgrc``, ``$HOME/.hgrc``, ``.hg/hgrc``
     This file contains defaults and configuration. Values in
@@ -90,20 +90,20 @@ if the ``.orig`` file already exists and is not tracked by Mercurial,
 it will be overwritten.
 
 Bugs
-----
+""""
 Probably lots, please post them to the mailing list (see Resources_
 below) when you find them.
 
 See Also
---------
+""""""""
 |hgignore(5)|_, |hgrc(5)|_
 
 Author
-------
+""""""
 Written by Matt Mackall <mpm@selenic.com>
 
 Resources
----------
+"""""""""
 Main Web Site: http://mercurial.selenic.com/
 
 Source code repository: http://selenic.com/hg
@@ -111,7 +111,7 @@ Source code repository: http://selenic.com/hg
 Mailing list: http://selenic.com/mailman/listinfo/mercurial
 
 Copying
--------
+"""""""
 Copyright (C) 2005-2012 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General
 Public License version 2 or any later version.

@@ -1,5 +1,5 @@
 What are phases?
-----------------
+================
 
 Phases are a system for tracking which changesets have been or should
 be shared. This helps prevent common mistakes when modifying history
@@ -17,7 +17,7 @@ changeset is public, all its ancestors are also public. Lastly,
 changeset phases should only be changed towards the public phase.
 
 How are phases managed?
------------------------
+=======================
 
 For the most part, phases should work transparently. By default, a
 changeset is created in the draft phase and is moved into the public
@@ -29,7 +29,7 @@ Phases can also be manually manipulated with the :hg:`phase` command
 if needed. See :hg:`help -v phase` for examples.
 
 Phases and servers
-------------------
+==================
 
 Normally, all servers are ``publishing`` by default. This means::
 
@@ -59,7 +59,7 @@ See :hg:`help config` for more information on config files.
   publishing.
 
 Examples
---------
+========
 
  - list changesets in draft or secret phase::
 

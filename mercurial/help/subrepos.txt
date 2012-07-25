@@ -43,7 +43,7 @@ Subrepositories are made of three components:
 
 
 Adding a Subrepository
-----------------------
+======================
 
 If ``.hgsub`` does not exist, create it and add it to the parent
 repository. Clone or checkout the external projects where you want it
@@ -53,7 +53,7 @@ subrepository is tracked and the next commit will record its state in
 ``.hgsubstate`` and bind it to the committed changeset.
 
 Synchronizing a Subrepository
------------------------------
+=============================
 
 Subrepos do not automatically track the latest changeset of their
 sources. Instead, they are updated to the changeset that corresponds
@@ -66,13 +66,13 @@ subrepo at the desired revision, test in the top-level repo, then
 commit in the parent repository to record the new combination.
 
 Deleting a Subrepository
-------------------------
+========================
 
 To remove a subrepository from the parent repository, delete its
 reference from ``.hgsub``, then remove its files.
 
 Interaction with Mercurial Commands
------------------------------------
+===================================
 
 :add: add does not recurse in subrepos unless -S/--subrepos is
     specified.  However, if you specify the full path of a file in a
@@ -132,7 +132,7 @@ Interaction with Mercurial Commands
     can require network access when using subrepositories.
 
 Remapping Subrepositories Sources
----------------------------------
+=================================
 
 A subrepository source location may change during a project life,
 invalidating references stored in the parent repository history. To

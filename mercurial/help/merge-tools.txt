@@ -17,7 +17,7 @@ conflict markers. Mercurial does not include any interactive merge
 programs but relies on external tools for that.
 
 Available merge tools
-"""""""""""""""""""""
+=====================
 
 External merge tools and their properties are configured in the
 merge-tools configuration section - see hgrc(5) - but they can often just
@@ -40,7 +40,7 @@ Internal tools are always available and do not require a GUI but will by default
 not handle symlinks or binary files.
 
 Choosing a merge tool
-"""""""""""""""""""""
+=====================
 
 Mercurial uses these rules when deciding which merge tool to use:
 
