@@ -1050,7 +1050,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 portable=True)
         cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
-        scmutil.nochangesfound(ui, outgoing and outgoing.excluded)
+        scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
 
     changegroup.writebundle(cg, fname, bundletype)

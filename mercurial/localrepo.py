@@ -1844,7 +1844,7 @@ class localrepository(object):
 
                 if not outgoing.missing:
                     # nothing to push
-                    scmutil.nochangesfound(self.ui, outgoing.excluded)
+                    scmutil.nochangesfound(self.ui, self, outgoing.excluded)
                     ret = None
                 else:
                     # something to push

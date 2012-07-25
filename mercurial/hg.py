@@ -525,7 +525,7 @@ def _outgoing(ui, repo, dest, opts):
                                             force=opts.get('force'))
     o = outgoing.missing
     if not o:
-        scmutil.nochangesfound(repo.ui, outgoing.excluded)
+        scmutil.nochangesfound(repo.ui, repo, outgoing.excluded)
         return None
     return o
 

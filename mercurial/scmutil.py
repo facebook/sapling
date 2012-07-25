@@ -6,12 +6,21 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error, osutil, revset, similar, encoding
+import util, error, osutil, revset, similar, encoding, phases
 import match as matchmod
 import os, errno, re, stat, sys, glob
 
-def nochangesfound(ui, secretlist=None):
-    '''report no changes for push/pull'''
+def nochangesfound(ui, repo, excluded=None):
+    '''Report no changes for push/pull, excluded is None or a list of
+    nodes excluded from the push/pull.
+    '''
+    secretlist = []
+    if excluded:
+        for n in excluded:
+            ctx = repo[n]
+            if ctx.phase() >= phases.secret and not ctx.extinct():
+                secretlist.append(n)
+
     if secretlist:
         ui.status(_("no changes found (ignored %d secret changesets)\n")
                   % len(secretlist))

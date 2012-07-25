@@ -116,7 +116,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         # use visible heads as it should be cached
         og.missingheads = visibleheads(repo)
         # extinct changesets are silently ignored
-        og.excluded = [ctx.node() for ctx in repo.set('secret()')]
+        og.excluded = [ctx.node() for ctx in repo.set('secret() or extinct()')]
     else:
         # compute common, missing and exclude secret stuff
         sets = repo.changelog.findcommonmissing(og.commonheads, onlyheads)
@@ -125,12 +125,10 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
         og.excluded = excluded = []
         for node in allmissing:
             ctx = repo[node]
-            if not ctx.extinct():
-                # extinct changesets are silently ignored
-                if ctx.phase() >= phases.secret:
-                    excluded.append(node)
-                else:
-                    missing.append(node)
+            if ctx.phase() >= phases.secret or ctx.extinct():
+                excluded.append(node)
+            else:
+                missing.append(node)
         if len(missing) == len(allmissing):
             missingheads = onlyheads
         else: # update missing heads
