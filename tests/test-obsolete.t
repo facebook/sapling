@@ -178,6 +178,53 @@ Try to pull markers
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
 
+clone support
+(markers are copied and extinct changesets are included to allow hardlinks)
+
+  $ hg clone tmpb clone-dest
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone-dest log -G --hidden
+  @  changeset:   5:5601fb93a350
+  |  tag:         tip
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add new_3_c
+  |
+  | x  changeset:   4:ca819180edb9
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_2_c
+  |
+  | x  changeset:   3:cdbce2fbb163
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_c
+  |
+  | o  changeset:   2:245bde4270cd
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add original_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+  $ hg -R clone-dest debugobsolete
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
 
 Destination repo have existing data
 ---------------------------------------
