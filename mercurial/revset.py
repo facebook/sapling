@@ -646,6 +646,10 @@ def extra(repo, subset, x):
 def filelog(repo, subset, x):
     """``filelog(pattern)``
     Changesets connected to the specified filelog.
+
+    If you want to get all changesets affecting matched files exactly,
+    use ``file()`` predicate, because ``filelog()`` may omit some changesets
+    for performance reasons: see :hg:`help log` for detail.
     """
 
     pat = getstring(x, _("filelog requires a pattern"))
@@ -794,6 +798,9 @@ def _matchfiles(repo, subset, x):
 def hasfile(repo, subset, x):
     """``file(pattern)``
     Changesets affecting files matched by pattern.
+
+    If you want to pick changesets up fast, consider to
+    use ``filelog()`` predicate, too.
     """
     # i18n: "file" is a keyword
     pat = getstring(x, _("file requires a pattern"))
