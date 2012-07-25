@@ -430,19 +430,26 @@ def histedit(ui, repo, *parent, **opts):
          tmpnodes, existing, rules, keep, tip, replacemap) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
-        # discover any nodes the user has added in the interim
-        newchildren = [c for c in parentctx.children()
-                       if c.node() not in existing]
+        # existing is the list of revisions initially considered by
+        # histedit. Here we use it to list new changesets, descendants
+        # of parentctx without an 'existing' changeset in-between. We
+        # also have to exclude 'existing' changesets which were
+        # previously dropped.
+        descendants = set(c.node() for c in
+                repo.set('(%n::) - %n', parentctxnode, parentctxnode))
+        existing = set(existing)
+        notdropped = set(n for n in existing if n in descendants and
+                (n not in replacemap or replacemap[n] in descendants))
+        # Discover any nodes the user has added in the interim. We can
+        # miss changesets which were dropped and recreated the same.
+        newchildren = list(c.node() for c in repo.set(
+            'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
         action, currentnode = rules.pop(0)
-        while newchildren:
-            if action in ('f', 'fold'):
-                tmpnodes.extend([n.node() for n in newchildren])
-            else:
-                created.extend([n.node() for n in newchildren])
-            filtered = []
-            for r in newchildren:
-                filtered += [c for c in r.children() if c.node not in existing]
-            newchildren = filtered
+        if action in ('f', 'fold'):
+            tmpnodes.extend(newchildren)
+        else:
+            created.extend(newchildren)
+
         m, a, r, d = repo.status()[:4]
         oldctx = repo[currentnode]
         message = oldctx.description()
