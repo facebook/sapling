@@ -91,6 +91,7 @@ fix up
   does not commute with e
   
   
+  
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   file e already exists
   1 out of 1 hunks FAILED -- saving rejects to file e.rej

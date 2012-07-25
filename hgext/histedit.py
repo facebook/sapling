@@ -310,7 +310,7 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     newmessage = '\n***\n'.join(
         [ctx.description()] +
         [repo[r].description() for r in internalchanges] +
-        [oldctx.description()])
+        [oldctx.description()]) + '\n'
     # If the changesets are from the same author, keep it.
     if ctx.user() == oldctx.user():
         username = ctx.user()
