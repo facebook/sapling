@@ -455,15 +455,16 @@ static file
   }
   
   .delete {
-      background-color: #ffc5ce;
+      background-color: #faa;
+      color: #333;
   }
   
   .insert {
-      background-color: #c5ffc4;
+      background-color: #ffa;
   }
   
   .replace {
-      background-color: #ffff99;
+      background-color: #e8e8e8;
   }
   
   .comparison {
