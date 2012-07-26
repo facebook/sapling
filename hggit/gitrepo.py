@@ -14,6 +14,9 @@ from git_handler import GitHandler
 class gitrepo(peerrepository):
     capabilities = ['lookup']
 
+    def _capabilities(self):
+        return self.capabilities
+
     def __init__(self, ui, path, create):
         if create: # pragma: no cover
             raise util.Abort('Cannot create a git repository.')
