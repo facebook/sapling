@@ -14,6 +14,11 @@ class overlaymanifest(object):
         self._map = None
         self._flagmap = None
 
+    def withflags(self):
+        self.load()
+        return set([path for path, flag in self._flagmap.iteritems()
+                    if flag & 020100])
+
     def copy(self):
         return overlaymanifest(self.repo, self.tree.id)
 
