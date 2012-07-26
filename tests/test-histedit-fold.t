@@ -208,7 +208,7 @@ dropped revision.
   |
   o  0:0189ba417d34 1+2+3
   
-  $ EDITED=`pwd`/../editcommands
+  $ EDITED="$TESTTMP/editcommands"
   $ cat > $EDITED <<EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
