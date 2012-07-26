@@ -1020,26 +1020,25 @@ class svn_sink(converter_sink, commandline):
         self.wc = None
         self.cwd = os.getcwd()
 
-        path = os.path.realpath(path)
-
         created = False
         if os.path.isfile(os.path.join(path, '.svn', 'entries')):
-            self.wc = path
+            self.wc = os.path.realpath(path)
             self.run0('update')
         else:
+            if not re.search(r'^(file|http|https|svn|svn\+ssh)\://', path):
+                path = os.path.realpath(path)
+                if os.path.isdir(os.path.dirname(path)):
+                    if not os.path.exists(os.path.join(path, 'db', 'fs-type')):
+                        ui.status(_('initializing svn repository %r\n') %
+                                  os.path.basename(path))
+                        commandline(ui, 'svnadmin').run0('create', path)
+                        created = path
+                    path = util.normpath(path)
+                    if not path.startswith('/'):
+                        path = '/' + path
+                    path = 'file://' + path
+
             wcpath = os.path.join(os.getcwd(), os.path.basename(path) + '-wc')
-
-            if os.path.isdir(os.path.dirname(path)):
-                if not os.path.exists(os.path.join(path, 'db', 'fs-type')):
-                    ui.status(_('initializing svn repository %r\n') %
-                              os.path.basename(path))
-                    commandline(ui, 'svnadmin').run0('create', path)
-                    created = path
-                path = util.normpath(path)
-                if not path.startswith('/'):
-                    path = '/' + path
-                path = 'file://' + path
-
             ui.status(_('initializing svn working copy %r\n')
                       % os.path.basename(wcpath))
             self.run0('checkout', path, wcpath)
