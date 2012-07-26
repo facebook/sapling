@@ -342,6 +342,7 @@ def bisect(repo, subset, x):
     - ``ignored``            : csets ignored due to DAG topology
     - ``current``            : the cset currently being bisected
     """
+    # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
     return [r for r in subset if r in state]
@@ -509,10 +510,11 @@ def converted(repo, subset, x):
     # There is exactly no chance of resolving the revision, so do a simple
     # string compare and hope for the best
 
-    # i18n: "converted" is a keyword
     rev = None
+    # i18n: "converted" is a keyword
     l = getargs(x, 0, 1, _('converted takes one or no arguments'))
     if l:
+        # i18n: "converted" is a keyword
         rev = getstring(l[0], _('converted requires a revision'))
 
     def _matchvalue(r):
@@ -608,6 +610,7 @@ def destination(repo, subset, x):
 def draft(repo, subset, x):
     """``draft()``
     Changeset in draft phase."""
+    # i18n: "draft" is a keyword
     getargs(x, 0, 0, _("draft takes no arguments"))
     pc = repo._phasecache
     return [r for r in subset if pc.phase(repo, r) == phases.draft]
@@ -615,6 +618,7 @@ def draft(repo, subset, x):
 def extinct(repo, subset, x):
     """``extinct()``
     obsolete changeset with obsolete descendant only."""
+    # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
     extinctset = set(repo.revs('(obsolete()::) - (::(not obsolete()))'))
     return [r for r in subset if r in extinctset]
@@ -629,11 +633,14 @@ def extra(repo, subset, x):
     use the prefix `literal:`.
     """
 
+    # i18n: "extra" is a keyword
     l = getargs(x, 1, 2, _('extra takes at least 1 and at most 2 arguments'))
+    # i18n: "extra" is a keyword
     label = getstring(l[0], _('first argument to extra must be a string'))
     value = None
 
     if len(l) > 1:
+        # i18n: "extra" is a keyword
         value = getstring(l[1], _('second argument to extra must be a string'))
         kind, value, matcher = _stringmatcher(value)
 
@@ -652,6 +659,7 @@ def filelog(repo, subset, x):
     for performance reasons: see :hg:`help log` for detail.
     """
 
+    # i18n: "filelog" is a keyword
     pat = getstring(x, _("filelog requires a pattern"))
     m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath',
                        ctx=repo[None])
@@ -755,6 +763,7 @@ def _matchfiles(repo, subset, x):
     hasset = False
     rev, default = None, None
     for arg in l:
+        # i18n: "_matchfiles" is a keyword
         s = getstring(arg, _("_matchfiles requires string arguments"))
         prefix, value = s[:2], s[2:]
         if prefix == 'p:':
@@ -765,15 +774,18 @@ def _matchfiles(repo, subset, x):
             exc.append(value)
         elif prefix == 'r:':
             if rev is not None:
+                # i18n: "_matchfiles" is a keyword
                 raise error.ParseError(_('_matchfiles expected at most one '
                                          'revision'))
             rev = value
         elif prefix == 'd:':
             if default is not None:
+                # i18n: "_matchfiles" is a keyword
                 raise error.ParseError(_('_matchfiles expected at most one '
                                          'default mode'))
             default = value
         else:
+            # i18n: "_matchfiles" is a keyword
             raise error.ParseError(_('invalid _matchfiles prefix: %s') % prefix)
         if not hasset and matchmod.patkind(value) == 'set':
             hasset = True
@@ -936,6 +948,7 @@ def node_(repo, subset, x):
 def obsolete(repo, subset, x):
     """``obsolete()``
     Mutable changeset with a newer version."""
+    # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
     return [r for r in subset if repo[r].obsolete()]
 
@@ -1078,6 +1091,7 @@ def present(repo, subset, x):
 def public(repo, subset, x):
     """``public()``
     Changeset in public phase."""
+    # i18n: "public" is a keyword
     getargs(x, 0, 0, _("public takes no arguments"))
     pc = repo._phasecache
     return [r for r in subset if pc.phase(repo, r) == phases.public]
@@ -1164,6 +1178,7 @@ def matching(repo, subset, x):
     ``metadata`` is the default field which is used when no fields are
     specified. You can match more than one field at a time.
     """
+    # i18n: "matching" is a keyword
     l = getargs(x, 1, 2, _("matching takes 1 or 2 arguments"))
 
     revs = getset(repo, xrange(len(repo)), l[0])
@@ -1171,6 +1186,7 @@ def matching(repo, subset, x):
     fieldlist = ['metadata']
     if len(l) > 1:
             fieldlist = getstring(l[1],
+                # i18n: "matching" is a keyword
                 _("matching requires a string "
                 "as its second argument")).split()
 
@@ -1228,6 +1244,7 @@ def matching(repo, subset, x):
         getfield = _funcs.get(info, None)
         if getfield is None:
             raise error.ParseError(
+                # i18n: "matching" is a keyword
                 _("unexpected field name passed to matching: %s") % info)
         getfieldfuncs.append(getfield)
     # convert the getfield array of functions into a "getinfo" function
@@ -1270,6 +1287,7 @@ def roots(repo, subset, x):
 def secret(repo, subset, x):
     """``secret()``
     Changeset in secret phase."""
+    # i18n: "secret" is a keyword
     getargs(x, 0, 0, _("secret takes no arguments"))
     pc = repo._phasecache
     return [r for r in subset if pc.phase(repo, r) == phases.secret]
@@ -1291,6 +1309,7 @@ def sort(repo, subset, x):
     l = getargs(x, 1, 2, _("sort requires one or two arguments"))
     keys = "rev"
     if len(l) == 2:
+        # i18n: "sort" is a keyword
         keys = getstring(l[1], _("sort spec must be a string"))
 
     s = l[0]
@@ -1406,6 +1425,7 @@ def tagged(repo, subset, x):
 def unstable(repo, subset, x):
     """``unstable()``
     Unstable changesets are non-obsolete with obsolete descendants."""
+    # i18n: "unstable" is a keyword
     getargs(x, 0, 0, _("unstable takes no arguments"))
     unstableset = set(repo.revs('(obsolete()::) - obsolete()'))
     return [r for r in subset if r in unstableset]
