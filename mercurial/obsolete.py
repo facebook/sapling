@@ -96,7 +96,7 @@ def _readmarkers(data):
         if len(metadata) != mdsize:
             raise util.Abort(_('parsing obsolete marker: metadata is too '
                                'short, %d bytes expected, got %d')
-                             % (len(metadata), mdsize))
+                             % (mdsize, len(metadata)))
         off += mdsize
         yield (pre, sucs, flags, metadata)
 
