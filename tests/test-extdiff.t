@@ -19,6 +19,8 @@ Should diff cloned directories:
   $ echo "[extdiff]" >> $HGRCPATH
   $ echo "cmd.falabala=echo" >> $HGRCPATH
   $ echo "opts.falabala=diffing" >> $HGRCPATH
+  $ echo "cmd.edspace=echo" >> $HGRCPATH
+  $ echo 'opts.edspace="name  <user@example.com>"' >> $HGRCPATH
 
   $ hg falabala
   diffing a.000000000000 a
@@ -166,6 +168,16 @@ Test extdiff with --option:
 
   $ hg falabala -o this -c 1
   diffing this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  [1]
+
+Test extdiff's handling of options with spaces in them:
+
+  $ hg edspace -c 1
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
+  [1]
+
+  $ hg extdiff -p echo -o "name  <user@example.com>" -c 1
+  name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob)
   [1]
 
 Test with revsets:

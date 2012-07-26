@@ -121,7 +121,7 @@ def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
 
     revs = opts.get('rev')
     change = opts.get('change')
-    args = ' '.join(diffopts)
+    args = ' '.join(map(util.shellquote, diffopts))
     do3way = '$parent2' in args
 
     if revs and change:
@@ -280,8 +280,7 @@ def uisetup(ui):
             cmd = cmd[4:]
             if not path:
                 path = cmd
-            diffopts = ui.config('extdiff', 'opts.' + cmd, '')
-            diffopts = diffopts and [diffopts] or []
+            diffopts = shlex.split(ui.config('extdiff', 'opts.' + cmd, ''))
         elif cmd.startswith('opts.'):
             continue
         else:
