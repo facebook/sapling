@@ -615,7 +615,7 @@ def draft(repo, subset, x):
 def extinct(repo, subset, x):
     """``extinct()``
     obsolete changeset with obsolete descendant only."""
-    getargs(x, 0, 0, _("obsolete takes no arguments"))
+    getargs(x, 0, 0, _("extinct takes no arguments"))
     extinctset = set(repo.revs('(obsolete()::) - (::(not obsolete()))'))
     return [r for r in subset if r in extinctset]
 
@@ -1406,7 +1406,7 @@ def tagged(repo, subset, x):
 def unstable(repo, subset, x):
     """``unstable()``
     Unstable changesets are non-obsolete with obsolete descendants."""
-    getargs(x, 0, 0, _("obsolete takes no arguments"))
+    getargs(x, 0, 0, _("unstable takes no arguments"))
     unstableset = set(repo.revs('(obsolete()::) - obsolete()'))
     return [r for r in subset if r in unstableset]
 
