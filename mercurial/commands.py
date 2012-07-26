@@ -1298,10 +1298,20 @@ def commit(ui, repo, *pats, **opts):
                                editor=editor,
                                extra=extra)
 
+        current = repo._bookmarkcurrent
+        marks = old.bookmarks()
         node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1
+        elif marks:
+            ui.debug('moving bookmarks %r from %s to %s\n' %
+                     (marks, old.hex(), hex(node)))
+            for bm in marks:
+                repo._bookmarks[bm] = node
+                if bm == current:
+                    bookmarks.setcurrent(repo, bm)
+            bookmarks.write(repo)
     else:
         e = cmdutil.commiteditor
         if opts.get('force_editor'):

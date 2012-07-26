@@ -111,6 +111,13 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         saverevs.difference_update(descendants)
     savebases = [cl.node(r) for r in saverevs]
     stripbases = [cl.node(r) for r in tostrip]
+    rset = ' or '.join([str(r) for r in tostrip])
+    newbmtarget = repo.revs('sort(heads(ancestors(%r) - (%r)), -rev)',
+                            rset, rset)
+    if newbmtarget:
+        newbmtarget = newbmtarget[0]
+    else:
+        newbmtarget = '.'
 
     bm = repo._bookmarks
     updatebm = []
@@ -174,7 +181,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
                     ui.warn(_('error removing %s: %s\n') % (undofile, str(e)))
 
         for m in updatebm:
-            bm[m] = repo['.'].node()
+            bm[m] = repo[newbmtarget].node()
         bookmarks.write(repo)
     except: # re-raises
         if backupfile:
@@ -192,4 +199,3 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         # Multiple branches involved in strip. Will allow branchcache to become
         # invalid and later on rebuilt from scratch
         repo.destroyed()
-
