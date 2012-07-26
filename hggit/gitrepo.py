@@ -7,7 +7,7 @@ except ImportError:
 try:
     from mercurial.peer import peerrepository
 except ImportError:
-    from mercurial.repo import Repository as peerrepository
+    from mercurial.repo import repository as peerrepository
 
 from git_handler import GitHandler
 
