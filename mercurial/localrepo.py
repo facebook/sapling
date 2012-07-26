@@ -1783,6 +1783,7 @@ class localrepository(object):
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
 
+            self.ui.debug('fetching remote obsolete markers')
             remoteobs = remote.listkeys('obsolete')
             if 'dump' in remoteobs:
                 if tr is None:
@@ -1951,6 +1952,7 @@ class localrepository(object):
                         if not r:
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
+                self.ui.debug('try to push obsolete markers to remote\n')
                 if (self.obsstore and
                     'obsolete' in remote.listkeys('namespaces')):
                     data = self.listkeys('obsolete')['dump']

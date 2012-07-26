@@ -117,7 +117,7 @@ Extension disabled for lack of a hook
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -178,7 +178,7 @@ Extension disabled for lack of acl.sources
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -250,7 +250,7 @@ No [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -742,7 +742,7 @@ barney is allowed everywhere
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1059,7 +1059,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1139,7 +1139,7 @@ fred is always allowed
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1291,7 +1291,7 @@ OS-level groups
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1492,7 +1492,7 @@ No branch acls specified
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1799,7 +1799,7 @@ Branch acl allow other
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -1888,7 +1888,7 @@ push foobar into the remote
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
@@ -2050,7 +2050,7 @@ User 'astro' must not be denied
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
   listing keys for "phases"
-  listing keys for "namespaces"
+  try to push obsolete markers to remote
   updating the branch cache
   checking for updated bookmarks
   listing keys for "bookmarks"
