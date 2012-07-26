@@ -95,7 +95,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     (inclusive) are included. If you already know the local repo's heads,
     passing them in onlyheads is faster than letting them be recomputed here.
 
-    If commoninc is given, it must the the result of a prior call to
+    If commoninc is given, it must be the result of a prior call to
     findcommonincoming(repo, other, force) to avoid recomputing it here.
 
     If portable is given, compute more conservative common and missingheads,

@@ -66,7 +66,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                              (hname, funcname))
     try:
         try:
-            # redirect IO descriptors the the ui descriptors so hooks
+            # redirect IO descriptors to the ui descriptors so hooks
             # that write directly to these don't mess up the command
             # protocol when running through the command server
             old = sys.stdout, sys.stderr, sys.stdin

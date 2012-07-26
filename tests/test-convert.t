@@ -178,8 +178,8 @@
                     or delete them.
       hook.cvschangesets
                     Specify a Python function to be called after the changesets
-                    are calculated from the the CVS log. The function is passed
-                    a list with the changeset entries, and can modify the
+                    are calculated from the CVS log. The function is passed a
+                    list with the changeset entries, and can modify the
                     changesets in-place, or add or delete them.
   
       An additional "debugcvsps" Mercurial command allows the builtin changeset
