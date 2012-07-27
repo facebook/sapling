@@ -112,10 +112,16 @@ leave sub dirty (and check ui.commitsubrepos=no aborts the commit)
   abort: uncommitted changes in subrepo s
   (use --subrepos for recursive commit)
   [255]
+  $ hg id
+  f6affe3fbfaa+ tip
+  $ hg -R s ci -mc
+  $ hg id
+  f6affe3fbfaa+ tip
+  $ echo d > s/a
   $ hg ci -m4
   committing subrepository s
   $ hg tip -R s
-  changeset:   3:1c833a7a9e3a
+  changeset:   4:02dcf1d70411
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -135,7 +141,7 @@ restore
   $ hg debugsub
   path s
    source   s
-   revision 1c833a7a9e3a4445c711aaf0f012379cd0d4034e
+   revision 02dcf1d704118aee3ee306ccfa1910850d5b05ef
 
 new branch for merge tests
 
@@ -741,7 +747,7 @@ Sticky subrepositorys, file changes
   $ hg add -S s/f1
   $ hg add -S t/f1
   $ hg id
-  365661e5936a
+  365661e5936a+
   $ hg -R s id
   fc627a69481f+
   $ hg -R t id  
@@ -785,7 +791,7 @@ Sticky subrepository, revision updates
   $ hg id
   e45c8b14af55+
   $ hg -R s id
-  1c833a7a9e3a
+  02dcf1d70411
   $ hg -R t id  
   7af322bc1198
 
@@ -797,21 +803,21 @@ Sticky subrepository, file changes and revision updates
   $ hg id
   e45c8b14af55+
   $ hg -R s id
-  1c833a7a9e3a+
+  02dcf1d70411+
   $ hg -R t id  
   7af322bc1198+
   $ hg update tip
    subrepository sources for s differ
-  use (l)ocal source (1c833a7a9e3a) or (r)emote source (12a213df6fa9)?
+  use (l)ocal source (02dcf1d70411) or (r)emote source (12a213df6fa9)?
    l
    subrepository sources for t differ
   use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)?
    l
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
-  925c17564ef8 tip
+  925c17564ef8+ tip
   $ hg -R s id
-  1c833a7a9e3a+
+  02dcf1d70411+
   $ hg -R t id  
   7af322bc1198+
 

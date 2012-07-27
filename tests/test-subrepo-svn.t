@@ -313,7 +313,7 @@ Sticky subrepositorys, file changes
   A         f1
   $ cd ..
   $ hg id -n
-  1
+  1+
   $ cd s
   $ svnversion
   2M
@@ -376,7 +376,7 @@ Sticky subrepository, file changes and revision updates
    l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
-  2
+  2+
   $ cd s
   $ svnversion
   1M

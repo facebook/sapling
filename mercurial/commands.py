@@ -3506,7 +3506,9 @@ def identify(ui, repo, source=None, rev=None,
             parents = ctx.parents()
             changed = ""
             if default or id or num:
-                changed = util.any(repo.status()) and "+" or ""
+                if (util.any(repo.status())
+                    or util.any(ctx.sub(s).dirty() for s in ctx.substate)):
+                    changed = '+'
             if default or id:
                 output = ["%s%s" %
                   ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
