@@ -234,24 +234,45 @@ def _encodemarkers(markers, addheader=False):
     if addheader:
         yield _pack('>B', _fmversion)
     for marker in markers:
-        pre, sucs, flags, metadata = marker
-        nbsuc = len(sucs)
-        format = _fmfixed + (_fmnode * nbsuc)
-        data = [nbsuc, len(metadata), flags, pre]
-        data.extend(sucs)
-        yield _pack(format, *data)
-        yield metadata
+        yield _encodeonemarker(marker)
+
+
+def _encodeonemarker(marker):
+    pre, sucs, flags, metadata = marker
+    nbsuc = len(sucs)
+    format = _fmfixed + (_fmnode * nbsuc)
+    data = [nbsuc, len(metadata), flags, pre]
+    data.extend(sucs)
+    return _pack(format, *data) + metadata
+
+# arbitrary picked to fit into 8K limit from HTTP server
+# you have to take in account:
+# - the version header
+# - the base85 encoding
+_maxpayload = 5300
 
 def listmarkers(repo):
     """List markers over pushkey"""
     if not repo.obsstore:
         return {}
-    markers = _encodemarkers(repo.obsstore, True)
-    return {'dump': base85.b85encode(''.join(markers))}
+    keys = {}
+    parts = []
+    currentlen = _maxpayload * 2  # ensure we create a new part
+    for marker in  repo.obsstore:
+        nextdata = _encodeonemarker(marker)
+        if (len(nextdata) + currentlen > _maxpayload):
+            currentpart = []
+            currentlen = 0
+            parts.append(currentpart)
+        currentpart.append(nextdata)
+    for idx, part in enumerate(reversed(parts)):
+        data = ''.join([_pack('>B', _fmversion)] + part)
+        keys['dump%i' % idx] = base85.b85encode(data)
+    return keys
 
 def pushmarker(repo, key, old, new):
     """Push markers over pushkey"""
-    if key != 'dump':
+    if not key.startswith('dump'):
         repo.ui.warn(_('unknown key: %r') % key)
         return 0
     if old:

@@ -1785,11 +1785,13 @@ class localrepository(object):
 
             self.ui.debug('fetching remote obsolete markers')
             remoteobs = remote.listkeys('obsolete')
-            if 'dump' in remoteobs:
+            if 'dump0' in remoteobs:
                 if tr is None:
                     tr = self.transaction(trname)
-                data = base85.b85decode(remoteobs['dump'])
-                self.obsstore.mergemarkers(tr, data)
+                for key in sorted(remoteobs, reverse=True):
+                    if key.startswith('dump'):
+                        data = base85.b85decode(remoteobs[key])
+                        self.obsstore.mergemarkers(tr, data)
             if tr is not None:
                 tr.close()
         finally:
@@ -1955,10 +1957,15 @@ class localrepository(object):
                 self.ui.debug('try to push obsolete markers to remote\n')
                 if (self.obsstore and
                     'obsolete' in remote.listkeys('namespaces')):
-                    data = self.listkeys('obsolete')['dump']
-                    r = remote.pushkey('obsolete', 'dump', '', data)
-                    if not r:
-                        self.ui.warn(_('failed to push obsolete markers!\n'))
+                    rslts = []
+                    remotedata = self.listkeys('obsolete')
+                    for key in sorted(remotedata, reverse=True):
+                        # reverse sort to ensure we end with dump0
+                        data = remotedata[key]
+                        rslts.append(remote.pushkey('obsolete', key, '', data))
+                    if [r for r in rslts if not r]:
+                        msg = _('failed to push some obsolete markers!\n')
+                        self.ui.warn(msg)
             finally:
                 if lock is not None:
                     lock.release()
