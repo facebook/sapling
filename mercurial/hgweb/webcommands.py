@@ -394,8 +394,7 @@ def manifest(web, req, tmpl):
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
 def tags(web, req, tmpl):
-    i = web.repo.tagslist()
-    i.reverse()
+    i = reversed(web.repo.tagslist())
     parity = paritygen(web.stripecount)
 
     def entries(notip=False, limit=0, **map):
@@ -466,8 +465,7 @@ def branches(web, req, tmpl):
                 latestentry=lambda **x: entries(1, **x))
 
 def summary(web, req, tmpl):
-    i = web.repo.tagslist()
-    i.reverse()
+    i = reversed(web.repo.tagslist())
 
     def tagentries(**map):
         parity = paritygen(web.stripecount)
