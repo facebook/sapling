@@ -115,7 +115,6 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     elif onlyheads is None:
         # use visible heads as it should be cached
         og.missingheads = visibleheads(repo)
-        # extinct changesets are silently ignored
         og.excluded = [ctx.node() for ctx in repo.set('secret() or extinct()')]
     else:
         # compute common, missing and exclude secret stuff
