@@ -37,6 +37,7 @@
   searching: 2 queries
   query 2; still undecided: 1, sample size is: 1
   2 total queries
+  listing keys for "bookmarks"
   new remote heads on branch 'default'
   new remote head 1e108cc5548c
   abort: push creates new remote head 1e108cc5548c!

@@ -2540,6 +2540,7 @@ class localrepository(object):
     def pushkey(self, namespace, key, old, new):
         self.hook('prepushkey', throw=True, namespace=namespace, key=key,
                   old=old, new=new)
+        self.ui.debug('pushing key for "%s:%s"\n' % (namespace, key))
         ret = pushkey.push(self, namespace, key, old, new)
         self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,
                   ret=ret)
@@ -2547,6 +2548,7 @@ class localrepository(object):
 
     def listkeys(self, namespace):
         self.hook('prelistkeys', throw=True, namespace=namespace)
+        self.ui.debug('listing keys for "%s"\n' % namespace)
         values = pushkey.list(self, namespace)
         self.hook('listkeys', namespace=namespace, values=values)
         return values

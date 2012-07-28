@@ -236,6 +236,7 @@ class wirepeer(peer.peerrepository):
         if not self.capable('pushkey'):
             yield False, None
         f = future()
+        self.ui.debug('preparing pushkey for "%s:%s"\n' % (namespace, key))
         yield todict(namespace=encoding.fromlocal(namespace),
                      key=encoding.fromlocal(key),
                      old=encoding.fromlocal(old),
@@ -256,6 +257,7 @@ class wirepeer(peer.peerrepository):
         if not self.capable('pushkey'):
             yield {}, None
         f = future()
+        self.ui.debug('preparing listkeys for "%s"\n' % namespace)
         yield todict(namespace=encoding.fromlocal(namespace)), f
         d = f.value
         r = {}

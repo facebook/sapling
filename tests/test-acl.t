@@ -82,6 +82,7 @@ Extension disabled for lack of a hook
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -115,8 +116,11 @@ Extension disabled for lack of a hook
   adding quux/file.py revisions
   files: 3/3 chunks (100.00%)
   added 3 changesets with 3 changes to 3 files
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -137,6 +141,7 @@ Extension disabled for lack of acl.sources
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -172,8 +177,11 @@ Extension disabled for lack of acl.sources
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: changes have source "push" - skipping
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -195,6 +203,7 @@ No [acl.allow]/[acl.deny]
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -240,8 +249,11 @@ No [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -263,6 +275,7 @@ Empty [acl.allow]
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -328,6 +341,7 @@ fred is allowed inside foo/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -398,6 +412,7 @@ Empty [acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -465,6 +480,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -537,6 +553,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -606,6 +623,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -677,6 +695,7 @@ barney is allowed everywhere
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -722,8 +741,11 @@ barney is allowed everywhere
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -752,6 +774,7 @@ wilma can change files with a .txt extension
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -830,6 +853,7 @@ file specified by acl.config does not exist
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -903,6 +927,7 @@ betty is allowed inside foo/ by a acl.config file
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -987,6 +1012,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1032,8 +1058,11 @@ acl.config can set only [acl.allow]/[acl.deny]
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1063,6 +1092,7 @@ fred is always allowed
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1108,8 +1138,11 @@ fred is always allowed
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1135,6 +1168,7 @@ no one is allowed inside foo/Bar/
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1209,6 +1243,7 @@ OS-level groups
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1255,8 +1290,11 @@ OS-level groups
   acl: path access granted: "f9cafe1212c8"
   acl: branch access granted: "911600dab2ae" on branch "default"
   acl: path access granted: "911600dab2ae"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1282,6 +1320,7 @@ OS-level groups
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   3 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1395,6 +1434,7 @@ No branch acls specified
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1451,8 +1491,11 @@ No branch acls specified
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1475,6 +1518,7 @@ Branch acl deny test
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1553,6 +1597,7 @@ Branch acl empty allow test
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1627,6 +1672,7 @@ Branch acl allow other
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1695,6 +1741,7 @@ Branch acl allow other
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1751,8 +1798,11 @@ Branch acl allow other
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1780,6 +1830,7 @@ push foobar into the remote
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1836,8 +1887,11 @@ push foobar into the remote
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1864,6 +1918,7 @@ Branch acl conflicting deny
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1937,6 +1992,7 @@ User 'astro' must not be denied
   query 1; heads
   searching for changes
   all remote heads known locally
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7
@@ -1993,8 +2049,11 @@ User 'astro' must not be denied
   acl: path access granted: "911600dab2ae"
   acl: branch access granted: "e8fc755d4d82" on branch "foobar"
   acl: path access granted: "e8fc755d4d82"
+  listing keys for "phases"
+  listing keys for "namespaces"
   updating the branch cache
   checking for updated bookmarks
+  listing keys for "bookmarks"
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -2015,6 +2074,7 @@ Non-astro users must be denied
   searching for changes
   all remote heads known locally
   invalidating branch cache (tip differs)
+  listing keys for "bookmarks"
   4 changesets found
   list of changesets:
   ef1ea85a6374b77d6da9dcda9541f498f2d17df7

@@ -51,6 +51,7 @@ No update, with debug option:
 #if hardlink
   $ hg --debug clone -U . ../c
   linked 8 files
+  listing keys for "bookmarks"
 #else
   $ hg --debug clone -U . ../c
   copied 8 files
