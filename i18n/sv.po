@@ -17,7 +17,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2012-07-28 14:35+0200\n"
-"PO-Revision-Date: 2012-07-28 14:59+0200\n"
+"PO-Revision-Date: 2012-07-28 22:58+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -4359,35 +4359,35 @@ msgid "%s appears more than once in %s"
 msgstr "%s finns mer än en gång i %s"
 
 msgid "guard cannot be an empty string"
-msgstr "guard kan inte vara en tom sträng"
+msgstr "skyddet kan inte vara en tom sträng"
 
 #, python-format
 msgid "guard %r starts with invalid character: %r"
-msgstr ""
+msgstr "skyddet %r börjar med ett otillåtet tecken: %r"
 
 #, python-format
 msgid "invalid character in guard %r: %r"
-msgstr ""
+msgstr "otillåtet tecken i skyddet %r: %r"
 
 #, python-format
 msgid "guard %r too short"
-msgstr ""
+msgstr "skyddet %r är för kort"
 
 #, python-format
 msgid "guard %r starts with invalid char"
-msgstr ""
+msgstr "skyddet %r börjar med ett otillåtet tecken"
 
 #, python-format
 msgid "allowing %s - no guards in effect\n"
-msgstr ""
+msgstr "tillåter %s - inga skydd aktiva\n"
 
 #, python-format
 msgid "allowing %s - no matching negative guards\n"
-msgstr ""
+msgstr "tillåter %s - inga matchande negativa skydd\n"
 
 #, python-format
 msgid "allowing %s - guarded by %s\n"
-msgstr ""
+msgstr "tillåter %s - skyddad av %s\n"
 
 #, python-format
 msgid "skipping %s - guarded by %s\n"
@@ -4395,11 +4395,11 @@ msgstr "hoppar över %s - skyddad av %s\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
-msgstr ""
+msgstr "hoppar över %s - inga matchande skydd\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
-msgstr ""
+msgstr "fel vid borttagning av återställare: %s\n"
 
 #, python-format
 msgid "saving current version of %s as %s\n"
@@ -4407,33 +4407,33 @@ msgstr "sparar nuvarande revision av %s som %s\n"
 
 #, python-format
 msgid "apply failed for patch %s"
-msgstr ""
+msgstr "misslyckades att applicera patchen %s"
 
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "patchning gick inte bra, sammanfogar %s\n"
 
 #, python-format
 msgid "update returned %d"
-msgstr ""
+msgstr "update returnerade %d"
 
 msgid "repo commit failed"
-msgstr ""
+msgstr "arkivering misslyckades"
 
 #, python-format
 msgid "unable to read %s"
-msgstr ""
+msgstr "kan inte läsa %s"
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr ""
+msgstr "patchen %s finns inte\n"
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr ""
+msgstr "patchen %s är inte applicerad\n"
 
 msgid "patch failed, unable to continue (try -v)\n"
-msgstr ""
+msgstr "patchning misslyckades, kan inte fortsätta (försök med -v)\n"
 
 #, python-format
 msgid "applying %s\n"
@@ -4448,19 +4448,19 @@ msgstr "lokala ändringar hittades, uppdatera först"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr ""
+msgstr "patchen %s är tom\n"
 
 msgid "qpush exactly duplicates child changeset"
-msgstr ""
+msgstr "qpush duplicerar barnändringen exakt"
 
 msgid "repository commit failed"
-msgstr ""
+msgstr "arkivering misslyckades"
 
 msgid "patch failed, rejects left in working dir\n"
-msgstr ""
+msgstr "patchning misslyckades, avslag lämnades i arbetskatalogen\n"
 
 msgid "fuzz found when applying patch, stopping\n"
-msgstr ""
+msgstr "ludd upptäcktes när patchen applicerades, stannar\n"
 
 #, python-format
 msgid "revision %s refers to unknown patches: %s\n"
@@ -4472,51 +4472,51 @@ msgstr "okända patchar: %s\n"
 
 #, python-format
 msgid "revision %d is not managed"
-msgstr ""
+msgstr "revision %d hanteras inte"
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr ""
+msgstr "kan inte radera revision %d ovanför applicerade patchar"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr ""
+msgstr "patchen %s färdigställdes utan arkiveringsmeddelande\n"
 
 msgid "qdelete requires at least one revision or patch name"
-msgstr ""
+msgstr "qdelete kräver minst en revision eller ett patchnamn"
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr ""
+msgstr "kan inte radera applicerad patch %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr ""
+msgstr "patchen %s finns inte i series-filen"
 
 msgid "no patches applied"
-msgstr ""
+msgstr "inga patcher applicerade"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "arbetskatalogen är inte qtip"
 
 #, python-format
 msgid "uncommitted changes in subrepository %s"
 msgstr "oarkiverade ändringar i underarkivet %s"
 
 msgid "local changes found"
-msgstr ""
+msgstr "lokala ändringar hittades"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr ""
+msgstr "\"%s\" kan inte användas som patchnamn"
 
 #, python-format
 msgid "patch name cannot begin with \"%s\""
-msgstr ""
+msgstr "patchnamn kan inte börja med \"%s\""
 
 #, python-format
 msgid "\"%s\" cannot be used in the name of a patch"
-msgstr ""
+msgstr "\"%s\" kan inte användas i patchnamn"
 
 #, python-format
 msgid "\"%s\" already exists as a directory"
@@ -4538,21 +4538,21 @@ msgstr "kan inte skriva patchen \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
-msgstr ""
+msgstr "fel vid radering av %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr ""
+msgstr "patchnamnet \"%s\" är tvetydligt:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr ""
+msgstr "patchen %s finns inte i serien"
 
 msgid "(working directory not at a head)\n"
-msgstr ""
+msgstr "(arbetskatalogen är inte på ett huvud)\n"
 
 msgid "no patches in series\n"
-msgstr ""
+msgstr "inga patchar i serien\n"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
@@ -4560,24 +4560,24 @@ msgstr "qpush: %s är redan på toppen\n"
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
-msgstr ""
+msgstr "kan inte pusha till en tidigare patch: %s"
 
 #, python-format
 msgid "guarded by %s"
 msgstr "skyddad av %s"
 
 msgid "no matching guards"
-msgstr ""
+msgstr "inga matchande skydd"
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
-msgstr ""
+msgstr "kan inte pusha '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
-msgstr ""
+msgstr "alla patchar är applicerade\n"
 
 msgid "patch series already fully applied\n"
-msgstr ""
+msgstr "patchserien är redan fullständigt applicerad\n"
 
 msgid "cannot use --exact and --keep-changes together"
 msgstr "kan inte använda --exact och --keep-changes tillsammans"
@@ -4596,77 +4596,80 @@ msgid "please specify the patch to move"
 msgstr "ange patchen som ska flyttas"
 
 msgid "cleaning up working directory..."
-msgstr ""
+msgstr "rensar upp arbetskatalogen..."
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
-msgstr ""
+msgstr "fel vid applicering, fixa och uppdatera %s\n"
 
 #, python-format
 msgid "now at: %s\n"
-msgstr ""
+msgstr "är nu på: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr ""
+msgstr "patchen %s är inte applicerad"
 
 msgid "no patches applied\n"
-msgstr ""
+msgstr "inga patchar applicerade\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
-msgstr ""
+msgstr "qpop: %s är redan på toppen\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: tvingar en uppdatering av dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "försöker att poppa okänd nod %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
+"poppning skulle ta bort en revision som inte hanteras av denna patchkö"
 
 msgid "popping would remove an immutable revision"
-msgstr ""
+msgstr "poppning skulle ta bort en oföränderlig revision"
 
 msgid "see \"hg help phases\" for details"
 msgstr "se \"hg help phases\" för detaljer"
 
 msgid "deletions found between repo revs"
-msgstr ""
+msgstr "raderingar hittades mellan arkivrevisioner"
 
 #, python-format
 msgid "popping %s\n"
-msgstr ""
+msgstr "poppar %s\n"
 
 msgid "patch queue now empty\n"
-msgstr ""
+msgstr "patchkön är nu tom\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "kan inte uppdatera en revision med barn"
 
 msgid "cannot refresh immutable revision"
-msgstr ""
+msgstr "kan inte uppdatera oföränderlig revision"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
 "recover)\n"
 msgstr ""
+"uppdatering avbröts medans patch var poppad! (revert --all, qpush för "
+"att återställa)\n"
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "katalog för patchkö finns redan"
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr ""
+msgstr "patchen %s finns inte i series-filen"
 
 msgid "no saved patch data found\n"
 msgstr "ingen sparad patchdata hittades\n"
 
 #, python-format
 msgid "restoring status: %s\n"
-msgstr ""
+msgstr "återställer status: %s\n"
 
 msgid "save entry has children, leaving it alone\n"
 msgstr ""
@@ -4689,7 +4692,7 @@ msgid "save: no patches applied, exiting\n"
 msgstr ""
 
 msgid "status is already saved\n"
-msgstr ""
+msgstr "status är redan sparad\n"
 
 msgid "hg patches saved state"
 msgstr ""
@@ -4925,10 +4928,10 @@ msgid "location of source patch repository"
 msgstr ""
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "hg qclone [FLAGGA]... KÄLLA [DEST]"
 
 msgid "clone main and patch repository at same time"
-msgstr ""
+msgstr "klona huvud- och patcharkivet på samma gång"
 
 msgid ""
 "    If source is local, destination will have no patches applied. If\n"
@@ -4971,7 +4974,7 @@ msgid "updating destination repository\n"
 msgstr ""
 
 msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qcommit [FLAGGA]... [FIL]..."
 
 msgid "commit changes in the queue repository (DEPRECATED)"
 msgstr "arkivera ändringar i köarkivet (FÖRÅLDRAD)"
@@ -4981,13 +4984,13 @@ msgstr ""
 "    Detta är ett föråldrat kommando; använd :hg:`commit --mq` istället."
 
 msgid "print patches not in series"
-msgstr ""
+msgstr "visa patchas som inte är i serien"
 
 msgid "hg qseries [-ms]"
-msgstr ""
+msgstr "hg qseries [-ms]"
 
 msgid "print the entire series file"
-msgstr ""
+msgstr "visa hela seriefilen"
 
 msgid "hg qtop [-s]"
 msgstr "hg qtop [-s]"
@@ -5011,22 +5014,22 @@ msgid "import uncommitted changes (DEPRECATED)"
 msgstr "importera icke arkiverade ändringar (FÖRLEGAD)"
 
 msgid "add \"From: <current user>\" to patch"
-msgstr ""
+msgstr "lägg till \"From: <denna användare>\" i patch"
 
 msgid "add \"From: <USER>\" to patch"
-msgstr ""
+msgstr "lägg till \"From: <ANVÄNDARE>\" i patch"
 
 msgid "add \"Date: <current date>\" to patch"
-msgstr ""
+msgstr "lägg till \"Date: <nuvarande datum>\" i patch"
 
 msgid "add \"Date: <DATE>\" to patch"
-msgstr ""
+msgstr "lägg till \"Date: <DATUM>\" i patch"
 
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
 msgstr "hg qnew [-e] [-m TEXT] [-l FIL] PATCH [FIL]..."
 
 msgid "create a new patch"
-msgstr ""
+msgstr "skapa en ny patch"
 
 msgid ""
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
@@ -5036,18 +5039,30 @@ msgid ""
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications."
 msgstr ""
+"    qnew skapar en ny patch ovanpå redan applicerade patchar (om några).\n"
+"    Patchen kommer att initialiseras med oarkiverade ändringar i\n"
+"    arbetskatalogen. Du kan också använda -I/--include, -X/--exclude,\n"
+"    och/eller en uppsättning filer efter patchnamnet för att bara lägga\n"
+"    till ändringar i dessa filer i patchen, och lämna resten som\n"
+"    oarkiverade ändringar."
 
 msgid ""
 "    -u/--user and -d/--date can be used to set the (given) user and\n"
 "    date, respectively. -U/--currentuser and -D/--currentdate set user\n"
 "    to current user and date to current date."
 msgstr ""
+"    -u/--user och -d/--date kan användas för att sätta (den angivna)\n"
+"    användaren respektive datumet. -U/--currentuser och -D/--currentdate\n"
+"    sätter användare till denna användaren och datumed till nuvarande datum."
 
 msgid ""
 "    -e/--edit, -m/--message or -l/--logfile set the patch header as\n"
 "    well as the commit message. If none is specified, the header is\n"
 "    empty and the commit message is '[mq]: PATCH'."
 msgstr ""
+"    -e/--edit, -m/--message or -l/--logfile sätter både patchhuvudet och\n"
+"    arkiveringsmeddelandet. Om inget är angivet, så är huvudet tomt och\n"
+"    arkiveringsmeddelandet är '[mq]: PATCH'."
 
 msgid ""
 "    Use the -g/--git option to keep the patch in the git extended diff\n"
@@ -5055,6 +5070,10 @@ msgid ""
 "    is important for preserving permission changes and copy/rename\n"
 "    information."
 msgstr ""
+"    Använd flaggan -g/--git gör att lagra patchen i gits utökade\n"
+"    diff-format. Läs hjälpämnet om diffar för mer inormation om varför\n"
+"    detta är viktigt för att lagra rättighetsändringar och information om\n"
+"    kopior/namnbyten."
 
 msgid ""
 "    Returns 0 on successful creation of a new patch.\n"
@@ -5079,7 +5098,7 @@ msgid "add/update date field in patch with given date"
 msgstr ""
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
-msgstr ""
+msgstr "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FIL] [-s] [FIL]..."
 
 msgid "update the current patch"
 msgstr "uppdatera den nuvarande patchen"
@@ -5224,7 +5243,7 @@ msgid "    To set guards on another patch::"
 msgstr ""
 
 msgid "      hg qguard other.patch -- +2.6.17 -stable"
-msgstr ""
+msgstr "      hg qguard other.patch -- +2.6.17 -stable"
 
 msgid "cannot mix -l/--list with options or arguments"
 msgstr ""
@@ -5234,7 +5253,7 @@ msgstr ""
 
 #, python-format
 msgid "no patch named %s"
-msgstr ""
+msgstr "ingen patch med namnet %s"
 
 msgid "hg qheader [PATCH]"
 msgstr "hg qheader [PATCH]"
@@ -5252,7 +5271,7 @@ msgid "list patch name in commit text"
 msgstr ""
 
 msgid "apply all patches"
-msgstr ""
+msgstr "applicera alla patchar"
 
 msgid "merge from another queue (DEPRECATED)"
 msgstr ""
@@ -5281,13 +5300,13 @@ msgstr ""
 
 #, python-format
 msgid "merging with queue at: %s\n"
-msgstr ""
+msgstr "sammanfogar med kö vid: %s\n"
 
 msgid "pop all patches"
-msgstr ""
+msgstr "poppa alla patchar"
 
 msgid "queue name to pop (DEPRECATED)"
-msgstr ""
+msgstr "könamn att poppa (FÖRLEGAD)"
 
 msgid "forget any local changes to patched files"
 msgstr ""
