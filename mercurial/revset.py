@@ -1424,7 +1424,7 @@ def tagged(repo, subset, x):
 
 def unstable(repo, subset, x):
     """``unstable()``
-    Unstable changesets are non-obsolete with obsolete descendants."""
+    Unstable changesets are non-obsolete with obsolete ancestors."""
     # i18n: "unstable" is a keyword
     getargs(x, 0, 0, _("unstable takes no arguments"))
     unstableset = set(repo.revs('(obsolete()::) - obsolete()'))
