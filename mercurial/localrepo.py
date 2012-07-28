@@ -1000,6 +1000,9 @@ class localrepository(object):
                         self.sjoin('phaseroots'))
         self.invalidate()
 
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
+
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
@@ -1066,9 +1069,6 @@ class localrepository(object):
             except AttributeError:
                 pass
         self.invalidatecaches()
-
-        # Discard all cache entries to force reloading everything.
-        self._filecache.clear()
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
@@ -1502,6 +1502,9 @@ class localrepository(object):
         # But I think doing it this way is necessary for the "instant
         # tag cache retrieval" case to work.
         self.invalidatecaches()
+
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
 
     def walk(self, match, node=None):
         '''
