@@ -27,10 +27,25 @@
 
   $ hg init tmpa
   $ cd tmpa
+  $ mkcommit kill_me
+
+Checking that the feature is properly disabled
+
+  $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
+  abort: obsolete feature is not enabled on this repo
+  [255]
+
+Enabling it
+
+  $ cat > ../obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 Killing a single changeset without replacement
 
-  $ mkcommit kill_me
   $ hg debugobsolete 0
   abort: changeset references must be full hexadecimal node identifiers
   [255]

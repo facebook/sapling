@@ -58,7 +58,9 @@ from i18n import _
 _pack = struct.pack
 _unpack = struct.unpack
 
-
+# the obsolete feature is not mature enought to be enabled by default.
+# you have to rely on third party extension extension to enable this.
+_enabled = False
 
 # data used for parsing and writing
 _fmversion = 0
@@ -194,6 +196,8 @@ class obsstore(object):
 
         Take care of filtering duplicate.
         Return the number of new marker."""
+        if not _enabled:
+            raise util.Abort('obsolete feature is not enabled on this repo')
         new = [m for m in markers if m not in self._all]
         if new:
             f = self.sopener('obsstore', 'ab')
