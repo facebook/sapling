@@ -17,7 +17,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2012-07-28 14:35+0200\n"
-"PO-Revision-Date: 2012-07-28 14:57+0200\n"
+"PO-Revision-Date: 2012-07-28 14:59+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -6070,7 +6070,7 @@ msgid ""
 msgstr ""
 "Du kan också endera konfigurera alternativet method i email-sektionen att\n"
 "vara en sendmail-kompatibel sändare eller fylla i sektionen [smtp] så att\n"
-"patchbomb-utäkningen automatiskt kan skicka patchbomber från kommandoraden.\n"
+"patchbomb-utökningen automatiskt kan skicka patchbomber från kommandoraden.\n"
 "Se sektionerna [email] och [smtp] i hgrc(5) för detaljer.\n"
 
 msgid "send patches as inline message text (default)"
@@ -6714,7 +6714,7 @@ msgid "specify merge tool for rebase"
 msgstr "ange sammanfogningsverktyg för ombasering"
 
 msgid "commands to interactively select changes for commit/qrefresh"
-msgstr ""
+msgstr "interaktivt val av ändringar för commit/qrefresh"
 
 msgid "ignore white space when comparing lines"
 msgstr "ignorera blanktecken när rader jämförs"
@@ -6726,50 +6726,50 @@ msgid "ignore changes whose lines are all blank"
 msgstr "ignorera ändringar vars rader är tomma"
 
 msgid "this modifies a binary file (all or nothing)\n"
-msgstr ""
+msgstr "detta modifierar en binär fil (allt eller inget)\n"
 
 msgid "this is a binary file\n"
-msgstr ""
+msgstr "det här är en binär fil\n"
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr ""
+msgstr "%d stycken, %d rader ändrade\n"
 
 msgid "[Ynesfdaq?]"
-msgstr ""
+msgstr "[Ynesfdaq?]"
 
 msgid "&Yes, record this change"
-msgstr ""
+msgstr "(&Y) Ja, lagra den här ändringen"
 
 msgid "&No, skip this change"
-msgstr ""
+msgstr "&Nej, hoppa över den här ändringen"
 
 msgid "&Edit the change manually"
-msgstr ""
+msgstr "(&E) Redigera ändringen manuellt"
 
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "(&S) Hoppa över kvarvarande ändringar i den här filen"
 
 msgid "Record remaining changes to this &file"
-msgstr ""
+msgstr "Spara kvarvarande ändringar till denna &fil"
 
 msgid "&Done, skip remaining changes and files"
-msgstr ""
+msgstr "&(D) Klar, hoppa över kvarvarande ändringar och filer"
 
 msgid "Record &all changes to all remaining files"
-msgstr ""
+msgstr "Spara &alla ändringar till alla kvarvarande filer"
 
 msgid "&Quit, recording no changes"
-msgstr ""
+msgstr "(&Q) Avsluta, spara inga ändringar"
 
 msgid "&?"
-msgstr ""
+msgstr "&?"
 
 msgid "cannot edit patch for whole file"
-msgstr ""
+msgstr "kan inte redigera patch för hel fil"
 
 msgid "cannot edit patch for binary file"
-msgstr ""
+msgstr "kan inte redigera patch för binär fil"
 
 msgid ""
 "\n"
@@ -6777,6 +6777,10 @@ msgid ""
 "To remove '+' lines, delete them.\n"
 "Lines starting with # will be removed from the patch."
 msgstr ""
+"\n"
+"För att radera rader med '-', ersätt med blanka (' ') rader (kontext).\n"
+"För att radera rader med '+', radera dom.\n"
+"Rader som börjar med # kommer att raderas från patchen."
 
 msgid ""
 "If the patch applies cleanly, the edited hunk will immediately be\n"
@@ -6785,33 +6789,37 @@ msgid ""
 "all lines of the hunk are removed, then the edit is aborted and\n"
 "the hunk is left unchanged.\n"
 msgstr ""
+"Om patchen appliceras utan problem, kommer det redigerade stycket att\n"
+"sparas. Om problem uppstår, kommer en .rej-fil att genereras: du kan\n"
+"använde den när du försöker igen. Om alla rader i stycket raderas, så\n"
+"avbryts redigeringen och stycket lämnas oförändrat.\n"
 
 msgid "edit failed"
-msgstr ""
+msgstr "redigering misslyckades"
 
 msgid "user quit"
-msgstr ""
+msgstr "användaren avslutade"
 
 #, python-format
 msgid "examine changes to %s?"
-msgstr ""
+msgstr "granska ändringar i %s?"
 
 msgid " and "
-msgstr ""
+msgstr " och "
 
 #, python-format
 msgid "record this change to %r?"
-msgstr ""
+msgstr "spara den här ändringen till %r?"
 
 #, python-format
 msgid "record change %d/%d to %r?"
-msgstr ""
+msgstr "spara ändring %d/%d till %r?"
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr "hg record [FLAGGA]... [FIL]..."
 
 msgid "interactively select changes to commit"
-msgstr ""
+msgstr "välj interaktivt ändringar för arkivering"
 
 msgid ""
 "    If a list of files is omitted, all changes reported by :hg:`status`\n"
@@ -6826,32 +6834,43 @@ msgid ""
 "    change to use. For each query, the following responses are\n"
 "    possible::"
 msgstr ""
+"    Du kommer att frågas om du vill lagra ändrade filer, och i filer med\n"
+"    flera ändringar kommer du att få frågan för varje ändring. Vid varje\n"
+"    fråga är följande svar möjliga::"
 
 msgid ""
 "      y - record this change\n"
 "      n - skip this change\n"
 "      e - edit this change manually"
 msgstr ""
+"      y - lagra den här ändringen\n"
+"      n - hoppa över den här ändringen\n"
+"      e - redigera ändringen manuellt"
 
 msgid ""
 "      s - skip remaining changes to this file\n"
 "      f - record remaining changes to this file"
 msgstr ""
+"      s - hoppa över kvarvarande ändringar i den här filen\n"
+"      f - spara kvarvarande ändringar till denna fil"
 
 msgid ""
 "      d - done, skip remaining changes and files\n"
 "      a - record all changes to all remaining files\n"
 "      q - quit, recording no changes"
 msgstr ""
+"      d - klar, hoppa över kvarvarande ändringar och filer\n"
+"      a - spara alla ändringar till alla kvarvarande filer\n"
+"      q - avsluta, spara inga ändringar"
 
 msgid "      ? - display help"
-msgstr ""
+msgstr "      ? - visa hjälp"
 
 msgid "    This command is not available when committing a merge."
-msgstr ""
+msgstr "    Det här kommandot är inte tillgängligt vid sammanfogning."
 
 msgid "interactively record a new patch"
-msgstr ""
+msgstr "lägra en ny ändring interaktivt"
 
 msgid ""
 "    See :hg:`help qnew` & :hg:`help record` for more information and\n"
@@ -6863,24 +6882,24 @@ msgstr ""
 "    "
 
 msgid "'mq' extension not loaded"
-msgstr ""
+msgstr "utökningen 'mq' är inte laddad"
 
 #, python-format
 msgid "running non-interactively, use %s instead"
-msgstr ""
+msgstr "kör icke-interaktivt, använd %s istället"
 
 msgid "cannot partially commit a merge (use \"hg commit\" instead)"
 msgstr ""
 "kan inte delvis arkivera en sammanfogning (använd \"hg commit\" istället)"
 
 msgid "no changes to record\n"
-msgstr ""
+msgstr "inga ändringar att lagra\n"
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr ""
+msgstr "hg qrecord [FLAGGA]... PATCH [FIL]..."
 
 msgid "interactively select changes to refresh"
-msgstr ""
+msgstr "interaktivt val av ändringar att uppdatera"
 
 msgid "recreates hardlinks between repository clones"
 msgstr ""
