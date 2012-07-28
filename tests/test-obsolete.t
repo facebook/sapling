@@ -492,3 +492,17 @@ Do not warn about new head when the new head is a successors of a remote one
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+
+Checking _enable=False warning if obsolete marker exist
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=!" >> $HGRCPATH
+  $ hg log -r tip
+  obsolete feature not enabled but 7 markers found!
+  changeset:   6:d6a026544050
+  tag:         tip
+  parent:      3:5601fb93a350
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add obsolete_e
+  

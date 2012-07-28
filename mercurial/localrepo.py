@@ -289,6 +289,10 @@ class localrepository(object):
     @storecache('obsstore')
     def obsstore(self):
         store = obsolete.obsstore(self.sopener)
+        if store and not obsolete._enabled:
+            # message is rare enough to not be stranlated
+            msg = 'obsolete feature not enabled but %i markers found!\n'
+            self.ui.warn(msg % len(list(store)))
         return store
 
     @propertycache
