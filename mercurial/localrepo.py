@@ -1787,15 +1787,16 @@ class localrepository(object):
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
 
-            self.ui.debug('fetching remote obsolete markers')
-            remoteobs = remote.listkeys('obsolete')
-            if 'dump0' in remoteobs:
-                if tr is None:
-                    tr = self.transaction(trname)
-                for key in sorted(remoteobs, reverse=True):
-                    if key.startswith('dump'):
-                        data = base85.b85decode(remoteobs[key])
-                        self.obsstore.mergemarkers(tr, data)
+            if obsolete._enabled:
+                self.ui.debug('fetching remote obsolete markers')
+                remoteobs = remote.listkeys('obsolete')
+                if 'dump0' in remoteobs:
+                    if tr is None:
+                        tr = self.transaction(trname)
+                    for key in sorted(remoteobs, reverse=True):
+                        if key.startswith('dump'):
+                            data = base85.b85decode(remoteobs[key])
+                            self.obsstore.mergemarkers(tr, data)
             if tr is not None:
                 tr.close()
         finally:
@@ -1959,7 +1960,7 @@ class localrepository(object):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
                 self.ui.debug('try to push obsolete markers to remote\n')
-                if (self.obsstore and
+                if (obsolete._enabled and self.obsstore and
                     'obsolete' in remote.listkeys('namespaces')):
                     rslts = []
                     remotedata = self.listkeys('obsolete')

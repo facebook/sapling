@@ -11,6 +11,8 @@ def _nslist(repo):
     n = {}
     for k in _namespaces:
         n[k] = ""
+    if not obsolete._enabled:
+        n.pop('obsolete')
     return n
 
 _namespaces = {"namespaces": (lambda *x: False, _nslist),
