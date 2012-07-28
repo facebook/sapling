@@ -934,10 +934,8 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
 
-    remoteui = hg.remoteui
-
     try:
-        remote = hg.repository(remoteui(repo, opts), dest)
+        remote = hg.peer(repo, opts, dest)
     except error.RepoError:
         return None
     o = lfutil.findoutgoing(repo, remote, False)
