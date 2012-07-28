@@ -348,7 +348,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             # we need to re-init the repo after manually copying the data
             # into it
-            destpeer = peer(ui, peeropts, dest)
+            destpeer = peer(srcrepo, peeropts, dest)
             srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
