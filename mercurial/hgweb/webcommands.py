@@ -817,7 +817,9 @@ def static(web, req, tmpl):
 
 def graph(web, req, tmpl):
 
-    rev = webutil.changectx(web.repo, req).rev()
+    ctx = webutil.changectx(web.repo, req)
+    rev = ctx.rev()
+
     bg_height = 39
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
@@ -830,20 +832,17 @@ def graph(web, req, tmpl):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
-    max_rev = len(web.repo) - 1
-    revcount = min(max_rev, revcount)
-    revnode = web.repo.changelog.node(rev)
-    revnode_hex = hex(revnode)
-    uprev = min(max_rev, rev + revcount)
-    downrev = max(0, rev - revcount)
     count = len(web.repo)
-    changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
-    startrev = rev
-    # if starting revision is less than 60 set it to uprev
-    if rev < web.maxshortchanges:
-        startrev = uprev
+    pos = rev
+    start = max(0, pos - revcount + 1)
+    end = min(count, start + revcount)
+    pos = end - 1
 
-    dag = graphmod.dagwalker(web.repo, range(startrev, downrev - 1, -1))
+    uprev = min(max(0, count - 1), rev + revcount)
+    downrev = max(0, rev - revcount)
+    changenav = webutil.revnavgen(pos, revcount, count, web.repo.changectx)
+
+    dag = graphmod.dagwalker(web.repo, range(start, end)[::-1])
     tree = list(graphmod.colored(dag, web.repo))
 
     def getcolumns(tree):
@@ -915,7 +914,7 @@ def graph(web, req, tmpl):
                 canvasheight=canvasheight, bg_height=bg_height,
                 jsdata=lambda **x: graphdata(True, **x),
                 nodes=lambda **x: graphdata(False, **x),
-                node=revnode_hex, changenav=changenav)
+                node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
     doc = e[0].__doc__

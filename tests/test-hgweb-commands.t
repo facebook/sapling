@@ -34,6 +34,15 @@ Set up the repo
   $ echo stable.color = FF0000 >> .hg/hgrc
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
+  $ hg log -G --template '{rev}:{node|short} {desc}\n'
+  @  3:ba87b23d29ca branch
+  |
+  o  2:1d22e65f027e branch
+  |
+  o  1:a4f92ed23982 Added tag 1.0 for changeset 2ef0ac749a14
+  |
+  o  0:2ef0ac749a14 base
+  
 
 Logs and changes
 
@@ -951,7 +960,7 @@ Overviews
   <br/>
   <a href="/graph/3?style=gitweb&revcount=30">less</a>
   <a href="/graph/3?style=gitweb&revcount=120">more</a>
-  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-3</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
+  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
   </div>
   
   <div class="title">&nbsp;</div>
@@ -1032,7 +1041,7 @@ Overviews
   <div class="page_nav">
   <a href="/graph/3?style=gitweb&revcount=30">less</a>
   <a href="/graph/3?style=gitweb&revcount=120">more</a>
-  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/2ef0ac749a14?style=gitweb">-3</a> <a href="/graph/tip?style=gitweb">tip</a> 
+  | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
   </div>
   
   <script type="text/javascript">process_dates()</script>
@@ -1285,6 +1294,69 @@ capabilities
 heads
 
 ERRORS ENCOUNTERED
+
+  $ cat errors.log
+  $ "$TESTDIR/killdaemons.py"
+
+  $ cd ..
+
+Test graph paging
+
+  $ mkcommit() {
+  >  echo $1 >> a
+  >  hg ci -Am $1 a
+  > }
+
+  $ hg init graph
+  $ cd graph
+  $ mkcommit 0
+  $ mkcommit 1
+  $ mkcommit 2
+  $ mkcommit 3
+  $ mkcommit 4
+  $ mkcommit 5
+  $ hg serve --config server.uncompressed=False \
+  >          --config web.maxshortchanges=2 \
+  >          -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg log -G --template '{rev}:{node|short} {desc}\n'
+  @  5:aed2d9c1d0e7 5
+  |
+  o  4:b60a39a85a01 4
+  |
+  o  3:ada793dcc118 3
+  |
+  o  2:ab4f1438558b 2
+  |
+  o  1:e06180cbfb0c 1
+  |
+  o  0:b4e73ffab476 0
+  
+
+Test paging
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  >   'graph/?style=raw' | grep changeset
+  changeset:   aed2d9c1d0e7
+  changeset:   b60a39a85a01
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  >   'graph/?style=raw&revcount=3' | grep changeset
+  changeset:   aed2d9c1d0e7
+  changeset:   b60a39a85a01
+  changeset:   ada793dcc118
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  >   'graph/e06180cbfb0?style=raw&revcount=3' | grep changeset
+  changeset:   ab4f1438558b
+  changeset:   e06180cbfb0c
+  changeset:   b4e73ffab476
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
+  >   'graph/b4e73ffab47?style=raw&revcount=3' | grep changeset
+  changeset:   ab4f1438558b
+  changeset:   e06180cbfb0c
+  changeset:   b4e73ffab476
 
   $ cat errors.log
 
