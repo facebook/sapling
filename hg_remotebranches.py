@@ -130,6 +130,10 @@ def reposetup(ui, repo):
                     if remote.local():
                         uri = os.path.realpath(uri)
                         rpath = getattr(remote, 'root', None)
+                        if rpath is None:
+                            # Maybe a localpeer? (hg@1ac628cd7113, 2.3)
+                            rpath = getattr(getattr(remote, '_repo', None),
+                                            'root', None)
                     else:
                         rpath = remote._url
                         if uri.startswith('http'):
