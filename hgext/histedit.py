@@ -37,7 +37,6 @@ file open in your editor::
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
- 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 In this file, lines beginning with ``#`` are ignored. You must specify a rule
 for each revision in your history. For example, if you had meant to add gamma
@@ -57,7 +56,6 @@ would reorganize the file to look like this::
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
- 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 At which point you close the editor and ``histedit`` starts working. When you
 specify a ``fold`` operation, ``histedit`` will open an editor when it folds
