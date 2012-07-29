@@ -162,9 +162,7 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
-editcomment = """
-
-# Edit history between %s and %s
+editcomment = _("""# Edit history between %s and %s
 #
 # Commands:
 #  p, pick = use commit
@@ -173,7 +171,7 @@ editcomment = """
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #
-"""
+""")
 
 def between(repo, old, new, keep):
     revs = [old]
@@ -522,6 +520,7 @@ def histedit(ui, repo, *parent, **opts):
         rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
+            rules += '\n\n'
             rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12])
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
