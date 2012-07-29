@@ -1269,13 +1269,6 @@ The full set of options is:
     be present in this list. The contents of the allow_push list are
     examined after the deny_push list.
 
-``guessmime``
-    Control MIME types for raw download of file content.
-    Set to True to let hgweb guess the content type from the file
-    extension. This will serve HTML files as ``text/html`` and might
-    allow cross-site scripting attacks when serving untrusted
-    repositories. Default is False.
-
 ``allow_read``
     If the user has not already been denied repository access due to
     the contents of deny_read, this list determines whether to grant
@@ -1335,6 +1328,12 @@ The full set of options is:
     collapses each collection of repositories found within a subdirectory
     into a single entry for that subdirectory. Default is False.
 
+``comparisoncontext``
+    Number of lines of context to show in side-by-side file comparison. If
+    negative or the value ``full``, whole files are shown. Default is 5.
+    This setting can be overridden by a ``context`` request parameter to the
+    ``comparison`` command, taking the same values.
+
 ``contact``
     Name or email address of the person in charge of the repository.
     Defaults to ui.username or ``$EMAIL`` or "unknown" if unset or empty.
@@ -1377,11 +1376,12 @@ The full set of options is:
 ``errorlog``
     Where to output the error log. Default is stderr.
 
-``comparisoncontext``
-    Number of lines of context to show in side-by-side file comparison. If
-    negative or the value ``full``, whole files are shown. Default is 5.
-    This setting can be overridden by a ``context`` request parameter to the
-    ``comparison`` command, taking the same values.
+``guessmime``
+    Control MIME types for raw download of file content.
+    Set to True to let hgweb guess the content type from the file
+    extension. This will serve HTML files as ``text/html`` and might
+    allow cross-site scripting attacks when serving untrusted
+    repositories. Default is False.
 
 ``hidden``
     Whether to hide the repository in the hgwebdir index.
@@ -1400,15 +1400,15 @@ The full set of options is:
     Base URL to use for logos. If unset, ``http://mercurial.selenic.com/``
     will be used.
 
-``name``
-    Repository name to use in the web interface. Default is current
-    working directory.
-
 ``maxchanges``
     Maximum number of changes to list on the changelog. Default is 10.
 
 ``maxfiles``
     Maximum number of files to list per changeset. Default is 10.
+
+``name``
+    Repository name to use in the web interface. Default is current
+    working directory.
 
 ``port``
     Port to listen on. Default is 8000.
