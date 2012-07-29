@@ -271,8 +271,8 @@ def diff_branchrev(ui, svn, meta, branch, branchpath, r, parentctx):
         if prev is None or pbranch == branch:
             # letting patch handle binaries sounded
             # cool, but it breaks patch in sad ways
-            d = svn.get_unified_diff(branchpath, r.revnum, deleted=False,
-                                     ignore_type=False)
+            d = svn.get_unified_diff(branchpath, r.revnum,                                                           other_rev=prev,
+                                     deleted=False, ignore_type=False)
         else:
             d = svn.get_unified_diff(branchpath, r.revnum,
                                      other_path=ppath, other_rev=prev,
