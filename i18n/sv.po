@@ -16,8 +16,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-07-23 20:26+0200\n"
-"PO-Revision-Date: 2012-07-23 20:38+0200\n"
+"POT-Creation-Date: 2012-07-28 14:35+0200\n"
+"PO-Revision-Date: 2012-07-28 22:58+0200\n"
 "Last-Translator: Jens Bäckman <jens.backman@gmail.com>\n"
 "Language-Team: Swedish\n"
 "Language: Swedish\n"
@@ -91,10 +91,10 @@ msgstr ""
 
 msgid ""
 "Branch-based Access Control\n"
-"..........................."
+"---------------------------"
 msgstr ""
 "Grenbaserad Åtkomstkontroll\n"
-"..........................."
+"---------------------------"
 
 msgid ""
 "Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to\n"
@@ -122,10 +122,10 @@ msgstr ""
 
 msgid ""
 "Path-based Access Control\n"
-"........................."
+"-------------------------"
 msgstr ""
 "Sökvägsbaserad Åtkomstkontroll\n"
-".............................."
+"------------------------------"
 
 msgid ""
 "Use the ``acl.deny`` and ``acl.allow`` sections to have path-based\n"
@@ -136,10 +136,10 @@ msgstr ""
 
 msgid ""
 "Groups\n"
-"......"
+"------"
 msgstr ""
 "Grupper\n"
-"......."
+"-------"
 
 msgid ""
 "Group names must be prefixed with an ``@`` symbol. Specifying a group\n"
@@ -155,10 +155,10 @@ msgstr ""
 
 msgid ""
 "Example Configuration\n"
-"....................."
+"---------------------"
 msgstr ""
 "Exempelkonfiguration\n"
-"...................."
+"--------------------"
 
 msgid "::"
 msgstr "::"
@@ -1359,10 +1359,10 @@ msgstr ""
 
 msgid ""
 "    Mercurial Source\n"
-"    ''''''''''''''''"
+"    ################"
 msgstr ""
 "    Mercurial-källa\n"
-"    '''''''''''''''"
+"    ###############"
 
 msgid ""
 "    The Mercurial source recognizes the following configuration\n"
@@ -1388,10 +1388,10 @@ msgstr ""
 
 msgid ""
 "    CVS Source\n"
-"    ''''''''''"
+"    ##########"
 msgstr ""
 "    CVS-källa\n"
-"    '''''''''"
+"    #########"
 
 msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
@@ -1447,7 +1447,7 @@ msgstr ""
 
 msgid ""
 "    :hook.cvschangesets: Specify a Python function to be called after\n"
-"        the changesets are calculated from the the CVS log. The\n"
+"        the changesets are calculated from the CVS log. The\n"
 "        function is passed a list with the changeset entries, and can\n"
 "        modify the changesets in-place, or add or delete them."
 msgstr ""
@@ -1461,10 +1461,10 @@ msgstr ""
 
 msgid ""
 "    Subversion Source\n"
-"    '''''''''''''''''"
+"    #################"
 msgstr ""
 "    Subversion-källa\n"
-"    ''''''''''''''''"
+"    ################"
 
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
@@ -1510,10 +1510,10 @@ msgstr ""
 
 msgid ""
 "    Perforce Source\n"
-"    '''''''''''''''"
+"    ###############"
 msgstr ""
 "    Perforce-källa\n"
-"    ''''''''''''''"
+"    ##############"
 
 msgid ""
 "    The Perforce (P4) importer can be given a p4 depot path or a\n"
@@ -1536,10 +1536,10 @@ msgstr ""
 
 msgid ""
 "    Mercurial Destination\n"
-"    '''''''''''''''''''''"
+"    #####################"
 msgstr ""
 "    Mercurial-destination\n"
-"    '''''''''''''''''''''"
+"    #####################"
 
 msgid "    The following options are supported:"
 msgstr ""
@@ -4089,11 +4089,11 @@ msgstr ""
 msgid "&Other"
 msgstr ""
 
-msgid "destination largefile already exists"
-msgstr ""
-
 msgid "no files to copy"
 msgstr "inga filer att kopiera"
+
+msgid "destination largefile already exists"
+msgstr "destionation-largefile finns redan"
 
 msgid "caching new largefiles\n"
 msgstr "cachar nya largefiles\n"
@@ -4359,35 +4359,35 @@ msgid "%s appears more than once in %s"
 msgstr "%s finns mer än en gång i %s"
 
 msgid "guard cannot be an empty string"
-msgstr "guard kan inte vara en tom sträng"
+msgstr "skyddet kan inte vara en tom sträng"
 
 #, python-format
 msgid "guard %r starts with invalid character: %r"
-msgstr ""
+msgstr "skyddet %r börjar med ett otillåtet tecken: %r"
 
 #, python-format
 msgid "invalid character in guard %r: %r"
-msgstr ""
+msgstr "otillåtet tecken i skyddet %r: %r"
 
 #, python-format
 msgid "guard %r too short"
-msgstr ""
+msgstr "skyddet %r är för kort"
 
 #, python-format
 msgid "guard %r starts with invalid char"
-msgstr ""
+msgstr "skyddet %r börjar med ett otillåtet tecken"
 
 #, python-format
 msgid "allowing %s - no guards in effect\n"
-msgstr ""
+msgstr "tillåter %s - inga skydd aktiva\n"
 
 #, python-format
 msgid "allowing %s - no matching negative guards\n"
-msgstr ""
+msgstr "tillåter %s - inga matchande negativa skydd\n"
 
 #, python-format
 msgid "allowing %s - guarded by %s\n"
-msgstr ""
+msgstr "tillåter %s - skyddad av %s\n"
 
 #, python-format
 msgid "skipping %s - guarded by %s\n"
@@ -4395,11 +4395,11 @@ msgstr "hoppar över %s - skyddad av %s\n"
 
 #, python-format
 msgid "skipping %s - no matching guards\n"
-msgstr ""
+msgstr "hoppar över %s - inga matchande skydd\n"
 
 #, python-format
 msgid "error removing undo: %s\n"
-msgstr ""
+msgstr "fel vid borttagning av återställare: %s\n"
 
 #, python-format
 msgid "saving current version of %s as %s\n"
@@ -4407,33 +4407,33 @@ msgstr "sparar nuvarande revision av %s som %s\n"
 
 #, python-format
 msgid "apply failed for patch %s"
-msgstr ""
+msgstr "misslyckades att applicera patchen %s"
 
 #, python-format
 msgid "patch didn't work out, merging %s\n"
-msgstr ""
+msgstr "patchning gick inte bra, sammanfogar %s\n"
 
 #, python-format
 msgid "update returned %d"
-msgstr ""
+msgstr "update returnerade %d"
 
 msgid "repo commit failed"
-msgstr ""
+msgstr "arkivering misslyckades"
 
 #, python-format
 msgid "unable to read %s"
-msgstr ""
+msgstr "kan inte läsa %s"
 
 #, python-format
 msgid "patch %s does not exist\n"
-msgstr ""
+msgstr "patchen %s finns inte\n"
 
 #, python-format
 msgid "patch %s is not applied\n"
-msgstr ""
+msgstr "patchen %s är inte applicerad\n"
 
 msgid "patch failed, unable to continue (try -v)\n"
-msgstr ""
+msgstr "patchning misslyckades, kan inte fortsätta (försök med -v)\n"
 
 #, python-format
 msgid "applying %s\n"
@@ -4448,19 +4448,19 @@ msgstr "lokala ändringar hittades, uppdatera först"
 
 #, python-format
 msgid "patch %s is empty\n"
-msgstr ""
+msgstr "patchen %s är tom\n"
 
 msgid "qpush exactly duplicates child changeset"
-msgstr ""
+msgstr "qpush duplicerar barnändringen exakt"
 
 msgid "repository commit failed"
-msgstr ""
+msgstr "arkivering misslyckades"
 
 msgid "patch failed, rejects left in working dir\n"
-msgstr ""
+msgstr "patchning misslyckades, avslag lämnades i arbetskatalogen\n"
 
 msgid "fuzz found when applying patch, stopping\n"
-msgstr ""
+msgstr "ludd upptäcktes när patchen applicerades, stannar\n"
 
 #, python-format
 msgid "revision %s refers to unknown patches: %s\n"
@@ -4472,51 +4472,51 @@ msgstr "okända patchar: %s\n"
 
 #, python-format
 msgid "revision %d is not managed"
-msgstr ""
+msgstr "revision %d hanteras inte"
 
 #, python-format
 msgid "cannot delete revision %d above applied patches"
-msgstr ""
+msgstr "kan inte radera revision %d ovanför applicerade patchar"
 
 #, python-format
 msgid "patch %s finalized without changeset message\n"
-msgstr ""
+msgstr "patchen %s färdigställdes utan arkiveringsmeddelande\n"
 
 msgid "qdelete requires at least one revision or patch name"
-msgstr ""
+msgstr "qdelete kräver minst en revision eller ett patchnamn"
 
 #, python-format
 msgid "cannot delete applied patch %s"
-msgstr ""
+msgstr "kan inte radera applicerad patch %s"
 
 #, python-format
 msgid "patch %s not in series file"
-msgstr ""
+msgstr "patchen %s finns inte i series-filen"
 
 msgid "no patches applied"
-msgstr ""
+msgstr "inga patcher applicerade"
 
 msgid "working directory revision is not qtip"
-msgstr ""
+msgstr "arbetskatalogen är inte qtip"
 
 #, python-format
 msgid "uncommitted changes in subrepository %s"
 msgstr "oarkiverade ändringar i underarkivet %s"
 
 msgid "local changes found"
-msgstr ""
+msgstr "lokala ändringar hittades"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
-msgstr ""
+msgstr "\"%s\" kan inte användas som patchnamn"
 
 #, python-format
 msgid "patch name cannot begin with \"%s\""
-msgstr ""
+msgstr "patchnamn kan inte börja med \"%s\""
 
 #, python-format
 msgid "\"%s\" cannot be used in the name of a patch"
-msgstr ""
+msgstr "\"%s\" kan inte användas i patchnamn"
 
 #, python-format
 msgid "\"%s\" already exists as a directory"
@@ -4538,21 +4538,21 @@ msgstr "kan inte skriva patchen \"%s\": %s"
 
 #, python-format
 msgid "error unlinking %s\n"
-msgstr ""
+msgstr "fel vid radering av %s\n"
 
 #, python-format
 msgid "patch name \"%s\" is ambiguous:\n"
-msgstr ""
+msgstr "patchnamnet \"%s\" är tvetydligt:\n"
 
 #, python-format
 msgid "patch %s not in series"
-msgstr ""
+msgstr "patchen %s finns inte i serien"
 
 msgid "(working directory not at a head)\n"
-msgstr ""
+msgstr "(arbetskatalogen är inte på ett huvud)\n"
 
 msgid "no patches in series\n"
-msgstr ""
+msgstr "inga patchar i serien\n"
 
 #, python-format
 msgid "qpush: %s is already at the top\n"
@@ -4560,24 +4560,24 @@ msgstr "qpush: %s är redan på toppen\n"
 
 #, python-format
 msgid "cannot push to a previous patch: %s"
-msgstr ""
+msgstr "kan inte pusha till en tidigare patch: %s"
 
 #, python-format
 msgid "guarded by %s"
 msgstr "skyddad av %s"
 
 msgid "no matching guards"
-msgstr ""
+msgstr "inga matchande skydd"
 
 #, python-format
 msgid "cannot push '%s' - %s\n"
-msgstr ""
+msgstr "kan inte pusha '%s' - %s\n"
 
 msgid "all patches are currently applied\n"
-msgstr ""
+msgstr "alla patchar är applicerade\n"
 
 msgid "patch series already fully applied\n"
-msgstr ""
+msgstr "patchserien är redan fullständigt applicerad\n"
 
 msgid "cannot use --exact and --keep-changes together"
 msgstr "kan inte använda --exact och --keep-changes tillsammans"
@@ -4596,77 +4596,80 @@ msgid "please specify the patch to move"
 msgstr "ange patchen som ska flyttas"
 
 msgid "cleaning up working directory..."
-msgstr ""
+msgstr "rensar upp arbetskatalogen..."
 
 #, python-format
 msgid "errors during apply, please fix and refresh %s\n"
-msgstr ""
+msgstr "fel vid applicering, fixa och uppdatera %s\n"
 
 #, python-format
 msgid "now at: %s\n"
-msgstr ""
+msgstr "är nu på: %s\n"
 
 #, python-format
 msgid "patch %s is not applied"
-msgstr ""
+msgstr "patchen %s är inte applicerad"
 
 msgid "no patches applied\n"
-msgstr ""
+msgstr "inga patchar applicerade\n"
 
 #, python-format
 msgid "qpop: %s is already at the top\n"
-msgstr ""
+msgstr "qpop: %s är redan på toppen\n"
 
 msgid "qpop: forcing dirstate update\n"
-msgstr ""
+msgstr "qpop: tvingar en uppdatering av dirstate\n"
 
 #, python-format
 msgid "trying to pop unknown node %s"
-msgstr ""
+msgstr "försöker att poppa okänd nod %s"
 
 msgid "popping would remove a revision not managed by this patch queue"
 msgstr ""
+"poppning skulle ta bort en revision som inte hanteras av denna patchkö"
 
 msgid "popping would remove an immutable revision"
-msgstr ""
+msgstr "poppning skulle ta bort en oföränderlig revision"
 
 msgid "see \"hg help phases\" for details"
 msgstr "se \"hg help phases\" för detaljer"
 
 msgid "deletions found between repo revs"
-msgstr ""
+msgstr "raderingar hittades mellan arkivrevisioner"
 
 #, python-format
 msgid "popping %s\n"
-msgstr ""
+msgstr "poppar %s\n"
 
 msgid "patch queue now empty\n"
-msgstr ""
+msgstr "patchkön är nu tom\n"
 
 msgid "cannot refresh a revision with children"
-msgstr ""
+msgstr "kan inte uppdatera en revision med barn"
 
 msgid "cannot refresh immutable revision"
-msgstr ""
+msgstr "kan inte uppdatera oföränderlig revision"
 
 msgid ""
 "refresh interrupted while patch was popped! (revert --all, qpush to "
 "recover)\n"
 msgstr ""
+"uppdatering avbröts medans patch var poppad! (revert --all, qpush för "
+"att återställa)\n"
 
 msgid "patch queue directory already exists"
-msgstr ""
+msgstr "katalog för patchkö finns redan"
 
 #, python-format
 msgid "patch %s is not in series file"
-msgstr ""
+msgstr "patchen %s finns inte i series-filen"
 
 msgid "no saved patch data found\n"
 msgstr "ingen sparad patchdata hittades\n"
 
 #, python-format
 msgid "restoring status: %s\n"
-msgstr ""
+msgstr "återställer status: %s\n"
 
 msgid "save entry has children, leaving it alone\n"
 msgstr ""
@@ -4689,7 +4692,7 @@ msgid "save: no patches applied, exiting\n"
 msgstr ""
 
 msgid "status is already saved\n"
-msgstr ""
+msgstr "status är redan sparad\n"
 
 msgid "hg patches saved state"
 msgstr ""
@@ -4925,10 +4928,10 @@ msgid "location of source patch repository"
 msgstr ""
 
 msgid "hg qclone [OPTION]... SOURCE [DEST]"
-msgstr ""
+msgstr "hg qclone [FLAGGA]... KÄLLA [DEST]"
 
 msgid "clone main and patch repository at same time"
-msgstr ""
+msgstr "klona huvud- och patcharkivet på samma gång"
 
 msgid ""
 "    If source is local, destination will have no patches applied. If\n"
@@ -4971,7 +4974,7 @@ msgid "updating destination repository\n"
 msgstr ""
 
 msgid "hg qcommit [OPTION]... [FILE]..."
-msgstr ""
+msgstr "hg qcommit [FLAGGA]... [FIL]..."
 
 msgid "commit changes in the queue repository (DEPRECATED)"
 msgstr "arkivera ändringar i köarkivet (FÖRÅLDRAD)"
@@ -4981,13 +4984,13 @@ msgstr ""
 "    Detta är ett föråldrat kommando; använd :hg:`commit --mq` istället."
 
 msgid "print patches not in series"
-msgstr ""
+msgstr "visa patchas som inte är i serien"
 
 msgid "hg qseries [-ms]"
-msgstr ""
+msgstr "hg qseries [-ms]"
 
 msgid "print the entire series file"
-msgstr ""
+msgstr "visa hela seriefilen"
 
 msgid "hg qtop [-s]"
 msgstr "hg qtop [-s]"
@@ -5011,22 +5014,22 @@ msgid "import uncommitted changes (DEPRECATED)"
 msgstr "importera icke arkiverade ändringar (FÖRLEGAD)"
 
 msgid "add \"From: <current user>\" to patch"
-msgstr ""
+msgstr "lägg till \"From: <denna användare>\" i patch"
 
 msgid "add \"From: <USER>\" to patch"
-msgstr ""
+msgstr "lägg till \"From: <ANVÄNDARE>\" i patch"
 
 msgid "add \"Date: <current date>\" to patch"
-msgstr ""
+msgstr "lägg till \"Date: <nuvarande datum>\" i patch"
 
 msgid "add \"Date: <DATE>\" to patch"
-msgstr ""
+msgstr "lägg till \"Date: <DATUM>\" i patch"
 
 msgid "hg qnew [-e] [-m TEXT] [-l FILE] PATCH [FILE]..."
 msgstr "hg qnew [-e] [-m TEXT] [-l FIL] PATCH [FIL]..."
 
 msgid "create a new patch"
-msgstr ""
+msgstr "skapa en ny patch"
 
 msgid ""
 "    qnew creates a new patch on top of the currently-applied patch (if\n"
@@ -5036,18 +5039,30 @@ msgid ""
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications."
 msgstr ""
+"    qnew skapar en ny patch ovanpå redan applicerade patchar (om några).\n"
+"    Patchen kommer att initialiseras med oarkiverade ändringar i\n"
+"    arbetskatalogen. Du kan också använda -I/--include, -X/--exclude,\n"
+"    och/eller en uppsättning filer efter patchnamnet för att bara lägga\n"
+"    till ändringar i dessa filer i patchen, och lämna resten som\n"
+"    oarkiverade ändringar."
 
 msgid ""
 "    -u/--user and -d/--date can be used to set the (given) user and\n"
 "    date, respectively. -U/--currentuser and -D/--currentdate set user\n"
 "    to current user and date to current date."
 msgstr ""
+"    -u/--user och -d/--date kan användas för att sätta (den angivna)\n"
+"    användaren respektive datumet. -U/--currentuser och -D/--currentdate\n"
+"    sätter användare till denna användaren och datumed till nuvarande datum."
 
 msgid ""
 "    -e/--edit, -m/--message or -l/--logfile set the patch header as\n"
 "    well as the commit message. If none is specified, the header is\n"
 "    empty and the commit message is '[mq]: PATCH'."
 msgstr ""
+"    -e/--edit, -m/--message or -l/--logfile sätter både patchhuvudet och\n"
+"    arkiveringsmeddelandet. Om inget är angivet, så är huvudet tomt och\n"
+"    arkiveringsmeddelandet är '[mq]: PATCH'."
 
 msgid ""
 "    Use the -g/--git option to keep the patch in the git extended diff\n"
@@ -5055,6 +5070,10 @@ msgid ""
 "    is important for preserving permission changes and copy/rename\n"
 "    information."
 msgstr ""
+"    Använd flaggan -g/--git gör att lagra patchen i gits utökade\n"
+"    diff-format. Läs hjälpämnet om diffar för mer inormation om varför\n"
+"    detta är viktigt för att lagra rättighetsändringar och information om\n"
+"    kopior/namnbyten."
 
 msgid ""
 "    Returns 0 on successful creation of a new patch.\n"
@@ -5079,7 +5098,7 @@ msgid "add/update date field in patch with given date"
 msgstr ""
 
 msgid "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FILE] [-s] [FILE]..."
-msgstr ""
+msgstr "hg qrefresh [-I] [-X] [-e] [-m TEXT] [-l FIL] [-s] [FIL]..."
 
 msgid "update the current patch"
 msgstr "uppdatera den nuvarande patchen"
@@ -5224,7 +5243,7 @@ msgid "    To set guards on another patch::"
 msgstr ""
 
 msgid "      hg qguard other.patch -- +2.6.17 -stable"
-msgstr ""
+msgstr "      hg qguard other.patch -- +2.6.17 -stable"
 
 msgid "cannot mix -l/--list with options or arguments"
 msgstr ""
@@ -5234,7 +5253,7 @@ msgstr ""
 
 #, python-format
 msgid "no patch named %s"
-msgstr ""
+msgstr "ingen patch med namnet %s"
 
 msgid "hg qheader [PATCH]"
 msgstr "hg qheader [PATCH]"
@@ -5252,7 +5271,7 @@ msgid "list patch name in commit text"
 msgstr ""
 
 msgid "apply all patches"
-msgstr ""
+msgstr "applicera alla patchar"
 
 msgid "merge from another queue (DEPRECATED)"
 msgstr ""
@@ -5281,13 +5300,13 @@ msgstr ""
 
 #, python-format
 msgid "merging with queue at: %s\n"
-msgstr ""
+msgstr "sammanfogar med kö vid: %s\n"
 
 msgid "pop all patches"
-msgstr ""
+msgstr "poppa alla patchar"
 
 msgid "queue name to pop (DEPRECATED)"
-msgstr ""
+msgstr "könamn att poppa (FÖRLEGAD)"
 
 msgid "forget any local changes to patched files"
 msgstr ""
@@ -6070,7 +6089,7 @@ msgid ""
 msgstr ""
 "Du kan också endera konfigurera alternativet method i email-sektionen att\n"
 "vara en sendmail-kompatibel sändare eller fylla i sektionen [smtp] så att\n"
-"patchbomb-utäkningen automatiskt kan skicka patchbomber från kommandoraden.\n"
+"patchbomb-utökningen automatiskt kan skicka patchbomber från kommandoraden.\n"
 "Se sektionerna [email] och [smtp] i hgrc(5) för detaljer.\n"
 
 msgid "send patches as inline message text (default)"
@@ -6714,7 +6733,7 @@ msgid "specify merge tool for rebase"
 msgstr "ange sammanfogningsverktyg för ombasering"
 
 msgid "commands to interactively select changes for commit/qrefresh"
-msgstr ""
+msgstr "interaktivt val av ändringar för commit/qrefresh"
 
 msgid "ignore white space when comparing lines"
 msgstr "ignorera blanktecken när rader jämförs"
@@ -6726,50 +6745,50 @@ msgid "ignore changes whose lines are all blank"
 msgstr "ignorera ändringar vars rader är tomma"
 
 msgid "this modifies a binary file (all or nothing)\n"
-msgstr ""
+msgstr "detta modifierar en binär fil (allt eller inget)\n"
 
 msgid "this is a binary file\n"
-msgstr ""
+msgstr "det här är en binär fil\n"
 
 #, python-format
 msgid "%d hunks, %d lines changed\n"
-msgstr ""
+msgstr "%d stycken, %d rader ändrade\n"
 
 msgid "[Ynesfdaq?]"
-msgstr ""
+msgstr "[Ynesfdaq?]"
 
 msgid "&Yes, record this change"
-msgstr ""
+msgstr "(&Y) Ja, lagra den här ändringen"
 
 msgid "&No, skip this change"
-msgstr ""
+msgstr "&Nej, hoppa över den här ändringen"
 
 msgid "&Edit the change manually"
-msgstr ""
+msgstr "(&E) Redigera ändringen manuellt"
 
 msgid "&Skip remaining changes to this file"
-msgstr ""
+msgstr "(&S) Hoppa över kvarvarande ändringar i den här filen"
 
 msgid "Record remaining changes to this &file"
-msgstr ""
+msgstr "Spara kvarvarande ändringar till denna &fil"
 
 msgid "&Done, skip remaining changes and files"
-msgstr ""
+msgstr "&(D) Klar, hoppa över kvarvarande ändringar och filer"
 
 msgid "Record &all changes to all remaining files"
-msgstr ""
+msgstr "Spara &alla ändringar till alla kvarvarande filer"
 
 msgid "&Quit, recording no changes"
-msgstr ""
+msgstr "(&Q) Avsluta, spara inga ändringar"
 
 msgid "&?"
-msgstr ""
+msgstr "&?"
 
 msgid "cannot edit patch for whole file"
-msgstr ""
+msgstr "kan inte redigera patch för hel fil"
 
 msgid "cannot edit patch for binary file"
-msgstr ""
+msgstr "kan inte redigera patch för binär fil"
 
 msgid ""
 "\n"
@@ -6777,6 +6796,10 @@ msgid ""
 "To remove '+' lines, delete them.\n"
 "Lines starting with # will be removed from the patch."
 msgstr ""
+"\n"
+"För att radera rader med '-', ersätt med blanka (' ') rader (kontext).\n"
+"För att radera rader med '+', radera dom.\n"
+"Rader som börjar med # kommer att raderas från patchen."
 
 msgid ""
 "If the patch applies cleanly, the edited hunk will immediately be\n"
@@ -6785,33 +6808,37 @@ msgid ""
 "all lines of the hunk are removed, then the edit is aborted and\n"
 "the hunk is left unchanged.\n"
 msgstr ""
+"Om patchen appliceras utan problem, kommer det redigerade stycket att\n"
+"sparas. Om problem uppstår, kommer en .rej-fil att genereras: du kan\n"
+"använde den när du försöker igen. Om alla rader i stycket raderas, så\n"
+"avbryts redigeringen och stycket lämnas oförändrat.\n"
 
 msgid "edit failed"
-msgstr ""
+msgstr "redigering misslyckades"
 
 msgid "user quit"
-msgstr ""
+msgstr "användaren avslutade"
 
 #, python-format
 msgid "examine changes to %s?"
-msgstr ""
+msgstr "granska ändringar i %s?"
 
 msgid " and "
-msgstr ""
+msgstr " och "
 
 #, python-format
 msgid "record this change to %r?"
-msgstr ""
+msgstr "spara den här ändringen till %r?"
 
 #, python-format
 msgid "record change %d/%d to %r?"
-msgstr ""
+msgstr "spara ändring %d/%d till %r?"
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr "hg record [FLAGGA]... [FIL]..."
 
 msgid "interactively select changes to commit"
-msgstr ""
+msgstr "välj interaktivt ändringar för arkivering"
 
 msgid ""
 "    If a list of files is omitted, all changes reported by :hg:`status`\n"
@@ -6826,32 +6853,43 @@ msgid ""
 "    change to use. For each query, the following responses are\n"
 "    possible::"
 msgstr ""
+"    Du kommer att frågas om du vill lagra ändrade filer, och i filer med\n"
+"    flera ändringar kommer du att få frågan för varje ändring. Vid varje\n"
+"    fråga är följande svar möjliga::"
 
 msgid ""
 "      y - record this change\n"
 "      n - skip this change\n"
 "      e - edit this change manually"
 msgstr ""
+"      y - lagra den här ändringen\n"
+"      n - hoppa över den här ändringen\n"
+"      e - redigera ändringen manuellt"
 
 msgid ""
 "      s - skip remaining changes to this file\n"
 "      f - record remaining changes to this file"
 msgstr ""
+"      s - hoppa över kvarvarande ändringar i den här filen\n"
+"      f - spara kvarvarande ändringar till denna fil"
 
 msgid ""
 "      d - done, skip remaining changes and files\n"
 "      a - record all changes to all remaining files\n"
 "      q - quit, recording no changes"
 msgstr ""
+"      d - klar, hoppa över kvarvarande ändringar och filer\n"
+"      a - spara alla ändringar till alla kvarvarande filer\n"
+"      q - avsluta, spara inga ändringar"
 
 msgid "      ? - display help"
-msgstr ""
+msgstr "      ? - visa hjälp"
 
 msgid "    This command is not available when committing a merge."
-msgstr ""
+msgstr "    Det här kommandot är inte tillgängligt vid sammanfogning."
 
 msgid "interactively record a new patch"
-msgstr ""
+msgstr "lägra en ny ändring interaktivt"
 
 msgid ""
 "    See :hg:`help qnew` & :hg:`help record` for more information and\n"
@@ -6863,24 +6901,24 @@ msgstr ""
 "    "
 
 msgid "'mq' extension not loaded"
-msgstr ""
+msgstr "utökningen 'mq' är inte laddad"
 
 #, python-format
 msgid "running non-interactively, use %s instead"
-msgstr ""
+msgstr "kör icke-interaktivt, använd %s istället"
 
 msgid "cannot partially commit a merge (use \"hg commit\" instead)"
 msgstr ""
 "kan inte delvis arkivera en sammanfogning (använd \"hg commit\" istället)"
 
 msgid "no changes to record\n"
-msgstr ""
+msgstr "inga ändringar att lagra\n"
 
 msgid "hg qrecord [OPTION]... PATCH [FILE]..."
-msgstr ""
+msgstr "hg qrecord [FLAGGA]... PATCH [FIL]..."
 
 msgid "interactively select changes to refresh"
-msgstr ""
+msgstr "interaktivt val av ändringar att uppdatera"
 
 msgid "recreates hardlinks between repository clones"
 msgstr ""
@@ -8020,23 +8058,23 @@ msgstr ""
 "     vid nästa arkivering."
 
 msgid ""
-"    Use the -s/--similarity option to detect renamed files. With a\n"
-"    parameter greater than 0, this compares every removed file with\n"
-"    every added file and records those similar enough as renames. This\n"
+"    Use the -s/--similarity option to detect renamed files. This\n"
 "    option takes a percentage between 0 (disabled) and 100 (files must\n"
-"    be identical) as its parameter. Detecting renamed files this way\n"
+"    be identical) as its parameter. With a parameter greater than 0,\n"
+"    this compares every removed file with every added file and records\n"
+"    those similar enough as renames. Detecting renamed files this way\n"
 "    can be expensive. After using this option, :hg:`status -C` can be\n"
-"    used to check which files were identified as moved or renamed.\n"
-"    If this option is not specified, only renames of identical files\n"
-"    are detected."
+"    used to check which files were identified as moved or renamed. If\n"
+"    not specified, -s/--similarity defaults to 100 and only renames of\n"
+"    identical files are detected."
 msgstr ""
-"    Använd flaggan -s/--similarity för att upptäcka omdöpta filer. Med en\n"
-"    parameter större än 0, kommer varje borttagen fil att jämföras med\n"
-"    varje tillagd fil och lagrar de som är tillräckligt lika som ett\n"
-"    namnbyte. Flaggan tar ett procentvärde mellan 0 (deaktiverad) och 100\n"
-"    (filer måste vara identiska) som parameter. Att upptäcka omdöpta filer\n"
-"    på det här sättet kan ta lång tid. Efter att denna flagga har använts,\n"
-"    kan :hg:`status -C` användas för att kontrollera vilka filer som\n"
+"    Använd flaggan -s/--similarity för att upptäcka omdöpta filer. Flaggan\n"
+"    tar ett procentvärde mellan 0 (deaktiverad) och 100 (filer måste vara\n"
+"    identiska) som parameter. Med en parameter större än 0, kommer varje\n"
+"    borttagen fil att jämföras med varje tillagd fil och lagrar de som är\n"
+"    tillräckligt lika som ett namnbyte. Att upptäcka omdöpta filer på det\n"
+"    här sättet kan ta lång tid. Efter att denna flagga har använts, kan\n"
+"    :hg:`status -C` användas för att kontrollera vilka filer som\n"
 "    identifierades som flyttade eller omdöpta. Om den flaggan inte anges,\n"
 "    upptäcks bara namnbyten för identiska filer."
 
@@ -12189,6 +12227,9 @@ msgstr "oarkiverad sammanfogning"
 msgid "not at a branch head (use -f to force)"
 msgstr "inte vid ett grenhuvud (använd -f för att tvinga)"
 
+msgid "null revision specified"
+msgstr "null-revision angiven"
+
 msgid "list repository tags"
 msgstr "lista arkivmärken"
 
@@ -13173,10 +13214,10 @@ msgstr ""
 
 msgid ""
 "Files\n"
-"-----"
+"====="
 msgstr ""
 "Filer\n"
-"-----"
+"====="
 
 msgid ""
 "Mercurial reads configuration data from several files, if they exist.\n"
@@ -13274,8 +13315,10 @@ msgstr ""
 
 msgid ""
 "Syntax\n"
-"------"
+"======"
 msgstr ""
+"Syntax\n"
+"======"
 
 msgid ""
 "A configuration file consists of sections, led by a ``[section]`` header\n"
@@ -13398,8 +13441,10 @@ msgstr ""
 
 msgid ""
 "Sections\n"
-"--------"
+"========"
 msgstr ""
+"Sektioner\n"
+"========="
 
 msgid ""
 "This section describes the different sections that may appear in a\n"
@@ -13409,8 +13454,10 @@ msgstr ""
 
 msgid ""
 "``alias``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"``alias``\n"
+"---------"
 
 msgid ""
 "Defines command aliases.\n"
@@ -13496,8 +13543,11 @@ msgstr ""
 msgid ""
 "\n"
 "``annotate``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
+"\n"
+"``annotate``\n"
+"------------"
 
 msgid ""
 "Settings used when displaying file annotations. All values are\n"
@@ -13529,8 +13579,11 @@ msgstr ""
 msgid ""
 "\n"
 "``auth``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
+"\n"
+"``auth``\n"
+"--------"
 
 msgid ""
 "Authentication credentials for HTTP authentication. This section\n"
@@ -13623,8 +13676,11 @@ msgstr ""
 msgid ""
 "\n"
 "``decode/encode``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-----------------"
 msgstr ""
+"\n"
+"``decode/encode``\n"
+"-----------------"
 
 msgid ""
 "Filters for transforming files on checkout/checkin. This would\n"
@@ -13691,8 +13747,11 @@ msgstr ""
 msgid ""
 "\n"
 "``defaults``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
+"\n"
+"``defaults``\n"
+"------------"
 
 msgid "(defaults are deprecated. Don't use them. Use aliases instead)"
 msgstr ""
@@ -13722,8 +13781,11 @@ msgstr ""
 msgid ""
 "\n"
 "``diff``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
+"\n"
+"``diff``\n"
+"--------"
 
 msgid ""
 "Settings used when displaying diffs. Everything except for ``unified``\n"
@@ -13759,8 +13821,10 @@ msgstr ""
 
 msgid ""
 "``email``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"``email``\n"
+"---------"
 
 msgid "Settings for extensions that send email messages."
 msgstr ""
@@ -13835,8 +13899,11 @@ msgstr ""
 msgid ""
 "\n"
 "``extensions``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 msgstr ""
+"\n"
+"``extensions``\n"
+"--------------"
 
 msgid ""
 "Mercurial has an extension mechanism for adding new features. To\n"
@@ -13878,8 +13945,11 @@ msgstr ""
 msgid ""
 "\n"
 "``format``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
+"\n"
+"``format``\n"
+"----------"
 
 msgid ""
 "``usestore``\n"
@@ -13913,8 +13983,10 @@ msgstr ""
 
 msgid ""
 "``graph``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"``graph``\n"
+"---------"
 
 msgid ""
 "Web graph view configuration. This section let you change graph\n"
@@ -13950,8 +14022,10 @@ msgstr ""
 
 msgid ""
 "``hooks``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"``hooks``\n"
+"---------"
 
 msgid ""
 "Commands or Python functions that get automatically executed by\n"
@@ -14188,8 +14262,11 @@ msgstr ""
 msgid ""
 "\n"
 "``hostfingerprints``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------------"
 msgstr ""
+"\n"
+"``hostfingerprints``\n"
+"--------------------"
 
 msgid ""
 "Fingerprints of the certificates of known HTTPS servers.\n"
@@ -14215,8 +14292,11 @@ msgstr ""
 msgid ""
 "\n"
 "``http_proxy``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 msgstr ""
+"\n"
+"``http_proxy``\n"
+"--------------"
 
 msgid ""
 "Used to access web-based Mercurial repositories through a HTTP\n"
@@ -14253,8 +14333,10 @@ msgstr ""
 
 msgid ""
 "``merge-patterns``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------------"
 msgstr ""
+"``merge-patterns``\n"
+"------------------"
 
 msgid ""
 "This section specifies merge tools to associate with particular file\n"
@@ -14271,8 +14353,10 @@ msgstr ""
 
 msgid ""
 "``merge-tools``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 msgstr ""
+"``merge-tools``\n"
+"---------------"
 
 msgid ""
 "This section configures external merge tools to use for file-level\n"
@@ -14411,8 +14495,11 @@ msgstr ""
 msgid ""
 "\n"
 "``patch``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"\n"
+"``patch``\n"
+"---------"
 
 msgid ""
 "Settings used when applying patches, for instance through the 'import'\n"
@@ -14435,8 +14522,11 @@ msgstr ""
 msgid ""
 "\n"
 "``paths``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
+"\n"
+"``paths``\n"
+"---------"
 
 msgid ""
 "Assigns symbolic names to repositories. The left side is the\n"
@@ -14460,8 +14550,10 @@ msgstr ""
 
 msgid ""
 "``phases``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
+"``phases``\n"
+"----------"
 
 msgid ""
 "Specifies default handling of phases. See :hg:`help phases` for more\n"
@@ -14484,8 +14576,10 @@ msgstr ""
 
 msgid ""
 "``profiling``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-------------"
 msgstr ""
+"``profiling``\n"
+"-------------"
 
 msgid ""
 "Specifies profiling type, format, and file output. Two profilers are\n"
@@ -14550,16 +14644,20 @@ msgstr ""
 
 msgid ""
 "``revsetalias``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 msgstr ""
+"``revsetalias``\n"
+"---------------"
 
 msgid "Alias definitions for revsets. See :hg:`help revsets` for details."
 msgstr ""
 
 msgid ""
 "``server``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
+"``server``\n"
+"----------"
 
 msgid "Controls generic server settings."
 msgstr ""
@@ -14593,8 +14691,10 @@ msgstr ""
 
 msgid ""
 "``smtp``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
+"``smtp``\n"
+"--------"
 
 msgid "Configuration for extensions that need to send email messages."
 msgstr ""
@@ -14638,8 +14738,11 @@ msgstr ""
 msgid ""
 "\n"
 "``subpaths``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
+"\n"
+"``subpaths``\n"
+"------------"
 
 msgid ""
 "Subrepository source URLs can go stale if a remote server changes name\n"
@@ -14664,15 +14767,17 @@ msgid "rewrites ``http://server/foo-hg/`` into ``http://hg.server/foo/``."
 msgstr ""
 
 msgid ""
-"Relative subrepository paths are first made absolute, and the the\n"
+"Relative subrepository paths are first made absolute, and the\n"
 "rewrite rules are then applied on the full (absolute) path. The rules\n"
 "are applied in definition order."
 msgstr ""
 
 msgid ""
 "``trusted``\n"
-"\"\"\"\"\"\"\"\"\"\"\""
+"-----------"
 msgstr ""
+"``trusted``\n"
+"-----------"
 
 msgid ""
 "Mercurial will not use the settings in the\n"
@@ -14705,8 +14810,11 @@ msgstr ""
 msgid ""
 "\n"
 "``ui``\n"
-"\"\"\"\"\"\""
+"------"
 msgstr ""
+"\n"
+"``ui``\n"
+"------"
 
 msgid "User interface controls."
 msgstr ""
@@ -14877,8 +14985,11 @@ msgstr ""
 msgid ""
 "\n"
 "``web``\n"
-"\"\"\"\"\"\"\""
+"-------"
 msgstr ""
+"\n"
+"``web``\n"
+"-------"
 
 msgid ""
 "Web interface configuration. The settings in this section apply to\n"
@@ -16231,8 +16342,10 @@ msgstr ""
 
 msgid ""
 "Synopsis\n"
-"--------"
+"========"
 msgstr ""
+"Synopsis\n"
+"========"
 
 msgid ""
 "The Mercurial system uses a file called ``.hgignore`` in the root\n"
@@ -16242,10 +16355,10 @@ msgstr ""
 
 msgid ""
 "Description\n"
-"-----------"
+"==========="
 msgstr ""
 "Beskrivning\n"
-"-----------"
+"==========="
 
 msgid ""
 "The working directory of a Mercurial repository will often contain\n"
@@ -16337,8 +16450,10 @@ msgstr ""
 
 msgid ""
 "Example\n"
-"-------"
+"======="
 msgstr ""
+"Exempel\n"
+"======="
 
 msgid "Here is an example ignore file. ::"
 msgstr ""
@@ -16493,8 +16608,10 @@ msgstr ""
 
 msgid ""
 "Available merge tools\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"====================="
 msgstr ""
+"Tillgängliga sammanfogningsverktyg\n"
+"=================================="
 
 msgid ""
 "External merge tools and their properties are configured in the\n"
@@ -16528,7 +16645,7 @@ msgstr ""
 
 msgid ""
 "Choosing a merge tool\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"====================="
 msgstr ""
 
 msgid "Mercurial uses these rules when deciding which merge tool to use:"
@@ -16738,8 +16855,10 @@ msgstr ""
 
 msgid ""
 "What are phases?\n"
-"----------------"
+"================"
 msgstr ""
+"Vad är faser?\n"
+"============="
 
 msgid ""
 "Phases are a system for tracking which changesets have been or should\n"
@@ -16765,8 +16884,10 @@ msgstr ""
 
 msgid ""
 "How are phases managed?\n"
-"-----------------------"
+"======================="
 msgstr ""
+"Hur hanteras faser?\n"
+"==================="
 
 msgid ""
 "For the most part, phases should work transparently. By default, a\n"
@@ -16783,8 +16904,10 @@ msgstr ""
 
 msgid ""
 "Phases and servers\n"
-"------------------"
+"=================="
 msgstr ""
+"Faser och servrar\n"
+"================="
 
 msgid "Normally, all servers are ``publishing`` by default. This means::"
 msgstr ""
@@ -16832,10 +16955,10 @@ msgstr ""
 
 msgid ""
 "Examples\n"
-"--------"
+"========"
 msgstr ""
 "Exempel\n"
-"-------"
+"======="
 
 msgid " - list changesets in draft or secret phase::"
 msgstr " - visa ändringar i draft- eller secret-fasen::"
@@ -17170,7 +17293,7 @@ msgstr ""
 msgid ""
 "\n"
 "Adding a Subrepository\n"
-"----------------------"
+"======================"
 msgstr ""
 
 msgid ""
@@ -17184,7 +17307,7 @@ msgstr ""
 
 msgid ""
 "Synchronizing a Subrepository\n"
-"-----------------------------"
+"============================="
 msgstr ""
 
 msgid ""
@@ -17203,7 +17326,7 @@ msgstr ""
 
 msgid ""
 "Deleting a Subrepository\n"
-"------------------------"
+"========================"
 msgstr ""
 
 msgid ""
@@ -17213,7 +17336,7 @@ msgstr ""
 
 msgid ""
 "Interaction with Mercurial Commands\n"
-"-----------------------------------"
+"==================================="
 msgstr ""
 
 msgid ""
@@ -17297,7 +17420,7 @@ msgstr ""
 
 msgid ""
 "Remapping Subrepositories Sources\n"
-"---------------------------------"
+"================================="
 msgstr ""
 
 msgid ""
@@ -18371,6 +18494,7 @@ msgid ""
 "    - ``current``            : the cset currently being bisected"
 msgstr ""
 
+#. i18n: "bisect" is a keyword
 msgid "bisect requires a string"
 msgstr "bisect kräver en sträng"
 
@@ -18442,9 +18566,11 @@ msgid ""
 "    present, or all converted changesets if no identifier is specified."
 msgstr ""
 
+#. i18n: "converted" is a keyword
 msgid "converted takes one or no arguments"
 msgstr "converted tar ett eller inga argument"
 
+#. i18n: "converted" is a keyword
 msgid "converted requires a revision"
 msgstr "converted kräver en revision"
 
@@ -18485,6 +18611,7 @@ msgid ""
 "    Changeset in draft phase."
 msgstr ""
 
+#. i18n: "draft" is a keyword
 msgid "draft takes no arguments"
 msgstr "draft tar inga argument"
 
@@ -18493,8 +18620,9 @@ msgid ""
 "    obsolete changeset with obsolete descendant only."
 msgstr ""
 
-msgid "obsolete takes no arguments"
-msgstr "obsolete tar inga argument"
+#. i18n: "extinct" is a keyword
+msgid "extinct takes no arguments"
+msgstr "extinct tar inga argument"
 
 msgid ""
 "``extra(label, [value])``\n"
@@ -18508,12 +18636,15 @@ msgid ""
 "    use the prefix `literal:`."
 msgstr ""
 
+#. i18n: "extra" is a keyword
 msgid "extra takes at least 1 and at most 2 arguments"
 msgstr "extra tar minst 1 och som mest 2 argument"
 
+#. i18n: "extra" is a keyword
 msgid "first argument to extra must be a string"
 msgstr "första argumentet till extra måste vara en sträng"
 
+#. i18n: "extra" is a keyword
 msgid "second argument to extra must be a string"
 msgstr "andra argumentet till extra måste vara en sträng"
 
@@ -18522,6 +18653,13 @@ msgid ""
 "    Changesets connected to the specified filelog."
 msgstr ""
 
+msgid ""
+"    For performance reasons, ``filelog()`` does not show every changeset\n"
+"    that affects the requested file(s). See :hg:`help log` for details. For\n"
+"    a slower, more accurate result, use ``file()``."
+msgstr ""
+
+#. i18n: "filelog" is a keyword
 msgid "filelog requires a pattern"
 msgstr "filelog kräver ett mönster"
 
@@ -18573,15 +18711,19 @@ msgstr "ogiltigt träffmönster: %s"
 msgid "_matchfiles requires at least one argument"
 msgstr "_matchfiles kräver minst ett argument"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles requires string arguments"
 msgstr "_matchfiles kräver strängargument"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles expected at most one revision"
 msgstr "_matchfiles förväntade sig som mest en revision"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles expected at most one default mode"
 msgstr "_matchfiles förvändate sig som mest ett standardläge"
 
+#. i18n: "_matchfiles" is a keyword
 #, python-format
 msgid "invalid _matchfiles prefix: %s"
 msgstr "ogiltigt _matchfiles-prefix: %s"
@@ -18589,6 +18731,11 @@ msgstr "ogiltigt _matchfiles-prefix: %s"
 msgid ""
 "``file(pattern)``\n"
 "    Changesets affecting files matched by pattern."
+msgstr ""
+
+msgid ""
+"    For a faster but less accurate result, consider using ``filelog()``\n"
+"    instead."
 msgstr ""
 
 #. i18n: "file" is a keyword
@@ -18699,6 +18846,10 @@ msgid ""
 "    Mutable changeset with a newer version."
 msgstr ""
 
+#. i18n: "obsolete" is a keyword
+msgid "obsolete takes no arguments"
+msgstr "obsolete tar inga argument"
+
 msgid ""
 "``origin([set])``\n"
 "    Changesets that were specified as a source for the grafts, transplants "
@@ -18762,6 +18913,7 @@ msgid ""
 "    Changeset in public phase."
 msgstr ""
 
+#. i18n: "public" is a keyword
 msgid "public takes no arguments"
 msgstr "public tar inga argument"
 
@@ -18847,12 +18999,15 @@ msgid ""
 "    specified. You can match more than one field at a time."
 msgstr ""
 
+#. i18n: "matching" is a keyword
 msgid "matching takes 1 or 2 arguments"
 msgstr "matching tar 1 eller 2 argument"
 
+#. i18n: "matching" is a keyword
 msgid "matching requires a string as its second argument"
 msgstr "matching kräver en sträng som sitt andra argument"
 
+#. i18n: "matching" is a keyword
 #, python-format
 msgid "unexpected field name passed to matching: %s"
 msgstr "oväntat fältnamn skickat till matching: %s"
@@ -18872,6 +19027,7 @@ msgid ""
 "    Changeset in secret phase."
 msgstr ""
 
+#. i18n: "secret" is a keyword
 msgid "secret takes no arguments"
 msgstr "secret tar inga argument"
 
@@ -18896,6 +19052,7 @@ msgstr ""
 msgid "sort requires one or two arguments"
 msgstr "sort kräver ett eller två argument"
 
+#. i18n: "sort" is a keyword
 msgid "sort spec must be a string"
 msgstr "sort-spec måste vara en sträng"
 
@@ -18928,6 +19085,10 @@ msgid ""
 "``unstable()``\n"
 "    Unstable changesets are non-obsolete with obsolete descendants."
 msgstr ""
+
+#. i18n: "unstable" is a keyword
+msgid "unstable takes no arguments"
+msgstr "unstable tar inga argument"
 
 msgid ""
 "``user(string)``\n"
