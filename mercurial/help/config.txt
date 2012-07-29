@@ -1406,6 +1406,10 @@ The full set of options is:
 ``maxfiles``
     Maximum number of files to list per changeset. Default is 10.
 
+``maxshortchanges``
+    Maximum number of changes to list on the shortlog, graph or filelog
+    pages. Default is 60.
+
 ``name``
     Repository name to use in the web interface. Default is current
     working directory.
