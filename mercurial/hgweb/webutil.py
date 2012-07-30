@@ -10,6 +10,8 @@ import os, mimetypes, copy
 from mercurial import match, patch, scmutil, error, ui, util
 from mercurial.i18n import _
 from mercurial.node import hex, nullid
+from common import ErrorResponse
+from common import HTTP_NOT_FOUND
 import difflib
 
 def up(p):
@@ -154,11 +156,15 @@ def changectx(repo, req):
     return ctx
 
 def filectx(repo, req):
+    if 'file' not in req.form:
+        raise ErrorResponse(HTTP_NOT_FOUND, 'file not given')
     path = cleanpath(repo, req.form['file'][0])
     if 'node' in req.form:
         changeid = req.form['node'][0]
-    else:
+    elif 'filenode' in req.form:
         changeid = req.form['filenode'][0]
+    else:
+        raise ErrorResponse(HTTP_NOT_FOUND, 'node or filenode not given')
     try:
         fctx = repo[changeid][path]
     except error.RepoError:

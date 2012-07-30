@@ -586,6 +586,8 @@ diff = filediff
 
 def comparison(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
+    if 'file' not in req.form:
+        raise ErrorResponse(HTTP_NOT_FOUND, 'file not given')
     path = webutil.cleanpath(web.repo, req.form['file'][0])
     rename = path in ctx and webutil.renamelink(ctx[path]) or []
 
