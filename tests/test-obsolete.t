@@ -31,6 +31,12 @@
 Killing a single changeset without replacement
 
   $ mkcommit kill_me
+  $ hg debugobsolete 0
+  abort: changeset references must be full hexadecimal node identifiers
+  [255]
+  $ hg debugobsolete '00'
+  abort: changeset references must be full hexadecimal node identifiers
+  [255]
   $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
   $ hg debugobsolete
   97b7c2d76b1845ed3eb988cd612611e72406cef0 0 {'date': '0 0', 'user': 'babar'}

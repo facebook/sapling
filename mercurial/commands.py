@@ -2067,17 +2067,31 @@ def debugknown(ui, repopath, *ids, **opts):
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker"""
+    def parsenodeid(s):
+        try:
+            # We do not use revsingle/revrange functions here to accept
+            # arbitrary node identifiers, possibly not present in the
+            # local repository.
+            n = bin(s)
+            if len(n) != len(nullid):
+                raise TypeError()
+            return n
+        except TypeError:
+            raise util.Abort('changeset references must be full hexadecimal '
+                             'node identifiers')
+
     if precursor is not None:
         metadata = {}
         if 'date' in opts:
             metadata['date'] = opts['date']
         metadata['user'] = opts['user'] or ui.username()
-        succs = tuple(bin(succ) for succ in successors)
+        succs = tuple(parsenodeid(succ) for succ in successors)
         l = repo.lock()
         try:
             tr = repo.transaction('debugobsolete')
             try:
-                repo.obsstore.create(tr, bin(precursor), succs, 0, metadata)
+                repo.obsstore.create(tr, parsenodeid(precursor), succs, 0,
+                                     metadata)
                 tr.close()
             finally:
                 tr.release()
