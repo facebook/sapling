@@ -557,7 +557,7 @@ make sure --traceback works on hook import failure
   $ echo 'precommit.importfail = python:importfail.whatever' >> .hg/hgrc
 
   $ echo a >> a
-  $ hg --traceback commit -ma 2>&1 | egrep -v '^( +File| {4}[a-zA-Z(])'
+  $ hg --traceback commit -ma 2>&1 | egrep -v '^( +File|    [a-zA-Z(])'
   exception from first failed import attempt:
   Traceback (most recent call last):
   ImportError: No module named somebogusmodule
