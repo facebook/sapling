@@ -136,17 +136,13 @@ class GitHandler(object):
     def init_author_file(self):
         self.author_map = {}
         if self.ui.config('git', 'authors'):
-            f = open(self.repo.wjoin(
-                self.ui.config('git', 'authors')))
-            try:
+            with open(self.repo.wjoin(self.ui.config('git', 'authors'))) as f:
                 for line in f:
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
                     from_, to = RE_AUTHOR_FILE.split(line, 2)
                     self.author_map[from_] = to
-            finally:
-                f.close()
 
     ## FILE LOAD AND SAVE METHODS
 
