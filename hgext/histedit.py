@@ -346,7 +346,7 @@ def message(ui, repo, ctx, ha, opts):
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
-    message = oldctx.description()
+    message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
     new = repo.commit(text=message, user=oldctx.user(), date=oldctx.date(),
                       extra=oldctx.extra())
@@ -450,7 +450,7 @@ def histedit(ui, repo, *parent, **opts):
 
         m, a, r, d = repo.status()[:4]
         oldctx = repo[currentnode]
-        message = oldctx.description()
+        message = oldctx.description() + '\n'
         if action in ('e', 'edit', 'm', 'mess'):
             message = ui.edit(message, ui.username())
         elif action in ('f', 'fold'):
