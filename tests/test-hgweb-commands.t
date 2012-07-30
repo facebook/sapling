@@ -857,7 +857,7 @@ Overviews
   <tr class="light"><td colspan="3"><a class="list" href="/bookmarks?style=gitweb">...</a></td></tr>
   </table>
   
-  <div><a class="title" href="#">branches</a></div>
+  <div><a class="title" href="/branches?style=gitweb">branches</a></div>
   <table cellspacing="0">
   
   <tr class="parity0">
@@ -891,7 +891,7 @@ Overviews
   </td>
   </tr>
   <tr class="light">
-    <td colspan="4"><a class="list"  href="#">...</a></td>
+    <td colspan="4"><a class="list"  href="/branches?style=gitweb">...</a></td>
   </tr>
   </table>
   <script type="text/javascript">process_dates()</script>
