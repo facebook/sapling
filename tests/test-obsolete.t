@@ -493,7 +493,7 @@ Do not warn about new head when the new head is a successors of a remote one
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
-Checking _enable=False warning if obsolete marker exist
+Checking _enable=False warning if obsolete marker exists
 
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "obs=!" >> $HGRCPATH
