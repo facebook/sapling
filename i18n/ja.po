@@ -56,6 +56,7 @@
 # command(, this)       (本)コマンド
 # commit                コミット
 # commit comment        コミットログ
+# commit message        コミットログ
 # copy(of file, repo)   複製
 # default(, by)         指定が無い場合/通常は
 # delete                (作業領域からの)ファイル削除
@@ -65,9 +66,11 @@
 # entry                 エントリ
 # extend(ed)            拡張
 # extension             (Mercurialの)エクステンション
+# fold (revision/patch) (リビジョン／パッチの)併合
 # glob(, rooted at ...) ワイルドカード形式
 #                       (... からの相対パスに対して、
 #                        パス先頭からのパターン合致で判定する)
+# graft                 移植
 # hash identifier(s)    ハッシュ値
 # head                  ヘッド
 # head changeset(s)     ヘッド
@@ -125,7 +128,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-06-30 20:47+0900\n"
+"POT-Creation-Date: 2012-07-29 22:08+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -220,10 +223,10 @@ msgstr "許可／禁止のいずれも、 キー／値の対で設定します�
 
 msgid ""
 "Branch-based Access Control\n"
-"..........................."
+"---------------------------"
 msgstr ""
 "ブランチベースのアクセス制御\n"
-"............................"
+"----------------------------"
 
 msgid ""
 "Use the ``acl.deny.branches`` and ``acl.allow.branches`` sections to\n"
@@ -252,11 +255,18 @@ msgstr ""
 "- 「全て」を意味するアスタリスク"
 
 msgid ""
+"You can add the \"!\" prefix to a user or group name to invert the sense\n"
+"of the match."
+msgstr ""
+"ユーザ／グループ名指定の冒頭に \"!\" を付けることで、 合致判定条件を、\n"
+"反転させることができます。"
+
+msgid ""
 "Path-based Access Control\n"
-"........................."
+"-------------------------"
 msgstr ""
 "パスベースのアクセス制御\n"
-"........................"
+"------------------------"
 
 msgid ""
 "Use the ``acl.deny`` and ``acl.allow`` sections to have path-based\n"
@@ -272,10 +282,10 @@ msgstr ""
 
 msgid ""
 "Groups\n"
-"......"
+"------"
 msgstr ""
 "グループ\n"
-"........"
+"--------"
 
 msgid ""
 "Group names must be prefixed with an ``@`` symbol. Specifying a group\n"
@@ -297,10 +307,10 @@ msgstr ""
 
 msgid ""
 "Example Configuration\n"
-"....................."
+"---------------------"
 msgstr ""
 "設定例\n"
-"......"
+"------"
 
 msgid "::"
 msgstr "::"
@@ -472,6 +482,89 @@ msgstr ""
 
 msgid "  .hgtags = release_engineer"
 msgstr "  .hgtags = release_engineer"
+
+msgid ""
+"Examples using the \"!\" prefix\n"
+"............................."
+msgstr ""
+"条件反転(\"!\")設定例\n"
+"..................."
+
+msgid ""
+"Suppose there's a branch that only a given user (or group) should be able "
+"to\n"
+"push to, and you don't want to restrict access to any other branch that may\n"
+"be created."
+msgstr ""
+"仮に、 指定ユーザ (又はグループ) の履歴のみを反映させたいブランチがあり、\n"
+"ブランチ生成も含めて、 それ以外のアクセスは制限したくない、とします。"
+
+msgid ""
+"The \"!\" prefix allows you to prevent anyone except a given user or group "
+"to\n"
+"push changesets in a given branch or path."
+msgstr ""
+"\"!\" 指定を使うことで、 指定ユーザ／グループ以外による履歴の反映を、\n"
+"特定ブランチ／パスに対して抑止できます。"
+
+msgid ""
+"In the examples below, we will:\n"
+"1) Deny access to branch \"ring\" to anyone but user \"gollum\"\n"
+"2) Deny access to branch \"lake\" to anyone but members of the group \"hobbit"
+"\"\n"
+"3) Deny access to a file to anyone but user \"gollum\""
+msgstr ""
+"以下の設定により:\n"
+"1) ユーザ \"gollum\" 以外のブランチ \"ring\" へのアクセス、\n"
+"2) グループ \"hobbit\" 以外のブランチ \"lake\" へのアクセス、\n"
+"3) ユーザ \"gollum\" 以外の ``/misty/mountains/cave/ring``\n"
+"ファイルへのアクセスが、禁止されます。"
+
+msgid ""
+"  [acl.allow.branches]\n"
+"  # Empty"
+msgstr ""
+"  [acl.allow.branches]\n"
+"  # 空"
+
+msgid ""
+"  # 1) only 'gollum' can commit to branch 'ring';\n"
+"  # 'gollum' and anyone else can still commit to any other branch.\n"
+"  ring = !gollum"
+msgstr ""
+"  # 1) ユーザ 'gollum' のみがブランチ 'ring' にコミット可能。\n"
+"  # その他のブランチへの 'gollum' ／他のユーザのコミット可否は変わらず。\n"
+"  ring = !gollum"
+
+msgid ""
+"  # 2) only members of the group 'hobbit' can commit to branch 'lake';\n"
+"  # 'hobbit' members and anyone else can still commit to any other branch.\n"
+"  lake = !@hobbit"
+msgstr ""
+"  # 2) グループ 'hobbit' のメンバーみがブランチ 'lake' にコミット可能。\n"
+"  # その他のブランチへの 'hobbit' ／他のユーザのコミット可否は変わらず。\n"
+"  lake = !@hobbit"
+
+msgid "  # You can also deny access based on file paths:"
+msgstr "  # ファイルパスによるアクセス禁止も可能:"
+
+msgid ""
+"  [acl.allow]\n"
+"  # Empty"
+msgstr ""
+"  [acl.allow]\n"
+"  # 空"
+
+msgid ""
+"  [acl.deny]\n"
+"  # 3) only 'gollum' can change the file below;\n"
+"  # 'gollum' and anyone else can still change any other file.\n"
+"  /misty/mountains/cave/ring = !gollum"
+msgstr ""
+"  [acl.deny]\n"
+"  # 3) ユーザ 'gollum' のみが以下のファイルを変更可能。\n"
+"  # 他のファイルの 'gollum' ／他のユーザの改変可否は変わらず。\n"
+"  /misty/mountains/cave/ring = !gollum"
 
 #, python-format
 msgid "group '%s' is undefined"
@@ -1163,8 +1256,15 @@ msgstr "フック種別 %s にリビジョン ID が指定されませんでし�
 msgid "Bugzilla error: %s"
 msgstr "Bugzilla エラー: %s"
 
-msgid "command to display child changesets"
-msgstr "子リビジョン表示のコマンド"
+msgid "command to display child changesets (DEPRECATED)"
+msgstr "子リビジョン表示のコマンド (非推奨)"
+
+msgid ""
+"This extension is deprecated. You should use :hg:`log -r\n"
+"\"children(REV)\"` instead.\n"
+msgstr ""
+"本エクステンションは非推奨です。:hg:`log -r \"children(REV)\"`\n"
+"を使用してください。\n"
 
 msgid "show the children of the given or working directory revision"
 msgstr "指定リビジョンの子リビジョンの表示"
@@ -1197,7 +1297,7 @@ msgid "command to display statistics about repository history"
 msgstr "変更履歴の統計情報表示のコマンド"
 
 #, python-format
-msgid "Revision %d is a merge, ignoring...\n"
+msgid "revision %d is a merge, ignoring...\n"
 msgstr "マージ実施リビジョン %d を無視...\n"
 
 msgid "analyzing"
@@ -1790,10 +1890,10 @@ msgstr ""
 
 msgid ""
 "    Mercurial Source\n"
-"    ''''''''''''''''"
+"    ################"
 msgstr ""
 "    Mercurial 形式からの変換\n"
-"    ''''''''''''''''''''''''"
+"    ########################"
 
 msgid ""
 "    The Mercurial source recognizes the following configuration\n"
@@ -1830,10 +1930,10 @@ msgstr ""
 
 msgid ""
 "    CVS Source\n"
-"    ''''''''''"
+"    ##########"
 msgstr ""
 "    CVS 形式からの変換\n"
-"    ''''''''''''''''''"
+"    ##################"
 
 msgid ""
 "    CVS source will use a sandbox (i.e. a checked-out copy) from CVS\n"
@@ -1915,7 +2015,7 @@ msgstr ""
 
 msgid ""
 "    :hook.cvschangesets: Specify a Python function to be called after\n"
-"        the changesets are calculated from the the CVS log. The\n"
+"        the changesets are calculated from the CVS log. The\n"
 "        function is passed a list with the changeset entries, and can\n"
 "        modify the changesets in-place, or add or delete them."
 msgstr ""
@@ -1936,10 +2036,10 @@ msgstr ""
 
 msgid ""
 "    Subversion Source\n"
-"    '''''''''''''''''"
+"    #################"
 msgstr ""
 "    Subversion 形式からの変換\n"
-"    '''''''''''''''''''''''''"
+"    #########################"
 
 msgid ""
 "    Subversion source detects classical trunk/branches/tags layouts.\n"
@@ -2005,10 +2105,10 @@ msgstr ""
 
 msgid ""
 "    Perforce Source\n"
-"    '''''''''''''''"
+"    ###############"
 msgstr ""
 "    Perforce 形式からの変換\n"
-"    '''''''''''''''''''''''"
+"    #######################"
 
 msgid ""
 "    The Perforce (P4) importer can be given a p4 depot path or a\n"
@@ -2041,10 +2141,10 @@ msgstr ""
 
 msgid ""
 "    Mercurial Destination\n"
-"    '''''''''''''''''''''"
+"    #####################"
 msgstr ""
 "    Mercurial 形式への変換\n"
-"    ''''''''''''''''''''''"
+"    ######################"
 
 msgid "    The following options are supported:"
 msgstr "    以下のオプションを指定できます:"
@@ -2266,11 +2366,11 @@ msgid "not all revisions were sorted"
 msgstr "格納されていないリビジョンがあります"
 
 #, python-format
-msgid "Writing author map file %s\n"
+msgid "writing author map file %s\n"
 msgstr "作成者名変換ファイル %s への書き込み中\n"
 
 #, python-format
-msgid "Ignoring bad line in author map file %s: %s\n"
+msgid "ignoring bad line in author map file %s: %s\n"
 msgstr "作成者名変換ファイル %s の不正な行を無視: %s\n"
 
 #, python-format
@@ -2404,7 +2504,7 @@ msgid ""
 "warning: CVS commit message references non-existent branch %r:\n"
 "%s\n"
 msgstr ""
-"警告: CVS コミットメッセージが未知のブランチ %r を参照しています:\n"
+"警告: CVS コミットログが未知のブランチ %r を参照しています:\n"
 "%s\n"
 
 #, python-format
@@ -2587,6 +2687,9 @@ msgstr "p4 ビューの読み込み中\n"
 msgid "collecting p4 changelists\n"
 msgstr "p4 チェンジリストの収集中\n"
 
+msgid "debugsvnlog could not load Subversion python bindings"
+msgstr "debugsvnlog が Subversion python バインディングを読み込めません"
+
 msgid "Mercurial failed to run itself, check hg executable is in PATH"
 msgstr "Mercurial 自身の実行に失敗。 PATH 設定と hg コマンドを確認してください"
 
@@ -2605,7 +2708,7 @@ msgstr ""
 msgid "%s does not look like a Subversion repository"
 msgstr "%s は Subversion 形式ではないと思われます"
 
-msgid "Could not load Subversion python bindings"
+msgid "could not load Subversion python bindings"
 msgstr "Subversion python バインディングが読み込めません"
 
 #, python-format
@@ -3183,8 +3286,8 @@ msgstr "factotum が対話的に実行されていません"
 msgid "factotum not responding"
 msgstr "factotum が応答しません"
 
-msgid "pull, update and merge in one command"
-msgstr "pull, update, merge の一括実行"
+msgid "pull, update and merge in one command (DEPRECATED)"
+msgstr "pull, update, merge の一括実行 (非推奨)"
 
 msgid "pull changes from a remote repository, merge new changes if needed."
 msgstr "連携先リポジトリからの取り込みと、 必要に応じたマージ実施"
@@ -3249,7 +3352,7 @@ msgid "pulling from %s\n"
 msgstr "%s から取り込み中\n"
 
 msgid ""
-"Other repository doesn't support revision lookup, so a rev cannot be "
+"other repository doesn't support revision lookup, so a rev cannot be "
 "specified."
 msgstr "連携先でリビジョンが特定できないため、 リビジョンは指定できません"
 
@@ -3277,10 +3380,10 @@ msgid "a specific revision you would like to pull"
 msgstr "取り込み対象リビジョンの指定"
 
 msgid "edit commit message"
-msgstr "コミットメッセージの編集"
+msgstr "コミットログの編集"
 
 msgid "edit commit message (DEPRECATED)"
-msgstr "コミットメッセージの編集(非推奨)"
+msgstr "コミットログの編集(非推奨)"
 
 msgid "switch parents when merging"
 msgstr "マージの際の第1親リビジョンを切り替え"
@@ -3316,14 +3419,14 @@ msgstr "署名済みリビジョンの一覧表示"
 msgid "%s:%d node does not exist\n"
 msgstr "%s:%d ノードは存在しません\n"
 
-msgid "hg sigcheck REVISION"
-msgstr "hg sigcheck REVISION"
+msgid "hg sigcheck REV"
+msgstr "hg sigcheck REV"
 
 msgid "verify all the signatures there may be for a particular revision"
 msgstr "特定リビジョンに関する全署名の検証"
 
 #, python-format
-msgid "No valid signature for %s\n"
+msgid "no valid signature for %s\n"
 msgstr "%s の正しい署名ではありません\n"
 
 msgid "make the signature local"
@@ -3345,10 +3448,10 @@ msgid "TEXT"
 msgstr "テキスト"
 
 msgid "commit message"
-msgstr "コミットメッセージ"
+msgstr "コミットログ"
 
-msgid "hg sign [OPTION]... [REVISION]..."
-msgstr "hg sign [OPTION]... [REVISION]..."
+msgid "hg sign [OPTION]... [REV]..."
+msgstr "hg sign [OPTION]... [REV]..."
 
 msgid "add a signature for the current or given revision"
 msgstr "指定リビジョンへの署名の付与"
@@ -3371,7 +3474,7 @@ msgid "uncommitted merge - please provide a specific revision"
 msgstr "マージが未コミットです - 対象リビジョンを指定してください"
 
 #, python-format
-msgid "Signing %d:%s\n"
+msgid "signing %d:%s\n"
 msgstr "%d:%s への署名中\n"
 
 msgid "error while signing"
@@ -3397,21 +3500,6 @@ msgstr ""
 "本エクステンションは、 incoming, outgoing および log コマンドに、\n"
 "新規オプション --graph を付与します。 --graph 指定により、 ASCII\n"
 "文字による履歴ツリーが表示されます。\n"
-
-#, python-format
-msgid "-G/--graph option is incompatible with --%s"
-msgstr "-G/--graph と --%s は併用できません"
-
-#, python-format
-msgid "cannot follow file not in parent revision: \"%s\""
-msgstr "親リビジョンに存在しないファイルは追跡できません: \"%s\""
-
-#, python-format
-msgid "cannot follow nonexistent file: \"%s\""
-msgstr "存在しないファイルは追跡できません: \"%s\""
-
-msgid "can only follow copies/renames for explicit filenames"
-msgstr "ファイル名が明示された場合のみ複製/改名を追跡可能です"
 
 msgid "follow changeset history, or file history across copies and renames"
 msgstr "複製元や改名元の履歴も遡る"
@@ -3476,9 +3564,6 @@ msgid ""
 msgstr ""
 "    @ 文字で表示されるリビジョンは、 作業領域の親リビジョンです。\n"
 "    "
-
-msgid "show the revision DAG"
-msgstr "履歴ツリーの表示"
 
 msgid "hooks for integrating with the CIA.vc notification service"
 msgstr "CIA.vc 通知サービスとの統合向けのフック集"
@@ -3742,6 +3827,388 @@ msgstr ""
 
 msgid "The default is 'colorful'.\n"
 msgstr "無指定時の設定は 'colorful' とみなされます。\n"
+
+msgid "interactive history editing"
+msgstr "対話的な履歴改変"
+
+msgid ""
+"With this extension installed, Mercurial gains one new command: histedit. "
+"Usage\n"
+"is as follows, assuming the following history::"
+msgstr ""
+"本エクステンションの有効化により histedit コマンドが利用可能になります。\n"
+"以降の説明では、 以下の履歴を前提としています::"
+
+msgid ""
+" @  3[tip]   7c2fd3b9020c   2009-04-27 18:04 -0500   durin42\n"
+" |    Add delta\n"
+" |\n"
+" o  2   030b686bedc4   2009-04-27 18:04 -0500   durin42\n"
+" |    Add gamma\n"
+" |\n"
+" o  1   c561b4e977df   2009-04-27 18:04 -0500   durin42\n"
+" |    Add beta\n"
+" |\n"
+" o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"      Add alpha"
+msgstr ""
+" @  3[tip]   7c2fd3b9020c   2009-04-27 18:04 -0500   durin42\n"
+" |    Add delta\n"
+" |\n"
+" o  2   030b686bedc4   2009-04-27 18:04 -0500   durin42\n"
+" |    Add gamma\n"
+" |\n"
+" o  1   c561b4e977df   2009-04-27 18:04 -0500   durin42\n"
+" |    Add beta\n"
+" |\n"
+" o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"      Add alpha"
+
+msgid ""
+"If you were to run ``hg histedit c561b4e977df``, you would see the "
+"following\n"
+"file open in your editor::"
+msgstr ""
+"``hg histedit c561b4e977df`` 実行により、 エディタが起動された上で、\n"
+"以下の内容のファイルが開かれます (※ 訳注: ヘルプ原文では\n"
+"『ファイルの更新数 〜』 相当行が編集対象に含まれるような記述ですが、\n"
+"実際には当該行は、 編集可能対象には含まれません)::"
+
+msgid ""
+" pick c561b4e977df Add beta\n"
+" pick 030b686bedc4 Add gamma\n"
+" pick 7c2fd3b9020c Add delta"
+msgstr ""
+" pick c561b4e977df Add beta\n"
+" pick 030b686bedc4 Add gamma\n"
+" pick 7c2fd3b9020c Add delta"
+
+msgid ""
+" # Edit history between 633536316234 and 7c2fd3b9020c\n"
+" #\n"
+" # Commands:\n"
+" #  p, pick = use commit\n"
+" #  e, edit = use commit, but stop for amending\n"
+" #  f, fold = use commit, but fold into previous commit\n"
+" #  d, drop = remove commit from history\n"
+" #  m, mess = edit message without changing commit content\n"
+" #\n"
+" 0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
+msgstr ""
+" # Edit history between 633536316234 and 7c2fd3b9020c\n"
+" #\n"
+" # Commands:\n"
+" #  p, pick = use commit\n"
+" #  e, edit = use commit, but stop for amending\n"
+" #  f, fold = use commit, but fold into previous commit\n"
+" #  d, drop = remove commit from history\n"
+" #  m, mess = edit message without changing commit content\n"
+" #"
+
+msgid ""
+"In this file, lines beginning with ``#`` are ignored. You must specify a "
+"rule\n"
+"for each revision in your history. For example, if you had meant to add "
+"gamma\n"
+"before beta, and then wanted to add delta in the same revision as beta, you\n"
+"would reorganize the file to look like this::"
+msgstr ""
+"このファイル中の ``#`` で始まる行は無視されます。 履歴編集対象に対して、\n"
+"各リビジョン毎の処理内容 (rule) を指定してください。 例えば \"Add beta\"\n"
+"による改変よりも \"Add gamma\" による改変を先に実施した上で、 \"Add\n"
+"delta\" による改変を \"Add beta\" へと併合 (fold) する場合なら、\n"
+"以下のように記述します::"
+
+msgid ""
+" pick 030b686bedc4 Add gamma\n"
+" pick c561b4e977df Add beta\n"
+" fold 7c2fd3b9020c Add delta"
+msgstr ""
+" pick 030b686bedc4 Add gamma\n"
+" pick c561b4e977df Add beta\n"
+" fold 7c2fd3b9020c Add delta"
+
+msgid ""
+"At which point you close the editor and ``histedit`` starts working. When "
+"you\n"
+"specify a ``fold`` operation, ``histedit`` will open an editor when it "
+"folds\n"
+"those revisions together, offering you a chance to clean up the commit "
+"message::"
+msgstr ""
+"``histedit`` の実際の処理は、 エディタを終了させた時点から始まります。\n"
+"``fold`` 操作を指定した場合、 併合後リビジョンのコミットログ入力のために、\n"
+"併合対象と併合先の各コミットログを、 以下の様に結合したファイルを、\n"
+"``histedit`` がエディタで開きます。"
+
+msgid ""
+" Add beta\n"
+" ***\n"
+" Add delta"
+msgstr ""
+" Add beta\n"
+" ***\n"
+" Add delta"
+
+msgid ""
+"Edit the commit message to your liking, then close the editor. For\n"
+"this example, let's assume that the commit message was changed to\n"
+"``Add beta and delta.`` After histedit has run and had a chance to\n"
+"remove any old or temporary revisions it needed, the history looks\n"
+"like this::"
+msgstr ""
+"コミットログの編集を終えたなら、 エディタを終了します。 ここでは、\n"
+"コミットログを ``Add beta and delta.`` に変更したものと仮定します。\n"
+"histedit による改変処理が完了すると、 以下の様な履歴になります::"
+
+msgid ""
+" @  2[tip]   989b4d060121   2009-04-27 18:04 -0500   durin42\n"
+" |    Add beta and delta.\n"
+" |\n"
+" o  1   081603921c3f   2009-04-27 18:04 -0500   durin42\n"
+" |    Add gamma\n"
+" |\n"
+" o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"      Add alpha"
+msgstr ""
+" @  2[tip]   989b4d060121   2009-04-27 18:04 -0500   durin42\n"
+" |    Add beta and delta.\n"
+" |\n"
+" o  1   081603921c3f   2009-04-27 18:04 -0500   durin42\n"
+" |    Add gamma\n"
+" |\n"
+" o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"      Add alpha"
+
+msgid ""
+"Note that ``histedit`` does *not* remove any revisions (even its own "
+"temporary\n"
+"ones) until after it has completed all the editing operations, so it will\n"
+"probably perform several strip operations when it's done. For the above "
+"example,\n"
+"it had to run strip twice. Strip can be slow depending on a variety of "
+"factors,\n"
+"so you might need to be a little patient. You can choose to keep the "
+"original\n"
+"revisions by passing the ``--keep`` flag."
+msgstr ""
+"``histedit`` の履歴改変処理では、 改変処理が完了するまでは、(例えそれが、\n"
+"作業用の一時的なものであっても) 履歴が削除されることはありませんので、\n"
+"処理終了直前には、 おそらく複数のリビジョンの破棄が行われます。\n"
+"上記の例の場合、 ２回の履歴破棄が行われる筈です。 履歴破棄の実行速度は、\n"
+"様々な要因が元で低下し得ますので、 多少の我慢が必要になるかもしれません。\n"
+"``--keep`` を指定することで、 履歴の破棄を抑止可能です。"
+
+msgid ""
+"The ``edit`` operation will drop you back to a command prompt,\n"
+"allowing you to edit files freely, or even use ``hg record`` to commit\n"
+"some changes as a separate commit. When you're done, any remaining\n"
+"uncommitted changes will be committed as well. When done, run ``hg\n"
+"histedit --continue`` to finish this step. You'll be prompted for a\n"
+"new commit message, but the default commit message will be the\n"
+"original message for the ``edit`` ed revision."
+msgstr ""
+"``edit`` 操作を指定した場合、 一旦コマンド入力に戻りますので、\n"
+"ファイル内容の編集や、 ``hg record`` による選択的な変更の取り込みなどを、\n"
+"自由に行ってください。 変更作業が完了したなら、 ``hg histedit --continue``\n"
+"を実行することで、 作業領域中の変更内容が、 変更後リビジョンとして、\n"
+"コミットされます。 この際に、 コミットログの問い合わせがありますが、\n"
+"デフォルト値は ``edit`` 対処リビジョンの、 元々のコミットログの内容です。"
+
+msgid ""
+"The ``message`` operation will give you a chance to revise a commit\n"
+"message without changing the contents. It's a shortcut for doing\n"
+"``edit`` immediately followed by `hg histedit --continue``."
+msgstr ""
+"``message`` 操作は、 対象リビジョンでの変更内容はそのままに、\n"
+"コミットログのみを変更します。 これは ``edit`` 操作を指定した上で、\n"
+"コマンド入力に戻ってすぐに ``hg histedit --continue`` を実施するのと、\n"
+"全く同じ挙動となります。"
+
+msgid ""
+"If ``histedit`` encounters a conflict when moving a revision (while\n"
+"handling ``pick`` or ``fold``), it'll stop in a similar manner to\n"
+"``edit`` with the difference that it won't prompt you for a commit\n"
+"message when done. If you decide at this point that you don't like how\n"
+"much work it will be to rearrange history, or that you made a mistake,\n"
+"you can use ``hg histedit --abort`` to abandon the new changes you\n"
+"have made and return to the state before you attempted to edit your\n"
+"history."
+msgstr ""
+"履歴改変による衝突が ``histedit`` によって (``pick`` や ``fold``\n"
+"操作において) 検出された場合に、 一旦コマンド入力に戻る点は ``edit``\n"
+"操作と同じですが、 衝突解消作業が完了して ``hg histedit --continue``\n"
+"を実行しても、 コミットログの問い合わせが無い点は ``edit`` と異なります。\n"
+"この時点で、 履歴改変に伴う作業量の問題や、 間違いに気付いた場合は、\n"
+"``hg histedit --abort`` 実行によって、 これまでの作業成果が破棄され、\n"
+"履歴は改変前の状態に戻ります。"
+
+msgid ""
+"If we clone the example repository above and add three more changes, such "
+"that\n"
+"we have the following history::"
+msgstr ""
+"上記の実行例におけるリポジトリを複製し、 そこで履歴を３つ追加した結果、\n"
+"以下の様な履歴になったものと仮定します::"
+
+msgid ""
+"   @  6[tip]   038383181893   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add theta\n"
+"   |\n"
+"   o  5   140988835471   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add eta\n"
+"   |\n"
+"   o  4   122930637314   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add zeta\n"
+"   |\n"
+"   o  3   836302820282   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add epsilon\n"
+"   |\n"
+"   o  2   989b4d060121   2009-04-27 18:04 -0500   durin42\n"
+"   |    Add beta and delta.\n"
+"   |\n"
+"   o  1   081603921c3f   2009-04-27 18:04 -0500   durin42\n"
+"   |    Add gamma\n"
+"   |\n"
+"   o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"        Add alpha"
+msgstr ""
+"   @  6[tip]   038383181893   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add theta\n"
+"   |\n"
+"   o  5   140988835471   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add eta\n"
+"   |\n"
+"   o  4   122930637314   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add zeta\n"
+"   |\n"
+"   o  3   836302820282   2009-04-27 18:04 -0500   stefan\n"
+"   |    Add epsilon\n"
+"   |\n"
+"   o  2   989b4d060121   2009-04-27 18:04 -0500   durin42\n"
+"   |    Add beta and delta.\n"
+"   |\n"
+"   o  1   081603921c3f   2009-04-27 18:04 -0500   durin42\n"
+"   |    Add gamma\n"
+"   |\n"
+"   o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42\n"
+"        Add alpha"
+
+msgid ""
+"If you run ``hg histedit --outgoing`` on the clone then it is the same\n"
+"as running ``hg histedit 836302820282``. If you need plan to push to a\n"
+"repository that Mercurial does not detect to be related to the source\n"
+"repo, you can add a ``--force`` option.\n"
+msgstr ""
+"複製『先』のリポジトリで ``hg histedit --outgoing`` を実行した場合、\n"
+"``hg histedit 836302820282`` 実行と同じ結果となります。 Mercurial が、\n"
+"連携先リポジトリとの関連性を、 検出できない場合でも、 ``--force``\n"
+"を指定することで、 元リポジトリとの関連ありとみなすことができます。\n"
+
+msgid "cannot edit history that would orphan nodes"
+msgstr "履歴ツリーが分断されるような履歴改変はできません"
+
+msgid "can't edit history with merges"
+msgstr "マージに関わる履歴の改変はできません"
+
+#, python-format
+msgid "%s: empty changeset"
+msgstr "%s: 空のリビジョン"
+
+msgid "Fix up the change and run hg histedit --continue"
+msgstr "衝突解消後に \"hg histedit --continue\" してください"
+
+msgid ""
+"Make changes as needed, you may commit or record as needed now.\n"
+"When you are finished, run hg histedit --continue to resume."
+msgstr ""
+"必要に応じて変更／記録を行ってください。 作業が完了したならば、\n"
+"改変再開のために hg histedit --continue を実行してください。"
+
+msgid "Read history edits from the specified file."
+msgstr "履歴改変手順を指定ファイルから読み込み"
+
+msgid "continue an edit already in progress"
+msgstr "中断された履歴改変を再開"
+
+msgid "don't strip old nodes after edit is complete"
+msgstr "改変元の履歴を改変完了後も保持"
+
+msgid "abort an edit in progress"
+msgstr "進行中の履歴改変を中止"
+
+msgid "changesets not found in destination"
+msgstr "連携先リポジトリに、 含まれないリビジョンを、 改変対象化"
+
+msgid "force outgoing even for unrelated repositories"
+msgstr "連携先が無関係なリポジトリでも、 比較を実施"
+
+msgid "first revision to be edited"
+msgstr "改変対象の最初のリビジョン"
+
+msgid "[PARENT]"
+msgstr "[PARENT]"
+
+msgid ""
+"interactively edit changeset history\n"
+"    "
+msgstr ""
+"対話的な履歴の改変\n"
+"    "
+
+msgid "source has mq patches applied"
+msgstr "元リポジトリでは MQ パッチが適用中です"
+
+msgid "only one repo argument allowed with --outgoing"
+msgstr "--outgoing 指定時には、引数は１つしか指定できません"
+
+#, python-format
+msgid "comparing with %s\n"
+msgstr "%s と比較中\n"
+
+msgid "--force only allowed with --outgoing"
+msgstr "--outgoing 指定時のみ --force を指定可能です"
+
+msgid "no arguments allowed with --continue"
+msgstr "--continue 指定時は引数を指定できません"
+
+msgid "no arguments allowed with --abort"
+msgstr "--abort 指定時は引数を指定できません"
+
+msgid "history edit already in progress, try --continue or --abort"
+msgstr "履歴改変は継続中です。 --continue または --abort を指定してください"
+
+msgid "histedit requires exactly one parent revision"
+msgstr "履歴改変には単一の親リビジョンを指定してください"
+
+msgid "histedit: Should update metadata for the following changes:\n"
+msgstr "histedit: 以下のリビジョンのためにメタデータの更新が必要です:\n"
+
+#, python-format
+msgid "histedit:  %s to %s\n"
+msgstr "histedit:  %s から %s へ\n"
+
+#, python-format
+msgid "histedit:     moving bookmarks %s\n"
+msgstr "histedit:     ブックマーク %s の移動中\n"
+
+msgid "must specify a rule for each changeset once"
+msgstr "１リビジョン毎に１つのルール指定が必要です"
+
+#, python-format
+msgid "malformed line \"%s\""
+msgstr "不正な行 \"%s\""
+
+msgid "may not use changesets other than the ones listed"
+msgstr "対象範囲以外のリビジョンは指定できません"
+
+#, python-format
+msgid "unknown changeset %s listed"
+msgstr "未知のリビジョン %s が指定されました"
+
+#, python-format
+msgid "unknown action \"%s\""
+msgstr "未知の操作 \"%s\" が指定されました"
 
 msgid "accelerate status report using Linux's inotify service"
 msgstr "Linux の inoitfy サービスによる状態報告の高速化"
@@ -4546,6 +5013,14 @@ msgstr "大容量ファイルの転送中"
 msgid "largefile %s missing from store (needs to be uploaded)"
 msgstr "大容量ファイル %s が不在です (連携先へ転送できません)"
 
+#, python-format
+msgid "%d additional largefiles cached\n"
+msgstr "大容量ファイル %d 個を追加取得\n"
+
+#, python-format
+msgid "%d largefiles failed to download\n"
+msgstr "大容量ファイル %d 個の取得に失敗\n"
+
 msgid "getting changed largefiles\n"
 msgstr "更新された大容量ファイルの取得中\n"
 
@@ -4578,14 +5053,14 @@ msgid "unknown operating system: %s\n"
 msgstr "未知の OS です: %s\n"
 
 #, python-format
-msgid "Found %s in store\n"
-msgstr "%s が見つかりました\n"
+msgid "found %s in store\n"
+msgstr "%s はリポジトリに取得済み\n"
 
 #, python-format
-msgid "Found %s in system cache\n"
-msgstr "システムキャッシュで %s が見つかりました\n"
+msgid "found %s in system cache\n"
+msgstr "%s はシステムキャッシュに取得済み\n"
 
-msgid "Can't get file locally"
+msgid "can't get file locally"
 msgstr "ファイルが手元にありません"
 
 #, python-format
@@ -4686,11 +5161,11 @@ msgstr "&Local"
 msgid "&Other"
 msgstr "&Other"
 
-msgid "destination largefile already exists"
-msgstr "大容量ファイルの複製先は既に存在します"
-
 msgid "no files to copy"
 msgstr "コピーするファイルがありません"
+
+msgid "destination largefile already exists"
+msgstr "大容量ファイルの複製先は既に存在します"
 
 msgid "caching new largefiles\n"
 msgstr "更新された大容量ファイルのキャッシュ中\n"
@@ -4698,6 +5173,10 @@ msgstr "更新された大容量ファイルのキャッシュ中\n"
 #, python-format
 msgid "%d largefiles cached\n"
 msgstr "大容量ファイル %d 個をキャッシュ\n"
+
+#, python-format
+msgid "--all-largefiles is incompatible with non-local destination %s"
+msgstr "非ローカルなリポジトリ %s では --all-largefiles を指定できません"
 
 #, python-format
 msgid "unknown archive type '%s'"
@@ -4814,6 +5293,12 @@ msgstr "大容量ファイルの存在確認以外に、 内容の検証も実�
 msgid "display outgoing largefiles"
 msgstr "転送対象大容量ファイルを表示"
 
+msgid "download all pulled versions of largefiles"
+msgstr "取り込みリビジョンにおいて、 大容量ファイルを全て取得"
+
+msgid "download all versions of all largefiles"
+msgstr "全リビジョンにおいて、 大容量ファイルを全て取得"
+
 msgid "manage a stack of patches"
 msgstr "パッチ併用の管理"
 
@@ -4905,11 +5390,35 @@ msgstr ""
 
 msgid ""
 "You will by default be managing a patch queue named \"patches\". You can\n"
-"create other, independent patch queues with the :hg:`qqueue` command.\n"
+"create other, independent patch queues with the :hg:`qqueue` command."
 msgstr ""
-"特に指定が無い場合、 パッチは \"patches\" という名前のキューで管理\n"
-"されます。  :hg:`qqueue` を使うことで、 相互に独立した別の管理キューを\n"
-"作成することができます。\n"
+"通常は \"patches\" という名前のキュー配下で、パッチが管理されます。\n"
+":hg:`qqueue` を使うことで、 独立した個別の管理キューを作成可能です。"
+
+msgid ""
+"If the working directory contains uncommitted files, qpush, qpop and\n"
+"qgoto abort immediately. If -f/--force is used, the changes are\n"
+"discarded. Setting::"
+msgstr ""
+"作業領域中に、 未コミット変更がある場合、 qpush, qpop や qgoto の実行は、\n"
+"即座に中断されます。 -f/--force 指定時は、 変更内容が破棄されます。\n"
+"これらのコマンドの挙動は、 以下の設定により::"
+
+msgid ""
+"  [mq]\n"
+"  keepchanges = True"
+msgstr ""
+"  [mq]\n"
+"  keepchanges = True"
+
+msgid ""
+"make them behave as if --keep-changes were passed, and non-conflicting\n"
+"local changes will be tolerated and preserved. If incompatible options\n"
+"such as -f/--force or --exact are passed, this setting is ignored.\n"
+msgstr ""
+"--keep-changes 指定時と同じになるため、 作業領域中の変更は、\n"
+"衝突が無い限り、 そのまま維持されます。 -f/--force や --exact のような、\n"
+"併用できないオプションが指定された場合、 この設定は無視されます。\n"
 
 msgid "print first line of patch header"
 msgstr "パッチヘッダの最初の行を表示"
@@ -5011,6 +5520,9 @@ msgstr "%s を適用中\n"
 msgid "unable to read %s\n"
 msgstr "ファイル %s が読み込めません\n"
 
+msgid "local changes found, refresh first"
+msgstr "作業領域の内容は変更されていますので qrefresh を実施してください"
+
 #, python-format
 msgid "patch %s is empty\n"
 msgstr "パッチ %s は空です\n"
@@ -5068,9 +5580,6 @@ msgstr "作業領域の親リビジョンは qtip ではありません"
 msgid "uncommitted changes in subrepository %s"
 msgstr "副リポジトリ %s の変更が未コミットです"
 
-msgid "local changes found, refresh first"
-msgstr "作業領域の内容は変更されていますので qrefresh を実施してください"
-
 msgid "local changes found"
 msgstr "作業領域の内容は変更されています"
 
@@ -5093,6 +5602,9 @@ msgstr "\"%s\" はディレクトリとして既に存在します"
 #, python-format
 msgid "patch \"%s\" already exists"
 msgstr "パッチ \"%s\" は既に存在します"
+
+msgid "cannot use both --force and --keep-changes"
+msgstr "--force と --keep-changes は併用できません"
 
 msgid "cannot manage merge changesets"
 msgstr "マージリビジョンは MQ の管理対象にできません"
@@ -5143,6 +5655,9 @@ msgstr "全てのパッチが適用中です\n"
 
 msgid "patch series already fully applied\n"
 msgstr "全てのパッチが適用中です\n"
+
+msgid "cannot use --exact and --keep-changes together"
+msgstr "--exact and --keep-changes は併用できません"
 
 msgid "cannot use --exact and --move together"
 msgstr "--exact と --move は併用できません"
@@ -5223,7 +5738,7 @@ msgstr "パッチ管理領域は既に存在します"
 msgid "patch %s is not in series file"
 msgstr "パッチ %s は未知のパッチです"
 
-msgid "No saved patch data found\n"
+msgid "no saved patch data found\n"
 msgstr "保存されたパッチ状態データが見つかりません\n"
 
 #, python-format
@@ -5244,8 +5759,8 @@ msgstr "パッチ状態保存リビジョンの親: %s %s\n"
 msgid "updating queue directory\n"
 msgstr "パッチ管理領域の更新中\n"
 
-msgid "Unable to load queue repository\n"
-msgstr "パッチ管理領域を読み込めません\n"
+msgid "unable to load queue repository\n"
+msgstr "パッチ管理領域のリポジトリ情報を読み込めません\n"
 
 msgid "save: no patches applied, exiting\n"
 msgstr "save: 適用中のパッチが無いため終了します\n"
@@ -5265,6 +5780,9 @@ msgstr "同名のパッチ %s が既に存在します"
 
 msgid "option \"-r\" not valid when importing files"
 msgstr "ファイル取り込みの際の \"-r\" 指定は不適切です"
+
+msgid "no files or revisions specified"
+msgstr "ファイル／リビジョンの指定がありません"
 
 msgid "option \"-n\" not valid when importing multiple patches"
 msgstr "複数パッチ取り込みの際の \"-n\" 指定は不適切です"
@@ -5396,8 +5914,8 @@ msgstr "git 拡張差分形式の使用"
 msgid "qpush after importing"
 msgstr "パッチ取り込み後にパッチ適用(qpush)を実施"
 
-msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
-msgstr "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... FILE..."
+msgid "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... [FILE]..."
+msgstr "hg qimport [-e] [-n NAME] [-f] [-g] [-P] [-r REV]... [FILE]..."
 
 msgid "import a patch or existing changeset"
 msgstr "パッチないし既存リビジョンの取り込み"
@@ -5633,12 +6151,12 @@ msgid ""
 "    only changes to matching files to the new patch, leaving the rest\n"
 "    as uncommitted modifications."
 msgstr ""
-"    本コマンドは、 (パッチ適用中の場合は)適用中パッチの最上位の位置に\n"
-"    新規パッチを作成します。 新規のパッチは、 作業領域中の全ての変更を\n"
-"    保持します。 -I/--include、 -X/--exclude と、 パッチ名に続けて指定\n"
-"    するファイル名の組み合わせによって、 新規パッチに変更が取り込まれる\n"
-"    ファイルを限定することができます。 取り込み対象外のファイルにおける\n"
-"    変更は未コミットなまま残ります。"
+"    本コマンドは、 (パッチ適用中の場合は) 適用中パッチの最上位の位置に、\n"
+"    新規パッチを作成します。 新規パッチには、 作業領域中の全ての変更が、\n"
+"    格納されます。 -I/--include、 -X/--exclude や、 パッチ名に続く、\n"
+"    ファイル名指定の組み合わせにより、 変更が取り込まれるファイルを、\n"
+"    限定することができます。 取り込み対象外のファイルにおける変更は、\n"
+"    未コミットなまま、 作業領域に残ります。"
 
 msgid ""
 "    -u/--user and -d/--date can be used to set the (given) user and\n"
@@ -5654,9 +6172,9 @@ msgid ""
 "    well as the commit message. If none is specified, the header is\n"
 "    empty and the commit message is '[mq]: PATCH'."
 msgstr ""
-"    -e/--edit, -m/--message ないし -l/--logfile は、 コミットメッセージと\n"
-"    同様に、 パッチのヘッダに記録する情報を指定します。 指定が無い場合は、\n"
-"    ヘッダは空のまま、 コミットメッセージが '[mq]: パッチ名' となります。"
+"    -e/--edit, -m/--message, -l/--logfile は、 コミットログと同様に、\n"
+"    パッチのヘッダに記録する情報を指定します。 指定が無い場合は、\n"
+"    ヘッダは空のまま、 コミットログが '[mq]: パッチ名' となります。"
 
 msgid ""
 "    Use the -g/--git option to keep the patch in the git extended diff\n"
@@ -5768,13 +6286,13 @@ msgid "edit patch header"
 msgstr "パッチヘッダ内容の編集"
 
 msgid "keep folded patch files"
-msgstr "結合対象パッチのパッチファイル削除を抑止"
+msgstr "併合対象パッチのパッチファイル削除を抑止"
 
 msgid "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 msgstr "hg qfold [-e] [-k] [-m TEXT] [-l FILE] PATCH..."
 
 msgid "fold the named patches into the current patch"
-msgstr "指定パッチの現行パッチへの統合"
+msgstr "指定パッチの現行パッチへの併合"
 
 msgid ""
 "    Patches must not yet be applied. Each patch will be successively\n"
@@ -5784,36 +6302,37 @@ msgid ""
 "    deleted. With -k/--keep, the folded patch files will not be\n"
 "    removed afterwards."
 msgstr ""
-"    対象パッチは未適用でなければなりません。\n"
-"    それぞれのパッチは、 指定された順序で、\n"
-"    連続的に現行パッチに適用されます。\n"
-"    全ての適用が成功した場合は、\n"
-"    現行パッチが全てのパッチの累積として更新され、\n"
-"    統合されたパッチは削除されます。\n"
-"    -k/--keep が指定された場合、\n"
-"    統合されたパッチのファイルは、 統合実施後も残ります。"
+"    併合対象パッチは、 未適用でなければなりません。 個々のパッチは、\n"
+"    指定された順序で、 現行パッチの上に、 連続して適用されます。\n"
+"    併合対象パッチの適用が、 全て成功した場合、 現行のパッチは、\n"
+"    対象パッチ全ての累積として更新され、 併合パッチは削除されます。\n"
+"    -k/--keep が指定された場合、 併合対象パッチのファイルは、\n"
+"    併合後も保持されます。"
 
 msgid ""
 "    The header for each folded patch will be concatenated with the\n"
 "    current patch header, separated by a line of ``* * *``."
 msgstr ""
-"    統合対象パッチのヘッダ情報は、 ``* * *`` 行を区切り記号として、\n"
+"    併合対象パッチのヘッダ情報は、 ``* * *`` 行を区切り記号として、\n"
 "    現行のパッチに追加されます。"
 
 msgid "qfold requires at least one patch name"
-msgstr "統合実施には最低1つのパッチ名指定が必要です"
+msgstr "併合実施には最低1つのパッチ名指定が必要です"
 
 #, python-format
-msgid "Skipping already folded patch %s\n"
-msgstr "既に統合済みのパッチ %s は無視します\n"
+msgid "skipping already folded patch %s\n"
+msgstr "既に併合済みのパッチ %s は無視します\n"
 
 #, python-format
 msgid "qfold cannot fold already applied patch %s"
-msgstr "パッチ %s は適用中なので統合できません"
+msgstr "パッチ %s は適用中なので併合できません"
 
 #, python-format
 msgid "error folding patch %s"
-msgstr "パッチ %s の統合に失敗"
+msgstr "パッチ %s の併合に失敗"
+
+msgid "tolerate non-conflicting local changes"
+msgstr "衝突しない作業領域中の変更を許容"
 
 msgid "overwrite any local changes"
 msgstr "作業領域中の変更を上書き"
@@ -5917,11 +6436,16 @@ msgid "push the next patch onto the stack"
 msgstr "次のパッチの適用"
 
 msgid ""
-"    When -f/--force is applied, all local changes in patched files\n"
-"    will be lost."
+"    By default, abort if the working directory contains uncommitted\n"
+"    changes. With --keep-changes, abort only if the uncommitted files\n"
+"    overlap with patched files. With -f/--force, backup and patch over\n"
+"    uncommitted changes."
 msgstr ""
-"    -f/--force が指定された場合、 パッチ適用対象ファイルの、\n"
-"    作業領域における変更内容は破棄されます。"
+"    作業領域に未コミット変更がある場合、 通常はコマンドが中断されます。\n"
+"    --keep-changes が指定された場合、 未コミット変更とパッチとの間で、\n"
+"    重複がある場合のみ、 中断されます。 -f/--force が指定された場合、\n"
+"    変更内容をバックアップした上で、 未コミット変更の上から、\n"
+"    パッチが適用されます。"
 
 msgid "no saved queues found, please use -n\n"
 msgstr "保存されたパッチ管理領域がありません。 -n を使用してください\n"
@@ -5946,13 +6470,24 @@ msgid "pop the current patch off the stack"
 msgstr "現行パッチの適用解除"
 
 msgid ""
-"    By default, pops off the top of the patch stack. If given a patch\n"
-"    name, keeps popping off patches until the named patch is at the\n"
-"    top of the stack."
+"    Without argument, pops off the top of the patch stack. If given a\n"
+"    patch name, keeps popping off patches until the named patch is at\n"
+"    the top of the stack."
 msgstr ""
-"    特に指定が無い場合、 適用中の最上位パッチを解除します。 パッチ名が指定\n"
-"    された場合、 当該パッチが適用中の最上位パッチになるまで、 他のパッチの\n"
-"    適用解除を行います。"
+"    引数指定が無い場合、 適用中パッチ群のうち、 最上位パッチを解除します。\n"
+"    パッチ名が指定された場合、 当該パッチが適用最上位パッチになるまで、\n"
+"    他のパッチの適用解除を行います。"
+
+msgid ""
+"    By default, abort if the working directory contains uncommitted\n"
+"    changes. With --keep-changes, abort only if the uncommitted files\n"
+"    overlap with patched files. With -f/--force, backup and discard\n"
+"    changes made to such files."
+msgstr ""
+"    作業領域に未コミット変更がある場合、 通常はコマンドが中断されます。\n"
+"    --keep-changes が指定された場合、 未コミット変更とパッチとの間で、\n"
+"    重複がある場合のみ、 中断されます。 -f/--force が指定された場合、\n"
+"    変更内容をバックアップした上で、 未コミット変更の内容を破棄します。"
 
 #, python-format
 msgid "using patch queue: %s\n"
@@ -6042,8 +6577,11 @@ msgstr "※ このオプションは無視されます (非推奨)"
 msgid "do not modify working copy during strip"
 msgstr "処理中の作業領域更新を抑止"
 
-msgid "hg strip [-k] [-f] [-n] REV..."
-msgstr "hg strip [-k] [-f] [-n] REV..."
+msgid "remove revs only reachable from given bookmark"
+msgstr "指定ブックマークから、 到達可能なリビジョンのみを除外"
+
+msgid "hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV..."
+msgstr "hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV..."
 
 msgid "strip changesets and all their descendants from the repository"
 msgstr "リポジトリからの、 特定リビジョンおよびその子孫の除外"
@@ -6090,6 +6628,24 @@ msgid ""
 msgstr ""
 "    除外処理完了時点で bundle ファイルを破棄する場合は\n"
 "    --no-backup を指定してください。"
+
+msgid ""
+"    Strip is not a history-rewriting operation and can be used on\n"
+"    changesets in the public phase. But if the stripped changesets have\n"
+"    been pushed to a remote repository you will likely pull them again."
+msgstr ""
+"    本コマンドでの操作は、 履歴の書き換えではないので、 対象リビジョンが\n"
+"    public フェーズでも、 実行可能です。 但し、 除外対象リビジョンが、\n"
+"    他リポジトリに反映済みである場合、 そのリビジョンは pull 操作により、\n"
+"    再び手元のリポジトリに出現することでしょう。"
+
+#, python-format
+msgid "bookmark '%s' not found"
+msgstr "ブックマーク '%s' がありません"
+
+#, python-format
+msgid "bookmark '%s' deleted\n"
+msgstr "ブックマーク '%s' が破棄されました\n"
 
 msgid "empty revision set"
 msgstr "指定に該当するリビジョンはありません"
@@ -6167,12 +6723,12 @@ msgid ""
 "    --pop) to push back to the current patch afterwards, but skip\n"
 "    guarded patches."
 msgstr ""
-"    本コマンドの実行により、 適用中のパッチの適用可否も変化し得ます。 特に\n"
-"    指定が無い場合、 ガードが有効なパッチの適用解除は行われません。\n"
-"    --pop が指定された場合、 適用可否が変わる最初のパッチまでのパッチが\n"
+"    本コマンドの実行により、 適用中のパッチの適用可否も変化し得ます。 \n"
+"    特に指定が無い場合、 ガードが有効なパッチの適用解除は行われません。\n"
+"    --pop が指定された場合、 適用可否が変わる最初のパッチまでのパッチが、\n"
 "    適用解除されます。 --reapply が指定された場合、 --pop 相当の処理後に、\n"
-"    ガードが有効なパッチの適用を見送りつつ、 現行パッチに至るまでパッチを\n"
-"    再適用します。"
+"    ガードが有効なパッチの適用を見送りつつ、 現行パッチに至るまで、\n"
+"    パッチを再適用します。"
 
 msgid ""
 "    Use -s/--series to print a list of all guards in the series file\n"
@@ -6350,15 +6906,12 @@ msgstr "新規キューの作成には --create を指定してください"
 msgid "cannot commit over an applied mq patch"
 msgstr "MQ パッチ適用中はコミットを実施できません"
 
-msgid "source has mq patches applied"
-msgstr "元リポジトリでは MQ パッチが適用中です"
-
 #, python-format
 msgid "mq status file refers to unknown node %s\n"
 msgstr "MQ の状態管理ファイルが未知のリビジョン %s を参照しています\n"
 
 #, python-format
-msgid "Tag %s overrides mq patch of the same name\n"
+msgid "tag %s overrides mq patch of the same name\n"
 msgstr "タグ %s は MQ パッチの同名タグを上書きします\n"
 
 msgid "cannot import over an applied patch"
@@ -6933,10 +7486,10 @@ msgid "a revision to send"
 msgstr "送信するリビジョン"
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
-msgstr "連携先が無関係なリポジトリでも送信(-b/--bundle 指定時)"
+msgstr "連携先が無関係なリポジトリでも送信 (-b/--bundle 指定時)"
 
 msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
-msgstr "連携先指定の代わりとなる基底リビジョン(-b/--bundle 指定時)"
+msgstr "連携先指定の代わりとなる基底リビジョン (-b/--bundle 指定時)"
 
 msgid "send an introduction email for a single patch"
 msgstr "説明文を独立したメールで送信"
@@ -7112,10 +7665,6 @@ msgstr ""
 "    を参照してください。 (※ 訳注: :hg:`help config` でも参照可能)\n"
 "    "
 
-#, python-format
-msgid "comparing with %s\n"
-msgstr "%s と比較中\n"
-
 msgid "no changes found\n"
 msgstr "差分はありません\n"
 
@@ -7139,7 +7688,7 @@ msgstr ""
 "一連のパッチのための説明文を記述してください。"
 
 #, python-format
-msgid "This patch series consists of %d patches."
+msgid "this patch series consists of %d patches."
 msgstr "一連のパッチは %d 個のパッチから構成されています。"
 
 msgid "no recipient addresses provided"
@@ -7164,10 +7713,10 @@ msgstr "&Yes"
 msgid "patchbomb canceled"
 msgstr "メールは送信しません"
 
-msgid "Displaying "
+msgid "displaying "
 msgstr "表示中 "
 
-msgid "Sending "
+msgid "sending "
 msgstr "送信中 "
 
 msgid "sending"
@@ -7349,12 +7898,12 @@ msgid "warning: %s\n"
 msgstr "警告: %s\n"
 
 #, python-format
-msgid "Removing file %s\n"
-msgstr "ファイル %s を削除しています\n"
+msgid "removing file %s\n"
+msgstr "ファイル %s の削除中\n"
 
 #, python-format
-msgid "Removing directory %s\n"
-msgstr "ディレクトリ %s を削除しています\n"
+msgid "removing directory %s\n"
+msgstr "ディレクトリ %s の削除中\n"
 
 msgid "command to move sets of revisions to a different ancestor"
 msgstr "一連のリビジョンを、履歴ツリー上の異なる位置に移動させるコマンド"
@@ -7391,13 +7940,13 @@ msgid "collapse the rebased changesets"
 msgstr "移動後に移動リビジョンを単一化"
 
 msgid "use text as collapse commit message"
-msgstr "指定テキストを要約コミットメッセージとして使用"
+msgstr "指定テキストを要約コミットログとして使用"
 
 msgid "invoke editor on commit messages"
-msgstr "コミットメッセージ入力にエディタを起動"
+msgstr "コミットログ入力にエディタを起動"
 
 msgid "read collapse commit message from file"
-msgstr "要約コミットメッセージをファイルから読み込み"
+msgstr "要約コミットログをファイルから読み込み"
 
 msgid "keep original changesets"
 msgstr "元リビジョンを維持"
@@ -7405,8 +7954,8 @@ msgstr "元リビジョンを維持"
 msgid "keep original branch names"
 msgstr "元ブランチ名を維持"
 
-msgid "force detaching of source from its original branch"
-msgstr "移動元を元ブランチから強制的に移動"
+msgid "(DEPRECATED)"
+msgstr "(非推奨)"
 
 msgid "specify merge tool"
 msgstr "マージツールの指定"
@@ -7434,7 +7983,7 @@ msgid ""
 "    development tree."
 msgstr ""
 "    本コマンドは、 反復的なマージを行なうことで、 ある履歴位置 (移動元)\n"
-"    から別な位置 (移動先) へとリビジョン群を移動します。 この機能は、\n"
+"    から別な位置 (移動先) へとリビジョン群を移植します。 この機能は、\n"
 "    手元のリポジトリでの成果を、 開発用の共有リポジトリに反映する際に、\n"
 "    枝分かれの無い状態にしたい場合などで有用です。"
 
@@ -7537,9 +8086,6 @@ msgstr "--abort と --continue は併用できません"
 msgid "cannot use collapse with continue or abort"
 msgstr "--collapse と、 --abort や --continue は併用できません"
 
-msgid "cannot use detach with continue or abort"
-msgstr "--detach と、 --abort や --continue は併用できません"
-
 msgid "abort and continue do not allow specifying revisions"
 msgstr "--abort や --continue と、 リビジョン指定は併用できません"
 
@@ -7554,12 +8100,6 @@ msgstr "--rev と --base は併用できません"
 
 msgid "cannot specify both a revision and a source"
 msgstr "--rev と --soruce は併用できません"
-
-msgid "detach requires a revision to be specified"
-msgstr "--detach にはリビジョン指定が必要です"
-
-msgid "cannot specify a base with detach"
-msgstr "--base と --detach は同時には指定できません"
 
 msgid "can't remove original changesets with unrebased descendants"
 msgstr "移動対象外の子孫を持つため、移動元リビジョンが削除できません"
@@ -7897,9 +8437,6 @@ msgstr ""
 msgid "hardlinks are not supported on this system"
 msgstr "このシステム上ではハードリンクが未サポートです"
 
-msgid "must specify local origin repository"
-msgstr "ローカルの元リポジトリ指定が必要です"
-
 #, python-format
 msgid "relinking %s to %s\n"
 msgstr "%s から %s にハードリンク中\n"
@@ -8120,10 +8657,6 @@ msgstr "フィルタリングに失敗"
 msgid "can only omit patchfile if merging"
 msgstr "マージの場合のみパッチファイルを省略可能"
 
-#, python-format
-msgid "%s: empty changeset"
-msgstr "%s: 空のリビジョン"
-
 msgid "fix up the merge and run hg transplant --continue"
 msgstr "衝突解消後に \"hg transplant --continue\" してください"
 
@@ -8246,13 +8779,13 @@ msgstr ""
 "    移植候補リビジョンに関して、 移植要否の問い合わせが発生します。"
 
 msgid ""
-"    :hg:`transplant --branch REVISION --all` will transplant the\n"
+"    :hg:`transplant --branch REV --all` will transplant the\n"
 "    selected branch (up to the named revision) onto your current\n"
 "    working directory."
 msgstr ""
-"    :hg:`transplant --branch REVISION --all` 実行により、\n"
-"    指定された名前付きブランチ中の (REVISION までの) リビジョンが、\n"
-"    作業領域の親上に移植されます。"
+"    :hg:`transplant --branch REV --all` 実行により、\n"
+"    指定された名前付きブランチ (の中の REV までのリビジョン) が、\n"
+"    作業領域の親リビジョンの子として、 移植されます。"
 
 msgid ""
 "    You can optionally mark selected transplanted changesets as merge\n"
@@ -8492,8 +9025,8 @@ msgstr ""
 "見直すことをお勧めします。\n"
 
 #, python-format
-msgid "Attempt to commit or push text file(s) using %s line endings\n"
-msgstr "テキストファイルの行末形式 %s による commit ないし履歴反映を実施\n"
+msgid "attempt to commit or push text file(s) using %s line endings\n"
+msgstr "行末形式 %s によるテキストファイルの commit ないし履歴反映を実施\n"
 
 #, python-format
 msgid "in %s: %s\n"
@@ -8603,6 +9136,10 @@ msgstr "ブランチ %s が見つかりません"
 msgid "divergent bookmark %s stored as %s\n"
 msgstr "分岐するブックマーク %s を %s として保存\n"
 
+#, python-format
+msgid "adding remote bookmark %s\n"
+msgstr "連携先にブックマーク %s を追加中\n"
+
 msgid "searching for changed bookmarks\n"
 msgstr "変更されたブックマークを探索中\n"
 
@@ -8655,7 +9192,7 @@ msgstr "--message と --logfile は同時に指定できません"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr "コミットメッセージ '%s' を読み込むことができません: %s"
+msgstr "コミットログ '%s' を読み込むことができません: %s"
 
 msgid "limit must be a positive integer"
 msgstr "制限には正数を指定してください"
@@ -8815,11 +9352,26 @@ msgid "%s: no key named '%s'"
 msgstr "%s: '%s' というキーはありません"
 
 #, python-format
-msgid "Found revision %s from %s\n"
+msgid "found revision %s from %s\n"
 msgstr "リビジョン %s を %s で見つけました\n"
 
 msgid "revision matching date not found"
 msgstr "リビジョンに一致する日付がありません"
+
+#, python-format
+msgid "cannot follow file not in parent revision: \"%s\""
+msgstr "親リビジョンに存在しないファイルは追跡できません: \"%s\""
+
+#, python-format
+msgid "cannot follow nonexistent file: \"%s\""
+msgstr "存在しないファイルは追跡できません: \"%s\""
+
+msgid "can only follow copies/renames for explicit filenames"
+msgstr "ファイル名が明示された場合のみ複製/改名を追跡可能です"
+
+#, python-format
+msgid "-G/--graph option is incompatible with --%s"
+msgstr "-G/--graph と --%s は併用できません"
 
 #, python-format
 msgid "adding %s\n"
@@ -8846,8 +9398,7 @@ msgid "stripping amended changeset %s\n"
 msgstr "改変対象リビジョン %s を除外中\n"
 
 msgid "HG: Enter commit message.  Lines beginning with 'HG:' are removed."
-msgstr ""
-"HG: コミットメッセージを入力してください。  HG: で始まる行は無視されます。"
+msgstr "HG: コミットログを入力してください。'HG:' で始まる行は無視されます。"
 
 msgid "HG: Leave message empty to abort commit."
 msgstr "HG: メッセージが空のままならコミットを中断します。"
@@ -8883,7 +9434,7 @@ msgid "HG: no files changed"
 msgstr "HG: ファイル変更なし"
 
 msgid "empty commit message"
-msgstr "コミットメッセージがありません"
+msgstr "コミットログがありません"
 
 #, python-format
 msgid "forgetting %s\n"
@@ -8984,10 +9535,10 @@ msgid "exclude names matching the given patterns"
 msgstr "パターンに合致したファイルを処理対象から除外"
 
 msgid "use text as commit message"
-msgstr "指定テキストをコミットメッセージとして使用"
+msgstr "指定テキストをコミットログとして使用"
 
 msgid "read commit message from file"
-msgstr "コミットメッセージをファイルから読み込み"
+msgstr "コミットログをファイルから読み込み"
 
 msgid "record the specified date as commit date"
 msgstr "指定日時をコミット日時として記録"
@@ -9012,6 +9563,9 @@ msgstr "マージ実施リビジョンの表示抑止"
 
 msgid "output diffstat-style summary of changes"
 msgstr "diffstat 形式の変更概要を生成"
+
+msgid "show the revision DAG"
+msgstr "履歴ツリーの表示"
 
 msgid "treat all files as text"
 msgstr "全ファイルをテキストファイルと仮定"
@@ -9115,24 +9669,24 @@ msgstr ""
 "    次回コミット時点です。"
 
 msgid ""
-"    Use the -s/--similarity option to detect renamed files. With a\n"
-"    parameter greater than 0, this compares every removed file with\n"
-"    every added file and records those similar enough as renames. This\n"
+"    Use the -s/--similarity option to detect renamed files. This\n"
 "    option takes a percentage between 0 (disabled) and 100 (files must\n"
-"    be identical) as its parameter. Detecting renamed files this way\n"
+"    be identical) as its parameter. With a parameter greater than 0,\n"
+"    this compares every removed file with every added file and records\n"
+"    those similar enough as renames. Detecting renamed files this way\n"
 "    can be expensive. After using this option, :hg:`status -C` can be\n"
-"    used to check which files were identified as moved or renamed.\n"
-"    If this option is not specified, only renames of identical files\n"
-"    are detected."
+"    used to check which files were identified as moved or renamed. If\n"
+"    not specified, -s/--similarity defaults to 100 and only renames of\n"
+"    identical files are detected."
 msgstr ""
-"    ファイルの改名を検知するには -s/--similarity を使用します。 指定値が\n"
-"    0 より大きい場合は、 全ての追加・除外ファイルが、 確認対象となって、\n"
-"    改名の有無が判定されます。 このオプションには、 0(改名比較無し)\n"
-"    から 100 (完全一致で判定)までの範囲でパーセンテージを指定します。\n"
-"    判定処理には、 相応の時間を要する場合があります。 判定結果の確認は、\n"
+"    ファイルの改名を検知するには -s/--similarity を使用します。 これは、\n"
+"    0 (改名比較無し) から 100 (完全一致で判定) の範囲で、 類似度を指定\n"
+"    するオプションです (パーセンテージ指定)。 0 より大きい指定値の場合、\n"
+"    全ての追加／除外ファイル対象として、 改名の有無が判定されます。 \n"
+"    改名判定には、 相応の時間を要する場合があります。 判定結果の確認は、\n"
 "    本コマンドの実行後に :hg:`status -C` 出力を参照してください。\n"
-"    本オプションが指定されない場合、 内容が完全に一致するファイルのみが、\n"
-"    改名とみなされます。"
+"    -s/--similarity 未指定の場合、 100 が指定されたものとみなされ、\n"
+"    内容が完全に一致するファイルのみが、 改名とみなされます。"
 
 msgid "similarity must be a number"
 msgstr "類似度には数値を指定してください"
@@ -9406,13 +9960,13 @@ msgid "mark changeset bad"
 msgstr "対象リビジョンの探索状態を bad 化"
 
 msgid "skip testing changeset"
-msgstr "対象リビジョンの判定作業を省略"
+msgstr "対象リビジョンの検証作業を省略"
 
 msgid "extend the bisect range"
 msgstr "探索範囲の拡張"
 
 msgid "use command to check changeset state"
-msgstr "good/bad 判定用コマンド"
+msgstr "good/bad 検証用コマンド"
 
 msgid "do not update to target"
 msgstr "対象リビジョンによる作業領域内容の更新を抑止"
@@ -9450,16 +10004,19 @@ msgstr ""
 
 msgid ""
 "    If you supply a command, it will be used for automatic bisection.\n"
-"    Its exit status will be used to mark revisions as good or bad:\n"
-"    status 0 means good, 125 means to skip the revision, 127\n"
-"    (command not found) will abort the bisection, and any other\n"
-"    non-zero exit status means the revision is bad."
+"    The environment variable HG_NODE will contain the ID of the\n"
+"    changeset being tested. The exit status of the command will be\n"
+"    used to mark revisions as good or bad: status 0 means good, 125\n"
+"    means to skip the revision, 127 (command not found) will abort the\n"
+"    bisection, and any other non-zero exit status means the revision\n"
+"    is bad."
 msgstr ""
 "    コマンドが指定された場合、 自動的なリビジョン検証に使用されます。\n"
-"    コマンドの終了コードはリビジョンに対する bad ないし good のマーク\n"
-"    付けに使用されます。 終了コード 0 は good、 125 はリビジョンのスキップ\n"
-"    127(コマンドが見つからない場合)は分割探索中断、 それ以外の 0 より\n"
-"    大きい終了コードは bad のマーク付けとみなされます。"
+"    コマンド実行時には、 環境変数 HG_NODE に検証対象リビジョンの ID\n"
+"    が格納されます。コマンドの終了コードは、 リビジョンに対する bad\n"
+"    ないし good のマーク付けに使用されます。終了コード 0 は good、 125\n"
+"    はリビジョンのスキップ、 127 (コマンド不在) は探索中断、\n"
+"    その他の非 0 終了コードは bad とみなされます。"
 
 msgid "      Some examples:"
 msgstr "      例:"
@@ -9535,6 +10092,15 @@ msgstr "      - 現在の検索において、 状態の判明しているリビ
 msgid "          hg log -r \"bisect(pruned)\""
 msgstr "          hg log -r \"bisect(pruned)\""
 
+msgid ""
+"      - see the changeset currently being bisected (especially useful\n"
+"        if running with -U/--noupdate)::"
+msgstr ""
+"      - 現在の検証対象リビジョンを表示 (特に -U/--noupdate 併用時に有用)::"
+
+msgid "          hg log -r \"bisect(current)\""
+msgstr "          hg log -r \"bisect(current)\""
+
 msgid "      - see all changesets that took part in the current bisection::"
 msgstr "      - 現在の検索対象になっているリビジョン全てを表示::"
 
@@ -9585,6 +10151,12 @@ msgstr "('hg bisect <cmd>' 形式の実行は推奨されません)\n"
 msgid "incompatible arguments"
 msgstr "不正な引数の組み合わせです"
 
+msgid "current bisect revision is unknown - start a new bisect to fix"
+msgstr "現在の検証対象リビジョンが不在です - 探索を最初からやり直してください"
+
+msgid "current bisect revision is a merge"
+msgstr "現在の検証対象リビジョンはマージ実施リビジョンです"
+
 #, python-format
 msgid "failed to execute %s"
 msgstr "%s の実行に失敗"
@@ -9594,7 +10166,7 @@ msgid "%s killed"
 msgstr "%s プロセスは中断されました"
 
 #, python-format
-msgid "Changeset %d:%s: %s\n"
+msgid "changeset %d:%s: %s\n"
 msgstr "リビジョン %d:%s: %s\n"
 
 #, python-format
@@ -10180,7 +10752,7 @@ msgid ""
 "    commit fails, you will find a backup of your message in\n"
 "    ``.hg/last-message.txt``."
 msgstr ""
-"    コミットメッセージが指定されない場合、 メッセージ入力用のプログラムが\n"
+"    コミットログが指定されない場合、 メッセージ入力用のプログラムが、\n"
 "    設定に従って起動されます。 コミット処理が失敗した場合でも、\n"
 "    入力したメッセージは ``.hg/last-message.txt`` に保存されます。"
 
@@ -10575,14 +11147,14 @@ msgid "test Mercurial installation"
 msgstr "Mercurial インストールの検証"
 
 #, python-format
-msgid "Checking encoding (%s)...\n"
-msgstr "文字コード %s の検証中...\n"
+msgid "checking encoding (%s)...\n"
+msgstr "文字コードの検証中 (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
 msgstr " (ロケール設定の妥当性を確認してください)\n"
 
 #, python-format
-msgid "Checking installed modules (%s)...\n"
+msgid "checking installed modules (%s)...\n"
 msgstr "インストール済みモジュールの確認中(%s)...\n"
 
 msgid " One or more extensions could not be found"
@@ -10592,14 +11164,14 @@ msgid " (check that you compiled the extensions)\n"
 msgstr " (エクステンションのコンパイル状況を確認してください)\n"
 
 #, python-format
-msgid "Checking templates (%s)...\n"
-msgstr "テンプレート (%s) の検証中...\n"
+msgid "checking templates (%s)...\n"
+msgstr "テンプレートの確認中 (%s)...\n"
 
 msgid " (templates seem to have been installed incorrectly)\n"
 msgstr " (テンプレートのインストールが不適切なようです)\n"
 
-msgid "Checking commit editor...\n"
-msgstr "メッセージ入力用エディタの検証中...\n"
+msgid "checking commit editor...\n"
+msgstr "メッセージ入力用エディタの確認中...\n"
 
 msgid " No commit editor set and can't find vi in PATH\n"
 msgstr " エディタが起動できません(vi にも PATH が通っていません)\n"
@@ -10611,14 +11183,14 @@ msgstr " (コミットメッセージ用エディタを設定ファイルで設�
 msgid " Can't find editor '%s' in PATH\n"
 msgstr " エディタ '%s' に PATH が通っていません\n"
 
-msgid "Checking username...\n"
-msgstr "ユーザ名の検証中...\n"
+msgid "checking username...\n"
+msgstr "ユーザ名の確認中...\n"
 
 msgid " (specify a username in your configuration file)\n"
 msgstr " (設定ファイルでユーザ名を設定してください)\n"
 
-msgid "No problems detected\n"
-msgstr "障害は検出されませんでした\n"
+msgid "no problems detected\n"
+msgstr "問題は検出されませんでした\n"
 
 #, python-format
 msgid "%s problems detected, please check your install!\n"
@@ -10631,14 +11203,19 @@ msgid "test whether node ids are known to a repo"
 msgstr "対象リポジトリにおける ID の既知性検証"
 
 msgid ""
-"    Every ID must be a full-length hex node id string. Returns a list of 0s "
-"and 1s\n"
-"    indicating unknown/known.\n"
+"    Every ID must be a full-length hex node id string. Returns a list of 0s\n"
+"    and 1s indicating unknown/known.\n"
 "    "
 msgstr ""
 "    ID の指定には、 完全長 (40桁) の16進数文字列を使用してください。\n"
 "    各 ID 毎の既知性を、 0 と 1 で表現したリストが出力されます。\n"
 "    "
+
+msgid "[OBSOLETED [REPLACEMENT] [REPL... ]"
+msgstr "[OBSOLETED [REPLACEMENT] [REPL... ]"
+
+msgid "create arbitrary obsolete marker"
+msgstr "任意の『廃止』状態の設定"
 
 msgid "REPO NAMESPACE [KEY OLD NEW]"
 msgstr "REPO NAMESPACE [KEY OLD NEW]"
@@ -10850,8 +11427,8 @@ msgstr "第2親との差分を使用"
 msgid "revisions to export"
 msgstr "対象リビジョン"
 
-msgid "[OPTION]... [-o OUTFILESPEC] REV..."
-msgstr "[OPTION]... [-o OUTFILESPEC] REV..."
+msgid "[OPTION]... [-o OUTFILESPEC] [-r] REV..."
+msgstr "[OPTION]... [-o OUTFILESPEC] [-r] REV..."
 
 msgid "dump the header and diffs for one or more changesets"
 msgstr "1つ以上のリビジョンに対するヘッダおよび変更内容の出力"
@@ -10997,8 +11574,14 @@ msgstr "      - .hgignore による無視対象ファイルを登録除外::"
 msgid "          hg forget \"set:hgignore()\""
 msgstr "          hg forget \"set:hgignore()\""
 
+msgid "revisions to graft"
+msgstr "移植対象リビジョン"
+
 msgid "resume interrupted graft"
 msgstr "中断された移植を再開"
+
+msgid "append graft info to log message"
+msgstr "コミットログへの移植情報の付与"
 
 msgid "record the current date as commit date"
 msgstr "現時刻をコミット日時として記録"
@@ -11006,8 +11589,8 @@ msgstr "現時刻をコミット日時として記録"
 msgid "record the current user as committer"
 msgstr "現ユーザをコミットユーザとして記録"
 
-msgid "[OPTION]... REVISION..."
-msgstr "[OPTION]... REVISION..."
+msgid "[OPTION]... [-r] REV..."
+msgstr "[OPTION]... [-r] REV..."
 
 msgid "copy changes from other branches onto the current branch"
 msgstr "別ブランチ上から現行ブランチへの指定リビジョンの複製"
@@ -11031,6 +11614,9 @@ msgid ""
 msgstr ""
 "    現行リビジョンの祖先、 既に移植 (graft) 済みのリビジョン、\n"
 "    マージ実施リビジョンは、 複製対象から除外されます。"
+
+msgid "      (grafted from CHANGESETHASH)"
+msgstr "      (grafted from 移植元リビジョンのハッシュ値)"
 
 msgid ""
 "    If a graft merge results in conflicts, the graft process is\n"
@@ -11121,6 +11707,10 @@ msgstr "衝突が未解消のため、継続できません"
 
 msgid "use hg resolve and hg graft --continue"
 msgstr "hg resolve と hg graft --continue を使用してください"
+
+#, python-format
+msgid "graft for revision %s is empty\n"
+msgstr "リビジョン %s の移植は空です\n"
 
 msgid "end fields with NUL"
 msgstr "各フィールドの区切りにNUL文字(0x00)を使用"
@@ -11276,6 +11866,9 @@ msgstr "エクステンションのヘルプのみを表示"
 msgid "show only help for commands"
 msgstr "コマンドに関するヘルプのみを表示"
 
+msgid "show topics matching keyword"
+msgstr "キーワードに合致するトピック一覧を表示"
+
 msgid "[-ec] [TOPIC]"
 msgstr "[-ec] [TOPIC]"
 
@@ -11298,41 +11891,6 @@ msgid ""
 msgstr ""
 "    成功時のコマンド終了値は 0 です。\n"
 "    "
-
-msgid "VALUE"
-msgstr "値"
-
-msgid "DEPRECATED"
-msgstr "非推奨"
-
-msgid ""
-"\n"
-"[+] marked option can be specified multiple times\n"
-msgstr ""
-"\n"
-"[+] 印付きのオプションは複数回指定可能です\n"
-
-msgid "global options:"
-msgstr "グローバルオプション:"
-
-msgid "use \"hg help\" for the full list of commands"
-msgstr "全コマンドの一覧は \"hg help\" で表示されます"
-
-msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
-msgstr ""
-"全コマンドの一覧は \"hg help\" で、 コマンド詳細は \"hg -v\" で表示されます"
-
-#, python-format
-msgid "use \"hg help %s\" to show the full help text"
-msgstr "\"hg help %s\" で詳細なヘルプが表示されます"
-
-#, python-format
-msgid "use \"hg -v help%s\" to show builtin aliases and global options"
-msgstr "組み込み別名およびグローバルオプションの表示は \"hg -v help%s\""
-
-#, python-format
-msgid "use \"hg -v help %s\" to show more info"
-msgstr "より詳細な情報は \"hg -v help %s\" で表示されます"
 
 #, python-format
 msgid ""
@@ -11367,6 +11925,9 @@ msgstr "\"hg help -e %s\" によってエクステンション %s のヘルプ�
 
 msgid "options:"
 msgstr "オプション:"
+
+msgid "global options:"
+msgstr "グローバルオプション:"
 
 #, python-format
 msgid ""
@@ -11403,6 +11964,21 @@ msgstr ""
 "\n"
 "追加のヘルプトピック:"
 
+msgid "use \"hg help\" for the full list of commands"
+msgstr "全コマンドの一覧は \"hg help\" で表示されます"
+
+msgid "use \"hg help\" for the full list of commands or \"hg -v\" for details"
+msgstr ""
+"全コマンドの一覧は \"hg help\" で、 コマンド詳細は \"hg -v\" で表示されます"
+
+#, python-format
+msgid "use \"hg help %s\" to show the full help text"
+msgstr "\"hg help %s\" で詳細なヘルプが表示されます"
+
+#, python-format
+msgid "use \"hg -v help%s\" to show builtin aliases and global options"
+msgstr "組み込み別名およびグローバルオプションの表示は \"hg -v help%s\""
+
 #, python-format
 msgid ""
 "\n"
@@ -11424,6 +12000,12 @@ msgstr "\"hg help extensions\" で有効なエクステンションの情報が�
 #, python-format
 msgid "'%s' is provided by the following extension:"
 msgstr "以下のエクステンションにより  '%s' が提供されています:"
+
+msgid "Topics"
+msgstr "トピック"
+
+msgid "Extension Commands"
+msgstr "エクステンション由来のコマンド"
 
 msgid "Mercurial Distributed SCM\n"
 msgstr "Mercurial - 分散構成管理ツール\n"
@@ -11833,8 +12415,8 @@ msgstr ""
 "    特に指定が無い場合、 本コマンドが出力する情報は -\n"
 "    リビジョン番号、 識別用ハッシュ値、 タグ、 (リビジョン番号の離れた)\n"
 "    親リビジョン、 作成者、 作成日時およびコミットログの1行目 - です。\n"
-"    -v/--verbose が指定された場合、 変更対象ファイル一覧と、 コミット\n"
-"    ログの全文も表示されます。"
+"    -v/--verbose が指定された場合、 変更対象ファイル一覧と、\n"
+"    コミットログの全文も表示されます。"
 
 msgid ""
 "    .. note::\n"
@@ -12047,6 +12629,18 @@ msgstr ""
 "    成功時のコマンド終了値は 0、 未解消ファイルがある場合は 1 です。\n"
 "    "
 
+msgid ""
+"multiple matching bookmarks to merge - please merge with an explicit rev or "
+"bookmark"
+msgstr "現ブックマークは複数ヘッドです -マージ対象を明示してください"
+
+msgid "run 'hg heads' to see all heads"
+msgstr "'hg heads' によりヘッドを一覧表示できます"
+
+msgid ""
+"no matching bookmark to merge - please merge with an explicit rev or bookmark"
+msgstr "現ブックマークは単一ヘッドです - マージ対象を明示してください"
+
 #, python-format
 msgid "branch '%s' has %d heads - please merge with an explicit rev"
 msgstr "ブランチ '%s' には %d 個のヘッドあります - 対象を明示してください"
@@ -12054,12 +12648,12 @@ msgstr "ブランチ '%s' には %d 個のヘッドあります - 対象を明�
 msgid "run 'hg heads .' to see heads"
 msgstr "'hg heads .' によりヘッドを一覧表示できます"
 
+msgid "heads are bookmarked - please merge with an explicit rev"
+msgstr "ヘッドはブックマークされています - マージ対象を明示してください"
+
 #, python-format
 msgid "branch '%s' has one head - please merge with an explicit rev"
 msgstr "ブランチ '%s' は単一ヘッドです - 対象を明示してください"
-
-msgid "run 'hg heads' to see all heads"
-msgstr "'hg heads' によりヘッドを一覧表示できます"
 
 msgid "nothing to merge"
 msgstr "マージの必要がありません"
@@ -12276,7 +12870,7 @@ msgid "(run 'hg update' to get a working copy)\n"
 msgstr "(作業領域の更新は 'hg update')\n"
 
 msgid "update to new branch head if changesets were pulled"
-msgstr "新規取り込みの際には作業領域を新規のブランチヘッドで更新"
+msgstr "新規取り込みの際は、 新規ブランチヘッドで、 作業領域を更新"
 
 msgid "run even when remote repository is unrelated"
 msgstr "連携先が無関係なリポジトリでも実行"
@@ -12336,11 +12930,6 @@ msgstr ""
 msgid "remote bookmark %s not found!"
 msgstr "連携先にはブックマーク %s がありません!"
 
-msgid ""
-"other repository doesn't support revision lookup, so a rev cannot be "
-"specified."
-msgstr "連携先でリビジョンが特定できないため、 リビジョンは指定できません"
-
 #, python-format
 msgid "importing bookmark %s\n"
 msgstr "ブックマーク %s の取り込み中\n"
@@ -12389,8 +12978,7 @@ msgid ""
 "    only create a new branch without forcing other changes."
 msgstr ""
 "    連携先に存在しない名前付きブランチを新規作成する場合は --new-branch\n"
-"    を使用します。 このオプション指定は、 新規ブランチの作成のみを許可\n"
-"    します。"
+"    を使用します。 このオプションは、 新規ブランチの作成のみを許可します。"
 
 msgid ""
 "    Use -f/--force to override the default behavior and push all\n"
@@ -12403,8 +12991,16 @@ msgid ""
 "    If -r/--rev is used, the specified revision and all its ancestors\n"
 "    will be pushed to the remote repository."
 msgstr ""
-"    -r/--rev が指定された場合、 指定されたリビジョンと、 その祖先となる\n"
-"    リビジョンが連携先リポジトリへと反映されます。"
+"    -r/--rev が指定された場合、 指定リビジョンとその祖先のリビジョン群が、\n"
+"    連携先リポジトリへと反映されます。"
+
+msgid ""
+"    If -B/--bookmark is used, the specified bookmarked revision, its\n"
+"    ancestors, and the bookmark will be pushed to the remote\n"
+"    repository."
+msgstr ""
+"    -B/--bookmark が指定された場合、 指定ブックマークのリビジョンと、\n"
+"    その祖先のリビジョン群、 およびブックマークが、 連携先へと反映されます。"
 
 msgid ""
 "    Please see :hg:`help urls` for important details about ``ssh://``\n"
@@ -12703,17 +13299,19 @@ msgstr "[OPTION]... [-r REV] [NAME]..."
 msgid "restore files to their checkout state"
 msgstr "親リビジョンの状態でファイルを復旧"
 
+msgid "    .. note::"
+msgstr "    .. note::"
+
 msgid ""
-"    .. note::\n"
 "       To check out earlier revisions, you should use :hg:`update REV`.\n"
-"       To cancel a merge (and lose your changes), use :hg:`update --clean .`."
+"       To cancel an uncommitted merge (and lose your changes), use\n"
+"       :hg:`update --clean .`."
 msgstr ""
-"    .. note::\n"
-"       作業領域を別リビジョン時点に変更したい場合は、\n"
+"       作業領域を、 別リビジョン時点の内容で更新する場合は\n"
 "       :hg:`update 対象リビジョン` を実行してください。\n"
-"       マージの実施を取り消す場合は、\n"
+"       マージ実施を途中で取り消す場合は\n"
 "       :hg:`update --clean .` を実行してください\n"
-"       (マージにおける修正内容は破棄されます)"
+"       (マージにおける修正内容は破棄されます)。"
 
 msgid ""
 "    With no revision specified, revert the specified files or directories\n"
@@ -12802,43 +13400,47 @@ msgid ""
 "    any dirstate changes since that time. This command does not alter\n"
 "    the working directory."
 msgstr ""
-"    本コマンドの使用には注意が必要です。 巻き戻しは１段階限りで、 巻き\n"
-"    戻したトランザクションの再実施はできません。 本コマンドは、 直前の\n"
-"    トランザクション実施時点の dirstate を復元し、 その時点以後の変更は\n"
-"    全て失われます。 但し、 作業領域内容は変更されません。"
+"    本コマンドの使用には注意を要します。 巻き戻しは１段階限りで、 \n"
+"    巻き戻し後の再実施はできません。 直前のトランザクション時点の、\n"
+"    作業領域状態が復元され、 その時点以後の変更は全て失われます。\n"
+"    但し、 作業領域の内容は変更されません。"
 
 msgid ""
 "    Transactions are used to encapsulate the effects of all commands\n"
 "    that create new changesets or propagate existing changesets into a\n"
-"    repository. For example, the following commands are transactional,\n"
-"    and their effects can be rolled back:"
+"    repository."
 msgstr ""
-"    トランザクションとは、 新規リビジョンの作成、 ないし外部からの既存\n"
-"    リビジョンの取り込みにおけるコマンドの改変操作を一括化するものです。\n"
-"    例えば、 以下のコマンドはいずれもトランザクションを形成するもので、\n"
-"    その効果は本コマンドにより巻き戻し可能です:"
+"    トランザクションとは、 コマンド実行による、 新規リビジョンの作成や、\n"
+"    外部からのリビジョンの取り込みといった、 改変操作を一括化するものです。"
 
 msgid ""
-"    - commit\n"
-"    - import\n"
-"    - pull\n"
-"    - push (with this repository as the destination)\n"
-"    - unbundle"
+"      For example, the following commands are transactional, and their\n"
+"      effects can be rolled back:"
 msgstr ""
-"    - commit\n"
-"    - import\n"
-"    - pull\n"
-"    - push (現リポジトリが、 反映対象として指定された場合)\n"
-"    - unbundle"
+"      例えば、 以下のコマンドはいずれもトランザクションを形成するため、\n"
+"      本コマンドにより、 その効果を巻き戻し可能です:"
 
 msgid ""
-"    To avoid permanent data loss, rollback will refuse to rollback a\n"
-"    commit transaction if it isn't checked out. Use --force to\n"
-"    override this protection."
+"      - commit\n"
+"      - import\n"
+"      - pull\n"
+"      - push (with this repository as the destination)\n"
+"      - unbundle"
 msgstr ""
-"    データが永遠に失われるのを回避するため、 コミットの巻き戻し操作は、\n"
-"    作業領域の親リビジョン以外に対しては、 失敗するようになっています。\n"
-"    この回避挙動は --force 指定により抑止されます。"
+"      - commit\n"
+"      - import\n"
+"      - pull\n"
+"      - push (現リポジトリが、 反映対象として指定された場合)\n"
+"      - unbundle"
+
+msgid ""
+"      To avoid permanent data loss, rollback will refuse to rollback a\n"
+"      commit transaction if it isn't checked out. Use --force to\n"
+"      override this protection."
+msgstr ""
+"      データが永遠に失われるのを回避するため、 コミットの巻き戻し操作は、\n"
+"      作業領域の親リビジョン以外に対しては、 失敗するようになっています。\n"
+"      この回避挙動は --force 指定により抑止されます。"
 
 msgid ""
 "    This command is not intended for use on public repositories. Once\n"
@@ -12959,9 +13561,6 @@ msgstr ""
 
 msgid "cannot use --stdio with --cmdserver"
 msgstr "--stdio と --cmdserver は併用できません"
-
-msgid "There is no Mercurial repository here (.hg not found)"
-msgstr "Mercurial リポジトリが見つかりません(.hg が不在です)"
 
 #, python-format
 msgid "listening at http://%s%s/%s (bound to %s:%d)\n"
@@ -13273,7 +13872,7 @@ msgid "remove a tag"
 msgstr "タグの削除"
 
 msgid "use <text> as commit message"
-msgstr "コミットメッセージ"
+msgstr "指定文字列をコミットログとして使用"
 
 msgid "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
 msgstr "[-f] [-l] [-m TEXT] [-d DATE] [-u USER] [-r REV] NAME..."
@@ -13368,6 +13967,9 @@ msgstr "マージが未コミットです"
 msgid "not at a branch head (use -f to force)"
 msgstr "親リビジョンがブランチのヘッドではありません(強制実行は -f 指定)"
 
+msgid "null revision specified"
+msgstr "null リビジョンが指定されました"
+
 msgid "list repository tags"
 msgstr "リポジトリ中のタグ一覧の表示"
 
@@ -13406,7 +14008,7 @@ msgstr ""
 "    特別なタグで、 改名や、 他のリビジョンへの付け替えはできません。"
 
 msgid "update to new branch head if changesets were unbundled"
-msgstr "新規取り込みの際には作業領域を新規ブランチヘッドで更新"
+msgstr "新規取り込みの際は、 新規ブランチヘッドで、 作業領域を更新"
 
 msgid "[-u] FILE..."
 msgstr "[-u] FILE..."
@@ -13450,6 +14052,13 @@ msgstr ""
 "    (詳細は :hg:`help bookmarks` 参照)"
 
 msgid ""
+"    Update sets the working directory's parent revison to the specified\n"
+"    changeset (see :hg:`help parents`)."
+msgstr ""
+"    作業領域の親リビジョンを、 指定されたリビジョンに更新します\n"
+"    (:hg:`help parents` 参照)。"
+
+msgid ""
 "    If the changeset is not a descendant or ancestor of the working\n"
 "    directory's parent, the update is aborted. With the -c/--check\n"
 "    option, the working directory is checked for uncommitted changes; if\n"
@@ -13462,47 +14071,49 @@ msgstr ""
 "    作業領域を指定リビジョンで更新します。"
 
 msgid ""
-"    Update sets the working directory's parent revison to the specified\n"
-"    changeset (see :hg:`help parents`)."
-msgstr ""
-"    作業領域の親リビジョンを、 指定されたリビジョンに更新します\n"
-"    (:hg:`help parents` 参照)。"
-
-msgid ""
-"    The following rules apply when the working directory contains\n"
-"    uncommitted changes:"
+"      The following rules apply when the working directory contains\n"
+"      uncommitted changes:"
 msgstr "    作業領域の変更が未コミットの場合、 以下の規則が適用されます:"
 
 msgid ""
-"    1. If neither -c/--check nor -C/--clean is specified, and if\n"
-"       the requested changeset is an ancestor or descendant of\n"
-"       the working directory's parent, the uncommitted changes\n"
-"       are merged into the requested changeset and the merged\n"
-"       result is left uncommitted. If the requested changeset is\n"
-"       not an ancestor or descendant (that is, it is on another\n"
-"       branch), the update is aborted and the uncommitted changes\n"
-"       are preserved."
+"      1. If neither -c/--check nor -C/--clean is specified, and if\n"
+"         the requested changeset is an ancestor or descendant of\n"
+"         the working directory's parent, the uncommitted changes\n"
+"         are merged into the requested changeset and the merged\n"
+"         result is left uncommitted. If the requested changeset is\n"
+"         not an ancestor or descendant (that is, it is on another\n"
+"         branch), the update is aborted and the uncommitted changes\n"
+"         are preserved."
 msgstr ""
-"    1. -c/--check と -C/--clean のいずれも指定されず、 指定リビジョンが\n"
-"       作業領域の親リビジョンにとって直系の祖先ないし子孫であった場合、\n"
-"       未コミット変更の内容は指定リビジョンへとマージされ、\n"
-"       マージ結果は未コミットのまま作業領域に残ります。\n"
-"       別の(名前無し)ブランチ上にあるリビジョンなど、 直系の祖先／子孫\n"
-"       以外が指定された場合、 更新は中断され、 未コミット変更は残ります。"
+"      1. -c/--check も -C/--clean も指定されず、 指定リビジョンが、\n"
+"         作業領域の親リビジョンの、 直系の祖先ないし子孫であった場合、\n"
+"         未コミット変更の内容は、 指定リビジョンへとマージされ、\n"
+"         マージ結果は、 未コミットのまま作業領域に残ります。\n"
+"         別の (名前無し) ブランチ上にあるリビジョンなど、\n"
+"         直系の祖先／子孫以外が指定された場合、\n"
+"         更新は中断され、 未コミット変更は、 作業領域に残ります。"
 
 msgid ""
-"    2. With the -c/--check option, the update is aborted and the\n"
-"       uncommitted changes are preserved."
+"      2. With the -c/--check option, the update is aborted and the\n"
+"         uncommitted changes are preserved."
 msgstr ""
-"    2. -c/--check が指定された場合、 更新は中断され、 未コミット変更は\n"
-"       残ります。"
+"      2. -c/--check が指定された場合、 更新は中断され、 \n"
+"         未コミット変更は、 作業領域に残ります。"
 
 msgid ""
-"    3. With the -C/--clean option, uncommitted changes are discarded and\n"
-"       the working directory is updated to the requested changeset."
+"      3. With the -C/--clean option, uncommitted changes are discarded and\n"
+"         the working directory is updated to the requested changeset."
 msgstr ""
-"    3. -C/--clean が指定された場合、 未コミット変更は破棄され、\n"
-"       作業領域は指定のリビジョンで更新されます。"
+"      3. -C/--clean が指定された場合、 未コミット変更は破棄され、\n"
+"         作業領域は指定のリビジョンで更新されます。"
+
+msgid ""
+"    To cancel an uncommitted merge (and lose your changes), use\n"
+"    :hg:`update --clean .`."
+msgstr ""
+"    マージ実施を途中で取り消す場合は\n"
+"    :hg:`update --clean .` を実行してください\n"
+"    (マージにおける修正内容は破棄されます)。"
 
 msgid ""
 "    Use null as the changeset to remove the working directory (like\n"
@@ -13806,13 +14417,27 @@ msgstr ""
 msgid "abort: out of memory\n"
 msgstr "中断: メモリ不足\n"
 
-msgid "** unknown exception encountered, please report by visiting\n"
-msgstr "** 予期せぬ例外が発生しました\n"
+msgid "the extension author."
+msgstr "エクステンションの作者"
 
-msgid "**  http://mercurial.selenic.com/wiki/BugTracker\n"
+#, python-format
+msgid ""
+"** Unknown exception encountered with possibly-broken third-party extension "
+"%s\n"
+"** which supports versions %s of Mercurial.\n"
+"** Please disable %s and try your action again.\n"
+"** If that fixes the bug please report it to %s\n"
 msgstr ""
-"**  http://mercurial.selenic.com/wiki/BugTracker まで\n"
-"**  以下の情報を報告してください。\n"
+"** 非同梱のエクステンション %s に起因する例外が発生しました。\n"
+"** 当該エクステンションのサポート対象 Mercurial の版: %s\n"
+"** エクステンション %s を無効化してから、再度同じ処理を実行してください。\n"
+"** 問題が改善された場合、 障害の発生を %s に報告してください。\n"
+
+msgid "** unknown exception encountered, please report by visiting\n"
+msgstr "** 予期せぬ例外が発生しました。以下の URL から障害報告してください\n"
+
+msgid "** http://mercurial.selenic.com/wiki/BugTracker\n"
+msgstr "** http://mercurial.selenic.com/wiki/BugTracker\n"
 
 #, python-format
 msgid "** Python %s\n"
@@ -13871,7 +14496,7 @@ msgid ""
 msgstr "-R は単独記述(例: '-dR' は不可)、 --repository の略記は --repo のみ"
 
 #, python-format
-msgid "Time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
+msgid "time: real %.3f secs (user %.3f+%.3f sys %.3f+%.3f)\n"
 msgstr "所要時間: 実時間 %.3f 秒 (ユーザ %.3f+%.3f システム %.3f+%.3f)\n"
 
 #, python-format
@@ -14320,6 +14945,19 @@ msgstr "bad (推定)"
 msgid "disabled extensions:"
 msgstr "無効化されているエクステンション:"
 
+msgid "VALUE"
+msgstr "値"
+
+msgid "DEPRECATED"
+msgstr "非推奨"
+
+msgid ""
+"\n"
+"[+] marked option can be specified multiple times\n"
+msgstr ""
+"\n"
+"[+] 印付きのオプションは複数回指定可能です\n"
+
 msgid "Configuration Files"
 msgstr "設定ファイル"
 
@@ -14410,10 +15048,10 @@ msgstr ""
 
 msgid ""
 "Files\n"
-"-----"
+"====="
 msgstr ""
 "ファイル\n"
-"--------"
+"========"
 
 msgid ""
 "Mercurial reads configuration data from several files, if they exist.\n"
@@ -14571,10 +15209,10 @@ msgstr ""
 
 msgid ""
 "Syntax\n"
-"------"
+"======"
 msgstr ""
 "文法\n"
-"----"
+"===="
 
 msgid ""
 "A configuration file consists of sections, led by a ``[section]`` header\n"
@@ -14583,7 +15221,8 @@ msgid ""
 msgstr ""
 "設定ファイルは、 「セクション」から構成され、\n"
 "各セクションは ``[セクション名]`` 形式のヘッダで始まり、\n"
-"``名前 = 値`` 形式の要素 (``設定キー`` と呼称される事も) が列挙されます::"
+"``名前 = 値`` 形式の要素 (『名前』は『設定キー』とも呼ばれます)\n"
+"が列挙されます::"
 
 msgid ""
 "    [spam]\n"
@@ -14758,10 +15397,10 @@ msgstr ""
 
 msgid ""
 "Sections\n"
-"--------"
+"========"
 msgstr ""
 "セクション\n"
-"----------"
+"=========="
 
 msgid ""
 "This section describes the different sections that may appear in a\n"
@@ -14773,10 +15412,10 @@ msgstr ""
 
 msgid ""
 "``alias``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "``alias``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid ""
 "Defines command aliases.\n"
@@ -14895,11 +15534,11 @@ msgstr ""
 msgid ""
 "\n"
 "``annotate``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
 "\n"
 "``annotate``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 
 msgid ""
 "Settings used when displaying file annotations. All values are\n"
@@ -14935,11 +15574,11 @@ msgstr ""
 msgid ""
 "\n"
 "``auth``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
 "\n"
 "``auth``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 
 msgid ""
 "Authentication credentials for HTTP authentication. This section\n"
@@ -15075,11 +15714,11 @@ msgstr ""
 msgid ""
 "\n"
 "``decode/encode``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-----------------"
 msgstr ""
 "\n"
 "``decode/encode``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-----------------"
 
 msgid ""
 "Filters for transforming files on checkout/checkin. This would\n"
@@ -15177,11 +15816,11 @@ msgstr ""
 msgid ""
 "\n"
 "``defaults``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
 "\n"
 "``defaults``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 
 msgid "(defaults are deprecated. Don't use them. Use aliases instead)"
 msgstr "(defaults の使用は非推奨です。 alias を使用してください)"
@@ -15221,11 +15860,11 @@ msgstr ""
 msgid ""
 "\n"
 "``diff``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
 "\n"
 "``diff``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 
 msgid ""
 "Settings used when displaying diffs. Everything except for ``unified``\n"
@@ -15267,10 +15906,10 @@ msgstr ""
 
 msgid ""
 "``email``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "``email``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid "Settings for extensions that send email messages."
 msgstr "電子メールを送信するエクステンション向けの設定。"
@@ -15382,11 +16021,11 @@ msgstr ""
 msgid ""
 "\n"
 "``extensions``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 msgstr ""
 "\n"
 "``extensions``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 
 msgid ""
 "Mercurial has an extension mechanism for adding new features. To\n"
@@ -15441,11 +16080,11 @@ msgstr ""
 msgid ""
 "\n"
 "``format``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
 "\n"
 "``format``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 
 msgid ""
 "``usestore``\n"
@@ -15501,10 +16140,10 @@ msgstr ""
 
 msgid ""
 "``graph``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "``graph``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid ""
 "Web graph view configuration. This section let you change graph\n"
@@ -15551,10 +16190,10 @@ msgstr ""
 
 msgid ""
 "``hooks``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "``hooks``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid ""
 "Commands or Python functions that get automatically executed by\n"
@@ -15968,11 +16607,11 @@ msgstr ""
 msgid ""
 "\n"
 "``hostfingerprints``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------------"
 msgstr ""
 "\n"
 "``hostfingerprints``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------------"
 
 msgid ""
 "Fingerprints of the certificates of known HTTPS servers.\n"
@@ -16008,11 +16647,11 @@ msgstr "本機能は、 Python 2.6 以降でのみ使用可能です。"
 msgid ""
 "\n"
 "``http_proxy``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 msgstr ""
 "\n"
 "``http_proxy``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"--------------"
 
 msgid ""
 "Used to access web-based Mercurial repositories through a HTTP\n"
@@ -16063,10 +16702,10 @@ msgstr ""
 
 msgid ""
 "``merge-patterns``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------------"
 msgstr ""
 "``merge-patterns``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------------"
 
 msgid ""
 "This section specifies merge tools to associate with particular file\n"
@@ -16090,10 +16729,10 @@ msgstr ""
 
 msgid ""
 "``merge-tools``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 msgstr ""
 "``merge-tools``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 
 msgid ""
 "This section configures external merge tools to use for file-level\n"
@@ -16304,11 +16943,11 @@ msgstr ""
 msgid ""
 "\n"
 "``patch``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "\n"
 "``patch``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid ""
 "Settings used when applying patches, for instance through the 'import'\n"
@@ -16345,11 +16984,11 @@ msgstr ""
 msgid ""
 "\n"
 "``paths``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 msgstr ""
 "\n"
 "``paths``\n"
-"\"\"\"\"\"\"\"\"\""
+"---------"
 
 msgid ""
 "Assigns symbolic names to repositories. The left side is the\n"
@@ -16388,10 +17027,10 @@ msgstr ""
 
 msgid ""
 "``phases``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
 "``phases``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 
 msgid ""
 "Specifies default handling of phases. See :hg:`help phases` for more\n"
@@ -16425,10 +17064,10 @@ msgstr ""
 
 msgid ""
 "``profiling``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-------------"
 msgstr ""
 "``profiling``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"-------------"
 
 msgid ""
 "Specifies profiling type, format, and file output. Two profilers are\n"
@@ -16525,10 +17164,10 @@ msgstr ""
 
 msgid ""
 "``revsetalias``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 msgstr ""
 "``revsetalias``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"---------------"
 
 msgid "Alias definitions for revsets. See :hg:`help revsets` for details."
 msgstr ""
@@ -16537,10 +17176,10 @@ msgstr ""
 
 msgid ""
 "``server``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 msgstr ""
 "``server``\n"
-"\"\"\"\"\"\"\"\"\"\""
+"----------"
 
 msgid "Controls generic server settings."
 msgstr "一般的なサーバ機能の設定。"
@@ -16592,10 +17231,10 @@ msgstr ""
 
 msgid ""
 "``smtp``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 msgstr ""
 "``smtp``\n"
-"\"\"\"\"\"\"\"\""
+"--------"
 
 msgid "Configuration for extensions that need to send email messages."
 msgstr "電子メールを送信するエクステンション向け設定。"
@@ -16657,11 +17296,11 @@ msgstr ""
 msgid ""
 "\n"
 "``subpaths``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 msgstr ""
 "\n"
 "``subpaths``\n"
-"\"\"\"\"\"\"\"\"\"\"\"\""
+"------------"
 
 msgid ""
 "Subrepository source URLs can go stale if a remote server changes name\n"
@@ -16695,7 +17334,7 @@ msgstr ""
 "``http://hg.server/foo/`` に書き換えられます。"
 
 msgid ""
-"Relative subrepository paths are first made absolute, and the the\n"
+"Relative subrepository paths are first made absolute, and the\n"
 "rewrite rules are then applied on the full (absolute) path. The rules\n"
 "are applied in definition order."
 msgstr ""
@@ -16705,10 +17344,10 @@ msgstr ""
 
 msgid ""
 "``trusted``\n"
-"\"\"\"\"\"\"\"\"\"\"\""
+"-----------"
 msgstr ""
 "``trusted``\n"
-"\"\"\"\"\"\"\"\"\"\"\""
+"-----------"
 
 msgid ""
 "Mercurial will not use the settings in the\n"
@@ -16762,11 +17401,11 @@ msgstr ""
 msgid ""
 "\n"
 "``ui``\n"
-"\"\"\"\"\"\""
+"------"
 msgstr ""
 "\n"
 "``ui``\n"
-"\"\"\"\"\"\""
+"------"
 
 msgid "User interface controls."
 msgstr "ユーザインタフェースに関する設定。"
@@ -17032,11 +17671,11 @@ msgstr ""
 msgid ""
 "\n"
 "``web``\n"
-"\"\"\"\"\"\"\""
+"-------"
 msgstr ""
 "\n"
 "``web``\n"
-"\"\"\"\"\"\"\""
+"-------"
 
 msgid ""
 "Web interface configuration. The settings in this section apply to\n"
@@ -17384,6 +18023,20 @@ msgid ""
 msgstr ""
 "``errorlog``\n"
 "    エラーログの書き出し先。 無指定時は標準エラー出力に出力。"
+
+msgid ""
+"``comparisoncontext``\n"
+"    Number of lines of context to show in side-by-side file comparison. If\n"
+"    negative or the value ``full``, whole files are shown. Default is 5.\n"
+"    This setting can be overridden by a ``context`` request parameter to "
+"the\n"
+"    ``comparison`` command, taking the same values."
+msgstr ""
+"``comparisoncontext``\n"
+"    ファイルの差分比較を表示する際の、 コンテキスト行数。 負値または\n"
+"    ``full`` 指定の場合、 ファイル全体が表示されます。 デフォルト値は 5。\n"
+"    ``comparison`` 要求時に ``context`` パラメータを指定することで、\n"
+"    設定を上書き可能です。"
 
 msgid ""
 "``hidden``\n"
@@ -17850,7 +18503,7 @@ msgid ""
 "    defaults to 'vi'."
 msgstr ""
 "EDITOR\n"
-"    コミット時のメッセージのように、 エディタでファイルを開き、\n"
+"    コミットログ入力時のように、 エディタでファイルを開き、\n"
 "    ユーザによる編集を促す状況があります。\n"
 "    そこで使用されるエディタは、 HGEDITOR、 VISUAL\n"
 "    あるいは EDITOR 環境変数に設定されたものを(この順序で)使用します。\n"
@@ -18952,10 +19605,10 @@ msgstr ""
 
 msgid ""
 "Synopsis\n"
-"--------"
+"========"
 msgstr ""
 "概要\n"
-"----"
+"===="
 
 msgid ""
 "The Mercurial system uses a file called ``.hgignore`` in the root\n"
@@ -18968,10 +19621,10 @@ msgstr ""
 
 msgid ""
 "Description\n"
-"-----------"
+"==========="
 msgstr ""
-"詳細\n"
-"----"
+"説明\n"
+"===="
 
 msgid ""
 "The working directory of a Mercurial repository will often contain\n"
@@ -19034,6 +19687,17 @@ msgstr ""
 "多くのコマンドでサポートされている ``-I`` および ``-X``\n"
 "の使用が便利です。 詳細に関しては、\n"
 ":hg:`help <command>` および :hg:`help patterns` を参照してください。"
+
+msgid ""
+"Files that are already tracked are not affected by .hgignore, even\n"
+"if they appear in .hgignore. An untracked file X can be explicitly\n"
+"added with :hg:`add X`, even if X would be excluded by a pattern\n"
+"in .hgignore."
+msgstr ""
+"既に管理対象となっているファイルは、 .hgignore 中の指定が合致しても、\n"
+"無視の対象とはなりません。 .hgignore 記述により、 管理対象外のファイル\n"
+"X が無視されている場合でも、 明示的な :hg:`add X` 実行により、\n"
+"ファイル X を管理対象にすることが可能です。"
 
 msgid ""
 "An ignore file is a plain text file consisting of a list of patterns,\n"
@@ -19104,10 +19768,10 @@ msgstr ""
 
 msgid ""
 "Example\n"
-"-------"
+"======="
 msgstr ""
 "記述例\n"
-"------"
+"======"
 
 msgid "Here is an example ignore file. ::"
 msgstr "無視設定ファイルの記述例を以下に示します。 ::"
@@ -19139,17 +19803,19 @@ msgstr ""
 
 msgid ""
 "Mercurial's internal web server, hgweb, can serve either a single\n"
-"repository, or a collection of them. In the latter case, a special\n"
-"configuration file can be used to specify the repository paths to use\n"
-"and global web configuration options."
+"repository, or a tree of repositories. In the second case, repository\n"
+"paths and global options can be defined using a dedicated\n"
+"configuration file common to :hg:`serve`, ``hgweb.wsgi``,\n"
+"``hgweb.cgi`` and ``hgweb.fcgi``."
 msgstr ""
 "Mercurial の内部ウェブサーバ機能 hgweb は、 単一リポジトリないし、\n"
-"複数リポジトリを公開することができます。 複数リポジトリを公開する場合、\n"
-"専用設定ファイルに、 対象リポジトリへのパスや、 共通設定を記述できます。"
+"リポジトリのツリーを公開可能です。 後者の場合、 専用の設定ファイルにより、\n"
+"パスやオプション設定を定義可能です。 設定ファイルは :hg:`serve`、\n"
+"``hgweb.wsgi``、　``hgweb.cgi`` および ``hgweb.fcgi`` で共通です。"
 
 msgid ""
-"This file uses the same syntax as other Mercurial configuration files,\n"
-"but only the following sections are recognized:"
+"This file uses the same syntax as other Mercurial configuration files\n"
+"but recognizes only the following sections:"
 msgstr ""
 "このファイルの記述文法は、 通常の Mercurial 設定ファイルと同じですが、\n"
 "以下のセクションのみが認識されます:"
@@ -19163,87 +19829,83 @@ msgstr ""
 "  - paths\n"
 "  - collections"
 
-msgid ""
-"The ``web`` section can specify all the settings described in the web\n"
-"section of the hgrc(5) documentation. See :hg:`help config` for\n"
-"information on where to find the manual page."
-msgstr ""
-"``web`` セクションでは、 hgrc(5) ドキュメントにおける ``web``\n"
-"セクションで説明されている全ての設定が可能です。\n"
-"hgrc(5) ドキュメントは :hg:`help config` でも参照可能です。"
+msgid "The ``web`` options are thorougly described in :hg:`help config`."
+msgstr "``web`` での記述の詳細は :hg:`help config` を参照してください。"
 
 msgid ""
-"The ``paths`` section provides mappings of physical repository\n"
-"paths to virtual ones. For instance::"
+"The ``paths`` section maps URL paths to paths of repositories in the\n"
+"filesystem. hgweb will not expose the filesystem directly - only\n"
+"Mercurial repositories can be published and only according to the\n"
+"configuration."
 msgstr ""
-"``paths`` セクションは、 仮想的なリポジトリパスと、 実際のリポジトリの、\n"
-"対応付けをを行います。 例えば::"
+"``paths`` セクションは、 URL 上のパスと、 それに対応するリポジトリの、\n"
+"ファイルシステム上におけるパスを対応付けます。 hgweb による公開は、\n"
+"ファイルシステムの直接公開ではなく、 Mercurial のリポジトリのみを、\n"
+"設定に従って公開します。"
+
+msgid ""
+"The left hand side is the path in the URL. Note that hgweb reserves\n"
+"subpaths like ``rev`` or ``file``, try using different names for\n"
+"nested repositories to avoid confusing effects."
+msgstr ""
+"設定キーは URL 中のパスを指します。 hgweb では ``rev`` または ``file``\n"
+"といった名前は、 特定用途用に使われますので、 想定外の挙動を避けるために、\n"
+"リポジトリのパスが、 これらと衝突しないように注意してください。"
+
+msgid ""
+"The right hand side is the path in the filesystem. If the specified\n"
+"path ends with ``*`` or ``**`` the filesystem will be searched\n"
+"recursively for repositories below that point.\n"
+"With ``*`` it will not recurse into the repositories it finds (except for\n"
+"``.hg/patches``).\n"
+"With ``**`` it will also search inside repository working directories\n"
+"and possibly find subrepositories."
+msgstr ""
+"設定値はファイルシステム上のパスです。 パス指定末尾が ``*`` や ``**``\n"
+"の場合、 指定のパス位置から、 リポジトリの検出が、 再帰的に実施されます。\n"
+"パスの末尾が ``*`` の場合、 検出されたリポジトリ配下の再帰的検出は、\n"
+"実施されません (``.hg/patches`` 配下を除く)。 パス末尾が ``**`` の場合、\n"
+"副リポジトリのような、 作業領域中のリポジトリも、 再帰的に検出されます。"
+
+msgid "In this example::"
+msgstr "以下の設定例の場合::"
 
 msgid ""
 "  [paths]\n"
-"  projects/a = /foo/bar\n"
-"  projects/b = /baz/quux\n"
-"  web/root = /real/root/*\n"
-"  / = /real/root2/*\n"
-"  virtual/root2 = /real/root2/**"
+"  /projects/a = /srv/tmprepos/a\n"
+"  /projects/b = c:/repos/b\n"
+"  / = /srv/repos/*\n"
+"  /user/bob = /home/bob/repos/**"
 msgstr ""
 "  [paths]\n"
-"  projects/a = /foo/bar\n"
-"  projects/b = /baz/quux\n"
-"  web/root = /real/root/*\n"
-"  / = /real/root2/*\n"
-"  virtual/root2 = /real/root2/**"
+"  /projects/a = /srv/tmprepos/a\n"
+"  /projects/b = c:/repos/b\n"
+"  / = /srv/repos/*\n"
+"  /user/bob = /home/bob/repos/**"
 
 msgid ""
 "- The first two entries make two repositories in different directories\n"
 "  appear under the same directory in the web interface\n"
-"- The third entry maps every Mercurial repository found in '/real/root'\n"
-"  into 'web/root'. This format is preferred over the [collections] one,\n"
-"  since using absolute paths as configuration keys is not supported on "
-"every\n"
-"  platform (especially on Windows).\n"
-"- The fourth entry is a special case mapping all repositories in\n"
-"  '/real/root2' in the root of the virtual directory.\n"
-"- The fifth entry recursively finds all repositories under the real\n"
-"  root, and maps their relative paths under the virtual root."
+"- The third entry will publish every Mercurial repository found in\n"
+"  ``/srv/repos/``, for instance the repository ``/srv/repos/quux/``\n"
+"  will appear as ``http://server/quux/``\n"
+"- The fourth entry will publish both ``http://server/user/bob/quux/``\n"
+"  and ``http://server/user/bob/quux/testsubrepo/``"
 msgstr ""
-"- 冒頭の2つの設定は、 異なるディレクトリ配下のリポジトリを、 URL 上は、\n"
-"  同一ディレクトリ配下にあるように見せます\n"
-"- 3つ目の設定は、 '/real/root' 配下のリポジトリを 'web/root'\n"
-"  配下にあるように見せます。 設定のキーとしての絶対パス利用が、\n"
-"  全ての環境でサポートされているわけでは無い (特に Windows 環境) ため、\n"
-"  ``collections`` セクションでの設定よりは、 こちらの表記を推奨します。\n"
-"- 4つ目の設定は、 '/real/root2' 配下のリポジトリを、 仮想パスの、\n"
-"  ルート配下にあるように見せます。\n"
-"- 5つ目の設定は、 '/real/root2' 配下のリポジトリを、 再帰的に検出し、\n"
-"  検出された全てを、 相対パスを使って 'virtual/root2' 配下に配置します。\n"
-"  (※ 訳注: ``**`` 指定の場合、 入れ子になったリポジトリも検出します)"
+"- 冒頭の2つの設定は、 ファイルシステム上は異なる位置にあるリポジトリを、\n"
+"  URL 上は同一ディレクトリ配下にあるように見せます\n"
+"- ３つ目の設定は、 ``/srv/repos/`` 配下の全リポジトリを公開します。\n"
+"  例えば ``/srv/repos/quux/`` リポジトリは ``http://server/quux/``\n"
+"  としてアクセス可能です。\n"
+"- ４つ目の設定では、 ``http://server/user/bob/quux/`` と\n"
+"  ``http://server/user/bob/quux/testsubrepo/`` の両方が公開されます。"
 
 msgid ""
-"The ``collections`` section provides mappings of trees of physical\n"
-"repositories paths to virtual ones, though the paths syntax is generally\n"
-"preferred. For instance::"
+"The ``collections`` section is deprecated and has been superseeded by\n"
+"``paths``.\n"
 msgstr ""
-"``collections`` セクションでは、 実リポジトリから仮想リポジトリへの、\n"
-"パスの対応付けを定義しますが、 ``paths`` セクションによる記述の方が、\n"
-"一般的に推奨されます。 記述例は::"
-
-msgid ""
-"  [collections]\n"
-"  /foo = /foo"
-msgstr ""
-"  [collections]\n"
-"  /foo = /foo"
-
-msgid ""
-"Here, the left side will be stripped off all repositories found in the\n"
-"right side. Thus ``/foo/bar`` and ``foo/quux/baz`` will be listed as\n"
-"``bar`` and ``quux/baz`` respectively.\n"
-msgstr ""
-"等号 ('=') の右辺で記述されたパス配下の、 全てのリポジトリが、\n"
-"等号の左辺を取り除いたパスで、 公開されます。 例えば上記設定において、\n"
-"``/foo/bar`` と ``foo/quux/baz`` というリポジトリが存在する場合、\n"
-"それぞれが ``bar`` および ``quux/baz`` として公開されます。\n"
+"``collections`` セクションでの設定は非推奨なので、 代わりに ``paths``\n"
+"を使用してください。\n"
 
 msgid "To merge files Mercurial uses merge tools."
 msgstr "Mercurial での更新内容マージには、 マージツールを使用します。"
@@ -19289,10 +19951,10 @@ msgstr ""
 
 msgid ""
 "Available merge tools\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"====================="
 msgstr ""
 "利用可能なマージツール\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"======================"
 
 msgid ""
 "External merge tools and their properties are configured in the\n"
@@ -19343,10 +20005,10 @@ msgstr ""
 
 msgid ""
 "Choosing a merge tool\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"====================="
 msgstr ""
 "マージツールの選択\n"
-"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\""
+"=================="
 
 msgid "Mercurial uses these rules when deciding which merge tool to use:"
 msgstr "Mercurial で使用されるマージツールは以下の順序で決定されます:"
@@ -19612,10 +20274,10 @@ msgstr ":hg:`help filesets` も参照してください。\n"
 
 msgid ""
 "What are phases?\n"
-"----------------"
+"================"
 msgstr ""
 "フェーズとは？\n"
-"--------------"
+"=============="
 
 msgid ""
 "Phases are a system for tracking which changesets have been or should\n"
@@ -19651,10 +20313,10 @@ msgstr ""
 
 msgid ""
 "How are phases managed?\n"
-"-----------------------"
+"======================="
 msgstr ""
 "フェーズはどう管理されるのか？\n"
-"------------------------------"
+"=============================="
 
 msgid ""
 "For the most part, phases should work transparently. By default, a\n"
@@ -19678,10 +20340,10 @@ msgstr ""
 
 msgid ""
 "Phases and servers\n"
-"------------------"
+"=================="
 msgstr ""
 "フェーズとサーバ\n"
-"----------------"
+"================"
 
 msgid "Normally, all servers are ``publishing`` by default. This means::"
 msgstr ""
@@ -19744,10 +20406,10 @@ msgstr ""
 
 msgid ""
 "Examples\n"
-"--------"
+"========"
 msgstr ""
 "記述例\n"
-"------"
+"======"
 
 msgid " - list changesets in draft or secret phase::"
 msgstr " - draft ないし secret フェーズのリビジョン一覧::"
@@ -19811,22 +20473,20 @@ msgstr ""
 "前方一致する場合にのみ有効です。"
 
 msgid ""
-"Any other string is treated as a tag or branch name. A tag name is a\n"
-"symbolic name associated with a revision identifier. A branch name\n"
-"denotes the tipmost revision of that branch. Tag and branch names must\n"
-"not contain the \":\" character."
+"Any other string is treated as a bookmark, tag, or branch name. A\n"
+"bookmark is a movable pointer to a revision. A tag is a permanent name\n"
+"associated with a revision. A branch name denotes the tipmost revision\n"
+"of that branch. Bookmark, tag, and branch names must not contain the \":\"\n"
+"character."
 msgstr ""
-"それ以外の文字列は、 「タグ名」ないし「ブランチ名」とみなされます。\n"
-"「タグ名」はリビジョン ID に付与されたシンボリックな名前です。\n"
-"「ブランチ名」は、 ブランチ中の最新リビジョンを意味します。\n"
-"タグ名およびブランチ名は \":\" を含んではなりません。"
+"他の文字列は、 「ブックマーク」 、 「タグ名」 ないし 「ブランチ名」\n"
+"とみなされます。 「ブックマーク」 は移動可能なリビジョン参照ポインタです。\n"
+"「タグ名」 は特定のリビジョンに付与された永続的な名前です。\n"
+"「ブランチ名」 は当該ブランチ中の最新リビジョンを意味します。\n"
+"ブックマーク、タグおよびブランチの名前は \":\" 文字を含んではなりません。"
 
-msgid ""
-"The reserved name \"tip\" is a special tag that always identifies the\n"
-"most recent revision."
-msgstr ""
-"常に「最新のリビジョン」を意味する名前 \"tip\" は、 特別なタグ名として\n"
-"予約されています。"
+msgid "The reserved name \"tip\" always identifies the most recent revision."
+msgstr "予約名 \"tip\" は、 常に一番最新のリビジョンを指します。"
 
 msgid ""
 "The reserved name \"null\" indicates the null revision. This is the\n"
@@ -20164,11 +20824,11 @@ msgstr ""
 msgid ""
 "\n"
 "Adding a Subrepository\n"
-"----------------------"
+"======================"
 msgstr ""
 "\n"
 "副リポジトリの追加\n"
-"------------------"
+"=================="
 
 msgid ""
 "If ``.hgsub`` does not exist, create it and add it to the parent\n"
@@ -20190,10 +20850,10 @@ msgstr ""
 
 msgid ""
 "Synchronizing a Subrepository\n"
-"-----------------------------"
+"============================="
 msgstr ""
 "副リポジトリの同期\n"
-"------------------"
+"=================="
 
 msgid ""
 "Subrepos do not automatically track the latest changeset of their\n"
@@ -20219,10 +20879,10 @@ msgstr ""
 
 msgid ""
 "Deleting a Subrepository\n"
-"------------------------"
+"========================"
 msgstr ""
 "副リポジトリの削除\n"
-"------------------"
+"=================="
 
 msgid ""
 "To remove a subrepository from the parent repository, delete its\n"
@@ -20233,10 +20893,10 @@ msgstr ""
 
 msgid ""
 "Interaction with Mercurial Commands\n"
-"-----------------------------------"
+"==================================="
 msgstr ""
 "Mercurial コマンドとの連携\n"
-"--------------------------"
+"=========================="
 
 msgid ""
 ":add: add does not recurse in subrepos unless -S/--subrepos is\n"
@@ -20373,10 +21033,10 @@ msgstr ""
 
 msgid ""
 "Remapping Subrepositories Sources\n"
-"---------------------------------"
+"================================="
 msgstr ""
 "副リポジトリ連携先の書き換え\n"
-"----------------------------"
+"============================"
 
 msgid ""
 "A subrepository source location may change during a project life,\n"
@@ -20647,6 +21307,9 @@ msgstr "作業領域の更新中\n"
 msgid "destination directory: %s\n"
 msgstr "複製先ディレクトリ: %s\n"
 
+msgid "empty destination path is not valid"
+msgstr "複製先指定における空のパスは不正です"
+
 #, python-format
 msgid "destination '%s' already exists"
 msgstr "複製先 '%s' は既に存在します"
@@ -20707,6 +21370,10 @@ msgid "cannot start server at '%s:%d': %s"
 msgstr "'%s:%d' でのサーバ起動に失敗: %s"
 
 #, python-format
+msgid "(binary file %s, hash: %s)"
+msgstr "(バイナリファイル %s, ハッシュ値: %s)"
+
+#, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
 msgstr " 更新ファイル数 %d、 追加 %d 行(+)、 削除 %d 行(-)\n"
 
@@ -20763,6 +21430,10 @@ msgstr "%s フック %s"
 #, python-format
 msgid "warning: %s hook %s\n"
 msgstr "警告: %s フック %s\n"
+
+#, python-format
+msgid "loading %s hook failed:\n"
+msgstr "フック %s の読み込みに失敗:\n"
 
 msgid "kb"
 msgstr "キロバイト"
@@ -20947,7 +21618,7 @@ msgstr "副リポジトリ %s でのコミット中\n"
 
 #, python-format
 msgid "note: commit message saved in %s\n"
-msgstr "備考: コミットメッセージを %s に保存しました\n"
+msgstr "備考: コミットログを %s に保存しました\n"
 
 #, python-format
 msgid "trouble committing %s!\n"
@@ -20961,9 +21632,23 @@ msgid ""
 "changegroupsubset."
 msgstr "連携先の changegroupsubset 機能未対応により、 部分取り込みできません。"
 
+msgid "destination does not support push"
+msgstr "指定の連携先には履歴反映ができません"
+
+#, python-format
+msgid "push includes an obsolete changeset: %s!"
+msgstr "履歴反映対象に『廃止』リビジョンが含まれます！: %s"
+
+#, python-format
+msgid "push includes an unstable changeset: %s!"
+msgstr "履歴反映対象に『非永続』リビジョンが含まれます！: %s"
+
 #, python-format
 msgid "updating %s to public failed!\n"
 msgstr "%s のフェーズの public 化に失敗!\n"
+
+msgid "failed to push obsolete markers!\n"
+msgstr "『廃止』情報の反映に失敗しました！\n"
 
 #, python-format
 msgid "%d changesets found\n"
@@ -21009,7 +21694,7 @@ msgstr "（%+d個のヘッド）"
 msgid "added %d changesets with %d changes to %d files%s\n"
 msgstr "%d 個のリビジョン(%d の変更を %d ファイルに適用)を追加%s\n"
 
-msgid "Unexpected response from remote server:"
+msgid "unexpected response from remote server:"
 msgstr "連携先のサーバから予期しない返信:"
 
 msgid "operation forbidden by server"
@@ -21027,6 +21712,9 @@ msgstr "全変更を転送中\n"
 #, python-format
 msgid "%d files to transfer, %s of data\n"
 msgstr "%d 個のファイル転送(データ量 %s)\n"
+
+msgid "clone"
+msgstr "複製"
 
 #, python-format
 msgid "transferred %s in %.1f seconds (%s/sec)\n"
@@ -21174,6 +21862,10 @@ msgstr "%s から %s に複製中\n"
 msgid "note: possible conflict - %s was renamed multiple times to:\n"
 msgstr "備考: 衝突の可能性 - %s が複数のファイルに改名されました:\n"
 
+#, python-format
+msgid "note: possible conflict - %s was deleted and renamed to:\n"
+msgstr "備考: 衝突の可能性 - 削除と平行して %s への改名があります:\n"
+
 msgid "merging with a working directory ancestor has no effect"
 msgstr "作業領域の祖先とのマージは意味がありません"
 
@@ -21220,6 +21912,22 @@ msgstr "情報:"
 
 msgid "Warning!"
 msgstr "警告!"
+
+#, python-format
+msgid "parsing obsolete marker: unknown version %r"
+msgstr "『廃止』情報解析: 未知のリビジョン %r"
+
+#, python-format
+msgid ""
+"parsing obsolete marker: metadata is too short, %d bytes expected, got %d"
+msgstr "『廃止』情報解析: メタデータの想定サイズ %d に対して %d しかありません"
+
+#, python-format
+msgid "unknown key: %r"
+msgstr "未知のキーです: %r"
+
+msgid "unexpected old value"
+msgstr "旧値の指定は想定外です"
 
 #, python-format
 msgid "unexpected token: %s"
@@ -21324,6 +22032,13 @@ msgid "patch failed to apply"
 msgstr "パッチの適用に失敗"
 
 #, python-format
+msgid "cannot %s; remote repository does not support the %r capability"
+msgstr "%s ができません。 連携先は機能 %r が未サポートです"
+
+msgid "cannot change null revision phase"
+msgstr "null リビジョンのフェーズは変更できません"
+
+#, python-format
 msgid "ignoring inconsistent public root from remote: %s\n"
 msgstr "連携先からの矛盾するフェーズ public 化要求を無視: %s\n"
 
@@ -21363,8 +22078,8 @@ msgid "strip failed, partial bundle stored in '%s'\n"
 msgstr "リビジョンの除外に失敗: 部分的なバンドルを '%s' に保存\n"
 
 #, python-format
-msgid "cannot %s; remote repository does not support the %r capability"
-msgstr "%s ができません。 連携先は機能 %r が未サポートです"
+msgid "revlog decompress error: %s"
+msgstr "revlog 圧縮の展開エラー: %s"
 
 #, python-format
 msgid "unknown compression type %r"
@@ -21476,15 +22191,18 @@ msgid ""
 "    - ``range``              : csets taking part in the bisection\n"
 "    - ``pruned``             : csets that are goods, bads or skipped\n"
 "    - ``untested``           : csets whose fate is yet unknown\n"
-"    - ``ignored``            : csets ignored due to DAG topology"
+"    - ``ignored``            : csets ignored due to DAG topology\n"
+"    - ``current``            : the cset currently being bisected"
 msgstr ""
 "    - ``good``, ``bad``, ``skip``: 各状態にマークされたリビジョン群\n"
 "    - ``goods``, ``bads``      : good ないし bad と判断されたリビジョン群\n"
 "    - ``range``              : 探索範囲中のリビジョン群 \n"
 "    - ``pruned``             : 状態が確定したリビジョン群\n"
 "    - ``untested``           : 状態が未確定のリビジョン群\n"
-"    - ``ignored``            : 探索対象から除外されたリビジョン群"
+"    - ``ignored``            : 探索対象から除外されたリビジョン群\n"
+"    - ``current``            : 現在の探索対象リビジョン"
 
+#. i18n: "bisect" is a keyword
 msgid "bisect requires a string"
 msgstr "bisect には文字列を指定してください"
 
@@ -21495,6 +22213,16 @@ msgstr ""
 "``bookmark([name])``\n"
 "    指定ブックマーク対象、ないし全ブックマーク対象。"
 
+msgid ""
+"    If `name` starts with `re:`, the remainder of the name is treated as\n"
+"    a regular expression. To match a bookmark that actually starts with `re:"
+"`,\n"
+"    use the prefix `literal:`."
+msgstr ""
+"    `name` が `re:` で始まる場合、 残りは正規表現として扱われます。\n"
+"    ブックマーク名そのものが `re:` で始まる場合は、 名前を `literal:`\n"
+"    付きで指定してください。"
+
 #. i18n: "bookmark" is a keyword
 msgid "bookmark takes one or no arguments"
 msgstr "bookmark の引数は最大1つです"
@@ -21502,6 +22230,10 @@ msgstr "bookmark の引数は最大1つです"
 #. i18n: "bookmark" is a keyword
 msgid "the argument to bookmark must be a string"
 msgstr "bookmark には文字列を指定してください"
+
+#, python-format
+msgid "no bookmarks exist that match '%s'"
+msgstr "'%s' に合致するブックマークはありません"
 
 msgid ""
 "``branch(string or set)``\n"
@@ -21511,6 +22243,16 @@ msgid ""
 msgstr ""
 "``branch(string or set)``\n"
 "    指定ブランチないしリビジョン群の属するブランチ群に、 属するリビジョン。"
+
+msgid ""
+"    If `string` starts with `re:`, the remainder of the name is treated as\n"
+"    a regular expression. To match a branch that actually starts with `re:"
+"`,\n"
+"    use the prefix `literal:`."
+msgstr ""
+"    `string` が `re:` で始まる場合、 残りは正規表現として扱われます。\n"
+"    ブランチ名そのものが `re:` で始まる場合は、 名前を `literal:`\n"
+"    付きで指定してください。"
 
 msgid ""
 "``children(set)``\n"
@@ -21544,6 +22286,23 @@ msgid "contains requires a pattern"
 msgstr "contains にはパターンを指定してください"
 
 msgid ""
+"``converted([id])``\n"
+"    Changesets converted from the given identifier in the old repository if\n"
+"    present, or all converted changesets if no identifier is specified."
+msgstr ""
+"``converted([id])``\n"
+"    id が指定された場合は、 変換元における id から変換されたリビジョン、\n"
+"    id 指定が無い場合は、 変換された全てのリビジョン群。"
+
+#. i18n: "converted" is a keyword
+msgid "converted takes one or no arguments"
+msgstr "converted の引数は最大1つです"
+
+#. i18n: "converted" is a keyword
+msgid "converted requires a revision"
+msgstr "converted にはリビジョン識別子を指定してください"
+
+msgid ""
 "``date(interval)``\n"
 "    Changesets within the interval, see :hg:`help dates`."
 msgstr ""
@@ -21574,26 +22333,89 @@ msgstr ""
 "    指定リビジョン群の子孫リビジョン群。"
 
 msgid ""
+"``destination([set])``\n"
+"    Changesets that were created by a graft, transplant or rebase "
+"operation,\n"
+"    with the given revisions specified as the source.  Omitting the optional "
+"set\n"
+"    is the same as passing all()."
+msgstr ""
+"``destination([set])``\n"
+"    指定リビジョン群を元に、 graft, transplant, rebase 等によって、\n"
+"    生成されたリビジョン群。 set 指定が省略された場合、 ``all()``\n"
+"    指定相当とみなします。"
+
+msgid ""
 "``draft()``\n"
 "    Changeset in draft phase."
 msgstr ""
 "``draft()``\n"
 "    フェーズが draft なリビジョン群。"
 
+#. i18n: "draft" is a keyword
 msgid "draft takes no arguments"
 msgstr "draft には引数が指定できません"
+
+msgid ""
+"``extinct()``\n"
+"    obsolete changeset with obsolete descendant only."
+msgstr ""
+"``extinct()``\n"
+"    『廃止』リビジョン以外の子孫を持たない『廃止』リビジョン群。\n"
+"    (※ 訳注: \"extinct\" は「廃れた」等の意)"
+
+#. i18n: "extinct" is a keyword
+msgid "extinct takes no arguments"
+msgstr "extinct には引数が指定できません"
+
+msgid ""
+"``extra(label, [value])``\n"
+"    Changesets with the given label in the extra metadata, with the given\n"
+"    optional value."
+msgstr ""
+"``extra(label, [value])``\n"
+"    extra メタデータに、 特定の名前の値を持つリビジョン群。 値指定により、\n"
+"    合致対象が更に絞り込まれます。"
+
+msgid ""
+"    If `value` starts with `re:`, the remainder of the value is treated as\n"
+"    a regular expression. To match a value that actually starts with `re:`,\n"
+"    use the prefix `literal:`."
+msgstr ""
+"    `value` が `re:` で始まる場合、 残りは正規表現として扱われます。\n"
+"    値そのものが `re:` で始まる場合は、 値を `literal:`\n"
+"    付きで指定してください。"
+
+#. i18n: "extra" is a keyword
+msgid "extra takes at least 1 and at most 2 arguments"
+msgstr "extra の引数は、 最低1つ、最大2つです"
+
+#. i18n: "extra" is a keyword
+msgid "first argument to extra must be a string"
+msgstr "extra の第１引数には文字列を指定してください"
+
+#. i18n: "extra" is a keyword
+msgid "second argument to extra must be a string"
+msgstr "extra の第２引数には文字列を指定してください"
 
 msgid ""
 "``filelog(pattern)``\n"
 "    Changesets connected to the specified filelog."
 msgstr ""
 "``filelog(pattern)``\n"
-"    パターンに合致するファイルの改変に関連付けられたリビジョン群。\n"
-"    (※ 訳注: ``filelog()`` に合致するリビジョンは ``file()`` にも合致。\n"
-"    filelog 情報を元にするため、 ``file()`` と一致しない場合もある。\n"
-"    ``filelog()`` の方が高速だが、 合致しないリビジョンもあるため、\n"
-"    実行性能上の必要性が無ければ、 ``file()`` の利用を推奨)"
+"    パターンに合致するファイルの改変に関連付けられたリビジョン群。"
 
+msgid ""
+"    For performance reasons, ``filelog()`` does not show every changeset\n"
+"    that affects the requested file(s). See :hg:`help log` for details. For\n"
+"    a slower, more accurate result, use ``file()``."
+msgstr ""
+"    指定ファイルの関連リビジョンであっても、 ``filelog()`` によって、\n"
+"    必ずしも列挙されるとは限らないのは、 性能上の理由からです。\n"
+"    この挙動の詳細に関しては :hg:`help log` を参照してください。\n"
+"    低速でも、 正確な結果が必要な場合は ``file()`` を使用してください。"
+
+#. i18n: "filelog" is a keyword
 msgid "filelog requires a pattern"
 msgstr "filelog にはパターンを指定してください"
 
@@ -21658,15 +22480,19 @@ msgstr "不正なマッチングパターン: %s"
 msgid "_matchfiles requires at least one argument"
 msgstr "_matchfiles には最低1つの引数が必要です"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles requires string arguments"
 msgstr "_matchfiles には文字列引数が必要です"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles expected at most one revision"
 msgstr "_matchfiles へのリビジョン指定は最大1つです"
 
+#. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles expected at most one default mode"
 msgstr "_matchfiles へのモード指定は最大1つです"
 
+#. i18n: "_matchfiles" is a keyword
 #, python-format
 msgid "invalid _matchfiles prefix: %s"
 msgstr "不正な _matchfiles 前置詞指定: %s"
@@ -21676,9 +22502,14 @@ msgid ""
 "    Changesets affecting files matched by pattern."
 msgstr ""
 "``file(pattern)``\n"
-"    パターンに合致するファイルに改変を行ったリビジョン群。\n"
-"    (※ 訳注: ``filelog()`` に合致するリビジョンは ``file()`` にも合致。\n"
-"    リビジョン側情報で判定するため ``filelog()`` と一致しない場合もある。)"
+"    パターンに合致するファイルに改変を行ったリビジョン群。"
+
+msgid ""
+"    For a faster but less accurate result, consider using ``filelog()``\n"
+"    instead."
+msgstr ""
+"    多少厳密さに欠けても、 性能が必要な場合は、 代わりに ``filelog()``\n"
+"    の使用を検討してみてください。"
 
 #. i18n: "file" is a keyword
 msgid "file requires a pattern"
@@ -21805,6 +22636,37 @@ msgid "id requires a string"
 msgstr "id には文字列を指定してください"
 
 msgid ""
+"``obsolete()``\n"
+"    Mutable changeset with a newer version."
+msgstr ""
+"``obsolete()``\n"
+"    新規リビジョンによる改変が可能なリビジョン群。\n"
+"    (※ 訳注: 『廃止』設定されているリビジョン群のこと)"
+
+#. i18n: "obsolete" is a keyword
+msgid "obsolete takes no arguments"
+msgstr "obsolete には引数が指定できません"
+
+msgid ""
+"``origin([set])``\n"
+"    Changesets that were specified as a source for the grafts, transplants "
+"or\n"
+"    rebases that created the given revisions.  Omitting the optional set is "
+"the\n"
+"    same as passing all().  If a changeset created by these operations is "
+"itself\n"
+"    specified as a source for one of these operations, only the source "
+"changeset\n"
+"    for the first operation is selected."
+msgstr ""
+"``origin([set])``\n"
+"    指定リビジョン群の graft, transplant, rebase 等による生成の際に、\n"
+"    元リビジョンとして指定されたリビジョン群。 set 指定が省略された場合、\n"
+"    ``all()`` 指定相当とみなします。 当該操作で生成されたリビジョンが、 \n"
+"    別のリビジョン生成の際に、 生成元として指定されている場合は、\n"
+"    最初の生成操作における生成元のみが、 生成元とみなされます。"
+
+msgid ""
 "``outgoing([path])``\n"
 "    Changesets not found in the specified destination repository, or the\n"
 "    default push location."
@@ -21869,6 +22731,7 @@ msgstr ""
 "``public()``\n"
 "    フェーズが public なリビジョン群。"
 
+#. i18n: "public" is a keyword
 msgid "public takes no arguments"
 msgstr "public には引数が指定できません"
 
@@ -21948,12 +22811,17 @@ msgstr "    リビジョンの一般的な項目以外に、 特別な項目も�
 
 msgid ""
 "    Regular revision fields are ``description``, ``author``, ``branch``,\n"
-"    ``date``, ``files``, ``phase``, ``parents``, ``substate`` and ``user``.\n"
-"    Note that ``author`` and ``user`` are synonyms."
+"    ``date``, ``files``, ``phase``, ``parents``, ``substate``, ``user``\n"
+"    and ``diff``.\n"
+"    Note that ``author`` and ``user`` are synonyms. ``diff`` refers to the\n"
+"    contents of the revision. Two revisions matching their ``diff`` will\n"
+"    also match their ``files``."
 msgstr ""
-"    一般的な項目には、``description``、 ``author``、 ``branch``、\n"
-"    ``date``、 ``files``、 ``phase``、 ``parents``、 ``substate`` および\n"
-"    ``user`` があります。 ``author`` と ``user`` は同一項目です。"
+"    一般的な項目には、``description``, ``author``, ``branch``,\n"
+"    ``date``, ``files``, ``phase``, ``parents``, ``substate``, ``user``\n"
+"    および ``diff`` があります。 ``author`` と ``user`` は同一項目です。\n"
+"    ``diff`` は各リビジョンでの差分を指します。 ２つのリビジョンにおいて\n"
+"    ``diff`` が一致する場合は ``files`` も一致します。"
 
 msgid ""
 "    Special fields are ``summary`` and ``metadata``:\n"
@@ -21973,12 +22841,15 @@ msgstr ""
 "    フィールド指定が無い場合、 ``metadata`` フィールドが対象となります。\n"
 "    同時に複数フィールドの合致判定が可能です。"
 
+#. i18n: "matching" is a keyword
 msgid "matching takes 1 or 2 arguments"
 msgstr "matching の引数は1つか2つです"
 
+#. i18n: "matching" is a keyword
 msgid "matching requires a string as its second argument"
 msgstr "matching の第2引数は文字列です"
 
+#. i18n: "matching" is a keyword
 #, python-format
 msgid "unexpected field name passed to matching: %s"
 msgstr "matching への想定外のフィールド名指定: %s"
@@ -22005,6 +22876,7 @@ msgstr ""
 "``secret()``\n"
 "    フェーズが secret なリビジョン群。"
 
+#. i18n: "secret" is a keyword
 msgid "secret takes no arguments"
 msgstr "secret には引数が指定できません"
 
@@ -22037,12 +22909,17 @@ msgstr ""
 msgid "sort requires one or two arguments"
 msgstr "sort の引数は1つないし2つです"
 
+#. i18n: "sort" is a keyword
 msgid "sort spec must be a string"
 msgstr "sort には文字列を指定してください"
 
 #, python-format
 msgid "unknown sort key %r"
 msgstr "未知の整列方式 %r"
+
+#, python-format
+msgid "invalid regular expression: %s"
+msgstr "不正な正規表現: %s"
 
 msgid ""
 "``tag([name])``\n"
@@ -22059,12 +22936,40 @@ msgstr "tagged の引数は最大1つです"
 msgid "the argument to tag must be a string"
 msgstr "tag には文字列を指定してください"
 
+#, python-format
+msgid "no tags exist that match '%s'"
+msgstr "'%s' に合致するタグはありません"
+
+msgid ""
+"``unstable()``\n"
+"    Unstable changesets are non-obsolete with obsolete descendants."
+msgstr ""
+"``unstable()``\n"
+"    『廃止』リビジョンを祖先に持つ『非廃止』リビジョン群。\n"
+"    (※ 訳注: 『廃止』リビジョンを祖先に持つ『非廃止』リビジョンは、\n"
+"    rebase 等での移動が想定されている ＝ 永続的リビジョンではないことから、\n"
+"    unstable と呼ばれています)"
+
+#. i18n: "unstable" is a keyword
+msgid "unstable takes no arguments"
+msgstr "unstable には引数が指定できません"
+
 msgid ""
 "``user(string)``\n"
 "    User name contains string. The match is case-insensitive."
 msgstr ""
 "``user(string)``\n"
 "    文字列をユーザ名に持つリビジョン群。 合致判定は文字大小を無視。"
+
+msgid ""
+"    If `string` starts with `re:`, the remainder of the string is treated "
+"as\n"
+"    a regular expression. To match a user that actually contains `re:`, use\n"
+"    the prefix `literal:`."
+msgstr ""
+"    `string` が `re:` で始まる場合、 残りは正規表現として扱われます。\n"
+"    ユーザ名そのものが `re:` で始まる場合は、 ユーザ名を `literal:`\n"
+"    付きで指定してください。"
 
 msgid "can't negate that"
 msgstr "負値にできません"
@@ -22418,10 +23323,10 @@ msgstr "ブランチ %s を副リポジトリ %s から反映中\n"
 #, python-format
 msgid ""
 "no branch checked out in subrepo %s\n"
-"cannot push revision %s"
+"cannot push revision %s\n"
 msgstr ""
 "副リポジトリ %s にブランチが取り出されていません。\n"
-"リビジョン %s の反映ができません。"
+"リビジョン %s を反映できません。\n"
 
 #, python-format
 msgid "%s, line %s: %s\n"
@@ -22744,6 +23649,15 @@ msgstr ":rev: 整数。 各リポジトリ固有のリビジョン番号。"
 msgid ":tags: List of strings. Any tags associated with the changeset."
 msgstr ":tags: 文字列列挙。 当該リビジョンに付与されたタグの一覧。"
 
+msgid ""
+":parents: List of strings. The parents of the changeset in \"rev:node\"\n"
+"    format. If the changeset has only one \"natural\" parent (the "
+"predecessor\n"
+"    revision) nothing is shown."
+msgstr ""
+":parents: 文字列列挙。 当該リビジョンの親リビジョンの \"rev:node\" 形式。\n"
+"    親が単一で、 且つリビジョン番号が１つ前の場合は、 何も表示されません。"
+
 #, python-format
 msgid "unknown method '%s'"
 msgstr "不明な処理 '%s' が指定されました"
@@ -22797,11 +23711,11 @@ msgid "already have changeset "
 msgstr "既にあるリビジョンです "
 
 #, python-format
-msgid "Not trusting file %s from untrusted user %s, group %s\n"
+msgid "not trusting file %s from untrusted user %s, group %s\n"
 msgstr "信頼できないファイル %s (所有者 %s, グループ %s)\n"
 
 #, python-format
-msgid "Ignored: %s\n"
+msgid "ignored: %s\n"
 msgstr "無視しました: %s\n"
 
 #, python-format
@@ -22820,7 +23734,7 @@ msgid "enter a commit username:"
 msgstr "コミットするユーザ名を入力してください:"
 
 #, python-format
-msgid "No username found, using '%s' instead\n"
+msgid "no username found, using '%s' instead\n"
 msgstr "ユーザ名が不明のため、 '%s' を使用\n"
 
 msgid "no username supplied (see \"hg help config\")"
@@ -23011,7 +23925,7 @@ msgstr "未知の第2親 %s を持つ %s"
 
 #, python-format
 msgid "checking parents of %s"
-msgstr "%s の親を検証中"
+msgstr "%s の親を確認中"
 
 #, python-format
 msgid "duplicate revision %d (%d)"
