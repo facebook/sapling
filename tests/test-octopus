@@ -53,7 +53,7 @@ echo delta > delta
 git add delta
 commit -m 'add delta'
 
-git merge branch1 branch2 | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*octopus.*$/Merge successful/;s/, 0 deletions.*//'
+git merge branch1 branch2 | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*octopus.*$/Merge successful/;s/, 0 deletions.*//'  | sed 's/| +/| /'
 
 cd ..
 mkdir gitrepo2

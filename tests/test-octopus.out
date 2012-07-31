@@ -6,8 +6,8 @@ Switched to branch "master"
 Trying simple merge with branch1
 Trying simple merge with branch2
 Merge successful
- beta  |    1 +
- gamma |    1 +
+ beta  | 1 +
+ gamma | 1 +
  2 files changed, 2 insertions(+)
  create mode 100644 beta
  create mode 100644 gamma

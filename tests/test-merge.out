@@ -3,7 +3,7 @@ Initialized empty Git repository in gitrepo/.git/
 Switched to a new branch "beta"
 Switched to branch "master"
 Merge successful
- beta |    1 +
+ beta | 1 +
  1 file changed, 1 insertion(+)
  create mode 100644 beta
 Initialized empty Git repository in gitrepo2/

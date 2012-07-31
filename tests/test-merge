@@ -48,7 +48,7 @@ git add gamma
 commit -m 'add gamma'
 
 # clean merge
-git merge beta | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*recursive.*$/Merge successful/' | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//'
+git merge beta | sed "s/the '//;s/' strategy//" | sed 's/^Merge.*recursive.*$/Merge successful/' | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//' | sed 's/| +/| /'
 
 cd ..
 mkdir gitrepo2
