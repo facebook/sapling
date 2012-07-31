@@ -273,6 +273,7 @@ def listmarkers(repo):
             currentlen = 0
             parts.append(currentpart)
         currentpart.append(nextdata)
+        currentlen += len(nextdata)
     for idx, part in enumerate(reversed(parts)):
         data = ''.join([_pack('>B', _fmversion)] + part)
         keys['dump%i' % idx] = base85.b85encode(data)
