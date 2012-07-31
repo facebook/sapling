@@ -1583,3 +1583,40 @@ Lock in subrepo, otherwise the change isn't archived
   lf_subrepo_archive/subrepo/normal.txt
 
   $ cd ..
+
+Test that addremove picks up largefiles prior to the initial commit (issue3541)
+
+  $ hg init addrm2
+  $ cd addrm2
+  $ touch large.dat
+  $ touch large2.dat
+  $ touch normal
+  $ hg add --large large.dat
+  $ hg addremove -v
+  adding large2.dat as a largefile
+  adding normal
+
+Test that forgetting all largefiles reverts to islfilesrepo() == False
+(addremove will add *.dat as normal files now)
+  $ hg forget large.dat
+  $ hg forget large2.dat
+  $ hg addremove -v
+  adding large.dat
+  adding large2.dat
+
+Test commit's addremove option prior to the first commit
+  $ hg forget large.dat
+  $ hg forget large2.dat
+  $ hg add --large large.dat
+  $ hg ci -Am "commit"
+  adding large2.dat as a largefile
+  Invoking status precommit hook
+  A large.dat
+  A large2.dat
+  A normal
+  $ find .hglf/ | sort
+  .hglf/
+  .hglf/large.dat
+  .hglf/large2.dat
+
+  $ cd ..

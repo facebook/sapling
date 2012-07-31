@@ -141,7 +141,7 @@ class largefilesdirstate(dirstate.dirstate):
     def normallookup(self, f):
         return super(largefilesdirstate, self).normallookup(unixpath(f))
 
-def openlfdirstate(ui, repo):
+def openlfdirstate(ui, repo, create=True):
     '''
     Return a dirstate object that tracks largefiles: i.e. its root is
     the repo root, but it is saved in .hg/largefiles/dirstate.
@@ -154,7 +154,7 @@ def openlfdirstate(ui, repo):
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
     # largefiles operation in a new clone.
-    if not os.path.exists(os.path.join(admin, 'dirstate')):
+    if create and not os.path.exists(os.path.join(admin, 'dirstate')):
         util.makedirs(admin)
         matcher = getstandinmatcher(repo)
         for standin in dirstatewalk(repo.dirstate, matcher):
@@ -435,8 +435,11 @@ def unixpath(path):
     return util.pconvert(os.path.normpath(path))
 
 def islfilesrepo(repo):
-    return ('largefiles' in repo.requirements and
-            util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
+    if ('largefiles' in repo.requirements and
+            util.any(shortname + '/' in f[0] for f in repo.store.datafiles())):
+        return True
+
+    return util.any(openlfdirstate(repo.ui, repo, False))
 
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
