@@ -53,8 +53,7 @@ testedwith = 'internal'
     ('c', 'continue', False, _('continue an interrupted rebase')),
     ('a', 'abort', False, _('abort an interrupted rebase'))] +
      templateopts,
-    _('hg rebase [-s REV | -b REV] [-d REV] [options]\n'
-      'hg rebase {-a|-c}'))
+    _('[-s REV | -b REV] [-d REV] [OPTION]'))
 def rebase(ui, repo, **opts):
     """move changeset (and descendants) to a different branch
 
