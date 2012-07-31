@@ -150,7 +150,7 @@ helptable = sorted([
     (['revsets', 'revset'], _("Specifying Revision Sets"), loaddoc('revsets')),
     (['filesets', 'fileset'], _("Specifying File Sets"), loaddoc('filesets')),
     (['diffs'], _('Diff Formats'), loaddoc('diffs')),
-    (['merge-tools'], _('Merge Tools'), loaddoc('merge-tools')),
+    (['merge-tools', 'mergetools'], _('Merge Tools'), loaddoc('merge-tools')),
     (['templating', 'templates', 'template', 'style'], _('Template Usage'),
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
