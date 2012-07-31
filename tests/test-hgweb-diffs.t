@@ -642,15 +642,14 @@ comparison new file
     <span class="legendinfo replace">replaced</span>
   </div>
   
-  
   <table class="bigtable">
-  <thead class="header">
-  <tr>
-  <th>-1:000000000000</th>
-  <th>0:b789fdd96dc2</th>
-  </tr>
-  </thead>
-  
+    <thead class="header">
+      <tr>
+        <th>-1:000000000000</th>
+        <th>0:b789fdd96dc2</th>
+      </tr>
+    </thead>
+    
   <tbody class="block">
   
   <tr>
@@ -765,15 +764,14 @@ comparison existing file
     <span class="legendinfo replace">replaced</span>
   </div>
   
-  
   <table class="bigtable">
-  <thead class="header">
-  <tr>
-  <th>0:b789fdd96dc2</th>
-  <th>1:a80d06849b33</th>
-  </tr>
-  </thead>
-  
+    <thead class="header">
+      <tr>
+        <th>0:b789fdd96dc2</th>
+        <th>1:a80d06849b33</th>
+      </tr>
+    </thead>
+    
   <tbody class="block">
   
   <tr>
@@ -890,15 +888,14 @@ comparison removed file
     <span class="legendinfo replace">replaced</span>
   </div>
   
-  
   <table class="bigtable">
-  <thead class="header">
-  <tr>
-  <th>1:a80d06849b33</th>
-  <th>-1:000000000000</th>
-  </tr>
-  </thead>
-  
+    <thead class="header">
+      <tr>
+        <th>1:a80d06849b33</th>
+        <th>-1:000000000000</th>
+      </tr>
+    </thead>
+    
   <tbody class="block">
   
   <tr>

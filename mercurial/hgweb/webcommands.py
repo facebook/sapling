@@ -8,7 +8,7 @@
 import os, mimetypes, re, cgi, copy
 import webutil
 from mercurial import error, encoding, archival, templater, templatefilters
-from mercurial.node import short, hex
+from mercurial.node import short, hex, nullid
 from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
@@ -597,7 +597,39 @@ def comparison(web, req, tmpl):
     else:
         context = parsecontext(web.config('web', 'comparisoncontext', '5'))
 
-    comparison = webutil.compare(tmpl, ctx, path, context)
+    def filelines(f):
+        if binary(f.data()):
+            mt = mimetypes.guess_type(f.path())[0]
+            if not mt:
+                mt = 'application/octet-stream'
+            return [_('(binary file %s, hash: %s)') % (mt, hex(f.filenode()))]
+        return f.data().splitlines()
+
+    if path in ctx:
+        fctx = ctx[path]
+        rightrev = fctx.filerev()
+        rightnode = fctx.filenode()
+        rightlines = filelines(fctx)
+        parents = fctx.parents()
+        if not parents:
+            leftrev = -1
+            leftnode = nullid
+            leftlines = ()
+        else:
+            pfctx = parents[0]
+            leftrev = pfctx.filerev()
+            leftnode = pfctx.filenode()
+            leftlines = filelines(pfctx)
+    else:
+        rightrev = -1
+        rightnode = nullid
+        rightlines = ()
+        fctx = ctx.parents()[0][path]
+        leftrev = fctx.filerev()
+        leftnode = fctx.filenode()
+        leftlines = filelines(fctx)
+
+    comparison = webutil.compare(tmpl, context, leftlines, rightlines)
     return tmpl('filecomparison',
                 file=path,
                 node=hex(ctx.node()),
@@ -609,6 +641,10 @@ def comparison(web, req, tmpl):
                 branch=webutil.nodebranchnodefault(ctx),
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
+                leftrev=leftrev,
+                leftnode=hex(leftnode),
+                rightrev=rightrev,
+                rightnode=hex(rightnode),
                 comparison=comparison)
 
 def annotate(web, req, tmpl):

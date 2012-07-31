@@ -84,16 +84,6 @@ difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class=
 difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
 diffline = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
 
-comparison = '
-  <table class="bigtable">
-    <thead class="header">
-      <tr>
-        <th>{leftrev}:{leftnode|short}</th>
-        <th>{rightrev}:{rightnode|short}</th>
-      </tr>
-    </thead>
-    {blocks}
-  </table>'
 comparisonblock ='
   <tbody class="block">
   {lines}

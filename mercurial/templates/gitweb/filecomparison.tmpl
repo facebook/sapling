@@ -55,7 +55,15 @@ comparison |
 </div>
 
 <div class="comparison">
-{comparison}
+  <table style="border-collapse:collapse;">
+    <thead class="header">
+      <tr>
+        <th>{leftrev}:{leftnode|short}</th>
+        <th>{rightrev}:{rightnode|short}</th>
+      </tr>
+    </thead>
+    {comparison}
+  </table>
 </div>
 
 </div>
