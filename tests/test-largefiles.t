@@ -543,6 +543,33 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub2/large6
   C sub2/large7
 
+Test commit -A (issue 3542)
+  $ echo large8 > large8
+  $ hg add --large large8
+  $ hg ci -Am 'this used to add large8 as normal and commit both'
+  Invoking status precommit hook
+  A large8
+  Invoking status postcommit hook
+  C large8
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ rm large8
+  $ hg ci -Am 'this used to not notice the rm'
+  removing large8
+  Invoking status precommit hook
+  R large8
+  Invoking status postcommit hook
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+
 Test that a standin can't be added as a large file
 
   $ touch large
@@ -588,8 +615,19 @@ Test that outgoing --large works (with revsets too)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     removed large
   
+  changeset:   13:0a3e75774479
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     this used to add large8 as normal and commit both
+  
+  changeset:   14:84f3d378175c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     this used to not notice the rm
+  
   searching for changes
   largefiles to upload:
+  large8
   large
   foo
   
