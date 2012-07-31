@@ -666,9 +666,9 @@ def revsettransplanted(repo, subset, x):
     Transplanted changesets in set, or all transplanted changesets.
     """
     if x:
-      s = revset.getset(repo, subset, x)
+        s = revset.getset(repo, subset, x)
     else:
-      s = subset
+        s = subset
     return [r for r in s if repo[r].extra().get('transplant_source')]
 
 def kwtransplanted(repo, ctx, **args):

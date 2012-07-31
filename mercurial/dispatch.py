@@ -169,7 +169,7 @@ def _runcatch(req):
             try: # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
             except (AttributeError, IndexError):
-                 # it might be anything, for example a string
+                # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
         elif util.safehasattr(inst, "args") and inst.args[0] == errno.EPIPE:

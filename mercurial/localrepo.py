@@ -272,7 +272,7 @@ class localrepository(object):
         return bookmarks.readcurrent(self)
 
     def _writebookmarks(self, marks):
-      bookmarks.write(self)
+        bookmarks.write(self)
 
     def bookmarkheads(self, bookmark):
         name = bookmark.split('@', 1)[0]

@@ -4499,7 +4499,7 @@ def phase(ui, repo, *revs, **opts):
         try:
             # set phase
             if not revs:
-                 raise util.Abort(_('empty revision set'))
+                raise util.Abort(_('empty revision set'))
             nodes = [repo[r].node() for r in revs]
             olddata = repo._phasecache.getphaserevs(repo)[:]
             phases.advanceboundary(repo, targetphase, nodes)
@@ -5442,7 +5442,7 @@ def summary(ui, repo, **opts):
                 # current bookmark not in parent ctx marks
                 pass
         for m in marks:
-          ui.write(' ' + m, label='log.bookmark')
+            ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
 
     st = list(repo.status(unknown=True))[:6]

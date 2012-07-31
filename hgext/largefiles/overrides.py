@@ -667,9 +667,9 @@ def overridepull(orig, ui, repo, source=None, **opts):
         repo._isrebasing = True
         try:
             if opts.get('update'):
-                 del opts['update']
-                 ui.debug('--update and --rebase are not compatible, ignoring '
-                          'the update flag\n')
+                del opts['update']
+                ui.debug('--update and --rebase are not compatible, ignoring '
+                         'the update flag\n')
             del opts['rebase']
             cmdutil.bailifchanged(repo)
             origpostincoming = commands.postincoming
