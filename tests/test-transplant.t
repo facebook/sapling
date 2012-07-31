@@ -603,3 +603,32 @@ test transplant with merge changeset accepts --parent
   applying be9f9b39483f
   be9f9b39483f transplanted to 9959e51f94d1
   $ cd ..
+
+test transplanting a patch turning into a no-op
+
+  $ hg init binarysource
+  $ cd binarysource
+  $ echo a > a
+  $ hg ci -Am adda a
+  >>> file('b', 'wb').write('\0b1')
+  $ hg ci -Am addb b
+  >>> file('b', 'wb').write('\0b2')
+  $ hg ci -m changeb b
+  $ cd ..
+
+  $ hg clone -r0 binarysource binarydest
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd binarydest
+  $ cp ../binarysource/b b
+  $ hg ci -Am addb2 b
+  $ hg transplant -s ../binarysource 2
+  searching for changes
+  applying 7a7d57e15850
+  7a7d57e158501e51588f5fd3288b491cac77e0d8: empty changeset (no-eol)
+  $ cd ..
+

@@ -263,9 +263,6 @@ class transplanter(object):
                 files = set()
                 patch.patch(self.ui, repo, patchfile, files=files, eolmode=None)
                 files = list(files)
-                if not files:
-                    self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
-                    return None
             except Exception, inst:
                 seriespath = os.path.join(self.path, 'series')
                 if os.path.exists(seriespath):
@@ -288,14 +285,8 @@ class transplanter(object):
         n = repo.commit(message, user, date, extra=extra, match=m,
                         editor=self.editor)
         if not n:
-            # Crash here to prevent an unclear crash later, in
-            # transplants.write().  This can happen if patch.patch()
-            # does nothing but claims success or if repo.status() fails
-            # to report changes done by patch.patch().  These both
-            # appear to be bugs in other parts of Mercurial, but dying
-            # here, as soon as we can detect the problem, is preferable
-            # to silently dropping changesets on the floor.
-            raise RuntimeError('nothing committed after transplant')
+            self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
+            return None
         if not merge:
             self.transplants.set(n, node)
 
