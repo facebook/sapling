@@ -155,12 +155,12 @@ helptable = sorted([
      loaddoc('templates')),
     (['urls'], _('URL Paths'), loaddoc('urls')),
     (["extensions"], _("Using Additional Features"), extshelp),
-   (["subrepo", "subrepos"], _("Subrepositories"), loaddoc('subrepos')),
-   (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
-   (["glossary"], _("Glossary"), loaddoc('glossary')),
-   (["hgignore", "ignore"], _("Syntax for Mercurial Ignore Files"),
-    loaddoc('hgignore')),
-   (["phases"], _("Working with Phases"), loaddoc('phases')),
+    (["subrepo", "subrepos"], _("Subrepositories"), loaddoc('subrepos')),
+    (["hgweb"], _("Configuring hgweb"), loaddoc('hgweb')),
+    (["glossary"], _("Glossary"), loaddoc('glossary')),
+    (["hgignore", "ignore"], _("Syntax for Mercurial Ignore Files"),
+     loaddoc('hgignore')),
+    (["phases"], _("Working with Phases"), loaddoc('phases')),
 ])
 
 # Map topics to lists of callable taking the current topic help and
