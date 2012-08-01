@@ -996,7 +996,7 @@ def walkchangerevs(repo, match, opts, prepare):
         defrange = '%s:0' % repo['.'].rev()
     else:
         defrange = '-1:0'
-    revs = scmutil.revrange(repo, opts['rev'] or [defrange])
+    revs = scmutil.revrange(repo, opts.get('rev') or [defrange])
     if not revs:
         return []
     wanted = set()

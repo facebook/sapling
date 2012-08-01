@@ -4074,7 +4074,7 @@ def log(ui, repo, *pats, **opts):
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
     df = False
-    if opts["date"]:
+    if opts.get("date"):
         df = util.matchdate(opts["date"])
 
     branches = opts.get('branch', []) + opts.get('only_branch', [])
