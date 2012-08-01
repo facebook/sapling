@@ -8,8 +8,8 @@ test-obsolete.t)
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
-Push does corrupt remote
-------------------------
+Push does not corrupt remote
+----------------------------
 
 Create a DAG where a changeset reuses a revision from a file first used in an
 extinct changeset.
