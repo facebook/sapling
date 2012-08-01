@@ -629,6 +629,6 @@ test transplanting a patch turning into a no-op
   $ hg transplant -s ../binarysource 2
   searching for changes
   applying 7a7d57e15850
-  7a7d57e158501e51588f5fd3288b491cac77e0d8: empty changeset (no-eol)
+  skipping emptied changeset 7a7d57e15850
   $ cd ..
 

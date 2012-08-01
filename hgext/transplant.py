@@ -285,7 +285,7 @@ class transplanter(object):
         n = repo.commit(message, user, date, extra=extra, match=m,
                         editor=self.editor)
         if not n:
-            self.ui.warn(_('%s: empty changeset') % revlog.hex(node))
+            self.ui.warn(_('skipping emptied changeset %s\n') % short(node))
             return None
         if not merge:
             self.transplants.set(n, node)
