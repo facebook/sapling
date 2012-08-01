@@ -150,6 +150,7 @@ from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
 from mercurial import hg
+from mercurial import lock as lockmod
 from mercurial import node
 from mercurial import patch
 from mercurial import repair
@@ -492,11 +493,16 @@ def histedit(ui, repo, *parent, **opts):
         ui.debug('should strip temp nodes %s\n' %
                  ', '.join([node.hex(n)[:12] for n in tmpnodes]))
         for nodes in (created, tmpnodes):
-            for n in reversed(nodes):
-                try:
-                    repair.strip(ui, repo, n)
-                except error.LookupError:
-                    pass
+            lock = None
+            try:
+                lock = repo.lock()
+                for n in reversed(nodes):
+                    try:
+                        repair.strip(ui, repo, n)
+                    except error.LookupError:
+                        pass
+            finally:
+                lockmod.release(lock)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
@@ -636,19 +642,29 @@ def histedit(ui, repo, *parent, **opts):
 
         ui.debug('should strip replaced nodes %s\n' %
                  ', '.join([node.hex(n)[:12] for n in replaced]))
-        for n in sorted(replaced, key=lambda x: repo[x].rev()):
+        lock = None
+        try:
+            lock = repo.lock()
+            for n in sorted(replaced, key=lambda x: repo[x].rev()):
+                try:
+                    repair.strip(ui, repo, n)
+                except error.LookupError:
+                    pass
+        finally:
+            lockmod.release(lock)
+
+    ui.debug('should strip temp nodes %s\n' %
+             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
+    lock = None
+    try:
+        lock = repo.lock()
+        for n in reversed(tmpnodes):
             try:
                 repair.strip(ui, repo, n)
             except error.LookupError:
                 pass
-
-    ui.debug('should strip temp nodes %s\n' %
-             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
-    for n in reversed(tmpnodes):
-        try:
-            repair.strip(ui, repo, n)
-        except error.LookupError:
-            pass
+    finally:
+        lockmod.release(lock)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
