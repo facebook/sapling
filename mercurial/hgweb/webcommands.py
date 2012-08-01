@@ -931,8 +931,7 @@ def help(web, req, tmpl):
     if not topicname:
         def topics(**map):
             for entries, summary, _ in helpmod.helptable:
-                entries = sorted(entries, key=len)
-                yield {'topic': entries[-1], 'summary': summary}
+                yield {'topic': entries[0], 'summary': summary}
 
         early, other = [], []
         primary = lambda s: s.split('|')[0]

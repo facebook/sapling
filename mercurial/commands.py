@@ -3297,7 +3297,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             rst.append(_("\nadditional help topics:\n\n"))
             topics = []
             for names, header, doc in help.helptable:
-                topics.append((sorted(names, key=len, reverse=True)[0], header))
+                topics.append((names[0], header))
             for t, desc in topics:
                 rst.append(" :%s: %s\n" % (t, desc))
 
