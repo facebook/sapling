@@ -118,6 +118,8 @@ class svnremoterepo(peerrepository):
     def __init__(self, ui, path=None):
         self.ui = ui
         if path is None:
+            path = self.ui.config('paths', 'default-push')
+        if path is None:
             path = self.ui.config('paths', 'default')
         if not path:
             raise hgutil.Abort('no Subversion URL specified')

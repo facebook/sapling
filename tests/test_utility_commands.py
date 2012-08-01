@@ -67,6 +67,23 @@ class UtilityTests(test_util.TestBase):
                      'rev': 5,
                      })
         self.assertMultiLineEqual(actual, expected)
+        destpath = self.wc_path + '_clone'
+        test_util.hgclone(u, self.repo, destpath)
+        repo2 = hg.repository(u, destpath)
+        repo2.ui.setconfig('paths', 'default-push',
+                           self.repo.ui.config('paths', 'default'))
+        hg.update(repo2, 'default')
+        svncommands.rebuildmeta(u, repo2, [])
+        u.pushbuffer()
+        svncommands.info(u, repo2)
+        actual = u.popbuffer()
+        expected = (expected_info_output %
+                    {'date': '2008-10-08 01:39:29 +0000 (Wed, 08 Oct 2008)',
+                     'repourl': repourl(repo_path),
+                     'branch': 'trunk',
+                     'rev': 6,
+                     })
+        self.assertMultiLineEqual(actual, expected)
 
     def test_info_single(self):
         repo, repo_path = self.load_and_fetch('two_heads.svndump', subdir='trunk')
