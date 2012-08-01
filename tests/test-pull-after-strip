@@ -7,7 +7,7 @@
 cat > tmp.py <<EOF
 import sys
 v = sys.stdin.read().strip()[:-1]
-if v[1] == '.' and int(v[2]) > 4:
+if v[1] == '.' and ((int(v[0]) == 1 and int(v[2]) > 4) or int(v[0]) > 1):
   sys.exit(0)
 sys.exit(1)
 EOF
