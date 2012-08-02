@@ -64,16 +64,16 @@ def get_cmd(cmd, cmdtable):
     return d
 
 def section(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
+    ui.write("%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s)))
 
 def subsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, '"' * encoding.colwidth(s)))
+    ui.write("%s\n%s\n\n" % (s, '=' * encoding.colwidth(s)))
 
 def subsubsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "." * encoding.colwidth(s)))
+    ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
 
 def subsubsubsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "#" * encoding.colwidth(s)))
+    ui.write("%s\n%s\n\n" % (s, "." * encoding.colwidth(s)))
 
 
 def show_doc(ui):

@@ -57,6 +57,7 @@ Create hardlinked clone r2:
 
   $ hg clone -U --debug r1 r2
   linked 7 files
+  listing keys for "bookmarks"
 
 Create non-hardlinked clone r3:
 

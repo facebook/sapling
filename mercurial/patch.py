@@ -634,7 +634,7 @@ class patchfile(object):
             if self.mode is None:
                 self.mode = (False, False)
         if self.missing:
-             self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
+            self.ui.warn(_("unable to find '%s' for patching\n") % self.fname)
 
         self.hash = {}
         self.dirty = 0
@@ -1630,9 +1630,9 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     if opts.git or opts.upgrade:
         copy = copies.pathcopies(ctx1, ctx2)
 
-    difffn = (lambda opts, losedata:
-                  trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
-                          copy, getfilectx, opts, losedata, prefix))
+    def difffn(opts, losedata):
+        return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
+                       copy, getfilectx, opts, losedata, prefix)
     if opts.upgrade and not opts.git:
         try:
             def losedata(fn):

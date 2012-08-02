@@ -74,7 +74,7 @@ def shouldtransform(node):
        'setattr' in sggparent or \
        'encode' in sggparent or \
        'decode' in sggparent:
-           return False
+        return False
 
     return True
 

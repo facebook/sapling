@@ -183,3 +183,56 @@ should effectively drop the changes from +6.
   
 
   $ cd ..
+
+Test corner case where folded revision is separated from its parent by a
+dropped revision.
+
+
+  $ hg init fold-with-dropped
+  $ cd fold-with-dropped
+  $ printf "1\n2\n3\n" > file
+  $ hg commit -Am '1+2+3'
+  adding file
+  $ echo 4 >> file
+  $ hg commit -m '+4'
+  $ echo 5 >> file
+  $ hg commit -m '+5'
+  $ echo 6 >> file
+  $ hg commit -m '+6'
+  $ hg log -G --template '{rev}:{node|short} {desc|firstline}\n'
+  @  3:251d831eeec5 +6
+  |
+  o  2:888f9082bf99 +5
+  |
+  o  1:617f94f13c0f +4
+  |
+  o  0:0189ba417d34 1+2+3
+  
+  $ EDITED="$TESTTMP/editcommands"
+  $ cat > $EDITED <<EOF
+  > pick 617f94f13c0f 1 +4
+  > drop 888f9082bf99 2 +5
+  > fold 251d831eeec5 3 +6
+  > EOF
+  $ HGEDITOR="cat $EDITED >" hg histedit 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  patching file file
+  Hunk #1 FAILED at 2
+  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  abort: Fix up the change and run hg histedit --continue
+  [255]
+  $ echo 5 >> file
+  $ hg commit -m '+5.2'
+  created new head
+  $ echo 6 >> file
+  $ HGEDITOR=cat hg histedit --continue
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  +4
+  ***
+  +5.2
+  ***
+  +6
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
+  $ cd ..
+

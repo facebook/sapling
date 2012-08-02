@@ -169,7 +169,7 @@ def _runcatch(req):
             try: # usually it is in the form (errno, strerror)
                 reason = inst.reason.args[1]
             except (AttributeError, IndexError):
-                 # it might be anything, for example a string
+                # it might be anything, for example a string
                 reason = inst.reason
             ui.warn(_("abort: error: %s\n") % reason)
         elif util.safehasattr(inst, "args") and inst.args[0] == errno.EPIPE:
@@ -225,8 +225,9 @@ def _runcatch(req):
                 break
             if compare not in testedwith.split() and testedwith != 'internal':
                 tested = [tuplever(v) for v in testedwith.split()]
-                nearest = max([t for t in tested if t < ct])
-                if nearest < worst[1]:
+                lower = [t for t in tested if t < ct]
+                nearest = max(lower or tested)
+                if worst[0] is None or nearest < worst[1]:
                     worst = name, nearest, report
         if worst[0] is not None:
             name, testedwith, report = worst

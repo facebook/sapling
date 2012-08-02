@@ -51,9 +51,11 @@ No update, with debug option:
 #if hardlink
   $ hg --debug clone -U . ../c
   linked 8 files
+  listing keys for "bookmarks"
 #else
   $ hg --debug clone -U . ../c
   copied 8 files
+  listing keys for "bookmarks"
 #endif
   $ cd ../c
   $ cat a 2>/dev/null || echo "a not present"

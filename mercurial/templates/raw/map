@@ -1,3 +1,5 @@
+default = 'shortlog'
+shortlog = "'raw' is not a browsable style"
 mimetype = 'text/plain; charset={encoding}'
 header = ''
 footer = ''

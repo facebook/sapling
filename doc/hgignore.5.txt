@@ -14,17 +14,17 @@ syntax for Mercurial ignore files
 .. include:: ../mercurial/help/hgignore.txt
 
 Author
-------
+======
 Vadim Gelfer <vadim.gelfer@gmail.com>
 
 Mercurial was written by Matt Mackall <mpm@selenic.com>.
 
 See Also
---------
+========
 |hg(1)|_, |hgrc(5)|_
 
 Copying
--------
+=======
 This manual page is copyright 2006 Vadim Gelfer.
 Mercurial is copyright 2005-2012 Matt Mackall.
 Free use of this software is granted under the terms of the GNU General

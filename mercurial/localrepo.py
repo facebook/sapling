@@ -272,7 +272,7 @@ class localrepository(object):
         return bookmarks.readcurrent(self)
 
     def _writebookmarks(self, marks):
-      bookmarks.write(self)
+        bookmarks.write(self)
 
     def bookmarkheads(self, bookmark):
         name = bookmark.split('@', 1)[0]
@@ -289,6 +289,10 @@ class localrepository(object):
     @storecache('obsstore')
     def obsstore(self):
         store = obsolete.obsstore(self.sopener)
+        if store and not obsolete._enabled:
+            # message is rare enough to not be translated
+            msg = 'obsolete feature not enabled but %i markers found!\n'
+            self.ui.warn(msg % len(list(store)))
         return store
 
     @propertycache
@@ -996,6 +1000,9 @@ class localrepository(object):
                         self.sjoin('phaseroots'))
         self.invalidate()
 
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
+
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
@@ -1062,9 +1069,6 @@ class localrepository(object):
             except AttributeError:
                 pass
         self.invalidatecaches()
-
-        # Discard all cache entries to force reloading everything.
-        self._filecache.clear()
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
@@ -1499,6 +1503,9 @@ class localrepository(object):
         # tag cache retrieval" case to work.
         self.invalidatecaches()
 
+        # Discard all cache entries to force reloading everything.
+        self._filecache.clear()
+
     def walk(self, match, node=None):
         '''
         walk recursively through the directory tree or a given
@@ -1783,12 +1790,16 @@ class localrepository(object):
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
 
-            remoteobs = remote.listkeys('obsolete')
-            if 'dump' in remoteobs:
-                if tr is None:
-                    tr = self.transaction(trname)
-                data = base85.b85decode(remoteobs['dump'])
-                self.obsstore.mergemarkers(tr, data)
+            if obsolete._enabled:
+                self.ui.debug('fetching remote obsolete markers')
+                remoteobs = remote.listkeys('obsolete')
+                if 'dump0' in remoteobs:
+                    if tr is None:
+                        tr = self.transaction(trname)
+                    for key in sorted(remoteobs, reverse=True):
+                        if key.startswith('dump'):
+                            data = base85.b85decode(remoteobs[key])
+                            self.obsstore.mergemarkers(tr, data)
             if tr is not None:
                 tr.close()
         finally:
@@ -1844,7 +1855,7 @@ class localrepository(object):
 
                 if not outgoing.missing:
                     # nothing to push
-                    scmutil.nochangesfound(self.ui, outgoing.excluded)
+                    scmutil.nochangesfound(self.ui, self, outgoing.excluded)
                     ret = None
                 else:
                     # something to push
@@ -1951,12 +1962,18 @@ class localrepository(object):
                         if not r:
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
-                if ('obsolete' in remote.listkeys('namespaces')
-                    and self.obsstore):
-                    data = self.listkeys('obsolete')['dump']
-                    r = remote.pushkey('obsolete', 'dump', '', data)
-                    if not r:
-                        self.ui.warn(_('failed to push obsolete markers!\n'))
+                self.ui.debug('try to push obsolete markers to remote\n')
+                if (obsolete._enabled and self.obsstore and
+                    'obsolete' in remote.listkeys('namespaces')):
+                    rslts = []
+                    remotedata = self.listkeys('obsolete')
+                    for key in sorted(remotedata, reverse=True):
+                        # reverse sort to ensure we end with dump0
+                        data = remotedata[key]
+                        rslts.append(remote.pushkey('obsolete', key, '', data))
+                    if [r for r in rslts if not r]:
+                        msg = _('failed to push some obsolete markers!\n')
+                        self.ui.warn(msg)
             finally:
                 if lock is not None:
                     lock.release()
@@ -2540,6 +2557,7 @@ class localrepository(object):
     def pushkey(self, namespace, key, old, new):
         self.hook('prepushkey', throw=True, namespace=namespace, key=key,
                   old=old, new=new)
+        self.ui.debug('pushing key for "%s:%s"\n' % (namespace, key))
         ret = pushkey.push(self, namespace, key, old, new)
         self.hook('pushkey', namespace=namespace, key=key, old=old, new=new,
                   ret=ret)
@@ -2547,6 +2565,7 @@ class localrepository(object):
 
     def listkeys(self, namespace):
         self.hook('prelistkeys', throw=True, namespace=namespace)
+        self.ui.debug('listing keys for "%s"\n' % namespace)
         values = pushkey.list(self, namespace)
         self.hook('listkeys', namespace=namespace, values=values)
         return values

@@ -190,15 +190,15 @@ def addremove(ui, repo, *pats, **opts):
     ``.hgignore``. As with add, these changes take effect at the next
     commit.
 
-    Use the -s/--similarity option to detect renamed files. With a
-    parameter greater than 0, this compares every removed file with
-    every added file and records those similar enough as renames. This
+    Use the -s/--similarity option to detect renamed files. This
     option takes a percentage between 0 (disabled) and 100 (files must
-    be identical) as its parameter. Detecting renamed files this way
+    be identical) as its parameter. With a parameter greater than 0,
+    this compares every removed file with every added file and records
+    those similar enough as renames. Detecting renamed files this way
     can be expensive. After using this option, :hg:`status -C` can be
-    used to check which files were identified as moved or renamed.
-    If this option is not specified, only renames of identical files
-    are detected.
+    used to check which files were identified as moved or renamed. If
+    not specified, -s/--similarity defaults to 100 and only renames of
+    identical files are detected.
 
     Returns 0 if all files are successfully added.
     """
@@ -1050,7 +1050,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 portable=True)
         cg = repo.getlocalbundle('bundle', outgoing)
     if not cg:
-        scmutil.nochangesfound(ui, outgoing and outgoing.excluded)
+        scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
 
     changegroup.writebundle(cg, fname, bundletype)
@@ -1298,10 +1298,20 @@ def commit(ui, repo, *pats, **opts):
                                editor=editor,
                                extra=extra)
 
+        current = repo._bookmarkcurrent
+        marks = old.bookmarks()
         node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1
+        elif marks:
+            ui.debug('moving bookmarks %r from %s to %s\n' %
+                     (marks, old.hex(), hex(node)))
+            for bm in marks:
+                repo._bookmarks[bm] = node
+                if bm == current:
+                    bookmarks.setcurrent(repo, bm)
+            bookmarks.write(repo)
     else:
         e = cmdutil.commiteditor
         if opts.get('force_editor'):
@@ -2057,17 +2067,31 @@ def debugknown(ui, repopath, *ids, **opts):
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker"""
+    def parsenodeid(s):
+        try:
+            # We do not use revsingle/revrange functions here to accept
+            # arbitrary node identifiers, possibly not present in the
+            # local repository.
+            n = bin(s)
+            if len(n) != len(nullid):
+                raise TypeError()
+            return n
+        except TypeError:
+            raise util.Abort('changeset references must be full hexadecimal '
+                             'node identifiers')
+
     if precursor is not None:
         metadata = {}
         if 'date' in opts:
             metadata['date'] = opts['date']
         metadata['user'] = opts['user'] or ui.username()
-        succs = tuple(bin(succ) for succ in successors)
+        succs = tuple(parsenodeid(succ) for succ in successors)
         l = repo.lock()
         try:
             tr = repo.transaction('debugobsolete')
             try:
-                repo.obsstore.create(tr, bin(precursor), succs, 0, metadata)
+                repo.obsstore.create(tr, parsenodeid(precursor), succs, 0,
+                                     metadata)
                 tr.close()
             finally:
                 tr.release()
@@ -3273,7 +3297,7 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
             rst.append(_("\nadditional help topics:\n\n"))
             topics = []
             for names, header, doc in help.helptable:
-                topics.append((sorted(names, key=len, reverse=True)[0], header))
+                topics.append((names[0], header))
             for t, desc in topics:
                 rst.append(" :%s: %s\n" % (t, desc))
 
@@ -3506,7 +3530,9 @@ def identify(ui, repo, source=None, rev=None,
             parents = ctx.parents()
             changed = ""
             if default or id or num:
-                changed = util.any(repo.status()) and "+" or ""
+                if (util.any(repo.status())
+                    or util.any(ctx.sub(s).dirty() for s in ctx.substate)):
+                    changed = '+'
             if default or id:
                 output = ["%s%s" %
                   ('+'.join([hexfunc(p.node()) for p in parents]), changed)]
@@ -4048,7 +4074,7 @@ def log(ui, repo, *pats, **opts):
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
 
     df = False
-    if opts["date"]:
+    if opts.get("date"):
         df = util.matchdate(opts["date"])
 
     branches = opts.get('branch', []) + opts.get('only_branch', [])
@@ -4473,7 +4499,7 @@ def phase(ui, repo, *revs, **opts):
         try:
             # set phase
             if not revs:
-                 raise util.Abort(_('empty revision set'))
+                raise util.Abort(_('empty revision set'))
             nodes = [repo[r].node() for r in revs]
             olddata = repo._phasecache.getphaserevs(repo)[:]
             phases.advanceboundary(repo, targetphase, nodes)
@@ -5416,7 +5442,7 @@ def summary(ui, repo, **opts):
                 # current bookmark not in parent ctx marks
                 pass
         for m in marks:
-          ui.write(' ' + m, label='log.bookmark')
+            ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
 
     st = list(repo.status(unknown=True))[:6]
@@ -5640,6 +5666,11 @@ def tag(ui, repo, name1, *names, **opts):
 
         if opts.get('edit'):
             message = ui.edit(message, ui.username())
+
+        # don't allow tagging the null rev
+        if (not opts.get('remove') and
+            scmutil.revsingle(repo, rev_).rev() == nullrev):
+            raise util.Abort(_("null revision specified"))
 
         repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
     finally:

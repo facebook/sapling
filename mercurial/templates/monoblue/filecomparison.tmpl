@@ -58,7 +58,15 @@
     </div>
 
     <div class="comparison">
-    {comparison}
+      <table class="bigtable">
+        <thead class="header">
+          <tr>
+            <th>{leftrev}:{leftnode|short}</th>
+            <th>{rightrev}:{rightnode|short}</th>
+          </tr>
+        </thead>
+        {comparison}
+      </table>
     </div>
 
 {footer}

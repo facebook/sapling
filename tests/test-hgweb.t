@@ -67,6 +67,8 @@ should give a 404 - static file that does not exist
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
   <li><a href="/help">help</a></li>
   </ul>
   </div>
@@ -155,6 +157,8 @@ should give a 404 - file does not exist
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
   <li><a href="/help">help</a></li>
   </ul>
   </div>
@@ -455,15 +459,16 @@ static file
   }
   
   .delete {
-      background-color: #ffc5ce;
+      background-color: #faa;
+      color: #333;
   }
   
   .insert {
-      background-color: #c5ffc4;
+      background-color: #ffa;
   }
   
   .replace {
-      background-color: #ffff99;
+      background-color: #e8e8e8;
   }
   
   .comparison {

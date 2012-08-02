@@ -211,7 +211,7 @@ class KeepAliveHandler(object):
                 h.close()
 
     def _request_closed(self, request, host, connection):
-        """tells us that this request is now closed and the the
+        """tells us that this request is now closed and that the
         connection is ready for another request"""
         self._cm.set_ready(connection, 1)
 

@@ -7,7 +7,7 @@ are versioned within the Mercurial source tree because the WXS files
 must kept up to date with distribution changes within their branch.  In
 other words, the default branch WXS files are expected to diverge from
 the stable branch WXS files.  Storing them within the same repository is
-the only sane way to keep the the source tree and the installer in sync.
+the only sane way to keep the source tree and the installer in sync.
 
 The MSI installer builder uses only the mercurial.ini file from the
 contrib/win32 folder, the contents of which have been historically used

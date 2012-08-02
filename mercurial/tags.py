@@ -241,7 +241,7 @@ def _readtagcache(ui, repo):
     # This is the most expensive part of finding tags, so performance
     # depends primarily on the size of newheads.  Worst case: no cache
     # file, so newheads == repoheads.
-    for head in newheads:
+    for head in reversed(newheads):
         cctx = repo[head]
         try:
             fnode = cctx.filenode('.hgtags')

@@ -342,11 +342,17 @@ class buildhgexe(build_ext):
     def build_extensions(self):
         if os.name != 'nt':
             return
+        if isinstance(self.compiler, HackedMingw32CCompiler):
+            self.compiler.compiler_so = self.compiler.compiler # no -mdll
+            self.compiler.dll_libraries = [] # no -lmsrvc90
         objects = self.compiler.compile(['mercurial/exewrapper.c'],
                                          output_dir=self.build_temp)
         dir = os.path.dirname(self.get_ext_fullpath('dummy'))
         target = os.path.join(dir, 'hg')
+        pythonlib = ("python%d%d" %
+               (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
         self.compiler.link_executable(objects, target,
+                                      libraries=[pythonlib],
                                       output_dir=self.build_temp)
 
 class hginstallscripts(install_scripts):

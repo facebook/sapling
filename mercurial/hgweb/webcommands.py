@@ -8,7 +8,7 @@
 import os, mimetypes, re, cgi, copy
 import webutil
 from mercurial import error, encoding, archival, templater, templatefilters
-from mercurial.node import short, hex
+from mercurial.node import short, hex, nullid
 from mercurial.util import binary
 from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
@@ -394,8 +394,7 @@ def manifest(web, req, tmpl):
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
 def tags(web, req, tmpl):
-    i = web.repo.tagslist()
-    i.reverse()
+    i = reversed(web.repo.tagslist())
     parity = paritygen(web.stripecount)
 
     def entries(notip=False, limit=0, **map):
@@ -466,8 +465,7 @@ def branches(web, req, tmpl):
                 latestentry=lambda **x: entries(1, **x))
 
 def summary(web, req, tmpl):
-    i = web.repo.tagslist()
-    i.reverse()
+    i = reversed(web.repo.tagslist())
 
     def tagentries(**map):
         parity = paritygen(web.stripecount)
@@ -588,6 +586,8 @@ diff = filediff
 
 def comparison(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
+    if 'file' not in req.form:
+        raise ErrorResponse(HTTP_NOT_FOUND, 'file not given')
     path = webutil.cleanpath(web.repo, req.form['file'][0])
     rename = path in ctx and webutil.renamelink(ctx[path]) or []
 
@@ -597,7 +597,39 @@ def comparison(web, req, tmpl):
     else:
         context = parsecontext(web.config('web', 'comparisoncontext', '5'))
 
-    comparison = webutil.compare(tmpl, ctx, path, context)
+    def filelines(f):
+        if binary(f.data()):
+            mt = mimetypes.guess_type(f.path())[0]
+            if not mt:
+                mt = 'application/octet-stream'
+            return [_('(binary file %s, hash: %s)') % (mt, hex(f.filenode()))]
+        return f.data().splitlines()
+
+    if path in ctx:
+        fctx = ctx[path]
+        rightrev = fctx.filerev()
+        rightnode = fctx.filenode()
+        rightlines = filelines(fctx)
+        parents = fctx.parents()
+        if not parents:
+            leftrev = -1
+            leftnode = nullid
+            leftlines = ()
+        else:
+            pfctx = parents[0]
+            leftrev = pfctx.filerev()
+            leftnode = pfctx.filenode()
+            leftlines = filelines(pfctx)
+    else:
+        rightrev = -1
+        rightnode = nullid
+        rightlines = ()
+        fctx = ctx.parents()[0][path]
+        leftrev = fctx.filerev()
+        leftnode = fctx.filenode()
+        leftlines = filelines(fctx)
+
+    comparison = webutil.compare(tmpl, context, leftlines, rightlines)
     return tmpl('filecomparison',
                 file=path,
                 node=hex(ctx.node()),
@@ -607,8 +639,12 @@ def comparison(web, req, tmpl):
                 author=ctx.user(),
                 rename=rename,
                 branch=webutil.nodebranchnodefault(ctx),
-                parent=webutil.parents(ctx),
-                child=webutil.children(ctx),
+                parent=webutil.parents(fctx),
+                child=webutil.children(fctx),
+                leftrev=leftrev,
+                leftnode=hex(leftnode),
+                rightrev=rightrev,
+                rightnode=hex(rightnode),
                 comparison=comparison)
 
 def annotate(web, req, tmpl):
@@ -781,7 +817,9 @@ def static(web, req, tmpl):
 
 def graph(web, req, tmpl):
 
-    rev = webutil.changectx(web.repo, req).rev()
+    ctx = webutil.changectx(web.repo, req)
+    rev = ctx.rev()
+
     bg_height = 39
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
@@ -794,20 +832,17 @@ def graph(web, req, tmpl):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
 
-    max_rev = len(web.repo) - 1
-    revcount = min(max_rev, revcount)
-    revnode = web.repo.changelog.node(rev)
-    revnode_hex = hex(revnode)
-    uprev = min(max_rev, rev + revcount)
-    downrev = max(0, rev - revcount)
     count = len(web.repo)
-    changenav = webutil.revnavgen(rev, revcount, count, web.repo.changectx)
-    startrev = rev
-    # if starting revision is less than 60 set it to uprev
-    if rev < web.maxshortchanges:
-        startrev = uprev
+    pos = rev
+    start = max(0, pos - revcount + 1)
+    end = min(count, start + revcount)
+    pos = end - 1
 
-    dag = graphmod.dagwalker(web.repo, range(startrev, downrev - 1, -1))
+    uprev = min(max(0, count - 1), rev + revcount)
+    downrev = max(0, rev - revcount)
+    changenav = webutil.revnavgen(pos, revcount, count, web.repo.changectx)
+
+    dag = graphmod.dagwalker(web.repo, range(start, end)[::-1])
     tree = list(graphmod.colored(dag, web.repo))
 
     def getcolumns(tree):
@@ -879,7 +914,7 @@ def graph(web, req, tmpl):
                 canvasheight=canvasheight, bg_height=bg_height,
                 jsdata=lambda **x: graphdata(True, **x),
                 nodes=lambda **x: graphdata(False, **x),
-                node=revnode_hex, changenav=changenav)
+                node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
     doc = e[0].__doc__
@@ -896,8 +931,7 @@ def help(web, req, tmpl):
     if not topicname:
         def topics(**map):
             for entries, summary, _ in helpmod.helptable:
-                entries = sorted(entries, key=len)
-                yield {'topic': entries[-1], 'summary': summary}
+                yield {'topic': entries[0], 'summary': summary}
 
         early, other = [], []
         primary = lambda s: s.split('|')[0]

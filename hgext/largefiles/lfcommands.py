@@ -121,7 +121,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             shutil.rmtree(rdst.root)
 
 def _addchangeset(ui, rsrc, rdst, ctx, revmap):
- # Convert src parents to dst parents
+    # Convert src parents to dst parents
     parents = _convertparents(ctx, revmap)
 
     # Generate list of changed files
@@ -506,7 +506,7 @@ def _updatelfile(repo, lfdirstate, lfile):
         # because otherwise the largefile will get reverted.  But for commit's
         # sake, we have to mark the file as unclean.
         if getattr(repo, "_isrebasing", False):
-           lfdirstate.normallookup(lfile)
+            lfdirstate.normallookup(lfile)
         else:
             lfdirstate.normal(lfile)
     elif state == 'r':

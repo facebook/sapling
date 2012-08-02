@@ -37,7 +37,6 @@ file open in your editor::
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
- 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 In this file, lines beginning with ``#`` are ignored. You must specify a rule
 for each revision in your history. For example, if you had meant to add gamma
@@ -57,7 +56,6 @@ would reorganize the file to look like this::
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
- 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 At which point you close the editor and ``histedit`` starts working. When you
 specify a ``fold`` operation, ``histedit`` will open an editor when it folds
@@ -152,6 +150,7 @@ from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
 from mercurial import hg
+from mercurial import lock as lockmod
 from mercurial import node
 from mercurial import patch
 from mercurial import repair
@@ -164,9 +163,7 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
-editcomment = """
-
-# Edit history between %s and %s
+editcomment = _("""# Edit history between %s and %s
 #
 # Commands:
 #  p, pick = use commit
@@ -175,7 +172,7 @@ editcomment = """
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #
-"""
+""")
 
 def between(repo, old, new, keep):
     revs = [old]
@@ -310,7 +307,7 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     newmessage = '\n***\n'.join(
         [ctx.description()] +
         [repo[r].description() for r in internalchanges] +
-        [oldctx.description()])
+        [oldctx.description()]) + '\n'
     # If the changesets are from the same author, keep it.
     if ctx.user() == oldctx.user():
         username = ctx.user()
@@ -348,7 +345,7 @@ def message(ui, repo, ctx, ha, opts):
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
-    message = oldctx.description()
+    message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
     new = repo.commit(text=message, user=oldctx.user(), date=oldctx.date(),
                       extra=oldctx.extra())
@@ -430,22 +427,29 @@ def histedit(ui, repo, *parent, **opts):
          tmpnodes, existing, rules, keep, tip, replacemap) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
-        # discover any nodes the user has added in the interim
-        newchildren = [c for c in parentctx.children()
-                       if c.node() not in existing]
+        # existing is the list of revisions initially considered by
+        # histedit. Here we use it to list new changesets, descendants
+        # of parentctx without an 'existing' changeset in-between. We
+        # also have to exclude 'existing' changesets which were
+        # previously dropped.
+        descendants = set(c.node() for c in
+                repo.set('(%n::) - %n', parentctxnode, parentctxnode))
+        existing = set(existing)
+        notdropped = set(n for n in existing if n in descendants and
+                (n not in replacemap or replacemap[n] in descendants))
+        # Discover any nodes the user has added in the interim. We can
+        # miss changesets which were dropped and recreated the same.
+        newchildren = list(c.node() for c in repo.set(
+            'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
         action, currentnode = rules.pop(0)
-        while newchildren:
-            if action in ('f', 'fold'):
-                tmpnodes.extend([n.node() for n in newchildren])
-            else:
-                created.extend([n.node() for n in newchildren])
-            filtered = []
-            for r in newchildren:
-                filtered += [c for c in r.children() if c.node not in existing]
-            newchildren = filtered
+        if action in ('f', 'fold'):
+            tmpnodes.extend(newchildren)
+        else:
+            created.extend(newchildren)
+
         m, a, r, d = repo.status()[:4]
         oldctx = repo[currentnode]
-        message = oldctx.description()
+        message = oldctx.description() + '\n'
         if action in ('e', 'edit', 'm', 'mess'):
             message = ui.edit(message, ui.username())
         elif action in ('f', 'fold'):
@@ -489,11 +493,16 @@ def histedit(ui, repo, *parent, **opts):
         ui.debug('should strip temp nodes %s\n' %
                  ', '.join([node.hex(n)[:12] for n in tmpnodes]))
         for nodes in (created, tmpnodes):
-            for n in reversed(nodes):
-                try:
-                    repair.strip(ui, repo, n)
-                except error.LookupError:
-                    pass
+            lock = None
+            try:
+                lock = repo.lock()
+                for n in reversed(nodes):
+                    try:
+                        repair.strip(ui, repo, n)
+                    except error.LookupError:
+                        pass
+            finally:
+                lockmod.release(lock)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
@@ -517,6 +526,7 @@ def histedit(ui, repo, *parent, **opts):
         rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
+            rules += '\n\n'
             rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12])
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
@@ -632,19 +642,29 @@ def histedit(ui, repo, *parent, **opts):
 
         ui.debug('should strip replaced nodes %s\n' %
                  ', '.join([node.hex(n)[:12] for n in replaced]))
-        for n in sorted(replaced, key=lambda x: repo[x].rev()):
+        lock = None
+        try:
+            lock = repo.lock()
+            for n in sorted(replaced, key=lambda x: repo[x].rev()):
+                try:
+                    repair.strip(ui, repo, n)
+                except error.LookupError:
+                    pass
+        finally:
+            lockmod.release(lock)
+
+    ui.debug('should strip temp nodes %s\n' %
+             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
+    lock = None
+    try:
+        lock = repo.lock()
+        for n in reversed(tmpnodes):
             try:
                 repair.strip(ui, repo, n)
             except error.LookupError:
                 pass
-
-    ui.debug('should strip temp nodes %s\n' %
-             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
-    for n in reversed(tmpnodes):
-        try:
-            repair.strip(ui, repo, n)
-        except error.LookupError:
-            pass
+    finally:
+        lockmod.release(lock)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))

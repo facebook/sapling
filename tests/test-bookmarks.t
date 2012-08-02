@@ -390,3 +390,70 @@ test missing revisions
   $ echo "925d80f479bc z" > .hg/bookmarks
   $ hg book
   no bookmarks set
+
+test stripping a non-checked-out but bookmarked revision
+
+  $ hg --config extensions.graphlog= log --graph
+  o  changeset:   4:9ba5f110a0b3
+  |  branch:      test
+  |  tag:         tip
+  |  parent:      2:db815d6d32e6
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     y
+  |
+  | @  changeset:   3:125c9a1d6df6
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     x
+  |
+  o  changeset:   2:db815d6d32e6
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  | o  changeset:   1:925d80f479bb
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:f7b1eb17ad24
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+  $ hg book should-end-on-two
+  $ hg co --clean 4
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg book four
+  $ hg --config extensions.mq= strip 3
+  saved backup bundle to * (glob)
+should-end-on-two should end up pointing to revision 2, as that's the
+tipmost surviving ancestor of the stripped revision.
+  $ hg --config extensions.graphlog= log --graph
+  @  changeset:   3:9ba5f110a0b3
+  |  branch:      test
+  |  bookmark:    four
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     y
+  |
+  o  changeset:   2:db815d6d32e6
+  |  bookmark:    should-end-on-two
+  |  parent:      0:f7b1eb17ad24
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     2
+  |
+  | o  changeset:   1:925d80f479bb
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     1
+  |
+  o  changeset:   0:f7b1eb17ad24
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  

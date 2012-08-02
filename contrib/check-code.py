@@ -206,6 +206,7 @@ pypats = [
     (r'\.debug\(\_', "don't mark debug messages for translation"),
     (r'\.strip\(\)\.split\(\)', "no need to strip before splitting"),
     (r'^\s*except\s*:', "warning: naked except clause", r'#.*re-raises'),
+    (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
   ],
   # warnings
   [

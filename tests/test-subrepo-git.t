@@ -430,7 +430,7 @@ Sticky subrepositorys, file changes
   $ git add f1
   $ cd ..
   $ hg id -n
-  1
+  1+
   $ cd s
   $ git rev-parse HEAD
   da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
@@ -487,7 +487,7 @@ Sticky subrepository, file changes and revision updates
    l
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n
-  7
+  7+
   $ cd s
   $ git rev-parse HEAD
   aa84837ccfbdfedcdcdeeedc309d73e6eb069edc

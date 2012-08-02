@@ -1,12 +1,12 @@
 Synopsis
---------
+========
 
 The Mercurial system uses a file called ``.hgignore`` in the root
 directory of a repository to control its behavior when it searches
 for files that it is not currently tracking.
 
 Description
------------
+===========
 
 The working directory of a Mercurial repository will often contain
 files that should not be tracked by Mercurial. These include backup
@@ -39,7 +39,7 @@ added with :hg:`add X`, even if X would be excluded by a pattern
 in .hgignore.
 
 Syntax
-------
+======
 
 An ignore file is a plain text file consisting of a list of patterns,
 with one pattern per line. Empty lines are skipped. The ``#``
@@ -73,7 +73,7 @@ regexp pattern, start it with ``^``.
   Please see :hg:`help patterns` for details.
 
 Example
--------
+=======
 
 Here is an example ignore file. ::
 

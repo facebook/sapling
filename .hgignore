@@ -15,6 +15,7 @@ syntax: glob
 *$py.class
 *.swp
 *.prof
+*.zip
 \#*\#
 .\#*
 tests/.coverage*

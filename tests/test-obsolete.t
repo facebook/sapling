@@ -14,13 +14,44 @@
   >    hg id --debug -ir "desc('$1')"
   > }
 
+  $ cat > debugkeys.py <<EOF
+  > def reposetup(ui, repo):
+  >     class debugkeysrepo(repo.__class__):
+  >         def listkeys(self, namespace):
+  >             ui.write('listkeys %s\n' % (namespace,))
+  >             return super(debugkeysrepo, self).listkeys(namespace)
+  > 
+  >     if repo.local():
+  >         repo.__class__ = debugkeysrepo
+  > EOF
 
   $ hg init tmpa
   $ cd tmpa
+  $ mkcommit kill_me
+
+Checking that the feature is properly disabled
+
+  $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
+  abort: obsolete feature is not enabled on this repo
+  [255]
+
+Enabling it
+
+  $ cat > ../obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
 
 Killing a single changeset without replacement
 
-  $ mkcommit kill_me
+  $ hg debugobsolete 0
+  abort: changeset references must be full hexadecimal node identifiers
+  [255]
+  $ hg debugobsolete '00'
+  abort: changeset references must be full hexadecimal node identifiers
+  [255]
   $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
   $ hg debugobsolete
   97b7c2d76b1845ed3eb988cd612611e72406cef0 0 {'date': '0 0', 'user': 'babar'}
@@ -173,6 +204,63 @@ Try to pull markers
   adding file changes
   added 4 changesets with 4 changes to 4 files (+1 heads)
   $ hg -R tmpd debugobsolete
+  245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
+  cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
+  ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
+  1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+
+Check obsolete keys are exchanged only if source has an obsolete store
+
+  $ hg init empty
+  $ hg --config extensions.debugkeys=debugkeys.py -R empty push tmpd
+  pushing to tmpd
+  no changes found
+  listkeys phases
+  listkeys bookmarks
+  [1]
+
+clone support
+(markers are copied and extinct changesets are included to allow hardlinks)
+
+  $ hg clone tmpb clone-dest
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R clone-dest log -G --hidden
+  @  changeset:   5:5601fb93a350
+  |  tag:         tip
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add new_3_c
+  |
+  | x  changeset:   4:ca819180edb9
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_2_c
+  |
+  | x  changeset:   3:cdbce2fbb163
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_c
+  |
+  | o  changeset:   2:245bde4270cd
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add original_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+  $ hg -R clone-dest debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
@@ -404,3 +492,17 @@ Do not warn about new head when the new head is a successors of a remote one
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+
+Checking _enable=False warning if obsolete marker exists
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=!" >> $HGRCPATH
+  $ hg log -r tip
+  obsolete feature not enabled but 7 markers found!
+  changeset:   6:d6a026544050
+  tag:         tip
+  parent:      3:5601fb93a350
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add obsolete_e
+  

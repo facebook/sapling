@@ -785,7 +785,7 @@ Test keyword search help
    extensions Using Additional Features
    glossary   Glossary
    phases     Working with Phases
-   subrepo    Subrepositories
+   subrepos   Subrepositories
    urls       URL Paths
   
   Commands:

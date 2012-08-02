@@ -304,16 +304,16 @@ ul#graphnodes li .info {
 }
 
 .delete {
-    background-color: black;
-    color: white;
+    background-color: #faa;
+    color: #333;
 }
 
 .insert {
-    background-color: #d0d0d0;
+    background-color: #ffa;
 }
 
 .replace {
-    background-color: #f9f9f9;
+    background-color: #e8e8e8;
 }
 
 .header {

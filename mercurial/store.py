@@ -232,7 +232,8 @@ def _calcmode(path):
         mode = None
     return mode
 
-_data = 'data 00manifest.d 00manifest.i 00changelog.d 00changelog.i phaseroots'
+_data = ('data 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
+         ' phaseroots obsstore')
 
 class basicstore(object):
     '''base class for local repository stores'''
@@ -411,7 +412,7 @@ class fncachestore(basicstore):
             self.fncache.rewrite(existing)
 
     def copylist(self):
-        d = ('data dh fncache phaseroots'
+        d = ('data dh fncache phaseroots obsstore'
              ' 00manifest.d 00manifest.i 00changelog.d 00changelog.i')
         return (['requires', '00changelog.i'] +
                 ['store/' + f for f in d.split()])

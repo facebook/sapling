@@ -112,6 +112,9 @@ test with "/" URI (issue 747) and subrepo
 
   $ hg init
   $ hg init sub
+  $ touch sub/test
+  $ hg -R sub commit -A -m "test"
+  adding test
   $ hg -R sub tag not-empty
   $ echo sub=sub > .hgsub
   $ echo a > a
@@ -129,7 +132,7 @@ test with "/" URI (issue 747) and subrepo
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 2 changesets with 2 changes to 2 files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd local2
   $ hg verify

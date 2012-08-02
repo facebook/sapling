@@ -39,9 +39,6 @@ class peerrepository(object):
     def peer(self):
         return self
 
-    def peer(self):
-        return self
-
     def canpush(self):
         return True
 

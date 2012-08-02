@@ -81,9 +81,16 @@ def addlargefiles(ui, repo, *pats, **opts):
                 ui.warn(_('%s already a largefile\n') % f)
             continue
 
-        if exact or not exists:
+        if (exact or not exists) and not lfutil.isstandin(f):
+            wfile = repo.wjoin(f)
+
+            # In case the file was removed previously, but not committed
+            # (issue3507)
+            if not os.path.exists(wfile):
+                continue
+
             abovemin = (lfsize and
-                        os.lstat(repo.wjoin(f)).st_size >= lfsize * 1024 * 1024)
+                        os.lstat(wfile).st_size >= lfsize * 1024 * 1024)
             if large or abovemin or (lfmatcher and lfmatcher(f)):
                 lfnames.append(f)
                 if ui.verbose or not exact:
@@ -432,7 +439,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             installnormalfilesmatchfn(repo[None].manifest())
             result = orig(ui, repo, pats, opts, rename)
         except util.Abort, e:
-            if str(e) != 'no files to copy':
+            if str(e) != _('no files to copy'):
                 raise e
             else:
                 nonormalfiles = True
@@ -508,18 +515,20 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                     dest.startswith(repo.wjoin(lfutil.shortname))):
                     srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
                     destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
-                    destlfiledir = os.path.dirname(destlfile) or '.'
+                    destlfiledir = os.path.dirname(repo.wjoin(destlfile)) or '.'
                     if not os.path.isdir(destlfiledir):
                         os.makedirs(destlfiledir)
                     if rename:
                         os.rename(repo.wjoin(srclfile), repo.wjoin(destlfile))
                         lfdirstate.remove(srclfile)
                     else:
-                        util.copyfile(srclfile, destlfile)
+                        util.copyfile(repo.wjoin(srclfile),
+                                      repo.wjoin(destlfile))
+
                     lfdirstate.add(destlfile)
             lfdirstate.write()
         except util.Abort, e:
-            if str(e) != 'no files to copy':
+            if str(e) != _('no files to copy'):
                 raise e
             else:
                 nolfiles = True
@@ -558,7 +567,7 @@ def overriderevert(orig, ui, repo, *pats, **opts):
                 os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
         try:
-            ctx = repo[opts.get('rev')]
+            ctx = scmutil.revsingle(repo, opts.get('rev'))
             oldmatch = None # for the closure
             def overridematch(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
@@ -658,9 +667,9 @@ def overridepull(orig, ui, repo, source=None, **opts):
         repo._isrebasing = True
         try:
             if opts.get('update'):
-                 del opts['update']
-                 ui.debug('--update and --rebase are not compatible, ignoring '
-                          'the update flag\n')
+                del opts['update']
+                ui.debug('--update and --rebase are not compatible, ignoring '
+                         'the update flag\n')
             del opts['rebase']
             cmdutil.bailifchanged(repo)
             origpostincoming = commands.postincoming
@@ -923,12 +932,10 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     if revs:
-        revs = [repo.lookup(rev) for rev in revs]
-
-    remoteui = hg.remoteui
+        revs = [repo.lookup(rev) for rev in scmutil.revrange(repo, revs)]
 
     try:
-        remote = hg.repository(remoteui(repo, opts), dest)
+        remote = hg.peer(repo, opts, dest)
     except error.RepoError:
         return None
     o = lfutil.findoutgoing(repo, remote, False)
@@ -1001,8 +1008,9 @@ def overrideaddremove(orig, ui, repo, *pats, **opts):
     # we don't remove the standin in the largefiles code, preventing a very
     # confused state later.
     if missing:
+        m = [repo.wjoin(f) for f in missing]
         repo._isaddremove = True
-        removelargefiles(ui, repo, *missing, **opts)
+        removelargefiles(ui, repo, *m, **opts)
         repo._isaddremove = False
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
@@ -1065,8 +1073,8 @@ def overridetransplant(orig, ui, repo, *revs, **opts):
     return result
 
 def overridecat(orig, ui, repo, file1, *pats, **opts):
-    rev = opts.get('rev')
-    if not lfutil.standin(file1) in repo[rev]:
+    ctx = scmutil.revsingle(repo, opts.get('rev'))
+    if not lfutil.standin(file1) in ctx:
         result = orig(ui, repo, file1, *pats, **opts)
         return result
-    return lfcommands.catlfile(repo, file1, opts.get('rev'), opts.get('output'))
+    return lfcommands.catlfile(repo, file1, ctx.rev(), opts.get('output'))

@@ -53,7 +53,7 @@ def repoforget(repo, list):
 def findoutgoing(repo, remote, force):
     from mercurial import discovery
     common, _anyinc, _heads = discovery.findcommonincoming(repo,
-        remote, force=force)
+        remote.peer(), force=force)
     return repo.changelog.findmissing(common)
 
 # -- Private worker functions ------------------------------------------
