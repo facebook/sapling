@@ -821,6 +821,9 @@ Example ``~/.hgrc``::
   # Give higher priority
   kdiff3.priority = 1
 
+  # Changing the priority of preconfigured tool
+  vimdiff.priority = 0
+
   # Define new tool
   myHtmlTool.args = -m $local $other $base $output
   myHtmlTool.regkey = Software\FooSoftware\HtmlMerge
