@@ -163,6 +163,7 @@ command = cmdutil.command(cmdtable)
 
 testedwith = 'internal'
 
+# i18n: command names and abbreviations must remain untranslated
 editcomment = _("""# Edit history between %s and %s
 #
 # Commands:
