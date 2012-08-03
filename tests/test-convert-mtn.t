@@ -2,9 +2,18 @@
   $ "$TESTDIR/hghave" mtn || exit 80
 
 Monotone directory is called .monotone on *nix and monotone
-on Windows. Having a variable here ease test patching.
+on Windows.
+
+#if windows
+
+  $ mtndir=monotone
+
+#else
 
   $ mtndir=.monotone
+
+#endif
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
   $ echo 'graphlog =' >> $HGRCPATH
