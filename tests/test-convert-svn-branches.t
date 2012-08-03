@@ -95,9 +95,5 @@ Convert again
 
 Test hg failing to call itself
 
-  $ HG=foobar hg convert svn-repo B-hg
-  * (glob)
-  initializing destination B-hg repository
+  $ HG=foobar hg convert svn-repo B-hg 2>&1 | grep abort
   abort: Mercurial failed to run itself, check hg executable is in PATH
-  [255]
-
