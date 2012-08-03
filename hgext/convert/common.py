@@ -345,8 +345,8 @@ class commandline(object):
         # (and make happy Windows shells while doing this).
         return argmax // 2 - 1
 
-    def limit_arglist(self, arglist, cmd, closestdin, *args, **kwargs):
-        cmdlen = len(self._cmdline(cmd, closestdin, *args, **kwargs))
+    def _limit_arglist(self, arglist, cmd, *args, **kwargs):
+        cmdlen = len(self._cmdline(cmd, *args, **kwargs))
         limit = self.argmax - cmdlen
         bytes = 0
         fl = []
@@ -363,7 +363,7 @@ class commandline(object):
             yield fl
 
     def xargs(self, arglist, cmd, *args, **kwargs):
-        for l in self.limit_arglist(arglist, cmd, True, *args, **kwargs):
+        for l in self._limit_arglist(arglist, cmd, *args, **kwargs):
             self.run0(cmd, *(list(args) + l), **kwargs)
 
 class mapfile(dict):
