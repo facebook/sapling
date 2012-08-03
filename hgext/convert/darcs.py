@@ -104,9 +104,10 @@ class darcs_source(converter_source, commandline):
         # possible, etree will still raise an exception if any
         # non-printable characters are in the XML changelog.
         parser = XMLParser(encoding='latin-1')
-        fp = self._run(cmd, **kwargs)
-        etree.parse(fp, parser=parser)
-        self.checkexit(fp.close())
+        p = self._run(cmd, **kwargs)
+        etree.parse(p.stdout, parser=parser)
+        p.wait()
+        self.checkexit(p.returncode)
         return etree.getroot()
 
     def format(self):
