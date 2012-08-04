@@ -68,7 +68,10 @@ Killing a single changeset with replacement
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkcommit new_c
   created new head
+  $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
   $ hg debugobsolete `getid original_c`  `getid new_c` -d '56 12'
+  $ hg log -r 'hidden()' --template '{rev}:{node|short} {desc}\n' --hidden
+  2:245bde4270cd add original_c
   $ hg debugobsolete
   245bde4270cd1072a27757984f9cda8ba26f08ca cdbce2fbb16313928851e97e0d85413f3f7eb77f 0 {'date': '56 12', 'user': 'test'}
 

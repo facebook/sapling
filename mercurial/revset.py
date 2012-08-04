@@ -838,6 +838,14 @@ def heads(repo, subset, x):
     ps = set(parents(repo, subset, x))
     return [r for r in s if r not in ps]
 
+def hidden(repo, subset, x):
+    """``hidden()``
+    Hidden changesets.
+    """
+    # i18n: "hidden" is a keyword
+    getargs(x, 0, 0, _("hidden takes no arguments"))
+    return [r for r in subset if r in repo.hiddenrevs]
+
 def keyword(repo, subset, x):
     """``keyword(string)``
     Search commit message, user name, and names of changed files for
@@ -1484,6 +1492,7 @@ symbols = {
     "grep": grep,
     "head": head,
     "heads": heads,
+    "hidden": hidden,
     "id": node_,
     "keyword": keyword,
     "last": last,
