@@ -276,9 +276,9 @@ class commandline(object):
                 pass
         cmdline = [util.shellquote(arg) for arg in cmdline]
         if not self.ui.debugflag:
-            cmdline += ['2>', util.nulldev]
+            cmdline += ['2>', os.devnull]
         if closestdin:
-            cmdline += ['<', util.nulldev]
+            cmdline += ['<', os.devnull]
         cmdline = ' '.join(cmdline)
         return cmdline
 

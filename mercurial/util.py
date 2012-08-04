@@ -45,7 +45,6 @@ makedir = platform.makedir
 nlinks = platform.nlinks
 normpath = platform.normpath
 normcase = platform.normcase
-nulldev = platform.nulldev
 openhardlinks = platform.openhardlinks
 oslink = platform.oslink
 parsepatchoutput = platform.parsepatchoutput
