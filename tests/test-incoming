@@ -7,7 +7,8 @@
 python -c 'import dulwich, dulwich.repo' || exit 80
 
 # This test only works on hg 1.7 and later
-python -c 'from mercurial import util ; assert util.version() > "1.7"' || exit 80
+python -c 'from mercurial import util ; assert \
+ util.version() != "unknown" and util.version() > "1.7"' || exit 80
 
 # bail early if the user is already running git-daemon
 echo hi | nc localhost 9418 2>/dev/null && exit 80
