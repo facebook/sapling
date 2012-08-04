@@ -33,7 +33,7 @@ file open in your editor::
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit
+ #  f, fold = use commit, but fold into previous commit (combines N and N-1)
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #
@@ -52,7 +52,7 @@ would reorganize the file to look like this::
  # Commands:
  #  p, pick = use commit
  #  e, edit = use commit, but stop for amending
- #  f, fold = use commit, but fold into previous commit
+ #  f, fold = use commit, but fold into previous commit (combines N and N-1)
  #  d, drop = remove commit from history
  #  m, mess = edit message without changing commit content
  #

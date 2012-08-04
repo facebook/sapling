@@ -463,6 +463,13 @@ Error if style missing key:
   abort: "changeset" not in template map
   [255]
 
+Error if style missing value:
+
+  $ echo 'changeset =' > t
+  $ hg log --style t
+  abort: t:1: missing value
+  [255]
+
 Error if include fails:
 
   $ echo 'changeset = q' >> t
