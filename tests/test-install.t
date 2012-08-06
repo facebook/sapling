@@ -1,6 +1,7 @@
 hg debuginstall
   $ hg debuginstall
   checking encoding (ascii)...
+  checking Python lib (*lib*)... (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking commit editor...
@@ -10,6 +11,7 @@ hg debuginstall
 hg debuginstall with no username
   $ HGUSER= hg debuginstall
   checking encoding (ascii)...
+  checking Python lib (*lib*)... (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking commit editor...
