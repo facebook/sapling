@@ -64,12 +64,19 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     if partial:
         try:
             youngestpath = os.path.join(svnmetadir, 'lastpulled')
-            youngest = int(util.load_string(youngestpath).strip())
-            sofar = list(maps.RevMap.readmapfile(repo))
-            lasthash = sofar[-1].split(' ', 2)[1]
-            startrev = repo[lasthash].rev() + 1
-            branchinfo = pickle.load(open(os.path.join(svnmetadir,
-                                                       'branch_info')))
+            foundpartialinfo = False
+            if os.path.exists(youngestpath):
+                youngest = int(util.load_string(youngestpath).strip())
+                sofar = list(maps.RevMap.readmapfile(repo))
+                if sofar and len(sofar[-1].split(' ', 2)) > 1:
+                    lasthash = sofar[-1].split(' ', 2)[1]
+                    startrev = repo[lasthash].rev() + 1
+                    branchinfo = pickle.load(open(os.path.join(svnmetadir,
+                                                           'branch_info')))
+                    foundpartialinfo = True
+            if not foundpartialinfo:
+                ui.status('missing some metadata -- doing a full rebuild\n')
+                partial = False
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise

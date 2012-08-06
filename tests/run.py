@@ -32,6 +32,7 @@ def tests():
     import test_template_keywords
     import test_utility_commands
     import test_unaffected_core
+    import test_updatemeta
     import test_urls
 
     sys.path.append(os.path.dirname(__file__))
