@@ -5,7 +5,7 @@ except:
 
 setup(
     name='hg-git',
-    version='0.3.3',
+    version='0.3.2',
     author='Scott Chacon',
     maintainer='Augie Fackler',
     maintainer_email='durin42@gmail.com',
@@ -19,5 +19,5 @@ project that is in Git.  A bridger of worlds, this plugin be.
     keywords='hg git mercurial',
     license='GPLv2',
     packages=['hggit'],
-    install_requires=['dulwich>=0.8.0'],
+    install_requires=['dulwich>=0.8.0', 'ordereddict>=1.1'],
 )

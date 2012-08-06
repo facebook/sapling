@@ -1,11 +1,14 @@
 import os, math, urllib, re
+import stat, posixpath, StringIO
+import ordereddict
 
 from dulwich.errors import HangupException, GitProtocolError
 from dulwich.index import commit_tree
-from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone
+from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone, S_IFGITLINK
 from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 from dulwich import client
+from dulwich import config as dul_config
 
 try:
     from mercurial import bookmarks
@@ -499,7 +502,24 @@ class GitHandler(object):
         return message
 
     def iterblobs(self, ctx):
+        if '.hgsubstate' in ctx:
+            hgsub = ordereddict.OrderedDict()
+            if '.hgsub' in ctx:
+                hgsub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
+            hgsubstate = util.parse_hgsubstate(ctx['.hgsubstate'].data().splitlines())
+            for path, sha in hgsubstate.iteritems():
+                try:
+                    if path in hgsub and not hgsub[path].startswith('[git]'):
+                        # some other kind of a repository (e.g. [hg])
+                        # that keeps its state in .hgsubstate, shall ignore
+                        continue
+                    yield path, sha, S_IFGITLINK
+                except ValueError:
+                    pass
+
         for f in ctx:
+            if f == '.hgsubstate' or f == '.hgsub':
+                continue
             fctx = ctx[f]
             blobid = self.map_git_get(hex(fctx.filenode()))
 
@@ -619,6 +639,35 @@ class GitHandler(object):
         # get a list of the changed, added, removed files
         files = self.get_files_changed(commit)
 
+        # Handle gitlinks: collect
+        gitlinks = self.collect_gitlinks(commit.tree)
+        git_commit_tree = self.git[commit.tree]
+
+        # Analyze hgsubstate and build an updated version
+        # using SHAs from gitlinks
+        hgsubstate = None
+        if gitlinks:
+            hgsubstate = util.parse_hgsubstate(self.git_file_readlines(git_commit_tree, '.hgsubstate'))
+            for path, sha in gitlinks:
+                hgsubstate[path] = sha
+            # in case .hgsubstate wasn't among changed files
+            # force its inclusion
+            files['.hgsubstate'] = (False, 0100644, None)
+
+        # Analyze .hgsub and merge with .gitmodules
+        hgsub = None
+        gitmodules = self.parse_gitmodules(git_commit_tree)
+	if gitmodules or gitlinks:
+            hgsub = util.parse_hgsub(self.git_file_readlines(git_commit_tree, '.hgsub'))
+            for (sm_path, sm_url, sm_name) in gitmodules:
+                hgsub[sm_path] = '[git]' + sm_url
+            files['.hgsub'] = (False, 0100644, None)
+        elif commit.parents and '.gitmodules' in self.git[self.git[commit.parents[0]].tree]:
+            # no .gitmodules in this commit, however present in the parent
+            # mark its hg counterpart as deleted (assuming .hgsub is there
+            # due to the same import_git_commit process
+            files['.hgsub'] = (True, 0100644, None)
+
         date = (commit.author_time, -commit.author_timezone)
         text = strip_message
 
@@ -679,9 +728,17 @@ class GitHandler(object):
                 if delete:
                     raise IOError
 
-                data = self.git[sha].data
-                copied_path = hg_renames.get(f)
-                e = self.convert_git_int_mode(mode)
+                if not sha: # indicates there's no git counterpart
+                    e = ''
+                    copied_path = None
+                    if '.hgsubstate' == f:
+                        data = util.serialize_hgsubstate(hgsubstate)
+                    elif '.hgsub' == f:
+                        data = util.serialize_hgsub(hgsub)
+                else:
+                    data = self.git[sha].data
+                    copied_path = hg_renames.get(f)
+                    e = self.convert_git_int_mode(mode)
             else:
                 # it's a converged file
                 fc = context.filectx(self.repo, f, changeid=memctx.p1().rev())
@@ -1135,6 +1192,57 @@ class GitHandler(object):
             files[file] = (delete, newmode, newsha)
 
         return files
+
+    def collect_gitlinks(self, tree_id):
+        """Walk the tree and collect all gitlink entries
+          :param tree_id: sha of the commit tree
+          :return: list of tuples (commit sha, full entry path)
+        """
+        queue = [(tree_id, '')]
+        gitlinks = []
+        while queue:
+            e, path = queue.pop(0)
+            o = self.git.object_store[e]
+            for (name, mode, sha) in o.iteritems():
+                if mode == S_IFGITLINK:
+                    gitlinks.append((posixpath.join(path, name), sha))
+                elif stat.S_ISDIR(mode):
+                    queue.append((sha, posixpath.join(path, name)))
+        return gitlinks
+
+    def parse_gitmodules(self, tree_obj):
+        """Parse .gitmodules from a git tree specified by tree_obj
+
+           :return: list of tuples (submodule path, url, name),
+           where name is quoted part of the section's name, or
+           empty list if nothing found
+        """
+        rv = []
+        try:
+            unused_mode,gitmodules_sha = tree_obj['.gitmodules']
+        except KeyError:
+            return rv
+        gitmodules_content = self.git[gitmodules_sha].data
+        fo = StringIO.StringIO(gitmodules_content)
+        tt = dul_config.ConfigFile.from_file(fo)
+        for section in tt.keys():
+            section_kind, section_name = section
+            if section_kind == 'submodule':
+                sm_path = tt.get(section, 'path')
+                sm_url  = tt.get(section, 'url')
+                rv.append((sm_path, sm_url, section_name))
+        return rv
+
+    def git_file_readlines(self, tree_obj, fname):
+        """Read content of a named entry from the git commit tree
+
+           :return: list of lines
+        """
+        if fname in tree_obj:
+            unused_mode, sha = tree_obj[fname]
+            content = self.git[sha].data
+            return content.splitlines()
+        return []
 
     def remote_name(self, remote):
         names = [name for name, path in self.paths if path == remote]
