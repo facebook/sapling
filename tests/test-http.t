@@ -77,6 +77,24 @@ clone via pull
   adding bar
   $ cd ..
 
+clone over http with --update
+
+  $ hg clone http://localhost:$HGPORT1/ updated --update 0
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 5 changes to 5 files
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -r . -R updated
+  changeset:   0:8b6053c928fe
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1
+  
+  $ rm -rf updated
+
 incoming via HTTP
 
   $ hg clone http://localhost:$HGPORT1/ --rev 0 partial
@@ -129,7 +147,7 @@ test http authentication
   >     if not auth:
   >         raise common.ErrorResponse(common.HTTP_UNAUTHORIZED, 'who',
   >                 [('WWW-Authenticate', 'Basic Realm="mercurial"')])
-  >     if base64.b64decode(auth.split()[1]).split(':', 1) != ['user', 'pass']: 
+  >     if base64.b64decode(auth.split()[1]).split(':', 1) != ['user', 'pass']:
   >         raise common.ErrorResponse(common.HTTP_FORBIDDEN, 'no')
   > def extsetup():
   >     common.permhooks.insert(0, perform_authentication)
@@ -138,24 +156,24 @@ test http authentication
   >    --config server.preferuncompressed=True
   $ cat pid >> $DAEMON_PIDS
 
-  $ hg id http://localhost:$HGPORT2/  
+  $ hg id http://localhost:$HGPORT2/
   abort: http authorization required
   [255]
-  $ hg id http://user@localhost:$HGPORT2/ 
+  $ hg id http://user@localhost:$HGPORT2/
   abort: http authorization required
   [255]
   $ hg id http://user:pass@localhost:$HGPORT2/
   5fed3813f7f5
-  $ echo '[auth]' >> .hg/hgrc 
+  $ echo '[auth]' >> .hg/hgrc
   $ echo 'l.schemes=http' >> .hg/hgrc
   $ echo 'l.prefix=lo' >> .hg/hgrc
   $ echo 'l.username=user' >> .hg/hgrc
   $ echo 'l.password=pass' >> .hg/hgrc
-  $ hg id http://localhost:$HGPORT2/ 
+  $ hg id http://localhost:$HGPORT2/
   5fed3813f7f5
-  $ hg id http://localhost:$HGPORT2/  
+  $ hg id http://localhost:$HGPORT2/
   5fed3813f7f5
-  $ hg id http://user@localhost:$HGPORT2/ 
+  $ hg id http://user@localhost:$HGPORT2/
   5fed3813f7f5
   $ hg clone http://user:pass@localhost:$HGPORT2/ dest 2>&1
   streaming all changes
@@ -164,7 +182,7 @@ test http authentication
   updating to branch default
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg id http://user2@localhost:$HGPORT2/ 
+  $ hg id http://user2@localhost:$HGPORT2/
   abort: http authorization required
   [255]
   $ hg id http://user:pass2@localhost:$HGPORT2/
