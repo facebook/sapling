@@ -69,7 +69,7 @@ Conflicting rebase:
 
 Try to continue without solving the conflict:
 
-  $ hg rebase --continue 
+  $ hg rebase --continue
   abort: unresolved merge conflicts (see hg help resolve)
   [255]
 

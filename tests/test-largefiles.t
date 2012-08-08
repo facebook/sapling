@@ -212,7 +212,7 @@ archiving.
   $ hg archive -r 3 ../archive3
   $ hg archive -r 4 ../archive4
   $ cd ../archive0
-  $ cat normal1 
+  $ cat normal1
   normal1
   $ cat large1
   large1
@@ -632,7 +632,7 @@ Clone a largefiles repo.
 Old revisions of a clone have correct largefiles content (this also
 tests update).
 
-  $ hg update -r 1 
+  $ hg update -r 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -785,7 +785,7 @@ revisions (this was a very bad bug that took a lot of work to fix).
 
 Rollback on largefiles.
 
-  $ echo large4-modified-again > sub/large4 
+  $ echo large4-modified-again > sub/large4
   $ hg commit -m "Modify large4 again"
   Invoking status precommit hook
   M sub/large4
@@ -815,7 +815,7 @@ Rollback on largefiles.
 
 "update --clean" leaves correct largefiles in working copy.
 
-  $ hg update --clean 
+  $ hg update --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -1019,7 +1019,7 @@ Test that transplanting a largefile change works correctly.
   getting changed largefiles
   3 largefiles updated, 0 removed
   $ cd g
-  $ hg transplant -s ../d 598410d3eb9a 
+  $ hg transplant -s ../d 598410d3eb9a
   searching for changes
   searching for changes
   adding changesets

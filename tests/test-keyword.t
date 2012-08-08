@@ -998,7 +998,7 @@ Prepare merge and resolve tests
 
   $ echo '$Id$' > m
   $ hg add m
-  $ hg commit -m 4kw 
+  $ hg commit -m 4kw
   $ echo foo >> m
   $ hg commit -m 5foo
 

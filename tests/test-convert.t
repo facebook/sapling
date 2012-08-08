@@ -399,7 +399,7 @@ test bogus URL
 
 test revset converted() lookup
 
-  $ hg --config convert.hg.saverev=True convert a c  
+  $ hg --config convert.hg.saverev=True convert a c
   initializing destination c repository
   scanning source...
   sorting...

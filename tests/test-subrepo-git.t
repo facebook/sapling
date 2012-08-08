@@ -446,7 +446,7 @@ Sticky subrepositorys, file changes
   $ git rev-parse HEAD
   da5f5b1d8ffcf62fb8327bcd3c89a4367a6018e7
   $ cd ..
-  $ hg update --clean tip > /dev/null 2>&1 
+  $ hg update --clean tip > /dev/null 2>&1
 
 Sticky subrepository, revision updates
   $ hg id -n

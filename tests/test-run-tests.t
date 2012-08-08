@@ -95,5 +95,5 @@ Conditional sections based on hghave:
 
 Exit code:
 
-  $ (exit 1) 
+  $ (exit 1)
   [1]

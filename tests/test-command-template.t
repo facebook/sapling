@@ -1245,7 +1245,7 @@ Age filter:
   $ hg add a
   $ hg commit -m future -d "`cat a`"
 
-  $ hg log -l1 --template '{date|age}\n' 
+  $ hg log -l1 --template '{date|age}\n'
   7 years from now
 
 Error on syntax:

@@ -730,7 +730,7 @@ Sticky subrepositories, no changes
   925c17564ef8 tip
   $ hg -R s id
   12a213df6fa9 tip
-  $ hg -R t id  
+  $ hg -R t id
   52c0adc0515a tip
   $ hg update 11
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -738,7 +738,7 @@ Sticky subrepositories, no changes
   365661e5936a
   $ hg -R s id
   fc627a69481f
-  $ hg -R t id  
+  $ hg -R t id
   e95bcfa18a35
 
 Sticky subrepositorys, file changes
@@ -750,7 +750,7 @@ Sticky subrepositorys, file changes
   365661e5936a+
   $ hg -R s id
   fc627a69481f+
-  $ hg -R t id  
+  $ hg -R t id
   e95bcfa18a35+
   $ hg update tip
    subrepository sources for s differ
@@ -764,7 +764,7 @@ Sticky subrepositorys, file changes
   925c17564ef8+ tip
   $ hg -R s id
   fc627a69481f+
-  $ hg -R t id  
+  $ hg -R t id
   e95bcfa18a35+
   $ hg update --clean tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -774,7 +774,7 @@ Sticky subrepository, revision updates
   925c17564ef8 tip
   $ hg -R s id
   12a213df6fa9 tip
-  $ hg -R t id  
+  $ hg -R t id
   52c0adc0515a tip
   $ cd s
   $ hg update -r -2
@@ -792,7 +792,7 @@ Sticky subrepository, revision updates
   e45c8b14af55+
   $ hg -R s id
   02dcf1d70411
-  $ hg -R t id  
+  $ hg -R t id
   7af322bc1198
 
 Sticky subrepository, file changes and revision updates
@@ -804,7 +804,7 @@ Sticky subrepository, file changes and revision updates
   e45c8b14af55+
   $ hg -R s id
   02dcf1d70411+
-  $ hg -R t id  
+  $ hg -R t id
   7af322bc1198+
   $ hg update tip
    subrepository sources for s differ
@@ -818,7 +818,7 @@ Sticky subrepository, file changes and revision updates
   925c17564ef8+ tip
   $ hg -R s id
   02dcf1d70411+
-  $ hg -R t id  
+  $ hg -R t id
   7af322bc1198+
 
 Sticky repository, update --clean
@@ -828,7 +828,7 @@ Sticky repository, update --clean
   925c17564ef8 tip
   $ hg -R s id
   12a213df6fa9 tip
-  $ hg -R t id  
+  $ hg -R t id
   52c0adc0515a tip
 
 Test subrepo already at intended revision:
@@ -843,7 +843,7 @@ Test subrepo already at intended revision:
   11+
   $ hg -R s id
   fc627a69481f
-  $ hg -R t id 
+  $ hg -R t id
   e95bcfa18a35
 
 Test that removing .hgsubstate doesn't break anything:

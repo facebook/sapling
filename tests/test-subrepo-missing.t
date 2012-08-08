@@ -60,7 +60,7 @@ delete .hgsubstate and update
   warning: subrepo spec file .hgsub not found
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hgsubstate
-  $ hg up 0  
+  $ hg up 0
   remote changed .hgsubstate which local deleted
   use (c)hanged version or leave (d)eleted? c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -210,7 +210,7 @@ hgweb
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ cd ../a
 
-  $ hg debugpushkey http://localhost:$HGPORT/ namespaces 
+  $ hg debugpushkey http://localhost:$HGPORT/ namespaces
   bookmarks	
   phases	
   namespaces	

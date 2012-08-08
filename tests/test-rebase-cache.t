@@ -73,7 +73,7 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   $ hg clone -q -u . a a1
   $ cd a1
 
-  $ hg tglog  
+  $ hg tglog
   @  8: 'F' branch3
   |
   o  7: 'branch3' branch3
@@ -120,7 +120,7 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg tglog  
+  $ hg tglog
   @  8: 'E' branch3
   |
   o  7: 'D' branch3
@@ -244,7 +244,7 @@ Rebase entire branch3 (7-8) onto branch2 (6):
   2: 'B' branch1
   0: 'A' 
 
-  $ hg tglog   
+  $ hg tglog
   @  7: 'F' branch2
   |
   o  6: 'E' branch2

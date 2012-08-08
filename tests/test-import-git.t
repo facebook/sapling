@@ -384,7 +384,7 @@ Move text file and patch as binary
   b
   \x00 (no-eol) (esc)
 
-  $ hg st --copies --change . 
+  $ hg st --copies --change .
   A binary2
     text2
   R text2

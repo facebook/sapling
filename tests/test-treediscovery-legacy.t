@@ -330,7 +330,7 @@ Exercise pushing to server without branchmap capability
   $ hg ci -Am A
   adding A
   $ cd ..
-  $ hg clone rlocal rremote  
+  $ hg clone rlocal rremote
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd rlocal
@@ -341,7 +341,7 @@ Exercise pushing to server without branchmap capability
   $ tstart rremote
 
   $ cd rlocal
-  $ hg incoming $remote 
+  $ hg incoming $remote
   comparing with http://localhost:$HGPORT/
   searching for changes
   no changes found

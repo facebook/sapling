@@ -142,7 +142,7 @@ Make changes on new branch on tt
   $ hg branch branchC
   marked working directory as branch branchC
   (branches are permanent and global, did you want a bookmark?)
-  $ echo b1 > bar 
+  $ echo b1 > bar
   $ hg ci -Am "commit on branchC on tt"
   adding bar
 
@@ -151,7 +151,7 @@ Make changes on default branch on t
   $ cd ../t
   $ hg up -C default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo a1 > bar 
+  $ echo a1 > bar
   $ hg ci -Am "commit on default on t"
   adding bar
 

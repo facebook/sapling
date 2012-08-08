@@ -533,7 +533,7 @@ Default destination, same directory
 
 destination directory not empty
 
-  $ mkdir a 
+  $ mkdir a
   $ echo stuff > a/a
   $ hg clone q a
   abort: destination 'a' is not empty
