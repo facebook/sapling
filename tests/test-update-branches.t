@@ -61,7 +61,7 @@ Test helper functions:
   >     hg up $opt $targetrev
   >     hg parent --template 'parent={rev}\n'
   >     hg stat -S
-  > }    
+  > }
 
   $ norevtest () {
   >     msg=$1
@@ -74,7 +74,7 @@ Test helper functions:
   >     hg up $opt
   >     hg parent --template 'parent={rev}\n'
   >     hg stat -S
-  > }    
+  > }
 
 Test cases are documented in a table in the update function of merge.py.
 Cases are run as shown in that table, row by row.

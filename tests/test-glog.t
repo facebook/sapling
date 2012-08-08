@@ -83,7 +83,7 @@ o  (0) root
 
   $ cat > printrevset.py <<EOF
   > from mercurial import extensions, revset, commands, cmdutil
-  >  
+  > 
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):

@@ -169,7 +169,7 @@ try to import --push
 
   $ cat > appendfoo.diff <<EOF
   > append foo
-  >  
+  > 
   > diff -r 07f494440405 -r 261500830e46 baz
   > --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   > +++ b/baz	Thu Jan 01 00:00:00 1970 +0000
@@ -179,7 +179,7 @@ try to import --push
 
   $ cat > appendbar.diff <<EOF
   > append bar
-  >  
+  > 
   > diff -r 07f494440405 -r 261500830e46 baz
   > --- a/baz	Thu Jan 01 00:00:00 1970 +0000
   > +++ b/baz	Thu Jan 01 00:00:00 1970 +0000

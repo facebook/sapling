@@ -3,7 +3,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > convert = 
+  > convert =
   > graphlog =
   > EOF
 
@@ -155,7 +155,7 @@ Test convert progress bar'
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > progress = 
+  > progress =
   > [progress]
   > assume-tty = 1
   > delay = 0
