@@ -33,7 +33,7 @@ Verify that updating to revision 0 via commands.update() works properly
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg identify -n
   0
- 
+
 
 Poke around at hashes:
 

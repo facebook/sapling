@@ -23,7 +23,7 @@ Create a repo with several bookmarks
   adding b
   $ hg book 'X'
   $ hg book 'Y'
- 
+
   $ echo c > c
   $ hg ci -Am C
   adding c
@@ -47,7 +47,7 @@ Create a repo with several bookmarks
   |/
   o  0: 'A' bookmarks:
   
- 
+
 Move only rebased bookmarks
 
   $ cd ..

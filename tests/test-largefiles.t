@@ -80,7 +80,7 @@ Test status, subdir and unknown files
   $ rm sub/unknown
 
 Remove both largefiles and normal files.
- 
+
   $ hg remove normal1 large1
   $ hg status large1
   R large1

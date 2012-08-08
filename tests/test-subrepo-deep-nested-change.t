@@ -100,7 +100,7 @@ debugsub output for main and sub1
    revision 53dd3430bcaf5ab4a7c48262bcad6d441f510487
 
 Check that deep archiving works
- 
+
   $ cd cloned
   $ echo 'test' > sub1/sub2/test.txt
   $ hg --config extensions.largefiles=! add sub1/sub2/test.txt

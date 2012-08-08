@@ -260,7 +260,7 @@ hgweb
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
      foobar                    1:9b140be10808
- 
+
   $ cd ..
 
 Pushing a bookmark should only push the changes required by that
