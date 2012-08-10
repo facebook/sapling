@@ -24309,12 +24309,12 @@ msgstr "стиль не найден: %s"
 
 #, python-format
 msgid "%s: missing value"
-msgstr "%s: значение отстутсвует"
+msgstr "%s: значение отсутствует"
 
 # NOT-SURE так?
 #, python-format
 msgid "\"%s\" not in template map"
-msgstr "\"%s\" отсутсвует в сопоставлении шаблона"
+msgstr "\"%s\" отсутствует в сопоставлении шаблона"
 
 #, python-format
 msgid "template file %s: %s"
