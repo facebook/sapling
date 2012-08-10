@@ -117,7 +117,7 @@ colortable = {
 def utcdate(text):
     ''':utcdate: Date. Returns a UTC-date in this format: "2009/08/18 11:00:13".
     '''
-    return util.datestr((text[0], 0), '%Y/%m/%d %H:%M:%S')
+    return util.datestr((util.parsedate(text)[0], 0), '%Y/%m/%d %H:%M:%S')
 # date like in svn's $Date
 def svnisodate(text):
     ''':svnisodate: Date. Returns a date in this format: "2009-08-18 13:00:13
@@ -129,7 +129,7 @@ def svnutcdate(text):
     ''':svnutcdate: Date. Returns a UTC-date in this format: "2009-08-18
     11:00:13Z".
     '''
-    return util.datestr((text[0], 0), '%Y-%m-%d %H:%M:%SZ')
+    return util.datestr((util.parsedate(text)[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 templatefilters.filters.update({'utcdate': utcdate,
                                 'svnisodate': svnisodate,

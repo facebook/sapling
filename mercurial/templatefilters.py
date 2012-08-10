@@ -221,7 +221,7 @@ def jsonescape(s):
 
 def localdate(text):
     """:localdate: Date. Converts a date to local date."""
-    return (text[0], util.makedate()[1])
+    return (util.parsedate(text)[0], util.makedate()[1])
 
 def nonempty(str):
     """:nonempty: Any text. Returns '(none)' if the string is empty."""
