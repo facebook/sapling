@@ -5772,7 +5772,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     current named branch and move the current bookmark (see :hg:`help
     bookmarks`).
 
-    Update sets the working directory's parent revison to the specified
+    Update sets the working directory's parent revision to the specified
     changeset (see :hg:`help parents`).
 
     If the changeset is not a descendant or ancestor of the working
