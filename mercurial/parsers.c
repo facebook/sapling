@@ -1084,8 +1084,10 @@ static PyObject *index_partialmatch(indexObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (nodelen > 40)
-		nodelen = 40;
+	if (nodelen > 40) {
+		PyErr_SetString(PyExc_ValueError, "key too long");
+		return NULL;
+	}
 
 	for (i = 0; i < nodelen; i++)
 		hexdigit(node, i);
