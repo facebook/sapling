@@ -597,14 +597,14 @@ class GitHandler(object):
                         'name' in self._tags:
                     # Mercurial 1.5 and later.
                     del self.repo._tags[name]
-                if (util.safehasattr(self.repo, '_tagtypes') and
+                if (hgutil.safehasattr(self.repo, '_tagtypes') and
                     self.repo._tagtypes and
                     name in self.repo._tagtypes):
                     # Mercurial 1.9 and earlier.
                     del self.repo._tagtypes[name]
-                elif (util.safehasattr(self.repo, 'tagscache') and
+                elif (hgutil.safehasattr(self.repo, 'tagscache') and
                       self.repo.tagscache and
-                      util.safehasattr(self.repo.tagscache, '_tagtypes') and
+                      hgutil.safehasattr(self.repo.tagscache, '_tagtypes') and
                       self.repo.tagscache._tagtypes and
                       name in self.repo.tagscache._tagtypes):
                     # Mercurial 2.0 and later.
