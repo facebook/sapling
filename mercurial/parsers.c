@@ -9,6 +9,7 @@
 
 #include <Python.h>
 #include <ctype.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "util.h"
@@ -72,7 +73,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 	for (start = cur = str, zero = NULL; cur < str + len; cur++) {
 		PyObject *file = NULL, *node = NULL;
 		PyObject *flags = NULL;
-		int nlen;
+		ptrdiff_t nlen;
 
 		if (!*cur) {
 			zero = cur;
@@ -94,7 +95,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 
 		nlen = cur - zero - 1;
 
-		node = unhexlify(zero + 1, nlen > 40 ? 40 : nlen);
+		node = unhexlify(zero + 1, nlen > 40 ? 40 : (int)nlen);
 		if (!node)
 			goto bail;
 
