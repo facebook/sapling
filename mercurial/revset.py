@@ -918,6 +918,25 @@ def merge(repo, subset, x):
     cl = repo.changelog
     return [r for r in subset if cl.parentrevs(r)[1] != -1]
 
+def branchpoint(repo, subset, x):
+    """``branchpoint()``
+    Changesets with more than one child.
+    """
+    # i18n: "branchpoint" is a keyword
+    getargs(x, 0, 0, _("branchpoint takes no arguments"))
+    cl = repo.changelog
+    if not subset:
+        return []
+    baserev = min(subset)
+    parentscount = [0]*(len(repo) - baserev)
+    for r in xrange(baserev + 1, len(repo)):
+        for p in cl.parentrevs(r):
+            if p >= baserev:
+                parentscount[p - baserev] += 1
+    branchpoints = set((baserev + i) for i in xrange(len(parentscount))
+                       if parentscount[i] > 1)
+    return [r for r in subset if r in branchpoints]
+
 def minrev(repo, subset, x):
     """``min(set)``
     Changeset with lowest revision number in set.
@@ -1474,6 +1493,7 @@ symbols = {
     "bisected": bisected,
     "bookmark": bookmark,
     "branch": branch,
+    "branchpoint": branchpoint,
     "children": children,
     "closed": closed,
     "contains": contains,

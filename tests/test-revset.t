@@ -332,6 +332,9 @@ quoting needed
   0
   $ log 'merge()'
   6
+  $ log 'branchpoint()'
+  1
+  4
   $ log 'modifies(b)'
   4
   $ log 'modifies("path:b")'
@@ -362,6 +365,13 @@ quoting needed
   $ log 'parents(merge())'
   4
   5
+  $ log 'p1(branchpoint())'
+  0
+  2
+  $ log 'p2(branchpoint())'
+  $ log 'parents(branchpoint())'
+  0
+  2
   $ log 'removes(a)'
   2
   6
