@@ -802,3 +802,7 @@ Test keyword search help
   
    qclone clone main and patch repository at same time
 
+Test usage of section marks in help documents
+
+  $ cd "$TESTDIR"/../doc
+  $ python check-seclevel.py
