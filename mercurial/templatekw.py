@@ -275,35 +275,27 @@ def shownode(repo, ctx, templ, **args):
     """
     return ctx.hex()
 
-def showparent1(repo, ctx, templ, **args):
-    """:parent1: Integer. The repository-local revision number of the
-    changeset's first parent, or -1 if the changeset has no parents."""
-    return ctx.parents()[0].rev()
+def showp1rev(repo, ctx, templ, **args):
+    """:p1rev: Integer. The repository-local revision number of the changeset's
+    first parent, or -1 if the changeset has no parents."""
+    return ctx.p1().rev()
 
-def showparent2(repo, ctx, templ, **args):
-    """:parent2: Integer. The repository-local revision number of the
-    changeset's second parent, or -1 if the changeset has no second parent."""
-    parents = ctx.parents()
-    if len(parents) > 1:
-        return parents[1].rev()
-    else:
-        return repo['null'].rev()
+def showp2rev(repo, ctx, templ, **args):
+    """:p2rev: Integer. The repository-local revision number of the changeset's
+    second parent, or -1 if the changeset has no second parent."""
+    return ctx.p2().rev()
 
-def showparent1node(repo, ctx, templ, **args):
-    """:parent1node: String. The identification hash of the changeset's
-    first parent, as a 40 digit hexadecimal string. If the changeset has no
-    parents, all digits are 0."""
-    return ctx.parents()[0].hex()
+def showp1node(repo, ctx, templ, **args):
+    """:p1node: String. The identification hash of the changeset's first parent,
+    as a 40 digit hexadecimal string. If the changeset has no parents, all
+    digits are 0."""
+    return ctx.p1().hex()
 
-def showparent2node(repo, ctx, templ, **args):
-    """:parent2node: String. The identification hash of the changeset's
-    second parent, as a 40 digit hexadecimal string. If the changeset has no
-    second parent, all digits are 0."""
-    parents = ctx.parents()
-    if len(parents) > 1:
-        return parents[1].hex()
-    else:
-        return repo['null'].hex()
+def showp2node(repo, ctx, templ, **args):
+    """:p2node: String. The identification hash of the changeset's second
+    parent, as a 40 digit hexadecimal string. If the changeset has no second
+    parent, all digits are 0."""
+    return ctx.p2().hex()
 
 def showphase(repo, ctx, templ, **args):
     """:phase: String. The changeset phase name."""
@@ -350,10 +342,10 @@ keywords = {
     'latesttagdistance': showlatesttagdistance,
     'manifest': showmanifest,
     'node': shownode,
-    'parent1': showparent1,
-    'parent1node': showparent1node,
-    'parent2': showparent2,
-    'parent2node': showparent2node,
+    'p1rev': showp1rev,
+    'p1node': showp1node,
+    'p2rev': showp2rev,
+    'p2node': showp2node,
     'phase': showphase,
     'phaseidx': showphaseidx,
     'rev': showrev,

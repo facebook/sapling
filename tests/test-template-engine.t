@@ -37,7 +37,7 @@
   0 97e5f848f0936960273bbf75be6388cd0350a32b test
 
   $ cat > changeset.txt << EOF
-  > {{parent1}} {{parent1node}} {{parent2}} {{parent2node}}
+  > {{p1rev}} {{p1node}} {{p2rev}} {{p2node}}
   > EOF
   $ hg ci -Ama
   $ hg log --style=./mymap
