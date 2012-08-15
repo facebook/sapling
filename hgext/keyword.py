@@ -7,7 +7,7 @@
 #
 # $Id$
 #
-# Keyword expansion hack against the grain of a DSCM
+# Keyword expansion hack against the grain of a Distributed SCM
 #
 # There are many good reasons why this is not needed in a distributed
 # SCM, still it may be useful in very small projects based on single
@@ -168,7 +168,7 @@ def _shrinktext(text, subfunc):
     return subfunc(r'$\1$', text)
 
 def _preselect(wstatus, changed):
-    '''Retrieves modfied and added files from a working directory state
+    '''Retrieves modified and added files from a working directory state
     and returns the subset of each contained in given changed files
     retrieved from a change context.'''
     modified, added = wstatus[:2]

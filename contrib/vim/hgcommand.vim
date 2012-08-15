@@ -1442,7 +1442,7 @@ Mercurial: http://mercurial.selenic.com/
 
                                                  *hgcommand-mappings-override*
 
-   The default mappings can be overriden by user-provided instead by mapping
+   The default mappings can be overridden by user-provided instead by mapping
    to <Plug>CommandName.  This is especially useful when these mappings
    collide with other existing mappings (vim will warn of this during plugin
    initialization, but will not clobber the existing mappings).

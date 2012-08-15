@@ -282,7 +282,7 @@ class autowatcher(watcher):
         callable that takes one parameter.  It will be called each time
         a directory is about to be automatically watched.  If it returns
         True, the directory will be watched if it still exists,
-        otherwise, it will beb skipped.'''
+        otherwise, it will be skipped.'''
 
         super(autowatcher, self).__init__()
         self.addfilter = addfilter

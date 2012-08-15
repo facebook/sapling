@@ -543,7 +543,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
           hg bisect --good
           hg bisect --bad
 
-      - mark the current revision, or a known revision, to be skipped (eg. if
+      - mark the current revision, or a known revision, to be skipped (e.g. if
         that revision is not usable because of another issue)::
 
           hg bisect --skip
@@ -1252,7 +1252,7 @@ def commit(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if nothing changed.
     """
     if opts.get('subrepos'):
-        # Let --subrepos on the command line overide config setting.
+        # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True)
 
     extra = {}

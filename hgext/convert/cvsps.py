@@ -156,8 +156,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         # The cvsps cache pickle needs a uniquified name, based on the
         # repository location. The address may have all sort of nasties
         # in it, slashes, colons and such. So here we take just the
-        # alphanumerics, concatenated in a way that does not mix up the
-        # various components, so that
+        # alphanumeric characters, concatenated in a way that does not
+        # mix up the various components, so that
         #    :pserver:user@server:/path
         # and
         #    /pserver/user/server/path
@@ -503,7 +503,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
         # Check if log entry belongs to the current changeset or not.
 
-        # Since CVS is file centric, two different file revisions with
+        # Since CVS is file-centric, two different file revisions with
         # different branchpoints should be treated as belonging to two
         # different changesets (and the ordering is important and not
         # honoured by cvsps at this point).

@@ -1535,7 +1535,7 @@ class queue(object):
                 # if amending a patch, we start with existing
                 # files plus specified files - unfiltered
                 match = scmutil.matchfiles(repo, mm + aa + dd + matchfn.files())
-                # filter with inc/exl options
+                # filter with include/exclude options
                 matchfn = scmutil.match(repo[None], opts=opts)
             else:
                 match = scmutil.matchall(repo)
@@ -3185,9 +3185,9 @@ def finish(ui, repo, *revrange, **opts):
     revs = scmutil.revrange(repo, revrange)
     if repo['.'].rev() in revs and repo[None].files():
         ui.warn(_('warning: uncommitted changes in the working directory\n'))
-    # queue.finish may changes phases but leave the responsability to lock the
+    # queue.finish may changes phases but leave the responsibility to lock the
     # repo to the caller to avoid deadlock with wlock. This command code is
-    # responsability for this locking.
+    # responsibility for this locking.
     lock = repo.lock()
     try:
         q.finish(repo, revs)

@@ -202,7 +202,7 @@ class convert_cvs(converter_source):
     def getfile(self, name, rev):
 
         def chunkedread(fp, count):
-            # file-objects returned by socked.makefile() do not handle
+            # file-objects returned by socket.makefile() do not handle
             # large read() requests very well.
             chunksize = 65536
             output = StringIO()

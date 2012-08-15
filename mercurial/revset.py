@@ -335,7 +335,7 @@ def bisect(repo, subset, x):
     Changesets marked in the specified bisect status:
 
     - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip
-    - ``goods``, ``bads``      : csets topologicaly good/bad
+    - ``goods``, ``bads``      : csets topologically good/bad
     - ``range``              : csets taking part in the bisection
     - ``pruned``             : csets that are goods, bads or skipped
     - ``untested``           : csets whose fate is yet unknown
@@ -594,7 +594,7 @@ def destination(repo, subset, x):
 
             # The visited lineage is a match if the current source is in the arg
             # set.  Since every candidate dest is visited by way of iterating
-            # subset, any dests futher back in the lineage will be tested by a
+            # subset, any dests further back in the lineage will be tested by a
             # different iteration over subset.  Likewise, if the src was already
             # selected, the current lineage can be selected without going back
             # further.

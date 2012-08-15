@@ -67,8 +67,8 @@ EXTRA ATTRIBUTES AND METHODS
 
     close_connection()  -  close the connection to the host
     readlines()         -  you know, readlines()
-    status              -  the return status (ie 404)
-    reason              -  english translation of status (ie 'File not found')
+    status              -  the return status (i.e. 404)
+    reason              -  english translation of status (i.e. 'File not found')
 
   If you want the best of both worlds, use this inside an
   AttributeError-catching try:
@@ -297,7 +297,7 @@ class KeepAliveHandler(object):
             # first.  We previously got into a nasty loop
             # where an exception was uncaught, and so the
             # connection stayed open.  On the next try, the
-            # same exception was raised, etc.  The tradeoff is
+            # same exception was raised, etc.  The trade-off is
             # that it's now possible this call will raise
             # a DIFFERENT exception
             if DEBUG:
@@ -370,7 +370,7 @@ class HTTPResponse(httplib.HTTPResponse):
     # so if you THEN do a normal read, you must first take stuff from
     # the buffer.
 
-    # the read method wraps the original to accomodate buffering,
+    # the read method wraps the original to accommodate buffering,
     # although read() never adds to the buffer.
     # Both readline and readlines have been stolen with almost no
     # modification from socket.py
@@ -442,7 +442,7 @@ class HTTPResponse(httplib.HTTPResponse):
                 try:
                     chunk_left = int(line, 16)
                 except ValueError:
-                    # close the connection as protocol synchronisation is
+                    # close the connection as protocol synchronization is
                     # probably lost
                     self.close()
                     raise httplib.IncompleteRead(value)
@@ -548,7 +548,7 @@ def safesend(self, str):
         read = getattr(str, 'read', None)
         if read is not None:
             if self.debuglevel > 0:
-                print "sendIng a read()able"
+                print "sending a read()able"
             data = read(blocksize)
             while data:
                 self.sock.sendall(data)
@@ -737,7 +737,7 @@ def test_timeout(url):
 
 
 def test(url, N=10):
-    print "checking error hander (do this on a non-200)"
+    print "checking error handler (do this on a non-200)"
     try: error_handler(url)
     except IOError:
         print "exiting - exception will prevent further tests"

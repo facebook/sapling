@@ -156,7 +156,7 @@ def reposetup(ui, repo):
                 # Create a function that we can use to override what is
                 # normally the ignore matcher.  We've already checked
                 # for ignored files on the first dirstate walk, and
-                # unecessarily re-checking here causes a huge performance
+                # unnecessarily re-checking here causes a huge performance
                 # hit because lfdirstate only knows about largefiles
                 def _ignoreoverride(self):
                     return False
@@ -192,7 +192,7 @@ def reposetup(ui, repo):
                         (unsure, modified, added, removed, missing, unknown,
                                 ignored, clean) = s
                         # Replace the list of ignored and unknown files with
-                        # the previously caclulated lists, and strip out the
+                        # the previously calculated lists, and strip out the
                         # largefiles
                         lfiles = set(lfdirstate._map)
                         ignored = set(result[5]).difference(lfiles)

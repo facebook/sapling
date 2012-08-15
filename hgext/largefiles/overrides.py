@@ -155,7 +155,7 @@ def removelargefiles(ui, repo, *pats, **opts):
             ui.status(_('removing %s\n') % m.rel(f))
 
     # Need to lock because standin files are deleted then removed from the
-    # repository and we could race inbetween.
+    # repository and we could race in-between.
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -251,7 +251,7 @@ def overrideverify(orig, ui, repo, *pats, **opts):
 
 # Override needs to refresh standins so that update's normal merge
 # will go through properly. Then the other update hook (overriding repo.update)
-# will get the new files. Filemerge is also overriden so that the merge
+# will get the new files. Filemerge is also overridden so that the merge
 # will merge standins correctly.
 def overrideupdate(orig, ui, repo, *pats, **opts):
     lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -696,7 +696,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
         result = orig(ui, repo, source, **opts)
         # If we do not have the new largefiles for any new heads we pulled, we
         # will run into a problem later if we try to merge or rebase with one of
-        # these heads, so cache the largefiles now direclty into the system
+        # these heads, so cache the largefiles now directly into the system
         # cache.
         ui.status(_("caching new largefiles\n"))
         numcached = 0
@@ -912,7 +912,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
             ui.status(_('removing %s\n') % m.rel(f))
 
     # Need to lock because standin files are deleted then removed from the
-    # repository and we could race inbetween.
+    # repository and we could race in-between.
     wlock = repo.wlock()
     try:
         lfdirstate = lfutil.openlfdirstate(ui, repo)

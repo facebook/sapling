@@ -21,7 +21,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
       any longer.
     "heads" is either the supplied heads, or else the remote's heads.
 
-    If you pass heads and they are all known locally, the reponse lists justs
+    If you pass heads and they are all known locally, the response lists just
     these heads in "common" and in "heads".
 
     Please use findcommonoutgoing to compute the set of outgoing nodes to give
@@ -348,7 +348,7 @@ def visibleheads(repo):
 def visiblebranchmap(repo):
     """return a branchmap for the visible set"""
     # XXX Recomputing this data on the fly is very slow.  We should build a
-    # XXX cached version while computin the standard branchmap version.
+    # XXX cached version while computing the standard branchmap version.
     sroots = repo._phasecache.phaseroots[phases.secret]
     if sroots or repo.obsstore:
         vbranchmap = {}

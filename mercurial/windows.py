@@ -152,7 +152,7 @@ def samestat(s1, s2):
 #   backslash
 # (See http://msdn2.microsoft.com/en-us/library/a1y7w461.aspx )
 # So, to quote a string, we must surround it in double quotes, double
-# the number of backslashes that preceed double quotes and add another
+# the number of backslashes that precede double quotes and add another
 # backslash before every double quote (being careful with the double
 # quote we've appended to the end)
 _quotere = None

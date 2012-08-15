@@ -27,7 +27,7 @@
 #   On 64-bit systems, make sure it's assigned a 32-bit app pool.
 #
 # - In the application, setup a wildcard script handler mapping of type
-#   IpsapiModule with the shim dll as its executable. This file MUST reside
+#   IsapiModule with the shim dll as its executable. This file MUST reside
 #   in the same directory as the shim. Remove all other handlers, if you wish.
 #
 # - Make sure the ISAPI and CGI restrictions (configured globally on the

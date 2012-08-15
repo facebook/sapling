@@ -558,7 +558,7 @@ leave existing directory in place after clone failure
   $ test -d d/.hg
   [1]
 
-reenable perm to allow deletion
+re-enable perm to allow deletion
 
   $ chmod +rx c/.hg/store/data
 

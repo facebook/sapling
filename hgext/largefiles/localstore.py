@@ -18,7 +18,7 @@ import basestore
 
 class localstore(basestore.basestore):
     '''localstore first attempts to grab files out of the store in the remote
-    Mercurial repository.  Failling that, it attempts to grab the files from
+    Mercurial repository.  Failing that, it attempts to grab the files from
     the user cache.'''
 
     def __init__(self, ui, repo, remote):

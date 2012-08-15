@@ -167,7 +167,7 @@ class converter(object):
 
     def toposort(self, parents, sortmode):
         '''Return an ordering such that every uncommitted changeset is
-        preceeded by all its uncommitted ancestors.'''
+        preceded by all its uncommitted ancestors.'''
 
         def mapchildren(parents):
             """Return a (children, roots) tuple where 'children' maps parent

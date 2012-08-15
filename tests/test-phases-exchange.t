@@ -84,7 +84,7 @@
   
 
 pull did not updated ../alpha state.
-push from alpha to beta should update phase even if nothing is transfered
+push from alpha to beta should update phase even if nothing is transferred
 
   $ cd ../alpha
   $ hgph # not updated by remote pull

@@ -12,7 +12,7 @@ from numbers import Number
 def bytesformatter(format, args):
     '''Custom implementation of a formatter for bytestrings.
 
-    This function currently relias on the string formatter to do the
+    This function currently relies on the string formatter to do the
     formatting and always returns bytes objects.
 
     >>> bytesformatter(20, 10)

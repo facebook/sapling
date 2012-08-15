@@ -300,7 +300,7 @@ class localrepository(object):
         """hiddenrevs: revs that should be hidden by command and tools
 
         This set is carried on the repo to ease initialisation and lazy
-        loading it'll probably move back to changelog for efficienty and
+        loading it'll probably move back to changelog for efficiency and
         consistency reason
 
         Note that the hiddenrevs will needs invalidations when
@@ -712,7 +712,7 @@ class localrepository(object):
             # Remove candidate heads that no longer are in the repo (e.g., as
             # the result of a strip that just happened).  Avoid using 'node in
             # self' here because that dives down into branchcache code somewhat
-            # recrusively.
+            # recursively.
             bheadrevs = [self.changelog.rev(node) for node in bheads
                          if self.changelog.hasnode(node)]
             newheadrevs = [self.changelog.rev(node) for node in newnodes
@@ -732,7 +732,7 @@ class localrepository(object):
                 iterrevs = list(bheadrevs)
 
             # This loop prunes out two kinds of heads - heads that are
-            # superceded by a head in newheadrevs, and newheadrevs that are not
+            # superseded by a head in newheadrevs, and newheadrevs that are not
             # heads because an existing head is their descendant.
             while iterrevs:
                 latest = iterrevs.pop()
@@ -1479,7 +1479,7 @@ class localrepository(object):
         and you also know the set of candidate new heads that may have resulted
         from the destruction, you can set newheadnodes.  This will enable the
         code to update the branchheads cache, rather than having future code
-        decide it's invalid and regenrating it from scratch.
+        decide it's invalid and regenerating it from scratch.
         '''
         # If we have info, newheadnodes, on how to update the branch cache, do
         # it, Otherwise, since nodes were destroyed, the cache is stale and this
@@ -1906,7 +1906,7 @@ class localrepository(object):
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
                 if ret:
-                    # push succeed, synchonize target of the push
+                    # push succeed, synchronize target of the push
                     cheads = outgoing.missingheads
                 elif revs is None:
                     # All out push fails. synchronize all common
@@ -1925,7 +1925,7 @@ class localrepository(object):
                     #     missing = ((commonheads::missingheads) - commonheads)
                     #
                     # We can pick:
-                    # * missingheads part of comon (::commonheads)
+                    # * missingheads part of common (::commonheads)
                     common = set(outgoing.common)
                     cheads = [node for node in revs if node in common]
                     # and
@@ -2539,7 +2539,7 @@ class localrepository(object):
         # uncompressed only if compatible.
 
         if not stream:
-            # if the server explicitely prefer to stream (for fast LANs)
+            # if the server explicitly prefer to stream (for fast LANs)
             stream = remote.capable('stream-preferred')
 
         if stream and not heads:

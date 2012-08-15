@@ -727,7 +727,7 @@ Cat and hg cat files before custom expansion
   ignore $Id$
   a
 
-Write custom keyword and prepare multiline commit message
+Write custom keyword and prepare multi-line commit message
 
   $ echo '$Xinfo$' >> a
   $ cat <<EOF >> log
@@ -745,7 +745,7 @@ Interrupted commit should not change state
   ? c
   ? log
 
-Commit with multiline message and custom expansion
+Commit with multi-line message and custom expansion
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   a

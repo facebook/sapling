@@ -175,7 +175,7 @@ class httpconnection(keepalive.HTTPConnection):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.host, self.port))
             if _generic_proxytunnel(self):
-                # we do not support client x509 certificates
+                # we do not support client X.509 certificates
                 self.sock = sslutil.ssl_wrap_socket(self.sock, None, None)
         else:
             keepalive.HTTPConnection.connect(self)

@@ -66,7 +66,7 @@
 				 using select() for socket reads
 				 tested on Debian unstable with Python 2.2.2"""
 
-"""0.05 update - ensure case insensitivty on domain names
+"""0.05 update - ensure case insensitivity on domain names
                  support for unicast DNS queries"""
 
 """0.04 update - added some unit tests
@@ -335,7 +335,7 @@ class DNSRecord(DNSEntry):
 		raise AbstractMethodException
 
 	def toString(self, other):
-		"""String representation with addtional information"""
+		"""String representation with additional information"""
 		arg = "%s/%s,%s" % (self.ttl, self.getRemainingTTL(currentTimeMillis()), other)
 		return DNSEntry.toString(self, "record", arg)
 
@@ -904,7 +904,7 @@ class Listener(object):
 	to cache information as it arrives.
 
 	It requires registration with an Engine object in order to have
-	the read() method called when a socket is availble for reading."""
+	the read() method called when a socket is available for reading."""
 
 	def __init__(self, zeroconf):
 		self.zeroconf = zeroconf
@@ -1140,7 +1140,7 @@ class ServiceInfo(object):
 		return self.port
 
 	def getPriority(self):
-		"""Pirority accessor"""
+		"""Priority accessor"""
 		return self.priority
 
 	def getWeight(self):
@@ -1259,7 +1259,7 @@ class Zeroconf(object):
 			# SO_REUSEADDR should be equivalent to SO_REUSEPORT for
 			# multicast UDP sockets (p 731, "TCP/IP Illustrated,
 			# Volume 2"), but some BSD-derived systems require
-			# SO_REUSEPORT to be specified explicity.  Also, not all
+			# SO_REUSEPORT to be specified explicitly.  Also, not all
 			# versions of Python have SO_REUSEPORT available.  So
 			# if you're on a BSD-based system, and haven't upgraded
 			# to Python 2.3 yet, you may find this library doesn't

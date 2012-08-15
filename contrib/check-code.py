@@ -321,7 +321,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     :f: filepath
     :logfunc: function used to report error
               logfunc(filename, linenumber, linecontent, errormessage)
-    :maxerr: number of error to display before arborting.
+    :maxerr: number of error to display before aborting.
              Set to false (default) to report all errors
 
     return True if no error is found, False otherwise.
@@ -365,7 +365,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                 p, msg = pat
                 ignore = None
 
-            # fix-up regexes for multiline searches
+            # fix-up regexes for multi-line searches
             po = p
             # \s doesn't match \n
             p = re.sub(r'(?<!\\)\\s', r'[ \\t]', p)

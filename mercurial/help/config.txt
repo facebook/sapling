@@ -1431,7 +1431,7 @@ The full set of options is:
     Example: ``http://hgserver/static/``.
 
 ``stripes``
-    How many lines a "zebra stripe" should span in multiline output.
+    How many lines a "zebra stripe" should span in multi-line output.
     Default is 1; set to 0 to disable.
 
 ``style``

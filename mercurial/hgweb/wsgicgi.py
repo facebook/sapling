@@ -19,7 +19,7 @@ def launch(application):
     environ = dict(os.environ.iteritems())
     environ.setdefault('PATH_INFO', '')
     if environ.get('SERVER_SOFTWARE', '').startswith('Microsoft-IIS'):
-        # IIS includes script_name in path_info
+        # IIS includes script_name in PATH_INFO
         scriptname = environ['SCRIPT_NAME']
         if environ['PATH_INFO'].startswith(scriptname):
             environ['PATH_INFO'] = environ['PATH_INFO'][len(scriptname):]

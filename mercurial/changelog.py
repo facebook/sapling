@@ -183,7 +183,7 @@ class changelog(revlog.revlog):
         nodeid\n        : manifest node in ascii
         user\n          : user, no \n or \r allowed
         time tz extra\n : date (time is int or float, timezone is int)
-                        : extra is metadatas, encoded and separated by '\0'
+                        : extra is metadata, encoded and separated by '\0'
                         : older versions ignore it
         files\n\n       : files modified by the cset, no \n or \r allowed
         (.*)            : comment (free text, ideally utf-8)

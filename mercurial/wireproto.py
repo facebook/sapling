@@ -516,7 +516,7 @@ def stream(repo, proto):
     it is serving. Client checks to see if it understands the format.
 
     The format is simple: the server writes out a line with the amount
-    of files, then the total amount of bytes to be transfered (separated
+    of files, then the total amount of bytes to be transferred (separated
     by a space). Then, for each file, the server first writes the filename
     and filesize (separated by the null character), then the file contents.
     '''

@@ -120,7 +120,7 @@ class AbstractSimpleReader(AbstractReader):
         if data:
             assert not self._finished, (
                 'tried to add data (%r) to a closed reader!' % data)
-        logger.debug('%s read an addtional %d data', self.name, len(data))
+        logger.debug('%s read an additional %d data', self.name, len(data))
         self._done_chunks.append(data)
 
 
@@ -162,7 +162,7 @@ class ChunkedReader(AbstractReader):
 
     def _load(self, data):
         assert not self._finished, 'tried to add data to a closed reader!'
-        logger.debug('chunked read an addtional %d data', len(data))
+        logger.debug('chunked read an additional %d data', len(data))
         position = 0
         if self._leftover_data:
             logger.debug('chunked reader trying to finish block from leftover data')
@@ -188,7 +188,7 @@ class ChunkedReader(AbstractReader):
                 return
             if amt == 0:
                 self._finished = True
-                logger.debug('closing chunked redaer due to chunk of length 0')
+                logger.debug('closing chunked reader due to chunk of length 0')
                 return
             self._done_chunks.append(data[block_start:block_start + amt])
             position = block_start + amt + len(self._eol)

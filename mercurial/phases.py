@@ -195,7 +195,7 @@ class phasecache(object):
         return self._phaserevs
 
     def phase(self, repo, rev):
-        # We need a repo argument here to be able to build _phaserev
+        # We need a repo argument here to be able to build _phaserevs
         # if necessary. The repository instance is not stored in
         # phasecache to avoid reference cycles. The changelog instance
         # is not stored because it is a filecache() property and can
@@ -363,7 +363,7 @@ def newheads(repo, heads, roots):
     """compute new head of a subset minus another
 
     * `heads`: define the first subset
-    * `rroots`: define the second we substract to the first"""
+    * `roots`: define the second we substract to the first"""
     revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
                       heads, roots, roots, heads)
     return [c.node() for c in revset]

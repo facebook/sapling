@@ -246,7 +246,7 @@ class bzr_source(converter_source):
                         # register the change as move
                         renames[topath] = frompath
 
-                # no futher changes, go to the next change
+                # no further changes, go to the next change
                 continue
 
             # we got unicode paths, need to convert them

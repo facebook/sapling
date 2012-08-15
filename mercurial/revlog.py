@@ -547,7 +547,7 @@ class revlog(object):
         # Our topologically sorted list of output nodes.
         orderedout = []
         # Don't start at nullid since we don't want nullid in our output list,
-        # and if nullid shows up in descedents, empty parents will look like
+        # and if nullid shows up in descendants, empty parents will look like
         # they're descendants.
         for r in xrange(max(lowestrev, 0), highestrev + 1):
             n = self.node(r)
@@ -1015,7 +1015,7 @@ class revlog(object):
         see addrevision for argument descriptions.
         invariants:
         - text is optional (can be None); if not set, cachedelta must be set.
-          if both are set, they must correspond to eachother.
+          if both are set, they must correspond to each other.
         """
         btext = [text]
         def buildtext():

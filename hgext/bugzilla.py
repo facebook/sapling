@@ -516,7 +516,7 @@ class bzmysql_3_0(bzmysql_2_18):
             raise util.Abort(_('unknown database schema'))
         return ids[0][0]
 
-# Buzgilla via XMLRPC interface.
+# Bugzilla via XMLRPC interface.
 
 class cookietransportrequest(object):
     """A Transport request method that retains cookies over its lifetime.

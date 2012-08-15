@@ -1258,7 +1258,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
     opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
     opts['branch'] = [repo.lookupbranch(b) for b in opts['branch']]
     # pats/include/exclude are passed to match.match() directly in
-    # _matchfile() revset but walkchangerevs() builds its matcher with
+    # _matchfiles() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
     # platforms without shell expansion (windows).
     pctx = repo[None]
@@ -1304,7 +1304,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
             fnopats = (('_ancestors', '_fancestors'),
                        ('_descendants', '_fdescendants'))
             if pats:
-                # follow() revset inteprets its file argument as a
+                # follow() revset interprets its file argument as a
                 # manifest entry, so use match.files(), not pats.
                 opts[fpats[followfirst]] = list(match.files())
             else:

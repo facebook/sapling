@@ -109,7 +109,8 @@ def findcommonheads(ui, local, remote,
         srvheadhashes = srvheadhashesref.value
         yesno = yesnoref.value
     else:
-        # compatibitity with pre-batch, but post-known remotes during 1.9 devel
+        # compatibility with pre-batch, but post-known remotes during 1.9
+        # development
         srvheadhashes = remote.heads()
         sample = []
 

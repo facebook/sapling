@@ -887,8 +887,8 @@ class svn_source(converter_source):
             io = StringIO()
             info = svn.ra.get_file(self.ra, file, revnum, io)
             data = io.getvalue()
-            # ra.get_files() seems to keep a reference on the input buffer
-            # preventing collection. Release it explicitely.
+            # ra.get_file() seems to keep a reference on the input buffer
+            # preventing collection. Release it explicitly.
             io.close()
             if isinstance(info, list):
                 info = info[-1]
@@ -923,7 +923,7 @@ class svn_source(converter_source):
         # Given the repository url of this wc, say
         #   "http://server/plone/CMFPlone/branches/Plone-2_0-branch"
         # extract the "entry" portion (a relative path) from what
-        # svn log --xml says, ie
+        # svn log --xml says, i.e.
         #   "/CMFPlone/branches/Plone-2_0-branch/tests/PloneTestCase.py"
         # that is to say "tests/PloneTestCase.py"
         if path.startswith(module):

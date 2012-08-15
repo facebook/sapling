@@ -65,7 +65,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
         dstlock = rdst.lock()
 
         # Get a list of all changesets in the source.  The easy way to do this
-        # is to simply walk the changelog, using changelog.nodesbewteen().
+        # is to simply walk the changelog, using changelog.nodesbetween().
         # Take a look at mercurial/revlog.py:639 for more details.
         # Use a generator instead of a list to decrease memory usage
         ctxs = (rsrc[ctx] for ctx in rsrc.changelog.nodesbetween(None,
@@ -177,7 +177,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
         if f not in lfiles and f not in normalfiles:
             islfile = _islfile(f, ctx, matcher, size)
             # If this file was renamed or copied then copy
-            # the lfileness of its predecessor
+            # the largefile-ness of its predecessor
             if f in ctx.manifest():
                 fctx = ctx.filectx(f)
                 renamed = fctx.renamed()
@@ -389,7 +389,7 @@ def cachelfiles(ui, repo, node, filelist=None):
         # If we are mid-merge, then we have to trust the standin that is in the
         # working copy to have the correct hashvalue.  This is because the
         # original hg.merge() already updated the standin as part of the normal
-        # merge process -- we just have to udpate the largefile to match.
+        # merge process -- we just have to update the largefile to match.
         if (getattr(repo, "_ismerging", False) and
              os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
             expectedhash = lfutil.readstandin(repo, lfile)

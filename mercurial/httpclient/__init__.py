@@ -293,7 +293,7 @@ class HTTPConnection(object):
           host: The host to which we'll connect.
           port: Optional. The port over which we'll connect. Default 80 for
                 non-ssl, 443 for ssl.
-          use_ssl: Optional. Wether to use ssl. Defaults to False if port is
+          use_ssl: Optional. Whether to use ssl. Defaults to False if port is
                    not 443, true if port is 443.
           ssl_validator: a function(socket) to validate the ssl cert
           timeout: Optional. Connection timeout, default is TIMEOUT_DEFAULT.
@@ -374,7 +374,7 @@ class HTTPConnection(object):
         if self.ssl:
             # This is the default, but in the case of proxied SSL
             # requests the proxy logic above will have cleared
-            # blocking mode, so reenable it just to be safe.
+            # blocking mode, so re-enable it just to be safe.
             sock.setblocking(1)
             logger.debug('wrapping socket for ssl with options %r',
                          self.ssl_opts)
@@ -414,7 +414,7 @@ class HTTPConnection(object):
         """Close the connection to the server.
 
         This is a no-op if the connection is already closed. The
-        connection may automatically close if requessted by the server
+        connection may automatically close if requested by the server
         or required by the nature of a response.
         """
         if self.sock is None:

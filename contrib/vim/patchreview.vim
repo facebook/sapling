@@ -55,7 +55,7 @@
 "   3) Optional (but recommended for speed)
 "
 "      Install patchutils ( http://cyberelk.net/tim/patchutils/ ) for your
-"      OS. For windows it is availble from Cygwin
+"      OS. For windows it is available from Cygwin
 "
 "         http://www.cygwin.com
 "

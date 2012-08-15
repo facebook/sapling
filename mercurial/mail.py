@@ -151,7 +151,7 @@ def mimetextpatch(s, subtype='plain', display=False):
 
 def mimetextqp(body, subtype, charset):
     '''Return MIME message.
-    Qouted-printable transfer encoding will be used if necessary.
+    Quoted-printable transfer encoding will be used if necessary.
     '''
     enc = None
     for line in body.splitlines():
