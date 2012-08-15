@@ -1009,7 +1009,7 @@ class localrepository(object):
             util.rename(self.join('undo.dirstate'), self.join('dirstate'))
             try:
                 branch = self.opener.read('undo.branch')
-                self.dirstate.setbranch(branch)
+                self.dirstate.setbranch(encoding.tolocal(branch))
             except IOError:
                 ui.warn(_('named branch could not be reset: '
                           'current branch is still \'%s\'\n')
