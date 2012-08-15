@@ -173,4 +173,53 @@ Test subrepo predicate
   sub
   $ fileset 'subrepo("glob:*")'
   sub
+  $ hg ci -m subrepo
+
+Test with a revision
+
+  $ hg log -G --template '{rev} {desc}\n'
+  @  4 subrepo
+  |
+  o    3 merge
+  |\
+  | o  2 diverging
+  | |
+  o |  1 manychanges
+  |/
+  o  0 addfiles
+  
+  $ echo unknown > unknown
+  $ fileset -r1 'modified()'
+  b2
+  $ fileset -r1 'added() and c1'
+  c1
+  $ fileset -r1 'removed()'
+  a2
+  $ fileset -r1 'deleted()'
+  $ fileset -r1 'unknown()'
+  $ fileset -r1 'ignored()'
+  $ fileset -r1 'hgignore()'
+  b2
+  bin
+  $ fileset -r1 'binary()'
+  bin
+  $ fileset -r1 'size(1k)'
+  1k
+  $ fileset -r3 'resolved()'
+  $ fileset -r3 'unresolved()'
+
+#if execbit
+  $ fileset -r1 'exec()'
+  b2
+#endif
+
+#if symlink
+  $ fileset -r1 'symlink()'
+  b2link
+#endif
+
+  $ fileset -r4 'subrepo("re:su.*")'
+  sub
+  $ fileset -r4 'subrepo("sub")'
+  sub
 
