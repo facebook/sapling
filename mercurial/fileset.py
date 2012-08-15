@@ -485,7 +485,7 @@ def getfileset(ctx, expr):
             subset.extend(c)
     else:
         status = None
-        subset = ctx.walk(ctx.match([]))
+        subset = list(ctx.walk(ctx.match([])))
 
     return getset(matchctx(ctx, subset, status), tree)
 

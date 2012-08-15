@@ -222,4 +222,7 @@ Test with a revision
   sub
   $ fileset -r4 'subrepo("sub")'
   sub
+  $ fileset -r4 'b2 or c1'
+  b2
+  c1
 
