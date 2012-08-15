@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil, scmutil, util
-import os, stat
+import os, stat, errno
 
 _sha = util.sha1
 
@@ -403,7 +403,9 @@ class fncachestore(basicstore):
             try:
                 yield f, ef, self.getsize(ef)
                 existing.append(f)
-            except OSError:
+            except OSError, err:
+                if err.errno != errno.ENOENT:
+                    raise
                 # nonexistent entry
                 rewrite = True
         if rewrite:
