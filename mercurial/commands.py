@@ -1847,14 +1847,17 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         localrevs = opts.get('local_head')
         doit(localrevs, remoterevs)
 
-@command('debugfileset', [], ('REVSPEC'))
-def debugfileset(ui, repo, expr):
+@command('debugfileset',
+    [('r', 'rev', '', _('apply the filespec on this revision'), _('REV'))],
+    _('[-r REV] FILESPEC'))
+def debugfileset(ui, repo, expr, **opts):
     '''parse and apply a fileset specification'''
+    ctx = scmutil.revsingle(repo, opts.get('rev'), None)
     if ui.verbose:
         tree = fileset.parse(expr)[0]
         ui.note(tree, "\n")
 
-    for f in fileset.getfileset(repo[None], expr):
+    for f in fileset.getfileset(ctx, expr):
         ui.write("%s\n" % f)
 
 @command('debugfsinfo', [], _('[PATH]'))
