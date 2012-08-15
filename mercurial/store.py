@@ -398,7 +398,7 @@ class fncachestore(basicstore):
     def datafiles(self):
         rewrite = False
         existing = []
-        for f in self.fncache:
+        for f in sorted(self.fncache):
             ef = self.encode(f)
             try:
                 yield f, ef, self.getsize(ef)
