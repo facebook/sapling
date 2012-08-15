@@ -36,4 +36,6 @@ Test operators and basic patterns
   b1
   $ fileset '! ("a*")'
   b1
+  $ fileset 'a* - a1'
+  a2
 

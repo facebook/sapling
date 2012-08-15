@@ -107,6 +107,11 @@ def notset(mctx, x):
     s = set(getset(mctx, x))
     return [r for r in mctx.subset if r not in s]
 
+def minusset(mctx, x, y):
+    xl = getset(mctx, x)
+    yl = set(getset(mctx, y))
+    return [f for f in xl if f not in yl]
+
 def listset(mctx, a, b):
     raise error.ParseError(_("can't use a list in this context"))
 
@@ -406,6 +411,7 @@ methods = {
     'symbol': stringset,
     'and': andset,
     'or': orset,
+    'minus': minusset,
     'list': listset,
     'group': getset,
     'not': notset,
