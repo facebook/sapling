@@ -256,8 +256,11 @@ def grep(mctx, x):
     """``grep(regex)``
     File contains the given regular expression.
     """
-    pat = getstring(x, _("grep requires a pattern"))
-    r = re.compile(pat)
+    try:
+        # i18n: "grep" is a keyword
+        r = re.compile(getstring(x, _("grep requires a pattern")))
+    except re.error, e:
+        raise error.ParseError(_('invalid match pattern: %s') % e)
     return [f for f in mctx.existing() if r.search(mctx.ctx[f].data())]
 
 _units = dict(k=2**10, K=2**10, kB=2**10, KB=2**10,

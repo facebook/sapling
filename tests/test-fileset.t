@@ -89,3 +89,11 @@ Test files properties
   $ fileset 'binary()'
   bin
 
+  $ fileset 'grep("b{1}")'
+  b2
+  c1
+  b1
+  $ fileset 'grep("missingparens(")'
+  hg: parse error: invalid match pattern: unbalanced parenthesis
+  [255]
+
