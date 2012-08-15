@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil, scmutil, util
-import os, stat
+import os, stat, errno
 
 _sha = util.sha1
 
@@ -398,12 +398,14 @@ class fncachestore(basicstore):
     def datafiles(self):
         rewrite = False
         existing = []
-        for f in self.fncache:
+        for f in sorted(self.fncache):
             ef = self.encode(f)
             try:
                 yield f, ef, self.getsize(ef)
                 existing.append(f)
-            except OSError:
+            except OSError, err:
+                if err.errno != errno.ENOENT:
+                    raise
                 # nonexistent entry
                 rewrite = True
         if rewrite:
