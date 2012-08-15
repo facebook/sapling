@@ -432,7 +432,7 @@ class matchctx(object):
     def existing(self):
         if self._status is not None:
             removed = set(self._status[3])
-            unknown = set(self._status[4])
+            unknown = set(self._status[4] + self._status[5])
         else:
             removed = set()
             unknown = set()

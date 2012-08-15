@@ -82,6 +82,9 @@ Test files properties
   $ fileset 'binary()'
   $ fileset 'binary() and unknown()'
   bin
+  $ echo '^bin$' >> .hgignore
+  $ fileset 'binary() and ignored()'
+  bin
   $ hg add bin
   $ fileset 'binary()'
   bin
