@@ -76,3 +76,8 @@ Test files status
   $ fileset 'copied()'
   c1
 
+Test files properties
+
+  >>> file('bin', 'wb').write('\0a')
+  $ fileset 'binary()'
+

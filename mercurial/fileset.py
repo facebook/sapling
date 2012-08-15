@@ -430,7 +430,12 @@ class matchctx(object):
     def filter(self, files):
         return [f for f in files if f in self.subset]
     def existing(self):
-        return (f for f in self.subset if f in self.ctx)
+        if self._status is not None:
+            removed = set(self._status[3])
+        else:
+            removed = set()
+        return (f for f in self.subset
+                if f in self.ctx and f not in removed)
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
 
@@ -444,14 +449,26 @@ def _intree(funcs, tree):
                 return True
     return False
 
+# filesets using matchctx.existing()
+_existingcallers = [
+    'binary',
+    'exec',
+    'grep',
+    'size',
+    'symlink',
+]
+
 def getfileset(ctx, expr):
     tree, pos = parse(expr)
     if (pos != len(expr)):
         raise error.ParseError(_("invalid token"), pos)
 
     # do we need status info?
-    if _intree(['modified', 'added', 'removed', 'deleted',
-                'unknown', 'ignored', 'clean'], tree):
+    if (_intree(['modified', 'added', 'removed', 'deleted',
+                 'unknown', 'ignored', 'clean'], tree) or
+        # Using matchctx.existing() on a workingctx requires us to check
+        # for deleted files.
+        (ctx.rev() is None and _intree(_existingcallers, tree))):
         unknown = _intree(['unknown'], tree)
         ignored = _intree(['ignored'], tree)
 
