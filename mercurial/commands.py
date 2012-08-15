@@ -1352,20 +1352,20 @@ def commit(ui, repo, *pats, **opts):
         # printed anyway.
         #
         # Par Msg Comment
-        # NN   y  additional topo root
+        # N N  y  additional topo root
         #
-        # BN   y  additional branch root
-        # CN   y  additional topo head
-        # HN   n  usual case
+        # B N  y  additional branch root
+        # C N  y  additional topo head
+        # H N  n  usual case
         #
-        # BB   y  weird additional branch root
-        # CB   y  branch merge
-        # HB   n  merge with named branch
+        # B B  y  weird additional branch root
+        # C B  y  branch merge
+        # H B  n  merge with named branch
         #
-        # CC   y  additional head from merge
-        # CH   n  merge with a head
+        # C C  y  additional head from merge
+        # C H  n  merge with a head
         #
-        # HH   n  head merge: head count decreases
+        # H H  n  head merge: head count decreases
 
     if not opts.get('close_branch'):
         for r in parents:

@@ -70,7 +70,7 @@ def parse_index2(data, inline):
 
 def parse_dirstate(dmap, copymap, st):
     parents = [st[:20], st[20: 40]]
-    # deref fields so they will be local in loop
+    # dereference fields so they will be local in loop
     format = ">cllll"
     e_size = struct.calcsize(format)
     pos1 = 40

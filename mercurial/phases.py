@@ -363,7 +363,7 @@ def newheads(repo, heads, roots):
     """compute new head of a subset minus another
 
     * `heads`: define the first subset
-    * `roots`: define the second we substract to the first"""
+    * `roots`: define the second we subtract from the first"""
     revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
                       heads, roots, roots, heads)
     return [c.node() for c in revset]

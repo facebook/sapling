@@ -58,7 +58,7 @@ def readcurrent(repo):
             raise
         return None
     try:
-        # No readline() in posixfile_nt, reading everything is cheap
+        # No readline() in osutil.posixfile, reading everything is cheap
         mark = encoding.tolocal((file.readlines() or [''])[0])
         if mark == '' or mark not in repo._bookmarks:
             mark = None

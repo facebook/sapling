@@ -1522,7 +1522,7 @@ class queue(object):
             #
             # this should really read:
             #   mm, dd, aa = repo.status(top, patchparent)[:3]
-            # but we do it backwards to take advantage of manifest/chlog
+            # but we do it backwards to take advantage of manifest/changelog
             # caching against the next repo.status call
             mm, aa, dd = repo.status(patchparent, top)[:3]
             changes = repo.changelog.read(top)

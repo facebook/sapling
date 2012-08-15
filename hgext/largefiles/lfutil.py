@@ -296,8 +296,8 @@ def standin(filename):
     '''Return the repo-relative path to the standin for the specified big
     file.'''
     # Notes:
-    # 1) Most callers want an absolute path, but _createstandin() needs
-    #    it repo-relative so lfadd() can pass it to repoadd().  So leave
+    # 1) Some callers want an absolute path, but for instance addlargefiles
+    #    needs it repo-relative so it can be passed to repoadd().  So leave
     #    it up to the caller to use repo.wjoin() to get an absolute path.
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are

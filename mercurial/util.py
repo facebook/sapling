@@ -1477,7 +1477,11 @@ _hextochr = dict((a + b, chr(int(a + b, 16)))
                  for a in _hexdig for b in _hexdig)
 
 def _urlunquote(s):
-    """unquote('abc%20def') -> 'abc def'."""
+    """Decode HTTP/HTML % encoding.
+
+    >>> _urlunquote('abc%20def')
+    'abc def'
+    """
     res = s.split('%')
     # fastpath
     if len(res) == 1:

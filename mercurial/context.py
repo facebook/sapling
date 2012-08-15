@@ -1167,7 +1167,7 @@ class workingfilectx(filectx):
 
         returns True if different than fctx.
         """
-        # fctx should be a filectx (not a wfctx)
+        # fctx should be a filectx (not a workingfilectx)
         # invert comparison to reuse the same code path
         return fctx.cmp(self)
 

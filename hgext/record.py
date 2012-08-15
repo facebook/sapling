@@ -33,7 +33,7 @@ def scanpatch(fp):
     - ('file',    [header_lines + fromfile + tofile])
     - ('context', [context_lines])
     - ('hunk',    [hunk_lines])
-    - ('range',   (-start,len, +start,len, diffp))
+    - ('range',   (-start,len, +start,len, proc))
     """
     lr = patch.linereader(fp)
 
