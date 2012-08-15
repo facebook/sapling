@@ -432,10 +432,12 @@ class matchctx(object):
     def existing(self):
         if self._status is not None:
             removed = set(self._status[3])
+            unknown = set(self._status[4])
         else:
             removed = set()
+            unknown = set()
         return (f for f in self.subset
-                if f in self.ctx and f not in removed)
+                if (f in self.ctx and f not in removed) or f in unknown)
     def narrow(self, files):
         return matchctx(self.ctx, self.filter(files), self._status)
 

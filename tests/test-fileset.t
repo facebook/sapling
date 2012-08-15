@@ -80,4 +80,9 @@ Test files properties
 
   >>> file('bin', 'wb').write('\0a')
   $ fileset 'binary()'
+  $ fileset 'binary() and unknown()'
+  bin
+  $ hg add bin
+  $ fileset 'binary()'
+  bin
 
