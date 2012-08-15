@@ -97,3 +97,80 @@ Test files properties
   hg: parse error: invalid match pattern: unbalanced parenthesis
   [255]
 
+#if execbit
+  $ chmod +x b2
+  $ fileset 'exec()'
+  b2
+#endif
+
+#if symlink
+  $ ln -s b2 b2link
+  $ fileset 'symlink() and unknown()'
+  b2link
+  $ hg add b2link
+#endif
+
+  >>> file('1k', 'wb').write(' '*1024)
+  >>> file('2k', 'wb').write(' '*2048)
+  $ hg add 1k 2k
+  $ fileset 'size("bar")'
+  hg: parse error: couldn't parse size: bar
+  [255]
+  $ fileset 'size(1k)'
+  1k
+  $ fileset '(1k or 2k) and size("< 2k")'
+  1k
+  $ fileset '(1k or 2k) and size("<=2k")'
+  1k
+  2k
+  $ fileset '(1k or 2k) and size("> 1k")'
+  2k
+  $ fileset '(1k or 2k) and size(">=1K")'
+  1k
+  2k
+  $ fileset '(1k or 2k) and size(".5KB - 1.5kB")'
+  1k
+
+Test merge states
+
+  $ hg ci -m manychanges
+  $ hg up -C 0
+  * files updated, 0 files merged, * files removed, 0 files unresolved (glob)
+  $ echo c >> b2
+  $ hg ci -m diverging b2
+  created new head
+  $ fileset 'resolved()'
+  $ fileset 'unresolved()'
+  $ hg merge
+  merging b2
+  warning: conflicts during merge.
+  merging b2 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  * files updated, 0 files merged, * files removed, 1 files unresolved (glob)
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ fileset 'resolved()'
+  $ fileset 'unresolved()'
+  b2
+  $ echo e > b2
+  $ hg resolve -m b2
+  $ fileset 'resolved()'
+  b2
+  $ fileset 'unresolved()'
+  $ hg ci -m merge
+
+Test subrepo predicate
+
+  $ hg init sub
+  $ echo a > sub/suba
+  $ hg -R sub add sub/suba
+  $ hg -R sub ci -m sub
+  $ echo 'sub = sub' > .hgsub
+  $ fileset 'subrepo()'
+  $ hg add .hgsub
+  $ fileset 'subrepo()'
+  sub
+  $ fileset 'subrepo("sub")'
+  sub
+  $ fileset 'subrepo("glob:*")'
+  sub
+
