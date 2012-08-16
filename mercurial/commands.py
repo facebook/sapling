@@ -4177,7 +4177,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
                     res.append(fn[plen:-slen])
         finally:
             lock.release()
-        for f in sorted(res):
+        for f in res:
             ui.write("%s\n" % f)
         return
 
