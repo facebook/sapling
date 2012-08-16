@@ -398,17 +398,48 @@ _hg_pat_opts=(
   '*'{-I+,--include}'[include names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/'
   '*'{-X+,--exclude}'[exclude names matching the given patterns]:dir:_files -W $(_hg_cmd root) -/')
 
+_hg_clone_opts=(
+  $_hg_remote_opts
+  '(--noupdate -U)'{-U,--noupdate}'[do not update the new working directory]'
+  '--pull[use pull protocol to copy metadata]'
+  '--uncompressed[use uncompressed transfer (fast over LAN)]')
+
+_hg_date_user_opts=(
+  '(--currentdate -D)'{-D,--currentdate}'[record the current date as commit date]'
+  '(--currentuser -U)'{-U,--currentuser}'[record the current user as committer]'
+  '(--date -d)'{-d+,--date}'[record the specified date as commit date]:date:'
+  '(--user -u)'{-u+,--user}'[record the specified user as committer]:user:')
+
+_hg_gitlike_opts=(
+  '(--git -g)'{-g,--git}'[use git extended diff format]')
+
 _hg_diff_opts=(
+  $_hg_gitlike_opts
   '(--text -a)'{-a,--text}'[treat all files as text]'
-  '(--git -g)'{-g,--git}'[use git extended diff format]'
-  "--nodates[omit dates from diff headers]")
+  '--nodates[omit dates from diff headers]')
+
+_hg_mergetool_opts=(
+  '(--tool -t)'{-t+,--tool}'[specify merge tool]:tool:')
 
 _hg_dryrun_opts=(
   '(--dry-run -n)'{-n,--dry-run}'[do not perform actions, just print output]')
 
+_hg_ignore_space_opts=(
+  '(--ignore-all-space -w)'{-w,--ignore-all-space}'[ignore white space when comparing lines]'
+  '(--ignore-space-change -b)'{-b,--ignore-space-change}'[ignore changes in the amount of white space]'
+  '(--ignore-blank-lines -B)'{-B,--ignore-blank-lines}'[ignore changes whose lines are all blank]')
+
 _hg_style_opts=(
   '--style[display using template map file]:'
   '--template[display with template]:')
+
+_hg_log_opts=(
+  $_hg_global_opts $_hg_style_opts $_hg_gitlike_opts
+  '(--limit -l)'{-l+,--limit}'[limit number of changes displayed]:'
+  '(--no-merges -M)'{-M,--no-merges}'[do not show merges]'
+  '(--patch -p)'{-p,--patch}'[show patch]'
+  '--stat[output diffstat-style summary of changes]'
+)
 
 _hg_commit_opts=(
   '(-m --message -l --logfile --edit -e)'{-e,--edit}'[edit commit message]'
@@ -418,6 +449,11 @@ _hg_commit_opts=(
 _hg_remote_opts=(
   '(--ssh -e)'{-e+,--ssh}'[specify ssh command to use]:'
   '--remotecmd[specify hg command to run on the remote side]:')
+
+_hg_branch_bmark_opts=(
+  '(--bookmark -B)'{-B+,--bookmark}'[specify bookmark(s)]:bookmark:_hg_bookmarks'
+  '(--branch -b)'{-b+,--branch}'[specify branch(es)]:branch:_hg_branches'
+)
 
 _hg_cmd() {
   _call_program hg HGPLAIN=1 hg "$_hg_cmd_globals[@]" "$@" 2> /dev/null
@@ -456,7 +492,7 @@ _hg_cmd_archive() {
 }
 
 _hg_cmd_backout() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_mergetool_opts $_hg_pat_opts \
     '--merge[merge with old dirstate parent after backout]' \
     '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
     '--parent[parent to choose when backing out merge]' \
@@ -512,7 +548,7 @@ _hg_cmd_cat() {
 }
 
 _hg_cmd_clone() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_clone_opts \
   '(--noupdate -U)'{-U,--noupdate}'[do not update the new working directory]' \
   '(--rev -r)'{-r+,--rev}'[a changeset you would like to have after cloning]:' \
   '--uncompressed[use uncompressed transfer (fast over LAN)]' \
@@ -540,12 +576,10 @@ _hg_cmd_copy() {
 
 _hg_cmd_diff() {
   typeset -A opt_args
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_diff_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+                     $_hg_diff_opts $_hg_ignore_space_opts \
   '*'{-r,--rev}'+[revision]:revision:_hg_revrange' \
   '(--show-function -p)'{-p,--show-function}'[show which function each change is in]' \
-  '(--ignore-all-space -w)'{-w,--ignore-all-space}'[ignore white space when comparing lines]' \
-  '(--ignore-space-change -b)'{-b,--ignore-space-change}'[ignore changes in the amount of white space]' \
-  '(--ignore-blank-lines -B)'{-B,--ignore-blank-lines}'[ignore changes whose lines are all blank]' \
   '*:file:->diff_files'
 
   if [[ $state == 'diff_files' ]]
@@ -572,16 +606,11 @@ _hg_cmd_forget() {
 }
 
 _hg_cmd_graft() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_dryrun_opts \
+                     $_hg_date_user_opts $_hg_mergetool_opts \
   '(--continue -c)'{-c,--continue}'[resume interrupted graft]' \
   '(--edit -e)'{-e,--edit}'[invoke editor on commit messages]' \
   '--log[append graft info to log message]' \
-  '(--currentdate -D)'{-D,--currentdate}'[record the current date as commit date]' \
-  '(--currentuser -U)'{-U,--currentuser}'[record the current user as committer]' \
-  '(--date -d)'{-d,--date}'[record the specified date as commit date]' \
-  '(--user -u)'{-u,--user}'[record the specified user as committer]' \
-  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
-  '(--dry-run -n)'{-n,--dry-run}'[do not perform actions, just print output]' \
   '*:revision:_hg_labels'
 }
 
@@ -610,7 +639,7 @@ _hg_cmd_help() {
 }
 
 _hg_cmd_identify() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
   '(--rev -r)'{-r+,--rev}'[identify the specified rev]:revision:_hg_labels' \
   '(--num -n)'{-n+,--num}'[show local revision number]' \
   '(--id -i)'{-i+,--id}'[show global revision id]' \
@@ -619,19 +648,16 @@ _hg_cmd_identify() {
 }
 
 _hg_cmd_import() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_commit_opts \
   '(--strip -p)'{-p+,--strip}'[directory strip option for patch (default: 1)]:count:' \
-  '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
   '(--force -f)'{-f,--force}'[skip check for outstanding uncommitted changes]' \
   '--bypass[apply patch without touching the working directory]' \
   '*:patch:_files'
 }
 
 _hg_cmd_incoming() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_style_opts \
-  '(--no-merges -M)'{-M,--no-merges}'[do not show merge revisions]' \
+  _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
-  '(--patch -p)'{-p,--patch}'[show patch]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:_hg_tags' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
   '--bundle[file to store the bundles into]:bundle file:_files' \
@@ -652,16 +678,13 @@ _hg_cmd_locate() {
 }
 
 _hg_cmd_log() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_style_opts \
+  _arguments -s -w : $_hg_log_opts $_hg_pat_opts \
   '(--follow --follow-first -f)'{-f,--follow}'[follow changeset or history]' \
   '(-f --follow)--follow-first[only follow the first parent of merge changesets]' \
   '(--copies -C)'{-C,--copies}'[show copied files]' \
   '(--keyword -k)'{-k+,--keyword}'[search for a keyword]:' \
-  '(--limit -l)'{-l+,--limit}'[limit number of changes displayed]:' \
   '*'{-r,--rev}'[show the specified revision or range]:revision:_hg_revrange' \
-  '(--no-merges -M)'{-M,--no-merges}'[do not show merges]' \
   '(--only-merges -m)'{-m,--only-merges}'[show only merges]' \
-  '(--patch -p)'{-p,--patch}'[show patch]' \
   '(--prune -P)'{-P+,--prune}'[do not display revision or any of its ancestors]:revision:_hg_labels' \
   '(--branch -b)'{-b+,--branch}'[show changesets within the given named branch]:branch:_hg_branches' \
   '*:files:_hg_files'
@@ -674,19 +697,16 @@ _hg_cmd_manifest() {
 }
 
 _hg_cmd_merge() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_mergetool_opts \
   '(--force -f)'{-f,--force}'[force a merge with outstanding changes]' \
   '(--rev -r 1)'{-r,--rev}'[revision to merge]:revision:_hg_mergerevs' \
   '(--preview -P)'{-P,--preview}'[review revisions to merge (no merge is performed)]' \
-  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
   ':revision:_hg_mergerevs'
 }
 
 _hg_cmd_outgoing() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_style_opts \
-  '(--no-merges -M)'{-M,--no-merges}'[do not show merge revisions]' \
+  _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
-  '(--patch -p)'{-p,--patch}'[show patch]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
   ':destination:_hg_remote'
@@ -714,7 +734,7 @@ _hg_cmd_phase() {
 }
 
 _hg_cmd_pull() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_branch_bmark_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
   '(--update -u)'{-u,--update}'[update to new tip if changesets were pulled]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:' \
@@ -722,7 +742,7 @@ _hg_cmd_pull() {
 }
 
 _hg_cmd_push() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_branch_bmark_opts \
   '(--force -f)'{-f,--force}'[force push]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]:revision:_hg_labels' \
   ':destination:_hg_remote'
@@ -746,7 +766,7 @@ _hg_cmd_resolve() {
   local context state line
   typeset -A opt_args
 
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_mergetool_opts $_hg_pat_opts \
   '(--list -l --mark -m --unmark -u)'{-l,--list}'[list state of files needing merge]:*:merged files:->resolve_files' \
   '(--mark -m --list -l --unmark -u)'{-m,--mark}'[mark files as resolved]:*:unresolved files:_hg_unresolved' \
   '(--unmark -u --list -l --mark -m)'{-u,--unmark}'[unmark files as resolved]:*:resolved files:_hg_resolved' \
@@ -840,7 +860,7 @@ _hg_cmd_tag() {
 }
 
 _hg_cmd_tip() {
-  _arguments -s -w : $_hg_global_opts $_hg_style_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_gitlike_opts $_hg_style_opts \
   '(--patch -p)'{-p,--patch}'[show patch]'
 }
 
@@ -927,7 +947,8 @@ _hg_cmd_qdelete() {
 }
 
 _hg_cmd_qdiff() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_diff_opts \
+                     $_hg_ignore_space_opts \
   '*:pattern:_hg_files'
 }
 
@@ -963,7 +984,7 @@ _hg_cmd_qheader() {
 }
 
 _hg_cmd_qimport() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_gitlike_opts \
   '(--existing -e)'{-e,--existing}'[import file in patch dir]' \
   '(--name -n 2)'{-n+,--name}'[patch file name]:name:' \
   '(--force -f)'{-f,--force}'[overwrite existing files]' \
@@ -973,6 +994,7 @@ _hg_cmd_qimport() {
 
 _hg_cmd_qnew() {
   _arguments -s -w : $_hg_global_opts $_hg_commit_opts \
+                     $_hg_date_user_opts $_hg_gitlike_opts \
   '(--force -f)'{-f,--force}'[import uncommitted changes into patch]' \
   ':patch:'
 }
@@ -1006,7 +1028,7 @@ _hg_cmd_qpush() {
 }
 
 _hg_cmd_qrefresh() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_commit_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_commit_opts $_hg_gitlike_opts \
   '(--git -g)'{-g,--git}'[use git extended diff format]' \
   '(--short -s)'{-s,--short}'[short refresh]' \
   '*:files:_hg_files'
@@ -1050,8 +1072,7 @@ _hg_cmd_strip() {
 
 # Patchbomb
 _hg_cmd_email() {
-  _arguments -s -w : $_hg_global_opts $_hg_remote_opts \
-  '(--git -g)'{-g,--git}'[use git extended diff format]' \
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_gitlike_opts \
   '--plain[omit hg patch header]' \
   '--body[send patches as inline message text (default)]' \
   '(--outgoing -o)'{-o,--outgoing}'[send changes not found in the target repository]' \
@@ -1081,18 +1102,14 @@ _hg_cmd_email() {
 
 # Rebase
 _hg_cmd_rebase() {
-  _arguments -s -w : $_hg_global_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_commit_opts $_hg_mergetool_opts \
   '*'{-r,--rev}'[rebase these revisions]:revision:_hg_revrange' \
   '(--source -s)'{-s,--source}'[rebase from the specified changeset]:revision:_hg_labels' \
   '(--base -b)'{-b,--base}'[rebase from the base of the specified changeset]:revision:_hg_labels' \
   '(--dest -d)'{-d,--dest}'[rebase onto the specified changeset]' \
   '--collapse[collapse the rebased changeset]' \
-  '(--message -m)'{-m+,--message}'[use <text> as collapse commit message]:text:' \
-  '(--edit -e)'{-e,--edit}'[invoke editor on commit messages]' \
-  '(--logfile -l)'{-l+,--logfile}'[read collapse commit message from <file>]:log file:_files -g \*.txt' \
   '--keep[keep original changeset]' \
   '--keepbranches[keep original branch name]' \
-  '(--tool -t)'{-t,--tool}'[specify merge tool]' \
   '(--continue -c)'{-c,--continue}'[continue an interrupted rebase]' \
   '(--abort -a)'{-a,--abort}'[abort an interrupted rebase]' \
 }
