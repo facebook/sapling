@@ -689,7 +689,7 @@ _hg_cmd_incoming() {
   _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
                      $_hg_subrepos_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
-  '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:_hg_tags' \
+  '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:_hg_labels' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
   '--bundle[file to store the bundles into]:bundle file:_files' \
   ':source:_hg_remote'
@@ -743,7 +743,7 @@ _hg_cmd_outgoing() {
   _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
                      $_hg_subrepos_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
-  '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]' \
+  '*'{-r,--rev}'[a specific revision you would like to push]:revision:_hg_revrange' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
   ':destination:_hg_remote'
 }
@@ -1169,9 +1169,9 @@ _hg_cmd_email() {
 _hg_cmd_rebase() {
   _arguments -s -w : $_hg_global_opts $_hg_commit_opts $_hg_mergetool_opts \
   '*'{-r,--rev}'[rebase these revisions]:revision:_hg_revrange' \
-  '(--source -s)'{-s,--source}'[rebase from the specified changeset]:revision:_hg_labels' \
-  '(--base -b)'{-b,--base}'[rebase from the base of the specified changeset]:revision:_hg_labels' \
-  '(--dest -d)'{-d,--dest}'[rebase onto the specified changeset]' \
+  '(--source -s)'{-s+,--source}'[rebase from the specified changeset]:revision:_hg_labels' \
+  '(--base -b)'{-b+,--base}'[rebase from the base of the specified changeset]:revision:_hg_labels' \
+  '(--dest -d)'{-d+,--dest}'[rebase onto the specified changeset]:revision:_hg_labels' \
   '--collapse[collapse the rebased changeset]' \
   '--keep[keep original changeset]' \
   '--keepbranches[keep original branch name]' \
