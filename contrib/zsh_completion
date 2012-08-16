@@ -1119,4 +1119,49 @@ _hg_cmd_rebase() {
   '(--abort -a)'{-a,--abort}'[abort an interrupted rebase]' \
 }
 
+# Record
+_hg_cmd_record() {
+  _arguments -s -w : $_hg_global_opts $_hg_commit_opts $_hg_pat_opts \
+                     $_hg_ignore_space_opts $_hg_subrepos_opts \
+  '(--addremove -A)'{-A,--addremove}'[mark new/missing files as added/removed before committing]' \
+  '--close-branch[mark a branch as closed, hiding it from the branch list]' \
+  '--amend[amend the parent of the working dir]' \
+  '(--date -d)'{-d+,--date}'[record the specified date as commit date]:date:' \
+  '(--user -u)'{-u+,--user}'[record the specified user as committer]:user:'
+}
+
+_hg_cmd_qrecord() {
+  _arguments -s -w : $_hg_global_opts $_hg_commit_opts $_hg_date_user_opts $_hg_gitlike_opts \
+                     $_hg_pat_opts $_hg_ignore_space_opts $_hg_subrepos_opts
+}
+
+# Convert
+_hg_cmd_convert() {
+_arguments -s -w : $_hg_global_opts \
+  '(--source-type -s)'{-s,--source-type}'[source repository type]' \
+  '(--dest-type -d)'{-d,--dest-type}'[destination repository type]' \
+  '(--rev -r)'{-r+,--rev}'[import up to target revision]:revision:' \
+  '(--authormap -A)'{-A+,--authormap}'[remap usernames using this file]:file:_files' \
+  '--filemap[remap file names using contents of file]:file:_files' \
+  '--splicemap[splice synthesized history into place]:file:_files' \
+  '--branchmap[change branch names while converting]:file:_files' \
+  '--branchsort[try to sort changesets by branches]' \
+  '--datesort[try to sort changesets by date]' \
+  '--sourcesort[preserve source changesets order]'
+}
+
+# Graphlog
+_hg_cmd_glog() {
+  _hg_cmd_log $@
+}
+
+# Purge
+_hg_cmd_purge() {
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
+  '(--abort-on-err -a)'{-a,--abort-on-err}'[abort if an error occurs]' \
+  '--all[purge ignored files too]' \
+  '(--print -p)'{-p,--print}'[print filenames instead of deleting them]' \
+  '(--print0 -0)'{-0,--print0}'[end filenames with NUL, for use with xargs (implies -p/--print)]'
+}
+
 _hg "$@"
