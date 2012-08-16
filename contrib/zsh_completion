@@ -361,6 +361,19 @@ _hg_clone_dest() {
     'urls:URL:_hg_urls'
 }
 
+_hg_add_help_topics=(
+    config dates diffs environment extensions filesets glossary hgignore hgweb
+    merge-tools multirevs obsolescence patterns phases revisions revsets
+    subrepos templating urls
+)
+
+_hg_help_topics() {
+    local topics
+    (( $#_hg_cmd_list )) || _hg_get_commands
+    topics=($_hg_cmd_list $_hg_add_help_topics)
+    _describe -t help_topics 'help topics' topics
+}
+
 # Common options
 _hg_global_opts=(
     '(--repository -R)'{-R+,--repository}'[repository root directory]:repository:_files -/'
@@ -588,7 +601,7 @@ _hg_cmd_heads() {
 
 _hg_cmd_help() {
   _arguments -s -w : $_hg_global_opts \
-  '*:mercurial command:_hg_commands'
+  '*:mercurial help topic:_hg_help_topics'
 }
 
 _hg_cmd_identify() {
