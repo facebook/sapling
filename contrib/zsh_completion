@@ -455,12 +455,15 @@ _hg_branch_bmark_opts=(
   '(--branch -b)'{-b+,--branch}'[specify branch(es)]:branch:_hg_branches'
 )
 
+_hg_subrepos_opts=(
+  '(--subrepos -S)'{-S,--subrepos}'[recurse into subrepositories]')
+
 _hg_cmd() {
   _call_program hg HGPLAIN=1 hg "$_hg_cmd_globals[@]" "$@" 2> /dev/null
 }
 
 _hg_cmd_add() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_dryrun_opts $_hg_subrepos_opts \
   '*:unknown files:_hg_unknown'
 }
 
@@ -483,7 +486,7 @@ _hg_cmd_annotate() {
 }
 
 _hg_cmd_archive() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
   '--no-decode[do not pass files through decoders]' \
   '(--prefix -p)'{-p+,--prefix}'[directory prefix for files in archive]:' \
   '(--rev -r)'{-r+,--rev}'[revision to distribute]:revision:_hg_labels' \
@@ -557,7 +560,7 @@ _hg_cmd_clone() {
 }
 
 _hg_cmd_commit() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
   '(--addremove -A)'{-A,--addremove}'[mark new/missing files as added/removed before committing]' \
   '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
   '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt' \
@@ -576,8 +579,8 @@ _hg_cmd_copy() {
 
 _hg_cmd_diff() {
   typeset -A opt_args
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
-                     $_hg_diff_opts $_hg_ignore_space_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_diff_opts $_hg_ignore_space_opts \
+                     $_hg_pat_opts $_hg_subrepos_opts \
   '*'{-r,--rev}'+[revision]:revision:_hg_revrange' \
   '(--show-function -p)'{-p,--show-function}'[show which function each change is in]' \
   '*:file:->diff_files'
@@ -657,6 +660,7 @@ _hg_cmd_import() {
 
 _hg_cmd_incoming() {
   _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
+                     $_hg_subrepos_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision up to which you would like to pull]:revision:_hg_tags' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
@@ -706,6 +710,7 @@ _hg_cmd_merge() {
 
 _hg_cmd_outgoing() {
   _arguments -s -w : $_hg_log_opts $_hg_branch_bmark_opts $_hg_remote_opts \
+                     $_hg_subrepos_opts \
   '(--force -f)'{-f,--force}'[run even when the remote repository is unrelated]' \
   '(--rev -r)'{-r+,--rev}'[a specific revision you would like to push]' \
   '(--newest-first -n)'{-n,--newest-first}'[show newest record first]' \
@@ -828,7 +833,7 @@ _hg_cmd_showconfig() {
 }
 
 _hg_cmd_status() {
-  _arguments -s -w : $_hg_global_opts $_hg_pat_opts \
+  _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
   '(--all -A)'{-A,--all}'[show status of all files]' \
   '(--modified -m)'{-m,--modified}'[show only modified files]' \
   '(--added -a)'{-a,--added}'[show only added files]' \
