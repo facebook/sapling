@@ -566,6 +566,11 @@ _hg_cmd_export() {
   '*:revision:_hg_labels'
 }
 
+_hg_cmd_forget() {
+  _arguments -s -w : $_hg_global_opts \
+  '*:file:_hg_files'
+}
+
 _hg_cmd_graft() {
   _arguments -s -w : $_hg_global_opts \
   '(--continue -c)'{-c,--continue}'[resume interrupted graft]' \
@@ -775,6 +780,11 @@ _hg_cmd_revert() {
       _wanted files expl 'modified, added, removed or deleted file' _multi_parts / status_files
     fi
   fi
+}
+
+_hg_cmd_rollback() {
+  _arguments -s -w : $_hg_global_opts $_hg_dryrun_opts \
+  '(--force -f)'{-f,--force}'[ignore safety measures]' \
 }
 
 _hg_cmd_serve() {
