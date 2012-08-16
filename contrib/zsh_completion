@@ -987,7 +987,16 @@ _hg_qseries_opts=(
   '(--summary -s)'{-s,--summary}'[print first line of patch header]')
 
 _hg_cmd_qapplied() {
-  _arguments -s -w : $_hg_global_opts $_hg_qseries_opts
+  _arguments -s -w : $_hg_global_opts $_hg_qseries_opts \
+  '(--last -1)'{-1,--last}'[show only the preceding applied patch]' \
+  '*:patch:_hg_qapplied'
+}
+
+_hg_cmd_qclone() {
+  _arguments -s -w : $_hg_global_opts $_hg_remote_opts $_hg_clone_opts \
+  '(--patches -p)'{-p+,--patches}'[location of source patch repository]' \
+  ':source repository:_hg_remote' \
+  ':destination:_hg_clone_dest'
 }
 
 _hg_cmd_qdelete() {
@@ -1012,12 +1021,15 @@ _hg_cmd_qfinish() {
 _hg_cmd_qfold() {
   _arguments -s -w : $_hg_global_opts $_h_commit_opts \
   '(--keep,-k)'{-k,--keep}'[keep folded patch files]' \
+  '(--force -f)'{-f,--force}'[overwrite any local changes]' \
+  '--no-backup[do not save backup copies of files]' \
   '*:unapplied patch:_hg_qunapplied'
 }
 
 _hg_cmd_qgoto() {
   _arguments -s -w : $_hg_global_opts \
   '(--force -f)'{-f,--force}'[overwrite any local changes]' \
+  '--keep-changes[tolerate non-conflicting local changes]' \
   ':patch:_hg_qseries'
 }
 
@@ -1040,13 +1052,12 @@ _hg_cmd_qimport() {
   '(--name -n 2)'{-n+,--name}'[patch file name]:name:' \
   '(--force -f)'{-f,--force}'[overwrite existing files]' \
   '*'{-r+,--rev}'[place existing revisions under mq control]:revision:_hg_revrange' \
+  '(--push -P)'{-P,--push}'[qpush after importing]' \
   '*:patch:_files'
 }
 
 _hg_cmd_qnew() {
-  _arguments -s -w : $_hg_global_opts $_hg_commit_opts \
-                     $_hg_date_user_opts $_hg_gitlike_opts \
-  '(--force -f)'{-f,--force}'[import uncommitted changes into patch]' \
+  _arguments -s -w : $_hg_global_opts $_hg_commit_opts $_hg_date_user_opts $_hg_gitlike_opts \
   ':patch:'
 }
 
@@ -1057,8 +1068,9 @@ _hg_cmd_qnext() {
 _hg_cmd_qpop() {
   _arguments -s -w : $_hg_global_opts \
   '(--all -a :)'{-a,--all}'[pop all patches]' \
-  '(--name -n)'{-n+,--name}'[queue name to pop]:' \
   '(--force -f)'{-f,--force}'[forget any local changes]' \
+  '--keep-changes[tolerate non-conflicting local changes]' \
+  '--no-backup[do not save backup copies of files]' \
   ':patch:_hg_qapplied'
 }
 
@@ -1070,24 +1082,23 @@ _hg_cmd_qpush() {
   _arguments -s -w : $_hg_global_opts \
   '(--all -a :)'{-a,--all}'[apply all patches]' \
   '(--list -l)'{-l,--list}'[list patch name in commit text]' \
-  '(--merge -m)'{-m+,--merge}'[merge from another queue]:' \
-  '(--name -n)'{-n+,--name}'[merge queue name]:' \
   '(--force -f)'{-f,--force}'[apply if the patch has rejects]' \
   '(--exact -e)'{-e,--exact}'[apply the target patch to its recorded parent]' \
   '--move[reorder patch series and apply only the patch]' \
+  '--keep-changes[tolerate non-conflicting local changes]' \
+  '--no-backup[do not save backup copies of files]' \
   ':patch:_hg_qunapplied'
 }
 
 _hg_cmd_qrefresh() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_commit_opts $_hg_gitlike_opts \
-  '(--git -g)'{-g,--git}'[use git extended diff format]' \
   '(--short -s)'{-s,--short}'[short refresh]' \
   '*:files:_hg_files'
 }
 
 _hg_cmd_qrename() {
   _arguments -s -w : $_hg_global_opts \
-  ':patch:_hg_qseries' \
+  ':patch:_hg_qunapplied' \
   ':destination:'
 }
 
@@ -1106,7 +1117,8 @@ _hg_cmd_qseries() {
 }
 
 _hg_cmd_qunapplied() {
-  _arguments -s -w : $_hg_global_opts $_hg_qseries_opts
+  _arguments -s -w : $_hg_global_opts $_hg_qseries_opts \
+  '(--first -1)'{-1,--first}'[show only the first patch]'
 }
 
 _hg_cmd_qtop() {
@@ -1115,9 +1127,11 @@ _hg_cmd_qtop() {
 
 _hg_cmd_strip() {
   _arguments -s -w : $_hg_global_opts \
-  '(--force -f)'{-f,--force}'[force multi-head removal]' \
-  '(--backup -b)'{-b,--backup}'[bundle unrelated changesets]' \
-  '(--nobackup -n)'{-n,--nobackup}'[no backups]' \
+  '(--force -f)'{-f,--force}'[force removal, discard uncommitted changes, no backup]' \
+  '(--no-backup -n)'{-n,--no-backup}'[no backups]' \
+  '(--keep -k)'{-k,--keep}'[do not modify working copy during strip]' \
+  '(--bookmark -B)'{-B+,--bookmark}'[remove revs only reachable from given bookmark]:bookmark:_hg_bookmarks' \
+  '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_labels' \
   ':revision:_hg_labels'
 }
 
