@@ -69,7 +69,7 @@ class config(object):
     def backup(self, section, item):
         """return a tuple allowing restore to reinstall a previous value
 
-        The main reason we need it is because it handle the "no data" case.
+        The main reason we need it is because it handles the "no data" case.
         """
         try:
             value = self._data[section][item]
