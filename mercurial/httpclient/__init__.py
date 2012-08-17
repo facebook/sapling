@@ -414,7 +414,7 @@ class HTTPConnection(object):
         """Close the connection to the server.
 
         This is a no-op if the connection is already closed. The
-        connection may automatically close if requessted by the server
+        connection may automatically close if requested by the server
         or required by the nature of a response.
         """
         if self.sock is None:
