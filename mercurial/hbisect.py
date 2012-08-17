@@ -170,7 +170,7 @@ def get(repo, status):
     if status in ('good', 'bad', 'skip', 'current'):
         return map(repo.changelog.rev, state[status])
     else:
-        # In the floowing sets, we do *not* call 'bisect()' with more
+        # In the following sets, we do *not* call 'bisect()' with more
         # than one level of recusrsion, because that can be very, very
         # time consuming. Instead, we always develop the expression as
         # much as possible.
