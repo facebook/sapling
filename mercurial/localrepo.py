@@ -299,7 +299,7 @@ class localrepository(object):
     def hiddenrevs(self):
         """hiddenrevs: revs that should be hidden by command and tools
 
-        This set is carried on the repo to ease initialisation and lazy
+        This set is carried on the repo to ease initialization and lazy
         loading it'll probably move back to changelog for efficiently and
         consistency reason
 
