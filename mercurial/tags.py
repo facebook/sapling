@@ -124,8 +124,8 @@ def _updatetags(filetags, tagtype, alltags, tagtypes):
             continue
 
         # we prefer alltags[name] if:
-        #  it supercedes us OR
-        #  mutual supercedes and it has a higher rank
+        #  it supersedes us OR
+        #  mutual supersedes and it has a higher rank
         # otherwise we win because we're tip-most
         anode, ahist = nodehist
         bnode, bhist = alltags[name]

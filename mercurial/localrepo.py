@@ -732,7 +732,7 @@ class localrepository(object):
                 iterrevs = list(bheadrevs)
 
             # This loop prunes out two kinds of heads - heads that are
-            # superceded by a head in newheadrevs, and newheadrevs that are not
+            # superseded by a head in newheadrevs, and newheadrevs that are not
             # heads because an existing head is their descendant.
             while iterrevs:
                 latest = iterrevs.pop()
