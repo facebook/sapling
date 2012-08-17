@@ -171,7 +171,7 @@ def get(repo, status):
         return map(repo.changelog.rev, state[status])
     else:
         # In the following sets, we do *not* call 'bisect()' with more
-        # than one level of recusrsion, because that can be very, very
+        # than one level of recursion, because that can be very, very
         # time consuming. Instead, we always develop the expression as
         # much as possible.
 
