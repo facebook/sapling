@@ -318,7 +318,7 @@ def successormarkers(ctx):
 def anysuccessors(obsstore, node):
     """Yield every successor of <node>
 
-    This this a linear yield unsuitable to detect splitted changeset."""
+    This this a linear yield unsuitable to detect split changeset."""
     remaining = set([node])
     seen = set(remaining)
     while remaining:
