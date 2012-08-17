@@ -478,7 +478,7 @@ both into 'revision' and 'patch file under .hg/patches':
   adding .hgsub
   $ hg -R sub update -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg commit -Am '#2 in parent (but be rollbacked soon)'
+  $ hg commit -Am '#2 in parent (but will be rolled-back soon)'
   $ hg rollback
   repository tip rolled back to revision 1 (undo commit)
   working directory now based on revision 1
