@@ -499,5 +499,5 @@ else:
                 orig(m.group(2), **opts)
                 m = re.match(ansire, m.group(3))
         finally:
-            # Explicity reset original attributes
+            # Explicitly reset original attributes
             _kernel32.SetConsoleTextAttribute(stdout, origattr)

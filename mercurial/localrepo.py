@@ -2538,7 +2538,7 @@ class localrepository(object):
         # uncompressed only if compatible.
 
         if not stream:
-            # if the server explicitely prefer to stream (for fast LANs)
+            # if the server explicitly prefer to stream (for fast LANs)
             stream = remote.capable('stream-preferred')
 
         if stream and not heads:
