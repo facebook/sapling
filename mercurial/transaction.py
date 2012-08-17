@@ -1,4 +1,4 @@
-# transaction.py - simple journalling scheme for mercurial
+# transaction.py - simple journaling scheme for mercurial
 #
 # This transaction scheme is intended to gracefully handle program
 # errors and interruptions. More serious failures like system crashes
