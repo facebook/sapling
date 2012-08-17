@@ -34,7 +34,7 @@ set bookmark
 
   $ hg book test2
 
-update to -2 (inactives the active bookmark)
+update to -2 (deactivates the active bookmark)
 
   $ hg update -r -2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
