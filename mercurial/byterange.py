@@ -431,7 +431,7 @@ def range_tuple_normalize(range_tup):
     Return a tuple whose first element is guaranteed to be an int
     and whose second element will be '' (meaning: the last byte) or
     an int. Finally, return None if the normalized tuple == (0,'')
-    as that is equivelant to retrieving the entire file.
+    as that is equivalent to retrieving the entire file.
     """
     if range_tup is None:
         return None
