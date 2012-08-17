@@ -752,7 +752,7 @@ function! s:HGCommit(...)
     " Protect against case and backslash issues in Windows.
     let autoPattern = '\c' . messageFileName
 
-    " Ensure existance of group
+    " Ensure existence of group
     augroup HGCommit
     augroup END
 
