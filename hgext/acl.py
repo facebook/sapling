@@ -126,9 +126,9 @@ Example Configuration
   # Group "hg-denied" will not have write access to any file:
   ** = @hg-denied
 
-  # Nobody will be able to change "DONT-TOUCH-THIS.txt", despite
+  # Nobody will be able to change "DO-NOT-TOUCH-THIS.txt", despite
   # everyone being able to change all other files. See below.
-  src/main/resources/DONT-TOUCH-THIS.txt = *
+  src/main/resources/DO-NOT-TOUCH-THIS.txt = *
 
   [acl.allow]
   # if acl.allow is not present, all users are allowed by default
