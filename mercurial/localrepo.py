@@ -300,7 +300,7 @@ class localrepository(object):
         """hiddenrevs: revs that should be hidden by command and tools
 
         This set is carried on the repo to ease initialisation and lazy
-        loading it'll probably move back to changelog for efficienty and
+        loading it'll probably move back to changelog for efficiently and
         consistency reason
 
         Note that the hiddenrevs will needs invalidations when
