@@ -594,7 +594,7 @@ def destination(repo, subset, x):
 
             # The visited lineage is a match if the current source is in the arg
             # set.  Since every candidate dest is visited by way of iterating
-            # subset, any dests futher back in the lineage will be tested by a
+            # subset, any dests further back in the lineage will be tested by a
             # different iteration over subset.  Likewise, if the src was already
             # selected, the current lineage can be selected without going back
             # further.
