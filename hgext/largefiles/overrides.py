@@ -696,7 +696,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
         result = orig(ui, repo, source, **opts)
         # If we do not have the new largefiles for any new heads we pulled, we
         # will run into a problem later if we try to merge or rebase with one of
-        # these heads, so cache the largefiles now direclty into the system
+        # these heads, so cache the largefiles now directly into the system
         # cache.
         ui.status(_("caching new largefiles\n"))
         numcached = 0
