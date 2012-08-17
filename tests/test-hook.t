@@ -581,7 +581,7 @@ commit and update hooks should run after command completion
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-make sure --verbose (and --quiet/--debug etc.) are propogated to the local ui
+make sure --verbose (and --quiet/--debug etc.) are propagated to the local ui
 that is passed to pre/post hooks
 
   $ echo '[hooks]' > .hg/hgrc
