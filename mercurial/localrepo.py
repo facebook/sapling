@@ -1905,7 +1905,7 @@ class localrepository(object):
                         ret = remote.addchangegroup(cg, 'push', self.url())
 
                 if ret:
-                    # push succeed, synchonize target of the push
+                    # push succeed, synchronize target of the push
                     cheads = outgoing.missingheads
                 elif revs is None:
                     # All out push fails. synchronize all common
