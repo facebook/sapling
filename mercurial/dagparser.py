@@ -56,13 +56,13 @@ def parsedag(desc):
         ... :forkhere  # a label for the last of the 3 nodes from above
         ... +5         # 5 more nodes on one branch
         ... :mergethis # label again
-        ... <forkhere  # set default parent to labelled fork node
+        ... <forkhere  # set default parent to labeled fork node
         ... +10        # 10 more nodes on a parallel branch
         ... @stable    # following nodes will be annotated as "stable"
         ... +5         # 5 nodes in stable
         ... !addfile   # custom command; could trigger new file in next node
         ... +2         # two more nodes
-        ... /mergethis # merge last node with labelled node
+        ... /mergethis # merge last node with labeled node
         ... +4         # 4 more nodes descending from merge node
         ...
         ... """)))
