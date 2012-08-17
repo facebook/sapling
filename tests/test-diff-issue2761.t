@@ -15,9 +15,9 @@ Same issue, different code path
 
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ touch doesnt-exist-in-1
+  $ touch does-not-exist-in-1
   $ hg add
-  adding doesnt-exist-in-1
+  adding does-not-exist-in-1
   $ hg ci -m third
-  $ rm doesnt-exist-in-1
+  $ rm does-not-exist-in-1
   $ hg diff -r 1
