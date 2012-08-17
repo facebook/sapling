@@ -224,9 +224,9 @@ class obsstore(object):
             self._load(new)
         return len(new)
 
-    def mergemarkers(self, transation, data):
+    def mergemarkers(self, transaction, data):
         markers = _readmarkers(data)
-        self.add(transation, markers)
+        self.add(transaction, markers)
 
     def _load(self, markers):
         for mark in markers:
