@@ -27,7 +27,7 @@
 "
 " You still can read the documentation at the end of this file. Locate it by
 " searching the "hgcommand-contents" string (and set ft=help to have
-" appropriate syntaxic coloration).
+" appropriate syntactic coloration).
 
 " Section: Plugin header {{{1
 
