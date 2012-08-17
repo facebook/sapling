@@ -114,7 +114,7 @@ _FLAGS_QR_MASK = 0x8000 # query response mask
 _FLAGS_QR_QUERY = 0x0000 # query
 _FLAGS_QR_RESPONSE = 0x8000 # response
 
-_FLAGS_AA = 0x0400 # Authorative answer
+_FLAGS_AA = 0x0400 # Authoritative answer
 _FLAGS_TC = 0x0200 # Truncated
 _FLAGS_RD = 0x0100 # Recursion desired
 _FLAGS_RA = 0x8000 # Recursion available
@@ -650,7 +650,7 @@ class DNSOutgoing(object):
 			if now == 0 or not record.isExpired(now):
 				self.answers.append((record, now))
 
-	def addAuthorativeAnswer(self, record):
+	def addAuthoritativeAnswer(self, record):
 		"""Adds an authoritative answer"""
 		self.authorities.append(record)
 
@@ -1433,7 +1433,7 @@ class Zeroconf(object):
 			out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
 			self.debug = out
 			out.addQuestion(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
-			out.addAuthorativeAnswer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, _DNS_TTL, info.name))
+			out.addAuthoritativeAnswer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, _DNS_TTL, info.name))
 			self.send(out)
 			i += 1
 			nextTime += _CHECK_TIME
