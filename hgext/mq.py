@@ -3185,7 +3185,7 @@ def finish(ui, repo, *revrange, **opts):
     revs = scmutil.revrange(repo, revrange)
     if repo['.'].rev() in revs and repo[None].files():
         ui.warn(_('warning: uncommitted changes in the working directory\n'))
-    # queue.finish may changes phases but leave the responsability to lock the
+    # queue.finish may changes phases but leave the responsibility to lock the
     # repo to the caller to avoid deadlock with wlock. This command code is
     # responsability for this locking.
     lock = repo.lock()
