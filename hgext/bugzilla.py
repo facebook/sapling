@@ -45,7 +45,7 @@ Access via XMLRPC/email uses XMLRPC to query Bugzilla, but sends
 email to the Bugzilla email interface to submit comments to bugs.
 The From: address in the email is set to the email address of the Mercurial
 user, so the comment appears to come from the Mercurial user. In the event
-that the Mercurial user email is not recognised by Bugzilla as a Bugzilla
+that the Mercurial user email is not recognized by Bugzilla as a Bugzilla
 user, the email associated with the Bugzilla username used to log into
 Bugzilla is used instead as the source of the comment. Marking bugs fixed
 works on all supported Bugzilla versions.
@@ -53,7 +53,7 @@ works on all supported Bugzilla versions.
 Configuration items common to all access modes:
 
 bugzilla.version
-  This access type to use. Values recognised are:
+  This access type to use. Values recognized are:
 
   :``xmlrpc``:       Bugzilla XMLRPC interface.
   :``xmlrpc+email``: Bugzilla XMLRPC and email interfaces.
@@ -303,7 +303,7 @@ class bzaccess(object):
     # Methods to be implemented by access classes.
     #
     # 'bugs' is a dict keyed on bug id, where values are a dict holding
-    # updates to bug state. Recognised dict keys are:
+    # updates to bug state. Recognized dict keys are:
     #
     # 'hours': Value, float containing work hours to be updated.
     # 'fix':   If key present, bug is to be marked fixed. Value ignored.
