@@ -21,7 +21,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
       any longer.
     "heads" is either the supplied heads, or else the remote's heads.
 
-    If you pass heads and they are all known locally, the reponse lists justs
+    If you pass heads and they are all known locally, the reponse lists just
     these heads in "common" and in "heads".
 
     Please use findcommonoutgoing to compute the set of outgoing nodes to give
