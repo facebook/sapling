@@ -1255,6 +1255,30 @@ Error on syntax:
   abort: t:3: unmatched quotes
   [255]
 
+Behind the scenes, this will throw TypeError
+
+  $ hg log -l 3 --template '{date|obfuscate}\n'
+  abort: Template filter 'obfuscate' is not compatible with keyword 'date'
+  [255]
+
+Behind the scenes, this will throw a ValueError
+
+  $ hg log -l 3 --template 'line: {desc|shortdate}\n'
+  abort: Template filter 'shortdate' is not compatible with keyword 'desc'
+  [255]
+
+Behind the scenes, this will throw AttributeError
+
+  $ hg log -l 3 --template 'line: {date|escape}\n'
+  abort: Template filter 'escape' is not compatible with keyword 'date'
+  [255]
+
+Behind the scenes, this will throw ValueError
+
+  $ hg tip --template '{author|email|date}\n'
+  abort: Template filter 'datefilter' is not compatible with keyword 'author'
+  [255]
+
   $ cd ..
 
 
