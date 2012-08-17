@@ -1,4 +1,4 @@
-Environement setup for MQ
+Environment setup for MQ
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
