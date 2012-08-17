@@ -158,7 +158,7 @@ class Translator(nodes.NodeVisitor):
     """"""
 
     words_and_spaces = re.compile(r'\S+| +|\n')
-    document_start = """Man page generated from reStructeredText."""
+    document_start = """Man page generated from reStructuredText."""
 
     def __init__(self, document):
         nodes.NodeVisitor.__init__(self, document)
