@@ -17,7 +17,7 @@
 "
 "   0.2.1 - Minor temp directory autodetection logic and cleanup
 "
-"   0.2 - Removed the need for filterdiff by implemeting it in pure vim script
+"   0.2 - Removed the need for filterdiff by implementing it in pure vim script
 "       - Added DiffReview command for reverse (changed repository to
 "         pristine state) reviews.
 "         (PatchReview does pristine repository to patch review)
