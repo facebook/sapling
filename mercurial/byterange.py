@@ -64,7 +64,7 @@ class HTTPRangeHandler(urllib2.BaseHandler):
 
 class RangeableFileObject(object):
     """File object wrapper to enable raw range handling.
-    This was implemented primarilary for handling range
+    This was implemented primarily for handling range
     specifications for file:// urls. This object effectively makes
     a file object look like it consists only of a range of bytes in
     the stream.
