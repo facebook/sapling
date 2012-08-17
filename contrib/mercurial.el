@@ -461,7 +461,7 @@ Each key is of the form (section . name)."
 (defun hg-complete-repo (string predicate all)
   "Attempt to complete a repository name.
 We complete on either symbolic names from Mercurial's config or real
-directory names from the file system.  We do not penalise URLs."
+directory names from the file system.  We do not penalize URLs."
   (or (if all
 	  (all-completions string hg-repo-completion-table predicate)
 	(try-completion string hg-repo-completion-table predicate))
