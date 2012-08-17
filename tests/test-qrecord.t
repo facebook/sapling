@@ -108,9 +108,9 @@ qrecord patch (mq not present)
 
 help (bad mq)
 
-  $ echo "mq=nonexistant" >> $HGRCPATH
+  $ echo "mq=nonexistent" >> $HGRCPATH
   $ hg help qrecord
-  *** failed to import extension mq from nonexistant: [Errno 2] * (glob)
+  *** failed to import extension mq from nonexistent: [Errno 2] * (glob)
   hg qrecord [OPTION]... PATCH [FILE]...
   
   interactively record a new patch
@@ -121,7 +121,7 @@ help (bad mq)
 
 help (mq present)
 
-  $ sed 's/mq=nonexistant/mq=/' $HGRCPATH > hgrc.tmp
+  $ sed 's/mq=nonexistent/mq=/' $HGRCPATH > hgrc.tmp
   $ mv hgrc.tmp $HGRCPATH
 
   $ hg help qrecord
