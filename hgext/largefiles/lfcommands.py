@@ -389,7 +389,7 @@ def cachelfiles(ui, repo, node, filelist=None):
         # If we are mid-merge, then we have to trust the standin that is in the
         # working copy to have the correct hashvalue.  This is because the
         # original hg.merge() already updated the standin as part of the normal
-        # merge process -- we just have to udpate the largefile to match.
+        # merge process -- we just have to update the largefile to match.
         if (getattr(repo, "_ismerging", False) and
              os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
             expectedhash = lfutil.readstandin(repo, lfile)
