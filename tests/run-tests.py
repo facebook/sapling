@@ -54,6 +54,7 @@ import tempfile
 import time
 import re
 import threading
+import killdaemons as killmod
 
 processlock = threading.Lock()
 
@@ -348,29 +349,8 @@ def terminate(proc):
         pass
 
 def killdaemons():
-    # Kill off any leftover daemon processes
-    try:
-        fp = open(DAEMON_PIDS)
-        for line in fp:
-            try:
-                pid = int(line)
-            except ValueError:
-                continue
-            try:
-                os.kill(pid, 0)
-                vlog('# Killing daemon process %d' % pid)
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(0.1)
-                os.kill(pid, 0)
-                vlog('# Daemon process %d is stuck - really killing it' % pid)
-                os.kill(pid, signal.SIGKILL)
-            except OSError, err:
-                if err.errno != errno.ESRCH:
-                    raise
-        fp.close()
-        os.unlink(DAEMON_PIDS)
-    except IOError:
-        pass
+    return killmod.killdaemons(DAEMON_PIDS, tryhard=False, remove=True,
+                               logfn=vlog)
 
 def cleanup(options):
     if not options.keep_tmpdir:
