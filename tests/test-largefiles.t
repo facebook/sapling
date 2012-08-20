@@ -200,7 +200,7 @@ Test display of largefiles in hgweb
   -rw-r--r-- 9 normal4
   
   
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 #endif
 
 Test archiving the various revisions.  These hit corner cases known with
@@ -1166,7 +1166,7 @@ largefiles can be pushed locally (issue3583)
   [255]
 
 used all HGPORTs, kill all daemons
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 #endif
 
 vanilla clients locked out from largefiles ssh repos
@@ -1252,7 +1252,7 @@ Push a largefiles repository to a served empty repository
   $ rm -rf empty
 
 used all HGPORTs, kill all daemons
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 #endif
 

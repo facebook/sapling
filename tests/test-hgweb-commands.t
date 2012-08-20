@@ -1260,7 +1260,7 @@ Static files
 
 Stop and restart with HGENCODING=cp932 and preferuncompressed
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ HGENCODING=cp932 hg serve --config server.preferuncompressed=True -n test \
   >     -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
@@ -1288,7 +1288,7 @@ heads
 ERRORS ENCOUNTERED
 
   $ cat errors.log
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
   $ cd ..
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os, time, errno, signal
+import os, sys, time, errno, signal
 
 if os.name =='nt':
     import ctypes
@@ -49,5 +49,6 @@ def killdaemons(pidfile, tryhard=True, remove=False, logfn=None):
         pass
 
 if __name__ == '__main__':
-    killdaemons(os.environ['DAEMON_PIDS'])
+    path, = sys.argv[1:]
+    killdaemons(path)
 

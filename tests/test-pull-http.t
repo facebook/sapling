@@ -28,7 +28,7 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   $ cat test3/.hg/hgrc
   [paths]
   default = http://foo@localhost:$HGPORT/
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 expect error, cloning not allowed
 
@@ -40,7 +40,7 @@ expect error, cloning not allowed
   requesting all changes
   abort: authorization failed
   [255]
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 serve errors
 

@@ -299,7 +299,7 @@ try bad style
 
 stop and restart
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log
   $ cat hg.pid >> $DAEMON_PIDS
 

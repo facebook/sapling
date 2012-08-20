@@ -657,7 +657,7 @@ Test [paths] '**' extension
 
 Test collapse = True
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat >> paths.conf <<EOF
   > [web]
   > collapse=true
@@ -723,7 +723,7 @@ Test subrepositories inside intermediate directories
 
 Test descend = False
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
@@ -784,7 +784,7 @@ Test [paths] '*' in a repo root
   $ hg id http://localhost:$HGPORT1/astar
   8580ff50825a
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat > paths.conf <<EOF
   > [paths]
   > t/a = $root/a
@@ -812,7 +812,7 @@ Test [paths] '*' in a repo root
 
 Test collapse = True
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat >> paths.conf <<EOF
   > [web]
   > collapse=true
@@ -837,7 +837,7 @@ Test collapse = True
 
 test descend = False
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat >> paths.conf <<EOF
   > descend=false
   > EOF
@@ -857,7 +857,7 @@ test descend = False
   /t/a/
   /t/b/
   
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ cat > paths.conf <<EOF
   > [paths]
   > nostore = $root/nostore
@@ -956,7 +956,7 @@ rss-log with basedir /
 
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT2 'a/rss-log' | grep '<guid'
       <guid isPermaLink="true">http://hg.example.com:8080/a/rev/8580ff50825a</guid>
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   $ hg serve --config web.baseurl=http://hg.example.com:8080/foo/ -p $HGPORT2 -d \
   >     --pid-file=hg.pid --webdir-conf collections.conf \
   >     -A access-collections-2.log -E error-collections-2.log
