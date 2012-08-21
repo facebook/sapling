@@ -146,7 +146,15 @@ def buildfilter(exp, context):
 
 def runfilter(context, mapping, data):
     func, data, filt = data
-    return filt(func(context, mapping, data))
+    try:
+        return filt(func(context, mapping, data))
+    except (ValueError, AttributeError, TypeError):
+        if isinstance(data, tuple):
+            dt = data[1]
+        else:
+            dt = data
+        raise util.Abort(_("template filter '%s' is not compatible with "
+                           "keyword '%s'") % (filt.func_name, dt))
 
 def buildmap(exp, context):
     func, data = compileexp(exp[1], context)
