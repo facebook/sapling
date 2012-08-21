@@ -1312,6 +1312,7 @@ class localrepository(object):
                 matched = set(changes[0] + changes[1] + changes[2])
 
                 for f in match.files():
+                    f = self.dirstate.normalize(f)
                     if f == '.' or f in matched or f in wctx.substate:
                         continue
                     if f in changes[3]: # missing
