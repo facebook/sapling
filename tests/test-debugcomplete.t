@@ -229,7 +229,7 @@ Show all commands + options
   debugdata: changelog, manifest
   debugdate: extended
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
-  debugfileset: 
+  debugfileset: rev
   debugfsinfo: 
   debuggetbundle: head, common, type
   debugignore: 
