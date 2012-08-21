@@ -225,7 +225,6 @@ class monotone_source(converter_source, commandline):
             return [self.rev]
 
     def getchanges(self, rev):
-        #revision = self.mtncmd("get_revision %s" % rev).split("\n\n")
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
         ignoremove = {}

@@ -84,9 +84,6 @@ def findcommonheads(ui, local, remote,
                     abortwhenunrelated=True):
     '''Return a tuple (common, anyincoming, remoteheads) used to identify
     missing nodes from or in remote.
-
-    shortcutlocal determines whether we try use direct access to localrepo if
-    remote is actually local.
     '''
     roundtrips = 0
     cl = local.changelog

@@ -64,9 +64,7 @@ class manifest(revlog.revlog):
 
         If the string is found m[start:end] are the line containing
         that string.  If start == end the string was not found and
-        they indicate the proper sorted insertion point.  This was
-        taken from bisect_left, and modified to find line start/end as
-        it goes along.
+        they indicate the proper sorted insertion point.
 
         m should be a buffer or a string
         s is a string'''

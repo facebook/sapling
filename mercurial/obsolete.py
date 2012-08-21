@@ -55,10 +55,6 @@ import struct
 import util, base85
 from i18n import _
 
-# the obsolete feature is not mature enought to be enabled by default.
-# you have to rely on third party extension extension to enable this.
-_enabled = False
-
 _pack = struct.pack
 _unpack = struct.unpack
 
