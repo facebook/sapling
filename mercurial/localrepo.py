@@ -300,7 +300,7 @@ class localrepository(object):
         """hiddenrevs: revs that should be hidden by command and tools
 
         This set is carried on the repo to ease initialisation and lazy
-        loading it'll probably move back to changelog for efficiency and
+        loading; it'll probably move back to changelog for efficiency and
         consistency reason
 
         Note that the hiddenrevs will needs invalidations when
@@ -2539,7 +2539,7 @@ class localrepository(object):
         # uncompressed only if compatible.
 
         if not stream:
-            # if the server explicitly prefer to stream (for fast LANs)
+            # if the server explicitly prefers to stream (for fast LANs)
             stream = remote.capable('stream-preferred')
 
         if stream and not heads:

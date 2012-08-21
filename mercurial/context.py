@@ -237,8 +237,8 @@ class changectx(object):
 
     def extinct(self):
         """True if the changeset is extinct"""
-        # We should just compute a cache a check against it.
-        # see revset implementation for details
+        # We should just compute a cache and check against it.
+        # See revset implementation for details.
         #
         # But this naive implementation does not require cache
         if self.phase() <= phases.public:
