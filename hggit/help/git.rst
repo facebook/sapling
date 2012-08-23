@@ -45,6 +45,19 @@ Git branches are exposed in Hg as bookmarks, while Git remotes are exposed
 as Hg local tags.  See `hg help bookmarks` and `hg help tags` for further
 information.
 
+Finding and displaying Git revisions
+------------------------------------
+
+For displaying the Git revision ID, Hg-Git provides a template keyword:
+
+  :gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal
+    digit string.
+
+For example::
+
+  $ hg log --template='{rev}:{node|short}:{gitnode|short} {desc}\n'
+  $ hg log --template='hg: {node}\ngit: {gitnode}\n{date|isodate} {author}\n{desc}\n\n'
+
 Limitations
 -----------
 

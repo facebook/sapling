@@ -28,6 +28,7 @@ from mercurial import extensions
 from mercurial import help
 from mercurial import hg
 from mercurial import localrepo
+from mercurial import templatekw
 from mercurial import util as hgutil
 from mercurial import url
 from mercurial.i18n import _
@@ -92,6 +93,7 @@ if getattr(hg, 'addbranchrevs', False):
     extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
 
 def extsetup():
+    templatekw.keywords.update({'gitnode': gitnodekw})
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
     entry = (['git'], _("Working with Git Repositories"),
         lambda: open(os.path.join(helpdir, 'git.rst')).read())
@@ -174,6 +176,16 @@ try:
 except AttributeError:
     # 1.7+
     pass
+
+def gitnodekw(**args):
+    """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""
+    node = args['ctx']
+    repo = args['repo']
+    git = GitHandler(repo, repo.ui)
+    gitnode = git.map_git_get(node.hex())
+    if gitnode is None:
+        gitnode = ''
+    return gitnode
 
 cmdtable = {
   "gimport":
