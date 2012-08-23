@@ -13,8 +13,11 @@ This way you can use Git hosting for your project or collaborate with a
 project that is in Git.  A bridger of worlds, this plugin be.
 
 Try hg clone git:// or hg clone git+ssh://
+
+For more information and instructions, see :hg:`help git`
 '''
 
+from bisect import insort
 import inspect
 import os
 
@@ -22,6 +25,7 @@ from mercurial import bundlerepo
 from mercurial import commands
 from mercurial import demandimport
 from mercurial import extensions
+from mercurial import help
 from mercurial import hg
 from mercurial import localrepo
 from mercurial import util as hgutil
@@ -86,6 +90,16 @@ def safebranchrevs(orig, lrepo, repo, branches, revs):
     return revs, co
 if getattr(hg, 'addbranchrevs', False):
     extensions.wrapfunction(hg, 'addbranchrevs', safebranchrevs)
+
+def extsetup():
+    helpdir = os.path.join(os.path.dirname(__file__), 'help')
+    entry = (['git'], _("Working with Git Repositories"),
+        lambda: open(os.path.join(helpdir, 'git.rst')).read())
+    # in 1.6 and earler the help table is a tuple
+    if getattr(help.helptable, 'extend', None):
+        insort(help.helptable, entry)
+    else:
+        help.helptable = help.helptable + (entry,)
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
