@@ -141,7 +141,6 @@ That will enable the Hg-Git extension for you.  The bookmarks section
 is not compulsory, but it makes some things a bit nicer for you.
 
 This plugin is currently tested against the following Mercurial versions:
- * 1.5.4
  * 1.6.4
  * 1.7.5
  * 1.8.4

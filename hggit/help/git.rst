@@ -58,6 +58,21 @@ For example::
   $ hg log --template='{rev}:{node|short}:{gitnode|short} {desc}\n'
   $ hg log --template='hg: {node}\ngit: {gitnode}\n{date|isodate} {author}\n{desc}\n\n'
 
+For finding changesets from Git, Hg-Git extends revsets to provide two new
+selectors:
+
+  :fromgit: Select changesets that originate from Git. Takes no arguments.
+  :gitnode: Select changesets that originate in a specific Git revision. Takes
+    a revision argument.
+
+For example::
+
+  $ hg log -r 'fromgit()'
+  $ hg log -r 'gitnode(84f75b909fc3)'
+
+Revsets are accepted by several Mercurial commands for specifying revisions.
+See ``hg help revsets`` for details.
+
 Limitations
 -----------
 

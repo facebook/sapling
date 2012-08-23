@@ -28,6 +28,7 @@ from mercurial import extensions
 from mercurial import help
 from mercurial import hg
 from mercurial import localrepo
+from mercurial import revset
 from mercurial import templatekw
 from mercurial import util as hgutil
 from mercurial import url
@@ -94,6 +95,9 @@ if getattr(hg, 'addbranchrevs', False):
 
 def extsetup():
     templatekw.keywords.update({'gitnode': gitnodekw})
+    revset.symbols.update({
+        'fromgit': revset_fromgit, 'gitnode': revset_gitnode
+    })
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
     entry = (['git'], _("Working with Git Repositories"),
         lambda: open(os.path.join(helpdir, 'git.rst')).read())
@@ -176,6 +180,29 @@ try:
 except AttributeError:
     # 1.7+
     pass
+
+def revset_fromgit(repo, subset, x):
+    '''``fromgit()``
+    Select changesets that originate from Git.
+    '''
+    args = revset.getargs(x, 0, 0, "fromgit takes no arguments")
+    git = GitHandler(repo, repo.ui)
+    return [r for r in subset if git.map_git_get(repo[r].hex()) is not None]
+
+def revset_gitnode(repo, subset, x):
+    '''``gitnode(hash)``
+    Select changesets that originate in the given Git revision.
+    '''
+    args = revset.getargs(x, 1, 1, "gitnode takes one argument")
+    rev = revset.getstring(args[0],
+                           "the argument to gitnode() must be a hash")
+    git = GitHandler(repo, repo.ui)
+    def matches(r):
+        gitnode = git.map_git_get(repo[r].hex())
+        if gitnode is None:
+            return False
+        return rev in [gitnode, gitnode[:12]]
+    return [r for r in subset if matches(r)]
 
 def gitnodekw(**args):
     """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""

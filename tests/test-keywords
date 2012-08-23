@@ -48,3 +48,7 @@ hg add gamma
 hg commit -m 'add gamma'
 
 hg log --template "{rev} {node} {node|short} {gitnode} {gitnode|short}\n"
+hg log --template "fromgit {rev}\n" --rev "fromgit()"
+hg log --template "gitnode_existsA {rev}\n" --rev "gitnode(9497a4ee62e16ee641860d7677cdb2589ea15554)"
+hg log --template "gitnode_existsB {rev}\n" --rev "gitnode(7eeab2ea75ec)"
+hg log --template "gitnode_notexists {rev}\n" --rev "gitnode(1234567890ab)"
