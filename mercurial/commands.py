@@ -1998,6 +1998,10 @@ def debuginstall(ui):
         ui.write(_(" (check that your locale is properly set)\n"))
         problems += 1
 
+    # Python lib
+    ui.status(_("checking Python lib (%s)...\n")
+              % os.path.dirname(os.__file__))
+
     # compiled modules
     ui.status(_("checking installed modules (%s)...\n")
               % os.path.dirname(__file__))

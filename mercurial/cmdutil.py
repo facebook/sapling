@@ -515,7 +515,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         sys.stdout.flush()
         sys.stderr.flush()
 
-        nullfd = os.open(util.nulldev, os.O_RDWR)
+        nullfd = os.open(os.devnull, os.O_RDWR)
         logfilefd = nullfd
         if logfile:
             logfilefd = os.open(logfile, os.O_RDWR | os.O_CREAT | os.O_APPEND)

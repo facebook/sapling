@@ -10,7 +10,6 @@ import encoding
 import os, sys, errno, stat, getpass, pwd, grp, tempfile, unicodedata
 
 posixfile = open
-nulldev = '/dev/null'
 normpath = os.path.normpath
 samestat = os.path.samestat
 oslink = os.link

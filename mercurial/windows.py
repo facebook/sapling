@@ -24,7 +24,6 @@ termwidth = win32.termwidth
 testpid = win32.testpid
 unlink = win32.unlink
 
-nulldev = 'NUL:'
 umask = 0022
 
 # wrap osutil.posixfile to provide friendlier exceptions
@@ -174,7 +173,7 @@ def popen(command, mode='r'):
     # Work around "popen spawned process may not write to stdout
     # under windows"
     # http://bugs.python.org/issue1366
-    command += " 2> %s" % nulldev
+    command += " 2> %s" % os.devnull
     return os.popen(quotecommand(command), mode)
 
 def explainexit(code):
