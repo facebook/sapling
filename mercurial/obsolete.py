@@ -395,3 +395,39 @@ def _computesuspendedset(repo):
 def _computeextinctset(repo):
     """the set of obsolete parents without non obsolete descendants"""
     return set(repo.revs('obsolete() - obsolete()::unstable()'))
+
+def createmarkers(repo, relations, flag=0, metadata=None):
+    """Add obsolete markers between changesets in a repo
+
+    <relations> must be an iterable of (<old>, (<new>, ...)) tuple.
+    `old` and `news` are changectx.
+
+    Trying to obsolete a public changeset will raise an exception.
+
+    Current user and date are used except if specified otherwise in the
+    metadata attribute.
+
+    This function operates within a transaction of its own, but does
+    not take any lock on the repo.
+    """
+    # prepare metadata
+    if metadata is None:
+        metadata = {}
+    if 'date' not in metadata:
+        metadata['date'] = '%i %i' % util.makedate()
+    if 'user' not in metadata:
+        metadata['user'] = repo.ui.username()
+    tr = repo.transaction('add-obsolescence-marker')
+    try:
+        for prec, sucs in relations:
+            if not prec.mutable():
+                raise util.Abort("cannot obsolete immutable changeset: %s"
+                                 % prec)
+            nprec = prec.node()
+            nsucs = tuple(s.node() for s in sucs)
+            if nprec in nsucs:
+                raise util.Abort("changeset %s cannot obsolete itself" % prec)
+            repo.obsstore.create(tr, nprec, nsucs, flag, metadata)
+        tr.close()
+    finally:
+        tr.release()
