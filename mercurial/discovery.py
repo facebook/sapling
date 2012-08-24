@@ -293,11 +293,14 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             # more tricky for unsynced changes.
             newhs = set()
             for nh in candidate_newhs:
-                for suc in obsolete.anysuccessors(repo.obsstore, nh):
-                    if suc != nh and suc in allmissing:
-                        break
-                else:
+                if repo[nh].phase() <= phases.public:
                     newhs.add(nh)
+                else:
+                    for suc in obsolete.anysuccessors(repo.obsstore, nh):
+                        if suc != nh and suc in allmissing:
+                            break
+                    else:
+                        newhs.add(nh)
         else:
             newhs = candidate_newhs
         if len(newhs) > len(oldhs):

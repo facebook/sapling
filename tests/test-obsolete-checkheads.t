@@ -71,13 +71,72 @@ Push should not warn about creating new head
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
-old head is obsolete but replacement in not pushed
+old head is now public (public local version)
+=============================================
+
+setup
+
+  $ rm -fr ../remote
+  $ cp -r ../backup1 ../remote
+  $ hg -R ../remote phase --public c70b08862e08
+  $ hg pull -v
+  pulling from $TESTTMP/remote
+  searching for changes
+  no changes found
+  $ hg glog --hidden
+  @  71e3228bffe1 (draft) add new
+  |
+  | o  c70b08862e08 (public) add old
+  |/
+  o  b4952fcf48cf (public) add base
+  
+
+Abort: old will still be an head because it's public.
+
+  $ hg push
+  pushing to $TESTTMP/remote
+  searching for changes
+  abort: push creates new remote head 71e3228bffe1!
+  (did you forget to merge? use push -f to force)
+  [255]
+
+old head is now public (public remote version)
+==============================================
+
+TODO: Not implemented yet.
+
+# setup
+#
+#   $ rm -fr ../remote
+#   $ cp -r ../backup1 ../remote
+#   $ hg -R ../remote phase --public c70b08862e08
+#   $ hg phase --draft --force c70b08862e08
+#   $ hg glog --hidden
+#   @  71e3228bffe1 (draft) add new
+#   |
+#   | x  c70b08862e08 (draft) add old
+#   |/
+#   o  b4952fcf48cf (public) add base
+#
+#
+#
+# Abort: old will still be an head because it's public.
+#
+#   $ hg push
+#   pushing to $TESTTMP/remote
+#   searching for changes
+#   abort: push creates new remote head 71e3228bffe1!
+#   (did you forget to merge? use push -f to force)
+#   [255]
+
+old head is obsolete but replacement is not pushed
 ==================================================
 
 setup
 
   $ rm -fr ../remote
   $ cp -r ../backup1 ../remote
+  $ hg phase --draft --force '(0::) - 0'
   $ hg up -q '.^'
   $ mkcommit other
   created new head
