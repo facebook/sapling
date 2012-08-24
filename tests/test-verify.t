@@ -61,10 +61,22 @@ introduce some bugs in repo
   $ cd ../../..
   $ cd ..
 
-test revlog corruption
+test changelog without a manifest
 
   $ hg init b
   $ cd b
+  $ hg branch foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -m branchfoo
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  0 files, 1 changesets, 0 total revisions
+
+test revlog corruption
 
   $ touch a
   $ hg add a
@@ -79,12 +91,12 @@ test revlog corruption
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-   a@0: broken revlog! (index data/a.i is corrupted)
+   a@1: broken revlog! (index data/a.i is corrupted)
   warning: orphan revlog 'data/a.i'
-  1 files, 1 changesets, 0 total revisions
+  1 files, 2 changesets, 0 total revisions
   1 warnings encountered!
   1 integrity errors encountered!
-  (first damaged changeset appears to be 0)
+  (first damaged changeset appears to be 1)
   [1]
 
   $ cd ..

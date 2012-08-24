@@ -4269,7 +4269,7 @@ def merge(ui, repo, node=None, **opts):
                              hint=_("run 'hg heads .' to see heads"))
 
         parent = repo.dirstate.p1()
-        if len(nbhs) == 1:
+        if len(nbhs) <= 1:
             if len(bheads) > 1:
                 raise util.Abort(_("heads are bookmarked - "
                                    "please merge with an explicit rev"),
