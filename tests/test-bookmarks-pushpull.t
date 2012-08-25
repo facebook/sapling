@@ -1,5 +1,16 @@
   $ "$TESTDIR/hghave" serve || exit 80
 
+  $ cat << EOF >> $HGRCPATH
+  > [phases]
+  > publish=False
+  > [extensions]
+  > EOF
+  $ cat > obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
 initialize
 
   $ hg init a
@@ -40,6 +51,7 @@ import bookmark by name
   bookmarks	
   phases	
   namespaces	
+  obsolete	
   $ hg debugpushkey ../a bookmarks
   Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   X	4e3505fd95835d721066b76e75dbb8cc554d7f77
@@ -198,6 +210,41 @@ diverging a remote bookmark fails
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
 
+
+Unrelated marker does not alter the decision
+
+  $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  $ hg push http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  abort: push creates new remote head 4efff6d98829!
+  (did you forget to merge? use push -f to force)
+  [255]
+  $ hg -R ../a book
+   * X                         1:0d2164f0ce0d
+     Y                         3:f6fc62dde3c0
+     Z                         1:0d2164f0ce0d
+
+Update to a successor works
+
+  $ hg id --debug -r 3
+  f6fc62dde3c0771e29704af56ba4d8af77abcc2f
+  $ hg id --debug -r 4
+  4efff6d98829d9c824c621afd6e3f01865f5439f tip Y
+  $ hg debugobsolete f6fc62dde3c0771e29704af56ba4d8af77abcc2f 4efff6d98829d9c824c621afd6e3f01865f5439f
+  $ hg push http://localhost:$HGPORT2/
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+  updating bookmark Y
+  $ hg -R ../a book
+   * X                         1:0d2164f0ce0d
+     Y                         4:4efff6d98829
+     Z                         1:0d2164f0ce0d
+
 hgweb
 
   $ cat <<EOF > .hg/hgrc
@@ -214,6 +261,7 @@ hgweb
   bookmarks	
   phases	
   namespaces	
+  obsolete	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
   Y	4efff6d98829d9c824c621afd6e3f01865f5439f
   foobar	9b140be1080824d768c5a4691a564088eede71f9
@@ -251,12 +299,12 @@ hgweb
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 3 files (+3 heads)
+  added 4 changesets with 4 changes to 3 files (+2 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
      X                         1:9b140be10808
-     Y                         4:4efff6d98829
+     Y                         3:4efff6d98829
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
      foobar                    1:9b140be10808
@@ -270,7 +318,7 @@ bookmark, not all outgoing changes:
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 5 changes to 3 files (+3 heads)
+  added 4 changesets with 4 changes to 3 files (+2 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd addmarks
