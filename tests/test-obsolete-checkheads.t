@@ -266,7 +266,6 @@ handled yet.
   $ hg push --traceback
   pushing to $TESTTMP/remote
   searching for changes
-  note: unsynced remote changes!
   adding changesets
   adding manifests
   adding file changes
