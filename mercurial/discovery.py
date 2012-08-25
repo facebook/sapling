@@ -264,6 +264,8 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     error = None
     unsynced = False
     allmissing = set(outgoing.missing)
+    allfuturecommon = set(c.node() for c in repo.set('%ld', outgoing.common))
+    allfuturecommon.update(allmissing)
     for branch, heads in headssum.iteritems():
         if heads[0] is None:
             # Maybe we should abort if we push more that one head
@@ -293,11 +295,11 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             # more tricky for unsynced changes.
             newhs = set()
             for nh in candidate_newhs:
-                if repo[nh].phase() <= phases.public:
+                if nh in repo and repo[nh].phase() <= phases.public:
                     newhs.add(nh)
                 else:
                     for suc in obsolete.anysuccessors(repo.obsstore, nh):
-                        if suc != nh and suc in allmissing:
+                        if suc != nh and suc in allfuturecommon:
                             break
                     else:
                         newhs.add(nh)

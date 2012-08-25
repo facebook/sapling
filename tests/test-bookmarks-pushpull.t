@@ -286,7 +286,7 @@ bookmark, not all outgoing changes:
   $ hg book -r tip add-bar
 Note: this push *must* push only a single changeset, as that's the point
 of this test.
-  $ hg push -B add-foo
+  $ hg push -B add-foo --traceback
   pushing to http://localhost:$HGPORT/
   searching for changes
   remote: adding changesets
