@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import util, setdiscovery, treediscovery, phases, obsolete
+import util, setdiscovery, treediscovery, phases, obsolete, bookmarks
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
@@ -255,7 +255,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
         rnode = remotebookmarks.get(bm)
         if rnode and rnode in repo:
             lctx, rctx = repo[bm], repo[rnode]
-            if rctx == lctx.ancestor(rctx):
+            if bookmarks.validdest(repo, rctx, lctx):
                 bookmarkedheads.add(lctx.node())
 
     # 3. Check for new heads.

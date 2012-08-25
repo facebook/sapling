@@ -209,7 +209,7 @@ def updatefromremote(ui, repo, remote, path):
                 cl = repo[nl]
                 if cl.rev() >= cr.rev():
                     continue
-                if cr in cl.descendants():
+                if validdest(repo, cl, cr):
                     repo._bookmarks[k] = cr.node()
                     changed = True
                     ui.status(_("updating bookmark %s\n") % k)
@@ -252,3 +252,7 @@ def diff(ui, repo, remote):
         ui.status(_("no changed bookmarks found\n"))
         return 1
     return 0
+
+def validdest(repo, old, new):
+    """Is the new bookmark destination a valid update from the old one"""
+    return new in old.descendants()

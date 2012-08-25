@@ -1992,7 +1992,7 @@ class localrepository(object):
                 if nr in self:
                     cr = self[nr]
                     cl = self[nl]
-                    if cl in cr.descendants():
+                    if bookmarks.validdest(self, cr, cl):
                         r = remote.pushkey('bookmarks', k, nr, nl)
                         if r:
                             self.ui.status(_("updating bookmark %s\n") % k)
