@@ -167,6 +167,8 @@ Same, but with changes in working dir (different code path):
   $ echo a >> a
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -v
   amending changeset ffb49186f961
+  a
+  copying changeset a4f8a65b7c6a to ad120869acf0
   another precious commit message
   
   
@@ -177,9 +179,7 @@ Same, but with changes in working dir (different code path):
   HG: branch 'default'
   HG: changed a
   a
-  copying changeset 27f3aacd3011 to ad120869acf0
-  a
-  stripping intermediate changeset 27f3aacd3011
+  stripping intermediate changeset a4f8a65b7c6a
   stripping amended changeset ffb49186f961
   2 changesets found
   saved backup bundle to $TESTTMP/.hg/strip-backup/ffb49186f961-amend-backup.hg (glob)

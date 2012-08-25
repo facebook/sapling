@@ -1582,10 +1582,14 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
         lock = repo.lock()
         tr = repo.transaction('amend')
         try:
+            # See if we got a message from -m or -l, if not, open the editor
+            # with the message of the changeset to amend
+            message = logmessage(ui, opts)
             # First, do a regular commit to record all changes in the working
             # directory (if there are any)
             ui.callhooks = False
             try:
+                opts['message'] = 'temporary amend commit for %s' % old
                 node = commit(ui, repo, commitfunc, pats, opts)
             finally:
                 ui.callhooks = True
@@ -1618,7 +1622,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = ctx.user()
                 date = ctx.date()
-                message = ctx.description()
                 # Recompute copies (avoid recording a -> b -> a)
                 copied = copies.pathcopies(base, ctx)
 
@@ -1663,17 +1666,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     except KeyError:
                         raise IOError
 
-                # See if we got a message from -m or -l, if not, open the editor
-                # with the message of the changeset to amend
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
-                message = logmessage(ui, opts)
-                if not message:
-                    cctx = context.workingctx(repo, old.description(),
-                                              user, date, extra,
-                                              repo.status(base.node(),
-                                              old.node()))
-                    message = commitforceeditor(repo, cctx, [])
+            if not message:
+                message = old.description()
 
             new = context.memctx(repo,
                                  parents=[base.node(), nullid],
@@ -1683,6 +1679,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  user=user,
                                  date=date,
                                  extra=extra)
+            new._text = commitforceeditor(repo, new, [])
             ph = repo.ui.config('phases', 'new-commit', phases.draft)
             try:
                 repo.ui.setconfig('phases', 'new-commit', old.phase())
