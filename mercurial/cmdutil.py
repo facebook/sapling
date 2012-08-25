@@ -11,6 +11,7 @@ import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import subrepo, context, repair, bookmarks, graphmod, revset, phases
+import lock as lockmod
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -1575,8 +1576,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
-    wlock = repo.wlock()
+    wlock = lock = None
     try:
+        wlock = repo.wlock()
+        lock = repo.lock()
         # First, do a regular commit to record all changes in the working
         # directory (if there are any)
         ui.callhooks = False
@@ -1694,16 +1697,12 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
             # Strip the intermediate commit (if there was one) and the amended
             # commit
-            lock = repo.lock()
-            try:
-                if node:
-                    ui.note(_('stripping intermediate changeset %s\n') % ctx)
-                ui.note(_('stripping amended changeset %s\n') % old)
-                repair.strip(ui, repo, old.node(), topic='amend-backup')
-            finally:
-                lock.release()
+            if node:
+                ui.note(_('stripping intermediate changeset %s\n') % ctx)
+            ui.note(_('stripping amended changeset %s\n') % old)
+            repair.strip(ui, repo, old.node(), topic='amend-backup')
     finally:
-        wlock.release()
+        lockmod.release(wlock, lock)
     return newid
 
 def commiteditor(repo, ctx, subs):
