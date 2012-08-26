@@ -146,7 +146,10 @@ def fileurl(path):
     path = os.path.abspath(path).replace(os.sep, '/')
     drive, path = os.path.splitdrive(path)
     if drive:
-        drive = '/' + drive
+        # In svn 1.7, the swig svn wrapper returns local svn URLs
+        # with an uppercase drive letter, try to match that to
+        # simplify svn info tests.
+        drive = '/' + drive.upper()
     url = 'file://%s%s' % (drive, path)
     return url
 
