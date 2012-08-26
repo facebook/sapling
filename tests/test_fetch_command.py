@@ -8,6 +8,7 @@ from mercurial import commands
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
+from mercurial import encoding
 
 class TestBasicRepoLayout(test_util.TestBase):
 
@@ -189,7 +190,9 @@ class TestBasicRepoLayout(test_util.TestBase):
 
     def test_invalid_message(self):
         repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz')
-        self.assertEqual(repo[0].description().decode('utf8'),
+        # changelog returns descriptions in local encoding
+        desc = encoding.fromlocal(repo[0].description())
+        self.assertEqual(desc.decode('utf8'),
                          u'bl\xe5b\xe6rgr\xf8d')
 
 
