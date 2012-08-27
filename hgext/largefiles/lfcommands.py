@@ -444,11 +444,13 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
             cachelfiles(ui, repo, '.', lfiles)
 
         updated, removed = 0, 0
-        for i in map(lambda f: _updatelfile(repo, lfdirstate, f), lfiles):
-            # increment the appropriate counter according to _updatelfile's
-            # return value
-            updated += i > 0 and i or 0
-            removed -= i < 0 and i or 0
+        for f in lfiles:
+            i = _updatelfile(repo, lfdirstate, f)
+            if i:
+                if i > 0:
+                    updated += i
+                else:
+                    removed -= i
             if printmessage and (removed or updated) and not printed:
                 ui.status(_('getting changed largefiles\n'))
                 printed = True
