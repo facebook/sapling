@@ -547,30 +547,37 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         prev = (parents and parents[0]) or nullid
 
         shouldclose = False
-        if not fp:
+        if not fp and len(template) > 0:
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
             fp = makefileobj(repo, template, node, desc=desc, total=total,
                              seqno=seqno, revwidth=revwidth, mode='ab')
             if fp != template:
                 shouldclose = True
-        if fp != sys.stdout and util.safehasattr(fp, 'name'):
+        if fp and fp != sys.stdout and util.safehasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 
-        fp.write("# HG changeset patch\n")
-        fp.write("# User %s\n" % ctx.user())
-        fp.write("# Date %d %d\n" % ctx.date())
-        if branch and branch != 'default':
-            fp.write("# Branch %s\n" % branch)
-        fp.write("# Node ID %s\n" % hex(node))
-        fp.write("# Parent  %s\n" % hex(prev))
-        if len(parents) > 1:
-            fp.write("# Parent  %s\n" % hex(parents[1]))
-        fp.write(ctx.description().rstrip())
-        fp.write("\n\n")
+        if not fp:
+            write = repo.ui.write
+        else:
+            def write(s, **kw):
+                fp.write(s)
 
-        for chunk in patch.diff(repo, prev, node, opts=opts):
-            fp.write(chunk)
+
+        write("# HG changeset patch\n")
+        write("# User %s\n" % ctx.user())
+        write("# Date %d %d\n" % ctx.date())
+        if branch and branch != 'default':
+            write("# Branch %s\n" % branch)
+        write("# Node ID %s\n" % hex(node))
+        write("# Parent  %s\n" % hex(prev))
+        if len(parents) > 1:
+            write("# Parent  %s\n" % hex(parents[1]))
+        write(ctx.description().rstrip())
+        write("\n\n")
+
+        for chunk, label in patch.diffui(repo, prev, node, opts=opts):
+            write(chunk, label=label)
 
         if shouldclose:
             fp.close()

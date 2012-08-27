@@ -144,4 +144,28 @@ Catch exporting unknown revisions (especially empty revsets, see issue3353)
   abort: export requires at least one changeset
   [255]
 
+Check for color output
+  $ echo "[color]" >> $HGRCPATH
+  $ echo "mode = ansi" >> $HGRCPATH
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "color=" >> $HGRCPATH
+
+  $ hg export --color always --nodates tip
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID * (glob)
+  # Parent * (glob)
+   !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+  
+  \x1b[0;1mdiff -r f3acbafac161 -r 197ecd81a57f foo\x1b[0m (esc)
+  \x1b[0;31;1m--- a/foo\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/foo\x1b[0m (esc)
+  \x1b[0;35m@@ -10,3 +10,4 @@\x1b[0m (esc)
+   foo-9
+   foo-10
+   foo-11
+  \x1b[0;32m+line\x1b[0m (esc)
+
+
   $ cd ..
