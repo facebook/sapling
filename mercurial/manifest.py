@@ -154,7 +154,7 @@ class manifest(revlog.revlog):
             # combine the changed lists into one list for sorting
             work = [(x, False) for x in added]
             work.extend((x, True) for x in removed)
-            # this could use heapq.merge() (from python2.6+) or equivalent
+            # this could use heapq.merge() (from Python 2.6+) or equivalent
             # since the lists are already sorted
             work.sort()
 

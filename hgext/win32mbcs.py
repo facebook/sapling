@@ -119,7 +119,7 @@ def wrapname(name, wrapper):
     def f(*args, **kwds):
         return wrapper(func, args, kwds)
     try:
-        f.__name__ = func.__name__                # fail with python23
+        f.__name__ = func.__name__ # fails with Python 2.3
     except Exception:
         pass
     setattr(module, name, f)

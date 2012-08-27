@@ -170,7 +170,7 @@ class HTTPResponse(object):
         except socket.sslerror, e:
             if e.args[0] != socket.SSL_ERROR_WANT_READ:
                 raise
-            logger.debug('SSL_WANT_READ in _select, should retry later')
+            logger.debug('SSL_ERROR_WANT_READ in _select, should retry later')
             return True
         logger.debug('response read %d data during _select', len(data))
         # If the socket was readable and no data was read, that means
@@ -532,7 +532,7 @@ class HTTPConnection(object):
                         if e.args[0] != socket.SSL_ERROR_WANT_READ:
                             raise
                         logger.debug(
-                            'SSL_WANT_READ while sending data, retrying...')
+                            'SSL_ERROR_WANT_READ while sending data, retrying...')
                         continue
                     if not data:
                         logger.info('socket appears closed in read')

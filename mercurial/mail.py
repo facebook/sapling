@@ -13,7 +13,7 @@ import email.Header, email.MIMEText, email.Utils
 _oldheaderinit = email.Header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
     """
-    Python2.7 introduces a backwards incompatible change
+    Python 2.7 introduces a backwards incompatible change
     (Python issue1974, r70772) in email.Generator.Generator code:
     pre-2.7 code passed "continuation_ws='\t'" to the Header
     constructor, and 2.7 removed this parameter.

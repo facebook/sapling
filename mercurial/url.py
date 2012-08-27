@@ -278,7 +278,8 @@ def _generic_proxytunnel(self):
     res.will_close = res._check_close()
 
     # do we have a Content-Length?
-    # NOTE: RFC 2616, S4.4, #3 says we ignore this if tr_enc is "chunked"
+    # NOTE: RFC 2616, section 4.4, #3 says we ignore this if
+    # transfer-encoding is "chunked"
     length = res.msg.getheader('content-length')
     if length and not res.chunked:
         try:

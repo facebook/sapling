@@ -83,7 +83,7 @@
    any/all/format not available in Python 2.4
   ./non-py24.py:11:
    >     try:
-   no try/except/finally in Py2.4
+   no try/except/finally in Python 2.4
   ./classstyle.py:4:
    > class oldstyle_class:
    old-style class, use class foo(object)

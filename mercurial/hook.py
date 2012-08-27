@@ -154,7 +154,7 @@ def hook(ui, repo, name, throw=False, **args):
                 oldstdout = os.dup(stdoutno)
                 os.dup2(stderrno, stdoutno)
         except AttributeError:
-            # __stdout/err__ doesn't have fileno(), it's not a real file
+            # __stdout__/__stderr__ doesn't have fileno(), it's not a real file
             pass
 
     try:
