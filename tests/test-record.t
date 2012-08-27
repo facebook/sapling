@@ -246,10 +246,19 @@ Add plain file
   +9
   +10
   
+Modify end of plain file with username unset
+
+  $ echo 11 >> plain
+  $ unset HGUSER
+  $ hg record --config ui.username= -d '8 0' -m end plain
+  abort: no username supplied (see "hg help config")
+  [255]
+
 
 Modify end of plain file
 
-  $ echo 11 >> plain
+  $ HGUSER="test"
+  $ export HGUSER
   $ hg record -d '8 0' -m end plain <<EOF
   > y
   > y

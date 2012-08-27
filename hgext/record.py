@@ -496,6 +496,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         raise util.Abort(_('running non-interactively, use %s instead') %
                          cmdsuggest)
 
+    # make sure username is set before going interactive
+    ui.username()
+
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
 
