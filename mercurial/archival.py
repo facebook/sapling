@@ -13,6 +13,10 @@ import scmutil, util, encoding
 import cStringIO, os, tarfile, time, zipfile
 import zlib, gzip
 
+# from unzip source code:
+_UNX_IFREG = 0x8000
+_UNX_IFLNK = 0xa000
+
 def tidyprefix(dest, kind, prefix):
     '''choose prefix to use for names in archive.  make sure prefix is
     safe for consumers.'''
@@ -173,10 +177,10 @@ class zipit(object):
         # unzip will not honor unix file modes unless file creator is
         # set to unix (id 3).
         i.create_system = 3
-        ftype = 0x8000 # UNX_IFREG in unzip source code
+        ftype = _UNX_IFREG
         if islink:
             mode = 0777
-            ftype = 0xa000 # UNX_IFLNK in unzip source code
+            ftype = _UNX_IFLNK
         i.external_attr = (mode | ftype) << 16L
         self.z.writestr(i, data)
 
