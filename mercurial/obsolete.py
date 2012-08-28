@@ -52,7 +52,7 @@ The header is followed by the markers. Each marker is made of:
   cannot contain '\0'.
 """
 import struct
-from mercurial import util, base85
+import util, base85
 from i18n import _
 
 # the obsolete feature is not mature enought to be enabled by default.
