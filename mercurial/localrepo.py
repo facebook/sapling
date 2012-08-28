@@ -1042,6 +1042,7 @@ class localrepository(object):
 
         self._branchcache = None # in UTF-8
         self._branchcachetip = None
+        obsolete.clearobscaches(self)
 
     def invalidatedirstate(self):
         '''Invalidates the dirstate, causing the next call to dirstate
@@ -2404,6 +2405,7 @@ class localrepository(object):
             self.ui.status(_("added %d changesets"
                              " with %d changes to %d files%s\n")
                              % (changesets, revisions, files, htext))
+            obsolete.clearobscaches(self)
 
             if changesets > 0:
                 p = lambda: cl.writepending() and self.root or ""

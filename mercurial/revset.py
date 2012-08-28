@@ -12,6 +12,7 @@ import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
 import encoding
+import obsolete as obsmod
 
 def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
@@ -621,8 +622,8 @@ def extinct(repo, subset, x):
     """
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
-    extinctset = set(repo.revs('(obsolete()::) - (::(not obsolete()))'))
-    return [r for r in subset if r in extinctset]
+    extincts = obsmod.getobscache(repo, 'extinct')
+    return [r for r in subset if r in extincts]
 
 def extra(repo, subset, x):
     """``extra(label, [value])``
@@ -959,7 +960,8 @@ def obsolete(repo, subset, x):
     Mutable changeset with a newer version."""
     # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
-    return [r for r in subset if repo[r].obsolete()]
+    obsoletes = obsmod.getobscache(repo, 'obsolete')
+    return [r for r in subset if r in obsoletes]
 
 def origin(repo, subset, x):
     """``origin([set])``
@@ -1437,8 +1439,8 @@ def unstable(repo, subset, x):
     """
     # i18n: "unstable" is a keyword
     getargs(x, 0, 0, _("unstable takes no arguments"))
-    unstableset = set(repo.revs('(obsolete()::) - obsolete()'))
-    return [r for r in subset if r in unstableset]
+    unstables = obsmod.getobscache(repo, 'unstable')
+    return [r for r in subset if r in unstables]
 
 
 def user(repo, subset, x):

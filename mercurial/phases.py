@@ -104,6 +104,7 @@ import errno
 from node import nullid, nullrev, bin, hex, short
 from i18n import _
 import util
+import obsolete
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
@@ -244,6 +245,7 @@ class phasecache(object):
             # declare deleted root in the target phase
             if targetphase != 0:
                 self.retractboundary(repo, targetphase, delroots)
+        obsolete.clearobscaches(repo)
 
     def retractboundary(self, repo, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
@@ -260,6 +262,7 @@ class phasecache(object):
             ctxs = repo.set('roots(%ln::)', currentroots)
             currentroots.intersection_update(ctx.node() for ctx in ctxs)
             self._updateroots(targetphase, currentroots)
+        obsolete.clearobscaches(repo)
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
