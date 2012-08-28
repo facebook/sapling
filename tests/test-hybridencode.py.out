@@ -19,3 +19,9 @@ B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilen
 A = 'data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i'
 B = 'data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i'
 
+A = 'data/com0/com1/com2/com3/com4/com5/com6/com7/com8/com9'
+B = 'data/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9'
+
+A = 'data/lpt0/lpt1/lpt2/lpt3/lpt4/lpt5/lpt6/lpt7/lpt8/lpt9'
+B = 'data/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749'
+
