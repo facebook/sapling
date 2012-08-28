@@ -657,7 +657,7 @@ class GitHandler(object):
         # Analyze .hgsub and merge with .gitmodules
         hgsub = None
         gitmodules = self.parse_gitmodules(git_commit_tree)
-	if gitmodules or gitlinks:
+        if gitmodules or gitlinks:
             hgsub = util.parse_hgsub(self.git_file_readlines(git_commit_tree, '.hgsub'))
             for (sm_path, sm_url, sm_name) in gitmodules:
                 hgsub[sm_path] = '[git]' + sm_url
