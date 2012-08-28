@@ -1,6 +1,5 @@
 import os, math, urllib, re
 import stat, posixpath, StringIO
-import ordereddict
 
 from dulwich.errors import HangupException, GitProtocolError
 from dulwich.index import commit_tree
@@ -503,7 +502,7 @@ class GitHandler(object):
 
     def iterblobs(self, ctx):
         if '.hgsubstate' in ctx:
-            hgsub = ordereddict.OrderedDict()
+            hgsub = util.OrderedDict()
             if '.hgsub' in ctx:
                 hgsub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
             hgsubstate = util.parse_hgsubstate(ctx['.hgsubstate'].data().splitlines())

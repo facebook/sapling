@@ -3,6 +3,12 @@ try:
 except:
     from distutils.core import setup
 
+try:
+    from collections import OrderedDict
+    extra_req = []
+except ImportError:
+    extra_req = 'ordereddict>=1.1'
+
 setup(
     name='hg-git',
     version='0.4.0',
@@ -19,5 +25,5 @@ project that is in Git.  A bridger of worlds, this plugin be.
     keywords='hg git mercurial',
     license='GPLv2',
     packages=['hggit'],
-    install_requires=['dulwich>=0.8.0', 'ordereddict>=1.1'],
+    install_requires=['dulwich>=0.8.0'] + extra_req,
 )

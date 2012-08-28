@@ -1,5 +1,8 @@
 """Compatability functions for old Mercurial versions."""
-import ordereddict
+try:
+    from collections import OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
 
 def progress(ui, *args, **kwargs):
     """Shim for progress on hg < 1.4. Remove when 1.3 is dropped."""
@@ -7,7 +10,7 @@ def progress(ui, *args, **kwargs):
 
 def parse_hgsub(lines):
     """Fills OrderedDict with hgsub file content passed as list of lines"""
-    rv = ordereddict.OrderedDict()
+    rv = OrderedDict()
     for l in lines:
         ls = l.strip();
         if not ls or ls[0] == '#': continue
@@ -21,7 +24,7 @@ def serialize_hgsub(data):
 
 def parse_hgsubstate(lines):
     """Fills OrderedDict with hgsubtate file content passed as list of lines"""
-    rv = ordereddict.OrderedDict()
+    rv = OrderedDict()
     for l in lines:
         ls = l.strip();
         if not ls or ls[0] == '#': continue
@@ -32,4 +35,3 @@ def parse_hgsubstate(lines):
 def serialize_hgsubstate(data):
     """Produces a string from OrderedDict hgsubstate content"""
     return ''.join(['%s %s\n' % (data[n], n) for n in sorted(data)])
-
