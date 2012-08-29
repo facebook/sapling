@@ -1,3 +1,48 @@
+A = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}'
+B = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}'
+
+uppercase char X is encoded as _x
+A = 'data/ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+B = 'data/_a_b_c_d_e_f_g_h_i_j_k_l_m_n_o_p_q_r_s_t_u_v_w_x_y_z'
+
+underbar is doubled
+A = 'data/_'
+B = 'data/__'
+
+tilde is character-encoded
+A = 'data/~'
+B = 'data/~7e'
+
+characters in ASCII code range 0..31
+A = 'data/\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f'
+B = 'data/~00~01~02~03~04~05~06~07~08~09~0a~0b~0c~0d~0e~0f~10~11~12~13~14~15~16~17~18~19~1a~1b~1c~1d~1e~1f'
+
+characters in ASCII code range 126..255 (only partially tested)
+A = 'data/~ \x7f \x80 \x81 \x82 \x83 .. \xfd \xfe \xff'
+B = 'data/~7e ~7f ~80 ~81 ~82 ~83 .. ~fd ~fe ~ff'
+
+Windows reserved characters
+A = 'data/less <, greater >, colon :, double-quote ", backslash \\, pipe |, question-mark ?, asterisk *'
+B = 'data/less ~3c, greater ~3e, colon ~3a, double-quote ~22, backslash ~5c, pipe ~7c, question-mark ~3f, asterisk ~2a'
+
+encoding directories ending in .hg, .i or .d with '.hg' suffix
+A = 'data/x.hg/x.i/x.d/foo'
+B = 'data/x.hg.hg/x.i.hg/x.d.hg/foo'
+
+but these are not encoded on *filenames*
+A = 'data/foo/x.hg'
+B = 'data/foo/x.hg'
+
+A = 'data/foo/x.i'
+B = 'data/foo/x.i'
+
+A = 'data/foo/x.d'
+B = 'data/foo/x.d'
+
+plain .hg, .i and .d directories have the leading dot encoded
+A = 'data/.hg/.i/.d/foo'
+B = 'data/~2ehg.hg/~2ei.hg/~2ed.hg/foo'
+
 A = 'data/aux.bla/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c.i'
 B = 'data/au~78.bla/bla.aux/pr~6e/_p_r_n/lpt/co~6d3/nu~6c/coma/foo._n_u_l/normal.c.i'
 
@@ -19,9 +64,69 @@ B = 'dh/project_/resource/anotherl/followed/andanoth/andthenanextremelylongfilen
 A = 'data/foo.../foo   / /a./_. /__/.x../    bla/.FOO/something.i'
 B = 'data/foo..~2e/foo  ~20/~20/a~2e/__.~20/____/~2ex.~2e/~20   bla/~2e_f_o_o/something.i'
 
-A = 'data/com0/com1/com2/com3/com4/com5/com6/com7/com8/com9'
-B = 'data/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9'
+A = 'data/c/co/com/com0/com1/com2/com3/com4/com5/com6/com7/com8/com9'
+B = 'data/c/co/com/com0/co~6d1/co~6d2/co~6d3/co~6d4/co~6d5/co~6d6/co~6d7/co~6d8/co~6d9'
 
-A = 'data/lpt0/lpt1/lpt2/lpt3/lpt4/lpt5/lpt6/lpt7/lpt8/lpt9'
-B = 'data/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749'
+A = 'data/C/CO/COM/COM0/COM1/COM2/COM3/COM4/COM5/COM6/COM7/COM8/COM9'
+B = 'data/_c/_c_o/_c_o_m/_c_o_m0/_c_o_m1/_c_o_m2/_c_o_m3/_c_o_m4/_c_o_m5/_c_o_m6/_c_o_m7/_c_o_m8/_c_o_m9'
+
+A = 'data/c.x/co.x/com.x/com0.x/com1.x/com2.x/com3.x/com4.x/com5.x/com6.x/com7.x/com8.x/com9.x'
+B = 'data/c.x/co.x/com.x/com0.x/co~6d1.x/co~6d2.x/co~6d3.x/co~6d4.x/co~6d5.x/co~6d6.x/co~6d7.x/co~6d8.x/co~6d9.x'
+
+A = 'data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9'
+B = 'data/x.c/x.co/x.com0/x.com1/x.com2/x.com3/x.com4/x.com5/x.com6/x.com7/x.com8/x.com9'
+
+A = 'data/cx/cox/comx/com0x/com1x/com2x/com3x/com4x/com5x/com6x/com7x/com8x/com9x'
+B = 'data/cx/cox/comx/com0x/com1x/com2x/com3x/com4x/com5x/com6x/com7x/com8x/com9x'
+
+A = 'data/xc/xco/xcom0/xcom1/xcom2/xcom3/xcom4/xcom5/xcom6/xcom7/xcom8/xcom9'
+B = 'data/xc/xco/xcom0/xcom1/xcom2/xcom3/xcom4/xcom5/xcom6/xcom7/xcom8/xcom9'
+
+A = 'data/l/lp/lpt/lpt0/lpt1/lpt2/lpt3/lpt4/lpt5/lpt6/lpt7/lpt8/lpt9'
+B = 'data/l/lp/lpt/lpt0/lp~741/lp~742/lp~743/lp~744/lp~745/lp~746/lp~747/lp~748/lp~749'
+
+A = 'data/L/LP/LPT/LPT0/LPT1/LPT2/LPT3/LPT4/LPT5/LPT6/LPT7/LPT8/LPT9'
+B = 'data/_l/_l_p/_l_p_t/_l_p_t0/_l_p_t1/_l_p_t2/_l_p_t3/_l_p_t4/_l_p_t5/_l_p_t6/_l_p_t7/_l_p_t8/_l_p_t9'
+
+A = 'data/l.x/lp.x/lpt.x/lpt0.x/lpt1.x/lpt2.x/lpt3.x/lpt4.x/lpt5.x/lpt6.x/lpt7.x/lpt8.x/lpt9.x'
+B = 'data/l.x/lp.x/lpt.x/lpt0.x/lp~741.x/lp~742.x/lp~743.x/lp~744.x/lp~745.x/lp~746.x/lp~747.x/lp~748.x/lp~749.x'
+
+A = 'data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9'
+B = 'data/x.l/x.lp/x.lpt/x.lpt0/x.lpt1/x.lpt2/x.lpt3/x.lpt4/x.lpt5/x.lpt6/x.lpt7/x.lpt8/x.lpt9'
+
+A = 'data/lx/lpx/lptx/lpt0x/lpt1x/lpt2x/lpt3x/lpt4x/lpt5x/lpt6x/lpt7x/lpt8x/lpt9x'
+B = 'data/lx/lpx/lptx/lpt0x/lpt1x/lpt2x/lpt3x/lpt4x/lpt5x/lpt6x/lpt7x/lpt8x/lpt9x'
+
+A = 'data/xl/xlp/xlpt/xlpt0/xlpt1/xlpt2/xlpt3/xlpt4/xlpt5/xlpt6/xlpt7/xlpt8/xlpt9'
+B = 'data/xl/xlp/xlpt/xlpt0/xlpt1/xlpt2/xlpt3/xlpt4/xlpt5/xlpt6/xlpt7/xlpt8/xlpt9'
+
+A = 'data/con/p/pr/prn/a/au/aux/n/nu/nul'
+B = 'data/co~6e/p/pr/pr~6e/a/au/au~78/n/nu/nu~6c'
+
+A = 'data/CON/P/PR/PRN/A/AU/AUX/N/NU/NUL'
+B = 'data/_c_o_n/_p/_p_r/_p_r_n/_a/_a_u/_a_u_x/_n/_n_u/_n_u_l'
+
+A = 'data/con.x/p.x/pr.x/prn.x/a.x/au.x/aux.x/n.x/nu.x/nul.x'
+B = 'data/co~6e.x/p.x/pr.x/pr~6e.x/a.x/au.x/au~78.x/n.x/nu.x/nu~6c.x'
+
+A = 'data/x.con/x.p/x.pr/x.prn/x.a/x.au/x.aux/x.n/x.nu/x.nul'
+B = 'data/x.con/x.p/x.pr/x.prn/x.a/x.au/x.aux/x.n/x.nu/x.nul'
+
+A = 'data/conx/px/prx/prnx/ax/aux/auxx/nx/nux/nulx'
+B = 'data/conx/px/prx/prnx/ax/au~78/auxx/nx/nux/nulx'
+
+A = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
+B = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
+
+largest unhashed path
+A = 'data/123456789-123456789-123456789-123456789-123456789-unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/123456789-123456789-123456789-123456789-123456789-unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+shortest hashed path
+A = 'data/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxe9c55002b50bf5181e7a6fc1f60b126e2a6fcf71'
+
+changing one char in part that's hashed away produces a different hash
+A = 'data/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxy-123456789-123456'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxd24fa4455faf8a94350c18e5eace7c2bb17af706'
 
