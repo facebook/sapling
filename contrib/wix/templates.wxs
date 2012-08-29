@@ -66,6 +66,7 @@
             <File Id="gitweb.changeset.tmpl"      Name="changeset.tmpl" />
             <File Id="gitweb.error.tmpl"          Name="error.tmpl" />
             <File Id="gitweb.fileannotate.tmpl"   Name="fileannotate.tmpl" />
+            <File Id="gitweb.filecomparison.tmpl" Name="filecomparison.tmpl" />
             <File Id="gitweb.filediff.tmpl"       Name="filediff.tmpl" />
             <File Id="gitweb.filelog.tmpl"        Name="filelog.tmpl" />
             <File Id="gitweb.filerevision.tmpl"   Name="filerevision.tmpl" />
@@ -94,6 +95,7 @@
             <File Id="monoblue.changeset.tmpl"      Name="changeset.tmpl" />
             <File Id="monoblue.error.tmpl"          Name="error.tmpl" />
             <File Id="monoblue.fileannotate.tmpl"   Name="fileannotate.tmpl" />
+            <File Id="monoblue.filecomparison.tmpl" Name="filecomparison.tmpl" />
             <File Id="monoblue.filediff.tmpl"       Name="filediff.tmpl" />
             <File Id="monoblue.filelog.tmpl"        Name="filelog.tmpl" />
             <File Id="monoblue.filerevision.tmpl"   Name="filerevision.tmpl" />
@@ -121,6 +123,7 @@
             <File Id="paper.diffstat.tmpl"      Name="diffstat.tmpl" />
             <File Id="paper.error.tmpl"         Name="error.tmpl" />
             <File Id="paper.fileannotate.tmpl"  Name="fileannotate.tmpl" />
+            <File Id="paper.filecomparison.tmpl" Name="filecomparison.tmpl" />
             <File Id="paper.filediff.tmpl"      Name="filediff.tmpl" />
             <File Id="paper.filelog.tmpl"       Name="filelog.tmpl" />
             <File Id="paper.filelogentry.tmpl"  Name="filelogentry.tmpl" />
@@ -147,6 +150,9 @@
             <File Id="raw.error.tmpl"        Name="error.tmpl" />
             <File Id="raw.fileannotate.tmpl" Name="fileannotate.tmpl" />
             <File Id="raw.filediff.tmpl"     Name="filediff.tmpl" />
+            <File Id="raw.graph.tmpl"        Name="graph.tmpl" />
+            <File Id="raw.graphedge.tmpl"    Name="graphedge.tmpl" />
+            <File Id="raw.graphnode.tmpl"    Name="graphnode.tmpl" />
             <File Id="raw.index.tmpl"        Name="index.tmpl" />
             <File Id="raw.manifest.tmpl"     Name="manifest.tmpl" />
             <File Id="raw.map"               Name="map" />
