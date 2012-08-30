@@ -306,6 +306,8 @@ class localrepository(object):
         Note that the hiddenrevs will needs invalidations when
         - a new changesets is added (possible unstable above extinct)
         - a new obsolete marker is added (possible new extinct changeset)
+
+        hidden changesets cannot have non-hidden descendants
         """
         hidden = set()
         if self.obsstore:
