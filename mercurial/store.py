@@ -418,7 +418,7 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
-class _fncacheopener(scmutil.abstractopener):
+class _fncachevfs(scmutil.abstractvfs):
     def __init__(self, op, fnc, encode):
         self.opener = op
         self.fncache = fnc
@@ -451,7 +451,7 @@ class fncachestore(basicstore):
         op.createmode = self.createmode
         fnc = fncache(op)
         self.fncache = fnc
-        self.opener = _fncacheopener(op, fnc, encode)
+        self.opener = _fncachevfs(op, fnc, encode)
 
     def join(self, f):
         return self.pathsep + self.encode(f)

@@ -167,7 +167,7 @@ class pathauditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
-class abstractopener(object):
+class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
     def __init__(self, *args, **kwargs):
@@ -219,8 +219,8 @@ class abstractopener(object):
     def makedirs(self, path=None, mode=None):
         return util.makedirs(self.join(path), mode)
 
-class opener(abstractopener):
-    '''Open files relative to a base directory
+class vfs(abstractvfs):
+    '''Operate files relative to a base directory
 
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
@@ -335,8 +335,10 @@ class opener(abstractopener):
             return path.startswith('/') and path or (self.basesep + path)
         return self.base
 
-class filteropener(abstractopener):
-    '''Wrapper opener for filtering filenames with a function.'''
+opener = vfs
+
+class filtervfs(abstractvfs):
+    '''Wrapper vfs for filtering filenames with a function.'''
 
     def __init__(self, opener, filter):
         self._filter = filter
@@ -344,6 +346,8 @@ class filteropener(abstractopener):
 
     def __call__(self, path, *args, **kwargs):
         return self._orig(self._filter(path), *args, **kwargs)
+
+filteropener = filtervfs
 
 def canonpath(root, cwd, myname, auditor=None):
     '''return the canonical path of myname, given cwd and root'''
