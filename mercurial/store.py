@@ -288,10 +288,10 @@ _data = ('data 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
 
 class basicstore(object):
     '''base class for local repository stores'''
-    def __init__(self, path, openertype):
+    def __init__(self, path, vfstype):
         self.path = path
         self.createmode = _calcmode(path)
-        op = openertype(self.path)
+        op = vfstype(self.path)
         op.createmode = self.createmode
         self.opener = scmutil.filteropener(op, encodedir)
 
@@ -338,10 +338,10 @@ class basicstore(object):
         pass
 
 class encodedstore(basicstore):
-    def __init__(self, path, openertype):
+    def __init__(self, path, vfstype):
         self.path = path + '/store'
         self.createmode = _calcmode(self.path)
-        op = openertype(self.path)
+        op = vfstype(self.path)
         op.createmode = self.createmode
         self.opener = scmutil.filteropener(op, encodefilename)
 
@@ -438,7 +438,7 @@ class _fncachevfs(scmutil.abstractvfs):
         return self.opener(self.encode(path), mode, *args, **kw)
 
 class fncachestore(basicstore):
-    def __init__(self, path, openertype, dotencode):
+    def __init__(self, path, vfstype, dotencode):
         if dotencode:
             encode = _dothybridencode
         else:
@@ -447,7 +447,7 @@ class fncachestore(basicstore):
         self.path = path + '/store'
         self.pathsep = self.path + '/'
         self.createmode = _calcmode(self.path)
-        op = openertype(self.path)
+        op = vfstype(self.path)
         op.createmode = self.createmode
         fnc = fncache(op)
         self.fncache = fnc
@@ -486,9 +486,9 @@ class fncachestore(basicstore):
     def write(self):
         self.fncache.write()
 
-def store(requirements, path, openertype):
+def store(requirements, path, vfstype):
     if 'store' in requirements:
         if 'fncache' in requirements:
-            return fncachestore(path, openertype, 'dotencode' in requirements)
-        return encodedstore(path, openertype)
-    return basicstore(path, openertype)
+            return fncachestore(path, vfstype, 'dotencode' in requirements)
+        return encodedstore(path, vfstype)
+    return basicstore(path, vfstype)
