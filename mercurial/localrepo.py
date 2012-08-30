@@ -117,14 +117,14 @@ class localrepository(object):
         return self.requirements[:]
 
     def __init__(self, baseui, path=None, create=False):
-        self.wopener = scmutil.opener(path, expand=True)
-        self.wvfs = self.wopener
+        self.wvfs = scmutil.vfs(path, expand=True)
+        self.wopener = self.wvfs
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
         self.auditor = scmutil.pathauditor(self.root, self._checknested)
-        self.opener = scmutil.opener(self.path)
-        self.vfs = self.opener
+        self.vfs = scmutil.vfs(self.path)
+        self.opener = self.vfs
         self.baseui = baseui
         self.ui = baseui.copy()
         # A list of callback to shape the phase if no data were found.
