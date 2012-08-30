@@ -182,12 +182,12 @@ class localrepository(object):
             if inst.errno != errno.ENOENT:
                 raise
 
-        self.store = store.store(requirements, self.sharedpath, scmutil.opener)
+        self.store = store.store(requirements, self.sharedpath, scmutil.vfs)
         self.spath = self.store.path
-        self.sopener = self.store.opener
-        self.svfs = self.sopener
+        self.svfs = self.store.vfs
+        self.sopener = self.svfs
         self.sjoin = self.store.join
-        self.opener.createmode = self.store.createmode
+        self.vfs.createmode = self.store.createmode
         self._applyrequirements(requirements)
         if create:
             self._writerequirements()
