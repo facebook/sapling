@@ -293,7 +293,8 @@ class basicstore(object):
         self.createmode = _calcmode(path)
         vfs = vfstype(self.path)
         vfs.createmode = self.createmode
-        self.opener = scmutil.filteropener(vfs, encodedir)
+        self.vfs = scmutil.filtervfs(vfs, encodedir)
+        self.opener = self.vfs
 
     def join(self, f):
         return self.path + '/' + encodedir(f)
@@ -343,7 +344,8 @@ class encodedstore(basicstore):
         self.createmode = _calcmode(self.path)
         vfs = vfstype(self.path)
         vfs.createmode = self.createmode
-        self.opener = scmutil.filteropener(vfs, encodefilename)
+        self.vfs = scmutil.filtervfs(vfs, encodefilename)
+        self.opener = self.vfs
 
     def datafiles(self):
         for a, b, size in self._walk('data', True):
@@ -451,7 +453,8 @@ class fncachestore(basicstore):
         vfs.createmode = self.createmode
         fnc = fncache(vfs)
         self.fncache = fnc
-        self.opener = _fncachevfs(vfs, fnc, encode)
+        self.vfs = _fncachevfs(vfs, fnc, encode)
+        self.opener = self.vfs
 
     def join(self, f):
         return self.pathsep + self.encode(f)
