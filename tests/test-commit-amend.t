@@ -355,3 +355,18 @@ first graft something so there's an additional entry:
   $ hg log -r . --debug | grep extra
   extra:       branch=a
   extra:       source=2647734878ef0236dda712fae9c1651cf694ea8a
+
+Preserve phase
+
+  $ hg phase '.^::.'
+  11: draft
+  13: draft
+  $ hg phase --secret --force .
+  $ hg phase '.^::.'
+  11: draft
+  13: secret
+  $ hg commit --amend -m 'amend for phase' -q
+  $ hg phase '.^::.'
+  11: draft
+  13: secret
+
