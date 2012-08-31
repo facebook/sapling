@@ -16,6 +16,7 @@ gvimdiff.regname=path
 gvimdiff.priority=-9
 
 vimdiff.args=$local $other $base
+vimdiff.check=changed
 vimdiff.priority=-10
 
 merge.checkconflicts=True
