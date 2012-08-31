@@ -111,9 +111,8 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
         saverevs.difference_update(descendants)
     savebases = [cl.node(r) for r in saverevs]
     stripbases = [cl.node(r) for r in tostrip]
-    rset = ' or '.join([str(r) for r in tostrip])
-    newbmtarget = repo.revs('sort(heads(ancestors(%r) - (%r)), -rev)',
-                            rset, rset)
+    newbmtarget = repo.revs('sort(heads((::%ld) - (%ld)), -rev)',
+                            tostrip, tostrip)
     if newbmtarget:
         newbmtarget = newbmtarget[0]
     else:
