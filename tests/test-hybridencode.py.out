@@ -130,3 +130,125 @@ changing one char in part that's hashed away produces a different hash
 A = 'data/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxy-123456789-123456'
 B = 'dh/123456789-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxd24fa4455faf8a94350c18e5eace7c2bb17af706'
 
+uppercase hitting length limit due to encoding
+A = 'data/A23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxcbbc657029b41b94ed510d05feb6716a5c03bc6b'
+
+A = 'data/Z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx938f32a725c89512833fb96b6602dd9ebff51ddd'
+
+compare with lowercase not hitting limit
+A = 'data/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+A = 'data/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/z23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+not hitting limit with any of these
+A = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&\'()+,-.;=[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+
+underbar hitting length limit due to encoding
+A = 'data/_23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/_23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx9921a01af50feeabc060ce00eee4cba6efc31d2b'
+
+tilde hitting length limit due to encoding
+A = 'data/~23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~7e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx9cec6f97d569c10995f785720044ea2e4227481b'
+
+Windows reserved characters hitting length limit
+A = 'data/<23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxee67d8f275876ca1ef2500fc542e63c885c4e62d'
+
+A = 'data/>23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx387a85a5b1547cc9136310c974df716818458ddb'
+
+A = 'data/:23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx2e4154fb571d13d22399c58cc4ef4858e4b75999'
+
+A = 'data/"23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2223456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxfc7e3ec7b0687ee06ed8c32fef0eb0c1980259f5'
+
+A = 'data/\\23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~5c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx944e1f2b7110687e116e0d151328ac648b06ab4a'
+
+A = 'data/|23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~7c23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx28b23dd3fd0242946334126ab62bcd772aac32f4'
+
+A = 'data/?23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~3f23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxa263022d3994d2143d98f94f431eef8b5e7e0f8a'
+
+A = 'data/*23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2a23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx0e7e6020e3c00ba7bb7893d84ca2966fbf53e140'
+
+initial space hitting length limit
+A = 'data/ 23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2023456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx92acbc78ef8c0b796111629a02601f07d8aec4ea'
+
+initial dot hitting length limit
+A = 'data/.23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2e23456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxdbe19cc6505b3515ab9228cebf877ad07075168f'
+
+trailing space in filename hitting length limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-1234 '
+B = 'dh/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx0025dc73e04f97426db4893e3bf67d581dc6d066'
+
+trailing dot in filename hitting length limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-1234.'
+B = 'dh/123456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxx85a16cf03ee7feba8a5abc626f1ba9886d01e89d'
+
+initial space in directory hitting length limit
+A = 'data/ x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~20x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx1b3a3b712b2ac00d6af14ae8b4c14fdbf904f516'
+
+initial dot in directory hitting length limit
+A = 'data/.x/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/~2ex/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx39dbc4c193a5643a8936fc69c3363cd7ac91ab14'
+
+trailing space in directory hitting length limit
+A = 'data/x /456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x~20/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx2253c341df0b5290790ad312cd8499850f2273e5'
+
+trailing dot in directory hitting length limit
+A = 'data/x./456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x~2e/456789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxcc0324d696d34562b44b5138db08ee1594ccc583'
+
+with directories that need direncoding, hitting length limit
+A = 'data/x.i/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.i.hg/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxa4c4399bdf81c67dbbbb7060aa0124d8dea94f74'
+
+A = 'data/x.d/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.d.hg/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxx1303fa90473b230615f5b3ea7b660e881ae5270a'
+
+A = 'data/x.hg/5789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/x.hg.hg/5789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxx26d724a8af68e7a4e4455e6602ea9adbd0eb801f'
+
+Windows reserved filenames, hitting length limit
+A = 'data/con/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6e/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxc0794d4f4c605a2617900eb2563d7113cf6ea7d3'
+
+A = 'data/prn/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/pr~6e/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx64db876e1a9730e27236cb9b167aff942240e932'
+
+A = 'data/aux/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/au~78/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx8a178558405ca6fb4bbd75446dfa186f06751a0d'
+
+A = 'data/nul/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/nu~6c/56789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxc5e51b6fec1bd07bd243b053a0c3f7209855b886'
+
+A = 'data/com1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6d1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx32f5f44ece3bb62b9327369ca84cc19c86259fcd'
+
+A = 'data/com9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/co~6d9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxx734360b28c66a3230f55849fe8926206d229f990'
+
+A = 'data/lpt1/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/lp~741/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxe6f16ab4b6b0637676b2842b3345c9836df46ef7'
+
+A = 'data/lpt9/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'dh/lp~749/6789-123456789-123456789-123456789-123456789-xxxxxxxxx-xxxxxxxxx-xxxxxa475814c51acead3e44f2ff801f0c4903f986157'
+
+non-reserved names, just not hitting limit
+A = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+B = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
+

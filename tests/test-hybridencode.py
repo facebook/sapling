@@ -101,3 +101,142 @@ print "changing one char in part that's hashed away produces a different hash"
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxy-'
           '123456789-123456')
+
+print "uppercase hitting length limit due to encoding"
+show('data/A23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/Z23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "compare with lowercase not hitting limit"
+show('data/a23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/z23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "not hitting limit with any of these"
+show("data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;="
+          "[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-"
+          "123456789-12345")
+
+print "underbar hitting length limit due to encoding"
+show('data/_23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "tilde hitting length limit due to encoding"
+show('data/~23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "Windows reserved characters hitting length limit"
+show('data/<23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/>23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/:23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/"23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/\\23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/|23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/?23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/*23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "initial space hitting length limit"
+show('data/ 23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "initial dot hitting length limit"
+show('data/.23456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "trailing space in filename hitting length limit"
+show('data/123456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-1234 ')
+
+print "trailing dot in filename hitting length limit"
+show('data/123456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-1234.')
+
+print "initial space in directory hitting length limit"
+show('data/ x/456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "initial dot in directory hitting length limit"
+show('data/.x/456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "trailing space in directory hitting length limit"
+show('data/x /456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "trailing dot in directory hitting length limit"
+show('data/x./456789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "with directories that need direncoding, hitting length limit"
+show('data/x.i/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/x.d/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/x.hg/5789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "Windows reserved filenames, hitting length limit"
+show('data/con/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/prn/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/aux/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/nul/56789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/com1/6789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/com9/6789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/lpt1/6789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+show('data/lpt9/6789-123456789-123456789-123456789-123456789-'
+          'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
+
+print "non-reserved names, just not hitting limit"
+show('data/123456789-123456789-123456789-123456789-123456789-'
+          '/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12345')
