@@ -1009,7 +1009,7 @@ class localrepository(object):
             util.rename(self.join('undo.dirstate'), self.join('dirstate'))
             try:
                 branch = self.opener.read('undo.branch')
-                self.dirstate.setbranch(branch)
+                self.dirstate.setbranch(encoding.tolocal(branch))
             except IOError:
                 ui.warn(_('named branch could not be reset: '
                           'current branch is still \'%s\'\n')
@@ -1312,6 +1312,7 @@ class localrepository(object):
                 matched = set(changes[0] + changes[1] + changes[2])
 
                 for f in match.files():
+                    f = self.dirstate.normalize(f)
                     if f == '.' or f in matched or f in wctx.substate:
                         continue
                     if f in changes[3]: # missing
