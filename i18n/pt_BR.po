@@ -11266,6 +11266,12 @@ msgstr "[-l REV] [-r REV] [-b RAMO]... [OUTRO]"
 msgid "runs the changeset discovery protocol in isolation"
 msgstr "executa o protocolo discovery isoladamente"
 
+msgid "apply the filespec on this revision"
+msgstr "aplica o filespec nesta revisão"
+
+msgid "[-r REV] FILESPEC"
+msgstr "[-r REV] FILESPEC"
+
 msgid "parse and apply a fileset specification"
 msgstr "interpreta e aplica uma especificação de fileset"
 
@@ -11327,6 +11333,10 @@ msgstr "verificando codificação (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
 msgstr " (verifique se seu locale está configurado propriamente)\n"
+
+#, python-format
+msgid "checking Python lib (%s)...\n"
+msgstr "verificando biblioteca Python (%s)...\n"
 
 #, python-format
 msgid "checking installed modules (%s)...\n"
@@ -14346,7 +14356,7 @@ msgstr ""
 "    (veja :hg:`help bookmarks`)."
 
 msgid ""
-"    Update sets the working directory's parent revison to the specified\n"
+"    Update sets the working directory's parent revision to the specified\n"
 "    changeset (see :hg:`help parents`)."
 msgstr ""
 "    Update muda o pai do diretório de trabalho para a revisão especificada\n"
@@ -15134,8 +15144,13 @@ msgstr ""
 "``grep(regex)``\n"
 "    O arquivo contém a expressão regular fornecida."
 
+#. i18n: "grep" is a keyword
 msgid "grep requires a pattern"
 msgstr "grep requer um padrão"
+
+#, python-format
+msgid "invalid match pattern: %s"
+msgstr "padrão de busca inválido: %s"
 
 #, python-format
 msgid "couldn't parse size: %s"
@@ -22988,10 +23003,6 @@ msgstr ""
 #. i18n: "grep" is a keyword
 msgid "grep requires a string"
 msgstr "grep requer uma string"
-
-#, python-format
-msgid "invalid match pattern: %s"
-msgstr "padrão de busca inválido: %s"
 
 #. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles requires at least one argument"
