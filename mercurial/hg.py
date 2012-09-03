@@ -10,7 +10,7 @@ from i18n import _
 from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, httppeer, sshpeer, statichttprepo, bookmarks
-import lock, util, extensions, error, node, scmutil
+import lock, util, extensions, error, node, scmutil, phases
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -303,7 +303,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
         copy = False
         if (srcrepo and srcrepo.cancopy() and islocal(dest)
-            and not srcrepo.revs("secret()")):
+            and not phases.hassecret(srcrepo)):
             copy = not pull and not rev
 
         if copy:

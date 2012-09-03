@@ -388,3 +388,6 @@ def newcommitphase(ui):
             msg = _("phases.new-commit: not a valid phase name ('%s')")
             raise error.ConfigError(msg % v)
 
+def hassecret(repo):
+    """utility function that check if a repo have any secret changeset."""
+    return bool(repo._phasecache.phaseroots[2])
