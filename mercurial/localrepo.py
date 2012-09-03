@@ -312,7 +312,7 @@ class localrepository(object):
         hidden = set()
         if self.obsstore:
             ### hide extinct changeset that are not accessible by any mean
-            hiddenquery = 'extinct() - ::(. + bookmark() + tagged())'
+            hiddenquery = 'extinct() - ::(. + bookmark())'
             hidden.update(self.revs(hiddenquery))
         return hidden
 
