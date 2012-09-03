@@ -25,7 +25,7 @@ Nothing to amend:
 
   $ cat >> $HGRCPATH <<EOF
   > [hooks]
-  > pretxncommit.foo = sh -c "echo \"pretxncommit \$HG_NODE\"; hg id -r \$HG_NODE"
+  > pretxncommit.foo = sh -c "echo \\"pretxncommit \$HG_NODE\\"; hg id -r \$HG_NODE"
   > EOF
 
 Amending changeset with changes in working dir:

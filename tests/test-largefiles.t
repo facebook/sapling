@@ -13,7 +13,7 @@
   > patterns=glob:**.dat
   > usercache=${USERCACHE}
   > [hooks]
-  > precommit=sh -c "echo \"Invoking status precommit hook\"; hg status"
+  > precommit=sh -c "echo \\"Invoking status precommit hook\\"; hg status"
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
@@ -434,7 +434,7 @@ Test 3364
   $ cd ../addrm
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
-  > post-commit.stat=sh -c "echo \"Invoking status postcommit hook\"; hg status -A"
+  > post-commit.stat=sh -c "echo \\"Invoking status postcommit hook\\"; hg status -A"
   > EOF
   $ touch foo
   $ hg add --large foo
