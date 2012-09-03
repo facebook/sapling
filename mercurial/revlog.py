@@ -611,12 +611,14 @@ class revlog(object):
         count = len(self)
         if not count:
             return [nullrev]
-        ishead = [1] * (count + 1)
+        # we won't iter over filtered rev so nobody is a head at start
+        ishead = [0] * (count + 1)
         index = self.index
         for r in self:
+            ishead[r] = 1  # I may be an head
             e = index[r]
-            ishead[e[5]] = ishead[e[6]] = 0
-        return [r for r in xrange(count) if ishead[r]]
+            ishead[e[5]] = ishead[e[6]] = 0  # my parent are not
+        return [r for r, val in enumerate(ishead) if val]
 
     def heads(self, start=None, stop=None):
         """return the list of all nodes that have no children
