@@ -627,8 +627,15 @@ class localrepository(object):
 
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
-        self.updatebranchcache()
-        return self._branchcache
+        if self.changelog.filteredrevs:
+            # some changeset are excluded we can't use the cache
+            branchmap = {}
+            self._updatebranchcache(branchmap, (self[r] for r in self))
+            return branchmap
+        else:
+            self.updatebranchcache()
+            return self._branchcache
+
 
     def _branchtip(self, heads):
         '''return the tipmost branch head in heads'''
