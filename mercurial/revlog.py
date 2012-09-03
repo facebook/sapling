@@ -607,7 +607,9 @@ class revlog(object):
         try:
             return self.index.headrevs()
         except AttributeError:
-            pass
+            return self._headrevs()
+
+    def _headrevs(self):
         count = len(self)
         if not count:
             return [nullrev]
