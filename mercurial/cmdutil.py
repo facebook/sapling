@@ -999,12 +999,13 @@ def walkchangerevs(repo, match, opts, prepare):
 
     if not len(repo):
         return []
-
-    if follow:
-        defrange = '%s:0' % repo['.'].rev()
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts.get('rev'))
+    elif follow:
+        revs = repo.revs('reverse(:.)')
     else:
-        defrange = '-1:0'
-    revs = scmutil.revrange(repo, opts.get('rev') or [defrange])
+        revs = list(repo)
+        revs.reverse()
     if not revs:
         return []
     wanted = set()
@@ -1392,7 +1393,7 @@ def getgraphlogrevs(repo, pats, opts):
         revs = scmutil.revrange(repo, opts['rev'])
     else:
         if follow and len(repo) > 0:
-            revs = scmutil.revrange(repo, ['.:0'])
+            revs = repo.revs('reverse(:.)')
         else:
             revs = list(repo.changelog)
             revs.reverse()
