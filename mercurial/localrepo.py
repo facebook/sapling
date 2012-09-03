@@ -516,7 +516,11 @@ class localrepository(object):
     def tags(self):
         '''return a mapping of tag to node'''
         t = {}
-        for k, v in self._tagscache.tags.iteritems():
+        if self.changelog.filteredrevs:
+            tags, tt = self._findtags()
+        else:
+            tags = self._tagscache.tags
+        for k, v in tags.iteritems():
             try:
                 # ignore tags to unknown nodes
                 self.changelog.rev(v)
