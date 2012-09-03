@@ -2439,10 +2439,10 @@ class localrepository(object):
             tr.close()
 
             if changesets > 0:
+                self.updatebranchcache()
                 def runhooks():
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")
-                    self.updatebranchcache()
                     self.hook("changegroup", node=hex(cl.node(clstart)),
                               source=srctype, url=url)
 
