@@ -838,7 +838,7 @@ class svnsubrepo(abstractsubrepo):
             name = ''.join(c.data for c
                            in e.getElementsByTagName('name')[0].childNodes
                            if c.nodeType == c.TEXT_NODE)
-            paths.append(name)
+            paths.append(name.encode('utf-8'))
         return paths
 
     def filedata(self, name):
