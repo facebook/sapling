@@ -1141,6 +1141,19 @@ vanilla clients locked out from largefiles http repos
   A f1
   $ cd ..
 
+largefiles can be pushed locally (issue3583)
+  $ hg init dest
+  $ cd r4
+  $ hg push ../dest
+  pushing to ../dest
+  searching for changes
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ cd ..
+
 #if serve
   $ hg serve -R r4 -d -p $HGPORT2 --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
