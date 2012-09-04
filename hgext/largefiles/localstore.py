@@ -33,8 +33,12 @@ class localstore(basestore.basestore):
         lfutil.link(lfutil.storepath(self.repo, hash),
                 lfutil.storepath(self.remote, hash))
 
-    def exists(self, hash):
-        return lfutil.instore(self.remote, hash)
+    def exists(self, hashes):
+        retval = {}
+        for hash in hashes:
+            retval[hash] = lfutil.instore(self.remote, hash)
+        return retval
+
 
     def _getfile(self, tmpfile, filename, hash):
         if lfutil.instore(self.remote, hash):

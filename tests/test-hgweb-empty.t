@@ -250,10 +250,6 @@ Some tests for hgweb in an empty repository
   var graph = new Graph();
   graph.scale(39);
   
-  var revlink = '<li style="_STYLE"><span class="desc">';
-  revlink += '<a href="/rev/_NODEID" title="_NODEID">_DESC</a>';
-  revlink += '</span>_TAGS<span class="info">_DATE, by _USER</span></li>';
-  
   graph.vertex = function(x, y, color, parity, cur) {
   	
   	this.ctx.beginPath();
@@ -264,13 +260,6 @@ Some tests for hgweb in an empty repository
   	var bg = '<li class="bg parity' + parity + '"></li>';
   	var left = (this.columns + 1) * this.bg_height;
   	var nstyle = 'padding-left: ' + left + 'px;';
-  	var item = revlink.replace(/_STYLE/, nstyle);
-  	item = item.replace(/_PARITY/, 'parity' + parity);
-  	item = item.replace(/_NODEID/, cur[0]);
-  	item = item.replace(/_NODEID/, cur[0]);
-  	item = item.replace(/_DESC/, cur[3]);
-  	item = item.replace(/_USER/, cur[4]);
-  	item = item.replace(/_DATE/, cur[5]);
   
   	var tagspan = '';
   	if (cur[7].length || cur[8].length || (cur[6][0] != 'default' || cur[6][1])) {
@@ -296,8 +285,11 @@ Some tests for hgweb in an empty repository
   		}
   		tagspan += '</span>';
   	}
+  
+  	var item = '<li style="' + nstyle + '"><span class="desc">';
+  	item += '<a href="/rev/' + cur[0] + '" title="' + cur[0] + '">' + cur[3] + '</a>';
+  	item += '</span>' + tagspan + '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
   	
-  	item = item.replace(/_TAGS/, tagspan);
   	return [bg, item];
   	
   }

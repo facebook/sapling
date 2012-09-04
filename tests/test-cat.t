@@ -21,3 +21,14 @@
   [1]
   $ hg cat -r 1 b
   1
+
+Test fileset
+
+  $ echo 3 > c
+  $ hg ci -Am addmore c
+  $ hg cat 'set:not(b) or a'
+  3
+  $ hg cat 'set:c or b'
+  1
+  3
+

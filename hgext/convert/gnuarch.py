@@ -184,7 +184,7 @@ class gnuarch_source(converter_source, commandline):
         cmdline = [self.execmd, cmd]
         cmdline += args
         cmdline = [util.shellquote(arg) for arg in cmdline]
-        cmdline += ['>', util.nulldev, '2>', util.nulldev]
+        cmdline += ['>', os.devnull, '2>', os.devnull]
         cmdline = util.quotecommand(' '.join(cmdline))
         self.ui.debug(cmdline, '\n')
         return os.system(cmdline)
