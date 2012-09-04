@@ -175,6 +175,26 @@ editcomment = _("""# Edit history between %s and %s
 #
 """)
 
+def foldchanges(ui, repo, node1, node2, opts):
+    """Produce a new changeset that represents the diff from node1 to node2."""
+    try:
+        fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
+        fp = os.fdopen(fd, 'w')
+        diffopts = patch.diffopts(ui, opts)
+        diffopts.git = True
+        diffopts.ignorews = False
+        diffopts.ignorewsamount = False
+        diffopts.ignoreblanklines = False
+        gen = patch.diff(repo, node1, node2, opts=diffopts)
+        for chunk in gen:
+            fp.write(chunk)
+        fp.close()
+        files = set()
+        patch.patch(ui, repo, patchfile, files=files, eolmode=None)
+    finally:
+        os.unlink(patchfile)
+    return files
+
 def between(repo, old, new, keep):
     revs = [old]
     current = old
@@ -200,27 +220,12 @@ def pick(ui, repo, ctx, ha, opts):
         ui.debug('node %s unchanged\n' % ha)
         return oldctx, [], [], []
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
     try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-            if not files:
-                ui.warn(_('%s: empty changeset')
-                             % node.hex(ha))
-                return ctx, [], [], []
-        finally:
-            os.unlink(patchfile)
+        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
+        if not files:
+            ui.warn(_('%s: empty changeset')
+                         % node.hex(ha))
+            return ctx, [], [], []
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
@@ -232,23 +237,8 @@ def pick(ui, repo, ctx, ha, opts):
 def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
     try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-        finally:
-            os.unlink(patchfile)
+        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
     except Exception:
         pass
     raise util.Abort(_('Make changes as needed, you may commit or record as '
@@ -258,27 +248,12 @@ def edit(ui, repo, ctx, ha, opts):
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
     try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-            if not files:
-                ui.warn(_('%s: empty changeset')
-                             % node.hex(ha))
-                return ctx, [], [], []
-        finally:
-            os.unlink(patchfile)
+        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
+        if not files:
+            ui.warn(_('%s: empty changeset')
+                         % node.hex(ha))
+            return ctx, [], [], []
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
@@ -289,22 +264,7 @@ def fold(ui, repo, ctx, ha, opts):
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     parent = ctx.parents()[0].node()
     hg.update(repo, parent)
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, parent, newnode, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    files = set()
-    try:
-        patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-    finally:
-        os.unlink(patchfile)
+    files = foldchanges(ui, repo, parent, newnode, opts)
     newmessage = '\n***\n'.join(
         [ctx.description()] +
         [repo[r].description() for r in internalchanges] +
@@ -326,23 +286,8 @@ def drop(ui, repo, ctx, ha, opts):
 def message(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
     try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-        finally:
-            os.unlink(patchfile)
+        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
