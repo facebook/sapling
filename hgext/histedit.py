@@ -238,7 +238,7 @@ def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     try:
-        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
+        foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
     except Exception:
         pass
     raise util.Abort(_('Make changes as needed, you may commit or record as '
@@ -264,7 +264,7 @@ def fold(ui, repo, ctx, ha, opts):
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     parent = ctx.parents()[0].node()
     hg.update(repo, parent)
-    files = foldchanges(ui, repo, parent, newnode, opts)
+    foldchanges(ui, repo, parent, newnode, opts)
     newmessage = '\n***\n'.join(
         [ctx.description()] +
         [repo[r].description() for r in internalchanges] +
@@ -287,7 +287,7 @@ def message(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     try:
-        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
+        foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
     except Exception:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
