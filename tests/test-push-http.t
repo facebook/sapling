@@ -16,9 +16,11 @@
   >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test2 push http://localhost:$HGPORT/
+  >     exitstatus=$?
   >     "$TESTDIR/killdaemons.py"
   >     echo % serve errors
   >     cat errors.log
+  >     return $exitstatus
   > }
   $ cd ../test
 
@@ -31,6 +33,7 @@ expect ssl error
   remote: ssl required
   updating cb9a9f314b8b to public failed!
   % serve errors
+  [1]
 
 expect authorization error
 
@@ -41,6 +44,7 @@ expect authorization error
   searching for changes
   abort: authorization failed
   % serve errors
+  [255]
 
 expect authorization error: must have authorized user
 
@@ -50,6 +54,7 @@ expect authorization error: must have authorized user
   searching for changes
   abort: authorization failed
   % serve errors
+  [255]
 
 expect success
 
@@ -110,6 +115,7 @@ expect authorization error: all users denied
   searching for changes
   abort: authorization failed
   % serve errors
+  [255]
 
 expect authorization error: some users denied, users must be authenticated
 
@@ -119,5 +125,6 @@ expect authorization error: some users denied, users must be authenticated
   searching for changes
   abort: authorization failed
   % serve errors
+  [255]
 
   $ cd ..
