@@ -29,11 +29,9 @@ expect ssl error
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
-  remote: ssl required
-  remote: ssl required
-  updating cb9a9f314b8b to public failed!
+  abort: HTTP Error 403: ssl required
   % serve errors
-  [1]
+  [255]
 
 expect authorization error
 

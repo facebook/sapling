@@ -48,7 +48,7 @@ def checkauthz(hgweb, req, op):
     # and replayed
     scheme = req.env.get('wsgi.url_scheme')
     if hgweb.configbool('web', 'push_ssl', True) and scheme != 'https':
-        raise ErrorResponse(HTTP_OK, 'ssl required')
+        raise ErrorResponse(HTTP_FORBIDDEN, 'ssl required')
 
     deny = hgweb.configlist('web', 'deny_push')
     if deny and (not user or deny == ['*'] or user in deny):
