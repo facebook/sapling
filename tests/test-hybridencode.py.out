@@ -261,3 +261,79 @@ non-reserved names, just not hitting limit
 A = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
 B = 'data/123456789-123456789-123456789-123456789-123456789-/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'
 
+hashed path with largest untruncated 1st dir
+A = 'data/12345678/-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/-123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxx4e9e9e384d00929a93b6835fbf976eb32321ff3c'
+
+hashed path with smallest truncated 1st dir
+A = 'data/123456789/123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/123456789-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxx1f4e4ec5f2be76e109bfaa8e31c062fe426d5490'
+
+hashed path with largest untruncated two dirs
+A = 'data/12345678/12345678/9-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/9-123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxx3332d8329d969cf835542a9f2cbcfb385b6cf39d'
+
+hashed path with smallest truncated two dirs
+A = 'data/123456789/123456789/123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/123456789-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx9699559798247dffa18717138859be5f8874840e'
+
+hashed path with largest untruncated three dirs
+A = 'data/12345678/12345678/12345678/89-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/89-123456789-123456789-hashed----xxxxxxxxx-xxxxxxxf0a2b053bb1369cce02f78c217d6a7aaea18c439'
+
+hashed path with smallest truncated three dirs
+A = 'data/123456789/123456789/123456789/123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/123456789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-1c6f8284967384ec13985a046d3553179d9d03cd'
+
+hashed path with largest untruncated four dirs
+A = 'data/12345678/12345678/12345678/12345678/789-123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/789-123456789-hashed----xxxxxxxxx-xxxxxxx0d30c99049d8f0ff97b94d4ef302027e8d54c6fd'
+
+hashed path with smallest truncated four dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/123456789-hashed----xxxxxxxxx-xxxxxxxxx-x46162779e1a771810b37a737f82ae7ed33771402'
+
+hashed path with largest untruncated five dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/6789-hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/6789-hashed----xxxxxxxxx-xxxxxxxbfe752ddc8b003c2790c66a9f2eb1ea75c114390'
+
+hashed path with smallest truncated five dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/hashed----xxxxxxxxx-xxxxxxxxx-xxb94c27b3532fa880cdd572b1c514785cab7b6ff2'
+
+hashed path with largest untruncated six dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/ed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/ed----xxxxxxxxx-xxxxxxxcd8cc5483a0f3be409e0e5d4bf9e36e113c59235'
+
+hashed path with smallest truncated six dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxxxxxxx-xxx47dd6f616f833a142da00701b334cebbf640da06'
+
+hashed path with largest untruncated seven dirs
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxx-xxxxxxx1c8ed635229fc22efe51035feeadeb4c8a0ecb82'
+
+hashed path with smallest truncated seven dirs
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx298ff7d33f8ce6db57930837ffea2fb2f48bb926'
+
+hashed path with largest untruncated eight dirs
+(directory 8 is dropped because it hits _maxshortdirslen)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxx-xxxxxxc8996ccd41b471f768057181a4d59d2febe7277d'
+
+hashed path with smallest truncated eight dirs
+(directory 8 is dropped because it hits _maxshortdirslen)
+A = 'data/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx4fa04a839a6bda93e1c21c713f2edcbd16e8890d'
+
+hashed path with largest non-dropped directory 8
+(just not hitting the _maxshortdirslen boundary)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxx4d43d1ccaa20efbfe99ec779dc063611536ff2c5'
+
+hashed path with shortest dropped directory 8
+(just hitting the _maxshortdirslen boundary)
+A = 'data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/123456/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-123456'
+B = 'dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/xxxxxxxxx-xxxx11fa9873cc6c3215eae864528b5530a04efc6cfe'
+

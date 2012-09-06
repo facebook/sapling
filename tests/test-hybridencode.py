@@ -248,3 +248,97 @@ print "non-reserved names, just not hitting limit"
 show('data/123456789-123456789-123456789-123456789-123456789-'
           '/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
+
+print "hashed path with largest untruncated 1st dir"
+show('data/12345678/-123456789-123456789-123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated 1st dir"
+show('data/123456789/123456789-123456789-123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated two dirs"
+show('data/12345678/12345678/9-123456789-123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated two dirs"
+show('data/123456789/123456789/123456789-123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated three dirs"
+show('data/12345678/12345678/12345678/89-123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated three dirs"
+show('data/123456789/123456789/123456789/123456789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated four dirs"
+show('data/12345678/12345678/12345678/12345678/789-123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated four dirs"
+show('data/123456789/123456789/123456789/123456789/123456789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated five dirs"
+show('data/12345678/12345678/12345678/12345678/12345678/6789-'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated five dirs"
+show('data/123456789/123456789/123456789/123456789/123456789/'
+          'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated six dirs"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/ed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated six dirs"
+show('data/123456789/123456789/123456789/123456789/123456789/'
+          '123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated seven dirs"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/xxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated seven dirs"
+show('data/123456789/123456789/123456789/123456789/123456789/'
+          '123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest untruncated eight dirs"
+print "(directory 8 is dropped because it hits _maxshortdirslen)"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345678/xxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with smallest truncated eight dirs"
+print "(directory 8 is dropped because it hits _maxshortdirslen)"
+show('data/123456789/123456789/123456789/123456789/123456789/'
+          '123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with largest non-dropped directory 8"
+print "(just not hitting the _maxshortdirslen boundary)"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "hashed path with shortest dropped directory 8"
+print "(just hitting the _maxshortdirslen boundary)"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/123456/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
