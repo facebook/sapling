@@ -337,6 +337,29 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
+print "...adding one truncated char to dir 1..7 won't drop dir 8"
+show('data/12345678x/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678x/12345678/12345678/12345678/12345'
+          '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678x/12345678/12345678/12345'
+          '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678x/12345678/12345'
+          '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678/12345678x/12345'
+          '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678x/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678x/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
 print "hashed path with shortest dropped directory 8"
 print "(just hitting the _maxshortdirslen boundary)"
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
