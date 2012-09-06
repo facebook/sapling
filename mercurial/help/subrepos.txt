@@ -13,11 +13,11 @@ Subrepositories are made of three components:
 2. Nested repository references. They are defined in ``.hgsub``, which
    should be placed in the root of working directory, and
    tell where the subrepository checkouts come from. Mercurial
-   subrepositories are referenced like:
+   subrepositories are referenced like::
 
      path/to/nested = https://example.com/nested/repo/path
 
-   Git and Subversion subrepos are also supported:
+   Git and Subversion subrepos are also supported::
 
      path/to/nested = [git]git://example.com/nested/repo/path
      path/to/nested = [svn]https://example.com/nested/trunk/path
