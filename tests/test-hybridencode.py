@@ -382,3 +382,46 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12 /xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
+
+print "extensions are replicated on hashed paths (unbounded!)"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.345')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.34567')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.345678')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-1')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-12')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-123')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-1234')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-12345')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWX'
+          'YZ-abcdefghjiklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPRSTU'
+          'VWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxx'
+          'xxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwww'
+          'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww')
+
