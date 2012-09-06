@@ -240,7 +240,7 @@ def overridedirty(orig, repo, ignoreupdate=False):
 def overridelog(orig, ui, repo, *pats, **opts):
     try:
         repo.lfstatus = True
-        orig(ui, repo, *pats, **opts)
+        return orig(ui, repo, *pats, **opts)
     finally:
         repo.lfstatus = False
 
