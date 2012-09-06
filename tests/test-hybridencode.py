@@ -365,3 +365,20 @@ print "(just hitting the _maxshortdirslen boundary)"
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/123456/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
+
+print "hashed path that drops dir 8 due to dot or space at end is"
+print "encoded, and thus causing to hit _maxshortdirslen"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/1234./-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/1234 /-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+
+print "... with dir 8 short enough for encoding"
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12./xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12 /xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-123456')
