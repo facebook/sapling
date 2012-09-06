@@ -968,7 +968,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     return toupload
 
 def overrideoutgoing(orig, ui, repo, dest=None, **opts):
-    orig(ui, repo, dest, **opts)
+    result = orig(ui, repo, dest, **opts)
 
     if opts.pop('large', None):
         toupload = getoutgoinglfiles(ui, repo, dest, **opts)
@@ -979,6 +979,8 @@ def overrideoutgoing(orig, ui, repo, dest=None, **opts):
             for file in toupload:
                 ui.status(lfutil.splitstandin(file) + '\n')
             ui.status('\n')
+
+    return result
 
 def overridesummary(orig, ui, repo, *pats, **opts):
     try:

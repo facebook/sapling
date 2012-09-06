@@ -1144,6 +1144,15 @@ vanilla clients locked out from largefiles http repos
 largefiles can be pushed locally (issue3583)
   $ hg init dest
   $ cd r4
+  $ hg outgoing ../dest
+  comparing with ../dest
+  searching for changes
+  changeset:   0:639881c12b4c
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     m1
+  
   $ hg push ../dest
   pushing to ../dest
   searching for changes
@@ -1152,6 +1161,13 @@ largefiles can be pushed locally (issue3583)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+ 
+exit code with nothing outgoing (issue3611)
+  $ hg outgoing ../dest
+  comparing with ../dest
+  searching for changes
+  no changes found
+  [1]
   $ cd ..
 
 #if serve
