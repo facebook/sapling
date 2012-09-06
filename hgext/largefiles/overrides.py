@@ -743,7 +743,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
 def overriderebase(orig, ui, repo, **opts):
     repo._isrebasing = True
     try:
-        orig(ui, repo, **opts)
+        return orig(ui, repo, **opts)
     finally:
         repo._isrebasing = False
 
