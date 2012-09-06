@@ -9,6 +9,7 @@ creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:7eeab2ea
+[0]
 % should have two different branches
   beta       cffa0e8 add beta
   master     7eeab2e add alpha
@@ -20,10 +21,12 @@ Switched to branch "not-master"
 pushing to git://localhost/gitrepo
 creating and sending data
 abort: refs/heads/master changed on the server, please pull and merge before pushing
+[255]
 % ... even with -f
 pushing to git://localhost/gitrepo
 creating and sending data
 abort: refs/heads/master changed on the server, please pull and merge before pushing
+[255]
 pulling from git://localhost/gitrepo
 importing git objects into hg
 (run 'hg update' to get a working copy)
@@ -45,9 +48,18 @@ summary:     add delta
 pushing to git://localhost/gitrepo
 creating and sending data
 abort: pushing refs/heads/master overwrites 72f56395749d
+[255]
 % ... but succeed with -f
 pushing to git://localhost/gitrepo
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
     default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:cc119202
+[0]
+% this should fail, no changes to push
+pushing to git://localhost/gitrepo
+creating and sending data
+    default::refs/heads/beta => GIT:cffa0e8d
+    default::refs/heads/not-master => GIT:7eeab2ea
+    default::refs/heads/master => GIT:cc119202
+[1]

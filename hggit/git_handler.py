@@ -241,15 +241,24 @@ class GitHandler(object):
 
     def push(self, remote, revs, force):
         self.export_commits()
-        changed_refs = self.upload_pack(remote, revs, force)
+        old_refs, new_refs = self.upload_pack(remote, revs, force)
         remote_name = self.remote_name(remote)
 
-        if remote_name and changed_refs:
-            for ref, sha in changed_refs.iteritems():
-                self.ui.status("    %s::%s => GIT:%s\n" %
-                               (remote_name, ref, sha[0:8]))
+        if remote_name and new_refs:
+            for ref, sha in new_refs.iteritems():
+                    self.ui.status("    %s::%s => GIT:%s\n" %
+                                   (remote_name, ref, sha[0:8]))
 
-            self.update_remote_branches(remote_name, changed_refs)
+            self.update_remote_branches(remote_name, new_refs)
+        if old_refs == new_refs:
+            ret = None
+        elif len(new_refs) > len(old_refs):
+            ret = 1 + (len(new_refs) - len(old_refs))
+        elif len(old_refs) > len(new_refs):
+            ret = -1 - (len(new_refs) - len(old_refs))
+        else:
+            ret = 1
+        return ret
 
     def clear(self):
         mapfile = self.repo.join(self.mapfile)
@@ -765,15 +774,17 @@ class GitHandler(object):
 
     def upload_pack(self, remote, revs, force):
         client, path = self.get_transport_and_path(remote)
+        old_refs = {}
         def changed(refs):
+            old_refs.update(refs)
             to_push = revs or set(self.local_heads().values() + self.tags.values())
             return self.get_changed_refs(refs, to_push, force)
 
         genpack = self.git.object_store.generate_pack_contents
         try:
             self.ui.status(_("creating and sending data\n"))
-            changed_refs = client.send_pack(path, changed, genpack)
-            return changed_refs
+            new_refs = client.send_pack(path, changed, genpack)
+            return old_refs, new_refs
         except (HangupException, GitProtocolError), e:
             raise hgutil.Abort(_("git remote error: ") + str(e))
 
