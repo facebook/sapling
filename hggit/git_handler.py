@@ -252,6 +252,7 @@ class GitHandler(object):
 
             self.update_remote_branches(remote_name, new_refs)
         if old_refs == new_refs:
+            self.ui.status(_("no changes found\n"))
             ret = None
         elif len(new_refs) > len(old_refs):
             ret = 1 + (len(new_refs) - len(old_refs))

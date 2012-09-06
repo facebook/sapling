@@ -55,4 +55,5 @@ creating and sending data
 % this should fail, no changes to push
 pushing to git://localhost/gitrepo
 creating and sending data
+no changes found
 [1]
