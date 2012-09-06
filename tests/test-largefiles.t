@@ -116,6 +116,9 @@ Remove both largefiles and normal files.
   $ hg remove large1-test
   not removing large1-test: file is untracked
   [1]
+  $ hg forget large1-test
+  not removing large1-test: file is already untracked
+  [1]
   $ rm large1-test
 
 Copy both largefiles and normal files (testing that status output is correct).

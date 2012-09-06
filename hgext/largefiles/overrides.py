@@ -894,7 +894,7 @@ def overridefetch(orig, ui, repo, *pats, **opts):
 
 def overrideforget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
-    orig(ui, repo, *pats, **opts)
+    result = orig(ui, repo, *pats, **opts)
     restorematchfn()
     m = scmutil.match(repo[None], pats, opts)
 
@@ -911,6 +911,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
                 os.path.isdir(m.rel(lfutil.standin(f))):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
+            result = 1
 
     for f in forget:
         if ui.verbose or not m.exact(f):
@@ -931,6 +932,8 @@ def overrideforget(orig, ui, repo, *pats, **opts):
             unlink=True)
     finally:
         wlock.release()
+
+    return result
 
 def getoutgoinglfiles(ui, repo, dest=None, **opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
