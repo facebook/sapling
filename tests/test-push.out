@@ -7,8 +7,6 @@ pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
     default::refs/heads/beta => GIT:cffa0e8d
-    default::refs/heads/not-master => GIT:7eeab2ea
-    default::refs/heads/master => GIT:7eeab2ea
 [0]
 % should have two different branches
   beta       cffa0e8 add beta
@@ -52,14 +50,9 @@ abort: pushing refs/heads/master overwrites 72f56395749d
 % ... but succeed with -f
 pushing to git://localhost/gitrepo
 creating and sending data
-    default::refs/heads/beta => GIT:cffa0e8d
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:cc119202
 [0]
 % this should fail, no changes to push
 pushing to git://localhost/gitrepo
 creating and sending data
-    default::refs/heads/beta => GIT:cffa0e8d
-    default::refs/heads/not-master => GIT:7eeab2ea
-    default::refs/heads/master => GIT:cc119202
 [1]

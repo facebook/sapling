@@ -7,42 +7,34 @@ importing git objects into hg
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:cffa0e8d
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:2b9ec6a4
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:fee30180
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:d1659250
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:ee985f12
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:d21e26b4
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:8c878c97
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:1e03e913
 @  changeset:   8:d3c51ce68cfd
 |  tag:         default/master

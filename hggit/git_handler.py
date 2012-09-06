@@ -245,9 +245,10 @@ class GitHandler(object):
         remote_name = self.remote_name(remote)
 
         if remote_name and new_refs:
-            for ref, sha in new_refs.iteritems():
+            for ref, new_sha in new_refs.iteritems():
+                if new_sha != old_refs.get(ref):
                     self.ui.status("    %s::%s => GIT:%s\n" %
-                                   (remote_name, ref, sha[0:8]))
+                                   (remote_name, ref, new_sha[0:8]))
 
             self.update_remote_branches(remote_name, new_refs)
         if old_refs == new_refs:
