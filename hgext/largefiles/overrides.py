@@ -730,7 +730,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
                       pull=opts.get('pull'),
                       stream=opts.get('uncompressed'),
                       rev=opts.get('rev'),
-                      update=True, # required for successful walkchangerevs
+                      update=opts.get('updaterev') or not opts.get('noupdate'),
                       branch=opts.get('branch'))
     if result is None:
         return True
