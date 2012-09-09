@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, bookmarks, graphmod, revset
+import subrepo, context, repair, bookmarks, graphmod, revset, phases
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -1675,7 +1675,12 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                              user=user,
                              date=date,
                              extra=extra)
-        newid = repo.commitctx(new)
+        ph = repo.ui.config('phases', 'new-commit', phases.draft)
+        try:
+            repo.ui.setconfig('phases', 'new-commit', old.phase())
+            newid = repo.commitctx(new)
+        finally:
+            repo.ui.setconfig('phases', 'new-commit', ph)
         if newid != old.node():
             # Reroute the working copy parent to the new changeset
             repo.setparents(newid, nullid)
