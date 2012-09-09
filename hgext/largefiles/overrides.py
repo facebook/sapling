@@ -736,7 +736,19 @@ def overrideclone(orig, ui, source, dest=None, **opts):
         return True
     if opts.get('all_largefiles'):
         sourcerepo, destrepo = result
-        success, missing = lfcommands.downloadlfiles(ui, destrepo.local(), None)
+        repo = destrepo.local()
+
+        # The .hglf directory must exist for the standin matcher to match
+        # anything (which listlfiles uses for each rev), and .hg/largefiles is
+        # assumed to exist by the code that caches the downloaded file.  These
+        # directories exist if clone updated to any rev.
+        if opts.get('noupdate'):
+            util.makedirs(repo.pathto(lfutil.shortname))
+            util.makedirs(repo.join(lfutil.longname))
+
+        # Caching is implicitly limited to 'rev' option, since the dest repo was
+        # truncated at that point.
+        success, missing = lfcommands.downloadlfiles(ui, repo, None)
         return missing != 0
     return result is None
 

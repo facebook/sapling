@@ -700,7 +700,7 @@ Test cloning with --all-largefiles flag
 
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles -U a a-clone-u
-  0 additional largefiles cached
+  11 additional largefiles cached
   $ hg -R a-clone-u sum
   parent: -1:000000000000  (no revision checked out)
   branch: default
