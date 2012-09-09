@@ -172,95 +172,103 @@ def push(repo, dest, force, revs):
         checkpush(force, revs)
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
-    # TODO: implement --rev/#rev support
-    # TODO: do credentials specified in the URL still work?
-    svn = dest.svn
-    meta = repo.svnmeta(svn.uuid, svn.subdir)
-
-    # Strategy:
-    # 1. Find all outgoing commits from this head
-    if len(repo.parents()) != 1:
-        ui.status('Cowardly refusing to push branch merge\n')
-        return 0 # results in nonzero exit status, see hg's commands.py
-    workingrev = repo.parents()[0]
-    ui.status('searching for changes\n')
-    hashes = meta.revmap.hashes()
-    outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
-    if not (outgoing and len(outgoing)):
-        ui.status('no changes found\n')
-        return 1 # so we get a sane exit status, see hg's commands.push
-    while outgoing:
-
-        # 2. Commit oldest revision that needs to be pushed
-        oldest = outgoing.pop(-1)
-        old_ctx = repo[oldest]
-        old_pars = old_ctx.parents()
-        if len(old_pars) != 1:
-            ui.status('Found a branch merge, this needs discussion and '
-                      'implementation.\n')
-            return 0 # results in nonzero exit status, see hg's commands.py
-        # We will commit to svn against this node's parent rev. Any file-level
-        # conflicts here will result in an error reported by svn.
-        base_ctx = old_pars[0]
-        base_revision = hashes[base_ctx.node()][0]
-        svnbranch = base_ctx.branch()
-        # Find most recent svn commit we have on this branch.
-        # This node will become the nearest known ancestor of the pushed rev.
-        oldtipctx = base_ctx
-        old_children = oldtipctx.descendants()
-        seen = set(c.node() for c in old_children)
-        samebranchchildren = [c for c in old_children if c.branch() == svnbranch
-                              and c.node() in hashes]
-        if samebranchchildren:
-            # The following relies on descendants being sorted by rev.
-            oldtipctx = samebranchchildren[-1]
-        # All set, so commit now.
-        try:
-            pushmod.commit(ui, repo, old_ctx, meta, base_revision, svn)
-        except pushmod.NoFilesException:
-            ui.warn("Could not push revision %s because it had no changes in svn.\n" %
-                     old_ctx)
-            return 1
-
-        # 3. Fetch revisions from svn
-        # TODO: this probably should pass in the source explicitly - rev too?
-        r = repo.pull(dest, force=force)
-        assert not r or r == 0
-
-        # 4. Find the new head of the target branch
-        # We expect to get our own new commit back, but we might also get other
-        # commits that happened since our last pull, or even right after our own
-        # commit (race).
-        for c in oldtipctx.descendants():
-            if c.node() not in seen and c.branch() == svnbranch:
-                newtipctx = c
-
-        # 5. Rebase all children of the currently-pushing rev to the new head
-        heads = repo.heads(old_ctx.node())
-        for needs_transplant in heads:
-            def extrafn(ctx, extra):
-                if ctx.node() == oldest:
-                    return
-                extra['branch'] = ctx.branch()
-            # TODO: can we avoid calling our own rebase wrapper here?
-            rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
-                   svnsourcerev=needs_transplant)
-            # Reload the repo after the rebase. Do not reuse contexts across this.
-            newtip = newtipctx.node()
-            repo = getpeer(ui, {}, meta.path)
-            repo = getattr(repo, 'local', lambda: repo)()
-            newtipctx = repo[newtip]
-            # Rewrite the node ids in outgoing to their rebased versions.
-            rebasemap = dict()
-            for child in newtipctx.descendants():
-                rebasesrc = child.extra().get('rebase_source')
-                if rebasesrc:
-                    rebasemap[node.bin(rebasesrc)] = child.node()
-            outgoing = [rebasemap.get(n) or n for n in outgoing]
-        # TODO: stop constantly creating the SVNMeta instances.
+    try:
+        # TODO: implement --rev/#rev support
+        # TODO: do credentials specified in the URL still work?
+        svn = dest.svn
         meta = repo.svnmeta(svn.uuid, svn.subdir)
+
+        # Strategy:
+        # 1. Find all outgoing commits from this head
+        if len(repo.parents()) != 1:
+            ui.status('Cowardly refusing to push branch merge\n')
+            return 0 # results in nonzero exit status, see hg's commands.py
+        workingrev = repo.parents()[0]
+        ui.status('searching for changes\n')
         hashes = meta.revmap.hashes()
-    util.swap_out_encoding(old_encoding)
+        outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
+        if not (outgoing and len(outgoing)):
+            ui.status('no changes found\n')
+            return 1 # so we get a sane exit status, see hg's commands.push
+        while outgoing:
+
+            # 2. Commit oldest revision that needs to be pushed
+            oldest = outgoing.pop(-1)
+            old_ctx = repo[oldest]
+            old_pars = old_ctx.parents()
+            if len(old_pars) != 1:
+                ui.status('Found a branch merge, this needs discussion and '
+                          'implementation.\n')
+                # results in nonzero exit status, see hg's commands.py
+                return 0
+            # We will commit to svn against this node's parent rev. Any
+            # file-level conflicts here will result in an error reported
+            # by svn.
+            base_ctx = old_pars[0]
+            base_revision = hashes[base_ctx.node()][0]
+            svnbranch = base_ctx.branch()
+            # Find most recent svn commit we have on this branch. This
+            # node will become the nearest known ancestor of the pushed
+            # rev.
+            oldtipctx = base_ctx
+            old_children = oldtipctx.descendants()
+            seen = set(c.node() for c in old_children)
+            samebranchchildren = [c for c in old_children
+                    if c.branch() == svnbranch and c.node() in hashes]
+            if samebranchchildren:
+                # The following relies on descendants being sorted by rev.
+                oldtipctx = samebranchchildren[-1]
+            # All set, so commit now.
+            try:
+                pushmod.commit(ui, repo, old_ctx, meta, base_revision, svn)
+            except pushmod.NoFilesException:
+                ui.warn("Could not push revision %s because it had no changes "
+                        "in svn.\n" % old_ctx)
+                return 1
+
+            # 3. Fetch revisions from svn
+            # TODO: this probably should pass in the source explicitly -
+            # rev too?
+            r = repo.pull(dest, force=force)
+            assert not r or r == 0
+
+            # 4. Find the new head of the target branch
+            # We expect to get our own new commit back, but we might
+            # also get other commits that happened since our last pull,
+            # or even right after our own commit (race).
+            for c in oldtipctx.descendants():
+                if c.node() not in seen and c.branch() == svnbranch:
+                    newtipctx = c
+
+            # 5. Rebase all children of the currently-pushing rev to the
+            # new head
+            heads = repo.heads(old_ctx.node())
+            for needs_transplant in heads:
+                def extrafn(ctx, extra):
+                    if ctx.node() == oldest:
+                        return
+                    extra['branch'] = ctx.branch()
+                # TODO: can we avoid calling our own rebase wrapper here?
+                rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
+                       svnsourcerev=needs_transplant)
+                # Reload the repo after the rebase. Do not reuse
+                # contexts across this.
+                newtip = newtipctx.node()
+                repo = getpeer(ui, {}, meta.path)
+                repo = getattr(repo, 'local', lambda: repo)()
+                newtipctx = repo[newtip]
+                # Rewrite the node ids in outgoing to their rebased versions.
+                rebasemap = dict()
+                for child in newtipctx.descendants():
+                    rebasesrc = child.extra().get('rebase_source')
+                    if rebasesrc:
+                        rebasemap[node.bin(rebasesrc)] = child.node()
+                outgoing = [rebasemap.get(n) or n for n in outgoing]
+            # TODO: stop constantly creating the SVNMeta instances.
+            meta = repo.svnmeta(svn.uuid, svn.subdir)
+            hashes = meta.revmap.hashes()
+    finally:
+        util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
 
 
