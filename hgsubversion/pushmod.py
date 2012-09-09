@@ -82,6 +82,11 @@ def _getdirchanges(svn, branchpath, parentctx, ctx, changedfiles, extchanges):
             added.append(d)
 
     for d in olddirs:
+        if not d:
+            # Do not remove the root directory when the hg repo becomes
+            # empty. hgsubversion cannot create branches, do not remove
+            # them.
+            continue
         if d not in newdirs and _isdir(svn, branchpath, d):
             deleted.append(d)
 

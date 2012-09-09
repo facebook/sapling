@@ -503,6 +503,25 @@ class PushTests(test_util.TestBase):
         self.commitchanges(changes, parent=par)
         self.pushrevisions()
 
+    def test_push_emptying_changeset(self):
+        r = self.repo['tip']
+        changes = [
+                ('alpha', None, None),
+                ('beta', None, None),
+                ]
+        parent = self.repo['tip'].rev()
+        self.commitchanges(changes, parent=parent)
+        self.pushrevisions()
+        self.assertEqual({}, self.repo['tip'].manifest())
+
+        # Try to re-add a file after emptying the branch
+        changes = [
+                ('alpha', 'alpha', 'alpha'),
+                ]
+        self.commitchanges(changes, parent=self.repo['tip'].rev())
+        self.pushrevisions()
+        self.assertEqual(['alpha'], list(self.repo['tip'].manifest()))
+
 def suite():
     test_classes = [PushTests, ]
     all_tests = []
