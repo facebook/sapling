@@ -727,15 +727,13 @@ def overrideclone(orig, ui, source, dest=None, **opts):
             raise util.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s' %
             d))
-    result = hg.clone(ui, opts, source, dest,
-                      pull=opts.get('pull'),
-                      stream=opts.get('uncompressed'),
-                      rev=opts.get('rev'),
-                      update=opts.get('updaterev') or not opts.get('noupdate'),
-                      branch=opts.get('branch'))
-    if result is None:
-        return True
-    if opts.get('all_largefiles'):
+
+    return orig(ui, source, dest, **opts)
+
+def hgclone(orig, ui, opts, *args, **kwargs):
+    result = orig(ui, opts, *args, **kwargs)
+
+    if result is not None and opts.get('all_largefiles'):
         sourcerepo, destrepo = result
         repo = destrepo.local()
 
@@ -750,8 +748,11 @@ def overrideclone(orig, ui, source, dest=None, **opts):
         # Caching is implicitly limited to 'rev' option, since the dest repo was
         # truncated at that point.
         success, missing = lfcommands.downloadlfiles(ui, repo, None)
-        return missing != 0
-    return result is None
+
+        if missing != 0:
+            return None
+
+    return result
 
 def overriderebase(orig, ui, repo, **opts):
     repo._isrebasing = True
