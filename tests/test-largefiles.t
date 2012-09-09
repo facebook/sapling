@@ -707,6 +707,16 @@ Test cloning with --all-largefiles flag
   commit: (clean)
   update: 8 new changesets (update)
 
+  $ mkdir xyz
+  $ cd xyz
+  $ hg clone ../a
+  destination directory: a
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  $ cd ..
+
   $ hg clone --all-largefiles a ssh://localhost/a
   abort: --all-largefiles is incompatible with non-local destination ssh://localhost/a
   [255]

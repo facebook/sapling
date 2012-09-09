@@ -720,12 +720,13 @@ def overridepull(orig, ui, repo, source=None, **opts):
     return result
 
 def overrideclone(orig, ui, source, dest=None, **opts):
-    if dest is None:
-        dest = hg.defaultdest(source)
-    if opts.get('all_largefiles') and not hg.islocal(dest):
+    d = dest
+    if d is None:
+        d = hg.defaultdest(source)
+    if opts.get('all_largefiles') and not hg.islocal(d):
             raise util.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s' %
-            dest))
+            d))
     result = hg.clone(ui, opts, source, dest,
                       pull=opts.get('pull'),
                       stream=opts.get('uncompressed'),
