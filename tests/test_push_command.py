@@ -491,6 +491,18 @@ class PushTests(test_util.TestBase):
             self.assertEqual([], os.listdir(
                 os.path.join(self.tmpdir, 'testrepo-1', 'db', 'transactions')))
 
+    def test_push_encoding(self):
+        self.test_push_two_revs()
+        # Writing then rebasing UTF-8 filenames in a cp1252 windows console
+        # used to fail because hg internal encoding was being changed during
+        # the interactions with subversion, *and during the rebase*, which
+        # confused the dirstate and made it believe the file was deleted.
+        fn = 'pi\xc3\xa8ce/test'
+        changes = [(fn, fn, 'a')]
+        par = self.repo['tip'].rev()
+        self.commitchanges(changes, parent=par)
+        self.pushrevisions()
+
 def suite():
     test_classes = [PushTests, ]
     all_tests = []

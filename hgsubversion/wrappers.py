@@ -249,8 +249,16 @@ def push(repo, dest, force, revs):
                         return
                     extra['branch'] = ctx.branch()
                 # TODO: can we avoid calling our own rebase wrapper here?
-                rebase(hgrebase.rebase, ui, repo, svn=True, svnextrafn=extrafn,
-                       svnsourcerev=needs_transplant)
+                # Tweaking the encoding is fine for internal
+                # manipulations, but it can lead to various breakage
+                # when starting to operate with the working directory
+                # and the dirstate.
+                util.swap_out_encoding(old_encoding)
+                try:
+                    rebase(hgrebase.rebase, ui, repo, svn=True,
+                           svnextrafn=extrafn, svnsourcerev=needs_transplant)
+                finally:
+                    util.swap_out_encoding()
                 # Reload the repo after the rebase. Do not reuse
                 # contexts across this.
                 newtip = newtipctx.node()
