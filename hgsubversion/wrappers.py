@@ -174,7 +174,6 @@ def push(repo, dest, force, revs):
     old_encoding = util.swap_out_encoding()
     # TODO: implement --rev/#rev support
     # TODO: do credentials specified in the URL still work?
-    svnurl = repo.ui.expandpath(dest.svnurl)
     svn = dest.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
