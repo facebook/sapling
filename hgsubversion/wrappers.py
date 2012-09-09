@@ -280,82 +280,83 @@ def pull(repo, source, heads=[], force=False):
     # Split off #rev
     svn_url, heads, checkout = util.parseurl(svn_url, heads)
     old_encoding = util.swap_out_encoding()
-
+    total = None
     try:
-        stopat_rev = int(checkout or 0)
-    except ValueError:
-        raise hgutil.Abort('unrecognised Subversion revision %s: '
-                           'only numbers work.' % checkout)
-
-    have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
-    if not have_replay:
-        repo.ui.note('fetching stupidly...\n')
-
-    svn = source.svn
-    meta = repo.svnmeta(svn.uuid, svn.subdir)
-
-    layout = repo.ui.config('hgsubversion', 'layout', 'auto')
-    if layout == 'auto':
         try:
-            rootlist = svn.list_dir('', revision=(stopat_rev or None))
-        except svnwrap.SubversionException, e:
-            err = "%s (subversion error: %d)" % (e.args[0], e.args[1])
-            raise hgutil.Abort(err)
-        if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
-            layout = 'standard'
+            stopat_rev = int(checkout or 0)
+        except ValueError:
+            raise hgutil.Abort('unrecognised Subversion revision %s: '
+                               'only numbers work.' % checkout)
+
+        have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
+        if not have_replay:
+            repo.ui.note('fetching stupidly...\n')
+
+        svn = source.svn
+        meta = repo.svnmeta(svn.uuid, svn.subdir)
+
+        layout = repo.ui.config('hgsubversion', 'layout', 'auto')
+        if layout == 'auto':
+            try:
+                rootlist = svn.list_dir('', revision=(stopat_rev or None))
+            except svnwrap.SubversionException, e:
+                err = "%s (subversion error: %d)" % (e.args[0], e.args[1])
+                raise hgutil.Abort(err)
+            if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
+                layout = 'standard'
+            else:
+                layout = 'single'
+            repo.ui.setconfig('hgsubversion', 'layout', layout)
+            repo.ui.note('using %s layout\n' % layout)
+
+        branch = repo.ui.config('hgsubversion', 'branch')
+        if branch:
+            if layout != 'single':
+                msg = ('branch cannot be specified for Subversion clones using '
+                       'standard directory layout')
+                raise hgutil.Abort(msg)
+
+            meta.branchmap['default'] = branch
+
+        ui = repo.ui
+        start = meta.revmap.youngest
+        origrevcount = len(meta.revmap)
+
+        if start <= 0:
+            # we are initializing a new repository
+            start = repo.ui.config('hgsubversion', 'startrev', 0)
+            if isinstance(start, str) and start.upper() == 'HEAD':
+                start = svn.last_changed_rev
+            else:
+                start = int(start)
+
+            if start > 0:
+                if layout == 'standard':
+                    raise hgutil.Abort('non-zero start revisions are only '
+                                       'supported for single-directory clones.')
+                ui.note('starting at revision %d; any prior will be ignored\n'
+                        % start)
+                # fetch all revisions *including* the one specified...
+                start -= 1
+
+            # anything less than zero makes no sense
+            if start < 0:
+                start = 0
+
+        skiprevs = repo.ui.configlist('hgsubversion', 'unsafeskip', '')
+        try:
+            skiprevs = set(map(int, skiprevs))
+        except ValueError:
+            raise hgutil.Abort('unrecognised Subversion revisions %r: '
+                               'only numbers work.' % checkout)
+
+        oldrevisions = len(meta.revmap)
+        if stopat_rev:
+            total = stopat_rev - start
         else:
-            layout = 'single'
-        repo.ui.setconfig('hgsubversion', 'layout', layout)
-        repo.ui.note('using %s layout\n' % layout)
+            total = svn.HEAD - start
+        lastpulled = None
 
-    branch = repo.ui.config('hgsubversion', 'branch')
-    if branch:
-        if layout != 'single':
-            msg = ('branch cannot be specified for Subversion clones using '
-                   'standard directory layout')
-            raise hgutil.Abort(msg)
-
-        meta.branchmap['default'] = branch
-
-    ui = repo.ui
-    start = meta.revmap.youngest
-    origrevcount = len(meta.revmap)
-
-    if start <= 0:
-        # we are initializing a new repository
-        start = repo.ui.config('hgsubversion', 'startrev', 0)
-        if isinstance(start, str) and start.upper() == 'HEAD':
-            start = svn.last_changed_rev
-        else:
-            start = int(start)
-
-        if start > 0:
-            if layout == 'standard':
-                raise hgutil.Abort('non-zero start revisions are only '
-                                   'supported for single-directory clones.')
-            ui.note('starting at revision %d; any prior will be ignored\n'
-                    % start)
-            # fetch all revisions *including* the one specified...
-            start -= 1
-
-        # anything less than zero makes no sense
-        if start < 0:
-            start = 0
-
-    skiprevs = repo.ui.configlist('hgsubversion', 'unsafeskip', '')
-    try:
-        skiprevs = set(map(int, skiprevs))
-    except ValueError:
-        raise hgutil.Abort('unrecognised Subversion revisions %r: '
-                           'only numbers work.' % checkout)
-
-    oldrevisions = len(meta.revmap)
-    if stopat_rev:
-        total = stopat_rev - start
-    else:
-        total = svn.HEAD - start
-    lastpulled = None
-    try:
         try:
             # start converting revisions
             firstrun = True
@@ -417,7 +418,8 @@ def pull(repo, source, heads=[], force=False):
         except KeyboardInterrupt:
             ui.traceback()
     finally:
-        util.progress(ui, 'pull', None, total=total)
+        if total is not None:
+            util.progress(ui, 'pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
     if lastpulled is not None:
