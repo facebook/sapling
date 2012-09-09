@@ -7,13 +7,11 @@ importing git objects into hg
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:05c2bcbe
 marked working directory as branch gamma
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/heads/master => GIT:296802ef
 @  changeset:   2:05aed681ccb3
 |  branch:      gamma

@@ -7,7 +7,6 @@ importing git objects into hg
 pushing to git://localhost/gitrepo
 exporting hg objects to git
 creating and sending data
-    default::refs/heads/not-master => GIT:7eeab2ea
     default::refs/tags/alpha => GIT:7eeab2ea
     default::refs/heads/master => GIT:9a2616b9
 @  changeset:   1:d529e9229f6d

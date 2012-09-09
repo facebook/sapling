@@ -30,13 +30,13 @@ Dulwich 0.6.0.
 Usage
 =====
 
-You can clone a Git repository from Hg by running `hg clone [url]`.  For
+You can clone a Git repository from Hg by running `hg clone <url> [dest]`.  For
 example, if you were to run
 
     $ hg clone git://github.com/schacon/hg-git.git
 
-hg-git would clone the repository down into the directory 'munger.git', then
-convert it to an Hg repository for you.
+Hg-Git would clone the repository and convert it to an Hg repository
+for you.
 
 If you want to clone a github repository for later pushing (or any
 other repository you access via ssh), you need to convert the ssh url
@@ -55,16 +55,16 @@ Your clone command would thus look like this:
 
     $ hg clone git+ssh://git@github.com/schacon/hg-git.git
 
-If you are starting from an existing Hg repository, you have to setup
-a Git repository somewhere that you have push access to, add it as
-default path or default-push path in your .hg/hgrc and then run `hg
-push` from within your project.  For example:
+If you are starting from an existing Hg repository, you have to set up
+a Git repository somewhere that you have push access to, add a path entry
+for it in your .hg/hgrc file, and then run `hg push [name]` from within
+your repository.  For example:
 
     $ cd hg-git # (an Hg repository)
     $ # edit .hg/hgrc and add the target git url in the paths section
     $ hg push
 
-This will convert all your Hg data into Git objects and push them up to the Git server.
+This will convert all your Hg data into Git objects and push them to the Git server.
 
 Now that you have an Hg repository that can push/pull to/from a Git
 repository, you can fetch updates with `hg pull`.
@@ -139,6 +139,16 @@ your `~/.hgrc` file look something like this:
 
 That will enable the Hg-Git extension for you.  The bookmarks section
 is not compulsory, but it makes some things a bit nicer for you.
+
+This plugin is currently tested against the following Mercurial versions:
+ * 1.6.4
+ * 1.7.5
+ * 1.8.4
+ * 1.9.3
+ * 2.0.2
+ * 2.1.2
+ * 2.2.3
+ * 2.3
 
 Configuration
 =============

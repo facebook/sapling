@@ -25,5 +25,6 @@ project that is in Git.  A bridger of worlds, this plugin be.
     keywords='hg git mercurial',
     license='GPLv2',
     packages=['hggit'],
+    package_data={ 'hggit': ['help/git.rst'] },
     install_requires=['dulwich>=0.8.0'] + extra_req,
 )
