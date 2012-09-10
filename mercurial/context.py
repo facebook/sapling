@@ -11,6 +11,7 @@ import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import copies
 import match as matchmod
 import os, errno, stat
+import obsolete as obsmod
 
 propertycache = util.propertycache
 
@@ -232,38 +233,15 @@ class changectx(object):
 
     def obsolete(self):
         """True if the changeset is obsolete"""
-        return (self.node() in self._repo.obsstore.precursors
-                and self.phase() > phases.public)
+        return self.rev() in obsmod.getobscache(self._repo, 'obsolete')
 
     def extinct(self):
         """True if the changeset is extinct"""
-        # We should just compute a cache and check against it.
-        # See revset implementation for details.
-        #
-        # But this naive implementation does not require cache
-        if self.phase() <= phases.public:
-            return False
-        if not self.obsolete():
-            return False
-        for desc in self.descendants():
-            if not desc.obsolete():
-                return False
-        return True
+        return self.rev() in obsmod.getobscache(self._repo, 'extinct')
 
     def unstable(self):
         """True if the changeset is not obsolete but it's ancestor are"""
-        # We should just compute /(obsolete()::) - obsolete()/
-        # and keep it in a cache.
-        #
-        # But this naive implementation does not require cache
-        if self.phase() <= phases.public:
-            return False
-        if self.obsolete():
-            return False
-        for anc in self.ancestors():
-            if anc.obsolete():
-                return True
-        return False
+        return self.rev() in obsmod.getobscache(self._repo, 'unstable')
 
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:

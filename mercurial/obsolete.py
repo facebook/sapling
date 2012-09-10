@@ -161,6 +161,8 @@ class obsstore(object):
     """
 
     def __init__(self, sopener):
+        # caches for various obsolescence related cache
+        self.caches = {}
         self._all = []
         # new markers to serialize
         self.precursors = {}
@@ -220,6 +222,8 @@ class obsstore(object):
                 # call 'filecacheentry.refresh()'  here
                 f.close()
             self._load(new)
+            # new marker *may* have changed several set. invalidate the cache.
+            self.caches.clear()
         return len(new)
 
     def mergemarkers(self, transation, data):
@@ -327,3 +331,67 @@ def anysuccessors(obsstore, node):
                 if suc not in seen:
                     seen.add(suc)
                     remaining.add(suc)
+
+# mapping of 'set-name' -> <function to computer this set>
+cachefuncs = {}
+def cachefor(name):
+    """Decorator to register a function as computing the cache for a set"""
+    def decorator(func):
+        assert name not in cachefuncs
+        cachefuncs[name] = func
+        return func
+    return decorator
+
+def getobscache(repo, name):
+    """Return the set of revision that belong to the <name> set
+
+    Such access may compute the set and cache it for future use"""
+    if not repo.obsstore:
+        return ()
+    if name not in repo.obsstore.caches:
+        repo.obsstore.caches[name] = cachefuncs[name](repo)
+    return repo.obsstore.caches[name]
+
+# To be simple we need to invalidate obsolescence cache when:
+#
+# - new changeset is added:
+# - public phase is changed
+# - obsolescence marker are added
+# - strip is used a repo
+def clearobscaches(repo):
+    """Remove all obsolescence related cache from a repo
+
+    This remove all cache in obsstore is the obsstore already exist on the
+    repo.
+
+    (We could be smarter here given the exact event that trigger the cache
+    clearing)"""
+    # only clear cache is there is obsstore data in this repo
+    if 'obsstore' in repo._filecache:
+        repo.obsstore.caches.clear()
+
+@cachefor('obsolete')
+def _computeobsoleteset(repo):
+    """the set of obsolete revisions"""
+    obs = set()
+    nm = repo.changelog.nodemap
+    for prec in repo.obsstore.precursors:
+        rev = nm.get(prec)
+        if rev is not None:
+            obs.add(rev)
+    return set(repo.revs('%ld - public()', obs))
+
+@cachefor('unstable')
+def _computeunstableset(repo):
+    """the set of non obsolete revisions with obsolete parents"""
+    return set(repo.revs('(obsolete()::) - obsolete()'))
+
+@cachefor('suspended')
+def _computesuspendedset(repo):
+    """the set of obsolete parents with non obsolete descendants"""
+    return set(repo.revs('obsolete() and obsolete()::unstable()'))
+
+@cachefor('extinct')
+def _computeextinctset(repo):
+    """the set of obsolete parents without non obsolete descendants"""
+    return set(repo.revs('obsolete() - obsolete()::unstable()'))
