@@ -21,7 +21,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2012-09-01 14:20+0200\n"
-"PO-Revision-Date: 2012-09-01 14:29+0100\n"
+"PO-Revision-Date: 2012-09-10 09:39+0100\n"
 "Last-Translator: Martin Schröder <martinschroeder@vcp-sh.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -19589,7 +19589,7 @@ msgid "%s: untracked file differs\n"
 msgstr "%s: Unversionierte Datei verändert\n"
 
 msgid "untracked files in working directory differ from files in requested revision"
-msgstr "Unversionierte Dateien in der Arbeitskopie unterscheidet sich von der angeforderten Revision: '%s'"
+msgstr "Unversionierte Dateien in der Arbeitskopie unterscheidet sich von der angeforderten Revision"
 
 #, python-format
 msgid "case-folding collision between %s and %s"
