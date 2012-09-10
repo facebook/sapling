@@ -141,14 +141,17 @@ def removelargefiles(ui, repo, *pats, **opts):
         for f in files:
             ui.warn(_('not removing %s: %s (use forget to undo)\n')
                     % (m.rel(f), reason))
+        return int(len(files) > 0)
+
+    result = 0
 
     if after:
         remove, forget = deleted, []
-        warn(modified + added + clean, _('file still exists'))
+        result = warn(modified + added + clean, _('file still exists'))
     else:
         remove, forget = deleted + clean, []
-        warn(modified, _('file is modified'))
-        warn(added, _('file has been marked for add'))
+        result = warn(modified, _('file is modified'))
+        result = warn(added, _('file has been marked for add')) or result
 
     for f in sorted(remove + forget):
         if ui.verbose or not m.exact(f):
@@ -181,6 +184,8 @@ def removelargefiles(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
+    return result
+
 # For overriding mercurial.hgweb.webcommands so that largefiles will
 # appear at their right place in the manifests.
 def decodepath(orig, path):
@@ -207,9 +212,9 @@ def overrideadd(orig, ui, repo, *pats, **opts):
 
 def overrideremove(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
-    orig(ui, repo, *pats, **opts)
+    result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    removelargefiles(ui, repo, *pats, **opts)
+    return removelargefiles(ui, repo, *pats, **opts) or result
 
 def overridestatusfn(orig, repo, rev2, **opts):
     try:

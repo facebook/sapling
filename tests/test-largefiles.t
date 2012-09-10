@@ -79,6 +79,17 @@ Test status, subdir and unknown files
   C sub/normal2
   $ rm sub/unknown
 
+Test exit codes for remove warning cases (modified and still exiting)
+
+  $ hg remove -A large1
+  not removing large1: file still exists (use forget to undo)
+  [1]
+  $ echo 'modified' > large1
+  $ hg remove large1
+  not removing large1: file is modified (use forget to undo)
+  [1]
+  $ hg up -Cq
+
 Remove both largefiles and normal files.
  
   $ hg remove normal1 large1
@@ -96,11 +107,15 @@ Remove both largefiles and normal files.
   A large1-test
   $ hg rm large1-test
   not removing large1-test: file has been marked for add (use forget to undo)
+  [1]
   $ hg st
   A large1-test
   $ hg forget large1-test
   $ hg st
   ? large1-test
+  $ hg remove large1-test
+  not removing large1-test: file is untracked
+  [1]
   $ rm large1-test
 
 Copy both largefiles and normal files (testing that status output is correct).
