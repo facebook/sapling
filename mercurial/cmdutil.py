@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, bookmarks, graphmod, revset, phases
+import subrepo, context, repair, bookmarks, graphmod, revset, phases, obsolete
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -1697,12 +1697,20 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                         repo._bookmarks[bm] = newid
                     bookmarks.write(repo)
             #commit the whole amend process
+            if obsolete._enabled and newid != old.node():
+                # mark the new changeset as successor of the rewritten one
+                new = repo[newid]
+                obs = [(old, (new,))]
+                if node:
+                    obs.append((ctx, (new,)))
+
+                obsolete.createmarkers(repo, obs)
             tr.close()
         finally:
             tr.release()
-        # Strip the intermediate commit (if there was one) and the amended
-        # commit
-        if newid != old.node():
+        if (not obsolete._enabled) and newid != old.node():
+            # Strip the intermediate commit (if there was one) and the amended
+            # commit
             if node:
                 ui.note(_('stripping intermediate changeset %s\n') % ctx)
             ui.note(_('stripping amended changeset %s\n') % old)

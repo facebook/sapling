@@ -370,3 +370,75 @@ Preserve phase
   11: draft
   13: secret
 
+Test amend with obsolete
+---------------------------
+
+Enable obsolete
+
+  $ cat > ${TESTTMP}/obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
+
+Amend with no files changes
+
+  $ hg id -n
+  13
+  $ hg ci --amend -m 'babar'
+  $ hg id -n
+  14
+  $ hg log -Gl 3 --style=compact
+  @  14[tip]:11   43df5a5434ad   1970-01-01 00:00 +0000   test
+  |    babar
+  |
+  | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
+  | |    fork
+  | |
+  o |  11   7e09f708a0e9   1970-01-01 00:00 +0000   test
+  | |    a''
+  | |
+  $ hg log -Gl 4 --hidden --style=compact
+  @  14[tip]:11   43df5a5434ad   1970-01-01 00:00 +0000   test
+  |    babar
+  |
+  | x  13:11   175fafee6f44   1970-01-01 00:00 +0000   test
+  |/     amend for phase
+  |
+  | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
+  | |    fork
+  | |
+  o |  11   7e09f708a0e9   1970-01-01 00:00 +0000   test
+  | |    a''
+  | |
+
+Amend with files changes
+
+(note: the extra commit over 15 is a temporary junk I would be happy to get
+ride of)
+
+  $ echo 'babar' >> a
+  $ hg commit --amend
+  $ hg log -Gl 6 --hidden --style=compact
+  @  16[tip]:11   31e0a4a1b04a   1970-01-01 00:00 +0000   test
+  |    babar
+  |
+  | x  15   053c696ada75   1970-01-01 00:00 +0000   test
+  | |    temporary amend commit for 43df5a5434ad
+  | |
+  | x  14:11   43df5a5434ad   1970-01-01 00:00 +0000   test
+  |/     babar
+  |
+  | x  13:11   175fafee6f44   1970-01-01 00:00 +0000   test
+  |/     amend for phase
+  |
+  | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
+  | |    fork
+  | |
+  o |  11   7e09f708a0e9   1970-01-01 00:00 +0000   test
+  | |    a''
+  | |
+
+
