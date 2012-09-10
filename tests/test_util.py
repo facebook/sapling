@@ -104,6 +104,11 @@ subdir = {'truncatedhistory.svndump': '/project2',
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')
 
+def getlocalpeer(repo):
+    localrepo = getattr(repo, 'local', lambda: repo)()
+    if isinstance(localrepo, bool):
+        localrepo = repo
+    return localrepo
 
 def _makeskip(name, message):
     if SkipTest:

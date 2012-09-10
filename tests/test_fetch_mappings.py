@@ -245,8 +245,8 @@ class MapTests(test_util.TestBase):
         ui = self.ui(stupid)
         src, dest = test_util.hgclone(ui, self.wc_path, self.wc_path + '_clone',
                                       update=False)
-        src = getattr(src, 'local', lambda: src)()
-        dest = getattr(dest, 'local', lambda: dest)()
+        src = test_util.getlocalpeer(src)
+        dest = test_util.getlocalpeer(dest)
         svncommands.rebuildmeta(ui, dest,
                                 args=[test_util.fileurl(repo_path)])
 

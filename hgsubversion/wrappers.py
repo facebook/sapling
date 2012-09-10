@@ -72,6 +72,12 @@ def getpeer(ui, opts, source):
         return peer(ui, opts, source)
     return hg.repository(ui, source)
 
+def getlocalpeer(ui, opts, source):
+    peer = getpeer(ui, opts, source)
+    repo = getattr(peer, 'local', lambda: peer)()
+    if isinstance(repo, bool):
+        repo = peer
+    return repo
 
 def getcaps(other):
     return (getattr(other, 'caps', None) or
@@ -262,8 +268,7 @@ def push(repo, dest, force, revs):
                 # Reload the repo after the rebase. Do not reuse
                 # contexts across this.
                 newtip = newtipctx.node()
-                repo = getpeer(ui, {}, meta.path)
-                repo = getattr(repo, 'local', lambda: repo)()
+                repo = getlocalpeer(ui, {}, meta.path)
                 newtipctx = repo[newtip]
                 # Rewrite the node ids in outgoing to their rebased versions.
                 rebasemap = dict()
@@ -554,7 +559,11 @@ def clone(orig, ui, source, dest=None, **opts):
 
     if dstrepo.local() and srcrepo.capable('subversion'):
         dst = dstrepo.local()
-        fd = dst.opener("hgrc", "a", text=True)
+        if isinstance(dst, bool):
+            # Apparently <= hg@1.9
+            fd = dstrepo.opener("hgrc", "a", text=True)
+        else:
+            fd = dst.opener("hgrc", "a", text=True)
         for section in set(s for s, v in optionmap.itervalues()):
             config = dict(ui.configitems(section))
             for name in dontretain[section]:

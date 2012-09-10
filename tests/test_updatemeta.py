@@ -26,8 +26,8 @@ def _do_case(self, name, stupid, single):
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
     src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
-    src = getattr(src, 'local', lambda: src)()
-    dest = getattr(dest, 'local', lambda: dest)()
+    src = test_util.getlocalpeer(src)
+    dest = test_util.getlocalpeer(dest)
 
     # insert a wrapper that prevents calling changectx.children()
     def failfn(orig, ctx):
