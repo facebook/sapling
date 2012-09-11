@@ -61,7 +61,7 @@ PyDoc_STRVAR(
 	init_doc,
 	"init() -> fd\n"
 	"\n"
-	"Initialise an inotify instance.\n"
+	"Initialize an inotify instance.\n"
 	"Return a file descriptor associated with a new inotify event queue.");
 
 static PyObject *add_watch(PyObject *self, PyObject *args)

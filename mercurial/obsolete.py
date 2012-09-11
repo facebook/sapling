@@ -226,9 +226,9 @@ class obsstore(object):
             self.caches.clear()
         return len(new)
 
-    def mergemarkers(self, transation, data):
+    def mergemarkers(self, transaction, data):
         markers = _readmarkers(data)
-        self.add(transation, markers)
+        self.add(transaction, markers)
 
     def _load(self, markers):
         for mark in markers:
@@ -320,7 +320,7 @@ def successormarkers(ctx):
 def anysuccessors(obsstore, node):
     """Yield every successor of <node>
 
-    This is a linear yield unsuitable to detect split changesets."""
+    This is a linear yield unsuited to detecting split changesets."""
     remaining = set([node])
     seen = set(remaining)
     while remaining:

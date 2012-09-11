@@ -315,7 +315,7 @@ def listphases(repo):
     return keys
 
 def pushphase(repo, nhex, oldphasestr, newphasestr):
-    """List phases root for serialisation over pushkey"""
+    """List phases root for serialization over pushkey"""
     lock = repo.lock()
     try:
         currentphase = repo[nhex].phase()

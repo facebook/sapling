@@ -1696,7 +1696,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
     """format the changelog or an index DAG as a concise textual description
 
     If you pass a revlog index, the revlog's DAG is emitted. If you list
-    revision numbers, they get labelled in the output as rN.
+    revision numbers, they get labeled in the output as rN.
 
     Otherwise, the changelog DAG of the current repo is emitted.
     """

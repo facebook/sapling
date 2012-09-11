@@ -22,7 +22,7 @@ let the daemon finish its stuff
 
   $ sleep 1
 
-eed to test all file opperations
+eed to test all file operations
 
   $ hg rm a
   $ rm b

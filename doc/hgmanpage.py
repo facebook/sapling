@@ -158,7 +158,7 @@ class Translator(nodes.NodeVisitor):
     """"""
 
     words_and_spaces = re.compile(r'\S+| +|\n')
-    document_start = """Man page generated from reStructeredText."""
+    document_start = """Man page generated from reStructuredText."""
 
     def __init__(self, document):
         nodes.NodeVisitor.__init__(self, document)
@@ -900,7 +900,7 @@ class Translator(nodes.NodeVisitor):
         # ``.PP`` : Start standard indented paragraph.
         # ``.LP`` : Start block paragraph, all except the first.
         # ``.P [type]``  : Start paragraph type.
-        # NOTE dont use paragraph starts because they reset indentation.
+        # NOTE don't use paragraph starts because they reset indentation.
         # ``.sp`` is only vertical space
         self.ensure_eol()
         self.body.append('.sp\n')

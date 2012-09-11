@@ -66,7 +66,7 @@ rename --after a single file when src and tgt already tracked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm d2/c
 
-rename --after a single file to a nonexistant target filename
+rename --after a single file to a nonexistent target filename
 
   $ hg rename --after d1/a dummy
   d1/a: not recording move - dummy does not exist (glob)

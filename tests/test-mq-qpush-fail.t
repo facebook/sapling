@@ -34,7 +34,7 @@ test qpush on empty series
   $ python -c 'print "\xe9"' > message
   $ cat .hg/patches/bad-patch >> message
   $ mv message .hg/patches/bad-patch
-  $ hg qpush -a && echo 'qpush succeded?!'
+  $ hg qpush -a && echo 'qpush succeeded?!'
   applying patch1
   applying patch2
   applying bad-patch

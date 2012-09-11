@@ -10,7 +10,7 @@ test-qrecord
 test-strict
 
 # --inotify activates de facto the inotify extension. It does not play well
-# with inotify-specific tests, which activate/desactivate inotify at will:
+# with inotify-specific tests, which activate/deactivate inotify at will:
 test-inotify
 test-inotify-debuginotify
 test-inotify-dirty-dirstate

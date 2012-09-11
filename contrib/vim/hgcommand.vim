@@ -27,7 +27,7 @@
 "
 " You still can read the documentation at the end of this file. Locate it by
 " searching the "hgcommand-contents" string (and set ft=help to have
-" appropriate syntaxic coloration).
+" appropriate syntactic coloration).
 
 " Section: Plugin header {{{1
 
@@ -752,7 +752,7 @@ function! s:HGCommit(...)
     " Protect against case and backslash issues in Windows.
     let autoPattern = '\c' . messageFileName
 
-    " Ensure existance of group
+    " Ensure existence of group
     augroup HGCommit
     augroup END
 

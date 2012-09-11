@@ -97,8 +97,8 @@ trying to push
 trying clone -r
 
   $ cd ..
-  $ hg clone -r donotexist static-http://localhost:$HGPORT/remote local0
-  abort: unknown revision 'donotexist'!
+  $ hg clone -r doesnotexist static-http://localhost:$HGPORT/remote local0
+  abort: unknown revision 'doesnotexist'!
   [255]
   $ hg clone -r 0 static-http://localhost:$HGPORT/remote local0
   adding changesets

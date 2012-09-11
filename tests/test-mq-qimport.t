@@ -240,7 +240,7 @@ qimport -e --name with --force
 
 qimport with bad name, should abort before reading file
 
-  $ hg qimport non-existant-file --name .hg
+  $ hg qimport non-existent-file --name .hg
   abort: patch name cannot begin with ".hg"
   [255]
 

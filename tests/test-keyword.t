@@ -814,7 +814,7 @@ Clone to test global and local configurations
 
   $ cd ..
 
-Expansion in destinaton with global configuration
+Expansion in destination with global configuration
 
   $ hg --quiet clone Test globalconf
   $ cat globalconf/a

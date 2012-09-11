@@ -1,4 +1,4 @@
-Just exercize debugindexdot
+Just exercise debugindexdot
 Create a short file history including a merge.
   $ hg init t
   $ cd t

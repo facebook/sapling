@@ -139,7 +139,7 @@ moving a missing file
   foo3 does not exist!
   $ hg up -qC .
 
-copy --after to a nonexistant target filename
+copy --after to a nonexistent target filename
   $ hg cp -A foo dummy
   foo: not recording copy - dummy does not exist
 

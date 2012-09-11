@@ -529,12 +529,12 @@ test python hook configured with python:[file]:[hook] syntax
   [1]
 
   $ echo '[hooks]' > .hg/hgrc
-  $ echo "update.ne = python:`pwd`/nonexisting.py:testhook" >> .hg/hgrc
+  $ echo "update.ne = python:`pwd`/nonexistent.py:testhook" >> .hg/hgrc
   $ echo "pre-identify.npmd = python:`pwd`/:no_python_module_dir" >> .hg/hgrc
 
   $ hg up null
   loading update.ne hook failed:
-  abort: No such file or directory: $TESTTMP/d/repo/nonexisting.py
+  abort: No such file or directory: $TESTTMP/d/repo/nonexistent.py
   [255]
 
   $ hg id
@@ -581,7 +581,7 @@ commit and update hooks should run after command completion
   cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-make sure --verbose (and --quiet/--debug etc.) are propogated to the local ui
+make sure --verbose (and --quiet/--debug etc.) are propagated to the local ui
 that is passed to pre/post hooks
 
   $ echo '[hooks]' > .hg/hgrc

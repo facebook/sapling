@@ -122,7 +122,7 @@ class lock(object):
     def release(self):
         """release the lock and execute callback function if any
 
-        If the lock has been acquired multiple time, the actual release is
+        If the lock has been acquired multiple times, the actual release is
         delayed to the last release call."""
         if self.held > 1:
             self.held -= 1

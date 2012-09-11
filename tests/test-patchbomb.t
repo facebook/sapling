@@ -1877,7 +1877,7 @@ test single flag for multiple patches:
   +b
   
 
-test mutiple flags for single patch:
+test multiple flags for single patch:
   $ hg email --date '1970-1-1 0:1' -n --flag fooFlag --flag barFlag -f quux -t foo \
   >  -c bar -s test -r 2
   this patch series consists of 1 patches.
