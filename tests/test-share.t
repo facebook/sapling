@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ echo "[extensions]"      >> $HGRCPATH
   $ echo "share = "          >> $HGRCPATH
@@ -127,3 +127,8 @@ check that a change does not propagate
   c2e0ac586386 tip
 
   $ cd ..
+
+Explicitly kill daemons to let the test exit on Windows
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
 Test wire protocol argument passing
 
@@ -111,4 +111,8 @@ SSH (try to exercise the ssh functionality with a dummy script):
   eins zwei None None None
   $ hg debugwireargs --ssh "python ./dummyssh" ssh://user@dummy/repo eins zwei --five fuenf
   eins zwei None None None
+
+Explicitly kill daemons to let the test exit on Windows
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
