@@ -38,6 +38,18 @@ encoding directories ending in .hg, .i or .d with '.hg' suffix
 A = 'data/x.hg/x.i/x.d/foo'
 B = 'data/x.hg.hg/x.i.hg/x.d.hg/foo'
 
+A = 'data/a.hg/a.i/a.d/foo'
+B = 'data/a.hg.hg/a.i.hg/a.d.hg/foo'
+
+A = 'data/au.hg/au.i/au.d/foo'
+B = 'data/au.hg.hg/au.i.hg/au.d.hg/foo'
+
+A = 'data/aux.hg/aux.i/aux.d/foo'
+B = 'data/au~78.hg.hg/au~78.i.hg/au~78.d.hg/foo'
+
+A = 'data/auxy.hg/auxy.i/auxy.d/foo'
+B = 'data/auxy.hg.hg/auxy.i.hg/auxy.d.hg/foo'
+
 but these are not encoded on *filenames*
 A = 'data/foo/x.hg'
 B = 'data/foo/x.hg'
@@ -47,6 +59,42 @@ B = 'data/foo/x.i'
 
 A = 'data/foo/x.d'
 B = 'data/foo/x.d'
+
+A = 'data/foo/a.hg'
+B = 'data/foo/a.hg'
+
+A = 'data/foo/a.i'
+B = 'data/foo/a.i'
+
+A = 'data/foo/a.d'
+B = 'data/foo/a.d'
+
+A = 'data/foo/au.hg'
+B = 'data/foo/au.hg'
+
+A = 'data/foo/au.i'
+B = 'data/foo/au.i'
+
+A = 'data/foo/au.d'
+B = 'data/foo/au.d'
+
+A = 'data/foo/aux.hg'
+B = 'data/foo/au~78.hg'
+
+A = 'data/foo/aux.i'
+B = 'data/foo/au~78.i'
+
+A = 'data/foo/aux.d'
+B = 'data/foo/au~78.d'
+
+A = 'data/foo/auxy.hg'
+B = 'data/foo/auxy.hg'
+
+A = 'data/foo/auxy.i'
+B = 'data/foo/auxy.i'
+
+A = 'data/foo/auxy.d'
+B = 'data/foo/auxy.d'
 
 plain .hg, .i and .d directories have the leading dot encoded
 A = 'data/.hg/.i/.d/foo'
@@ -126,6 +174,33 @@ B = 'data/conx/px/prx/prnx/ax/au~78/auxx/nx/nux/nulx'
 
 A = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
 B = 'data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul'
+
+A = 'data/a./au./aux./auxy./aux.'
+B = 'data/a~2e/au~2e/au~78~2e/auxy~2e/au~78~2e'
+
+A = 'data/c./co./con./cony./con.'
+B = 'data/c~2e/co~2e/co~6e~2e/cony~2e/co~6e~2e'
+
+A = 'data/p./pr./prn./prny./prn.'
+B = 'data/p~2e/pr~2e/pr~6e~2e/prny~2e/pr~6e~2e'
+
+A = 'data/n./nu./nul./nuly./nul.'
+B = 'data/n~2e/nu~2e/nu~6c~2e/nuly~2e/nu~6c~2e'
+
+A = 'data/l./lp./lpt./lpt1./lpt1y./lpt1.'
+B = 'data/l~2e/lp~2e/lpt~2e/lp~741~2e/lpt1y~2e/lp~741~2e'
+
+A = 'data/lpt9./lpt9y./lpt9.'
+B = 'data/lp~749~2e/lpt9y~2e/lp~749~2e'
+
+A = 'data/com./com1./com1y./com1.'
+B = 'data/com~2e/co~6d1~2e/com1y~2e/co~6d1~2e'
+
+A = 'data/com9./com9y./com9.'
+B = 'data/co~6d9~2e/com9y~2e/co~6d9~2e'
+
+A = 'data/a /au /aux /auxy /aux '
+B = 'data/a~20/au~20/aux~20/auxy~20/aux~20'
 
 largest unhashed path
 A = 'data/123456789-123456789-123456789-123456789-123456789-unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12345'

@@ -42,11 +42,27 @@ show('data/less <, greater >, colon :, double-quote ", backslash \\'
 
 print "encoding directories ending in .hg, .i or .d with '.hg' suffix"
 show('data/x.hg/x.i/x.d/foo')
+show('data/a.hg/a.i/a.d/foo')
+show('data/au.hg/au.i/au.d/foo')
+show('data/aux.hg/aux.i/aux.d/foo')
+show('data/auxy.hg/auxy.i/auxy.d/foo')
 
 print "but these are not encoded on *filenames*"
 show('data/foo/x.hg')
 show('data/foo/x.i')
 show('data/foo/x.d')
+show('data/foo/a.hg')
+show('data/foo/a.i')
+show('data/foo/a.d')
+show('data/foo/au.hg')
+show('data/foo/au.i')
+show('data/foo/au.d')
+show('data/foo/aux.hg')
+show('data/foo/aux.i')
+show('data/foo/aux.d')
+show('data/foo/auxy.hg')
+show('data/foo/auxy.i')
+show('data/foo/auxy.d')
 
 print "plain .hg, .i and .d directories have the leading dot encoded"
 show('data/.hg/.i/.d/foo')
@@ -94,6 +110,17 @@ show('data/con.x/p.x/pr.x/prn.x/a.x/au.x/aux.x/n.x/nu.x/nul.x')
 show('data/x.con/x.p/x.pr/x.prn/x.a/x.au/x.aux/x.n/x.nu/x.nul')
 show('data/conx/px/prx/prnx/ax/aux/auxx/nx/nux/nulx')
 show('data/xcon/xp/xpr/xprn/xa/xau/xaux/xn/xnu/xnul')
+
+show('data/a./au./aux./auxy./aux.')
+show('data/c./co./con./cony./con.')
+show('data/p./pr./prn./prny./prn.')
+show('data/n./nu./nul./nuly./nul.')
+show('data/l./lp./lpt./lpt1./lpt1y./lpt1.')
+show('data/lpt9./lpt9y./lpt9.')
+show('data/com./com1./com1y./com1.')
+show('data/com9./com9y./com9.')
+
+show('data/a /au /aux /auxy /aux ')
 
 print "largest unhashed path"
 show('data/123456789-123456789-123456789-123456789-123456789-'
