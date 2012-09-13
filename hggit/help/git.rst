@@ -78,5 +78,3 @@ Limitations
 
 - Cloning/pushing/pulling local Git repositories is not supported (due to
   lack of support in Dulwich)
-- The `hg incoming` and `hg outgoing` commands are not currently
-  supported.

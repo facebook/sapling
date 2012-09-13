@@ -24,6 +24,7 @@ import os
 from mercurial import bundlerepo
 from mercurial import commands
 from mercurial import demandimport
+from mercurial import discovery
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
@@ -142,25 +143,24 @@ def sortednodetags(orig, *args, **kwargs):
     return ret
 extensions.wrapfunction(localrepo.localrepository, 'nodetags', sortednodetags)
 
-try:
-    from mercurial import discovery
-    kwname = 'heads'
-    if hg.util.version() >= '1.7':
-        kwname = 'remoteheads'
-    if getattr(discovery, 'findcommonoutgoing', None):
-        kwname = 'onlyheads'
-    def findoutgoing(orig, local, remote, *args, **kwargs):
-        if isinstance(remote, gitrepo.gitrepo):
-            raise hgutil.Abort(
-                'hg-git outgoing support is broken')
-        return orig(local, remote, *args, **kwargs)
-    if getattr(discovery, 'findoutgoing', None):
-        extensions.wrapfunction(discovery, 'findoutgoing', findoutgoing)
-    else:
-        extensions.wrapfunction(discovery, 'findcommonoutgoing',
-                                findoutgoing)
-except ImportError:
-    pass
+def findcommonoutgoing(orig, repo, other, *args, **kwargs):
+    if isinstance(other, gitrepo.gitrepo):
+        git = GitHandler(repo, repo.ui)
+        heads = git.get_refs(other.path)[0]
+        kw = {}
+        kw.update(kwargs)
+        for val, k in zip(args,
+                ('onlyheads', 'force', 'commoninc', 'portable')):
+            kw[k] = val
+        force = kw.get('force', False)
+        commoninc = kw.get('commoninc', None)
+        if commoninc is None:
+            commoninc = discovery.findcommonincoming(repo, other,
+                heads=heads, force=force)
+            kw['commoninc'] = commoninc
+        return orig(repo, other, **kw)
+    return orig(repo, other, *args, **kwargs)
+extensions.wrapfunction(discovery, 'findcommonoutgoing', findcommonoutgoing)
 
 def getremotechanges(orig, ui, repo, other, *args, **opts):
     if isinstance(other, gitrepo.gitrepo):

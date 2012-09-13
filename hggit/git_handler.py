@@ -1,7 +1,7 @@
 import os, math, urllib, re
 import stat, posixpath, StringIO
 
-from dulwich.errors import HangupException, GitProtocolError
+from dulwich.errors import HangupException, GitProtocolError, UpdateRefsError
 from dulwich.index import commit_tree
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone, S_IFGITLINK
 from dulwich.pack import create_delta, apply_delta
@@ -226,7 +226,10 @@ class GitHandler(object):
             return {}
 
         try:
-            client.send_pack(path, changed, lambda have, want: [])
+            try:
+                client.send_pack(path, changed, lambda have, want: [])
+            except UpdateRefsError:
+                pass # dulwich throws an error when send_pack doesn't upload
 
             changed_refs = [ref for ref, sha in new_refs.iteritems()
                             if sha != old_refs.get(ref)]
