@@ -25,7 +25,7 @@ tests-%:
 # latest Ubuntu LTS release (2.0.2 for 12.04 LTS) may be dropped if they
 # interfere with new development.  The latest released minor version should be
 # listed for each major version; earlier minor versions are not needed.
-all-version-tests: tests-1.7.5 tests-1.8.4 tests-1.9.3 tests-2.0.2 \
-                   tests-2.1.2 tests-2.2.3 tests-2.3.1 tests-tip
+all-version-tests: tests-1.9.3 tests-2.0.2 tests-2.1.2 tests-2.2.3 \
+                   tests-2.3.1 tests-tip
 
 .PHONY: tests all-version-tests

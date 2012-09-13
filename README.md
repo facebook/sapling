@@ -24,7 +24,7 @@ Dependencies
 This plugin is implemented entirely in Python - there are no Git
 binary dependencies, you do not need to have Git installed on your
 system.  The only dependencies are Mercurial and Dulwich.  The plugin
-is known to work on Hg versions 1.3 through 1.5 and requires at least
+is known to work on Hg versions 1.9.3 through 2.3.1 and requires at least
 Dulwich 0.8.6.
 
 Usage
@@ -141,8 +141,6 @@ That will enable the Hg-Git extension for you.  The bookmarks section
 is not compulsory, but it makes some things a bit nicer for you.
 
 This plugin is currently tested against the following Mercurial versions:
- * 1.7.5
- * 1.8.4
  * 1.9.3
  * 2.0.2
  * 2.1.2
