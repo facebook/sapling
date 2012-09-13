@@ -26,7 +26,7 @@ From git://localhost/gitsubrepo
    56f0304..aabf7cd  master     -> origin/master
 Updating 56f0304..aabf7cd
 Fast-forward
- gamma |    1 +
+ gamma | 1 +
  1 file changed, 1 insertion(+)
  create mode 100644 gamma
 pushing to git://localhost/gitrepo1

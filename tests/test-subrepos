@@ -55,7 +55,7 @@ git submodule add ../gitsubrepo subrepo1
 gitcommit -m 'add subrepo1'
 git submodule add ../gitsubrepo xyz/subrepo2
 gitcommit -m 'add subrepo2'
-# we are going to push to this repo from our hg clone, 
+# we are going to push to this repo from our hg clone,
 # allow commits despite working copy presense
 git config receive.denyCurrentBranch ignore
 cd ..
@@ -96,7 +96,7 @@ gitcommit -m 'add gamma'
 cd ..
 cd hgrepo
 cd xyz/subrepo2
-git pull
+git pull | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//' | sed 's/|  */| /'
 cd ../..
 echo xxx >> alpha
 hg commit -m 'Update subrepo2 from hg'
@@ -133,4 +133,3 @@ echo % pull shall bring .hgsub entry which was added to the git repo
 cat hgrepo/.hgsub | sed s_$(pwd)_TEMPLOCATION_
 echo % .hgsubstate shall list revision of the subrepo added through git repo
 cat hgrepo/.hgsubstate | sed s_$(pwd)_TEMPLOCATION_
-
