@@ -4,7 +4,6 @@ bail if the user does not have dulwich
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
-  $ echo 'hgext.bookmarks =' >> $HGRCPATH
 
   $ hg init test
   $ cd test

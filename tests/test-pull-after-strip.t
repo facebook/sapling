@@ -21,7 +21,6 @@ bail early if the user is already running git-daemon
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > graphlog=
-  > bookmarks=
   > mq=
   > EOF
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH

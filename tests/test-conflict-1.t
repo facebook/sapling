@@ -10,7 +10,6 @@ bail early if the user is already running git-daemon
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
-  $ echo 'hgext.bookmarks =' >> $HGRCPATH
 
   $ hg init hgrepo1
   $ cd hgrepo1

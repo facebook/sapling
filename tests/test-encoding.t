@@ -12,7 +12,6 @@ bail early if the user is already running git-daemon
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
-  $ echo 'hgext.bookmarks =' >> $HGRCPATH
 
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
   $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
