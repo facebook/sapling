@@ -41,7 +41,7 @@ setup
 
   $ mkcommit old
   $ hg push
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -64,7 +64,7 @@ old exists remotely as draft. It is obsoleted by new that we now push.
 Push should not warn about creating new head
 
   $ hg push
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -80,7 +80,7 @@ setup
   $ cp -r ../backup1 ../remote
   $ hg -R ../remote phase --public c70b08862e08
   $ hg pull -v
-  pulling from $TESTTMP/remote
+  pulling from $TESTTMP/remote (glob)
   searching for changes
   no changes found
   $ hg glog --hidden
@@ -94,7 +94,7 @@ setup
 Abort: old will still be an head because it's public.
 
   $ hg push
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   abort: push creates new remote head 71e3228bffe1!
   (did you forget to merge? use push -f to force)
@@ -154,7 +154,7 @@ old exists remotely as draft. It is obsoleted by new but we don't push new.
 Push should abort on new head
 
   $ hg push -r 'desc("other")'
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   abort: push creates new remote head d7d41ccbd4de!
   (did you forget to merge? use push -f to force)
@@ -181,7 +181,7 @@ setup. (The obsolete marker is known locally only
   $ mkcommit new
   created new head
   $ hg push -f
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -216,7 +216,7 @@ Push should not warn about adding new heads. We create one, but we'll delete
 one anyway.
 
   $ hg push
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -264,7 +264,7 @@ It should not complain about "unsynced remote changes!" either but that's not
 handled yet.
 
   $ hg push --traceback
-  pushing to $TESTTMP/remote
+  pushing to $TESTTMP/remote (glob)
   searching for changes
   adding changesets
   adding manifests
