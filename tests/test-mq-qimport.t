@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ cat > writelines.py <<EOF
   > import sys
@@ -278,3 +278,5 @@ check qimport phase:
   1: secret
 
   $ cd ..
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS

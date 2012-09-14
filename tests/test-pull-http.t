@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ hg init test
   $ cd test
@@ -49,7 +49,7 @@ serve errors
   >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test pull http://localhost:$HGPORT/
-  >     kill `cat hg.pid`
+  >     "$TESTDIR/killdaemons.py" hg.pid
   >     echo % serve errors
   >     cat errors.log
   > }

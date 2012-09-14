@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
@@ -1062,4 +1062,5 @@ A. Clone without secret changeset
   |
   o  0 public a-A - 054250a37db4
   
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
