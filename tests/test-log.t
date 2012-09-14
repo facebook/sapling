@@ -1213,3 +1213,52 @@ test in problematic encoding
   1
 
   $ cd ..
+
+test hg log on non-existent files and on directories
+  $ hg init issue1340
+  $ cd issue1340
+  $ mkdir d1; mkdir D2; mkdir D3.i; mkdir d4.hg; mkdir d5.d; mkdir .d6
+  $ echo 1 > d1/f1
+  $ echo 1 > D2/f1
+  $ echo 1 > D3.i/f1
+  $ echo 1 > d4.hg/f1
+  $ echo 1 > d5.d/f1
+  $ echo 1 > .d6/f1
+  $ hg add .
+  adding .d6/f1
+  adding D2/f1
+  adding D3.i/f1
+  adding d1/f1
+  adding d4.hg/f1
+  adding d5.d/f1
+  $ hg commit -m "a bunch of weird directories"
+  $ hg log -l1 d1/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 f1
+  $ hg log -l1 . | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 ./ | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 d1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 D2 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 D2/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 D3.i | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 D3.i/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 d4.hg | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 d4.hg/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 d5.d | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 d5.d/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 .d6 | grep changeset
+  changeset:   0:65624cd9070a
+  $ hg log -l1 .d6/f1 | grep changeset
+  changeset:   0:65624cd9070a
+  $ cd ..

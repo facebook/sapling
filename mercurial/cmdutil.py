@@ -1111,6 +1111,17 @@ def walkchangerevs(repo, match, opts, prepare):
                 wanted.add(rev)
                 if copied:
                     copies.append(copied)
+
+        # We decided to fall back to the slowpath because at least one
+        # of the paths was not a file. Check to see if at least one of them
+        # existed in history, otherwise simply return
+        if slowpath:
+            for path in match.files():
+                if path == '.' or path in repo.store:
+                    break
+                else:
+                    return []
+
     if slowpath:
         # We have to read the changelog to match filenames against
         # changed files
@@ -1286,6 +1297,18 @@ def _makegraphlogrevset(repo, pats, opts, revs):
                     raise util.Abort(
                         _('cannot follow nonexistent file: "%s"') % f)
                 slowpath = True
+
+        # We decided to fall back to the slowpath because at least one
+        # of the paths was not a file. Check to see if at least one of them
+        # existed in history - in that case, we'll continue down the
+        # slowpath; otherwise, we can turn off the slowpath
+        if slowpath:
+            for path in match.files():
+                if path == '.' or path in repo.store:
+                    break
+            else:
+                slowpath = False
+
     if slowpath:
         # See walkchangerevs() slow path.
         #
