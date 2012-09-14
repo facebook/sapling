@@ -393,11 +393,11 @@ the hunk is left unchanged.
             if skipfile is None and skipall is None:
                 chunk.pretty(ui)
             if total == 1:
-                msg = _('record this change to %r?') % chunk.filename()
+                msg = _("record this change to '%s'?") % chunk.filename()
             else:
                 idx = pos - len(h.hunks) + i
-                msg = _('record change %d/%d to %r?') % (idx, total,
-                                                         chunk.filename())
+                msg = _("record change %d/%d to '%s'?") % (idx, total,
+                                                           chunk.filename())
             r, skipfile, skipall, newpatches = prompt(skipfile,
                     skipall, msg, chunk)
             if r:
