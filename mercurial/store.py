@@ -373,6 +373,14 @@ class _fncacheopener(scmutil.abstractopener):
         self.fncache = fnc
         self.encode = encode
 
+    def _getmustaudit(self):
+        return self.opener.mustaudit
+
+    def _setmustaudit(self, onoff):
+        self.opener.mustaudit = onoff
+
+    mustaudit = property(_getmustaudit, _setmustaudit)
+
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb') and path.startswith('data/'):
             self.fncache.add(path)
