@@ -341,6 +341,17 @@ class basicstore(object):
     def write(self):
         pass
 
+    def __contains__(self, path):
+        '''Checks if the store contains path'''
+        path = "/".join(("data", path))
+        # file?
+        if os.path.exists(self.join(path + ".i")):
+            return True
+        # dir?
+        if not path.endswith("/"):
+            path = path + "/"
+        return os.path.exists(self.join(path))
+
 class encodedstore(basicstore):
     def __init__(self, path, vfstype):
         vfs = vfstype(path + '/store')
