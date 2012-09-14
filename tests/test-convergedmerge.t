@@ -55,9 +55,8 @@ bail early if the user is already running git-daemon
 
   $ mkdir gitrepo
   $ cd gitrepo
-  $ git init --bare | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  Initialized empty Git repository in gitrepo/
-  
+  $ git init --bare
+  Initialized empty Git repository in $TESTTMP/gitrepo/
 
 dulwich does not presently support local git repos, workaround
   $ cd ..

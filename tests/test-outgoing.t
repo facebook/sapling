@@ -32,9 +32,8 @@ bail early if the user is already running git-daemon
 
   $ mkdir gitrepo
   $ cd gitrepo
-  $ git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  Initialized empty Git repository in gitrepo/.git/
-  
+  $ git init
+  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
 
   $ echo alpha > alpha
   $ git add alpha

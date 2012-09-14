@@ -29,9 +29,8 @@ bail early if the user is already running git-daemon
 
   $ mkdir gitrepo1
   $ cd gitrepo1
-  $ git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  Initialized empty Git repository in gitrepo1/.git/
-  
+  $ git init
+  Initialized empty Git repository in $TESTTMP/gitrepo1/.git/
   $ echo alpha > alpha
   $ git add alpha
   $ commit -m 'add alpha'
@@ -39,9 +38,8 @@ bail early if the user is already running git-daemon
 
   $ mkdir gitsubrepo
   $ cd gitsubrepo
-  $ git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  Initialized empty Git repository in gitsubrepo/.git/
-  
+  $ git init
+  Initialized empty Git repository in $TESTTMP/gitsubrepo/.git/
   $ echo beta > beta
   $ git add beta
   $ commit -m 'add beta'

@@ -39,9 +39,8 @@ TODO stop using this when we're 1.5 only
 
   $ mkdir gitrepo
   $ cd gitrepo
-  $ git init | python -c "import sys; print sys.stdin.read().replace('$(dirname $(pwd))/', '')"
-  Initialized empty Git repository in gitrepo/.git/
-  
+  $ git init
+  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
 
   $ echo alpha > alpha
   $ git add alpha
