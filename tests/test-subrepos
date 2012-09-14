@@ -99,7 +99,7 @@ cd xyz/subrepo2
 git pull | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//' | sed 's/|  */| /'
 cd ../..
 echo xxx >> alpha
-hg commit -m 'Update subrepo2 from hg'
+hg commit -m 'Update subrepo2 from hg' | grep -v "committing subrepository"
 hg push
 cd ..
 cd gitrepo1
@@ -127,9 +127,9 @@ git add .hgsubstate .hgsub
 gitcommit -m "Test3. Prepare .hgsub and .hgsubstate sources"
 cd ../hgrepo
 hg pull
-hg checkout -C  | sed s_$(dirname $(pwd))_TEMPLOCATION_
+hg checkout -C  | sed "s_$(dirname $(pwd))_TEMPLOCATION_"
 cd ..
 echo % pull shall bring .hgsub entry which was added to the git repo
-cat hgrepo/.hgsub | sed s_$(pwd)_TEMPLOCATION_
+cat hgrepo/.hgsub | sed "s_$(pwd)_TEMPLOCATION_"
 echo % .hgsubstate shall list revision of the subrepo added through git repo
-cat hgrepo/.hgsubstate | sed s_$(pwd)_TEMPLOCATION_
+cat hgrepo/.hgsubstate | sed "s_$(pwd)_TEMPLOCATION_"
