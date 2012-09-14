@@ -267,7 +267,7 @@ class opener(abstractopener):
             mode += "b" # for that other OS
 
         nlink = -1
-        dirname, basename = os.path.split(f)
+        dirname, basename = util.split(f)
         # If basename is empty, then the path is malformed because it points
         # to a directory. Let the posixfile() call below raise IOError.
         if basename and mode not in ('r', 'rb'):
@@ -383,7 +383,7 @@ def canonpath(root, cwd, myname, auditor=None):
                 name = os.path.join(*rel)
                 auditor(name)
                 return util.pconvert(name)
-            dirname, basename = os.path.split(name)
+            dirname, basename = util.split(name)
             rel.append(basename)
             if dirname == name:
                 break
