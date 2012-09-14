@@ -123,8 +123,7 @@ TODO
 Hg Bookmarks Integration
 ========================
 
-If you have the bookmarks extension enabled, Hg-Git will use it. It
-will push your bookmarks up to the Git server as branches and will
+Hg-Git pushes your bookmarks up to the Git server as branches and will
 pull Git branches down and set them up as bookmarks.
 
 Installing
@@ -134,11 +133,9 @@ Clone this repository somewhere and make the 'extensions' section in
 your `~/.hgrc` file look something like this:
 
     [extensions]
-    hgext.bookmarks =
     hggit = [path-to]/hg-git/hggit
 
-That will enable the Hg-Git extension for you.  The bookmarks section
-is not compulsory, but it makes some things a bit nicer for you.
+That will enable the Hg-Git extension for you.
 
 This plugin is currently tested against the following Mercurial versions:
  * 1.9.3
