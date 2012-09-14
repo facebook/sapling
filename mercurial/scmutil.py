@@ -229,6 +229,7 @@ class opener(abstractopener):
         if expand:
             base = os.path.realpath(util.expandpath(base))
         self.base = base
+        self.basesep = self.base + os.sep
         self._setmustaudit(audit)
         self.createmode = None
         self._trustnlink = None
@@ -331,9 +332,8 @@ class opener(abstractopener):
 
     def join(self, path):
         if path:
-            return os.path.join(self.base, path)
-        else:
-            return self.base
+            return path.startswith('/') and path or (self.basesep + path)
+        return self.base
 
 class filteropener(abstractopener):
     '''Wrapper opener for filtering filenames with a function.'''
