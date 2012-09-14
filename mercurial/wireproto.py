@@ -545,12 +545,20 @@ def stream(repo, proto):
         repo.ui.debug('%d files, %d bytes to transfer\n' %
                       (len(entries), total_bytes))
         yield '%d %d\n' % (len(entries), total_bytes)
-        for name, size in entries:
-            repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-            # partially encode name over the wire for backwards compat
-            yield '%s\0%d\n' % (store.encodedir(name), size)
-            for chunk in util.filechunkiter(repo.sopener(name), limit=size):
-                yield chunk
+
+        sopener = repo.sopener
+        oldaudit = sopener.mustaudit
+        sopener.mustaudit = False
+
+        try:
+            for name, size in entries:
+                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+                # partially encode name over the wire for backwards compat
+                yield '%s\0%d\n' % (store.encodedir(name), size)
+                for chunk in util.filechunkiter(sopener(name), limit=size):
+                    yield chunk
+        finally:
+            sopener.mustaudit = oldaudit
 
     return streamres(streamer(repo, entries, total_bytes))
 
