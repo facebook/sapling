@@ -63,21 +63,13 @@ allow commits despite working copy presense
   $ cd ..
   $ echo
   
-
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
   $ echo % Ensure gitlinks are transformed to .hgsubstate on hg pull from git
   % Ensure gitlinks are transformed to .hgsubstate on hg pull from git
-  $ hg clone git://localhost/gitrepo1 hgrepo
+  $ hg clone gitrepo1 hgrepo
   importing git objects into hg
   updating to branch default
-  cloning subrepo subrepo1 from git://localhost/gitsubrepo
-  cloning subrepo xyz/subrepo2 from git://localhost/gitsubrepo
+  cloning subrepo subrepo1 from $TESTTMP/gitsubrepo
+  cloning subrepo xyz/subrepo2 from $TESTTMP/gitsubrepo
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
   $ hg bookmarks -f -r default master
@@ -111,7 +103,7 @@ allow commits despite working copy presense
   $ cd hgrepo
   $ cd xyz/subrepo2
   $ git pull | sed 's/files/file/;s/insertions/insertion/;s/, 0 deletions.*//' | sed 's/|  */| /'
-  From git://localhost/gitsubrepo
+  From $TESTTMP/gitsubrepo
      56f0304..aabf7cd  master     -> origin/master
   Updating 56f0304..aabf7cd
   Fast-forward
@@ -122,7 +114,7 @@ allow commits despite working copy presense
   $ echo xxx >> alpha
   $ hg commit -m 'Update subrepo2 from hg' | grep -v "committing subrepository" || true
   $ hg push
-  pushing to git://localhost/gitrepo1
+  pushing to $TESTTMP/gitrepo1
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:4663c492
@@ -155,7 +147,7 @@ bring working copy to HEAD state (it's not bare repo)
   $ gitcommit -m "Test3. Prepare .hgsub and .hgsubstate sources"
   $ cd ../hgrepo
   $ hg pull
-  pulling from git://localhost/gitrepo1
+  pulling from $TESTTMP/gitrepo1
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg checkout -C  | sed "s_$(dirname $(pwd))_TEMPLOCATION_"
