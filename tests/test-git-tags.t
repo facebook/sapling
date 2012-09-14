@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -49,16 +46,8 @@ bail early if the user is already running git-daemon
   $ commit -m 'add beta'
   $ tag -a -m 'added tag beta' beta
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -81,7 +70,7 @@ dulwich does not presently support local git repos, workaround
   $ echo beta-fix >> beta
   $ hg commit -m 'fix for beta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:3b7fd1b3

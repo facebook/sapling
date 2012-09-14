@@ -1,9 +1,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -39,16 +36,8 @@ bail early if the user is already running git-daemon
   $ git add alpha
   $ commit -m "add alpha"
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -65,7 +54,7 @@ dulwich does not presently support local git repos, workaround
   $ hg book -r 1 beta
 
   $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   exporting hg objects to git
   changeset:   1:0564f526fb0f
   tag:         beta
@@ -81,7 +70,7 @@ dulwich does not presently support local git repos, workaround
   summary:     add gamma
   
   $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test
@@ -89,7 +78,7 @@ dulwich does not presently support local git repos, workaround
   summary:     add beta
   
   $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test
@@ -122,17 +111,17 @@ dulwich does not presently support local git repos, workaround
   $ echo % this will fail # maybe we should try to make it work
   % this will fail
   $ hg outgoing
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
   $ echo % let\'s pull and try again
   % let's pull and try again
   $ hg pull
-  pulling from git://localhost/gitrepo
+  pulling from */gitrepo (glob)
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test
@@ -146,7 +135,7 @@ dulwich does not presently support local git repos, workaround
   summary:     add gamma
   
   $ hg outgoing -r beta | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test
@@ -154,7 +143,7 @@ dulwich does not presently support local git repos, workaround
   summary:     add beta
   
   $ hg outgoing -r master | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
-  comparing with git://localhost/gitrepo
+  comparing with */gitrepo (glob)
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test

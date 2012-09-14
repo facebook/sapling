@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -44,16 +41,8 @@ bail early if the user is already running git-daemon
   $ git checkout -b not-master
   Switched to a new branch 'not-master'
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -64,7 +53,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add beta
   $ hgcommit -u "test" -m 'add beta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:cffa0e8d
@@ -72,7 +61,7 @@ dulwich does not presently support local git repos, workaround
   $ echo gamma >> beta
   $ hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:2b9ec6a4
@@ -81,7 +70,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add gamma
   $ hgcommit -u "<test@example.com>" -m 'add gamma'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:fee30180
@@ -90,7 +79,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add delta
   $ hgcommit -u "name<test@example.com>" -m 'add delta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:d1659250
@@ -99,7 +88,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add epsilon
   $ hgcommit -u "name <test@example.com" -m 'add epsilon'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:ee985f12
@@ -108,7 +97,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add zeta
   $ hgcommit -u " test " -m 'add zeta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:d21e26b4
@@ -117,7 +106,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add eta
   $ hgcommit -u "test < test@example.com >" -m 'add eta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:8c878c97
@@ -126,7 +115,7 @@ dulwich does not presently support local git repos, workaround
   $ hg add theta
   $ hgcommit -u "test >test@example.com>" -m 'add theta'
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/master => GIT:1e03e913
@@ -182,7 +171,7 @@ dulwich does not presently support local git repos, workaround
   
 
   $ cd ..
-  $ hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
+  $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo2

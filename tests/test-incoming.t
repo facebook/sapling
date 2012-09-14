@@ -8,9 +8,6 @@ This test only works on hg 1.7 and later
   $ python -c 'from mercurial import util ; assert \
   >  util.version() != "unknown" and util.version() > "1.7"' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -46,22 +43,14 @@ bail early if the user is already running git-daemon
   $ git add alpha
   $ commit -m "add alpha"
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgrepo
   $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
 
   $ cd ../gitrepo
   $ echo beta > beta
@@ -70,7 +59,7 @@ dulwich does not presently support local git repos, workaround
 
   $ cd ../hgrepo
   $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -92,7 +81,7 @@ dulwich does not presently support local git repos, workaround
 
   $ cd ../hgrepo
   $ hg incoming -p | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
@@ -133,14 +122,14 @@ dulwich does not presently support local git repos, workaround
   $ echo % incoming -r
   % incoming -r
   $ hg incoming -r master | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:11 2007 +0000
   summary:     add beta
   
   $ hg incoming -r b1 | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
   tag:         t1
   user:        test <test@example.org>
@@ -153,7 +142,7 @@ dulwich does not presently support local git repos, workaround
   summary:     add d/gamma line 2
   
   $ hg incoming -r t1 | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
   changeset:   1:9865e289be73
   tag:         t1
   user:        test <test@example.org>
@@ -164,11 +153,11 @@ dulwich does not presently support local git repos, workaround
   $ echo % nothing incoming after pull
   % nothing incoming after pull
   $ hg pull
-  pulling from git://localhost/gitrepo
+  pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
-  comparing with git://localhost/gitrepo
+  comparing with $TESTTMP/gitrepo
 
   $ echo 'done'
   done

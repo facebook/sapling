@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -44,16 +41,8 @@ bail early if the user is already running git-daemon
   $ git checkout -b not-master 2>&1 | sed s/\'/\"/g
   Switched to a new branch "not-master"
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -69,7 +58,7 @@ dulwich does not presently support local git repos, workaround
 
   $ hg book -r 1 beta
   $ hg push -r beta
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/heads/beta => GIT:cffa0e8d
@@ -100,7 +89,7 @@ dulwich does not presently support local git repos, workaround
   $ echo % this should fail
   % this should fail
   $ hg push -r master
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   creating and sending data
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
@@ -108,13 +97,13 @@ dulwich does not presently support local git repos, workaround
   $ echo % ... even with -f
   % ... even with -f
   $ hg push -fr master
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   creating and sending data
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
 
   $ hg pull
-  pulling from git://localhost/gitrepo
+  pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg update' to get a working copy)
 TODO shouldn't need to do this since we're (in theory) pushing master explicitly,
@@ -141,7 +130,7 @@ which should not implicitly also push the not-master ref.
   $ echo % this should also fail
   % this should also fail
   $ hg push -r master
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   creating and sending data
   abort: pushing refs/heads/master overwrites 72f56395749d
   [255]
@@ -149,7 +138,7 @@ which should not implicitly also push the not-master ref.
   $ echo % ... but succeed with -f
   % ... but succeed with -f
   $ hg push -fr master
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   creating and sending data
       default::refs/heads/master => GIT:cc119202
 
@@ -158,7 +147,7 @@ which should not implicitly also push the not-master ref.
 The exit code for this was broken in Mercurial (incorrectly returning 0) until
 issue3228 was fixed in 2.1
   $ hg push -r master && false
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   creating and sending data
   no changes found
   [1]

@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -44,16 +41,8 @@ bail early if the user is already running git-daemon
   $ git checkout -b not-master
   Switched to a new branch 'not-master'
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -62,7 +51,7 @@ dulwich does not presently support local git repos, workaround
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgtag alpha
   $ hg push
-  pushing to git://localhost/gitrepo
+  pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   creating and sending data
       default::refs/tags/alpha => GIT:7eeab2ea
@@ -92,7 +81,7 @@ dulwich does not presently support local git repos, workaround
   alpha
 
   $ cd ..
-  $ hg clone git://localhost/gitrepo hgrepo2 | grep -v '^updating'
+  $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo2

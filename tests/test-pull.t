@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
   $ echo 'hgext.graphlog =' >> $HGRCPATH
@@ -45,15 +42,9 @@ bail early if the user is already running git-daemon
 
 
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr
-
   $ echo % clone a tag
   % clone a tag
-  $ hg clone -r alpha git://localhost/gitrepo hgrepo-a | grep -v '^updating'
+  $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo-a
@@ -70,7 +61,7 @@ bail early if the user is already running git-daemon
   $ cd ..
   $ echo % clone a branch
   % clone a branch
-  $ hg clone -r beta git://localhost/gitrepo hgrepo-b | grep -v '^updating'
+  $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo-b

@@ -15,9 +15,6 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > graphlog=
@@ -59,15 +56,9 @@ bail early if the user is already running git-daemon
 
 
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr
-
   $ echo % clone a tag
   % clone a tag
-  $ hg clone -r alpha git://localhost/gitrepo hgrepo-a | grep -v '^updating'
+  $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo-a
@@ -84,7 +75,7 @@ bail early if the user is already running git-daemon
   $ cd ..
   $ echo % clone a branch
   % clone a branch
-  $ hg clone -r beta git://localhost/gitrepo hgrepo-b | grep -v '^updating'
+  $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo-b
@@ -115,7 +106,7 @@ bail early if the user is already running git-daemon
   $ hg strip tip 2>&1 | grep -v saving | grep -v backup
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull -r beta
-  pulling from git://localhost/gitrepo
+  pulling from $TESTTMP/gitrepo
   importing git objects into hg
   abort: you appear to have run strip - please run hg git-cleanup
   [255]
@@ -124,7 +115,7 @@ bail early if the user is already running git-daemon
   $ echo % pull works after \'hg git-cleanup\'
   % pull works after 'hg git-cleanup'
   $ hg pull -r beta
-  pulling from git://localhost/gitrepo
+  pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg log --graph | egrep -v ': *(beta|master)'

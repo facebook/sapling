@@ -4,9 +4,6 @@
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-bail early if the user is already running git-daemon
-  $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
-
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 
@@ -53,16 +50,8 @@ bail early if the user is already running git-daemon
   $ git init --bare
   Initialized empty Git repository in $TESTTMP/gitrepo2/
 
-dulwich does not presently support local git repos, workaround
   $ cd ..
-  $ git daemon --base-path="$(pwd)"\
-  >  --listen=localhost\
-  >  --export-all\
-  >  --pid-file="$DAEMON_PIDS" \
-  >  --detach --reuseaddr \
-  >  --enable=receive-pack
-
-  $ hg clone git://localhost/gitrepo hgrepo | grep -v '^updating'
+  $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
@@ -76,8 +65,8 @@ dulwich does not presently support local git repos, workaround
 
   $ hg gclear
   clearing out the git cache data
-  $ hg push git://localhost/gitrepo2
-  pushing to git://localhost/gitrepo2
+  $ hg push ../gitrepo2
+  pushing to ../gitrepo2
   exporting hg objects to git
   creating and sending data
 
