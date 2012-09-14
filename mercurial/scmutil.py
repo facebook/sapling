@@ -229,13 +229,21 @@ class opener(abstractopener):
         if expand:
             base = os.path.realpath(util.expandpath(base))
         self.base = base
-        self._audit = audit
-        if audit:
-            self.auditor = pathauditor(base)
-        else:
-            self.auditor = util.always
+        self._setmustaudit(audit)
         self.createmode = None
         self._trustnlink = None
+
+    def _getmustaudit(self):
+        return self._audit
+
+    def _setmustaudit(self, onoff):
+        self._audit = onoff
+        if onoff:
+            self.auditor = pathauditor(self.base)
+        else:
+            self.auditor = util.always
+
+    mustaudit = property(_getmustaudit, _setmustaudit)
 
     @util.propertycache
     def _cansymlink(self):
