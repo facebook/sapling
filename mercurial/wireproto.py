@@ -548,11 +548,13 @@ def stream(repo, proto):
 
         sopener = repo.sopener
         oldaudit = sopener.mustaudit
+        debugflag = repo.ui.debugflag
         sopener.mustaudit = False
 
         try:
             for name, size in entries:
-                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+                if debugflag:
+                    repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
                 # partially encode name over the wire for backwards compat
                 yield '%s\0%d\n' % (store.encodedir(name), size)
                 if size <= 65536:

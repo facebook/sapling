@@ -6,7 +6,7 @@
   >     exit 80
   > fi
   $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
-  mercurial/wireproto.py:560:
+  mercurial/wireproto.py:562:
    >                     yield sopener(name).read(size)
    use opener.read() instead
   FAILURE IS NOT AN OPTION!!!
