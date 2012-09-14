@@ -555,8 +555,11 @@ def stream(repo, proto):
                 repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
                 # partially encode name over the wire for backwards compat
                 yield '%s\0%d\n' % (store.encodedir(name), size)
-                for chunk in util.filechunkiter(sopener(name), limit=size):
-                    yield chunk
+                if size <= 65536:
+                    yield sopener(name).read(size)
+                else:
+                    for chunk in util.filechunkiter(sopener(name), limit=size):
+                        yield chunk
         finally:
             sopener.mustaudit = oldaudit
 
