@@ -425,10 +425,19 @@ class fncache(object):
             self._dirty = True
             self.entries.add(fn)
 
-    def __contains__(self, fn):
+    def __contains__(self, path):
         if self.entries is None:
             self._load()
-        return fn in self.entries
+        # Check for files (exact match)
+        if path + ".i" in self.entries:
+            return True
+        # Now check for directories (prefix match)
+        if not path.endswith('/'):
+            path += '/'
+        for e in self.entries:
+            if e.startswith(path):
+                return True
+        return False
 
     def __iter__(self):
         if self.entries is None:
@@ -510,6 +519,11 @@ class fncachestore(basicstore):
 
     def write(self):
         self.fncache.write()
+
+    def __contains__(self, path):
+        '''Checks if the store contains path'''
+        path = "/".join(("data", path))
+        return path in self.fncache
 
 def store(requirements, path, vfstype):
     if 'store' in requirements:
