@@ -20,6 +20,7 @@ samedevice = win32.samedevice
 samefile = win32.samefile
 setsignalhandler = win32.setsignalhandler
 spawndetached = win32.spawndetached
+split = os.path.split
 termwidth = win32.termwidth
 testpid = win32.testpid
 unlink = win32.unlink

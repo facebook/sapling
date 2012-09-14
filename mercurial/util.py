@@ -62,6 +62,7 @@ setflags = platform.setflags
 setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
 spawndetached = platform.spawndetached
+split = platform.split
 sshargs = platform.sshargs
 statfiles = platform.statfiles
 termwidth = platform.termwidth
