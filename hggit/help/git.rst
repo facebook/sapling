@@ -14,12 +14,16 @@ repositories. Examples of Git repository URLs include::
   http://code.google.com/p/guava-libraries
   ssh://git@github.com:schacon/hg-git.git
   git://github.com/schacon/hg-git.git
+  ../hg-git (local file path)
 
-For protocols other than git://, it isn't clear whether these should be
-interpreted as Mercurial or Git URLs. Thus, to specify that a URL should
+For the HTTP, HTTPS, and SSH protocols, it isn't clear based solely on
+the URL whether the remote repository should be treated as a Mercurial
+repository or a Git repository.  Thus, to specify that a URL should
 use Git, prepend the URL with "git+". For example, an HTTPS URL would
 start with "git+https://". Also, note that Git doesn't require the
-specification of the protocol for SSH, but Mercurial does.
+specification of the protocol for SSH, but Mercurial does.  Hg-Git
+automatically detects whether file paths should be treated as Git repositories
+by their contents.
 
 If you are starting from an existing Hg repository, you have to set up a
 Git repository somewhere that you have push access to, add a path entry
@@ -72,9 +76,3 @@ For example::
 
 Revsets are accepted by several Mercurial commands for specifying revisions.
 See ``hg help revsets`` for details.
-
-Limitations
------------
-
-- Cloning/pushing/pulling local Git repositories is not supported (due to
-  lack of support in Dulwich)

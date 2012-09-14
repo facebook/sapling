@@ -63,7 +63,3 @@ cd tests ; /Stuff/hg-crew/tests/run-tests.py
 And you should see output like this:
 .
 # Ran 1 tests, 0 skipped, 0 failed.
-
-Note that due to limitations of Dulwich at the moment, the tests need to
-start a git-daemon process. Right now, they use the default port, so will
-skip if they detect an already-running git-daemon.

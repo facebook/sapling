@@ -74,15 +74,15 @@ repository, you can fetch updates with `hg pull`.
 That will pull down any commits that have been pushed to the server in
 the meantime and give you a new head that you can merge in.
 
-Hg-Git can also be used to convert a Mercurial repository to Git.  As
-Dulwich doesn't support local repositories yet, the easiest way is to
-setup up a local SSH server.  Then use the following commands to
-convert the repository (it assumes your running this in $HOME).
+Hg-Git can also be used to convert a Mercurial repository to Git.  You can use
+a local repository or a remote repository accessed via SSH, HTTP or HTTPS.  Use
+the following commands to convert the repository (it assumes your running this
+in $HOME).
 
     $ mkdir git-repo; cd git-repo; git init; cd ..
     $ cd hg-repo
     $ hg bookmarks hg
-    $ hg push git+ssh://localhost:git-repo
+    $ hg push ../git-repo
 
 The hg bookmark is necessary to prevent problems as otherwise hg-git
 pushes to the currently checked out branch confusing Git. This will
