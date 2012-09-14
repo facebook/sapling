@@ -195,6 +195,16 @@ def perffncachewrite(ui, repo):
         s.fncache.write()
     timer(d)
 
+def perffncacheencode(ui, repo):
+    from mercurial import store
+    s = store.store(set(['store','fncache','dotencode']),
+                    repo.path, scmutil.opener)
+    s.fncache._load()
+    def d():
+        for p in s.fncache.entries:
+            s.encode(p)
+    timer(d)
+
 def perfdiffwd(ui, repo):
     """Profile diff of working directory changes"""
     options = {
@@ -226,6 +236,7 @@ cmdtable = {
     'perfcca': (perfcca, []),
     'perffncacheload': (perffncacheload, []),
     'perffncachewrite': (perffncachewrite, []),
+    'perffncacheencode': (perffncacheencode, []),
     'perflookup': (perflookup, []),
     'perfrevrange': (perfrevrange, []),
     'perfnodelookup': (perfnodelookup, []),
