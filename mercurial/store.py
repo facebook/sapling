@@ -390,6 +390,7 @@ class fncachestore(basicstore):
     def __init__(self, path, openertype, encode):
         self.encode = encode
         self.path = path + '/store'
+        self.pathsep = self.path + '/'
         self.createmode = _calcmode(self.path)
         op = openertype(self.path)
         op.createmode = self.createmode
@@ -398,10 +399,10 @@ class fncachestore(basicstore):
         self.opener = _fncacheopener(op, fnc, encode)
 
     def join(self, f):
-        return self.path + '/' + self.encode(f)
+        return self.pathsep + self.encode(f)
 
     def getsize(self, path):
-        return os.stat(self.path + '/' + path).st_size
+        return os.stat(self.pathsep + path).st_size
 
     def datafiles(self):
         rewrite = False
