@@ -132,8 +132,8 @@ def _auxencode(path, dotencode):
 
     >>> _auxencode('.foo/aux.txt/txt.aux/con/prn/nul/foo.', True)
     '~2efoo/au~78.txt/txt.aux/co~6e/pr~6e/nu~6c/foo~2e'
-    >>> _auxencode('.com1com2/lpt9.lpt4.lpt1/conprn/foo.', False)
-    '.com1com2/lp~749.lpt4.lpt1/conprn/foo~2e'
+    >>> _auxencode('.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.', False)
+    '.com1com2/lp~749.lpt4.lpt1/conprn/com0/lpt0/foo~2e'
     >>> _auxencode('foo. ', True)
     'foo.~20'
     >>> _auxencode(' .foo', True)
