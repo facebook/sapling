@@ -118,9 +118,9 @@ def _buildlowerencodefun():
 
 lowerencode = _buildlowerencodefun()
 
-_winreservednames = '''con prn aux nul
-    com1 com2 com3 com4 com5 com6 com7 com8 com9
-    lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
+# Windows reserved names: con, prn, aux, nul, com1..com9, lpt1..lpt9
+_winres3 = ('aux', 'con', 'prn', 'nul') # length 3
+_winres4 = ('com', 'lpt')               # length 4 (with trailing 1..9)
 def _auxencode(path, dotencode):
     '''
     Encodes filenames containing names reserved by Windows or which end in
@@ -144,16 +144,21 @@ def _auxencode(path, dotencode):
     res = []
     for n in path.split('/'):
         if n:
-            base = n.split('.')[0]
-            if base and (base in _winreservednames):
-                # encode third letter ('aux' -> 'au~78')
-                ec = "~%02x" % ord(n[2])
-                n = n[0:2] + ec + n[3:]
+            if dotencode and n[0] in '. ':
+                n = "~%02x" % ord(n[0]) + n[1:]
+            else:
+                l = n.find('.')
+                if l == -1:
+                    l = len(n)
+                if ((l == 3 and n[:3] in _winres3) or
+                    (l == 4 and n[3] <= '9' and n[3] >= '1'
+                            and n[:3] in _winres4)):
+                    # encode third letter ('aux' -> 'au~78')
+                    ec = "~%02x" % ord(n[2])
+                    n = n[0:2] + ec + n[3:]
             if n[-1] in '. ':
                 # encode last period or space ('foo...' -> 'foo..~2e')
                 n = n[:-1] + "~%02x" % ord(n[-1])
-            if dotencode and n[0] in '. ':
-                n = "~%02x" % ord(n[0]) + n[1:]
         res.append(n)
     return '/'.join(res)
 
