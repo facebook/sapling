@@ -6,10 +6,6 @@
   >     exit 80
   > fi
   $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
-  mercurial/wireproto.py:562:
-   >                     yield sopener(name).read(size)
-   use opener.read() instead
-  FAILURE IS NOT AN OPTION!!!
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 || true
   hgext/convert/cvsps.py:0:
@@ -163,9 +159,6 @@
   mercurial/commands.py:0:
    >     ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
    warning: unwrapped ui message
-  mercurial/wireproto.py:0:
-   >                     yield sopener(name).read(size)
-   use opener.read() instead
   tests/autodiff.py:0:
    >         ui.write('data lost for: %s\n' % fn)
    warning: unwrapped ui message

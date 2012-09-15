@@ -558,7 +558,12 @@ def stream(repo, proto):
                 # partially encode name over the wire for backwards compat
                 yield '%s\0%d\n' % (store.encodedir(name), size)
                 if size <= 65536:
-                    yield sopener(name).read(size)
+                    fp = sopener(name)
+                    try:
+                        data = fp.read(size)
+                    finally:
+                        fp.close()
+                    yield data
                 else:
                     for chunk in util.filechunkiter(sopener(name), limit=size):
                         yield chunk
