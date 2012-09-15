@@ -200,13 +200,11 @@ def _hybridencode(path, auxencode):
     '''
     if not path.startswith('data/'):
         return path
-    # escape directories ending with .i and .d
-    path = encodedir(path)
-    ndpath = path[len('data/'):]
-    res = 'data/' + '/'.join(auxencode(encodefilename(ndpath)))
+    res = '/'.join(auxencode(encodefilename(path)))
     if len(res) > _maxstorepathlen:
+        path = encodedir(path)
         digest = _sha(path).hexdigest()
-        parts = auxencode(lowerencode(ndpath))
+        parts = auxencode(lowerencode(path))[1:]
         _root, ext = os.path.splitext(parts[-1])
         basename = parts[-1]
         sdirs = []
