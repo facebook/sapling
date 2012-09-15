@@ -127,8 +127,10 @@ def _auxencode(path, dotencode):
     period or space. Does not touch other single reserved characters c.
     Specifically, c in '\\:*?"<>|' or ord(c) <= 31 are *not* encoded here.
     Additionally encodes space or period at the beginning, if dotencode is
-    True.
-    path is assumed to be all lowercase.
+    True. Parameter path is assumed to be all lowercase.
+    A segment only needs encoding if a reserved name appears as a
+    basename (e.g. "aux", "aux.foo"). A directory or file named "foo.aux"
+    doesn't need encoding.
 
     >>> _auxencode('.foo/aux.txt/txt.aux/con/prn/nul/foo.', True)
     '~2efoo/au~78.txt/txt.aux/co~6e/pr~6e/nu~6c/foo~2e'
