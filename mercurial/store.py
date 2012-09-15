@@ -141,11 +141,12 @@ def _auxencode(path, dotencode):
     >>> _auxencode(' .foo', True)
     '~20.foo'
     '''
-    res = []
-    for n in path.split('/'):
+    res = path.split('/')
+    for i, n in enumerate(res):
         if n:
             if dotencode and n[0] in '. ':
                 n = "~%02x" % ord(n[0]) + n[1:]
+                res[i] = n
             else:
                 l = n.find('.')
                 if l == -1:
@@ -156,10 +157,11 @@ def _auxencode(path, dotencode):
                     # encode third letter ('aux' -> 'au~78')
                     ec = "~%02x" % ord(n[2])
                     n = n[0:2] + ec + n[3:]
+                    res[i] = n
             if n[-1] in '. ':
                 # encode last period or space ('foo...' -> 'foo..~2e')
                 n = n[:-1] + "~%02x" % ord(n[-1])
-        res.append(n)
+                res[i] = n
     return '/'.join(res)
 
 _maxstorepathlen = 120
