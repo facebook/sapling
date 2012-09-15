@@ -198,8 +198,6 @@ def _hybridencode(path, auxencode):
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
     encoding was used.
     '''
-    if not path.startswith('data/'):
-        return path
     res = '/'.join(auxencode(encodefilename(path)))
     if len(res) > _maxstorepathlen:
         path = encodedir(path)
