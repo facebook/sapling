@@ -143,25 +143,26 @@ def _auxencode(path, dotencode):
     '''
     res = path.split('/')
     for i, n in enumerate(res):
-        if n:
-            if dotencode and n[0] in '. ':
-                n = "~%02x" % ord(n[0]) + n[1:]
+        if not n:
+            continue
+        if dotencode and n[0] in '. ':
+            n = "~%02x" % ord(n[0]) + n[1:]
+            res[i] = n
+        else:
+            l = n.find('.')
+            if l == -1:
+                l = len(n)
+            if ((l == 3 and n[:3] in _winres3) or
+                (l == 4 and n[3] <= '9' and n[3] >= '1'
+                        and n[:3] in _winres4)):
+                # encode third letter ('aux' -> 'au~78')
+                ec = "~%02x" % ord(n[2])
+                n = n[0:2] + ec + n[3:]
                 res[i] = n
-            else:
-                l = n.find('.')
-                if l == -1:
-                    l = len(n)
-                if ((l == 3 and n[:3] in _winres3) or
-                    (l == 4 and n[3] <= '9' and n[3] >= '1'
-                            and n[:3] in _winres4)):
-                    # encode third letter ('aux' -> 'au~78')
-                    ec = "~%02x" % ord(n[2])
-                    n = n[0:2] + ec + n[3:]
-                    res[i] = n
-            if n[-1] in '. ':
-                # encode last period or space ('foo...' -> 'foo..~2e')
-                n = n[:-1] + "~%02x" % ord(n[-1])
-                res[i] = n
+        if n[-1] in '. ':
+            # encode last period or space ('foo...' -> 'foo..~2e')
+            n = n[:-1] + "~%02x" % ord(n[-1])
+            res[i] = n
     return '/'.join(res)
 
 _maxstorepathlen = 120
