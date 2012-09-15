@@ -22,8 +22,6 @@ def encodedir(path):
     >>> encodedir('data/foo.i.hg/bla.i')
     'data/foo.i.hg.hg/bla.i'
     '''
-    if not path.startswith('data/'):
-        return path
     return (path
             .replace(".hg/", ".hg.hg/")
             .replace(".i/", ".i.hg/")
@@ -38,7 +36,7 @@ def decodedir(path):
     >>> decodedir('data/foo.i.hg.hg/bla.i')
     'data/foo.i.hg/bla.i'
     '''
-    if not path.startswith('data/') or ".hg/" not in path:
+    if ".hg/" not in path:
         return path
     return (path
             .replace(".d.hg/", ".d/")
