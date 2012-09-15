@@ -161,8 +161,7 @@ def _auxencode(path, dotencode):
                 res[i] = n
         if n[-1] in '. ':
             # encode last period or space ('foo...' -> 'foo..~2e')
-            n = n[:-1] + "~%02x" % ord(n[-1])
-            res[i] = n
+            res[i] = n[:-1] + "~%02x" % ord(n[-1])
     return '/'.join(res)
 
 _maxstorepathlen = 120
