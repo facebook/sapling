@@ -133,13 +133,13 @@ def _auxencode(path, dotencode):
     doesn't need encoding.
 
     >>> _auxencode('.foo/aux.txt/txt.aux/con/prn/nul/foo.', True)
-    '~2efoo/au~78.txt/txt.aux/co~6e/pr~6e/nu~6c/foo~2e'
+    ['~2efoo', 'au~78.txt', 'txt.aux', 'co~6e', 'pr~6e', 'nu~6c', 'foo~2e']
     >>> _auxencode('.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.', False)
-    '.com1com2/lp~749.lpt4.lpt1/conprn/com0/lpt0/foo~2e'
+    ['.com1com2', 'lp~749.lpt4.lpt1', 'conprn', 'com0', 'lpt0', 'foo~2e']
     >>> _auxencode('foo. ', True)
-    'foo.~20'
+    ['foo.~20']
     >>> _auxencode(' .foo', True)
-    '~20.foo'
+    ['~20.foo']
     '''
     res = path.split('/')
     for i, n in enumerate(res):
@@ -162,7 +162,7 @@ def _auxencode(path, dotencode):
         if n[-1] in '. ':
             # encode last period or space ('foo...' -> 'foo..~2e')
             res[i] = n[:-1] + "~%02x" % ord(n[-1])
-    return '/'.join(res)
+    return res
 
 _maxstorepathlen = 120
 _dirprefixlen = 8
@@ -203,12 +203,11 @@ def _hybridencode(path, auxencode):
     # escape directories ending with .i and .d
     path = encodedir(path)
     ndpath = path[len('data/'):]
-    res = 'data/' + auxencode(encodefilename(ndpath))
+    res = 'data/' + '/'.join(auxencode(encodefilename(ndpath)))
     if len(res) > _maxstorepathlen:
         digest = _sha(path).hexdigest()
-        aep = auxencode(lowerencode(ndpath))
-        _root, ext = os.path.splitext(aep)
-        parts = aep.split('/')
+        parts = auxencode(lowerencode(ndpath))
+        _root, ext = os.path.splitext(parts[-1])
         basename = parts[-1]
         sdirs = []
         for p in parts[:-1]:
