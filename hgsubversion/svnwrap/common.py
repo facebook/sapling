@@ -144,3 +144,26 @@ def parse_autoprops(prop_list):
         properties[prop.strip()] = value
     return properties
 
+class SimpleStringIO(object):
+    """SimpleStringIO can replace a StringIO in write mode.
+
+    cStringIO reallocates and doubles the size of its internal buffer
+    when it needs to append new data which requires two large blocks for
+    large inputs. SimpleStringIO stores each individual blocks and joins
+    them once done. This might cause more memory fragmentation but
+    requires only one large block. In practice, ra.get_file() seems to
+    write in 16kB blocks (svn 1.7.5) which should be friendly to memory
+    allocators.
+    """
+    def __init__(self):
+        self._blocks = []
+
+    def write(self, s):
+        self._blocks.append(s)
+
+    def getvalue(self):
+        return ''.join(self._blocks)
+
+    def close(self):
+        del self._blocks
+

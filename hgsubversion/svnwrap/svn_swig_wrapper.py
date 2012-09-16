@@ -505,7 +505,7 @@ class SubversionRepo(object):
         assert not path.startswith('/')
         mode = ''
         try:
-            out = cStringIO.StringIO()
+            out = common.SimpleStringIO()
             info = ra.get_file(self.ra, path, revision, out)
             data = out.getvalue()
             out.close()

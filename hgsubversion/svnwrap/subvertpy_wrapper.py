@@ -472,7 +472,7 @@ class SubversionRepo(object):
         """
         mode = ''
         try:
-            out = cStringIO.StringIO()
+            out = common.SimpleStringIO()
             rev, info = self.remote.get_file(path, out, revision)
             data = out.getvalue()
             out.close()
