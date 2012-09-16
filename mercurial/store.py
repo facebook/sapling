@@ -396,8 +396,18 @@ class _fncacheopener(scmutil.abstractopener):
             self.fncache.add(path)
         return self.opener(self.encode(path), mode, *args, **kw)
 
+def _plainhybridencode(f):
+    return _hybridencode(f, False)
+
+def _dothybridencode(f):
+    return _hybridencode(f, True)
+
 class fncachestore(basicstore):
-    def __init__(self, path, openertype, encode):
+    def __init__(self, path, openertype, dotencode):
+        if dotencode:
+            encode = _dothybridencode
+        else:
+            encode = _plainhybridencode
         self.encode = encode
         self.path = path + '/store'
         self.pathsep = self.path + '/'
@@ -444,8 +454,6 @@ class fncachestore(basicstore):
 def store(requirements, path, openertype):
     if 'store' in requirements:
         if 'fncache' in requirements:
-            de = 'dotencode' in requirements
-            encode = lambda f: _hybridencode(f, de)
-            return fncachestore(path, openertype, encode)
+            return fncachestore(path, openertype, 'dotencode' in requirements)
         return encodedstore(path, openertype)
     return basicstore(path, openertype)
