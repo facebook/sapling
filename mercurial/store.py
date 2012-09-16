@@ -201,8 +201,8 @@ def _hybridencode(path, auxencode):
         path = encodedir(path)
         digest = _sha(path).hexdigest()
         parts = auxencode(lowerencode(path))[1:]
-        _root, ext = os.path.splitext(parts[-1])
         basename = parts[-1]
+        _root, ext = os.path.splitext(basename)
         sdirs = []
         for p in parts[:-1]:
             d = p[:_dirprefixlen]
