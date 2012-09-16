@@ -130,22 +130,23 @@ def _auxencode(path, dotencode):
     basename (e.g. "aux", "aux.foo"). A directory or file named "foo.aux"
     doesn't need encoding.
 
-    >>> _auxencode('.foo/aux.txt/txt.aux/con/prn/nul/foo.', True)
+    >>> s = '.foo/aux.txt/txt.aux/con/prn/nul/foo.'
+    >>> _auxencode(s.split('/'), True)
     ['~2efoo', 'au~78.txt', 'txt.aux', 'co~6e', 'pr~6e', 'nu~6c', 'foo~2e']
-    >>> _auxencode('.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.', False)
+    >>> s = '.com1com2/lpt9.lpt4.lpt1/conprn/com0/lpt0/foo.'
+    >>> _auxencode(s.split('/'), False)
     ['.com1com2', 'lp~749.lpt4.lpt1', 'conprn', 'com0', 'lpt0', 'foo~2e']
-    >>> _auxencode('foo. ', True)
+    >>> _auxencode(['foo. '], True)
     ['foo.~20']
-    >>> _auxencode(' .foo', True)
+    >>> _auxencode([' .foo'], True)
     ['~20.foo']
     '''
-    res = path.split('/')
-    for i, n in enumerate(res):
+    for i, n in enumerate(path):
         if not n:
             continue
         if dotencode and n[0] in '. ':
             n = "~%02x" % ord(n[0]) + n[1:]
-            res[i] = n
+            path[i] = n
         else:
             l = n.find('.')
             if l == -1:
@@ -156,11 +157,11 @@ def _auxencode(path, dotencode):
                 # encode third letter ('aux' -> 'au~78')
                 ec = "~%02x" % ord(n[2])
                 n = n[0:2] + ec + n[3:]
-                res[i] = n
+                path[i] = n
         if n[-1] in '. ':
             # encode last period or space ('foo...' -> 'foo..~2e')
-            res[i] = n[:-1] + "~%02x" % ord(n[-1])
-    return res
+            path[i] = n[:-1] + "~%02x" % ord(n[-1])
+    return path
 
 _maxstorepathlen = 120
 _dirprefixlen = 8
@@ -196,11 +197,11 @@ def _hybridencode(path, auxencode):
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
     encoding was used.
     '''
-    res = '/'.join(auxencode(encodefilename(path)))
+    res = '/'.join(auxencode(encodefilename(path).split('/')))
     if len(res) > _maxstorepathlen:
         path = encodedir(path)
         digest = _sha(path).hexdigest()
-        parts = auxencode(lowerencode(path))[1:]
+        parts = auxencode(lowerencode(path).split('/')[1:])
         basename = parts[-1]
         _root, ext = os.path.splitext(basename)
         sdirs = []
