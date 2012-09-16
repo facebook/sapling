@@ -7,7 +7,7 @@ try:
     from collections import OrderedDict
     extra_req = []
 except ImportError:
-    extra_req = 'ordereddict>=1.1'
+    extra_req = ['ordereddict>=1.1']
 
 setup(
     name='hg-git',
