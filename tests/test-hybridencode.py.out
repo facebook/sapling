@@ -35,8 +35,8 @@ A = 'data/less <, greater >, colon :, double-quote ", backslash \\, pipe |, ques
 B = 'data/less ~3c, greater ~3e, colon ~3a, double-quote ~22, backslash ~5c, pipe ~7c, question-mark ~3f, asterisk ~2a'
 
 encoding directories ending in .hg, .i or .d with '.hg' suffix
-A = 'data/x.hg/x.i/x.d/foo'
-B = 'data/x.hg.hg/x.i.hg/x.d.hg/foo'
+A = 'data/x.h.i/x.hg/x.i/x.d/foo'
+B = 'data/x.h.i.hg/x.hg.hg/x.i.hg/x.d.hg/foo'
 
 A = 'data/a.hg/a.i/a.d/foo'
 B = 'data/a.hg.hg/a.i.hg/a.d.hg/foo'

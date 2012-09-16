@@ -40,7 +40,7 @@ show('data/less <, greater >, colon :, double-quote ", backslash \\'
            ', pipe |, question-mark ?, asterisk *')
 
 print "encoding directories ending in .hg, .i or .d with '.hg' suffix"
-show('data/x.hg/x.i/x.d/foo')
+show('data/x.h.i/x.hg/x.i/x.d/foo')
 show('data/a.hg/a.i/a.d/foo')
 show('data/au.hg/au.i/au.d/foo')
 show('data/aux.hg/aux.i/aux.d/foo')
