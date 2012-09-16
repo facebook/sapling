@@ -166,7 +166,7 @@ def _auxencode(path, dotencode):
 _maxstorepathlen = 120
 _dirprefixlen = 8
 _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
-def _hybridencode(path, auxencode):
+def _hybridencode(path, dotencode):
     '''encodes path with a length limit
 
     Encodes all paths that begin with 'data/', according to the following.
@@ -197,11 +197,13 @@ def _hybridencode(path, auxencode):
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
     encoding was used.
     '''
-    res = '/'.join(auxencode(encodefilename(path).split('/')))
+    ef = encodefilename(path).split('/')
+    res = '/'.join(_auxencode(ef, dotencode))
     if len(res) > _maxstorepathlen:
         path = encodedir(path)
         digest = _sha(path).hexdigest()
-        parts = auxencode(lowerencode(path).split('/')[1:])
+        le = lowerencode(path).split('/')[1:]
+        parts = _auxencode(le, dotencode)
         basename = parts[-1]
         _root, ext = os.path.splitext(basename)
         sdirs = []
@@ -442,8 +444,8 @@ class fncachestore(basicstore):
 def store(requirements, path, openertype):
     if 'store' in requirements:
         if 'fncache' in requirements:
-            auxencode = lambda f: _auxencode(f, 'dotencode' in requirements)
-            encode = lambda f: _hybridencode(f, auxencode)
+            de = 'dotencode' in requirements
+            encode = lambda f: _hybridencode(f, de)
             return fncachestore(path, openertype, encode)
         return encodedstore(path, openertype)
     return basicstore(path, openertype)

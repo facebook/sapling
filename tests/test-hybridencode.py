@@ -1,7 +1,6 @@
 from mercurial import store
 
-auxencode = lambda f: store._auxencode(f, True)
-hybridencode = lambda f: store._hybridencode(f, auxencode)
+hybridencode = lambda f: store._hybridencode(f, True)
 
 enc = hybridencode # used for 'dotencode' repo format
 
