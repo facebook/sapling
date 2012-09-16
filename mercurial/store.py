@@ -204,15 +204,20 @@ def _hybridencode(path, auxencode):
         basename = parts[-1]
         _root, ext = os.path.splitext(basename)
         sdirs = []
+        sdirslen = 0
         for p in parts[:-1]:
             d = p[:_dirprefixlen]
             if d[-1] in '. ':
                 # Windows can't access dirs ending in period or space
                 d = d[:-1] + '_'
-            t = '/'.join(sdirs) + '/' + d
-            if len(t) > _maxshortdirslen:
-                break
+            if sdirslen == 0:
+                t = len(d)
+            else:
+                t = sdirslen + 1 + len(d)
+                if t > _maxshortdirslen:
+                    break
             sdirs.append(d)
+            sdirslen = t
         dirs = '/'.join(sdirs)
         if len(dirs) > 0:
             dirs += '/'
