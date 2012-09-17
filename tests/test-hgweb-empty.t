@@ -258,7 +258,7 @@ Some tests for hgweb in an empty repository
   	this.ctx.fill();
   	
   	var bg = '<li class="bg parity' + parity + '"></li>';
-  	var left = (this.columns + 1) * this.bg_height;
+  	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
   	var nstyle = 'padding-left: ' + left + 'px;';
   
   	var tagspan = '';
