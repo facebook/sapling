@@ -79,6 +79,17 @@ Test status, subdir and unknown files
   C sub/normal2
   $ rm sub/unknown
 
+Test exit codes for remove warning cases (modified and still exiting)
+
+  $ hg remove -A large1
+  not removing large1: file still exists (use forget to undo)
+  [1]
+  $ echo 'modified' > large1
+  $ hg remove large1
+  not removing large1: file is modified (use forget to undo)
+  [1]
+  $ hg up -Cq
+
 Remove both largefiles and normal files.
 
   $ hg remove normal1 large1
@@ -96,11 +107,18 @@ Remove both largefiles and normal files.
   A large1-test
   $ hg rm large1-test
   not removing large1-test: file has been marked for add (use forget to undo)
+  [1]
   $ hg st
   A large1-test
   $ hg forget large1-test
   $ hg st
   ? large1-test
+  $ hg remove large1-test
+  not removing large1-test: file is untracked
+  [1]
+  $ hg forget large1-test
+  not removing large1-test: file is already untracked
+  [1]
   $ rm large1-test
 
 Copy both largefiles and normal files (testing that status output is correct).
@@ -1144,6 +1162,15 @@ vanilla clients locked out from largefiles http repos
 largefiles can be pushed locally (issue3583)
   $ hg init dest
   $ cd r4
+  $ hg outgoing ../dest
+  comparing with ../dest
+  searching for changes
+  changeset:   0:639881c12b4c
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     m1
+  
   $ hg push ../dest
   pushing to ../dest
   searching for changes
@@ -1152,6 +1179,13 @@ largefiles can be pushed locally (issue3583)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+ 
+exit code with nothing outgoing (issue3611)
+  $ hg outgoing ../dest
+  comparing with ../dest
+  searching for changes
+  no changes found
+  [1]
   $ cd ..
 
 #if serve
