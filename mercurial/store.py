@@ -348,7 +348,7 @@ class fncache(object):
     def _write(self, files, atomictemp):
         fp = self.opener('fncache', mode='wb', atomictemp=atomictemp)
         if files:
-            fp.write('\n'.join(map(encodedir, files)) + '\n')
+            fp.write(encodedir('\n'.join(files) + '\n'))
         fp.close()
         self._dirty = False
 
