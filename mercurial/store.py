@@ -336,7 +336,7 @@ class fncache(object):
             # skip nonexistent file
             self.entries = set()
             return
-        self.entries = set(map(decodedir, fp.read().splitlines()))
+        self.entries = set(decodedir(fp.read()).splitlines())
         if '' in self.entries:
             fp.seek(0)
             for n, line in enumerate(fp):
