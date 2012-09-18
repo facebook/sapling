@@ -310,7 +310,10 @@ def rebase(ui, repo, **opts):
                     nstate[repo[k].node()] = repo[v].node()
 
         if not keepf:
-            clearrebased(ui, repo, state)
+            collapsedas = None
+            if collapsef:
+                collapsedas = newrev
+            clearrebased(ui, repo, state, collapsedas)
 
         if currentbookmarks:
             updatebookmarks(repo, nstate, currentbookmarks, **opts)
@@ -656,12 +659,17 @@ def buildstate(repo, dest, rebaseset, collapse):
         state.update(dict.fromkeys(detachset, nullmerge))
     return repo['.'].rev(), dest.rev(), state
 
-def clearrebased(ui, repo, state):
-    """dispose of rebased revision at the end of the rebase"""
+def clearrebased(ui, repo, state, collapsedas=None):
+    """dispose of rebased revision at the end of the rebase
+
+    If `collapsedas` is not None, the rebase was a collapse whose result if the
+    `collapsedas` node."""
     if obsolete._enabled:
         markers = []
         for rev, newrev in sorted(state.items()):
             if newrev >= 0:
+                if collapsedas is not None:
+                    newrev = collapsedas
                 markers.append((repo[rev], (repo[newrev],)))
         if markers:
             obsolete.createmarkers(repo, markers)

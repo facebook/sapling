@@ -173,3 +173,52 @@ set.
 
   $ cd ..
 
+collapse rebase
+---------------------------------
+
+  $ hg clone base collapse
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd collapse
+  $ hg rebase  -s 42ccdea3bb16 -d eea13746799a --collapse
+  $ hg log -G
+  @  8:4dc2197e807b Collapsed revision
+  |
+  | o  7:02de42196ebe H
+  | |
+  o |  6:eea13746799a G
+  |\|
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  o  0:cd010b8cd998 A
+  
+  $ hg log --hidden -G
+  @  8:4dc2197e807b Collapsed revision
+  |
+  | o  7:02de42196ebe H
+  | |
+  o |  6:eea13746799a G
+  |\|
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  | x  3:32af7686d403 D
+  | |
+  | x  2:5fddd98957c8 C
+  | |
+  | x  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
+  $ hg id --debug
+  4dc2197e807bae9817f09905b50ab288be2dbbcf tip
+  $ hg debugobsolete
+  42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 {'date': '*', 'user': 'test'} (glob)
+  5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 {'date': '*', 'user': 'test'} (glob)
+  32af7686d403cf45b5d95f2d70cebea587ac806a 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 {'date': '*', 'user': 'test'} (glob)
+
+  $ cd ..
+
