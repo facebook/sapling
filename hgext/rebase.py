@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil, phases
+from mercurial import extensions, patch, scmutil, phases, obsolete
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -658,14 +658,22 @@ def buildstate(repo, dest, rebaseset, collapse):
 
 def clearrebased(ui, repo, state):
     """dispose of rebased revision at the end of the rebase"""
-    rebased = [rev for rev in state if state[rev] != nullmerge]
-    if rebased:
-        if set(repo.changelog.descendants([min(rebased)])) - set(state):
-            ui.warn(_("warning: new changesets detected "
-                      "on source branch, not stripping\n"))
-        else:
-            # backup the old csets by default
-            repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+    if obsolete._enabled:
+        markers = []
+        for rev, newrev in sorted(state.items()):
+            if newrev >= 0:
+                markers.append((repo[rev], (repo[newrev],)))
+        if markers:
+            obsolete.createmarkers(repo, markers)
+    else:
+        rebased = [rev for rev in state if state[rev] != nullmerge]
+        if rebased:
+            if set(repo.changelog.descendants([min(rebased)])) - set(state):
+                ui.warn(_("warning: new changesets detected "
+                          "on source branch, not stripping\n"))
+            else:
+                # backup the old csets by default
+                repair.strip(ui, repo, repo[min(rebased)].node(), "all")
 
 
 def pullrebase(orig, ui, repo, *args, **opts):
