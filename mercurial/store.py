@@ -184,6 +184,38 @@ def _auxencode(path, dotencode):
 _maxstorepathlen = 120
 _dirprefixlen = 8
 _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
+
+def _hashencode(path, dotencode):
+    digest = _sha(path).hexdigest()
+    le = lowerencode(path).split('/')[1:]
+    parts = _auxencode(le, dotencode)
+    basename = parts[-1]
+    _root, ext = os.path.splitext(basename)
+    sdirs = []
+    sdirslen = 0
+    for p in parts[:-1]:
+        d = p[:_dirprefixlen]
+        if d[-1] in '. ':
+            # Windows can't access dirs ending in period or space
+            d = d[:-1] + '_'
+        if sdirslen == 0:
+            t = len(d)
+        else:
+            t = sdirslen + 1 + len(d)
+            if t > _maxshortdirslen:
+                break
+        sdirs.append(d)
+        sdirslen = t
+    dirs = '/'.join(sdirs)
+    if len(dirs) > 0:
+        dirs += '/'
+    res = 'dh/' + dirs + digest + ext
+    spaceleft = _maxstorepathlen - len(res)
+    if spaceleft > 0:
+        filler = basename[:spaceleft]
+        res = 'dh/' + dirs + filler + digest + ext
+    return res
+
 def _hybridencode(path, dotencode):
     '''encodes path with a length limit
 
@@ -219,34 +251,7 @@ def _hybridencode(path, dotencode):
     ef = _encodefname(path).split('/')
     res = '/'.join(_auxencode(ef, dotencode))
     if len(res) > _maxstorepathlen:
-        digest = _sha(path).hexdigest()
-        le = lowerencode(path).split('/')[1:]
-        parts = _auxencode(le, dotencode)
-        basename = parts[-1]
-        _root, ext = os.path.splitext(basename)
-        sdirs = []
-        sdirslen = 0
-        for p in parts[:-1]:
-            d = p[:_dirprefixlen]
-            if d[-1] in '. ':
-                # Windows can't access dirs ending in period or space
-                d = d[:-1] + '_'
-            if sdirslen == 0:
-                t = len(d)
-            else:
-                t = sdirslen + 1 + len(d)
-                if t > _maxshortdirslen:
-                    break
-            sdirs.append(d)
-            sdirslen = t
-        dirs = '/'.join(sdirs)
-        if len(dirs) > 0:
-            dirs += '/'
-        res = 'dh/' + dirs + digest + ext
-        spaceleft = _maxstorepathlen - len(res)
-        if spaceleft > 0:
-            filler = basename[:spaceleft]
-            res = 'dh/' + dirs + filler + digest + ext
+        res = _hashencode(path, dotencode)
     return res
 
 def _calcmode(path):
