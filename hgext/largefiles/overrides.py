@@ -141,14 +141,17 @@ def removelargefiles(ui, repo, *pats, **opts):
         for f in files:
             ui.warn(_('not removing %s: %s (use forget to undo)\n')
                     % (m.rel(f), reason))
+        return int(len(files) > 0)
+
+    result = 0
 
     if after:
         remove, forget = deleted, []
-        warn(modified + added + clean, _('file still exists'))
+        result = warn(modified + added + clean, _('file still exists'))
     else:
         remove, forget = deleted + clean, []
-        warn(modified, _('file is modified'))
-        warn(added, _('file has been marked for add'))
+        result = warn(modified, _('file is modified'))
+        result = warn(added, _('file has been marked for add')) or result
 
     for f in sorted(remove + forget):
         if ui.verbose or not m.exact(f):
@@ -181,6 +184,8 @@ def removelargefiles(ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
+    return result
+
 # For overriding mercurial.hgweb.webcommands so that largefiles will
 # appear at their right place in the manifests.
 def decodepath(orig, path):
@@ -207,9 +212,9 @@ def overrideadd(orig, ui, repo, *pats, **opts):
 
 def overrideremove(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
-    orig(ui, repo, *pats, **opts)
+    result = orig(ui, repo, *pats, **opts)
     restorematchfn()
-    removelargefiles(ui, repo, *pats, **opts)
+    return removelargefiles(ui, repo, *pats, **opts) or result
 
 def overridestatusfn(orig, repo, rev2, **opts):
     try:
@@ -235,7 +240,7 @@ def overridedirty(orig, repo, ignoreupdate=False):
 def overridelog(orig, ui, repo, *pats, **opts):
     try:
         repo.lfstatus = True
-        orig(ui, repo, *pats, **opts)
+        return orig(ui, repo, *pats, **opts)
     finally:
         repo.lfstatus = False
 
@@ -738,7 +743,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
 def overriderebase(orig, ui, repo, **opts):
     repo._isrebasing = True
     try:
-        orig(ui, repo, **opts)
+        return orig(ui, repo, **opts)
     finally:
         repo._isrebasing = False
 
@@ -889,7 +894,7 @@ def overridefetch(orig, ui, repo, *pats, **opts):
 
 def overrideforget(orig, ui, repo, *pats, **opts):
     installnormalfilesmatchfn(repo[None].manifest())
-    orig(ui, repo, *pats, **opts)
+    result = orig(ui, repo, *pats, **opts)
     restorematchfn()
     m = scmutil.match(repo[None], pats, opts)
 
@@ -906,6 +911,7 @@ def overrideforget(orig, ui, repo, *pats, **opts):
                 os.path.isdir(m.rel(lfutil.standin(f))):
             ui.warn(_('not removing %s: file is already untracked\n')
                     % m.rel(f))
+            result = 1
 
     for f in forget:
         if ui.verbose or not m.exact(f):
@@ -926,6 +932,8 @@ def overrideforget(orig, ui, repo, *pats, **opts):
             unlink=True)
     finally:
         wlock.release()
+
+    return result
 
 def getoutgoinglfiles(ui, repo, dest=None, **opts):
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -968,7 +976,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
     return toupload
 
 def overrideoutgoing(orig, ui, repo, dest=None, **opts):
-    orig(ui, repo, dest, **opts)
+    result = orig(ui, repo, dest, **opts)
 
     if opts.pop('large', None):
         toupload = getoutgoinglfiles(ui, repo, dest, **opts)
@@ -979,6 +987,8 @@ def overrideoutgoing(orig, ui, repo, dest=None, **opts):
             for file in toupload:
                 ui.status(lfutil.splitstandin(file) + '\n')
             ui.status('\n')
+
+    return result
 
 def overridesummary(orig, ui, repo, *pats, **opts):
     try:
