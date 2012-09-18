@@ -215,10 +215,10 @@ def _hybridencode(path, dotencode):
     The string 'data/' at the beginning is replaced with 'dh/', if the hashed
     encoding was used.
     '''
-    ef = encodefilename(path).split('/')
+    path = encodedir(path)
+    ef = _encodefname(path).split('/')
     res = '/'.join(_auxencode(ef, dotencode))
     if len(res) > _maxstorepathlen:
-        path = encodedir(path)
         digest = _sha(path).hexdigest()
         le = lowerencode(path).split('/')[1:]
         parts = _auxencode(le, dotencode)
