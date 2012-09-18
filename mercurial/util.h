@@ -121,6 +121,7 @@ typedef PyObject *(*ssizeargfunc)(PyObject *, Py_ssize_t);
 #ifdef _MSC_VER
 /* msvc 6.0 has problems */
 #define inline __inline
+typedef unsigned char uint8_t;
 typedef unsigned long uint32_t;
 typedef unsigned __int64 uint64_t;
 #else

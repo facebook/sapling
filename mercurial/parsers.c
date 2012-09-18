@@ -1507,6 +1507,7 @@ bail:
 static char parsers_doc[] = "Efficient content parsing.";
 
 PyObject *encodedir(PyObject *self, PyObject *args);
+PyObject *pathencode(PyObject *self, PyObject *args);
 
 static PyMethodDef methods[] = {
 	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
@@ -1514,6 +1515,7 @@ static PyMethodDef methods[] = {
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
+	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{NULL, NULL}
 };
 
