@@ -270,3 +270,31 @@ old file -- date clamped to 1980
   \s*147\s+2 files (re)
 
   $ cd ..
+
+issue3600: check whether "hg archive" can create archive files which
+are extracted with expected timestamp, even though TZ is not
+configured as GMT.
+
+  $ mkdir issue3600
+  $ cd issue3600
+
+  $ hg init repo
+  $ echo a > repo/a
+  $ hg -R repo add repo/a
+  $ hg -R repo commit -m '#0' -d '456789012 21600'
+  $ cat > show_mtime.py <<EOF
+  > import sys, os
+  > print int(os.stat(sys.argv[1]).st_mtime)
+  > EOF
+
+  $ hg -R repo archive --prefix tar-extracted archive.tar
+  $ (TZ=UTC-3; export TZ; tar xf archive.tar)
+  $ python show_mtime.py tar-extracted/a
+  456789012
+
+  $ hg -R repo archive --prefix zip-extracted archive.zip
+  $ (TZ=UTC-3; export TZ; unzip -q archive.zip)
+  $ python show_mtime.py zip-extracted/a
+  456789012
+
+  $ cd ..
