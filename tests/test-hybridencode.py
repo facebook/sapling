@@ -1,12 +1,22 @@
-from mercurial import store
+from mercurial import parsers, store
 
 hybridencode = lambda f: store._hybridencode(f, True)
 
-enc = hybridencode # used for 'dotencode' repo format
+pathencode = getattr(parsers, 'pathencode', None)
+def pencode(f):
+    pe = pathencode(f)
+    if pe is None:
+        return store._hashencode(store.encodedir(f), True)
+    return pe
 
 def show(s):
     print "A = '%s'" % s.encode("string_escape")
-    print "B = '%s'" % enc(s).encode("string_escape")
+    he = hybridencode(s)
+    print "B = '%s'" % he.encode("string_escape")
+    if pathencode:
+        pe = pencode(s)
+        if pe != he:
+            print "N = '%s'" % pe.encode("string_escape")
     print
 
 show("data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}")
@@ -450,4 +460,3 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           'VWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxx'
           'xxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwww'
           'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww')
-
