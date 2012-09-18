@@ -159,7 +159,7 @@ def update(repo, parents, node):
         if mark and marks[mark] in parents:
             old = repo[marks[mark]]
             new = repo[node]
-            if new in old.descendants() and mark == cur:
+            if old.descendant(new) and mark == cur:
                 marks[cur] = new.node()
                 update = True
             if mark != cur:
@@ -281,4 +281,4 @@ def validdest(repo, old, new):
         validdests.remove(old)
         return new in validdests
     else:
-        return new in old.descendants()
+        return old.descendant(new)
