@@ -203,21 +203,21 @@ Test display of largefiles in hgweb
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/?style=raw'
   200 Script output follows
-  
-  
+
+
   drwxr-xr-x sub
   -rw-r--r-- 41 large3
   -rw-r--r-- 9 normal3
-  
-  
+
+
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
   200 Script output follows
-  
-  
+
+
   -rw-r--r-- 41 large4
   -rw-r--r-- 9 normal4
-  
-  
+
+
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 #endif
 
@@ -1179,7 +1179,7 @@ largefiles can be pushed locally (issue3583)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
- 
+
 exit code with nothing outgoing (issue3611)
   $ hg outgoing ../dest
   comparing with ../dest
