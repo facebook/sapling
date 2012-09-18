@@ -422,8 +422,16 @@ class _fncacheopener(scmutil.abstractopener):
 def _plainhybridencode(f):
     return _hybridencode(f, False)
 
-def _dothybridencode(f):
-    return _hybridencode(f, True)
+_pathencode = getattr(parsers, 'pathencode', None)
+if _pathencode:
+    def _dothybridencode(f):
+        ef = _pathencode(f)
+        if ef is None:
+            return _hashencode(dotencode(f), True)
+        return ef
+else:
+    def _dothybridencode(f):
+        return _hybridencode(f, True)
 
 class fncachestore(basicstore):
     def __init__(self, path, openertype, dotencode):
