@@ -184,7 +184,8 @@ def rebase(ui, repo, **opts):
                 rebaseset = repo.revs(
                     '(children(ancestor(%ld, %d)) and ::(%ld))::',
                     base, dest, base)
-
+            # temporary top level filtering of extinct revisions
+            rebaseset = repo.revs('%ld - hidden()', rebaseset)
             if rebaseset:
                 root = min(rebaseset)
             else:
@@ -193,7 +194,7 @@ def rebase(ui, repo, **opts):
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination\n')
                 result = None
-            elif not keepf and repo.revs('first(children(%ld) - %ld)',
+            elif not keepf and repo.revs('first(children(%ld) - %ld)-hidden()',
                                          rebaseset, rebaseset):
                 raise util.Abort(
                     _("can't remove original changesets with"
