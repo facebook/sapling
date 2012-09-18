@@ -77,8 +77,9 @@ def uisetup(ui):
                                    overrides.overrideclone)
     cloneopt = [('', 'all-largefiles', None,
                  _('download all versions of all largefiles'))]
-
     entry[1].extend(cloneopt)
+    entry = extensions.wrapfunction(hg, 'clone', overrides.hgclone)
+
     entry = extensions.wrapcommand(commands.table, 'cat',
                                    overrides.overridecat)
     entry = extensions.wrapfunction(merge, '_checkunknownfile',
