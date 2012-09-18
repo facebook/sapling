@@ -567,8 +567,11 @@ def stream(repo, proto):
                 else:
                     for chunk in util.filechunkiter(sopener(name), limit=size):
                         yield chunk
-        finally:
+        # replace with "finally:" when support for python 2.4 has been dropped
+        except Exception:
             sopener.mustaudit = oldaudit
+            raise
+        sopener.mustaudit = oldaudit
 
     return streamres(streamer(repo, entries, total_bytes))
 
