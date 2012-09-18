@@ -670,6 +670,59 @@ Test cloning with --all-largefiles flag
   3 largefiles updated, 0 removed
   8 additional largefiles cached
 
+  $ rm "${USERCACHE}"/*
+  $ hg clone --all-largefiles -u 0 a a-clone0
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  9 additional largefiles cached
+  $ hg -R a-clone0 sum
+  parent: 0:30d30fe6a5be 
+   add files
+  branch: default
+  commit: (clean)
+  update: 7 new changesets (update)
+
+  $ rm "${USERCACHE}"/*
+  $ hg clone --all-largefiles -u 1 a a-clone1
+  updating to branch default
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  8 additional largefiles cached
+  $ hg -R a-clone1 sum
+  parent: 1:ce8896473775 
+   edit files
+  branch: default
+  commit: (clean)
+  update: 6 new changesets (update)
+
+  $ rm "${USERCACHE}"/*
+  $ hg clone --all-largefiles -U a a-clone-u
+  11 additional largefiles cached
+  $ hg -R a-clone-u sum
+  parent: -1:000000000000  (no revision checked out)
+  branch: default
+  commit: (clean)
+  update: 8 new changesets (update)
+
+  $ mkdir xyz
+  $ cd xyz
+  $ hg clone ../a
+  destination directory: a
+  updating to branch default
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  3 largefiles updated, 0 removed
+  $ cd ..
+
+Ensure base clone command argument validation
+
+  $ hg clone -U -u 0 a a-clone-failure
+  abort: cannot specify both --noupdate and --updaterev
+  [255]
+
   $ hg clone --all-largefiles a ssh://localhost/a
   abort: --all-largefiles is incompatible with non-local destination ssh://localhost/a
   [255]

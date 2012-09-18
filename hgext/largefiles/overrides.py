@@ -720,25 +720,39 @@ def overridepull(orig, ui, repo, source=None, **opts):
     return result
 
 def overrideclone(orig, ui, source, dest=None, **opts):
-    if dest is None:
-        dest = hg.defaultdest(source)
-    if opts.get('all_largefiles') and not hg.islocal(dest):
+    d = dest
+    if d is None:
+        d = hg.defaultdest(source)
+    if opts.get('all_largefiles') and not hg.islocal(d):
             raise util.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s' %
-            dest))
-    result = hg.clone(ui, opts, source, dest,
-                      pull=opts.get('pull'),
-                      stream=opts.get('uncompressed'),
-                      rev=opts.get('rev'),
-                      update=True, # required for successful walkchangerevs
-                      branch=opts.get('branch'))
-    if result is None:
-        return True
-    if opts.get('all_largefiles'):
+            d))
+
+    return orig(ui, source, dest, **opts)
+
+def hgclone(orig, ui, opts, *args, **kwargs):
+    result = orig(ui, opts, *args, **kwargs)
+
+    if result is not None and opts.get('all_largefiles'):
         sourcerepo, destrepo = result
-        success, missing = lfcommands.downloadlfiles(ui, destrepo.local(), None)
-        return missing != 0
-    return result is None
+        repo = destrepo.local()
+
+        # The .hglf directory must exist for the standin matcher to match
+        # anything (which listlfiles uses for each rev), and .hg/largefiles is
+        # assumed to exist by the code that caches the downloaded file.  These
+        # directories exist if clone updated to any rev.
+        if opts.get('noupdate'):
+            util.makedirs(repo.pathto(lfutil.shortname))
+            util.makedirs(repo.join(lfutil.longname))
+
+        # Caching is implicitly limited to 'rev' option, since the dest repo was
+        # truncated at that point.
+        success, missing = lfcommands.downloadlfiles(ui, repo, None)
+
+        if missing != 0:
+            return None
+
+    return result
 
 def overriderebase(orig, ui, repo, **opts):
     repo._isrebasing = True
