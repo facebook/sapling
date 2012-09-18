@@ -6,28 +6,30 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import osutil, scmutil, util
+import osutil, scmutil, util, parsers
 import os, stat, errno
 
 _sha = util.sha1
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d
-def encodedir(path):
+def _encodedir(path):
     '''
-    >>> encodedir('data/foo.i')
+    >>> _encodedir('data/foo.i')
     'data/foo.i'
-    >>> encodedir('data/foo.i/bla.i')
+    >>> _encodedir('data/foo.i/bla.i')
     'data/foo.i.hg/bla.i'
-    >>> encodedir('data/foo.i.hg/bla.i')
+    >>> _encodedir('data/foo.i.hg/bla.i')
     'data/foo.i.hg.hg/bla.i'
-    >>> encodedir('data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
+    >>> _encodedir('data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
     'data/foo.i\\ndata/foo.i.hg/bla.i\\ndata/foo.i.hg.hg/bla.i\\n'
     '''
     return (path
             .replace(".hg/", ".hg.hg/")
             .replace(".i/", ".i.hg/")
             .replace(".d/", ".d.hg/"))
+
+encodedir = getattr(parsers, 'encodedir', _encodedir)
 
 def decodedir(path):
     '''
