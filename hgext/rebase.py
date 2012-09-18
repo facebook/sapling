@@ -310,15 +310,7 @@ def rebase(ui, repo, **opts):
                     nstate[repo[k].node()] = repo[v].node()
 
         if not keepf:
-            # Remove no more useful revisions
-            rebased = [rev for rev in state if state[rev] != nullmerge]
-            if rebased:
-                if set(repo.changelog.descendants([min(rebased)])) - set(state):
-                    ui.warn(_("warning: new changesets detected "
-                              "on source branch, not stripping\n"))
-                else:
-                    # backup the old csets by default
-                    repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+            clearrebased(ui, repo, state)
 
         if currentbookmarks:
             updatebookmarks(repo, nstate, currentbookmarks, **opts)
@@ -663,6 +655,18 @@ def buildstate(repo, dest, rebaseset, collapse):
         detachset = repo.revs('::%d - ::%d - %d', root, commonbase, root)
         state.update(dict.fromkeys(detachset, nullmerge))
     return repo['.'].rev(), dest.rev(), state
+
+def clearrebased(ui, repo, state):
+    """dispose of rebased revision at the end of the rebase"""
+    rebased = [rev for rev in state if state[rev] != nullmerge]
+    if rebased:
+        if set(repo.changelog.descendants([min(rebased)])) - set(state):
+            ui.warn(_("warning: new changesets detected "
+                      "on source branch, not stripping\n"))
+        else:
+            # backup the old csets by default
+            repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
