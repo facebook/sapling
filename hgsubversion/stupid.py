@@ -22,7 +22,7 @@ import util
 #  a
 #  a
 # +a
-# 
+#
 # Property changes on: a
 # ___________________________________________________________________
 # Added: svn:executable
@@ -239,11 +239,16 @@ def patchrepo(ui, meta, parentctx, patchfp):
     try:
         touched = set()
         backend = svnbackend(ui, meta.repo, parentctx, store)
-        ret = patch.patchbackend(ui, backend, patchfp, 0, touched)
-        if ret < 0:
-            raise BadPatchApply('patching failed')
-        if ret > 0:
-            raise BadPatchApply('patching succeeded with fuzz')
+
+        try:
+            ret = patch.patchbackend(ui, backend, patchfp, 0, touched)
+            if ret < 0:
+                raise BadPatchApply('patching failed')
+            if ret > 0:
+                raise BadPatchApply('patching succeeded with fuzz')
+        except patch.PatchError, e:
+            raise BadPatchApply(str(e))
+
         files = {}
         for f in touched:
             try:

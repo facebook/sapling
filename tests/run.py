@@ -20,6 +20,7 @@ def tests():
     import test_fetch_truncated
     import test_hooks
     import test_pull
+    import test_pull_fallback
     import test_push_command
     import test_push_renames
     import test_push_dirs

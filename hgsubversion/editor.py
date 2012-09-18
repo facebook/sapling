@@ -356,7 +356,19 @@ class HgEditor(svnwrap.Editor):
             try:
                 if not self.meta.is_path_valid(self.current.file):
                     return
-                handler(window)
+                try:
+                    handler(window)
+                except AssertionError, e: # pragma: no cover
+                    # Enhance the exception message
+                    msg, others = e.args[0], e.args[1:]
+
+                    if msg:
+                        msg += '\n'
+
+                    msg += _TXDELT_WINDOW_HANDLER_FAILURE_MSG
+                    e.args = (msg,) + others
+                    raise e
+
                 # window being None means commit this file
                 if not window:
                     self.current.files[self.current.file] = target.getvalue()
@@ -369,3 +381,13 @@ class HgEditor(svnwrap.Editor):
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window
+
+_TXDELT_WINDOW_HANDLER_FAILURE_MSG = (
+    "Your SVN repository may not be supplying correct replay deltas."
+    " It is strongly"
+    "\nadvised that you repull the entire SVN repository using"
+    " hg pull --stupid."
+    "\nAlternatively, re-pull just this revision using --stupid and verify"
+    " that the"
+    "\nchangeset is correct."
+)
