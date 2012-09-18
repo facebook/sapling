@@ -21,6 +21,8 @@ def encodedir(path):
     'data/foo.i.hg/bla.i'
     >>> encodedir('data/foo.i.hg/bla.i')
     'data/foo.i.hg.hg/bla.i'
+    >>> encodedir('data/foo.i\\ndata/foo.i/bla.i\\ndata/foo.i.hg/bla.i\\n')
+    'data/foo.i\\ndata/foo.i.hg/bla.i\\ndata/foo.i.hg.hg/bla.i\\n'
     '''
     return (path
             .replace(".hg/", ".hg.hg/")
