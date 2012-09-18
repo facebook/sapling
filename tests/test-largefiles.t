@@ -91,7 +91,7 @@ Test exit codes for remove warning cases (modified and still exiting)
   $ hg up -Cq
 
 Remove both largefiles and normal files.
- 
+
   $ hg remove normal1 large1
   $ hg status large1
   R large1
@@ -203,21 +203,21 @@ Test display of largefiles in hgweb
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/?style=raw'
   200 Script output follows
-  
-  
+
+
   drwxr-xr-x sub
   -rw-r--r-- 41 large3
   -rw-r--r-- 9 normal3
-  
-  
+
+
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
   200 Script output follows
-  
-  
+
+
   -rw-r--r-- 41 large4
   -rw-r--r-- 9 normal4
-  
-  
+
+
   $ "$TESTDIR/killdaemons.py"
 #endif
 
@@ -230,7 +230,7 @@ archiving.
   $ hg archive -r 3 ../archive3
   $ hg archive -r 4 ../archive4
   $ cd ../archive0
-  $ cat normal1 
+  $ cat normal1
   normal1
   $ cat large1
   large1
@@ -650,7 +650,7 @@ Clone a largefiles repo.
 Old revisions of a clone have correct largefiles content (this also
 tests update).
 
-  $ hg update -r 1 
+  $ hg update -r 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -803,7 +803,7 @@ revisions (this was a very bad bug that took a lot of work to fix).
 
 Rollback on largefiles.
 
-  $ echo large4-modified-again > sub/large4 
+  $ echo large4-modified-again > sub/large4
   $ hg commit -m "Modify large4 again"
   Invoking status precommit hook
   M sub/large4
@@ -833,7 +833,7 @@ Rollback on largefiles.
 
 "update --clean" leaves correct largefiles in working copy.
 
-  $ hg update --clean 
+  $ hg update --clean
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -1037,7 +1037,7 @@ Test that transplanting a largefile change works correctly.
   getting changed largefiles
   3 largefiles updated, 0 removed
   $ cd g
-  $ hg transplant -s ../d 598410d3eb9a 
+  $ hg transplant -s ../d 598410d3eb9a
   searching for changes
   searching for changes
   adding changesets
@@ -1179,7 +1179,7 @@ largefiles can be pushed locally (issue3583)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
- 
+
 exit code with nothing outgoing (issue3611)
   $ hg outgoing ../dest
   comparing with ../dest
