@@ -257,11 +257,11 @@ def validdest(repo, old, new):
     """Is the new bookmark destination a valid update from the old one"""
     if old == new:
         # Old == new -> nothing to update.
-        validdests = ()
+        return False
     elif not old:
         # old is nullrev, anything is valid.
         # (new != nullrev has been excluded by the previous check)
-        validdests = (new,)
+        return True
     elif repo.obsstore:
         # We only need this complicated logic if there is obsolescence
         # XXX will probably deserve an optimised rset.
@@ -279,6 +279,6 @@ def validdest(repo, old, new):
                                                         c.node()))
             validdests = set(repo.set('%ln::', succs))
         validdests.remove(old)
+        return new in validdests
     else:
-        validdests = old.descendants()
-    return new in validdests
+        return new in old.descendants()
