@@ -93,10 +93,24 @@ def _buildencodefun():
                     pass
             else:
                 raise KeyError
-    return (lambda s: "".join([cmap[c] for c in encodedir(s)]),
-            lambda s: decodedir("".join(list(decode(s)))))
+    return (lambda s: ''.join([cmap[c] for c in s]),
+            lambda s: ''.join(list(decode(s))))
 
-encodefilename, decodefilename = _buildencodefun()
+_encodefname, _decodefname = _buildencodefun()
+
+def encodefilename(s):
+    '''
+    >>> encodefilename('foo.i/bar.d/bla.hg/hi:world?/HELLO')
+    'foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o'
+    '''
+    return _encodefname(encodedir(s))
+
+def decodefilename(s):
+    '''
+    >>> decodefilename('foo.i.hg/bar.d.hg/bla.hg.hg/hi~3aworld~3f/_h_e_l_l_o')
+    'foo.i/bar.d/bla.hg/hi:world?/HELLO'
+    '''
+    return decodedir(_decodefname(s))
 
 def _buildlowerencodefun():
     '''
