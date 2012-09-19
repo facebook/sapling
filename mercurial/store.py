@@ -254,6 +254,20 @@ def _hybridencode(path, dotencode):
         res = _hashencode(path, dotencode)
     return res
 
+def _plainhybridencode(f):
+    return _hybridencode(f, False)
+
+_pathencode = getattr(parsers, 'pathencode', None)
+if _pathencode:
+    def _dothybridencode(f):
+        ef = _pathencode(f)
+        if ef is None:
+            return _hashencode(encodedir(f), True)
+        return ef
+else:
+    def _dothybridencode(f):
+        return _hybridencode(f, True)
+
 def _calcmode(path):
     try:
         # files in .hg/ will be created using this mode
@@ -418,20 +432,6 @@ class _fncacheopener(scmutil.abstractopener):
         if mode not in ('r', 'rb') and path.startswith('data/'):
             self.fncache.add(path)
         return self.opener(self.encode(path), mode, *args, **kw)
-
-def _plainhybridencode(f):
-    return _hybridencode(f, False)
-
-_pathencode = getattr(parsers, 'pathencode', None)
-if _pathencode:
-    def _dothybridencode(f):
-        ef = _pathencode(f)
-        if ef is None:
-            return _hashencode(encodedir(f), True)
-        return ef
-else:
-    def _dothybridencode(f):
-        return _hybridencode(f, True)
 
 class fncachestore(basicstore):
     def __init__(self, path, openertype, dotencode):
