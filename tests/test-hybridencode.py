@@ -1,22 +1,17 @@
-from mercurial import parsers, store
-
-hybridencode = lambda f: store._hybridencode(f, True)
-
-pathencode = getattr(parsers, 'pathencode', None)
-def pencode(f):
-    pe = pathencode(f)
-    if pe is None:
-        return store._hashencode(store.encodedir(f), True)
-    return pe
+from mercurial import store
 
 def show(s):
+    # show test input
     print "A = '%s'" % s.encode("string_escape")
-    he = hybridencode(s)
-    print "B = '%s'" % he.encode("string_escape")
-    if pathencode:
-        pe = pencode(s)
-        if pe != he:
-            print "N = '%s'" % pe.encode("string_escape")
+
+    # show the result of the C implementation, if available
+    h = store._dothybridencode(s)
+    print "B = '%s'" % h.encode("string_escape")
+
+    # compare it with reference implementation in Python
+    r = store._hybridencode(s, True)
+    if h != r:
+        print "R = '%s'" % r.encode("string_escape")
     print
 
 show("data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}")
