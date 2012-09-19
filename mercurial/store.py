@@ -427,7 +427,7 @@ if _pathencode:
     def _dothybridencode(f):
         ef = _pathencode(f)
         if ef is None:
-            return _hashencode(dotencode(f), True)
+            return _hashencode(encodedir(f), True)
         return ef
 else:
     def _dothybridencode(f):
