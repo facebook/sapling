@@ -12,6 +12,7 @@ import cmdutil
 import scmutil, util, encoding
 import cStringIO, os, tarfile, time, zipfile
 import zlib, gzip
+import struct
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
@@ -169,6 +170,7 @@ class zipit(object):
         if mtime < epoch:
             mtime = epoch
 
+        self.mtime = mtime
         self.date_time = time.gmtime(mtime)[:6]
 
     def addfile(self, name, mode, islink, data):
@@ -182,6 +184,14 @@ class zipit(object):
             mode = 0777
             ftype = _UNX_IFLNK
         i.external_attr = (mode | ftype) << 16L
+        # add "extended-timestamp" extra block, because zip archives
+        # without this will be extracted with unexpected timestamp,
+        # if TZ is not configured as GMT
+        i.extra += struct.pack('<hhBl',
+                               0x5455,     # block type: "extended-timestamp"
+                               1 + 4,      # size of this block
+                               1,          # "modification time is present"
+                               self.mtime) # time of last modification (UTC)
         self.z.writestr(i, data)
 
     def done(self):
