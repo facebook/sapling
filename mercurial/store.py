@@ -254,19 +254,23 @@ def _hybridencode(path, dotencode):
         res = _hashencode(path, dotencode)
     return res
 
+def _pathencode(path):
+    ef = _encodefname(encodedir(path)).split('/')
+    res = '/'.join(_auxencode(ef, True))
+    if len(res) > _maxstorepathlen:
+        return None
+    return res
+
+_pathencode = getattr(parsers, 'pathencode', _pathencode)
+
+def _dothybridencode(f):
+    ef = _pathencode(f)
+    if ef is None:
+        return _hashencode(encodedir(f), True)
+    return ef
+
 def _plainhybridencode(f):
     return _hybridencode(f, False)
-
-_pathencode = getattr(parsers, 'pathencode', None)
-if _pathencode:
-    def _dothybridencode(f):
-        ef = _pathencode(f)
-        if ef is None:
-            return _hashencode(encodedir(f), True)
-        return ef
-else:
-    def _dothybridencode(f):
-        return _hybridencode(f, True)
 
 def _calcmode(path):
     try:
