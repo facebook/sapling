@@ -306,6 +306,12 @@ def message(ui, repo, ctx, ha, opts):
 
 
 def makedesc(c):
+    """build a initial action line for a ctx `c`
+
+    line are in the form:
+
+      pick <hash> <rev> <summary>
+    """
     summary = ''
     if c.description():
         summary = c.description().splitlines()[0]
