@@ -282,20 +282,6 @@ def message(ui, repo, ctx, ha, opts):
     # We didn't make an edit, so just indicate no replaced nodes
     return newctx, [new], [], []
 
-
-def makedesc(c):
-    """build a initial action line for a ctx `c`
-
-    line are in the form:
-
-      pick <hash> <rev> <summary>
-    """
-    summary = ''
-    if c.description():
-        summary = c.description().splitlines()[0]
-    line = 'pick %s %d %s' % (c.hex()[:12], c.rev(), summary)
-    return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
-
 actiontable = {'p': pick,
                'pick': pick,
                'e': edit,
@@ -640,6 +626,19 @@ def readstate(repo):
     fp = open(os.path.join(repo.path, 'histedit-state'))
     return pickle.load(fp)
 
+
+def makedesc(c):
+    """build a initial action line for a ctx `c`
+
+    line are in the form:
+
+      pick <hash> <rev> <summary>
+    """
+    summary = ''
+    if c.description():
+        summary = c.description().splitlines()[0]
+    line = 'pick %s %d %s' % (c.hex()[:12], c.rev(), summary)
+    return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
 
 def verifyrules(rules, repo, ctxs):
     """Verify that there exists exactly one edit rule per given changeset.
