@@ -196,6 +196,9 @@ def foldchanges(ui, repo, node1, node2, opts):
     return files
 
 def between(repo, old, new, keep):
+    """select and validate the set of revision to edit
+
+    When keep is false, the specified set can't have children."""
     revs = [old]
     current = old
     while current != new:
