@@ -215,11 +215,11 @@ def symbolset(repo, subset, x):
 def rangeset(repo, subset, x, y):
     m = getset(repo, subset, x)
     if not m:
-        m = getset(repo, range(len(repo)), x)
+        m = getset(repo, list(repo), x)
 
     n = getset(repo, subset, y)
     if not n:
-        n = getset(repo, range(len(repo)), y)
+        n = getset(repo, list(repo), y)
 
     if not m or not n:
         return []
@@ -234,7 +234,7 @@ def rangeset(repo, subset, x, y):
 
 def dagrange(repo, subset, x, y):
     if subset:
-        r = range(len(repo))
+        r = list(repo)
         xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
         s = set(subset)
         return [r for r in xs if r in s]
@@ -277,7 +277,7 @@ def ancestor(repo, subset, x):
     """
     # i18n: "ancestor" is a keyword
     l = getargs(x, 2, 2, _("ancestor requires two arguments"))
-    r = range(len(repo))
+    r = list(repo)
     a = getset(repo, r, l[0])
     b = getset(repo, r, l[1])
     if len(a) != 1 or len(b) != 1:
@@ -288,7 +288,7 @@ def ancestor(repo, subset, x):
     return [r for r in an if r in subset]
 
 def _ancestors(repo, subset, x, followfirst=False):
-    args = getset(repo, range(len(repo)), x)
+    args = getset(repo, list(repo), x)
     if not args:
         return []
     s = set(_revancestors(repo, args, followfirst)) | set(args)
@@ -415,7 +415,7 @@ def branch(repo, subset, x):
         else:
             return [r for r in subset if matcher(repo[r].branch())]
 
-    s = getset(repo, range(len(repo)), x)
+    s = getset(repo, list(repo), x)
     b = set()
     for r in s:
         b.add(repo[r].branch())
@@ -466,7 +466,7 @@ def children(repo, subset, x):
     """``children(set)``
     Child changesets of changesets in set.
     """
-    s = set(getset(repo, range(len(repo)), x))
+    s = set(getset(repo, list(repo), x))
     cs = _children(repo, subset, s)
     return [r for r in subset if r in cs]
 
@@ -547,7 +547,7 @@ def desc(repo, subset, x):
     return l
 
 def _descendants(repo, subset, x, followfirst=False):
-    args = getset(repo, range(len(repo)), x)
+    args = getset(repo, list(repo), x)
     if not args:
         return []
     s = set(_revdescendants(repo, args, followfirst)) | set(args)
@@ -571,9 +571,9 @@ def destination(repo, subset, x):
     is the same as passing all().
     """
     if x is not None:
-        args = set(getset(repo, range(len(repo)), x))
+        args = set(getset(repo, list(repo), x))
     else:
-        args = set(getall(repo, range(len(repo)), x))
+        args = set(getall(repo, list(repo), x))
 
     dests = set()
 
@@ -877,7 +877,7 @@ def limit(repo, subset, x):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
     ss = set(subset)
-    os = getset(repo, range(len(repo)), l[0])[:lim]
+    os = getset(repo, list(repo), l[0])[:lim]
     return [r for r in os if r in ss]
 
 def last(repo, subset, x):
@@ -895,14 +895,14 @@ def last(repo, subset, x):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
     ss = set(subset)
-    os = getset(repo, range(len(repo)), l[0])[-lim:]
+    os = getset(repo, list(repo), l[0])[-lim:]
     return [r for r in os if r in ss]
 
 def maxrev(repo, subset, x):
     """``max(set)``
     Changeset with highest revision number in set.
     """
-    os = getset(repo, range(len(repo)), x)
+    os = getset(repo, list(repo), x)
     if os:
         m = max(os)
         if m in subset:
@@ -922,7 +922,7 @@ def minrev(repo, subset, x):
     """``min(set)``
     Changeset with lowest revision number in set.
     """
-    os = getset(repo, range(len(repo)), x)
+    os = getset(repo, list(repo), x)
     if os:
         m = min(os)
         if m in subset:
@@ -972,9 +972,9 @@ def origin(repo, subset, x):
     for the first operation is selected.
     """
     if x is not None:
-        args = set(getset(repo, range(len(repo)), x))
+        args = set(getset(repo, list(repo), x))
     else:
-        args = set(getall(repo, range(len(repo)), x))
+        args = set(getall(repo, list(repo), x))
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
@@ -1024,7 +1024,7 @@ def p1(repo, subset, x):
 
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, range(len(repo)), x):
+    for r in getset(repo, list(repo), x):
         ps.add(cl.parentrevs(r)[0])
     return [r for r in subset if r in ps]
 
@@ -1042,7 +1042,7 @@ def p2(repo, subset, x):
 
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, range(len(repo)), x):
+    for r in getset(repo, list(repo), x):
         ps.add(cl.parentrevs(r)[1])
     return [r for r in subset if r in ps]
 
@@ -1056,7 +1056,7 @@ def parents(repo, subset, x):
 
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, range(len(repo)), x):
+    for r in getset(repo, list(repo), x):
         ps.update(cl.parentrevs(r))
     return [r for r in subset if r in ps]
 

@@ -1394,7 +1394,8 @@ def getgraphlogrevs(repo, pats, opts):
         if follow and len(repo) > 0:
             revs = scmutil.revrange(repo, ['.:0'])
         else:
-            revs = range(len(repo) - 1, -1, -1)
+            revs = list(repo.changelog)
+            revs.reverse()
     if not revs:
         return iter([]), None, None
     expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)

@@ -363,14 +363,13 @@ class localrepository(object):
         return len(self.changelog)
 
     def __iter__(self):
-        for i in xrange(len(self)):
-            yield i
+        return iter(self.changelog)
 
     def revs(self, expr, *args):
         '''Return a list of revisions matching the given revset'''
         expr = revset.formatspec(expr, *args)
         m = revset.match(None, expr)
-        return [r for r in m(self, range(len(self)))]
+        return [r for r in m(self, list(self))]
 
     def set(self, expr, *args):
         '''
@@ -603,7 +602,7 @@ class localrepository(object):
         # TODO: rename this function?
         tiprev = len(self) - 1
         if lrev != tiprev:
-            ctxgen = (self[r] for r in xrange(lrev + 1, tiprev + 1))
+            ctxgen = (self[r] for r in self.changelog.revs(lrev + 1, tiprev))
             self._updatebranchcache(partial, ctxgen)
             self._writebranchcache(partial, self.changelog.tip(), tiprev)
 
