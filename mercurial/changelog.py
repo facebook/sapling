@@ -120,6 +120,82 @@ class changelog(revlog.revlog):
         self._realopener = opener
         self._delayed = False
         self._divert = False
+        self.filteredrevs = ()
+
+    def tip(self):
+        """filtered version of revlog.tip"""
+        for i in xrange(len(self) -1, -2, -1):
+            if i not in self.filteredrevs:
+                return self.node(i)
+
+    def __iter__(self):
+        """filtered version of revlog.__iter__"""
+        for i in xrange(len(self)):
+            if i not in self.filteredrevs:
+                yield i
+
+    def revs(self, start=0, stop=None):
+        """filtered version of revlog.revs"""
+        for i in super(changelog, self).revs(start, stop):
+            if i not in self.filteredrevs:
+                yield i
+
+    @util.propertycache
+    def nodemap(self):
+        # XXX need filtering too
+        self.rev(self.node(0))
+        return self._nodecache
+
+    def hasnode(self, node):
+        """filtered version of revlog.hasnode"""
+        try:
+            i = self.rev(node)
+            return i not in self.filteredrevs
+        except KeyError:
+            return False
+
+    def headrevs(self):
+        if self.filteredrevs:
+            # XXX we should fix and use the C version
+            return self._headrevs()
+        return super(changelog, self).headrevs()
+
+    def strip(self, *args, **kwargs):
+        # XXX make something better than assert
+        # We can't expect proper strip behavior if we are filtered.
+        assert not self.filteredrevs
+        super(changelog, self).strip(*args, **kwargs)
+
+    def rev(self, node):
+        """filtered version of revlog.rev"""
+        r = super(changelog, self).rev(node)
+        if r in self.filteredrevs:
+            raise error.LookupError(node, self.indexfile, _('no node'))
+        return r
+
+    def node(self, rev):
+        """filtered version of revlog.node"""
+        if rev in self.filteredrevs:
+            raise IndexError(rev)
+        return super(changelog, self).node(rev)
+
+    def linkrev(self, rev):
+        """filtered version of revlog.linkrev"""
+        if rev in self.filteredrevs:
+            raise IndexError(rev)
+        return super(changelog, self).linkrev(rev)
+
+    def parentrevs(self, rev):
+        """filtered version of revlog.parentrevs"""
+        if rev in self.filteredrevs:
+            raise IndexError(rev)
+        return super(changelog, self).parentrevs(rev)
+
+    def flags(self, rev):
+        """filtered version of revlog.flags"""
+        if rev in self.filteredrevs:
+            raise IndexError(rev)
+        return super(changelog, self).flags(rev)
 
     def delayupdate(self):
         "delay visibility of index updates to other readers"
