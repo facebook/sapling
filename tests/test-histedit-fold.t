@@ -157,16 +157,21 @@ folding and creating no new change doesn't break:
 
   $ HGEDITOR='python editor.py' hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file file
-  Hunk #1 FAILED at 2
-  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  merging file
+  warning: conflicts during merge.
+  merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
   [255]
-There were conflicts, but we'll continue without resolving. This
+There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
   $ hg status
+  M file
   ? editor.py
-  ? file.rej
+  ? file.orig
+  $ hg resolve -l
+  U file
+  $ hg revert -r 'p1()' file
+  $ hg resolve --mark file
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
@@ -217,12 +222,19 @@ dropped revision.
   > EOF
   $ HGEDITOR="cat $EDITED >" hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file file
-  Hunk #1 FAILED at 2
-  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  merging file
+  warning: conflicts during merge.
+  merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
   [255]
-  $ echo 5 >> file
+  $ cat > file << EOF
+  > 1
+  > 2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ hg resolve --mark file
   $ hg commit -m '+5.2'
   created new head
   $ echo 6 >> file

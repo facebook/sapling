@@ -89,9 +89,9 @@ log before edit
 edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
 abort the edit
@@ -147,21 +147,24 @@ second edit set
 edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
 fix up
   $ echo 'I can haz no commute' > e
+  $ hg resolve --mark e
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
 just continue this time
+  $ hg revert -r 'p1()' e
+  $ hg resolve --mark e
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -227,19 +230,22 @@ start over
 edit the history, this time with a fold action
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
   $ echo 'I can haz no commute' > e
+  $ hg resolve --mark e
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 second edit also fails, but just continue
+  $ hg revert -r 'p1()' e
+  $ hg resolve --mark e
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -142,7 +142,6 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import tempfile
 import os
 
 from mercurial import bookmarks
@@ -154,10 +153,10 @@ from mercurial import context
 from mercurial import hg
 from mercurial import lock as lockmod
 from mercurial import node
-from mercurial import patch
 from mercurial import repair
 from mercurial import scmutil
 from mercurial import util
+from mercurial import merge as mergemod
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -177,25 +176,27 @@ editcomment = _("""# Edit history between %s and %s
 #
 """)
 
-def foldchanges(ui, repo, node1, node2, opts):
-    """Produce a new changeset that represents the diff from node1 to node2."""
-    try:
-        fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-        fp = os.fdopen(fd, 'w')
-        diffopts = patch.diffopts(ui, opts)
-        diffopts.git = True
-        diffopts.ignorews = False
-        diffopts.ignorewsamount = False
-        diffopts.ignoreblanklines = False
-        gen = patch.diff(repo, node1, node2, opts=diffopts)
-        for chunk in gen:
-            fp.write(chunk)
-        fp.close()
-        files = set()
-        patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-    finally:
-        os.unlink(patchfile)
-    return files
+def applychanges(ui, repo, ctx, opts):
+    """Merge changeset from ctx (only) in the current working directory"""
+    wcpar = repo.dirstate.parents()[0]
+    if ctx.p1().node() == wcpar:
+        # edition ar "in place" we do not need to make any merge,
+        # just applies changes on parent for edition
+        cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
+        stats = None
+    else:
+        try:
+            # ui.forcemerge is an internal variable, do not document
+            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                    ctx.p1().node())
+        finally:
+            repo.ui.setconfig('ui', 'forcemerge', '')
+        repo.setparents(wcpar, node.nullid)
+        repo.dirstate.write()
+        # fix up dirstate for copies and renames
+    cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+    return stats
 
 def collapse(repo, first, last, commitopts):
     """collapse the set of revisions from first to last as new one.
@@ -273,27 +274,24 @@ def pick(ui, repo, ctx, ha, opts):
         ui.debug('node %s unchanged\n' % ha)
         return oldctx, [], [], []
     hg.update(repo, ctx.node())
-    try:
-        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
-        if not files:
-            ui.warn(_('%s: empty changeset')
-                         % node.hex(ha))
-            return ctx, [], [], []
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
+    # drop the second merge parent
     n = repo.commit(text=oldctx.description(), user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
+    if n is None:
+        ui.warn(_('%s: empty changeset\n')
+                     % node.hex(ha))
+        return ctx, [], [], []
     return repo[n], [n], [oldctx.node()], []
 
 
 def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    try:
-        foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
-    except Exception:
-        pass
+    applychanges(ui, repo, oldctx, opts)
     raise util.Abort(_('Make changes as needed, you may commit or record as '
                        'needed now.\nWhen you are finished, run hg'
                        ' histedit --continue to resume.'))
@@ -301,17 +299,16 @@ def edit(ui, repo, ctx, ha, opts):
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    try:
-        files = foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
-        if not files:
-            ui.warn(_('%s: empty changeset')
-                         % node.hex(ha))
-            return ctx, [], [], []
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
+    if n is None:
+        ui.warn(_('%s: empty changeset')
+                     % node.hex(ha))
+        return ctx, [], [], []
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
@@ -346,9 +343,8 @@ def drop(ui, repo, ctx, ha, opts):
 def message(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    try:
-        foldchanges(ui, repo, oldctx.p1().node() , ha, opts)
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     message = oldctx.description() + '\n'

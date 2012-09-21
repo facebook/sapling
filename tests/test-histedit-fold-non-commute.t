@@ -88,13 +88,14 @@ log before edit
 edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
 fix up
-  $ echo a > e
+  $ echo 'I can haz no commute' > e
+  $ hg resolve --mark e
   $ cat > cat.py <<EOF
   > import sys
   > print open(sys.argv[1]).read()
@@ -121,25 +122,27 @@ fix up
   
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file e
-  Hunk #1 FAILED at 0
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
 just continue this time
+  $ hg revert -r 'p1()' e
+  $ hg resolve --mark e
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:45bd04206744
+  @  changeset:   5:2696a654c663
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:abff6367c13a
+  o  changeset:   4:ec2c1cf833a8
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -167,7 +170,7 @@ log after edit
 
 contents of e
   $ hg cat e
-  a
+  I can haz no commute
 
 manifest
   $ hg manifest
