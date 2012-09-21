@@ -553,6 +553,7 @@ def histedit(ui, repo, *parent, **opts):
         writestate(repo, parentctx.node(), created, replaced,
                    tmpnodes, existing, rules, keep, tip, replacemap)
         action, ha = rules.pop(0)
+        ui.debug('histedit: processing %s %s\n' % (action, ha))
         (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
             ui, repo, parentctx, ha, opts)
 
