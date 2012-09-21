@@ -149,6 +149,8 @@ from mercurial import bookmarks
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
+from mercurial import copies
+from mercurial import context
 from mercurial import hg
 from mercurial import lock as lockmod
 from mercurial import node
@@ -194,6 +196,76 @@ def foldchanges(ui, repo, node1, node2, opts):
     finally:
         os.unlink(patchfile)
     return files
+
+def collapse(repo, first, last, commitopts):
+    """collapse the set of revisions from first to last as new one.
+
+    Expected commit options are:
+        - message
+        - date
+        - username
+    Edition of commit message is trigered in all case.
+
+    This function works in memory."""
+    ctxs = list(repo.set('%d::%d', first, last))
+    if not ctxs:
+        return None
+    base = first.parents()[0]
+
+    # commit a new version of the old changeset, including the update
+    # collect all files which might be affected
+    files = set()
+    for ctx in ctxs:
+        files.update(ctx.files())
+
+    # Recompute copies (avoid recording a -> b -> a)
+    copied = copies.pathcopies(first, last)
+
+    # prune files which were reverted by the updates
+    def samefile(f):
+        if f in last.manifest():
+            a = last.filectx(f)
+            if f in base.manifest():
+                b = base.filectx(f)
+                return (a.data() == b.data()
+                        and a.flags() == b.flags())
+            else:
+                return False
+        else:
+            return f not in base.manifest()
+    files = [f for f in files if not samefile(f)]
+    # commit version of these files as defined by head
+    headmf = last.manifest()
+    def filectxfn(repo, ctx, path):
+        if path in headmf:
+            fctx = last[path]
+            flags = fctx.flags()
+            mctx = context.memfilectx(fctx.path(), fctx.data(),
+                                      islink='l' in flags,
+                                      isexec='x' in flags,
+                                      copied=copied.get(path))
+            return mctx
+        raise IOError()
+
+    if commitopts.get('message'):
+        message = commitopts['message']
+    else:
+        message = first.description()
+    user = commitopts.get('user')
+    date = commitopts.get('date')
+    extra = first.extra()
+
+    parents = (first.p1().node(), first.p2().node())
+    new = context.memctx(repo,
+                         parents=parents,
+                         text=message,
+                         files=files,
+                         filectxfn=filectxfn,
+                         user=user,
+                         date=date,
+                         extra=extra)
+    new._text = cmdutil.commitforceeditor(repo, new, [])
+    return repo.commitctx(new)
 
 def pick(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
@@ -245,19 +317,26 @@ def fold(ui, repo, ctx, ha, opts):
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     parent = ctx.parents()[0].node()
     hg.update(repo, parent)
-    foldchanges(ui, repo, parent, newnode, opts)
-    newmessage = '\n***\n'.join(
-        [ctx.description()] +
-        [repo[r].description() for r in internalchanges] +
-        [oldctx.description()]) + '\n'
-    # If the changesets are from the same author, keep it.
+    ### prepare new commit data
+    commitopts = opts.copy()
+    # username
     if ctx.user() == oldctx.user():
         username = ctx.user()
     else:
         username = ui.username()
-    newmessage = ui.edit(newmessage, username)
-    n = repo.commit(text=newmessage, user=username,
-                    date=max(ctx.date(), oldctx.date()), extra=oldctx.extra())
+    commitopts['user'] = username
+    # commit message
+    newmessage = '\n***\n'.join(
+        [ctx.description()] +
+        [repo[r].description() for r in internalchanges] +
+        [oldctx.description()]) + '\n'
+    commitopts['message'] = newmessage
+    # date
+    commitopts['date'] = max(ctx.date(), oldctx.date())
+    n = collapse(repo, ctx, repo[newnode], commitopts)
+    if n is None:
+        return ctx, [], [], []
+    hg.update(repo, n)
     return repo[n], [n], [oldctx.node(), ctx.node()], [newnode]
 
 def drop(ui, repo, ctx, ha, opts):

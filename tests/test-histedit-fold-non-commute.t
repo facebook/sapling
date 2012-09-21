@@ -92,6 +92,17 @@ fix up
   
   
   
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: changed d
+  HG: changed e
+  
+  
+  
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   file e already exists
   1 out of 1 hunks FAILED -- saving rejects to file e.rej
