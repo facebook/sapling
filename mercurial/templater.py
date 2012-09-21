@@ -164,6 +164,9 @@ def buildmap(exp, context):
 def runmap(context, mapping, data):
     func, data, ctmpl = data
     d = func(context, mapping, data)
+    if util.safehasattr(d, '__call__'):
+        d = d()
+
     lm = mapping.copy()
 
     for i in d:

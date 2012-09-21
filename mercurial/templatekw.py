@@ -9,7 +9,27 @@ from node import hex
 import patch, util, error
 import hbisect
 
-def showlist(name, values, plural=None, **args):
+# This helper class allows us to handle both:
+#  "{files}" (legacy command-line-specific list hack) and
+#  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
+
+class _hybrid(object):
+    def __init__(self, gen, values):
+        self.gen = gen
+        self.values = values
+    def __iter__(self):
+        return self.gen
+    def __call__(self):
+        for x in self.values:
+            yield x
+
+def showlist(name, values, plural=None, element=None, **args):
+    if not element:
+        element = name
+    f = _showlist(name, values, plural, **args)
+    return _hybrid(f, [{element: x} for x in values])
+
+def _showlist(name, values, plural=None, **args):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
@@ -176,7 +196,7 @@ def showchildren(**args):
     """:children: List of strings. The children of the changeset."""
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
-    return showlist('children', childrevs, **args)
+    return showlist('children', childrevs, element='child', **args)
 
 def showdate(repo, ctx, templ, **args):
     """:date: Date information. The date when the changeset was committed."""
@@ -204,7 +224,8 @@ def showextras(**args):
 def showfileadds(**args):
     """:file_adds: List of strings. Files added by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_add', getfiles(repo, ctx, revcache)[1], **args)
+    return showlist('file_add', getfiles(repo, ctx, revcache)[1],
+                    element='file', **args)
 
 def showfilecopies(**args):
     """:file_copies: List of strings. Files copied in this changeset with
@@ -223,7 +244,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies', **args)
+    return showlist('file_copy', c, plural='file_copies',
+                    element='file', **args)
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -234,17 +256,20 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies', **args)
+    return showlist('file_copy', c, plural='file_copies',
+                    element='file', **args)
 
 def showfiledels(**args):
     """:file_dels: List of strings. Files removed by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_del', getfiles(repo, ctx, revcache)[2], **args)
+    return showlist('file_del', getfiles(repo, ctx, revcache)[2],
+                    element='file', **args)
 
 def showfilemods(**args):
     """:file_mods: List of strings. Files modified by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
-    return showlist('file_mod', getfiles(repo, ctx, revcache)[0], **args)
+    return showlist('file_mod', getfiles(repo, ctx, revcache)[0],
+                    element='file', **args)
 
 def showfiles(**args):
     """:files: List of strings. All files modified, added, or removed by this

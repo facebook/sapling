@@ -1520,3 +1520,8 @@ Test recursive showlist template (issue1989):
   10,test
   branch: test
 
+Test new-style inline templating:
+
+  $ hg log -R latesttag -r tip --template 'modified files: {file_mods % " {file}\n"}\n'
+  modified files:  .hgtags
+  
