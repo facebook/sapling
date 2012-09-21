@@ -195,28 +195,6 @@ def foldchanges(ui, repo, node1, node2, opts):
         os.unlink(patchfile)
     return files
 
-def between(repo, old, new, keep):
-    """select and validate the set of revision to edit
-
-    When keep is false, the specified set can't have children."""
-    revs = [old]
-    current = old
-    while current != new:
-        ctx = repo[current]
-        if not keep and len(ctx.children()) > 1:
-            raise util.Abort(_('cannot edit history that would orphan nodes'))
-        if len(ctx.parents()) != 1 and ctx.parents()[1] != node.nullid:
-            raise util.Abort(_("can't edit history with merges"))
-        if not ctx.children():
-            current = new
-        else:
-            current = ctx.children()[0].node()
-            revs.append(current)
-    if len(repo[current].children()) and not keep:
-        raise util.Abort(_('cannot edit history that would orphan nodes'))
-    return revs
-
-
 def pick(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
@@ -623,6 +601,28 @@ def histedit(ui, repo, *parent, **opts):
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
+
+
+def between(repo, old, new, keep):
+    """select and validate the set of revision to edit
+
+    When keep is false, the specified set can't have children."""
+    revs = [old]
+    current = old
+    while current != new:
+        ctx = repo[current]
+        if not keep and len(ctx.children()) > 1:
+            raise util.Abort(_('cannot edit history that would orphan nodes'))
+        if len(ctx.parents()) != 1 and ctx.parents()[1] != node.nullid:
+            raise util.Abort(_("can't edit history with merges"))
+        if not ctx.children():
+            current = new
+        else:
+            current = ctx.children()[0].node()
+            revs.append(current)
+    if len(repo[current].children()) and not keep:
+        raise util.Abort(_('cannot edit history that would orphan nodes'))
+    return revs
 
 
 def writestate(repo, parentctxnode, created, replaced,
