@@ -29,6 +29,8 @@ import _ssh
 import util
 from overlay import overlayrepo
 
+RE_GIT_AUTHOR = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
+
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
     def __init__(self, ui):
@@ -433,12 +435,10 @@ class GitHandler(object):
         author = ctx.user()
 
         # see if a translation exists
-        if author in self.author_map:
-            author = self.author_map[author]
+        author = self.author_map.get(author, author)
 
         # check for git author pattern compliance
-        regex = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
-        a = regex.match(author)
+        a = RE_GIT_AUTHOR.match(author)
 
         if a:
             name = self.get_valid_git_username_email(a.group(1))
