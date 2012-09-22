@@ -237,15 +237,15 @@ def updatefromremote(ui, repo, remote, path):
     if changed:
         write(repo)
 
-def diff(ui, repo, remote):
+def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))
 
-    lmarks = repo.listkeys('bookmarks')
-    rmarks = remote.listkeys('bookmarks')
+    smarks = src.listkeys('bookmarks')
+    dmarks = dst.listkeys('bookmarks')
 
-    diff = sorted(set(rmarks) - set(lmarks))
+    diff = sorted(set(smarks) - set(dmarks))
     for k in diff:
-        mark = ui.debugflag and rmarks[k] or rmarks[k][:12]
+        mark = ui.debugflag and smarks[k] or smarks[k][:12]
         ui.write("   %-25s %s\n" % (k, mark))
 
     if len(diff) <= 0:
