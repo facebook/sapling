@@ -33,6 +33,8 @@ RE_GIT_AUTHOR = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
 
 RE_GIT_SANITIZE_AUTHOR = re.compile('[<>\n]')
 
+RE_GIT_AUTHOR_EXTRA = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
+
 # Test for git:// and git+ssh:// URI.
 # Support several URL forms, including separating the
 # host and path with either a / or : (sepr)
@@ -707,8 +709,7 @@ class GitHandler(object):
 
         # convert extra data back to the end
         if ' ext:' in commit.author:
-            regex = re.compile('^(.*?)\ ext:\((.*)\) <(.*)\>$')
-            m = regex.match(commit.author)
+            m = RE_GIT_AUTHOR_EXTRA.match(commit.author)
             if m:
                 name = m.group(1)
                 ex = urllib.unquote(m.group(2))
