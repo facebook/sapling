@@ -31,6 +31,13 @@ from overlay import overlayrepo
 
 RE_GIT_AUTHOR = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
 
+# Test for git:// and git+ssh:// URI.
+# Support several URL forms, including separating the
+# host and path with either a / or : (sepr)
+RE_GIT_URI = re.compile(
+    r'^(?P<scheme>git([+]ssh)?://)(?P<host>.*?)(:(?P<port>\d+))?'
+    r'(?P<sepr>[:/])(?P<path>.*)$')
+
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
     def __init__(self, ui):
@@ -1293,14 +1300,7 @@ class GitHandler(object):
         if not issubclass(client.get_ssh_vendor, _ssh.SSHVendor):
             client.get_ssh_vendor = _ssh.generate_ssh_vendor(self.ui)
 
-        # Test for git:// and git+ssh:// URI.
-        #  Support several URL forms, including separating the
-        #  host and path with either a / or : (sepr)
-        git_pattern = re.compile(
-            r'^(?P<scheme>git([+]ssh)?://)(?P<host>.*?)(:(?P<port>\d+))?'
-            r'(?P<sepr>[:/])(?P<path>.*)$'
-        )
-        git_match = git_pattern.match(uri)
+        git_match = RE_GIT_URI.match(uri)
         if git_match:
             res = git_match.groupdict()
             transport = client.SSHGitClient if 'ssh' in res['scheme'] else client.TCPGitClient
