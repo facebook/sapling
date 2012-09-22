@@ -47,7 +47,6 @@ class RevisionData(object):
         self.copies = {}
         self.missing = set()
         self.emptybranches = {}
-        self.base = None
         self.externals = {}
         self.exception = None
 
@@ -149,10 +148,6 @@ class HgEditor(svnwrap.Editor):
 
         self.current.file = path
         self.ui.note('M %s\n' % path)
-        if base_revision != -1:
-            self.current.base = base_revision
-        else:
-            self.current.base = None
 
         if self.current.file in self.current.files:
             return
@@ -182,7 +177,6 @@ class HgEditor(svnwrap.Editor):
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
         self.current.file = None
-        self.current.base = None
         if path in self.current.deleted:
             del self.current.deleted[path]
         fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
