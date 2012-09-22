@@ -42,6 +42,9 @@ RE_GIT_URI = re.compile(
     r'^(?P<scheme>git([+]ssh)?://)(?P<host>.*?)(:(?P<port>\d+))?'
     r'(?P<sepr>[:/])(?P<path>.*)$')
 
+RE_NEWLINES = re.compile('[\r\n]')
+RE_GIT_PROGRESS = re.compile('\((\d+)/(\d+)\)')
+
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
     def __init__(self, ui):
@@ -53,7 +56,7 @@ class GitProgress(object):
     def progress(self, msg):
         # 'Counting objects: 33640, done.\n'
         # 'Compressing objects:   0% (1/9955)   \r
-        msgs = re.split('[\r\n]', self.msgbuf + msg)
+        msgs = RE_NEWLINES.split(self.msgbuf + msg)
         self.msgbuf = msgs.pop()
 
         for msg in msgs:
@@ -64,7 +67,7 @@ class GitProgress(object):
                 continue
             topic = td[0]
 
-            m = re.search('\((\d+)/(\d+)\)', data)
+            m = RE_GIT_PROGRESS.search(data)
             if m:
                 if self.lasttopic and self.lasttopic != topic:
                     self.flush()
