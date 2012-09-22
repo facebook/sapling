@@ -45,6 +45,8 @@ RE_GIT_URI = re.compile(
 RE_NEWLINES = re.compile('[\r\n]')
 RE_GIT_PROGRESS = re.compile('\((\d+)/(\d+)\)')
 
+RE_AUTHOR_FILE = re.compile('\s*=\s*')
+
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
     def __init__(self, ui):
@@ -125,7 +127,7 @@ class GitHandler(object):
                     line = line.strip()
                     if not line or line.startswith('#'):
                         continue
-                    from_, to = re.split(r'\s*=\s*', line, 2)
+                    from_, to = RE_AUTHOR_FILE.split(line, 2)
                     self.author_map[from_] = to
 
     ## FILE LOAD AND SAVE METHODS
