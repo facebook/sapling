@@ -161,6 +161,10 @@ def buildmap(exp, context):
     ctmpl = gettemplate(exp[2], context)
     return (runmap, (func, data, ctmpl))
 
+def runtemplate(context, mapping, template):
+    for func, data in template:
+        yield func(context, mapping, data)
+
 def runmap(context, mapping, data):
     func, data, ctmpl = data
     d = func(context, mapping, data)
@@ -172,8 +176,7 @@ def runmap(context, mapping, data):
     for i in d:
         if isinstance(i, dict):
             lm.update(i)
-            for f, d in ctmpl:
-                yield f(context, lm, d)
+            yield runtemplate(context, lm, ctmpl)
         else:
             # v is not an iterable of dicts, this happen when 'key'
             # has been fully expanded already and format is useless.
@@ -276,6 +279,7 @@ class engine(object):
         generator.'''
         return _flatten(func(self, mapping, data) for func, data in
                          self._load(t))
+        return _flatten(runtemplate(self, mapping, self._load(t)))
 
 engines = {'default': engine}
 
