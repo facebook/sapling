@@ -384,6 +384,10 @@ class GitHandler(object):
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
             if git_sha:
+                if git_sha not in self.git.object_store:
+                    raise hgutil.Abort(_('Parent SHA-1 not present in Git'
+                                         'repo: %s' % git_sha))
+
                 commit.parents.append(git_sha)
 
         commit.message = self.get_git_message(ctx)
@@ -392,6 +396,10 @@ class GitHandler(object):
             commit.encoding = extra['encoding']
 
         tree_sha = commit_tree(self.git.object_store, self.iterblobs(ctx))
+        if tree_sha not in self.git.object_store:
+            raise hgutil.Abort(_('Tree SHA-1 not present in Git repo: %s' %
+                tree_sha))
+
         commit.tree = tree_sha
 
         self.git.object_store.add_object(commit)
