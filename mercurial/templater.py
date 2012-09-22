@@ -195,6 +195,26 @@ def buildfunc(exp, context):
         f = context._filters[n]
         return (runfilter, (args[0][0], args[0][1], f))
 
+def join(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("join expects one or two arguments"))
+
+    joinset = args[0][0](context, mapping, args[0][1])
+    if util.safehasattr(joinset, '__call__'):
+        joinset = [x.values()[0] for x in joinset()]
+
+    joiner = " "
+    if len(args) > 1:
+        joiner = args[1][0](context, mapping, args[1][1])
+
+    first = True
+    for x in joinset:
+        if first:
+            first = False
+        else:
+            yield joiner
+        yield x
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -206,6 +226,7 @@ methods = {
     }
 
 funcs = {
+    "join": join,
 }
 
 # template engine
