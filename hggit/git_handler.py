@@ -31,6 +31,8 @@ from overlay import overlayrepo
 
 RE_GIT_AUTHOR = re.compile('^(.*?) ?\<(.*?)(?:\>(.*))?$')
 
+RE_GIT_SANITIZE_AUTHOR = re.compile('[<>\n]')
+
 # Test for git:// and git+ssh:// URI.
 # Support several URL forms, including separating the
 # host and path with either a / or : (sepr)
@@ -435,7 +437,7 @@ class GitHandler(object):
         >>> g('Typo in hgrc >but.hg-git@handles.it.gracefully>')
         'Typo in hgrc ?but.hg-git@handles.it.gracefully'
         """
-        return re.sub('[<>\n]', '?', name.lstrip('< ').rstrip('> '))
+        return RE_GIT_SANITIZE_AUTHOR.sub('?', name.lstrip('< ').rstrip('> '))
 
     def get_git_author(self, ctx):
         # hg authors might not have emails
