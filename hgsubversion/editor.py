@@ -302,6 +302,10 @@ class HgEditor(svnwrap.Editor):
             self.current.externals[path] = value
 
     @svnwrap.ieditor
+    def open_root(self, edit_baton, base_revision, dir_pool=None):
+        return None
+
+    @svnwrap.ieditor
     def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
         self.current.batons[path] = path
         p_, branch = self.meta.split_branch_path(path)[:2]
