@@ -100,39 +100,12 @@ class AbstractEditor(object):
         baton = self.editor.open_root(None, base_revnum)
         return DirectoryEditor(self.editor, baton)
 
-    def open_directory(self, path, base_revnum):
-        baton = self.editor.open_directory(path, self.baton, base_revnum)
-        return DirectoryEditor(self.editor, baton)
-
-    def open_file(self, path, base_revnum):
-        baton = self.editor.open_file(path, self.baton, base_revnum)
-        return FileEditor(self.editor, baton)
-
-    def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        baton = self.editor.add_directory(
-            path, self.baton, copyfrom_path, copyfrom_rev)
-        return DirectoryEditor(self.editor, baton)
-
-    def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
-        baton = self.editor.add_file(
-            path, self.baton, copyfrom_path, copyfrom_rev)
-        return FileEditor(self.editor, baton)
-
-    def apply_textdelta(self, base_checksum):
-        return self.editor.apply_textdelta(self.baton, base_checksum)
-
-    def change_prop(self, name, value):
-        raise NotImplementedError()
-
     def abort(self):
         # TODO: should we do something special here?
         self.close()
 
     def close(self):
         del self.editor
-
-    def delete_entry(self, path, revnum):
-        self.editor.delete_entry(path, revnum, self.baton)
 
 class FileEditor(AbstractEditor):
     def __init__(self, editor, baton):
@@ -141,12 +114,36 @@ class FileEditor(AbstractEditor):
     def change_prop(self, name, value):
         self.editor.change_file_prop(self.baton, name, value, pool=None)
 
+    def apply_textdelta(self, base_checksum):
+        return self.editor.apply_textdelta(self.baton, base_checksum)
+
     def close(self, checksum=None):
         super(FileEditor, self).close()
 
 class DirectoryEditor(AbstractEditor):
     def __init__(self, editor, baton):
         super(DirectoryEditor, self).__init__(editor, baton)
+
+    def delete_entry(self, path, revnum):
+        self.editor.delete_entry(path, revnum, self.baton)
+
+    def open_directory(self, path, base_revnum):
+        baton = self.editor.open_directory(path, self.baton, base_revnum)
+        return DirectoryEditor(self.editor, baton)
+
+    def add_directory(self, path, copyfrom_path=None, copyfrom_rev=-1):
+        baton = self.editor.add_directory(
+            path, self.baton, copyfrom_path, copyfrom_rev)
+        return DirectoryEditor(self.editor, baton)
+
+    def open_file(self, path, base_revnum):
+        baton = self.editor.open_file(path, self.baton, base_revnum)
+        return FileEditor(self.editor, baton)
+
+    def add_file(self, path, copyfrom_path=None, copyfrom_rev=-1):
+        baton = self.editor.add_file(
+            path, self.baton, copyfrom_path, copyfrom_rev)
+        return FileEditor(self.editor, baton)
 
     def change_prop(self, name, value):
         self.editor.change_dir_prop(self.baton, name, value, pool=None)
