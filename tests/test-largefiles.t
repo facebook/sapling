@@ -1582,6 +1582,14 @@ Lock in subrepo, otherwise the change isn't archived
   lf_subrepo_archive/subrepo/large.txt
   lf_subrepo_archive/subrepo/normal.txt
 
+Test archiving a revision that references a subrepo that is not yet
+cloned (see test-subrepo-recursion.t):
+
+  $ hg clone -U . ../empty
+  $ cd ../empty
+  $ hg archive --subrepos -r tip ../archive.tar.gz 2>&1 | "$TESTDIR/filtercr.py"
+  cloning subrepo subrepo from $TESTTMP/statusmatch/subrepo
+  
   $ cd ..
 
 Test that addremove picks up largefiles prior to the initial commit (issue3541)
