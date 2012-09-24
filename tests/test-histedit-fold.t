@@ -257,5 +257,39 @@ dropped revision.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   1:e29e02896e6c
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +4
+  |
+  o  changeset:   0:0189ba417d34
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1+2+3
+  
+  $ hg export tip
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID e29e02896e6c2b149d2228a0a64b4f3a9a4237f3
+  # Parent  0189ba417d34df9dda55f88b637dcae9917b5964
+  +4
+  ***
+  +5.2
+  ***
+  +6
+  
+  diff -r 0189ba417d34 -r e29e02896e6c file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,6 @@
+   1
+   2
+   3
+  +4
+  +5
+  +6
   $ cd ..
 
