@@ -104,6 +104,23 @@ class RevisionData(object):
 class EditingError(Exception):
     pass
 
+class CopiedFile(object):
+    def __init__(self, node, path, copypath):
+        self.node = node
+        self.path = path
+        self.copypath = copypath
+
+    def resolve(self, repo, ctx=None):
+        if ctx is None:
+            ctx = repo[self.node]
+        fctx = ctx[self.path]
+        data = fctx.data()
+        flags = fctx.flags()
+        islink = 'l' in flags
+        if islink:
+            data = 'link ' + data
+        return data, 'x' in flags, islink, self.copypath
+
 class HgEditor(svnwrap.Editor):
 
     def __init__(self, meta):
@@ -115,7 +132,7 @@ class HgEditor(svnwrap.Editor):
 
     def _clear(self):
         self._filecounter = 0
-        # A mapping of svn paths to (data, isexec, islink, copypath) tuples
+        # A mapping of svn paths to CopiedFile entries
         self._svncopies = {}
         # A mapping of batons to (path, data, isexec, islink, copypath) tuples
         self._openfiles = {}
@@ -182,7 +199,8 @@ class HgEditor(svnwrap.Editor):
         self.ui.note('M %s\n' % path)
 
         if path in self._svncopies:
-            base, isexec, islink, copypath = self._svncopies.pop(path)
+            copy = self._svncopies.pop(path)
+            base, isexec, islink, copypath = copy.resolve(self.repo)
             return self._openfile(path, base, isexec, islink, copypath)
 
         if not self.meta.is_path_valid(path):
@@ -316,12 +334,7 @@ class HgEditor(svnwrap.Editor):
                 continue
             fctx = fromctx.filectx(f)
             dest = path + '/' + f[len(frompath):]
-            flags = fctx.flags()
-            islink = 'l' in flags
-            data = fctx.data()
-            if islink:
-                data = 'link ' + data
-            svncopies[dest] = (data, 'x' in flags, islink, None)
+            svncopies[dest] = CopiedFile(new_hash, f, None)
             if dest in self.current.deleted:
                 # Remove this once svn copies and edited files are
                 # clearly separated.
@@ -337,8 +350,7 @@ class HgEditor(svnwrap.Editor):
                 parentctx = self.repo.changectx(parentid)
                 for k, v in copies.iteritems():
                     if util.issamefile(parentctx, fromctx, v):
-                        data, isexec, islink = svncopies[k][:-1]
-                        svncopies[k] = (data, isexec, islink, v)
+                        svncopies[k].copypath = v
         self._svncopies.update(svncopies)
 
         # Copy the externals definitions of copied directories
@@ -449,10 +461,16 @@ class HgEditor(svnwrap.Editor):
             raise EditingError('%d edited files were not closed'
                     % len(self._openfiles))
 
-        for c in self._svncopies.iteritems():
-            dest, (data, isexec, islink, copied) = c
-            self.current.set(dest, data, isexec, islink)
-            self.current.copies[dest] = copied
+        # Resolve by changelog entries to avoid extra reads
+        nodes = {}
+        for path, copy in self._svncopies.iteritems():
+            nodes.setdefault(copy.node, []).append((path, copy))
+        for node, copies in nodes.iteritems():
+            ctx = self.repo[node]
+            for path, copy in copies:
+                data, isexec, islink, copied = copy.resolve(self.repo, ctx)
+                self.current.set(path, data, isexec, islink)
+                self.current.copies[path] = copied
         self._svncopies.clear()
 
 _TXDELT_WINDOW_HANDLER_FAILURE_MSG = (
