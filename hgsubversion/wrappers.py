@@ -12,6 +12,7 @@ from mercurial import util as hgutil
 from mercurial import node
 from mercurial import i18n
 from mercurial import extensions
+from mercurial import repair
 
 import replay
 import pushmod
@@ -193,6 +194,7 @@ def push(repo, dest, force, revs):
         ui.status('searching for changes\n')
         hashes = meta.revmap.hashes()
         outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
+        to_strip=[]
         if not (outgoing and len(outgoing)):
             ui.status('no changes found\n')
             return 1 # so we get a sane exit status, see hg's commands.push
@@ -248,38 +250,44 @@ def push(repo, dest, force, revs):
 
             # 5. Rebase all children of the currently-pushing rev to the
             # new head
-            heads = repo.heads(old_ctx.node())
-            for needs_transplant in heads:
-                def extrafn(ctx, extra):
-                    if ctx.node() == oldest:
-                        return
-                    extra['branch'] = ctx.branch()
-                # TODO: can we avoid calling our own rebase wrapper here?
-                # Tweaking the encoding is fine for internal
-                # manipulations, but it can lead to various breakage
-                # when starting to operate with the working directory
-                # and the dirstate.
-                util.swap_out_encoding(old_encoding)
-                try:
-                    rebase(hgrebase.rebase, ui, repo, svn=True,
-                           svnextrafn=extrafn, svnsourcerev=needs_transplant)
-                finally:
-                    util.swap_out_encoding()
-                # Reload the repo after the rebase. Do not reuse
-                # contexts across this.
-                newtip = newtipctx.node()
-                repo = getlocalpeer(ui, {}, meta.path)
-                newtipctx = repo[newtip]
-                # Rewrite the node ids in outgoing to their rebased versions.
-                rebasemap = dict()
-                for child in newtipctx.descendants():
-                    rebasesrc = child.extra().get('rebase_source')
-                    if rebasesrc:
-                        rebasemap[node.bin(rebasesrc)] = child.node()
-                outgoing = [rebasemap.get(n) or n for n in outgoing]
-            # TODO: stop constantly creating the SVNMeta instances.
+            #
+            # there may be commits descended from the one we just
+            # pushed to svn that we aren't going to push to svn in
+            # this operation
+            oldhex = node.hex(old_ctx.node())
+            needs_rebase_set = "%s:: and not(%s)" % (oldhex, oldhex)
+            def extrafn(ctx, extra):
+                extra['branch'] = ctx.branch()
+
+            util.swap_out_encoding(old_encoding)
+            try:
+                hgrebase.rebase(ui, repo, dest=node.hex(newtipctx.node()),
+                                rev=[needs_rebase_set],
+                                extrafn=extrafn,
+                                # We actually want to strip one more rev than
+                                # we're rebasing
+                                keep=True)
+            finally:
+                util.swap_out_encoding()
+
+            to_strip.append(old_ctx.node())
+            # don't trust the pre-rebase repo.  Do not reuse
+            # contexts across this.
+            newtip = newtipctx.node()
+            repo = getlocalpeer(ui, {}, meta.path)
+            newtipctx = repo[newtip]
+
+            rebasemap = dict()
+            for child in newtipctx.descendants():
+                rebasesrc = child.extra().get('rebase_source')
+                if rebasesrc:
+                    rebasemap[node.bin(rebasesrc)] = child.node()
+            outgoing = [rebasemap.get(n) or n for n in outgoing]
+
             meta = repo.svnmeta(svn.uuid, svn.subdir)
             hashes = meta.revmap.hashes()
+        hg.update(repo, repo['tip'].node())
+        repair.strip(ui, repo, to_strip, "all")
     finally:
         util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
