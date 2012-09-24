@@ -405,9 +405,19 @@ def fillfunc(context, mapping, args):
 
     return fill(text, width)
 
+def datefunc(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("date expects one or two arguments"))
+
+    date = args[0][0](context, mapping, args[0][1])
+    if len(args) == 2:
+        fmt = stringify(args[1][0](context, mapping, args[1][1]))
+        return util.datestr(date, fmt)
+    return util.datestr(date)
 
 funcs = {
     "fill": fillfunc,
+    "date": datefunc,
 }
 
 # tell hggettext to extract docstrings from these functions:
