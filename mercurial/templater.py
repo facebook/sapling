@@ -36,18 +36,21 @@ def tokenizer(data):
             if c == 'r':
                 pos += 1
                 c = program[pos]
-                decode = lambda x: x
+                decode = False
             else:
-                decode = lambda x: x.decode('string-escape')
+                decode = True
             pos += 1
             s = pos
             while pos < end: # find closing quote
                 d = program[pos]
-                if d == '\\': # skip over escaped characters
+                if decode and d == '\\': # skip over escaped characters
                     pos += 2
                     continue
                 if d == c:
-                    yield ('string', decode(program[s:pos]), s)
+                    if not decode:
+                        yield ('string', program[s:pos].replace('\\', r'\\'), s)
+                        break
+                    yield ('string', program[s:pos].decode('string-escape'), s)
                     break
                 pos += 1
             else:
