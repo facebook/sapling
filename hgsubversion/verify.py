@@ -166,6 +166,9 @@ def verify(ui, repo, args=None, **opts):
                 if self.props is not None:
                     self.props[name] = value
 
+            def close_file(self, file_baton, checksum, pool=None):
+                pass
+
             def close_directory(self, dir_baton, pool=None):
                 pass
 

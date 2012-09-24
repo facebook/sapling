@@ -118,6 +118,7 @@ class FileEditor(AbstractEditor):
         return self.editor.apply_textdelta(self.baton, base_checksum)
 
     def close(self, checksum=None):
+        self.editor.close_file(self.baton, checksum)
         super(FileEditor, self).close()
 
 class DirectoryEditor(AbstractEditor):

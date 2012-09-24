@@ -115,20 +115,25 @@ class HgEditor(svnwrap.Editor):
 
     def _clear(self):
         self._filecounter = 0
-        self._filebatons = {}
-        self._files = {}
         # A mapping of svn paths to (data, isexec, islink, copypath) tuples
         self._svncopies = {}
+        # A mapping of batons to (path, data, isexec, islink, copypath) tuples
+        self._openfiles = {}
+        # A mapping of file paths to batons
+        self._openpaths = {}
 
-    def _addfilebaton(self, path):
-        # XXX: enforce unicity here. This cannot be done right now
-        # because copied files are mixed with open files and the cleanup
-        # rules in delete_entry() requires the distinction to be made to
-        # be implemented correctly.
+    def _openfile(self, path, data, isexec, islink, copypath, create=False):
+        if path in self._openpaths:
+            raise EditingError('trying to open an already opened file %s'
+                    % path)
+        if not create and path in self.current.deleted:
+            raise EditingError('trying to open a deleted file %s' % path)
+        if path in self.current.deleted:
+            del self.current.deleted[path]
         self._filecounter += 1
         baton = '%d-%s' % (self._filecounter, path)
-        self._filebatons[baton] = path
-        self._files[path] = baton
+        self._openfiles[baton] = (path, data, isexec, islink, copypath)
+        self._openpaths[path] = baton
         return baton
 
     @svnwrap.ieditor
@@ -162,8 +167,7 @@ class HgEditor(svnwrap.Editor):
                 self.current.externals[path] = None
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
-                    if f_p not in self.current.files:
-                        self.current.delete(f_p)
+                    self.current.delete(f_p)
                     if f_p in self._svncopies:
                         del self._svncopies[f_p]
             self.current.delete(path)
@@ -179,9 +183,7 @@ class HgEditor(svnwrap.Editor):
 
         if path in self._svncopies:
             base, isexec, islink, copypath = self._svncopies.pop(path)
-            self.current.set(path, base, isexec, islink)
-            self.current.copies[path] = copypath
-            return self._addfilebaton(path)
+            return self._openfile(path, base, isexec, islink, copypath)
 
         if not self.meta.is_path_valid(path):
             return None
@@ -200,10 +202,10 @@ class HgEditor(svnwrap.Editor):
 
         fctx = ctx.filectx(fpath)
         base = fctx.data()
-        if 'l' in fctx.flags():
+        flags = fctx.flags()
+        if 'l' in flags:
             base = 'link ' + base
-        self.current.set(path, base, 'x' in fctx.flags(), 'l' in fctx.flags())
-        return self._addfilebaton(path)
+        return self._openfile(path, base, 'x' in flags, 'l' in flags, None)
 
     @svnwrap.ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
@@ -222,8 +224,7 @@ class HgEditor(svnwrap.Editor):
         if not copyfrom_path:
             self.ui.note('A %s\n' % path)
             self.current.added.add(path)
-            self.current.set(path, '', False, False)
-            return self._addfilebaton(path)
+            return self._openfile(path, '', False, False, None, create=True)
         self.ui.note('A+ %s\n' % path)
         (from_file,
          from_branch) = self.meta.split_branch_path(copyfrom_path)[:2]
@@ -236,18 +237,36 @@ class HgEditor(svnwrap.Editor):
         ha = self.meta.get_parent_revision(copyfrom_revision + 1,
                                            from_branch, True)
         ctx = self.repo.changectx(ha)
-        if from_file in ctx:
-            fctx = ctx.filectx(from_file)
-            flags = fctx.flags()
-            self.current.set(path, fctx.data(), 'x' in flags, 'l' in flags)
-            if from_branch == branch:
-                parentid = self.meta.get_parent_revision(
-                    self.current.rev.revnum, branch)
-                if parentid != revlog.nullid:
-                    parentctx = self.repo.changectx(parentid)
-                    if util.issamefile(parentctx, ctx, from_file):
-                        self.current.copies[path] = from_file
-        return self._addfilebaton(path)
+        if from_file not in ctx:
+            self.current.missing.add(path)
+            return None
+
+        fctx = ctx.filectx(from_file)
+        flags = fctx.flags()
+        self.current.set(path, fctx.data(), 'x' in flags, 'l' in flags)
+        copypath = None
+        if from_branch == branch:
+            parentid = self.meta.get_parent_revision(
+                self.current.rev.revnum, branch)
+            if parentid != revlog.nullid:
+                parentctx = self.repo.changectx(parentid)
+                if util.issamefile(parentctx, ctx, from_file):
+                    copypath = from_file
+        return self._openfile(path, fctx.data(), 'x' in flags, 'l' in flags,
+                copypath, create=True)
+
+    @svnwrap.ieditor
+    def close_file(self, file_baton, checksum, pool=None):
+        if file_baton is None:
+            return
+        if file_baton not in self._openfiles:
+            raise EditingError('trying to close a non-open file %s'
+                    % file_baton)
+        path, data, isexec, islink, copypath = self._openfiles.pop(file_baton)
+        del self._openpaths[path]
+        self.current.set(path, data, isexec, islink)
+        if copypath is not None:
+            self.current.copies[path] = copypath
 
     @svnwrap.ieditor
     def add_directory(self, path, parent_baton, copyfrom_path,
@@ -335,11 +354,16 @@ class HgEditor(svnwrap.Editor):
     def change_file_prop(self, file_baton, name, value, pool=None):
         if file_baton is None:
             return
-        path = self._filebatons[file_baton]
+        path, data, isexec, islink, copypath = self._openfiles[file_baton]
+        changed = False
         if name == 'svn:executable':
-            self.current.execfiles[path] = bool(value is not None)
+            changed = True
+            isexec = bool(value is not None)
         elif name == 'svn:special':
-            self.current.symlinks[path] = bool(value is not None)
+            changed = True
+            islink = bool(value is not None)
+        if changed:
+            self._openfiles[file_baton] = (path, data, isexec, islink, copypath)
 
     @svnwrap.ieditor
     def change_dir_prop(self, dir_baton, name, value, pool=None):
@@ -372,27 +396,14 @@ class HgEditor(svnwrap.Editor):
 
     @svnwrap.ieditor
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
-        # We know coming in here the file must be one of the following options:
-        # 1) Deleted (invalid, fail an assertion)
-        # 2) Missing a base text (bail quick since we have to fetch a full plaintext)
-        # 3) Has a base text in self.current.files, apply deltas
-        path = self._filebatons.get(file_baton)
-        if path is None or not self.meta.is_path_valid(path):
+        if file_baton is None:
+            return lambda x: None
+        if file_baton not in self._openfiles:
+            raise EditingError('trying to patch a closed file %s' % file_baton)
+        path, base, isexec, islink, copypath = self._openfiles[file_baton]
+        if not self.meta.is_path_valid(path):
             return lambda x: None
 
-        base = ''
-        if path in self.current.deleted:
-            msg = ('cannot apply textdelta to %s: file is deleted' % path)
-            raise IOError(errno.ENOENT, msg)
-
-        if (path not in self.current.files and
-            path not in self.current.missing):
-            msg = ('cannot apply textdelta to %s: file not found' % path)
-            raise IOError(errno.ENOENT, msg)
-
-        if path in self.current.missing:
-            return lambda x: None
-        base = self.current.files[path]
         target = NeverClosingStringIO()
         self.stream = target
 
@@ -419,7 +430,8 @@ class HgEditor(svnwrap.Editor):
 
                 # window being None means commit this file
                 if not window:
-                    self.current.files[path] = target.getvalue()
+                    self._openfiles[file_baton] = (
+                        path, target.getvalue(), isexec, islink, copypath)
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(path)
@@ -431,6 +443,12 @@ class HgEditor(svnwrap.Editor):
         return txdelt_window
 
     def close(self):
+        if self._openfiles:
+            for e in self._openfiles.itervalues():
+                self.ui.debug('error: %s was not closed\n' % e[0])
+            raise EditingError('%d edited files were not closed'
+                    % len(self._openfiles))
+
         for c in self._svncopies.iteritems():
             dest, (data, isexec, islink, copied) = c
             self.current.set(dest, data, isexec, islink)
