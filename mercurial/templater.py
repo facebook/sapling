@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import sys, os
+import sys, os, re
 import util, config, templatefilters, parser, error
 
 # template parsing
@@ -218,6 +218,15 @@ def join(context, mapping, args):
             yield joiner
         yield x
 
+def sub(context, mapping, args):
+    if len(args) != 3:
+        raise error.ParseError(_("sub expects three arguments"))
+
+    pat = stringify(args[0][0](context, mapping, args[0][1]))
+    rpl = stringify(args[1][0](context, mapping, args[1][1]))
+    src = stringify(args[2][0](context, mapping, args[2][1]))
+    yield re.sub(pat, rpl, src)
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -230,6 +239,7 @@ methods = {
 
 funcs = {
     "join": join,
+    "sub": sub,
 }
 
 # template engine
