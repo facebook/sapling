@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cgi, re, os, time, urllib
-import encoding, node, util
+import encoding, node, util, error
 import hbisect
 
 def addbreaks(text):
@@ -389,6 +389,25 @@ filters = {
     "user": userfilter,
     "emailuser": emailuser,
     "xmlescape": xmlescape,
+}
+
+def fillfunc(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("fill expects one or two arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    width = 76
+    if len(args) == 2:
+        try:
+            width = int(stringify(args[1][0](context, mapping, args[1][1])))
+        except ValueError:
+            raise error.ParseError(_("fill expects an integer width"))
+
+    return fill(text, width)
+
+
+funcs = {
+    "fill": fillfunc,
 }
 
 # tell hggettext to extract docstrings from these functions:
