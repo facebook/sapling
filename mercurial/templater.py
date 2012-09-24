@@ -227,6 +227,31 @@ def sub(context, mapping, args):
     src = stringify(args[2][0](context, mapping, args[2][1]))
     yield re.sub(pat, rpl, src)
 
+def if_(context, mapping, args):
+    if not (2 <= len(args) <= 3):
+        raise error.ParseError(_("if expects two or three arguments"))
+
+    test = stringify(args[0][0](context, mapping, args[0][1]))
+    if test:
+        t = stringify(args[1][0](context, mapping, args[1][1]))
+        yield runtemplate(context, mapping, compiletemplate(t, context))
+    elif len(args) == 3:
+        t = stringify(args[2][0](context, mapping, args[2][1]))
+        yield runtemplate(context, mapping, compiletemplate(t, context))
+
+def ifeq(context, mapping, args):
+    if not (3 <= len(args) <= 4):
+        raise error.ParseError(_("ifeq expects three or four arguments"))
+
+    test = stringify(args[0][0](context, mapping, args[0][1]))
+    match = stringify(args[1][0](context, mapping, args[1][1]))
+    if test == match:
+        t = stringify(args[2][0](context, mapping, args[2][1]))
+        yield runtemplate(context, mapping, compiletemplate(t, context))
+    elif len(args) == 4:
+        t = stringify(args[3][0](context, mapping, args[3][1]))
+        yield runtemplate(context, mapping, compiletemplate(t, context))
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -238,6 +263,8 @@ methods = {
     }
 
 funcs = {
+    "if": if_,
+    "ifeq": ifeq,
     "join": join,
     "sub": sub,
 }
