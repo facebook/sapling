@@ -192,6 +192,9 @@ def buildfunc(exp, context):
     if n in funcs:
         f = funcs[n]
         return (f, args)
+    if n in templatefilters.funcs:
+        f = templatefilters.funcs[n]
+        return (f, args)
     if n in context._filters:
         if len(args) != 1:
             raise error.ParseError(_("filter %s expects one argument") % n)
