@@ -4963,6 +4963,7 @@ def resolve(ui, repo, *pats, **opts):
                         ret = 1
                 finally:
                     ui.setconfig('ui', 'forcemerge', '')
+                    ms.commit()
 
                 # replace filemerge's .orig file with our resolve file
                 util.rename(a + ".resolve", a + ".orig")
