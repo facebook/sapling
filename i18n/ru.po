@@ -24378,7 +24378,7 @@ msgid "response expected"
 msgstr "ожидается ответ"
 
 msgid "unrecognized response\n"
-msgstr "не распознанный ответ\n"
+msgstr "нераспознанный ответ\n"
 
 msgid "password: "
 msgstr "пароль: "
