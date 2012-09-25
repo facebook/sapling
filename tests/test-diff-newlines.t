@@ -13,6 +13,7 @@
   +++ b/a	Thu Jan 01 00:00:02 1970 +0000
   @@ -1,2 +1,3 @@
    confuse str.splitlines
-   embedded\rnewline (esc)
+   embedded\r (no-eol) (esc)
+  newline
   +clean diff
 

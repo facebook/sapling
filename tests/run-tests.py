@@ -283,21 +283,6 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
-def splitnewlines(text):
-    '''like str.splitlines, but only split on newlines.
-    keep line endings.'''
-    i = 0
-    lines = []
-    while True:
-        n = text.find('\n', i)
-        if n == -1:
-            last = text[i:]
-            if last:
-                lines.append(last)
-            return lines
-        lines.append(text[i:n + 1])
-        i = n + 1
-
 def parsehghaveoutput(lines):
     '''Parse hghave log lines.
     Return tuple of lists (missing, failed):
@@ -761,7 +746,7 @@ def run(cmd, wd, options, replacements):
 
     for s, r in replacements:
         output = re.sub(s, r, output)
-    return ret, splitnewlines(output)
+    return ret, output.splitlines(True)
 
 def runone(options, test):
     '''tristate output:
@@ -924,7 +909,7 @@ def runone(options, test):
         refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
-        refout = list(splitnewlines(f.read()))
+        refout = f.read().splitlines(True)
         f.close()
     else:
         refout = []
