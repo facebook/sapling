@@ -49,7 +49,7 @@ class RevisionData(object):
         self.externals = {}
         self.exception = None
 
-    def set(self, path, data, isexec=False, islink=False):
+    def set(self, path, data, isexec=False, islink=False, copypath=None):
         self.files[path] = data
         self.execfiles[path] = isexec
         self.symlinks[path] = islink
@@ -57,6 +57,8 @@ class RevisionData(object):
             del self.deleted[path]
         if path in self.missing:
             self.missing.remove(path)
+        if copypath is not None:
+            self.copies[path] = copypath
 
     def delete(self, path):
         self.deleted[path] = True
@@ -286,9 +288,7 @@ class HgEditor(svnwrap.Editor):
                     % file_baton)
         path, data, isexec, islink, copypath = self._openfiles.pop(file_baton)
         del self._openpaths[path]
-        self.current.set(path, data, isexec, islink)
-        if copypath is not None:
-            self.current.copies[path] = copypath
+        self.current.set(path, data, isexec, islink, copypath)
 
     @svnwrap.ieditor
     def add_directory(self, path, parent_baton, copyfrom_path,
@@ -473,8 +473,7 @@ class HgEditor(svnwrap.Editor):
             ctx = self.repo[node]
             for path, copy in copies:
                 data, isexec, islink, copied = copy.resolve(self.repo, ctx)
-                self.current.set(path, data, isexec, islink)
-                self.current.copies[path] = copied
+                self.current.set(path, data, isexec, islink, copied)
         self._svncopies.clear()
 
         for f in self._deleted:
