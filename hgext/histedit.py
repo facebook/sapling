@@ -602,38 +602,8 @@ def histedit(ui, repo, *parent, **opts):
 
     if not keep:
         if replacemap:
-            ui.note(_('histedit: Should update metadata for the following '
-                      'changes:\n'))
-
-            def copybms(old, new):
-                if old in tmpnodes or old in created:
-                    # can't have any metadata we'd want to update
-                    return
-                while new in replacemap:
-                    new = replacemap[new]
-                ui.note(_('histedit:  %s to %s\n') % (node.short(old),
-                                                      node.short(new)))
-                octx = repo[old]
-                marks = octx.bookmarks()
-                if marks:
-                    ui.note(_('histedit:     moving bookmarks %s\n') %
-                              ', '.join(marks))
-                    for mark in marks:
-                        repo._bookmarks[mark] = new
-                    bookmarks.write(repo)
-
-            # We assume that bookmarks on the tip should remain
-            # tipmost, but bookmarks on non-tip changesets should go
-            # to their most reasonable successor. As a result, find
-            # the old tip and new tip and copy those bookmarks first,
-            # then do the rest of the bookmark copies.
-            oldtip = sorted(replacemap.keys(), key=repo.changelog.rev)[-1]
-            newtip = sorted(replacemap.values(), key=repo.changelog.rev)[-1]
-            copybms(oldtip, newtip)
-
-            for old, new in sorted(replacemap.iteritems()):
-                copybms(old, new)
-                # TODO update mq state
+            movebookmarks(ui, repo, replacemap, tmpnodes, created)
+            # TODO update mq state
 
         ui.debug('should strip replaced nodes %s\n' %
                  ', '.join([node.short(n) for n in replaced]))
@@ -743,3 +713,37 @@ def verifyrules(rules, repo, ctxs):
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     return parsed
+
+def movebookmarks(ui, repo, replacemap, tmpnodes, created):
+    """Move bookmark from old to newly created node"""
+    ui.note(_('histedit: Should update metadata for the following '
+              'changes:\n'))
+
+    def copybms(old, new):
+        if old in tmpnodes or old in created:
+            # can't have any metadata we'd want to update
+            return
+        while new in replacemap:
+            new = replacemap[new]
+        ui.note(_('histedit:  %s to %s\n') % (node.short(old),
+                                              node.short(new)))
+        octx = repo[old]
+        marks = octx.bookmarks()
+        if marks:
+            ui.note(_('histedit:     moving bookmarks %s\n') %
+                      ', '.join(marks))
+            for mark in marks:
+                repo._bookmarks[mark] = new
+            bookmarks.write(repo)
+
+    # We assume that bookmarks on the tip should remain
+    # tipmost, but bookmarks on non-tip changesets should go
+    # to their most reasonable successor. As a result, find
+    # the old tip and new tip and copy those bookmarks first,
+    # then do the rest of the bookmark copies.
+    oldtip = sorted(replacemap.keys(), key=repo.changelog.rev)[-1]
+    newtip = sorted(replacemap.values(), key=repo.changelog.rev)[-1]
+    copybms(oldtip, newtip)
+
+    for old, new in sorted(replacemap.iteritems()):
+        copybms(old, new)
