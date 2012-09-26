@@ -482,21 +482,8 @@ def histedit(ui, repo, *parent, **opts):
          existing, rules, keep, tip, replacemap) = readstate(repo)
         ui.debug('restore wc to old tip %s\n' % node.hex(tip))
         hg.clean(repo, tip)
-        ui.debug('should strip created nodes %s\n' %
-                 ', '.join([node.short(n) for n in created]))
-        ui.debug('should strip temp nodes %s\n' %
-                 ', '.join([node.short(n) for n in tmpnodes]))
-        for nodes in (created, tmpnodes):
-            lock = None
-            try:
-                lock = repo.lock()
-                for n in reversed(nodes):
-                    try:
-                        repair.strip(ui, repo, n)
-                    except error.LookupError:
-                        pass
-            finally:
-                lockmod.release(lock)
+        cleanupnode(ui, repo, 'created', created)
+        cleanupnode(ui, repo, 'temp', tmpnodes)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
@@ -604,32 +591,9 @@ def histedit(ui, repo, *parent, **opts):
         if replacemap:
             movebookmarks(ui, repo, replacemap, tmpnodes, created)
             # TODO update mq state
+        cleanupnode(ui, repo, 'replaced', replaced)
 
-        ui.debug('should strip replaced nodes %s\n' %
-                 ', '.join([node.short(n) for n in replaced]))
-        lock = None
-        try:
-            lock = repo.lock()
-            for n in sorted(replaced, key=lambda x: repo[x].rev()):
-                try:
-                    repair.strip(ui, repo, n)
-                except error.LookupError:
-                    pass
-        finally:
-            lockmod.release(lock)
-
-    ui.debug('should strip temp nodes %s\n' %
-             ', '.join([node.short(n) for n in tmpnodes]))
-    lock = None
-    try:
-        lock = repo.lock()
-        for n in reversed(tmpnodes):
-            try:
-                repair.strip(ui, repo, n)
-            except error.LookupError:
-                pass
-    finally:
-        lockmod.release(lock)
+    cleanupnode(ui, repo, 'temp', tmpnodes)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
@@ -747,3 +711,26 @@ def movebookmarks(ui, repo, replacemap, tmpnodes, created):
 
     for old, new in sorted(replacemap.iteritems()):
         copybms(old, new)
+
+def cleanupnode(ui, repo, name, nodes):
+    """strip a group of nodes from the repository
+
+    The set of node to strip may contains unknown nodes."""
+    ui.debug('should strip %s nodes %s\n' %
+             (name, ', '.join([node.short(n) for n in nodes])))
+    lock = None
+    try:
+        lock = repo.lock()
+        # Find all node that need to be stripped
+        # (we hg %lr instead of %ln to silently ignore unknown item
+        nm = repo.changelog.nodemap
+        nodes = [n for n in nodes if n in nm]
+        roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
+        for c in roots:
+            # We should process node in reverse order to strip tip most first.
+            # but this trigger a bug in changegroup hook.
+            # This would reduce bundle overhead
+            repair.strip(ui, repo, c)
+    finally:
+        lockmod.release(lock)
+
