@@ -162,6 +162,9 @@ fix up
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
+This failure is caused by 7b4e2f4b7bcd "e" not rebasing the non commutative
+former children.
+
 just continue this time
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
