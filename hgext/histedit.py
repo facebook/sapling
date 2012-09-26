@@ -483,9 +483,9 @@ def histedit(ui, repo, *parent, **opts):
         ui.debug('restore wc to old tip %s\n' % node.hex(tip))
         hg.clean(repo, tip)
         ui.debug('should strip created nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in created]))
+                 ', '.join([node.short(n) for n in created]))
         ui.debug('should strip temp nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in tmpnodes]))
+                 ', '.join([node.short(n) for n in tmpnodes]))
         for nodes in (created, tmpnodes):
             lock = None
             try:
@@ -521,7 +521,7 @@ def histedit(ui, repo, *parent, **opts):
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'
-            rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12])
+            rules += editcomment % (node.short(parent), node.short(tip))
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -636,7 +636,7 @@ def histedit(ui, repo, *parent, **opts):
                 # TODO update mq state
 
         ui.debug('should strip replaced nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in replaced]))
+                 ', '.join([node.short(n) for n in replaced]))
         lock = None
         try:
             lock = repo.lock()
@@ -649,7 +649,7 @@ def histedit(ui, repo, *parent, **opts):
             lockmod.release(lock)
 
     ui.debug('should strip temp nodes %s\n' %
-             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
+             ', '.join([node.short(n) for n in tmpnodes]))
     lock = None
     try:
         lock = repo.lock()
@@ -713,7 +713,7 @@ def makedesc(c):
     summary = ''
     if c.description():
         summary = c.description().splitlines()[0]
-    line = 'pick %s %d %s' % (c.hex()[:12], c.rev(), summary)
+    line = 'pick %s %d %s' % (c, c.rev(), summary)
     return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
 
 def verifyrules(rules, repo, ctxs):
