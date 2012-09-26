@@ -417,8 +417,8 @@ def histedit(ui, repo, *parent, **opts):
     if opts.get('continue', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --continue'))
-        (parentctxnode, created, replaced,
-         tmpnodes, existing, rules, keep, tip, replacemap) = readstate(repo)
+        (parentctxnode, created, replaced, tmpnodes,
+         existing, rules, keep, topmost, replacemap) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
         # existing is the list of revisions initially considered by
@@ -479,9 +479,9 @@ def histedit(ui, repo, *parent, **opts):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --abort'))
         (parentctxnode, created, replaced, tmpnodes,
-         existing, rules, keep, tip, replacemap) = readstate(repo)
-        ui.debug('restore wc to old tip %s\n' % node.hex(tip))
-        hg.clean(repo, tip)
+         existing, rules, keep, topmost, replacemap) = readstate(repo)
+        ui.debug('restore wc to old parent %s\n' % node.short(topmost))
+        hg.clean(repo, topmost)
         cleanupnode(ui, repo, 'created', created)
         cleanupnode(ui, repo, 'temp', tmpnodes)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
@@ -492,7 +492,7 @@ def histedit(ui, repo, *parent, **opts):
             raise util.Abort(_('history edit already in progress, try '
                                '--continue or --abort'))
 
-        tip, empty = repo.dirstate.parents()
+        topmost, empty = repo.dirstate.parents()
 
 
         if len(parent) != 1:
@@ -500,7 +500,7 @@ def histedit(ui, repo, *parent, **opts):
         parent = scmutil.revsingle(repo, parent[0]).node()
 
         keep = opts.get('keep', False)
-        revs = between(repo, parent, tip, keep)
+        revs = between(repo, parent, topmost, keep)
 
         ctxs = [repo[r] for r in revs]
         existing = [r.node() for r in ctxs]
@@ -508,7 +508,7 @@ def histedit(ui, repo, *parent, **opts):
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'
-            rules += editcomment % (node.short(parent), node.short(tip))
+            rules += editcomment % (node.short(parent), node.short(topmost))
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -534,7 +534,7 @@ def histedit(ui, repo, *parent, **opts):
 
     while rules:
         writestate(repo, parentctx.node(), created, replaced,
-                   tmpnodes, existing, rules, keep, tip, replacemap)
+                   tmpnodes, existing, rules, keep, topmost, replacemap)
         action, ha = rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha))
         (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
@@ -622,16 +622,16 @@ def between(repo, old, new, keep):
 
 
 def writestate(repo, parentctxnode, created, replaced,
-               tmpnodes, existing, rules, keep, oldtip, replacemap):
+               tmpnodes, existing, rules, keep, topmost, replacemap):
     fp = open(os.path.join(repo.path, 'histedit-state'), 'w')
     pickle.dump((parentctxnode, created, replaced,
-                 tmpnodes, existing, rules, keep, oldtip, replacemap),
+                 tmpnodes, existing, rules, keep, topmost, replacemap),
                 fp)
     fp.close()
 
 def readstate(repo):
     """Returns a tuple of (parentnode, created, replaced, tmp, existing, rules,
-                           keep, oldtip, replacemap ).
+                           keep, topmost, replacemap ).
     """
     fp = open(os.path.join(repo.path, 'histedit-state'))
     return pickle.load(fp)
