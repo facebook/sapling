@@ -1,5 +1,4 @@
 import errno
-import cStringIO
 import sys
 import tempfile
 import shutil
@@ -12,18 +11,6 @@ from mercurial import node
 import svnwrap
 import util
 import svnexternals
-
-class NeverClosingStringIO(object):
-    def __init__(self):
-        self._fp = cStringIO.StringIO()
-
-    def __getattr__(self, name):
-        return getattr(self._fp, name)
-
-    def close(self):
-        # svn 1.7 apply_delta driver now calls close() on passed file
-        # object which prevent us from calling getvalue() afterwards.
-        pass
 
 class EditingError(Exception):
     pass
@@ -234,6 +221,8 @@ class HgEditor(svnwrap.Editor):
         # A mapping of svn paths to CopiedFile entries
         self._svncopies = {}
         # A mapping of batons to (path, data, isexec, islink, copypath) tuples
+        # data is a SimpleStringIO if the file was edited, a string
+        # otherwise.
         self._openfiles = {}
         # A mapping of file paths to batons
         self._openpaths = {}
@@ -385,6 +374,10 @@ class HgEditor(svnwrap.Editor):
                     % file_baton)
         path, data, isexec, islink, copypath = self._openfiles.pop(file_baton)
         del self._openpaths[path]
+        if not isinstance(data, basestring):
+            # Files can be opened, properties changed and apply_text
+            # never called, in which case data is still a string.
+            data = data.getvalue()
         self.current.set(path, data, isexec, islink, copypath)
 
     @svnwrap.ieditor
@@ -524,10 +517,12 @@ class HgEditor(svnwrap.Editor):
         if file_baton not in self._openfiles:
             raise EditingError('trying to patch a closed file %s' % file_baton)
         path, base, isexec, islink, copypath = self._openfiles[file_baton]
+        if not isinstance(base, basestring):
+            raise EditingError('trying to edit a file again: %s' % path)
         if not self.meta.is_path_valid(path):
             return lambda x: None
 
-        target = NeverClosingStringIO()
+        target = svnwrap.SimpleStringIO(closing=False)
         self.stream = target
 
         handler = svnwrap.apply_txdelta(base, target)
@@ -554,7 +549,7 @@ class HgEditor(svnwrap.Editor):
                 # window being None means commit this file
                 if not window:
                     self._openfiles[file_baton] = (
-                        path, target.getvalue(), isexec, islink, copypath)
+                        path, target, isexec, islink, copypath)
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.current.missing.add(path)

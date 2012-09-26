@@ -124,7 +124,7 @@ def verify(ui, repo, args=None, **opts):
                 raise NotImplementedError()
 
             def apply_textdelta(self, file_baton, base_checksum, pool=None):
-                stream = editor.NeverClosingStringIO()
+                stream = svnwrap.SimpleStringIO(closing=False)
                 handler = svnwrap.apply_txdelta('', stream)
                 if not callable(handler):
                     raise hgutil.Abort('Error in Subversion bindings: '
