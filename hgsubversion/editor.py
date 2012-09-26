@@ -25,6 +25,9 @@ class NeverClosingStringIO(object):
         # object which prevent us from calling getvalue() afterwards.
         pass
 
+class EditingError(Exception):
+    pass
+
 class FileStore(object):
     def __init__(self, maxsize=None):
         self._tempdir = None
@@ -35,8 +38,12 @@ class FileStore(object):
             self._maxsize = 100*(2**20)
         self._size = 0
         self._data = {}
+        self._popped = set()
 
     def setfile(self, fname, data):
+        if fname in self._popped:
+            raise EditingError('trying to set a popped file %s' % fname)
+
         if self._maxsize < 0 or (len(data) + self._size) <= self._maxsize:
             self._data[fname] = data
             self._size += len(data)
@@ -54,6 +61,9 @@ class FileStore(object):
             self._files[fname] = fn
 
     def delfile(self, fname):
+        if fname in self._popped:
+            raise EditingError('trying to delete a popped file %s' % fname)
+
         if fname in self._data:
             del self._data[fname]
         elif fname in self._files:
@@ -61,6 +71,9 @@ class FileStore(object):
             os.unlink(path)
 
     def getfile(self, fname):
+        if fname in self._popped:
+            raise EditingError('trying to get a popped file %s' % fname)
+
         if fname in self._data:
             return self._data[fname]
         if self._tempdir is None or fname not in self._files:
@@ -71,6 +84,10 @@ class FileStore(object):
             return fp.read()
         finally:
             fp.close()
+
+    def popfile(self, fname):
+        self.delfile(fname)
+        self._popped.add(fname)
 
     def files(self):
         return list(self._files) + list(self._data)
@@ -129,6 +146,11 @@ class RevisionData(object):
         copied = self.copies.get(path)
         return data, isexec, islink, copied
 
+    def pop(self, path):
+        ret = self.get(path)
+        self.store.popfile(path)
+        return ret
+
     def delete(self, path):
         self.deleted[path] = True
         self.store.delfile(path)
@@ -180,9 +202,6 @@ class RevisionData(object):
 
     def close(self):
         self.store.close()
-
-class EditingError(Exception):
-    pass
 
 class CopiedFile(object):
     def __init__(self, node, path, copypath):

@@ -154,7 +154,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         def filectxfn(repo, memctx, path):
             current_file = files[path]
-            data, isexec, islink, copied = current.get(current_file)
+            data, isexec, islink, copied = current.pop(current_file)
             if isexec is None or islink is None:
                 flags = parentctx.flags(path)
                 if isexec is None:
