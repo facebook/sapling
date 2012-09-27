@@ -173,7 +173,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-08-09 13:23+0400\n"
+"POT-Creation-Date: 2012-09-25 15:43+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -11501,6 +11501,12 @@ msgid "runs the changeset discovery protocol in isolation"
 msgstr ""
 "запускает протокол обнаружения набора изменения в изолированном окружении"
 
+msgid "apply the filespec on this revision"
+msgstr "применить filespec к этой ревизии"
+
+msgid "[-r REV] FILESPEC"
+msgstr "[-r РЕВИЗИЯ] FILESPEC"
+
 msgid "parse and apply a fileset specification"
 msgstr "разобрать и применить спецификацию набора файлов (fileset)"
 
@@ -11563,6 +11569,10 @@ msgstr "проверка кодировки (%s)...\n"
 
 msgid " (check that your locale is properly set)\n"
 msgstr " (проверьте правильность установки локали)\n"
+
+#, python-format
+msgid "checking Python lib (%s)...\n"
+msgstr "проверка библиотеки Python (%s)...\n"
 
 #, python-format
 msgid "checking installed modules (%s)...\n"
@@ -14542,11 +14552,11 @@ msgstr ""
 "    bookmarks`)."
 
 msgid ""
-"    Update sets the working directory's parent revison to the specified\n"
+"    Update sets the working directory's parent revision to the specified\n"
 "    changeset (see :hg:`help parents`)."
 msgstr ""
 "    Update устанавливает ревизию родителя рабочего каталога в заданный\n"
-"    набор изменений (см. :hg:`help update`)."
+"    набор изменений (см. :hg:`help parents`)."
 
 msgid ""
 "    If the changeset is not a descendant or ancestor of the working\n"
@@ -15336,8 +15346,13 @@ msgstr ""
 "``grep(regex)``\n"
 "    Файл, содержащий заданное регулярное выражение."
 
+#. i18n: "grep" is a keyword
 msgid "grep requires a pattern"
 msgstr "grep требует шаблон"
+
+#, python-format
+msgid "invalid match pattern: %s"
+msgstr "неверный шаблон поиска: %s"
 
 #, python-format
 msgid "couldn't parse size: %s"
@@ -21280,18 +21295,18 @@ msgid ""
 "2. Nested repository references. They are defined in ``.hgsub``, which\n"
 "   should be placed in the root of working directory, and\n"
 "   tell where the subrepository checkouts come from. Mercurial\n"
-"   subrepositories are referenced like:"
+"   subrepositories are referenced like::"
 msgstr ""
 "2. Ссылки на вложенные хранилища. Они определяются в файле ``.hgsub``,\n"
 "   который должен находиться в корне рабочего каталога, и описывают,\n"
 "   откуда были извлечены копии подхранилищ.\n"
-"   Подхранилища имеют такие пути:"
+"   Подхранилища Mercirial имеют такие пути::"
 
 msgid "     path/to/nested = https://example.com/nested/repo/path"
 msgstr "     path/to/nested = https://example.com/nested/repo/path"
 
-msgid "   Git and Subversion subrepos are also supported:"
-msgstr "   Поддерживаются также подхранилища Git и Subversion:"
+msgid "   Git and Subversion subrepos are also supported::"
+msgstr "   Поддерживаются также подхранилища Git и Subversion::"
 
 msgid ""
 "     path/to/nested = [git]git://example.com/nested/repo/path\n"
@@ -23039,10 +23054,6 @@ msgstr ""
 msgid "grep requires a string"
 msgstr "grep требует строку"
 
-#, python-format
-msgid "invalid match pattern: %s"
-msgstr "неверный шаблон поиска: %s"
-
 #. i18n: "_matchfiles" is a keyword
 msgid "_matchfiles requires at least one argument"
 msgstr "_matchfiles требует хотя бы один аргумент"
@@ -24378,7 +24389,7 @@ msgid "response expected"
 msgstr "ожидается ответ"
 
 msgid "unrecognized response\n"
-msgstr "не распознанный ответ\n"
+msgstr "нераспознанный ответ\n"
 
 msgid "password: "
 msgstr "пароль: "
