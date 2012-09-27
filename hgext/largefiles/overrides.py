@@ -1018,11 +1018,12 @@ def overridesummary(orig, ui, repo, *pats, **opts):
         else:
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
-def overrideaddremove(orig, ui, repo, *pats, **opts):
+def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,
+                     similarity=None):
     if not lfutil.islfilesrepo(repo):
-        return orig(ui, repo, *pats, **opts)
+        return orig(repo, pats, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
-    lfdirstate = lfutil.openlfdirstate(ui, repo)
+    lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
     s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [], False,
         False, False)
     (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
@@ -1034,16 +1035,16 @@ def overrideaddremove(orig, ui, repo, *pats, **opts):
     if missing:
         m = [repo.wjoin(f) for f in missing]
         repo._isaddremove = True
-        removelargefiles(ui, repo, *m, **opts)
+        removelargefiles(repo.ui, repo, *m, **opts)
         repo._isaddremove = False
     # Call into the normal add code, and any files that *should* be added as
     # largefiles will be
-    addlargefiles(ui, repo, *pats, **opts)
+    addlargefiles(repo.ui, repo, *pats, **opts)
     # Now that we've handled largefiles, hand off to the original addremove
     # function to take care of the rest.  Make sure it doesn't do anything with
     # largefiles by installing a matcher that will ignore them.
     installnormalfilesmatchfn(repo[None].manifest())
-    result = orig(ui, repo, *pats, **opts)
+    result = orig(repo, pats, opts, dry_run, similarity)
     restorematchfn()
     return result
 

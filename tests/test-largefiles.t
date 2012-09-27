@@ -543,6 +543,33 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub2/large6
   C sub2/large7
 
+Test commit -A (issue 3542)
+  $ echo large8 > large8
+  $ hg add --large large8
+  $ hg ci -Am 'this used to add large8 as normal and commit both'
+  Invoking status precommit hook
+  A large8
+  Invoking status postcommit hook
+  C large8
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+  $ rm large8
+  $ hg ci -Am 'this used to not notice the rm'
+  removing large8
+  Invoking status precommit hook
+  R large8
+  Invoking status postcommit hook
+  C normal
+  C normal3
+  C sub/large4
+  C sub/normal4
+  C sub2/large6
+  C sub2/large7
+
 Test that a standin can't be added as a large file
 
   $ touch large
@@ -588,8 +615,19 @@ Test that outgoing --large works (with revsets too)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     removed large
   
+  changeset:   13:0a3e75774479
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     this used to add large8 as normal and commit both
+  
+  changeset:   14:84f3d378175c
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     this used to not notice the rm
+  
   searching for changes
   largefiles to upload:
+  large8
   large
   foo
   
@@ -1543,5 +1581,42 @@ Lock in subrepo, otherwise the change isn't archived
   lf_subrepo_archive/subrepo
   lf_subrepo_archive/subrepo/large.txt
   lf_subrepo_archive/subrepo/normal.txt
+
+  $ cd ..
+
+Test that addremove picks up largefiles prior to the initial commit (issue3541)
+
+  $ hg init addrm2
+  $ cd addrm2
+  $ touch large.dat
+  $ touch large2.dat
+  $ touch normal
+  $ hg add --large large.dat
+  $ hg addremove -v
+  adding large2.dat as a largefile
+  adding normal
+
+Test that forgetting all largefiles reverts to islfilesrepo() == False
+(addremove will add *.dat as normal files now)
+  $ hg forget large.dat
+  $ hg forget large2.dat
+  $ hg addremove -v
+  adding large.dat
+  adding large2.dat
+
+Test commit's addremove option prior to the first commit
+  $ hg forget large.dat
+  $ hg forget large2.dat
+  $ hg add --large large.dat
+  $ hg ci -Am "commit"
+  adding large2.dat as a largefile
+  Invoking status precommit hook
+  A large.dat
+  A large2.dat
+  A normal
+  $ find .hglf/ | sort
+  .hglf/
+  .hglf/large.dat
+  .hglf/large2.dat
 
   $ cd ..
