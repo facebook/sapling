@@ -156,6 +156,7 @@ from mercurial import node
 from mercurial import repair
 from mercurial import scmutil
 from mercurial import util
+from mercurial import obsolete
 from mercurial import merge as mergemod
 from mercurial.i18n import _
 
@@ -508,7 +509,15 @@ def histedit(ui, repo, *parent, **opts):
         if mapping:
             movebookmarks(ui, repo, mapping, topmost, ntm)
             # TODO update mq state
-        cleanupnode(ui, repo, 'replaced', mapping)
+        if obsolete._enabled:
+            markers = []
+            for prec, succs in mapping.iteritems():
+                markers.append((repo[prec],
+                                tuple(repo[s] for s in succs)))
+            if markers:
+                obsolete.createmarkers(repo, markers)
+        else:
+            cleanupnode(ui, repo, 'replaced', mapping)
 
     cleanupnode(ui, repo, 'temp', tmpnodes)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
