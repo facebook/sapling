@@ -419,62 +419,11 @@ def histedit(ui, repo, *parent, **opts):
             raise util.Abort(_('no arguments allowed with --continue'))
         (parentctxnode, created, replaced, tmpnodes,
          existing, rules, keep, topmost, replacemap) = readstate(repo)
-        currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
-        # existing is the list of revisions initially considered by
-        # histedit. Here we use it to list new changesets, descendants
-        # of parentctx without an 'existing' changeset in-between. We
-        # also have to exclude 'existing' changesets which were
-        # previously dropped.
-        descendants = set(c.node() for c in
-                repo.set('(%n::) - %n', parentctxnode, parentctxnode))
         existing = set(existing)
-        notdropped = set(n for n in existing if n in descendants and
-                (n not in replacemap or replacemap[n] in descendants))
-        # Discover any nodes the user has added in the interim. We can
-        # miss changesets which were dropped and recreated the same.
-        newchildren = list(c.node() for c in repo.set(
-            'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
-        action, currentnode = rules.pop(0)
-        if action in ('f', 'fold'):
-            tmpnodes.extend(newchildren)
-        else:
-            created.extend(newchildren)
-
-        m, a, r, d = repo.status()[:4]
-        oldctx = repo[currentnode]
-        message = oldctx.description() + '\n'
-        if action in ('e', 'edit', 'm', 'mess'):
-            message = ui.edit(message, ui.username())
-        elif action in ('f', 'fold'):
-            message = 'fold-temp-revision %s' % currentnode
-        new = None
-        if m or a or r or d:
-            new = repo.commit(text=message, user=oldctx.user(),
-                              date=oldctx.date(), extra=oldctx.extra())
-
-        # If we're resuming a fold and we have new changes, mark the
-        # replacements and finish the fold. If not, it's more like a
-        # drop of the changesets that disappeared, and we can skip
-        # this step.
-        if action in ('f', 'fold') and (new or newchildren):
-            if new:
-                tmpnodes.append(new)
-            else:
-                new = newchildren[-1]
-            (parentctx, created_, replaced_, tmpnodes_) = finishfold(
-                ui, repo, parentctx, oldctx, new, opts, newchildren)
-            replaced.extend(replaced_)
-            created.extend(created_)
-            tmpnodes.extend(tmpnodes_)
-        elif action not in ('d', 'drop'):
-            if new != oldctx.node():
-                replaced.append(oldctx.node())
-            if new:
-                if new != oldctx.node():
-                    created.append(new)
-                parentctx = repo[new]
-
+        parentctx = bootstrapcontinue(ui, repo, parentctx, existing,
+                                      replacemap, rules, tmpnodes, created,
+                                      replaced, opts)
     elif opts.get('abort', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --abort'))
@@ -597,6 +546,64 @@ def histedit(ui, repo, *parent, **opts):
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
+
+
+def bootstrapcontinue(ui, repo, parentctx, existing, replacemap, rules,
+                      tmpnodes, created, replaced, opts):
+    currentparent, wantnull = repo.dirstate.parents()
+    # existing is the list of revisions initially considered by
+    # histedit. Here we use it to list new changesets, descendants
+    # of parentctx without an 'existing' changeset in-between. We
+    # also have to exclude 'existing' changesets which were
+    # previously dropped.
+    descendants = set(c.node() for c in
+            repo.set('(%d::) - %d', parentctx, parentctx))
+    notdropped = set(n for n in existing if n in descendants and
+            (n not in replacemap or replacemap[n] in descendants))
+    # Discover any nodes the user has added in the interim. We can
+    # miss changesets which were dropped and recreated the same.
+    newchildren = list(c.node() for c in repo.set(
+        'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
+    action, currentnode = rules.pop(0)
+    if action in ('f', 'fold'):
+        tmpnodes.extend(newchildren)
+    else:
+        created.extend(newchildren)
+
+    m, a, r, d = repo.status()[:4]
+    oldctx = repo[currentnode]
+    message = oldctx.description() + '\n'
+    if action in ('e', 'edit', 'm', 'mess'):
+        message = ui.edit(message, ui.username())
+    elif action in ('f', 'fold'):
+        message = 'fold-temp-revision %s' % currentnode
+    new = None
+    if m or a or r or d:
+        new = repo.commit(text=message, user=oldctx.user(),
+                          date=oldctx.date(), extra=oldctx.extra())
+
+    # If we're resuming a fold and we have new changes, mark the
+    # replacements and finish the fold. If not, it's more like a
+    # drop of the changesets that disappeared, and we can skip
+    # this step.
+    if action in ('f', 'fold') and (new or newchildren):
+        if new:
+            tmpnodes.append(new)
+        else:
+            new = newchildren[-1]
+        (parentctx, created_, replaced_, tmpnodes_) = finishfold(
+            ui, repo, parentctx, oldctx, new, opts, newchildren)
+        replaced.extend(replaced_)
+        created.extend(created_)
+        tmpnodes.extend(tmpnodes_)
+    elif action not in ('d', 'drop'):
+        if new != oldctx.node():
+            replaced.append(oldctx.node())
+        if new:
+            if new != oldctx.node():
+                created.append(new)
+            parentctx = repo[new]
+    return parentctx
 
 
 def between(repo, old, new, keep):
