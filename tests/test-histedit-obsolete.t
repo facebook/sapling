@@ -92,3 +92,32 @@ Enable obsolete
   d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {'date': '*', 'user': 'test'} (glob)
   055a42cdd88768532f9cf79daa407fc8d138de9b ae467701c5006bf21ffcfdb555b3d6b63280b6b7 0 {'date': '*': 'test'} (glob)
   177f92b773850b59254aa5e923436f921b55483b d36c0562f908c692f5204d606d4ff3537d41f1bf 0 {'date': '*', 'user': 'test'} (glob)
+
+Ensure hidden revision does not prevent histedit
+-------------------------------------------------
+
+create an hidden revision
+
+  $ cat > commands.txt <<EOF
+  > pick d36c0562f908 6 c
+  > drop ae467701c500 7 d
+  > pick 0efacef7cb48 8 f
+  > EOF
+  $ hg histedit 6 --commands commands.txt
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log --graph
+  @  9:7c044e3e33a9 f
+  |
+  o  6:d36c0562f908 c
+  |
+  o  0:cb9a9f314b8b a
+  
+check hidden revision are ignored (6 have hidden children 7 and 8)
+
+  $ cat > commands.txt <<EOF
+  > pick d36c0562f908 6 c
+  > pick 7c044e3e33a9 8 f
+  > EOF
+  $ hg histedit 6 --commands commands.txt
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
