@@ -35,6 +35,10 @@ bail if the user does not have dulwich
   $ echo alpha > alpha
   $ git add alpha
   $ commit -m "add alpha"
+  $ git branch alpha
+  $ git show-ref
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/alpha
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/master
 
   $ cd ..
   $ hg clone gitrepo hgrepo | grep -v '^updating'
@@ -42,6 +46,7 @@ bail if the user does not have dulwich
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgrepo
+  $ hg update -q master
   $ echo beta > beta
   $ hg add beta
   $ hgcommit -m 'add beta'
@@ -98,6 +103,11 @@ bail if the user does not have dulwich
   $ echo % some more work on master from git
   % some more work on master from git
   $ cd gitrepo
+
+Check state of refs after outgoing
+  $ git show-ref
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/alpha
+  7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 refs/heads/master
 
   $ git checkout master 2>&1 | sed s/\'/\"/g
   Already on "master"

@@ -240,14 +240,10 @@ class GitHandler(object):
             old_refs.update(refs)
             to_push = set(self.local_heads().values() + self.tags.values())
             new_refs.update(self.get_changed_refs(refs, to_push, True))
-            # don't push anything
-            return {}
+            return refs # always return the same refs to make the send a no-op
 
         try:
-            try:
-                client.send_pack(path, changed, lambda have, want: [])
-            except UpdateRefsError:
-                pass # dulwich throws an error when send_pack doesn't upload
+            client.send_pack(path, changed, lambda have, want: [])
 
             changed_refs = [ref for ref, sha in new_refs.iteritems()
                             if sha != old_refs.get(ref)]
