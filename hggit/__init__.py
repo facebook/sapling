@@ -42,6 +42,8 @@ demandimport.ignore.extend([
 import gitrepo, hgrepo
 from git_handler import GitHandler
 
+buglink = 'https://bitbucket.org/durin42/hg-git/issues'
+
 # support for `hg clone git://github.com/defunkt/facebox.git`
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
 _gitschemes = ('git', 'git+ssh', 'git+http', 'git+https')
