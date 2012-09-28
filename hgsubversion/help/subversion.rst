@@ -302,6 +302,25 @@ settings:
     be included or excluded. See the documentation for ``hg convert`` for more
     information on filemaps.
 
+  ``hgsubversion.filestoresize``
+
+    Maximum amount of temporary edited files data to be kept in memory,
+    in megabytes. The replay and stupid mode pull data by retrieving
+    delta information from the subversion repository and applying it on
+    known files data. Since the order of file edits is driven by the
+    subversion delta information order, edited files cannot be committed
+    immediately and are kept until all of them have been processed for
+    each changeset. ``filestoresize`` defines the maximum amount of
+    files data to be kept in memory before falling back to storing them
+    in a temporary directory. This setting is important with
+    repositories containing many files or large ones as both the
+    application of deltas and Mercurial commit process require the whole
+    file data to be available in memory. By limiting the amount of
+    temporary data kept in memory, larger files can be retrieved, at the
+    price of slower disk operations. Set it to a negative value to
+    disable the fallback behaviour and keep everything in memory.
+    Default to 200.
+
   ``hgsubversion.username``, ``hgsubversion.password``
 
     Set the username or password for accessing Subversion repositories.

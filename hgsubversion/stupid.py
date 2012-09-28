@@ -235,7 +235,7 @@ except AttributeError:
 def patchrepo(ui, meta, parentctx, patchfp):
     if not svnbackend:
         return patchrepoold(ui, meta, parentctx, patchfp)
-    store = patch.filestore()
+    store = patch.filestore(util.getfilestoresize(ui))
     try:
         touched = set()
         backend = svnbackend(ui, meta.repo, parentctx, store)

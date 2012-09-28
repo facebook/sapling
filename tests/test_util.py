@@ -333,8 +333,9 @@ class TestBase(unittest.TestCase):
             tarball.extract(entry, path)
         return path
 
-    def fetch(self, repo_path, subdir=None, stupid=False, layout='auto', startrev=0,
-              externals=None, noupdate=True, dest=None, rev=None):
+    def fetch(self, repo_path, subdir=None, stupid=False, layout='auto',
+            startrev=0, externals=None, noupdate=True, dest=None, rev=None,
+            config=None):
         if layout == 'single':
             if subdir is None:
                 subdir = 'trunk'
@@ -357,8 +358,11 @@ class TestBase(unittest.TestCase):
             cmd.append('--noupdate')
         if rev is not None:
             cmd.append('--rev=%s' % rev)
+        config = dict(config or {})
         if externals:
-            cmd[:0] = ['--config', 'hgsubversion.externals=%s' % externals]
+            config['hgsubversion.externals'] = str(externals)
+        for k,v in reversed(sorted(config.iteritems())):
+            cmd[:0] = ['--config', '%s=%s' % (k, v)]
 
         dispatch(cmd)
 

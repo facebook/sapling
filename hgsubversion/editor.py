@@ -95,7 +95,7 @@ class RevisionData(object):
         self.clear()
 
     def clear(self):
-        self.store = FileStore()
+        self.store = FileStore(util.getfilestoresize(self.ui))
         self.added = set()
         self.deleted = {}
         self.rev = None

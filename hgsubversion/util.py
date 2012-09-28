@@ -327,3 +327,12 @@ revsets = {
     'fromsvn': revset_fromsvn,
     'svnrev': revset_svnrev,
 }
+
+def getfilestoresize(ui):
+    """Return the replay or stupid file memory store size in megabytes or -1"""
+    size = ui.configint('hgsubversion', 'filestoresize', 200)
+    if size >= 0:
+        size = size*(2**20)
+    else:
+        size = -1
+    return size
