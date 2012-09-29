@@ -229,7 +229,6 @@ class vfs(abstractvfs):
         if expand:
             base = os.path.realpath(util.expandpath(base))
         self.base = base
-        self.basesep = self.base + os.sep
         self._setmustaudit(audit)
         self.createmode = None
         self._trustnlink = None
@@ -332,8 +331,9 @@ class vfs(abstractvfs):
 
     def join(self, path):
         if path:
-            return path.startswith('/') and path or (self.basesep + path)
-        return self.base
+            return os.path.join(self.base, path)
+        else:
+            return self.base
 
 opener = vfs
 
