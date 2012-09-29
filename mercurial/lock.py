@@ -97,7 +97,12 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        locker = util.readlock(self.f)
+        try:
+            locker = util.readlock(self.f)
+        except OSError, why:
+            if why.errno == errno.ENOENT:
+                return None
+            raise
         try:
             host, pid = locker.split(":", 1)
         except ValueError:
