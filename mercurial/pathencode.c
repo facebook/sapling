@@ -501,6 +501,12 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
+	if (len > maxstorepathlen) {
+		newobj = Py_None;
+		Py_INCREF(newobj);
+		return newobj;
+	}
+
 	newlen = len ? basicencode(NULL, 0, path, len + 1) : 1;
 
 	if (newlen <= maxstorepathlen + 1) {
