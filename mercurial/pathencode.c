@@ -475,15 +475,8 @@ static Py_ssize_t basicencode(char *dest, size_t destsize,
 
 	Py_ssize_t destlen = 0;
 
-	if (len < 5 || memcmp(src, "data/", 5) != 0) {
-		memcopy(dest, &destlen, destsize, src, len);
-		return destlen;
-	}
-
-	memcopy(dest, &destlen, destsize, "data/", 5);
-
 	return _encode(twobytes, onebyte, dest, destlen, destsize,
-		       src + 5, len - 5, 1);
+		       src, len, 1);
 }
 
 static const Py_ssize_t maxstorepathlen = 120;
