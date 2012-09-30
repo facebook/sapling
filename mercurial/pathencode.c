@@ -55,7 +55,7 @@ enum dir_state {
 	DDEFAULT,
 };
 
-static inline int isset(const uint32_t bitset[], char c)
+static inline int inset(const uint32_t bitset[], char c)
 {
 	return bitset[((uint8_t)c) >> 5] & (1 << (((uint8_t)c) & 31));
 }
@@ -419,7 +419,7 @@ static Py_ssize_t _encode(const uint32_t twobytes[8], const uint32_t onebyte[8],
 			}
 			break;
 		case DEFAULT:
-			while (isset(onebyte, src[i])) {
+			while (inset(onebyte, src[i])) {
 				charcopy(dest, &destlen, destsize, src[i++]);
 				if (i == len)
 					goto done;
@@ -439,14 +439,14 @@ static Py_ssize_t _encode(const uint32_t twobytes[8], const uint32_t onebyte[8],
 				i++;
 				break;
 			default:
-				if (isset(onebyte, src[i])) {
+				if (inset(onebyte, src[i])) {
 					do {
 						charcopy(dest, &destlen,
 							 destsize, src[i++]);
 					} while (i < len &&
-						 isset(onebyte, src[i]));
+						 inset(onebyte, src[i]));
 				}
-				else if (isset(twobytes, src[i])) {
+				else if (inset(twobytes, src[i])) {
 					char c = src[i++];
 					charcopy(dest, &destlen, destsize, '_');
 					charcopy(dest, &destlen, destsize,
