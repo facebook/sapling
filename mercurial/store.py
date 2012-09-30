@@ -255,6 +255,8 @@ def _hybridencode(path, dotencode):
     return res
 
 def _pathencode(path):
+    if len(path) > _maxstorepathlen:
+        return None
     ef = _encodefname(encodedir(path)).split('/')
     res = '/'.join(_auxencode(ef, True))
     if len(res) > _maxstorepathlen:
