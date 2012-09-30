@@ -414,44 +414,49 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12 /xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "extensions are replicated on hashed paths (unbounded!)"
+print '''Extensions are replicated on hashed paths. Note that
+we only get to encode files that end in .i or .d inside the
+store. Encoded filenames are thus bound in length.'''
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.345')
+          '123456789-12.345.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456')
+          '123456789-12.345.d')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.34567')
+          '123456789-12.3456.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.345678')
+          '123456789-12.34567.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789')
+          '123456789-12.345678.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-')
+          '123456789-12.3456789.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-1')
+          '123456789-12.3456789-.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-12')
+          '123456789-12.3456789-1.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-123')
+          '123456789-12.3456789-12.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-1234')
+          '123456789-12.3456789-123.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
-          '123456789-12.3456789-12345')
+          '123456789-12.3456789-1234.i')
+show('data/12345678/12345678/12345678/12345678/12345678/12345'
+          '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
+          '123456789-12.3456789-12345.i')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWX'
           'YZ-abcdefghjiklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPRSTU'
           'VWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxx'
           'xxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwww'
-          'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww')
+          'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i')
