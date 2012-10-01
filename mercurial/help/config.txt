@@ -923,6 +923,17 @@ the following entries.
     Optional. Directory or URL to use when pushing if no destination
     is specified.
 
+Custom paths can be defined by assigning the path to a name that later can be
+used from the command line. Example::
+
+    [paths]
+    my_path = http://example.com/path
+
+To push to the path defined in ``my_path`` run the command::
+
+    hg push my_path
+
+
 ``phases``
 ----------
 
