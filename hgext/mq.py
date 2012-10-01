@@ -63,7 +63,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, url, error, phases
+from mercurial import repair, extensions, url, error, phases, bookmarks
 from mercurial import patch as patchmod
 import os, re, errno, shutil
 
@@ -1577,6 +1577,7 @@ class queue(object):
             a = list(aa)
             c = [filter(matchfn, l) for l in (m, a, r)]
             match = scmutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
+            bmlist = repo[top].bookmarks()
 
             try:
                 if diffopts.git or diffopts.upgrade:
@@ -1662,6 +1663,11 @@ class queue(object):
                 for chunk in chunks:
                     patchf.write(chunk)
                 patchf.close()
+
+                for bm in bmlist:
+                    repo._bookmarks[bm] = n
+                bookmarks.write(repo)
+
                 self.applied.append(statusentry(n, patchfn))
             except: # re-raises
                 ctx = repo[cparents[0]]
