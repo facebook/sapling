@@ -833,7 +833,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             raise util.Abort(
                 _("a bookmark cannot have the name of an existing branch"))
         if rev:
-            marks[mark] = repo.lookup(rev)
+            marks[mark] = scmutil.revsingle(repo, rev).node()
         else:
             marks[mark] = cur
         if not inactive and cur == marks[mark]:

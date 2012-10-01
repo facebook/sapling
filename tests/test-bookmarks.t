@@ -154,6 +154,19 @@ list bookmarks
    * Y                         2:db815d6d32e6
      Z                         0:f7b1eb17ad24
 
+bookmarks from a revset
+  $ hg bookmark -r '.^1' REVSET
+  $ hg bookmark -r ':tip' TIP
+  $ hg bookmarks
+     REVSET                    0:f7b1eb17ad24
+   * TIP                       2:db815d6d32e6
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+
+  $ hg bookmark -d REVSET
+  $ hg bookmark -d TIP
+
 rename without new name
 
   $ hg bookmark -m Y
