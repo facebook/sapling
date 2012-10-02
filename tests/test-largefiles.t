@@ -1622,8 +1622,8 @@ Test commit's addremove option prior to the first commit
   A large.dat
   A large2.dat
   A normal
-  $ find .hglf/ | sort
-  .hglf/
+  $ find .hglf | sort
+  .hglf
   .hglf/large.dat
   .hglf/large2.dat
 
