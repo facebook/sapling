@@ -336,6 +336,17 @@ test clone with a specific revision
   $ hg -R cloned-bookmarks-rev bookmarks
      X2                        1:925d80f479bb
 
+test clone with update to a bookmark
+
+  $ hg clone -u Z . cloned-bookmarks-update
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks-update bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+
 create bundle with two heads
 
   $ hg clone . tobundle
