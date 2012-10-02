@@ -377,10 +377,7 @@ class HTTPResponse(httplib.HTTPResponse):
 
 
     def __init__(self, sock, debuglevel=0, strict=0, method=None):
-        if method: # the httplib in python 2.3 uses the method arg
-            httplib.HTTPResponse.__init__(self, sock, debuglevel, method)
-        else: # 2.2 doesn't
-            httplib.HTTPResponse.__init__(self, sock, debuglevel)
+        httplib.HTTPResponse.__init__(self, sock, debuglevel, method)
         self.fileno = sock.fileno
         self.code = None
         self._rbuf = ''
