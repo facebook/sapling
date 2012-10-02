@@ -841,6 +841,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     archiver.done()
 
 def hgsubrepoarchive(orig, repo, ui, archiver, prefix, match=None):
+    repo._get(repo._state + ('hg',))
     rev = repo._state[1]
     ctx = repo._repo[rev]
 
