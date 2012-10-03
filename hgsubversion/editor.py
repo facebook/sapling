@@ -138,20 +138,26 @@ class HgEditor(svnwrap.Editor):
         self._openfiles = {}
         # A mapping of file paths to batons
         self._openpaths = {}
+        self._deleted = set()
 
     def _openfile(self, path, data, isexec, islink, copypath, create=False):
         if path in self._openpaths:
             raise EditingError('trying to open an already opened file %s'
                     % path)
-        if not create and path in self.current.deleted:
+        if not create and path in self._deleted:
             raise EditingError('trying to open a deleted file %s' % path)
-        if path in self.current.deleted:
-            del self.current.deleted[path]
+        if path in self._deleted:
+            self._deleted.remove(path)
         self._filecounter += 1
         baton = '%d-%s' % (self._filecounter, path)
         self._openfiles[baton] = (path, data, isexec, islink, copypath)
         self._openpaths[path] = baton
         return baton
+
+    def _deletefile(self, path):
+        self._deleted.add(path)
+        if path in self._svncopies:
+            del self._svncopies[path]
 
     @svnwrap.ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
@@ -169,7 +175,7 @@ class HgEditor(svnwrap.Editor):
         prefix = path + '/'
         for f in list(self._svncopies):
             if f.startswith(prefix):
-                del self._svncopies[f]
+                self._deletefile(f)
 
         if br_path is not None:
             ha = self.meta.get_parent_revision(self.current.rev.revnum, branch)
@@ -184,10 +190,8 @@ class HgEditor(svnwrap.Editor):
                 self.current.externals[path] = None
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
-                    self.current.delete(f_p)
-                    if f_p in self._svncopies:
-                        del self._svncopies[f_p]
-            self.current.delete(path)
+                    self._deletefile(f_p)
+            self._deletefile(path)
 
     @svnwrap.ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
@@ -230,8 +234,8 @@ class HgEditor(svnwrap.Editor):
                  copyfrom_revision=None, file_pool=None):
         if path in self._svncopies:
             raise EditingError('trying to replace copied file %s' % path)
-        if path in self.current.deleted:
-            del self.current.deleted[path]
+        if path in self._deleted:
+            self._deleted.remove(path)
         fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
         if not fpath:
             return None
@@ -335,10 +339,10 @@ class HgEditor(svnwrap.Editor):
             fctx = fromctx.filectx(f)
             dest = path + '/' + f[len(frompath):]
             svncopies[dest] = CopiedFile(new_hash, f, None)
-            if dest in self.current.deleted:
+            if dest in self._deleted:
                 # Remove this once svn copies and edited files are
                 # clearly separated.
-                del self.current.deleted[dest]
+                self._deleted.remove(dest)
             if branch == source_branch:
                 copies[dest] = f
         if copies:
@@ -472,6 +476,10 @@ class HgEditor(svnwrap.Editor):
                 self.current.set(path, data, isexec, islink)
                 self.current.copies[path] = copied
         self._svncopies.clear()
+
+        for f in self._deleted:
+            self.current.delete(f)
+        self._deleted.clear()
 
 _TXDELT_WINDOW_HANDLER_FAILURE_MSG = (
     "Your SVN repository may not be supplying correct replay deltas."
