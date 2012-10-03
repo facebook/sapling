@@ -5879,6 +5879,10 @@ def verify(ui, repo):
     the changelog, manifest, and tracked files, as well as the
     integrity of their crosslinks and indices.
 
+    Please see http://mercurial.selenic.com/wiki/RepositoryCorruption
+    for more information about recovery from corruption of the
+    repository.
+
     Returns 0 on success, 1 if errors are encountered.
     """
     return hg.verify(repo)
