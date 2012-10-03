@@ -117,8 +117,6 @@ Non fncache repo:
   .hg/undo.dirstate
   $ cd ..
 
-#if no-windows
-
 Encoding of reserved / long paths in the store
 
   $ hg init r2
@@ -128,22 +126,46 @@ Encoding of reserved / long paths in the store
   > portablefilenames = ignore
   > EOF
 
-  $ DIR="bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL"
-  $ mkdir -p "$DIR"
-  $ echo foo > "$DIR/normal.c"
-  $ DIR="AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH"
-  $ mkdir -p "$DIR"
-  $ echo foo > "$DIR/LOREMIPSUM.TXT"
-  $ DIR="enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlExtension/src/main/java/META-INF/services"
-  $ mkdir -p "$DIR"
-  $ echo foo > "$DIR/org.netbeans.modules.xml.wsdl.bindingsupport.spi.ExtensibilityElementTemplateProvider"
-  $ DIR="Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother"
-  $ mkdir -p "$DIR"
-  $ echo foo > "$DIR/AndThenAnExtremelyLongFileName.txt"
-  $ DIR="12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345"
-  $ mkdir -p "$DIR"
-  $ echo foo > "$DIR/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz"
-  $ hg ci -qAm1
+  $ hg import -q --bypass - <<EOF
+  > # HG changeset patch
+  > # User test
+  > # Date 0 0
+  > # Node ID 1c7a2f7cb77be1a0def34e4c7cabc562ad98fbd7
+  > # Parent  0000000000000000000000000000000000000000
+  > 1
+  > 
+  > diff --git a/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz b/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > diff --git a/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT b/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/AUX/SECOND/X.PRN/FOURTH/FI:FTH/SIXTH/SEVENTH/EIGHTH/NINETH/TENTH/ELEVENTH/LOREMIPSUM.TXT
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > diff --git a/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt b/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/Project Planning/Resources/AnotherLongDirectoryName/Followedbyanother/AndAnother/AndThenAnExtremelyLongFileName.txt	
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > diff --git a/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c b/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > diff --git a/enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlExtension/src/main/java/META-INF/services/org.netbeans.modules.xml.wsdl.bindingsupport.spi.ExtensibilityElementTemplateProvider b/enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlExtension/src/main/java/META-INF/services/org.netbeans.modules.xml.wsdl.bindingsupport.spi.ExtensibilityElementTemplateProvider
+  > new file mode 100644
+  > --- /dev/null
+  > +++ b/enterprise/openesbaddons/contrib-imola/corba-bc/netbeansplugin/wsdlExtension/src/main/java/META-INF/services/org.netbeans.modules.xml.wsdl.bindingsupport.spi.ExtensibilityElementTemplateProvider
+  > @@ -0,0 +1,1 @@
+  > +foo
+  > EOF
+
   $ find .hg/store -name *.i  | sort
   .hg/store/00changelog.i
   .hg/store/00manifest.i
@@ -155,5 +177,4 @@ Encoding of reserved / long paths in the store
 
   $ cd ..
 
-#endif
 
