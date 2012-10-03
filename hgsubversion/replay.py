@@ -76,6 +76,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         svn.get_revision(r.revnum, editor)
     else:
         svn.get_replay(r.revnum, editor, meta.revmap.oldest)
+    editor.close()
 
     current = editor.current
     current.findmissing(svn)

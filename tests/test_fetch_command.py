@@ -226,6 +226,14 @@ class TestStupidPull(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
+    def test_empty_repo(self, stupid=False):
+        # This used to crash HgEditor because it could be closed without
+        # having been initialized again.
+        self._load_fixture_and_fetch('emptyrepo2.svndump', stupid=stupid)
+
+    def test_empty_repo_stupid(self):
+        self.test_empty_repo(stupid=True)
+
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestStupidPull),

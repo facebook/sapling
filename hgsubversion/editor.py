@@ -117,6 +117,8 @@ class HgEditor(svnwrap.Editor):
         self._filecounter = 0
         self._filebatons = {}
         self._files = {}
+        # A mapping of svn paths to (data, isexec, islink, copypath) tuples
+        self._svncopies = {}
 
     def _addfilebaton(self, path):
         # XXX: enforce unicity here. This cannot be done right now
@@ -137,6 +139,16 @@ class HgEditor(svnwrap.Editor):
                 # Tag deletion is not handled as branched deletion
                 return
             self.meta.closebranches.add(branch)
+
+        # Delete copied entries, no need to check they exist in hg
+        # parent revision.
+        if path in self._svncopies:
+            del self._svncopies[path]
+        prefix = path + '/'
+        for f in list(self._svncopies):
+            if f.startswith(prefix):
+                del self._svncopies[f]
+
         if br_path is not None:
             ha = self.meta.get_parent_revision(self.current.rev.revnum, branch)
             if ha == revlog.nullid:
@@ -148,21 +160,13 @@ class HgEditor(svnwrap.Editor):
                     br_path2 = br_path + '/'
                 # assuming it is a directory
                 self.current.externals[path] = None
-                prefix = path + '/'
-                map(self.current.delete,
-                    [pat for pat in self.current.files.iterkeys()
-                        if pat.startswith(prefix)])
                 for f in ctx.walk(util.PrefixMatch(br_path2)):
                     f_p = '%s/%s' % (path, f[len(br_path2):])
                     if f_p not in self.current.files:
                         self.current.delete(f_p)
-                # Remove copied but deleted files
-                for f in list(self._files):
-                    if f.startswith(prefix):
-                        del self._filebatons[self._files.pop(f)]
+                    if f_p in self._svncopies:
+                        del self._svncopies[f_p]
             self.current.delete(path)
-            if path in self._files:
-                del self._filebatons[self._files.pop(path)]
 
     @svnwrap.ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
@@ -171,12 +175,13 @@ class HgEditor(svnwrap.Editor):
             self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
             return None
 
-        if path in self._files:
-            # Remove this when copied files are no longer registered as
-            # open files.
-            return self._files[path]
-
         self.ui.note('M %s\n' % path)
+
+        if path in self._svncopies:
+            base, isexec, islink, copypath = self._svncopies.pop(path)
+            self.current.set(path, base, isexec, islink)
+            self.current.copies[path] = copypath
+            return self._addfilebaton(path)
 
         if not self.meta.is_path_valid(path):
             return None
@@ -203,6 +208,8 @@ class HgEditor(svnwrap.Editor):
     @svnwrap.ieditor
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
+        if path in self._svncopies:
+            raise EditingError('trying to replace copied file %s' % path)
         if path in self.current.deleted:
             del self.current.deleted[path]
         fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
@@ -283,29 +290,38 @@ class HgEditor(svnwrap.Editor):
             frompath = '%s/' % frompath
         else:
             frompath = ''
+        svncopies = {}
         copies = {}
         for f in fromctx:
             if not f.startswith(frompath):
                 continue
             fctx = fromctx.filectx(f)
             dest = path + '/' + f[len(frompath):]
-            self.current.set(dest, fctx.data(), 'x' in fctx.flags(), 'l' in fctx.flags())
-            # Put copied files with open files for now, they should
-            # really be separated to reduce resource usage.
-            self._addfilebaton(dest)
+            flags = fctx.flags()
+            islink = 'l' in flags
+            data = fctx.data()
+            if islink:
+                data = 'link ' + data
+            svncopies[dest] = (data, 'x' in flags, islink, None)
             if dest in self.current.deleted:
+                # Remove this once svn copies and edited files are
+                # clearly separated.
                 del self.current.deleted[dest]
             if branch == source_branch:
                 copies[dest] = f
         if copies:
             # Preserve the directory copy records if no file was changed between
             # the source and destination revisions, or discard it completely.
-            parentid = self.meta.get_parent_revision(self.current.rev.revnum, branch)
+            parentid = self.meta.get_parent_revision(
+                    self.current.rev.revnum, branch)
             if parentid != revlog.nullid:
                 parentctx = self.repo.changectx(parentid)
                 for k, v in copies.iteritems():
                     if util.issamefile(parentctx, fromctx, v):
-                        self.current.copies[k] = v
+                        data, isexec, islink = svncopies[k][:-1]
+                        svncopies[k] = (data, isexec, islink, v)
+        self._svncopies.update(svncopies)
+
         # Copy the externals definitions of copied directories
         fromext = svnexternals.parse(self.ui, fromctx)
         for p, v in fromext.iteritems():
@@ -413,6 +429,13 @@ class HgEditor(svnwrap.Editor):
                 self._exception_info = sys.exc_info()
                 raise
         return txdelt_window
+
+    def close(self):
+        for c in self._svncopies.iteritems():
+            dest, (data, isexec, islink, copied) = c
+            self.current.set(dest, data, isexec, islink)
+            self.current.copies[dest] = copied
+        self._svncopies.clear()
 
 _TXDELT_WINDOW_HANDLER_FAILURE_MSG = (
     "Your SVN repository may not be supplying correct replay deltas."

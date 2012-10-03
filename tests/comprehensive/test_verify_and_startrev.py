@@ -33,6 +33,7 @@ _skipstandard = set([
     'subdir_is_file_prefix.svndump',
     'correct.svndump',
     'corrupt.svndump',
+    'emptyrepo2.svndump',
 ])
 
 def _do_case(self, name, stupid, layout):
