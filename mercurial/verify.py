@@ -99,7 +99,7 @@ def _verify(repo):
                     (short(p1), short(n)), f)
             if p2 not in seen and p2 != nullid:
                 err(lr, _("unknown parent 2 %s of %s") %
-                    (short(p2), short(p1)), f)
+                    (short(p2), short(n)), f)
         except Exception, inst:
             exc(lr, _("checking parents of %s") % short(node), inst, f)
 
