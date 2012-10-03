@@ -120,7 +120,7 @@ def _verify(repo):
     havemf = len(mf) > 0
 
     ui.status(_("checking changesets\n"))
-    hasmanifest = False
+    refersmf = False
     seen = {}
     checklog(cl, "changelog", 0)
     total = len(repo)
@@ -133,17 +133,17 @@ def _verify(repo):
             changes = cl.read(n)
             if changes[0] != nullid:
                 mflinkrevs.setdefault(changes[0], []).append(i)
-                hasmanifest = True
+                refersmf = True
             for f in changes[3]:
                 filelinkrevs.setdefault(f, []).append(i)
         except Exception, inst:
-            hasmanifest = True
+            refersmf = True
             exc(i, _("unpacking changeset %s") % short(n), inst)
     ui.progress(_('checking'), None)
 
     ui.status(_("checking manifests\n"))
     seen = {}
-    if hasmanifest:
+    if refersmf:
         # Do not check manifest if there are only changelog entries with
         # null manifests.
         checklog(mf, "manifest", 0)
