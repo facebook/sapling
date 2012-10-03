@@ -116,6 +116,7 @@ for i in [0, 1]:
         utestpats[i].append((p, m))
 
 utestfilters = [
+    (r"<<(\S+)((.|\n)*?\n  > \1)", rephere),
     (r"( *)(#([^\n]*\S)?)", repcomment),
 ]
 

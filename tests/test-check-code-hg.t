@@ -162,19 +162,6 @@
   tests/autodiff.py:0:
    >         ui.write('data lost for: %s\n' % fn)
    warning: unwrapped ui message
-  tests/test-convert-mtn.t:0:
-   >   > function get_passphrase(keypair_id)
-   don't use 'function', use old style
-  tests/test-import-git.t:0:
-   >   > Mc\${NkU|\`?^000jF3jhEB
-   ^ must be quoted
-  tests/test-import.t:0:
-   >   > diff -Naur proj-orig/foo proj-new/foo
-   don't use 'diff -N'
-   don't use 'diff -N'
-  tests/test-schemes.t:0:
-   >   > z = file:\$PWD/
-   don't use $PWD, use `pwd`
   tests/test-ui-color.py:0:
    > testui.warn('warning\n')
    warning: unwrapped ui message
