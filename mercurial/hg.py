@@ -336,6 +336,16 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             destlock = copystore(ui, srcrepo, destpath)
 
+            # Recomputing branch cache might be slow on big repos,
+            # so just copy it
+            dstcachedir = os.path.join(destpath, 'cache')
+            srcbranchcache = srcrepo.sjoin('cache/branchheads')
+            dstbranchcache = os.path.join(dstcachedir, 'branchheads')
+            if os.path.exists(srcbranchcache):
+                if not os.path.exists(dstcachedir):
+                    os.mkdir(dstcachedir)
+                util.copyfile(srcbranchcache, dstbranchcache)
+
             # we need to re-init the repo after manually copying the data
             # into it
             destpeer = peer(ui, peeropts, dest)

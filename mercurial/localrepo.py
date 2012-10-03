@@ -2472,6 +2472,12 @@ class localrepository(object):
     def stream_in(self, remote, requirements):
         lock = self.lock()
         try:
+            # Save remote branchmap. We will use it later
+            # to speed up branchcache creation
+            rbranchmap = None
+            if remote.capable("branchmap"):
+                rbranchmap = remote.branchmap()
+
             fp = remote.stream_out()
             l = fp.readline()
             try:
@@ -2532,6 +2538,17 @@ class localrepository(object):
             self._applyrequirements(requirements)
             self._writerequirements()
 
+            if rbranchmap:
+                rbheads = []
+                for bheads in rbranchmap.itervalues():
+                    rbheads.extend(bheads)
+
+                self.branchcache = rbranchmap
+                if rbheads:
+                    rtiprev = max((int(self.changelog.rev(node))
+                            for node in rbheads))
+                    self._writebranchcache(self.branchcache,
+                            self[rtiprev].node(), rtiprev)
             self.invalidate()
             return len(self.heads()) + 1
         finally:

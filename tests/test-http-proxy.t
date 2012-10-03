@@ -99,6 +99,7 @@ do not use the proxy if it is in the no list
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat proxy.log
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
+  * - - [*] "GET http://localhost:$HGPORT/?cmd=branchmap HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=stream_out HTTP/1.1" - - (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=listkeys HTTP/1.1" - - x-hgarg-1:namespace=bookmarks (glob)
   * - - [*] "GET http://localhost:$HGPORT/?cmd=capabilities HTTP/1.1" - - (glob)
