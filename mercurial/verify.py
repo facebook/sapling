@@ -96,16 +96,16 @@ def _verify(repo):
             p1, p2 = obj.parents(node)
             if p1 not in seen and p1 != nullid:
                 err(lr, _("unknown parent 1 %s of %s") %
-                    (short(p1), short(n)), f)
+                    (short(p1), short(node)), f)
             if p2 not in seen and p2 != nullid:
                 err(lr, _("unknown parent 2 %s of %s") %
-                    (short(p2), short(n)), f)
+                    (short(p2), short(node)), f)
         except Exception, inst:
             exc(lr, _("checking parents of %s") % short(node), inst, f)
 
         if node in seen:
-            err(lr, _("duplicate revision %d (%d)") % (i, seen[n]), f)
-        seen[n] = i
+            err(lr, _("duplicate revision %d (%d)") % (i, seen[node]), f)
+        seen[node] = i
         return lr
 
     if os.path.exists(repo.sjoin("journal")):
