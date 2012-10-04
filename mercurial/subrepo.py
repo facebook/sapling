@@ -674,8 +674,8 @@ class svnsubrepo(abstractsubrepo):
 
     @propertycache
     def _svnversion(self):
-        output, err = self._svncommand(['--version'], filename=None)
-        m = re.search(r'^svn,\s+version\s+(\d+)\.(\d+)', output)
+        output, err = self._svncommand(['--version', '--quiet'], filename=None)
+        m = re.search(r'^(\d+)\.(\d+)', output)
         if not m:
             raise util.Abort(_('cannot retrieve svn tool version'))
         return (int(m.group(1)), int(m.group(2)))

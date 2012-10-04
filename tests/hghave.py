@@ -152,7 +152,7 @@ def has_docutils():
         return False
 
 def getsvnversion():
-    m = matchoutput('svn --version 2>&1', r'^svn,\s+version\s+(\d+)\.(\d+)')
+    m = matchoutput('svn --version --quiet 2>&1', r'^(\d+)\.(\d+)')
     if not m:
         return (0, 0)
     return (int(m.group(1)), int(m.group(2)))
