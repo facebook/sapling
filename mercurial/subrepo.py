@@ -655,6 +655,10 @@ class svnsubrepo(abstractsubrepo):
             cmd.append(path)
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
+        lc_all = env.get('LC_ALL')
+        if lc_all:
+            env['LANG'] = lc_all
+            del env['LC_ALL']
         env['LC_MESSAGES'] = 'C'
         p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
