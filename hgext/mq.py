@@ -3262,7 +3262,8 @@ def qqueue(ui, repo, name=None, **opts):
 
     def _setactive(name):
         if q.applied:
-            raise util.Abort(_('patches applied - cannot set new queue active'))
+            raise util.Abort(_('new queue created, but cannot make active '
+                               'as patches are applied'))
         _setactivenocheck(name)
 
     def _setactivenocheck(name):
