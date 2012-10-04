@@ -3538,7 +3538,7 @@ def identify(ui, repo, source=None, rev=None,
 
     if source:
         source, branches = hg.parseurl(ui.expandpath(source))
-        peer = hg.peer(ui, opts, source)
+        peer = hg.peer(repo or ui, opts, source) # only pass ui when no repo
         repo = peer.local()
         revs, checkout = hg.addbranchrevs(repo, peer, branches, None)
 

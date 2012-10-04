@@ -353,7 +353,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                           node=node.hex(node.nullid))
         else:
             try:
-                destpeer = peer(ui, peeropts, dest, create=True)
+                destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
+                                # only pass ui when no srcrepo
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
                     dircleanup.close()
