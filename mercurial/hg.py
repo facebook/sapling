@@ -410,6 +410,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 bn = destrepo[uprev].branch()
                 destrepo.ui.status(_("updating to branch %s\n") % bn)
                 _update(destrepo, uprev)
+                if update in destrepo._bookmarks:
+                    bookmarks.setcurrent(destrepo, update)
 
         return srcpeer, destpeer
     finally:
