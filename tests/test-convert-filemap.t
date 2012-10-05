@@ -229,11 +229,11 @@ final file versions in this repo:
   $ cat > renames.fmap <<EOF
   > include dir
   > exclude dir/file2
-  > rename dir dir2
+  > rename dir dir2//../dir2/
   > include foo
   > include copied
-  > rename foo foo2
-  > rename copied copied2
+  > rename foo foo2/
+  > rename copied ./copied2
   > exclude dir/subdir
   > include dir/subdir/file3
   > EOF
@@ -284,10 +284,8 @@ filemap errors
   > include
   > EOF
   $ hg -q convert --filemap errors.fmap source errors.repo
-  errors.fmap:1: superfluous / in exclude 'dir/'
   errors.fmap:3: superfluous / in include '/dir'
   errors.fmap:3: superfluous / in rename '/dir'
-  errors.fmap:3: superfluous / in exclude 'dir//dir'
   errors.fmap:4: unknown directive 'out of sync'
   errors.fmap:5: path to exclude is missing
   abort: errors in filemap

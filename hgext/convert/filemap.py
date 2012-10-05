@@ -4,6 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import posixpath
 import shlex
 from mercurial.i18n import _
 from mercurial import util
@@ -15,6 +16,13 @@ def rpairs(name):
         yield name[:e], name[e + 1:]
         e = name.rfind('/', 0, e)
     yield '.', name
+
+def normalize(path):
+    ''' We use posixpath.normpath to support cross-platform path format.
+    However, it doesn't handle None input. So we wrap it up. '''
+    if path is None:
+        return None
+    return posixpath.normpath(path)
 
 class filemapper(object):
     '''Map and filter filenames when importing.
@@ -53,21 +61,21 @@ class filemapper(object):
         cmd = lex.get_token()
         while cmd:
             if cmd == 'include':
-                name = lex.get_token()
+                name = normalize(lex.get_token())
                 errs += check(name, self.exclude, 'exclude')
                 self.include[name] = name
             elif cmd == 'exclude':
-                name = lex.get_token()
+                name = normalize(lex.get_token())
                 errs += check(name, self.include, 'include')
                 errs += check(name, self.rename, 'rename')
                 self.exclude[name] = name
             elif cmd == 'rename':
-                src = lex.get_token()
-                dest = lex.get_token()
+                src = normalize(lex.get_token())
+                dest = normalize(lex.get_token())
                 errs += check(src, self.exclude, 'exclude')
                 self.rename[src] = dest
             elif cmd == 'source':
-                errs += self.parse(lex.get_token())
+                errs += self.parse(normalize(lex.get_token()))
             else:
                 self.ui.warn(_('%s:%d: unknown directive %r\n') %
                              (lex.infile, lex.lineno, cmd))
@@ -76,6 +84,7 @@ class filemapper(object):
         return errs
 
     def lookup(self, name, mapping):
+        name = normalize(name)
         for pre, suf in rpairs(name):
             try:
                 return mapping[pre], pre, suf
