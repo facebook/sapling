@@ -172,18 +172,17 @@ if 'SystemRoot' in os.environ:
     env['SystemRoot'] = os.environ['SystemRoot']
 
 if os.path.isdir('.hg'):
-    cmd = [sys.executable, 'hg', 'id', '-i', '-t']
-    l = runhg(cmd, env).split()
-    while len(l) > 1 and l[-1][0].isalpha(): # remove non-numbered tags
-        l.pop()
-    if len(l) > 1: # tag found
-        version = l[-1]
-        if l[0].endswith('+'): # propagate the dirty status to the tag
+    cmd = [sys.executable, 'hg', 'log', '-r', '.', '--template', '{tags}\n']
+    numerictags = [t for t in runhg(cmd, env).split() if t[0].isdigit()]
+    hgid = runhg([sys.executable, 'hg', 'id', '-i'], env).strip()
+    if numerictags: # tag(s) found
+        version = numerictags[-1]
+        if hgid.endswith('+'): # propagate the dirty status to the tag
             version += '+'
-    elif len(l) == 1: # no tag found
+    else: # no tag found
         cmd = [sys.executable, 'hg', 'parents', '--template',
                '{latesttag}+{latesttagdistance}-']
-        version = runhg(cmd, env) + l[0]
+        version = runhg(cmd, env) + hgid
     if version.endswith('+'):
         version += time.strftime('%Y%m%d')
 elif os.path.exists('.hg_archival.txt'):
