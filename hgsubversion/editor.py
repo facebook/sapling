@@ -1,6 +1,9 @@
 import errno
 import cStringIO
 import sys
+import tempfile
+import shutil
+import os
 
 from mercurial import util as hgutil
 from mercurial import revlog
@@ -22,12 +25,69 @@ class NeverClosingStringIO(object):
         # object which prevent us from calling getvalue() afterwards.
         pass
 
+class FileStore(object):
+    def __init__(self, maxsize=None):
+        self._tempdir = None
+        self._files = {}
+        self._created = 0
+        self._maxsize = maxsize
+        if self._maxsize is None:
+            self._maxsize = 100*(2**20)
+        self._size = 0
+        self._data = {}
+
+    def setfile(self, fname, data):
+        if self._maxsize < 0 or (len(data) + self._size) <= self._maxsize:
+            self._data[fname] = data
+            self._size += len(data)
+        else:
+            if self._tempdir is None:
+                self._tempdir = tempfile.mkdtemp(prefix='hg-subversion-')
+            # Avoid filename issues with these simple names
+            fn = str(self._created)
+            fp = hgutil.posixfile(os.path.join(self._tempdir, fn), 'wb')
+            try:
+                fp.write(data)
+            finally:
+                fp.close()
+            self._created += 1
+            self._files[fname] = fn
+
+    def delfile(self, fname):
+        if fname in self._data:
+            del self._data[fname]
+        elif fname in self._files:
+            path = os.path.join(self._tempdir, self._files.pop(fname))
+            os.unlink(path)
+
+    def getfile(self, fname):
+        if fname in self._data:
+            return self._data[fname]
+        if self._tempdir is None or fname not in self._files:
+            raise IOError
+        path = os.path.join(self._tempdir, self._files[fname])
+        fp = hgutil.posixfile(path, 'rb')
+        try:
+            return fp.read()
+        finally:
+            fp.close()
+
+    def files(self):
+        return list(self._files) + list(self._data)
+
+    def close(self):
+        if self._tempdir is not None:
+            tempdir, self._tempdir = self._tempdir, None
+            shutil.rmtree(tempdir)
+        self._files = None
+        self._data = None
+
 class RevisionData(object):
 
     __slots__ = [
-        'file', 'added', 'files', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
+        'file', 'added', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
         'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
-        'exception',
+        'exception', 'store',
     ]
 
     def __init__(self, ui):
@@ -35,8 +95,8 @@ class RevisionData(object):
         self.clear()
 
     def clear(self):
+        self.store = FileStore()
         self.added = set()
-        self.files = {}
         self.deleted = {}
         self.rev = None
         self.execfiles = {}
@@ -50,7 +110,7 @@ class RevisionData(object):
         self.exception = None
 
     def set(self, path, data, isexec=False, islink=False, copypath=None):
-        self.files[path] = data
+        self.store.setfile(path, data)
         self.execfiles[path] = isexec
         self.symlinks[path] = islink
         if path in self.deleted:
@@ -60,13 +120,28 @@ class RevisionData(object):
         if copypath is not None:
             self.copies[path] = copypath
 
+    def get(self, path):
+        if path in self.deleted:
+            raise IOError(errno.ENOENT, '%s is deleted' % path)
+        data = self.store.getfile(path)
+        isexec = self.execfiles.get(path)
+        islink = self.symlinks.get(path)
+        copied = self.copies.get(path)
+        return data, isexec, islink, copied
+
     def delete(self, path):
         self.deleted[path] = True
-        if path in self.files:
-            del self.files[path]
+        self.store.delfile(path)
         self.execfiles[path] = False
         self.symlinks[path] = False
         self.ui.note('D %s\n' % path)
+
+    def files(self):
+        """Return a sorted list of changed files."""
+        files = set(self.store.files())
+        for g in (self.symlinks, self.execfiles, self.deleted):
+            files.update(g)
+        return sorted(files)
 
     def findmissing(self, svn):
 
@@ -102,6 +177,9 @@ class RevisionData(object):
 
         self.missing = set()
         self.ui.note('\n')
+
+    def close(self):
+        self.store.close()
 
 class EditingError(Exception):
     pass

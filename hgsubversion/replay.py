@@ -62,8 +62,13 @@ def _safe_message(msg):
           return msg.decode('iso-8859-1').encode('utf-8')
   return msg
 
-
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
+    try:
+        return _convert_rev(ui, meta, svn, r, tbdelta, firstrun)
+    finally:
+        meta.editor.current.close()
+
+def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     editor = meta.editor
     editor.current.clear()
@@ -89,14 +94,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     if current.missing:
         raise MissingPlainTextError()
 
-    # paranoidly generate the list of files to commit
-    files_to_commit = set(current.files.keys())
-    files_to_commit.update(current.symlinks.keys())
-    files_to_commit.update(current.execfiles.keys())
-    files_to_commit.update(current.deleted.keys())
-    # back to a list and sort so we get sane behavior
-    files_to_commit = list(files_to_commit)
-    files_to_commit.sort()
+    files_to_commit = current.files()
     branch_batches = {}
     rev = current.rev
     date = meta.fixdate(rev.date)
@@ -156,24 +154,26 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
         def filectxfn(repo, memctx, path):
             current_file = files[path]
-            if current_file in current.deleted:
-                raise IOError(errno.ENOENT, '%s is deleted' % path)
-            copied = current.copies.get(current_file)
-            flags = parentctx.flags(path)
-            is_exec = current.execfiles.get(current_file, 'x' in flags)
-            is_link = current.symlinks.get(current_file, 'l' in flags)
-            if current_file in current.files:
-                data = current.files[current_file]
-                if is_link and data.startswith('link '):
-                    data = data[len('link '):]
-                elif is_link:
-                    ui.debug('file marked as link, but may contain data: '
-                             '%s (%r)\n' % (current_file, flags))
+            data, isexec, islink, copied = current.get(current_file)
+            if isexec is None or islink is None:
+                flags = parentctx.flags(path)
+                if isexec is None:
+                    isexec = 'x' in flags
+                if islink is None:
+                    islink = 'l' in flags
+
+            if data is not None:
+                if islink:
+                    if data.startswith('link '):
+                        data = data[len('link '):]
+                    else:
+                        ui.debug('file marked as link, but may contain data: '
+                            '%s\n' % current_file)
             else:
                 data = parentctx.filectx(path).data()
             return context.memfilectx(path=path,
                                       data=data,
-                                      islink=is_link, isexec=is_exec,
+                                      islink=islink, isexec=isexec,
                                       copied=copied)
 
         message = _safe_message(rev.message)
