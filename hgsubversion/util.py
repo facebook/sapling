@@ -2,6 +2,7 @@ import errno
 import re
 import os
 import urllib
+from collections import deque
 
 from mercurial import cmdutil
 from mercurial import error
@@ -336,3 +337,32 @@ def getfilestoresize(ui):
     else:
         size = -1
     return size
+
+# Copy-paste from mercurial.util to avoid having to deal with backward
+# compatibility, plus the cache size is configurable.
+def lrucachefunc(func, size):
+    '''cache most recent results of function calls'''
+    cache = {}
+    order = deque()
+    if func.func_code.co_argcount == 1:
+        def f(arg):
+            if arg not in cache:
+                if len(cache) > size:
+                    del cache[order.popleft()]
+                cache[arg] = func(arg)
+            else:
+                order.remove(arg)
+            order.append(arg)
+            return cache[arg]
+    else:
+        def f(*args):
+            if args not in cache:
+                if len(cache) > size:
+                    del cache[order.popleft()]
+                cache[args] = func(*args)
+            else:
+                order.remove(args)
+            order.append(args)
+            return cache[args]
+
+    return f

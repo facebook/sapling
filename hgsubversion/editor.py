@@ -204,9 +204,9 @@ class CopiedFile(object):
         self.path = path
         self.copypath = copypath
 
-    def resolve(self, repo, ctx=None):
+    def resolve(self, getctxfn, ctx=None):
         if ctx is None:
-            ctx = repo[self.node]
+            ctx = getctxfn(self.node)
         fctx = ctx[self.path]
         data = fctx.data()
         flags = fctx.flags()
@@ -235,6 +235,7 @@ class HgEditor(svnwrap.Editor):
         # A mapping of file paths to batons
         self._openpaths = {}
         self._deleted = set()
+        self._getctx = util.lrucachefunc(self.repo.changectx, 3)
 
     def _openfile(self, path, data, isexec, islink, copypath, create=False):
         if path in self._openpaths:
@@ -277,7 +278,7 @@ class HgEditor(svnwrap.Editor):
             ha = self.meta.get_parent_revision(self.current.rev.revnum, branch)
             if ha == revlog.nullid:
                 return
-            ctx = self.repo.changectx(ha)
+            ctx = self._getctx(ha)
             if br_path not in ctx:
                 br_path2 = ''
                 if br_path != '':
@@ -300,7 +301,7 @@ class HgEditor(svnwrap.Editor):
 
         if path in self._svncopies:
             copy = self._svncopies.pop(path)
-            base, isexec, islink, copypath = copy.resolve(self.repo)
+            base, isexec, islink, copypath = copy.resolve(self._getctx)
             return self._openfile(path, base, isexec, islink, copypath)
 
         if not self.meta.is_path_valid(path):
@@ -313,7 +314,7 @@ class HgEditor(svnwrap.Editor):
         # replacing branch as parent, but svn delta editor provides delta
         # agains replaced branch.
         parent = self.meta.get_parent_revision(baserev + 1, branch, True)
-        ctx = self.repo[parent]
+        ctx = self._getctx(parent)
         if fpath not in ctx:
             self.current.addmissing(path)
             return None
@@ -354,7 +355,7 @@ class HgEditor(svnwrap.Editor):
         # agains replaced branch.
         ha = self.meta.get_parent_revision(copyfrom_revision + 1,
                                            from_branch, True)
-        ctx = self.repo.changectx(ha)
+        ctx = self._getctx(ha)
         if from_file not in ctx:
             self.current.addmissing(path)
             return None
@@ -367,7 +368,7 @@ class HgEditor(svnwrap.Editor):
             parentid = self.meta.get_parent_revision(
                 self.current.rev.revnum, branch)
             if parentid != revlog.nullid:
-                parentctx = self.repo.changectx(parentid)
+                parentctx = self._getctx(parentid)
                 if util.issamefile(parentctx, ctx, from_file):
                     copypath = from_file
         return self._openfile(path, fctx.data(), 'x' in flags, 'l' in flags,
@@ -428,7 +429,7 @@ class HgEditor(svnwrap.Editor):
         if new_hash == node.nullid:
             self.current.addmissing('%s/' % path)
             return path
-        fromctx = self.repo.changectx(new_hash)
+        fromctx = self._getctx(new_hash)
         if frompath != '/' and frompath != '':
             frompath = '%s/' % frompath
         else:
@@ -463,7 +464,7 @@ class HgEditor(svnwrap.Editor):
             parentid = self.meta.get_parent_revision(
                     self.current.rev.revnum, branch)
             if parentid != revlog.nullid:
-                parentctx = self.repo.changectx(parentid)
+                parentctx = self._getctx(parentid)
                 for k, v in copies.iteritems():
                     if util.issamefile(parentctx, fromctx, v):
                         svncopies[k].copypath = v
@@ -584,9 +585,8 @@ class HgEditor(svnwrap.Editor):
         for path, copy in self._svncopies.iteritems():
             nodes.setdefault(copy.node, []).append((path, copy))
         for node, copies in nodes.iteritems():
-            ctx = self.repo[node]
             for path, copy in copies:
-                data, isexec, islink, copied = copy.resolve(self.repo, ctx)
+                data, isexec, islink, copied = copy.resolve(self._getctx)
                 self.current.set(path, data, isexec, islink, copied)
         self._svncopies.clear()
 
