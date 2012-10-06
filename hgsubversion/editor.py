@@ -91,7 +91,7 @@ class RevisionData(object):
     __slots__ = [
         'file', 'added', 'deleted', 'rev', 'execfiles', 'symlinks', 'batons',
         'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
-        'exception', 'store',
+        'exception', 'store', '_failonmissing',
     ]
 
     def __init__(self, ui):
@@ -109,6 +109,9 @@ class RevisionData(object):
         # Map fully qualified destination file paths to module source path
         self.copies = {}
         self.missing = set()
+        # Used in tests and debugging
+        self._failonmissing = self.ui.config(
+            'hgsubversion', 'failonmissing', False)
         self.emptybranches = {}
         self.externals = {}
         self.exception = None
@@ -151,6 +154,11 @@ class RevisionData(object):
         for g in (self.symlinks, self.execfiles, self.deleted):
             files.update(g)
         return sorted(files)
+
+    def addmissing(self, path):
+        if self._failonmissing:
+            raise EditingError('missing entry: %s' % path)
+        self.missing.add(path)
 
     def findmissing(self, svn):
 
@@ -307,7 +315,7 @@ class HgEditor(svnwrap.Editor):
         parent = self.meta.get_parent_revision(baserev + 1, branch, True)
         ctx = self.repo[parent]
         if fpath not in ctx:
-            self.current.missing.add(path)
+            self.current.addmissing(path)
             return None
 
         fctx = ctx.filectx(fpath)
@@ -339,7 +347,7 @@ class HgEditor(svnwrap.Editor):
         (from_file,
          from_branch) = self.meta.split_branch_path(copyfrom_path)[:2]
         if not from_file:
-            self.current.missing.add(path)
+            self.current.addmissing(path)
             return None
         # Use exact=True because during replacements ('R' action) we select
         # replacing branch as parent, but svn delta editor provides delta
@@ -348,7 +356,7 @@ class HgEditor(svnwrap.Editor):
                                            from_branch, True)
         ctx = self.repo.changectx(ha)
         if from_file not in ctx:
-            self.current.missing.add(path)
+            self.current.addmissing(path)
             return None
 
         fctx = ctx.filectx(from_file)
@@ -399,7 +407,7 @@ class HgEditor(svnwrap.Editor):
         if tag not in self.meta.tags:
             tag = None
             if not self.meta.is_path_valid(copyfrom_path):
-                self.current.missing.add('%s/' % path)
+                self.current.addmissing('%s/' % path)
                 return path
         if tag:
             changeid = self.meta.tags[tag]
@@ -414,7 +422,7 @@ class HgEditor(svnwrap.Editor):
                 self.meta.branches[branch] = tmp
         new_hash = self.meta.get_parent_revision(source_rev + 1, source_branch, True)
         if new_hash == node.nullid:
-            self.current.missing.add('%s/' % path)
+            self.current.addmissing('%s/' % path)
             return path
         fromctx = self.repo.changectx(new_hash)
         if frompath != '/' and frompath != '':
@@ -552,7 +560,7 @@ class HgEditor(svnwrap.Editor):
                         path, target, isexec, islink, copypath)
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
-                    self.current.missing.add(path)
+                    self.current.addmissing(path)
                 else: # pragma: no cover
                     raise hgutil.Abort(*e.args)
             except: # pragma: no cover
