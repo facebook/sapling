@@ -95,12 +95,15 @@ class TestBasicRepoLayout(test_util.TestBase):
         assert 'README' not in repo
         assert '../branches' not in repo
 
-    def test_files_copied_from_outside_btt(self):
+    def test_files_copied_from_outside_btt(self, stupid=False):
         repo = self._load_fixture_and_fetch(
-            'test_files_copied_from_outside_btt.svndump')
+            'test_files_copied_from_outside_btt.svndump', stupid=stupid)
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
         self.assertEqual(len(repo.changelog), 2)
+
+    def test_files_copied_from_outside_btt_stupid(self):
+        self.test_files_copied_from_outside_btt(stupid=True)
 
     def test_file_renamed_in_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(

@@ -406,7 +406,11 @@ class HgEditor(svnwrap.Editor):
         tag = self.meta.get_path_tag(copyfrom_path)
         if tag not in self.meta.tags:
             tag = None
-            if not self.meta.is_path_valid(copyfrom_path):
+            if not self.meta.is_path_valid(copyfrom_path, existing=False):
+                # The source path only exists at copyfrom_revision, use
+                # existing=False to guess a possible branch location and
+                # test it against the filemap. The actual path and
+                # revision will be resolved below if necessary.
                 self.current.addmissing('%s/' % path)
                 return path
         if tag:

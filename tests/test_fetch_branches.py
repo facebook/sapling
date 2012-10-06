@@ -58,8 +58,9 @@ class TestFetchBranches(test_util.TestBase):
         self.test_unorderedbranch(True)
 
     def test_renamed_branch_to_trunk(self, stupid=False):
+        config = {'hgsubversion.failonmissing': 'true'}
         repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
-                                            stupid=stupid)
+                                            stupid=stupid, config=config)
         self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
         self.assert_('iota' in repo['default'])
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')

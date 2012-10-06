@@ -393,10 +393,10 @@ class SVNMeta(object):
                 return {ln: (src_branch, src_rev, revnum)}
         return {}
 
-    def is_path_valid(self, path):
+    def is_path_valid(self, path, existing=True):
         if path is None:
             return False
-        subpath = self.split_branch_path(path)[0]
+        subpath = self.split_branch_path(path, existing)[0]
         if subpath is None:
             return False
         return subpath in self.filemap
