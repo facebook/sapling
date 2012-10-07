@@ -150,19 +150,19 @@ bring working copy to HEAD state (it's not bare repo)
   pulling from $TESTTMP/gitrepo1
   importing git objects into hg
   (run 'hg update' to get a working copy)
-  $ hg checkout -C  | sed "s_$(dirname $(pwd))_TEMPLOCATION_"
-  cloning subrepo hgsub from TEMPLOCATION/hgsub
+  $ hg checkout -C
+  cloning subrepo hgsub from $TESTTMP/hgsub
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
   $ echo % pull shall bring .hgsub entry which was added to the git repo
   % pull shall bring .hgsub entry which was added to the git repo
-  $ cat hgrepo/.hgsub | sed "s_$(pwd)_TEMPLOCATION_"
-  hgsub = TEMPLOCATION/hgsub
+  $ cat hgrepo/.hgsub
+  hgsub = $TESTTMP/hgsub
   subrepo1 = [git]../gitsubrepo
   xyz/subrepo2 = [git]../gitsubrepo
   $ echo % .hgsubstate shall list revision of the subrepo added through git repo
   % .hgsubstate shall list revision of the subrepo added through git repo
-  $ cat hgrepo/.hgsubstate | sed "s_$(pwd)_TEMPLOCATION_"
+  $ cat hgrepo/.hgsubstate
   481ec30d580f333ae3a77f94c973ce37b69d5bda hgsub
   56f0304c5250308f14cfbafdc27bd12d40154d17 subrepo1
   aabf7cd015089aff0b84596e69aa37b24a3d090a xyz/subrepo2
