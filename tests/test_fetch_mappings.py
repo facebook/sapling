@@ -101,49 +101,40 @@ class MapTests(test_util.TestBase):
         all_tests = set(test)
         self.assertEqual(fromself.symmetric_difference(all_tests), set())
 
-    def test_file_map(self, stupid=False):
-        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
+    def _loadwithfilemap(self, svndump, filemapcontent, stupid=False):
+        repo_path = self.load_svndump(svndump)
         filemap = open(self.filemap, 'w')
-        filemap.write("include alpha\n")
+        filemap.write(filemapcontent)
         filemap.close()
         ui = self.ui(stupid)
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, filemap=self.filemap)
-        self.assertEqual(node.hex(self.repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
-        self.assertEqual(node.hex(self.repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
+        return self.repo
+
+    def test_file_map(self, stupid=False):
+        repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
+            "include alpha\n", stupid)
+        self.assertEqual(node.hex(repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
+        self.assertEqual(node.hex(repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
 
     def test_file_map_stupid(self):
         # TODO: re-enable test if we ever reinstate this feature
         self.assertRaises(hgutil.Abort, self.test_file_map, True)
 
     def test_file_map_exclude(self, stupid=False):
-        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
-        filemap = open(self.filemap, 'w')
-        filemap.write("exclude alpha\n")
-        filemap.close()
-        ui = self.ui(stupid)
-        ui.setconfig('hgsubversion', 'filemap', self.filemap)
-        commands.clone(ui, test_util.fileurl(repo_path),
-                       self.wc_path, filemap=self.filemap)
-        self.assertEqual(node.hex(self.repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
-        self.assertEqual(node.hex(self.repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
+        repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
+            "exclude alpha\n", stupid)
+        self.assertEqual(node.hex(repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
+        self.assertEqual(node.hex(repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
 
     def test_file_map_exclude_stupid(self):
         # TODO: re-enable test if we ever reinstate this feature
         self.assertRaises(hgutil.Abort, self.test_file_map_exclude, True)
 
     def test_file_map_rule_order(self):
-        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
-        filemap = open(self.filemap, 'w')
-        filemap.write("exclude alpha\n")
-        filemap.write("include .\n")
-        filemap.write("exclude gamma\n")
-        filemap.close()
-        ui = self.ui(False)
-        ui.setconfig('hgsubversion', 'filemap', self.filemap)
-        commands.clone(ui, test_util.fileurl(repo_path),
-                       self.wc_path, filemap=self.filemap)
+        repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
+            "exclude alpha\ninclude .\nexclude gamma\n")
         # The exclusion of alpha is overridden by the later rule to
         # include all of '.', whereas gamma should remain excluded
         # because it's excluded after the root directory.
