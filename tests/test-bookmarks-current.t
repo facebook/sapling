@@ -115,6 +115,13 @@ deactivate current bookmark using -i
      Z                         0:719295282060
 
   $ hg up -q Y
+  $ hg bookmark -i
+  $ hg bookmarks
+     Y                         0:719295282060
+     Z                         0:719295282060
+  $ hg bookmark -i
+  no active bookmark
+  $ hg up -q Y
   $ hg bookmarks
    * Y                         0:719295282060
      Z                         0:719295282060
