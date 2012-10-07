@@ -97,3 +97,19 @@ Cloning transfers all bookmarks from remote to local
     1 7bcd915dc873 9497a4ee62e1 "add beta" bookmarks: [b1]
     0 3442585be8a6 7eeab2ea75ec "add alpha" bookmarks: []
   $ cd ..
+
+No changes
+  $ cd purehglocalrepo
+  $ hg outgoing
+  comparing with $TESTTMP/hgremoterepo
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
+  $ cd hggitlocalrepo
+  $ hg outgoing
+  comparing with $TESTTMP/gitremoterepo
+  searching for changes
+  no changes found
+  [1]
+  $ cd ..
