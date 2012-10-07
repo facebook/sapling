@@ -30,7 +30,6 @@ def updateexternals(ui, meta, current):
     branches = {}
     for path, entry in current.externals.iteritems():
         if not meta.is_path_valid(path):
-            ui.warn('WARNING: Invalid path %s in externals\n' % path)
             continue
 
         p, b, bp = meta.split_branch_path(path)
