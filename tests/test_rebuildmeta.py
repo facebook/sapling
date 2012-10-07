@@ -94,7 +94,7 @@ def _run_assertions(self, name, stupid, single, src, dest, u):
 
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the source!')
-    self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
+    self.assertTrue(os.path.isdir(os.path.join(dest.path, 'svn')),
                     'no .hg/svn directory in the destination!')
     dest = hg.repository(u, os.path.dirname(dest.path))
     for tf in ('lastpulled', 'rev_map', 'uuid', 'tagmap', 'layout', 'subdir',):
