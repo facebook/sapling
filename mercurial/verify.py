@@ -25,6 +25,7 @@ def _normpath(f):
     return f
 
 def _verify(repo):
+    repo = repo.unfiltered()
     mflinkrevs = {}
     filelinkrevs = {}
     filenodes = {}
