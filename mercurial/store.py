@@ -441,6 +441,12 @@ class _fncachevfs(scmutil.abstractvfs):
             self.fncache.add(path)
         return self.vfs(self.encode(path), mode, *args, **kw)
 
+    def join(self, path):
+        if path:
+            return self.vfs.join(self.encode(path))
+        else:
+            return self.vfs.join(path)
+
 class fncachestore(basicstore):
     def __init__(self, path, vfstype, dotencode):
         if dotencode:

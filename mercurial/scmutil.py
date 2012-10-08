@@ -347,6 +347,12 @@ class filtervfs(abstractvfs):
     def __call__(self, path, *args, **kwargs):
         return self._orig(self._filter(path), *args, **kwargs)
 
+    def join(self, path):
+        if path:
+            return self._orig.join(self._filter(path))
+        else:
+            return self._orig.join(path)
+
 filteropener = filtervfs
 
 def canonpath(root, cwd, myname, auditor=None):

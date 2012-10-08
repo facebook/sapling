@@ -74,6 +74,12 @@ def build_opener(ui, authinfo):
             f = "/".join((self.base, urllib.quote(path)))
             return httprangereader(f, urlopener)
 
+        def join(self, path):
+            if path:
+                return os.path.join(self.base, path)
+            else:
+                return self.base
+
     return statichttpvfs
 
 class statichttppeer(localrepo.localpeer):
