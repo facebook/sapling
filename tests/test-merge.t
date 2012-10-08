@@ -70,7 +70,7 @@ clean merge
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   exporting hg objects to git
-  creating and sending data
+  searching for changes
 
   $ cd ..
   $ cd gitrepo2

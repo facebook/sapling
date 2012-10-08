@@ -862,7 +862,8 @@ class GitHandler(object):
 
         genpack = self.git.object_store.generate_pack_contents
         try:
-            self.ui.status(_("creating and sending data\n"))
+            self.ui.status(_("searching for changes\n"))
+            self.ui.note(_("creating and sending data\n"))
             new_refs = client.send_pack(path, changed, genpack)
             return old_refs, new_refs
         except (HangupException, GitProtocolError), e:

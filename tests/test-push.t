@@ -60,7 +60,7 @@ bail if the user does not have dulwich
   $ hg push -r beta
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/beta => GIT:cffa0e8d
 
   $ cd ..
@@ -90,7 +90,7 @@ bail if the user does not have dulwich
   % this should fail
   $ hg push -r master
   pushing to $TESTTMP/gitrepo
-  creating and sending data
+  searching for changes
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
 
@@ -98,7 +98,7 @@ bail if the user does not have dulwich
   % ... even with -f
   $ hg push -fr master
   pushing to $TESTTMP/gitrepo
-  creating and sending data
+  searching for changes
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
 
@@ -131,7 +131,7 @@ which should not implicitly also push the not-master ref.
   % this should also fail
   $ hg push -r master
   pushing to $TESTTMP/gitrepo
-  creating and sending data
+  searching for changes
   abort: pushing refs/heads/master overwrites 72f56395749d
   [255]
 
@@ -139,7 +139,7 @@ which should not implicitly also push the not-master ref.
   % ... but succeed with -f
   $ hg push -fr master
   pushing to $TESTTMP/gitrepo
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:cc119202
 
   $ echo % this should fail, no changes to push
@@ -148,7 +148,7 @@ The exit code for this was broken in Mercurial (incorrectly returning 0) until
 issue3228 was fixed in 2.1
   $ hg push -r master && false
   pushing to $TESTTMP/gitrepo
-  creating and sending data
+  searching for changes
   no changes found
   [1]
 

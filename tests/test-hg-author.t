@@ -55,7 +55,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:cffa0e8d
 
   $ echo gamma >> beta
@@ -63,7 +63,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:2b9ec6a4
 
   $ echo gamma > gamma
@@ -72,7 +72,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:fee30180
 
   $ echo delta > delta
@@ -81,7 +81,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:d1659250
 
   $ echo epsilon > epsilon
@@ -90,7 +90,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:ee985f12
 
   $ echo zeta > zeta
@@ -99,7 +99,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:d21e26b4
 
   $ echo eta > eta
@@ -108,7 +108,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:8c878c97
 
   $ echo theta > theta
@@ -117,7 +117,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:1e03e913
 
   $ hg log --graph | egrep -v ': *(not-master|master)'

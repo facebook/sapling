@@ -58,7 +58,7 @@ TODO stop using this when we're 1.5 only
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:05c2bcbe
 
   $ hg branch gamma | grep -v 'permanent and global'
@@ -67,7 +67,7 @@ TODO stop using this when we're 1.5 only
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:296802ef
 
   $ hg log --graph | $filterhash | egrep -v ': *(not-master|master)'

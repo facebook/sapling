@@ -122,7 +122,7 @@ utf-8 encoded commit message
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   exporting hg objects to git
-  creating and sending data
+  searching for changes
 
   $ cd ../gitrepo2
   $ git log --pretty=medium

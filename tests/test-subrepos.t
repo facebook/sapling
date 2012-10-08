@@ -116,7 +116,7 @@ allow commits despite working copy presense
   $ hg push
   pushing to $TESTTMP/gitrepo1
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/heads/master => GIT:4663c492
   $ cd ..
   $ cd gitrepo1

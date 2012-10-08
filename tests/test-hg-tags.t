@@ -53,7 +53,7 @@ bail if the user does not have dulwich
   $ hg push
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
       default::refs/tags/alpha => GIT:7eeab2ea
       default::refs/heads/master => GIT:9a2616b9
 

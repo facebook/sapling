@@ -61,7 +61,7 @@ resolve using second parent
   $ hg push -r master ../gitrepo
   pushing to ../gitrepo
   exporting hg objects to git
-  creating and sending data
+  searching for changes
   $ cd ..
 
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
