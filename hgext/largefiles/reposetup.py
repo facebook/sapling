@@ -14,6 +14,7 @@ import os
 from mercurial import context, error, manifest, match as match_, util
 from mercurial import node as node_
 from mercurial.i18n import _
+from mercurial import localrepo
 
 import lfcommands
 import proto
@@ -88,6 +89,9 @@ def reposetup(ui, repo):
         # appropriate list in the result. Also removes standin files
         # from the listing. Revert to the original status if
         # self.lfstatus is False.
+        # XXX large file status is buggy when used on repo proxy.
+        # XXX this needs to be investigated.
+        @localrepo.unfilteredmeth
         def status(self, node1='.', node2=None, match=None, ignored=False,
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
