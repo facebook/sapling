@@ -15,6 +15,7 @@ import cStringIO
 _format = ">cllll"
 propertycache = util.propertycache
 filecache = scmutil.filecache
+_rangemask = 0x7fffffff
 
 class repocache(filecache):
     """filecache for files in .hg/"""
@@ -334,7 +335,8 @@ class dirstate(object):
         '''Mark a file normal and clean.'''
         s = os.lstat(self._join(f))
         mtime = int(s.st_mtime)
-        self._addpath(f, 'n', s.st_mode, s.st_size, mtime)
+        self._addpath(f, 'n', s.st_mode,
+                      s.st_size & _rangemask, mtime & _rangemask)
         if f in self._copymap:
             del self._copymap[f]
         if mtime > self._lastnormaltime:
@@ -401,7 +403,8 @@ class dirstate(object):
         if self._pl[1] == nullid:
             return self.normallookup(f)
         s = os.lstat(self._join(f))
-        self._addpath(f, 'm', s.st_mode, s.st_size, int(s.st_mtime))
+        self._addpath(f, 'm', s.st_mode,
+                      s.st_size & _rangemask, int(s.st_mtime) & _rangemask)
         if f in self._copymap:
             del self._copymap[f]
 
@@ -769,13 +772,13 @@ class dirstate(object):
                 # means "can we check links?".
                 mtime = int(st.st_mtime)
                 if (size >= 0 and
-                    (size != st.st_size
+                    ((size != st.st_size and size != st.st_size & _rangemask)
                      or ((mode ^ st.st_mode) & 0100 and self._checkexec))
                     and (mode & lnkkind != lnkkind or self._checklink)
                     or size == -2 # other parent
                     or fn in self._copymap):
                     madd(fn)
-                elif (mtime != time
+                elif ((time != mtime and time != mtime & _rangemask)
                       and (mode & lnkkind != lnkkind or self._checklink)):
                     ladd(fn)
                 elif mtime == self._lastnormaltime:
