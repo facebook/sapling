@@ -41,7 +41,7 @@ def _revdescendants(repo, revs, followfirst):
         return
 
     seen = set(revs)
-    for i in xrange(first + 1, len(cl)):
+    for i in cl.revs(first + 1):
         for x in cl.parentrevs(i)[:cut]:
             if x != nullrev and x in seen:
                 seen.add(i)
@@ -1209,7 +1209,7 @@ def matching(repo, subset, x):
     # i18n: "matching" is a keyword
     l = getargs(x, 1, 2, _("matching takes 1 or 2 arguments"))
 
-    revs = getset(repo, xrange(len(repo)), l[0])
+    revs = getset(repo, repo.changelog, l[0])
 
     fieldlist = ['metadata']
     if len(l) > 1:
@@ -1307,7 +1307,7 @@ def roots(repo, subset, x):
     """``roots(set)``
     Changesets in set with no parent changeset in set.
     """
-    s = set(getset(repo, xrange(len(repo)), x))
+    s = set(getset(repo, repo.changelog, x))
     subset = [r for r in subset if r in s]
     cs = _children(repo, subset, s)
     return [r for r in subset if r not in cs]
