@@ -15,6 +15,10 @@ locally is only to provide a test fixture.
 Bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
+Skip if Mercurial < 2.1; workflow was different before that
+  $ python -c 'from mercurial import util ; assert \
+  >  util.version() != "unknown" and util.version() >= "2.1"' || exit 80
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 
@@ -105,10 +109,20 @@ No changes
   searching for changes
   no changes found
   [1]
+  $ hg push
+  pushing to $TESTTMP/hgremoterepo
+  searching for changes
+  no changes found
+  [1]
   $ cd ..
   $ cd hggitlocalrepo
   $ hg outgoing
   comparing with $TESTTMP/gitremoterepo
+  searching for changes
+  no changes found
+  [1]
+  $ hg push
+  pushing to $TESTTMP/gitremoterepo
   searching for changes
   no changes found
   [1]
