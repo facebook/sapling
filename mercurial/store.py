@@ -423,8 +423,8 @@ class fncache(object):
         return iter(self.entries)
 
 class _fncachevfs(scmutil.abstractvfs):
-    def __init__(self, op, fnc, encode):
-        self.opener = op
+    def __init__(self, vfs, fnc, encode):
+        self.opener = vfs
         self.fncache = fnc
         self.encode = encode
 
