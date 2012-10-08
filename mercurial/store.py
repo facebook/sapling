@@ -295,6 +295,7 @@ class basicstore(object):
         self.path = vfs.base
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
+        self.rawvfs = vfs
         self.vfs = scmutil.filtervfs(vfs, encodedir)
         self.opener = self.vfs
 
@@ -308,7 +309,7 @@ class basicstore(object):
             path += '/' + relpath
         striplen = len(self.path) + 1
         l = []
-        if os.path.isdir(path):
+        if self.rawvfs.isdir(path):
             visit = [path]
             while visit:
                 p = visit.pop()
@@ -346,6 +347,7 @@ class encodedstore(basicstore):
         self.path = vfs.base
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
+        self.rawvfs = vfs
         self.vfs = scmutil.filtervfs(vfs, encodefilename)
         self.opener = self.vfs
 
