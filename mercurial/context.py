@@ -95,7 +95,10 @@ class changectx(object):
 
         # lookup failed
         # check if it might have come from damaged dirstate
-        if changeid in repo.dirstate.parents():
+        #
+        # XXX we could avoid the unfiltered if we had a recognizable exception
+        # for filtered changeset access
+        if changeid in repo.unfiltered().dirstate.parents():
             raise error.Abort(_("working directory has unknown parent '%s'!")
                               % short(changeid))
         try:
