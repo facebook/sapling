@@ -291,9 +291,9 @@ _data = ('data 00manifest.d 00manifest.i 00changelog.d 00changelog.i'
 class basicstore(object):
     '''base class for local repository stores'''
     def __init__(self, path, vfstype):
-        self.path = path
+        vfs = vfstype(path)
+        self.path = vfs.base
         self.createmode = _calcmode(path)
-        vfs = vfstype(self.path)
         vfs.createmode = self.createmode
         self.vfs = scmutil.filtervfs(vfs, encodedir)
         self.opener = self.vfs
@@ -342,9 +342,9 @@ class basicstore(object):
 
 class encodedstore(basicstore):
     def __init__(self, path, vfstype):
-        self.path = path + '/store'
+        vfs = vfstype(path + '/store')
+        self.path = vfs.base
         self.createmode = _calcmode(self.path)
-        vfs = vfstype(self.path)
         vfs.createmode = self.createmode
         self.vfs = scmutil.filtervfs(vfs, encodefilename)
         self.opener = self.vfs
@@ -448,10 +448,10 @@ class fncachestore(basicstore):
         else:
             encode = _plainhybridencode
         self.encode = encode
-        self.path = path + '/store'
+        vfs = vfstype(path + '/store')
+        self.path = vfs.base
         self.pathsep = self.path + '/'
         self.createmode = _calcmode(self.path)
-        vfs = vfstype(self.path)
         vfs.createmode = self.createmode
         fnc = fncache(vfs)
         self.fncache = fnc
