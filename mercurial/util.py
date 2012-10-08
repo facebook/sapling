@@ -244,8 +244,11 @@ class propertycache(object):
         self.name = func.__name__
     def __get__(self, obj, type=None):
         result = self.func(obj)
-        setattr(obj, self.name, result)
+        self.cachevalue(obj, result)
         return result
+
+    def cachevalue(self, obj, value):
+        setattr(obj, self.name, value)
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''

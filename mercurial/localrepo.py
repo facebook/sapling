@@ -23,6 +23,23 @@ class storecache(filecache):
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
+class unfilteredpropertycache(propertycache):
+    """propertycache that apply to unfiltered repo only"""
+
+    def __get__(self, repo, type=None):
+        return super(unfilteredpropertycache, self).__get__(repo.unfiltered())
+
+class filteredpropertycache(propertycache):
+    """propertycache that must take filtering in account"""
+
+    def cachevalue(self, obj, value):
+        object.__setattr__(obj, self.name, value)
+
+
+def hasunfilteredcache(repo, name):
+    """check if an repo and a unfilteredproperty cached value for <name>"""
+    return name in vars(repo.unfiltered())
+
 def unfilteredmeth(orig):
     """decorate method that always need to be run on unfiltered version"""
     def wrapper(repo, *args, **kwargs):
@@ -304,7 +321,7 @@ class localrepository(object):
             self.ui.warn(msg % len(list(store)))
         return store
 
-    @propertycache
+    @unfilteredpropertycache
     def hiddenrevs(self):
         """hiddenrevs: revs that should be hidden by command and tools
 
@@ -492,7 +509,7 @@ class localrepository(object):
         self.tags() # instantiate the cache
         self._tag(names, node, message, local, user, date)
 
-    @propertycache
+    @filteredpropertycache
     def _tagscache(self):
         '''Returns a tagscache object that contains various tags related
         caches.'''
@@ -879,11 +896,11 @@ class localrepository(object):
 
         return data
 
-    @propertycache
+    @unfilteredpropertycache
     def _encodefilterpats(self):
         return self._loadfilter('encode')
 
-    @propertycache
+    @unfilteredpropertycache
     def _decodefilterpats(self):
         return self._loadfilter('decode')
 
@@ -1049,13 +1066,10 @@ class localrepository(object):
         return 0
 
     def invalidatecaches(self):
-        def delcache(name):
-            try:
-                delattr(self, name)
-            except AttributeError:
-                pass
 
-        delcache('_tagscache')
+        if '_tagscache' in vars(self):
+            # can't use delattr on proxy
+            del self.__dict__['_tagscache']
 
         self.unfiltered()._branchcache = None # in UTF-8
         self.unfiltered()._branchcachetip = None
@@ -1070,7 +1084,7 @@ class localrepository(object):
         rereads the dirstate. Use dirstate.invalidate() if you want to
         explicitly read the dirstate again (i.e. restoring it to a previous
         known good state).'''
-        if 'dirstate' in self.__dict__:
+        if hasunfilteredcache(self, 'dirstate'):
             for k in self.dirstate._filecache:
                 try:
                     delattr(self.dirstate, k)
@@ -1127,7 +1141,7 @@ class localrepository(object):
 
         def unlock():
             self.store.write()
-            if '_phasecache' in vars(self):
+            if hasunfilteredcache(self, '_phasecache'):
                 self._phasecache.write()
             for k, ce in self._filecache.items():
                 if k == 'dirstate':
