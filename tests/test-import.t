@@ -602,6 +602,9 @@ test -p0
   $ echo a > a
   $ hg ci -Am t
   adding a
+  $ hg import -p foo
+  abort: invalid value 'foo' for option -p, expected int
+  [255]
   $ hg import -p0 - << EOF
   > foobar
   > --- a	Sat Apr 12 22:43:58 2008 -0400
