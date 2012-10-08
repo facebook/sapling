@@ -274,10 +274,10 @@ def _dothybridencode(f):
 def _plainhybridencode(f):
     return _hybridencode(f, False)
 
-def _calcmode(path):
+def _calcmode(vfs):
     try:
         # files in .hg/ will be created using this mode
-        mode = os.stat(path).st_mode
+        mode = vfs.stat().st_mode
             # avoid some useless chmods
         if (0777 & ~util.umask) == (0777 & mode):
             mode = None
@@ -293,7 +293,7 @@ class basicstore(object):
     def __init__(self, path, vfstype):
         vfs = vfstype(path)
         self.path = vfs.base
-        self.createmode = _calcmode(path)
+        self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.vfs = scmutil.filtervfs(vfs, encodedir)
         self.opener = self.vfs
@@ -344,7 +344,7 @@ class encodedstore(basicstore):
     def __init__(self, path, vfstype):
         vfs = vfstype(path + '/store')
         self.path = vfs.base
-        self.createmode = _calcmode(self.path)
+        self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         self.vfs = scmutil.filtervfs(vfs, encodefilename)
         self.opener = self.vfs
@@ -457,7 +457,7 @@ class fncachestore(basicstore):
         vfs = vfstype(path + '/store')
         self.path = vfs.base
         self.pathsep = self.path + '/'
-        self.createmode = _calcmode(self.path)
+        self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
         fnc = fncache(vfs)
         self.fncache = fnc

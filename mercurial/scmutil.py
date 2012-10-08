@@ -219,6 +219,9 @@ class abstractvfs(object):
     def mkdir(self, path=None):
         return os.mkdir(self.join(path))
 
+    def stat(self, path=None):
+        return os.stat(self.join(path))
+
 class vfs(abstractvfs):
     '''Operate files relative to a base directory
 
