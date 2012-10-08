@@ -214,7 +214,7 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
 
-    @util.propertycache
+    @localrepo.unfilteredpropertycache
     def changelog(self):
         # consume the header if it exists
         self.bundle.changelogheader()
@@ -222,7 +222,7 @@ class bundlerepository(localrepo.localrepository):
         self.manstart = self.bundle.tell()
         return c
 
-    @util.propertycache
+    @localrepo.unfilteredpropertycache
     def manifest(self):
         self.bundle.seek(self.manstart)
         # consume the header if it exists
@@ -231,12 +231,12 @@ class bundlerepository(localrepo.localrepository):
         self.filestart = self.bundle.tell()
         return m
 
-    @util.propertycache
+    @localrepo.unfilteredpropertycache
     def manstart(self):
         self.changelog
         return self.manstart
 
-    @util.propertycache
+    @localrepo.unfilteredpropertycache
     def filestart(self):
         self.manifest
         return self.filestart

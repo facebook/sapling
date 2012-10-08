@@ -18,7 +18,18 @@ import weakref, errno, os, time, inspect
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
-class storecache(filecache):
+class repofilecache(filecache):
+    """All filecache usage on repo are done for logic that should be unfiltered
+    """
+
+    def __get__(self, repo, type=None):
+        return super(repofilecache, self).__get__(repo.unfiltered(), type)
+    def __set__(self, repo, value):
+        return super(repofilecache, self).__set__(repo.unfiltered(), value)
+    def __delete__(self, repo):
+        return super(repofilecache, self).__delete__(repo.unfiltered())
+
+class storecache(repofilecache):
     """filecache for files in the store"""
     def join(self, obj, fname):
         return obj.sjoin(fname)
@@ -292,11 +303,11 @@ class localrepository(object):
         Intended to be ovewritten by filtered repo."""
         return self
 
-    @filecache('bookmarks')
+    @repofilecache('bookmarks')
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
-    @filecache('bookmarks.current')
+    @repofilecache('bookmarks.current')
     def _bookmarkcurrent(self):
         return bookmarks.readcurrent(self)
 
@@ -355,7 +366,7 @@ class localrepository(object):
     def manifest(self):
         return manifest.manifest(self.sopener)
 
-    @filecache('dirstate')
+    @repofilecache('dirstate')
     def dirstate(self):
         warned = [0]
         def validate(node):
