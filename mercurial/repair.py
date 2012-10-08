@@ -56,6 +56,7 @@ def _collectbrokencsets(repo, files, striprev):
     return s
 
 def strip(ui, repo, nodelist, backup="all", topic='backup'):
+    repo = repo.unfiltered()
     # It simplifies the logic around updating the branchheads cache if we only
     # have to consider the effect of the stripped revisions and not revisions
     # missing because the cache is out-of-date.
