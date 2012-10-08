@@ -341,8 +341,6 @@ class engine(object):
         '''Perform expansion. t is name of map element to expand.
         mapping contains added elements for use during expansion. Is a
         generator.'''
-        return _flatten(func(self, mapping, data) for func, data in
-                         self._load(t))
         return _flatten(runtemplate(self, mapping, self._load(t)))
 
 engines = {'default': engine}
