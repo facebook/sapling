@@ -275,6 +275,7 @@ def newcommit(repo, phase, *args, **kwargs):
     It should be used instead of repo.commit inside the mq source for operation
     creating new changeset.
     """
+    repo = repo.unfiltered()
     if phase is None:
         if repo.ui.configbool('mq', 'secret', False):
             phase = phases.secret
