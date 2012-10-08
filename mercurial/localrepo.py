@@ -1869,25 +1869,26 @@ class localrepository(object):
             if not unbundle:
                 lock = remote.lock()
             try:
+                unfi = self.unfiltered()
                 # discovery
                 fci = discovery.findcommonincoming
-                commoninc = fci(self, remote, force=force)
+                commoninc = fci(unfi, remote, force=force)
                 common, inc, remoteheads = commoninc
                 fco = discovery.findcommonoutgoing
-                outgoing = fco(self, remote, onlyheads=revs,
+                outgoing = fco(unfi, remote, onlyheads=revs,
                                commoninc=commoninc, force=force)
 
 
                 if not outgoing.missing:
                     # nothing to push
-                    scmutil.nochangesfound(self.ui, self, outgoing.excluded)
+                    scmutil.nochangesfound(unfi.ui, unfi, outgoing.excluded)
                     ret = None
                 else:
                     # something to push
                     if not force:
                         # if self.obsstore == False --> no obsolete
                         # then, save the iteration
-                        if self.obsstore:
+                        if unfi.obsstore:
                             # this message are here for 80 char limit reason
                             mso = _("push includes obsolete changeset: %s!")
                             msu = _("push includes unstable changeset: %s!")
@@ -1897,14 +1898,14 @@ class localrepository(object):
                             # least one of the missinghead will be obsolete or
                             # unstable. So checking heads only is ok
                             for node in outgoing.missingheads:
-                                ctx = self[node]
+                                ctx = unfi[node]
                                 if ctx.obsolete():
                                     raise util.Abort(mso % ctx)
                                 elif ctx.unstable():
                                     raise util.Abort(msu % ctx)
                                 elif ctx.bumped():
                                     raise util.Abort(msb % ctx)
-                        discovery.checkheads(self, remote, outgoing,
+                        discovery.checkheads(unfi, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))
 
@@ -1957,7 +1958,7 @@ class localrepository(object):
                     cheads = [node for node in revs if node in common]
                     # and
                     # * commonheads parents on missing
-                    revset = self.set('%ln and parents(roots(%ln))',
+                    revset = unfi.set('%ln and parents(roots(%ln))',
                                      outgoing.commonheads,
                                      outgoing.missing)
                     cheads.extend(c.node() for c in revset)
@@ -1980,7 +1981,7 @@ class localrepository(object):
                     # Get the list of all revs draft on remote by public here.
                     # XXX Beware that revset break if droots is not strictly
                     # XXX root we may want to ensure it is but it is costly
-                    outdated =  self.set('heads((%ln::%ln) and public())',
+                    outdated =  unfi.set('heads((%ln::%ln) and public())',
                                          droots, cheads)
                     for newremotehead in outdated:
                         r = remote.pushkey('phases',
