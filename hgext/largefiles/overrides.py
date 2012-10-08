@@ -968,7 +968,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
         return None
     o = lfutil.findoutgoing(repo, remote, False)
     if not o:
-        return None
+        return o
     o = repo.changelog.nodesbetween(o, revs)[0]
     if opts.get('newest_first'):
         o.reverse()
@@ -1002,6 +1002,8 @@ def overrideoutgoing(orig, ui, repo, dest=None, **opts):
         toupload = getoutgoinglfiles(ui, repo, dest, **opts)
         if toupload is None:
             ui.status(_('largefiles: No remote repo\n'))
+        elif not toupload:
+            ui.status(_('largefiles: no files to upload\n'))
         else:
             ui.status(_('largefiles to upload:\n'))
             for file in toupload:
@@ -1021,6 +1023,8 @@ def overridesummary(orig, ui, repo, *pats, **opts):
         toupload = getoutgoinglfiles(ui, repo, None, **opts)
         if toupload is None:
             ui.status(_('largefiles: No remote repo\n'))
+        elif not toupload:
+            ui.status(_('largefiles: (no files to upload)\n'))
         else:
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
