@@ -459,6 +459,7 @@ class fncachestore(basicstore):
         self.pathsep = self.path + '/'
         self.createmode = _calcmode(vfs)
         vfs.createmode = self.createmode
+        self.rawvfs = vfs
         fnc = fncache(vfs)
         self.fncache = fnc
         self.vfs = _fncachevfs(vfs, fnc, encode)
@@ -467,16 +468,14 @@ class fncachestore(basicstore):
     def join(self, f):
         return self.pathsep + self.encode(f)
 
-    def getsize(self, path):
-        return os.stat(self.pathsep + path).st_size
-
     def datafiles(self):
         rewrite = False
         existing = []
+        getstat = self.rawvfs.stat
         for f in sorted(self.fncache):
             ef = self.encode(f)
             try:
-                yield f, ef, self.getsize(ef)
+                yield f, ef, getstat(ef).st_size
                 existing.append(f)
             except OSError, err:
                 if err.errno != errno.ENOENT:
