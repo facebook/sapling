@@ -3453,7 +3453,8 @@ def reposetup(ui, repo):
             mqtags = [(patch.node, patch.name) for patch in q.applied]
 
             try:
-                self.changelog.rev(mqtags[-1][0])
+                # for now ignore filtering business
+                self.unfiltered().changelog.rev(mqtags[-1][0])
             except error.LookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
@@ -3483,7 +3484,7 @@ def reposetup(ui, repo):
             else:
                 qbasenode = q.applied[0].node
                 try:
-                    qbase = cl.rev(qbasenode)
+                    qbase = self.unfiltered().changelog.rev(qbasenode)
                 except error.LookupError:
                     self.ui.warn(_('mq status file refers to unknown node %s\n')
                                  % short(qbasenode))
