@@ -426,6 +426,7 @@ def getrevs(repo, name):
     """Return the set of revision that belong to the <name> set
 
     Such access may compute the set and cache it for future use"""
+    repo = repo.unfiltered()
     if not repo.obsstore:
         return ()
     if name not in repo.obsstore.caches:
