@@ -367,8 +367,8 @@ class encodedstore(basicstore):
 class fncache(object):
     # the filename used to be partially encoded
     # hence the encodedir/decodedir dance
-    def __init__(self, opener):
-        self.opener = opener
+    def __init__(self, vfs):
+        self.vfs = vfs
         self.entries = None
         self._dirty = False
 
@@ -376,7 +376,7 @@ class fncache(object):
         '''fill the entries from the fncache file'''
         self._dirty = False
         try:
-            fp = self.opener('fncache', mode='rb')
+            fp = self.vfs('fncache', mode='rb')
         except IOError:
             # skip nonexistent file
             self.entries = set()
@@ -391,7 +391,7 @@ class fncache(object):
         fp.close()
 
     def _write(self, files, atomictemp):
-        fp = self.opener('fncache', mode='wb', atomictemp=atomictemp)
+        fp = self.vfs('fncache', mode='wb', atomictemp=atomictemp)
         if files:
             fp.write(encodedir('\n'.join(files) + '\n'))
         fp.close()
@@ -424,22 +424,22 @@ class fncache(object):
 
 class _fncachevfs(scmutil.abstractvfs):
     def __init__(self, vfs, fnc, encode):
-        self.opener = vfs
+        self.vfs = vfs
         self.fncache = fnc
         self.encode = encode
 
     def _getmustaudit(self):
-        return self.opener.mustaudit
+        return self.vfs.mustaudit
 
     def _setmustaudit(self, onoff):
-        self.opener.mustaudit = onoff
+        self.vfs.mustaudit = onoff
 
     mustaudit = property(_getmustaudit, _setmustaudit)
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb') and path.startswith('data/'):
             self.fncache.add(path)
-        return self.opener(self.encode(path), mode, *args, **kw)
+        return self.vfs(self.encode(path), mode, *args, **kw)
 
 class fncachestore(basicstore):
     def __init__(self, path, vfstype, dotencode):
