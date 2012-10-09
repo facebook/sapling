@@ -684,7 +684,7 @@ def tsttest(test, wd, options, replacements):
     pos = -1
     postout = []
     ret = 0
-    for n, l in enumerate(output):
+    for l in output:
         lout, lcmd = l, None
         if salt in l:
             lout, lcmd = l.split(salt, 1)
