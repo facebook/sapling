@@ -46,104 +46,96 @@
 
 test default params, display nothing because of delay
 
-  $ hg -y loop 3 2>&1 | "$TESTDIR/filtercr.py"
-  
+  $ hg -y loop 3
   $ echo "delay=0" >> $HGRCPATH
   $ echo "refresh=0" >> $HGRCPATH
 
 test with delay=0, refresh=0
 
-  $ hg -y loop 3 2>&1 | "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/3
-  loop [===============>                                ] 1/3
-  loop [===============================>                ] 2/3
-                                                              \r (esc)
+  $ hg -y loop 3
+  \r (no-eol) (esc)
+  loop [                                                ] 0/3\r (no-eol) (esc)
+  loop [===============>                                ] 1/3\r (no-eol) (esc)
+  loop [===============================>                ] 2/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 
 test nested short-lived topics (which shouldn't display with nestdelay):
 
-  $ hg -y loop 3 --nested 2>&1 | \
-  > python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/3
-  loop [===============>                                ] 1/3
-  loop [===============================>                ] 2/3
-                                                              \r (esc)
+  $ hg -y loop 3 --nested
+  \r (no-eol) (esc)
+  loop [                                                ] 0/3\r (no-eol) (esc)
+  loop [===============>                                ] 1/3\r (no-eol) (esc)
+  loop [===============================>                ] 2/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 
-  $ hg --config progress.changedelay=0 -y loop 3 --nested 2>&1 | \
-  > python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/3
-  nested [                                              ] 0/2
-  nested [======================>                       ] 1/2
-  loop [===============>                                ] 1/3
-  nested [                                              ] 0/2
-  nested [======================>                       ] 1/2
-  loop [===============================>                ] 2/3
-  nested [                                              ] 0/2
-  nested [======================>                       ] 1/2
-                                                              \r (esc)
+  $ hg --config progress.changedelay=0 -y loop 3 --nested
+  \r (no-eol) (esc)
+  loop [                                                ] 0/3\r (no-eol) (esc)
+  nested [                                              ] 0/2\r (no-eol) (esc)
+  nested [======================>                       ] 1/2\r (no-eol) (esc)
+  loop [===============>                                ] 1/3\r (no-eol) (esc)
+  nested [                                              ] 0/2\r (no-eol) (esc)
+  nested [======================>                       ] 1/2\r (no-eol) (esc)
+  loop [===============================>                ] 2/3\r (no-eol) (esc)
+  nested [                                              ] 0/2\r (no-eol) (esc)
+  nested [======================>                       ] 1/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 
 test two topics being printed in parallel (as when we're doing a local
 --pull clone, where you get the unbundle and bundle progress at the
 same time):
-  $ hg loop 3 --parallel 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/3
-  loop [===============>                                ] 1/3
-  loop [===============================>                ] 2/3
-                                                              \r (esc)
+  $ hg loop 3 --parallel
+  \r (no-eol) (esc)
+  loop [                                                ] 0/3\r (no-eol) (esc)
+  loop [===============>                                ] 1/3\r (no-eol) (esc)
+  loop [===============================>                ] 2/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 test refresh is taken in account
 
-  $ hg -y --config progress.refresh=100 loop 3 2>&1 | "$TESTDIR/filtercr.py"
-  
+  $ hg -y --config progress.refresh=100 loop 3
 
 test format options 1
 
-  $ hg -y --config 'progress.format=number topic item+2' loop 2 2>&1 \
-  > | "$TESTDIR/filtercr.py"
-  
-  0/2 loop lo
-  1/2 loop lo
-                                                              \r (esc)
+  $ hg -y --config 'progress.format=number topic item+2' loop 2
+  \r (no-eol) (esc)
+  0/2 loop lo\r (no-eol) (esc)
+  1/2 loop lo\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 test format options 2
 
-  $ hg -y --config 'progress.format=number item-3 bar' loop 2 2>&1 \
-  > | "$TESTDIR/filtercr.py"
-  
-  0/2 p.0 [                                                 ]
-  1/2 p.1 [=======================>                         ]
-                                                              \r (esc)
+  $ hg -y --config 'progress.format=number item-3 bar' loop 2
+  \r (no-eol) (esc)
+  0/2 p.0 [                                                 ]\r (no-eol) (esc)
+  1/2 p.1 [=======================>                         ]\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 test format options and indeterminate progress
 
-  $ hg -y --config 'progress.format=number item bar' loop -- -2 2>&1 \
-  > | "$TESTDIR/filtercr.py"
-  
-  0 loop.0               [ <=>                              ]
-  1 loop.1               [  <=>                             ]
-                                                              \r (esc)
+  $ hg -y --config 'progress.format=number item bar' loop -- -2
+  \r (no-eol) (esc)
+  0 loop.0               [ <=>                              ]\r (no-eol) (esc)
+  1 loop.1               [  <=>                             ]\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 make sure things don't fall over if count > total
 
-  $ hg -y loop --total 4 6 2>&1 | "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/4
-  loop [===========>                                    ] 1/4
-  loop [=======================>                        ] 2/4
-  loop [===================================>            ] 3/4
-  loop [===============================================>] 4/4
-  loop [ <=>                                            ] 5/4
-                                                              \r (esc)
+  $ hg -y loop --total 4 6
+  \r (no-eol) (esc)
+  loop [                                                ] 0/4\r (no-eol) (esc)
+  loop [===========>                                    ] 1/4\r (no-eol) (esc)
+  loop [=======================>                        ] 2/4\r (no-eol) (esc)
+  loop [===================================>            ] 3/4\r (no-eol) (esc)
+  loop [===============================================>] 4/4\r (no-eol) (esc)
+  loop [ <=>                                            ] 5/4\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 test immediate progress completion
 
-  $ hg -y loop 0 2>&1 | "$TESTDIR/filtercr.py"
-  
+  $ hg -y loop 0
 
 test delay time estimates
 
@@ -173,44 +165,44 @@ test delay time estimates
   $ echo "delay=25" >> $HGRCPATH
   $ echo "width=60" >> $HGRCPATH
 
-  $ hg -y loop 8 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [=========>                                ] 2/8 1m07s
-  loop [===============>                            ] 3/8 56s
-  loop [=====================>                      ] 4/8 45s
-  loop [==========================>                 ] 5/8 34s
-  loop [================================>           ] 6/8 23s
-  loop [=====================================>      ] 7/8 12s
-                                                              \r (esc)
+  $ hg -y loop 8
+  \r (no-eol) (esc)
+  loop [=========>                                ] 2/8 1m07s\r (no-eol) (esc)
+  loop [===============>                            ] 3/8 56s\r (no-eol) (esc)
+  loop [=====================>                      ] 4/8 45s\r (no-eol) (esc)
+  loop [==========================>                 ] 5/8 34s\r (no-eol) (esc)
+  loop [================================>           ] 6/8 23s\r (no-eol) (esc)
+  loop [=====================================>      ] 7/8 12s\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
-  $ MOCKTIME=10000 hg -y loop 4 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/4
-  loop [=========>                                ] 1/4 8h21m
-  loop [====================>                     ] 2/4 5h34m
-  loop [==============================>           ] 3/4 2h47m
-                                                              \r (esc)
+  $ MOCKTIME=10000 hg -y loop 4
+  \r (no-eol) (esc)
+  loop [                                                ] 0/4\r (no-eol) (esc)
+  loop [=========>                                ] 1/4 8h21m\r (no-eol) (esc)
+  loop [====================>                     ] 2/4 5h34m\r (no-eol) (esc)
+  loop [==============================>           ] 3/4 2h47m\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
-  $ MOCKTIME=1000000 hg -y loop 4 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/4
-  loop [=========>                                ] 1/4 5w00d
-  loop [====================>                     ] 2/4 3w03d
-  loop [=============================>           ] 3/4 11d14h
-                                                              \r (esc)
+  $ MOCKTIME=1000000 hg -y loop 4
+  \r (no-eol) (esc)
+  loop [                                                ] 0/4\r (no-eol) (esc)
+  loop [=========>                                ] 1/4 5w00d\r (no-eol) (esc)
+  loop [====================>                     ] 2/4 3w03d\r (no-eol) (esc)
+  loop [=============================>           ] 3/4 11d14h\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 
-  $ MOCKTIME=14000000 hg -y loop 4 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [                                                ] 0/4
-  loop [=========>                                ] 1/4 1y18w
-  loop [===================>                     ] 2/4 46w03d
-  loop [=============================>           ] 3/4 23w02d
-                                                              \r (esc)
+  $ MOCKTIME=14000000 hg -y loop 4
+  \r (no-eol) (esc)
+  loop [                                                ] 0/4\r (no-eol) (esc)
+  loop [=========>                                ] 1/4 1y18w\r (no-eol) (esc)
+  loop [===================>                     ] 2/4 46w03d\r (no-eol) (esc)
+  loop [=============================>           ] 3/4 23w02d\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 Time estimates should not fail when there's no end point:
-  $ hg -y loop -- -4 2>&1 | python "$TESTDIR/filtercr.py"
-  
-  loop [ <=>                                              ] 2
-  loop [  <=>                                             ] 3
-                                                              \r (esc)
+  $ hg -y loop -- -4
+  \r (no-eol) (esc)
+  loop [ <=>                                              ] 2\r (no-eol) (esc)
+  loop [  <=>                                             ] 3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)

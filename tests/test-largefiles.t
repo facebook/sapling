@@ -1587,9 +1587,8 @@ cloned (see test-subrepo-recursion.t):
 
   $ hg clone -U . ../empty
   $ cd ../empty
-  $ hg archive --subrepos -r tip ../archive.tar.gz 2>&1 | "$TESTDIR/filtercr.py"
+  $ hg archive --subrepos -r tip ../archive.tar.gz
   cloning subrepo subrepo from $TESTTMP/statusmatch/subrepo
-  
   $ cd ..
 
 Test that addremove picks up largefiles prior to the initial commit (issue3541)

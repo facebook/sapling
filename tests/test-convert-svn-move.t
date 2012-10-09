@@ -165,68 +165,75 @@ Test convert progress bar'
   > width = 60
   > EOF
 
-  $ hg convert svn-repo hg-progress 2>&1 | "$TESTDIR/filtercr.py"
-  
-  scanning [ <=>                                          ] 1
-  scanning [  <=>                                         ] 2
-  scanning [   <=>                                        ] 3
-  scanning [    <=>                                       ] 4
-  scanning [     <=>                                      ] 5
-  scanning [      <=>                                     ] 6
-  scanning [       <=>                                    ] 7
-                                                              
-  converting [                                          ] 0/7
-  getting files [=====>                                 ] 1/6
-  getting files [============>                          ] 2/6
-  getting files [==================>                    ] 3/6
-  getting files [=========================>             ] 4/6
-  getting files [===============================>       ] 5/6
-  getting files [======================================>] 6/6
-                                                              
-  converting [=====>                                    ] 1/7
-  scanning paths [                                      ] 0/1
-  getting files [======================================>] 1/1
-                                                              
-  converting [===========>                              ] 2/7
-  scanning paths [                                      ] 0/2
-  scanning paths [==================>                   ] 1/2
-  getting files [========>                              ] 1/4
-  getting files [==================>                    ] 2/4
-  getting files [============================>          ] 3/4
-  getting files [======================================>] 4/4
-                                                              
-  converting [=================>                        ] 3/7
-  scanning paths [                                      ] 0/1
-  getting files [======================================>] 1/1
-                                                              
-  converting [=======================>                  ] 4/7
-  scanning paths [                                      ] 0/1
-  getting files [======================================>] 1/1
-                                                              
-  converting [=============================>            ] 5/7
-  scanning paths [                                      ] 0/3
-  scanning paths [===========>                          ] 1/3
-  scanning paths [========================>             ] 2/3
-  getting files [===>                                   ] 1/8
-  getting files [========>                              ] 2/8
-  getting files [=============>                         ] 3/8
-  getting files [==================>                    ] 4/8
-  getting files [=======================>               ] 5/8
-  getting files [============================>          ] 6/8
-  getting files [=================================>     ] 7/8
-  getting files [======================================>] 8/8
-                                                              
-  converting [===================================>      ] 6/7
-  scanning paths [                                      ] 0/1
-  getting files [===>                                   ] 1/8
-  getting files [========>                              ] 2/8
-  getting files [=============>                         ] 3/8
-  getting files [==================>                    ] 4/8
-  getting files [=======================>               ] 5/8
-  getting files [============================>          ] 6/8
-  getting files [=================================>     ] 7/8
-  getting files [======================================>] 8/8
-                                                              
+  $ hg convert svn-repo hg-progress
+  \r (no-eol) (esc)
+  scanning [ <=>                                          ] 1\r (no-eol) (esc)
+  scanning [  <=>                                         ] 2\r (no-eol) (esc)
+  scanning [   <=>                                        ] 3\r (no-eol) (esc)
+  scanning [    <=>                                       ] 4\r (no-eol) (esc)
+  scanning [     <=>                                      ] 5\r (no-eol) (esc)
+  scanning [      <=>                                     ] 6\r (no-eol) (esc)
+  scanning [       <=>                                    ] 7\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [                                          ] 0/7\r (no-eol) (esc)
+  getting files [=====>                                 ] 1/6\r (no-eol) (esc)
+  getting files [============>                          ] 2/6\r (no-eol) (esc)
+  getting files [==================>                    ] 3/6\r (no-eol) (esc)
+  getting files [=========================>             ] 4/6\r (no-eol) (esc)
+  getting files [===============================>       ] 5/6\r (no-eol) (esc)
+  getting files [======================================>] 6/6\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=====>                                    ] 1/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/1\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===========>                              ] 2/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/2\r (no-eol) (esc)
+  scanning paths [==================>                   ] 1/2\r (no-eol) (esc)
+  getting files [========>                              ] 1/4\r (no-eol) (esc)
+  getting files [==================>                    ] 2/4\r (no-eol) (esc)
+  getting files [============================>          ] 3/4\r (no-eol) (esc)
+  getting files [======================================>] 4/4\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=================>                        ] 3/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/1\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=======================>                  ] 4/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/1\r (no-eol) (esc)
+  getting files [======================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [=============================>            ] 5/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/3\r (no-eol) (esc)
+  scanning paths [===========>                          ] 1/3\r (no-eol) (esc)
+  scanning paths [========================>             ] 2/3\r (no-eol) (esc)
+  getting files [===>                                   ] 1/8\r (no-eol) (esc)
+  getting files [========>                              ] 2/8\r (no-eol) (esc)
+  getting files [=============>                         ] 3/8\r (no-eol) (esc)
+  getting files [==================>                    ] 4/8\r (no-eol) (esc)
+  getting files [=======================>               ] 5/8\r (no-eol) (esc)
+  getting files [============================>          ] 6/8\r (no-eol) (esc)
+  getting files [=================================>     ] 7/8\r (no-eol) (esc)
+  getting files [======================================>] 8/8\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  converting [===================================>      ] 6/7\r (no-eol) (esc)
+  scanning paths [                                      ] 0/1\r (no-eol) (esc)
+  getting files [===>                                   ] 1/8\r (no-eol) (esc)
+  getting files [========>                              ] 2/8\r (no-eol) (esc)
+  getting files [=============>                         ] 3/8\r (no-eol) (esc)
+  getting files [==================>                    ] 4/8\r (no-eol) (esc)
+  getting files [=======================>               ] 5/8\r (no-eol) (esc)
+  getting files [============================>          ] 6/8\r (no-eol) (esc)
+  getting files [=================================>     ] 7/8\r (no-eol) (esc)
+  getting files [======================================>] 8/8\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   initializing destination hg-progress repository
   scanning source...
   sorting...
@@ -238,6 +245,5 @@ Test convert progress bar'
   2 adddb
   1 branch
   0 clobberdir
-  
 
   $ cd ..

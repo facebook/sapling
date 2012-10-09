@@ -224,19 +224,19 @@ enable progress extension:
   > width = 60
   > EOF
 
-  $ hg archive ../with-progress 2>&1 | "$TESTDIR/filtercr.py"
-  
-  archiving [                                           ] 0/4
-  archiving [                                           ] 0/4
-  archiving [=========>                                 ] 1/4
-  archiving [=========>                                 ] 1/4
-  archiving [====================>                      ] 2/4
-  archiving [====================>                      ] 2/4
-  archiving [===============================>           ] 3/4
-  archiving [===============================>           ] 3/4
-  archiving [==========================================>] 4/4
-  archiving [==========================================>] 4/4
-                                                              \r (esc)
+  $ hg archive ../with-progress
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/4\r (no-eol) (esc)
+  archiving [                                           ] 0/4\r (no-eol) (esc)
+  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
+  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
+  archiving [====================>                      ] 2/4\r (no-eol) (esc)
+  archiving [====================>                      ] 2/4\r (no-eol) (esc)
+  archiving [===============================>           ] 3/4\r (no-eol) (esc)
+  archiving [===============================>           ] 3/4\r (no-eol) (esc)
+  archiving [==========================================>] 4/4\r (no-eol) (esc)
+  archiving [==========================================>] 4/4\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 cleanup after progress extension test:
 
