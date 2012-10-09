@@ -690,8 +690,7 @@ def tsttest(test, wd, options, replacements):
             lout, lcmd = l.split(salt, 1)
 
         if lout:
-            if lcmd:
-                # output block had no trailing newline, clean up
+            if not lout.endswith('\n'):
                 lout += ' (no-eol)\n'
 
             # find the expected output at the current position
