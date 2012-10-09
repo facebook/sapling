@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import osutil, scmutil, util, parsers
+import scmutil, util, parsers
 import os, stat, errno
 
 _sha = util.sha1
@@ -311,9 +311,10 @@ class basicstore(object):
         l = []
         if self.rawvfs.isdir(path):
             visit = [path]
+            readdir = self.rawvfs.readdir
             while visit:
                 p = visit.pop()
-                for f, kind, st in osutil.listdir(p, stat=True):
+                for f, kind, st in readdir(p, stat=True):
                     fp = p + '/' + f
                     if kind == stat.S_IFREG and f[-2:] in ('.d', '.i'):
                         n = util.pconvert(fp[striplen:])

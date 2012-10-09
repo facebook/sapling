@@ -219,6 +219,9 @@ class abstractvfs(object):
     def mkdir(self, path=None):
         return os.mkdir(self.join(path))
 
+    def readdir(self, path=None, stat=None, skip=None):
+        return osutil.listdir(self.join(path), stat, skip)
+
     def stat(self, path=None):
         return os.stat(self.join(path))
 
