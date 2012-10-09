@@ -846,6 +846,12 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             raise util.Abort(_("bookmark name required"))
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
+        if inactive:
+            if not repo._bookmarkcurrent:
+                ui.status(_("no active bookmark\n"))
+            else:
+                bookmarks.setcurrent(repo, None)
+            return
         else:
             for bmark, n in sorted(marks.iteritems()):
                 current = repo._bookmarkcurrent
