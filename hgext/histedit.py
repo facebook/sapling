@@ -205,7 +205,7 @@ def collapse(repo, first, last, commitopts):
         - message
         - date
         - username
-    Edition of commit message is trigered in all case.
+    Commit message is edited in all cases.
 
     This function works in memory."""
     ctxs = list(repo.set('%d::%d', first, last))

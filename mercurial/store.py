@@ -227,7 +227,7 @@ def _hybridencode(path, dotencode):
     characters are encoded as '~xx', where xx is the two digit hex code
     of the character (see encodefilename).
     Relevant path components consisting of Windows reserved filenames are
-    masked by encoding the third character ('aux' -> 'au~78', see auxencode).
+    masked by encoding the third character ('aux' -> 'au~78', see _auxencode).
 
     Hashed encoding (not reversible):
 

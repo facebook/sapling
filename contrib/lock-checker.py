@@ -35,7 +35,7 @@ def reposetup(ui, repo):
             return orig.transaction(self, *args, **kwargs)
 
         # TODO(durin42): kiilerix had a commented-out lock check in
-        # writebranchcache and _writerequirements
+        # _writebranchcache and _writerequirements
 
         def _tag(self, *args, **kwargs):
             _checklock(self)

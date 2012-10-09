@@ -264,7 +264,7 @@ def validdest(repo, old, new):
         return True
     elif repo.obsstore:
         # We only need this complicated logic if there is obsolescence
-        # XXX will probably deserve an optimised rset.
+        # XXX will probably deserve an optimised revset.
 
         validdests = set([old])
         plen = -1
