@@ -43,6 +43,11 @@ ERR_FS_NOT_FOUND = core.SVN_ERR_FS_NOT_FOUND
 ERR_FS_TXN_OUT_OF_DATE = core.SVN_ERR_FS_TXN_OUT_OF_DATE
 ERR_INCOMPLETE_DATA = core.SVN_ERR_INCOMPLETE_DATA
 ERR_RA_DAV_REQUEST_FAILED = core.SVN_ERR_RA_DAV_REQUEST_FAILED
+SSL_UNKNOWNCA = core.SVN_AUTH_SSL_UNKNOWNCA
+SSL_CNMISMATCH = core.SVN_AUTH_SSL_CNMISMATCH
+SSL_NOTYETVALID = core.SVN_AUTH_SSL_NOTYETVALID
+SSL_EXPIRED = core.SVN_AUTH_SSL_EXPIRED
+SSL_OTHER = core.SVN_AUTH_SSL_OTHER
 SubversionException = core.SubversionException
 Editor = delta.Editor
 
@@ -103,6 +108,31 @@ def user_pass_prompt(realm, default_username, ms, pool): # pragma: no cover
     creds.password = getpass.getpass('Password for %s: ' % creds.username)
     return creds
 
+_ssl_server_trust_prompt_callback = None
+def ssl_server_trust_prompt_callback(callback):
+    global _ssl_server_trust_prompt_callback
+    _ssl_server_trust_prompt_callback = callback
+
+def _ssl_server_trust_prompt(realm, failures, cert_info, may_save, pool):
+    global _ssl_server_trust_prompt_callback
+    if _ssl_server_trust_prompt_callback:
+        cert = [
+                cert_info.hostname,
+                cert_info.fingerprint,
+                cert_info.valid_from,
+                cert_info.valid_until,
+                cert_info.issuer_dname,
+                ]
+        ret = _ssl_server_trust_prompt_callback(realm, failures, cert, may_save, pool)
+        if ret:
+            creds = core.svn_auth_cred_ssl_server_trust_t()
+            (creds.accepted_failures, creds.may_save) = ret
+        else:
+            creds = None
+    else:
+        creds = None
+    return creds
+
 def _create_auth_baton(pool, password_stores):
     """Create a Subversion authentication baton. """
     # Give the client context baton a suite of authentication
@@ -146,6 +176,7 @@ def _create_auth_baton(pool, password_stores):
         client.get_ssl_client_cert_pw_file_provider(),
         client.get_ssl_server_trust_file_provider(),
         client.get_simple_prompt_provider(user_pass_prompt, 2),
+        client.get_ssl_server_trust_prompt_provider(_ssl_server_trust_prompt),
         ]
 
     return core.svn_auth_open(providers, pool)
@@ -211,19 +242,14 @@ class SubversionRepo(object):
             self.ra = ra.open2(self.svn_url, callbacks,
                                svn_config, self.pool)
         except SubversionException, e:
-            if e.apr_err == core.SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED:
-                msg = ('Subversion does not trust the SSL certificate for this '
-                       'site; please try running \'svn ls %s\' first.'
-                       % self.svn_url)
-            elif e.apr_err == core.SVN_ERR_RA_DAV_REQUEST_FAILED:
-                msg = ('Failed to open Subversion repository; please try '
-                       'running \'svn ls %s\' for details.' % self.svn_url)
-            else:
-                msg = e.args[0]
-                for k, v in vars(core).iteritems():
-                    if k.startswith('SVN_ERR_') and v == e.apr_err:
-                        msg = '%s (%s)' % (msg, k)
-                        break
+            # e.child contains a detailed error messages
+            msglist = []
+            svn_exc = e
+            while svn_exc:
+                if svn_exc.args[0]:
+                    msglist.append(svn_exc.args[0])
+                svn_exc = svn_exc.child
+            msg = '\n'.join(msglist)
             raise common.SubversionConnectionException(msg)
 
     @property

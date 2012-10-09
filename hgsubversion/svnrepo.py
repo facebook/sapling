@@ -195,4 +195,52 @@ def instance(ui, url, create):
     if create:
         raise hgutil.Abort('cannot create new remote Subversion repository')
 
+    svnwrap.ssl_server_trust_prompt_callback(svn_auth_ssl_server_trust_prompt(ui))
     return svnremoterepo(ui, url)
+
+def svn_auth_ssl_server_trust_prompt(ui):
+    def callback(realm, failures, cert_info, may_save, pool=None):
+        msg = 'Error validating server certificate for \'%s\':\n' % (realm,)
+        if failures & svnwrap.SSL_UNKNOWNCA:
+            msg += (
+                    ' - The certificate is not issued by a trusted authority. Use the\n'
+                    '   fingerprint to validate the certificate manually!\n'
+                    )
+        if failures & svnwrap.SSL_CNMISMATCH:
+            msg += ' - The certificate hostname does not match.\n'
+        if failures & svnwrap.SSL_NOTYETVALID:
+            msg += ' - The certificate is not yet valid.\n'
+        if failures & svnwrap.SSL_EXPIRED:
+            msg += ' - The certificate has expired.\n'
+        if failures & svnwrap.SSL_OTHER:
+            msg += ' - The certificate has an unknown error.\n'
+        msg += (
+                'Certificate information:\n'
+                '- Hostname: %s\n'
+                '- Valid: from %s until %s\n'
+                '- Issuer: %s\n'
+                '- Fingerprint: %s\n'
+                ) % (
+                        cert_info[0], # hostname
+                        cert_info[2], # valid_from
+                        cert_info[3], # valid_until
+                        cert_info[4], # issuer_dname
+                        cert_info[1], # fingerprint
+                        )
+        if may_save:
+            msg += '(R)eject, accept (t)emporarily or accept (p)ermanently? '
+            choices = (('&Reject'), ('&Temporarily'), ('&Permanently'))
+        else:
+            msg += '(R)eject or accept (t)emporarily? '
+            choices = (('&Reject'), ('&Temporarily'))
+        choice = ui.promptchoice(msg, choices, default=0)
+        if choice == 1:
+            creds = (failures, False)
+        elif may_save and choice == 2:
+            creds = (failures, True)
+        else:
+            creds = None
+
+        return creds
+    return callback
+
