@@ -587,22 +587,10 @@ def between(repo, old, new, keep):
     """select and validate the set of revision to edit
 
     When keep is false, the specified set can't have children."""
-    revs = [old]
-    current = old
-    while current != new:
-        ctx = repo[current]
-        if not keep and len(ctx.children()) > 1:
-            raise util.Abort(_('cannot edit history that would orphan nodes'))
-        if len(ctx.parents()) != 1 and ctx.parents()[1] != node.nullid:
-            raise util.Abort(_("can't edit history with merges"))
-        if not ctx.children():
-            current = new
-        else:
-            current = ctx.children()[0].node()
-            revs.append(current)
-    if len(repo[current].children()) and not keep:
+    revs = list(repo.set('%n::%n', old, new))
+    if not keep and repo.revs('(%ld::) - %ld', revs, revs):
         raise util.Abort(_('cannot edit history that would orphan nodes'))
-    return revs
+    return [c.node() for c in revs]
 
 
 def writestate(repo, parentnode, rules, keep, topmost, replacements):
