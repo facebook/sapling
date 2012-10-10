@@ -550,21 +550,20 @@ def histedit(ui, repo, *parent, **opts):
 
 def bootstrapcontinue(ui, repo, parentctx, existing, replacemap, rules,
                       tmpnodes, created, replaced, opts):
-    currentparent, wantnull = repo.dirstate.parents()
-    # existing is the list of revisions initially considered by
-    # histedit. Here we use it to list new changesets, descendants
-    # of parentctx without an 'existing' changeset in-between. We
-    # also have to exclude 'existing' changesets which were
-    # previously dropped.
-    descendants = set(c.node() for c in
-            repo.set('(%d::) - %d', parentctx, parentctx))
-    notdropped = set(n for n in existing if n in descendants and
-            (n not in replacemap or replacemap[n] in descendants))
-    # Discover any nodes the user has added in the interim. We can
-    # miss changesets which were dropped and recreated the same.
-    newchildren = list(c.node() for c in repo.set(
-        'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
     action, currentnode = rules.pop(0)
+    # is there any new commit between the expected parent and "."
+    #
+    # note: does not take non linear new change in account (but previous
+    #       implementation didn't used them anyway (issue3655)
+    newchildren = [c.node() for c in repo.set('(%d::.)', parentctx)]
+    if not newchildren:
+        # `parentctxnode` should match but no result. This means that
+        # currentnode is not a descendant from parentctxnode.
+        msg = _('working directory parent is not a descendant of %s')
+        hint = _('update to %s or descendant and run "hg histedit '
+                 '--continue" again') % parentctx
+        raise util.Abort(msg % parentctx, hint=hint)
+    newchildren.pop(0)  # remove parentctxnode
     if action in ('f', 'fold'):
         tmpnodes.extend(newchildren)
     else:
