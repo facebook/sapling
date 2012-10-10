@@ -695,14 +695,12 @@ def movebookmarks(ui, repo, replacemap, tmpnodes, created):
             return
         while new in replacemap:
             new = replacemap[new]
-        ui.note(_('histedit:  %s to %s\n') % (node.short(old),
-                                              node.short(new)))
         octx = repo[old]
         marks = octx.bookmarks()
         if marks:
-            ui.note(_('histedit:     moving bookmarks %s\n') %
-                      ', '.join(marks))
             for mark in marks:
+                ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
+                        % (mark, octx, node.short(new)))
                 repo._bookmarks[mark] = new
             bookmarks.write(repo)
 
