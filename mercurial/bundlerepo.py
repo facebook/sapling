@@ -360,7 +360,8 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             bundle = None
         if not localrepo:
             # use the created uncompressed bundlerepo
-            localrepo = bundlerepo = bundlerepository(ui, repo.root, fname)
+            localrepo = bundlerepo = bundlerepository(repo.baseui, repo.root,
+                                                      fname)
             # this repo contains local and other now, so filter out local again
             common = repo.heads()
     if localrepo:
