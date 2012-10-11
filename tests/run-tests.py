@@ -921,6 +921,11 @@ def runone(options, test):
             f.write(line)
         f.close()
 
+    def describe(ret):
+        if ret < 0:
+            return 'killed by signal %d' % -ret
+        return 'returned error code %d' % ret
+
     if skipped:
         mark = 's'
         if out is None:                 # debug mode: nothing to parse
@@ -948,13 +953,13 @@ def runone(options, test):
                 showdiff(refout, out, ref, err)
             iolock.release()
         if ret:
-            fail("output changed and returned error code %d" % ret, ret)
+            fail("output changed and " + describe(ret), ret)
         else:
             fail("output changed", ret)
         ret = 1
     elif ret:
         mark = '!'
-        fail("returned error code %d" % ret, ret)
+        fail(describe(ret), ret)
     else:
         success()
 
