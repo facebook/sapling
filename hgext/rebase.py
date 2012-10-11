@@ -713,7 +713,8 @@ def updatemq(repo, state, skipped, **opts):
         for rev in sorted(mqrebase, reverse=True):
             if rev not in skipped:
                 name, isgit = mqrebase[rev]
-                repo.ui.debug('import mq patch %d (%s)\n' % (state[rev], name))
+                repo.ui.note(_('updating mq patch %s to %s:%s\n') %
+                             (name, state[rev], repo[state[rev]]))
                 mq.qimport(repo, (), patchname=name, git=isgit,
                                 rev=[str(state[rev])])
             else:

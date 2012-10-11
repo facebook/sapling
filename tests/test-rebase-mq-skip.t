@@ -49,11 +49,30 @@ already has one local mq patch
 
   $ hg up -q -C qtip
 
-  $ hg rebase
+  $ hg rebase -v
   rebasing 2:13a46ce44f60 "P0" (p0.patch qbase)
+  resolving manifests
+  removing p0
+  getting r1
+  resolving manifests
+  getting p0
+  p0
   rebasing 3:148775c71080 "P1" (p1.patch qtip)
+  resolving manifests
   note: rebase of 3:148775c71080 created no changes to commit
+  rebase merging completed
+  updating mq patch p0.patch to 5:9ecc820b1737
+  $TESTTMP/a/.hg/patches/p0.patch
+  2 changesets found
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-backup.hg (glob)
+  2 changesets found
+  adding branch
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  rebase completed
+  1 revisions have been skipped
 
   $ hg tglog
   @  3: 'P0' tags: p0.patch qbase qtip tip
