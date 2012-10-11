@@ -272,7 +272,7 @@ def pick(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
         ui.debug('node %s unchanged\n' % ha)
-        return oldctx, [], [], []
+        return oldctx, []
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
@@ -284,8 +284,9 @@ def pick(ui, repo, ctx, ha, opts):
     if n is None:
         ui.warn(_('%s: empty changeset\n')
                      % node.hex(ha))
-        return ctx, [], [], []
-    return repo[n], [n], [oldctx.node()], []
+        return ctx, []
+    new = repo[n]
+    return new, [(oldctx.node(), (n,))]
 
 
 def edit(ui, repo, ctx, ha, opts):
@@ -308,7 +309,7 @@ def fold(ui, repo, ctx, ha, opts):
     if n is None:
         ui.warn(_('%s: empty changeset')
                      % node.hex(ha))
-        return ctx, [], [], []
+        return ctx, []
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
@@ -332,12 +333,18 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     commitopts['date'] = max(ctx.date(), oldctx.date())
     n = collapse(repo, ctx, repo[newnode], commitopts)
     if n is None:
-        return ctx, [], [], []
+        return ctx, []
     hg.update(repo, n)
-    return repo[n], [n], [oldctx.node(), ctx.node()], [newnode]
+    replacements = [(oldctx.node(), (newnode,)),
+                     (ctx.node(), (n,)),
+                     (newnode, (n,)),
+                    ]
+    for ich in internalchanges:
+        replacements.append((ich, (n,)))
+    return repo[n], replacements
 
 def drop(ui, repo, ctx, ha, opts):
-    return ctx, [], [repo[ha].node()], []
+    return ctx, [(repo[ha].node(), ())]
 
 
 def message(ui, repo, ctx, ha, opts):
@@ -353,9 +360,9 @@ def message(ui, repo, ctx, ha, opts):
                       extra=oldctx.extra())
     newctx = repo[new]
     if oldctx.node() != newctx.node():
-        return newctx, [new], [oldctx.node()], []
+        return newctx, [(oldctx.node(), (new,))]
     # We didn't make an edit, so just indicate no replaced nodes
-    return newctx, [new], [], []
+    return newctx, []
 
 actiontable = {'p': pick,
                'pick': pick,
@@ -417,22 +424,20 @@ def histedit(ui, repo, *parent, **opts):
     if opts.get('continue', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --continue'))
-        (parentctxnode, created, replaced, tmpnodes,
-         existing, rules, keep, topmost, replacemap) = readstate(repo)
+        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
+        currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
-        existing = set(existing)
-        parentctx = bootstrapcontinue(ui, repo, parentctx, existing,
-                                      replacemap, rules, tmpnodes, created,
-                                      replaced, opts)
+        parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
+        replacements.extend(repl)
     elif opts.get('abort', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --abort'))
-        (parentctxnode, created, replaced, tmpnodes,
-         existing, rules, keep, topmost, replacemap) = readstate(repo)
+        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
+        mapping, tmpnodes, leafs, _ntm = processreplacement(repo, replacements)
         ui.debug('restore wc to old parent %s\n' % node.short(topmost))
         hg.clean(repo, topmost)
-        cleanupnode(ui, repo, 'created', created)
-        cleanupnode(ui, repo, 'temp', tmpnodes)
+        cleanupnode(ui, repo, 'created', tmpnodes)
+        cleanupnode(ui, repo, 'temp', leafs)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
@@ -443,7 +448,6 @@ def histedit(ui, repo, *parent, **opts):
 
         topmost, empty = repo.dirstate.parents()
 
-
         if len(parent) != 1:
             raise util.Abort(_('histedit requires exactly one parent revision'))
         parent = scmutil.revsingle(repo, parent[0]).node()
@@ -452,7 +456,6 @@ def histedit(ui, repo, *parent, **opts):
         revs = between(repo, parent, topmost, keep)
 
         ctxs = [repo[r] for r in revs]
-        existing = [r.node() for r in ctxs]
         rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
@@ -475,72 +478,37 @@ def histedit(ui, repo, *parent, **opts):
 
         parentctx = repo[parent].parents()[0]
         keep = opts.get('keep', False)
-        replaced = []
-        replacemap = {}
-        tmpnodes = []
-        created = []
+        replacements = []
 
 
     while rules:
-        writestate(repo, parentctx.node(), created, replaced,
-                   tmpnodes, existing, rules, keep, topmost, replacemap)
+        writestate(repo, parentctx.node(), rules, keep, topmost, replacements)
         action, ha = rules.pop(0)
         ui.debug('histedit: processing %s %s\n' % (action, ha))
-        (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
-            ui, repo, parentctx, ha, opts)
-
-        if replaced_:
-            clen, rlen = len(created_), len(replaced_)
-            if clen == rlen == 1:
-                ui.debug('histedit: exact replacement of %s with %s\n' % (
-                    node.short(replaced_[0]), node.short(created_[0])))
-
-                replacemap[replaced_[0]] = created_[0]
-            elif clen > rlen:
-                assert rlen == 1, ('unexpected replacement of '
-                                   '%d changes with %d changes' % (rlen, clen))
-                # made more changesets than we're replacing
-                # TODO synthesize patch names for created patches
-                replacemap[replaced_[0]] = created_[-1]
-                ui.debug('histedit: created many, assuming %s replaced by %s' %
-                         (node.short(replaced_[0]), node.short(created_[-1])))
-            elif rlen > clen:
-                if not created_:
-                    # This must be a drop. Try and put our metadata on
-                    # the parent change.
-                    assert rlen == 1
-                    r = replaced_[0]
-                    ui.debug('histedit: %s seems replaced with nothing, '
-                            'finding a parent\n' % (node.short(r)))
-                    pctx = repo[r].parents()[0]
-                    if pctx.node() in replacemap:
-                        ui.debug('histedit: parent is already replaced\n')
-                        replacemap[r] = replacemap[pctx.node()]
-                    else:
-                        replacemap[r] = pctx.node()
-                    ui.debug('histedit: %s best replaced by %s\n' % (
-                        node.short(r), node.short(replacemap[r])))
-                else:
-                    assert len(created_) == 1
-                    for r in replaced_:
-                        ui.debug('histedit: %s replaced by %s\n' % (
-                            node.short(r), node.short(created_[0])))
-                        replacemap[r] = created_[0]
-            else:
-                assert False, (
-                    'Unhandled case in replacement mapping! '
-                    'replacing %d changes with %d changes' % (rlen, clen))
-        created.extend(created_)
-        replaced.extend(replaced_)
-        tmpnodes.extend(tmpnodes_)
+        actfunc = actiontable[action]
+        parentctx, replacement_ = actfunc(ui, repo, parentctx, ha, opts)
+        replacements.extend(replacement_)
 
     hg.update(repo, parentctx.node())
 
+    mapping, tmpnodes, created, ntm = processreplacement(repo, replacements)
+    if mapping:
+        for prec, succs in mapping.iteritems():
+            if not succs:
+                ui.debug('histedit: %s is dropped\n' % node.short(prec))
+            else:
+                ui.debug('histedit: %s is replaced by %s\n' % (
+                    node.short(prec), node.short(succs[0])))
+                if len(succs) > 1:
+                    m = 'histedit:                            %s'
+                    for n in succs[1:]:
+                        ui.debug(m % node.short(n))
+
     if not keep:
-        if replacemap:
-            movebookmarks(ui, repo, replacemap, tmpnodes, created)
+        if mapping:
+            movebookmarks(ui, repo, mapping, topmost, ntm)
             # TODO update mq state
-        cleanupnode(ui, repo, 'replaced', replaced)
+        cleanupnode(ui, repo, 'replaced', mapping)
 
     cleanupnode(ui, repo, 'temp', tmpnodes)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
@@ -548,9 +516,9 @@ def histedit(ui, repo, *parent, **opts):
         os.unlink(repo.sjoin('undo'))
 
 
-def bootstrapcontinue(ui, repo, parentctx, existing, replacemap, rules,
-                      tmpnodes, created, replaced, opts):
+def bootstrapcontinue(ui, repo, parentctx, rules, opts):
     action, currentnode = rules.pop(0)
+    ctx = repo[currentnode]
     # is there any new commit between the expected parent and "."
     #
     # note: does not take non linear new change in account (but previous
@@ -564,45 +532,46 @@ def bootstrapcontinue(ui, repo, parentctx, existing, replacemap, rules,
                  '--continue" again') % parentctx
         raise util.Abort(msg % parentctx, hint=hint)
     newchildren.pop(0)  # remove parentctxnode
-    if action in ('f', 'fold'):
-        tmpnodes.extend(newchildren)
-    else:
-        created.extend(newchildren)
-
-    m, a, r, d = repo.status()[:4]
-    oldctx = repo[currentnode]
-    message = oldctx.description() + '\n'
-    if action in ('e', 'edit', 'm', 'mess'):
-        message = ui.edit(message, ui.username())
-    elif action in ('f', 'fold'):
-        message = 'fold-temp-revision %s' % currentnode
+    # Commit dirty working directory if necessary
     new = None
+    m, a, r, d = repo.status()[:4]
     if m or a or r or d:
-        new = repo.commit(text=message, user=oldctx.user(),
-                          date=oldctx.date(), extra=oldctx.extra())
-
-    # If we're resuming a fold and we have new changes, mark the
-    # replacements and finish the fold. If not, it's more like a
-    # drop of the changesets that disappeared, and we can skip
-    # this step.
-    if action in ('f', 'fold') and (new or newchildren):
-        if new:
-            tmpnodes.append(new)
+        # prepare the message for the commit to comes
+        if action in ('f', 'fold'):
+            message = 'fold-temp-revision %s' % currentnode
         else:
+            message = ctx.description() + '\n'
+        if action in ('e', 'edit', 'm', 'mess'):
+            editor = cmdutil.commitforceeditor
+        else:
+            editor = False
+        new = repo.commit(text=message, user=ctx.user(),
+                          date=ctx.date(), extra=ctx.extra(),
+                          editor=editor)
+        if new is not None:
+            newchildren.append(new)
+
+    replacements = []
+    # track replacements
+    if ctx.node() not in newchildren:
+        # note: new children may be empty when the changeset is dropped.
+        # this happen e.g during conflicting pick where we revert content
+        # to parent.
+        replacements.append((ctx.node(), tuple(newchildren)))
+
+    if action in ('f', 'fold'):
+        # finalize fold operation if applicable
+        if new is None:
             new = newchildren[-1]
-        (parentctx, created_, replaced_, tmpnodes_) = finishfold(
-            ui, repo, parentctx, oldctx, new, opts, newchildren)
-        replaced.extend(replaced_)
-        created.extend(created_)
-        tmpnodes.extend(tmpnodes_)
-    elif action not in ('d', 'drop'):
-        if new != oldctx.node():
-            replaced.append(oldctx.node())
-        if new:
-            if new != oldctx.node():
-                created.append(new)
-            parentctx = repo[new]
-    return parentctx
+        else:
+            newchildren.pop()  # remove new from internal changes
+        parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
+                                     newchildren)
+        replacements.extend(repl)
+    elif newchildren:
+        # otherwize update "parentctx" before proceding to further operation
+        parentctx = repo[newchildren[-1]]
+    return parentctx, replacements
 
 
 def between(repo, old, new, keep):
@@ -627,17 +596,13 @@ def between(repo, old, new, keep):
     return revs
 
 
-def writestate(repo, parentctxnode, created, replaced,
-               tmpnodes, existing, rules, keep, topmost, replacemap):
+def writestate(repo, parentnode, rules, keep, topmost, replacements):
     fp = open(os.path.join(repo.path, 'histedit-state'), 'w')
-    pickle.dump((parentctxnode, created, replaced,
-                 tmpnodes, existing, rules, keep, topmost, replacemap),
-                fp)
+    pickle.dump((parentnode, rules, keep, topmost, replacements), fp)
     fp.close()
 
 def readstate(repo):
-    """Returns a tuple of (parentnode, created, replaced, tmp, existing, rules,
-                           keep, topmost, replacemap ).
+    """Returns a tuple of (parentnode, rules, keep, topmost, replacements).
     """
     fp = open(os.path.join(repo.path, 'histedit-state'))
     return pickle.load(fp)
@@ -684,37 +649,97 @@ def verifyrules(rules, repo, ctxs):
         parsed.append([action, ha])
     return parsed
 
-def movebookmarks(ui, repo, replacemap, tmpnodes, created):
+def processreplacement(repo, replacements):
+    """process the list of replacements to return
+
+    1) the final mapping between original and created nodes
+    2) the list of temporary node created by histedit
+    3) the list of new commit created by histedit"""
+    allsuccs = set()
+    replaced = set()
+    fullmapping = {}
+    # initialise basic set
+    # fullmapping record all operation recorded in replacement
+    for rep in replacements:
+        allsuccs.update(rep[1])
+        replaced.add(rep[0])
+        fullmapping.setdefault(rep[0], set()).update(rep[1])
+    new = allsuccs - replaced
+    tmpnodes = allsuccs & replaced
+    # Reduce content fullmapping  into direct relation between original nodes
+    # and final node created during history edition
+    # Dropped changeset are replaced by an empty list
+    toproceed = set(fullmapping)
+    final = {}
+    while toproceed:
+        for x in list(toproceed):
+            succs = fullmapping[x]
+            for s in list(succs):
+                if s in toproceed:
+                    # non final node with unknown closure
+                    # We can't process this now
+                    break
+                elif s in final:
+                    # non final node, replace with closure
+                    succs.remove(s)
+                    succs.update(final[s])
+            else:
+                final[x] = succs
+                toproceed.remove(x)
+    # remove tmpnodes from final mapping
+    for n in tmpnodes:
+        del final[n]
+    # we expect all changes involved in final to exist in the repo
+    # turn `final` into list (topologically sorted)
+    nm = repo.changelog.nodemap
+    for prec, succs in final.items():
+        final[prec] = sorted(succs, key=nm.get)
+
+    # computed topmost element (necessary for bookmark)
+    if new:
+        newtopmost = max(new, key=repo.changelog.rev)
+    elif not final:
+        # Nothing rewritten at all. we won't need `newtopmost`
+        # It is the same as `oldtopmost` and `processreplacement` know it
+        newtopmost = None
+    else:
+        # every body died. The newtopmost is the parent of the root.
+        newtopmost = repo[min(final, key=repo.changelog.rev)].p1().node()
+
+    return final, tmpnodes, new, newtopmost
+
+def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
     """Move bookmark from old to newly created node"""
-    ui.note(_('histedit: Should update metadata for the following '
-              'changes:\n'))
-
-    def copybms(old, new):
-        if old in tmpnodes or old in created:
-            # can't have any metadata we'd want to update
-            return
-        while new in replacemap:
-            new = replacemap[new]
-        octx = repo[old]
-        marks = octx.bookmarks()
-        if marks:
-            for mark in marks:
-                ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
-                        % (mark, octx, node.short(new)))
-                repo._bookmarks[mark] = new
-            bookmarks.write(repo)
-
-    # We assume that bookmarks on the tip should remain
-    # tipmost, but bookmarks on non-tip changesets should go
-    # to their most reasonable successor. As a result, find
-    # the old tip and new tip and copy those bookmarks first,
-    # then do the rest of the bookmark copies.
-    oldtip = sorted(replacemap.keys(), key=repo.changelog.rev)[-1]
-    newtip = sorted(replacemap.values(), key=repo.changelog.rev)[-1]
-    copybms(oldtip, newtip)
-
-    for old, new in sorted(replacemap.iteritems()):
-        copybms(old, new)
+    if not mapping:
+        # if nothing got rewritten there is not purpose for this function
+        return
+    moves = []
+    for bk, old in repo._bookmarks.iteritems():
+        if old == oldtopmost:
+            # special case ensure bookmark stay on tip. 
+            #
+            # This is arguably a feature and we may only want that for the
+            # active bookmark. But the behavior is kept compatible with the old
+            # version for now.
+            moves.append((bk, newtopmost))
+            continue
+        base = old
+        new = mapping.get(base, None)
+        if new is None:
+            continue
+        while not new:
+            # base is killed, trying with parent
+            base = repo[base].p1().node()
+            new = mapping.get(base, (base,))
+            # nothing to move
+        moves.append((bk, new[-1]))
+    if moves:
+        for mark, new in moves:
+            old = repo._bookmarks[mark]
+            ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
+                    % (mark, node.short(old), node.short(new)))
+            repo._bookmarks[mark] = new
+        bookmarks.write(repo)
 
 def cleanupnode(ui, repo, name, nodes):
     """strip a group of nodes from the repository
@@ -737,4 +762,3 @@ def cleanupnode(ui, repo, name, nodes):
             repair.strip(ui, repo, c)
     finally:
         lockmod.release(lock)
-
