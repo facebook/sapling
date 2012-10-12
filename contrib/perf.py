@@ -180,15 +180,13 @@ def perfcca(ui, repo):
     timer(lambda: scmutil.casecollisionauditor(ui, False, repo.dirstate))
 
 def perffncacheload(ui, repo):
-    from mercurial import scmutil, store
-    s = store.store(set(['store','fncache']), repo.path, scmutil.opener)
+    s = repo.store
     def d():
         s.fncache._load()
     timer(d)
 
 def perffncachewrite(ui, repo):
-    from mercurial import scmutil, store
-    s = store.store(set(['store','fncache']), repo.path, scmutil.opener)
+    s = repo.store
     s.fncache._load()
     def d():
         s.fncache._dirty = True
@@ -196,9 +194,7 @@ def perffncachewrite(ui, repo):
     timer(d)
 
 def perffncacheencode(ui, repo):
-    from mercurial import store
-    s = store.store(set(['store','fncache','dotencode']),
-                    repo.path, scmutil.opener)
+    s = repo.store
     s.fncache._load()
     def d():
         for p in s.fncache.entries:
