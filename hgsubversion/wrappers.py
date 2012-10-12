@@ -286,7 +286,11 @@ def push(repo, dest, force, revs):
 
             meta = repo.svnmeta(svn.uuid, svn.subdir)
             hashes = meta.revmap.hashes()
-        hg.update(repo, repo['tip'].node())
+        util.swap_out_encoding(old_encoding)
+        try:
+            hg.update(repo, repo['tip'].node())
+        finally:
+            util.swap_out_encoding()
         repair.strip(ui, repo, to_strip, "all")
     finally:
         util.swap_out_encoding(old_encoding)
