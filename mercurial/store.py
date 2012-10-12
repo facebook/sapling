@@ -512,6 +512,17 @@ class fncachestore(basicstore):
     def write(self):
         self.fncache.write()
 
+    def _exists(self, f):
+        ef = self.encode(f)
+        try:
+            self.getsize(ef)
+            return True
+        except OSError, err:
+            if err.errno != errno.ENOENT:
+                raise
+            # nonexistent entry
+            return False
+
     def __contains__(self, path):
         '''Checks if the store contains path'''
         path = "/".join(("data", path))
