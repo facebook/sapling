@@ -66,6 +66,19 @@ edit the history
   abort: Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
 
+Go at a random point and try to continue
+
+  $ hg id -n
+  3+
+  $ hg up 0
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ HGEDITOR='echo foobaz > ' hg histedit --continue
+  abort: working directory parent is not a descendant of 055a42cdd887
+  (update to 055a42cdd887 or descendant and run "hg histedit --continue" again)
+  [255]
+  $ hg up 3
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 commit, then edit the revision
   $ hg ci -m 'wat'
   created new head
