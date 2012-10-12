@@ -527,13 +527,14 @@ class fncachestore(basicstore):
         '''Checks if the store contains path'''
         path = "/".join(("data", path))
         # check for files (exact match)
-        if path + '.i' in self.fncache:
+        e = path + '.i'
+        if e in self.fncache and self._exists(e):
             return True
         # now check for directories (prefix match)
         if not path.endswith('/'):
             path += '/'
         for e in self.fncache:
-            if e.startswith(path):
+            if e.startswith(path) and self._exists(e):
                 return True
         return False
 
