@@ -588,8 +588,12 @@ def between(repo, old, new, keep):
 
     When keep is false, the specified set can't have children."""
     revs = list(repo.set('%n::%n', old, new))
-    if not keep and repo.revs('(%ld::) - (%ld + hidden())', revs, revs):
-        raise util.Abort(_('cannot edit history that would orphan nodes'))
+    if not keep:
+        if repo.revs('(%ld::) - (%ld + hidden())', revs, revs):
+            raise util.Abort(_('cannot edit history that would orphan nodes'))
+        root = min(revs)
+        if not root.phase():
+            raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in revs]
 
 

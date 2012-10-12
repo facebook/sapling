@@ -121,3 +121,22 @@ check hidden revision are ignored (6 have hidden children 7 and 8)
   > EOF
   $ hg histedit 6 --commands commands.txt
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+
+Check that histedit respect phases
+=========================================
+
+(not directly related to the test file but doesn't deserve it's own test case)
+
+  $ hg log -G
+  @  9:7c044e3e33a9 f
+  |
+  o  6:d36c0562f908 c
+  |
+  o  0:cb9a9f314b8b a
+  
+  $ hg ph -pv '.^'
+  phase changed for 2 changesets
+  $ hg histedit -r '.~2'
+  abort: cannot edit immutable changeset: cb9a9f314b8b
+  [255]
