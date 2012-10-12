@@ -1224,13 +1224,7 @@ test hg log on non-existent files and on directories
   $ echo 1 > d4.hg/f1
   $ echo 1 > d5.d/f1
   $ echo 1 > .d6/f1
-  $ hg add .
-  adding .d6/f1
-  adding D2/f1
-  adding D3.i/f1
-  adding d1/f1
-  adding d4.hg/f1
-  adding d5.d/f1
+  $ hg -q add .
   $ hg commit -m "a bunch of weird directories"
   $ hg log -l1 d1/f1 | grep changeset
   changeset:   0:65624cd9070a
