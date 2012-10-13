@@ -327,10 +327,7 @@ class vfs(abstractvfs):
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
                               (src, err.strerror), linkname)
         else:
-            f = self(dst, "w")
-            f.write(src)
-            f.close()
-            self._fixfilemode(dst)
+            self.write(dst, src)
 
     def audit(self, path):
         self.auditor(path)
