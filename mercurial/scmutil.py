@@ -255,10 +255,10 @@ class vfs(abstractvfs):
     def _cansymlink(self):
         return util.checklink(self.base)
 
-    def _fixfilemode(self, fp):
+    def _fixfilemode(self, name):
         if self.createmode is None:
             return
-        os.fchmod(fp.fileno(), self.createmode & 0666)
+        os.chmod(name, self.createmode & 0666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False):
         if self._audit:
@@ -305,7 +305,7 @@ class vfs(abstractvfs):
                     util.rename(util.mktempcopy(f), f)
         fp = util.posixfile(f, mode)
         if nlink == 0:
-            self._fixfilemode(fp)
+            self._fixfilemode(f)
         return fp
 
     def symlink(self, src, dst):
@@ -329,8 +329,8 @@ class vfs(abstractvfs):
         else:
             f = self(dst, "w")
             f.write(src)
-            self._fixfilemode(f)
             f.close()
+            self._fixfilemode(dst)
 
     def audit(self, path):
         self.auditor(path)
