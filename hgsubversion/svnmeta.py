@@ -367,7 +367,7 @@ class SVNMeta(object):
         if existing:
             return None, None, None
         if path == 'trunk' or path.startswith('trunk/'):
-            path = path.split('/')[1:]
+            path = '/'.join(path.split('/')[1:])
             test = 'trunk'
         elif path.startswith('branches/'):
             elts = path.split('/')
