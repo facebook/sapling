@@ -141,7 +141,17 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
 
             hash = fctx.data().strip()
             path = lfutil.findfile(rsrc, hash)
-            ### TODO: What if the file is not cached?
+
+            # If one file is missing, likely all files from this rev are
+            if path is None:
+                cachelfiles(ui, rsrc, ctx.node())
+                path = lfutil.findfile(rsrc, hash)
+
+                if path is None:
+                    raise util.Abort(
+                        _("missing largefile \'%s\' from revision %s")
+                         % (f, node.hex(ctx.node())))
+
             data = ''
             fd = None
             try:
