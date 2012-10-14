@@ -455,6 +455,9 @@ def histedit(ui, repo, *parent, **opts):
 
         keep = opts.get('keep', False)
         revs = between(repo, parent, topmost, keep)
+        if not revs:
+            ui.warn(_('nothing to edit\n'))
+            return 1
 
         ctxs = [repo[r] for r in revs]
         rules = opts.get('commands', '')
@@ -588,7 +591,7 @@ def between(repo, old, new, keep):
 
     When keep is false, the specified set can't have children."""
     ctxs = list(repo.set('%n::%n', old, new))
-    if not keep:
+    if ctxs and not keep:
         if repo.revs('(%ld::) - (%ld + hidden())', ctxs, ctxs):
             raise util.Abort(_('cannot edit history that would orphan nodes'))
         root = min(ctxs)
