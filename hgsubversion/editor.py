@@ -184,7 +184,10 @@ class RevisionData(object):
         i = 1
         self.ui.note('\nfetching files...\n')
         for p in files:
-            self.ui.note('.')
+            if self.ui.debugflag:
+                self.ui.debug('fetching %s\n' % p)
+            else:
+                self.ui.note('.')
             self.ui.flush()
             if i % 50 == 0:
                 svn.init_ra_and_client()
