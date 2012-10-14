@@ -51,6 +51,8 @@ all
 
 other
 
+  $ hg grep -l port port
+  port:4
   $ hg grep import port
   port:4:import/export
 
