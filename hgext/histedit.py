@@ -594,7 +594,7 @@ def between(repo, old, new, keep):
     if ctxs and not keep:
         if repo.revs('(%ld::) - (%ld + hidden())', ctxs, ctxs):
             raise util.Abort(_('cannot edit history that would orphan nodes'))
-        root = min(ctxs)
+        root = ctxs[0] # list is already sorted by repo.set
         if not root.phase():
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)
     return [c.node() for c in ctxs]
