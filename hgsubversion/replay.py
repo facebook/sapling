@@ -99,8 +99,12 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     date = meta.fixdate(rev.date)
 
     # build up the branches that have files on them
+    failoninvalid = ui.configbool('hgsubversion',
+            'failoninvalidreplayfile', False)
     for f in files_to_commit:
         if not meta.is_path_valid(f):
+            if failoninvalid:
+                raise hgutil.Abort('file %s should not be in commit list' % f)
             continue
         p, b = meta.split_branch_path(f)[:2]
         if b not in branch_batches:

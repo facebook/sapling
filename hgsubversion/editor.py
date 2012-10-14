@@ -312,10 +312,9 @@ class HgEditor(svnwrap.Editor):
     @svnwrap.ieditor
     def open_file(self, path, parent_baton, base_revision, p=None):
         self._checkparentdir(parent_baton)
-        fpath, branch = self.meta.split_branch_path(path)[:2]
-        if not fpath:
-            self.ui.debug('WARNING: Opening non-existant file %s\n' % path)
+        if not self.meta.is_path_valid(path):
             return None
+        fpath, branch = self.meta.split_branch_path(path)[:2]
 
         self.ui.note('M %s\n' % path)
 
@@ -323,9 +322,6 @@ class HgEditor(svnwrap.Editor):
             copy = self._svncopies.pop(path)
             base, isexec, islink, copypath = copy.resolve(self._getctx)
             return self._openfile(path, base, isexec, islink, copypath)
-
-        if not self.meta.is_path_valid(path):
-            return None
 
         baserev = base_revision
         if baserev is None or baserev == -1:
@@ -350,16 +346,20 @@ class HgEditor(svnwrap.Editor):
     def add_file(self, path, parent_baton=None, copyfrom_path=None,
                  copyfrom_revision=None, file_pool=None):
         self._checkparentdir(parent_baton)
+        # Use existing=False because we use the fact a file is being
+        # added here to populate the branchmap which is used with
+        # existing=True.
+        fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
+        if not fpath or fpath not in self.meta.filemap:
+            return None
         if path in self._svncopies:
             raise EditingError('trying to replace copied file %s' % path)
         if path in self._deleted:
             self._deleted.remove(path)
-        fpath, branch = self.meta.split_branch_path(path, existing=False)[:2]
-        if not fpath:
-            return None
         if (branch not in self.meta.branches and
             not self.meta.get_path_tag(self.meta.remotename(branch))):
-            # we know this branch will exist now, because it has at least one file. Rock.
+            # we know this branch will exist now, because it has at
+            # least one file. Rock.
             self.meta.branches[branch] = None, 0, self.current.rev.revnum
         if not copyfrom_path:
             self.ui.note('A %s\n' % path)
@@ -478,6 +478,8 @@ class HgEditor(svnwrap.Editor):
             if not f.startswith(frompath):
                 continue
             dest = path + '/' + f[len(frompath):]
+            if not self.meta.is_path_valid(dest):
+                continue
             if dest in self._deleted:
                 self._deleted.remove(dest)
             if copyfromparent:

@@ -108,6 +108,8 @@ class MapTests(test_util.TestBase):
         filemap.close()
         ui = self.ui(stupid)
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
+        ui.setconfig('hgsubversion', 'failoninvalidreplayfile', 'true')
+        ui.setconfig('hgsubversion', 'failonmissing', 'true')
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, filemap=self.filemap)
         return self.repo
@@ -142,6 +144,10 @@ class MapTests(test_util.TestBase):
                          ['alpha', 'beta'])
         self.assertEqual(self.repo['default'].manifest().keys(),
                          ['alpha', 'beta'])
+
+    def test_file_map_copy(self):
+        repo = self._loadwithfilemap('copies.svndump', "exclude dir2\n")
+        self.assertEqual(['dir/a'], list(repo['tip']))
 
     def test_branchmap(self, stupid=False):
         repo_path = self.load_svndump('branchmap.svndump')
