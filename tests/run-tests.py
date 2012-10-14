@@ -526,14 +526,14 @@ def globmatch(el, l):
 def linematch(el, l):
     if el == l: # perfect match (fast)
         return True
-    if (el and
-        (el.endswith(" (re)\n") and rematch(el[:-6], l) or
-         el.endswith(" (glob)\n") and globmatch(el[:-8], l) or
-         el.endswith(" (esc)\n") and
-             (el[:-7].decode('string-escape') + '\n' == l or
-              os.name == 'nt' and
-              el[:-7].decode('string-escape') + '\n' == l))):
-        return True
+    if el:
+        if el.endswith(" (esc)\n"):
+            el = el[:-7].decode('string-escape') + '\n'
+        if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+            return True
+        if (el.endswith(" (re)\n") and rematch(el[:-6], l) or
+            el.endswith(" (glob)\n") and globmatch(el[:-8], l)):
+            return True
     return False
 
 def tsttest(test, wd, options, replacements):

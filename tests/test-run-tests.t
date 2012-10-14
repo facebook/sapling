@@ -62,6 +62,18 @@ Windows: \r\n is handled like \n and can be escaped:
   crcrlf\r (esc)
 #endif
 
+Combining esc with other markups - and handling lines ending with \r instead of \n:
+
+  $ printf 'foo/bar\r'
+  foo/bar\r (no-eol) (glob) (esc)
+#if windows
+  $ printf 'foo\\bar\r'
+  foo/bar\r (no-eol) (glob) (esc)
+#endif
+  $ printf 'foo/bar\rfoo/bar\r'
+  foo.bar\r \(no-eol\) (re) (esc)
+  foo.bar\r \(no-eol\) (re)
+
 testing hghave
 
   $ "$TESTDIR/hghave" true
