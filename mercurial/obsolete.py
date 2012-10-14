@@ -20,6 +20,31 @@ facilitate conflicts resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
+Examples:
+
+- When changeset A is replacement by a changeset A', one marker is stored:
+
+    (A, (A'))
+
+- When changesets A and B are folded into a new changeset C two markers are
+  stored:
+
+    (A, (C,)) and (B, (C,))
+
+- When changeset A is simply "pruned" from the graph, a marker in create:
+
+    (A, ())
+
+- When changeset A is split into B and C, a single marker are used:
+
+    (A, (C, C))
+
+  We use a single marker to distinct the "split" case from the "divergence"
+  case. If two independants operation rewrite the same changeset A in to A' and
+  A'' when have an error case: divergent rewriting. We can detect it because
+  two markers will be created independently:
+
+  (A, (B,)) and (A, (C,))
 
 Format
 ------
