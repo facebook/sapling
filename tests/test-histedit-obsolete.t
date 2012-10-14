@@ -58,7 +58,7 @@ Enable obsolete
   #  m, mess = edit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat >> commands.txt <<EOF
+  $ cat > commands.txt <<EOF
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
   > pick 055a42cdd887 3 d
