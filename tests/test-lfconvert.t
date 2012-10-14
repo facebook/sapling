@@ -276,10 +276,21 @@ round-trip: converting back to a normal (non-largefiles) repo with
 
 Avoid a traceback if a largefile isn't available (issue3519)
 
+Ensure the largefile can be cached in the source if necessary
   $ hg clone -U largefiles-repo issue3519
   $ rm "${USERCACHE}"/*
   $ hg lfconvert --to-normal issue3519 normalized3519
   initializing destination normalized3519
+
+Ensure the abort message is useful if a largefile is entirely unavailable
+  $ rm -rf normalized3519
+  $ rm "${USERCACHE}"/*
+  $ rm issue3519/.hg/largefiles/*
+  $ rm largefiles-repo/.hg/largefiles/*
+  $ hg lfconvert --to-normal issue3519 normalized3519
+  initializing destination normalized3519
+  large: can't get file locally
+  (no default or default-push path set in hgrc)
   abort: missing largefile 'large' from revision d4892ec57ce212905215fad1d9018f56b99202ad
   [255]
 
