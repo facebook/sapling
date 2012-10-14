@@ -224,6 +224,13 @@ except ImportError:
     _terminfo_params = False
 
 _styles = {'grep.match': 'red bold',
+           'grep.linenumber': 'green',
+           'grep.rev': 'green',
+           'grep.change': 'green',
+           'grep.sep': 'cyan',
+           'grep.filename': 'magenta',
+           'grep.user': 'magenta',
+           'grep.date': 'magenta',
            'bookmarks.current': 'green',
            'branches.active': 'none',
            'branches.closed': 'black bold',
