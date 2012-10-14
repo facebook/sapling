@@ -323,7 +323,7 @@ class FileMap(object):
             msg = 'duplicate %s entry in %s: "%s"\n'
             self.ui.status(msg % (m, fn, path))
             return
-        bits = m.strip('e'), path
+        bits = m.rstrip('e'), path
         self.ui.debug('%sing %s\n' % bits)
         # respect rule order
         mapping[path] = len(self)
