@@ -52,7 +52,7 @@ The header is followed by the markers. Each marker is made of:
   cannot contain '\0'.
 """
 import struct
-import util, base85
+import util, base85, node
 from i18n import _
 
 _pack = struct.pack
@@ -237,6 +237,9 @@ class obsstore(object):
             self.precursors.setdefault(pre, set()).add(mark)
             for suc in sucs:
                 self.successors.setdefault(suc, set()).add(mark)
+        if node.nullid in self.successors:
+            raise util.Abort(_('bad obsolescence marker detected: '
+                               'invalid successors nullid'))
 
 def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for

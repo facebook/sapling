@@ -100,6 +100,13 @@ Register two markers with a missing node
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
 
+Refuse pathological nullid successors
+  $ hg debugobsolete -d '9001 0' 1337133713371337133713371337133713371337 0000000000000000000000000000000000000000
+  transaction abort!
+  rollback completed
+  abort: bad obsolescence marker detected: invalid successors nullid
+  [255]
+
 Check that graphlog detect that a changeset is obsolete:
 
   $ hg glog
