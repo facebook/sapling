@@ -929,7 +929,7 @@ def branchpoint(repo, subset, x):
         return []
     baserev = min(subset)
     parentscount = [0]*(len(repo) - baserev)
-    for r in xrange(baserev + 1, len(repo)):
+    for r in cl.revs(start=baserev + 1):
         for p in cl.parentrevs(r):
             if p >= baserev:
                 parentscount[p - baserev] += 1
