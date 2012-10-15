@@ -225,7 +225,8 @@ class HgEditor(svnwrap.Editor):
                 'opened directory: %s != %s' % (self._opendirs[-1][0], baton))
 
     def _deletefile(self, path):
-        self._deleted.add(path)
+        if self.meta.is_path_valid(path):
+            self._deleted.add(path)
         if path in self._svncopies:
             del self._svncopies[path]
         self._missing.discard(path)

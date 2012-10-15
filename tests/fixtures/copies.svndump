@@ -1,6 +1,6 @@
 SVN-fs-dump-format-version: 2
 
-UUID: f9962aa6-eec5-4335-8af9-9ae89f4b18b2
+UUID: 6f377846-a035-4244-a154-e87a9351a653
 
 Revision-number: 0
 Prop-content-length: 56
@@ -9,7 +9,7 @@ Content-length: 56
 K 8
 svn:date
 V 27
-2012-10-14T14:22:33.372222Z
+2012-10-15T19:02:56.936694Z
 PROPS-END
 
 Revision-number: 1
@@ -23,7 +23,7 @@ pmezard
 K 8
 svn:date
 V 27
-2012-10-14T14:22:33.393643Z
+2012-10-15T19:02:56.958201Z
 K 7
 svn:log
 V 4
@@ -72,7 +72,7 @@ pmezard
 K 8
 svn:date
 V 27
-2012-10-14T14:22:35.042430Z
+2012-10-15T19:02:58.046478Z
 K 7
 svn:log
 V 21
@@ -109,7 +109,7 @@ pmezard
 K 8
 svn:date
 V 27
-2012-10-14T14:22:38.041919Z
+2012-10-15T19:03:01.045897Z
 K 7
 svn:log
 V 17
@@ -121,5 +121,38 @@ Node-kind: dir
 Node-action: add
 Node-copyfrom-rev: 2
 Node-copyfrom-path: trunk/dir2
+
+
+Revision-number: 4
+Prop-content-length: 117
+Content-length: 117
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-15T19:03:03.046654Z
+K 7
+svn:log
+V 15
+copy and remove
+PROPS-END
+
+Node-path: trunk/dir3/a
+Node-kind: file
+Node-action: delete
+
+Node-path: trunk/dir3/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/dir2/a
+Text-copy-source-md5: dd8c6a395b5dd36c56d23275028f526c
+Text-copy-source-sha1: 05dec960e24d918b8a73a1c53bcbbaac2ee5c2e0
+
+
 
 

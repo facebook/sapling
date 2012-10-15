@@ -152,14 +152,14 @@ class MapTests(test_util.TestBase):
         # directory.
         repo = self._loadwithfilemap('copies.svndump', "exclude dir2\n",
                 failonmissing=False)
-        self.assertEqual(['dir/a', 'dir3/a'], list(repo['tip']))
+        self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
 
     def test_file_map_exclude_copy_source_and_dest(self):
         # dir3 is excluded and copied from dir2 which is also excluded.
         # dir3 files should not be marked as missing and fetched.
         repo = self._loadwithfilemap('copies.svndump',
                 "exclude dir2\nexclude dir3\n")
-        self.assertEqual(['dir/a'], list(repo['tip']))
+        self.assertEqual(['dir/a'], list(repo[2]))
 
     def test_file_map_include_file_exclude_dir(self):
         # dir3 is excluded but we want dir3/a, which is also copied from
@@ -167,7 +167,11 @@ class MapTests(test_util.TestBase):
         repo = self._loadwithfilemap('copies.svndump',
                 "include .\nexclude dir2\nexclude dir3\ninclude dir3/a\n",
                 failonmissing=False)
-        self.assertEqual(['dir/a', 'dir3/a'], list(repo['tip']))
+        self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
+
+    def test_file_map_delete_dest(self):
+        repo = self._loadwithfilemap('copies.svndump', 'exclude dir3\n')
+        self.assertEqual(['dir/a', 'dir2/a'], list(repo[3]))
 
     def test_branchmap(self, stupid=False):
         repo_path = self.load_svndump('branchmap.svndump')
