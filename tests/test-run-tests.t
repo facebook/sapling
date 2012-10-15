@@ -52,6 +52,16 @@ Literal match ending in " (re)":
   $ echo 'foo (re)'
   foo (re)
 
+Windows: \r\n is handled like \n and can be escaped:
+
+#if windows
+  $ printf 'crlf\r\ncr\r\tcrlf\r\ncrcrlf\r\r\n'
+  crlf
+  cr\r (no-eol) (esc)
+  \tcrlf (esc)
+  crcrlf\r (esc)
+#endif
+
 testing hghave
 
   $ "$TESTDIR/hghave" true

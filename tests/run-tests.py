@@ -494,8 +494,10 @@ def stringescape(s):
 
 def rematch(el, l):
     try:
-        # ensure that the regex matches to the end of the string
-        return re.match(el + r'\Z', l)
+        # use \Z to ensure that the regex matches to the end of the string
+        if os.name == 'nt':
+            return re.match(el + r'\r?\n\Z', l)
+        return re.match(el + r'\n\Z', l)
     except re.error:
         # el is an invalid regex
         return False
@@ -525,12 +527,12 @@ def linematch(el, l):
     if el == l: # perfect match (fast)
         return True
     if (el and
-        (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
-         el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
+        (el.endswith(" (re)\n") and rematch(el[:-6], l) or
+         el.endswith(" (glob)\n") and globmatch(el[:-8], l) or
          el.endswith(" (esc)\n") and
              (el[:-7].decode('string-escape') + '\n' == l or
-              el[:-7].decode('string-escape').replace('\r', '') +
-                  '\n' == l and os.name == 'nt'))):
+              os.name == 'nt' and
+              el[:-7].decode('string-escape') + '\n' == l))):
         return True
     return False
 
@@ -885,7 +887,6 @@ def runone(options, test):
         (r':%s\b' % (options.port + 2), ':$HGPORT2'),
         ]
     if os.name == 'nt':
-        replacements.append((r'\r\n', '\n'))
         replacements.append(
             (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                      c in '/\\' and r'[/\\]' or
