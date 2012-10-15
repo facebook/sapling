@@ -503,6 +503,20 @@ def pushkey(repo, proto, namespace, key, old, new):
     else:
         new = encoding.tolocal(new) # normal path
 
+    if util.safehasattr(proto, 'restore'):
+
+        proto.redirect()
+
+        try:
+            r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
+                             encoding.tolocal(old), new) or False
+        except util.Abort:
+            r = False
+
+        output = proto.restore()
+
+        return '%s\n%s' % (int(r), output)
+
     r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
                      encoding.tolocal(old), new)
     return '%s\n' % int(r)
