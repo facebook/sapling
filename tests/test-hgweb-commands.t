@@ -27,7 +27,10 @@ Set up the repo
   $ hg branch unstable
   marked working directory as branch unstable
   (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -Ambranch
+  >>> open('msg', 'wb').write('branch commit with null character: \0\n')
+  $ hg ci -l msg
+  $ rm msg
+
   $ echo [graph] >> .hg/hgrc
   $ echo default.width = 3 >> .hg/hgrc
   $ echo stable.width = 3 >> .hg/hgrc
@@ -35,7 +38,7 @@ Set up the repo
   $ hg serve --config server.uncompressed=False -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg log -G --template '{rev}:{node|short} {desc}\n'
-  @  3:ba87b23d29ca branch
+  @  3:cad8025a2e87 branch commit with null character: \x00 (esc)
   |
   o  2:1d22e65f027e branch
   |
@@ -59,9 +62,9 @@ Logs and changes
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>branch</title>
-    <id>http://*:$HGPORT/#changeset-ba87b23d29ca67a305625d81a20ac279c1e3f444</id> (glob)
-    <link href="http://*:$HGPORT/rev/ba87b23d29ca"/> (glob)
+    <title>branch commit with null character: </title>
+    <id>http://*:$HGPORT/#changeset-cad8025a2e87f88c06259790adfa15acb4080123</id> (glob)
+    <link href="http://*:$HGPORT/rev/cad8025a2e87"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -70,7 +73,7 @@ Logs and changes
     <published>1970-01-01T00:00:00+00:00</published>
     <content type="xhtml">
      <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">branch</pre>
+      <pre xml:space="preserve">branch commit with null character: </pre>
      </div>
     </content>
    </entry>
@@ -137,9 +140,9 @@ Logs and changes
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>branch</title>
-    <id>http://*:$HGPORT/#changeset-ba87b23d29ca67a305625d81a20ac279c1e3f444</id> (glob)
-    <link href="http://*:$HGPORT/rev/ba87b23d29ca"/> (glob)
+    <title>branch commit with null character: </title>
+    <id>http://*:$HGPORT/#changeset-cad8025a2e87f88c06259790adfa15acb4080123</id> (glob)
+    <link href="http://*:$HGPORT/rev/cad8025a2e87"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>
@@ -148,7 +151,7 @@ Logs and changes
     <published>1970-01-01T00:00:00+00:00</published>
     <content type="xhtml">
      <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">branch</pre>
+      <pre xml:space="preserve">branch commit with null character: </pre>
      </div>
     </content>
    </entry>
@@ -257,14 +260,14 @@ Logs and changes
   </div>
   <ul>
   <li class="active">log</li>
-  <li><a href="/graph/ba87b23d29ca">graph</a></li>
+  <li><a href="/graph/cad8025a2e87">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/ba87b23d29ca">changeset</a></li>
-  <li><a href="/file/ba87b23d29ca">browse</a></li>
+  <li><a href="/rev/cad8025a2e87">changeset</a></li>
+  <li><a href="/file/cad8025a2e87">browse</a></li>
   </ul>
   <ul>
   
@@ -300,7 +303,7 @@ Logs and changes
    <tr class="parity0">
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
-    <td class="description"><a href="/rev/ba87b23d29ca">branch</a><span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
+    <td class="description"><a href="/rev/cad8025a2e87">branch commit with null character: </a><span class="branchhead">unstable</span> <span class="tag">tip</span> <span class="tag">something</span> </td>
    </tr>
    <tr class="parity1">
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
@@ -701,19 +704,19 @@ Overviews
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-tags'
   200 Script output follows
   
-  tip	ba87b23d29ca67a305625d81a20ac279c1e3f444
+  tip	cad8025a2e87f88c06259790adfa15acb4080123
   1.0	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-branches'
   200 Script output follows
   
-  unstable	ba87b23d29ca67a305625d81a20ac279c1e3f444	open
+  unstable	cad8025a2e87f88c06259790adfa15acb4080123	open
   stable	1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe	inactive
   default	a4f92ed23982be056b9852de5dfe873eaac7f0de	inactive
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'raw-bookmarks'
   200 Script output follows
   
   anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
-  something	ba87b23d29ca67a305625d81a20ac279c1e3f444
+  something	cad8025a2e87f88c06259790adfa15acb4080123
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'summary/?style=gitweb'
   200 Script output follows
   
@@ -753,7 +756,7 @@ Overviews
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/ba87b23d29ca?style=gitweb">files</a> |
+  <a href="/file/cad8025a2e87?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
   </div>
@@ -772,14 +775,14 @@ Overviews
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><i>test</i></td>
   <td>
-  <a class="list" href="/rev/ba87b23d29ca?style=gitweb">
-  <b>branch</b>
+  <a class="list" href="/rev/cad8025a2e87?style=gitweb">
+  <b>branch commit with null character: </b>
   <span class="logtags"><span class="branchtag" title="unstable">unstable</span> <span class="tagtag" title="tip">tip</span> <span class="bookmarktag" title="something">something</span> </span>
   </a>
   </td>
   <td class="link" nowrap>
-  <a href="/rev/ba87b23d29ca?style=gitweb">changeset</a> |
-  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
+  <a href="/rev/cad8025a2e87?style=gitweb">changeset</a> |
+  <a href="/file/cad8025a2e87?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity1">
@@ -856,11 +859,11 @@ Overviews
   </tr>
   <tr class="parity1">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td><a class="list" href="/rev/ba87b23d29ca?style=gitweb"><b>something</b></a></td>
+  <td><a class="list" href="/rev/cad8025a2e87?style=gitweb"><b>something</b></a></td>
   <td class="link">
-  <a href="/rev/ba87b23d29ca?style=gitweb">changeset</a> |
-  <a href="/log/ba87b23d29ca?style=gitweb">changelog</a> |
-  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
+  <a href="/rev/cad8025a2e87?style=gitweb">changeset</a> |
+  <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
+  <a href="/file/cad8025a2e87?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="light"><td colspan="3"><a class="list" href="/bookmarks?style=gitweb">...</a></td></tr>
@@ -871,12 +874,12 @@ Overviews
   
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td><a class="list" href="/shortlog/ba87b23d29ca?style=gitweb"><b>ba87b23d29ca</b></a></td>
+  <td><a class="list" href="/shortlog/cad8025a2e87?style=gitweb"><b>cad8025a2e87</b></a></td>
   <td class="">unstable</td>
   <td class="link">
-  <a href="/changeset/ba87b23d29ca?style=gitweb">changeset</a> |
-  <a href="/log/ba87b23d29ca?style=gitweb">changelog</a> |
-  <a href="/file/ba87b23d29ca?style=gitweb">files</a>
+  <a href="/changeset/cad8025a2e87?style=gitweb">changeset</a> |
+  <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
+  <a href="/file/cad8025a2e87?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity1">
@@ -955,7 +958,7 @@ Overviews
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/ba87b23d29ca?style=gitweb">files</a> |
+  <a href="/file/cad8025a2e87?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
   <a href="/graph/3?style=gitweb&revcount=30">less</a>
@@ -976,7 +979,7 @@ Overviews
   <script>
   <!-- hide script content
   
-  var data = [["ba87b23d29ca", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  var data = [["cad8025a2e87", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch commit with null character: \x00", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]]; (esc)
   var graph = new Graph();
   graph.scale(39);
   
@@ -1056,13 +1059,13 @@ raw graph
   
   
   # HG graph
-  # Node ID ba87b23d29ca67a305625d81a20ac279c1e3f444
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Rows shown 4
   
-  changeset:   ba87b23d29ca
+  changeset:   cad8025a2e87
   user:        test
   date:        1970-01-01
-  summary:     branch
+  summary:     branch commit with null character: \x00 (esc)
   branch:      unstable
   tag:         tip
   bookmark:    something
@@ -1111,7 +1114,7 @@ heads
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=heads'
   200 Script output follows
   
-  ba87b23d29ca67a305625d81a20ac279c1e3f444
+  cad8025a2e87f88c06259790adfa15acb4080123
 
 branches
 
@@ -1125,15 +1128,11 @@ changegroup
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT '?cmd=changegroup&roots=0000000000000000000000000000000000000000'
   200 Script output follows
   
-  x\x9c\xbdTMHTQ\x14\x1e\xfc\xef\xd9&\x10\x11*x\x88\x81\x9aN\xf7\xddw\xdf{\xf7Y\x0efR\xb4\x11\xb1U\x82\xc5\xfd\x9d!c\x06\x9c'd\xa0\x99X\x82\x92i\xablUZ-*\x08\x84\x82\x02KkQ\xf8\x13\xe4\xaa\x8dn\x94\x906)\xd5B\x02\xeb\xbe\x9c\x01\x85\xc9\x996\x1d\xf8x\x97{\xefy\xe7;\xe7|\xe7\x06\x02\x81\xb1\xe0\xda\x13\xefN\xd1\xca\x8f\xcb-\xbde\xfc\xeepU\xecJ\xc3\xcd@\x86\x96\xc6\xb7^`\xe9"[H\xe4\x18T\x1a\x16p]\xc3\x96\x14\x13\xcbt\xa1tM\x0c\x1c\x0b2,M\xcd\x13qO\x03:\xd089"c1\xcd\x87FI\\\xa8\xbf|\xbc\xbf\x11\\p{_\xe5\xb6\xddn^j\xdd\xec\x0f=z\xb7\xb6\x94)\xebT\xbe\x89\xa3 (esc)
-  \x1f6!6p\x00\xc4H`L\x18\x83\xdc\xa6\x8c\x0b\x84\x01\x06\x06s\xb84\x1cn2F4u\x19*\xd4*\x14\x04#a\x8f\x84\xe3\xfe^\xc8OS\xa1\xfc8\xe7\x82\xebj[7\x82@\x97\xb1v\x9dEH4,\xe2\xc2\xd3\xa1\x90\x800\x07\xb9\xc4@\xea\xee\xe4\xc1\xd2\xcf\xe7\xb3\xba[\xf2\xf6X\xdd]C\x1d\x05\xf3\x87\x1f,l\xeeBt\x87\xa5\xf2\xdd\x9e\x90*\xa9kC\xac"!\x17\x12)!c\x000\xd7\x05&\xb5\xa9\xc5\xa8-Ln (esc)
-  \x0c|\xf2A\x85\x1a\x85bUy\x9d\xb6\x93(\x8b\xd4\xc4=B/\x8a?\r (no-eol) (esc)
-  P'G\x15\x98B\xde\xd6\xa9Zy/\xfb'j+f\xc2\xe3\xb9\xb4\xf5\xea\x98\xf6\xa6sz\xf9{\xc3.\xa4vX*\xdf\x04\x0f\xff[\xb4\x8dGG4\xc1$\xe1:\xb9\xbaq\xf2\xeb\xa9\xfd\xebM\xa3\xc5?\x07\xce\xdc\xda\xc0\xf9\xcd\xef\xbf\xa5\xd3g\xd2\xd2\xa8\xa5uKu\x01(8$\xa6k@\x02(D\x16\x80\x00\x99\x82\x08\xa5\r (no-eol) (esc)
-  \x81(t\\f`\xea\x02\xce\xb5\x7f\xba\xac\x02\x8c\\x\x98\x9f\xd5\xb7:0W\xdd6\xbf\xd2\xd3s\xa0k\xbd\xeb\xd8L\xa6	\xa5Q\x86\x91Pc\x80\x98\x8cB,L\x07#\x80\x04\x82\xb6\x8d)\xa3\x08X\x02\x00\xear\x0c-`b\x9b\x18>\xa1\x1b\xf9g\xe9@\xd1\xe9\xca_US{G\xb3\x9f?\x9b\x8d\xd6\x86zR\x91LE\xe8/\xdd& (esc)
-  C
-  \xd5~u\xb0e#\x08\r (no-eol) (esc)
-  \x8c\xd5\xf83\x93\x01B\x95\xe8\x1c\x03\xdb\x92s*\x99`\xcc0\x88\xb4d\xb2\xbd\x85\xc9,\x14\xb7\xf1\xd9\xf2\xe5Ku\x8d\xf5rp\xb6\xee\\\xe0\xc5\xa7C\xd9\xd7\xefe\xda\xe94\xc5\xaa\xde>\x8a\x02I\xcb!\x16\xc1\x10"\x1b\x11\xe0\x02\xc8l\xe9H\x84\xb0\xf4\xa78\xc9-\xf1(\xa9\x15\x0f.\x8c\x8fT\x16\x965\xe9'\xbe\xac6\xaeLtN\x0f\x0e/fJ-\x8d\x08s\x12#\xe7[\xfe\xff\x0b\x17\xb9\xc6KK\xfa\xa2o\xa7\x1e\x87\xfaKb\x8b\xaf?\xcc\xed{z>\xd3\xb8\xbb\xcc}\x8eB\x01\x89\xc6\xbc\x88hO\xa6\x15\xf8\r (no-eol) (esc)
-  r4\xb3\xe5 (no-eol) (esc)
+  x\x9c\xbd\x94MHTQ\x14\xc7'+\x9d\xc66\x81\x89P\xc1\xa3\x14\xcct\xba\xef\xbe\xfb\xde\xbb\xcfr0\xb3"\x02\x11[%\x98\xdcO\xa7\xd2\x19\x98y\xd2\x07h"\x96\xa0e\xda\xa6lUY-\xca\x08\xa2\x82\x16\x96\xd1\xa2\xf0#\xc8\x95\x1b\xdd$!m*"\xc8\x82\xea\xbe\x9c\x01\x85\xc9\x996\x1d\xf8\xc1\xe3~\x9d\xff9\xef\x7f\xaf\xcf\xe7\xbb\x19\xfc4\xec^\xcb\x9b\xfbz\xa6\xbe\xb3\x90_\xef/\x8d\x9e\xad\xbe\xe4\xcb0\xd2\xec\xad\x12X:\xc8\x12\x12\xd9:\x95\xba	\x1cG\xb7$\xc5\xc44\x1c(\x1d\x03\x03\xdb\x84\x0cK#\xe0\x8a\xb8\x1b\x00\x1a\x08p\xb2SF\xa3\x01\x8f\x00%q\xa1Ny{k!8\xe5t>[{\xe2j\xddl\xc3\xcf\xee\xd0\xddW\x9ff3U\x9djobj\xbb\x87E\x88\x05l\x001\x12\x18\x13\xc6 \xb7(\xe3\x02a\x80\x81\xcel.u\x9b\x1b\x8c\x91\x80Z\x0c\x15\x15 (esc)
+  \x7f0\xdc\xe4\x92\xa6\xb87\x16\xf2\xcaT\x14\xef\xe1\\pM\r (no-eol) (esc)
+  kz\x10h2\x1a\xd3X\x98D\x9aD\\\xb8\x1a\x14\x12\x10f#\x87\xe8H\xad\x1d\xd9\xb2\xf5}cV{}\xf6:\xb3\xbd\xad\xaf\xd5?\xb9\xe3\xf6\xd4\xcf\x15\x84.\x8bT{\x97\x16\xa4Z\xeaX\x10\xabL\xc8\x81DJ\xc8\x18\x00\xccq\x80A-j2j	\x83\x1b\x02\x03O|PQ\xae\xc8W\x9d\xd7h\x8cDX\xb8<\xee\x12\xda,\xfe\xfc\x005\xb3K\xc1\x14\xd9\x8b\xb3^C\xc7\xa6\xb3\xea\x83\xdd\xdf.d\x17]\xe9\xbf\xff}\xe3\xf0#\xff\xaam+\x88Z\x16\xa9\xf6&tT+\xf2\x96\xe8h\x8d$\x94\xa8\xf1}\x8aC\x8a\xc2\xc59\x8dE[Z\x8e\xb9\xda\xc9cnX\x8b\xb467{\xad\x8e\x11\xe6\x8aX\xb9\x96L52\xbf\xb0\xff\xe3\x81M\x9fk\x07\xf3\x7f\xf4\x1c\xbe\xbc\x80s\xea^\x7fY\xc1\xca\xcb"\x8d\xbb\x1a\x16]\xea\x83\x82Cb8:$\x80Bd\x02\x08\x90!\x88P^\x12\x88B\xdba:\xa6\x0e\xe0<\xf0O\x8bU\x82\x81\xe3wr\xb2\xba\xe6{&\xcaNL\xceutln\xfb\xdc\xb6{,\xd3\x82\xd28IO\xb8\xd7G\x0cF!\x16\x86\x8d\x11@\x02A\xcb\xc2\x94Q\x04L\x01\x00u8\x86&0\xb0EtO\xd0\xc5\x9c#\xb4'\xef`\xc9\xaf\xd2\xd1\xf5\x83\xab\x9f<\x1e\x8fT\x84:R\x89L%\xe8/\xee \x8a>E\x99\xd7\x1dlZ\x08B\x1dc\xf5\\0\x83\x01B\x95Im\x1d[\x92s*\x99`L\xd7\x894e qfn\xb2 (esc)
+  \xa5mh\xbc\xf8\xdd\xa9\xca\x9a*\xd9;^y\xd4\xf7t\xbah\xf5\xf9\x1b\x99\xfe\xe94\xcd*[zu\x05\x92\xa6ML\x82!D\x16"\xc0\x01\x90Y\xd2\x96\x08a\xe9\xdd\xfa\xa4\xb6\xc4#\xa6\xbexpjh\xa0$\xb7\xb0V\xdb\xfba\xbef\xee\xe1\xe9\x17\xbd\xfd3\x99JKc\xc25\x89+\xeaE\xce\xffK\x17>\xc7\xb7\x16tE^\x8e\xde\x0bu\x17Dg\x9e\xbf\x99\xd8\xf0\xa01\xd3\xbc+\xbc\x13k\x14~\x12\x89\xbaa\x11K\x96\xe5\xfb\r (no-eol) (esc)
+  \x95)\xbe\xf6 (no-eol) (esc)
 
 stream_out
 
@@ -1277,8 +1276,8 @@ commit message with Japanese Kanji 'Noh', which ends with '\x5c'
 Graph json escape of multibyte character
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/' \
-  >     | grep '^var data ='
-  var data = [["548001d11f45", [0, 1], [[0, 0, 1, -1, ""]], "\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["ba87b23d29ca", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]];
+  >     | grep -a '^var data ='
+  var data = [["061dd13ba3c3", [0, 1], [[0, 0, 1, -1, ""]], "\\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["cad8025a2e87", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch commit with null character: \x00", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]]; (esc)
 
 capabilities
 

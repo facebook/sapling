@@ -92,9 +92,9 @@ def email(text):
 
 def escape(text):
     """:escape: Any text. Replaces the special XML/XHTML characters "&", "<"
-    and ">" with XML entities.
+    and ">" with XML entities, and filters out NUL characters.
     """
-    return cgi.escape(text, True)
+    return cgi.escape(text.replace('\0', ''), True)
 
 para_re = None
 space_re = None
