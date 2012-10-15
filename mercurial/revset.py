@@ -933,9 +933,7 @@ def branchpoint(repo, subset, x):
         for p in cl.parentrevs(r):
             if p >= baserev:
                 parentscount[p - baserev] += 1
-    branchpoints = set((baserev + i) for i in xrange(len(parentscount))
-                       if parentscount[i] > 1)
-    return [r for r in subset if r in branchpoints]
+    return [r for r in subset if (parentscount[r - baserev] > 1)]
 
 def minrev(repo, subset, x):
     """``min(set)``
