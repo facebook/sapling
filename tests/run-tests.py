@@ -542,6 +542,11 @@ def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
     # matches \ on windows. Escaping of these caracters is supported.
     if el + '\n' == l:
+        if os.name == 'nt':
+            # matching on "/" is not needed for this line
+            iolock.acquire()
+            print "\nInfo, unnecessary glob: %s (glob)" % el
+            iolock.release()
         return True
     i, n = 0, len(el)
     res = ''
