@@ -2084,7 +2084,9 @@ def debugknown(ui, repopath, *ids, **opts):
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
-@command('debugobsolete', [] + commitopts2,
+@command('debugobsolete',
+        [('', 'flags', 0, _('markers flag')),
+        ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker"""
@@ -2111,8 +2113,8 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         try:
             tr = repo.transaction('debugobsolete')
             try:
-                repo.obsstore.create(tr, parsenodeid(precursor), succs, 0,
-                                     metadata)
+                repo.obsstore.create(tr, parsenodeid(precursor), succs,
+                                     opts['flags'], metadata)
                 tr.close()
             finally:
                 tr.release()

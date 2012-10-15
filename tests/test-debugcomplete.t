@@ -237,7 +237,7 @@ Show all commands + options
   debugindexdot: 
   debuginstall: 
   debugknown: 
-  debugobsolete: date, user
+  debugobsolete: flags, date, user
   debugpushkey: 
   debugpvec: 
   debugrebuildstate: rev
