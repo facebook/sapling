@@ -472,9 +472,8 @@ proc readrefs {} {
             exit 2
         }
     }
-    regsub -all "\r\n" $heads "\n" heads
 
-    set lines [split $heads "\n"]
+    set lines [split $heads \r\n]
     foreach f $lines {
         set match ""
         regexp {changeset:\s+(\S+):(\S+)$} $f match id sha
