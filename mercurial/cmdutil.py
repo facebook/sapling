@@ -687,7 +687,7 @@ class changeset_printer(object):
                    for p in self._meaningful_parentrevs(log, rev)]
 
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
-                      label='log.changeset')
+                      label='log.changeset changeset.%s' % ctx.phasestr())
 
         branch = ctx.branch()
         # don't show the default branch name
@@ -705,7 +705,7 @@ class changeset_printer(object):
                           label='log.phase')
         for parent in parents:
             self.ui.write(_("parent:      %d:%s\n") % parent,
-                          label='log.parent')
+                          label='log.parent changeset.%s' % ctx.phasestr())
 
         if self.ui.debugflag:
             mnode = ctx.manifestnode()

@@ -977,7 +977,7 @@ def branches(ui, repo, active=False, closed=False):
                 label = 'branches.current'
             rev = str(ctx.rev()).rjust(31 - encoding.colwidth(ctx.branch()))
             rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
-                           'log.changeset')
+                           'log.changeset changeset.%s' % ctx.phasestr())
             tag = ui.label(ctx.branch(), label)
             if ui.quiet:
                 ui.write("%s\n" % tag)
@@ -5423,7 +5423,7 @@ def summary(ui, repo, **opts):
         # label with log.changeset (instead of log.parent) since this
         # shows a working directory parent *changeset*:
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
-                 label='log.changeset')
+                 label='log.changeset changeset.%s' % p.phasestr())
         ui.write(' '.join(p.tags()), label='log.tag')
         if p.bookmarks():
             marks.extend(p.bookmarks())
@@ -5710,7 +5710,7 @@ def tags(ui, repo):
 
         hn = hexfunc(n)
         r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        rev = ui.label(r, 'log.changeset')
+        rev = ui.label(r, 'log.changeset changeset.%s' % repo[n].phasestr())
         spaces = " " * (30 - encoding.colwidth(t))
 
         tag = ui.label(t, 'tags.normal')
