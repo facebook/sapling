@@ -20,6 +20,12 @@ facilitate conflicts resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
+The old obsoleted changeset is called "precursor" and possible replacements are
+called "successors".  Markers that used changeset X as a precursors are called
+"successor markers of X" because they hold information about the successors of
+X. Markers that use changeset Y as a successors are call "precursor markers of
+Y" because they hold information about the precursors of Y.
+
 Examples:
 
 - When changeset A is replacement by a changeset A', one marker is stored:
@@ -181,8 +187,8 @@ class obsstore(object):
     """Store obsolete markers
 
     Markers can be accessed with two mappings:
-    - precursors: old -> set(new)
-    - successors: new -> set(old)
+    - precursors[x] -> set(markers on precursors edges of x)
+    - successors[x] -> set(markers on successors edges of x)
     """
 
     def __init__(self, sopener):
@@ -259,10 +265,10 @@ class obsstore(object):
         for mark in markers:
             self._all.append(mark)
             pre, sucs = mark[:2]
-            self.precursors.setdefault(pre, set()).add(mark)
+            self.successors.setdefault(pre, set()).add(mark)
             for suc in sucs:
-                self.successors.setdefault(suc, set()).add(mark)
-        if node.nullid in self.successors:
+                self.precursors.setdefault(suc, set()).add(mark)
+        if node.nullid in self.precursors:
             raise util.Abort(_('bad obsolescence marker detected: '
                                'invalid successors nullid'))
 
@@ -336,12 +342,12 @@ def allmarkers(repo):
         yield marker(repo, markerdata)
 
 def precursormarkers(ctx):
-    """obsolete marker making this changeset obsolete"""
+    """obsolete marker marking this changeset as a successors"""
     for data in ctx._repo.obsstore.precursors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
 def successormarkers(ctx):
-    """obsolete marker marking this changeset as a successors"""
+    """obsolete marker making this changeset obsolete"""
     for data in ctx._repo.obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
@@ -354,7 +360,7 @@ def anysuccessors(obsstore, node):
     while remaining:
         current = remaining.pop()
         yield current
-        for mark in obsstore.precursors.get(current, ()):
+        for mark in obsstore.successors.get(current, ()):
             for suc in mark[1]:
                 if suc not in seen:
                     seen.add(suc)
@@ -403,8 +409,8 @@ def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
     obs = set()
     nm = repo.changelog.nodemap
-    for prec in repo.obsstore.precursors:
-        rev = nm.get(prec)
+    for node in repo.obsstore.successors:
+        rev = nm.get(node)
         if rev is not None:
             obs.add(rev)
     return set(repo.revs('%ld - public()', obs))
