@@ -421,10 +421,6 @@ class HgEditor(svnwrap.Editor):
         else:
             source_rev = copyfrom_revision
             frompath, source_branch = self.meta.split_branch_path(copyfrom_path)[:2]
-            if frompath == '' and br_path == '':
-                assert br_path is not None
-                tmp = source_branch, source_rev, self.current.rev.revnum
-                self.meta.branches[branch] = tmp
         new_hash = self.meta.get_parent_revision(source_rev + 1, source_branch, True)
         if new_hash == node.nullid:
             self.current.addmissing('%s/' % path)
@@ -444,6 +440,14 @@ class HgEditor(svnwrap.Editor):
                 # are the same, not need to do anything but restore
                 # files marked as deleted.
                 copyfromparent = True
+            # Get the parent which would have been used for this branch
+            # without the replace action.
+            oldpnode = self.meta.get_parent_revision(
+                    self.current.rev.revnum, branch, exact=True)
+            if (oldpnode != revlog.nullid
+                    and util.isancestor(self._getctx(oldpnode), fromctx)):
+                # Branch-wide replacement, unmark the branch as deleted
+                self.meta.closebranches.discard(branch)
 
         svncopies = {}
         copies = {}

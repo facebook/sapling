@@ -539,7 +539,12 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
     else:
         branchprefix = (branchpath and branchpath + '/') or ''
         for path, e in r.paths.iteritems():
-            if not path.startswith(branchprefix):
+            if path == branchpath:
+                if e.action != 'R' or branch not in meta.branches:
+                    # Full-branch replacements are handled as reverts,
+                    # skip everything else.
+                    continue
+            elif not path.startswith(branchprefix):
                 continue
             if not meta.is_path_valid(path):
                 continue
@@ -703,6 +708,20 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         branch = meta.localname(p)
         if not (r.paths[p].action == 'R' and branch in meta.branches):
             continue
+        # Check the branch is not being replaced by one of its
+        # ancestors, it happens a lot with project-wide reverts.
+        frompath = r.paths[p].copyfrom_path
+        frompath, frombranch = meta.split_branch_path(
+            frompath, existing=False)[:2]
+        if frompath == '':
+            fromnode = meta.get_parent_revision(
+                    r.paths[p].copyfrom_rev + 1, frombranch, exact=True)
+            if fromnode != node.nullid:
+                fromctx = meta.repo[fromnode]
+                pctx = meta.repo[meta.get_parent_revision(
+                    r.revnum, branch, exact=True)]
+                if util.isancestor(pctx, fromctx):
+                    continue
         closed = checkbranch(meta, r, branch)
         if closed is not None:
             deleted_branches[branch] = closed

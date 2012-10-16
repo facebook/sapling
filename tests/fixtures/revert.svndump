@@ -1,0 +1,197 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 307f02f4-2d74-44cb-98a4-4e162241d396
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2012-10-06T08:50:46.559327Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 105
+Content-length: 105
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-06T08:50:46.581582Z
+K 7
+svn:log
+V 4
+init
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 60b725f10c9c85c70d97880dfe8191b3
+Text-content-sha1: 3f786850e387550fdab836ed7e6dc881de23001b
+Content-length: 12
+
+PROPS-END
+a
+
+
+Node-path: trunk/dir
+Node-kind: dir
+Node-action: add
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+
+Node-path: trunk/dir/b
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 2
+Text-content-md5: 3b5d5c3712955042212316173ccf37be
+Text-content-sha1: 89e6c98d92887913cadf06b2adb97f26cde4849b
+Content-length: 12
+
+PROPS-END
+b
+
+
+Revision-number: 2
+Prop-content-length: 113
+Content-length: 113
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-06T08:50:47.048033Z
+K 7
+svn:log
+V 11
+changefiles
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-content-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+Content-length: 4
+
+a
+a
+
+
+Node-path: trunk/dir/b
+Node-kind: file
+Node-action: change
+Text-content-length: 4
+Text-content-md5: 06ac26ed8b614fc0b141e4542aa067c2
+Text-content-sha1: f6980469e74f7125178e88ec571e06fe6ce86e95
+Content-length: 4
+
+b
+b
+
+
+Revision-number: 3
+Prop-content-length: 107
+Content-length: 107
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-06T08:50:50.058224Z
+K 7
+svn:log
+V 6
+revert
+PROPS-END
+
+Node-path: trunk
+Node-kind: dir
+Node-action: delete
+
+Node-path: trunk
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 1
+Node-copyfrom-path: trunk
+
+
+
+
+Revision-number: 4
+Prop-content-length: 108
+Content-length: 108
+
+K 10
+svn:author
+V 7
+pmezard
+K 8
+svn:date
+V 27
+2012-10-06T08:50:54.047396Z
+K 7
+svn:log
+V 7
+revert2
+PROPS-END
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: delete
+
+Node-path: trunk/a
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/a
+Text-copy-source-md5: 0d227f1abf8c2932d342e9b99cc957eb
+Text-copy-source-sha1: d7c8127a20a396cff08af086a1c695b0636f0c29
+
+
+
+
+Node-path: trunk/dir/b
+Node-kind: file
+Node-action: delete
+
+Node-path: trunk/dir/b
+Node-kind: file
+Node-action: add
+Node-copyfrom-rev: 2
+Node-copyfrom-path: trunk/dir/b
+Text-copy-source-md5: 06ac26ed8b614fc0b141e4542aa067c2
+Text-copy-source-sha1: f6980469e74f7125178e88ec571e06fe6ce86e95
+
+
+
+

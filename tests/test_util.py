@@ -520,7 +520,7 @@ class TestBase(unittest.TestCase):
             msg = '%s\n%s' % (msg or '', diff)
             raise self.failureException, msg
 
-    def draw(self, repo):
+    def getgraph(self, repo):
         """Helper function displaying a repository graph, especially
         useful when debugging comprehensive tests.
         """
@@ -537,4 +537,10 @@ summary:   {desc|firstline}
 files:     {files}
 
 """
+        _ui.pushbuffer()
         graphlog.graphlog(_ui, repo, rev=None, template=templ)
+        return _ui.popbuffer()
+
+    def draw(self, repo):
+        sys.stdout.write(self.getgraph(repo))
+

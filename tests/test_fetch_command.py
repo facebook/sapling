@@ -237,6 +237,39 @@ class TestStupidPull(test_util.TestBase):
     def test_empty_repo_stupid(self):
         self.test_empty_repo(stupid=True)
 
+    def test_fetch_revert(self, stupid=False):
+        repo = self._load_fixture_and_fetch('revert.svndump', stupid=stupid)
+        graph = self.getgraph(repo)
+        refgraph = """\
+o  changeset: 3:937dcd1206d4
+|  branch:
+|  tags:      tip
+|  summary:   revert2
+|  files:     a dir/b
+|
+o  changeset: 2:9317a748b7c3
+|  branch:
+|  tags:
+|  summary:   revert
+|  files:     a dir/b
+|
+o  changeset: 1:243259a4138a
+|  branch:
+|  tags:
+|  summary:   changefiles
+|  files:     a dir/b
+|
+o  changeset: 0:ab86791fc857
+   branch:
+   tags:
+   summary:   init
+   files:     a dir/b
+"""
+        self.assertEqual(refgraph.strip(), graph.strip())
+
+    def test_fetch_revert_stupid(self):
+        self.test_fetch_revert(stupid=True)
+
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestStupidPull),

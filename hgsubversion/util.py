@@ -212,6 +212,14 @@ def swap_out_encoding(new_encoding="UTF-8"):
     encoding.encoding = new_encoding
     return old
 
+def isancestor(ctx, ancestorctx):
+    """Return True if ancestorctx is equal or an ancestor of ctx."""
+    if ctx == ancestorctx:
+        return True
+    for actx in ctx.ancestors():
+        if actx == ancestorctx:
+            return True
+    return False
 
 def issamefile(parentctx, childctx, f):
     """Return True if f exists and is the same in childctx and parentctx"""

@@ -544,7 +544,9 @@ class SVNMeta(object):
             # 1. Is the file located inside any currently known
             #    branch?  If yes, then we're done with it, this isn't
             #    interesting.
-            # 2. Does the file have copyfrom information? If yes, then
+            # 2. Does the file have copyfrom information? If yes, and
+            #    the branch is being replaced by what would be an
+            #    ancestor, treat it as a regular revert. Otherwise,
             #    we're done: this is a new branch, and we record the
             #    copyfrom in added_branches if it comes from the root
             #    of another branch, or create it from scratch.
@@ -565,6 +567,18 @@ class SVNMeta(object):
                     if paths[p].action == 'D':
                         self.closebranches.add(br) # case 4
                     elif paths[p].action == 'R':
+                        # Check the replacing source is not an ancestor
+                        # branch of the branch being replaced, this
+                        # would just be a revert.
+                        cfi, cbr = self.split_branch_path(
+                            paths[p].copyfrom_path, paths[p].copyfrom_rev)[:2]
+                        if cfi == '':
+                            cctx = self.repo[self.get_parent_revision(
+                                paths[p].copyfrom_rev + 1, cbr)]
+                            ctx = self.repo[self.get_parent_revision(
+                                revision.revnum, br)]
+                            if cctx and util.isancestor(ctx, cctx):
+                                continue
                         parent = self._determine_parent_branch(
                             p, paths[p].copyfrom_path, paths[p].copyfrom_rev,
                             revision.revnum)
