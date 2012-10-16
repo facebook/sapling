@@ -428,18 +428,28 @@ class HgEditor(svnwrap.Editor):
             frompath = '%s/' % frompath
         else:
             frompath = ''
+
+        copyfromparent = False
+        if frompath == '' and br_path == '':
+            pnode = self.meta.get_parent_revision(
+                    self.current.rev.revnum, branch)
+            if pnode == new_hash:
+                # Data parent is topological parent and relative paths
+                # are the same, not need to do anything but restore
+                # files marked as deleted.
+                copyfromparent = True
+
         svncopies = {}
         copies = {}
         for f in fromctx:
             if not f.startswith(frompath):
                 continue
-            fctx = fromctx.filectx(f)
             dest = path + '/' + f[len(frompath):]
-            svncopies[dest] = CopiedFile(new_hash, f, None)
             if dest in self._deleted:
-                # Remove this once svn copies and edited files are
-                # clearly separated.
                 self._deleted.remove(dest)
+            if copyfromparent:
+                continue
+            svncopies[dest] = CopiedFile(new_hash, f, None)
             if branch == source_branch:
                 copies[dest] = f
         if copies:
