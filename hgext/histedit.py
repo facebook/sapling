@@ -514,7 +514,9 @@ def histedit(ui, repo, *parent, **opts):
             # TODO update mq state
         if obsolete._enabled:
             markers = []
-            for prec, succs in mapping.iteritems():
+            # sort by revision number because it sound "right"
+            for prec in sorted(mapping, key=repo.changelog.rev):
+                succs = mapping[prec]
                 markers.append((repo[prec],
                                 tuple(repo[s] for s in succs)))
             if markers:

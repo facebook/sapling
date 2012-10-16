@@ -87,11 +87,12 @@ Enable obsolete
   o  0:cb9a9f314b8b a
   
   $ hg debugobsolete
-  e860deea161a2f77de56603b340ebbb4536308ae ae467701c5006bf21ffcfdb555b3d6b63280b6b7 0 {'date': '*', 'user': 'test'} (glob)
-  652413bf663ef2a641cab26574e46d5f5a64a55a 0efacef7cb481bf574f69075b82d044fdbe5c20f 0 {'date': '*': 'test'} (glob)
-  d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {'date': '*', 'user': 'test'} (glob)
-  055a42cdd88768532f9cf79daa407fc8d138de9b ae467701c5006bf21ffcfdb555b3d6b63280b6b7 0 {'date': '*': 'test'} (glob)
-  177f92b773850b59254aa5e923436f921b55483b d36c0562f908c692f5204d606d4ff3537d41f1bf 0 {'date': '*', 'user': 'test'} (glob)
+  d2ae7f538514cd87c17547b0de4cea71fe1af9fb 0 {'date': '* *', 'user': 'test'} (glob)
+  177f92b773850b59254aa5e923436f921b55483b d36c0562f908c692f5204d606d4ff3537d41f1bf 0 {'date': '* *', 'user': 'test'} (glob)
+  055a42cdd88768532f9cf79daa407fc8d138de9b ae467701c5006bf21ffcfdb555b3d6b63280b6b7 0 {'date': '* *', 'user': 'test'} (glob)
+  e860deea161a2f77de56603b340ebbb4536308ae ae467701c5006bf21ffcfdb555b3d6b63280b6b7 0 {'date': '* *', 'user': 'test'} (glob)
+  652413bf663ef2a641cab26574e46d5f5a64a55a 0efacef7cb481bf574f69075b82d044fdbe5c20f 0 {'date': '* *', 'user': 'test'} (glob)
+
 
 Ensure hidden revision does not prevent histedit
 -------------------------------------------------
