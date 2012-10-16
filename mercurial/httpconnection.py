@@ -233,7 +233,9 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
     def http_open(self, req):
         if req.get_full_url().startswith('https'):
             return self.https_open(req)
-        return self.do_open(HTTPConnection, req, False)
+        def makehttpcon(*args, **kwargs):
+            return HTTPConnection(*args, use_ssl=False, **kwargs)
+        return self.do_open(makehttpcon, req, False)
 
     def https_open(self, req):
         # req.get_full_url() does not contain credentials and we may
