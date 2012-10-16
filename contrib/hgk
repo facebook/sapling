@@ -139,6 +139,18 @@ proc gitdir {} {
     }
 }
 
+proc popupify {w} {
+    wm resizable $w 0 0
+    wm withdraw $w
+    update
+    set x [expr {([winfo screenwidth .]-[winfo reqwidth $w])/2}]
+    set y [expr {([winfo screenheight .]-[winfo reqheight $w])/2}]
+    wm geometry  $w +$x+$y
+    wm transient $w .
+    wm deiconify $w
+    wm resizable $w 1 1
+}
+
 proc getcommits {rargs} {
     global commits commfd phase canv mainfont env
     global startmsecs nextupdate ncmupdate
@@ -529,6 +541,7 @@ proc error_popup msg {
     ttk::button $w.ok -text OK -command "destroy $w"
     pack $w.ok -side bottom -fill x
     bind $w <Visibility> "grab $w; focus $w"
+    popupify $w
     tkwait window $w
 }
 
@@ -949,6 +962,7 @@ Use and redistribute under the terms of the GNU General Public License} \
     pack $w.m -side top -fill x -padx 20 -pady 20
     ttk::button $w.ok -text Close -command "destroy $w"
     pack $w.ok -side bottom
+    popupify $w
 }
 
 set aunextcolor 0
@@ -3755,6 +3769,7 @@ proc mkpatch {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
+    popupify $top
 }
 
 proc mkpatchrev {} {
@@ -3822,6 +3837,7 @@ proc mktag {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.tag
+    popupify $top
 }
 
 proc domktag {} {
@@ -3906,6 +3922,7 @@ proc writecommit {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
+    popupify $top
 }
 
 proc wrcomgo {} {
