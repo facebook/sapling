@@ -701,14 +701,14 @@ def processreplacement(repo, replacements):
 
     # computed topmost element (necessary for bookmark)
     if new:
-        newtopmost = max(new, key=repo.changelog.rev)
+        newtopmost = sorted(new, key=repo.changelog.rev)[-1]
     elif not final:
         # Nothing rewritten at all. we won't need `newtopmost`
         # It is the same as `oldtopmost` and `processreplacement` know it
         newtopmost = None
     else:
         # every body died. The newtopmost is the parent of the root.
-        newtopmost = repo[min(final, key=repo.changelog.rev)].p1().node()
+        newtopmost = repo[sorted(final, key=repo.changelog.rev)[0]].p1().node()
 
     return final, tmpnodes, new, newtopmost
 
