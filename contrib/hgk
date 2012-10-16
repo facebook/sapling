@@ -456,16 +456,13 @@ proc readrefs {} {
             exit 2
         }
     }
-    regsub -all "\r\n" $tags "\n" tags
 
-    set lines [split $tags "\n"]
-    foreach f $lines {
-	regexp {(\S+)$} $f full
-	regsub {\s+(\S+)$} $f "" direct
-	set sha [split $full ':']
-	set tag [lindex $sha 1]
-	lappend tagids($direct) $tag
-	lappend idtags($tag) $direct
+    foreach {tag rev} $tags {
+        # we use foreach as Tcl8.4 doesn't support lassign
+        foreach {- id} [split $rev :] {
+            lappend tagids($tag) $id
+            lappend idtags($id) $tag
+        }
     }
 
     set status [catch {exec $env(HG) --config ui.report_untrusted=false heads} heads]
