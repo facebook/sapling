@@ -351,11 +351,13 @@ def successormarkers(ctx):
     for data in ctx._repo.obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
-def allsuccessors(obsstore, node):
-    """Yield every successor of <node>
+def allsuccessors(obsstore, nodes):
+    """Yield node for every successor of <nodes>.
+
+    Some successors may be unknown locally.
 
     This is a linear yield unsuited to detecting split changesets."""
-    remaining = set([node])
+    remaining = set(nodes)
     seen = set(remaining)
     while remaining:
         current = remaining.pop()

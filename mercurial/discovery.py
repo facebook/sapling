@@ -298,7 +298,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                 if nh in repo and repo[nh].phase() <= phases.public:
                     newhs.add(nh)
                 else:
-                    for suc in obsolete.allsuccessors(repo.obsstore, nh):
+                    for suc in obsolete.allsuccessors(repo.obsstore, [nh]):
                         if suc != nh and suc in allfuturecommon:
                             discardedheads.add(nh)
                             break
