@@ -214,16 +214,20 @@ def updatefromremote(ui, repo, remote, path):
                     changed = True
                     ui.status(_("updating bookmark %s\n") % k)
                 else:
+                    if k == '@':
+                        kd = ''
+                    else:
+                        kd = k
                     # find a unique @ suffix
                     for x in range(1, 100):
-                        n = '%s@%d' % (k, x)
+                        n = '%s@%d' % (kd, x)
                         if n not in repo._bookmarks:
                             break
                     # try to use an @pathalias suffix
                     # if an @pathalias already exists, we overwrite (update) it
                     for p, u in ui.configitems("paths"):
                         if path == u:
-                            n = '%s@%s' % (k, p)
+                            n = '%s@%s' % (kd, p)
 
                     repo._bookmarks[n] = cr.node()
                     changed = True

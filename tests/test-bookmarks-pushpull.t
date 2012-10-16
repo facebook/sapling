@@ -111,8 +111,10 @@ divergent bookmarks
   $ echo c1 > f1
   $ hg ci -Am1
   adding f1
+  $ hg book -f @
   $ hg book -f X
   $ hg book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
@@ -124,8 +126,10 @@ divergent bookmarks
   $ echo c2 > f2
   $ hg ci -Am2
   adding f2
+  $ hg book -f @
   $ hg book -f X
   $ hg book
+     @                         1:9b140be10808
    * X                         1:9b140be10808
      Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
@@ -141,8 +145,11 @@ divergent bookmarks
   added 1 changesets with 1 changes to 1 files (+1 heads)
   divergent bookmark X stored as X@foo
   updating bookmark Z
+  divergent bookmark @ stored as @foo
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
+     @                         1:9b140be10808
+     @foo                      2:0d2164f0ce0d
    * X                         1:9b140be10808
      X@foo                     2:0d2164f0ce0d
      Y                         0:4e3505fd9583
@@ -157,6 +164,7 @@ divergent bookmarks
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
   $ hg -R ../a book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
@@ -177,6 +185,7 @@ update a remote bookmark from a non-head to a head
   added 1 changesets with 1 changes to 1 files (+1 heads)
   updating bookmark Y
   $ hg -R ../a book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
@@ -206,6 +215,7 @@ diverging a remote bookmark fails
   (did you forget to merge? use push -f to force)
   [255]
   $ hg -R ../a book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
@@ -221,6 +231,7 @@ Unrelated marker does not alter the decision
   (did you forget to merge? use push -f to force)
   [255]
   $ hg -R ../a book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
@@ -241,6 +252,7 @@ Update to a successor works
   remote: added 1 changesets with 1 changes to 1 files (+1 heads)
   updating bookmark Y
   $ hg -R ../a book
+     @                         1:0d2164f0ce0d
    * X                         1:0d2164f0ce0d
      Y                         4:4efff6d98829
      Z                         1:0d2164f0ce0d
@@ -263,11 +275,12 @@ hgweb
   namespaces	
   obsolete	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
-  Y	4efff6d98829d9c824c621afd6e3f01865f5439f
-  foobar	9b140be1080824d768c5a4691a564088eede71f9
-  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  @	9b140be1080824d768c5a4691a564088eede71f9
   foo	0000000000000000000000000000000000000000
+  foobar	9b140be1080824d768c5a4691a564088eede71f9
+  Y	4efff6d98829d9c824c621afd6e3f01865f5439f
   X	9b140be1080824d768c5a4691a564088eede71f9
+  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
   $ hg out -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
   searching for changed bookmarks
@@ -289,10 +302,11 @@ hgweb
   $ hg pull -B Z http://localhost:$HGPORT/
   pulling from http://localhost:$HGPORT/
   no changes found
-  adding remote bookmark foobar
-  adding remote bookmark Z
+  divergent bookmark @ stored as @1
   adding remote bookmark foo
+  adding remote bookmark foobar
   divergent bookmark X stored as X@1
+  adding remote bookmark Z
   importing bookmark Z
   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
   requesting all changes
@@ -303,6 +317,7 @@ hgweb
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
+     @                         1:9b140be10808
      X                         1:9b140be10808
      Y                         3:4efff6d98829
      Z                         2:0d2164f0ce0d
