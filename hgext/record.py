@@ -667,3 +667,5 @@ def uisetup(ui):
 def _wrapcmd(cmd, table, wrapfn, msg):
     entry = extensions.wrapcommand(table, cmd, wrapfn)
     entry[1].append(('i', 'interactive', None, msg))
+
+commands.inferrepo += " record qrecord"

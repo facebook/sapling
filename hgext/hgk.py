@@ -350,3 +350,5 @@ cmdtable = {
           ('n', 'max-count', 0, _('max-count'))],
          _('hg debug-rev-list [OPTION]... REV...')),
 }
+
+commands.inferrepo += " debug-diff-tree debug-cat-file"

@@ -5911,3 +5911,5 @@ norepo = ("clone init version help debugcommands debugcomplete"
           " debugknown debuggetbundle debugbundle")
 optionalrepo = ("identify paths serve showconfig debugancestor debugdag"
                 " debugdata debugindex debugindexdot debugrevlog")
+inferrepo = ("add addremove annotate cat commit diff grep forget log parents"
+             " remove resolve status debugwalk")

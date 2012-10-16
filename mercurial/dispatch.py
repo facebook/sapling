@@ -715,7 +715,8 @@ def _dispatch(req):
                 raise
             except error.RepoError:
                 if cmd not in commands.optionalrepo.split():
-                    if args and not path: # try to infer -R from command args
+                    if (cmd in commands.inferrepo.split() and
+                        args and not path): # try to infer -R from command args
                         repos = map(cmdutil.findrepo, args)
                         guess = repos[0]
                         if guess and repos.count(guess) == len(repos):

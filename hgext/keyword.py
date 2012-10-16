@@ -728,3 +728,5 @@ def reposetup(ui, repo):
             pass
 
     repo.__class__ = kwrepo
+
+commands.inferrepo += " kwexpand kwfiles kwshrink"

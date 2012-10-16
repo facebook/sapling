@@ -329,3 +329,5 @@ use %(path)s to diff repository (or selected files)
         cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
                          _('hg %s [OPTION]... [FILE]...') % cmd)
+
+commands.inferrepo += " extdiff"

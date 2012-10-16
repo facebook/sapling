@@ -12,7 +12,7 @@ import os
 import shutil
 
 from mercurial import util, match as match_, hg, node, context, error, \
-    cmdutil, scmutil
+    cmdutil, scmutil, commands
 from mercurial.i18n import _
 from mercurial.lock import release
 
@@ -549,3 +549,5 @@ cmdtable = {
                   ],
                   _('hg lfconvert SOURCE DEST [FILE ...]')),
     }
+
+commands.inferrepo += " lfconvert"

@@ -197,3 +197,5 @@ cmdtable = {
           ] + commands.walkopts,
          _("hg churn [-d DATE] [-r REV] [--aliases FILE] [FILE]")),
 }
+
+commands.inferrepo += " churn"

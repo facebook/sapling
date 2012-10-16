@@ -3602,3 +3602,5 @@ colortable = {'qguard.negative': 'red',
               'qseries.guarded': 'black bold',
               'qseries.missing': 'red bold',
               'qseries.unapplied': 'black bold'}
+
+commands.inferrepo += " qnew qrefresh qdiff qcommit"
