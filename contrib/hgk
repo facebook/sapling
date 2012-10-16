@@ -642,7 +642,7 @@ proc makewindow {} {
 			  findtype Exact IgnCase Regexp]
     set findloc "All fields"
     ttk::optionMenu .ctop.top.bar.findloc findloc "All fields" Headline \
-	Comments Author Committer Files Pickaxe
+	Comments Author Files Pickaxe
     pack .ctop.top.bar.findloc -side right
     pack .ctop.top.bar.findtype -side right
     # for making sure type==Exact whenever loc==Pickaxe
@@ -1929,7 +1929,7 @@ proc dofind {} {
 	set oldsel $selectedline
     }
     set didsel 0
-    set fldtypes {Headline Author Date Committer CDate Comment}
+    set fldtypes {Headline Author Date CDate Comment}
     for {set l 0} {$l < $numcommits} {incr l} {
 	set id $lineid($l)
 	set info $commitinfo($id)
@@ -2476,7 +2476,6 @@ proc selectline {l isnew} {
         $ctext insert end "Branch: [lindex $info 7]\n"
     }
     $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
-    $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
     if {[info exists idbookmarks($id)]} {
 	$ctext insert end "Bookmarks:"
 	foreach bookmark $idbookmarks($id) {
