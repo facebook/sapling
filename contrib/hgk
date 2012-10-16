@@ -15,7 +15,42 @@
 # The whole snipped is activated only under windows, mouse wheel
 # bindings working already under MacOSX and Linux.
 
+if {[catch {package require Ttk}]} {
+    # use a shim
+    namespace eval ttk {
+        proc style args {}
+
+        proc entry args {
+            eval [linsert $args 0 ::entry] -relief flat
+        }
+    }
+
+    interp alias {} ttk::button {} button
+    interp alias {} ttk::frame {} frame
+    interp alias {} ttk::label {} label
+    interp alias {} ttk::scrollbar {} scrollbar
+    interp alias {} ttk::optionMenu {} tk_optionMenu
+} else {
+    proc ::ttk::optionMenu {w varName firstValue args} {
+        upvar #0 $varName var
+
+        if {![info exists var]} {
+            set var $firstValue
+        }
+        ttk::menubutton $w -textvariable $varName -menu $w.menu \
+                -direction flush
+        menu $w.menu -tearoff 0
+        $w.menu add radiobutton -label $firstValue -variable $varName
+        foreach i $args {
+            $w.menu add radiobutton -label $i -variable $varName
+        }
+        return $w.menu
+    }
+}
+
 if {[tk windowingsystem] eq "win32"} {
+
+ttk::style theme use xpnative
 
 set mw_classes [list Text Listbox Table TreeCtrl]
    foreach class $mw_classes { bind $class <MouseWheel> {} }
@@ -72,6 +107,12 @@ proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
 bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 
 # end of win32 section
+} else {
+
+if {[ttk::style theme use] eq "default"} {
+    ttk::style theme use clam
+}
+
 }
 
 
@@ -480,7 +521,7 @@ proc error_popup msg {
     wm transient $w .
     message $w.m -text $msg -justify center -aspect 400
     pack $w.m -side top -fill x -padx 20 -pady 20
-    button $w.ok -text OK -command "destroy $w"
+    ttk::button $w.ok -text OK -command "destroy $w"
     pack $w.ok -side bottom -fill x
     bind $w <Visibility> "grab $w; focus $w"
     tkwait window $w
@@ -526,11 +567,11 @@ proc makewindow {} {
 	set geometry(ctexth) [expr {($texth - 8) /
 				    [font metrics $textfont -linespace]}]
     }
-    frame .ctop.top
-    frame .ctop.top.bar
+    ttk::frame .ctop.top
+    ttk::frame .ctop.top.bar
     pack .ctop.top.bar -side bottom -fill x
     set cscroll .ctop.top.csb
-    scrollbar $cscroll -command {allcanvs yview} -highlightthickness 0
+    ttk::scrollbar $cscroll -command {allcanvs yview}
     pack $cscroll -side right -fill y
     panedwindow .ctop.top.clist -orient horizontal -sashpad 0 -handlesize 4
     pack .ctop.top.clist -side top -fill both -expand 1
@@ -557,7 +598,7 @@ proc makewindow {} {
 	-command gotocommit -width 8
     $sha1but conf -disabledforeground [$sha1but cget -foreground]
     pack .ctop.top.bar.sha1label -side left
-    entry $sha1entry -width 40 -font $textfont -textvariable sha1string
+    ttk::entry $sha1entry -width 40 -font $textfont -textvariable sha1string
     trace add variable sha1string write sha1change
     pack $sha1entry -side left -pady 2
 
@@ -577,25 +618,25 @@ proc makewindow {} {
 	0x00, 0x38, 0xff, 0x7f, 0xff, 0x7f, 0xff, 0x7f, 0x00, 0x38, 0x00, 0x1c,
 	0x00, 0x0e, 0x00, 0x07, 0x80, 0x03, 0xc0, 0x01};
     }
-    button .ctop.top.bar.leftbut -image bm-left -command goback \
+    ttk::button .ctop.top.bar.leftbut -image bm-left -command goback \
 	-state disabled -width 26
     pack .ctop.top.bar.leftbut -side left -fill y
-    button .ctop.top.bar.rightbut -image bm-right -command goforw \
+    ttk::button .ctop.top.bar.rightbut -image bm-right -command goforw \
 	-state disabled -width 26
     pack .ctop.top.bar.rightbut -side left -fill y
 
-    button .ctop.top.bar.findbut -text "Find" -command dofind
+    ttk::button .ctop.top.bar.findbut -text "Find" -command dofind
     pack .ctop.top.bar.findbut -side left
     set findstring {}
     set fstring .ctop.top.bar.findstring
     lappend entries $fstring
-    entry $fstring -width 30 -font $textfont -textvariable findstring
+    ttk::entry $fstring -width 30 -font $textfont -textvariable findstring
     pack $fstring -side left -expand 1 -fill x
     set findtype Exact
-    set findtypemenu [tk_optionMenu .ctop.top.bar.findtype \
+    set findtypemenu [ttk::optionMenu .ctop.top.bar.findtype \
 			  findtype Exact IgnCase Regexp]
     set findloc "All fields"
-    tk_optionMenu .ctop.top.bar.findloc findloc "All fields" Headline \
+    ttk::optionMenu .ctop.top.bar.findloc findloc "All fields" Headline \
 	Comments Author Committer Files Pickaxe
     pack .ctop.top.bar.findloc -side right
     pack .ctop.top.bar.findtype -side right
@@ -604,14 +645,14 @@ proc makewindow {} {
 
     panedwindow .ctop.cdet -orient horizontal
     .ctop add .ctop.cdet
-    frame .ctop.cdet.left
+    ttk::frame .ctop.cdet.left
     set ctext .ctop.cdet.left.ctext
     text $ctext -fg $fgcolor -bg $bgcolor -state disabled -font $textfont \
 	-width $geometry(ctextw) -height $geometry(ctexth) \
 	-yscrollcommand ".ctop.cdet.left.sb set" \
 	-xscrollcommand ".ctop.cdet.left.hb set" -wrap none
-    scrollbar .ctop.cdet.left.sb -command "$ctext yview"
-    scrollbar .ctop.cdet.left.hb -orient horizontal -command "$ctext xview"
+    ttk::scrollbar .ctop.cdet.left.sb -command "$ctext yview"
+    ttk::scrollbar .ctop.cdet.left.hb -orient horizontal -command "$ctext xview"
     pack .ctop.cdet.left.sb -side right -fill y
     pack .ctop.cdet.left.hb -side bottom -fill x
     pack $ctext -side left -fill both -expand 1
@@ -643,12 +684,12 @@ proc makewindow {} {
 	$ctext tag conf found -back yellow
     }
 
-    frame .ctop.cdet.right
+    ttk::frame .ctop.cdet.right
     set cflist .ctop.cdet.right.cfiles
     listbox $cflist -fg $fgcolor -bg $bgcolor \
         -selectmode extended -width $geometry(cflistw) \
 	-yscrollcommand ".ctop.cdet.right.sb set"
-    scrollbar .ctop.cdet.right.sb -command "$cflist yview"
+    ttk::scrollbar .ctop.cdet.right.sb -command "$cflist yview"
     pack .ctop.cdet.right.sb -side right -fill y
     pack $cflist -side left -fill both -expand 1
     .ctop.cdet add .ctop.cdet.right
@@ -901,7 +942,7 @@ Copyright © 2005 Paul Mackerras
 Use and redistribute under the terms of the GNU General Public License} \
 	    -justify center -aspect 400
     pack $w.m -side top -fill x -padx 20 -pady 20
-    button $w.ok -text Close -command "destroy $w"
+    ttk::button $w.ok -text Close -command "destroy $w"
     pack $w.ok -side bottom
 }
 
@@ -2417,8 +2458,7 @@ proc selectline {l isnew} {
     set currentid $id
     $sha1entry delete 0 end
     $sha1entry insert 0 $id
-    $sha1entry selection from 0
-    $sha1entry selection to end
+    $sha1entry selection range 0 end
 
     $ctext conf -state normal
     $ctext delete 0.0 end
@@ -3675,36 +3715,36 @@ proc mkpatch {} {
     set patchtop $top
     catch {destroy $top}
     toplevel $top
-    label $top.title -text "Generate patch"
+    ttk::label $top.title -text "Generate patch"
     grid $top.title - -pady 10
-    label $top.from -text "From:"
-    entry $top.fromsha1 -width 40 -relief flat
+    ttk::label $top.from -text "From:"
+    ttk::entry $top.fromsha1 -width 40
     $top.fromsha1 insert 0 $oldid
     $top.fromsha1 conf -state readonly
     grid $top.from $top.fromsha1 -sticky w
-    entry $top.fromhead -width 60 -relief flat
+    ttk::entry $top.fromhead -width 60
     $top.fromhead insert 0 $oldhead
     $top.fromhead conf -state readonly
     grid x $top.fromhead -sticky w
-    label $top.to -text "To:"
-    entry $top.tosha1 -width 40 -relief flat
+    ttk::label $top.to -text "To:"
+    ttk::entry $top.tosha1 -width 40
     $top.tosha1 insert 0 $newid
     $top.tosha1 conf -state readonly
     grid $top.to $top.tosha1 -sticky w
-    entry $top.tohead -width 60 -relief flat
+    ttk::entry $top.tohead -width 60
     $top.tohead insert 0 $newhead
     $top.tohead conf -state readonly
     grid x $top.tohead -sticky w
-    button $top.rev -text "Reverse" -command mkpatchrev -padx 5
+    ttk::button $top.rev -text "Reverse" -command mkpatchrev
     grid $top.rev x -pady 10
-    label $top.flab -text "Output file:"
-    entry $top.fname -width 60
+    ttk::label $top.flab -text "Output file:"
+    ttk::entry $top.fname -width 60
     $top.fname insert 0 [file normalize "patch$patchnum.patch"]
     incr patchnum
     grid $top.flab $top.fname -sticky w
-    frame $top.buts
-    button $top.buts.gen -text "Generate" -command mkpatchgo
-    button $top.buts.can -text "Cancel" -command mkpatchcan
+    ttk::frame $top.buts
+    ttk::button $top.buts.gen -text "Generate" -command mkpatchgo
+    ttk::button $top.buts.can -text "Cancel" -command mkpatchcan
     grid $top.buts.gen $top.buts.can
     grid columnconfigure $top.buts 0 -weight 1 -uniform a
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
@@ -3755,23 +3795,23 @@ proc mktag {} {
     set mktagtop $top
     catch {destroy $top}
     toplevel $top
-    label $top.title -text "Create tag"
+    ttk::label $top.title -text "Create tag"
     grid $top.title - -pady 10
-    label $top.id -text "ID:"
-    entry $top.sha1 -width 40 -relief flat
+    ttk::label $top.id -text "ID:"
+    ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
     grid $top.id $top.sha1 -sticky w
-    entry $top.head -width 60 -relief flat
+    ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
     grid x $top.head -sticky w
-    label $top.tlab -text "Tag name:"
-    entry $top.tag -width 60
+    ttk::label $top.tlab -text "Tag name:"
+    ttk::entry $top.tag -width 60
     grid $top.tlab $top.tag -sticky w
-    frame $top.buts
-    button $top.buts.gen -text "Create" -command mktaggo
-    button $top.buts.can -text "Cancel" -command mktagcan
+    ttk::frame $top.buts
+    ttk::button $top.buts.gen -text "Create" -command mktaggo
+    ttk::button $top.buts.can -text "Cancel" -command mktagcan
     grid $top.buts.gen $top.buts.can
     grid columnconfigure $top.buts 0 -weight 1 -uniform a
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
@@ -3835,27 +3875,27 @@ proc writecommit {} {
     set wrcomtop $top
     catch {destroy $top}
     toplevel $top
-    label $top.title -text "Write commit to file"
+    ttk::label $top.title -text "Write commit to file"
     grid $top.title - -pady 10
-    label $top.id -text "ID:"
-    entry $top.sha1 -width 40 -relief flat
+    ttk::label $top.id -text "ID:"
+    ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
     grid $top.id $top.sha1 -sticky w
-    entry $top.head -width 60 -relief flat
+    ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
     grid x $top.head -sticky w
-    label $top.clab -text "Command:"
-    entry $top.cmd -width 60 -textvariable wrcomcmd
+    ttk::label $top.clab -text "Command:"
+    ttk::entry $top.cmd -width 60 -textvariable wrcomcmd
     grid $top.clab $top.cmd -sticky w -pady 10
-    label $top.flab -text "Output file:"
-    entry $top.fname -width 60
+    ttk::label $top.flab -text "Output file:"
+    ttk::entry $top.fname -width 60
     $top.fname insert 0 [file normalize "commit-[string range $rowmenuid 0 6]"]
     grid $top.flab $top.fname -sticky w
-    frame $top.buts
-    button $top.buts.gen -text "Write" -command wrcomgo
-    button $top.buts.can -text "Cancel" -command wrcomcan
+    ttk::frame $top.buts
+    ttk::button $top.buts.gen -text "Write" -command wrcomgo
+    ttk::button $top.buts.can -text "Cancel" -command wrcomcan
     grid $top.buts.gen $top.buts.can
     grid columnconfigure $top.buts 0 -weight 1 -uniform a
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
