@@ -471,6 +471,10 @@ class filectx(object):
         return self._changectx.branch()
     def extra(self):
         return self._changectx.extra()
+    def phase(self):
+        return self._changectx.phase()
+    def phasestr(self):
+        return self._changectx.phasestr()
     def manifest(self):
         return self._changectx.manifest()
     def changectx(self):
