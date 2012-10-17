@@ -5640,8 +5640,7 @@ def tag(ui, repo, name1, *names, **opts):
         if len(names) != len(set(names)):
             raise util.Abort(_('tag names must be unique'))
         for n in names:
-            if n in ['tip', '.', 'null']:
-                raise util.Abort(_("the name '%s' is reserved") % n)
+            scmutil.checknewlabel(repo, n)
             if not n:
                 raise util.Abort(_('tag names cannot consist entirely of '
                                    'whitespace'))
