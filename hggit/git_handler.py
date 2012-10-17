@@ -86,8 +86,21 @@ class GitHandler(object):
 
         self.branch_bookmark_suffix = ui.config('git', 'branch_bookmark_suffix')
 
-        self.load_map()
+        self._map_git_real = {}
+        self._map_hg_real = {}
         self.load_tags()
+
+    @property
+    def _map_git(self):
+      if not self._map_git_real:
+        self.load_map()
+      return self._map_git_real
+
+    @property
+    def _map_hg(self):
+      if not self._map_hg_real:
+        self.load_map()
+      return self._map_hg_real
 
     # make the git data directory
     def init_if_missing(self):
@@ -123,13 +136,11 @@ class GitHandler(object):
         return self._map_hg.get(hgsha)
 
     def load_map(self):
-        self._map_git = {}
-        self._map_hg = {}
         if os.path.exists(self.repo.join(self.mapfile)):
             for line in self.repo.opener(self.mapfile):
                 gitsha, hgsha = line.strip().split(' ', 1)
-                self._map_git[gitsha] = hgsha
-                self._map_hg[hgsha] = gitsha
+                self._map_git_real[gitsha] = hgsha
+                self._map_hg_real[hgsha] = gitsha
 
     def save_map(self):
         file = self.repo.opener(self.mapfile, 'w+', atomictemp=True)
