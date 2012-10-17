@@ -55,11 +55,11 @@ Literal match ending in " (re)":
 Windows: \r\n is handled like \n and can be escaped:
 
 #if windows
-  $ printf 'crlf\r\ncr\r\tcrlf\r\ncrcrlf\r\r\n'
+  $ printf 'crlf\r\ncr\r\tcrlf\r\ncrlf\r\n'
   crlf
   cr\r (no-eol) (esc)
   \tcrlf (esc)
-  crcrlf\r (esc)
+  crlf\r (esc)
 #endif
 
 Combining esc with other markups - and handling lines ending with \r instead of \n:
