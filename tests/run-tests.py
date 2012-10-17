@@ -476,6 +476,8 @@ def pytest(test, wd, options, replacements):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
+    if os.name == 'nt':
+        replacements.append((r'\r\n', '\n'))
     return run(cmd, wd, options, replacements)
 
 def shtest(test, wd, options, replacements):
