@@ -794,6 +794,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if not mark:
             raise util.Abort(_("bookmark names cannot consist entirely of "
                                "whitespace"))
+        for c in (':', '\0', '\n', '\r'):
+            if c in mark:
+                raise util.Abort(_("bookmark '%s' contains illegal "
+                    "character" % mark))
+        scmutil.checknewlabel(repo, mark)
         return mark
 
     def checkconflict(repo, mark, force=False):

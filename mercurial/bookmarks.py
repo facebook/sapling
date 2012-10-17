@@ -10,14 +10,6 @@ from mercurial.node import hex
 from mercurial import encoding, error, util, obsolete, phases
 import errno, os
 
-def checkvalid(mark):
-    for c in (':', '\0', '\n', '\r'):
-        if c in mark:
-            raise util.Abort(_("bookmark '%s' contains illegal "
-                "character" % mark))
-    if mark in ['tip', '.', 'null']:
-        raise util.Abort(_('the name \'%s\' is reserved') % mark)
-
 def read(repo):
     '''Parse .hg/bookmarks file and return a dictionary
 
@@ -81,8 +73,6 @@ def write(repo):
 
     if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
-    for mark in refs.keys():
-        checkvalid(mark)
 
     wlock = repo.wlock()
     try:
@@ -113,7 +103,6 @@ def setcurrent(repo, mark):
 
     if mark not in repo._bookmarks:
         mark = ''
-    checkvalid(mark)
 
     wlock = repo.wlock()
     try:
