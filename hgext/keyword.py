@@ -89,6 +89,7 @@ from mercurial.i18n import _
 import os, re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
+commands.inferrepo += ' kwexpand kwfiles kwshrink'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -728,5 +729,3 @@ def reposetup(ui, repo):
             pass
 
     repo.__class__ = kwrepo
-
-commands.inferrepo += " kwexpand kwfiles kwshrink"
