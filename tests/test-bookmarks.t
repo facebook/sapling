@@ -214,12 +214,12 @@ reject bookmark name with newline
 
   $ hg bookmark '
   > '
-  abort: bookmark name cannot contain newlines
+  abort: bookmark names cannot consist entirely of whitespace
   [255]
 
   $ hg bookmark -m Z '
   > '
-  abort: bookmark name cannot contain newlines
+  abort: bookmark names cannot consist entirely of whitespace
   [255]
 
 bookmark with existing name

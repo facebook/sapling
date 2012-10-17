@@ -790,8 +790,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     cur   = repo.changectx('.').node()
 
     def checkformat(mark):
-        if "\n" in mark:
-            raise util.Abort(_("bookmark name cannot contain newlines"))
         mark = mark.strip()
         if not mark:
             raise util.Abort(_("bookmark names cannot consist entirely of "
