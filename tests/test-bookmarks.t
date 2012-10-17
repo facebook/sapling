@@ -242,6 +242,20 @@ bookmark with name of branch
   abort: a bookmark cannot have the name of an existing branch
   [255]
 
+incompatible options
+
+  $ hg bookmark -m Y -d Z
+  abort: --delete and --rename are incompatible
+  [255]
+
+  $ hg bookmark -r 1 -d Z
+  abort: --rev is incompatible with --delete
+  [255]
+
+  $ hg bookmark -r 1 -m Z Y
+  abort: --rev is incompatible with --rename
+  [255]
+
 force bookmark with existing name
 
   $ hg bookmark -f Z

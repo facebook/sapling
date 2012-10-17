@@ -807,6 +807,13 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             raise util.Abort(
                 _("a bookmark cannot have the name of an existing branch"))
 
+    if delete and rename:
+        raise util.Abort(_("--delete and --rename are incompatible"))
+    if delete and rev:
+        raise util.Abort(_("--rev is incompatible with --delete"))
+    if rename and rev:
+        raise util.Abort(_("--rev is incompatible with --rename"))
+
     if delete:
         if mark is None:
             raise util.Abort(_("bookmark name required"))
