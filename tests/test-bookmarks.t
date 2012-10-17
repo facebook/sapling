@@ -217,10 +217,29 @@ reject bookmark name with newline
   abort: bookmark name cannot contain newlines
   [255]
 
+  $ hg bookmark -m Z '
+  > '
+  abort: bookmark name cannot contain newlines
+  [255]
+
 bookmark with existing name
 
   $ hg bookmark Z
   abort: bookmark 'Z' already exists (use -f to force)
+  [255]
+
+  $ hg bookmark -m Y Z
+  abort: bookmark 'Z' already exists (use -f to force)
+  [255]
+
+bookmark with name of branch
+
+  $ hg bookmark default
+  abort: a bookmark cannot have the name of an existing branch
+  [255]
+
+  $ hg bookmark -m Y default
+  abort: a bookmark cannot have the name of an existing branch
   [255]
 
 force bookmark with existing name
@@ -244,6 +263,10 @@ revision but no bookmark name
 bookmark name with whitespace only
 
   $ hg bookmark ' '
+  abort: bookmark names cannot consist entirely of whitespace
+  [255]
+
+  $ hg bookmark -m Y ' '
   abort: bookmark names cannot consist entirely of whitespace
   [255]
 

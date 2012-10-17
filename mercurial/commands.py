@@ -789,6 +789,24 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     marks = repo._bookmarks
     cur   = repo.changectx('.').node()
 
+    def checkformat(mark):
+        if "\n" in mark:
+            raise util.Abort(_("bookmark name cannot contain newlines"))
+        mark = mark.strip()
+        if not mark:
+            raise util.Abort(_("bookmark names cannot consist entirely of "
+                               "whitespace"))
+        return mark
+
+    def checkconflict(repo, mark, force=False):
+        if mark in marks and not force:
+            raise util.Abort(_("bookmark '%s' already exists "
+                               "(use -f to force)") % mark)
+        if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
+            and not force):
+            raise util.Abort(
+                _("a bookmark cannot have the name of an existing branch"))
+
     if delete:
         if mark is None:
             raise util.Abort(_("bookmark name required"))
@@ -801,13 +819,12 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         return
 
     if rename:
-        if rename not in marks:
-            raise util.Abort(_("bookmark '%s' does not exist") % rename)
-        if mark in marks and not force:
-            raise util.Abort(_("bookmark '%s' already exists "
-                               "(use -f to force)") % mark)
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
+        mark = checkformat(mark)
+        if rename not in marks:
+            raise util.Abort(_("bookmark '%s' does not exist") % rename)
+        checkconflict(repo, mark, force)
         marks[mark] = marks[rename]
         if repo._bookmarkcurrent == rename and not inactive:
             bookmarks.setcurrent(repo, mark)
@@ -816,22 +833,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         return
 
     if mark is not None:
-        if "\n" in mark:
-            raise util.Abort(_("bookmark name cannot contain newlines"))
-        mark = mark.strip()
-        if not mark:
-            raise util.Abort(_("bookmark names cannot consist entirely of "
-                               "whitespace"))
+        mark = checkformat(mark)
         if inactive and mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
             return
-        if mark in marks and not force:
-            raise util.Abort(_("bookmark '%s' already exists "
-                               "(use -f to force)") % mark)
-        if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
-            and not force):
-            raise util.Abort(
-                _("a bookmark cannot have the name of an existing branch"))
+        checkconflict(repo, mark, force)
         if rev:
             marks[mark] = scmutil.revsingle(repo, rev).node()
         else:
