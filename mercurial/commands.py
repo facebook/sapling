@@ -813,19 +813,18 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         raise util.Abort(_("--rev is incompatible with --delete"))
     if rename and rev:
         raise util.Abort(_("--rev is incompatible with --rename"))
+    if mark is None and (delete or rev):
+        raise util.Abort(_("bookmark name required"))
 
     if delete:
-        if mark is None:
-            raise util.Abort(_("bookmark name required"))
         if mark not in marks:
             raise util.Abort(_("bookmark '%s' does not exist") % mark)
         if mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
         del marks[mark]
         bookmarks.write(repo)
-        return
 
-    if rename:
+    elif rename:
         if mark is None:
             raise util.Abort(_("new bookmark name required"))
         mark = checkformat(mark)
@@ -837,9 +836,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             bookmarks.setcurrent(repo, mark)
         del marks[rename]
         bookmarks.write(repo)
-        return
 
-    if mark is not None:
+    elif mark is not None:
         mark = checkformat(mark)
         if inactive and mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
@@ -854,17 +852,14 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         bookmarks.write(repo)
         return
 
-    if mark is None:
-        if rev:
-            raise util.Abort(_("bookmark name required"))
+    else: # mark is None
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
-        if inactive:
+        elif inactive:
             if not repo._bookmarkcurrent:
                 ui.status(_("no active bookmark\n"))
             else:
                 bookmarks.setcurrent(repo, None)
-            return
         else:
             for bmark, n in sorted(marks.iteritems()):
                 current = repo._bookmarkcurrent
@@ -879,7 +874,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
                     ui.write(" %s %-25s %d:%s\n" % (
                         prefix, bmark, repo.changelog.rev(n), hexfn(n)),
                         label=label)
-        return
 
 @command('branch',
     [('f', 'force', None,
