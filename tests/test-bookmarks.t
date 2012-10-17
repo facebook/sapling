@@ -222,6 +222,21 @@ reject bookmark name with newline
   abort: bookmark names cannot consist entirely of whitespace
   [255]
 
+bookmark with reserved name
+
+  $ hg bookmark tip
+  abort: the name 'tip' is reserved
+  [255]
+
+  $ hg bookmark .
+  abort: the name '.' is reserved
+  [255]
+
+  $ hg bookmark null
+  abort: the name 'null' is reserved
+  [255]
+
+
 bookmark with existing name
 
   $ hg bookmark Z

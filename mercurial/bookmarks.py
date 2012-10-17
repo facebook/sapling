@@ -15,6 +15,8 @@ def checkvalid(mark):
         if c in mark:
             raise util.Abort(_("bookmark '%s' contains illegal "
                 "character" % mark))
+    if mark in ['tip', '.', 'null']:
+        raise util.Abort(_('the name \'%s\' is reserved') % mark)
 
 def read(repo):
     '''Parse .hg/bookmarks file and return a dictionary
