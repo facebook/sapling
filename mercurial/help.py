@@ -61,6 +61,11 @@ def optrst(options, verbose):
 
     return ''.join(rst)
 
+def indicateomitted(rst, omitted, notomitted=None):
+    rst.append('\n\n.. container:: omitted\n\n    %s\n\n' % omitted)
+    if notomitted:
+        rst.append('\n\n.. container:: notomitted\n\n    %s\n\n' % notomitted)
+
 def topicmatch(kw):
     """Return help topics matching kw.
 

@@ -47,7 +47,7 @@ Should diff cloned directories:
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help falabala" to show more info
+  use "hg -v help falabala" to show the global options
 
   $ hg ci -d '0 0' -mtest1
 

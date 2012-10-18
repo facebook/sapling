@@ -3265,8 +3265,12 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
                 rst.append(_('\nuse "hg help %s" to show the full help text\n')
                            % name)
             elif not ui.quiet:
-                rst.append(_('\nuse "hg -v help %s" to show more info\n')
-                           % name)
+                omitted = _('use "hg -v help %s" to show more complete'
+                            ' help and the global options') % name
+                notomitted = _('use "hg -v help %s" to show'
+                               ' the global options') % name
+                help.indicateomitted(rst, omitted, notomitted)
+
         return rst
 
 
@@ -3369,6 +3373,11 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         if util.safehasattr(doc, '__call__'):
             rst += ["    %s\n" % l for l in doc().splitlines()]
 
+        if not ui.verbose:
+            omitted = (_('use "hg help -v %s" to show more complete help') %
+                       name)
+            help.indicateomitted(rst, omitted)
+
         try:
             cmdutil.findcmd(name, table)
             rst.append(_('\nuse "hg help -c %s" to see help for '
@@ -3395,6 +3404,11 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         if tail:
             rst.extend(tail.splitlines(True))
             rst.append('\n')
+
+        if not ui.verbose:
+            omitted = (_('use "hg help -v %s" to show more complete help') %
+                       name)
+            help.indicateomitted(rst, omitted)
 
         if mod:
             try:
@@ -3459,7 +3473,13 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
         rst.extend(helplist())
 
     keep = ui.verbose and ['verbose'] or []
-    formatted, pruned = minirst.format(''.join(rst), textwidth, keep=keep)
+    text = ''.join(rst)
+    formatted, pruned = minirst.format(text, textwidth, keep=keep)
+    if 'verbose' in pruned:
+        keep.append('omitted')
+    else:
+        keep.append('notomitted')
+    formatted, pruned = minirst.format(text, textwidth, keep=keep)
     ui.write(formatted)
 
 
