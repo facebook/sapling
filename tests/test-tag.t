@@ -40,8 +40,14 @@
   $ hg tag -r 0 x y z y y z
   abort: tag names must be unique
   [255]
-  $ hg tag tap nada dot tip null .
+  $ hg tag tap nada dot tip
   abort: the name 'tip' is reserved
+  [255]
+  $ hg tag .
+  abort: the name '.' is reserved
+  [255]
+  $ hg tag null
+  abort: the name 'null' is reserved
   [255]
   $ hg tag "bleah"
   abort: tag 'bleah' already exists (use -f to force)
