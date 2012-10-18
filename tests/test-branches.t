@@ -45,6 +45,8 @@
   (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '5 0' -m "Adding c branch"
 
+reserved names
+
   $ hg branch tip
   abort: the name 'tip' is reserved
   [255]
@@ -53,6 +55,17 @@
   [255]
   $ hg branch .
   abort: the name '.' is reserved
+  [255]
+
+invalid characters
+
+  $ hg branch 'foo:bar'
+  abort: ':' cannot be used in a branch name
+  [255]
+
+  $ hg branch 'foo
+  > bar'
+  abort: '\n' cannot be used in a branch name
   [255]
 
   $ echo 'd' >d

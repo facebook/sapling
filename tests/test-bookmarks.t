@@ -302,7 +302,12 @@ bookmark name with whitespace only
 invalid bookmark
 
   $ hg bookmark 'foo:bar'
-  abort: bookmark 'foo:bar' contains illegal character
+  abort: ':' cannot be used in a bookmark name
+  [255]
+
+  $ hg bookmark 'foo
+  > bar'
+  abort: '\n' cannot be used in a bookmark name
   [255]
 
 the bookmark extension should be ignored now that it is part of core

@@ -794,11 +794,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if not mark:
             raise util.Abort(_("bookmark names cannot consist entirely of "
                                "whitespace"))
-        for c in (':', '\0', '\n', '\r'):
-            if c in mark:
-                raise util.Abort(_("bookmark '%s' contains illegal "
-                    "character" % mark))
-        scmutil.checknewlabel(repo, mark)
+        scmutil.checknewlabel(repo, mark, 'bookmark')
         return mark
 
     def checkconflict(repo, mark, force=False):
@@ -5645,7 +5641,7 @@ def tag(ui, repo, name1, *names, **opts):
         if len(names) != len(set(names)):
             raise util.Abort(_('tag names must be unique'))
         for n in names:
-            scmutil.checknewlabel(repo, n)
+            scmutil.checknewlabel(repo, n, 'tag')
             if not n:
                 raise util.Abort(_('tag names cannot consist entirely of '
                                    'whitespace'))

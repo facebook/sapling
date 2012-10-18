@@ -385,17 +385,9 @@ class localrepository(object):
     def hook(self, name, throw=False, **args):
         return hook.hook(self.ui, self, name, throw, **args)
 
-    tag_disallowed = ':\0\r\n'
-
     def _tag(self, names, node, message, local, user, date, extra={}):
         if isinstance(names, str):
-            allchars = names
             names = (names,)
-        else:
-            allchars = ''.join(names)
-        for c in self.tag_disallowed:
-            if c in allchars:
-                raise util.Abort(_('%r cannot be used in a tag name') % c)
 
         branches = self.branchmap()
         for name in names:

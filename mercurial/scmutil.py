@@ -27,9 +27,13 @@ def nochangesfound(ui, repo, excluded=None):
     else:
         ui.status(_("no changes found\n"))
 
-def checknewlabel(repo, lbl):
+def checknewlabel(repo, lbl, kind):
     if lbl in ['tip', '.', 'null']:
         raise util.Abort(_("the name '%s' is reserved") % lbl)
+    for c in (':', '\0', '\n', '\r'):
+        if c in lbl:
+            raise util.Abort(_("%r cannot be used in a %s name") %
+                               (c, kind))
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
