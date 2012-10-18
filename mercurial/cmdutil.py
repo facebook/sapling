@@ -11,6 +11,7 @@ import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import subrepo, context, repair, bookmarks, graphmod, revset, phases, obsolete
+import changelog
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -1696,6 +1697,9 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             if not message:
                 message = old.description()
 
+            pureextra = extra.copy()
+            extra['amend_source'] = old.hex()
+
             new = context.memctx(repo,
                                  parents=[base.node(), nullid],
                                  text=message,
@@ -1705,6 +1709,19 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  date=date,
                                  extra=extra)
             new._text = commitforceeditor(repo, new, [])
+
+            newdesc =  changelog.stripdesc(new.description())
+            if ((not node)
+                and newdesc == old.description()
+                and user == old.user()
+                and date == old.date()
+                and pureextra == old.extra()):
+                # nothing changed. continuing here would create a new node
+                # anyway because of the amend_source noise.
+                #
+                # This not what we expect from amend.
+                return old.node()
+
             ph = repo.ui.config('phases', 'new-commit', phases.draft)
             try:
                 repo.ui.setconfig('phases', 'new-commit', old.phase())

@@ -509,9 +509,9 @@ amend
   $ hg --debug commit --amend -d '15 1' -m 'amend without changes' | grep keywords
   overwriting a expanding keywords
   $ hg -q id
-  577e60613a88
+  67d8c481a6be
   $ head -1 a
-  expand $Id: a,v 577e60613a88 1970/01/01 00:00:15 test $
+  expand $Id: a,v 67d8c481a6be 1970/01/01 00:00:15 test $
 
   $ hg -q strip -n tip
 
