@@ -233,15 +233,15 @@ class changectx(object):
 
     def obsolete(self):
         """True if the changeset is obsolete"""
-        return self.rev() in obsmod.getobscache(self._repo, 'obsolete')
+        return self.rev() in obsmod.getrevs(self._repo, 'obsolete')
 
     def extinct(self):
         """True if the changeset is extinct"""
-        return self.rev() in obsmod.getobscache(self._repo, 'extinct')
+        return self.rev() in obsmod.getrevs(self._repo, 'extinct')
 
     def unstable(self):
         """True if the changeset is not obsolete but it's ancestor are"""
-        return self.rev() in obsmod.getobscache(self._repo, 'unstable')
+        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
 
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:

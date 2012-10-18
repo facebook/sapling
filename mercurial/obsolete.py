@@ -376,7 +376,7 @@ def cachefor(name):
         return func
     return decorator
 
-def getobscache(repo, name):
+def getrevs(repo, name):
     """Return the set of revision that belong to the <name> set
 
     Such access may compute the set and cache it for future use"""

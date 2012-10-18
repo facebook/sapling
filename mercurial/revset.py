@@ -622,7 +622,7 @@ def extinct(repo, subset, x):
     """
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
-    extincts = obsmod.getobscache(repo, 'extinct')
+    extincts = obsmod.getrevs(repo, 'extinct')
     return [r for r in subset if r in extincts]
 
 def extra(repo, subset, x):
@@ -977,7 +977,7 @@ def obsolete(repo, subset, x):
     Mutable changeset with a newer version."""
     # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
-    obsoletes = obsmod.getobscache(repo, 'obsolete')
+    obsoletes = obsmod.getrevs(repo, 'obsolete')
     return [r for r in subset if r in obsoletes]
 
 def origin(repo, subset, x):
@@ -1456,7 +1456,7 @@ def unstable(repo, subset, x):
     """
     # i18n: "unstable" is a keyword
     getargs(x, 0, 0, _("unstable takes no arguments"))
-    unstables = obsmod.getobscache(repo, 'unstable')
+    unstables = obsmod.getrevs(repo, 'unstable')
     return [r for r in subset if r in unstables]
 
 
