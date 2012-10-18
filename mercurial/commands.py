@@ -851,7 +851,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             bookmarks.setcurrent(repo, mark)
         bookmarks.write(repo)
 
-    else: # mark is None
+    else: # show bookmarks
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
         elif inactive:
