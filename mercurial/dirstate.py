@@ -260,8 +260,8 @@ class dirstate(object):
         return copies
 
     def setbranch(self, branch):
-        if branch in ['tip', '.', 'null']:
-            raise util.Abort(_('the name \'%s\' is reserved') % branch)
+        # no repo object here, just check for reserved names
+        scmutil.checknewlabel(None, branch)
         self._branch = encoding.fromlocal(branch)
         f = self._opener('branch', 'w', atomictemp=True)
         try:
