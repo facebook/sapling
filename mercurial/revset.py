@@ -422,6 +422,17 @@ def branch(repo, subset, x):
     s = set(s)
     return [r for r in subset if r in s or repo[r].branch() in b]
 
+def bumped(repo, subset, x):
+    """``bumped()``
+    Mutable changesets marked as successors of public changesets.
+
+    Only non-public and non-obsolete changesets can be `bumped`.
+    """
+    # i18n: "bumped" is a keyword
+    getargs(x, 0, 0, _("bumped takes no arguments"))
+    bumped = obsmod.getrevs(repo, 'bumped')
+    return [r for r in subset if r in bumped]
+
 def checkstatus(repo, subset, pat, field):
     m = None
     s = []
@@ -1492,6 +1503,7 @@ symbols = {
     "bookmark": bookmark,
     "branch": branch,
     "branchpoint": branchpoint,
+    "bumped": bumped,
     "children": children,
     "closed": closed,
     "contains": contains,

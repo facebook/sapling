@@ -155,6 +155,22 @@ Check that public changeset are not accounted as obsolete:
      summary:     add a
   
 
+And that bumped changeset are detected
+--------------------------------------
+
+If we didn't filtered obsolete changesets out, 3 and 4 would show up too. Also
+note that the bumped changeset (5:5601fb93a350) is not a direct successor of
+the public changeset
+
+  $ hg log --hidden -r 'bumped()'
+  changeset:   5:5601fb93a350
+  tag:         tip
+  parent:      1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add new_3_c
+  
+
   $ cd ..
 
 Exchange Test
