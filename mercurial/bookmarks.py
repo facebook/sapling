@@ -266,7 +266,7 @@ def validdest(repo, old, new):
             for c in validdests:
                 if c.phase() > phases.public:
                     # obsolescence marker does not apply to public changeset
-                    succs.update(obsolete.anysuccessors(repo.obsstore,
+                    succs.update(obsolete.allsuccessors(repo.obsstore,
                                                         c.node()))
             validdests = set(repo.set('%ln::', succs))
         validdests.remove(old)
