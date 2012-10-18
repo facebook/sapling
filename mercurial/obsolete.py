@@ -368,7 +368,17 @@ def allsuccessors(obsstore, nodes):
                     seen.add(suc)
                     remaining.add(suc)
 
-# mapping of 'set-name' -> <function to computer this set>
+def _knownrevs(repo, nodes):
+    """yield revision numbers of known nodes passed in parameters
+
+    Unknown revisions are silently ignored."""
+    torev = repo.changelog.nodemap.get
+    for n in nodes:
+        rev = torev(n)
+        if rev is not None:
+            yield rev
+
+# mapping of 'set-name' -> <function to compute this set>
 cachefuncs = {}
 def cachefor(name):
     """Decorator to register a function as computing the cache for a set"""
@@ -431,6 +441,18 @@ def _computesuspendedset(repo):
 def _computeextinctset(repo):
     """the set of obsolete parents without non obsolete descendants"""
     return set(repo.revs('obsolete() - obsolete()::unstable()'))
+
+
+@cachefor('bumped')
+def _computebumpedset(repo):
+    """the set of revs trying to obsolete public revisions"""
+    # get all possible bumped changesets
+    tonode = repo.changelog.node
+    publicnodes = (tonode(r) for r in repo.revs('public()'))
+    successors = allsuccessors(repo.obsstore, publicnodes)
+    # revision public or already obsolete don't count as bumped
+    query = '%ld - obsolete() - public()'
+    return set(repo.revs(query, _knownrevs(repo, successors)))
 
 def createmarkers(repo, relations, flag=0, metadata=None):
     """Add obsolete markers between changesets in a repo
