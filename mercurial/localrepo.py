@@ -1872,6 +1872,7 @@ class localrepository(object):
                             # this message are here for 80 char limit reason
                             mso = _("push includes obsolete changeset: %s!")
                             msu = _("push includes unstable changeset: %s!")
+                            msb = _("push includes bumped changeset: %s!")
                             # If we are to push if there is at least one
                             # obsolete or unstable changeset in missing, at
                             # least one of the missinghead will be obsolete or
@@ -1882,6 +1883,8 @@ class localrepository(object):
                                     raise util.Abort(_(mso) % ctx)
                                 elif ctx.unstable():
                                     raise util.Abort(_(msu) % ctx)
+                                elif ctx.bumped():
+                                    raise util.Abort(_(msb) % ctx)
                         discovery.checkheads(self, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))

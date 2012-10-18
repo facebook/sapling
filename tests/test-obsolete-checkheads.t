@@ -38,6 +38,7 @@ New head replaces old head
 ==========================
 
 setup
+(we add the 1 flags to prevent bumped error during the test)
 
   $ mkcommit old
   $ hg push
@@ -50,7 +51,7 @@ setup
   $ hg up -q '.^'
   $ mkcommit new
   created new head
-  $ hg debugobsolete `getid old` `getid new`
+  $ hg debugobsolete --flags 1 `getid old` `getid new`
   $ hg glog --hidden
   @  71e3228bffe1 (draft) add new
   |

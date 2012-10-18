@@ -171,6 +171,14 @@ the public changeset
   summary:     add new_3_c
   
 
+And that we can't push bumped changeset
+
+  $ hg push ../tmpa
+  pushing to ../tmpa
+  searching for changes
+  abort: push includes bumped changeset: 5601fb93a350!
+  [255]
+
 Fixing "bumped" situation
 We need to create a clone of 5 and add a special marker with a flag
 
