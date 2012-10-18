@@ -850,7 +850,6 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if not inactive and cur == marks[mark]:
             bookmarks.setcurrent(repo, mark)
         bookmarks.write(repo)
-        return
 
     else: # mark is None
         if len(marks) == 0:
