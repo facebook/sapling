@@ -453,7 +453,7 @@ refuse to push obsolete changeset
   $ hg push ../tmpc/ -r 'desc("original_d")'
   pushing to ../tmpc/
   searching for changes
-  abort: push includes an obsolete changeset: 94b33453f93b!
+  abort: push includes obsolete changeset: 94b33453f93b!
   [255]
 
 refuse to push unstable changeset
@@ -461,7 +461,7 @@ refuse to push unstable changeset
   $ hg push ../tmpc/
   pushing to ../tmpc/
   searching for changes
-  abort: push includes an unstable changeset: cda648ca50f5!
+  abort: push includes unstable changeset: cda648ca50f5!
   [255]
 
 Test that extinct changeset are properly detected

@@ -1870,8 +1870,8 @@ class localrepository(object):
                         # then, save the iteration
                         if self.obsstore:
                             # this message are here for 80 char limit reason
-                            mso = _("push includes an obsolete changeset: %s!")
-                            msu = _("push includes an unstable changeset: %s!")
+                            mso = _("push includes obsolete changeset: %s!")
+                            msu = _("push includes unstable changeset: %s!")
                             # If we are to push if there is at least one
                             # obsolete or unstable changeset in missing, at
                             # least one of the missinghead will be obsolete or
