@@ -243,6 +243,13 @@ class changectx(object):
         """True if the changeset is not obsolete but it's ancestor are"""
         return self.rev() in obsmod.getrevs(self._repo, 'unstable')
 
+    def bumped(self):
+        """True if the changeset try to be a successor of a public changeset
+
+        Only non-public and non-obsolete changesets may be bumped.
+        """
+        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
