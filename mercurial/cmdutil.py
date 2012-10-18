@@ -1744,7 +1744,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 new = repo[newid]
                 obs = [(old, (new,))]
                 if node:
-                    obs.append((ctx, (new,)))
+                    obs.append((ctx, ()))
 
                 obsolete.createmarkers(repo, obs)
             tr.close()
