@@ -385,7 +385,7 @@ class localrepository(object):
     def hook(self, name, throw=False, **args):
         return hook.hook(self.ui, self, name, throw, **args)
 
-    tag_disallowed = ':\r\n'
+    tag_disallowed = ':\0\r\n'
 
     def _tag(self, names, node, message, local, user, date, extra={}):
         if isinstance(names, str):
