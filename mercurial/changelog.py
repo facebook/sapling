@@ -49,6 +49,10 @@ def encodeextra(d):
     items = [_string_escape('%s:%s' % (k, d[k])) for k in sorted(d)]
     return "\0".join(items)
 
+def stripdesc(desc):
+    """strip trailing whitespace and leading and trailing empty lines"""
+    return '\n'.join([l.rstrip() for l in desc.splitlines()]).strip('\n')
+
 class appender(object):
     '''the changelog index must be updated last on disk, so we use this class
     to delay writes to it'''
@@ -308,8 +312,7 @@ class changelog(revlog.revlog):
             raise error.RevlogError(_("username %s contains a newline")
                                     % repr(user))
 
-        # strip trailing whitespace and leading and trailing empty lines
-        desc = '\n'.join([l.rstrip() for l in desc.splitlines()]).strip('\n')
+        desc = stripdesc(desc)
 
         if date:
             parseddate = "%d %d" % util.parsedate(date)
