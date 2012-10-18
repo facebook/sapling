@@ -10,7 +10,7 @@ from i18n import _
 from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, httppeer, sshpeer, statichttprepo, bookmarks
-import lock, util, extensions, error, node, scmutil, phases
+import lock, util, extensions, error, node, scmutil, phases, url
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -88,6 +88,13 @@ def islocal(repo):
         except AttributeError:
             return False
     return repo.local()
+
+def openpath(ui, path):
+    '''open path with open if local, url.open if remote'''
+    if islocal(path):
+        return open(util.urllocalpath(path))
+    else:
+        return url.open(ui, path)
 
 def _peerorrepo(ui, path, create=False):
     """return a repository object for the specified path"""

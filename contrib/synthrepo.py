@@ -36,7 +36,7 @@ A few obvious properties that are not currently handled realistically:
 '''
 
 import bisect, collections, json, os, random, time
-from mercurial import cmdutil, context, patch, scmutil, url, util
+from mercurial import cmdutil, context, patch, scmutil, url, util, hg
 from mercurial.i18n import _
 from mercurial.node import nullrev, nullid
 
@@ -224,7 +224,7 @@ def synthesize(ui, repo, descpath, **opts):
     path to an alternate dictionary to use.
     '''
     try:
-        fp = url.open(ui, descpath)
+        fp = hg.openpath(ui, descpath)
     except Exception, err:
         raise util.Abort('%s: %s' % (descpath, err[0].strerror))
     desc = json.load(fp)

@@ -63,7 +63,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, url, error, phases, bookmarks
+from mercurial import repair, extensions, error, phases, bookmarks
 from mercurial import patch as patchmod
 import os, re, errno, shutil
 
@@ -2004,7 +2004,7 @@ class queue(object):
                     if filename == '-':
                         text = self.ui.fin.read()
                     else:
-                        fp = url.open(self.ui, filename)
+                        fp = hg.openpath(self.ui, filename)
                         text = fp.read()
                         fp.close()
                 except (OSError, IOError):

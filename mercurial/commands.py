@@ -10,7 +10,7 @@ from lock import release
 from i18n import _, gettext
 import os, re, difflib, time, tempfile, errno
 import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
-import patch, help, url, encoding, templatekw, discovery
+import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
 import merge as mergemod
@@ -1590,7 +1590,7 @@ def debugbuilddag(ui, repo, text=None,
 @command('debugbundle', [('a', 'all', None, _('show all details'))], _('FILE'))
 def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
-    f = url.open(ui, bundlepath)
+    f = hg.openpath(ui, bundlepath)
     try:
         gen = changegroup.readbundle(f, bundlepath)
         if all:
@@ -3856,7 +3856,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 else:
                     patchurl = os.path.join(base, patchurl)
                     ui.status(_('applying %s\n') % patchurl)
-                    patchfile = url.open(ui, patchurl)
+                    patchfile = hg.openpath(ui, patchurl)
 
                 haspatch = False
                 for hunk in patch.split(patchfile):
@@ -5804,7 +5804,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     wc = repo['.']
     try:
         for fname in fnames:
-            f = url.open(ui, fname)
+            f = hg.openpath(ui, fname)
             gen = changegroup.readbundle(f, fname)
             modheads = repo.addchangegroup(gen, 'unbundle', 'bundle:' + fname)
     finally:
