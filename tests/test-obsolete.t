@@ -171,6 +171,43 @@ the public changeset
   summary:     add new_3_c
   
 
+Fixing "bumped" situation
+We need to create a clone of 5 and add a special marker with a flag
+
+  $ hg up '5^'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg revert -ar 5
+  adding new_3_c
+  $ hg ci -m 'add n3w_3_c'
+  created new head
+  $ hg debugobsolete -d '1338 0' --flags 1 `getid new_3_c` `getid n3w_3_c`
+  $ hg log -r 'bumped()'
+  $ hg log -G
+  @  changeset:   6:6f9641995072
+  |  tag:         tip
+  |  parent:      1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add n3w_3_c
+  |
+  | o  changeset:   2:245bde4270cd
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add original_c
+  |
+  o  changeset:   1:7c3bad9141dc
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     add b
+  |
+  o  changeset:   0:1f0dee641bb7
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add a
+  
+
+
+
   $ cd ..
 
 Exchange Test
@@ -197,6 +234,7 @@ Try to pull markers
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
 
 Rollback//Transaction support
 
@@ -206,6 +244,7 @@ Rollback//Transaction support
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb 0 {'date': '1340 0', 'user': 'test'}
   $ hg rollback -n
   repository tip rolled back to revision 3 (undo debugobsolete)
@@ -216,6 +255,7 @@ Rollback//Transaction support
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
 
   $ cd ..
 
@@ -234,6 +274,7 @@ Try to pull markers
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
 
 Check obsolete keys are exchanged only if source has an obsolete store
 
@@ -252,12 +293,18 @@ clone support
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R clone-dest log -G --hidden
-  @  changeset:   5:5601fb93a350
+  @  changeset:   6:6f9641995072
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  |  summary:     add n3w_3_c
+  |
+  | x  changeset:   5:5601fb93a350
+  |/   parent:      1:7c3bad9141dc
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     add new_3_c
   |
   | x  changeset:   4:ca819180edb9
   |/   parent:      1:7c3bad9141dc
@@ -291,6 +338,7 @@ clone support
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
 
 
 Destination repo have existing data
@@ -315,6 +363,7 @@ On pull
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
 
 
 On push
@@ -329,6 +378,7 @@ On push
   cdbce2fbb16313928851e97e0d85413f3f7eb77f ca819180edb99ed25ceafb3e9584ac287e240b00 0 {'date': '1337 0', 'user': 'test'}
   ca819180edb99ed25ceafb3e9584ac287e240b00 1337133713371337133713371337133713371337 0 {'date': '1338 0', 'user': 'test'}
   1337133713371337133713371337133713371337 5601fb93a350734d935195fee37f4054c529ff39 0 {'date': '1339 0', 'user': 'test'}
+  5601fb93a350734d935195fee37f4054c529ff39 6f96419950729f3671185b847352890f074f7557 1 {'date': '1338 0', 'user': 'test'}
   2448244824482448244824482448244824482448 1339133913391339133913391339133913391339 0 {'date': '1339 0', 'user': 'test'}
 
 detect outgoing obsolete and unstable
@@ -336,12 +386,12 @@ detect outgoing obsolete and unstable
 
 
   $ hg glog
-  o  changeset:   3:5601fb93a350
+  o  changeset:   3:6f9641995072
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  |  summary:     add n3w_3_c
   |
   | o  changeset:   2:245bde4270cd
   |/   user:        test
@@ -358,34 +408,34 @@ detect outgoing obsolete and unstable
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
   
-  $ hg up 'desc("new_3_c")'
+  $ hg up 'desc("n3w_3_c")'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit original_d
   $ mkcommit original_e
   $ hg debugobsolete `getid original_d` -d '0 0'
   $ hg log -r 'obsolete()'
-  changeset:   4:7c694bff0650
+  changeset:   4:94b33453f93b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add original_d
   
   $ hg glog -r '::unstable()'
-  @  changeset:   5:6e572121998e
+  @  changeset:   5:cda648ca50f5
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add original_e
   |
-  x  changeset:   4:7c694bff0650
+  x  changeset:   4:94b33453f93b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add original_d
   |
-  o  changeset:   3:5601fb93a350
+  o  changeset:   3:6f9641995072
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  |  summary:     add n3w_3_c
   |
   o  changeset:   1:7c3bad9141dc
   |  user:        test
@@ -403,7 +453,7 @@ refuse to push obsolete changeset
   $ hg push ../tmpc/ -r 'desc("original_d")'
   pushing to ../tmpc/
   searching for changes
-  abort: push includes an obsolete changeset: 7c694bff0650!
+  abort: push includes an obsolete changeset: 94b33453f93b!
   [255]
 
 refuse to push unstable changeset
@@ -411,7 +461,7 @@ refuse to push unstable changeset
   $ hg push ../tmpc/
   pushing to ../tmpc/
   searching for changes
-  abort: push includes an unstable changeset: 6e572121998e!
+  abort: push includes an unstable changeset: cda648ca50f5!
   [255]
 
 Test that extinct changeset are properly detected
@@ -439,18 +489,18 @@ Don't try to push extinct changeset
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add original_c
   
-  changeset:   3:5601fb93a350
+  changeset:   3:6f9641995072
   parent:      1:7c3bad9141dc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add new_3_c
+  summary:     add n3w_3_c
   
-  changeset:   4:7c694bff0650
+  changeset:   4:94b33453f93b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add original_d
   
-  changeset:   5:6e572121998e
+  changeset:   5:cda648ca50f5
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -475,22 +525,22 @@ no warning displayed
 Do not warn about new head when the new head is a successors of a remote one
 
   $ hg glog
-  @  changeset:   5:6e572121998e
+  @  changeset:   5:cda648ca50f5
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add original_e
   |
-  x  changeset:   4:7c694bff0650
+  x  changeset:   4:94b33453f93b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     add original_d
   |
-  o  changeset:   3:5601fb93a350
+  o  changeset:   3:6f9641995072
   |  parent:      1:7c3bad9141dc
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add new_3_c
+  |  summary:     add n3w_3_c
   |
   | o  changeset:   2:245bde4270cd
   |/   user:        test
@@ -507,7 +557,7 @@ Do not warn about new head when the new head is a successors of a remote one
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add a
   
-  $ hg up -q 'desc(new_3_c)'
+  $ hg up -q 'desc(n3w_3_c)'
   $ mkcommit obsolete_e
   created new head
   $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'`
@@ -524,10 +574,10 @@ Checking _enable=False warning if obsolete marker exists
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "obs=!" >> $HGRCPATH
   $ hg log -r tip
-  obsolete feature not enabled but 7 markers found!
-  changeset:   6:d6a026544050
+  obsolete feature not enabled but 8 markers found!
+  changeset:   6:3de5eca88c00
   tag:         tip
-  parent:      3:5601fb93a350
+  parent:      3:6f9641995072
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add obsolete_e

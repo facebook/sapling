@@ -102,6 +102,37 @@ _fmnode = '20s'
 _fmfsize = struct.calcsize(_fmfixed)
 _fnodesize = struct.calcsize(_fmnode)
 
+### obsolescence marker flag
+
+## bumpedfix flag
+#
+# When a changeset A' succeed to a changeset A which became public, we call A'
+# "bumped" because it's a successors of a public changesets
+#
+# o    A' (bumped)
+# |`:
+# | o  A
+# |/
+# o    Z
+#
+# The way to solve this situation is to create a new changeset Ad as children
+# of A. This changeset have the same content than A'. So the diff from A to A'
+# is the same than the diff from A to Ad. Ad is marked as a successors of A'
+#
+# o   Ad
+# |`:
+# | x A'
+# |'|
+# o | A
+# |/
+# o Z
+#
+# But by transitivity Ad is also a successors of A. To avoid having Ad marked
+# as bumped too, we add the `bumpedfix` flag to the marker. <A', (Ad,)>.
+# This flag mean that the successors are an interdiff that fix the bumped
+# situation, breaking the transitivity of "bumped" here.
+bumpedfix = 1
+
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
     off = 0
@@ -351,7 +382,7 @@ def successormarkers(ctx):
     for data in ctx._repo.obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
-def allsuccessors(obsstore, nodes):
+def allsuccessors(obsstore, nodes, ignoreflags=0):
     """Yield node for every successor of <nodes>.
 
     Some successors may be unknown locally.
@@ -363,6 +394,9 @@ def allsuccessors(obsstore, nodes):
         current = remaining.pop()
         yield current
         for mark in obsstore.successors.get(current, ()):
+            # ignore marker flagged with with specified flag
+            if mark[2] & ignoreflags:
+                continue
             for suc in mark[1]:
                 if suc not in seen:
                     seen.add(suc)
@@ -449,7 +483,8 @@ def _computebumpedset(repo):
     # get all possible bumped changesets
     tonode = repo.changelog.node
     publicnodes = (tonode(r) for r in repo.revs('public()'))
-    successors = allsuccessors(repo.obsstore, publicnodes)
+    successors = allsuccessors(repo.obsstore, publicnodes,
+                               ignoreflags=bumpedfix)
     # revision public or already obsolete don't count as bumped
     query = '%ld - obsolete() - public()'
     return set(repo.revs(query, _knownrevs(repo, successors)))
