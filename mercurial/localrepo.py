@@ -1797,7 +1797,7 @@ class localrepository(object):
                 phases.advanceboundary(self, phases.public, subset)
 
             if obsolete._enabled:
-                self.ui.debug('fetching remote obsolete markers')
+                self.ui.debug('fetching remote obsolete markers\n')
                 remoteobs = remote.listkeys('obsolete')
                 if 'dump0' in remoteobs:
                     if tr is None:
