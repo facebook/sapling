@@ -284,6 +284,13 @@ Test remote paths with spaces (issue2983):
   $ hg id --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
   73649e48688a
 
+Test (non-)escaping of remote paths with spaces when cloning (issue3145):
+
+  $ hg clone --ssh "python \"$TESTDIR/dummyssh\"" "ssh://user@dummy/a repo"
+  destination directory: a repo
+  abort: destination 'a repo' is not empty
+  [255]
+
 Test hg-ssh using a helper script that will restore PYTHONPATH (which might
 have been cleared by a hg.exe wrapper) and invoke hg-ssh with the right
 parameters:
@@ -372,5 +379,6 @@ Test hg-ssh in read-only mode:
   changegroup-in-remote hook: HG_NODE=1383141674ec756a6056f6a9097618482fe0f4a6 HG_SOURCE=serve HG_URL=remote:ssh:127.0.0.1
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   Got arguments 1:user@dummy 2:hg init 'a repo'
+  Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
   Got arguments 1:user@dummy 2:hg -R 'a repo' serve --stdio
