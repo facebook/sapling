@@ -234,7 +234,9 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         if req.get_full_url().startswith('https'):
             return self.https_open(req)
         def makehttpcon(*args, **kwargs):
-            return HTTPConnection(*args, use_ssl=False, **kwargs)
+            k2 = dict(kwargs)
+            k2['use_ssl'] = False
+            return HTTPConnection(*args, **k2)
         return self.do_open(makehttpcon, req, False)
 
     def https_open(self, req):
