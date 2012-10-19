@@ -1663,7 +1663,7 @@ check messages when there is no files to upload:
 
   $ hg -q clone src clone2
   $ hg -R clone2 paths | grep default
-  default = $TESTTMP/issue3651/src
+  default = $TESTTMP/issue3651/src (glob)
 
   $ hg -R clone2 summary --large
   parent: 0:fc0bd45326d3 tip
@@ -1674,7 +1674,7 @@ check messages when there is no files to upload:
   searching for changes
   largefiles: (no files to upload)
   $ hg -R clone2 outgoing --large
-  comparing with $TESTTMP/issue3651/src
+  comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
   no changes found
   searching for changes
@@ -1697,7 +1697,7 @@ check messages when there are files to upload:
   searching for changes
   largefiles: 1 to upload
   $ hg -R clone2 outgoing --large
-  comparing with $TESTTMP/issue3651/src
+  comparing with $TESTTMP/issue3651/src (glob)
   searching for changes
   changeset:   1:1acbe71ce432
   tag:         tip
