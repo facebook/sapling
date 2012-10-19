@@ -109,11 +109,13 @@ expect success, server lacks the unbundlehash capability
 
 expect push success, phase change failure
 
-  $ echo '[web]' > .hg/hgrc
-  $ echo 'push_ssl = false' >> .hg/hgrc
-  $ echo 'allow_push = *' >> .hg/hgrc
-  $ echo '[hooks]' >> .hg/hgrc
-  $ echo 'prepushkey = python "$TESTDIR/printenv.py" prepushkey 1' >> .hg/hgrc
+  $ cat > .hg/hgrc <<EOF
+  > [web]
+  > push_ssl = false
+  > allow_push = *
+  > [hooks]
+  > prepushkey = python "$TESTDIR/printenv.py" prepushkey 1
+  > EOF
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
@@ -127,7 +129,7 @@ expect push success, phase change failure
 
 expect phase change success
 
-  $ echo 'prepushkey = python "$TESTDIR/printenv.py" prepushkey 0' >> .hg/hgrc
+  $ echo "prepushkey = python \"$TESTDIR/printenv.py\" prepushkey 0" >> .hg/hgrc
   $ req
   pushing to http://localhost:$HGPORT/
   searching for changes
