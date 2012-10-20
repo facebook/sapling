@@ -18,6 +18,9 @@ cd project
 svn cp trunk/dir trunk/dir2
 echo b >> trunk/dir2/a
 svn ci -m 'copy/edit trunk/dir/a'
+svn up
+svn cp trunk/dir2 trunk/dir3
+svn ci -m 'copy dir2 to dir3'
 cd ..
 
 svnadmin dump testrepo > ../copies.svndump

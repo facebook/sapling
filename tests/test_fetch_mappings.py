@@ -101,7 +101,8 @@ class MapTests(test_util.TestBase):
         all_tests = set(test)
         self.assertEqual(fromself.symmetric_difference(all_tests), set())
 
-    def _loadwithfilemap(self, svndump, filemapcontent, stupid=False):
+    def _loadwithfilemap(self, svndump, filemapcontent, stupid=False,
+            failonmissing=True):
         repo_path = self.load_svndump(svndump)
         filemap = open(self.filemap, 'w')
         filemap.write(filemapcontent)
@@ -109,7 +110,7 @@ class MapTests(test_util.TestBase):
         ui = self.ui(stupid)
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
         ui.setconfig('hgsubversion', 'failoninvalidreplayfile', 'true')
-        ui.setconfig('hgsubversion', 'failonmissing', 'true')
+        ui.setconfig('hgsubversion', 'failonmissing', failonmissing)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, filemap=self.filemap)
         return self.repo
@@ -146,8 +147,27 @@ class MapTests(test_util.TestBase):
                          ['alpha', 'beta'])
 
     def test_file_map_copy(self):
-        repo = self._loadwithfilemap('copies.svndump', "exclude dir2\n")
+        # Exercise excluding files copied from a non-excluded directory.
+        # There will be missing files as we are copying from an excluded
+        # directory.
+        repo = self._loadwithfilemap('copies.svndump', "exclude dir2\n",
+                failonmissing=False)
+        self.assertEqual(['dir/a', 'dir3/a'], list(repo['tip']))
+
+    def test_file_map_exclude_copy_source_and_dest(self):
+        # dir3 is excluded and copied from dir2 which is also excluded.
+        # dir3 files should not be marked as missing and fetched.
+        repo = self._loadwithfilemap('copies.svndump',
+                "exclude dir2\nexclude dir3\n")
         self.assertEqual(['dir/a'], list(repo['tip']))
+
+    def test_file_map_include_file_exclude_dir(self):
+        # dir3 is excluded but we want dir3/a, which is also copied from
+        # an exluded dir2. dir3/a should be fetched.
+        repo = self._loadwithfilemap('copies.svndump',
+                "include .\nexclude dir2\nexclude dir3\ninclude dir3/a\n",
+                failonmissing=False)
+        self.assertEqual(['dir/a', 'dir3/a'], list(repo['tip']))
 
     def test_branchmap(self, stupid=False):
         repo_path = self.load_svndump('branchmap.svndump')

@@ -90,8 +90,8 @@ class RevisionData(object):
 
     __slots__ = [
         'file', 'added', 'deleted', 'rev', 'execfiles', 'symlinks',
-        'copies', 'missing', 'emptybranches', 'base', 'externals', 'ui',
-        'exception', 'store', '_failonmissing',
+        'copies', 'emptybranches', 'base', 'externals', 'ui',
+        'exception', 'store',
     ]
 
     def __init__(self, ui):
@@ -107,10 +107,6 @@ class RevisionData(object):
         self.symlinks = {}
         # Map fully qualified destination file paths to module source path
         self.copies = {}
-        self.missing = set()
-        # Used in tests and debugging
-        self._failonmissing = self.ui.config(
-            'hgsubversion', 'failonmissing', False)
         self.emptybranches = {}
         self.externals = {}
         self.exception = None
@@ -121,8 +117,6 @@ class RevisionData(object):
         self.symlinks[path] = islink
         if path in self.deleted:
             del self.deleted[path]
-        if path in self.missing:
-            self.missing.remove(path)
         if copypath is not None:
             self.copies[path] = copypath
 
@@ -154,49 +148,6 @@ class RevisionData(object):
             files.update(g)
         return sorted(files)
 
-    def addmissing(self, path):
-        if self._failonmissing:
-            raise EditingError('missing entry: %s' % path)
-        self.missing.add(path)
-
-    def findmissing(self, svn):
-
-        if not self.missing:
-            return
-
-        msg = 'fetching %s files that could not use replay.\n'
-        self.ui.debug(msg % len(self.missing))
-        root = svn.subdir and svn.subdir[1:] or ''
-        r = self.rev.revnum
-
-        files = set()
-        for p in self.missing:
-            self.ui.note('.')
-            self.ui.flush()
-            if p[-1] == '/':
-                dir = p[len(root):]
-                new = [p + f for f, k in svn.list_files(dir, r) if k == 'f']
-                files.update(new)
-            else:
-                files.add(p)
-
-        i = 1
-        self.ui.note('\nfetching files...\n')
-        for p in files:
-            if self.ui.debugflag:
-                self.ui.debug('fetching %s\n' % p)
-            else:
-                self.ui.note('.')
-            self.ui.flush()
-            if i % 50 == 0:
-                svn.init_ra_and_client()
-            i += 1
-            data, mode = svn.get_file(p[len(root):], r)
-            self.set(p, data, 'x' in mode, 'l' in mode)
-
-        self.missing = set()
-        self.ui.note('\n')
-
     def close(self):
         self.store.close()
 
@@ -226,6 +177,9 @@ class HgEditor(svnwrap.Editor):
         self.current = RevisionData(meta.ui)
         self._clear()
 
+    def setsvn(self, svn):
+        self._svn = svn
+
     def _clear(self):
         self._filecounter = 0
         # A mapping of svn paths to CopiedFile entries
@@ -240,6 +194,7 @@ class HgEditor(svnwrap.Editor):
         self._getctx = util.lrucachefunc(self.repo.changectx, 3)
         # A stack of opened directory (baton, path) pairs.
         self._opendirs = []
+        self._missing = set()
 
     def _openfile(self, path, data, isexec, islink, copypath, create=False):
         if path in self._openpaths:
@@ -273,6 +228,26 @@ class HgEditor(svnwrap.Editor):
         self._deleted.add(path)
         if path in self._svncopies:
             del self._svncopies[path]
+        self._missing.discard(path)
+
+    def addmissing(self, path, isdir=False):
+        svn = self._svn
+        root = svn.subdir and svn.subdir[1:] or ''
+        if not isdir:
+            self._missing.add(path[len(root):])
+        else:
+            # Resolve missing directories content immediately so the
+            # missing files maybe processed by delete actions.
+            rev = self.current.rev.revnum
+            path = path + '/'
+            parentdir = path[len(root):]
+            for f, k in svn.list_files(parentdir, rev):
+                if k != 'f':
+                    continue
+                f = parentdir + f
+                if not self.meta.is_path_valid(f, False):
+                    continue
+                self._missing.add(f)
 
     @svnwrap.ieditor
     def delete_entry(self, path, revision_bogus, parent_baton, pool=None):
@@ -292,6 +267,12 @@ class HgEditor(svnwrap.Editor):
         for f in list(self._svncopies):
             if f.startswith(prefix):
                 self._deletefile(f)
+        if path in self._missing:
+            self._missing.remove(path)
+        else:
+            for f in list(self._missing):
+                if f.startswith(prefix):
+                    self._missing.remove(f)
 
         if br_path is not None:
             ha = self.meta.get_parent_revision(self.current.rev.revnum, branch)
@@ -332,7 +313,7 @@ class HgEditor(svnwrap.Editor):
         parent = self.meta.get_parent_revision(baserev + 1, branch, True)
         ctx = self._getctx(parent)
         if fpath not in ctx:
-            self.current.addmissing(path)
+            self.addmissing(path)
             return None
 
         fctx = ctx.filectx(fpath)
@@ -369,7 +350,7 @@ class HgEditor(svnwrap.Editor):
         (from_file,
          from_branch) = self.meta.split_branch_path(copyfrom_path)[:2]
         if not from_file:
-            self.current.addmissing(path)
+            self.addmissing(path)
             return None
         # Use exact=True because during replacements ('R' action) we select
         # replacing branch as parent, but svn delta editor provides delta
@@ -378,7 +359,7 @@ class HgEditor(svnwrap.Editor):
                                            from_branch, True)
         ctx = self._getctx(ha)
         if from_file not in ctx:
-            self.current.addmissing(path)
+            self.addmissing(path)
             return None
 
         fctx = ctx.filectx(from_file)
@@ -435,7 +416,7 @@ class HgEditor(svnwrap.Editor):
                 # existing=False to guess a possible branch location and
                 # test it against the filemap. The actual path and
                 # revision will be resolved below if necessary.
-                self.current.addmissing('%s/' % path)
+                self.addmissing(path, isdir=True)
                 return baton
         if tag:
             changeid = self.meta.tags[tag]
@@ -446,7 +427,7 @@ class HgEditor(svnwrap.Editor):
             frompath, source_branch = self.meta.split_branch_path(copyfrom_path)[:2]
         new_hash = self.meta.get_parent_revision(source_rev + 1, source_branch, True)
         if new_hash == node.nullid:
-            self.current.addmissing('%s/' % path)
+            self.addmissing(path, isdir=True)
             return baton
         fromctx = self._getctx(new_hash)
         if frompath != '/' and frompath != '':
@@ -596,7 +577,7 @@ class HgEditor(svnwrap.Editor):
                         path, target, isexec, islink, copypath)
             except svnwrap.SubversionException, e: # pragma: no cover
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
-                    self.current.addmissing(path)
+                    self.addmissing(path)
                 else: # pragma: no cover
                     raise hgutil.Abort(*e.args)
             except: # pragma: no cover
@@ -624,6 +605,32 @@ class HgEditor(svnwrap.Editor):
                 data, isexec, islink, copied = copy.resolve(self._getctx)
                 self.current.set(path, data, isexec, islink, copied)
         self._svncopies.clear()
+
+        # Resolve missing files
+        if self._missing:
+            missing = sorted(self._missing)
+            self.ui.debug('fetching %s files that could not use replay.\n'
+                    % len(missing))
+            if self.ui.configbool('hgsubversion', 'failonmissing', False):
+                raise EditingError('missing entry: %s' % missing[0])
+
+            svn = self._svn
+            rev = self.current.rev.revnum
+            root = svn.subdir and svn.subdir[1:] or ''
+            i = 1
+            for f in missing:
+                if self.ui.debugflag:
+                    self.ui.debug('fetching %s\n' % f)
+                else:
+                    self.ui.note('.')
+                self.ui.flush()
+                if i % 50 == 0:
+                    svn.init_ra_and_client()
+                i += 1
+                data, mode = svn.get_file(f, rev)
+                self.current.set(f, data, 'x' in mode, 'l' in mode)
+            if not self.ui.debugflag:
+                self.ui.note('\n')
 
         for f in self._deleted:
             self.current.delete(f)

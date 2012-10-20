@@ -72,6 +72,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     editor = meta.editor
     editor.current.clear()
     editor.current.rev = r
+    editor.setsvn(svn)
 
     if firstrun and meta.revmap.oldest <= 0:
         # We know nothing about this project, so fetch everything before
@@ -83,15 +84,12 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     editor.close()
 
     current = editor.current
-    current.findmissing(svn)
 
     updateexternals(ui, meta, current)
 
     if current.exception is not None:  # pragma: no cover
         traceback.print_exception(*current.exception)
         raise ReplayException()
-    if current.missing:
-        raise MissingPlainTextError()
 
     files_to_commit = current.files()
     branch_batches = {}
