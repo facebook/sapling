@@ -270,6 +270,22 @@ o  changeset: 0:ab86791fc857
     def test_fetch_revert_stupid(self):
         self.test_fetch_revert(stupid=True)
 
+    def test_fetch_movetotrunk(self, stupid=False):
+        repo = self._load_fixture_and_fetch('movetotrunk.svndump',
+                stupid=stupid, subdir='sub1/sub2')
+        graph = self.getgraph(repo)
+        refgraph = """\
+o  changeset: 0:02996a5980ba
+   branch:
+   tags:      tip
+   summary:   move to trunk
+   files:     a dir/b
+"""
+        self.assertEqual(refgraph.strip(), graph.strip())
+
+    def test_fetch_movetotrunk_stupid(self):
+        self.test_fetch_movetotrunk(stupid=True)
+
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
            unittest.TestLoader().loadTestsFromTestCase(TestStupidPull),

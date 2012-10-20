@@ -27,6 +27,7 @@ _skipshallow = set([
 
 _skipall = set([
     'project_root_not_repo_root.svndump',
+    'movetotrunk.svndump',
 ])
 
 _skipstandard = set([
