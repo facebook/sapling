@@ -116,10 +116,10 @@ tagging on a non-head revision
 
   $ hg tag -l 'xx
   > newline'
-  abort: '\n' cannot be used in a tag name
+  abort: '\n' cannot be used in a name
   [255]
   $ hg tag -l 'xx:xx'
-  abort: ':' cannot be used in a tag name
+  abort: ':' cannot be used in a name
   [255]
 
 cloning local tags
