@@ -765,7 +765,9 @@ Ensure base clone command argument validation
   abort: --all-largefiles is incompatible with non-local destination ssh://localhost/a
   [255]
 
-Test pulling with --all-largefiles flag
+Test pulling with --all-largefiles flag.  Also test that the largefiles are
+downloaded from 'default' instead of 'default-push' when no source is specified
+(issue3584)
 
   $ rm -Rf a-backup
   $ hg clone -r 1 a a-backup
@@ -779,7 +781,7 @@ Test pulling with --all-largefiles flag
   2 largefiles updated, 0 removed
   $ rm "${USERCACHE}"/*
   $ cd a-backup
-  $ hg pull --all-largefiles
+  $ hg pull --all-largefiles --config paths.default-push=bogus/path
   pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
@@ -821,8 +823,12 @@ revisions (this was a very bad bug that took a lot of work to fix).
   getting changed largefiles
   3 largefiles updated, 0 removed
   $ cd d
-  $ hg pull --rebase ../b
-  pulling from ../b
+
+More rebase testing, but also test that the largefiles are downloaded from
+'default' instead of 'default-push' when no source is specified (issue3584).
+The error messages go away if repo 'b' is created with --all-largefiles.
+  $ hg pull --rebase --all-largefiles --config paths.default-push=bogus/path --config paths.default=../b
+  pulling from $TESTTMP/b (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -832,6 +838,26 @@ revisions (this was a very bad bug that took a lot of work to fix).
   M sub/normal4
   M sub2/large6
   saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
+  large3: can't get file locally
+  (no default or default-push path set in hgrc)
+  sub/large4: can't get file locally
+  (no default or default-push path set in hgrc)
+  large1: can't get file locally
+  (no default or default-push path set in hgrc)
+  sub/large2: can't get file locally
+  (no default or default-push path set in hgrc)
+  sub/large2: can't get file locally
+  (no default or default-push path set in hgrc)
+  large1: can't get file locally
+  (no default or default-push path set in hgrc)
+  sub/large2: can't get file locally
+  (no default or default-push path set in hgrc)
+  large1: can't get file locally
+  (no default or default-push path set in hgrc)
+  sub/large2: can't get file locally
+  (no default or default-push path set in hgrc)
+  0 additional largefiles cached
+  9 largefiles failed to download
   nothing to rebase
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
