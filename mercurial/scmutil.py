@@ -360,21 +360,21 @@ class auditvfs(object):
 
     mustaudit = property(_getmustaudit, _setmustaudit)
 
-class filtervfs(abstractvfs):
+class filtervfs(abstractvfs, auditvfs):
     '''Wrapper vfs for filtering filenames with a function.'''
 
-    def __init__(self, opener, filter):
+    def __init__(self, vfs, filter):
+        auditvfs.__init__(self, vfs)
         self._filter = filter
-        self._orig = opener
 
     def __call__(self, path, *args, **kwargs):
-        return self._orig(self._filter(path), *args, **kwargs)
+        return self.vfs(self._filter(path), *args, **kwargs)
 
     def join(self, path):
         if path:
-            return self._orig.join(self._filter(path))
+            return self.vfs.join(self._filter(path))
         else:
-            return self._orig.join(path)
+            return self.vfs.join(path)
 
 filteropener = filtervfs
 
