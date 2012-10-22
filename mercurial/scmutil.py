@@ -348,6 +348,18 @@ class vfs(abstractvfs):
 
 opener = vfs
 
+class auditvfs(object):
+    def __init__(self, vfs):
+        self.vfs = vfs
+
+    def _getmustaudit(self):
+        return self.vfs.mustaudit
+
+    def _setmustaudit(self, onoff):
+        self.vfs.mustaudit = onoff
+
+    mustaudit = property(_getmustaudit, _setmustaudit)
+
 class filtervfs(abstractvfs):
     '''Wrapper vfs for filtering filenames with a function.'''
 

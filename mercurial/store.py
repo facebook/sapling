@@ -436,19 +436,11 @@ class fncache(object):
             self._load()
         return iter(self.entries)
 
-class _fncachevfs(scmutil.abstractvfs):
+class _fncachevfs(scmutil.abstractvfs, scmutil.auditvfs):
     def __init__(self, vfs, fnc, encode):
-        self.vfs = vfs
+        scmutil.auditvfs.__init__(self, vfs)
         self.fncache = fnc
         self.encode = encode
-
-    def _getmustaudit(self):
-        return self.vfs.mustaudit
-
-    def _setmustaudit(self, onoff):
-        self.vfs.mustaudit = onoff
-
-    mustaudit = property(_getmustaudit, _setmustaudit)
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb') and path.startswith('data/'):
