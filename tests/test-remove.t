@@ -265,4 +265,17 @@ test that commit does not crash if the user removes a newly added file
   nothing changed
   [1]
 
-  $ cd ..
+handling of untracked directories and missing files
+
+  $ mkdir d1
+  $ echo a > d1/a
+  $ hg rm --after d1
+  not removing d1: no tracked files
+  [1]
+  $ hg add d1/a
+  $ rm d1/a
+  $ hg rm --after d1
+  removing d1/a
+  $ hg rm --after nosuch
+  nosuch: No such file or directory
+  [1]
