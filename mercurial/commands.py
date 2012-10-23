@@ -4842,11 +4842,18 @@ def remove(ui, repo, *pats, **opts):
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
+    # warn about failure to delete explicit files/dirs
+    wctx = repo[None]
     for f in m.files():
-        if f not in repo.dirstate and not os.path.isdir(m.rel(f)):
-            if os.path.exists(m.rel(f)):
+        if f in repo.dirstate or f in wctx.dirs():
+            continue
+        if os.path.exists(m.rel(f)):
+            if os.path.isdir(m.rel(f)):
+                ui.warn(_('not removing %s: no tracked files\n') % m.rel(f))
+            else:
                 ui.warn(_('not removing %s: file is untracked\n') % m.rel(f))
-            ret = 1
+        # missing files will generate a warning elsewhere
+        ret = 1
 
     if force:
         list = modified + deleted + clean + added
@@ -5887,7 +5894,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
 
     if check:
         c = repo[None]
-        if c.dirty(merge=False, branch=False):
+        if c.dirty(merge=False, branch=False, missing=True):
             raise util.Abort(_("uncommitted local changes"))
         if rev is None:
             rev = repo[repo[None].branch()].rev()

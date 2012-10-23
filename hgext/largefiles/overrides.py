@@ -681,9 +681,9 @@ def overridepull(orig, ui, repo, source=None, **opts):
             def _dummy(*args, **kwargs):
                 pass
             commands.postincoming = _dummy
-            repo.lfpullsource = source
             if not source:
                 source = 'default'
+            repo.lfpullsource = source
             try:
                 result = commands.pull(ui, repo, source, **opts)
             finally:
@@ -694,9 +694,9 @@ def overridepull(orig, ui, repo, source=None, **opts):
         finally:
             repo._isrebasing = False
     else:
-        repo.lfpullsource = source
         if not source:
             source = 'default'
+        repo.lfpullsource = source
         oldheads = lfutil.getcurrentheads(repo)
         result = orig(ui, repo, source, **opts)
         # If we do not have the new largefiles for any new heads we pulled, we

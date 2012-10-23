@@ -60,12 +60,12 @@ reserved names
 invalid characters
 
   $ hg branch 'foo:bar'
-  abort: ':' cannot be used in a branch name
+  abort: ':' cannot be used in a name
   [255]
 
   $ hg branch 'foo
   > bar'
-  abort: '\n' cannot be used in a branch name
+  abort: '\n' cannot be used in a name
   [255]
 
   $ echo 'd' >d

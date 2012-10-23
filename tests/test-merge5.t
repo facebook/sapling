@@ -16,6 +16,11 @@
   $ hg update
   abort: crosses branches (merge branches or update --check to force update)
   [255]
+  $ rm b
+  $ hg update -c
+  abort: uncommitted local changes
+  [255]
+  $ hg revert b
   $ hg update -c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mv a c
