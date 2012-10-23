@@ -108,27 +108,23 @@ def user_pass_prompt(realm, default_username, ms, pool): # pragma: no cover
     creds.password = getpass.getpass('Password for %s: ' % creds.username)
     return creds
 
-_ssl_server_trust_prompt_callback = None
-def ssl_server_trust_prompt_callback(callback):
-    global _ssl_server_trust_prompt_callback
-    _ssl_server_trust_prompt_callback = callback
+_prompt = None
+def prompt_callback(callback):
+    global _prompt
+    _prompt = callback
 
-def _ssl_server_trust_prompt(realm, failures, cert_info, may_save, pool):
-    global _ssl_server_trust_prompt_callback
-    if _ssl_server_trust_prompt_callback:
-        cert = [
-                cert_info.hostname,
-                cert_info.fingerprint,
-                cert_info.valid_from,
-                cert_info.valid_until,
-                cert_info.issuer_dname,
-                ]
-        ret = _ssl_server_trust_prompt_callback(realm, failures, cert, may_save, pool)
-        if ret:
-            creds = core.svn_auth_cred_ssl_server_trust_t()
-            (creds.accepted_failures, creds.may_save) = ret
-        else:
-            creds = None
+def _ssl_server_trust(realm, failures, cert_info, may_save, pool):
+    cert = [
+            cert_info.hostname,
+            cert_info.fingerprint,
+            cert_info.valid_from,
+            cert_info.valid_until,
+            cert_info.issuer_dname,
+            ]
+    ret = _prompt.ssl_server_trust(realm, failures, cert, may_save, pool)
+    if ret:
+        creds = core.svn_auth_cred_ssl_server_trust_t()
+        (creds.accepted_failures, creds.may_save) = ret
     else:
         creds = None
     return creds
@@ -176,8 +172,12 @@ def _create_auth_baton(pool, password_stores):
         client.get_ssl_client_cert_pw_file_provider(),
         client.get_ssl_server_trust_file_provider(),
         client.get_simple_prompt_provider(user_pass_prompt, 2),
-        client.get_ssl_server_trust_prompt_provider(_ssl_server_trust_prompt),
         ]
+
+    if _prompt:
+        providers += [
+            client.get_ssl_server_trust_prompt_provider(_ssl_server_trust),
+            ]
 
     return core.svn_auth_open(providers, pool)
 

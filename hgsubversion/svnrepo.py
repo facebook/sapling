@@ -195,11 +195,14 @@ def instance(ui, url, create):
     if create:
         raise hgutil.Abort('cannot create new remote Subversion repository')
 
-    svnwrap.ssl_server_trust_prompt_callback(svn_auth_ssl_server_trust_prompt(ui))
+    svnwrap.prompt_callback(SubversionPrompt(ui))
     return svnremoterepo(ui, url)
 
-def svn_auth_ssl_server_trust_prompt(ui):
-    def callback(realm, failures, cert_info, may_save, pool=None):
+class SubversionPrompt(object):
+    def __init__(self, ui):
+        self.ui = ui
+
+    def ssl_server_trust(self, realm, failures, cert_info, may_save, pool=None):
         msg = 'Error validating server certificate for \'%s\':\n' % (realm,)
         if failures & svnwrap.SSL_UNKNOWNCA:
             msg += (
@@ -233,14 +236,12 @@ def svn_auth_ssl_server_trust_prompt(ui):
         else:
             msg += '(R)eject or accept (t)emporarily? '
             choices = (('&Reject'), ('&Temporarily'))
-        choice = ui.promptchoice(msg, choices, default=0)
+        choice = self.ui.promptchoice(msg, choices, default=0)
         if choice == 1:
             creds = (failures, False)
         elif may_save and choice == 2:
             creds = (failures, True)
         else:
             creds = None
-
         return creds
-    return callback
 

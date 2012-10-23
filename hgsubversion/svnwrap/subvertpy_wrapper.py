@@ -52,11 +52,6 @@ def version():
         svnvers += '-' + subversion_version[3]
     return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
 
-_ssl_server_trust_prompt_callback = None
-def ssl_server_trust_prompt_callback(callback):
-    global _ssl_server_trust_prompt_callback
-    _ssl_server_trust_prompt_callback = callback
-
 # exported values
 ERR_FS_CONFLICT = subvertpy.ERR_FS_CONFLICT
 ERR_FS_NOT_FOUND = subvertpy.ERR_FS_NOT_FOUND
@@ -82,6 +77,11 @@ def ieditor(fn):
     """
 
     return fn
+
+_prompt = None
+def prompt_callback(callback):
+    global _prompt
+    _prompt = callback
 
 _svntypes = {
     subvertpy.NODE_DIR: 'd',
@@ -212,21 +212,15 @@ class SubversionRepo(object):
             return self.username or username, self.password or '', False
         def getuser(realm, may_save):
             return self.username or '', False
-        def svn_auth_ssl_server_trust_prompt(realm, failures, cert_info, may_save):
-            global _ssl_server_trust_prompt_callback
-            if _ssl_server_trust_prompt_callback:
-                ret = _ssl_server_trust_prompt_callback(realm, failures, cert_info, may_save)
-                if ret:
-                    creds = ret
-                else:
-                    # We need to reject the certificate, but subvertpy doesn't
-                    # handle None as a return value here, and requires
-                    # we instead return a tuple of (int, bool). Because of that,
-                    # we return (0, False) instead.
-                    creds = (0, False)
-            else:
-                creds = (0, False)
 
+        def ssl_server_trust(realm, failures, cert_info, may_save):
+            creds = _prompt.ssl_server_trust(realm, failures, cert_info, may_save)
+            if creds is None:
+                # We need to reject the certificate, but subvertpy doesn't
+                # handle None as a return value here, and requires
+                # we instead return a tuple of (int, bool). Because of that,
+                # we return (0, False) instead.
+                creds = (0, False)
             return creds
 
         providers = ra.get_platform_specific_client_providers()
@@ -238,8 +232,11 @@ class SubversionRepo(object):
             ra.get_ssl_server_trust_file_provider(),
             ra.get_username_prompt_provider(getuser, 0),
             ra.get_simple_prompt_provider(getpass, 0),
-            ra.get_ssl_server_trust_prompt_provider(svn_auth_ssl_server_trust_prompt),
         ]
+        if _prompt:
+            providers += [
+                ra.get_ssl_server_trust_prompt_provider(ssl_server_trust),
+            ]
 
         auth = ra.Auth(providers)
         if self.username:
