@@ -750,6 +750,14 @@ issue2549 - correct optimizations
   $ log 'min(1 or 2) and not 1'
   $ log 'last(1 or 2, 1) and not 2'
 
+test revsets started with 40-chars hash (issue3669)
+
+  $ ISSUE3669_TIP=`hg tip --template '{node}'`
+  $ hg log -r "${ISSUE3669_TIP}" --template '{rev}\n'
+  9
+  $ hg log -r "${ISSUE3669_TIP}^" --template '{rev}\n'
+  8
+
 tests for 'remote()' predicate:
 #.  (csets in remote) (id)            (remote)
 1.  less than local   current branch  "default"
