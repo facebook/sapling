@@ -202,6 +202,20 @@ class SubversionPrompt(object):
     def __init__(self, ui):
         self.ui = ui
 
+    def maybe_print_realm(self, realm):
+        if realm:
+            self.ui.write('Authentication realm: %s\n' % (realm,))
+            self.ui.flush()
+
+    def simple(self, realm, default_username, may_save, pool=None):
+        self.maybe_print_realm(realm)
+        if default_username:
+            username = default_username
+        else:
+            username = self.ui.prompt('Username: ', default='')
+        password = self.ui.getpass('Password for \'%s\': ' % (username,), default='')
+        return (username, password, bool(may_save))
+
     def ssl_server_trust(self, realm, failures, cert_info, may_save, pool=None):
         msg = 'Error validating server certificate for \'%s\':\n' % (realm,)
         if failures & svnwrap.SSL_UNKNOWNCA:

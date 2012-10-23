@@ -1,5 +1,4 @@
 import cStringIO
-import getpass
 import errno
 import os
 import shutil
@@ -93,25 +92,16 @@ def ieditor(fn):
             raise
     return fun
 
-def user_pass_prompt(realm, default_username, ms, pool): # pragma: no cover
-    # FIXME: should use getpass() and username() from mercurial.ui
-    creds = core.svn_auth_cred_simple_t()
-    creds.may_save = ms
-    if default_username:
-        sys.stderr.write('Auth realm: %s\n' % (realm,))
-        creds.username = default_username
-    else:
-        sys.stderr.write('Auth realm: %s\n' % (realm,))
-        sys.stderr.write('Username: ')
-        sys.stderr.flush()
-        creds.username = sys.stdin.readline().strip()
-    creds.password = getpass.getpass('Password for %s: ' % creds.username)
-    return creds
-
 _prompt = None
 def prompt_callback(callback):
     global _prompt
     _prompt = callback
+
+def _simple(realm, default_username, ms, pool):
+    ret = _prompt.simple(realm, default_username, ms, pool)
+    creds = core.svn_auth_cred_simple_t()
+    (creds.username, creds.password, creds.may_save) = ret
+    return creds
 
 def _ssl_server_trust(realm, failures, cert_info, may_save, pool):
     cert = [
@@ -171,11 +161,11 @@ def _create_auth_baton(pool, password_stores):
         client.get_ssl_client_cert_file_provider(),
         client.get_ssl_client_cert_pw_file_provider(),
         client.get_ssl_server_trust_file_provider(),
-        client.get_simple_prompt_provider(user_pass_prompt, 2),
         ]
 
     if _prompt:
         providers += [
+            client.get_simple_prompt_provider(_simple, 2),
             client.get_ssl_server_trust_prompt_provider(_ssl_server_trust),
             ]
 
