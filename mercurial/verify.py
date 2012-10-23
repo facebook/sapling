@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import os
+import os, posixpath
 import revlog, util, error
 
 def verify(repo):
@@ -236,7 +236,12 @@ def _verify(repo):
             try:
                 storefiles.remove(ff)
             except KeyError:
-                err(lr, _("missing revlog!"), ff)
+                # under hg < 2.4, convert didn't sanitize paths properly,
+                # so a converted repo may contain repeated slashes
+                try:
+                    storefiles.remove(posixpath.normpath(ff))
+                except KeyError:
+                    err(lr, _("missing revlog!"), ff)
 
         checklog(fl, f, lr)
         seen = {}
