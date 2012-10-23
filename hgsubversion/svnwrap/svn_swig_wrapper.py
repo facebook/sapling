@@ -109,6 +109,12 @@ def _username(realm, ms, pool):
     (creds.username, creds.may_save) = ret
     return creds
 
+def _ssl_client_cert(realm, may_save, pool):
+    ret = _prompt.ssl_client_cert(realm, may_save, pool)
+    creds = core.svn_auth_cred_ssl_client_cert_t()
+    (creds.cert_file, creds.may_save) = ret
+    return creds
+
 def _ssl_server_trust(realm, failures, cert_info, may_save, pool):
     cert = [
             cert_info.hostname,
@@ -173,6 +179,7 @@ def _create_auth_baton(pool, password_stores):
         providers += [
             client.get_simple_prompt_provider(_simple, 2),
             client.get_username_prompt_provider(_username, 2),
+            client.get_ssl_client_cert_prompt_provider(_ssl_client_cert, 2),
             client.get_ssl_server_trust_prompt_provider(_ssl_server_trust),
             ]
 

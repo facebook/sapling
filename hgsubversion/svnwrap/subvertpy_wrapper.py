@@ -213,6 +213,9 @@ class SubversionRepo(object):
         def username(realm, may_save):
             return _prompt.username(realm, may_save)
 
+        def ssl_client_cert(realm, may_save):
+            return _prompt.ssl_client_cert(realm, may_save)
+
         def ssl_server_trust(realm, failures, cert_info, may_save):
             creds = _prompt.ssl_server_trust(realm, failures, cert_info, may_save)
             if creds is None:
@@ -235,6 +238,7 @@ class SubversionRepo(object):
             providers += [
                 ra.get_simple_prompt_provider(simple, 2),
                 ra.get_username_prompt_provider(username, 2),
+                ra.get_ssl_client_cert_prompt_provider(ssl_client_cert, 2),
                 ra.get_ssl_server_trust_prompt_provider(ssl_server_trust),
             ]
 

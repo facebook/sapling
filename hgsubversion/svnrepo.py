@@ -221,6 +221,11 @@ class SubversionPrompt(object):
         password = self.ui.getpass('Password for \'%s\': ' % (username,), default='')
         return (username, password, bool(may_save))
 
+    def ssl_client_cert(self, realm, may_save, pool=None):
+        self.maybe_print_realm(realm)
+        cert_file = self.ui.prompt('Client certificate filename: ', default='')
+        return (cert_file, bool(may_save))
+
     def ssl_server_trust(self, realm, failures, cert_info, may_save, pool=None):
         msg = 'Error validating server certificate for \'%s\':\n' % (realm,)
         if failures & svnwrap.SSL_UNKNOWNCA:
