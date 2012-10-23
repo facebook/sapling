@@ -1880,11 +1880,11 @@ class localrepository(object):
                             for node in outgoing.missingheads:
                                 ctx = self[node]
                                 if ctx.obsolete():
-                                    raise util.Abort(_(mso) % ctx)
+                                    raise util.Abort(mso % ctx)
                                 elif ctx.unstable():
-                                    raise util.Abort(_(msu) % ctx)
+                                    raise util.Abort(msu % ctx)
                                 elif ctx.bumped():
-                                    raise util.Abort(_(msb) % ctx)
+                                    raise util.Abort(msb % ctx)
                         discovery.checkheads(self, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))
