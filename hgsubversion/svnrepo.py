@@ -207,6 +207,11 @@ class SubversionPrompt(object):
             self.ui.write('Authentication realm: %s\n' % (realm,))
             self.ui.flush()
 
+    def username(self, realm, may_save, pool=None):
+        self.maybe_print_realm(realm)
+        username = self.ui.prompt('Username: ', default='')
+        return (username, bool(may_save))
+
     def simple(self, realm, default_username, may_save, pool=None):
         self.maybe_print_realm(realm)
         if default_username:

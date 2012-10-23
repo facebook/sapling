@@ -206,12 +206,12 @@ class SubversionRepo(object):
         """
         def getclientstring():
             return 'hgsubversion'
-        # TODO: handle certificate authentication, Mercurial style
-        def getuser(realm, may_save):
-            return self.username or '', False
 
         def simple(realm, username, may_save):
             return _prompt.simple(realm, username, may_save)
+
+        def username(realm, may_save):
+            return _prompt.username(realm, may_save)
 
         def ssl_server_trust(realm, failures, cert_info, may_save):
             creds = _prompt.ssl_server_trust(realm, failures, cert_info, may_save)
@@ -230,11 +230,11 @@ class SubversionRepo(object):
             ra.get_ssl_client_cert_file_provider(),
             ra.get_ssl_client_cert_pw_file_provider(),
             ra.get_ssl_server_trust_file_provider(),
-            ra.get_username_prompt_provider(getuser, 0),
         ]
         if _prompt:
             providers += [
                 ra.get_simple_prompt_provider(simple, 2),
+                ra.get_username_prompt_provider(username, 2),
                 ra.get_ssl_server_trust_prompt_provider(ssl_server_trust),
             ]
 
