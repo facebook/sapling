@@ -7,7 +7,7 @@
 
 from node import nullid, short
 from i18n import _
-import os, posixpath
+import os
 import revlog, util, error
 
 def verify(repo):
@@ -16,6 +16,13 @@ def verify(repo):
         return _verify(repo)
     finally:
         lock.release()
+
+def _normpath(f):
+    # under hg < 2.4, convert didn't sanitize paths properly, so a
+    # converted repo may contain repeated slashes
+    while '//' in f:
+        f = f.replace('//', '/')
+    return f
 
 def _verify(repo):
     mflinkrevs = {}
@@ -135,7 +142,7 @@ def _verify(repo):
                 mflinkrevs.setdefault(changes[0], []).append(i)
                 refersmf = True
             for f in changes[3]:
-                filelinkrevs.setdefault(f, []).append(i)
+                filelinkrevs.setdefault(_normpath(f), []).append(i)
         except Exception, inst:
             refersmf = True
             exc(i, _("unpacking changeset %s") % short(n), inst)
@@ -162,7 +169,7 @@ def _verify(repo):
                 if not f:
                     err(lr, _("file without name in manifest"))
                 elif f != "/dev/null":
-                    filenodes.setdefault(f, {}).setdefault(fn, lr)
+                    filenodes.setdefault(_normpath(f), {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
     ui.progress(_('checking'), None)
@@ -209,7 +216,7 @@ def _verify(repo):
         if not f:
             err(None, _("cannot decode filename '%s'") % f2)
         elif size > 0 or not revlogv1:
-            storefiles.add(f)
+            storefiles.add(_normpath(f))
 
     files = sorted(set(filenodes) | set(filelinkrevs))
     total = len(files)
@@ -236,12 +243,7 @@ def _verify(repo):
             try:
                 storefiles.remove(ff)
             except KeyError:
-                # under hg < 2.4, convert didn't sanitize paths properly,
-                # so a converted repo may contain repeated slashes
-                try:
-                    storefiles.remove(posixpath.normpath(ff))
-                except KeyError:
-                    err(lr, _("missing revlog!"), ff)
+                err(lr, _("missing revlog!"), ff)
 
         checklog(fl, f, lr)
         seen = {}
