@@ -523,7 +523,7 @@ class hgsubrepo(abstractsubrepo):
         self._get(state)
         source, revision, kind = state
         self._repo.ui.debug("getting subrepo %s\n" % self._path)
-        hg.clean(self._repo, revision, False)
+        hg.updaterepo(self._repo, revision, overwrite)
 
     def merge(self, state):
         self._get(state)

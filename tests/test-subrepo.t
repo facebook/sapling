@@ -210,9 +210,10 @@ merge tests
   subrepo merge f0d2028bf86d+ 1831e14459c4 1f14a2e2d3ec
     subrepo t: other changed, get t:6747d179aa9a688023c4b0cad32e4c92bb7f34ad:hg
   getting subrepo t
+    searching for copies back to rev 1
   resolving manifests
-   overwrite: True, partial: False
-   ancestor: 60ca1237c194+, local: 60ca1237c194+, remote: 6747d179aa9a
+   overwrite: False, partial: False
+   ancestor: 60ca1237c194, local: 60ca1237c194+, remote: 6747d179aa9a
    t: remote is newer -> g
   updating: t 1/1 files (100.00%)
   getting t
@@ -580,16 +581,37 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ hg -q -R repo2/s push
   $ hg -R repo2/s up -C 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo 2 > repo2/s/a
-  $ hg -R repo2/s ci -m3
+  $ echo 2 > repo2/s/b
+  $ hg -R repo2/s ci -m3 -A
+  adding b
   created new head
   $ hg -R repo2 ci -m3
   $ hg -q -R repo2 push
-  abort: push creates new remote head 9d66565e64e1!
+  abort: push creates new remote head cc505f09a8b2!
   (did you forget to merge? use push -f to force)
   [255]
   $ hg -R repo update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+test if untracked file is not overwritten
+
+  $ echo issue3276_ok > repo/s/b
+  $ hg -R repo2 push -f -q
+  $ hg -R repo update
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+
+  $ cat repo/s/b
+  issue3276_ok
+  $ rm repo/s/b
+  $ hg -R repo revert --all
+  reverting repo/.hgsubstate
+  reverting subrepo s
+  $ hg -R repo update
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat repo/s/b
+  2
   $ rm -rf repo2 repo
 
 
