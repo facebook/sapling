@@ -275,6 +275,9 @@ round-trip: converting back to a normal (non-largefiles) repo with
 
   $ cd ..
 
+Clearing the usercache ensures that commitctx doesn't try to cache largefiles
+from the working dir on a convert.
+  $ rm "${USERCACHE}"/*
   $ hg convert largefiles-repo
   assuming destination largefiles-repo-hg
   initializing destination largefiles-repo-hg repository
@@ -304,6 +307,9 @@ round-trip: converting back to a normal (non-largefiles) repo with
   |
   o  0:d4892ec57ce2  add large, normal1
   
+Verify will fail (for now) if the usercache is purged before converting, since
+largefiles are not cached in the converted repo's local store by the conversion
+process.
   $ hg -R largefiles-repo-hg verify --large --lfa
   checking changesets
   checking manifests
@@ -311,7 +317,20 @@ round-trip: converting back to a normal (non-largefiles) repo with
   checking files
   8 files, 7 changesets, 12 total revisions
   searching 7 changesets for largefiles
+  changeset 0:d4892ec57ce2: large missing
+    (looked for hash 2e000fa7e85759c7f4c254d4d9c33ef481e459a7)
+  changeset 1:334e5237836d: sub/maybelarge.dat missing
+    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
+  changeset 2:261ad3f3f037: stuff/maybelarge.dat missing
+    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
+  changeset 3:55759520c76f: sub/maybelarge.dat missing
+    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
+  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat missing
+    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
+  changeset 6:17126745edfd: anotherlarge missing
+    (looked for hash 3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3)
   verified existence of 6 revisions of 4 largefiles
+  [1]
   $ hg -R largefiles-repo-hg showconfig paths
 
 
@@ -319,7 +338,7 @@ Avoid a traceback if a largefile isn't available (issue3519)
 
 Ensure the largefile can be cached in the source if necessary
   $ hg clone -U largefiles-repo issue3519
-  $ rm "${USERCACHE}"/*
+  $ rm -f "${USERCACHE}"/*
   $ hg lfconvert --to-normal issue3519 normalized3519
   initializing destination normalized3519
 

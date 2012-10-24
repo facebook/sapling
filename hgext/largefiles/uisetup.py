@@ -168,3 +168,10 @@ def uisetup(ui):
         if name == 'transplant':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'transplant',
                 overrides.overridetransplant)
+        if name == 'convert':
+            convcmd = getattr(module, 'convcmd')
+            hgsink = getattr(convcmd, 'mercurial_sink')
+            extensions.wrapfunction(hgsink, 'before',
+                                    overrides.mercurialsinkbefore)
+            extensions.wrapfunction(hgsink, 'after',
+                                    overrides.mercurialsinkafter)

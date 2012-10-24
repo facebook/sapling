@@ -1113,3 +1113,11 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         result = orig(ui, repo, file1, *pats, **opts)
         return result
     return lfcommands.catlfile(repo, file1, ctx.rev(), opts.get('output'))
+
+def mercurialsinkbefore(orig, sink):
+    sink.repo._isconverting = True
+    orig(sink)
+
+def mercurialsinkafter(orig, sink):
+    sink.repo._isconverting = False
+    orig(sink)
