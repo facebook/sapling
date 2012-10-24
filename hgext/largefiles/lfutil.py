@@ -215,7 +215,7 @@ def copyfromcache(repo, hash, filename):
     return True
 
 def copytostore(repo, rev, file, uploaded=False):
-    hash = readstandin(repo, file)
+    hash = readstandin(repo, file, rev)
     if instore(repo, hash):
         return
     copytostoreabsolute(repo, repo.wjoin(file), hash)

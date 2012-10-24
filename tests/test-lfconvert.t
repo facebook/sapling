@@ -6,6 +6,7 @@
   > share =
   > graphlog =
   > mq =
+  > convert =
   > [largefiles]
   > minsize = 0.5
   > patterns = **.other
@@ -273,6 +274,46 @@ round-trip: converting back to a normal (non-largefiles) repo with
   pass
 
   $ cd ..
+
+  $ hg convert largefiles-repo
+  assuming destination largefiles-repo-hg
+  initializing destination largefiles-repo-hg repository
+  scanning source...
+  sorting...
+  converting...
+  6 add large, normal1
+  5 add sub/*
+  4 rename sub/ to stuff/
+  3 add normal3, modify sub/*
+  2 remove large, normal3
+  1 merge
+  0 add anotherlarge (should be a largefile)
+
+  $ hg -R largefiles-repo-hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  o  6:17126745edfd  add anotherlarge (should be a largefile)
+  |
+  o    5:9cc5aa7204f0  merge
+  |\
+  | o  4:a5a02de7a8e4  remove large, normal3
+  | |
+  | o  3:55759520c76f  add normal3, modify sub/*
+  | |
+  o |  2:261ad3f3f037  rename sub/ to stuff/
+  |/
+  o  1:334e5237836d  add sub/*
+  |
+  o  0:d4892ec57ce2  add large, normal1
+  
+  $ hg -R largefiles-repo-hg verify --large --lfa
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 7 changesets, 12 total revisions
+  searching 7 changesets for largefiles
+  verified existence of 6 revisions of 4 largefiles
+  $ hg -R largefiles-repo-hg showconfig paths
+
 
 Avoid a traceback if a largefile isn't available (issue3519)
 
