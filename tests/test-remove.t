@@ -276,6 +276,12 @@ handling of untracked directories and missing files
   $ rm d1/a
   $ hg rm --after d1
   removing d1/a (glob)
+#if windows
+  $ hg rm --after nosuch
+  nosuch: * (glob)
+  [1]
+#else
   $ hg rm --after nosuch
   nosuch: No such file or directory
   [1]
+#endif
