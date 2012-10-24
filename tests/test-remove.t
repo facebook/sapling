@@ -275,7 +275,7 @@ handling of untracked directories and missing files
   $ hg add d1/a
   $ rm d1/a
   $ hg rm --after d1
-  removing d1/a
+  removing d1/a (glob)
   $ hg rm --after nosuch
   nosuch: No such file or directory
   [1]
