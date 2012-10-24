@@ -1611,6 +1611,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # See if we got a message from -m or -l, if not, open the editor
             # with the message of the changeset to amend
             message = logmessage(ui, opts)
+            # ensure logfile does not conflict with later enforcement of the
+            # message. potential logfile content has been processed by
+            # `logmessage` anyway.
+            opts.pop('logfile')
             # First, do a regular commit to record all changes in the working
             # directory (if there are any)
             ui.callhooks = False

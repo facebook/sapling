@@ -65,9 +65,11 @@ Add new file:
   saved backup bundle to $TESTTMP/.hg/strip-backup/43f1ba15f28a-amend-backup.hg (glob)
 
 Remove file that was added in amended commit:
+(and test logfile option)
 
   $ hg rm b
-  $ hg ci --amend -m 'amend base1 remove new file'
+  $ echo 'amend base1 remove new file' > ../logfile
+  $ hg ci --amend -l ../logfile
   saved backup bundle to $TESTTMP/.hg/strip-backup/b8e3cb2b3882-amend-backup.hg (glob)
 
   $ hg cat b
