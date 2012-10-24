@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex
-from mercurial import encoding, error, util, obsolete, phases
+from mercurial import encoding, error, util, obsolete
 import errno, os
 
 def read(repo):
@@ -264,7 +264,7 @@ def validdest(repo, old, new):
             plen = len(validdests)
             succs = set(c.node() for c in validdests)
             for c in validdests:
-                if c.phase() > phases.public:
+                if c.mutable():
                     # obsolescence marker does not apply to public changeset
                     succs.update(obsolete.allsuccessors(repo.obsstore,
                                                         [c.node()]))
