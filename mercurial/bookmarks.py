@@ -267,7 +267,6 @@ def validdest(repo, old, new):
             succs.update(obsolete.allsuccessors(repo.obsstore, mutable))
             known = (n for n in succs if n in nm)
             validdests = set(repo.set('%ln::', known))
-        validdests.remove(old)
         return new in validdests
     else:
         return old.descendant(new)
