@@ -622,6 +622,7 @@ def tsttest(test, wd, options, replacements):
         script.append('set -x\n')
     if os.getenv('MSYSTEM'):
         script.append('alias pwd="pwd -W"\n')
+    n = 0
     for n, l in enumerate(t):
         if not l.endswith('\n'):
             l += '\n'
