@@ -1170,9 +1170,9 @@ def main():
 
         checktools()
 
-    if len(args) == 0:
-        args = os.listdir(".")
-    args.sort()
+        if len(args) == 0:
+            args = os.listdir(".")
+        args.sort()
 
     tests = args
 
