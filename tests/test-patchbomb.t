@@ -1663,8 +1663,8 @@ no intro message in non-interactive mode
   Subject: [PATCH 2 of 2] b
   X-Mercurial-Node: 97d72e5f12c7e84f85064aa72e5a297142c36ed9
   Message-Id: <97d72e5f12c7e84f8506.61@*> (glob)
-  In-Reply-To: <8580ff50825a50c8f716.60@*> (glob)
-  References: <8580ff50825a50c8f716.60@*> (glob)
+  In-Reply-To: <baz>
+  References: <baz>
   User-Agent: Mercurial-patchbomb/* (glob)
   Date: Thu, 01 Jan 1970 00:01:01 +0000
   From: quux

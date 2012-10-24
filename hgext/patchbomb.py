@@ -496,8 +496,6 @@ def patchbomb(ui, repo, *revs, **opts):
         if not parent.endswith('>'):
             parent += '>'
 
-    first = True
-
     sender_addr = email.Utils.parseaddr(sender)[1]
     sender = mail.addressencode(ui, sender, _charsets, opts.get('test'))
     sendmail = None
@@ -509,9 +507,8 @@ def patchbomb(ui, repo, *revs, **opts):
         if parent:
             m['In-Reply-To'] = parent
             m['References'] = parent
-        if first:
+        if not parent or 'X-Mercurial-Node' not in m:
             parent = m['Message-Id']
-            first = False
 
         m['User-Agent'] = 'Mercurial-patchbomb/%s' % util.version()
         m['Date'] = email.Utils.formatdate(start_time[0], localtime=True)
