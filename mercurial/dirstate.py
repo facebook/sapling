@@ -673,7 +673,7 @@ class dirstate(object):
             try:
                 entries = listdir(join(nd), stat=True, skip=skip)
             except OSError, inst:
-                if inst.errno == errno.EACCES:
+                if inst.errno in (errno.EACCES, errno.ENOENT):
                     fwarn(nd, inst.strerror)
                     continue
                 raise
