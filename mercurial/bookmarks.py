@@ -263,11 +263,8 @@ def validdest(repo, old, new):
         while len(validdests) != plen:
             plen = len(validdests)
             succs = set(c.node() for c in validdests)
-            for c in validdests:
-                if c.mutable():
-                    # obsolescence marker does not apply to public changeset
-                    succs.update(obsolete.allsuccessors(repo.obsstore,
-                                                        [c.node()]))
+            mutable = [c.node() for c in validdests if c.mutable()]
+            succs.update(obsolete.allsuccessors(repo.obsstore, mutable))
             known = (n for n in succs if n in nm)
             validdests = set(repo.set('%ln::', known))
         validdests.remove(old)
