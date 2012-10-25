@@ -885,15 +885,17 @@ class GitHandler(object):
 
         #The remote repo is empty and the local one doesn't have bookmarks/tags
         if refs.keys()[0] == 'capabilities^{}':
-            del new_refs['capabilities^{}']
             if not self.local_heads():
-                tip = hex(self.repo.lookup('tip'))
-                try:
-                    commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
-                except NameError:
-                    bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
-                bookmarks.setcurrent(self.repo, 'master')
-                new_refs['refs/heads/master'] = self.map_git_get(tip)
+                tip = self.repo.lookup('tip')
+                if tip != nullid:
+                    del new_refs['capabilities^{}']
+                    tip = hex(tip)
+                    try:
+                        commands.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                    except NameError:
+                        bookmarks.bookmark(self.ui, self.repo, 'master', tip, force=True)
+                    bookmarks.setcurrent(self.repo, 'master')
+                    new_refs['refs/heads/master'] = self.map_git_get(tip)
 
         for rev in revs:
             ctx = self.repo[rev]
