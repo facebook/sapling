@@ -22,6 +22,7 @@ class gitrepo(peerrepository):
             raise util.Abort('Cannot create a git repository.')
         self.ui = ui
         self.path = path
+        self.localrepo = None
 
     def url(self):
         return self.path

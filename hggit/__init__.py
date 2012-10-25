@@ -184,6 +184,14 @@ except AttributeError:
     # 1.7+
     pass
 
+def peer(orig, uiorrepo, *args, **opts):
+    newpeer = orig(uiorrepo, *args, **opts)
+    if isinstance(newpeer, gitrepo.gitrepo):
+        if isinstance(uiorrepo, localrepo.localrepository):
+            newpeer.localrepo = uiorrepo
+    return newpeer
+extensions.wrapfunction(hg, 'peer', peer)
+
 def revset_fromgit(repo, subset, x):
     '''``fromgit()``
     Select changesets that originate from Git.
