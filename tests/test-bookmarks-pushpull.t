@@ -262,7 +262,8 @@ Update to a successor works
   4efff6d98829d9c824c621afd6e3f01865f5439f
   $ hg id --debug -r 5
   c922c0139ca03858f655e4a2af4dd02796a63969 tip Y
-  $ hg debugobsolete f6fc62dde3c0771e29704af56ba4d8af77abcc2f 4efff6d98829d9c824c621afd6e3f01865f5439f
+  $ hg debugobsolete f6fc62dde3c0771e29704af56ba4d8af77abcc2f cccccccccccccccccccccccccccccccccccccccc
+  $ hg debugobsolete cccccccccccccccccccccccccccccccccccccccc 4efff6d98829d9c824c621afd6e3f01865f5439f
   $ hg push http://localhost:$HGPORT2/
   pushing to http://localhost:$HGPORT2/
   searching for changes

@@ -256,7 +256,7 @@ def validdest(repo, old, new):
     elif repo.obsstore:
         # We only need this complicated logic if there is obsolescence
         # XXX will probably deserve an optimised revset.
-
+        nm = repo.changelog.nodemap
         validdests = set([old])
         plen = -1
         # compute the whole set of successors or descendants
@@ -268,7 +268,8 @@ def validdest(repo, old, new):
                     # obsolescence marker does not apply to public changeset
                     succs.update(obsolete.allsuccessors(repo.obsstore,
                                                         [c.node()]))
-            validdests = set(repo.set('%ln::', succs))
+            known = (n for n in succs if nm.get(n) is not None)
+            validdests = set(repo.set('%ln::', known))
         validdests.remove(old)
         return new in validdests
     else:
