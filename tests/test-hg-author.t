@@ -56,7 +56,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:cffa0e8d
 
   $ echo gamma >> beta
   $ hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
@@ -64,7 +63,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:2b9ec6a4
 
   $ echo gamma > gamma
   $ hg add gamma
@@ -73,7 +71,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:fee30180
 
   $ echo delta > delta
   $ hg add delta
@@ -82,7 +79,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:d1659250
 
   $ echo epsilon > epsilon
   $ hg add epsilon
@@ -91,7 +87,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:ee985f12
 
   $ echo zeta > zeta
   $ hg add zeta
@@ -100,7 +95,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:d21e26b4
 
   $ echo eta > eta
   $ hg add eta
@@ -109,7 +103,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:8c878c97
 
   $ echo theta > theta
   $ hg add theta
@@ -118,7 +111,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:1e03e913
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   8:d3c51ce68cfd

@@ -73,6 +73,5 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/master => GIT:3b7fd1b3
 
   $ cd ..

@@ -61,7 +61,6 @@ bail if the user does not have dulwich
   pushing to $TESTTMP/gitrepo
   exporting hg objects to git
   searching for changes
-      default::refs/heads/beta => GIT:cffa0e8d
 
   $ cd ..
 
@@ -140,7 +139,6 @@ which should not implicitly also push the not-master ref.
   $ hg push -fr master
   pushing to $TESTTMP/gitrepo
   searching for changes
-      default::refs/heads/master => GIT:cc119202
 
   $ echo % this should fail, no changes to push
   % this should fail, no changes to push
