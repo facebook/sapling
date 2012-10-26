@@ -137,3 +137,45 @@ No changes
   no changes found
   [1]
   $ cd ..
+
+Changed bookmarks, but not revs
+  $ cd purehglocalrepo
+  $ hg bookmark -fr 2 b1
+  $ hg bookmark -r 0 b2
+  $ hgstate
+    3 fc2664cac217 "add delta" bookmarks: [master]
+    2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
+    1 7bcd915dc873 "add beta" bookmarks: []
+    0 3442585be8a6 "add alpha" bookmarks: [b2]
+  $ hg outgoing
+  comparing with $TESTTMP/hgremoterepo
+  searching for changes
+  no changes found
+  [1]
+As of 2.3, Mercurial's outgoing -B doesn't actually show changed bookmarks
+It only shows "new" bookmarks.  Thus, b1 doesn't show up.
+  $ hg outgoing -B
+  comparing with $TESTTMP/hgremoterepo
+  searching for changed bookmarks
+     b2                        3442585be8a6
+  $ cd ..
+  $ cd hggitlocalrepo
+  $ hg bookmark -fr 2 b1
+  $ hg bookmark -r 0 b2
+  $ hgstate
+    3 fc2664cac217 "add delta" bookmarks: [master]
+    2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
+    1 7bcd915dc873 "add beta" bookmarks: []
+    0 3442585be8a6 "add alpha" bookmarks: [b2]
+  $ hg outgoing
+  comparing with $TESTTMP/gitremoterepo
+  searching for changes
+  no changes found
+  [1]
+As of 2.3, Mercurial's outgoing -B doesn't actually show changed bookmarks
+It only shows "new" bookmarks.  Thus, b1 doesn't show up.
+  $ hg outgoing -B
+  comparing with $TESTTMP/gitremoterepo
+  searching for changed bookmarks
+     b2                        3442585be8a6
+  $ cd ..
