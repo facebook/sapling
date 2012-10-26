@@ -509,6 +509,7 @@ Test clone with special '@' bookmark:
   $ hg clone . ../i
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  active bookmark: @
   $ hg id -i ../i
   a7949464abda
 

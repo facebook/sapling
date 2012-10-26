@@ -337,6 +337,7 @@ hgweb
   added 5 changesets with 5 changes to 3 files (+2 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  active bookmark: @
   $ hg -R cloned-bookmarks bookmarks
    * @                         1:9b140be10808
      X                         1:9b140be10808
@@ -357,6 +358,7 @@ bookmark, not all outgoing changes:
   added 5 changesets with 5 changes to 3 files (+2 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  active bookmark: @
   $ cd addmarks
   $ echo foo > foo
   $ hg add foo
