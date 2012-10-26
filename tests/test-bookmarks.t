@@ -394,6 +394,22 @@ test clone with pull protocol
   $ hg bookmark -d @
   $ hg bookmark -d a@
 
+test clone with a bookmark named "default" (issue3677)
+
+  $ hg bookmark -r 1 -f -i default
+  $ hg clone . cloned-bookmark-default
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmark-default bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+     default                   1:925d80f479bb
+     x  y                      2:db815d6d32e6
+  $ hg -R cloned-bookmark-default parents -q
+  2:db815d6d32e6
+  $ hg bookmark -d default
+
 test clone with a specific revision
 
   $ hg clone -r 925d80 . cloned-bookmarks-rev
