@@ -114,11 +114,12 @@ bail if the user does not have dulwich
   git commit map cleaned
   $ echo % pull works after \'hg git-cleanup\'
   % pull works after 'hg git-cleanup'
-  $ hg pull -r beta
+"adding remote bookmark" message was added in Mercurial 2.3
+  $ hg pull -r beta | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg update' to get a working copy)
-  $ hg log --graph | egrep -v ': *(beta|master)'
+  $ hg log --graph | egrep -v 'bookmark: *(alpha|beta|master)'
   o  changeset:   2:611948b1ec6a
   |  tag:         default/beta
   |  tag:         tip

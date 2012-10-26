@@ -964,7 +964,7 @@ class GitHandler(object):
         return new_refs
 
 
-    def fetch_pack(self, remote_name, heads):
+    def fetch_pack(self, remote_name, heads=None):
         client, path = self.get_transport_and_path(remote_name)
         graphwalker = self.git.get_graph_walker()
         def determine_wants(refs):

@@ -109,6 +109,11 @@ No changes
   searching for changes
   no changes found
   [1]
+  $ hg outgoing -B
+  comparing with $TESTTMP/hgremoterepo
+  searching for changed bookmarks
+  no changed bookmarks found
+  [1]
   $ hg push
   pushing to $TESTTMP/hgremoterepo
   searching for changes
@@ -120,6 +125,11 @@ No changes
   comparing with $TESTTMP/gitremoterepo
   searching for changes
   no changes found
+  [1]
+  $ hg outgoing -B
+  comparing with $TESTTMP/gitremoterepo
+  searching for changed bookmarks
+  no changed bookmarks found
   [1]
   $ hg push
   pushing to $TESTTMP/gitremoterepo

@@ -126,7 +126,7 @@ Check state of refs after outgoing
   [255]
   $ echo % let\'s pull and try again
   % let's pull and try again
-  $ hg pull
+  $ hg pull 2>&1 | grep -v 'divergent bookmark'
   pulling from */gitrepo (glob)
   importing git objects into hg
   (run 'hg update' to get a working copy)

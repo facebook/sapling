@@ -152,7 +152,8 @@ This test only works on hg 1.7 and later
 
   $ echo % nothing incoming after pull
   % nothing incoming after pull
-  $ hg pull
+"adding remote bookmark" message was added in Mercurial 2.3
+  $ hg pull | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg heads' to see heads, 'hg merge' to merge)

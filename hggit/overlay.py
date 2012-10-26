@@ -227,6 +227,12 @@ class overlayrepo(object):
             return self.handler.repo[n]
         return overlaychangectx(self, n)
 
+    def node(self, n):
+        """Returns an Hg or Git hash for the specified Git hash"""
+        if bin(n) in self.revmap:
+            return n
+        return self.handler.map_hg_get(n)
+
     def nodebookmarks(self, n):
         return self.refmap.get(n, [])
 

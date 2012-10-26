@@ -102,7 +102,7 @@ bail if the user does not have dulwich
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
 
-  $ hg pull
+  $ hg pull 2>&1 | grep -v 'divergent bookmark'
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   (run 'hg update' to get a working copy)
@@ -117,7 +117,7 @@ which should not implicitly also push the not-master ref.
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add gamma
   
-  $ hg log -r default/master
+  $ hg log -r default/master | grep -v 'master@default'
   changeset:   3:1436150b86c2
   tag:         default/master
   tag:         tip
