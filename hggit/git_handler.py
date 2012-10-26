@@ -337,7 +337,7 @@ class GitHandler(object):
         export = [node for node in nodes if not hex(node) in self._map_hg]
         total = len(export)
         if total:
-            self.ui.status(_("exporting hg objects to git\n"))
+            self.ui.note(_("exporting hg objects to git\n"))
         for i, rev in enumerate(export):
             util.progress(self.ui, 'exporting', i, total=total)
             ctx = self.repo.changectx(rev)

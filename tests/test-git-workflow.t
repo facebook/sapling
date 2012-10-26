@@ -66,7 +66,6 @@ bail if the user does not have dulwich
   $ echo "[git]" >> .hg/hgrc
   $ echo "intree = True" >> .hg/hgrc
   $ hg gexport
-  exporting hg objects to git
 
   $ echo % do some work
   % do some work

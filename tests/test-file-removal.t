@@ -108,7 +108,6 @@ bail if the user does not have dulwich
   clearing out the git cache data
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
-  exporting hg objects to git
   searching for changes
 
   $ cd ../gitrepo2

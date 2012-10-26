@@ -60,7 +60,6 @@ resolve using second parent
   $ hg bookmark -r tip master
   $ hg push -r master ../gitrepo
   pushing to ../gitrepo
-  exporting hg objects to git
   searching for changes
   $ cd ..
 

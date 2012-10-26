@@ -59,7 +59,6 @@ bail if the user does not have dulwich
   $ hg book -r 1 beta
   $ hg push -r beta
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ cd ..

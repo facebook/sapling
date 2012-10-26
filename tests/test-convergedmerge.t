@@ -61,7 +61,6 @@ bail if the user does not have dulwich
   $ hg bookmark -r4 master
   $ hg push -r master ../gitrepo
   pushing to ../gitrepo
-  exporting hg objects to git
   searching for changes
   $ cd ..
 

@@ -54,14 +54,12 @@ bail if the user does not have dulwich
   $ hgcommit -u "test" -m 'add beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo gamma >> beta
   $ hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo gamma > gamma
@@ -69,7 +67,6 @@ bail if the user does not have dulwich
   $ hgcommit -u "<test@example.com>" -m 'add gamma'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo delta > delta
@@ -77,7 +74,6 @@ bail if the user does not have dulwich
   $ hgcommit -u "name<test@example.com>" -m 'add delta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo epsilon > epsilon
@@ -85,7 +81,6 @@ bail if the user does not have dulwich
   $ hgcommit -u "name <test@example.com" -m 'add epsilon'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo zeta > zeta
@@ -93,7 +88,6 @@ bail if the user does not have dulwich
   $ hgcommit -u " test " -m 'add zeta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo eta > eta
@@ -101,7 +95,6 @@ bail if the user does not have dulwich
   $ hgcommit -u "test < test@example.com >" -m 'add eta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ echo theta > theta
@@ -109,7 +102,6 @@ bail if the user does not have dulwich
   $ hgcommit -u "test >test@example.com>" -m 'add theta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ hg log --graph | egrep -v ': *(not-master|master)'

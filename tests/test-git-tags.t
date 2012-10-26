@@ -71,7 +71,6 @@ bail if the user does not have dulwich
   $ hg commit -m 'fix for beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
-  exporting hg objects to git
   searching for changes
 
   $ cd ..

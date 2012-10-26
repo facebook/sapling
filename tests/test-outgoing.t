@@ -60,7 +60,6 @@ bail if the user does not have dulwich
 
   $ hg outgoing | sed 's/bookmark:    /tag:         /' | grep -v 'searching for changes'
   comparing with */gitrepo (glob)
-  exporting hg objects to git
   changeset:   1:0564f526fb0f
   tag:         beta
   user:        test
