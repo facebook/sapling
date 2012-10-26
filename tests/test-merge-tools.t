@@ -773,6 +773,30 @@ Merge using tool with a path that must be quoted:
   # hg stat
   M f
 
+Issue3581: Merging a filename that needs to be quoted
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ echo "revision 4" > '"; exit 1; echo "'
+  $ hg commit -Am "revision 4"
+  adding "; exit 1; echo "
+  warning: filename contains '"', which is reserved on Windows: '"; exit 1; echo "'
+  $ hg update -C 1 > /dev/null
+  $ echo "revision 5" > '"; exit 1; echo "'
+  $ hg commit -Am "revision 5"
+  adding "; exit 1; echo "
+  warning: filename contains '"', which is reserved on Windows: '"; exit 1; echo "'
+  created new head
+  $ hg merge --config merge-tools.true.executable="true" -r 4
+  merging "; exit 1; echo "
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg update -C 1 > /dev/null
+
 Merge post-processing
 
 cat is a bad merge-tool and doesn't change:
