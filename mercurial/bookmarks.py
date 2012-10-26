@@ -268,7 +268,7 @@ def validdest(repo, old, new):
                     # obsolescence marker does not apply to public changeset
                     succs.update(obsolete.allsuccessors(repo.obsstore,
                                                         [c.node()]))
-            known = (n for n in succs if nm.get(n) is not None)
+            known = (n for n in succs if n in nm)
             validdests = set(repo.set('%ln::', known))
         validdests.remove(old)
         return new in validdests
