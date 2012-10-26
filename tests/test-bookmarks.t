@@ -366,7 +366,7 @@ test clone
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
-     @                         2:db815d6d32e6
+   * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
@@ -384,7 +384,7 @@ test clone with pull protocol
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
-     @                         2:db815d6d32e6
+   * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6

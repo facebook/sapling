@@ -418,6 +418,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 if uprev is None:
                     try:
                         uprev = destrepo._bookmarks['@']
+                        update = '@'
                     except KeyError:
                         try:
                             uprev = destrepo.branchtip('default')

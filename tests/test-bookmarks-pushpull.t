@@ -338,7 +338,7 @@ hgweb
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
-     @                         1:9b140be10808
+   * @                         1:9b140be10808
      X                         1:9b140be10808
      Y                         4:c922c0139ca0
      Z                         2:0d2164f0ce0d
@@ -377,6 +377,7 @@ of this test.
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  updating bookmark @ failed!
   exporting bookmark add-foo
 
   $ cd ..
