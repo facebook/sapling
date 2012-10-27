@@ -365,7 +365,6 @@ test clone
   $ hg clone . cloned-bookmarks
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  active bookmark: @
   $ hg -R cloned-bookmarks bookmarks
    * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
@@ -384,7 +383,6 @@ test clone with pull protocol
   added 3 changesets with 3 changes to 3 files (+1 heads)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  active bookmark: @
   $ hg -R cloned-bookmarks-pull bookmarks
    * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
@@ -429,7 +427,6 @@ test clone with update to a bookmark
   $ hg clone -u Z . cloned-bookmarks-update
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  active bookmark: Z
   $ hg -R cloned-bookmarks-update bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
