@@ -171,11 +171,14 @@ def share(ui, source, dest=None, update=True):
     r = repository(ui, root)
 
     default = srcrepo.ui.config('paths', 'default')
-    if default:
-        fp = r.opener("hgrc", "w", text=True)
-        fp.write("[paths]\n")
-        fp.write("default = %s\n" % default)
-        fp.close()
+    if not default:
+        # set default to source for being able to clone subrepos
+        default = os.path.abspath(util.urllocalpath(origsource))
+    fp = r.opener("hgrc", "w", text=True)
+    fp.write("[paths]\n")
+    fp.write("default = %s\n" % default)
+    fp.close()
+    r.ui.setconfig('paths', 'default', default)
 
     if update:
         r.ui.status(_("updating working directory\n"))
