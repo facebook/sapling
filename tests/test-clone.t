@@ -511,6 +511,7 @@ Test clone with special '@' bookmark:
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -i ../i
   a7949464abda
+  $ cd "$TESTTMP"
 
 
 Testing failures:
