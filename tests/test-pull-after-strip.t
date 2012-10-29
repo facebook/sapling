@@ -1,5 +1,5 @@
-# Fails for some reason, need to investigate
-#   $ "$TESTDIR/hghave" git || exit 80
+bail if the user does not have git command-line client
+  $ "$TESTDIR/hghave" git || exit 80
 
 this test is busted on hg < 1.5. I'm not sure how to fix it.
   $ cat > tmp.py <<EOF

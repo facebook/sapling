@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Fails for some reason, need to investigate
-#   $ "$TESTDIR/hghave" git || exit 80
+bail if the user does not have git command-line client
+  $ "$TESTDIR/hghave" git || exit 80
 
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
