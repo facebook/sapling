@@ -230,6 +230,27 @@ class SubversionPrompt(object):
         password = self.ui.getpass('Passphrase for \'%s\': ' % (realm,), default='')
         return (password, bool(may_save))
 
+    def insecure(fn):
+        def fun(self, *args, **kwargs):
+            failures = args[1]
+            cert_info = args[2]
+            # cert_info[0] is hostname
+            # cert_info[1] is fingerprint
+
+            fingerprint = self.ui.config('hostfingerprints', cert_info[0])
+            if fingerprint and fingerprint.lower() == cert_info[1].lower():
+                # same as the acceptance temporarily
+                return (failures, False)
+
+            cacerts = self.ui.config('web', 'cacerts')
+            if not cacerts:
+                # same as the acceptance temporarily
+                return (failures, False)
+
+            return fn(self, *args, **kwargs)
+        return fun
+
+    @insecure
     def ssl_server_trust(self, realm, failures, cert_info, may_save, pool=None):
         msg = 'Error validating server certificate for \'%s\':\n' % (realm,)
         if failures & svnwrap.SSL_UNKNOWNCA:
