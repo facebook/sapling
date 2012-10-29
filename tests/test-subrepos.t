@@ -2,7 +2,7 @@ bail if the user does not have git command-line client
   $ "$TESTDIR/hghave" git || exit 80
 
 bail if the user does not have dulwich
-python -c 'import dulwich, dulwich.repo' || exit 80
+  $ python -c 'import dulwich, dulwich.repo' || exit 80
 
 bail early if the user is already running git-daemon
   $ ! (echo hi | nc localhost 9418 2>/dev/null) || exit 80
