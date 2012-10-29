@@ -507,10 +507,20 @@ Test clone with special '@' bookmark:
   $ cd a
   $ hg bookmark -r a7949464abda @  # branch point of stable from default
   $ hg clone . ../i
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -i ../i
   a7949464abda
+  $ rm -r ../i
+
+  $ hg bookmark -f -r stable @
+  $ hg bookmarks
+     @                         15:0aae7cf88f0d
+  $ hg clone . ../i
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -i ../i
+  0aae7cf88f0d
   $ cd "$TESTTMP"
 
 

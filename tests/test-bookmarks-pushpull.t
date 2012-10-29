@@ -335,7 +335,7 @@ hgweb
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
    * @                         1:9b140be10808
@@ -355,7 +355,7 @@ bookmark, not all outgoing changes:
   adding manifests
   adding file changes
   added 5 changesets with 5 changes to 3 files (+2 heads)
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd addmarks
   $ echo foo > foo

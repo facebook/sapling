@@ -363,7 +363,7 @@ test clone
      a@                        2:db815d6d32e6
      x  y                      2:db815d6d32e6
   $ hg clone . cloned-bookmarks
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
    * @                         2:db815d6d32e6
@@ -381,7 +381,7 @@ test clone with pull protocol
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
    * @                         2:db815d6d32e6

@@ -411,6 +411,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 if update is not True:
                     checkout = srcpeer.lookup(update)
                 uprev = None
+                status = None
                 if checkout is not None:
                     try:
                         uprev = destrepo.lookup(checkout)
@@ -420,13 +421,21 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                     try:
                         uprev = destrepo._bookmarks['@']
                         update = '@'
+                        bn = destrepo[uprev].branch()
+                        if bn == 'default':
+                            status = _("updating to bookmark @\n")
+                        else:
+                            status = _("updating to bookmark @ on branch %s\n"
+                                       % bn)
                     except KeyError:
                         try:
                             uprev = destrepo.branchtip('default')
                         except error.RepoLookupError:
                             uprev = destrepo.lookup('tip')
-                bn = destrepo[uprev].branch()
-                destrepo.ui.status(_("updating to branch %s\n") % bn)
+                if not status:
+                    bn = destrepo[uprev].branch()
+                    status = _("updating to branch %s\n") % bn
+                destrepo.ui.status(status)
                 _update(destrepo, uprev)
                 if update in destrepo._bookmarks:
                     bookmarks.setcurrent(destrepo, update)
