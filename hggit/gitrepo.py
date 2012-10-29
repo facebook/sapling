@@ -62,7 +62,7 @@ class gitrepo(peerrepository):
                 newcommits = [bin(c) for c in commits]
                 b = overlayrepo(handler, newcommits, refs)
                 stripped_refs = dict([
-                    (ref[ref.find('refs/heads/')+11:], b.node(refs[ref]))
+                    (ref[11:], b.node(refs[ref]))
                         for ref in refs.keys()
                             if ref.startswith('refs/heads/')])
                 return stripped_refs
