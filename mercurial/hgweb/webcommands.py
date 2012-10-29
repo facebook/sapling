@@ -14,6 +14,7 @@ from common import paritygen, staticfile, get_contact, ErrorResponse
 from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, patch
 from mercurial import help as helpmod
+from mercurial import scmutil
 from mercurial.i18n import _
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
@@ -799,7 +800,11 @@ def archive(web, req, tmpl):
         headers.append(('Content-Encoding', encoding))
     req.header(headers)
     req.respond(HTTP_OK)
-    archival.archive(web.repo, req, cnode, artype, prefix=name)
+
+    ctx = webutil.changectx(web.repo, req)
+    archival.archive(web.repo, req, cnode, artype, prefix=name,
+                     matchfn=scmutil.match(ctx, []),
+                     subrepos=web.configbool("web", "archivesubrepos"))
     return []
 
 

@@ -1295,6 +1295,10 @@ The full set of options is:
     (DEPRECATED) Whether to allow .zip downloading of repository
     revisions. Default is False. This feature creates temporary files.
 
+``archivesubrepos``
+    Whether to recurse into subrepositories when archiving. Default is
+    False.
+
 ``baseurl``
     Base URL to use when publishing URLs in other locations, so
     third-party tools like email notification hooks can construct
