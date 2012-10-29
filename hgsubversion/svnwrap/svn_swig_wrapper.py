@@ -61,6 +61,7 @@ def optrev(revnum):
     optrev.value.number = revnum
     return optrev
 
+core.svn_config_ensure(None)
 svn_config = core.svn_config_get_config(None)
 class RaCallbacks(ra.Callbacks):
     @staticmethod
