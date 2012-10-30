@@ -51,7 +51,7 @@ is correct.
   branch: default
   commit: (clean)
   update: (current)
-  largefiles: No remote repo
+  largefiles: (no remote repo)
 
 Commit preserved largefile contents.
 
@@ -1683,7 +1683,7 @@ because it can't be reproduced easily.
   branch: default
   commit: (clean)
   update: (current)
-  largefiles: No remote repo
+  largefiles: (no remote repo)
 
 check messages when there is no files to upload:
 

@@ -1023,7 +1023,7 @@ def overridesummary(orig, ui, repo, *pats, **opts):
         toupload = getoutgoinglfiles(ui, repo, None, **opts)
         if toupload is None:
             # i18n: column positioning for "hg summary"
-            ui.status(_('largefiles: No remote repo\n'))
+            ui.status(_('largefiles: (no remote repo)\n'))
         elif not toupload:
             # i18n: column positioning for "hg summary"
             ui.status(_('largefiles: (no files to upload)\n'))
