@@ -1575,8 +1575,18 @@ class queue(object):
             m = list(mm)
             r = list(dd)
             a = list(aa)
-            c = [filter(matchfn, l) for l in (m, a, r)]
-            match = scmutil.matchfiles(repo, set(c[0] + c[1] + c[2] + inclsubs))
+
+            # create 'match' that includes the files to be recommited.
+            # apply matchfn via repo.status to ensure correct case handling.
+            cm, ca, cr, cd = repo.status(patchparent, match=matchfn)[:4]
+            allmatches = set(cm + ca + cr + cd)
+            refreshchanges = [x.intersection(allmatches) for x in (mm, aa, dd)]
+
+            files = set(inclsubs)
+            for x in refreshchanges:
+                files.update(x)
+            match = scmutil.matchfiles(repo, files)
+
             bmlist = repo[top].bookmarks()
 
             try:
@@ -1656,6 +1666,7 @@ class queue(object):
                 n = newcommit(repo, oldphase, message, user, ph.date,
                               match=match, force=True)
                 # only write patch after a successful commit
+                c = [list(x) for x in refreshchanges]
                 if inclsubs:
                     self.putsubstate2changes(substatestate, c)
                 chunks = patchmod.diff(repo, patchparent,
