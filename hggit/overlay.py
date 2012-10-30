@@ -151,6 +151,13 @@ class overlaychangectx(context.changectx):
     def __nonzero__(self):
         return True
 
+    def phase(self):
+        try:
+            from mercurial import phases
+            return phases.draft
+        except ImportError:
+            return 1
+
 class overlayrevlog(object):
     def __init__(self, repo, base):
         self.repo = repo
