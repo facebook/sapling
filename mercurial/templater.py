@@ -203,6 +203,7 @@ def buildfunc(exp, context):
 
 def join(context, mapping, args):
     if not (1 <= len(args) <= 2):
+        # i18n: "join" is a keyword
         raise error.ParseError(_("join expects one or two arguments"))
 
     joinset = args[0][0](context, mapping, args[0][1])
@@ -223,6 +224,7 @@ def join(context, mapping, args):
 
 def sub(context, mapping, args):
     if len(args) != 3:
+        # i18n: "sub" is a keyword
         raise error.ParseError(_("sub expects three arguments"))
 
     pat = stringify(args[0][0](context, mapping, args[0][1]))
@@ -232,6 +234,7 @@ def sub(context, mapping, args):
 
 def if_(context, mapping, args):
     if not (2 <= len(args) <= 3):
+        # i18n: "if" is a keyword
         raise error.ParseError(_("if expects two or three arguments"))
 
     test = stringify(args[0][0](context, mapping, args[0][1]))
@@ -244,6 +247,7 @@ def if_(context, mapping, args):
 
 def ifeq(context, mapping, args):
     if not (3 <= len(args) <= 4):
+        # i18n: "ifeq" is a keyword
         raise error.ParseError(_("ifeq expects three or four arguments"))
 
     test = stringify(args[0][0](context, mapping, args[0][1]))
