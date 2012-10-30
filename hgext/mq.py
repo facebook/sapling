@@ -3561,7 +3561,8 @@ def summary(orig, ui, repo, *args, **kwargs):
     if u:
         m.append(ui.label(_("%d unapplied"), 'qseries.unapplied') % u)
     if m:
-        ui.write("mq:     %s\n" % ', '.join(m))
+        # i18n: column positioning for "hg summary"
+        ui.write(_("mq:     %s\n") % ', '.join(m))
     else:
         # i18n: column positioning for "hg summary"
         ui.note(_("mq:     (empty queue)\n"))

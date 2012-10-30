@@ -62,9 +62,6 @@
   hgext/hgk.py:0:
    >     ui.write("tree %s\n" % short(ctx.changeset()[0]))
    warning: unwrapped ui message
-  hgext/mq.py:0:
-   >         ui.write("mq:     %s\n" % ', '.join(m))
-   warning: unwrapped ui message
   hgext/patchbomb.py:0:
    >             ui.write('Subject: %s\n' % subj)
    warning: unwrapped ui message
