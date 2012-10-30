@@ -6,11 +6,23 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-from mercurial import util
+from mercurial import util, config
 from mercurial.node import hex, nullid
 from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
+
+class submodule(object):
+    def __init__(self, path, node, url):
+        self.path = path
+        self.node = node
+        self.url = url
+
+    def hgsub(self):
+        return "%s = [git]%s" % (self.path, self.url)
+
+    def hgsubstate(self):
+        return "%s %s" % (self.node, self.path)
 
 class convert_git(converter_source):
     # Windows does not support GIT_DIR= construct while other systems
@@ -55,6 +67,7 @@ class convert_git(converter_source):
         checktool('git', 'git')
 
         self.path = path
+        self.submodules = []
 
     def getheads(self):
         if not self.rev:
@@ -76,9 +89,48 @@ class convert_git(converter_source):
         return data
 
     def getfile(self, name, rev):
-        data = self.catfile(rev, "blob")
-        mode = self.modecache[(name, rev)]
+        if name == '.hgsub':
+            data = '\n'.join([m.hgsub() for m in self.submoditer()])
+            mode = ''
+        elif name == '.hgsubstate':
+            data = '\n'.join([m.hgsubstate() for m in self.submoditer()])
+            mode = ''
+        else:
+            data = self.catfile(rev, "blob")
+            mode = self.modecache[(name, rev)]
         return data, mode
+
+    def submoditer(self):
+        null = hex(nullid)
+        for m in sorted(self.submodules, key=lambda p: p.path):
+            if m.node != null:
+                yield m
+
+    def parsegitmodules(self, content):
+        """Parse the formatted .gitmodules file, example file format:
+        [submodule "sub"]\n
+        \tpath = sub\n
+        \turl = git://giturl\n
+        """
+        self.submodules = []
+        c = config.config()
+        # Each item in .gitmodules starts with \t that cant be parsed
+        c.parse('.gitmodules', content.replace('\t',''))
+        for sec in c.sections():
+            s = c[sec]
+            if 'url' in s and 'path' in s:
+                self.submodules.append(submodule(s['path'], '', s['url']))
+
+    def retrievegitmodules(self, version):
+        modules, ret = self.gitread("git show %s:%s" % (version, '.gitmodules'))
+        if ret:
+            raise util.Abort(_('cannot read submodules config file in %s') % version)
+        self.parsegitmodules(modules)
+        for m in self.submodules:
+            node, ret = self.gitread("git rev-parse %s:%s" % (version, m.path))
+            if ret:
+                continue
+            m.node = node.strip()
 
     def getchanges(self, version):
         self.modecache = {}
@@ -86,6 +138,7 @@ class convert_git(converter_source):
         changes = []
         seen = set()
         entry = None
+        subexists = False
         for l in fh.read().split('\x00'):
             if not entry:
                 if not l.startswith(':'):
@@ -97,15 +150,24 @@ class convert_git(converter_source):
                 seen.add(f)
                 entry = entry.split()
                 h = entry[3]
-                if entry[1] == '160000':
-                    raise util.Abort('git submodules are not supported!')
                 p = (entry[1] == "100755")
                 s = (entry[1] == "120000")
-                self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
-                changes.append((f, h))
+
+                if f == '.gitmodules':
+                    subexists = True
+                    changes.append(('.hgsub', ''))
+                elif entry[1] == '160000' or entry[0] == ':160000':
+                    subexists = True
+                else:
+                    self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
+                    changes.append((f, h))
             entry = None
         if fh.close():
             raise util.Abort(_('cannot read changes in %s') % version)
+
+        if subexists:
+            self.retrievegitmodules(version)
+            changes.append(('.hgsubstate', ''))
         return (changes, {})
 
     def getcommit(self, version):

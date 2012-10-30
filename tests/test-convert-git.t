@@ -298,3 +298,50 @@ damage git repository and convert again
   $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | \
   >     grep 'abort:' | sed 's/abort:.*/abort:/g'
   abort:
+
+test sub modules
+
+  $ mkdir git-repo5
+  $ cd git-repo5
+  $ git init-db >/dev/null 2>/dev/null
+  $ echo 'sub' >> foo
+  $ git add foo
+  $ commit -a -m 'addfoo'
+  $ BASE=${PWD}
+  $ cd ..
+  $ mkdir git-repo6
+  $ cd git-repo6
+  $ git init-db >/dev/null 2>/dev/null
+  $ git submodule add ${BASE} >/dev/null 2>/dev/null
+  $ commit -a -m 'addsubmodule' >/dev/null 2>/dev/null
+  $ cd ..
+
+convert sub modules
+  $ hg convert git-repo6 git-repo6-hg
+  initializing destination git-repo6-hg repository
+  scanning source...
+  sorting...
+  converting...
+  0 addsubmodule
+  updating bookmarks
+  $ hg -R git-repo6-hg log -v
+  changeset:   0:* (glob)
+  bookmark:    master
+  tag:         tip
+  user:        nottest <test@example.org>
+  date:        Mon Jan 01 00:00:23 2007 +0000
+  files:       .hgsub .hgsubstate
+  description:
+  addsubmodule
+  
+  committer: test <test@example.org>
+  
+  
+
+  $ cd git-repo6-hg
+  $ hg up >/dev/null 2>/dev/null
+  $ cat .hgsubstate
+  * git-repo5 (glob)
+  $ cd git-repo5
+  $ cat foo
+  sub
