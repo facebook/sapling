@@ -687,55 +687,71 @@ class changeset_printer(object):
         parents = [(p, hexfunc(log.node(p)))
                    for p in self._meaningful_parentrevs(log, rev)]
 
+        # i18n: column positioning for "hg log"
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
                       label='log.changeset changeset.%s' % ctx.phasestr())
 
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
+            # i18n: column positioning for "hg log"
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
         for bookmark in self.repo.nodebookmarks(changenode):
+            # i18n: column positioning for "hg log"
             self.ui.write(_("bookmark:    %s\n") % bookmark,
                     label='log.bookmark')
         for tag in self.repo.nodetags(changenode):
+            # i18n: column positioning for "hg log"
             self.ui.write(_("tag:         %s\n") % tag,
                           label='log.tag')
         if self.ui.debugflag and ctx.phase():
+            # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
         for parent in parents:
+            # i18n: column positioning for "hg log"
             self.ui.write(_("parent:      %d:%s\n") % parent,
                           label='log.parent changeset.%s' % ctx.phasestr())
 
         if self.ui.debugflag:
             mnode = ctx.manifestnode()
+            # i18n: column positioning for "hg log"
             self.ui.write(_("manifest:    %d:%s\n") %
                           (self.repo.manifest.rev(mnode), hex(mnode)),
                           label='ui.debug log.manifest')
+        # i18n: column positioning for "hg log"
         self.ui.write(_("user:        %s\n") % ctx.user(),
                       label='log.user')
+        # i18n: column positioning for "hg log"
         self.ui.write(_("date:        %s\n") % date,
                       label='log.date')
 
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
-            for key, value in zip([_("files:"), _("files+:"), _("files-:")],
-                                  files):
+            for key, value in zip([# i18n: column positioning for "hg log"
+                                   _("files:"),
+                                   # i18n: column positioning for "hg log"
+                                   _("files+:"),
+                                   # i18n: column positioning for "hg log"
+                                   _("files-:")], files):
                 if value:
                     self.ui.write("%-12s %s\n" % (key, " ".join(value)),
                                   label='ui.debug log.files')
         elif ctx.files() and self.ui.verbose:
+            # i18n: column positioning for "hg log"
             self.ui.write(_("files:       %s\n") % " ".join(ctx.files()),
                           label='ui.note log.files')
         if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
+            # i18n: column positioning for "hg log"
             self.ui.write(_("copies:      %s\n") % ' '.join(copies),
                           label='ui.note log.copies')
 
         extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
+                # i18n: column positioning for "hg log"
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')),
                               label='ui.debug log.extra')
@@ -749,6 +765,7 @@ class changeset_printer(object):
                               label='ui.note log.description')
                 self.ui.write("\n\n")
             else:
+                # i18n: column positioning for "hg log"
                 self.ui.write(_("summary:     %s\n") %
                               description.splitlines()[0],
                               label='log.summary')
