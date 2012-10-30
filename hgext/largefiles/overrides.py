@@ -1022,10 +1022,13 @@ def overridesummary(orig, ui, repo, *pats, **opts):
     if opts.pop('large', None):
         toupload = getoutgoinglfiles(ui, repo, None, **opts)
         if toupload is None:
+            # i18n: column positioning for "hg summary"
             ui.status(_('largefiles: No remote repo\n'))
         elif not toupload:
+            # i18n: column positioning for "hg summary"
             ui.status(_('largefiles: (no files to upload)\n'))
         else:
+            # i18n: column positioning for "hg summary"
             ui.status(_('largefiles: %d to upload\n') % len(toupload))
 
 def scmutiladdremove(orig, repo, pats=[], opts={}, dry_run=None,

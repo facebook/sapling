@@ -5464,6 +5464,7 @@ def summary(ui, repo, **opts):
     for p in parents:
         # label with log.changeset (instead of log.parent) since this
         # shows a working directory parent *changeset*:
+        # i18n: column positioning for "hg summary"
         ui.write(_('parent: %d:%s ') % (p.rev(), str(p)),
                  label='log.changeset changeset.%s' % p.phasestr())
         ui.write(' '.join(p.tags()), label='log.tag')
@@ -5481,6 +5482,7 @@ def summary(ui, repo, **opts):
 
     branch = ctx.branch()
     bheads = repo.branchheads(branch)
+    # i18n: column positioning for "hg summary"
     m = _('branch: %s\n') % branch
     if branch != 'default':
         ui.write(m, label='log.branch')
@@ -5489,6 +5491,7 @@ def summary(ui, repo, **opts):
 
     if marks:
         current = repo._bookmarkcurrent
+        # i18n: column positioning for "hg summary"
         ui.write(_('bookmarks:'), label='log.bookmark')
         if current is not None:
             try:
@@ -5554,8 +5557,10 @@ def summary(ui, repo, **opts):
         t += _(' (new branch head)')
 
     if cleanworkdir:
+        # i18n: column positioning for "hg summary"
         ui.status(_('commit: %s\n') % t.strip())
     else:
+        # i18n: column positioning for "hg summary"
         ui.write(_('commit: %s\n') % t.strip())
 
     # all ancestors of branch heads - all ancestors of parent = new csets
@@ -5573,10 +5578,13 @@ def summary(ui, repo, **opts):
     new = sum(new)
 
     if new == 0:
+        # i18n: column positioning for "hg summary"
         ui.status(_('update: (current)\n'))
     elif pnode not in bheads:
+        # i18n: column positioning for "hg summary"
         ui.write(_('update: %d new changesets (update)\n') % new)
     else:
+        # i18n: column positioning for "hg summary"
         ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
                  (new, len(bheads)))
 
@@ -5618,8 +5626,10 @@ def summary(ui, repo, **opts):
                 t.append(_('%d outgoing bookmarks') % len(diff))
 
         if t:
+            # i18n: column positioning for "hg summary"
             ui.write(_('remote: %s\n') % (', '.join(t)))
         else:
+            # i18n: column positioning for "hg summary"
             ui.status(_('remote: (synced)\n'))
 
 @command('tag',
