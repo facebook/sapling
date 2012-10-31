@@ -444,6 +444,33 @@ Unbundle incremental bundles into fresh empty in one go
   added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+View full contents of the bundle
+  $ hg -R test bundle --base null -r 3  ../partial.hg
+  4 changesets found
+  $ cd test
+  $ hg -R ../../partial.hg log -r "bundle()"
+  changeset:   0:f9ee2f85a263
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0.0
+  
+  changeset:   1:34c2bf6b0626
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0.1
+  
+  changeset:   2:e38ba6f5b7e0
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0.2
+  
+  changeset:   3:eebf5a27f8ca
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0.3
+  
+  $ cd ..
+
 test for 540d1059c802
 
 test for 540d1059c802

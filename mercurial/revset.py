@@ -442,6 +442,19 @@ def bumped(repo, subset, x):
     bumped = obsmod.getrevs(repo, 'bumped')
     return [r for r in subset if r in bumped]
 
+def bundle(repo, subset, x):
+    """``bundle()``
+    Changesets in the bundle.
+
+    Bundle must be specified by the -R option."""
+
+    try:
+        bundlenodes = repo.changelog.bundlenodes
+    except AttributeError:
+        raise util.Abort(_("no bundle provided - specify with -R"))
+    revs = set(repo[n].rev() for n in bundlenodes)
+    return [r for r in subset if r in revs]
+
 def checkstatus(repo, subset, pat, field):
     m = None
     s = []
@@ -1513,6 +1526,7 @@ symbols = {
     "branch": branch,
     "branchpoint": branchpoint,
     "bumped": bumped,
+    "bundle": bundle,
     "children": children,
     "closed": closed,
     "contains": contains,

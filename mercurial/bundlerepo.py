@@ -33,6 +33,7 @@ class bundlerevlog(revlog.revlog):
         self.basemap = {}
         n = len(self)
         chain = None
+        self.bundlenodes = []
         while True:
             chunkdata = bundle.deltachunk(chain)
             if not chunkdata:
@@ -48,6 +49,7 @@ class bundlerevlog(revlog.revlog):
             start = bundle.tell() - size
 
             link = linkmapper(cs)
+            self.bundlenodes.append(node)
             if node in self.nodemap:
                 # this can happen if two branches make the same change
                 chain = node
