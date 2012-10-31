@@ -9,6 +9,9 @@ the end user, don't vary at all when Hg-Git is in use.  Only the synchonization
 of bookmarks should be considered "under test", and mutation of bookmarks
 locally is only to provide a test fixture.
 
+Load commonly used test logic
+  $ . "$TESTDIR/testutil"
+
 bail if the user does not have git command-line client
   $ "$TESTDIR/hghave" git || exit 80
 
@@ -18,9 +21,6 @@ Bail if the user does not have dulwich
 Skip if Mercurial < 2.1; workflow was different before that
   $ python -c 'from mercurial import util ; assert \
   >  util.version() != "unknown" and util.version() >= "2.1"' || exit 80
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
   $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL

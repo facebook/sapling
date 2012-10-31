@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# This file holds logic that is used in many tests.
+# It can be called in a test like this:
+#  $ . "$TESTDIR/testutil"
+
+# Activate extensions
+echo "[extensions]" >> $HGRCPATH
+echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
+# Not needed in Mercurial 2.3+, as graphlog was integrated into core
+echo 'graphlog=' >> $HGRCPATH
+echo 'mq=' >> $HGRCPATH

@@ -1,7 +1,7 @@
 Tests that the various help files are properly registered
 
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
+Load commonly used test logic
+  $ . "$TESTDIR/testutil"
 
   $ hg help | grep 'git' | sed 's/  */ /g'
    hggit push and pull from a Git server

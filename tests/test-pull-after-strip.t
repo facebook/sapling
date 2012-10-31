@@ -1,3 +1,6 @@
+Load commonly used test logic
+  $ . "$TESTDIR/testutil"
+
 bail if the user does not have git command-line client
   $ "$TESTDIR/hghave" git || exit 80
 
@@ -14,13 +17,6 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
 
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
-
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > graphlog=
-  > mq=
-  > EOF
-  $ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 
   $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
   $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
