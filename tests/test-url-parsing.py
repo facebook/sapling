@@ -1,4 +1,12 @@
-import os, sys, tempfile, unittest, shutil
+import sys
+
+try:
+    import dulwich
+except ImportError:
+    print "skipped: missing feature: dulwich"
+    sys.exit(80)
+
+import os, tempfile, unittest, shutil
 from mercurial import ui, hg, commands
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.path.pardir))
