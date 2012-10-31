@@ -99,7 +99,26 @@ def _checkunknown(repo, wctx, mctx):
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
 
-def _checkcollision(mctx, wctx):
+def _remains(f, m, ma, workingctx=False):
+    """check whether specified file remains after merge.
+
+    It is assumed that specified file is not contained in the manifest
+    of the other context.
+    """
+    if f in ma:
+        n = m[f]
+        if n != ma[f]:
+            return True # because it is changed locally
+            # even though it doesn't remain, if "remote deleted" is
+            # chosen in manifestmerge()
+        elif workingctx and n[20:] == "a":
+            return True # because it is added locally (linear merge specific)
+        else:
+            return False # because it is removed remotely
+    else:
+        return True # because it is added locally
+
+def _checkcollision(mctx, extractxs):
     "check for case folding collisions in the destination context"
     folded = {}
     for fn in mctx:
@@ -109,7 +128,8 @@ def _checkcollision(mctx, wctx):
                              % (fn, folded[fold]))
         folded[fold] = fn
 
-    if wctx:
+    if extractxs:
+        wctx, actx = extractxs
         # class to delay looking up copy mapping
         class pathcopies(object):
             @util.propertycache
@@ -121,7 +141,9 @@ def _checkcollision(mctx, wctx):
         for fn in wctx:
             fold = util.normcase(fn)
             mfn = folded.get(fold, None)
-            if mfn and mfn != fn and pc.map.get(mfn) != fn:
+            if (mfn and mfn != fn and pc.map.get(mfn) != fn and
+                _remains(fn, wctx.manifest(), actx.manifest(), True) and
+                _remains(mfn, mctx.manifest(), actx.manifest())):
                 raise util.Abort(_("case-folding collision between %s and %s")
                                  % (mfn, fn))
 
@@ -595,7 +617,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 (force or not wc.dirty(missing=True, branch=False))):
                 _checkcollision(p2, None)
             else:
-                _checkcollision(p2, wc)
+                _checkcollision(p2, (wc, pa))
         if not force:
             _checkunknown(repo, wc, p2)
         action += _forgetremoved(wc, p2, branchmerge)
