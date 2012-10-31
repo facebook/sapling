@@ -11,11 +11,9 @@ TODO stop using this when we're 1.5 only
   $ filterhash="sed s/71414c4e3c6f/a31e374801c9/;s/698615204564/d93a72262a83/"
   $ filterhash="$filterhash;s/d93a72262a83/05aed681ccb3/"
 
-  $ mkdir gitrepo
-  $ cd gitrepo
-  $ git init
+  $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
-
+  $ cd gitrepo
   $ echo alpha > alpha
   $ git add alpha
   $ fn_git_commit -m "add alpha"

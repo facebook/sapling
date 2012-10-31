@@ -7,10 +7,8 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ mkdir hgrepo
+  $ hg init hgrepo
   $ cd hgrepo
-  $ hg init
-
   $ echo alpha > alpha
   $ hg add alpha
   $ fn_hg_commit -m "add alpha"

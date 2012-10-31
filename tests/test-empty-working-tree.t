@@ -7,20 +7,15 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ mkdir gitrepo
-  $ cd gitrepo
-  $ git init
+  $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
-
+  $ cd gitrepo
   $ git commit --allow-empty -m empty >/dev/null 2>/dev/null || echo "git commit error"
 
   $ cd ..
-  $ mkdir gitrepo2
-  $ cd gitrepo2
-  $ git init --bare
+  $ git init --bare gitrepo2
   Initialized empty Git repository in $TESTTMP/gitrepo2/
 
-  $ cd ..
   $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

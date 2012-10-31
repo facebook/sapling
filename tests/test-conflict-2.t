@@ -48,12 +48,8 @@ resolve using second parent
 
   $ cd ..
 
-  $ mkdir gitrepo
-  $ cd gitrepo
-  $ git init --bare
+  $ git init --bare gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/
-
-  $ cd ..
 
   $ cd hgrepo1
   $ hg bookmark -r tip master

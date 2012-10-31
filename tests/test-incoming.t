@@ -11,11 +11,9 @@ This test only works on hg 1.7 and later
   $ python -c 'from mercurial import util ; assert \
   >  util.version() != "unknown" and util.version() > "1.7"' || exit 80
 
-  $ mkdir gitrepo
-  $ cd gitrepo
-  $ git init
+  $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
-
+  $ cd gitrepo
   $ echo alpha > alpha
   $ git add alpha
   $ fn_git_commit -m "add alpha"

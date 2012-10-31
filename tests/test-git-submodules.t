@@ -7,19 +7,17 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ mkdir gitrepo1
-  $ cd gitrepo1
-  $ git init
+  $ git init gitrepo1
   Initialized empty Git repository in $TESTTMP/gitrepo1/.git/
+  $ cd gitrepo1
   $ echo alpha > alpha
   $ git add alpha
   $ fn_git_commit -m 'add alpha'
   $ cd ..
 
-  $ mkdir gitsubrepo
-  $ cd gitsubrepo
-  $ git init
+  $ git init gitsubrepo
   Initialized empty Git repository in $TESTTMP/gitsubrepo/.git/
+  $ cd gitsubrepo
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'
