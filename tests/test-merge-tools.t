@@ -775,6 +775,7 @@ Merge using tool with a path that must be quoted:
 
 Issue3581: Merging a filename that needs to be quoted
 
+#if no-windows
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -796,6 +797,7 @@ Issue3581: Merging a filename that needs to be quoted
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg update -C 1 > /dev/null
+#endif
 
 Merge post-processing
 
