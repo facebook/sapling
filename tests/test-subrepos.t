@@ -7,36 +7,13 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
-  $ count=10
-  $ gitcommit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-  $ hgcommit()
-  > {
-  >     HGDATE="2007-01-01 00:00:$count +0000"
-  >     hg commit -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
-  >     count=`expr $count + 1`
-  > }
-
-
   $ mkdir gitsubrepo
   $ cd gitsubrepo
   $ git init
   Initialized empty Git repository in $TESTTMP/gitsubrepo/.git/
   $ echo beta > beta
   $ git add beta
-  $ gitcommit -m 'add beta'
+  $ fn_git_commit -m 'add beta'
   $ cd ..
 
   $ mkdir gitrepo1
@@ -45,15 +22,15 @@ bail if the user does not have dulwich
   Initialized empty Git repository in $TESTTMP/gitrepo1/.git/
   $ echo alpha > alpha
   $ git add alpha
-  $ gitcommit -m 'add alpha'
+  $ fn_git_commit -m 'add alpha'
   $ git submodule add ../gitsubrepo subrepo1
   Cloning into 'subrepo1'...
   done.
-  $ gitcommit -m 'add subrepo1'
+  $ fn_git_commit -m 'add subrepo1'
   $ git submodule add ../gitsubrepo xyz/subrepo2
   Cloning into 'xyz/subrepo2'...
   done.
-  $ gitcommit -m 'add subrepo2'
+  $ fn_git_commit -m 'add subrepo2'
 we are going to push to this repo from our hg clone,
 allow commits despite working copy presense
   $ git config receive.denyCurrentBranch ignore
@@ -95,7 +72,7 @@ allow commits despite working copy presense
   $ cd gitsubrepo
   $ echo gamma > gamma
   $ git add gamma
-  $ gitcommit -m 'add gamma'
+  $ fn_git_commit -m 'add gamma'
   $ cd ..
   $ cd hgrepo
   $ cd xyz/subrepo2
@@ -134,12 +111,12 @@ bring working copy to HEAD state (it's not bare repo)
   $ cd hgsub
   $ echo delta > delta
   $ hg add delta
-  $ hgcommit -m "add delta"
+  $ fn_hg_commit -m "add delta"
   $ echo "`hg tip --template '{node}'` hgsub" > ../gitrepo1/.hgsubstate
   $ echo "hgsub = $(pwd)" > ../gitrepo1/.hgsub
   $ cd ../gitrepo1
   $ git add .hgsubstate .hgsub
-  $ gitcommit -m "Test3. Prepare .hgsub and .hgsubstate sources"
+  $ fn_git_commit -m "Test3. Prepare .hgsub and .hgsubstate sources"
   $ cd ../hgrepo
   $ hg pull
   pulling from $TESTTMP/gitrepo1

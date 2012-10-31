@@ -7,28 +7,6 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
-  $ count=10
-  $ commit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-  $ hgcommit()
-  > {
-  >     HGDATE="2007-01-01 00:00:$count +0000"
-  >     hg commit -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
-  >     count=`expr $count + 1`
-  > }
-
   $ mkdir gitrepo
   $ cd gitrepo
   $ git init
@@ -36,7 +14,7 @@ bail if the user does not have dulwich
 
   $ echo alpha > alpha
   $ git add alpha
-  $ commit -m "add alpha"
+  $ fn_git_commit -m "add alpha"
   $ git checkout -b not-master
   Switched to a new branch 'not-master'
 
@@ -50,55 +28,55 @@ bail if the user does not have dulwich
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo beta > beta
   $ hg add beta
-  $ hgcommit -u "test" -m 'add beta'
+  $ fn_hg_commit -u "test" -m 'add beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo gamma >> beta
-  $ hgcommit -u "test <test@example.com> (comment)" -m 'modify beta'
+  $ fn_hg_commit -u "test <test@example.com> (comment)" -m 'modify beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo gamma > gamma
   $ hg add gamma
-  $ hgcommit -u "<test@example.com>" -m 'add gamma'
+  $ fn_hg_commit -u "<test@example.com>" -m 'add gamma'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo delta > delta
   $ hg add delta
-  $ hgcommit -u "name<test@example.com>" -m 'add delta'
+  $ fn_hg_commit -u "name<test@example.com>" -m 'add delta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo epsilon > epsilon
   $ hg add epsilon
-  $ hgcommit -u "name <test@example.com" -m 'add epsilon'
+  $ fn_hg_commit -u "name <test@example.com" -m 'add epsilon'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo zeta > zeta
   $ hg add zeta
-  $ hgcommit -u " test " -m 'add zeta'
+  $ fn_hg_commit -u " test " -m 'add zeta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo eta > eta
   $ hg add eta
-  $ hgcommit -u "test < test@example.com >" -m 'add eta'
+  $ fn_hg_commit -u "test < test@example.com >" -m 'add eta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ echo theta > theta
   $ hg add theta
-  $ hgcommit -u "test >test@example.com>" -m 'add theta'
+  $ fn_hg_commit -u "test >test@example.com>" -m 'add theta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes

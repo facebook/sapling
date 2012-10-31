@@ -7,28 +7,6 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
-  $ count=10
-  $ commit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-  $ hgcommit()
-  > {
-  >     HGDATE="2007-01-01 00:00:$count +0000"
-  >     hg commit -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
-  >     count=`expr $count + 1`
-  > }
-
   $ mkdir gitrepo
   $ cd gitrepo
   $ git init
@@ -36,7 +14,7 @@ bail if the user does not have dulwich
 
   $ echo alpha > alpha
   $ git add alpha
-  $ commit -m "add alpha"
+  $ fn_git_commit -m "add alpha"
   $ git checkout -b not-master 2>&1 | sed s/\'/\"/g
   Switched to a new branch "not-master"
 
@@ -48,12 +26,12 @@ bail if the user does not have dulwich
   $ cd hgrepo
   $ echo beta > beta
   $ hg add beta
-  $ hgcommit -m 'add beta'
+  $ fn_hg_commit -m 'add beta'
 
 
   $ echo gamma > gamma
   $ hg add gamma
-  $ hgcommit -m 'add gamma'
+  $ fn_hg_commit -m 'add gamma'
 
   $ hg book -r 1 beta
   $ hg push -r beta
@@ -76,7 +54,7 @@ bail if the user does not have dulwich
   Switched to branch "master"
   $ echo delta > delta
   $ git add delta
-  $ commit -m "add delta"
+  $ fn_git_commit -m "add delta"
   $ git checkout not-master 2>&1 | sed s/\'/\"/g
   Switched to branch "not-master"
 

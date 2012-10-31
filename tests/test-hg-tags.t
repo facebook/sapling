@@ -7,28 +7,6 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
-  $ count=10
-  $ commit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-  $ hgtag()
-  > {
-  >     HGDATE="2007-01-01 00:00:$count +0000"
-  >     hg tag -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
-  >     count=`expr $count + 1`
-  > }
-
   $ mkdir gitrepo
   $ cd gitrepo
   $ git init
@@ -36,7 +14,7 @@ bail if the user does not have dulwich
 
   $ echo alpha > alpha
   $ git add alpha
-  $ commit -m "add alpha"
+  $ fn_git_commit -m "add alpha"
   $ git checkout -b not-master
   Switched to a new branch 'not-master'
 
@@ -48,7 +26,7 @@ bail if the user does not have dulwich
   $ cd hgrepo
   $ hg co master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hgtag alpha
+  $ fn_hg_tag alpha
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes

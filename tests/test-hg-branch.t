@@ -7,31 +7,9 @@ bail if the user does not have git command-line client
 bail if the user does not have dulwich
   $ python -c 'import dulwich, dulwich.repo' || exit 80
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
 TODO stop using this when we're 1.5 only
   $ filterhash="sed s/71414c4e3c6f/a31e374801c9/;s/698615204564/d93a72262a83/"
   $ filterhash="$filterhash;s/d93a72262a83/05aed681ccb3/"
-
-  $ count=10
-  $ commit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-  $ hgcommit()
-  > {
-  >     HGDATE="2007-01-01 00:00:$count +0000"
-  >     hg commit -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
-  >     count=`expr $count + 1`
-  > }
 
   $ mkdir gitrepo
   $ cd gitrepo
@@ -40,7 +18,7 @@ TODO stop using this when we're 1.5 only
 
   $ echo alpha > alpha
   $ git add alpha
-  $ commit -m "add alpha"
+  $ fn_git_commit -m "add alpha"
   $ git checkout -b not-master
   Switched to a new branch 'not-master'
 
@@ -53,14 +31,14 @@ TODO stop using this when we're 1.5 only
   $ hg co master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv alpha beta
-  $ hgcommit -m 'rename alpha to beta'
+  $ fn_hg_commit -m 'rename alpha to beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
 
   $ hg branch gamma | grep -v 'permanent and global'
   marked working directory as branch gamma
-  $ hgcommit -m 'started branch gamma'
+  $ fn_hg_commit -m 'started branch gamma'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
