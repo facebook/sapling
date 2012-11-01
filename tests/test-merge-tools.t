@@ -774,8 +774,10 @@ Merge using tool with a path that must be quoted:
   M f
 
 Issue3581: Merging a filename that needs to be quoted
+(This test doesn't work on Windows filesystems even on Linux, so check
+for Unix-like permission)
 
-#if no-windows
+#if unix-permissions
   $ beforemerge
   [merge-tools]
   false.whatever=
