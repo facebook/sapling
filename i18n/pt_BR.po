@@ -5257,9 +5257,15 @@ msgstr "largefiles: nenhum arquivo a ser enviado\n"
 msgid "largefiles to upload:\n"
 msgstr "largefiles a serem enviados:\n"
 
+#. i18n: column positioning for "hg summary"
+msgid "largefiles: (no remote repo)\n"
+msgstr "largefiles: (nenhum repositório remoto)\n"
+
+#. i18n: column positioning for "hg summary"
 msgid "largefiles: (no files to upload)\n"
 msgstr "largefiles: (nenhum arquivo a ser enviado)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "largefiles: %d to upload\n"
 msgstr "largefiles: %d a serem enviados\n"
@@ -7017,6 +7023,12 @@ msgstr "%d aplicados"
 msgid "%d unapplied"
 msgstr "%d não aplicados"
 
+#. i18n: column positioning for "hg summary"
+#, python-format
+msgid "mq:     %s\n"
+msgstr "mq:     %s\n"
+
+#. i18n: column positioning for "hg summary"
 msgid "mq:     (empty queue)\n"
 msgstr "mq:     (fila vazia)\n"
 
@@ -9455,59 +9467,74 @@ msgstr "(considere usar --after)\n"
 msgid "child process failed to start"
 msgstr "processo filho falhou ao iniciar"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "changeset:   %d:%s\n"
 msgstr "revisão:     %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "branch:      %s\n"
 msgstr "ramo:        %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "bookmark:    %s\n"
 msgstr "marcador:    %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "tag:         %s\n"
 msgstr "etiqueta:    %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "phase:       %s\n"
 msgstr "fase:        %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "parent:      %d:%s\n"
 msgstr "pai:         %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "manifest:    %d:%s\n"
 msgstr "manifesto:   %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "user:        %s\n"
 msgstr "usuário:     %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "date:        %s\n"
 msgstr "data:        %s\n"
 
-msgid "files+:"
-msgstr "arquivos+:"
-
-msgid "files-:"
-msgstr "arquivos-:"
-
+#. i18n: column positioning for "hg log"
 msgid "files:"
 msgstr "arquivos:"
 
+#. i18n: column positioning for "hg log"
+msgid "files+:"
+msgstr "arquivos+:"
+
+#. i18n: column positioning for "hg log"
+msgid "files-:"
+msgstr "arquivos-:"
+
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "files:       %s\n"
 msgstr "arquivos:    %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "copies:      %s\n"
 msgstr "cópias:      %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "extra:       %s=%s\n"
 msgstr "extra:       %s=%s\n"
@@ -9515,6 +9542,7 @@ msgstr "extra:       %s=%s\n"
 msgid "description:\n"
 msgstr "descrição:\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "summary:     %s\n"
 msgstr "sumário:     %s\n"
@@ -14105,6 +14133,7 @@ msgstr ""
 "    Com a opção --remote, isto verificará no caminho default mudanças ainda\n"
 "    não sincronizadas. Isto pode levar algum tempo."
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "parent: %d:%s "
 msgstr "pai: %d:%s "
@@ -14115,10 +14144,12 @@ msgstr " (repositório vazio)"
 msgid " (no revision checked out)"
 msgstr " (nenhuma revisão na cópia de trabalho)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "branch: %s\n"
 msgstr "ramo: %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "bookmarks:"
 msgstr "marcadores:"
 
@@ -14177,17 +14208,21 @@ msgstr " (limpo)"
 msgid " (new branch head)"
 msgstr " (nova cabeça de ramo)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "commit: %s\n"
 msgstr "consolidação: %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "update: (current)\n"
 msgstr "atualizações: (atual)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets (update)\n"
 msgstr "atualizações: %d novas revisões (update)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
 msgstr "atualizações: %d novas revisões, %d cabeças de ramo (merge)\n"
@@ -14207,10 +14242,12 @@ msgstr "%d marcadores a serem trazidos"
 msgid "%d outgoing bookmarks"
 msgstr "%d marcadores a serem enviados"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "remote: %s\n"
 msgstr "remoto: %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "remote: (synced)\n"
 msgstr "remoto: (sincronizado)\n"
 
@@ -24437,15 +24474,19 @@ msgstr "o filtro de modelo '%s' não é compatível com a palavra chave '%s'"
 msgid "filter %s expects one argument"
 msgstr "o filtro %s espera um argumento"
 
+#. i18n: "join" is a keyword
 msgid "join expects one or two arguments"
 msgstr "join exige um ou dois argumentos"
 
+#. i18n: "sub" is a keyword
 msgid "sub expects three arguments"
 msgstr "sub espera três argumentos"
 
+#. i18n: "if" is a keyword
 msgid "if expects two or three arguments"
 msgstr "if espera dois ou três argumentos"
 
+#. i18n: "ifeq" is a keyword
 msgid "ifeq expects three or four arguments"
 msgstr "ifeq espera três ou quatro argumentos"
 
