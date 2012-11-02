@@ -606,7 +606,7 @@ test if untracked file is not overwritten
   issue3276_ok
   $ rm repo/s/b
   $ hg -R repo revert --all
-  reverting repo/.hgsubstate
+  reverting repo/.hgsubstate (glob)
   reverting subrepo s
   $ hg -R repo update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
