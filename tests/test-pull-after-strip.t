@@ -1,17 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-this test is busted on hg < 1.5. I'm not sure how to fix it.
-  $ cat > tmp.py <<EOF
-  > import sys
-  > v = sys.stdin.read().strip()[:-1]
-  > if v[1] == '.' and ((int(v[0]) == 1 and int(v[2]) > 4) or int(v[0]) > 1):
-  >   sys.exit(0)
-  > sys.exit(1)
-  > EOF
-
-  $ hg version | grep version | sed 's/.*(version //' | python tmp.py || exit 80
-
   $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
   $ cd gitrepo
