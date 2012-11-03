@@ -127,8 +127,7 @@ Load commonly used test logic
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo2
-  $ hg log --graph | egrep -v ': *(not-master|master)'
+  $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   8:efec0270e295
   |  tag:         default/master
   |  tag:         tip
@@ -177,10 +176,7 @@ Load commonly used test logic
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
-
-  $ cd ..
-  $ cd gitrepo
-  $ git log --pretty=medium master
+  $ git --git-dir=gitrepo/.git log --pretty=medium master
   commit 1e03e913eca571b86ee06d3c1ddd795dde9ca917
   Author: test ?test@example.com <test ?test@example.com>
   Date:   Mon Jan 1 00:00:18 2007 +0000
@@ -234,5 +230,3 @@ Load commonly used test logic
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-
-  $ cd ..

@@ -56,10 +56,9 @@ Load commonly used test logic
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo2
   $ echo % expect the same revision ids as above
   % expect the same revision ids as above
-  $ hg log --graph --style compact | sed 's/\[.*\]//g'
+  $ hg -R hgrepo2 log --graph --style compact | sed 's/\[.*\]//g'
   @    4:1,3   eaa21d002113   1970-01-01 00:00 +0000   test
   |\     merge
   | |
@@ -75,5 +74,3 @@ Load commonly used test logic
   o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
-
-  $ cd ..

@@ -34,8 +34,7 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
   $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo-a
-  $ hg log --graph | egrep -v ': *(beta|master)'
+  $ hg -R hgrepo-a log --graph | egrep -v ': *(beta|master)'
   @  changeset:   0:3442585be8a6
      tag:         alpha
      tag:         default/master
@@ -44,15 +43,12 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
-
-  $ cd ..
   $ echo % clone a branch
   % clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo-b
-  $ hg log --graph | egrep -v ': *(beta|master)'
+  $ hg -R hgrepo-b log --graph | egrep -v ': *(beta|master)'
   @  changeset:   1:7bcd915dc873
   |  tag:         default/beta
   |  tag:         tip
@@ -67,8 +63,6 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
-  $ cd ..
-
   $ cd gitrepo
   $ echo beta line 2 >> beta
   $ git add beta

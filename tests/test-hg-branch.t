@@ -60,8 +60,7 @@ TODO stop using this when we're 1.5 only
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo2
-  $ hg log --graph | $filterhash | egrep -v ': *(not-master|master)'
+  $ hg -R hgrepo2 log --graph | $filterhash | egrep -v ': *(not-master|master)'
   o  changeset:   2:05aed681ccb3
   |  branch:      gamma
   |  tag:         default/master
@@ -81,5 +80,3 @@ TODO stop using this when we're 1.5 only
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
-
-  $ cd ..

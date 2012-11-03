@@ -69,9 +69,9 @@ Load commonly used test logic
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  $ cd ..
 
-  $ cd ../gitrepo2
-  $ git log --pretty=medium | sed s/\\.\\.\\.//g
+  $ git --git-dir=gitrepo2 log --pretty=medium | sed s/\\.\\.\\.//g
   commit f0c7ec180419a130636d0c333fc34c1462cab4b5
   Merge: d8e22dd 9497a4e e5023f9
   Author: test <test@example.org>
@@ -102,5 +102,3 @@ Load commonly used test logic
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-
-  $ cd ..

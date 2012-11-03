@@ -50,8 +50,7 @@ Load commonly used test logic
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo2
-  $ hg log --graph | egrep -v ': *(not-master|master)'
+  $ hg -R hgrepo2 log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   1:d529e9229f6d
   |  tag:         default/master
   |  tag:         tip
@@ -69,7 +68,5 @@ Load commonly used test logic
 
   $ echo % the tag should be in .hgtags
   % the tag should be in .hgtags
-  $ cat .hgtags
+  $ cat hgrepo2/.hgtags
   3442585be8a60c6cd476bbc4e45755339f2a23ef alpha
-
-  $ cd ..

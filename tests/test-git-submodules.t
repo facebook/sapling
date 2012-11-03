@@ -52,8 +52,7 @@ while older git will use the full normalized path for .)
   $ hg clone gitrepo2 hgrepo | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo
-  $ hg log --graph  | grep -v ': *master'
+  $ hg -R hgrepo log --graph  | grep -v ': *master'
   @  changeset:   2:76fda365fbbb
   |  tag:         default/master
   |  tag:         tip
@@ -74,5 +73,5 @@ while older git will use the full normalized path for .)
 
   $ echo % we should have some bookmarks
   % we should have some bookmarks
-  $ hg book
+  $ hg -R hgrepo book
    * master                    2:76fda365fbbb

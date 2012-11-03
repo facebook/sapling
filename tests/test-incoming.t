@@ -17,17 +17,16 @@ This test only works on hg 1.7 and later
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ cd hgrepo
-  $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg -R hgrepo incoming | grep -v 'no changes found' | grep -v 'bookmark:'
   comparing with $TESTTMP/gitrepo
 
-  $ cd ../gitrepo
+  $ cd gitrepo
   $ echo beta > beta
   $ git add beta
   $ fn_git_commit -m 'add beta'
+  $ cd ..
 
-  $ cd ../hgrepo
-  $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
+  $ hg -R hgrepo incoming | grep -v 'no changes found' | grep -v 'bookmark:'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
   user:        test <test@example.org>
@@ -35,7 +34,7 @@ This test only works on hg 1.7 and later
   summary:     add beta
   
 
-  $ cd ../gitrepo
+  $ cd gitrepo
   $ git checkout -b b1 HEAD^
   Switched to a new branch 'b1'
   $ mkdir d
@@ -47,7 +46,6 @@ This test only works on hg 1.7 and later
   $ echo gamma 2 >> d/gamma
   $ git add d/gamma
   $ fn_git_commit -m'add d/gamma line 2'
-
   $ cd ../hgrepo
   $ hg incoming -p | grep -v 'no changes found' | grep -v 'bookmark:'
   comparing with $TESTTMP/gitrepo

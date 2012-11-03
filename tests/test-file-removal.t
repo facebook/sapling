@@ -83,8 +83,8 @@ Load commonly used test logic
   pushing to ../gitrepo2
   searching for changes
 
-  $ cd ../gitrepo2
-  $ git log --pretty=medium
+  $ cd ..
+  $ git --git-dir=gitrepo2 log --pretty=medium
   commit b991de8952c482a7cd51162674ffff8474862218
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:14 2007 +0000
@@ -114,5 +114,3 @@ Load commonly used test logic
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-
-  $ cd ..

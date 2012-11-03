@@ -22,13 +22,10 @@ Load commonly used test logic
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
-
-  $ cd ../gitrepo2
-  $ git log --pretty=medium
+  $ cd ..
+  $ git --git-dir=gitrepo2 log --pretty=medium
   commit 678256865a8c85ae925bf834369264193c88f8de
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:00 2007 +0000
   
       empty
-
-  $ cd ..

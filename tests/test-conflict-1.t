@@ -55,10 +55,9 @@ resolve using first parent
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd hgrepo2
   $ echo % expect the same revision ids as above
   % expect the same revision ids as above
-  $ hg log --graph --style compact | sed 's/\[.*\]//g'
+  $ hg -R hgrepo2 log --graph --style compact | sed 's/\[.*\]//g'
   @    3:1,2   6c53bc0f062f   1970-01-01 00:00 +0000   test
   |\     merge to C
   | |
@@ -71,5 +70,3 @@ resolve using first parent
   o  0   5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
-
-  $ cd ..

@@ -112,8 +112,8 @@ utf-8 encoded commit message
   pushing to ../gitrepo2
   searching for changes
 
-  $ cd ../gitrepo2
-  $ git log --pretty=medium
+  $ cd ..
+  $ git --git-dir=gitrepo2 log --pretty=medium
   commit da0edb01d4f3d1abf08b1be298379b0b2960e680
   Author: t\xe9st \xe8nc\xf6d\xeeng <test@example.org> (esc)
   Date:   Mon Jan 1 00:00:13 2007 +0000
@@ -137,5 +137,3 @@ utf-8 encoded commit message
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add älphà
-
-  $ cd ..

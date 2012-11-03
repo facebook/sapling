@@ -45,10 +45,9 @@ clean merge
   searching for changes
 
   $ cd ..
-  $ cd gitrepo2
   $ echo % git log in repo pushed from hg
   % git log in repo pushed from hg
-  $ git log --pretty=medium master | sed 's/\.\.\.//g'
+  $ git --git-dir=gitrepo2 log --pretty=medium master | sed 's/\.\.\.//g'
   commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
   Merge: e5023f9 9497a4e
   Author: test <test@example.org>
@@ -73,7 +72,7 @@ clean merge
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-  $ git log --pretty=medium beta | sed 's/\.\.\.//g'
+  $ git --git-dir=gitrepo2 log --pretty=medium beta | sed 's/\.\.\.//g'
   commit 9497a4ee62e16ee641860d7677cdb2589ea15554
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:11 2007 +0000
@@ -85,5 +84,3 @@ clean merge
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       add alpha
-
-  $ cd ..

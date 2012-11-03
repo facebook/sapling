@@ -41,9 +41,9 @@ Load commonly used test logic
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  $ cd ..
 
-  $ cd ../gitrepo2
-  $ git log --pretty=medium
+  $ git --git-dir=gitrepo2 log --pretty=medium
   commit 6e0dbd8cd92ed4823c69cb48d8a2b81f904e6e69
   Author: test <test@example.org>
   Date:   Mon Jan 1 00:00:12 2007 +0000
@@ -61,5 +61,3 @@ Load commonly used test logic
   Date:   Mon Jan 1 00:00:10 2007 +0000
   
       initial
-
-  $ cd ..
