@@ -71,7 +71,6 @@ while older git will use the full normalized path for .)
      summary:     add alpha
   
 
-  $ echo % we should have some bookmarks
-  % we should have some bookmarks
+we should have some bookmarks
   $ hg -R hgrepo book
    * master                    2:76fda365fbbb

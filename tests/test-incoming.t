@@ -86,8 +86,7 @@ This test only works on hg 1.7 and later
   +gamma 2
   
 
-  $ echo % incoming -r
-  % incoming -r
+incoming -r
   $ hg incoming -r master | grep -v 'no changes found' | grep -v 'bookmark:'
   comparing with $TESTTMP/gitrepo
   changeset:   1:9497a4ee62e1
@@ -117,8 +116,7 @@ This test only works on hg 1.7 and later
   summary:     add d/gamma
   
 
-  $ echo % nothing incoming after pull
-  % nothing incoming after pull
+nothing incoming after pull
 "adding remote bookmark" message was added in Mercurial 2.3
   $ hg pull | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
@@ -126,6 +124,3 @@ This test only works on hg 1.7 and later
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg incoming | grep -v 'no changes found' | grep -v 'bookmark:'
   comparing with $TESTTMP/gitrepo
-
-  $ echo 'done'
-  done

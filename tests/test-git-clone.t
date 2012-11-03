@@ -30,7 +30,6 @@ Load commonly used test logic
      summary:     add alpha
   
 
-  $ echo % we should have some bookmarks
-  % we should have some bookmarks
+we should have some bookmarks
   $ hg -R hgrepo book
    * master                    1:7bcd915dc873

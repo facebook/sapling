@@ -20,8 +20,7 @@ Load commonly used test logic
   $ git rm foo/bar
   rm 'foo/bar'
   $ fn_git_commit -m 'remove foo/bar'
-  $ echo % final manifest in git is just beta
-  % final manifest in git is just beta
+final manifest in git is just beta
   $ git ls-files
   beta
 
@@ -62,18 +61,12 @@ Load commonly used test logic
      summary:     add alpha
   
 
-  $ echo
-  
-  $ echo % make sure alpha is not in this manifest
-  % make sure alpha is not in this manifest
+make sure alpha is not in this manifest
   $ hg manifest -r 3
   beta
   foo/bar
 
-  $ echo
-  
-  $ echo % make sure that only beta is in the manifest
-  % make sure that only beta is in the manifest
+make sure that only beta is in the manifest
   $ hg manifest
   beta
 

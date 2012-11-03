@@ -29,8 +29,7 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
 
 
   $ cd ..
-  $ echo % clone a tag
-  % clone a tag
+clone a tag
   $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -43,8 +42,7 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
-  $ echo % clone a branch
-  % clone a branch
+clone a branch
   $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -79,8 +77,7 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
   [255]
   $ hg git-cleanup
   git commit map cleaned
-  $ echo % pull works after \'hg git-cleanup\'
-  % pull works after 'hg git-cleanup'
+pull works after 'hg git-cleanup'
 "adding remote bookmark" message was added in Mercurial 2.3
   $ hg pull -r beta | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo

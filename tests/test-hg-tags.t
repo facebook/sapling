@@ -41,8 +41,7 @@ Load commonly used test logic
 
   $ cd ..
   $ cd gitrepo
-  $ echo % git should have the tag alpha
-  % git should have the tag alpha
+git should have the tag alpha
   $ git tag -l
   alpha
 
@@ -66,7 +65,6 @@ Load commonly used test logic
      summary:     add alpha
   
 
-  $ echo % the tag should be in .hgtags
-  % the tag should be in .hgtags
+the tag should be in .hgtags
   $ cat hgrepo2/.hgtags
   3442585be8a60c6cd476bbc4e45755339f2a23ef alpha

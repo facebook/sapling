@@ -36,8 +36,7 @@ clean merge
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hgrepo
 
-  $ echo % clear the cache to be sure it is regenerated correctly
-  % clear the cache to be sure it is regenerated correctly
+clear the cache to be sure it is regenerated correctly
   $ hg gclear
   clearing out the git cache data
   $ hg push ../gitrepo2
@@ -45,8 +44,7 @@ clean merge
   searching for changes
 
   $ cd ..
-  $ echo % git log in repo pushed from hg
-  % git log in repo pushed from hg
+git log in repo pushed from hg
   $ git --git-dir=gitrepo2 log --pretty=medium master | sed 's/\.\.\.//g'
   commit 5806851511aaf3bfe813ae3a86c5027165fa9b96
   Merge: e5023f9 9497a4e

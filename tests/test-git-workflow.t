@@ -23,8 +23,7 @@ Load commonly used test logic
 
   $ cd ..
 
-  $ echo % configure for use from git
-  % configure for use from git
+configure for use from git
   $ hg clone hgrepo gitrepo
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -36,8 +35,7 @@ Load commonly used test logic
   $ echo "intree = True" >> .hg/hgrc
   $ hg gexport
 
-  $ echo % do some work
-  % do some work
+do some work
   $ git config core.bare false
   $ git checkout master 2>&1 | sed s/\'/\"/g
   Already on "master"
@@ -45,8 +43,7 @@ Load commonly used test logic
   $ git add beta
   $ fn_git_commit -m 'add beta'
 
-  $ echo % get things back to hg
-  % get things back to hg
+get things back to hg
   $ hg gimport
   importing git objects into hg
   $ hg log --graph --debug | grep -v ': *master' | grep -v phase:
@@ -75,7 +72,6 @@ Load commonly used test logic
      add alpha
   
   
-  $ echo % gimport should have updated the bookmarks as well
-  % gimport should have updated the bookmarks as well
+gimport should have updated the bookmarks as well
   $ hg bookmarks
      master                    1:7108ae7bd184

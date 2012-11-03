@@ -71,8 +71,7 @@ Load commonly used test logic
 
   $ cd ..
 
-  $ echo % some more work on master from git
-  % some more work on master from git
+some more work on master from git
   $ cd gitrepo
 
 Check state of refs after outgoing
@@ -89,14 +88,12 @@ Check state of refs after outgoing
   $ cd ..
 
   $ cd hgrepo
-  $ echo % this will fail # maybe we should try to make it work
-  % this will fail
+this will fail # maybe we should try to make it work
   $ hg outgoing
   comparing with */gitrepo (glob)
   abort: refs/heads/master changed on the server, please pull and merge before pushing
   [255]
-  $ echo % let\'s pull and try again
-  % let's pull and try again
+let's pull and try again
   $ hg pull 2>&1 | grep -v 'divergent bookmark'
   pulling from */gitrepo (glob)
   importing git objects into hg
