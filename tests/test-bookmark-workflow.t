@@ -12,12 +12,6 @@ locally is only to provide a test fixture.
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-bail if the user does not have git command-line client
-  $ "$TESTDIR/hghave" git || exit 80
-
-Bail if the user does not have dulwich
-  $ python -c 'import dulwich, dulwich.repo' || exit 80
-
 Skip if Mercurial < 2.1; workflow was different before that
   $ python -c 'from mercurial import util ; assert \
   >  util.version() != "unknown" and util.version() >= "2.1"' || exit 80

@@ -1,12 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-bail if the user does not have git command-line client
-  $ "$TESTDIR/hghave" git || exit 80
-
-bail if the user does not have dulwich
-  $ python -c 'import dulwich, dulwich.repo' || exit 80
-
   $ git init gitrepo1
   Initialized empty Git repository in $TESTTMP/gitrepo1/.git/
   $ cd gitrepo1

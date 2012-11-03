@@ -11,6 +11,15 @@ echo "hggit=$(echo $(dirname $TESTDIR))/hggit" >> $HGRCPATH
 echo 'graphlog=' >> $HGRCPATH
 echo 'mq=' >> $HGRCPATH
 
+# Standard checks for external dependencies
+# We use the git command-line client and dulwich in pretty much all the tests.
+# Thus, to avoid repetitively declaring that requirement in almost every test,
+# we just call the checks in all tests that include this library.
+python -c 'import dulwich' || {
+    echo "skipped: missing feature: dulwich" && exit 80
+}
+"$TESTDIR/hghave" git || exit 80
+
 GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
 GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
 GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE

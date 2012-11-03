@@ -1,9 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-bail if the user does not have git command-line client
-  $ "$TESTDIR/hghave" git || exit 80
-
 this test is busted on hg < 1.5. I'm not sure how to fix it.
   $ cat > tmp.py <<EOF
   > import sys
@@ -14,9 +11,6 @@ this test is busted on hg < 1.5. I'm not sure how to fix it.
   > EOF
 
   $ hg version | grep version | sed 's/.*(version //' | python tmp.py || exit 80
-
-bail if the user does not have dulwich
-  $ python -c 'import dulwich, dulwich.repo' || exit 80
 
   $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/

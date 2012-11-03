@@ -1,12 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-bail if the user does not have git command-line client
-  $ "$TESTDIR/hghave" git || exit 80
-
-bail if the user does not have dulwich
-  $ python -c 'import dulwich, dulwich.repo' || exit 80
-
 TODO stop using this when we're 1.5 only
   $ filterhash="sed s/71414c4e3c6f/a31e374801c9/;s/698615204564/d93a72262a83/"
   $ filterhash="$filterhash;s/d93a72262a83/05aed681ccb3/"

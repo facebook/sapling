@@ -1,12 +1,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-bail if the user does not have git command-line client
-  $ "$TESTDIR/hghave" git || exit 80
-
-bail if the user does not have dulwich
-  $ python -c 'import dulwich, dulwich.repo' || exit 80
-
 This test only works on hg 1.7 and later
   $ python -c 'from mercurial import util ; assert \
   >  util.version() != "unknown" and util.version() > "1.7"' || exit 80
