@@ -31,6 +31,10 @@ class baseformatter(object):
         '''do default text output while assigning data to item'''
         for k, v in zip(fields.split(), fielddata):
             self._item[k] = v
+    def condwrite(self, cond, fields, deftext, *fielddata, **opts):
+        '''do conditional write (primarily for plain formatter)'''
+        for k, v in zip(fields.split(), fielddata):
+            self._item[k] = v
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
         pass
@@ -51,6 +55,10 @@ class plainformatter(baseformatter):
         pass
     def write(self, fields, deftext, *fielddata, **opts):
         self._ui.write(deftext % fielddata, **opts)
+    def condwrite(self, cond, fields, deftext, *fielddata, **opts):
+        '''do conditional write'''
+        if cond:
+            self._ui.write(deftext % fielddata, **opts)
     def plain(self, text, **opts):
         self._ui.write(text, **opts)
     def end(self):
