@@ -5,14 +5,14 @@
 GIT_AUTHOR_NAME='tést èncödîng'; export GIT_AUTHOR_NAME
 echo beta > beta
 git add beta
-commit -m 'add beta'
+fn_git_commit -m 'add beta'
 
 echo gamma > gamma
 git add gamma
-commit -m 'add gämmâ'
+fn_git_commit -m 'add gämmâ'
 
 # test the commit encoding field
 git config i18n.commitencoding latin-1
 echo delta > delta
 git add delta
-commit -m 'add déltà'
+fn_git_commit -m 'add déltà'

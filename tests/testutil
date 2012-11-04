@@ -33,25 +33,25 @@ count=10
 fn_git_commit() {
     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-    git commit "$@" >/dev/null 2>/dev/null || echo "git commit error"
+    git commit "$@" >/dev/null || echo "git commit error"
     count=`expr $count + 1`
 }
 
 fn_hg_commit() {
     HGDATE="2007-01-01 00:00:$count +0000"
-    hg commit -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg commit error"
+    hg commit -d "$HGDATE" "$@" >/dev/null || echo "hg commit error"
     count=`expr $count + 1`
 }
 
 fn_git_tag() {
     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-    git tag "$@" >/dev/null 2>/dev/null || echo "git tag error"
+    git tag "$@" >/dev/null || echo "git tag error"
     count=`expr $count + 1`
 }
 
 fn_hg_tag() {
     HGDATE="2007-01-01 00:00:$count +0000"
-    hg tag -d "$HGDATE" "$@" >/dev/null 2>/dev/null || echo "hg tag error"
+    hg tag -d "$HGDATE" "$@" >/dev/null || echo "hg tag error"
     count=`expr $count + 1`
 }

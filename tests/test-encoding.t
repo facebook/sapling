@@ -3,22 +3,6 @@
 Load commonly used test logic
   $ . "$TESTDIR/testutil"
 
-  $ GIT_AUTHOR_NAME='test'; export GIT_AUTHOR_NAME
-  $ GIT_AUTHOR_EMAIL='test@example.org'; export GIT_AUTHOR_EMAIL
-  $ GIT_AUTHOR_DATE="2007-01-01 00:00:00 +0000"; export GIT_AUTHOR_DATE
-  $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
-  $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
-  $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
-
-  $ count=10
-  $ commit()
-  > {
-  >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"
-  >     GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"
-  >     git commit "$@" >/dev/null || echo "git commit error"
-  >     count=`expr $count + 1`
-  > }
-
   $ git init gitrepo
   Initialized empty Git repository in $TESTTMP/gitrepo/.git/
   $ cd gitrepo
@@ -26,7 +10,7 @@ Load commonly used test logic
 utf-8 encoded commit message
   $ echo alpha > alpha
   $ git add alpha
-  $ commit -m 'add älphà'
+  $ fn_git_commit -m 'add älphà'
 
 Create some commits using latin1 encoding
 The warning message changed in Git 1.8.0
