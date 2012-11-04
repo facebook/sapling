@@ -382,7 +382,7 @@ def parse_revnum(svnrepo, r):
     try:
         return int(r or 0)
     except ValueError:
-        if isinstance(r, str) and r.upper() == 'HEAD':
+        if isinstance(r, str) and r.lower() in ('head', 'tip'):
             return svnrepo.last_changed_rev
         else:
             # TODO: use error.RepoLookupError when we drop 1.3?
