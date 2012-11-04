@@ -307,18 +307,14 @@ def pull(repo, source, heads=[], force=False):
     old_encoding = util.swap_out_encoding()
     total = None
     try:
-        try:
-            stopat_rev = int(checkout or 0)
-        except ValueError:
-            raise hgutil.Abort('unrecognised Subversion revision %s: '
-                               'only numbers work.' % checkout)
-
         have_replay = not repo.ui.configbool('hgsubversion', 'stupid')
         if not have_replay:
             repo.ui.note('fetching stupidly...\n')
 
         svn = source.svn
         meta = repo.svnmeta(svn.uuid, svn.subdir)
+
+        stopat_rev = util.parse_revnum(svn, checkout)
 
         layout = repo.ui.config('hgsubversion', 'layout', 'auto')
         if layout == 'auto':
@@ -349,11 +345,8 @@ def pull(repo, source, heads=[], force=False):
 
         if start <= 0:
             # we are initializing a new repository
-            start = repo.ui.config('hgsubversion', 'startrev', 0)
-            if isinstance(start, str) and start.upper() == 'HEAD':
-                start = svn.last_changed_rev
-            else:
-                start = int(start)
+            start = util.parse_revnum(svn, repo.ui.config('hgsubversion',
+                                                          'startrev', 0))
 
             if start > 0:
                 if layout == 'standard':
@@ -369,11 +362,7 @@ def pull(repo, source, heads=[], force=False):
                 start = 0
 
         skiprevs = repo.ui.configlist('hgsubversion', 'unsafeskip', '')
-        try:
-            skiprevs = set(map(int, skiprevs))
-        except ValueError:
-            raise hgutil.Abort('unrecognised Subversion revisions %r: '
-                               'only numbers work.' % checkout)
+        skiprevs = set(util.parse_revnum(svn, r) for r in skiprevs)
 
         oldrevisions = len(meta.revmap)
         if stopat_rev:

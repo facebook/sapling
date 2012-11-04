@@ -377,3 +377,13 @@ def lrucachefunc(func, size):
             return cache[args]
 
     return f
+
+def parse_revnum(svnrepo, r):
+    try:
+        return int(r or 0)
+    except ValueError:
+        if isinstance(r, str) and r.upper() == 'HEAD':
+            return svnrepo.last_changed_rev
+        else:
+            # TODO: use error.RepoLookupError when we drop 1.3?
+            raise hgutil.Abort("unknown Subversion revision %r" % r)
