@@ -5511,8 +5511,7 @@ def summary(ui, repo, **opts):
         source, branches = hg.parseurl(ui.expandpath('default'))
         sbranch = branches[0]
         other = hg.peer(repo, {}, source)
-        revs, checkout = hg.addbranchrevs(repo, other, branches,
-                                          opts.get('rev'))
+        revs, checkout = hg.addbranchrevs(repo, other, branches, None)
         if revs:
             revs = [other.lookup(rev) for rev in revs]
         ui.debug('comparing with %s\n' % util.hidepassword(source))
