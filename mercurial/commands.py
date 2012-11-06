@@ -4206,6 +4206,9 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
     Returns 0 on success.
     """
+
+    fm = ui.formatter('manifest', opts)
+
     if opts.get('all'):
         if rev or node:
             raise util.Abort(_("can't specify a revision with --all"))
@@ -4223,7 +4226,9 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         finally:
             lock.release()
         for f in res:
-            ui.write("%s\n" % f)
+            fm.startitem()
+            fm.write("path", '%s\n', f)
+        fm.end()
         return
 
     if rev and node:
@@ -4232,14 +4237,17 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     if not node:
         node = rev
 
-    decor = {'l':'644 @ ', 'x':'755 * ', '':'644   '}
+    char = {'l': '@', 'x': '*', '': ''}
+    mode = {'l': '644', 'x': '755', '': '644'}
     ctx = scmutil.revsingle(repo, node)
+    mf = ctx.manifest()
     for f in ctx:
-        if ui.debugflag:
-            ui.write("%40s " % hex(ctx.manifest()[f]))
-        if ui.verbose:
-            ui.write(decor[ctx.flags(f)])
-        ui.write("%s\n" % f)
+        fm.startitem()
+        fl = ctx[f].flags()
+        fm.condwrite(ui.debugflag, 'hash', '%s ', hex(mf[f]))
+        fm.condwrite(ui.verbose, 'mode type', '%s %1s ', mode[fl], char[fl])
+        fm.write('path', '%s\n', f)
+    fm.end()
 
 @command('^merge',
     [('f', 'force', None, _('force a merge with outstanding changes')),
