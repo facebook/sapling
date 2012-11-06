@@ -10,7 +10,7 @@ import cStringIO, email.Parser, os, errno, re
 import tempfile, zlib, shutil
 
 from i18n import _
-from node import hex, nullid, short
+from node import hex, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 import context
 
@@ -1514,44 +1514,6 @@ def changedfiles(ui, repo, patchpath, strip=1):
     finally:
         fp.close()
 
-def b85diff(to, tn):
-    '''print base85-encoded binary diff'''
-    def gitindex(text):
-        if not text:
-            return hex(nullid)
-        l = len(text)
-        s = util.sha1('blob %d\0' % l)
-        s.update(text)
-        return s.hexdigest()
-
-    def fmtline(line):
-        l = len(line)
-        if l <= 26:
-            l = chr(ord('A') + l - 1)
-        else:
-            l = chr(l - 26 + ord('a') - 1)
-        return '%c%s\n' % (l, base85.b85encode(line, True))
-
-    def chunk(text, csize=52):
-        l = len(text)
-        i = 0
-        while i < l:
-            yield text[i:i + csize]
-            i += csize
-
-    tohash = gitindex(to)
-    tnhash = gitindex(tn)
-    if tohash == tnhash:
-        return ""
-
-    # TODO: deltas
-    ret = ['index %s..%s\nGIT binary patch\nliteral %s\n' %
-           (tohash, tnhash, len(tn))]
-    for l in chunk(zlib.compress(tn)):
-        ret.append(fmtline(l))
-    ret.append('\n')
-    return ''.join(ret)
-
 class GitDiffRequired(Exception):
     pass
 
@@ -1789,7 +1751,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
         if dodiff:
             if dodiff == 'binary':
-                text = b85diff(to, tn)
+                text = mdiff.b85diff(to, tn)
             else:
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic

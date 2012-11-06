@@ -7,7 +7,8 @@
 
 from i18n import _
 import bdiff, mpatch, util
-import re, struct
+import re, struct, base85, zlib
+from node import hex, nullid
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
@@ -313,6 +314,44 @@ def _unidiff(t1, t2, l1, l2, opts=defaultopts):
     if hunk:
         for x in yieldhunk(hunk):
             yield x
+
+def b85diff(to, tn):
+    '''print base85-encoded binary diff'''
+    def gitindex(text):
+        if not text:
+            return hex(nullid)
+        l = len(text)
+        s = util.sha1('blob %d\0' % l)
+        s.update(text)
+        return s.hexdigest()
+
+    def fmtline(line):
+        l = len(line)
+        if l <= 26:
+            l = chr(ord('A') + l - 1)
+        else:
+            l = chr(l - 26 + ord('a') - 1)
+        return '%c%s\n' % (l, base85.b85encode(line, True))
+
+    def chunk(text, csize=52):
+        l = len(text)
+        i = 0
+        while i < l:
+            yield text[i:i + csize]
+            i += csize
+
+    tohash = gitindex(to)
+    tnhash = gitindex(tn)
+    if tohash == tnhash:
+        return ""
+
+    # TODO: deltas
+    ret = ['index %s..%s\nGIT binary patch\nliteral %s\n' %
+           (tohash, tnhash, len(tn))]
+    for l in chunk(zlib.compress(tn)):
+        ret.append(fmtline(l))
+    ret.append('\n')
+    return ''.join(ret)
 
 def patchtext(bin):
     pos = 0
