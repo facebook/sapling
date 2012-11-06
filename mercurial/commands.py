@@ -5749,7 +5749,7 @@ def tag(ui, repo, name1, *names, **opts):
         release(lock, wlock)
 
 @command('tags', [], '')
-def tags(ui, repo):
+def tags(ui, repo, **opts):
     """list repository tags
 
     This lists both regular and local tags. When the -v/--verbose
@@ -5758,27 +5758,27 @@ def tags(ui, repo):
     Returns 0 on success.
     """
 
+    fm = ui.formatter('tags', opts)
     hexfunc = ui.debugflag and hex or short
     tagtype = ""
 
     for t, n in reversed(repo.tagslist()):
-        if ui.quiet:
-            ui.write("%s\n" % t, label='tags.normal')
-            continue
-
         hn = hexfunc(n)
-        r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        rev = ui.label(r, 'log.changeset changeset.%s' % repo[n].phasestr())
-        spaces = " " * (30 - encoding.colwidth(t))
+        label = 'tags.normal'
+        tagtype = ''
+        if repo.tagtype(t) == 'local':
+            label = 'tags.local'
+            tagtype = 'local'
 
-        tag = ui.label(t, 'tags.normal')
-        if ui.verbose:
-            if repo.tagtype(t) == 'local':
-                tagtype = " local"
-                tag = ui.label(t, 'tags.local')
-            else:
-                tagtype = ""
-        ui.write("%s%s %s%s\n" % (tag, spaces, rev, tagtype))
+        fm.startitem()
+        fm.write('tag', '%s', t, label=label)
+        fmt = " " * (30 - encoding.colwidth(t)) + ' %5d:%s'
+        fm.condwrite(not ui.quiet, 'rev id', fmt,
+                     repo.changelog.rev(n), hn, label=label)
+        fm.condwrite(ui.verbose and tagtype, 'type', ' %s',
+                     tagtype, label=label)
+        fm.plain('\n')
+    fm.end()
 
 @command('tip',
     [('p', 'patch', None, _('show patch')),
