@@ -68,9 +68,9 @@ test issue2039
   $ touch "$A"
   $ touch "$B"
   $ hg status --color=always
-  \x1b[0;35;1;4m? foo\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mfoo\x1b[0m (esc)
   \x1b[0;35;1;4mbar\x1b[0m (esc)
-  \x1b[0;35;1;4m? foo\x1b[0m (esc)
+  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mfoo\x1b[0m (esc)
   \x1b[0;35;1;4mbar.baz\x1b[0m (esc)
 
   $ cd ..

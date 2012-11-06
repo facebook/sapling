@@ -5426,17 +5426,16 @@ def status(ui, repo, *pats, **opts):
         copy = copies.pathcopies(repo[node1], repo[node2])
 
     fm = ui.formatter('status', opts)
-    format = '%s %s' + end
-    if opts.get('no_status'):
-        format = '%.0s%s' + end
+    fmt = '%s' + end
+    showchar = not opts.get('no_status')
 
     for state, char, files in changestates:
         if state in show:
             label = 'status.' + state
             for f in files:
                 fm.startitem()
-                fm.write("status path", format, char,
-                         repo.pathto(f, cwd), label=label)
+                fm.condwrite(showchar, 'status', '%s ', char, label=label)
+                fm.write('path', fmt, repo.pathto(f, cwd), label=label)
                 if f in copy:
                     fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
                              label='status.copied')
