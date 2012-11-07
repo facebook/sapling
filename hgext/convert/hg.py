@@ -219,9 +219,10 @@ class mercurial_sink(converter_sink):
             return
 
         self.ui.status(_("updating bookmarks\n"))
+        destmarks = self.repo._bookmarks
         for bookmark in updatedbookmark:
-            self.repo._bookmarks[bookmark] = bin(updatedbookmark[bookmark])
-            bookmarks.write(self.repo)
+            destmarks[bookmark] = bin(updatedbookmark[bookmark])
+        destmarks.write()
 
     def hascommit(self, rev):
         if rev not in self.repo and self.clonebranches:

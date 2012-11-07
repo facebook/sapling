@@ -144,7 +144,6 @@ except ImportError:
     import pickle
 import os
 
-from mercurial import bookmarks
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
@@ -740,12 +739,13 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
             # nothing to move
         moves.append((bk, new[-1]))
     if moves:
+        marks = repo._bookmarks
         for mark, new in moves:
-            old = repo._bookmarks[mark]
+            old = marks[mark]
             ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
                     % (mark, node.short(old), node.short(new)))
-            repo._bookmarks[mark] = new
-        bookmarks.write(repo)
+            marks[mark] = new
+        marks.write()
 
 def cleanupnode(ui, repo, name, nodes):
     """strip a group of nodes from the repository

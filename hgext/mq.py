@@ -63,7 +63,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, error, phases, bookmarks
+from mercurial import repair, extensions, error, phases
 from mercurial import patch as patchmod
 import os, re, errno, shutil
 
@@ -1675,9 +1675,10 @@ class queue(object):
                     patchf.write(chunk)
                 patchf.close()
 
+                marks = repo._bookmarks
                 for bm in bmlist:
-                    repo._bookmarks[bm] = n
-                bookmarks.write(repo)
+                    marks[bm] = n
+                marks.write()
 
                 self.applied.append(statusentry(n, patchfn))
             except: # re-raises
@@ -2999,7 +3000,7 @@ def strip(ui, repo, *revs, **opts):
             revs.update(set(rsrevs))
         if not revs:
             del marks[mark]
-            repo._writebookmarks(mark)
+            marks.write()
             ui.write(_("bookmark '%s' deleted\n") % mark)
 
     if not revs:
@@ -3049,7 +3050,7 @@ def strip(ui, repo, *revs, **opts):
 
     if opts.get('bookmark'):
         del marks[mark]
-        repo._writebookmarks(marks)
+        marks.write()
         ui.write(_("bookmark '%s' deleted\n") % mark)
 
     repo.mq.strip(repo, revs, backup=backup, update=update,

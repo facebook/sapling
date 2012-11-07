@@ -391,14 +391,15 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         destrepo = destpeer.local()
         if destrepo and srcpeer.capable("pushkey"):
             rb = srcpeer.listkeys('bookmarks')
+            marks = destrepo._bookmarks
             for k, n in rb.iteritems():
                 try:
                     m = destrepo.lookup(n)
-                    destrepo._bookmarks[k] = m
+                    marks[k] = m
                 except error.RepoLookupError:
                     pass
             if rb:
-                bookmarks.write(destrepo)
+                marks.write()
         elif srcrepo and destpeer.capable("pushkey"):
             for k, n in srcrepo._bookmarks.iteritems():
                 destpeer.pushkey('bookmarks', k, '', hex(n))

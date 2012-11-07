@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, bookmarks, graphmod, revset, phases, obsolete
+import subrepo, context, repair, graphmod, revset, phases, obsolete
 import changelog
 import lock as lockmod
 
@@ -1756,9 +1756,10 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 # Move bookmarks from old parent to amend commit
                 bms = repo.nodebookmarks(old.node())
                 if bms:
+                    marks = repo._bookmarks
                     for bm in bms:
-                        repo._bookmarks[bm] = newid
-                    bookmarks.write(repo)
+                        marks[bm] = newid
+                    marks.write()
             #commit the whole amend process
             if obsolete._enabled and newid != old.node():
                 # mark the new changeset as successor of the rewritten one

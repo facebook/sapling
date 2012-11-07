@@ -821,7 +821,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
         del marks[mark]
-        bookmarks.write(repo)
+        marks.write()
 
     elif rename:
         if mark is None:
@@ -834,7 +834,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if repo._bookmarkcurrent == rename and not inactive:
             bookmarks.setcurrent(repo, mark)
         del marks[rename]
-        bookmarks.write(repo)
+        marks.write()
 
     elif mark is not None:
         mark = checkformat(mark)
@@ -848,7 +848,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             marks[mark] = cur
         if not inactive and cur == marks[mark]:
             bookmarks.setcurrent(repo, mark)
-        bookmarks.write(repo)
+        marks.write()
 
     # Same message whether trying to deactivate the current bookmark (-i
     # with no NAME) or listing bookmarks
@@ -1321,11 +1321,12 @@ def commit(ui, repo, *pats, **opts):
         elif marks:
             ui.debug('moving bookmarks %r from %s to %s\n' %
                      (marks, old.hex(), hex(node)))
+            newmarks = repo._bookmarks
             for bm in marks:
-                repo._bookmarks[bm] = node
+                newmarks[bm] = node
                 if bm == current:
                     bookmarks.setcurrent(repo, bm)
-            bookmarks.write(repo)
+            newmarks.write()
     else:
         e = cmdutil.commiteditor
         if opts.get('force_editor'):
@@ -4673,11 +4674,12 @@ def pull(ui, repo, source="default", **opts):
 
     # update specified bookmarks
     if opts.get('bookmark'):
+        marks = repo._bookmarks
         for b in opts['bookmark']:
             # explicit pull overrides local bookmark if any
             ui.status(_("importing bookmark %s\n") % b)
-            repo._bookmarks[b] = repo[rb[b]].node()
-        bookmarks.write(repo)
+            marks[b] = repo[rb[b]].node()
+        marks.write()
 
     return ret
 

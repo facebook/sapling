@@ -479,13 +479,14 @@ def updatemq(repo, state, skipped, **opts):
 
 def updatebookmarks(repo, nstate, originalbookmarks, **opts):
     'Move bookmarks to their correct changesets'
+    marks = repo._bookmarks
     for k, v in originalbookmarks.iteritems():
         if v in nstate:
             if nstate[v] != nullmerge:
                 # update the bookmarks for revs that have moved
-                repo._bookmarks[k] = nstate[v]
+                marks[k] = nstate[v]
 
-    bookmarks.write(repo)
+    marks.write()
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                                                                 external):

@@ -265,14 +265,11 @@ class localrepository(object):
 
     @filecache('bookmarks')
     def _bookmarks(self):
-        return bookmarks.read(self)
+        return bookmarks.bmstore(self)
 
     @filecache('bookmarks.current')
     def _bookmarkcurrent(self):
         return bookmarks.readcurrent(self)
-
-    def _writebookmarks(self, marks):
-        bookmarks.write(self)
 
     def bookmarkheads(self, bookmark):
         name = bookmark.split('@', 1)[0]
