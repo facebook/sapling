@@ -4206,6 +4206,9 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
     Returns 0 on success.
     """
+
+    fm = ui.formatter('manifest', opts)
+
     if opts.get('all'):
         if rev or node:
             raise util.Abort(_("can't specify a revision with --all"))
@@ -4223,7 +4226,9 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         finally:
             lock.release()
         for f in res:
-            ui.write("%s\n" % f)
+            fm.startitem()
+            fm.write("path", '%s\n', f)
+        fm.end()
         return
 
     if rev and node:
@@ -4232,14 +4237,17 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     if not node:
         node = rev
 
-    decor = {'l':'644 @ ', 'x':'755 * ', '':'644   '}
+    char = {'l': '@', 'x': '*', '': ''}
+    mode = {'l': '644', 'x': '755', '': '644'}
     ctx = scmutil.revsingle(repo, node)
+    mf = ctx.manifest()
     for f in ctx:
-        if ui.debugflag:
-            ui.write("%40s " % hex(ctx.manifest()[f]))
-        if ui.verbose:
-            ui.write(decor[ctx.flags(f)])
-        ui.write("%s\n" % f)
+        fm.startitem()
+        fl = ctx[f].flags()
+        fm.condwrite(ui.debugflag, 'hash', '%s ', hex(mf[f]))
+        fm.condwrite(ui.verbose, 'mode type', '%s %1s ', mode[fl], char[fl])
+        fm.write('path', '%s\n', f)
+    fm.end()
 
 @command('^merge',
     [('f', 'force', None, _('force a merge with outstanding changes')),
@@ -5426,17 +5434,16 @@ def status(ui, repo, *pats, **opts):
         copy = copies.pathcopies(repo[node1], repo[node2])
 
     fm = ui.formatter('status', opts)
-    format = '%s %s' + end
-    if opts.get('no_status'):
-        format = '%.0s%s' + end
+    fmt = '%s' + end
+    showchar = not opts.get('no_status')
 
     for state, char, files in changestates:
         if state in show:
             label = 'status.' + state
             for f in files:
                 fm.startitem()
-                fm.write("status path", format, char,
-                         repo.pathto(f, cwd), label=label)
+                fm.condwrite(showchar, 'status', '%s ', char, label=label)
+                fm.write('path', fmt, repo.pathto(f, cwd), label=label)
                 if f in copy:
                     fm.write("copy", '  %s' + end, repo.pathto(copy[f], cwd),
                              label='status.copied')
@@ -5742,7 +5749,7 @@ def tag(ui, repo, name1, *names, **opts):
         release(lock, wlock)
 
 @command('tags', [], '')
-def tags(ui, repo):
+def tags(ui, repo, **opts):
     """list repository tags
 
     This lists both regular and local tags. When the -v/--verbose
@@ -5751,27 +5758,27 @@ def tags(ui, repo):
     Returns 0 on success.
     """
 
+    fm = ui.formatter('tags', opts)
     hexfunc = ui.debugflag and hex or short
     tagtype = ""
 
     for t, n in reversed(repo.tagslist()):
-        if ui.quiet:
-            ui.write("%s\n" % t, label='tags.normal')
-            continue
-
         hn = hexfunc(n)
-        r = "%5d:%s" % (repo.changelog.rev(n), hn)
-        rev = ui.label(r, 'log.changeset changeset.%s' % repo[n].phasestr())
-        spaces = " " * (30 - encoding.colwidth(t))
+        label = 'tags.normal'
+        tagtype = ''
+        if repo.tagtype(t) == 'local':
+            label = 'tags.local'
+            tagtype = 'local'
 
-        tag = ui.label(t, 'tags.normal')
-        if ui.verbose:
-            if repo.tagtype(t) == 'local':
-                tagtype = " local"
-                tag = ui.label(t, 'tags.local')
-            else:
-                tagtype = ""
-        ui.write("%s%s %s%s\n" % (tag, spaces, rev, tagtype))
+        fm.startitem()
+        fm.write('tag', '%s', t, label=label)
+        fmt = " " * (30 - encoding.colwidth(t)) + ' %5d:%s'
+        fm.condwrite(not ui.quiet, 'rev id', fmt,
+                     repo.changelog.rev(n), hn, label=label)
+        fm.condwrite(ui.verbose and tagtype, 'type', ' %s',
+                     tagtype, label=label)
+        fm.plain('\n')
+    fm.end()
 
 @command('tip',
     [('p', 'patch', None, _('show patch')),
