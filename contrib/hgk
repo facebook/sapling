@@ -579,15 +579,15 @@ proc makewindow {} {
     set canv .ctop.top.clist.canv
     canvas $canv -height $geometry(canvh) -width $geometry(canv1) \
 	-bg $bgcolor -bd 0 \
-	-yscrollincr $linespc -yscrollcommand "$cscroll set" -selectbackground grey
+	-yscrollincr $linespc -yscrollcommand "$cscroll set" -selectbackground "#c0c0c0"
     .ctop.top.clist add $canv
     set canv2 .ctop.top.clist.canv2
     canvas $canv2 -height $geometry(canvh) -width $geometry(canv2) \
-	-bg $bgcolor -bd 0 -yscrollincr $linespc -selectbackground grey
+	-bg $bgcolor -bd 0 -yscrollincr $linespc -selectbackground "#c0c0c0"
     .ctop.top.clist add $canv2
     set canv3 .ctop.top.clist.canv3
     canvas $canv3 -height $geometry(canvh) -width $geometry(canv3) \
-	-bg $bgcolor -bd 0 -yscrollincr $linespc -selectbackground grey
+	-bg $bgcolor -bd 0 -yscrollincr $linespc -selectbackground "#c0c0c0"
     .ctop.top.clist add $canv3
     bind .ctop.top.clist <Configure> {resizeclistpanes %W %w}
 
@@ -1260,7 +1260,7 @@ proc drawtags {id x xt y1} {
         } else {
             # draw a head or other ref
             if {[incr nheads -1] >= 0} {
-                set col green
+                set col "#00ff00"
             } else {
                 set col "#ddddff"
             }
