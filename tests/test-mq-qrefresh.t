@@ -209,6 +209,7 @@ qrefresh --short tests:
   $ hg add orphanchild
   $ hg qrefresh nonexistentfilename # clear patch
   nonexistentfilename: * (glob)
+  $ hg diff -c qtip
   $ hg qrefresh --short 1/base
   $ hg qrefresh --short 2/base
 
