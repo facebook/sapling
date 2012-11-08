@@ -1121,7 +1121,7 @@ results = dict(p=[], f=[], s=[], i=[])
 times = []
 iolock = threading.Lock()
 
-def runqueue(options, tests, results):
+def runqueue(options, tests):
     for test in tests:
         ret = runone(options, test)
         if options.first and ret is not None and not ret:
@@ -1147,7 +1147,7 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        runqueue(options, tests, results)
+        runqueue(options, tests)
 
         failed = len(results['f'])
         tested = len(results['p']) + failed
