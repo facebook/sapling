@@ -55,6 +55,7 @@ import time
 import re
 import threading
 import killdaemons as killmod
+import cPickle as pickle
 
 processlock = threading.Lock()
 
@@ -1060,25 +1061,23 @@ def runchildren(options, tests):
         os.close(wfd)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     failures = 0
-    tested, skipped, failed = 0, 0, 0
+    passed, skipped, failed = 0, 0, 0
     skips = []
     fails = []
     while fps:
         pid, status = os.wait()
         fp = fps.pop(pid)
-        l = fp.read().splitlines()
         try:
-            test, skip, fail = map(int, l[:3])
-        except ValueError:
-            test, skip, fail = 0, 0, 0
-        split = -fail or len(l)
-        for s in l[3:split]:
-            skips.append(s.split(" ", 1))
-        for s in l[split:]:
-            fails.append(s.split(" ", 1))
-        tested += test
-        skipped += skip
-        failed += fail
+            childresults = pickle.load(fp)
+        except pickle.UnpicklingError:
+            pass
+        else:
+            passed += len(childresults['p'])
+            skipped += len(childresults['s'])
+            failed += len(childresults['f'])
+            skips.extend(childresults['s'])
+            fails.extend(childresults['f'])
+
         vlog('pid %d exited, status %d' % (pid, status))
         failures |= status
     print
@@ -1093,7 +1092,7 @@ def runchildren(options, tests):
 
     _checkhglib("Tested")
     print "# Ran %d tests, %d skipped, %d failed." % (
-        tested, skipped, failed)
+        passed + failed, skipped, failed)
 
     if options.anycoverage:
         outputcoverage(options)
@@ -1138,11 +1137,7 @@ def runtests(options, tests):
 
         if options.child:
             fp = os.fdopen(options.child, 'w')
-            fp.write('%d\n%d\n%d\n' % (tested, skipped, failed))
-            for s in results['s']:
-                fp.write("%s %s\n" % s)
-            for s in results['f']:
-                fp.write("%s %s\n" % s)
+            pickle.dump(results, fp, pickle.HIGHEST_PROTOCOL)
             fp.close()
         else:
             print
