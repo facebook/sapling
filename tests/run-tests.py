@@ -176,6 +176,8 @@ def parseargs():
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
+    parser.add_option("--time", action="store_true",
+        help="time how long each test takes")
     parser.add_option("--tmpdir", type="string",
         help="run tests in the given temporary directory"
              " (implies --keep-tmpdir)")
@@ -264,6 +266,10 @@ def parseargs():
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
         options.timeout = 0
+        if options.time:
+            sys.stderr.write(
+                'warning: --time option ignored with --debug\n')
+        options.time = False
     if options.py3k_warnings:
         if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
             parser.error('--py3k-warnings can only be used on Python 2.6+')
@@ -447,6 +453,14 @@ def installhg(options):
         os.environ['COVERAGE_PROCESS_START'] = rc
         fn = os.path.join(INST, '..', '.coverage')
         os.environ['COVERAGE_FILE'] = fn
+
+def outputtimes(options):
+    vlog('# Producing time report')
+    times.sort(key=lambda t: (t[1], t[0]), reverse=True)
+    cols = '%7.3f   %s'
+    print '\n%-7s   %s' % ('Time', 'Test')
+    for test, timetaken in times:
+        print cols % (timetaken, test)
 
 def outputcoverage(options):
 
@@ -887,7 +901,12 @@ def runone(options, test):
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
     os.mkdir(testtmp)
+    if options.time:
+        starttime = time.time()
     ret, out = runner(testpath, testtmp, options, replacements)
+    if options.time:
+        endtime = time.time()
+        times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
 
     mark = '.'
@@ -1072,6 +1091,9 @@ def runchildren(options, tests):
             failed += len(childresults['f'])
             skips.extend(childresults['s'])
             fails.extend(childresults['f'])
+        if options.time:
+            childtimes = pickle.load(fp)
+            times.extend(childtimes)
 
         vlog('pid %d exited, status %d' % (pid, status))
         failures |= status
@@ -1089,11 +1111,14 @@ def runchildren(options, tests):
     print "# Ran %d tests, %d skipped, %d failed." % (
         passed + failed, skipped, failed)
 
+    if options.time:
+        outputtimes(options)
     if options.anycoverage:
         outputcoverage(options)
     sys.exit(failures != 0)
 
 results = dict(p=[], f=[], s=[], i=[])
+times = []
 iolock = threading.Lock()
 
 def runqueue(options, tests, results):
@@ -1132,6 +1157,8 @@ def runtests(options, tests):
         if options.child:
             fp = os.fdopen(options.child, 'w')
             pickle.dump(results, fp, pickle.HIGHEST_PROTOCOL)
+            if options.time:
+                pickle.dump(times, fp, pickle.HIGHEST_PROTOCOL)
             fp.close()
         else:
             print
@@ -1142,6 +1169,8 @@ def runtests(options, tests):
             _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
                 tested, skipped + ignored, failed)
+            if options.time:
+                outputtimes(options)
 
         if options.anycoverage:
             outputcoverage(options)
