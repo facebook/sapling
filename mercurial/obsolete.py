@@ -558,11 +558,16 @@ def successorssets(repo, initialnode, cache=None):
                 # sets. In such a case, the marker will contribute multiple
                 # divergent successors sets. If multiple successors have
                 # divergents successors sets, a cartesian product is used.
+                #
+                # At the end we post-process successors sets to remove
+                # duplicated entry and successors set that are strict subset of
+                # another one.
                 succssets = []
                 for mark in succmarkers[current]:
                     # successors sets contributed by this marker
                     markss = [[]]
                     for suc in mark[1]:
+                        # cardinal product with previous successors
                         productresult = []
                         for prefix in markss:
                             for suffix in cache[suc]:
@@ -575,7 +580,20 @@ def successorssets(repo, initialnode, cache=None):
                                 productresult.append(newss)
                         markss = productresult
                     succssets.extend(markss)
-                cache[current] = list(set(tuple(r) for r in succssets if r))
+                # remove duplicated and subset
+                seen = []
+                final = []
+                candidate = sorted(((set(s), s) for s in succssets if s),
+                                   key=lambda x: len(x[1]), reverse=True)
+                for setversion, listversion in candidate:
+                    for seenset in seen:
+                        if setversion.issubset(seenset):
+                            break
+                    else:
+                        final.append(listversion)
+                        seen.append(setversion)
+                final.reverse() # put small successors set first
+                cache[current] = final
     return cache[initialnode]
 
 def _knownrevs(repo, nodes):

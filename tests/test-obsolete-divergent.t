@@ -75,8 +75,8 @@ A_1 have two direct and divergent successors A_1 and A_1
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -139,8 +139,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      82623d38b9ba
       392fd25390da
+      82623d38b9ba
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -396,3 +396,18 @@ fix the divergence
 
   $ cd ..
 
+
+Subset does not diverge
+------------------------------
+
+Do not report divergent successors-set if it is a subset of another
+successors-set. (report [A,B] not [A] + [A,B])
+
+  $ newcase subset
+  $ hg debugobsolete `getid A_0` `getid A_2`
+  $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
+  $ hg debugsuccessorssets 'desc('A_0')'
+  007dc284c1f8
+      82623d38b9ba 392fd25390da
+
+  $ cd ..
