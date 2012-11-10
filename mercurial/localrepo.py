@@ -1918,6 +1918,7 @@ class localrepository(object):
                             mso = _("push includes obsolete changeset: %s!")
                             msu = _("push includes unstable changeset: %s!")
                             msb = _("push includes bumped changeset: %s!")
+                            msd = _("push includes divergent changeset: %s!")
                             # If we are to push if there is at least one
                             # obsolete or unstable changeset in missing, at
                             # least one of the missinghead will be obsolete or
@@ -1930,6 +1931,8 @@ class localrepository(object):
                                     raise util.Abort(msu % ctx)
                                 elif ctx.bumped():
                                     raise util.Abort(msb % ctx)
+                                elif ctx.divergent():
+                                    raise util.Abort(msd % ctx)
                         discovery.checkheads(unfi, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))

@@ -84,6 +84,16 @@ A_1 have two direct and divergent successors A_1 and A_1
   $ hg log -r 'divergent()'
   2:82623d38b9ba A_1
   3:392fd25390da A_2
+
+check that mercurial refuse to push
+
+  $ hg init ../other
+  $ hg push ../other
+  pushing to ../other
+  searching for changes
+  abort: push includes divergent changeset: 82623d38b9ba!
+  [255]
+
   $ cd ..
 
 
