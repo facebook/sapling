@@ -1071,7 +1071,7 @@ def runchildren(options, tests):
         childopts += ['--tmpdir', childtmp]
         cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
         vlog(' '.join(cmdline))
-        fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'r')
+        fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'rb')
         os.close(wfd)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     failures = 0
@@ -1155,7 +1155,7 @@ def runtests(options, tests):
         ignored = len(results['i'])
 
         if options.child:
-            fp = os.fdopen(options.child, 'w')
+            fp = os.fdopen(options.child, 'wb')
             pickle.dump(results, fp, pickle.HIGHEST_PROTOCOL)
             if options.time:
                 pickle.dump(times, fp, pickle.HIGHEST_PROTOCOL)
