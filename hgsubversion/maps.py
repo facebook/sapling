@@ -45,7 +45,7 @@ class AuthorMap(dict):
         if path != self.path:
             writing = open(self.path, 'a')
 
-        self.ui.note('reading authormap from %s\n' % path)
+        self.ui.debug('reading authormap from %s\n' % path)
         f = open(path, 'r')
         for number, line_org in enumerate(f):
 
@@ -88,7 +88,7 @@ class AuthorMap(dict):
         elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
             self[author] = result = '%s%s' % (author, self.defaulthost)
             msg = 'substituting author "%s" for default "%s"\n'
-            self.ui.note(msg % (author, result))
+            self.ui.debug(msg % (author, result))
         else:
             msg = 'author %s has no entry in the author map!'
             raise hgutil.Abort(msg % author)
@@ -333,7 +333,7 @@ class FileMap(object):
             f.close()
 
     def load(self, fn):
-        self.ui.note('reading file map from %s\n' % fn)
+        self.ui.debug('reading file map from %s\n' % fn)
         f = open(fn, 'r')
         self.load_fd(f, fn)
         f.close()
@@ -355,7 +355,7 @@ class FileMap(object):
                 self.ui.warn(msg % (fn, line.rstrip()))
 
     def _load(self):
-        self.ui.note('reading in-repo file map from %s\n' % self.path)
+        self.ui.debug('reading in-repo file map from %s\n' % self.path)
         f = open(self.path)
         ver = int(f.readline())
         if ver != self.VERSION:
@@ -394,7 +394,7 @@ class BranchMap(dict):
         if path != self.path:
             writing = open(self.path, 'a')
 
-        self.ui.note('reading branchmap from %s\n' % path)
+        self.ui.debug('reading branchmap from %s\n' % path)
         f = open(path, 'r')
         for number, line in enumerate(f):
 
@@ -456,7 +456,7 @@ class TagMap(dict):
         if path != self.path:
             writing = open(self.path, 'a')
 
-        self.ui.note('reading tag renames from %s\n' % path)
+        self.ui.debug('reading tag renames from %s\n' % path)
         f = open(path, 'r')
         for number, line in enumerate(f):
 
