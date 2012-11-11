@@ -1,3 +1,4 @@
+import difflib
 import posixpath
 
 from mercurial import util as hgutil
@@ -38,6 +39,18 @@ def verify(ui, repo, args=None, **opts):
 
     ui.write('verifying %s against %s@%i\n' % (ctx, branchurl, srev))
 
+    def diff_file(path, svndata):
+        fctx = ctx[path]
+
+        if ui.verbose and not fctx.isbinary():
+            svndesc = '%s/%s/%s@%d' % (svn.svn_url, branchpath, path, srev)
+            hgdesc = '%s@%s' % (path, ctx)
+
+            for c in difflib.unified_diff(svndata.splitlines(True),
+                                          fctx.data().splitlines(True),
+                                          svndesc, hgdesc):
+                ui.note(c)
+
     if opts.get('stupid', ui.configbool('hgsubversion', 'stupid')):
         svnfiles = set()
         result = 0
@@ -62,6 +75,7 @@ def verify(ui, repo, args=None, **opts):
                 continue
             if not fctx.data() == data:
                 ui.write('difference in: %s\n' % fn)
+                diff_file(fn, data)
                 result = 1
             if not fctx.flags() == mode:
                 ui.write('wrong flags for: %s\n' % fn)
@@ -154,6 +168,7 @@ def verify(ui, repo, args=None, **opts):
 
                     if hgdata != svndata:
                         self.ui.warn('difference in: %s\n' % self.file)
+                        diff_file(self.file, svndata)
                         self.failed = True
 
                 if self.file is not None:
