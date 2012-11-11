@@ -937,8 +937,14 @@ class GitHandler(object):
         for tag, sha in self.repo.tags().iteritems():
             if self.repo.tagtype(tag) in ('global', 'git'):
                 tag = tag.replace(' ', '_')
-                self.git.refs['refs/tags/' + tag] = self.map_git_get(hex(sha))
-                self.tags[tag] = hex(sha)
+                target = self.map_git_get(hex(sha))
+                if target is not None:
+                    self.git.refs['refs/tags/' + tag] = target
+                    self.tags[tag] = hex(sha)
+                else:
+                    self.repo.ui.warn(
+                        'Skipping export of tag %s because it '
+                        'has no matching git revision.' % tag)
 
     def _filter_for_bookmarks(self, bms):
         if not self.branch_bookmark_suffix:
