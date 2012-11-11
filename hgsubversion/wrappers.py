@@ -386,12 +386,10 @@ def pull(repo, source, heads=[], force=False):
             # start converting revisions
             firstrun = True
             for r in svn.revisions(start=start, stop=stopat_rev):
-                if r.revnum in skiprevs:
-                    ui.status('[r%d SKIPPED]\n' % r.revnum)
-                    continue
                 lastpulled = r.revnum
-                if (r.author is None and
-                    r.message == 'This is an empty revision for padding.'):
+                if (r.revnum in skiprevs or
+                    (r.author is None and
+                     r.message == 'This is an empty revision for padding.')):
                     continue
                 tbdelta = meta.update_branch_tag_map_for_rev(r)
                 # got a 502? Try more than once!
