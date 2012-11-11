@@ -32,6 +32,9 @@ def formatrev(rev):
         return '\t(working copy)'
     return '\t(revision %d)' % rev
 
+def configpath(ui, name):
+    path = ui.config('hgsubversion', name)
+    return path and hgutil.expandpath(path)
 
 def filterdiff(diff, oldrev, newrev):
     diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
@@ -374,3 +377,13 @@ def lrucachefunc(func, size):
             return cache[args]
 
     return f
+
+def parse_revnum(svnrepo, r):
+    try:
+        return int(r or 0)
+    except ValueError:
+        if isinstance(r, str) and r.lower() in ('head', 'tip'):
+            return svnrepo.last_changed_rev
+        else:
+            # TODO: use error.RepoLookupError when we drop 1.3?
+            raise hgutil.Abort("unknown Subversion revision %r" % r)

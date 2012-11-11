@@ -48,13 +48,13 @@ class SVNMeta(object):
         self.revmap = maps.RevMap(repo)
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
-        authors = self.ui.config('hgsubversion', 'authormap')
+        authors = util.configpath(self.ui, 'authormap')
         tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                  'usebranchnames', True)
-        branchmap = self.ui.config('hgsubversion', 'branchmap')
-        tagmap = self.ui.config('hgsubversion', 'tagmap')
-        filemap = self.ui.config('hgsubversion', 'filemap')
+        branchmap = util.configpath(self.ui, 'branchmap')
+        tagmap = util.configpath(self.ui, 'tagmap')
+        filemap = util.configpath(self.ui, 'filemap')
 
         self.branches = {}
         if os.path.exists(self.branch_info_file):
