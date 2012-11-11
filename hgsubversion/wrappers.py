@@ -386,10 +386,10 @@ def pull(repo, source, heads=[], force=False):
             # start converting revisions
             firstrun = True
             for r in svn.revisions(start=start, stop=stopat_rev):
-                lastpulled = r.revnum
                 if (r.revnum in skiprevs or
                     (r.author is None and
                      r.message == 'This is an empty revision for padding.')):
+                    lastpulled = r.revnum
                     continue
                 tbdelta = meta.update_branch_tag_map_for_rev(r)
                 # got a 502? Try more than once!
@@ -438,6 +438,9 @@ def pull(repo, source, heads=[], force=False):
                         else:
                             ui.traceback()
                             raise hgutil.Abort(*e.args)
+
+                lastpulled = r.revnum
+
         except KeyboardInterrupt:
             ui.traceback()
     finally:
