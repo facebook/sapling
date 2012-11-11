@@ -95,7 +95,7 @@ class PathAdapter(object):
         if self.copyfrom_path:
             self.copyfrom_path = intern(self.copyfrom_path)
 
-class AbstractEditor(object):
+class BaseEditor(object):
     __slots__ = ('editor', 'baton')
 
     def __init__(self, editor, baton=None):
@@ -116,7 +116,9 @@ class AbstractEditor(object):
     def close(self):
         del self.editor
 
-class FileEditor(AbstractEditor):
+class FileEditor(BaseEditor):
+    __slots__ = ()
+
     def __init__(self, editor, baton):
         super(FileEditor, self).__init__(editor, baton)
 
@@ -130,7 +132,9 @@ class FileEditor(AbstractEditor):
         self.editor.close_file(self.baton, checksum)
         super(FileEditor, self).close()
 
-class DirectoryEditor(AbstractEditor):
+class DirectoryEditor(BaseEditor):
+    __slots__ = ()
+
     def __init__(self, editor, baton):
         super(DirectoryEditor, self).__init__(editor, baton)
 
@@ -461,7 +465,7 @@ class SubversionRepo(object):
     def get_replay(self, revision, editor, oldestrev=0):
 
         try:
-            self.remote.replay(revision, oldestrev, AbstractEditor(editor))
+            self.remote.replay(revision, oldestrev, BaseEditor(editor))
         except (SubversionException, NotImplementedError), e: # pragma: no cover
             # can I depend on this number being constant?
             if (isinstance(e, NotImplementedError) or
@@ -476,7 +480,7 @@ class SubversionRepo(object):
     def get_revision(self, revision, editor):
         ''' feed the contents of the given revision to the given editor '''
         reporter = self.remote.do_update(revision, '', True,
-                                         AbstractEditor(editor))
+                                         BaseEditor(editor))
         reporter.set_path('', revision, True)
         reporter.finish()
 
