@@ -570,13 +570,16 @@ class HgEditor(svnwrap.Editor):
 
                     msg += _TXDELT_WINDOW_HANDLER_FAILURE_MSG
                     e.args = (msg,) + others
-                    raise e
+
+                    # re-raising ensures that we show the full stack trace
+                    raise
 
                 # window being None means commit this file
                 if not window:
                     self._openfiles[file_baton] = (
                         path, target, isexec, islink, copypath)
             except svnwrap.SubversionException, e: # pragma: no cover
+                self.ui.traceback()
                 if e.args[1] == svnwrap.ERR_INCOMPLETE_DATA:
                     self.addmissing(path)
                 else: # pragma: no cover
