@@ -23,6 +23,10 @@ pattern error
 
 simple
 
+  $ hg grep '.*'
+  port:4:export
+  port:4:vaportight
+  port:4:import/export
   $ hg grep port port
   port:4:export
   port:4:vaportight
