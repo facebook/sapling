@@ -101,6 +101,8 @@ changelogparent = '
 
 changesetparent = '<a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a> '
 
+changesetbaseline = '<a href="{url}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">{node|short}</a> '
+
 filerevparent = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a> '
 filerevchild = '<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a> '
 

@@ -184,6 +184,7 @@ def runmap(context, mapping, data):
     for i in d:
         if isinstance(i, dict):
             lm.update(i)
+            lm['originalnode'] = mapping.get('node')
             yield runtemplate(context, lm, ctmpl)
         else:
             # v is not an iterable of dicts, this happen when 'key'

@@ -140,13 +140,7 @@ def cleanpath(repo, path):
     path = path.lstrip('/')
     return scmutil.canonpath(repo.root, '', path)
 
-def changectx(repo, req):
-    changeid = "tip"
-    if 'node' in req.form:
-        changeid = req.form['node'][0]
-    elif 'manifest' in req.form:
-        changeid = req.form['manifest'][0]
-
+def changeidctx (repo, changeid):
     try:
         ctx = repo[changeid]
     except error.RepoError:
@@ -154,6 +148,28 @@ def changectx(repo, req):
         ctx = repo[man.linkrev(man.rev(man.lookup(changeid)))]
 
     return ctx
+
+def changectx (repo, req):
+    changeid = "tip"
+    if 'node' in req.form:
+        changeid = req.form['node'][0]
+        ipos=changeid.find(':')
+        if ipos != -1:
+            changeid = changeid[(ipos + 1):]
+    elif 'manifest' in req.form:
+        changeid = req.form['manifest'][0]
+
+    return changeidctx(repo, changeid)
+
+def basechangectx(repo, req):
+    if 'node' in req.form:
+        changeid = req.form['node'][0]
+        ipos=changeid.find(':')
+        if ipos != -1:
+            changeid = changeid[:ipos]
+            return changeidctx(repo, changeid)
+
+    return None
 
 def filectx(repo, req):
     if 'file' not in req.form:
@@ -178,7 +194,7 @@ def listfilediffs(tmpl, files, node, max):
     if len(files) > max:
         yield tmpl('fileellipses')
 
-def diffs(repo, tmpl, ctx, files, parity, style):
+def diffs(repo, tmpl, ctx, basectx, files, parity, style):
 
     def countgen():
         start = 1
@@ -209,8 +225,11 @@ def diffs(repo, tmpl, ctx, files, parity, style):
         m = match.always(repo.root, repo.getcwd())
 
     diffopts = patch.diffopts(repo.ui, untrusted=True)
-    parents = ctx.parents()
-    node1 = parents and parents[0].node() or nullid
+    if basectx is None:
+        parents = ctx.parents()
+        node1 = parents and parents[0].node() or nullid
+    else:
+        node1 = basectx.node()
     node2 = ctx.node()
 
     block = []
@@ -274,10 +293,10 @@ def compare(tmpl, context, leftlines, rightlines):
         for oc in s.get_grouped_opcodes(n=context):
             yield tmpl('comparisonblock', lines=getblock(oc))
 
-def diffstatgen(ctx):
+def diffstatgen(ctx, basectx):
     '''Generator function that provides the diffstat data.'''
 
-    stats = patch.diffstatdata(util.iterlines(ctx.diff()))
+    stats = patch.diffstatdata(util.iterlines(ctx.diff(basectx)))
     maxname, maxtotal, addtotal, removetotal, binary = patch.diffstatsum(stats)
     while True:
         yield stats, maxname, maxtotal, addtotal, removetotal, binary

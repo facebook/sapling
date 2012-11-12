@@ -256,6 +256,9 @@ def shortlog(web, req, tmpl):
 
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)
+    basectx = webutil.basechangectx(web.repo, req)
+    if basectx is None:
+        basectx = ctx.p1()
     showtags = webutil.showtag(web.repo, tmpl, 'changesettag', ctx.node())
     showbookmarks = webutil.showbookmark(web.repo, tmpl, 'changesetbookmark',
                                          ctx.node())
@@ -274,10 +277,10 @@ def changeset(web, req, tmpl):
         style = req.form['style'][0]
 
     parity = paritygen(web.stripecount)
-    diffs = webutil.diffs(web.repo, tmpl, ctx, None, parity, style)
+    diffs = webutil.diffs(web.repo, tmpl, ctx, basectx, None, parity, style)
 
     parity = paritygen(web.stripecount)
-    diffstatgen = webutil.diffstatgen(ctx)
+    diffstatgen = webutil.diffstatgen(ctx, basectx)
     diffstat = webutil.diffstat(tmpl, ctx, diffstatgen, parity)
 
     return tmpl('changeset',
@@ -286,6 +289,7 @@ def changeset(web, req, tmpl):
                 node=ctx.hex(),
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
+                currentbaseline=basectx.hex(),
                 changesettag=showtags,
                 changesetbookmark=showbookmarks,
                 changesetbranch=showbranch,
@@ -567,7 +571,7 @@ def filediff(web, req, tmpl):
     if 'style' in req.form:
         style = req.form['style'][0]
 
-    diffs = webutil.diffs(web.repo, tmpl, ctx, [path], parity, style)
+    diffs = webutil.diffs(web.repo, tmpl, ctx, None, [path], parity, style)
     rename = fctx and webutil.renamelink(fctx) or []
     ctx = fctx and fctx or ctx
     return tmpl("filediff",
