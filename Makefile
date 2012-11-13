@@ -34,7 +34,7 @@ all: build doc
 
 local:
 	$(PYTHON) setup.py $(PURE) build_py -c -d . build_ext -i build_hgexe -i build_mo
-	$(PYTHON) hg version
+	env HGRCPATH= $(PYTHON) hg version
 
 build:
 	$(PYTHON) setup.py $(PURE) build
