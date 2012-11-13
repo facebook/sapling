@@ -29,9 +29,10 @@ Nothing to amend:
   > EOF
 
 Amending changeset with changes in working dir:
+(and check that --message does not trigger an editor)
 
   $ echo a >> a
-  $ hg ci --amend -m 'amend base1'
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend -m 'amend base1'
   pretxncommit 43f1ba15f28a50abf0aae529cf8a16bfced7b149
   43f1ba15f28a tip
   saved backup bundle to $TESTTMP/.hg/strip-backup/489edb5b847d-amend-backup.hg (glob)
@@ -66,10 +67,11 @@ Add new file:
 
 Remove file that was added in amended commit:
 (and test logfile option)
+(and test that logfile option do not trigger an editor)
 
   $ hg rm b
   $ echo 'amend base1 remove new file' > ../logfile
-  $ hg ci --amend -l ../logfile
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg ci --amend --logfile ../logfile
   saved backup bundle to $TESTTMP/.hg/strip-backup/b8e3cb2b3882-amend-backup.hg (glob)
 
   $ hg cat b
