@@ -124,7 +124,8 @@ class convert_git(converter_source):
     def retrievegitmodules(self, version):
         modules, ret = self.gitread("git show %s:%s" % (version, '.gitmodules'))
         if ret:
-            raise util.Abort(_('cannot read submodules config file in %s') % version)
+            raise util.Abort(_('cannot read submodules config file in %s') %
+                             version)
         self.parsegitmodules(modules)
         for m in self.submodules:
             node, ret = self.gitread("git rev-parse %s:%s" % (version, m.path))
