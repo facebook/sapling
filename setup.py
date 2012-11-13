@@ -151,6 +151,8 @@ def runhg(cmd, env):
            if not e.startswith(b('Not trusting file')) \
               and not e.startswith(b('warning: Not importing'))]
     if err:
+        print >> sys.stderr, "stderr from '%s':" % (' '.join(cmd))
+        print >> sys.stderr, '\n'.join(['  ' + e for e in err])
         return ''
     return out
 
