@@ -1715,7 +1715,9 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
                 user = opts.get('user') or old.user()
                 date = opts.get('date') or old.date()
+            editmsg = False
             if not message:
+                editmsg = True
                 message = old.description()
 
             pureextra = extra.copy()
@@ -1729,7 +1731,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  user=user,
                                  date=date,
                                  extra=extra)
-            new._text = commitforceeditor(repo, new, [])
+            if editmsg:
+                new._text = commitforceeditor(repo, new, [])
 
             newdesc =  changelog.stripdesc(new.description())
             if ((not node)
