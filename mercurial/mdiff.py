@@ -156,7 +156,7 @@ def diffline(revs, a, b, opts):
         parts.append(a)
     return ' '.join(parts) + '\n'
 
-def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
+def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
     def datetag(date, fn=None):
         if not opts.git and not opts.nodates:
             return '\t%s\n' % date
@@ -206,9 +206,6 @@ def unidiff(a, ad, b, bd, fn1, fn2, r=None, opts=defaultopts):
     for ln in xrange(len(l)):
         if l[ln][-1] != '\n':
             l[ln] += "\n\ No newline at end of file\n"
-
-    if r:
-        l.insert(0, diffline(r, fn1, fn2, opts))
 
     return "".join(l)
 

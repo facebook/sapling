@@ -1746,17 +1746,17 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         dodiff = 'binary'
                 elif binary or nflag != oflag:
                     losedatafn(f)
-            if opts.git:
-                header.insert(0, mdiff.diffline(revs, join(a), join(b), opts))
 
         if dodiff:
+            if opts.git or revs:
+                header.insert(0, mdiff.diffline(revs, join(a), join(b), opts))
             if dodiff == 'binary':
                 text = mdiff.b85diff(to, tn)
             else:
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic
                                     tn, util.datestr(ctx2.date()),
-                                    join(a), join(b), revs, opts=opts)
+                                    join(a), join(b), opts=opts)
             if header and (text or len(header) > 1):
                 yield ''.join(header)
             if text:
