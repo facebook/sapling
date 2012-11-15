@@ -1584,9 +1584,8 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
         return []
 
     revs = None
-    if not repo.ui.quiet:
-        hexfunc = repo.ui.debugflag and hex or short
-        revs = [hexfunc(node) for node in [node1, node2] if node]
+    hexfunc = repo.ui.debugflag and hex or short
+    revs = [hexfunc(node) for node in [node1, node2] if node]
 
     copy = {}
     if opts.git or opts.upgrade:
@@ -1665,6 +1664,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         return os.path.join(prefix, f)
 
     def diffline(revs, a, b, opts):
+        if repo.ui.quiet and not opts.git:
+            return ''
         parts = ['diff']
         if opts.git:
             parts.append('--git')
