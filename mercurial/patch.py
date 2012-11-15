@@ -10,7 +10,7 @@ import cStringIO, email.Parser, os, errno, re
 import tempfile, zlib, shutil
 
 from i18n import _
-from node import hex, short
+from node import hex, nullid, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 import context
 
@@ -1662,6 +1662,22 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             header.append('old mode %s\n' % omode)
             header.append('new mode %s\n' % nmode)
 
+    def addindexmeta(meta, revs):
+        if opts.git:
+            i = len(revs)
+            if i==2:
+                meta.append('index %s..%s\n' % tuple(revs))
+            elif i==3:
+                meta.append('index %s,%s..%s\n' % tuple(revs))
+
+    def gitindex(text):
+        if not text:
+            return hex(nullid)
+        l = len(text)
+        s = util.sha1('blob %d\0' % l)
+        s.update(text)
+        return s.hexdigest()
+
     def diffline(a, b, revs):
         if opts.git:
             line = 'diff --git a/%s b/%s\n' % (a, b)
@@ -1763,6 +1779,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 header.insert(0, diffline(join(a), join(b), revs))
             if dodiff == 'binary':
                 text = mdiff.b85diff(to, tn)
+                if text:
+                    addindexmeta(header, [gitindex(to), gitindex(tn)])
             else:
                 text = mdiff.unidiff(to, date1,
                                     # ctx2 date may be dynamic
