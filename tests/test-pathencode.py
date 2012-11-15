@@ -8,7 +8,7 @@
 from mercurial import parsers
 from mercurial import store
 import binascii, itertools, math, os, random, sys, time
-from collections import defaultdict
+import collections
 
 def hybridencode(path):
     return store._hybridencode(path, True)
@@ -41,7 +41,7 @@ def buildprobtable(fp, cmd='hg manifest tip'):
     '''Construct and print a table of probabilities for path name
     components.  The numbers are percentages.'''
 
-    counts = defaultdict(lambda: 0)
+    counts = collections.defaultdict(lambda: 0)
     for line in os.popen(cmd).read().splitlines():
         if line[-2:] in ('.i', '.d'):
             line = line[:-2]
