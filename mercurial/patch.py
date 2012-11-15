@@ -1663,7 +1663,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     def join(f):
         return os.path.join(prefix, f)
 
-    def diffline(revs, a, b, opts):
+    def diffline(a, b, revs):
         if repo.ui.quiet and not opts.git:
             return ''
         parts = ['diff']
@@ -1763,7 +1763,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
         if dodiff:
             if opts.git or revs:
-                header.insert(0, diffline(revs, join(a), join(b), opts))
+                header.insert(0, diffline(join(a), join(b), revs))
             if dodiff == 'binary':
                 text = mdiff.b85diff(to, tn)
             else:
