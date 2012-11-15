@@ -143,19 +143,6 @@ def allblocks(text1, text2, opts=None, lines1=None, lines2=None, refine=False):
             yield s, type
         yield s1, '='
 
-def diffline(revs, a, b, opts):
-    parts = ['diff']
-    if opts.git:
-        parts.append('--git')
-    if revs and not opts.git:
-        parts.append(' '.join(["-r %s" % rev for rev in revs]))
-    if opts.git:
-        parts.append('a/%s' % a)
-        parts.append('b/%s' % b)
-    else:
-        parts.append(a)
-    return ' '.join(parts) + '\n'
-
 def unidiff(a, ad, b, bd, fn1, fn2, opts=defaultopts):
     def datetag(date, fn=None):
         if not opts.git and not opts.nodates:

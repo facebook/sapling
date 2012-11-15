@@ -1664,6 +1664,19 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
     def join(f):
         return os.path.join(prefix, f)
 
+    def diffline(revs, a, b, opts):
+        parts = ['diff']
+        if opts.git:
+            parts.append('--git')
+        if revs and not opts.git:
+            parts.append(' '.join(["-r %s" % rev for rev in revs]))
+        if opts.git:
+            parts.append('a/%s' % a)
+            parts.append('b/%s' % b)
+        else:
+            parts.append(a)
+        return ' '.join(parts) + '\n'
+
     date1 = util.datestr(ctx1.date())
     man1 = ctx1.manifest()
 
@@ -1749,7 +1762,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
         if dodiff:
             if opts.git or revs:
-                header.insert(0, mdiff.diffline(revs, join(a), join(b), opts))
+                header.insert(0, diffline(revs, join(a), join(b), opts))
             if dodiff == 'binary':
                 text = mdiff.b85diff(to, tn)
             else:
