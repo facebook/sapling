@@ -1651,17 +1651,16 @@ def diffui(*args, **kw):
     '''like diff(), but yields 2-tuples of (output, label) for ui.write()'''
     return difflabel(diff, *args, **kw)
 
-
-def _addmodehdr(header, omode, nmode):
-    if omode != nmode:
-        header.append('old mode %s\n' % omode)
-        header.append('new mode %s\n' % nmode)
-
 def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
     def join(f):
         return os.path.join(prefix, f)
+
+    def addmodehdr(header, omode, nmode):
+        if omode != nmode:
+            header.append('old mode %s\n' % omode)
+            header.append('new mode %s\n' % nmode)
 
     def diffline(a, b, revs):
         if opts.git:
@@ -1707,7 +1706,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                         else:
                             a = copyto[f]
                         omode = gitmode[man1.flags(a)]
-                        _addmodehdr(header, omode, mode)
+                        addmodehdr(header, omode, mode)
                         if a in removed and a not in gone:
                             op = 'rename'
                             gone.add(a)
@@ -1753,7 +1752,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 nflag = ctx2.flags(f)
                 binary = util.binary(to) or util.binary(tn)
                 if opts.git:
-                    _addmodehdr(header, gitmode[oflag], gitmode[nflag])
+                    addmodehdr(header, gitmode[oflag], gitmode[nflag])
                     if binary:
                         dodiff = 'binary'
                 elif binary or nflag != oflag:
