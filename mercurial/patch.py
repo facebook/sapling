@@ -1664,19 +1664,17 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         return os.path.join(prefix, f)
 
     def diffline(a, b, revs):
-        if repo.ui.quiet and not opts.git:
-            return ''
-        parts = ['diff']
         if opts.git:
-            parts.append('--git')
-        if revs and not opts.git:
-            parts.append(' '.join(["-r %s" % rev for rev in revs]))
-        if opts.git:
-            parts.append('a/%s' % a)
-            parts.append('b/%s' % b)
+            line = 'diff --git a/%s b/%s\n' % (a, b)
+        elif not repo.ui.quiet:
+            if revs:
+                revinfo = ' '.join(["-r %s" % rev for rev in revs])
+                line = 'diff %s %s\n' % (revinfo, a)
+            else:
+                line = 'diff %s\n' % a
         else:
-            parts.append(a)
-        return ' '.join(parts) + '\n'
+            line = ''
+        return line
 
     date1 = util.datestr(ctx1.date())
     man1 = ctx1.manifest()
