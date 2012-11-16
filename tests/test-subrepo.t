@@ -718,6 +718,14 @@ subrepository:
   committing subrepository subrepo-2
   $ hg st subrepo-2/file
 
+Check that share works with subrepo
+  $ hg --config extensions.share= share . ../shared
+  updating working directory
+  cloning subrepo subrepo-2 from $TESTTMP/subrepo-status/subrepo-2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ test -f ../shared/subrepo-1/.hg/sharedpath
+  [1]
+
 Check hg update --clean
   $ cd $TESTTMP/t
   $ rm -r t/t.orig

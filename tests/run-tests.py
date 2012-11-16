@@ -768,13 +768,18 @@ def runone(options, test):
     True -> passed
     False -> failed'''
 
-    global results, iolock
+    global results, resultslock, iolock
 
     testpath = os.path.join(TESTDIR, test)
 
+    def result(l, e):
+        resultslock.acquire()
+        results[l].append(e)
+        resultslock.release()
+
     def skip(msg):
         if not options.verbose:
-            results['s'].append((test, msg))
+            result('s', (test, msg))
         else:
             iolock.acquire()
             print "\nSkipping %s: %s" % (testpath, msg)
@@ -797,15 +802,15 @@ def runone(options, test):
                     rename(testpath + ".err", testpath)
                 else:
                     rename(testpath + ".err", testpath + ".out")
-                success(test)
+                result('p', test)
                 return
-        results['f'].append((test, msg))
+        result('f', (test, msg))
 
     def success():
-        results['p'].append(test)
+        result('p', test)
 
     def ignore(msg):
-        results['i'].append((test, msg))
+        result('i', (test, msg))
 
     if (os.path.basename(test).startswith("test-") and '~' not in test and
         ('.' not in test or test.endswith('.py') or
@@ -1118,6 +1123,7 @@ def runchildren(options, tests):
     sys.exit(failures != 0)
 
 results = dict(p=[], f=[], s=[], i=[])
+resultslock = threading.Lock()
 times = []
 iolock = threading.Lock()
 

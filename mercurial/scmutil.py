@@ -279,37 +279,38 @@ class vfs(abstractvfs):
             mode += "b" # for that other OS
 
         nlink = -1
-        dirname, basename = util.split(f)
-        # If basename is empty, then the path is malformed because it points
-        # to a directory. Let the posixfile() call below raise IOError.
-        if basename and mode not in ('r', 'rb'):
-            if atomictemp:
-                if not os.path.isdir(dirname):
-                    util.makedirs(dirname, self.createmode)
-                return util.atomictempfile(f, mode, self.createmode)
-            try:
-                if 'w' in mode:
-                    util.unlink(f)
+        if mode not in ('r', 'rb'):
+            dirname, basename = util.split(f)
+            # If basename is empty, then the path is malformed because it points
+            # to a directory. Let the posixfile() call below raise IOError.
+            if basename:
+                if atomictemp:
+                    if not os.path.isdir(dirname):
+                        util.makedirs(dirname, self.createmode)
+                    return util.atomictempfile(f, mode, self.createmode)
+                try:
+                    if 'w' in mode:
+                        util.unlink(f)
+                        nlink = 0
+                    else:
+                        # nlinks() may behave differently for files on Windows
+                        # shares if the file is open.
+                        fd = util.posixfile(f)
+                        nlink = util.nlinks(f)
+                        if nlink < 1:
+                            nlink = 2 # force mktempcopy (issue1922)
+                        fd.close()
+                except (OSError, IOError), e:
+                    if e.errno != errno.ENOENT:
+                        raise
                     nlink = 0
-                else:
-                    # nlinks() may behave differently for files on Windows
-                    # shares if the file is open.
-                    fd = util.posixfile(f)
-                    nlink = util.nlinks(f)
-                    if nlink < 1:
-                        nlink = 2 # force mktempcopy (issue1922)
-                    fd.close()
-            except (OSError, IOError), e:
-                if e.errno != errno.ENOENT:
-                    raise
-                nlink = 0
-                if not os.path.isdir(dirname):
-                    util.makedirs(dirname, self.createmode)
-            if nlink > 0:
-                if self._trustnlink is None:
-                    self._trustnlink = nlink > 1 or util.checknlink(f)
-                if nlink > 1 or not self._trustnlink:
-                    util.rename(util.mktempcopy(f), f)
+                    if not os.path.isdir(dirname):
+                        util.makedirs(dirname, self.createmode)
+                if nlink > 0:
+                    if self._trustnlink is None:
+                        self._trustnlink = nlink > 1 or util.checknlink(f)
+                    if nlink > 1 or not self._trustnlink:
+                        util.rename(util.mktempcopy(f), f)
         fp = util.posixfile(f, mode)
         if nlink == 0:
             self._fixfilemode(f)
