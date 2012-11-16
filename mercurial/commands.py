@@ -2936,7 +2936,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     def matchlines(body):
         begin = 0
         linenum = 0
-        while True and begin < len(body):
+        while begin < len(body):
             match = regexp.search(body, begin)
             if not match:
                 break
