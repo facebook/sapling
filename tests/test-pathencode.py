@@ -10,6 +10,9 @@ from mercurial import store
 import binascii, itertools, math, os, random, sys, time
 import collections
 
+if sys.version_info[:2] < (2, 6):
+    sys.exit(0)
+
 def hybridencode(path):
     return store._hybridencode(path, True)
 
@@ -186,5 +189,5 @@ def main():
     if runtests(rng, seed, count):
         sys.exit(1)
 
-if __name__ == '__main__' and sys.version_info[:2] >= (2, 6):
+if __name__ == '__main__':
     main()
