@@ -191,6 +191,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         branch indicated in the regex as the second parent of the
         changeset. Default is ``{{mergefrombranch ([-\\w]+)}}``
 
+    :convert.localtimezone: use local time (as determined by the TZ
+        environment variable) for changeset date/times. The default
+        is False (use UTC).
+
     :hook.cvslog: Specify a Python function to be called at the end of
         gathering the CVS log. The function is passed a list with the
         log entries, and can modify the entries in-place, or add or
@@ -230,6 +234,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     :convert.svn.trunk: specify the name of the trunk branch. The
         default is ``trunk``.
+
+    :convert.localtimezone: use local time (as determined by the TZ
+        environment variable) for changeset date/times. The default
+        is False (use UTC).
 
     Source history can be retrieved starting at a specific revision,
     instead of being integrally converted. Only single branch

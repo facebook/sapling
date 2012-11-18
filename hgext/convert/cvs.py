@@ -11,6 +11,7 @@ from mercurial import encoding, util
 from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
+from common import makedatetimestamp
 import cvsps
 
 class convert_cvs(converter_source):
@@ -70,6 +71,8 @@ class convert_cvs(converter_source):
                 cs.author = self.recode(cs.author)
                 self.lastbranch[cs.branch] = id
                 cs.comment = self.recode(cs.comment)
+                if self.ui.configbool('convert', 'localtimezone'):
+                    cs.date = makedatetimestamp(cs.date[0])
                 date = util.datestr(cs.date, '%Y-%m-%d %H:%M:%S %1%2')
                 self.tags.update(dict.fromkeys(cs.tags, id))
 

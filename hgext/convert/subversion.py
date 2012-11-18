@@ -18,6 +18,7 @@ from cStringIO import StringIO
 
 from common import NoRepo, MissingTool, commit, encodeargs, decodeargs
 from common import commandline, converter_source, converter_sink, mapfile
+from common import makedatetimestamp
 
 try:
     from svn.core import SubversionException, Pool
@@ -802,6 +803,8 @@ class svn_source(converter_source):
             # ISO-8601 conformant
             # '2007-01-04T17:35:00.902377Z'
             date = util.parsedate(date[:19] + " UTC", ["%Y-%m-%dT%H:%M:%S"])
+            if self.ui.configbool('convert', 'localtimezone'):
+                date = makedatetimestamp(date[0])
 
             log = message and self.recode(message) or ''
             author = author and self.recode(author) or ''

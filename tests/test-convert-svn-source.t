@@ -63,9 +63,16 @@ Update svn repository
   Committed revision 5.
   $ cd ..
 
-Convert to hg once
+Convert to hg once and also test localtimezone option
 
-  $ hg convert "$SVNREPOURL/proj%20B" B-hg
+NOTE: This doesn't check all time zones -- it merely determines that
+the configuration option is taking effect.
+
+An arbitrary (U.S.) time zone is used here.  TZ=US/Hawaii is selected
+since it does not use DST (unlike other U.S. time zones) and is always
+a fixed difference from UTC.
+
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True "$SVNREPOURL/proj%20B" B-hg
   initializing destination B-hg repository
   scanning source...
   sorting...
@@ -109,7 +116,7 @@ Update svn repository again
 
 Test incremental conversion
 
-  $ hg convert "$SVNREPOURL/proj%20B" B-hg
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True "$SVNREPOURL/proj%20B" B-hg
   scanning source...
   sorting...
   converting...
@@ -118,22 +125,22 @@ Test incremental conversion
   updating tags
 
   $ cd B-hg
-  $ hg glog --template '{rev} {desc|firstline} files: {files}\n'
-  o  7 update tags files: .hgtags
+  $ hg glog --template '{rev} {desc|firstline} date: {date|date} files: {files}\n'
+  o  7 update tags date: * +0000 files: .hgtags (glob)
   |
-  o  6 work in progress files: letter2.txt
+  o  6 work in progress date: * -1000 files: letter2.txt (glob)
   |
-  o  5 second letter files: letter .txt letter2.txt
+  o  5 second letter date: * -1000 files: letter .txt letter2.txt (glob)
   |
-  o  4 update tags files: .hgtags
+  o  4 update tags date: * +0000 files: .hgtags (glob)
   |
-  o  3 nice day files: letter .txt
+  o  3 nice day date: * -1000 files: letter .txt (glob)
   |
-  o  2 world files: letter .txt
+  o  2 world date: * -1000 files: letter .txt (glob)
   |
-  o  1 hello files: letter .txt
+  o  1 hello date: * -1000 files: letter .txt (glob)
   |
-  o  0 init projB files:
+  o  0 init projB date: * -1000 files: (glob)
   
   $ hg tags -q
   tip

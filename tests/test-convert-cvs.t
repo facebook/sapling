@@ -69,9 +69,16 @@ commit a new revision changing b/c
   $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
   $ cd ..
 
-convert fresh repo
+convert fresh repo and also check localtimezone option
 
-  $ hg convert src src-hg
+NOTE: This doesn't check all time zones -- it merely determines that
+the configuration option is taking effect.
+
+An arbitrary (U.S.) time zone is used here.  TZ=US/Hawaii is selected
+since it does not use DST (unlike other U.S. time zones) and is always
+a fixed difference from UTC.
+
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True src src-hg
   initializing destination src-hg repository
   connecting to $TESTTMP/cvsrepo
   scanning source...
@@ -161,7 +168,7 @@ commit new file revisions
 
 convert again
 
-  $ hg convert src src-hg
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True src src-hg
   connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
@@ -221,7 +228,7 @@ commit branch
 
 convert again
 
-  $ hg convert src src-hg
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True src src-hg
   connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
@@ -239,7 +246,7 @@ convert again
 
 convert again with --filemap
 
-  $ hg convert --filemap filemap src src-filemap
+  $ TZ=US/Hawaii hg convert --config convert.localtimezone=True --filemap filemap src src-filemap
   connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
@@ -286,7 +293,7 @@ commit new file revisions with some fuzz
 
 convert again
 
-  $ hg convert --config convert.cvsps.fuzz=2 src src-hg
+  $ TZ=US/Hawaii hg convert --config convert.cvsps.fuzz=2 --config convert.localtimezone=True src src-hg
   connecting to $TESTTMP/cvsrepo
   scanning source...
   collecting CVS rlog
@@ -300,25 +307,25 @@ convert again
   2 funny
   1 fuzzy
   0 fuzzy
-  $ hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'
-  o  8 (branch) fuzzy files: b/c
+  $ hg -R src-hg glog --template '{rev} ({branches}) {desc} date: {date|date} files: {files}\n'
+  o  8 (branch) fuzzy date: * -1000 files: b/c (glob)
   |
-  o  7 (branch) fuzzy files: a
+  o  7 (branch) fuzzy date: * -1000 files: a (glob)
   |
   o  6 (branch) funny
   |  ----------------------------
-  |  log message files: a
-  o  5 (branch) ci2 files: b/c
+  |  log message date: * -1000 files: a (glob)
+  o  5 (branch) ci2 date: * -1000 files: b/c (glob)
   
-  o  4 () ci1 files: a b/c
+  o  4 () ci1 date: * -1000 files: a b/c (glob)
   |
-  o  3 () update tags files: .hgtags
+  o  3 () update tags date: * +0000 files: .hgtags (glob)
   |
-  o  2 () ci0 files: b/c
+  o  2 () ci0 date: * -1000 files: b/c (glob)
   |
-  | o  1 (INITIAL) import files:
+  | o  1 (INITIAL) import date: * -1000 files: (glob)
   |/
-  o  0 () Initial revision files: a b/c
+  o  0 () Initial revision date: * -1000 files: a b/c (glob)
   
 
 testing debugcvsps

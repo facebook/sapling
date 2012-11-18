@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import base64, errno, subprocess, os
+import base64, errno, subprocess, os, datetime
 import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
@@ -446,3 +446,10 @@ def parsesplicemap(path):
         if e.errno != errno.ENOENT:
             raise
     return m
+
+def makedatetimestamp(t):
+    """Like util.makedate() but for time t instead of current time"""
+    delta = (datetime.datetime.utcfromtimestamp(t) -
+             datetime.datetime.fromtimestamp(t))
+    tz = delta.days * 86400 + delta.seconds
+    return t, tz
