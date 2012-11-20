@@ -134,9 +134,15 @@ class changelog(revlog.revlog):
 
     def __iter__(self):
         """filtered version of revlog.__iter__"""
-        for i in xrange(len(self)):
-            if i not in self.filteredrevs:
-                yield i
+        if len(self.filteredrevs) == 0:
+            return revlog.revlog.__iter__(self)
+
+        def filterediter():
+            for i in xrange(len(self)):
+                if i not in self.filteredrevs:
+                    yield i
+
+        return filterediter()
 
     def revs(self, start=0, stop=None):
         """filtered version of revlog.revs"""

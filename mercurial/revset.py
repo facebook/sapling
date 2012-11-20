@@ -584,6 +584,14 @@ def _descendants(repo, subset, x, followfirst=False):
     if not args:
         return []
     s = set(_revdescendants(repo, args, followfirst)) | set(args)
+
+    if len(subset) == len(repo):
+        # the passed in revisions may not exist, -1 for example
+        for arg in args:
+            if arg not in subset:
+                s.remove(arg)
+        return list(s)
+
     return [r for r in subset if r in s]
 
 def descendants(repo, subset, x):
@@ -1341,7 +1349,10 @@ def roots(repo, subset, x):
     Changesets in set with no parent changeset in set.
     """
     s = set(getset(repo, repo.changelog, x))
-    subset = [r for r in subset if r in s]
+    if len(subset) == len(repo):
+        subset = s
+    else:
+        subset = [r for r in subset if r in s]
     cs = _children(repo, subset, s)
     return [r for r in subset if r not in cs]
 

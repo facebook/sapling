@@ -254,8 +254,7 @@ class revlog(object):
     def __len__(self):
         return len(self.index) - 1
     def __iter__(self):
-        for i in xrange(len(self)):
-            yield i
+        return iter(xrange(len(self)))
     def revs(self, start=0, stop=None):
         """iterate over all rev in this revlog (from start to stop)"""
         if stop is None:
