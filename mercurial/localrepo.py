@@ -263,6 +263,12 @@ class localrepository(object):
     def peer(self):
         return localpeer(self) # not cached to avoid reference cycle
 
+    def unfiltered(self):
+        """Return unfiltered version of the repository
+
+        Intended to be ovewritten by filtered repo."""
+        return self
+
     @filecache('bookmarks')
     def _bookmarks(self):
         return bookmarks.bmstore(self)
