@@ -3436,7 +3436,7 @@ def reposetup(ui, repo):
                             outapplied.pop()
                 # looking for pushed and shared changeset
                 for node in outapplied:
-                    if repo[node].phase() < phases.secret:
+                    if self[node].phase() < phases.secret:
                         raise util.Abort(_('source has mq patches applied'))
                 # no non-secret patches pushed
             super(mqrepo, self).checkpush(force, revs)
