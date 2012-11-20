@@ -257,11 +257,14 @@ class revlog(object):
         return iter(xrange(len(self)))
     def revs(self, start=0, stop=None):
         """iterate over all rev in this revlog (from start to stop)"""
-        if stop is None:
-            stop = len(self)
+        step = 1
+        if stop is not None:
+            if start > stop:
+                step = -1
+            stop += step
         else:
-            stop += 1
-        return xrange(start, stop)
+            stop = len(self)
+        return xrange(start, stop, step)
 
     @util.propertycache
     def nodemap(self):
