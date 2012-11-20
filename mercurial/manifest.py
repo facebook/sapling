@@ -117,15 +117,23 @@ class manifest(revlog.revlog):
         # apply the changes collected during the bisect loop to our addlist
         # return a delta suitable for addrevision
         def addlistdelta(addlist, x):
-            # start from the bottom up
-            # so changes to the offsets don't mess things up.
-            for start, end, content in reversed(x):
+            # for large addlist arrays, building a new array is cheaper
+            # than repeatedly modifying the existing one
+            currentposition = 0
+            newaddlist = array.array('c')
+
+            for start, end, content in x:
+                newaddlist += addlist[currentposition:start]
                 if content:
-                    addlist[start:end] = array.array('c', content)
-                else:
-                    del addlist[start:end]
-            return "".join(struct.pack(">lll", start, end, len(content))
+                    newaddlist += array.array('c', content)
+
+                currentposition = end
+
+            newaddlist += addlist[currentposition:]
+
+            deltatext = "".join(struct.pack(">lll", start, end, len(content))
                            + content for start, end, content in x)
+            return deltatext, newaddlist
 
         def checkforbidden(l):
             for f in l:
@@ -194,7 +202,8 @@ class manifest(revlog.revlog):
             if dstart is not None:
                 delta.append([dstart, dend, "".join(dline)])
             # apply the delta to the addlist, and get a delta for addrevision
-            cachedelta = (self.rev(p1), addlistdelta(addlist, delta))
+            deltatext, addlist = addlistdelta(addlist, delta)
+            cachedelta = (self.rev(p1), deltatext)
             arraytext = addlist
             text = util.buffer(arraytext)
 
