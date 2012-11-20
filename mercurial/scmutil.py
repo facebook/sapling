@@ -634,13 +634,13 @@ def revrange(repo, revs):
                 start, end = spec.split(_revrangesep, 1)
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
-                step = start > end and -1 or 1
+                rangeiter = repo.changelog.revs(start, end)
                 if not seen and not l:
                     # by far the most common case: revs = ["-1:0"]
-                    l = range(start, end + step, step)
+                    l = list(rangeiter)
                     # defer syncing seen until next iteration
                     continue
-                newrevs = set(xrange(start, end + step, step))
+                newrevs = set(rangeiter)
                 if seen:
                     newrevs.difference_update(seen)
                     seen.update(newrevs)
