@@ -307,7 +307,7 @@ def reposetup(ui, repo):
                 eolmtime = 0
 
             if eolmtime > cachemtime:
-                ui.debug("eol: detected change in .hgeol\n")
+                self.ui.debug("eol: detected change in .hgeol\n")
                 wlock = None
                 try:
                     wlock = self.wlock()
