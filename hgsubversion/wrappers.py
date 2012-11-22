@@ -101,6 +101,11 @@ def incoming(orig, ui, repo, origsource='default', **opts):
     svnrevisions = list(svn.revisions(start=meta.revmap.youngest))
     if opts.get('newest_first'):
         svnrevisions.reverse()
+    # Returns 0 if there are incoming changes, 1 otherwise.
+    if len(svnrevisions) > 0:
+        ret = 0
+    else:
+        ret = 1
     for r in svnrevisions:
         ui.status('\n')
         for label, attr in revmeta:
@@ -109,6 +114,7 @@ def incoming(orig, ui, repo, origsource='default', **opts):
             if not ui.verbose:
                 val = val.split('\n')[0]
             ui.status('%s%s\n' % (l1.ljust(13), val))
+    return ret
 
 
 def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
