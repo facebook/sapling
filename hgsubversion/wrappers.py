@@ -98,7 +98,10 @@ def incoming(orig, ui, repo, origsource='default', **opts):
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    for r in svn.revisions(start=meta.revmap.youngest):
+    svnrevisions = list(svn.revisions(start=meta.revmap.youngest))
+    if opts.get('newest_first'):
+        svnrevisions.reverse()
+    for r in svnrevisions:
         ui.status('\n')
         for label, attr in revmeta:
             l1 = label + ':'
