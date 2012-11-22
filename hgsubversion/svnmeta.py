@@ -110,6 +110,8 @@ class SVNMeta(object):
             lo = self.repo.ui.config('hgsubversion', 'layout', default='auto')
             if lo == 'auto':
                 raise hgutil.Abort('layout not yet determined')
+            elif not lo in ('single', 'standard'):
+                raise hgutil.Abort('unknown layout \'%s\'' % lo)
             self._layout = lo
             f = open(self.layoutfile, 'w')
             f.write(self._layout)
