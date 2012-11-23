@@ -549,6 +549,10 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
           hg bisect --skip
           hg bisect --skip 23
 
+      - skip all revisions that do not touch directories ``foo`` or ``bar``
+
+          hg bisect --skip '!( file("path:foo") & file("path:bar") )'
+
       - forget the current bisection::
 
           hg bisect --reset
