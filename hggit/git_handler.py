@@ -1130,7 +1130,10 @@ class GitHandler(object):
                     bookmarks.write(self.repo, bms)
                 else:
                     self.repo._bookmarks = bms
-                    bookmarks.write(self.repo)
+                    if getattr(bms, 'write', None): # hg >= 2.5
+                        bms.write()
+                    else: # hg < 2.5
+                        bookmarks.write(self.repo)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
