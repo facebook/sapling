@@ -211,11 +211,11 @@ pypats = [
     (r'\.strip\(\)\.split\(\)', "no need to strip before splitting"),
     (r'^\s*except\s*:', "warning: naked except clause", r'#.*re-raises'),
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
+    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
+     "missing _() in ui message (use () to hide false-positives)"),
   ],
   # warnings
   [
-    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
-     "warning: unwrapped ui message"),
   ]
 ]
 
