@@ -474,11 +474,11 @@ def patchbomb(ui, repo, *revs, **opts):
 
     if opts.get('diffstat') or opts.get('confirm'):
         ui.write(_('\nFinal summary:\n\n'))
-        ui.write('From: %s\n' % sender)
+        ui.write(('From: %s\n' % sender))
         for addr in showaddrs:
             ui.write('%s\n' % addr)
         for m, subj, ds in msgs:
-            ui.write('Subject: %s\n' % subj)
+            ui.write(('Subject: %s\n' % subj))
             if ds:
                 ui.write(ds)
         ui.write('\n')

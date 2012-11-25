@@ -1513,7 +1513,7 @@ def debugbuilddag(ui, repo, text=None,
         ui.progress(_('building'), id, unit=_('revisions'), total=total)
         for type, data in dagparser.parsedag(text):
             if type == 'n':
-                ui.note('node %s\n' % str(data))
+                ui.note(('node %s\n' % str(data)))
                 id, ps = data
 
                 files = []
@@ -1574,10 +1574,10 @@ def debugbuilddag(ui, repo, text=None,
                 at = id
             elif type == 'l':
                 id, name = data
-                ui.note('tag %s\n' % name)
+                ui.note(('tag %s\n' % name))
                 tags.append("%s %s\n" % (hex(repo.changelog.node(id)), name))
             elif type == 'a':
-                ui.note('branch %s\n' % data)
+                ui.note(('branch %s\n' % data))
                 atbranch = data
             ui.progress(_('building'), id, unit=_('revisions'), total=total)
         tr.close()
@@ -1595,7 +1595,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
     try:
         gen = changegroup.readbundle(f, bundlepath)
         if all:
-            ui.write("format: id, p1, p2, cset, delta base, len(delta)\n")
+            ui.write(("format: id, p1, p2, cset, delta base, len(delta)\n"))
 
             def showchunks(named):
                 ui.write("\n%s\n" % named)
@@ -1787,11 +1787,11 @@ def debugdate(ui, date, range=None, **opts):
         d = util.parsedate(date, util.extendeddateformats)
     else:
         d = util.parsedate(date)
-    ui.write("internal: %s %s\n" % d)
-    ui.write("standard: %s\n" % util.datestr(d))
+    ui.write(("internal: %s %s\n") % d)
+    ui.write(("standard: %s\n") % util.datestr(d))
     if range:
         m = util.matchdate(range)
-        ui.write("match: %s\n" % m(d[0]))
+        ui.write(("match: %s\n") % m(d[0]))
 
 @command('debugdiscovery',
     [('', 'old', None, _('use old-style discovery')),
@@ -1821,7 +1821,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                                                                 force=True)
             common = set(common)
             if not opts.get('nonheads'):
-                ui.write("unpruned common: %s\n" % " ".join([short(n)
+                ui.write(("unpruned common: %s\n") % " ".join([short(n)
                                                             for n in common]))
                 dag = dagutil.revlogdag(repo.changelog)
                 all = dag.ancestorset(dag.internalizeall(common))
@@ -1831,11 +1831,11 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         common = set(common)
         rheads = set(hds)
         lheads = set(repo.heads())
-        ui.write("common heads: %s\n" % " ".join([short(n) for n in common]))
+        ui.write(("common heads: %s\n") % " ".join([short(n) for n in common]))
         if lheads <= common:
-            ui.write("local is subset\n")
+            ui.write(("local is subset\n"))
         elif rheads <= common:
-            ui.write("remote is subset\n")
+            ui.write(("remote is subset\n"))
 
     serverlogs = opts.get('serverlog')
     if serverlogs:
@@ -1879,9 +1879,9 @@ def debugfileset(ui, repo, expr, **opts):
 def debugfsinfo(ui, path = "."):
     """show information detected about current filesystem"""
     util.writefile('.debugfsinfo', '')
-    ui.write('exec: %s\n' % (util.checkexec(path) and 'yes' or 'no'))
-    ui.write('symlink: %s\n' % (util.checklink(path) and 'yes' or 'no'))
-    ui.write('case-sensitive: %s\n' % (util.checkcase('.debugfsinfo')
+    ui.write(('exec: %s\n') % (util.checkexec(path) and 'yes' or 'no'))
+    ui.write(('symlink: %s\n') % (util.checklink(path) and 'yes' or 'no'))
+    ui.write(('case-sensitive: %s\n') % (util.checkcase('.debugfsinfo')
                                 and 'yes' or 'no'))
     os.unlink('.debugfsinfo')
 
@@ -1979,7 +1979,7 @@ def debugindexdot(ui, repo, file_):
             r = filelog
     if not r:
         r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
-    ui.write("digraph G {\n")
+    ui.write(("digraph G {\n"))
     for i in r:
         node = r.node(i)
         pp = r.parents(node)
@@ -2325,52 +2325,54 @@ def debugrevlog(ui, repo, file_ = None, **opts):
     def pcfmt(value, total):
         return (value, 100 * float(value) / total)
 
-    ui.write('format : %d\n' % format)
-    ui.write('flags  : %s\n' % ', '.join(flags))
+    ui.write(('format : %d\n') % format)
+    ui.write(('flags  : %s\n') % ', '.join(flags))
 
     ui.write('\n')
     fmt = pcfmtstr(totalsize)
     fmt2 = dfmtstr(totalsize)
-    ui.write('revisions     : ' + fmt2 % numrevs)
-    ui.write('    merges    : ' + fmt % pcfmt(nummerges, numrevs))
-    ui.write('    normal    : ' + fmt % pcfmt(numrevs - nummerges, numrevs))
-    ui.write('revisions     : ' + fmt2 % numrevs)
-    ui.write('    full      : ' + fmt % pcfmt(numfull, numrevs))
-    ui.write('    deltas    : ' + fmt % pcfmt(numdeltas, numrevs))
-    ui.write('revision size : ' + fmt2 % totalsize)
-    ui.write('    full      : ' + fmt % pcfmt(fulltotal, totalsize))
-    ui.write('    deltas    : ' + fmt % pcfmt(deltatotal, totalsize))
+    ui.write(('revisions     : ') + fmt2 % numrevs)
+    ui.write(('    merges    : ') + fmt % pcfmt(nummerges, numrevs))
+    ui.write(('    normal    : ') + fmt % pcfmt(numrevs - nummerges, numrevs))
+    ui.write(('revisions     : ') + fmt2 % numrevs)
+    ui.write(('    full      : ') + fmt % pcfmt(numfull, numrevs))
+    ui.write(('    deltas    : ') + fmt % pcfmt(numdeltas, numrevs))
+    ui.write(('revision size : ') + fmt2 % totalsize)
+    ui.write(('    full      : ') + fmt % pcfmt(fulltotal, totalsize))
+    ui.write(('    deltas    : ') + fmt % pcfmt(deltatotal, totalsize))
 
     ui.write('\n')
     fmt = dfmtstr(max(avgchainlen, compratio))
-    ui.write('avg chain length  : ' + fmt % avgchainlen)
-    ui.write('compression ratio : ' + fmt % compratio)
+    ui.write(('avg chain length  : ') + fmt % avgchainlen)
+    ui.write(('compression ratio : ') + fmt % compratio)
 
     if format > 0:
         ui.write('\n')
-        ui.write('uncompressed data size (min/max/avg) : %d / %d / %d\n'
+        ui.write(('uncompressed data size (min/max/avg) : %d / %d / %d\n')
                  % tuple(datasize))
-    ui.write('full revision size (min/max/avg)     : %d / %d / %d\n'
+    ui.write(('full revision size (min/max/avg)     : %d / %d / %d\n')
              % tuple(fullsize))
-    ui.write('delta size (min/max/avg)             : %d / %d / %d\n'
+    ui.write(('delta size (min/max/avg)             : %d / %d / %d\n')
              % tuple(deltasize))
 
     if numdeltas > 0:
         ui.write('\n')
         fmt = pcfmtstr(numdeltas)
         fmt2 = pcfmtstr(numdeltas, 4)
-        ui.write('deltas against prev  : ' + fmt % pcfmt(numprev, numdeltas))
+        ui.write(('deltas against prev  : ') + fmt % pcfmt(numprev, numdeltas))
         if numprev > 0:
-            ui.write('    where prev = p1  : ' + fmt2 % pcfmt(nump1prev,
+            ui.write(('    where prev = p1  : ') + fmt2 % pcfmt(nump1prev,
                                                               numprev))
-            ui.write('    where prev = p2  : ' + fmt2 % pcfmt(nump2prev,
+            ui.write(('    where prev = p2  : ') + fmt2 % pcfmt(nump2prev,
                                                               numprev))
-            ui.write('    other            : ' + fmt2 % pcfmt(numoprev,
+            ui.write(('    other            : ') + fmt2 % pcfmt(numoprev,
                                                               numprev))
         if gdelta:
-            ui.write('deltas against p1    : ' + fmt % pcfmt(nump1, numdeltas))
-            ui.write('deltas against p2    : ' + fmt % pcfmt(nump2, numdeltas))
-            ui.write('deltas against other : ' + fmt % pcfmt(numother,
+            ui.write(('deltas against p1    : ')
+                     + fmt % pcfmt(nump1, numdeltas))
+            ui.write(('deltas against p2    : ')
+                     + fmt % pcfmt(nump2, numdeltas))
+            ui.write(('deltas against other : ') + fmt % pcfmt(numother,
                                                              numdeltas))
 
 @command('debugrevspec', [], ('REVSPEC'))
@@ -2448,9 +2450,9 @@ def debugstate(ui, repo, nodates=None, datesort=None):
 def debugsub(ui, repo, rev=None):
     ctx = scmutil.revsingle(repo, rev, None)
     for k, v in sorted(ctx.substate.items()):
-        ui.write('path %s\n' % k)
-        ui.write(' source   %s\n' % v[0])
-        ui.write(' revision %s\n' % v[1])
+        ui.write(('path %s\n') % k)
+        ui.write((' source   %s\n') % v[0])
+        ui.write((' revision %s\n') % v[1])
 
 @command('debugwalk', walkopts, _('[OPTION]... [FILE]...'))
 def debugwalk(ui, repo, *pats, **opts):

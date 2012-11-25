@@ -801,22 +801,22 @@ def debugcvsps(ui, *args, **opts):
             # Note: trailing spaces on several lines here are needed to have
             #       bug-for-bug compatibility with cvsps.
             ui.write('---------------------\n')
-            ui.write('PatchSet %d \n' % cs.id)
-            ui.write('Date: %s\n' % util.datestr(cs.date,
-                                                 '%Y/%m/%d %H:%M:%S %1%2'))
-            ui.write('Author: %s\n' % cs.author)
-            ui.write('Branch: %s\n' % (cs.branch or 'HEAD'))
-            ui.write('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
-                                  ','.join(cs.tags) or '(none)'))
+            ui.write(('PatchSet %d \n' % cs.id))
+            ui.write(('Date: %s\n' % util.datestr(cs.date,
+                                                 '%Y/%m/%d %H:%M:%S %1%2')))
+            ui.write(('Author: %s\n' % cs.author))
+            ui.write(('Branch: %s\n' % (cs.branch or 'HEAD')))
+            ui.write(('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
+                                  ','.join(cs.tags) or '(none)')))
             branchpoints = getattr(cs, 'branchpoints', None)
             if branchpoints:
-                ui.write('Branchpoints: %s \n' % ', '.join(branchpoints))
+                ui.write(('Branchpoints: %s \n' % ', '.join(branchpoints)))
             if opts["parents"] and cs.parents:
                 if len(cs.parents) > 1:
-                    ui.write('Parents: %s\n' %
-                             (','.join([str(p.id) for p in cs.parents])))
+                    ui.write(('Parents: %s\n' %
+                             (','.join([str(p.id) for p in cs.parents]))))
                 else:
-                    ui.write('Parent: %d\n' % cs.parents[0].id)
+                    ui.write(('Parent: %d\n' % cs.parents[0].id))
 
             if opts["ancestors"]:
                 b = cs.branch
@@ -825,11 +825,11 @@ def debugcvsps(ui, *args, **opts):
                     b, c = ancestors[b]
                     r.append('%s:%d:%d' % (b or "HEAD", c, branches[b]))
                 if r:
-                    ui.write('Ancestors: %s\n' % (','.join(r)))
+                    ui.write(('Ancestors: %s\n' % (','.join(r))))
 
-            ui.write('Log:\n')
+            ui.write(('Log:\n'))
             ui.write('%s\n\n' % cs.comment)
-            ui.write('Members: \n')
+            ui.write(('Members: \n'))
             for f in cs.entries:
                 fn = f.file
                 if fn.startswith(opts["prefix"]):

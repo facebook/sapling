@@ -35,7 +35,7 @@ def autodiff(ui, repo, *pats, **opts):
     for chunk in it:
         ui.write(chunk)
     for fn in sorted(brokenfiles):
-        ui.write('data lost for: %s\n' % fn)
+        ui.write(('data lost for: %s\n' % fn))
 
 cmdtable = {
     "autodiff":
