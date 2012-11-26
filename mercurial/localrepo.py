@@ -1075,16 +1075,17 @@ class localrepository(object):
                     delattr(self.dirstate, k)
                 except AttributeError:
                     pass
-            delattr(self, 'dirstate')
+            delattr(self.unfiltered(), 'dirstate')
 
     def invalidate(self):
+        unfiltered = self.unfiltered() # all filecaches are stored on unfiltered
         for k in self._filecache:
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
                 continue
 
             try:
-                delattr(self, k)
+                delattr(unfiltered, k)
             except AttributeError:
                 pass
         self.invalidatecaches()
@@ -1489,6 +1490,7 @@ class localrepository(object):
                 tr.release()
             lock.release()
 
+    @unfilteredmeth
     def destroyed(self, newheadnodes=None):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
