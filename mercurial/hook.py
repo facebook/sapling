@@ -142,25 +142,26 @@ def hook(ui, repo, name, throw=False, **args):
         return False
 
     r = False
-
     oldstdout = -1
-    if _redirect:
-        try:
-            stdoutno = sys.__stdout__.fileno()
-            stderrno = sys.__stderr__.fileno()
-            # temporarily redirect stdout to stderr, if possible
-            if stdoutno >= 0 and stderrno >= 0:
-                sys.__stdout__.flush()
-                oldstdout = os.dup(stdoutno)
-                os.dup2(stderrno, stdoutno)
-        except AttributeError:
-            # __stdout__/__stderr__ doesn't have fileno(), it's not a real file
-            pass
 
     try:
         for hname, cmd in _allhooks(ui):
             if hname.split('.')[0] != name or not cmd:
                 continue
+
+            if oldstdout == -1 and _redirect:
+                try:
+                    stdoutno = sys.__stdout__.fileno()
+                    stderrno = sys.__stderr__.fileno()
+                    # temporarily redirect stdout to stderr, if possible
+                    if stdoutno >= 0 and stderrno >= 0:
+                        sys.__stdout__.flush()
+                        oldstdout = os.dup(stdoutno)
+                        os.dup2(stderrno, stdoutno)
+                except AttributeError:
+                    # __stdout__/__stderr__ has no fileno(), not a real file
+                    pass
+
             if util.safehasattr(cmd, '__call__'):
                 r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
             elif cmd.startswith('python:'):
