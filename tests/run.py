@@ -19,6 +19,7 @@ def tests():
     import test_fetch_symlinks
     import test_fetch_truncated
     import test_hooks
+    import test_svn_pre_commit_hooks
     import test_pull
     import test_pull_fallback
     import test_push_command
