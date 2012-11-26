@@ -978,6 +978,7 @@ class localrepository(object):
         finally:
             release(lock, wlock)
 
+    @unfilteredmeth # Until we get smarter cache management
     def _rollback(self, dryrun, force):
         ui = self.ui
         try:
