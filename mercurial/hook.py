@@ -158,8 +158,8 @@ def hook(ui, repo, name, throw=False, **args):
                         sys.__stdout__.flush()
                         oldstdout = os.dup(stdoutno)
                         os.dup2(stderrno, stdoutno)
-                except AttributeError:
-                    # __stdout__/__stderr__ has no fileno(), not a real file
+                except (OSError, AttributeError):
+                    # files seem to be bogus, give up on redirecting (WSGI, etc)
                     pass
 
             if util.safehasattr(cmd, '__call__'):
