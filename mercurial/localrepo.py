@@ -23,6 +23,12 @@ class storecache(filecache):
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
+def unfilteredmeth(orig):
+    """decorate method that always need to be run on unfiltered version"""
+    def wrapper(repo, *args, **kwargs):
+        return orig(repo.unfiltered(), *args, **kwargs)
+    return wrapper
+
 MODERNCAPS = set(('lookup', 'branchmap', 'pushkey', 'known', 'getbundle'))
 LEGACYCAPS = MODERNCAPS.union(set(['changegroupsubset']))
 
