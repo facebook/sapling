@@ -444,8 +444,16 @@ class revlog(object):
         'heads' and 'common' are both lists of node IDs.  If heads is
         not supplied, uses all of the revlog's heads.  If common is not
         supplied, uses nullid."""
-        _common, missing = self.findcommonmissing(common, heads)
-        return missing
+        if common is None:
+            common = [nullid]
+        if heads is None:
+            heads = self.heads()
+
+        common = [self.rev(n) for n in common]
+        heads = [self.rev(n) for n in heads]
+
+        return [self.node(r) for r in
+                ancestor.missingancestors(heads, common, self.parentrevs)]
 
     def nodesbetween(self, roots=None, heads=None):
         """Return a topological path from 'roots' to 'heads'.
