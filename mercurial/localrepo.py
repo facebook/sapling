@@ -2085,6 +2085,7 @@ class localrepository(object):
         return self.getlocalbundle(source,
                                    discovery.outgoing(cl, common, heads))
 
+    @unfilteredmeth
     def _changegroupsubset(self, commonrevs, csets, heads, source):
 
         cl = self.changelog
@@ -2196,6 +2197,7 @@ class localrepository(object):
         # to avoid a race we use changegroupsubset() (issue1320)
         return self.changegroupsubset(basenodes, self.heads(), source)
 
+    @unfilteredmeth
     def _changegroup(self, nodes, source):
         """Compute the changegroup of all nodes that we have that a recipient
         doesn't.  Return a chunkbuffer object whose read() method will return
