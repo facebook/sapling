@@ -1240,6 +1240,7 @@ class localrepository(object):
 
         return fparent1
 
+    @unfilteredmeth
     def commit(self, text="", user=None, date=None, match=None, force=False,
                editor=False, extra={}):
         """Add a new revision to current repository.
@@ -1410,6 +1411,7 @@ class localrepository(object):
         self._afterlock(commithook)
         return ret
 
+    @unfilteredmeth
     def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
         Revision information is passed via the context argument.
@@ -2291,6 +2293,7 @@ class localrepository(object):
 
         return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
+    @unfilteredmeth
     def addchangegroup(self, source, srctype, url, emptyok=False):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
