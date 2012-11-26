@@ -899,7 +899,7 @@ class chunkbuffer(object):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
         left = l
-        buf = ''
+        buf = []
         queue = self._queue
         while left > 0:
             # refill the queue
@@ -917,11 +917,11 @@ class chunkbuffer(object):
             left -= len(chunk)
             if left < 0:
                 queue.appendleft(chunk[left:])
-                buf += chunk[:left]
+                buf.append(chunk[:left])
             else:
-                buf += chunk
+                buf.append(chunk)
 
-        return buf
+        return ''.join(buf)
 
 def filechunkiter(f, size=65536, limit=None):
     """Create a generator that produces the data in the file size
