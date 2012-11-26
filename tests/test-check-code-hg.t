@@ -5,6 +5,7 @@
   >     echo "skipped: not a Mercurial working dir" >&2
   >     exit 80
   > fi
-  $ hg manifest | xargs "$check_code" || echo 'FAILURE IS NOT AN OPTION!!!'
 
-  $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 || true
+New errors are not allowed. Warnings are strongly discouraged.
+
+  $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0
