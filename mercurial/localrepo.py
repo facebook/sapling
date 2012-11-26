@@ -613,6 +613,7 @@ class localrepository(object):
 
         return partial
 
+    @unfilteredmeth # Until we get a smarter cache management
     def updatebranchcache(self):
         tip = self.changelog.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
@@ -665,6 +666,7 @@ class localrepository(object):
             bt[bn] = self._branchtip(heads)
         return bt
 
+    @unfilteredmeth # Until we get a smarter cache management
     def _readbranchcache(self):
         partial = {}
         try:
@@ -697,6 +699,7 @@ class localrepository(object):
             partial, last, lrev = {}, nullid, nullrev
         return partial, last, lrev
 
+    @unfilteredmeth # Until we get a smarter cache management
     def _writebranchcache(self, branches, tip, tiprev):
         try:
             f = self.opener("cache/branchheads", "w", atomictemp=True)
@@ -708,6 +711,7 @@ class localrepository(object):
         except (IOError, OSError):
             pass
 
+    @unfilteredmeth # Until we get a smarter cache management
     def _updatebranchcache(self, partial, ctxgen):
         """Given a branchhead cache, partial, that may have extra nodes or be
         missing heads, and a generator of nodes that are at least a superset of
@@ -1051,8 +1055,8 @@ class localrepository(object):
 
         delcache('_tagscache')
 
-        self._branchcache = None # in UTF-8
-        self._branchcachetip = None
+        self.unfiltered()._branchcache = None # in UTF-8
+        self.unfiltered()._branchcachetip = None
         obsolete.clearobscaches(self)
 
     def invalidatedirstate(self):
