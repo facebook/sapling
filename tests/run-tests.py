@@ -395,7 +395,7 @@ def installhg(options):
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
            % dict(exe=sys.executable, pure=pure, compiler=compiler,
                   base=os.path.join(HGTMP, "build"),
-                  prefix=INST, libdir=PYTHONDIR, bindir=BINDIR, 
+                  prefix=INST, libdir=PYTHONDIR, bindir=BINDIR,
                   nohome=nohome, logfile=installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
