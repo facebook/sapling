@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cStringIO, email.Parser, os, errno, re
+import cStringIO, email.Parser, os, errno, re, posixpath
 import tempfile, zlib, shutil
 
 from i18n import _
@@ -1655,7 +1655,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix):
 
     def join(f):
-        return os.path.join(prefix, f)
+        return posixpath.join(prefix, f)
 
     def addmodehdr(header, omode, nmode):
         if omode != nmode:

@@ -446,7 +446,7 @@ class hgsubrepo(abstractsubrepo):
                 node2 = node.bin(node2)
             cmdutil.diffordiffstat(self._repo.ui, self._repo, diffopts,
                                    node1, node2, match,
-                                   prefix=os.path.join(prefix, self._path),
+                                   prefix=posixpath.join(prefix, self._path),
                                    listsubrepos=True, **opts)
         except error.RepoLookupError, inst:
             self._repo.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
