@@ -294,7 +294,12 @@ indexentry = '
     <td>{contact|obfuscate}</td>
     <td class="age">{lastchange|rfc822date}</td>
     <td class="indexlinks">{archives%indexarchiveentry}</td>
-    <td><div class="rss_logo"><a href="{url}rss-log">RSS</a> <a href="{url}atom-log">Atom</a></div></td>
+    <td>{if(isdirectory, '',
+            '<div class="rss_logo">
+                <a href="{url}rss-log">RSS</a> <a href="{url}atom-log">Atom</a>
+            </div>'
+            )}
+    </td>
   </tr>\n'
 indexarchiveentry = ' <a href="{url}archive/{node|short}{extension}">{type|escape}</a> '
 index = index.tmpl

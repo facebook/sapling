@@ -304,7 +304,8 @@ class hgwebdir(object):
                                description_sort="",
                                lastchange=d,
                                lastchange_sort=d[1]-d[0],
-                               archives=[])
+                               archives=[],
+                               isdirectory=True)
 
                     seendirs.add(name)
                     yield row
