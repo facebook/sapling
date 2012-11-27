@@ -163,6 +163,8 @@ def parseargs():
     parser.add_option("-p", "--port", type="int",
         help="port on which servers should listen"
              " (default: $%s or %d)" % defaults['port'])
+    parser.add_option("--compiler", type="string",
+        help="compiler to build with")
     parser.add_option("--pure", action="store_true",
         help="use pure Python code instead of C extensions")
     parser.add_option("-R", "--restart", action="store_true",
@@ -371,6 +373,9 @@ def usecorrectpython():
 def installhg(options):
     vlog("# Performing temporary installation of HG")
     installerrs = os.path.join("tests", "install.err")
+    compiler = ''
+    if options.compiler:
+        compiler = '--compiler ' + options.compiler
     pure = options.pure and "--pure" or ""
 
     # Run installer in hg root
@@ -385,10 +390,10 @@ def installhg(options):
         # when they happen.
         nohome = ''
     cmd = ('%(exe)s setup.py %(pure)s clean --all'
-           ' build --build-base="%(base)s"'
+           ' build %(compiler)s --build-base="%(base)s"'
            ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-           % dict(exe=sys.executable, pure=pure, 
+           % dict(exe=sys.executable, pure=pure, compiler=compiler,
                   base=os.path.join(HGTMP, "build"),
                   prefix=INST, libdir=PYTHONDIR, bindir=BINDIR, 
                   nohome=nohome, logfile=installerrs))
