@@ -384,12 +384,14 @@ def installhg(options):
         # least on Windows for now, deal with .pydistutils.cfg bugs
         # when they happen.
         nohome = ''
-    cmd = ('%s setup.py %s clean --all'
-           ' build --build-base="%s"'
-           ' install --force --prefix="%s" --install-lib="%s"'
-           ' --install-scripts="%s" %s >%s 2>&1'
-           % (sys.executable, pure, os.path.join(HGTMP, "build"),
-              INST, PYTHONDIR, BINDIR, nohome, installerrs))
+    cmd = ('%(exe)s setup.py %(pure)s clean --all'
+           ' build --build-base="%(base)s"'
+           ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
+           ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
+           % dict(exe=sys.executable, pure=pure, 
+                  base=os.path.join(HGTMP, "build"),
+                  prefix=INST, libdir=PYTHONDIR, bindir=BINDIR, 
+                  nohome=nohome, logfile=installerrs))
     vlog("# Running", cmd)
     if os.system(cmd) == 0:
         if not options.verbose:
