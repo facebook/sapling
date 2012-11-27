@@ -261,7 +261,6 @@ class dirstate(object):
 
     def setbranch(self, branch):
         # no repo object here, just check for reserved names
-        scmutil.checknewlabel(None, branch, 'branch')
         self._branch = encoding.fromlocal(branch)
         f = self._opener('branch', 'w', atomictemp=True)
         try:
