@@ -8,6 +8,7 @@
 from i18n import _
 import sys, os, re
 import util, config, templatefilters, parser, error
+import types
 
 # template parsing
 
@@ -140,6 +141,10 @@ def runsymbol(context, mapping, key):
         v = context._defaults.get(key, '')
     if util.safehasattr(v, '__call__'):
         return v(**mapping)
+    if isinstance(v, types.GeneratorType):
+        v = list(v)
+        mapping[key] = v
+        return v
     return v
 
 def buildfilter(exp, context):
