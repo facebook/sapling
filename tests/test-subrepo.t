@@ -725,6 +725,19 @@ Check that share works with subrepo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ test -f ../shared/subrepo-1/.hg/sharedpath
   [1]
+  $ hg -R ../shared in
+  comparing with $TESTTMP/subrepo-status (glob)
+  searching for changes
+  no changes found
+  [1]
+  $ hg -R ../shared/subrepo-2 showconfig paths
+  paths.default=$TESTTMP/subrepo-status/subrepo-2
+  $ hg -R ../shared/subrepo-1 sum --remote
+  parent: -1:000000000000 tip (empty repository)
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: (synced)
 
 Check hg update --clean
   $ cd $TESTTMP/t
