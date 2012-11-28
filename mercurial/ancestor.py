@@ -234,7 +234,7 @@ def missingancestors(revs, bases, pfunc):
             thisvisit = basesvisit
             othervisit = revsvisit
         else:
-            # not an ancestor of a or b: ignore
+            # not an ancestor of revs or bases: ignore
             continue
 
         thisvisit.remove(curr)
