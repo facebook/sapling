@@ -103,7 +103,7 @@ Note: old client behave as a publishing server with draft only content
 import errno
 from node import nullid, nullrev, bin, hex, short
 from i18n import _
-import util
+import util, error
 import obsolete
 
 allphases = public, draft, secret = range(3)
