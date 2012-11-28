@@ -12,7 +12,7 @@ from mercurial import ui, hg, scmutil, util, templater
 from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
-from hgweb_mod import hgweb
+from hgweb_mod import hgweb, makebreadcrumb
 from request import wsgirequest
 import webutil
 
@@ -395,6 +395,7 @@ class hgwebdir(object):
         self.updatereqenv(req.env)
 
         return tmpl("index", entries=entries, subdir=subdir,
+                    pathdef=makebreadcrumb('/' + subdir),
                     sortcolumn=sortcolumn, descending=descending,
                     **dict(sort))
 

@@ -24,6 +24,30 @@ perms = {
     'pushkey': 'push',
 }
 
+def makebreadcrumb(url):
+    '''Return a 'URL breadcrumb' list
+
+    A 'URL breadcrumb' is a list of URL-name pairs,
+    corresponding to each of the path items on a URL.
+    This can be used to create path navigation entries.
+    '''
+    if url.endswith('/'):
+        url = url[:-1]
+    relpath = url
+    if relpath.startswith('/'):
+        relpath = relpath[1:]
+
+    breadcrumb = []
+    urlel = url
+    pathitems = [''] + relpath.split('/')
+    for pathel in reversed(pathitems):
+        if not pathel or not urlel:
+            break
+        breadcrumb.append({'url': urlel, 'name': pathel})
+        urlel = os.path.dirname(urlel)
+    return reversed(breadcrumb)
+
+
 class hgweb(object):
     def __init__(self, repo, name=None, baseui=None):
         if isinstance(repo, str):
@@ -285,7 +309,8 @@ class hgweb(object):
                                              "header": header,
                                              "footer": footer,
                                              "motd": motd,
-                                             "sessionvars": sessionvars
+                                             "sessionvars": sessionvars,
+                                             "pathdef": makebreadcrumb(req.url),
                                             })
         return tmpl
 

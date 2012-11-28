@@ -318,3 +318,11 @@ ul#graphnodes li .info {
 .block {
     border-top: 1px solid #999;
 }
+
+.breadcrumb {
+    color: gray;
+}
+
+.breadcrumb a {
+    color: blue;
+}

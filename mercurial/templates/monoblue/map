@@ -259,3 +259,4 @@ index = index.tmpl
 urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 graph = graph.tmpl
+breadcrumb = '&gt; <a href="{url}">{name}</a> '

@@ -7,7 +7,7 @@
 <body>
 <div id="container">
     <div class="page-header">
-        <h1><a href="{url}summary{sessionvars%urlparameter}">{repo|escape}</a> / not found: {repo|escape}</h1>
+        <h1 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb} / not found: {repo|escape}</h1>
 
         <form action="{url}log">
             {sessionvars%hiddenformentry}

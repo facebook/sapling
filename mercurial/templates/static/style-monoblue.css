@@ -524,3 +524,7 @@ ul#graphnodes li .info {
     border-top: 1px solid #999;
 }
 /** end of comparison **/
+
+.breadcrumb a:hover {
+    text-decoration:underline;
+}

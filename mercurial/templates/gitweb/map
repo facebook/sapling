@@ -305,3 +305,4 @@ indexarchiveentry = ' <a href="{url}archive/{node|short}{extension}">{type|escap
 index = index.tmpl
 urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
+breadcrumb = '&gt; <a href="{url}">{name}</a> '
