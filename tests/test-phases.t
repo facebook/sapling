@@ -337,6 +337,7 @@ test that phase are displayed in log at debug level
   description:
   A
   
+  
 
 
 (Issue3707)
@@ -347,7 +348,6 @@ test invalid phase name
   rollback completed
   abort: phases.new-commit: not a valid phase name ('babar')
   [255]
-  
 Test phase command
 ===================
 
