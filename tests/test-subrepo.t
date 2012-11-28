@@ -726,10 +726,8 @@ Check that share works with subrepo
   $ test -f ../shared/subrepo-1/.hg/sharedpath
   [1]
   $ hg -R ../shared in
-  comparing with $TESTTMP/subrepo-status (glob)
-  searching for changes
-  no changes found
-  [1]
+  abort: repository default not found!
+  [255]
   $ hg -R ../shared/subrepo-2 showconfig paths
   paths.default=$TESTTMP/subrepo-status/subrepo-2
   $ hg -R ../shared/subrepo-1 sum --remote
