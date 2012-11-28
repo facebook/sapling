@@ -656,9 +656,12 @@ def buildstate(repo, dest, rebaseset, collapse):
     #
     # The actual abort is handled by `defineparents`
     if len(root.parents()) <= 1:
-        # (strict) ancestors of <root> not ancestors of <dest>
-        detachset = repo.revs('::%d - ::%d - %d', root, commonbase, root)
+        # ancestors of <root> not ancestors of <dest>
+        detachset = repo.changelog.findmissingrevs([commonbase.rev()],
+                                                   [root.rev()])
         state.update(dict.fromkeys(detachset, nullmerge))
+        # detachset can have root, and we definitely want to rebase that
+        state[root.rev()] = nullrev
     return repo['.'].rev(), dest.rev(), state
 
 def clearrebased(ui, repo, state, collapsedas=None):
