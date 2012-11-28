@@ -4495,7 +4495,7 @@ def paths(ui, repo, search=None):
             else:
                 ui.write("%s = %s\n" % (name, util.hidepassword(path)))
 
-@command('^phase',
+@command('phase',
     [('p', 'public', False, _('set changeset phase to public')),
      ('d', 'draft', False, _('set changeset phase to draft')),
      ('s', 'secret', False, _('set changeset phase to secret')),
