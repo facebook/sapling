@@ -928,7 +928,7 @@ def branch(ui, repo, label=None, **opts):
                                        ' exists'),
                                      # i18n: "it" refers to an existing branch
                                      hint=_("use 'hg update' to switch to it"))
-            scmutil.checknewlabel(None, label, 'branch')
+            scmutil.checknewlabel(repo, label, 'branch')
             repo.dirstate.setbranch(label)
             ui.status(_('marked working directory as branch %s\n') % label)
             ui.status(_('(branches are permanent and global, '
