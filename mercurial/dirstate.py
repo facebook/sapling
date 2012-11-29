@@ -260,7 +260,6 @@ class dirstate(object):
         return copies
 
     def setbranch(self, branch):
-        # no repo object here, just check for reserved names
         self._branch = encoding.fromlocal(branch)
         f = self._opener('branch', 'w', atomictemp=True)
         try:
