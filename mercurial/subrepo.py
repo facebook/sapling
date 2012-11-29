@@ -330,7 +330,7 @@ class abstractsubrepo(object):
     def status(self, rev2, **opts):
         return [], [], [], [], [], [], []
 
-    def diff(self, diffopts, node2, match, prefix, **opts):
+    def diff(self, ui, diffopts, node2, match, prefix, **opts):
         pass
 
     def outgoing(self, ui, dest, opts):
@@ -437,14 +437,14 @@ class hgsubrepo(abstractsubrepo):
                                % (inst, subrelpath(self)))
             return [], [], [], [], [], [], []
 
-    def diff(self, diffopts, node2, match, prefix, **opts):
+    def diff(self, ui, diffopts, node2, match, prefix, **opts):
         try:
             node1 = node.bin(self._state[1])
             # We currently expect node2 to come from substate and be
             # in hex format
             if node2 is not None:
                 node2 = node.bin(node2)
-            cmdutil.diffordiffstat(self._repo.ui, self._repo, diffopts,
+            cmdutil.diffordiffstat(ui, self._repo, diffopts,
                                    node1, node2, match,
                                    prefix=os.path.join(prefix, self._path),
                                    listsubrepos=True, **opts)

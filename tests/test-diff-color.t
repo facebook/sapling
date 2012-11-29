@@ -125,6 +125,38 @@ qrecord
    c
   \x1b[0;33mrecord this change to 'a'? [Ynesfdaq?]\x1b[0m  (esc)
 
+  $ hg qpop -a
+  popping patch
+  patch queue now empty
+
 #endif
+
+issue3712: test colorization of subrepo diff
+
+  $ hg init sub
+  $ echo b > sub/b
+  $ hg -R sub commit -Am 'create sub'
+  adding b
+  $ echo 'sub = sub' > .hgsub
+  $ hg add .hgsub
+  $ hg commit -m 'add subrepo sub'
+  $ echo aa >> a
+  $ echo bb >> sub/b
+
+  $ hg diff --color=always -S
+  \x1b[0;1mdiff --git a/a b/a\x1b[0m (esc)
+  \x1b[0;31;1m--- a/a\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/a\x1b[0m (esc)
+  \x1b[0;35m@@ -7,3 +7,4 @@\x1b[0m (esc)
+   a
+   c
+   c
+  \x1b[0;32m+aa\x1b[0m (esc)
+  \x1b[0;1mdiff --git a/sub/b b/sub/b\x1b[0m (esc)
+  \x1b[0;31;1m--- a/sub/b\x1b[0m (esc)
+  \x1b[0;32;1m+++ b/sub/b\x1b[0m (esc)
+  \x1b[0;35m@@ -1,1 +1,2 @@\x1b[0m (esc)
+   b
+  \x1b[0;32m+bb\x1b[0m (esc)
 
   $ cd ..
