@@ -15,7 +15,6 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -37,7 +36,6 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -222,7 +220,6 @@ Test short command list with verbose option
    init          create a new repository in the given directory
    log, history  show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove, rm    remove the specified files on the next commit
@@ -536,7 +533,6 @@ Test command without options
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -564,7 +560,6 @@ Test command without options
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
