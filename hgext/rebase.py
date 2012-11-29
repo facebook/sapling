@@ -706,6 +706,10 @@ def pullrebase(orig, ui, repo, *args, **opts):
             commands.postincoming = origpostincoming
         revspostpull = len(repo)
         if revspostpull > revsprepull:
+            # --rev option from pull conflict with rebase own --rev
+            # dropping it
+            if 'rev' in opts:
+                del opts['rev']
             rebase(ui, repo, **opts)
             branch = repo[None].branch()
             dest = repo[branch].rev()
