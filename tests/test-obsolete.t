@@ -173,6 +173,13 @@ the public changeset
 
 And that we can't push bumped changeset
 
+  $ hg push ../tmpa -r 0 --force #(make repo)
+  pushing to ../tmpa
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
   $ hg push ../tmpa
   pushing to ../tmpa
   searching for changes
