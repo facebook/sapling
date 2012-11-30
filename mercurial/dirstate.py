@@ -697,9 +697,6 @@ class dirstate(object):
         if not skipstep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
             for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
-                if (not st is None and
-                    getkind(st.st_mode) not in (regkind, lnkkind)):
-                    st = None
                 results[nf] = st
         for s in subrepos:
             del results[s]

@@ -352,12 +352,18 @@ def findexe(command):
 def setsignalhandler():
     pass
 
+_wantedkinds = set([stat.S_IFREG, stat.S_IFLNK])
+
 def statfiles(files):
-    'Stat each file in files and yield stat or None if file does not exist.'
+    '''Stat each file in files. Yield each stat, or None if a file does not
+    exist or has a type we don't care about.'''
     lstat = os.lstat
+    getkind = stat.S_IFMT
     for nf in files:
         try:
             st = lstat(nf)
+            if getkind(st.st_mode) not in _wantedkinds:
+                st = None
         except OSError, err:
             if err.errno not in (errno.ENOENT, errno.ENOTDIR):
                 raise

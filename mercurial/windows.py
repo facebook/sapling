@@ -7,7 +7,7 @@
 
 from i18n import _
 import osutil, encoding
-import errno, msvcrt, os, re, sys, _winreg
+import errno, msvcrt, os, re, stat, sys, _winreg
 
 import win32
 executablepath = win32.executablepath
@@ -213,10 +213,15 @@ def findexe(command):
             return executable
     return findexisting(os.path.expanduser(os.path.expandvars(command)))
 
+_wantedkinds = set([stat.S_IFREG, stat.S_IFLNK])
+
 def statfiles(files):
-    '''Stat each file in files and yield stat or None if file does not exist.
+    '''Stat each file in files. Yield each stat, or None if a file
+    does not exist or has a type we don't care about.
+
     Cluster and cache stat per directory to minimize number of OS stat calls.'''
     dircache = {} # dirname -> filename -> status | None if file does not exist
+    getkind = stat.S_IFMT
     for nf in files:
         nf  = normcase(nf)
         dir, base = os.path.split(nf)
@@ -226,7 +231,8 @@ def statfiles(files):
         if cache is None:
             try:
                 dmap = dict([(normcase(n), s)
-                    for n, k, s in osutil.listdir(dir, True)])
+                             for n, k, s in osutil.listdir(dir, True)
+                             if getkind(s) in _wantedkinds])
             except OSError, err:
                 # handle directory not found in Python version prior to 2.5
                 # Python <= 2.4 returns native Windows code 3 in errno
