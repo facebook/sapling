@@ -91,7 +91,7 @@ def reposetup(ui, repo):
         # self.lfstatus is False.
         # XXX large file status is buggy when used on repo proxy.
         # XXX this needs to be investigated.
-        @localrepo.unfilteredmeth
+        @localrepo.unfilteredmethod
         def status(self, node1='.', node2=None, match=None, ignored=False,
                 clean=False, unknown=False, listsubrepos=False):
             listignored, listclean, listunknown = ignored, clean, unknown
