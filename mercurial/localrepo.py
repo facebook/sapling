@@ -51,7 +51,7 @@ def hasunfilteredcache(repo, name):
     """check if an repo and a unfilteredproperty cached value for <name>"""
     return name in vars(repo.unfiltered())
 
-def unfilteredmeth(orig):
+def unfilteredmethod(orig):
     """decorate method that always need to be run on unfiltered version"""
     def wrapper(repo, *args, **kwargs):
         return orig(repo.unfiltered(), *args, **kwargs)
@@ -422,7 +422,7 @@ class localrepository(object):
     def hook(self, name, throw=False, **args):
         return hook.hook(self.ui, self, name, throw, **args)
 
-    @unfilteredmeth
+    @unfilteredmethod
     def _tag(self, names, node, message, local, user, date, extra={}):
         if isinstance(names, str):
             names = (names,)
@@ -642,7 +642,7 @@ class localrepository(object):
 
         return partial
 
-    @unfilteredmeth # Until we get a smarter cache management
+    @unfilteredmethod # Until we get a smarter cache management
     def updatebranchcache(self):
         tip = self.changelog.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
@@ -695,7 +695,7 @@ class localrepository(object):
             bt[bn] = self._branchtip(heads)
         return bt
 
-    @unfilteredmeth # Until we get a smarter cache management
+    @unfilteredmethod # Until we get a smarter cache management
     def _readbranchcache(self):
         partial = {}
         try:
@@ -728,7 +728,7 @@ class localrepository(object):
             partial, last, lrev = {}, nullid, nullrev
         return partial, last, lrev
 
-    @unfilteredmeth # Until we get a smarter cache management
+    @unfilteredmethod # Until we get a smarter cache management
     def _writebranchcache(self, branches, tip, tiprev):
         try:
             f = self.opener("cache/branchheads", "w", atomictemp=True)
@@ -740,7 +740,7 @@ class localrepository(object):
         except (IOError, OSError):
             pass
 
-    @unfilteredmeth # Until we get a smarter cache management
+    @unfilteredmethod # Until we get a smarter cache management
     def _updatebranchcache(self, partial, ctxgen):
         """Given a branchhead cache, partial, that may have extra nodes or be
         missing heads, and a generator of nodes that are at least a superset of
@@ -1006,7 +1006,7 @@ class localrepository(object):
         finally:
             release(lock, wlock)
 
-    @unfilteredmeth # Until we get smarter cache management
+    @unfilteredmethod # Until we get smarter cache management
     def _rollback(self, dryrun, force):
         ui = self.ui
         try:
@@ -1265,7 +1265,7 @@ class localrepository(object):
 
         return fparent1
 
-    @unfilteredmeth
+    @unfilteredmethod
     def commit(self, text="", user=None, date=None, match=None, force=False,
                editor=False, extra={}):
         """Add a new revision to current repository.
@@ -1436,7 +1436,7 @@ class localrepository(object):
         self._afterlock(commithook)
         return ret
 
-    @unfilteredmeth
+    @unfilteredmethod
     def commitctx(self, ctx, error=False):
         """Add a new revision to current repository.
         Revision information is passed via the context argument.
@@ -1518,7 +1518,7 @@ class localrepository(object):
                 tr.release()
             lock.release()
 
-    @unfilteredmeth
+    @unfilteredmethod
     def destroyed(self, newheadnodes=None):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
@@ -2113,7 +2113,7 @@ class localrepository(object):
         return self.getlocalbundle(source,
                                    discovery.outgoing(cl, common, heads))
 
-    @unfilteredmeth
+    @unfilteredmethod
     def _changegroupsubset(self, commonrevs, csets, heads, source):
 
         cl = self.changelog
@@ -2225,7 +2225,7 @@ class localrepository(object):
         # to avoid a race we use changegroupsubset() (issue1320)
         return self.changegroupsubset(basenodes, self.heads(), source)
 
-    @unfilteredmeth
+    @unfilteredmethod
     def _changegroup(self, nodes, source):
         """Compute the changegroup of all nodes that we have that a recipient
         doesn't.  Return a chunkbuffer object whose read() method will return
@@ -2319,7 +2319,7 @@ class localrepository(object):
 
         return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
 
-    @unfilteredmeth
+    @unfilteredmethod
     def addchangegroup(self, source, srctype, url, emptyok=False):
         """Add the changegroup returned by source.read() to this repo.
         srctype is a string like 'push', 'pull', or 'unbundle'.  url is
