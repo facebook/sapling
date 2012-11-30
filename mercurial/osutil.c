@@ -276,6 +276,16 @@ int entkind(struct dirent *ent)
 	return -1;
 }
 
+static PyObject *makestat(const struct stat *st)
+{
+        PyObject *stat;
+
+        stat = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
+        if (stat)
+                memcpy(&((struct listdir_stat *)stat)->st, st, sizeof(*st));
+        return stat;
+}
+
 static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 {
 	PyObject *list, *elem, *stat, *ret = NULL;
@@ -351,10 +361,9 @@ static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
 		}
 
 		if (keepstat) {
-			stat = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
+			stat = makestat(&st);
 			if (!stat)
 				goto error;
-			memcpy(&((struct listdir_stat *)stat)->st, &st, sizeof(st));
 			elem = Py_BuildValue("siN", ent->d_name, kind, stat);
 		} else
 			elem = Py_BuildValue("si", ent->d_name, kind);
