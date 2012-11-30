@@ -135,7 +135,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-10-31 18:16+0900\n"
+"POT-Creation-Date: 2012-11-30 17:45+0900\n"
 "PO-Revision-Date: 2009-11-16 21:24+0100\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
@@ -5246,12 +5246,18 @@ msgstr "largefiles: 転送予定ファイルはありません\n"
 msgid "largefiles to upload:\n"
 msgstr "転送予定大容量ファイル:\n"
 
-msgid "largefiles: (no files to upload)\n"
-msgstr "largefiles      : (転送予定ファイルなし)\n"
+#. i18n: column positioning for "hg summary"
+msgid "largefiles: (no remote repo)\n"
+msgstr "largefiles:   (連携先リポジトリが指定されていません)\n"
 
+#. i18n: column positioning for "hg summary"
+msgid "largefiles: (no files to upload)\n"
+msgstr "largefiles:   (転送予定ファイルなし)\n"
+
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "largefiles: %d to upload\n"
-msgstr "largefiles      : 転送予定ファイル数 %d\n"
+msgstr "largefiles:   %d 個の転送予定ファイル\n"
 
 msgid "largefile contents do not match hash"
 msgstr "大容量ファイルの内容が想定ハッシュ値と一致しません"
@@ -6983,8 +6989,14 @@ msgstr "適用パッチ数 %d"
 msgid "%d unapplied"
 msgstr "未適用パッチ数 %d"
 
+#. i18n: column positioning for "hg summary"
+#, python-format
+msgid "mq:     %s\n"
+msgstr "mq:           %s\n"
+
+#. i18n: column positioning for "hg summary"
 msgid "mq:     (empty queue)\n"
-msgstr "mq:     (空キュー)\n"
+msgstr "mq:           (キューは空です)\n"
 
 msgid ""
 "``mq()``\n"
@@ -9350,69 +9362,85 @@ msgstr "(--after を使ってみては？)\n"
 msgid "child process failed to start"
 msgstr "子プロセスの生成に失敗"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr "チェンジセット:   %d:%s\n"
+msgstr "リビジョン:   %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "branch:      %s\n"
-msgstr "ブランチ:         %s\n"
+msgstr "ブランチ:     %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "bookmark:    %s\n"
-msgstr "ブックマーク:     %s\n"
+msgstr "ブックマーク: %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "tag:         %s\n"
-msgstr "タグ:             %s\n"
+msgstr "タグ:         %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "phase:       %s\n"
-msgstr "フェーズ:         %s\n"
+msgstr "フェーズ:     %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr "親:               %d:%s\n"
+msgstr "親リビジョン: %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr "管理ファイル一覧: %d:%s\n"
+msgstr "manifest参照: %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "user:        %s\n"
-msgstr "ユーザ:           %s\n"
+msgstr "ユーザ:       %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "date:        %s\n"
-msgstr "日付:             %s\n"
+msgstr "日付:         %s\n"
 
-msgid "files+:"
-msgstr "ファイル追加:    "
-
-msgid "files-:"
-msgstr "ファイル削除:    "
-
+#. i18n: column positioning for "hg log"
 msgid "files:"
-msgstr "ファイル:        "
+msgstr "ファイル:    "
 
+#. i18n: column positioning for "hg log"
+msgid "files+:"
+msgstr "ファイル追加:"
+
+#. i18n: column positioning for "hg log"
+msgid "files-:"
+msgstr "ファイル削除:"
+
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "files:       %s\n"
-msgstr "ファイル:         %s\n"
+msgstr "ファイル:     %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "copies:      %s\n"
-msgstr "コピー:           %s\n"
+msgstr "コピー:       %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr "その他:           %s=%s\n"
+msgstr "その他:       %s=%s\n"
 
 msgid "description:\n"
 msgstr "説明:\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "summary:     %s\n"
-msgstr "要約:             %s\n"
+msgstr "要約:         %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -13848,9 +13876,10 @@ msgstr ""
 "    --remote が指定された場合、 default 連携先に対する取り込み／反映に\n"
 "    関する概要も表示します。 この処理には時間を要する場合があります。"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "parent: %d:%s "
-msgstr "親リビジョン    : %d:%s "
+msgstr "親リビジョン: %d:%s "
 
 msgid " (empty repository)"
 msgstr " (空のリポジトリ)"
@@ -13858,12 +13887,14 @@ msgstr " (空のリポジトリ)"
 msgid " (no revision checked out)"
 msgstr " (作業領域が未更新)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "branch: %s\n"
-msgstr "ブランチ        : %s\n"
+msgstr "ブランチ:     %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "bookmarks:"
-msgstr "ブックマーク    :"
+msgstr "ブックマーク:"
 
 #, python-format
 msgid "%d modified"
@@ -13920,42 +13951,48 @@ msgstr " (改変無し)"
 msgid " (new branch head)"
 msgstr " (新規ブランチヘッド)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "commit: %s\n"
-msgstr "想定 commit 結果: %s\n"
+msgstr "作業領域状態: %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "update: (current)\n"
-msgstr "update 候補     : (現行のまま)\n"
+msgstr "update 候補:  (現行親リビジョン)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets (update)\n"
-msgstr "update 候補     : %d の新規リビジョン(更新)\n"
+msgstr "update 候補:  %d の新規リビジョン(update)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
-msgstr "update 候補     : %d の新規リビジョン、 %d のブランチヘッド(マージ)\n"
+msgstr "update 候補:  %d 個の新規リビジョン、%d 個のブランチヘッド(merge)\n"
 
 msgid "1 or more incoming"
-msgstr "取り込み候補(incoming)リビジョンあり"
+msgstr "取り込み候補リビジョンあり"
 
 #, python-format
 msgid "%d outgoing"
-msgstr "%d 個の反映候補(outgoing)リビジョン"
+msgstr "%d 個の反映候補リビジョン"
 
 #, python-format
 msgid "%d incoming bookmarks"
-msgstr "%d 個の取り込み候補(incoming)ブックマーク"
+msgstr "%d 個の取り込み候補ブックマーク"
 
 #, python-format
 msgid "%d outgoing bookmarks"
-msgstr "%d 個の反映候補(outgoing)ブックマーク"
+msgstr "%d 個の反映候補ブックマーク"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "remote: %s\n"
-msgstr "想定連携結果    : %s\n"
+msgstr "連携先同期:   %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "remote: (synced)\n"
-msgstr "想定連携結果    : (同期済み)\n"
+msgstr "連携先同期:   (同期済み)\n"
 
 msgid "force tag"
 msgstr "タグ付けの強制実施"
@@ -21688,14 +21725,14 @@ msgstr "利用可能なロールバック情報がありません\n"
 
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s: %s)\n"
-msgstr "tip をリビジョン %s に巻き戻しました (取り消し %s: %s)\n"
+msgstr "tip をリビジョン %s へと巻き戻し(%s %s の取り消し)\n"
 
 #, python-format
 msgid "repository tip rolled back to revision %s (undo %s)\n"
-msgstr "tip をリビジョン %s に巻き戻しました (取り消し %s)\n"
+msgstr "tip をリビジョン %s へと巻き戻し(%s の取り消し)\n"
 
 msgid "rolling back unknown transaction\n"
-msgstr "未知のトランザクションの巻き戻し中\n"
+msgstr "未知のトランザクションの巻き戻し\n"
 
 msgid "rollback of last commit while not checked out may lose data"
 msgstr "作業領域と無関係のコミットの巻き戻しは、コミットデータを喪失します"
@@ -23907,15 +23944,19 @@ msgstr "フィルタ指定 '%s' はキーワード '%s' と互換性がありま
 msgid "filter %s expects one argument"
 msgstr "フィルタ %s は引数が1つ必要です"
 
+#. i18n: "join" is a keyword
 msgid "join expects one or two arguments"
 msgstr "join の引数は1つないし2つです"
 
+#. i18n: "sub" is a keyword
 msgid "sub expects three arguments"
 msgstr "sub は引数が3つ必要です"
 
+#. i18n: "if" is a keyword
 msgid "if expects two or three arguments"
 msgstr "if は2ないし3の引数が必要です"
 
+#. i18n: "ifeq" is a keyword
 msgid "ifeq expects three or four arguments"
 msgstr "ifeq は3ないし4の引数が必要です"
 
