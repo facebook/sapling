@@ -696,8 +696,9 @@ class dirstate(object):
         # step 3: report unseen items in the dmap hash
         if not skipstep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
-            for nf, st in zip(visit, util.statfiles([join(i) for i in visit])):
-                results[nf] = st
+            nf = iter(visit).next
+            for st in util.statfiles([join(i) for i in visit]):
+                results[nf()] = st
         for s in subrepos:
             del results[s]
         del results['.hg']
