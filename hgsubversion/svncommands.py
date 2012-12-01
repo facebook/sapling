@@ -80,9 +80,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
-            ui.status('missing some metadata -- doing a full rebuild')
+            ui.status('missing some metadata -- doing a full rebuild\n')
         except AttributeError:
-            ui.status('no metadata available -- doing a full rebuild')
+            ui.status('no metadata available -- doing a full rebuild\n')
 
 
     lastpulled = open(os.path.join(svnmetadir, 'lastpulled'), 'wb')
