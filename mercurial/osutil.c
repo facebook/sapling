@@ -278,12 +278,12 @@ int entkind(struct dirent *ent)
 
 static PyObject *makestat(const struct stat *st)
 {
-        PyObject *stat;
+	PyObject *stat;
 
-        stat = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
-        if (stat)
-                memcpy(&((struct listdir_stat *)stat)->st, st, sizeof(*st));
-        return stat;
+	stat = PyObject_CallObject((PyObject *)&listdir_stat_type, NULL);
+	if (stat)
+		memcpy(&((struct listdir_stat *)stat)->st, st, sizeof(*st));
+	return stat;
 }
 
 static PyObject *_listdir(char *path, int pathlen, int keepstat, char *skip)
