@@ -102,6 +102,9 @@ class UtilityTests(test_util.TestBase):
 
     def test_missing_metadata(self):
         self._load_fixture_and_fetch('two_heads.svndump')
+        os.remove(self.repo.join('svn/branch_info'))
+        svncommands.updatemeta(self.ui(), self.repo, [])
+
         test_util.rmtree(self.repo.join('svn'))
         self.assertRaises(hgutil.Abort,
                           self.repo.svnmeta)

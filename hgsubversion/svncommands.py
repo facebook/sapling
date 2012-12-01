@@ -4,6 +4,7 @@ import cPickle as pickle
 import sys
 import traceback
 import urlparse
+import errno
 
 from mercurial import commands
 from mercurial import hg
