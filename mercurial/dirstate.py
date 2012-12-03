@@ -750,13 +750,19 @@ class dirstate(object):
         radd = removed.append
         dadd = deleted.append
         cadd = clean.append
+        mexact = match.exact
+        dirignore = self._dirignore
+        checkexec = self._checkexec
+        checklink = self._checklink
+        copymap = self._copymap
+        lastnormaltime = self._lastnormaltime
 
         lnkkind = stat.S_IFLNK
 
         for fn, st in self.walk(match, subrepos, listunknown,
                                 listignored).iteritems():
             if fn not in dmap:
-                if (listignored or match.exact(fn)) and self._dirignore(fn):
+                if (listignored or mexact(fn)) and dirignore(fn):
                     if listignored:
                         iadd(fn)
                 elif listunknown:
@@ -775,15 +781,15 @@ class dirstate(object):
                 mtime = int(st.st_mtime)
                 if (size >= 0 and
                     ((size != st.st_size and size != st.st_size & _rangemask)
-                     or ((mode ^ st.st_mode) & 0100 and self._checkexec))
-                    and (mode & lnkkind != lnkkind or self._checklink)
+                     or ((mode ^ st.st_mode) & 0100 and checkexec))
+                    and (mode & lnkkind != lnkkind or checklink)
                     or size == -2 # other parent
-                    or fn in self._copymap):
+                    or fn in copymap):
                     madd(fn)
                 elif ((time != mtime and time != mtime & _rangemask)
-                      and (mode & lnkkind != lnkkind or self._checklink)):
+                      and (mode & lnkkind != lnkkind or checklink)):
                     ladd(fn)
-                elif mtime == self._lastnormaltime:
+                elif mtime == lastnormaltime:
                     # fn may have been changed in the same timeslot without
                     # changing its size. This can happen if we quickly do
                     # multiple commits in a single transaction.
