@@ -389,6 +389,55 @@ error_value:
 	return ret;
 }
 
+static PyObject *statfiles(PyObject *self, PyObject *args)
+{
+        PyObject *names, *stats;
+        Py_ssize_t i, count;
+
+        if (!PyArg_ParseTuple(args, "O:statfiles", &names))
+                return NULL;
+
+        count = PySequence_Length(names);
+        if (count == -1) {
+                PyErr_SetString(PyExc_TypeError, "not a sequence");
+                return NULL;
+        }
+
+        stats = PyList_New(count);
+        if (stats == NULL)
+                return NULL;
+
+        for (i = 0; i < count; i++) {
+                PyObject *stat;
+                struct stat st;
+                int ret, kind;
+                char *path;
+
+                path = PyString_AsString(PySequence_GetItem(names, i));
+                if (path == NULL) {
+                        PyErr_SetString(PyExc_TypeError, "not a string");
+                        goto bail;
+                }
+                ret = lstat(path, &st);
+                kind = st.st_mode & S_IFMT;
+                if (ret != -1 && (kind == S_IFREG || kind == S_IFLNK)) {
+                        stat = makestat(&st);
+                        if (stat == NULL)
+                                goto bail;
+                        PyList_SET_ITEM(stats, i, stat);
+                } else {
+                        Py_INCREF(Py_None);
+                        PyList_SET_ITEM(stats, i, Py_None);
+                }
+        }
+
+        return stats;
+
+bail:
+        Py_DECREF(stats);
+        return NULL;
+}
+
 #endif /* ndef _WIN32 */
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -553,6 +602,10 @@ static PyMethodDef methods[] = {
 	{"posixfile", (PyCFunction)posixfile, METH_VARARGS | METH_KEYWORDS,
 	 "Open a file with POSIX-like semantics.\n"
 "On error, this function may raise either a WindowsError or an IOError."},
+#else
+	{"statfiles", (PyCFunction)statfiles, METH_VARARGS | METH_KEYWORDS,
+	 "stat a series of files or symlinks\n"
+"Returns None for non-existent entries and entries of other types.\n"},
 #endif
 #ifdef __APPLE__
 	{
