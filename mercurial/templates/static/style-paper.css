@@ -60,6 +60,12 @@ body {
   border: 0;
 }
 
+.atom-logo img{
+  width: 14px;
+  height: 14px;
+  border: 0;
+}
+
 .menu a { color: black; display: block; }
 
 .search {
