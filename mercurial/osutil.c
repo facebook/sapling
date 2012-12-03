@@ -391,51 +391,51 @@ error_value:
 
 static PyObject *statfiles(PyObject *self, PyObject *args)
 {
-        PyObject *names, *stats;
-        Py_ssize_t i, count;
+	PyObject *names, *stats;
+	Py_ssize_t i, count;
 
-        if (!PyArg_ParseTuple(args, "O:statfiles", &names))
-                return NULL;
+	if (!PyArg_ParseTuple(args, "O:statfiles", &names))
+		return NULL;
 
-        count = PySequence_Length(names);
-        if (count == -1) {
-                PyErr_SetString(PyExc_TypeError, "not a sequence");
-                return NULL;
-        }
+	count = PySequence_Length(names);
+	if (count == -1) {
+		PyErr_SetString(PyExc_TypeError, "not a sequence");
+		return NULL;
+	}
 
-        stats = PyList_New(count);
-        if (stats == NULL)
-                return NULL;
+	stats = PyList_New(count);
+	if (stats == NULL)
+		return NULL;
 
-        for (i = 0; i < count; i++) {
-                PyObject *stat;
-                struct stat st;
-                int ret, kind;
-                char *path;
+	for (i = 0; i < count; i++) {
+		PyObject *stat;
+		struct stat st;
+		int ret, kind;
+		char *path;
 
-                path = PyString_AsString(PySequence_GetItem(names, i));
-                if (path == NULL) {
-                        PyErr_SetString(PyExc_TypeError, "not a string");
-                        goto bail;
-                }
-                ret = lstat(path, &st);
-                kind = st.st_mode & S_IFMT;
-                if (ret != -1 && (kind == S_IFREG || kind == S_IFLNK)) {
-                        stat = makestat(&st);
-                        if (stat == NULL)
-                                goto bail;
-                        PyList_SET_ITEM(stats, i, stat);
-                } else {
-                        Py_INCREF(Py_None);
-                        PyList_SET_ITEM(stats, i, Py_None);
-                }
-        }
+		path = PyString_AsString(PySequence_GetItem(names, i));
+		if (path == NULL) {
+			PyErr_SetString(PyExc_TypeError, "not a string");
+			goto bail;
+		}
+		ret = lstat(path, &st);
+		kind = st.st_mode & S_IFMT;
+		if (ret != -1 && (kind == S_IFREG || kind == S_IFLNK)) {
+			stat = makestat(&st);
+			if (stat == NULL)
+				goto bail;
+			PyList_SET_ITEM(stats, i, stat);
+		} else {
+			Py_INCREF(Py_None);
+			PyList_SET_ITEM(stats, i, Py_None);
+		}
+	}
 
-        return stats;
+	return stats;
 
 bail:
-        Py_DECREF(stats);
-        return NULL;
+	Py_DECREF(stats);
+	return NULL;
 }
 
 #endif /* ndef _WIN32 */
