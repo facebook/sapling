@@ -40,11 +40,11 @@ def perfwalk(ui, repo, *pats):
         except Exception:
             timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
 
-def perfstatus(ui, repo, *pats):
+def perfstatus(ui, repo, **opts):
     #m = match.always(repo.root, repo.getcwd())
     #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False,
     #                                                False))))
-    timer(lambda: sum(map(len, repo.status())))
+    timer(lambda: sum(map(len, repo.status(**opts))))
 
 def clearcaches(cl):
     # behave somewhat consistently across internal API changes
@@ -238,7 +238,9 @@ cmdtable = {
     'perfnodelookup': (perfnodelookup, []),
     'perfparents': (perfparents, []),
     'perfstartup': (perfstartup, []),
-    'perfstatus': (perfstatus, []),
+    'perfstatus': (perfstatus,
+                   [('u', 'unknown', False,
+                     'ask status to look for unknown files')]),
     'perfwalk': (perfwalk, []),
     'perfmanifest': (perfmanifest, []),
     'perfchangeset': (perfchangeset, []),
