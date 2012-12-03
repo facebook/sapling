@@ -10,4 +10,6 @@ tags = tags.tmpl
 tagentry = tagentry.tmpl
 bookmarks = bookmarks.tmpl
 bookmarkentry = bookmarkentry.tmpl
+branches = branches.tmpl
+branchentry = branchentry.tmpl
 error = error.tmpl
