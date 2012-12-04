@@ -2830,8 +2830,8 @@ def graft(ui, repo, *revs, **opts):
 
     wlock = repo.wlock()
     try:
+        current = repo['.']
         for pos, ctx in enumerate(repo.set("%ld", revs)):
-            current = repo['.']
 
             ui.status(_('grafting revision %s\n') % ctx.rev())
             if opts.get('dry_run'):
@@ -2883,6 +2883,8 @@ def graft(ui, repo, *revs, **opts):
                         date=date, extra=extra, editor=editor)
             if node is None:
                 ui.status(_('graft for revision %s is empty\n') % ctx.rev())
+            else:
+                current = repo[node]
     finally:
         wlock.release()
 
