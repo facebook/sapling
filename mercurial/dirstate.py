@@ -605,7 +605,7 @@ class dirstate(object):
             normalize = self._normalize
             skipstep3 = False
         else:
-            normalize = lambda x, y, z: x
+            normalize = None
 
         files = sorted(match.files())
         subrepos.sort()
@@ -626,7 +626,10 @@ class dirstate(object):
 
         # step 1: find all explicit files
         for ff in files:
-            nf = normalize(normpath(ff), False, True)
+            if normalize:
+                nf = normalize(normpath(ff), False, True)
+            else:
+                nf = normpath(ff)
             if nf in results:
                 continue
 
@@ -676,7 +679,10 @@ class dirstate(object):
                     continue
                 raise
             for f, kind, st in entries:
-                nf = normalize(nd and (nd + "/" + f) or f, True, True)
+                if normalize:
+                    nf = normalize(nd and (nd + "/" + f) or f, True, True)
+                else:
+                    nf = nd and (nd + "/" + f) or f
                 if nf not in results:
                     if kind == dirkind:
                         if not ignore(nf):
