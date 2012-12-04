@@ -448,6 +448,26 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
 
     return updated, merged, removed, unresolved
 
+def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
+    "Calculate the actions needed to merge mctx into tctx"
+    action = []
+    folding = not util.checkcase(repo.path)
+    if folding:
+        # collision check is not needed for clean update
+        if (not branchmerge and
+            (force or not tctx.dirty(missing=True, branch=False))):
+            _checkcollision(mctx, None)
+        else:
+            _checkcollision(mctx, tctx)
+    if not force:
+        _checkunknown(repo, tctx, mctx)
+    action += _forgetremoved(tctx, mctx, branchmerge)
+    action += manifestmerge(repo, tctx, mctx,
+                            ancestor,
+                            force and not branchmerge,
+                            partial)
+    return action
+
 def recordupdates(repo, action, branchmerge):
     "record merge actions to the dirstate"
 
@@ -609,19 +629,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 pa = p1
 
         ### calculate phase
-        action = []
-        folding = not util.checkcase(repo.path)
-        if folding:
-            # collision check is not needed for clean update
-            if (not branchmerge and
-                (force or not wc.dirty(missing=True, branch=False))):
-                _checkcollision(p2, None)
-            else:
-                _checkcollision(p2, (wc, pa))
-        if not force:
-            _checkunknown(repo, wc, p2)
-        action += _forgetremoved(wc, p2, branchmerge)
-        action += manifestmerge(repo, wc, p2, pa, overwrite, partial)
+        action = calculateupdates(repo, wc, p2, pa, branchmerge, force, partial)
 
         ### apply phase
         if not branchmerge: # just jump to the new rev
