@@ -1142,19 +1142,20 @@ Diff here should be the same:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
-  $ cat > $HGTMP/testhidden.py << EOF
-  > def reposetup(ui, repo):
-  >     for line in repo.opener('hidden'):
-  >         ctx = repo[line.strip()]
-  >         repo.hiddenrevs.add(ctx.rev())
+enable obsolete to test hidden feature
+
+  $ cat > ${TESTTMP}/obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "hidden=$HGTMP/testhidden.py" >> $HGRCPATH
-  $ touch .hg/hidden
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
   $ hg log --template='{rev}:{node}\n'
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
-  $ echo a765632148dc55d38c35c4f247c618701886cb2f > .hg/hidden
+  $ hg debugobsolete a765632148dc55d38c35c4f247c618701886cb2f
+  $ hg up null -q
   $ hg log --template='{rev}:{node}\n'
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
   $ hg log --template='{rev}:{node}\n' --hidden
@@ -1163,7 +1164,7 @@ Diff here should be the same:
 
 clear extensions configuration
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo "hidden=!" >> $HGRCPATH
+  $ echo "obs=!" >> $HGRCPATH
   $ cd ..
 
 test -u/-k for problematic encoding
