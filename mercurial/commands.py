@@ -2837,6 +2837,20 @@ def graft(ui, repo, *revs, **opts):
             if opts.get('dry_run'):
                 continue
 
+            source = ctx.extra().get('source')
+            if not source:
+                source = ctx.hex()
+            extra = {'source': source}
+            user = ctx.user()
+            if opts.get('user'):
+                user = opts['user']
+            date = ctx.date()
+            if opts.get('date'):
+                date = opts['date']
+            message = ctx.description()
+            if opts.get('log'):
+                message += '\n(grafted from %s)' % ctx.hex()
+
             # we don't merge the first commit when continuing
             if not cont:
                 # perform the graft merge with p1(rev) as 'ancestor'
@@ -2865,19 +2879,6 @@ def graft(ui, repo, *revs, **opts):
             cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
 
             # commit
-            source = ctx.extra().get('source')
-            if not source:
-                source = ctx.hex()
-            extra = {'source': source}
-            user = ctx.user()
-            if opts.get('user'):
-                user = opts['user']
-            date = ctx.date()
-            if opts.get('date'):
-                date = opts['date']
-            message = ctx.description()
-            if opts.get('log'):
-                message += '\n(grafted from %s)' % ctx.hex()
             node = repo.commit(text=message, user=user,
                         date=date, extra=extra, editor=editor)
             if node is None:
