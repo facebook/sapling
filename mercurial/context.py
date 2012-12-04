@@ -355,6 +355,9 @@ class changectx(object):
     def dirs(self):
         return self._dirs
 
+    def dirty(self):
+        return False
+
 class filectx(object):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""

@@ -461,7 +461,8 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
             _checkcollision(mctx, tctx)
     if not force:
         _checkunknown(repo, tctx, mctx)
-    action += _forgetremoved(tctx, mctx, branchmerge)
+    if tctx.rev() is None:
+        action += _forgetremoved(tctx, mctx, branchmerge)
     action += manifestmerge(repo, tctx, mctx,
                             ancestor,
                             force and not branchmerge,
