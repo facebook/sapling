@@ -421,7 +421,7 @@ class SubversionRepo(object):
                         editor.delete_entry(path, base_revision)
                         continue
                     else:
-                        assert False, 'invalid action \'%s\'' % action
+                        assert False, "invalid action '%s'" % action
 
                     if path in props:
                         if props[path].get('svn:special', None):

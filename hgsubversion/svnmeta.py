@@ -111,7 +111,7 @@ class SVNMeta(object):
             if lo == 'auto':
                 raise hgutil.Abort('layout not yet determined')
             elif not lo in ('single', 'standard'):
-                raise hgutil.Abort('unknown layout \'%s\'' % lo)
+                raise hgutil.Abort("unknown layout '%s'" % lo)
             self._layout = lo
             f = open(self.layoutfile, 'w')
             f.write(self._layout)

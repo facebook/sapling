@@ -327,7 +327,7 @@ def pull(repo, source, heads=[], force=False):
 
         layout = repo.ui.config('hgsubversion', 'layout', 'auto')
         if not layout in ('auto', 'single', 'standard'):
-            raise hgutil.Abort('unknown layout \'%s\'' % layout)
+            raise hgutil.Abort("unknown layout '%s'" % layout)
         if layout == 'auto':
             try:
                 rootlist = svn.list_dir('', revision=(stopat_rev or None))
