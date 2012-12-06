@@ -228,6 +228,11 @@ def perfrevlog(ui, repo, file_, **opts):
 
     timer(d)
 
+def perfrevset(ui, repo, expr):
+    def d():
+        repo.revs(expr)
+    timer(d)
+
 cmdtable = {
     'perfcca': (perfcca, []),
     'perffncacheload': (perffncacheload, []),
@@ -258,4 +263,5 @@ cmdtable = {
     'perfrevlog': (perfrevlog,
                    [('d', 'dist', 100, 'distance between the revisions')],
                    "[INDEXFILE]"),
+    'perfrevset': (perfrevset, [], "REVSET")
 }
