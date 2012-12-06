@@ -399,7 +399,7 @@ def manifest(web, req, tmpl):
                 branches=webutil.nodebranchdict(web.repo, ctx))
 
 def tags(web, req, tmpl):
-    i = reversed(web.repo.tagslist())
+    i = list(reversed(web.repo.tagslist()))
     parity = paritygen(web.stripecount)
 
     def entries(notip=False, limit=0, **map):
@@ -442,13 +442,16 @@ def bookmarks(web, req, tmpl):
                 latestentry=lambda **x: entries(1, **x))
 
 def branches(web, req, tmpl):
-    tips = (web.repo[n] for t, n in web.repo.branchtags().iteritems())
+    tips = []
     heads = web.repo.heads()
     parity = paritygen(web.stripecount)
     sortkey = lambda ctx: (not ctx.closesbranch(), ctx.rev())
 
     def entries(limit, **map):
         count = 0
+        if not tips:
+            for t, n in web.repo.branchtags().iteritems():
+                tips.append(web.repo[n])
         for ctx in sorted(tips, key=sortkey, reverse=True):
             if limit > 0 and count >= limit:
                 return
