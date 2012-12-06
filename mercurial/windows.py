@@ -232,7 +232,7 @@ def statfiles(files):
             try:
                 dmap = dict([(normcase(n), s)
                              for n, k, s in osutil.listdir(dir, True)
-                             if getkind(s) in _wantedkinds])
+                             if getkind(s.st_mode) in _wantedkinds])
             except OSError, err:
                 # handle directory not found in Python version prior to 2.5
                 # Python <= 2.4 returns native Windows code 3 in errno
