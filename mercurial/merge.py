@@ -458,7 +458,7 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
             (force or not tctx.dirty(missing=True, branch=False))):
             _checkcollision(mctx, None)
         else:
-            _checkcollision(mctx, tctx)
+            _checkcollision(mctx, (tctx, ancestor))
     if not force:
         _checkunknown(repo, tctx, mctx)
     if tctx.rev() is None:
