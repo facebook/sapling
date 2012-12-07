@@ -80,7 +80,7 @@ class bmstore(dict):
 def readcurrent(repo):
     '''Get the current bookmark
 
-    If we use gittishsh branches we have a current bookmark that
+    If we use gittish branches we have a current bookmark that
     we are on. This function returns the name of the bookmark. It
     is stored in .hg/bookmarks.current
     '''
