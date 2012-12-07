@@ -1885,8 +1885,8 @@ class localrepository(object):
 
         if not remote.canpush():
             raise util.Abort(_("destination does not support push"))
-        # get local lock as we might write phase data
         unfi = self.unfiltered()
+        # get local lock as we might write phase data
         locallock = self.lock()
         try:
             self.checkpush(force, revs)
