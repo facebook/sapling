@@ -488,8 +488,13 @@ def checkstatus(repo, subset, pat, field):
 
 def _children(repo, narrow, parentset):
     cs = set()
+    if not parentset:
+        return cs
     pr = repo.changelog.parentrevs
+    minrev = min(parentset)
     for r in narrow:
+        if r <= minrev:
+            continue
         for p in pr(r):
             if p in parentset:
                 cs.add(r)
