@@ -1110,8 +1110,14 @@ refresh omitting an added file
   $ hg qpop
   popping baz
   now at: bar
-  $ hg qdel baz
 
+test qdel/qrm
+
+  $ hg qdel baz
+  $ echo p >> .hg/patches/series
+  $ hg qrm p
+  $ hg qser
+  bar
 
 create a git patch
 

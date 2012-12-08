@@ -827,7 +827,11 @@ class queue(object):
             if r:
                 r[None].forget(patches)
             for p in patches:
-                os.unlink(self.join(p))
+                try:
+                    os.unlink(self.join(p))
+                except OSError, inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
 
         qfinished = []
         if numrevs:
