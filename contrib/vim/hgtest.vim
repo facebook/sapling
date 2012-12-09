@@ -2,7 +2,8 @@
 " Language: Mercurial unified tests
 " Author: Steve Losh (steve@stevelosh.com)
 "
-" Add the following line to your ~/.vimrc to enable:
+" Place this file in ~/.vim/syntax/ and add the following line to your
+" ~/.vimrc to enable:
 " au BufNewFile,BufRead *.t set filetype=hgtest
 "
 " If you want folding you'll need the following line as well:
