@@ -121,7 +121,7 @@ def forbidnewline(ui, repo, hooktype, node, newline, **kwargs):
     # changegroup that contains an unacceptable commit followed later
     # by a commit that fixes the problem.
     tip = repo['tip']
-    for rev in xrange(len(repo)-1, repo[node].rev()-1, -1):
+    for rev in xrange(len(repo) - 1, repo[node].rev() - 1, -1):
         c = repo[rev]
         for f in c.files():
             if f in seen or f not in tip or f not in c:

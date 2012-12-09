@@ -146,7 +146,7 @@ class Table(object):
                 text.extend(cell)
                 if not text[-1].endswith('\n'):
                     text[-1] += '\n'
-                if i < len(row)-1:
+                if i < len(row) - 1:
                     text.append('T}'+self._tab_char+'T{\n')
                 else:
                     text.append('T}\n')
@@ -258,7 +258,7 @@ class Translator(nodes.NodeVisitor):
             # ensure we get a ".TH" as viewers require it.
             self.head.append(self.header())
         # filter body
-        for i in xrange(len(self.body)-1, 0, -1):
+        for i in xrange(len(self.body) - 1, 0, -1):
             # remove superfluous vertical gaps.
             if self.body[i] == '.sp\n':
                 if self.body[i - 1][:4] in ('.BI ','.IP '):
@@ -880,7 +880,7 @@ class Translator(nodes.NodeVisitor):
         self.context[-3] = '.BI' # bold/italic alternate
         if node['delimiter'] != ' ':
             self.body.append('\\fB%s ' % node['delimiter'])
-        elif self.body[len(self.body)-1].endswith('='):
+        elif self.body[len(self.body) - 1].endswith('='):
             # a blank only means no blank in output, just changing font
             self.body.append(' ')
         else:

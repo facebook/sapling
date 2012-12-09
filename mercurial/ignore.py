@@ -46,7 +46,7 @@ def ignorepats(lines):
                 pat = line
                 break
             elif line.startswith(s+':'):
-                pat = rels + line[len(s)+1:]
+                pat = rels + line[len(s) + 1:]
                 break
         patterns.append(pat)
 

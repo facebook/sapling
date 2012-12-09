@@ -613,7 +613,7 @@ class ui(object):
         ('&None', 'E&xec', 'Sym&link') Responses are case insensitive.
         If ui is not interactive, the default is returned.
         """
-        resps = [s[s.index('&')+1].lower() for s in choices]
+        resps = [s[s.index('&') + 1].lower() for s in choices]
         while True:
             r = self.prompt(msg, resps[default])
             if r.lower() in resps:

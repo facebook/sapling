@@ -1147,7 +1147,7 @@ class queue(object):
                 return matches[0]
             if self.series and self.applied:
                 if s == 'qtip':
-                    return self.series[self.seriesend(True)-1]
+                    return self.series[self.seriesend(True) - 1]
                 if s == 'qbase':
                     return self.series[0]
             return None
@@ -1626,7 +1626,7 @@ class queue(object):
                 # if the patch excludes a modified file, mark that
                 # file with mtime=0 so status can see it.
                 mm = []
-                for i in xrange(len(m)-1, -1, -1):
+                for i in xrange(len(m) - 1, -1, -1):
                     if not matchfn(m[i]):
                         mm.append(m[i])
                         del m[i]
