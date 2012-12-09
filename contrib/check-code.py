@@ -135,7 +135,7 @@ pypats = [
     (r"[^_]_\('[^']+'\s*%", "don't use % inside _()"),
     (r'(\w|\)),\w', "missing whitespace after ,"),
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
-    (r'^\s+\w+=\w+[^,)\n]$', "missing whitespace in assignment"),
+    (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'(\s+)try:\n((?:\n|\1\s.*\n)+?)\1except.*?:\n'
      r'((?:\n|\1\s.*\n)+?)\1finally:', 'no try/except/finally in Python 2.4'),
     (r'(\s+)try:\n((?:\n|\1\s.*\n)*?)\1\s*yield\b.*?'
