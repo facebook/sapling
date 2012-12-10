@@ -2107,8 +2107,8 @@ class localrepository(object):
         """
         cl = self.changelog
         if common:
-            nm = cl.nodemap
-            common = [n for n in common if n in nm]
+            hasnode = cl.hasnode
+            common = [n for n in common if hasnode(n)]
         else:
             common = [nullid]
         if not heads:
