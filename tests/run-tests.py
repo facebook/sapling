@@ -94,7 +94,8 @@ IMPL_PATH = 'PYTHONPATH'
 if 'java' in sys.platform:
     IMPL_PATH = 'JYTHONPATH'
 
-requiredtools = ["python", "diff", "grep", "unzip", "gunzip", "bunzip2", "sed"]
+requiredtools = [os.path.basename(sys.executable), "diff", "grep", "unzip",
+                 "gunzip", "bunzip2", "sed"]
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
