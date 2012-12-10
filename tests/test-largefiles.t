@@ -345,6 +345,63 @@ Corner cases for adding largefiles.
   A sub2/large6
   A sub2/large7
 
+Committing directories containing only largefiles.
+
+  $ mkdir -p z/y/x/m
+  $ touch z/y/x/m/large1
+  $ touch z/y/x/large2
+  $ hg add --large z/y/x/m/large1 z/y/x/large2
+  $ hg commit -m "Subdir with directory only containing largefiles" z
+  Invoking status precommit hook
+  M large3
+  A large5
+  A sub2/large6
+  A sub2/large7
+  A z/y/x/large2
+  A z/y/x/m/large1
+  $ hg rollback --quiet
+  $ touch z/y/x/m/normal
+  $ hg add z/y/x/m/normal
+  $ hg commit -m "Subdir with mixed contents" z
+  Invoking status precommit hook
+  M large3
+  A large5
+  A sub2/large6
+  A sub2/large7
+  A z/y/x/large2
+  A z/y/x/m/large1
+  A z/y/x/m/normal
+  $ hg st
+  M large3
+  A large5
+  A sub2/large6
+  A sub2/large7
+  $ hg rollback --quiet
+  $ hg revert z/y/x/large2 z/y/x/m/large1
+  $ rm z/y/x/large2 z/y/x/m/large1
+  $ hg commit -m "Subdir with normal contents" z
+  Invoking status precommit hook
+  M large3
+  A large5
+  A sub2/large6
+  A sub2/large7
+  A z/y/x/m/normal
+  $ hg st
+  M large3
+  A large5
+  A sub2/large6
+  A sub2/large7
+  $ hg rollback --quiet
+  $ hg revert --quiet z
+  $ hg commit -m "Empty subdir" z
+  abort: z: no match under directory!
+  [255]
+  $ rm -rf z
+  $ hg ci -m "standin" .hglf
+  abort: file ".hglf" is a largefile standin
+  (commit the largefile itself instead)
+  [255]
+
 Test "hg status" with combination of 'file pattern' and 'directory
 pattern' for largefiles:
 
