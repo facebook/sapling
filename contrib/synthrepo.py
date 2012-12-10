@@ -231,6 +231,8 @@ def synthesize(ui, repo, descpath, **opts):
     fp.close()
 
     def cdf(l):
+        if not l:
+            return [], []
         vals, probs = zip(*sorted(l, key=lambda x: x[1], reverse=True))
         t = float(sum(probs, 0))
         s, cdfs = 0, []
