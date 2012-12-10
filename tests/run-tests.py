@@ -370,6 +370,10 @@ def usecorrectpython():
         # windows fallback
         shutil.copyfile(sys.executable, mypython)
         shutil.copymode(sys.executable, mypython)
+    except OSError, err:
+        # child processes may race, which is harmless
+        if err.errno != errno.EEXIST:
+            raise
 
 def installhg(options):
     vlog("# Performing temporary installation of HG")
