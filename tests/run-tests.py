@@ -1030,6 +1030,8 @@ def runchildren(options, tests):
     if INST:
         installhg(options)
         _checkhglib("Testing")
+    else:
+        usecorrectpython()
 
     optcopy = dict(options.__dict__)
     optcopy['jobs'] = 1
@@ -1149,6 +1151,8 @@ def runtests(options, tests):
         if INST:
             installhg(options)
             _checkhglib("Testing")
+        else:
+            usecorrectpython()
 
         if options.restart:
             orig = list(tests)
