@@ -2311,6 +2311,9 @@ class localrepository(object):
                         n = fl.node(new)
                         if n in needs:
                             needs.remove(n)
+                        else:
+                            raise util.Abort(
+                                _("received spurious file revlog entry"))
                     if not needs:
                         del needfiles[f]
             self.ui.progress(_('files'), None)
