@@ -363,6 +363,8 @@ def usecorrectpython():
             return
     else:
         exename = 'python'
+        if sys.platform == 'win32':
+            exename = 'python.exe'
     vlog('# Making python executable in test path use correct Python')
     mypython = os.path.join(BINDIR, exename)
     try:
