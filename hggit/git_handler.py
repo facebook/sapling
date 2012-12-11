@@ -8,6 +8,7 @@ from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 from dulwich import client
 from dulwich import config as dul_config
+from StringIO import StringIO
 
 try:
     from mercurial import bookmarks
@@ -993,19 +994,19 @@ class GitHandler(object):
                         if not ref.endswith('^{}')
                         and ( ref.startswith('refs/heads/') or ref.startswith('refs/tags/') ) ]
             want = [x for x in want if x not in self.git]
+            
             return want
-        f, commit = self.git.object_store.add_pack()
         try:
-            try:
-                progress = GitProgress(self.ui)
-                ret = client.fetch_pack(path, determine_wants, graphwalker,
-                                        f.write, progress.progress)
-                progress.flush()
-                return ret
-            except (HangupException, GitProtocolError), e:
-                raise hgutil.Abort(_("git remote error: ") + str(e))
-        finally:
-            commit()
+            progress = GitProgress(self.ui)
+            f = StringIO()
+            ret = client.fetch_pack(path, determine_wants, graphwalker, f.write, progress.progress)
+            if(f.pos != 0):
+                f.seek(0)
+                po =  self.git.object_store.add_thin_pack(f.read, None)
+            progress.flush()
+            return ret
+        except (HangupException, GitProtocolError), e:
+            raise hgutil.Abort(_("git remote error: ") + str(e))
 
     ## REFERENCES HANDLING
 
