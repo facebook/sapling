@@ -56,6 +56,7 @@ import re
 import threading
 import killdaemons as killmod
 import cPickle as pickle
+import Queue as queue
 
 processlock = threading.Lock()
 
@@ -1079,7 +1080,13 @@ def runchildren(options, tests):
                 blacklisted.append(test)
             else:
                 job.append(test)
-    fps = {}
+
+    waitq = queue.Queue()
+
+    # windows lacks os.wait, so we must emulate it
+    def waitfor(proc, rfd):
+        fp = os.fdopen(rfd, 'rb')
+        return lambda: waitq.put((proc.pid, proc.wait(), fp))
 
     for j, job in enumerate(jobs):
         if not job:
@@ -1090,16 +1097,18 @@ def runchildren(options, tests):
         childopts += ['--tmpdir', childtmp]
         cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
         vlog(' '.join(cmdline))
-        fps[os.spawnvp(os.P_NOWAIT, cmdline[0], cmdline)] = os.fdopen(rfd, 'rb')
+        proc = subprocess.Popen(cmdline, executable=cmdline[0])
+        threading.Thread(target=waitfor(proc, rfd)).start()
         os.close(wfd)
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     failures = 0
     passed, skipped, failed = 0, 0, 0
     skips = []
     fails = []
-    while fps:
-        pid, status = os.wait()
-        fp = fps.pop(pid)
+    for job in jobs:
+        if not job:
+            continue
+        pid, status, fp = waitq.get()
         try:
             childresults = pickle.load(fp)
         except pickle.UnpicklingError:
