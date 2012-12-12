@@ -253,6 +253,13 @@ class changectx(object):
         """
         return self.rev() in obsmod.getrevs(self._repo, 'bumped')
 
+    def divergent(self):
+        """Is a successors of a changeset with multiple possible successors set
+
+        Only non-public and non-obsolete changesets may be divergent.
+        """
+        return self.rev() in obsmod.getrevs(self._repo, 'divergent')
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
