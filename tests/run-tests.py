@@ -328,7 +328,7 @@ def checktools():
     # Before we go any further, check for pre-requisite tools
     # stuff from coreutils (cat, rm, etc) are not tested
     for p in requiredtools:
-        if os.name == 'nt':
+        if os.name == 'nt' and not p.endswith('.exe'):
             p += '.exe'
         found = findprogram(p)
         if found:
@@ -365,18 +365,24 @@ def usecorrectpython():
         exename = 'python'
         if sys.platform == 'win32':
             exename = 'python.exe'
-    vlog('# Making python executable in test path use correct Python')
-    mypython = os.path.join(BINDIR, exename)
-    try:
-        os.symlink(sys.executable, mypython)
-    except AttributeError:
-        # windows fallback
-        shutil.copyfile(sys.executable, mypython)
-        shutil.copymode(sys.executable, mypython)
-    except OSError, err:
-        # child processes may race, which is harmless
-        if err.errno != errno.EEXIST:
-            raise
+    if getattr(os, 'symlink', None):
+        vlog("# Making python executable in test path a symlink to '%s'" % 
+             sys.executable)
+        mypython = os.path.join(BINDIR, exename)
+        try:
+            os.symlink(sys.executable, mypython)
+        except OSError, err:
+            # child processes may race, which is harmless
+            if err.errno != errno.EEXIST:
+                raise
+    else:
+        vlog("# Modifying search path to find %s in '%s'" % (exename, exedir))
+        path = os.environ['PATH'].split(os.pathsep)
+        while exedir in path:
+            path.remove(exedir)
+        os.environ['PATH'] = os.pathsep.join([exedir] + path)
+        if not findprogram(exename):
+            print "WARNING: Cannot find %s in search path" % exename
 
 def installhg(options):
     vlog("# Performing temporary installation of HG")
