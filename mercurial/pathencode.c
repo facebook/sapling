@@ -524,6 +524,59 @@ PyObject *lowerencode(PyObject *self, PyObject *args)
 }
 
 /*
+ * Avoiding a trip through Python would improve performance by 50%,
+ * but we don't encounter enough long names to be worth the code.
+ */
+static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
+{
+	static PyObject *shafunc;
+	PyObject *shaobj, *hashobj;
+
+	if (shafunc == NULL) {
+		PyObject *util, *name = PyString_FromString("mercurial.util");
+
+		if (name == NULL)
+			return -1;
+
+		util = PyImport_Import(name);
+		Py_DECREF(name);
+
+		if (util == NULL) {
+			PyErr_SetString(PyExc_ImportError, "mercurial.util");
+			return -1;
+		}
+		shafunc = PyObject_GetAttrString(util, "sha1");
+		Py_DECREF(util);
+
+		if (shafunc == NULL) {
+			PyErr_SetString(PyExc_AttributeError,
+					"module 'mercurial.util' has no "
+					"attribute 'sha1'");
+			return -1;
+		}
+	}
+
+	shaobj = PyObject_CallFunction(shafunc, "s#", str, len);
+
+	if (shaobj == NULL)
+		return -1;
+
+	hashobj = PyObject_CallMethod(shaobj, "digest", "");
+	Py_DECREF(shaobj);
+
+	if (!PyString_Check(hashobj) || PyString_GET_SIZE(hashobj) != 20) {
+		PyErr_SetString(PyExc_TypeError,
+				"result of digest is not a 20-byte hash");
+		Py_DECREF(hashobj);
+		return -1;
+	}
+
+	memcpy(hash, PyString_AS_STRING(hashobj), 20);
+	Py_DECREF(hashobj);
+	return 0;
+}
+
+/*
  * We currently implement only basic encoding.
  *
  * If a name is too long to encode due to Windows path name limits,
