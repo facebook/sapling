@@ -84,12 +84,12 @@
   > pick 652413bf663e 5 f
   > EOF
   $ hg histedit 1 --commands commands.txt --verbose | grep histedit
-  histedit: moving bookmarks two from 177f92b77385 to d36c0562f908
-  histedit: moving bookmarks three from 055a42cdd887 to ae467701c500
-  histedit: moving bookmarks four from e860deea161a to ae467701c500
   histedit: moving bookmarks also-two from 177f92b77385 to d36c0562f908
-  histedit: moving bookmarks will-move-backwards from d2ae7f538514 to cb9a9f314b8b
   histedit: moving bookmarks five from 652413bf663e to 0efacef7cb48
+  histedit: moving bookmarks four from e860deea161a to ae467701c500
+  histedit: moving bookmarks three from 055a42cdd887 to ae467701c500
+  histedit: moving bookmarks two from 177f92b77385 to d36c0562f908
+  histedit: moving bookmarks will-move-backwards from d2ae7f538514 to cb9a9f314b8b
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg (glob)
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg (glob)
   $ hg log --graph
@@ -141,9 +141,9 @@
   > pick ae467701c500 2 d
   > EOF
   $ hg histedit 1 --commands commands.txt --verbose | grep histedit
-  histedit: moving bookmarks three from ae467701c500 to 1be9c35b4cb2
-  histedit: moving bookmarks four from ae467701c500 to 1be9c35b4cb2
   histedit: moving bookmarks five from 0efacef7cb48 to 1be9c35b4cb2
+  histedit: moving bookmarks four from ae467701c500 to 1be9c35b4cb2
+  histedit: moving bookmarks three from ae467701c500 to 1be9c35b4cb2
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg (glob)
 
 We expect 'five' to stay at tip, since the tipmost bookmark is most

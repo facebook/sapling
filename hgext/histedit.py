@@ -720,7 +720,7 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
         # if nothing got rewritten there is not purpose for this function
         return
     moves = []
-    for bk, old in repo._bookmarks.iteritems():
+    for bk, old in sorted(repo._bookmarks.iteritems()):
         if old == oldtopmost:
             # special case ensure bookmark stay on tip. 
             #
