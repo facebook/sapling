@@ -132,7 +132,7 @@ def _buildlowerencodefun():
         cmap[chr(x)] = chr(x).lower()
     return lambda s: "".join([cmap[c] for c in s])
 
-lowerencode = _buildlowerencodefun()
+lowerencode = getattr(parsers, 'lowerencode', None) or _buildlowerencodefun()
 
 # Windows reserved names: con, prn, aux, nul, com1..com9, lpt1..lpt9
 _winres3 = ('aux', 'con', 'prn', 'nul') # length 3

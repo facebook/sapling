@@ -15,6 +15,7 @@
  * required.
  */
 
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <assert.h>
 #include <ctype.h>
@@ -480,6 +481,47 @@ static Py_ssize_t basicencode(char *dest, size_t destsize,
 }
 
 static const Py_ssize_t maxstorepathlen = 120;
+
+static Py_ssize_t _lowerencode(char *dest, size_t destsize,
+			       const char *src, Py_ssize_t len)
+{
+	static const uint32_t onebyte[8] = {
+		1, 0x2bfffbfb, 0xe8000001, 0x2fffffff
+	};
+
+	static const uint32_t lower[8] = { 0, 0, 0x7fffffe };
+
+	Py_ssize_t i, destlen = 0;
+
+	for (i = 0; i < len; i++) {
+		if (inset(onebyte, src[i]))
+			charcopy(dest, &destlen, destsize, src[i]);
+		else if (inset(lower, src[i]))
+			charcopy(dest, &destlen, destsize, src[i] + 32);
+		else
+			escape3(dest, &destlen, destsize, src[i]);
+	}
+
+	return destlen;
+}
+
+PyObject *lowerencode(PyObject *self, PyObject *args)
+{
+	char *path;
+	Py_ssize_t len, newlen;
+	PyObject *ret;
+
+	if (!PyArg_ParseTuple(args, "s#:lowerencode", &path, &len))
+		return NULL;
+
+	newlen = _lowerencode(NULL, 0, path, len);
+	ret = PyString_FromStringAndSize(NULL, newlen);
+	if (ret)
+		newlen = _lowerencode(PyString_AS_STRING(ret), newlen,
+				      path, len);
+
+	return ret;
+}
 
 /*
  * We currently implement only basic encoding.
