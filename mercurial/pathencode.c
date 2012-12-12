@@ -720,12 +720,6 @@ static PyObject *hashencode(const char *src, Py_ssize_t len)
 	return hashmangle(auxed, auxlen, sha);
 }
 
-/*
- * We currently implement only basic encoding.
- *
- * If a name is too long to encode due to Windows path name limits,
- * this function returns None.
- */
 PyObject *pathencode(PyObject *self, PyObject *args)
 {
 	Py_ssize_t len, newlen;
@@ -740,13 +734,10 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	if (len > maxstorepathlen) {
-		newobj = Py_None;
-		Py_INCREF(newobj);
-		return newobj;
-	}
-
-	newlen = len ? basicencode(NULL, 0, path, len + 1) : 1;
+	if (len > maxstorepathlen)
+		newlen = maxstorepathlen + 2;
+	else
+		newlen = len ? basicencode(NULL, 0, path, len + 1) : 1;
 
 	if (newlen <= maxstorepathlen + 1) {
 		if (newlen == len + 1) {
@@ -761,10 +752,9 @@ PyObject *pathencode(PyObject *self, PyObject *args)
 			basicencode(PyString_AS_STRING(newobj), newlen, path,
 				    len + 1);
 		}
-	} else {
-		newobj = Py_None;
-		Py_INCREF(newobj);
 	}
+	else
+		newobj = hashencode(path, len + 1);
 
 	return newobj;
 }
