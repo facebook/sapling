@@ -523,6 +523,19 @@ PyObject *lowerencode(PyObject *self, PyObject *args)
 	return ret;
 }
 
+/* See store.py:_auxencode for a description. */
+static Py_ssize_t auxencode(char *dest, size_t destsize,
+			    const char *src, Py_ssize_t len)
+{
+	static const uint32_t twobytes[8];
+
+	static const uint32_t onebyte[8] = {
+		~0, 0xffff3ffe, ~0, ~0, ~0, ~0, ~0, ~0,
+	};
+
+	return _encode(twobytes, onebyte, dest, 0, destsize, src, len, 0);
+}
+
 static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
 {
 	static const Py_ssize_t dirprefixlen = 8;
@@ -681,6 +694,30 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	memcpy(hash, PyString_AS_STRING(hashobj), 20);
 	Py_DECREF(hashobj);
 	return 0;
+}
+
+static PyObject *hashencode(const char *src, Py_ssize_t len)
+{
+	const Py_ssize_t baselen = (len - 5) * 3;
+#ifndef _MSC_VER
+	/* alloca is surprisingly slow, so avoid when possible */
+	char dired[baselen];
+	char lowered[baselen];
+	char auxed[baselen];
+#else
+	char *dired = alloca(baselen);
+	char *lowered = alloca(baselen);
+	char *auxed = alloca(baselen);
+#endif
+	Py_ssize_t dirlen, lowerlen, auxlen;
+	char sha[20];
+
+	dirlen = _encodedir(dired, baselen, src, len);
+	if (sha1hash(sha, dired, dirlen - 1) == -1)
+		return NULL;
+	lowerlen = _lowerencode(lowered, baselen, dired + 5, dirlen - 5);
+	auxlen = auxencode(auxed, baselen, lowered, lowerlen);
+	return hashmangle(auxed, auxlen, sha);
 }
 
 /*
