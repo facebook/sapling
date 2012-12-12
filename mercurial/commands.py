@@ -4880,8 +4880,7 @@ def remove(ui, repo, *pats, **opts):
     elif after:
         list = deleted
         for f in modified + added + clean:
-            ui.warn(_('not removing %s: file still exists (use -f'
-                      ' to force removal)\n') % m.rel(f))
+            ui.warn(_('not removing %s: file still exists\n') % m.rel(f))
             ret = 1
     else:
         list = deleted + clean

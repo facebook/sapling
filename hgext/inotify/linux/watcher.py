@@ -72,7 +72,7 @@ class event(object):
 
     def __repr__(self):
         r = repr(self.raw)
-        return 'event(path=' + repr(self.path) + ', ' + r[r.find('(')+1:]
+        return 'event(path=' + repr(self.path) + ', ' + r[r.find('(') + 1:]
 
 
 _event_props = {

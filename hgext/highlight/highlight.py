@@ -50,7 +50,7 @@ def pygmentize(field, fctx, style, tmpl):
     colorized = highlight(text, lexer, formatter)
     # strip wrapping div
     colorized = colorized[:colorized.find('\n</pre>')]
-    colorized = colorized[colorized.find('<pre>')+5:]
+    colorized = colorized[colorized.find('<pre>') + 5:]
     coloriter = (s.encode(encoding.encoding, 'replace')
                  for s in colorized.splitlines())
 

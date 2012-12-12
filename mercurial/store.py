@@ -76,7 +76,7 @@ def _buildencodefun():
     cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
     for x in (range(32) + range(126, 256) + winreserved):
         cmap[chr(x)] = "~%02x" % x
-    for x in range(ord("A"), ord("Z")+1) + [ord(e)]:
+    for x in range(ord("A"), ord("Z") + 1) + [ord(e)]:
         cmap[chr(x)] = e + chr(x).lower()
     dmap = {}
     for k, v in cmap.iteritems():
@@ -128,7 +128,7 @@ def _buildlowerencodefun():
     cmap = dict([(chr(x), chr(x)) for x in xrange(127)])
     for x in (range(32) + range(126, 256) + winreserved):
         cmap[chr(x)] = "~%02x" % x
-    for x in range(ord("A"), ord("Z")+1):
+    for x in range(ord("A"), ord("Z") + 1):
         cmap[chr(x)] = chr(x).lower()
     return lambda s: "".join([cmap[c] for c in s])
 

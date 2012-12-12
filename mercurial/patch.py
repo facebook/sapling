@@ -1007,7 +1007,7 @@ class hunk(object):
 
             bot = min(fuzz, bot)
             top = min(fuzz, top)
-            return old[top:len(old)-bot], new[top:len(new)-bot], top
+            return old[top:len(old) - bot], new[top:len(new) - bot], top
         return old, new, 0
 
     def fuzzit(self, fuzz, toponly):

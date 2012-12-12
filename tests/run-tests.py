@@ -935,6 +935,8 @@ def runone(options, test):
         times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
 
+    killdaemons()
+
     mark = '.'
 
     skipped = (ret == SKIPPED_STATUS)
@@ -1004,8 +1006,6 @@ def runone(options, test):
         sys.stdout.write(mark)
         sys.stdout.flush()
         iolock.release()
-
-    killdaemons()
 
     if not options.keep_tmpdir:
         shutil.rmtree(testtmp, True)

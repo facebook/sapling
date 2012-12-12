@@ -2655,7 +2655,7 @@ class localrepository(object):
             fp.write(text)
         finally:
             fp.close()
-        return self.pathto(fp.name[len(self.root)+1:])
+        return self.pathto(fp.name[len(self.root) + 1:])
 
 # used to avoid circular references so destructors work
 def aftertrans(files):

@@ -107,7 +107,7 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -A bar
-  not removing bar: file still exists (use -f to force removal)
+  not removing bar: file still exists
   exit code: 1
   A bar
   ./bar
@@ -117,7 +117,7 @@ the table cases
 21 state clean, options -A
 
   $ remove -A foo
-  not removing foo: file still exists (use -f to force removal)
+  not removing foo: file still exists
   exit code: 1
   ? bar
   ./bar
@@ -128,7 +128,7 @@ the table cases
 
   $ echo b >> foo
   $ remove -A foo
-  not removing foo: file still exists (use -f to force removal)
+  not removing foo: file still exists
   exit code: 1
   M foo
   ? bar
@@ -220,7 +220,7 @@ dir, options -A
 
   $ rm test/bar
   $ remove -A test
-  not removing test/foo: file still exists (use -f to force removal) (glob)
+  not removing test/foo: file still exists (glob)
   removing test/bar (glob)
   exit code: 1
   R test/bar
