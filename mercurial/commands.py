@@ -1827,8 +1827,8 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                                                                 force=True)
             common = set(common)
             if not opts.get('nonheads'):
-                ui.write(("unpruned common: %s\n") % " ".join([short(n)
-                                                            for n in common]))
+                ui.write(("unpruned common: %s\n") %
+                         " ".join(sorted(short(n) for n in common)))
                 dag = dagutil.revlogdag(repo.changelog)
                 all = dag.ancestorset(dag.internalizeall(common))
                 common = dag.externalizeall(dag.headsetofconnecteds(all))
@@ -1837,7 +1837,8 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         common = set(common)
         rheads = set(hds)
         lheads = set(repo.heads())
-        ui.write(("common heads: %s\n") % " ".join([short(n) for n in common]))
+        ui.write(("common heads: %s\n") %
+                 " ".join(sorted(short(n) for n in common)))
         if lheads <= common:
             ui.write(("local is subset\n"))
         elif rheads <= common:
@@ -2134,7 +2135,8 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 ui.write(' ')
                 ui.write(hex(repl))
             ui.write(' %X ' % m._data[2])
-            ui.write(m.metadata())
+            ui.write('{%s}' % (', '.join('%r: %r' % t for t in
+                                         sorted(m.metadata().items()))))
             ui.write('\n')
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))

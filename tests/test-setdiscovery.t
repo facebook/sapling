@@ -36,8 +36,8 @@ Small superset:
   % -- a -> b tree
   comparing with b
   searching for changes
-  unpruned common: b5714e113bc0 66f7d451a68b 01241442b3c2
-  common heads: b5714e113bc0 01241442b3c2
+  unpruned common: 01241442b3c2 66f7d451a68b b5714e113bc0
+  common heads: 01241442b3c2 b5714e113bc0
   local is subset
   
   % -- a -> b set
@@ -45,14 +45,14 @@ Small superset:
   query 1; heads
   searching for changes
   all local heads known remotely
-  common heads: b5714e113bc0 01241442b3c2
+  common heads: 01241442b3c2 b5714e113bc0
   local is subset
   
   % -- b -> a tree
   comparing with a
   searching for changes
-  unpruned common: b5714e113bc0 01241442b3c2
-  common heads: b5714e113bc0 01241442b3c2
+  unpruned common: 01241442b3c2 b5714e113bc0
+  common heads: 01241442b3c2 b5714e113bc0
   remote is subset
   
   % -- b -> a set
@@ -60,7 +60,7 @@ Small superset:
   query 1; heads
   searching for changes
   all remote heads known locally
-  common heads: b5714e113bc0 01241442b3c2
+  common heads: 01241442b3c2 b5714e113bc0
   remote is subset
 
 
@@ -89,7 +89,7 @@ Many new:
   % -- b -> a tree
   comparing with a
   searching for changes
-  unpruned common: bebd167eb94d 66f7d451a68b
+  unpruned common: 66f7d451a68b bebd167eb94d
   common heads: bebd167eb94d
   
   % -- b -> a set
@@ -128,7 +128,7 @@ Both sides many new with stub:
   % -- b -> a tree
   comparing with a
   searching for changes
-  unpruned common: 66f7d451a68b 2dc09a01254d
+  unpruned common: 2dc09a01254d 66f7d451a68b
   common heads: 2dc09a01254d
   
   % -- b -> a set
