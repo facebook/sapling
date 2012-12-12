@@ -366,7 +366,7 @@ def usecorrectpython():
         if sys.platform == 'win32':
             exename = 'python.exe'
     if getattr(os, 'symlink', None):
-        vlog("# Making python executable in test path a symlink to '%s'" % 
+        vlog("# Making python executable in test path a symlink to '%s'" %
              sys.executable)
         mypython = os.path.join(BINDIR, exename)
         try:
