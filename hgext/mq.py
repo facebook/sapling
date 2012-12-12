@@ -947,7 +947,7 @@ class queue(object):
             bctx = repo[baserev]
         else:
             bctx = wctx.parents()[0]
-        for s in wctx.substate:
+        for s in sorted(wctx.substate):
             if wctx.sub(s).dirty(True):
                 raise util.Abort(
                     _("uncommitted changes in subrepository %s") % s)

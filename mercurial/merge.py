@@ -222,7 +222,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     if '.hgsubstate' in m1:
         # check whether sub state is modified
-        for s in p1.substate:
+        for s in sorted(p1.substate):
             if p1.sub(s).dirty():
                 m1['.hgsubstate'] += "+"
                 break
@@ -593,7 +593,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             if not force and (wc.files() or wc.deleted()):
                 raise util.Abort(_("outstanding uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
-            for s in wc.substate:
+            for s in sorted(wc.substate):
                 if wc.sub(s).dirty():
                     raise util.Abort(_("outstanding uncommitted changes in "
                                        "subrepository '%s'") % s)

@@ -147,7 +147,7 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             r = "%s:%s:%s" % r
         repo.ui.debug("  subrepo %s: %s %s\n" % (s, msg, r))
 
-    for s, l in s1.items():
+    for s, l in sorted(s1.iteritems()):
         a = sa.get(s, nullstate)
         ld = l # local state with possible dirty flag for compares
         if wctx.sub(s).dirty():

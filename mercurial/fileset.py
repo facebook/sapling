@@ -373,7 +373,7 @@ def subrepo(mctx, x):
     # i18n: "subrepo" is a keyword
     getargs(x, 0, 1, _("subrepo takes at most one argument"))
     ctx = mctx.ctx
-    sstate = ctx.substate
+    sstate = sorted(ctx.substate)
     if x:
         pat = getstring(x, _("subrepo requires a pattern or no arguments"))
 

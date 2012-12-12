@@ -85,7 +85,7 @@ def bailifchanged(repo):
     if modified or added or removed or deleted:
         raise util.Abort(_("outstanding uncommitted changes"))
     ctx = repo[None]
-    for s in ctx.substate:
+    for s in sorted(ctx.substate):
         if ctx.sub(s).dirty():
             raise util.Abort(_("uncommitted changes in subrepo %s") % s)
 
@@ -1515,7 +1515,7 @@ def add(ui, repo, match, dryrun, listsubrepos, prefix, explicitonly):
             if ui.verbose or not exact:
                 ui.status(_('adding %s\n') % match.rel(join(f)))
 
-    for subpath in wctx.substate:
+    for subpath in sorted(wctx.substate):
         sub = wctx.sub(subpath)
         try:
             submatch = matchmod.narrowmatcher(subpath, match)
@@ -1546,7 +1546,7 @@ def forget(ui, repo, match, prefix, explicitonly):
     if explicitonly:
         forget = [f for f in forget if match.exact(f)]
 
-    for subpath in wctx.substate:
+    for subpath in sorted(wctx.substate):
         sub = wctx.sub(subpath)
         try:
             submatch = matchmod.narrowmatcher(subpath, match)
@@ -1857,7 +1857,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 names[abs] = m.rel(abs), m.exact(abs)
 
         # get the list of subrepos that must be reverted
-        targetsubs = [s for s in ctx.substate if m(s)]
+        targetsubs = sorted(s for s in ctx.substate if m(s))
         m = scmutil.matchfiles(repo, names)
         changes = repo.status(match=m)[:4]
         modified, added, removed, deleted = map(set, changes)

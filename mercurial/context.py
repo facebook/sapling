@@ -1035,13 +1035,13 @@ class workingctx(changectx):
         return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
-        return sorted(self._repo.dirstate.walk(match, self.substate.keys(),
+        return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
                                                True, False))
 
     def dirty(self, missing=False, merge=True, branch=True):
         "check whether a working directory is modified"
         # check subrepos first
-        for s in self.substate:
+        for s in sorted(self.substate):
             if self.sub(s).dirty():
                 return True
         # check current working dir

@@ -299,7 +299,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     repo.ui.progress(_('archiving'), None)
 
     if subrepos:
-        for subpath in ctx.substate:
+        for subpath in sorted(ctx.substate):
             sub = ctx.sub(subpath)
             submatch = matchmod.narrowmatcher(subpath, matchfn)
             sub.archive(repo.ui, archiver, prefix, submatch)
