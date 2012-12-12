@@ -646,6 +646,15 @@ def destination(repo, subset, x):
 
     return [r for r in subset if r in dests]
 
+def divergent(repo, subset, x):
+    """``divergent()``
+    Final successors of changesets with an alternative set of final successors.
+    """
+    # i18n: "divergent" is a keyword
+    getargs(x, 0, 0, _("divergent takes no arguments"))
+    divergent = obsmod.getrevs(repo, 'divergent')
+    return [r for r in subset if r in divergent]
+
 def draft(repo, subset, x):
     """``draft()``
     Changeset in draft phase."""
@@ -1541,6 +1550,7 @@ symbols = {
     "descendants": descendants,
     "_firstdescendants": _firstdescendants,
     "destination": destination,
+    "divergent": divergent,
     "draft": draft,
     "extinct": extinct,
     "extra": extra,
