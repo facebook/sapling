@@ -18,10 +18,10 @@ creating 'local'
   $ checknewrepo local
   store created
   00changelog.i created
-  revlogv1
-  fncache
-  store
   dotencode
+  fncache
+  revlogv1
+  store
   $ echo this > local/foo
   $ hg ci --cwd local -A -m "init"
   adding foo
@@ -47,8 +47,8 @@ creating repo with format.dotencode=false
   $ checknewrepo old3
   store created
   00changelog.i created
-  revlogv1
   fncache
+  revlogv1
   store
 
 test failure
@@ -149,10 +149,10 @@ creating 'local/sub/repo'
   $ checknewrepo local/sub/repo
   store created
   00changelog.i created
-  revlogv1
-  fncache
-  store
   dotencode
+  fncache
+  revlogv1
+  store
 
 prepare test of init of url configured from paths
 
@@ -166,10 +166,10 @@ init should (for consistency with clone) expand the url
   $ checknewrepo "url from paths"
   store created
   00changelog.i created
-  revlogv1
-  fncache
-  store
   dotencode
+  fncache
+  revlogv1
+  store
 
 verify that clone also expand urls
 
@@ -179,10 +179,10 @@ verify that clone also expand urls
   $ checknewrepo "another paths url"
   store created
   00changelog.i created
-  revlogv1
-  fncache
-  store
   dotencode
+  fncache
+  revlogv1
+  store
 
 clone bookmarks
 

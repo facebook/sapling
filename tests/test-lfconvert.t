@@ -96,11 +96,11 @@ Test link+rename largefile codepath
 
 "lfconvert" adds 'largefiles' to .hg/requires.
   $ cat .hg/requires
+  dotencode
+  fncache
   largefiles
   revlogv1
-  fncache
   store
-  dotencode
 
 "lfconvert" includes a newline at the end of the standin files.
   $ cat .hglf/large .hglf/sub/maybelarge.dat

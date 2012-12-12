@@ -262,7 +262,7 @@ class localrepository(object):
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")
-        for r in self.requirements:
+        for r in sorted(self.requirements):
             reqfile.write("%s\n" % r)
         reqfile.close()
 
