@@ -353,7 +353,7 @@ class sessionvars(object):
         return sessionvars(copy.copy(self.vars), self.start)
     def __iter__(self):
         separator = self.start
-        for key, value in self.vars.iteritems():
+        for key, value in sorted(self.vars.iteritems()):
             yield {'name': key, 'value': str(value), 'separator': separator}
             separator = '&'
 

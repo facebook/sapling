@@ -976,8 +976,8 @@ Overviews
   <a href="/file/cad8025a2e87?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
-  <a href="/graph/3?style=gitweb&revcount=30">less</a>
-  <a href="/graph/3?style=gitweb&revcount=120">more</a>
+  <a href="/graph/3?revcount=30&style=gitweb">less</a>
+  <a href="/graph/3?revcount=120&style=gitweb">more</a>
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
   </div>
   
@@ -1049,8 +1049,8 @@ Overviews
   </script>
   
   <div class="page_nav">
-  <a href="/graph/3?style=gitweb&revcount=30">less</a>
-  <a href="/graph/3?style=gitweb&revcount=120">more</a>
+  <a href="/graph/3?revcount=30&style=gitweb">less</a>
+  <a href="/graph/3?revcount=120&style=gitweb">more</a>
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
   </div>
   
