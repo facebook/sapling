@@ -1028,7 +1028,7 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
                     files.add(f)
         toupload = toupload.union(
             set([f for f in files if lfutil.isstandin(f) and f in ctx]))
-    return toupload
+    return sorted(toupload)
 
 def overrideoutgoing(orig, ui, repo, dest=None, **opts):
     result = orig(ui, repo, dest, **opts)

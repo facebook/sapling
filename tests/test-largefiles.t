@@ -705,9 +705,9 @@ Test that outgoing --large works (with revsets too)
   
   searching for changes
   largefiles to upload:
-  large8
-  large
   foo
+  large
+  large8
   
   $ cd ../a
 
