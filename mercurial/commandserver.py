@@ -220,7 +220,7 @@ class server(object):
                     'getencoding' : getencoding}
 
     def serve(self):
-        hellomsg = 'capabilities: ' + ' '.join(self.capabilities.keys())
+        hellomsg = 'capabilities: ' + ' '.join(sorted(self.capabilities))
         hellomsg += '\n'
         hellomsg += 'encoding: ' + encoding.encoding
 
