@@ -5,7 +5,7 @@ def show(s):
     print "A = '%s'" % s.encode("string_escape")
 
     # show the result of the C implementation, if available
-    h = store._dothybridencode(s)
+    h = store._pathencode(s)
     print "B = '%s'" % h.encode("string_escape")
 
     # compare it with reference implementation in Python

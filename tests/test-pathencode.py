@@ -154,7 +154,7 @@ def genpath(rng, count):
 def runtests(rng, seed, count):
     nerrs = 0
     for p in genpath(rng, count):
-        h = store._dothybridencode(p)    # uses C implementation, if available
+        h = store._pathencode(p)    # uses C implementation, if available
         r = store._hybridencode(p, True) # reference implementation in Python
         if h != r:
             if nerrs == 0:

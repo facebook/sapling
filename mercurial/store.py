@@ -255,21 +255,16 @@ def _hybridencode(path, dotencode):
     return res
 
 def _pathencode(path):
+    de = encodedir(path)
     if len(path) > _maxstorepathlen:
-        return None
-    ef = _encodefname(encodedir(path)).split('/')
+        return _hashencode(de, True)
+    ef = _encodefname(de).split('/')
     res = '/'.join(_auxencode(ef, True))
     if len(res) > _maxstorepathlen:
-        return None
+        return _hashencode(de, True)
     return res
 
 _pathencode = getattr(parsers, 'pathencode', _pathencode)
-
-def _dothybridencode(f):
-    ef = _pathencode(f)
-    if ef is None:
-        return _hashencode(encodedir(f), True)
-    return ef
 
 def _plainhybridencode(f):
     return _hybridencode(f, False)
@@ -456,7 +451,7 @@ class _fncachevfs(scmutil.abstractvfs, scmutil.auditvfs):
 class fncachestore(basicstore):
     def __init__(self, path, vfstype, dotencode):
         if dotencode:
-            encode = _dothybridencode
+            encode = _pathencode
         else:
             encode = _plainhybridencode
         self.encode = encode
