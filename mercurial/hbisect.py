@@ -147,7 +147,7 @@ def save_state(repo, state):
     f = repo.opener("bisect.state", "w", atomictemp=True)
     wlock = repo.wlock()
     try:
-        for kind in state:
+        for kind in sorted(state):
             for node in state[kind]:
                 f.write("%s %s\n" % (kind, hex(node)))
         f.close()

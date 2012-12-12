@@ -222,21 +222,21 @@ mark revsets instead of single revs
   Testing changeset 12:1941b52820a5 (23 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat .hg/bisect.state
-  current 1941b52820a544549596820a8ae006842b0e2c64
-  skip 9d7d07bc967ca98ad0600c24953fd289ad5fa991
-  skip ce8f0998e922c179e80819d5066fbe46e2998784
-  skip e7fa0811edb063f6319531f0d0a865882138e180
-  skip a2e6ea4973e9196ddd3386493b0c214b41fd97d3
   bad b99c7b9c8e11558adef3fad9af211c58d46f325b
   bad 5cd978ea51499179507ee7b6f340d2dbaa401185
   bad db07c04beaca44cf24832541e7f4a2346a95275b
   bad b53bea5e2fcb30d3e00bd3409507a5659ce0fd8b
+  current 1941b52820a544549596820a8ae006842b0e2c64
   good 3efc6fd51aeb8594398044c6c846ca59ae021203
   good 288867a866e9adb7a29880b66936c874b80f4651
   good 8e0c2264c8af790daf3585ada0669d93dee09c83
   good b5bd63375ab9a290419f2024b7f4ee9ea7ce90a8
   good ed2d2f24b11c368fa8aa0da9f4e1db580abade59
   good 58c80a7c8a4025a94cedaf7b4a4e3124e8909a96
+  skip 9d7d07bc967ca98ad0600c24953fd289ad5fa991
+  skip ce8f0998e922c179e80819d5066fbe46e2998784
+  skip e7fa0811edb063f6319531f0d0a865882138e180
+  skip a2e6ea4973e9196ddd3386493b0c214b41fd97d3
 
 bisect reverse test
 
