@@ -314,7 +314,7 @@ def mergecopies(repo, c1, c2, ca):
     if fullcopy:
         repo.ui.debug("  all copies found (* = to merge, ! = divergent, "
                       "% = renamed and deleted):\n")
-        for f in fullcopy:
+        for f in sorted(fullcopy):
             note = ""
             if f in copy:
                 note += "*"

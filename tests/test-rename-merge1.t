@@ -29,9 +29,9 @@
      b
      b2
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a2' -> dst: 'c2' !
      src: 'a' -> dst: 'b' *
      src: 'a2' -> dst: 'b2' !
+     src: 'a2' -> dst: 'c2' !
     checking for directory renames
    a2: divergent renames -> dr
   resolving manifests

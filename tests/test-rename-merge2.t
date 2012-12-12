@@ -370,8 +370,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files in other:
      c
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     src: 'a' -> dst: 'c' !
      src: 'a' -> dst: 'b' !
+     src: 'a' -> dst: 'c' !
     checking for directory renames
    a: divergent renames -> dr
   resolving manifests
