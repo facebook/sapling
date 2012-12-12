@@ -523,6 +523,113 @@ PyObject *lowerencode(PyObject *self, PyObject *args)
 	return ret;
 }
 
+static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
+{
+	static const Py_ssize_t dirprefixlen = 8;
+	static const Py_ssize_t maxshortdirslen = 68;
+	char *dest;
+	PyObject *ret;
+
+	Py_ssize_t i, d, p, lastslash = len - 1, lastdot = -1;
+	Py_ssize_t destsize, destlen = 0, slop, used;
+
+	while (lastslash >= 0 && src[lastslash] != '/') {
+		if (src[lastslash] == '.' && lastdot == -1)
+			lastdot = lastslash;
+		lastslash--;
+	}
+
+#if 0
+	/* All paths should end in a suffix of ".i" or ".d".
+           Unfortunately, the file names in test-hybridencode.py
+           violate this rule.  */
+	if (lastdot != len - 3) {
+		PyErr_SetString(PyExc_ValueError,
+				"suffix missing or wrong length");
+		return NULL;
+	}
+#endif
+
+	/* If src contains a suffix, we will append it to the end of
+	   the new string, so make room. */
+	destsize = 120;
+	if (lastdot >= 0)
+		destsize += len - lastdot - 1;
+
+	ret = PyString_FromStringAndSize(NULL, destsize);
+	if (ret == NULL)
+		return NULL;
+
+	dest = PyString_AS_STRING(ret);
+	memcopy(dest, &destlen, destsize, "dh/", 3);
+
+	/* Copy up to dirprefixlen bytes of each path component, up to
+	   a limit of maxshortdirslen bytes. */
+	for (i = d = p = 0; i < lastslash; i++, p++) {
+		if (src[i] == '/') {
+			char d = dest[destlen - 1];
+			/* After truncation, a directory name may end
+			   in a space or dot, which are unportable. */
+			if (d == '.' || d == ' ')
+				dest[destlen - 1] = '_';
+			if (destlen > maxshortdirslen)
+				break;
+			charcopy(dest, &destlen, destsize, src[i]);
+			p = -1;
+		}
+		else if (p < dirprefixlen)
+			charcopy(dest, &destlen, destsize, src[i]);
+	}
+
+	/* Rewind to just before the last slash copied. */
+	if (destlen > maxshortdirslen + 3)
+		do {
+			destlen--;
+		} while (destlen > 0 && dest[destlen] != '/');
+
+	if (destlen > 3) {
+		if (lastslash > 0) {
+			char d = dest[destlen - 1];
+			/* The last directory component may be
+			   truncated, so make it safe. */
+			if (d == '.' || d == ' ')
+				dest[destlen - 1] = '_';
+		}
+
+		charcopy(dest, &destlen, destsize, '/');
+	}
+
+	/* Add a prefix of the original file's name. Its length
+	   depends on the number of bytes left after accounting for
+	   hash and suffix. */
+	used = destlen + 40;
+	if (lastdot >= 0)
+		used += len - lastdot - 1;
+	slop = maxstorepathlen - used;
+	if (slop > 0) {
+		Py_ssize_t basenamelen =
+			lastslash >= 0 ? len - lastslash - 2 : len - 1;
+
+		if (basenamelen > slop)
+			basenamelen = slop;
+		if (basenamelen > 0)
+			memcopy(dest, &destlen, destsize, &src[lastslash + 1],
+				basenamelen);
+	}
+
+	/* Add hash and suffix. */
+	for (i = 0; i < 20; i++)
+		hexencode(dest, &destlen, destsize, sha[i]);
+
+	if (lastdot >= 0)
+		memcopy(dest, &destlen, destsize, &src[lastdot],
+			len - lastdot - 1);
+
+	PyString_GET_SIZE(ret) = destlen;
+
+	return ret;
+}
+
 /*
  * Avoiding a trip through Python would improve performance by 50%,
  * but we don't encounter enough long names to be worth the code.
