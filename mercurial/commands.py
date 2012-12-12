@@ -3632,7 +3632,7 @@ def identify(ui, repo, source=None, rev=None,
                 bms = [bm for bm, bmr in peer.listkeys('bookmarks').iteritems()
                        if bmr == hexremoterev]
 
-            return bms
+            return sorted(bms)
 
         if bookmarks:
             output.extend(getbms())
