@@ -684,6 +684,28 @@ def _computebumpedset(repo):
     query = '%ld - obsolete() - public()'
     return set(repo.revs(query, _knownrevs(repo, successors)))
 
+@cachefor('divergent')
+def _computedivergentset(repo):
+    """the set of rev that compete to be the final successors of some revision.
+    """
+    divergent = set()
+    obsstore = repo.obsstore
+    newermap = {}
+    for ctx in repo.set('(not public()) - obsolete()'):
+        mark = obsstore.precursors.get(ctx.node(), ())
+        toprocess = set(mark)
+        while toprocess:
+            prec = toprocess.pop()[0]
+            if prec not in newermap:
+                successorssets(repo, prec, newermap)
+            newer = [n for n in newermap[prec] if n]
+            if len(newer) > 1:
+                divergent.add(ctx.rev())
+                break
+            toprocess.update(obsstore.precursors.get(prec, ()))
+    return divergent
+
+
 def createmarkers(repo, relations, flag=0, metadata=None):
     """Add obsolete markers between changesets in a repo
 
