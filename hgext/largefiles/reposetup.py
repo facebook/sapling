@@ -164,10 +164,8 @@ def reposetup(ui, repo):
                 m = copy.copy(match)
                 m._files = tostandins(m._files)
 
-                # Get ignored files here even if we weren't asked for them; we
-                # must use the result here for filtering later
                 result = super(lfilesrepo, self).status(node1, node2, m,
-                    True, clean, unknown, listsubrepos)
+                    ignored, clean, unknown, listsubrepos)
                 if working:
                     try:
                         # Any non-largefiles that were explicitly listed must be
