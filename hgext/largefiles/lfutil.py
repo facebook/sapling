@@ -31,18 +31,6 @@ def repoadd(repo, list):
     add = repo[None].add
     return add(list)
 
-def reporemove(repo, list, unlink=False):
-    def remove(list, unlink):
-        wlock = repo.wlock()
-        try:
-            if unlink:
-                for f in list:
-                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-            repo[None].forget(list)
-        finally:
-            wlock.release()
-    return remove(list, unlink=unlink)
-
 def repoforget(repo, list):
     forget = repo[None].forget
     return forget(list)

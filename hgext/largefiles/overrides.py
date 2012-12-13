@@ -180,9 +180,9 @@ def removelargefiles(ui, repo, *pats, **opts):
         # If this is being called by addremove, let the original addremove
         # function handle this.
         if not getattr(repo, "_isaddremove", False):
-            lfutil.reporemove(repo, remove, unlink=True)
-        else:
-            lfutil.reporemove(repo, remove, unlink=False)
+            for f in remove:
+                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+        repo[None].forget(remove)
     finally:
         wlock.release()
 
@@ -958,8 +958,10 @@ def overrideforget(orig, ui, repo, *pats, **opts):
             else:
                 lfdirstate.remove(f)
         lfdirstate.write()
-        lfutil.reporemove(repo, [lfutil.standin(f) for f in forget],
-            unlink=True)
+        standins = [lfutil.standin(f) for f in forget]
+        for f in standins:
+            util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+        repo[None].forget(standins)
     finally:
         wlock.release()
 
