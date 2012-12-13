@@ -188,17 +188,11 @@ def reposetup(ui, repo):
                         match._files = [f for f in match._files
                                         if sfindirstate(f)]
                         # Don't waste time getting the ignored and unknown
-                        # files again; we already have them
+                        # files from lfdirstate
                         s = lfdirstate.status(match, [], False,
                                 listclean, False)
-                        (unsure, modified, added, removed, missing, unknown,
-                                ignored, clean) = s
-                        # Replace the list of ignored and unknown files with
-                        # the previously calculated lists, and strip out the
-                        # largefiles
-                        lfiles = set(lfdirstate._map)
-                        ignored = set(result[5]).difference(lfiles)
-                        unknown = set(result[4]).difference(lfiles)
+                        (unsure, modified, added, removed, missing, _unknown,
+                                _ignored, clean) = s
                         if parentworking:
                             for lfile in unsure:
                                 standin = lfutil.standin(lfile)
@@ -229,6 +223,7 @@ def reposetup(ui, repo):
                         # Replace the original ignore function
                         lfdirstate._ignore = origignore
 
+                    # Standins no longer found in lfdirstate has been removed
                     for standin in ctx1.manifest():
                         if not lfutil.isstandin(standin):
                             continue
@@ -243,20 +238,17 @@ def reposetup(ui, repo):
 
                     # Largefiles are not really removed when they're
                     # still in the normal dirstate. Likewise, normal
-                    # files are not really removed if it's still in
+                    # files are not really removed if they are still in
                     # lfdirstate. This happens in merges where files
                     # change type.
                     removed = [f for f in removed if f not in self.dirstate]
                     result[2] = [f for f in result[2] if f not in lfdirstate]
 
+                    lfiles = set(lfdirstate._map)
                     # Unknown files
-                    unknown = set(unknown).difference(ignored)
-                    result[4] = [f for f in unknown
-                                 if (self.dirstate[f] == '?' and
-                                     not lfutil.isstandin(f))]
-                    # Ignored files were calculated earlier by the dirstate,
-                    # and we already stripped out the largefiles from the list
-                    result[5] = ignored
+                    result[4] = set(result[4]).difference(lfiles)
+                    # Ignored files
+                    result[5] = set(result[5]).difference(lfiles)
                     # combine normal files and largefiles
                     normals = [[fn for fn in filelist
                                 if not lfutil.isstandin(fn)]
