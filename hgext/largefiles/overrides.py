@@ -137,21 +137,23 @@ def removelargefiles(ui, repo, *pats, **opts):
                                         if lfutil.standin(f) in manifest]
                                        for list in [s[0], s[1], s[3], s[6]]]
 
-    def warn(files, reason):
+    def warn(files, msg):
         for f in files:
-            ui.warn(_('not removing %s: %s (use forget to undo)\n')
-                    % (m.rel(f), reason))
+            ui.warn(msg % m.rel(f))
         return int(len(files) > 0)
 
     result = 0
 
     if after:
         remove, forget = deleted, []
-        result = warn(modified + added + clean, _('file still exists'))
+        result = warn(modified + added + clean,
+                      _('not removing %s: file still exists\n'))
     else:
         remove, forget = deleted + clean, []
-        result = warn(modified, _('file is modified'))
-        result = warn(added, _('file has been marked for add')) or result
+        result = warn(modified, _('not removing %s: file is modified (use -f'
+                                  ' to force removal)\n'))
+        result = warn(added, _('not removing %s: file has been marked for add'
+                               ' (use forget to undo)\n')) or result
 
     for f in sorted(remove + forget):
         if ui.verbose or not m.exact(f):
