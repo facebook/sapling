@@ -141,16 +141,16 @@ def openlfdirstate(ui, repo, create=True):
     Return a dirstate object that tracks largefiles: i.e. its root is
     the repo root, but it is saved in .hg/largefiles/dirstate.
     '''
-    admin = repo.join(longname)
-    opener = scmutil.opener(admin)
+    lfstoredir = repo.join(longname)
+    opener = scmutil.opener(lfstoredir)
     lfdirstate = largefilesdirstate(opener, ui, repo.root,
                                      repo.dirstate._validate)
 
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
     # largefiles operation in a new clone.
-    if create and not os.path.exists(os.path.join(admin, 'dirstate')):
-        util.makedirs(admin)
+    if create and not os.path.exists(os.path.join(lfstoredir, 'dirstate')):
+        util.makedirs(lfstoredir)
         matcher = getstandinmatcher(repo)
         for standin in dirstatewalk(repo.dirstate, matcher):
             lfile = splitstandin(standin)
