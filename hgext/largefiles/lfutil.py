@@ -260,19 +260,11 @@ def getstandinmatcher(repo, pats=[], opts={}):
         pats = [standindir]
     else:
         # no patterns and no standin dir: return matcher that matches nothing
-        match = match_.match(repo.root, None, [], exact=True)
-        match.matchfn = lambda f: False
-        return match
-    return getmatcher(repo, pats, opts, showbad=False)
+        return match_.match(repo.root, None, [], exact=True)
 
-def getmatcher(repo, pats=[], opts={}, showbad=True):
-    '''Wrapper around scmutil.match() that adds showbad: if false,
-    neuter the match object's bad() method so it does not print any
-    warnings about missing files or directories.'''
+    # no warnings about missing files or directories
     match = scmutil.match(repo[None], pats, opts)
-
-    if not showbad:
-        match.bad = lambda f, msg: None
+    match.bad = lambda f, msg: None
     return match
 
 def composestandinmatcher(repo, rmatcher):
