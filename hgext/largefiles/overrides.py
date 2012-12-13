@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-    node, archival, error, merge
+    node, archival, error, merge, discovery
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -976,10 +976,10 @@ def getoutgoinglfiles(ui, repo, dest=None, **opts):
         remote = hg.peer(repo, opts, dest)
     except error.RepoError:
         return None
-    o = lfutil.findoutgoing(repo, remote, False)
-    if not o:
-        return o
-    o = repo.changelog.nodesbetween(o, revs)[0]
+    outgoing = discovery.findcommonoutgoing(repo, remote.peer(), force=False)
+    if not outgoing.missing:
+        return outgoing.missing
+    o = repo.changelog.nodesbetween(outgoing.missing, revs)[0]
     if opts.get('newest_first'):
         o.reverse()
 

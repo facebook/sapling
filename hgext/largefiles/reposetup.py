@@ -11,7 +11,8 @@ import copy
 import types
 import os
 
-from mercurial import context, error, manifest, match as match_, util
+from mercurial import context, error, manifest, match as match_, util, \
+    discovery
 from mercurial import node as node_
 from mercurial.i18n import _
 from mercurial import localrepo
@@ -404,10 +405,11 @@ def reposetup(ui, repo):
                 wlock.release()
 
         def push(self, remote, force=False, revs=None, newbranch=False):
-            o = lfutil.findoutgoing(self, remote, force)
-            if o:
+            outgoing = discovery.findcommonoutgoing(repo, remote.peer(),
+                                                    force=force)
+            if outgoing.missing:
                 toupload = set()
-                o = self.changelog.nodesbetween(o, revs)[0]
+                o = self.changelog.nodesbetween(outgoing.missing, revs)[0]
                 for n in o:
                     parents = [p for p in self.changelog.parents(n)
                                if p != node_.nullid]

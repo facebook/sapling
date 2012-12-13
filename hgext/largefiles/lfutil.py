@@ -47,11 +47,6 @@ def repoforget(repo, list):
     forget = repo[None].forget
     return forget(list)
 
-def findoutgoing(repo, remote, force):
-    from mercurial import discovery
-    outgoing = discovery.findcommonoutgoing(repo, remote.peer(), force=force)
-    return outgoing.missing
-
 # -- Private worker functions ------------------------------------------
 
 def getminsize(ui, assumelfiles, opt, default=10):
