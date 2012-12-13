@@ -18,6 +18,7 @@ from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
 
 shortname = '.hglf'
+shortnameslash = shortname + '/'
 longname = 'largefiles'
 
 
@@ -291,12 +292,12 @@ def standin(filename):
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are
     #    passed filenames from an external source (like the command line).
-    return shortname + '/' + util.pconvert(filename)
+    return shortnameslash + util.pconvert(filename)
 
 def isstandin(filename):
     '''Return true if filename is a big file standin. filename must be
     in Mercurial's internal form (slash-separated).'''
-    return filename.startswith(shortname + '/')
+    return filename.startswith(shortnameslash)
 
 def splitstandin(filename):
     # Split on / because that's what dirstate always uses, even on Windows.
@@ -425,7 +426,7 @@ def unixpath(path):
 
 def islfilesrepo(repo):
     if ('largefiles' in repo.requirements and
-            util.any(shortname + '/' in f[0] for f in repo.store.datafiles())):
+            util.any(shortnameslash in f[0] for f in repo.store.datafiles())):
         return True
 
     return util.any(openlfdirstate(repo.ui, repo, False))
