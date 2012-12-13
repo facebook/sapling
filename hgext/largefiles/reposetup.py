@@ -339,7 +339,7 @@ def reposetup(ui, repo):
                 # Case 2: user calls commit with specified patterns: refresh
                 # any matching big files.
                 smatcher = lfutil.composestandinmatcher(self, match)
-                standins = lfutil.dirstatewalk(self.dirstate, smatcher)
+                standins = self.dirstate.walk(smatcher, [], False, False)
 
                 # No matching big files: get out of the way and pass control to
                 # the usual commit() method.

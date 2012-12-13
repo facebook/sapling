@@ -22,19 +22,6 @@ shortnameslash = shortname + '/'
 longname = 'largefiles'
 
 
-# -- Portability wrappers ----------------------------------------------
-
-def dirstatewalk(dirstate, matcher, unknown=False, ignored=False):
-    return dirstate.walk(matcher, [], unknown, ignored)
-
-def repoadd(repo, list):
-    add = repo[None].add
-    return add(list)
-
-def repoforget(repo, list):
-    forget = repo[None].forget
-    return forget(list)
-
 # -- Private worker functions ------------------------------------------
 
 def getminsize(ui, assumelfiles, opt, default=10):
@@ -138,7 +125,7 @@ def openlfdirstate(ui, repo, create=True):
     if create and not os.path.exists(os.path.join(lfstoredir, 'dirstate')):
         util.makedirs(lfstoredir)
         matcher = getstandinmatcher(repo)
-        for standin in dirstatewalk(repo.dirstate, matcher):
+        for standin in repo.dirstate.walk(matcher, [], False, False):
             lfile = splitstandin(standin)
             hash = readstandin(repo, lfile)
             lfdirstate.normallookup(lfile)
@@ -270,8 +257,8 @@ def standin(filename):
     file.'''
     # Notes:
     # 1) Some callers want an absolute path, but for instance addlargefiles
-    #    needs it repo-relative so it can be passed to repoadd().  So leave
-    #    it up to the caller to use repo.wjoin() to get an absolute path.
+    #    needs it repo-relative so it can be passed to repo[None].add().  So
+    #    leave it up to the caller to use repo.wjoin() to get an absolute path.
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are
     #    passed filenames from an external source (like the command line).
@@ -429,7 +416,7 @@ def getcurrentheads(repo):
 def getstandinsstate(repo):
     standins = []
     matcher = getstandinmatcher(repo)
-    for standin in dirstatewalk(repo.dirstate, matcher):
+    for standin in repo.dirstate.walk(matcher, [], False, False):
         lfile = splitstandin(standin)
         standins.append((lfile, readstandin(repo, lfile)))
     return standins

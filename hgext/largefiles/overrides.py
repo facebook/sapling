@@ -116,7 +116,7 @@ def addlargefiles(ui, repo, *pats, **opts):
                     lfdirstate.add(f)
             lfdirstate.write()
             bad += [lfutil.splitstandin(f)
-                    for f in lfutil.repoadd(repo, standins)
+                    for f in repo[None].add(standins)
                     if f in m.files()]
     finally:
         wlock.release()
@@ -176,7 +176,7 @@ def removelargefiles(ui, repo, *pats, **opts):
         lfdirstate.write()
         forget = [lfutil.standin(f) for f in forget]
         remove = [lfutil.standin(f) for f in remove]
-        lfutil.repoforget(repo, forget)
+        repo[None].forget(forget)
         # If this is being called by addremove, let the original addremove
         # function handle this.
         if not getattr(repo, "_isaddremove", False):
