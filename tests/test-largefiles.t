@@ -1469,7 +1469,33 @@ Push a largefiles repository to a served empty repository
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  $ rm -rf empty
+
+Clone over http, with largefiles being pulled on update, not on clone.
+
+  $ hg clone -q http://localhost:$HGPORT2/ http-clone -U
+
+  $ hg -R http-clone --debug up --config largefiles.usercache=http-clone-usercache
+  resolving manifests
+   overwrite: False, partial: False
+   ancestor: 000000000000, local: 000000000000+, remote: cf03e5bb9936
+   .hglf/f1: remote created -> g
+  updating: .hglf/f1 1/1 files (100.00%)
+  getting .hglf/f1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  using http://localhost:$HGPORT2/
+  sending capabilities command
+  getting largefiles: 0/1 lfile (0.00%)
+  getting f1:02a439e5c31c526465ab1a0ca1f431f76b827b90
+  sending batch command
+  sending getlfile command
+  found 02a439e5c31c526465ab1a0ca1f431f76b827b90 in store
+  1 largefiles updated, 0 removed
+
+  $ ls http-clone-usercache/*
+  http-clone-usercache/02a439e5c31c526465ab1a0ca1f431f76b827b90
+
+  $ rm -rf empty http-clone http-clone-usercache
 
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
