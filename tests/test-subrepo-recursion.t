@@ -386,7 +386,7 @@ created by archive:
   $ echo f > foo/f
   $ hg archive --subrepos -r tip archive
   cloning subrepo foo from $TESTTMP/empty/foo
-  abort: destination '$TESTTMP/almost-empty/foo' is not empty (glob)
+  abort: destination '$TESTTMP/almost-empty/foo' is not empty (in subrepo foo) (glob)
   [255]
 
 Clone and test outgoing:

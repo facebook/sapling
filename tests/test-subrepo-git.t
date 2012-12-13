@@ -331,10 +331,10 @@ Don't crash if the subrepo is missing
   $ hg sum | grep commit
   commit: 1 subrepos
   $ hg push -q
-  abort: subrepo s is missing
+  abort: subrepo s is missing (in subrepo s)
   [255]
   $ hg commit --subrepos -qm missing
-  abort: subrepo s is missing
+  abort: subrepo s is missing (in subrepo s)
   [255]
   $ hg update -C
   cloning subrepo s from $TESTTMP/gitroot
