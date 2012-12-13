@@ -183,8 +183,8 @@ convert to hg
   sorting...
   converting...
   9 add file1 on trunk
-  8 add text
-  7 unrelated change
+  8 unrelated change
+  7 add text
   6 add text [MERGE from v1_0]
   5 add text [MERGE from v1_1]
   4 add file2 on trunk
@@ -204,8 +204,8 @@ complete log
   5: '' add file2 on trunk
   4: '' add text [MERGE from v1_1]
   3: 'v1_1' add text [MERGE from v1_0]
-  2: 'v1_1' unrelated change
-  1: 'v1_0' add text
+  2: 'v1_0' add text
+  1: 'v1_1' unrelated change
   0: '' add file1 on trunk
 
 graphical log
@@ -225,9 +225,9 @@ graphical log
   |\|
   | o    3: 'v1_1' add text [MERGE from v1_0]
   | |\
-  +---o  2: 'v1_1' unrelated change
+  +---o  2: 'v1_0' add text
   | |
-  | o  1: 'v1_0' add text
+  | o  1: 'v1_1' unrelated change
   |/
   o  0: '' add file1 on trunk
   

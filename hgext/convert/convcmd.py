@@ -175,7 +175,7 @@ class converter(object):
             revisions without parents. 'parents' must be a mapping of revision
             identifier to its parents ones.
             """
-            visit = parents.keys()
+            visit = sorted(parents)
             seen = set()
             children = {}
             roots = []

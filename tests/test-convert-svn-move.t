@@ -100,8 +100,8 @@ Convert files being replaced by directories
   4 clobber1
   3 clobber2
   2 adddb
-  1 branch
-  0 clobberdir
+  1 clobberdir
+  0 branch
 
   $ cd hg-repo
 
@@ -210,9 +210,7 @@ Test convert progress bar'
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   converting [=============================>            ] 5/7\r (no-eol) (esc)
-  scanning paths [                                      ] 0/3\r (no-eol) (esc)
-  scanning paths [===========>                          ] 1/3\r (no-eol) (esc)
-  scanning paths [========================>             ] 2/3\r (no-eol) (esc)
+  scanning paths [                                      ] 0/1\r (no-eol) (esc)
   getting files [===>                                   ] 1/8\r (no-eol) (esc)
   getting files [========>                              ] 2/8\r (no-eol) (esc)
   getting files [=============>                         ] 3/8\r (no-eol) (esc)
@@ -224,7 +222,9 @@ Test convert progress bar'
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   converting [===================================>      ] 6/7\r (no-eol) (esc)
-  scanning paths [                                      ] 0/1\r (no-eol) (esc)
+  scanning paths [                                      ] 0/3\r (no-eol) (esc)
+  scanning paths [===========>                          ] 1/3\r (no-eol) (esc)
+  scanning paths [========================>             ] 2/3\r (no-eol) (esc)
   getting files [===>                                   ] 1/8\r (no-eol) (esc)
   getting files [========>                              ] 2/8\r (no-eol) (esc)
   getting files [=============>                         ] 3/8\r (no-eol) (esc)
@@ -243,7 +243,7 @@ Test convert progress bar'
   4 clobber1
   3 clobber2
   2 adddb
-  1 branch
-  0 clobberdir
+  1 clobberdir
+  0 branch
 
   $ cd ..

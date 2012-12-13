@@ -91,8 +91,8 @@ a fixed difference from UTC.
   sorting...
   converting...
   2 Initial revision
-  1 import
-  0 ci0
+  1 ci0
+  0 import
   updating tags
   $ hgcat a
   a
@@ -116,10 +116,10 @@ convert fresh repo with --filemap
   sorting...
   converting...
   2 Initial revision
-  1 import
+  1 ci0
+  0 import
   filtering out empty revision
-  repository tip rolled back to revision 0 (undo commit)
-  0 ci0
+  repository tip rolled back to revision 1 (undo commit)
   updating tags
   $ hgcat b/c
   c
@@ -321,9 +321,9 @@ convert again
   |
   o  3 () update tags date: * +0000 files: .hgtags (glob)
   |
-  o  2 () ci0 date: * -1000 files: b/c (glob)
-  |
-  | o  1 (INITIAL) import date: * -1000 files: (glob)
+  | o  2 (INITIAL) import date: * -1000 files: (glob)
+  | |
+  o |  1 () ci0 date: * -1000 files: b/c (glob)
   |/
   o  0 () Initial revision date: * -1000 files: a b/c (glob)
   
