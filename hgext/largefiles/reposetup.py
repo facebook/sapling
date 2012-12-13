@@ -269,6 +269,8 @@ def reposetup(ui, repo):
                         return f
                     result = [[toname(f) for f in items] for items in result]
 
+                lfdirstate.write()
+
                 if not listunknown:
                     result[4] = []
                 if not listignored:
