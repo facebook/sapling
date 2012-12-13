@@ -248,7 +248,7 @@ def linktousercache(repo, hash):
 
 def getstandinmatcher(repo, pats=[], opts={}):
     '''Return a match object that applies pats to the standin directory'''
-    standindir = repo.pathto(shortname)
+    standindir = repo.wjoin(shortname)
     if pats:
         # patterns supplied: search standin directory relative to current dir
         cwd = repo.getcwd()

@@ -755,7 +755,7 @@ def hgclone(orig, ui, opts, *args, **kwargs):
         # .hg/largefiles, and the standin matcher won't match anything anyway.)
         if 'largefiles' in repo.requirements:
             if opts.get('noupdate'):
-                util.makedirs(repo.pathto(lfutil.shortname))
+                util.makedirs(repo.wjoin(lfutil.shortname))
                 util.makedirs(repo.join(lfutil.longname))
 
         # Caching is implicitly limited to 'rev' option, since the dest repo was
