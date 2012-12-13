@@ -916,24 +916,15 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   M sub/normal4
   M sub2/large6
   saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
-  large3: can't get file locally
-  (no default or default-push path set in hgrc)
-  sub/large4: can't get file locally
-  (no default or default-push path set in hgrc)
-  large1: can't get file locally
-  (no default or default-push path set in hgrc)
-  sub/large2: can't get file locally
-  (no default or default-push path set in hgrc)
-  sub/large2: can't get file locally
-  (no default or default-push path set in hgrc)
-  large1: can't get file locally
-  (no default or default-push path set in hgrc)
-  sub/large2: can't get file locally
-  (no default or default-push path set in hgrc)
-  large1: can't get file locally
-  (no default or default-push path set in hgrc)
-  sub/large2: can't get file locally
-  (no default or default-push path set in hgrc)
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for large3: can't get file locally
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for sub/large4: can't get file locally
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for large1: can't get file locally
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for sub/large2: can't get file locally
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for sub/large2: can't get file locally
+  error getting 5f78770c0e77ba4287ad6ef3071c9bf9c379742f from file:$TESTTMP/b for large1: can't get file locally
+  error getting eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from file:$TESTTMP/b for sub/large2: can't get file locally
+  error getting 4669e532d5b2c093a78eca010077e708a071bb64 from file:$TESTTMP/b for large1: can't get file locally
+  error getting 1deebade43c8c498a3c8daddac0244dc55d1331d from file:$TESTTMP/b for sub/large2: can't get file locally
   0 additional largefiles cached
   9 largefiles failed to download
   nothing to rebase

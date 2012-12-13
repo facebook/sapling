@@ -22,9 +22,8 @@ class localstore(basestore.basestore):
     the user cache.'''
 
     def __init__(self, ui, repo, remote):
-        url = os.path.join(remote.local().path, '.hg', lfutil.longname)
-        super(localstore, self).__init__(ui, repo, util.expandpath(url))
         self.remote = remote.local()
+        super(localstore, self).__init__(ui, repo, self.remote.url())
 
     def put(self, source, hash):
         util.makedirs(os.path.dirname(lfutil.storepath(self.remote, hash)))
@@ -46,7 +45,7 @@ class localstore(basestore.basestore):
         elif lfutil.inusercache(self.ui, hash):
             path = lfutil.usercachepath(self.ui, hash)
         else:
-            raise basestore.StoreError(filename, hash, '',
+            raise basestore.StoreError(filename, hash, self.url,
                 _("can't get file locally"))
         fd = open(path, 'rb')
         try:

@@ -26,14 +26,8 @@ class StoreError(Exception):
         self.detail = detail
 
     def longmessage(self):
-        if self.url:
-            return ('%s: %s\n'
-                    '(failed URL: %s)\n'
-                    % (self.filename, self.detail, self.url))
-        else:
-            return ('%s: %s\n'
-                    '(no default or default-push path set in hgrc)\n'
-                    % (self.filename, self.detail))
+        return (_("error getting %s from %s for %s: %s\n") %
+                 (self.hash, self.url, self.filename, self.detail))
 
     def __str__(self):
         return "%s: %s" % (self.url, self.detail)
