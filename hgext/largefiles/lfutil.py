@@ -135,6 +135,8 @@ class largefilesdirstate(dirstate.dirstate):
         return super(largefilesdirstate, self).forget(unixpath(f))
     def normallookup(self, f):
         return super(largefilesdirstate, self).normallookup(unixpath(f))
+    def _ignore(self):
+        return False
 
 def openlfdirstate(ui, repo, create=True):
     '''

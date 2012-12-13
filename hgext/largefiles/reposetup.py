@@ -157,14 +157,6 @@ def reposetup(ui, repo):
                             newfiles.append(f)
                     return newfiles
 
-                # Create a function that we can use to override what is
-                # normally the ignore matcher.  We've already checked
-                # for ignored files on the first dirstate walk, and
-                # unnecessarily re-checking here causes a huge performance
-                # hit because lfdirstate only knows about largefiles
-                def _ignoreoverride(self):
-                    return False
-
                 m = copy.copy(match)
                 m._files = tostandins(m._files)
 
@@ -172,14 +164,6 @@ def reposetup(ui, repo):
                     ignored, clean, unknown, listsubrepos)
                 if working:
                     try:
-                        # Any non-largefiles that were explicitly listed must be
-                        # taken out or lfdirstate.status will report an error.
-                        # The status of these files was already computed using
-                        # super's status.
-                        # Override lfdirstate's ignore matcher to not do
-                        # anything
-                        origignore = lfdirstate._ignore
-                        lfdirstate._ignore = _ignoreoverride
 
                         def sfindirstate(f):
                             sf = lfutil.standin(f)
@@ -220,8 +204,7 @@ def reposetup(ui, repo):
                                 else:
                                     added.append(lfile)
                     finally:
-                        # Replace the original ignore function
-                        lfdirstate._ignore = origignore
+                        pass
 
                     # Standins no longer found in lfdirstate has been removed
                     for standin in ctx1.manifest():
