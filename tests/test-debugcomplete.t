@@ -96,6 +96,7 @@ Show debug commands if there are no other candidates
   debugsetparents
   debugstate
   debugsub
+  debugsuccessorssets
   debugwalk
   debugwireargs
 
@@ -246,6 +247,7 @@ Show all commands + options
   debugsetparents: 
   debugstate: nodates, datesort
   debugsub: rev
+  debugsuccessorssets: 
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   graft: rev, continue, edit, log, currentdate, currentuser, date, user, tool, dry-run

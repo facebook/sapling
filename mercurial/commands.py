@@ -2459,6 +2459,60 @@ def debugsub(ui, repo, rev=None):
         ui.write((' source   %s\n') % v[0])
         ui.write((' revision %s\n') % v[1])
 
+@command('debugsuccessorssets',
+    [],
+    _('[REV]'))
+def debugsuccessorssets(ui, repo, *revs):
+    """show set of successors for revision
+
+    A successors set of changeset A is a consistent group of revisions that
+    succeed A. It contains non-obsolete changesets only.
+
+    In most cases a changeset A has a single successors set containing a single
+    successors (changeset A replaced by A').
+
+    A changeset that is made obsolete with no successors are called "pruned".
+    Such changesets have no successors sets at all.
+
+    A changeset that has been "split" will have a successors set containing
+    more than one successors.
+
+    A changeset that has been rewritten in multiple different ways is called
+    "divergent". Such changesets have multiple successor sets (each of which
+    may also be split, i.e. have multiple successors).
+
+    Results are displayed as follows::
+
+        <rev1>
+            <successors-1A>
+        <rev2>
+            <successors-2A>
+            <successors-2B1> <successors-2B2> <successors-2B3>
+
+    Here rev2 has two possible (i.e. divergent) successors sets. The first
+    holds one element, whereas the second holds three (i.e. the changeset has
+    been split).
+    """
+    # passed to successorssets caching computation from one call to another
+    cache = {}
+    ctx2str = str
+    node2str = short
+    if ui.debug():
+        def ctx2str(ctx):
+            return ctx.hex()
+        node2str = hex
+    for rev in scmutil.revrange(repo, revs):
+        ctx = repo[rev]
+        ui.write('%s\n'% ctx2str(ctx))
+        for succsset in obsolete.successorssets(repo, ctx.node(), cache):
+            if succsset:
+                ui.write('    ')
+                ui.write(node2str(succsset[0]))
+                for node in succsset[1:]:
+                    ui.write(' ')
+                    ui.write(node2str(node))
+            ui.write('\n')
+
 @command('debugwalk', walkopts, _('[OPTION]... [FILE]...'))
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""

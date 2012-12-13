@@ -402,6 +402,182 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
                     seen.add(suc)
                     remaining.add(suc)
 
+def successorssets(repo, initialnode, cache=None):
+    """Return all set of successors of initial nodes
+
+    Successors set of changeset A are a group of revision that succeed A. It
+    succeed A as a consistent whole, each revision being only partial
+    replacement.  Successors set contains non-obsolete changeset only.
+
+    In most cases a changeset A have zero (changeset pruned) or a single
+    successors set that contains a single successor (changeset A replaced by
+    A')
+
+    When changeset is split, it results successors set containing more than
+    a single element. Divergent rewriting will result in multiple successors
+    sets.
+
+    They are returned as a list of tuples containing all valid successors sets.
+
+    Final successors unknown locally are considered plain prune (obsoleted
+    without successors).
+
+    The optional `cache` parameter is a dictionary that may contains
+    precomputed successors sets. It is meant to reuse the computation of
+    previous call to `successorssets` when multiple calls are made at the same
+    time. The cache dictionary is updated in place. The caller is responsible
+    for its live spawn. Code that makes multiple calls to `successorssets`
+    *must* use this cache mechanism or suffer terrible performances."""
+
+    succmarkers = repo.obsstore.successors
+
+    # Stack of nodes we search successors sets for
+    toproceed = [initialnode]
+    # set version of above list for fast loop detection
+    # element added to "toproceed" must be added here
+    stackedset = set(toproceed)
+    if cache is None:
+        cache = {}
+
+    # This while loop is the flattened version of a recursive search for
+    # successors sets
+    #
+    # def successorssets(x):
+    #    successors = directsuccessors(x)
+    #    ss = [[]]
+    #    for succ in directsuccessors(x):
+    #        # product as in itertools cartesian product
+    #        ss = product(ss, successorssets(succ))
+    #    return ss
+    #
+    # But we can not use plain recursive calls here:
+    # - that would blow the python call stack
+    # - obsolescence markers may have cycles, we need to handle them.
+    #
+    # The `toproceed` list act as our call stack. Every node we search
+    # successors set for are stacked there.
+    #
+    # The `stackedset` is set version of this stack used to check if a node is
+    # already stacked. This check is used to detect cycles and prevent infinite
+    # loop.
+    #
+    # successors set of all nodes are stored in the `cache` dictionary.
+    #
+    # After this while loop ends we use the cache to return the successors sets
+    # for the node requested by the caller.
+    while toproceed:
+        # Every iteration tries to compute the successors sets of the topmost
+        # node of the stack: CURRENT.
+        #
+        # There are four possible outcomes:
+        #
+        # 1) We already know the successors sets of CURRENT:
+        #    -> mission accomplished, pop it from the stack.
+        # 2) Node is not obsolete:
+        #    -> the node is its own successors sets. Add it to the cache.
+        # 3) We do not know successors set of direct successors of CURRENT:
+        #    -> We add those successors to the stack.
+        # 4) We know successors sets of all direct successors of CURRENT:
+        #    -> We can compute CURRENT successors set and add it to the
+        #       cache.
+        #
+        current = toproceed[-1]
+        if current in cache:
+            # case (1): We already know the successors sets
+            stackedset.remove(toproceed.pop())
+        elif current not in succmarkers:
+            # case (2): The node is not obsolete.
+            if current in repo:
+                # We have a valid last successors.
+                cache[current] = [(current,)]
+            else:
+                # Final obsolete version is unknown locally.
+                # Do not count that as a valid successors
+                cache[current] = []
+        else:
+            # cases (3) and (4)
+            #
+            # We proceed in two phases. Phase 1 aims to distinguish case (3)
+            # from case (4):
+            #
+            #     For each direct successors of CURRENT, we check whether its
+            #     successors sets are known. If they are not, we stack the
+            #     unknown node and proceed to the next iteration of the while
+            #     loop. (case 3)
+            #
+            #     During this step, we may detect obsolescence cycles: a node
+            #     with unknown successors sets but already in the call stack.
+            #     In such a situation, we arbitrary set the successors sets of
+            #     the node to nothing (node pruned) to break the cycle.
+            #
+            #     If no break was encountered we proceeed to phase 2.
+            #
+            # Phase 2 computes successors sets of CURRENT (case 4); see details
+            # in phase 2 itself.
+            #
+            # Note the two levels of iteration in each phase.
+            # - The first one handles obsolescence markers using CURRENT as
+            #   precursor (successors markers of CURRENT).
+            #
+            #   Having multiple entry here means divergence.
+            #
+            # - The second one handles successors defined in each marker.
+            #
+            #   Having none means pruned node, multiple successors means split,
+            #   single successors are standard replacement.
+            #
+            for mark in succmarkers[current]:
+                for suc in mark[1]:
+                    if suc not in cache:
+                        if suc in stackedset:
+                            # cycle breaking
+                            cache[suc] = []
+                        else:
+                            # case (3) If we have not computed successors sets
+                            # of one of those successors we add it to the
+                            # `toproceed` stack and stop all work for this
+                            # iteration.
+                            toproceed.append(suc)
+                            stackedset.add(suc)
+                            break
+                else:
+                    continue
+                break
+            else:
+                # case (4): we know all successors sets of all direct
+                # successors
+                #
+                # Successors set contributed by each marker depends on the
+                # successors sets of all its "successors" node.
+                #
+                # Each different marker is a divergence in the obsolescence
+                # history. It contributes successors sets dictinct from other
+                # markers.
+                #
+                # Within a marker, a successor may have divergent successors
+                # sets. In such a case, the marker will contribute multiple
+                # divergent successors sets. If multiple successors have
+                # divergents successors sets, a cartesian product is used.
+                succssets = []
+                for mark in succmarkers[current]:
+                    # successors sets contributed by this marker
+                    markss = [[]]
+                    for suc in mark[1]:
+                        productresult = []
+                        for prefix in markss:
+                            for suffix in cache[suc]:
+                                newss = list(prefix)
+                                for part in suffix:
+                                    # do not duplicated entry in successors set
+                                    # first entry wins.
+                                    if part not in newss:
+                                        newss.append(part)
+                                productresult.append(newss)
+                        markss = productresult
+                    succssets.extend(markss)
+                cache[current] = list(set(tuple(r) for r in succssets if r))
+    return cache[initialnode]
+
 def _knownrevs(repo, nodes):
     """yield revision numbers of known nodes passed in parameters
 
