@@ -78,6 +78,15 @@ def perfancestors(ui, repo):
             pass
     timer(d)
 
+def perfancestorset(ui, repo, revset):
+    revs = repo.revs(revset)
+    heads = repo.changelog.headrevs()
+    def d():
+        s = set(repo.changelog.ancestors(heads))
+        for rev in revs:
+            rev in s
+    timer(d)
+
 def perfdirstate(ui, repo):
     "a" in repo.dirstate
     def d():
@@ -253,6 +262,7 @@ cmdtable = {
     'perfheads': (perfheads, []),
     'perftags': (perftags, []),
     'perfancestors': (perfancestors, []),
+    'perfancestorset': (perfancestorset, [], "REVSET"),
     'perfdirstate': (perfdirstate, []),
     'perfdirstatedirs': (perfdirstate, []),
     'perfdirstatewrite': (perfdirstatewrite, []),
