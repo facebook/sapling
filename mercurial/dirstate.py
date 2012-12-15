@@ -265,8 +265,10 @@ class dirstate(object):
         f = self._opener('branch', 'w', atomictemp=True)
         try:
             f.write(self._branch + '\n')
-        finally:
             f.close()
+        except: # re-raises
+            f.discard()
+            raise
 
     def _read(self):
         self._map = {}
