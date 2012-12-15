@@ -61,6 +61,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     # have to consider the effect of the stripped revisions and not revisions
     # missing because the cache is out-of-date.
     branchmap.updatecache(repo)
+    repo.destroying()
 
     cl = repo.changelog
     # TODO handle undo of merge sets

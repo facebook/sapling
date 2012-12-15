@@ -895,6 +895,7 @@ class localrepository(object):
             return 0
 
         parents = self.dirstate.parents()
+        self.destroying()
         transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
         if os.path.exists(self.join('undo.bookmarks')):
             util.rename(self.join('undo.bookmarks'),
@@ -1377,6 +1378,20 @@ class localrepository(object):
             if tr:
                 tr.release()
             lock.release()
+
+    @unfilteredmethod
+    def destroying(self):
+        '''Inform the repository that nodes are about to be destroyed.
+        Intended for use by strip and rollback, so there's a common
+        place for anything that has to be done before destroying history.
+
+        This is mostly useful for saving state that is in memory and waiting
+        to be flushed when the current lock is released. Because a call to
+        destroyed is imminent, the repo will be invalidated causing those
+        changes to stay in memory (waiting for the next unlock), or vanish
+        completely.
+        '''
+        pass
 
     @unfilteredmethod
     def destroyed(self, newheadnodes=None):
