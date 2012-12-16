@@ -265,6 +265,12 @@ class dirstate(object):
         try:
             f.write(self._branch + '\n')
             f.close()
+
+            # make sure filecache has the correct stat info for _branch after
+            # replacing the underlying file
+            ce = self._filecache['_branch']
+            if ce:
+                ce.refresh()
         except: # re-raises
             f.discard()
             raise
