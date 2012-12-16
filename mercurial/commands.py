@@ -2156,7 +2156,7 @@ def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
         ui.status(str(r) + '\n')
         return not r
     else:
-        for k, v in target.listkeys(namespace).iteritems():
+        for k, v in sorted(target.listkeys(namespace).iteritems()):
             ui.write("%s\t%s\n" % (k.encode('string-escape'),
                                    v.encode('string-escape')))
 

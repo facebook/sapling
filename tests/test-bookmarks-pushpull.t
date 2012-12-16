@@ -51,12 +51,12 @@ import bookmark by name
      Z                         0:4e3505fd9583
   $ hg debugpushkey ../a namespaces
   bookmarks	
-  phases	
   namespaces	
   obsolete	
+  phases	
   $ hg debugpushkey ../a bookmarks
-  Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   X	4e3505fd95835d721066b76e75dbb8cc554d7f77
+  Y	4e3505fd95835d721066b76e75dbb8cc554d7f77
   Z	4e3505fd95835d721066b76e75dbb8cc554d7f77
   $ hg pull -B X ../a
   pulling from ../a
@@ -292,16 +292,16 @@ hgweb
 
   $ hg debugpushkey http://localhost:$HGPORT/ namespaces
   bookmarks	
-  phases	
   namespaces	
   obsolete	
+  phases	
   $ hg debugpushkey http://localhost:$HGPORT/ bookmarks
   @	9b140be1080824d768c5a4691a564088eede71f9
+  X	9b140be1080824d768c5a4691a564088eede71f9
+  Y	c922c0139ca03858f655e4a2af4dd02796a63969
+  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
   foo	0000000000000000000000000000000000000000
   foobar	9b140be1080824d768c5a4691a564088eede71f9
-  Y	c922c0139ca03858f655e4a2af4dd02796a63969
-  X	9b140be1080824d768c5a4691a564088eede71f9
-  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
   $ hg out -B http://localhost:$HGPORT/
   comparing with http://localhost:$HGPORT/
   searching for changed bookmarks
