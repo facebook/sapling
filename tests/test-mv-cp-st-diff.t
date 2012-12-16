@@ -21,11 +21,15 @@ set up a boring main branch
   $ hg add x/y
   $ hg ci -m2
   $ cd ..
+
   $ show()
   > {
-  >     echo "- $2: $1"
+  >     echo "# $2:"
+  >     echo
+  >     echo "% hg st -C $1"
   >     hg st -C $1
   >     echo
+  >     echo "% hg diff --git $1"
   >     hg diff --git $1
   >     echo
   > }
@@ -35,24 +39,28 @@ make a new branch and get diff/status output
 $1 - first commit
 $2 - second commit
 $3 - working dir action
-$4 - test description
 
   $ tb()
   > {
-  >     hg clone t t2 ; cd t2
+  >     hg clone -q t t2 ; cd t2
   >     hg co -q -C 0
   > 
+  >     echo % add a $count
   >     add a $count
   >     count=`expr $count + 1`
+  >     echo % hg ci -m "t0"
   >     hg ci -m "t0"
+  >     echo % $1
   >     $1
+  >     echo % hg ci -m "t1"
   >     hg ci -m "t1"
+  >     echo % $2
   >     $2
+  >     echo % hg ci -m "t2"
   >     hg ci -m "t2"
+  >     echo % $3
   >     $3
-  > 
-  >     echo "** $4 **"
-  >     echo "** $1 / $2 / $3"
+  >     echo
   >     show "" "working to parent"
   >     show "--rev 0" "working to root"
   >     show "--rev 2" "working to branch"
@@ -64,26 +72,39 @@ $4 - test description
   >     cd ..
   >     rm -rf t2
   > }
-  $ tb "add a a1" "add a a2" "hg mv a b" "rename in working dir"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+rename in working dir
+
+  $ tb "add a a1" "add a a2" "hg mv a b"
+  % add a 0
+  % hg ci -m t0
   created new head
-  ** rename in working dir **
-  ** add a a1 / add a a2 / hg mv a b
-  - working to parent: 
+  % add a a1
+  % hg ci -m t1
+  % add a a2
+  % hg ci -m t2
+  % hg mv a b
+  
+  # working to parent:
+  
+  % hg st -C 
   A b
     a
   R a
   
+  % hg diff --git 
   diff --git a/a b/b
   rename from a
   rename to b
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   A b
     a
   R a
   
+  % hg diff --git --rev 0
   diff --git a/a b/b
   rename from a
   rename to b
@@ -95,12 +116,15 @@ $4 - test description
   +a1
   +a2
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   A b
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/b
   rename from a
   rename to b
@@ -120,9 +144,12 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   M a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -132,9 +159,12 @@ $4 - test description
   +a1
   +a2
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   M a
   
+  % hg diff --git --rev . --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -144,10 +174,13 @@ $4 - test description
   -a1
   -a2
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   M a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -165,10 +198,13 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   M a
   A x/y
   
+  % hg diff --git --rev . --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -187,25 +223,37 @@ $4 - test description
   +y1
   
   
-  $ tb "add a a1" "add a a2" "hg cp a b" "copy in working dir"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+copy in working dir
+
+  $ tb "add a a1" "add a a2" "hg cp a b"
+  % add a 1
+  % hg ci -m t0
   created new head
-  ** copy in working dir **
-  ** add a a1 / add a a2 / hg cp a b
-  - working to parent: 
+  % add a a1
+  % hg ci -m t1
+  % add a a2
+  % hg ci -m t2
+  % hg cp a b
+  
+  # working to parent:
+  
+  % hg st -C 
   A b
     a
   
+  % hg diff --git 
   diff --git a/a b/b
   copy from a
   copy to b
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   M a
   A b
     a
   
+  % hg diff --git --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -225,12 +273,15 @@ $4 - test description
   +a1
   +a2
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   M a
   A b
     a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -260,9 +311,12 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   M a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -272,9 +326,12 @@ $4 - test description
   +a1
   +a2
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   M a
   
+  % hg diff --git --rev . --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -284,10 +341,13 @@ $4 - test description
   -a1
   -a2
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   M a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -305,10 +365,13 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   M a
   A x/y
   
+  % hg diff --git --rev . --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -327,15 +390,24 @@ $4 - test description
   +y1
   
   
-  $ tb "hg mv a b" "add b b1" "add b w" "single rename"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+single rename
+
+  $ tb "hg mv a b" "add b b1" "add b w"
+  % add a 2
+  % hg ci -m t0
   created new head
-  ** single rename **
-  ** hg mv a b / add b b1 / add b w
-  - working to parent: 
+  % hg mv a b
+  % hg ci -m t1
+  % add b b1
+  % hg ci -m t2
+  % add b w
+  
+  # working to parent:
+  
+  % hg st -C 
   M b
   
+  % hg diff --git 
   diff --git a/b b/b
   --- a/b
   +++ b/b
@@ -345,11 +417,14 @@ $4 - test description
    b1
   +w
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   A b
     a
   R a
   
+  % hg diff --git --rev 0
   diff --git a/a b/b
   rename from a
   rename to b
@@ -361,12 +436,15 @@ $4 - test description
   +b1
   +w
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   A b
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/b
   rename from a
   rename to b
@@ -386,11 +464,14 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   A b
     a
   R a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -401,11 +482,14 @@ $4 - test description
   +2
   +b1
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   A a
     b
   R b
   
+  % hg diff --git --rev . --rev 0
   diff --git a/b b/a
   rename from b
   rename to a
@@ -416,12 +500,15 @@ $4 - test description
   -2
   -b1
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   A b
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -440,12 +527,15 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   A a
     b
   A x/y
   R b
   
+  % hg diff --git --rev . --rev 2
   diff --git a/b b/a
   rename from b
   rename to a
@@ -465,15 +555,24 @@ $4 - test description
   +y1
   
   
-  $ tb "hg cp a b" "add b b1" "add a w" "single copy"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+single copy
+
+  $ tb "hg cp a b" "add b b1" "add a w"
+  % add a 3
+  % hg ci -m t0
   created new head
-  ** single copy **
-  ** hg cp a b / add b b1 / add a w
-  - working to parent: 
+  % hg cp a b
+  % hg ci -m t1
+  % add b b1
+  % hg ci -m t2
+  % add a w
+  
+  # working to parent:
+  
+  % hg st -C 
   M a
   
+  % hg diff --git 
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -482,11 +581,14 @@ $4 - test description
    3
   +w
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   M a
   A b
     a
   
+  % hg diff --git --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -504,12 +606,15 @@ $4 - test description
   +3
   +b1
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   M a
   A b
     a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -537,11 +642,14 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   M a
   A b
     a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -558,11 +666,14 @@ $4 - test description
   +3
   +b1
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   M a
     b
   R b
   
+  % hg diff --git --rev . --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -578,12 +689,15 @@ $4 - test description
   -3
   -b1
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   M a
   A b
     a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -610,12 +724,15 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   M a
     b
   A x/y
   R b
   
+  % hg diff --git --rev . --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -640,26 +757,38 @@ $4 - test description
   +y1
   
   
-  $ tb "hg mv a b" "hg mv b c" "hg mv c d" "rename chain"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+rename chain
+
+  $ tb "hg mv a b" "hg mv b c" "hg mv c d"
+  % add a 4
+  % hg ci -m t0
   created new head
-  ** rename chain **
-  ** hg mv a b / hg mv b c / hg mv c d
-  - working to parent: 
+  % hg mv a b
+  % hg ci -m t1
+  % hg mv b c
+  % hg ci -m t2
+  % hg mv c d
+  
+  # working to parent:
+  
+  % hg st -C 
   A d
     c
   R c
   
+  % hg diff --git 
   diff --git a/c b/d
   rename from c
   rename to d
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   A d
     a
   R a
   
+  % hg diff --git --rev 0
   diff --git a/a b/d
   rename from a
   rename to d
@@ -669,12 +798,15 @@ $4 - test description
    a
   +4
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   A d
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/d
   rename from a
   rename to d
@@ -692,11 +824,14 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   A c
     a
   R a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/c
   rename from a
   rename to c
@@ -706,11 +841,14 @@ $4 - test description
    a
   +4
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   A a
     c
   R c
   
+  % hg diff --git --rev . --rev 0
   diff --git a/c b/a
   rename from c
   rename to a
@@ -720,12 +858,15 @@ $4 - test description
    a
   -4
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   A c
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/c
   rename from a
   rename to c
@@ -743,12 +884,15 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   A a
     c
   A x/y
   R c
   
+  % hg diff --git --rev . --rev 2
   diff --git a/c b/a
   rename from c
   rename to a
@@ -767,21 +911,32 @@ $4 - test description
   +y1
   
   
-  $ tb "hg cp a b" "hg cp b c" "hg cp c d" "copy chain"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+copy chain
+
+  $ tb "hg cp a b" "hg cp b c" "hg cp c d"
+  % add a 5
+  % hg ci -m t0
   created new head
-  ** copy chain **
-  ** hg cp a b / hg cp b c / hg cp c d
-  - working to parent: 
+  % hg cp a b
+  % hg ci -m t1
+  % hg cp b c
+  % hg ci -m t2
+  % hg cp c d
+  
+  # working to parent:
+  
+  % hg st -C 
   A d
     c
   
+  % hg diff --git 
   diff --git a/c b/d
   copy from c
   copy to d
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   M a
   A b
     a
@@ -790,6 +945,7 @@ $4 - test description
   A d
     a
   
+  % hg diff --git --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -821,7 +977,9 @@ $4 - test description
    a
   +5
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   M a
   A b
     a
@@ -831,6 +989,7 @@ $4 - test description
     a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -876,13 +1035,16 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   M a
   A b
     a
   A c
     a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -906,12 +1068,15 @@ $4 - test description
    a
   +5
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   M a
     b
   R b
   R c
   
+  % hg diff --git --rev . --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -933,7 +1098,9 @@ $4 - test description
   -a
   -5
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   M a
   A b
     a
@@ -941,6 +1108,7 @@ $4 - test description
     a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -976,13 +1144,16 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   M a
     b
   A x/y
   R b
   R c
   
+  % hg diff --git --rev . --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1013,24 +1184,36 @@ $4 - test description
   +y1
   
   
-  $ tb "add a a1" "hg mv a b" "hg mv b a" "circular rename"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+circular rename
+
+  $ tb "add a a1" "hg mv a b" "hg mv b a"
+  % add a 6
+  % hg ci -m t0
   created new head
-  ** circular rename **
-  ** add a a1 / hg mv a b / hg mv b a
-  - working to parent: 
+  % add a a1
+  % hg ci -m t1
+  % hg mv a b
+  % hg ci -m t2
+  % hg mv b a
+  
+  # working to parent:
+  
+  % hg st -C 
   A a
     b
   R b
   
+  % hg diff --git 
   diff --git a/b b/a
   rename from b
   rename to a
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   M a
   
+  % hg diff --git --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1039,10 +1222,13 @@ $4 - test description
   +6
   +a1
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   M a
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1059,11 +1245,14 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   A b
     a
   R a
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -1074,11 +1263,14 @@ $4 - test description
   +6
   +a1
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   A a
     b
   R b
   
+  % hg diff --git --rev . --rev 0
   diff --git a/b b/a
   rename from b
   rename to a
@@ -1089,12 +1281,15 @@ $4 - test description
   -6
   -a1
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   A b
     a
   R a
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/b
   rename from a
   rename to b
@@ -1113,12 +1308,15 @@ $4 - test description
   @@ -1,1 +0,0 @@
   -y1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   A a
     b
   A x/y
   R b
   
+  % hg diff --git --rev . --rev 2
   diff --git a/b b/a
   rename from b
   rename to a
@@ -1138,16 +1336,25 @@ $4 - test description
   +y1
   
   
-  $ tb "hg mv x y" "add y/x x1" "add y/x x2" "directory move"
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+directory move
+
+  $ tb "hg mv x y" "add y/x x1" "add y/x x2"
+  % add a 7
+  % hg ci -m t0
   created new head
-  moving x/x to y/x (glob)
-  ** directory move **
-  ** hg mv x y / add y/x x1 / add y/x x2
-  - working to parent: 
+  % hg mv x y
+  moving x/x to y/x
+  % hg ci -m t1
+  % add y/x x1
+  % hg ci -m t2
+  % add y/x x2
+  
+  # working to parent:
+  
+  % hg st -C 
   M y/x
   
+  % hg diff --git 
   diff --git a/y/x b/y/x
   --- a/y/x
   +++ b/y/x
@@ -1156,12 +1363,15 @@ $4 - test description
    x1
   +x2
   
-  - working to root: --rev 0
+  # working to root:
+  
+  % hg st -C --rev 0
   M a
   A y/x
     x/x
   R x/x
   
+  % hg diff --git --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1178,13 +1388,16 @@ $4 - test description
   +x1
   +x2
   
-  - working to branch: --rev 2
+  # working to branch:
+  
+  % hg st -C --rev 2
   M a
   A y/x
     x/x
   R x/x
   R x/y
   
+  % hg diff --git --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1209,12 +1422,15 @@ $4 - test description
   +x1
   +x2
   
-  - root to parent: --rev 0 --rev .
+  # root to parent:
+  
+  % hg st -C --rev 0 --rev .
   M a
   A y/x
     x/x
   R x/x
   
+  % hg diff --git --rev 0 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1230,12 +1446,15 @@ $4 - test description
    x
   +x1
   
-  - parent to root: --rev . --rev 0
+  # parent to root:
+  
+  % hg st -C --rev . --rev 0
   M a
   A x/x
     y/x
   R y/x
   
+  % hg diff --git --rev . --rev 0
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1251,13 +1470,16 @@ $4 - test description
    x
   -x1
   
-  - branch to parent: --rev 2 --rev .
+  # branch to parent:
+  
+  % hg st -C --rev 2 --rev .
   M a
   A y/x
     x/x
   R x/x
   R x/y
   
+  % hg diff --git --rev 2 --rev .
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1281,13 +1503,16 @@ $4 - test description
    x
   +x1
   
-  - parent to branch: --rev . --rev 2
+  # parent to branch:
+  
+  % hg st -C --rev . --rev 2
   M a
   A x/x
     y/x
   A x/y
   R y/x
   
+  % hg diff --git --rev . --rev 2
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -1318,14 +1543,14 @@ testing copies with unrelated branch
 
   $ hg init unrelated
   $ cd unrelated
-  $ add a a
+  $ echo a >> a
   $ hg ci -Am adda
   adding a
   $ hg mv a b
   $ hg ci -m movea
   $ hg up -C null
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ add a a
+  $ echo a >> a
   $ hg ci -Am addunrelateda
   adding a
   created new head
