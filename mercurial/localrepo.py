@@ -1015,7 +1015,7 @@ class localrepository(object):
             if hasunfilteredcache(self, '_phasecache'):
                 self._phasecache.write()
             for k, ce in self._filecache.items():
-                if k == 'dirstate':
+                if k == 'dirstate' or k not in self.__dict__:
                     continue
                 ce.refresh()
 
