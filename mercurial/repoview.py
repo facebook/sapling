@@ -7,9 +7,20 @@
 # GNU General Public License version 2 or any later version.
 
 import copy
+import phases
+
+def computeunserved(repo):
+    """compute the set of revision that should be filtered when used a server
+
+    Secret and hidden changeset should not pretend to be here."""
+    assert not repo.changelog.filteredrevs
+    # fast path in simple case to avoid impact of non optimised code
+    if phases.hassecret(repo) or repo.obsstore:
+        return frozenset(repo.revs('hidden() + secret()'))
+    return ()
 
 # function to compute filtered set
-filtertable = {}
+filtertable = {'unserved': computeunserved}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
