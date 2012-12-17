@@ -25,8 +25,12 @@ class changectx(object):
         self._repo = repo
 
         if isinstance(changeid, int):
+            try:
+                self._node = repo.changelog.node(changeid)
+            except IndexError:
+                raise error.RepoLookupError(
+                    _("unknown revision '%s'") % changeid)
             self._rev = changeid
-            self._node = repo.changelog.node(changeid)
             return
         if isinstance(changeid, long):
             changeid = str(changeid)
