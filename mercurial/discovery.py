@@ -355,23 +355,4 @@ def visibleheads(repo):
 
 def visiblebranchmap(repo):
     """return a branchmap for the visible set"""
-    # XXX Recomputing this data on the fly is very slow.  We should build a
-    # XXX cached version while computing the standard branchmap version.
-    sroots = repo._phasecache.phaseroots[phases.secret]
-    if sroots or repo.obsstore:
-        vbranchmap = {}
-        for branch, nodes in  repo.branchmap().iteritems():
-            # search for secret heads.
-            for n in nodes:
-                if repo[n].phase() >= phases.secret:
-                    nodes = None
-                    break
-            # if secret heads were found we must compute them again
-            if nodes is None:
-                s = repo.set('heads(branch(%s) - secret() - extinct())',
-                             branch)
-                nodes = [c.node() for c in s]
-            vbranchmap[branch] = nodes
-    else:
-        vbranchmap = repo.branchmap()
-    return vbranchmap
+    return repo.filtered('unserved').branchmap()
