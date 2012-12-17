@@ -341,17 +341,27 @@ class revlog(object):
         return len(t)
     size = rawsize
 
-    def ancestors(self, revs, stoprev=0):
+    def ancestors(self, revs, stoprev=0, inclusive=False):
         """Generate the ancestors of 'revs' in reverse topological order.
         Does not generate revs lower than stoprev.
 
-        Yield a sequence of revision numbers starting with the parents
-        of each revision in revs, i.e., each revision is *not* considered
-        an ancestor of itself.  Results are in breadth-first order:
-        parents of each rev in revs, then parents of those, etc.  Result
-        does not include the null revision."""
+        If inclusive is False, yield a sequence of revision numbers starting
+        with the parents of each revision in revs, i.e., each revision is *not*
+        considered an ancestor of itself.  Results are in breadth-first order:
+        parents of each rev in revs, then parents of those, etc.
+
+        If inclusive is True, yield all the revs first (ignoring stoprev),
+        then yield all the ancestors of revs as when inclusive is False.
+        If an element in revs is an ancestor of a different rev it is not
+        yielded again.
+
+        Result does not include the null revision."""
         visit = util.deque(revs)
         seen = set([nullrev])
+        if inclusive:
+            for rev in revs:
+                yield rev
+            seen.update(revs)
         while visit:
             for parent in self.parentrevs(visit.popleft()):
                 if parent < stoprev:
@@ -364,10 +374,7 @@ class revlog(object):
     def incancestors(self, revs, stoprev=0):
         """Identical to ancestors() except it also generates the
         revisions, 'revs'"""
-        for rev in revs:
-            yield rev
-        for rev in self.ancestors(revs, stoprev):
-            yield rev
+        return self.ancestors(revs, stoprev, inclusive=True)
 
     def descendants(self, revs):
         """Generate the descendants of 'revs' in revision order.

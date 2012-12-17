@@ -62,6 +62,14 @@ if __name__ == '__main__':
     for r in repo.changelog.ancestors([7], 6):
         print r,
 
+    print '\nAncestors of 7, including revs'
+    for r in repo.changelog.ancestors([7], inclusive=True):
+        print r,
+
+    print '\nAncestors of 7, 5 and 3, including revs'
+    for r in repo.changelog.ancestors([7, 5, 3], inclusive=True):
+        print r,
+
     # Descendants
     print '\n\nDescendants of 5'
     for r in repo.changelog.descendants([5]):
