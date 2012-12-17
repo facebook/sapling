@@ -371,11 +371,6 @@ class revlog(object):
                     seen.add(parent)
                     yield parent
 
-    def incancestors(self, revs, stoprev=0):
-        """Identical to ancestors() except it also generates the
-        revisions, 'revs'"""
-        return self.ancestors(revs, stoprev, inclusive=True)
-
     def descendants(self, revs):
         """Generate the descendants of 'revs' in revision order.
 
