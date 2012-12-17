@@ -57,6 +57,8 @@ def readpats(root, files, warn):
 
     pats = {}
     for f in files:
+        if f in pats:
+            continue
         try:
             pats[f] = []
             fp = open(f)
