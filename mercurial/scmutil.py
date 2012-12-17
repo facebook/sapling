@@ -950,6 +950,7 @@ class filecache(object):
     def __get__(self, obj, type=None):
         # do we need to check if the file changed?
         if self.name in obj.__dict__:
+            assert self.name in obj._filecache, self.name
             return obj.__dict__[self.name]
 
         entry = obj._filecache.get(self.name)
@@ -971,8 +972,15 @@ class filecache(object):
         return entry.obj
 
     def __set__(self, obj, value):
-        if self.name in obj._filecache:
-            obj._filecache[self.name].obj = value # update cached copy
+        if self.name not in obj._filecache:
+            # we add an entry for the missing value because X in __dict__
+            # implies X in _filecache
+            ce = filecacheentry(self.join(obj, self.path), False)
+            obj._filecache[self.name] = ce
+        else:
+            ce = obj._filecache[self.name]
+
+        ce.obj = value # update cached copy
         obj.__dict__[self.name] = value # update copy returned by obj.x
 
     def __delete__(self, obj):

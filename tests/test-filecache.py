@@ -101,6 +101,17 @@ def test_filecache_synced():
     # it
     repo.commit('.')
 
+def setbeforeget(repo):
+    os.remove('x')
+    repo.cached = 0
+    repo.invalidate()
+    print repo.cached
+    repo.invalidate()
+    f = open('x', 'w')
+    f.write('a')
+    f.close()
+    print repo.cached
+
 print 'basic:'
 print
 basic(fakerepo())
@@ -109,3 +120,7 @@ print 'fakeuncacheable:'
 print
 fakeuncacheable()
 test_filecache_synced()
+print
+print 'setbeforeget:'
+print
+setbeforeget(fakerepo())
