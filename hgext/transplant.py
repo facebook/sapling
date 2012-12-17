@@ -94,7 +94,8 @@ class transplanter(object):
             parentrev = repo.changelog.rev(parent)
         if hasnode(repo, node):
             rev = repo.changelog.rev(node)
-            reachable = repo.changelog.incancestors([parentrev], rev)
+            reachable = repo.changelog.ancestors([parentrev], rev,
+                                                 inclusive=True)
             if rev in reachable:
                 return True
         for t in self.transplants.get(node):
@@ -103,7 +104,8 @@ class transplanter(object):
                 self.transplants.remove(t)
                 return False
             lnoderev = repo.changelog.rev(t.lnode)
-            if lnoderev in repo.changelog.incancestors([parentrev], lnoderev):
+            if lnoderev in repo.changelog.ancestors([parentrev], lnoderev,
+                                                    inclusive=True):
                 return True
         return False
 
