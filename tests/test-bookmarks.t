@@ -40,9 +40,9 @@ look up bookmark
   summary:     0
   
 
-second bookmark for rev 0
+second bookmark for rev 0, command should work even with ui.strict on
 
-  $ hg bookmark X2
+  $ hg --config ui.strict=1 bookmark X2
 
 bookmark rev -1 again
 
