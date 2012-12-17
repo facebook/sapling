@@ -268,6 +268,23 @@ class changectx(object):
         """True if the changeset is either unstable, bumped or divergent"""
         return self.unstable() or self.bumped() or self.divergent()
 
+    def troubles(self):
+        """return the list of troubles affecting this changesets.
+
+        Troubles are returned as strings. possible values are:
+        - unstable,
+        - bumped,
+        - divergent.
+        """
+        troubles = []
+        if self.unstable():
+            troubles.append('unstable')
+        if self.bumped():
+            troubles.append('bumped')
+        if self.divergent():
+            troubles.append('divergent')
+        return troubles
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
