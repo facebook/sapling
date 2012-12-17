@@ -176,6 +176,7 @@ And that we can't push bumped changeset
   $ hg push ../tmpa -r 0 --force #(make repo related)
   pushing to ../tmpa
   searching for changes
+  warning: repository is unrelated
   adding changesets
   adding manifests
   adding file changes

@@ -338,19 +338,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
 
 def visibleheads(repo):
     """return the set of visible head of this repo"""
-    # XXX we want a cache on this
-    sroots = repo._phasecache.phaseroots[phases.secret]
-    if sroots or repo.obsstore:
-        # XXX very slow revset. storing heads or secret "boundary"
-        # would help.
-        revset = repo.set('heads(not (%ln:: + extinct()))', sroots)
-
-        vheads = [ctx.node() for ctx in revset]
-        if not vheads:
-            vheads.append(nullid)
-    else:
-        vheads = repo.heads()
-    return vheads
+    return repo.filtered('unserved').heads()
 
 
 def visiblebranchmap(repo):
