@@ -70,7 +70,7 @@ def readpats(root, files, warn):
             if f != files[0]:
                 warn(_("skipping unreadable ignore file '%s': %s\n") %
                      (f, inst.strerror))
-    return pats
+    return [(f, pats[f]) for f in files if f in pats]
 
 def ignore(root, files, warn):
     '''return matcher covering patterns in 'files'.
@@ -95,7 +95,7 @@ def ignore(root, files, warn):
     pats = readpats(root, files, warn)
 
     allpats = []
-    for patlist in pats.values():
+    for f, patlist in pats:
         allpats.extend(patlist)
     if not allpats:
         return util.never
@@ -104,7 +104,7 @@ def ignore(root, files, warn):
         ignorefunc = match.match(root, '', [], allpats)
     except util.Abort:
         # Re-raise an exception where the src is the right file
-        for f, patlist in pats.iteritems():
+        for f, patlist in pats:
             try:
                 match.match(root, '', [], patlist)
             except util.Abort, inst:
