@@ -264,6 +264,10 @@ class changectx(object):
         """
         return self.rev() in obsmod.getrevs(self._repo, 'divergent')
 
+    def troubled(self):
+        """True if the changeset is either unstable, bumped or divergent"""
+        return self.unstable() or self.bumped() or self.divergent()
+
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
             try:
