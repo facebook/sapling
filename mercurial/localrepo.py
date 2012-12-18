@@ -1101,8 +1101,11 @@ class localrepository(object):
 
         self.unfiltered()._branchcache = None # in UTF-8
         self.unfiltered()._branchcachetip = None
-        obsolete.clearobscaches(self)
+        self.invalidatevolatilesets()
+
+    def invalidatevolatilesets(self):
         self.filteredrevcache.clear()
+        obsolete.clearobscaches(self)
 
     def invalidatedirstate(self):
         '''Invalidates the dirstate, causing the next call to dirstate
@@ -1868,7 +1871,7 @@ class localrepository(object):
                         if key.startswith('dump'):
                             data = base85.b85decode(remoteobs[key])
                             self.obsstore.mergemarkers(tr, data)
-                    self.filteredrevcache.clear()
+                    self.invalidatevolatilesets()
             if tr is not None:
                 tr.close()
         finally:
@@ -2480,8 +2483,7 @@ class localrepository(object):
             self.ui.status(_("added %d changesets"
                              " with %d changes to %d files%s\n")
                              % (changesets, revisions, files, htext))
-            obsolete.clearobscaches(self)
-            self.filteredrevcache.clear()
+            self.invalidatevolatilesets()
 
             if changesets > 0:
                 p = lambda: cl.writepending() and self.root or ""
