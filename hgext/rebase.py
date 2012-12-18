@@ -214,8 +214,8 @@ def rebase(ui, repo, **opts):
             else:
                 originalwd, target, state = result
                 if collapsef:
-                    targetancestors = set(repo.changelog.ancestors([target]))
-                    targetancestors.add(target)
+                    targetancestors = repo.changelog.ancestors([target],
+                                                               inclusive=True)
                     external = checkexternal(repo, state, targetancestors)
 
         if keepbranchesf:
@@ -233,8 +233,7 @@ def rebase(ui, repo, **opts):
 
         # Rebase
         if not targetancestors:
-            targetancestors = set(repo.changelog.ancestors([target]))
-            targetancestors.add(target)
+            targetancestors = repo.changelog.ancestors([target], inclusive=True)
 
         # Keep track of the current bookmarks in order to reset them later
         currentbookmarks = repo._bookmarks.copy()
