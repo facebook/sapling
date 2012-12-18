@@ -34,6 +34,9 @@ graph = {0: [-1], 1: [0], 2: [1], 3: [1], 4: [2], 5: [4], 6: [4],
          13: [8]}
 pfunc = graph.get
 
+class mockchangelog(object):
+    parentrevs = graph.get
+
 def runmissingancestors(revs, bases):
     print "%% ancestors of %s and not of %s" % (revs, bases)
     print ancestor.missingancestors(revs, bases, pfunc)
@@ -70,5 +73,34 @@ def test_missingancestors():
     runmissingancestors([10, 11, 12], [13])
     runmissingancestors([13], [10, 11, 12])
 
+def genlazyancestors(revs, stoprev=0, inclusive=False):
+    print ("%% lazy ancestor set for %s, stoprev = %s, inclusive = %s" %
+           (revs, stoprev, inclusive))
+    return ancestor.lazyancestors(mockchangelog, revs, stoprev=stoprev,
+                                  inclusive=inclusive)
+
+def printlazyancestors(s, l):
+    print [n for n in l if n in s]
+
+def test_lazyancestors():
+    # Empty revs
+    s = genlazyancestors([])
+    printlazyancestors(s, [3, 0, -1])
+
+    # Standard example
+    s = genlazyancestors([11, 13])
+    printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
+
+    # Including revs
+    s = genlazyancestors([11, 13], inclusive=True)
+    printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
+
+    # Test with stoprev
+    s = genlazyancestors([11, 13], stoprev=6)
+    printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
+    s = genlazyancestors([11, 13], stoprev=6, inclusive=True)
+    printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
+
 if __name__ == '__main__':
     test_missingancestors()
+    test_lazyancestors()

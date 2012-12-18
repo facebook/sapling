@@ -177,8 +177,8 @@ class lazyancestors(object):
         """Create a new object generating ancestors for the given revs. Does
         not generate revs lower than stoprev.
 
-        This is computed lazily starting from revs. The object only supports
-        iteration.
+        This is computed lazily starting from revs. The object supports
+        iteration and membership.
 
         cl should be a changelog and revs should be an iterable. inclusive is
         a boolean that indicates whether revs should be included. Revs lower
@@ -189,6 +189,19 @@ class lazyancestors(object):
         self._initrevs = revs
         self._stoprev = stoprev
         self._inclusive = inclusive
+
+        # Initialize data structures for __contains__.
+        # For __contains__, we use a heap rather than a deque because
+        # (a) it minimizes the number of parentrevs calls made
+        # (b) it makes the loop termination condition obvious
+        # Python's heap is a min-heap. Multiply all values by -1 to convert it
+        # into a max-heap.
+        self._containsvisit = [-rev for rev in revs]
+        heapq.heapify(self._containsvisit)
+        if inclusive:
+            self._containsseen = set(revs)
+        else:
+            self._containsseen = set()
 
     def __iter__(self):
         """Generate the ancestors of _initrevs in reverse topological order.
@@ -219,3 +232,33 @@ class lazyancestors(object):
                     visit.append(parent)
                     seen.add(parent)
                     yield parent
+
+    def __contains__(self, target):
+        """Test whether target is an ancestor of self._initrevs."""
+        # Trying to do both __iter__ and __contains__ using the same visit
+        # heap and seen set is complex enough that it slows down both. Keep
+        # them separate.
+        seen = self._containsseen
+        if target in seen:
+            return True
+
+        parentrevs = self._parentrevs
+        visit = self._containsvisit
+        stoprev = self._stoprev
+        heappop = heapq.heappop
+        heappush = heapq.heappush
+
+        targetseen = False
+
+        while visit and -visit[0] > target and not targetseen:
+            for parent in parentrevs(-heappop(visit)):
+                if parent < stoprev or parent in seen:
+                    continue
+                # We need to make sure we push all parents into the heap so
+                # that we leave it in a consistent state for future calls.
+                heappush(visit, -parent)
+                seen.add(parent)
+                if parent == target:
+                    targetseen = True
+
+        return targetseen

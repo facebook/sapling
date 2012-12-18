@@ -34,3 +34,13 @@
 [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
 % ancestors of [13] and not of [10, 11, 12]
 [8, 13]
+% lazy ancestor set for [], stoprev = 0, inclusive = False
+[]
+% lazy ancestor set for [11, 13], stoprev = 0, inclusive = False
+[7, 8, 3, 4, 1, 0]
+% lazy ancestor set for [11, 13], stoprev = 0, inclusive = True
+[11, 13, 7, 8, 3, 4, 1, 0]
+% lazy ancestor set for [11, 13], stoprev = 6, inclusive = False
+[7, 8]
+% lazy ancestor set for [11, 13], stoprev = 6, inclusive = True
+[11, 13, 7, 8]

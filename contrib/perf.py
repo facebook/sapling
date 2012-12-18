@@ -82,7 +82,7 @@ def perfancestorset(ui, repo, revset):
     revs = repo.revs(revset)
     heads = repo.changelog.headrevs()
     def d():
-        s = set(repo.changelog.ancestors(heads))
+        s = repo.changelog.ancestors(heads)
         for rev in revs:
             rev in s
     timer(d)
