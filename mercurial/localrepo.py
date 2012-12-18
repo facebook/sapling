@@ -1106,6 +1106,8 @@ class localrepository(object):
     def invalidatevolatilesets(self):
         self.filteredrevcache.clear()
         obsolete.clearobscaches(self)
+        if 'hiddenrevs' in vars(self):
+            del self.hiddenrevs
 
     def invalidatedirstate(self):
         '''Invalidates the dirstate, causing the next call to dirstate
