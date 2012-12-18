@@ -345,31 +345,10 @@ class revlog(object):
         """Generate the ancestors of 'revs' in reverse topological order.
         Does not generate revs lower than stoprev.
 
-        If inclusive is False, yield a sequence of revision numbers starting
-        with the parents of each revision in revs, i.e., each revision is *not*
-        considered an ancestor of itself.  Results are in breadth-first order:
-        parents of each rev in revs, then parents of those, etc.
+        See the documentation for ancestor.lazyancestors for more details."""
 
-        If inclusive is True, yield all the revs first (ignoring stoprev),
-        then yield all the ancestors of revs as when inclusive is False.
-        If an element in revs is an ancestor of a different rev it is not
-        yielded again.
-
-        Result does not include the null revision."""
-        visit = util.deque(revs)
-        seen = set([nullrev])
-        if inclusive:
-            for rev in revs:
-                yield rev
-            seen.update(revs)
-        while visit:
-            for parent in self.parentrevs(visit.popleft()):
-                if parent < stoprev:
-                    continue
-                if parent not in seen:
-                    visit.append(parent)
-                    seen.add(parent)
-                    yield parent
+        return ancestor.lazyancestors(self, revs, stoprev=stoprev,
+                                      inclusive=inclusive)
 
     def descendants(self, revs):
         """Generate the descendants of 'revs' in revision order.

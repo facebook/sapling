@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import heapq
+import heapq, util
 from node import nullrev
 
 def ancestor(a, b, pfunc):
@@ -171,3 +171,51 @@ def missingancestors(revs, bases, pfunc):
 
     missing.reverse()
     return missing
+
+class lazyancestors(object):
+    def __init__(self, cl, revs, stoprev=0, inclusive=False):
+        """Create a new object generating ancestors for the given revs. Does
+        not generate revs lower than stoprev.
+
+        This is computed lazily starting from revs. The object only supports
+        iteration.
+
+        cl should be a changelog and revs should be an iterable. inclusive is
+        a boolean that indicates whether revs should be included. Revs lower
+        than stoprev will not be generated.
+
+        Result does not include the null revision."""
+        self._parentrevs = cl.parentrevs
+        self._initrevs = revs
+        self._stoprev = stoprev
+        self._inclusive = inclusive
+
+    def __iter__(self):
+        """Generate the ancestors of _initrevs in reverse topological order.
+
+        If inclusive is False, yield a sequence of revision numbers starting
+        with the parents of each revision in revs, i.e., each revision is *not*
+        considered an ancestor of itself.  Results are in breadth-first order:
+        parents of each rev in revs, then parents of those, etc.
+
+        If inclusive is True, yield all the revs first (ignoring stoprev),
+        then yield all the ancestors of revs as when inclusive is False.
+        If an element in revs is an ancestor of a different rev it is not
+        yielded again."""
+        seen = set()
+        revs = self._initrevs
+        if self._inclusive:
+            for rev in revs:
+                yield rev
+            seen.update(revs)
+
+        parentrevs = self._parentrevs
+        stoprev = self._stoprev
+        visit = util.deque(revs)
+
+        while visit:
+            for parent in parentrevs(visit.popleft()):
+                if parent >= stoprev and parent not in seen:
+                    visit.append(parent)
+                    seen.add(parent)
+                    yield parent
