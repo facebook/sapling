@@ -684,16 +684,17 @@ class localrepository(object):
 
     @unfilteredmethod # Until we get a smarter cache management
     def updatebranchcache(self):
-        tip = self.changelog.tip()
+        cl = self.changelog
+        tip = cl.tip()
         if self._branchcache is not None and self._branchcachetip == tip:
             return
 
         oldtip = self._branchcachetip
         self._branchcachetip = tip
-        if oldtip is None or oldtip not in self.changelog.nodemap:
+        if oldtip is None or oldtip not in cl.nodemap:
             partial, last, lrev = self._readbranchcache()
         else:
-            lrev = self.changelog.rev(oldtip)
+            lrev = cl.rev(oldtip)
             partial = self._branchcache
 
         self._branchtags(partial, lrev)
