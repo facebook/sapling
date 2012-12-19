@@ -160,3 +160,16 @@ build/x & build/y shouldn't appear in "hg st"
   $ kill `cat hg.pid`
 
   $ cd ..
+
+Ensure that if the repo is in a directory whose name is too long, the
+unix domain socket is reached through a symlink (issue1208).
+
+  $ mkdir 0_3456789_10_456789_20_456789_30_456789_40_456789_50_45678_
+  $ cd 0_3456789_10_456789_20_456789_30_456789_40_456789_50_45678_
+  $ mkdir 60_456789_70_456789_80_456789_90_456789_100_56789_
+  $ cd 60_456789_70_456789_80_456789_90_456789_100_56789_
+
+  $ hg --config inotify.pidfile=hg3.pid clone -q ../../repo1
+  $ readlink repo1/.hg/inotify.sock
+  */inotify.sock (glob)
+  $ kill `cat hg3.pid`
