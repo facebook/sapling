@@ -202,26 +202,25 @@ def changelog(web, req, tmpl, shortlog=False):
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
             files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
-            l.insert(0, {"parity": parity.next(),
-                         "author": ctx.user(),
-                         "parent": webutil.parents(ctx, i - 1),
-                         "child": webutil.children(ctx, i + 1),
-                         "changelogtag": showtags,
-                         "desc": ctx.description(),
-                         "date": ctx.date(),
-                         "files": files,
-                         "rev": i,
-                         "node": hex(n),
-                         "tags": webutil.nodetagsdict(web.repo, n),
-                         "bookmarks": webutil.nodebookmarksdict(web.repo, n),
-                         "inbranch": webutil.nodeinbranch(web.repo, ctx),
-                         "branches": webutil.nodebranchdict(web.repo, ctx)
-                        })
-
+            l.append({"parity": parity.next(),
+                      "author": ctx.user(),
+                      "parent": webutil.parents(ctx, i - 1),
+                      "child": webutil.children(ctx, i + 1),
+                      "changelogtag": showtags,
+                      "desc": ctx.description(),
+                      "date": ctx.date(),
+                      "files": files,
+                      "rev": i,
+                      "node": hex(n),
+                      "tags": webutil.nodetagsdict(web.repo, n),
+                      "bookmarks": webutil.nodebookmarksdict(web.repo, n),
+                      "inbranch": webutil.nodeinbranch(web.repo, ctx),
+                      "branches": webutil.nodebranchdict(web.repo, ctx)
+                     })
         if limit > 0:
-            l = l[:limit]
+            l = l[-limit:]
 
-        for e in l:
+        for e in reversed(l):
             yield e
 
     revcount = shortlog and web.maxshortchanges or web.maxchanges
@@ -520,7 +519,7 @@ def summary(web, req, tmpl):
             n = ctx.node()
             hn = hex(n)
 
-            l.insert(0, tmpl(
+            l.append(tmpl(
                'shortlogentry',
                 parity=parity.next(),
                 author=ctx.user(),
@@ -533,6 +532,7 @@ def summary(web, req, tmpl):
                 inbranch=webutil.nodeinbranch(web.repo, ctx),
                 branches=webutil.nodebranchdict(web.repo, ctx)))
 
+        l.reverse()
         yield l
 
     tip = web.repo['tip']
@@ -748,27 +748,27 @@ def filelog(web, req, tmpl):
         for i in xrange(start, end):
             iterfctx = fctx.filectx(i)
 
-            l.insert(0, {"parity": parity.next(),
-                         "filerev": i,
-                         "file": f,
-                         "node": iterfctx.hex(),
-                         "author": iterfctx.user(),
-                         "date": iterfctx.date(),
-                         "rename": webutil.renamelink(iterfctx),
-                         "parent": webutil.parents(iterfctx),
-                         "child": webutil.children(iterfctx),
-                         "desc": iterfctx.description(),
-                         "tags": webutil.nodetagsdict(repo, iterfctx.node()),
-                         "bookmarks": webutil.nodebookmarksdict(
-                             repo, iterfctx.node()),
-                         "branch": webutil.nodebranchnodefault(iterfctx),
-                         "inbranch": webutil.nodeinbranch(repo, iterfctx),
-                         "branches": webutil.nodebranchdict(repo, iterfctx)})
+            l.append({"parity": parity.next(),
+                      "filerev": i,
+                      "file": f,
+                      "node": iterfctx.hex(),
+                      "author": iterfctx.user(),
+                      "date": iterfctx.date(),
+                      "rename": webutil.renamelink(iterfctx),
+                      "parent": webutil.parents(iterfctx),
+                      "child": webutil.children(iterfctx),
+                      "desc": iterfctx.description(),
+                      "tags": webutil.nodetagsdict(repo, iterfctx.node()),
+                      "bookmarks": webutil.nodebookmarksdict(
+                          repo, iterfctx.node()),
+                      "branch": webutil.nodebranchnodefault(iterfctx),
+                      "inbranch": webutil.nodeinbranch(repo, iterfctx),
+                      "branches": webutil.nodebranchdict(repo, iterfctx)})
 
         if limit > 0:
-            l = l[:limit]
+            l = l[-limit:]
 
-        for e in l:
+        for e in reversed(l):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
