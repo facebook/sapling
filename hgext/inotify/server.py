@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import cmdutil, osutil, util
+from mercurial import cmdutil, posix, osutil, util
 import common
 
 import errno
@@ -330,41 +330,15 @@ class socketlistener(object):
     def __init__(self, ui, root, repowatcher, timeout):
         self.ui = ui
         self.repowatcher = repowatcher
-        self.sock = socket.socket(socket.AF_UNIX)
-        self.sockpath = join(root, '.hg/inotify.sock')
-
-        self.realsockpath = self.sockpath
-        if os.path.islink(self.sockpath):
-            if os.path.exists(self.sockpath):
-                self.realsockpath = os.readlink(self.sockpath)
-            else:
-                os.unlink(self.sockpath)
         try:
-            self.sock.bind(self.realsockpath)
-        except socket.error, err:
-            if err.args[0] == errno.EADDRINUSE:
-                raise AlreadyStartedException(_('cannot start: socket is '
-                                                'already bound'))
-            if err.args[0] == "AF_UNIX path too long":
-                tempdir = tempfile.mkdtemp(prefix="hg-inotify-")
-                self.realsockpath = os.path.join(tempdir, "inotify.sock")
-                try:
-                    self.sock.bind(self.realsockpath)
-                    os.symlink(self.realsockpath, self.sockpath)
-                except (OSError, socket.error), inst:
-                    try:
-                        os.unlink(self.realsockpath)
-                    except OSError:
-                        pass
-                    os.rmdir(tempdir)
-                    if inst.errno == errno.EEXIST:
-                        raise AlreadyStartedException(_('cannot start: tried '
-                            'linking .hg/inotify.sock to a temporary socket but'
-                            ' .hg/inotify.sock already exists'))
-                    raise
-            else:
-                raise
-        self.sock.listen(5)
+            self.sock = posix.unixdomainserver(
+                lambda p: os.path.join(root, '.hg', p),
+                'inotify')
+        except (OSError, socket.error), err:
+            if err.errno == errno.EADDRINUSE:
+                raise AlreadyStartedException(_('cannot start: '
+                                                'socket is already bound'))
+            raise
         self.fileno = self.sock.fileno
 
     def answer_stat_query(self, cs):

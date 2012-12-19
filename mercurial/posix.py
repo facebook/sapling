@@ -7,7 +7,7 @@
 
 from i18n import _
 import encoding
-import os, sys, errno, stat, getpass, pwd, grp, tempfile, unicodedata
+import os, sys, errno, stat, getpass, pwd, grp, socket, tempfile, unicodedata
 
 posixfile = open
 normpath = os.path.normpath
@@ -483,3 +483,43 @@ class cachestat(object):
 
 def executablepath():
     return None # available on Windows only
+
+class unixdomainserver(socket.socket):
+    def __init__(self, join, subsystem):
+        '''Create a unix domain socket with the given prefix.'''
+        super(unixdomainserver, self).__init__(socket.AF_UNIX)
+        sockname = subsystem + '.sock'
+        self.realpath = self.path = join(sockname)
+        if os.path.islink(self.path):
+            if os.path.exists(self.path):
+                self.realpath = os.readlink(self.path)
+            else:
+                os.unlink(self.path)
+        try:
+            self.bind(self.realpath)
+        except socket.error, err:
+            if err.args[0] == 'AF_UNIX path too long':
+                tmpdir = tempfile.mkdtemp(prefix='hg-%s-' % subsystem)
+                self.realpath = os.path.join(tmpdir, sockname)
+                try:
+                    self.bind(self.realpath)
+                    os.symlink(self.realpath, self.path)
+                except (OSError, socket.error):
+                    self.cleanup()
+                    raise
+            else:
+                raise
+        self.listen(5)
+
+    def cleanup(self):
+        def okayifmissing(f, path):
+            try:
+                f(path)
+            except OSError, err:
+                if err.errno != errno.ENOENT:
+                    raise
+
+        okayifmissing(os.unlink, self.path)
+        if self.realpath != self.path:
+            okayifmissing(os.unlink, self.realpath)
+            okayifmissing(os.rmdir, os.path.dirname(self.realpath))

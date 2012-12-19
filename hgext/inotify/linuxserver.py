@@ -405,14 +405,7 @@ class socketlistener(server.socketlistener, pollable):
 
     def shutdown(self):
         self.sock.close()
-        try:
-            os.unlink(self.sockpath)
-            if self.realsockpath:
-                os.unlink(self.realsockpath)
-                os.rmdir(os.path.dirname(self.realsockpath))
-        except OSError, err:
-            if err.errno != errno.ENOENT:
-                raise
+        self.sock.cleanup()
 
     def answer_stat_query(self, cs):
         if self.repowatcher.timeout:
