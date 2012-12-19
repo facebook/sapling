@@ -172,4 +172,11 @@ unix domain socket is reached through a symlink (issue1208).
   $ hg --config inotify.pidfile=hg3.pid clone -q ../../repo1
   $ readlink repo1/.hg/inotify.sock
   */inotify.sock (glob)
+
+Trying to start the server a second time should fail as usual.
+
+  $ hg --cwd repo1 inserve
+  abort: inotify-server: cannot start: socket is already bound
+  [255]
+
   $ kill `cat hg3.pid`
