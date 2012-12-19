@@ -338,8 +338,7 @@ class socketlistener(object):
             if os.path.exists(self.sockpath):
                 self.realsockpath = os.readlink(self.sockpath)
             else:
-                raise util.Abort('inotify-server: cannot start: '
-                                '.hg/inotify.sock is a broken symlink')
+                os.unlink(self.sockpath)
         try:
             self.sock.bind(self.realsockpath)
         except socket.error, err:

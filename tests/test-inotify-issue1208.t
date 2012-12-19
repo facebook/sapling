@@ -6,16 +6,11 @@
   $ hg init $p
   $ cd $p
 
-fail
+dangling symlink should be deleted
 
   $ ln -sf doesnotexist .hg/inotify.sock
-  $ hg st
-  abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
-  inotify-client: could not start inotify server: child process failed to start
-  $ hg inserve
-  abort: inotify-server: cannot start: .hg/inotify.sock is a broken symlink
-  [255]
-  $ rm .hg/inotify.sock
+  $ hg --config inotify.pidfile=../hg.pid st
+  $ kill `cat ../hg.pid`
 
 inserve
 
