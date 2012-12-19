@@ -730,7 +730,6 @@ class localrepository(object):
             bt[bn] = self._branchtip(heads)
         return bt
 
-    @unfilteredmethod # Until we get a smarter cache management
     def _updatebranchcache(self, partial, ctxgen):
         """Given a branchhead cache, partial, that may have extra nodes or be
         missing heads, and a generator of nodes that are at least a superset of
