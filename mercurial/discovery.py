@@ -8,6 +8,7 @@
 from node import nullid, short
 from i18n import _
 import util, setdiscovery, treediscovery, phases, obsolete, bookmarks
+import branchmap
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
@@ -194,7 +195,7 @@ def _headssummary(repo, remote, outgoing):
     # This will possibly add new heads and remove existing ones.
     newmap = dict((branch, heads[1]) for branch, heads in headssum.iteritems()
                   if heads[0] is not None)
-    repo._updatebranchcache(newmap, missingctx)
+    branchmap.update(repo, newmap, missingctx)
     for branch, newheads in newmap.iteritems():
         headssum[branch][1][:] = newheads
     return headssum
@@ -205,7 +206,7 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     cl = repo.changelog
     # 1-4b. old servers: Check for new topological heads.
     # Construct {old,new}map with branch = None (topological branch).
-    # (code based on _updatebranchcache)
+    # (code based on update)
     oldheads = set(h for h in remoteheads if h in cl.nodemap)
     # all nodes in outgoing.missing are children of either:
     # - an element of oldheads

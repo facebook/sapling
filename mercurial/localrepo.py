@@ -682,7 +682,7 @@ class localrepository(object):
         #                   on disk
         if lrev < catip:
             ctxgen = (self[r] for r in cl.revs(lrev + 1, catip))
-            self._updatebranchcache(partial, ctxgen)
+            branchmap.update(self, partial, ctxgen)
             branchmap.write(self, partial, cl.node(catip), catip)
             lrev = catip
         # If cacheable tip were lower than actual tip, we need to update the
@@ -691,7 +691,7 @@ class localrepository(object):
         tiprev = len(self) - 1
         if lrev < tiprev:
             ctxgen = (self[r] for r in cl.revs(lrev + 1, tiprev))
-            self._updatebranchcache(partial, ctxgen)
+            branchmap.update(self, partial, ctxgen)
         self._branchcache = partial
         self._branchcachetip = tip
 
@@ -699,9 +699,9 @@ class localrepository(object):
         '''returns a dictionary {branch: [branchheads]}'''
         if self.changelog.filteredrevs:
             # some changeset are excluded we can't use the cache
-            branchmap = {}
-            self._updatebranchcache(branchmap, (self[r] for r in self))
-            return branchmap
+            bmap = {}
+            branchmap.update(self, bmap, (self[r] for r in self))
+            return bmap
         else:
             self.updatebranchcache()
             return self._branchcache
@@ -729,66 +729,6 @@ class localrepository(object):
         for bn, heads in self.branchmap().iteritems():
             bt[bn] = self._branchtip(heads)
         return bt
-
-    def _updatebranchcache(self, partial, ctxgen):
-        """Given a branchhead cache, partial, that may have extra nodes or be
-        missing heads, and a generator of nodes that are at least a superset of
-        heads missing, this function updates partial to be correct.
-        """
-        # collect new branch entries
-        newbranches = {}
-        for c in ctxgen:
-            newbranches.setdefault(c.branch(), []).append(c.node())
-        # if older branchheads are reachable from new ones, they aren't
-        # really branchheads. Note checking parents is insufficient:
-        # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-        for branch, newnodes in newbranches.iteritems():
-            bheads = partial.setdefault(branch, [])
-            # Remove candidate heads that no longer are in the repo (e.g., as
-            # the result of a strip that just happened).  Avoid using 'node in
-            # self' here because that dives down into branchcache code somewhat
-            # recursively.
-            bheadrevs = [self.changelog.rev(node) for node in bheads
-                         if self.changelog.hasnode(node)]
-            newheadrevs = [self.changelog.rev(node) for node in newnodes
-                           if self.changelog.hasnode(node)]
-            ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
-            # Remove duplicates - nodes that are in newheadrevs and are already
-            # in bheadrevs.  This can happen if you strip a node whose parent
-            # was already a head (because they're on different branches).
-            bheadrevs = sorted(set(bheadrevs).union(newheadrevs))
-
-            # Starting from tip means fewer passes over reachable.  If we know
-            # the new candidates are not ancestors of existing heads, we don't
-            # have to examine ancestors of existing heads
-            if ctxisnew:
-                iterrevs = sorted(newheadrevs)
-            else:
-                iterrevs = list(bheadrevs)
-
-            # This loop prunes out two kinds of heads - heads that are
-            # superseded by a head in newheadrevs, and newheadrevs that are not
-            # heads because an existing head is their descendant.
-            while iterrevs:
-                latest = iterrevs.pop()
-                if latest not in bheadrevs:
-                    continue
-                ancestors = set(self.changelog.ancestors([latest],
-                                                         bheadrevs[0]))
-                if ancestors:
-                    bheadrevs = [b for b in bheadrevs if b not in ancestors]
-            partial[branch] = [self.changelog.node(rev) for rev in bheadrevs]
-
-        # There may be branches that cease to exist when the last commit in the
-        # branch was stripped.  This code filters them out.  Note that the
-        # branch that ceased to exist may not be in newbranches because
-        # newbranches is the set of candidate heads, which when you strip the
-        # last commit in a branch will be the parent branch.
-        for branch in partial.keys():
-            nodes = [head for head in partial[branch]
-                     if self.changelog.hasnode(head)]
-            if not nodes:
-                del partial[branch]
 
     def lookup(self, key):
         return self[key].node()
@@ -1532,7 +1472,7 @@ class localrepository(object):
             tiprev = len(self) - 1
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
-            self._updatebranchcache(self._branchcache, ctxgen)
+            branchmap.update(self, self._branchcache, ctxgen)
             branchmap.write(self, self._branchcache, self.changelog.tip(),
                             tiprev)
 
