@@ -13,9 +13,6 @@ import collections
 if sys.version_info[:2] < (2, 6):
     sys.exit(0)
 
-def hybridencode(path):
-    return store._hybridencode(path, True)
-
 validchars = set(map(chr, range(0, 256)))
 alphanum = range(ord('A'), ord('Z'))
 
@@ -157,7 +154,15 @@ def genpath(rng, count):
 def runtests(rng, seed, count):
     nerrs = 0
     for p in genpath(rng, count):
-        hybridencode(p)
+        h = store._dothybridencode(p)    # uses C implementation, if available
+        r = store._hybridencode(p, True) # reference implementation in Python
+        if h != r:
+            if nerrs == 0:
+                print >> sys.stderr, 'seed:', hex(seed)[:-1]
+            print >> sys.stderr, "\np: '%s'" % p.encode("string_escape")
+            print >> sys.stderr, "h: '%s'" % h.encode("string_escape")
+            print >> sys.stderr, "r: '%s'" % r.encode("string_escape")
+            nerrs += 1
     return nerrs
 
 def main():
