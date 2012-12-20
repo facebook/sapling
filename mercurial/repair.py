@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import changegroup
+from mercurial import changegroup, branchmap
 from mercurial.node import short
 from mercurial.i18n import _
 import os
@@ -60,7 +60,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     # It simplifies the logic around updating the branchheads cache if we only
     # have to consider the effect of the stripped revisions and not revisions
     # missing because the cache is out-of-date.
-    repo.updatebranchcache()
+    branchmap.updatecache(repo)
 
     cl = repo.changelog
     # TODO handle undo of merge sets

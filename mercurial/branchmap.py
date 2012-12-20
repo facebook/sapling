@@ -111,3 +111,35 @@ def update(repo, partial, ctxgen):
         if not nodes:
             del partial[branch]
 
+def updatecache(repo):
+    repo = repo.unfiltered()  # Until we get a smarter cache management
+    cl = repo.changelog
+    tip = cl.tip()
+    if repo._branchcache is not None and repo._branchcachetip == tip:
+        return
+
+    oldtip = repo._branchcachetip
+    if oldtip is None or oldtip not in cl.nodemap:
+        partial, last, lrev = read(repo)
+    else:
+        lrev = cl.rev(oldtip)
+        partial = repo._branchcache
+
+    catip = repo._cacheabletip()
+    # if lrev == catip: cache is already up to date
+    # if lrev >  catip: we have uncachable element in `partial` can't write
+    #                   on disk
+    if lrev < catip:
+        ctxgen = (repo[r] for r in cl.revs(lrev + 1, catip))
+        update(repo, partial, ctxgen)
+        write(repo, partial, cl.node(catip), catip)
+        lrev = catip
+    # If cacheable tip were lower than actual tip, we need to update the
+    # cache up to tip. This update (from cacheable to actual tip) is not
+    # written to disk since it's not cacheable.
+    tiprev = len(repo) - 1
+    if lrev < tiprev:
+        ctxgen = (repo[r] for r in cl.revs(lrev + 1, tiprev))
+        update(repo, partial, ctxgen)
+    repo._branchcache = partial
+    repo._branchcachetip = tip

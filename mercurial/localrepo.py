@@ -662,39 +662,6 @@ class localrepository(object):
         cl = self.changelog
         return cl.rev(cl.tip())
 
-    @unfilteredmethod # Until we get a smarter cache management
-    def updatebranchcache(self):
-        cl = self.changelog
-        tip = cl.tip()
-        if self._branchcache is not None and self._branchcachetip == tip:
-            return
-
-        oldtip = self._branchcachetip
-        if oldtip is None or oldtip not in cl.nodemap:
-            partial, last, lrev = branchmap.read(self)
-        else:
-            lrev = cl.rev(oldtip)
-            partial = self._branchcache
-
-        catip = self._cacheabletip()
-        # if lrev == catip: cache is already up to date
-        # if lrev >  catip: we have uncachable element in `partial` can't write
-        #                   on disk
-        if lrev < catip:
-            ctxgen = (self[r] for r in cl.revs(lrev + 1, catip))
-            branchmap.update(self, partial, ctxgen)
-            branchmap.write(self, partial, cl.node(catip), catip)
-            lrev = catip
-        # If cacheable tip were lower than actual tip, we need to update the
-        # cache up to tip. This update (from cacheable to actual tip) is not
-        # written to disk since it's not cacheable.
-        tiprev = len(self) - 1
-        if lrev < tiprev:
-            ctxgen = (self[r] for r in cl.revs(lrev + 1, tiprev))
-            branchmap.update(self, partial, ctxgen)
-        self._branchcache = partial
-        self._branchcachetip = tip
-
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
         if self.changelog.filteredrevs:
@@ -703,7 +670,7 @@ class localrepository(object):
             branchmap.update(self, bmap, (self[r] for r in self))
             return bmap
         else:
-            self.updatebranchcache()
+            branchmap.updatecache(self)
             return self._branchcache
 
 
@@ -1446,7 +1413,7 @@ class localrepository(object):
                 # if minimal phase was 0 we don't need to retract anything
                 phases.retractboundary(self, targetphase, [n])
             tr.close()
-            self.updatebranchcache()
+            branchmap.updatecache(self)
             return n
         finally:
             if tr:
@@ -2431,7 +2398,7 @@ class localrepository(object):
             tr.close()
 
             if changesets > 0:
-                self.updatebranchcache()
+                branchmap.updatecache(self)
                 def runhooks():
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")
