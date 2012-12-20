@@ -13,7 +13,10 @@ filtertable = {}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
-    return filtertable[filtername](repo.unfiltered())
+    if filtername not in repo.filteredrevcache:
+        func = filtertable[filtername]
+        repo.filteredrevcache[filtername] = func(repo.unfiltered())
+    return repo.filteredrevcache[filtername]
 
 class repoview(object):
     """Provide a read/write view of a repo through a filtered changelog

@@ -239,6 +239,15 @@ class localrepository(object):
         # Maps a property name to its util.filecacheentry
         self._filecache = {}
 
+        # hold sets of revision to be filtered
+        # should be cleared when something might have changed the filter value:
+        # - new changesets,
+        # - phase change,
+        # - new obsolescence marker,
+        # - working directory parent change,
+        # - bookmark changes
+        self.filteredrevcache = {}
+
     def close(self):
         pass
 
@@ -1093,6 +1102,7 @@ class localrepository(object):
         self.unfiltered()._branchcache = None # in UTF-8
         self.unfiltered()._branchcachetip = None
         obsolete.clearobscaches(self)
+        self.filteredrevcache.clear()
 
     def invalidatedirstate(self):
         '''Invalidates the dirstate, causing the next call to dirstate
@@ -1858,6 +1868,7 @@ class localrepository(object):
                         if key.startswith('dump'):
                             data = base85.b85decode(remoteobs[key])
                             self.obsstore.mergemarkers(tr, data)
+                    self.filteredrevcache.clear()
             if tr is not None:
                 tr.close()
         finally:
@@ -2470,6 +2481,7 @@ class localrepository(object):
                              " with %d changes to %d files%s\n")
                              % (changesets, revisions, files, htext))
             obsolete.clearobscaches(self)
+            self.filteredrevcache.clear()
 
             if changesets > 0:
                 p = lambda: cl.writepending() and self.root or ""
