@@ -42,17 +42,6 @@ def read(repo):
         partial = branchcache()
     return partial
 
-def write(repo, cache):
-    try:
-        f = repo.opener("cache/branchheads", "w", atomictemp=True)
-        f.write("%s %s\n" % (hex(cache.tipnode), cache.tiprev))
-        for label, nodes in cache.iteritems():
-            for node in nodes:
-                f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
-        f.close()
-    except (IOError, OSError):
-        pass
-
 def update(repo, partial, ctxgen):
     """Given a branchhead cache, partial, that may have extra nodes or be
     missing heads, and a generator of nodes that are at least a superset of
@@ -133,7 +122,7 @@ def updatecache(repo):
         update(repo, partial, ctxgen)
         partial.tipnode = cl.node(catip)
         partial.tiprev = catip
-        write(repo, partial)
+        partial.write(repo)
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
     # written to disk since it's not cacheable.
@@ -152,3 +141,14 @@ class branchcache(dict):
         super(branchcache, self).__init__(entries)
         self.tipnode = tipnode
         self.tiprev = tiprev
+
+    def write(self, repo):
+        try:
+            f = repo.opener("cache/branchheads", "w", atomictemp=True)
+            f.write("%s %s\n" % (hex(self.tipnode), self.tiprev))
+            for label, nodes in self.iteritems():
+                for node in nodes:
+                    f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
+            f.close()
+        except (IOError, OSError):
+            pass

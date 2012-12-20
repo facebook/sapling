@@ -1440,7 +1440,7 @@ class localrepository(object):
             branchmap.update(self, cache, ctxgen)
             cache.tipnode = self.changelog.tip()
             cache.tiprev = self.changelog.rev(cache.tipnode)
-            branchmap.write(self, cache)
+            cache.write(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
@@ -2498,7 +2498,7 @@ class localrepository(object):
                                                   self[rtiprev].node(),
                                                   rtiprev)
                     self._branchcache = cache
-                    branchmap.write(self, cache)
+                    cache.write(self)
             self.invalidate()
             return len(self.heads()) + 1
         finally:
