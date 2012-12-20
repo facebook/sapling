@@ -32,6 +32,7 @@ class bundlerevlog(revlog.revlog):
         self.bundle = bundle
         self.basemap = {}
         n = len(self)
+        self.disktiprev = n - 1
         chain = None
         self.bundlenodes = []
         while True:
@@ -284,9 +285,11 @@ class bundlerepository(localrepo.localrepository):
     def getcwd(self):
         return os.getcwd() # always outside the repo
 
-    def _writebranchcache(self, branches, tip, tiprev):
-        # don't overwrite the disk cache with bundle-augmented data
-        pass
+    def _cacheabletip(self):
+        # we should not cache data from the bundle on disk
+        ret = super(bundlerepository, self)._cacheabletip()
+        return min(self.changelog.disktiprev, ret)
+
 
 def instance(ui, path, create):
     if create:
