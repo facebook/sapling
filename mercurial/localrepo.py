@@ -661,9 +661,20 @@ class localrepository(object):
         cl = self.changelog
         return cl.rev(cl.tip())
 
-    def _branchtags(self, partial, lrev):
-        # TODO: rename this function?
+    @unfilteredmethod # Until we get a smarter cache management
+    def updatebranchcache(self):
         cl = self.changelog
+        tip = cl.tip()
+        if self._branchcache is not None and self._branchcachetip == tip:
+            return
+
+        oldtip = self._branchcachetip
+        if oldtip is None or oldtip not in cl.nodemap:
+            partial, last, lrev = self._readbranchcache()
+        else:
+            lrev = cl.rev(oldtip)
+            partial = self._branchcache
+
         catip = self._cacheabletip()
         # if lrev == catip: cache is already up to date
         # if lrev >  catip: we have uncachable element in `partial` can't write
@@ -680,26 +691,8 @@ class localrepository(object):
         if lrev < tiprev:
             ctxgen = (self[r] for r in cl.revs(lrev + 1, tiprev))
             self._updatebranchcache(partial, ctxgen)
-        return partial
-
-    @unfilteredmethod # Until we get a smarter cache management
-    def updatebranchcache(self):
-        cl = self.changelog
-        tip = cl.tip()
-        if self._branchcache is not None and self._branchcachetip == tip:
-            return
-
-        oldtip = self._branchcachetip
-        self._branchcachetip = tip
-        if oldtip is None or oldtip not in cl.nodemap:
-            partial, last, lrev = self._readbranchcache()
-        else:
-            lrev = cl.rev(oldtip)
-            partial = self._branchcache
-
-        self._branchtags(partial, lrev)
-        # this private cache holds all heads (not just the branch tips)
         self._branchcache = partial
+        self._branchcachetip = tip
 
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
