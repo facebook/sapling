@@ -7,7 +7,7 @@
 
 from i18n import _
 import os, sys
-import extensions, util
+import extensions, util, demandimport
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
@@ -35,13 +35,17 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                 sys.path = sys.path[:] + [modpath]
                 modname = modfile
         try:
+            demandimport.disable()
             obj = __import__(modname)
+            demandimport.enable()
         except ImportError:
             e1 = sys.exc_type, sys.exc_value, sys.exc_traceback
             try:
                 # extensions are loaded with hgext_ prefix
                 obj = __import__("hgext_%s" % modname)
+                demandimport.enable()
             except ImportError:
+                demandimport.enable()
                 e2 = sys.exc_type, sys.exc_value, sys.exc_traceback
                 if ui.tracebackflag:
                     ui.warn(_('exception from first failed import attempt:\n'))
