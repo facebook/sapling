@@ -3477,7 +3477,7 @@ def reposetup(ui, repo):
 
             return result
 
-        def _branchtags(self, partial, lrev):
+        def _cacheabletip(self):
             q = self.mq
             cl = self.changelog
             qbase = None
@@ -3492,25 +3492,10 @@ def reposetup(ui, repo):
                 except error.LookupError:
                     self.ui.warn(_('mq status file refers to unknown node %s\n')
                                  % short(qbasenode))
-            if qbase is None:
-                return super(mqrepo, self)._branchtags(partial, lrev)
-
-            start = lrev + 1
-            if start < qbase:
-                # update the cache (excluding the patches) and save it
-                ctxgen = (self[r] for r in xrange(lrev + 1, qbase))
-                self._updatebranchcache(partial, ctxgen)
-                self._writebranchcache(partial, cl.node(qbase - 1), qbase - 1)
-                start = qbase
-            # if start = qbase, the cache is as updated as it should be.
-            # if start > qbase, the cache includes (part of) the patches.
-            # we might as well use it, but we won't save it.
-
-            # update the cache up to the tip
-            ctxgen = (self[r] for r in xrange(start, len(cl)))
-            self._updatebranchcache(partial, ctxgen)
-
-            return partial
+            ret = super(mqrepo, self)._cacheabletip()
+            if qbase is not None:
+                ret = min(qbase - 1, ret)
+            return ret
 
     if repo.local():
         repo.__class__ = mqrepo

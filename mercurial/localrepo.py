@@ -649,14 +649,37 @@ class localrepository(object):
                 marks.append(bookmark)
         return sorted(marks)
 
+    def _cacheabletip(self):
+        """tip-most revision stable enought to used in persistent cache
+
+        This function is overwritten by MQ to ensure we do not write cache for
+        a part of the history that will likely change.
+
+        Efficient handling of filtered revision in branchcache should offer a
+        better alternative. But we are using this approach until it is ready.
+        """
+        cl = self.changelog
+        return cl.rev(cl.tip())
+
     def _branchtags(self, partial, lrev):
         # TODO: rename this function?
-        tiprev = len(self) - 1
-        if lrev != tiprev:
-            ctxgen = (self[r] for r in self.changelog.revs(lrev + 1, tiprev))
+        cl = self.changelog
+        catip = self._cacheabletip()
+        # if lrev == catip: cache is already up to date
+        # if lrev >  catip: we have uncachable element in `partial` can't write
+        #                   on disk
+        if lrev < catip:
+            ctxgen = (self[r] for r in cl.revs(lrev + 1, catip))
             self._updatebranchcache(partial, ctxgen)
-            self._writebranchcache(partial, self.changelog.tip(), tiprev)
-
+            self._writebranchcache(partial, cl.node(catip), catip)
+            lrev = catip
+        # If cacheable tip were lower than actual tip, we need to update the
+        # cache up to tip. This update (from cacheable to actual tip) is not
+        # written to disk since it's not cacheable.
+        tiprev = len(self) - 1
+        if lrev < tiprev:
+            ctxgen = (self[r] for r in cl.revs(lrev + 1, tiprev))
+            self._updatebranchcache(partial, ctxgen)
         return partial
 
     @unfilteredmethod # Until we get a smarter cache management
