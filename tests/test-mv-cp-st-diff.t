@@ -1343,7 +1343,7 @@ directory move
   % hg ci -m t0
   created new head
   % hg mv x y
-  moving x/x to y/x
+  moving x/x to y/x (glob)
   % hg ci -m t1
   % add y/x x1
   % hg ci -m t2
