@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 from node import bin, hex, nullid, nullrev, short
 from i18n import _
-import peer, changegroup, subrepo, discovery, pushkey, obsolete
+import peer, changegroup, subrepo, discovery, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock, transaction, store, encoding, base85
 import scmutil, util, extensions, hook, error, revset
@@ -302,6 +302,14 @@ class localrepository(object):
 
         Intended to be ovewritten by filtered repo."""
         return self
+
+    def filtered(self, name):
+        """Return a filtered version of a repository"""
+        # build a new class with the mixin and the current class
+        # (possibily subclass of the repo)
+        class proxycls(repoview.repoview, self.unfiltered().__class__):
+            pass
+        return proxycls(self, name)
 
     @repofilecache('bookmarks')
     def _bookmarks(self):
