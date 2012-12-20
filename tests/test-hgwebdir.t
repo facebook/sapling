@@ -207,6 +207,7 @@ should succeed, slashy names
           <th><a href="?sort=contact">Contact</a></th>
           <th><a href="?sort=lastchange">Last modified</a></th>
           <th>&nbsp;</th>
+          <th>&nbsp;</th>
       </tr>
       
   <tr class="parity0">
@@ -215,6 +216,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/t/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -223,6 +229,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/b/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -231,6 +242,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -239,6 +255,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -247,6 +268,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/b/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -255,6 +281,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/c/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -263,6 +294,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/notrepo/e/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -271,6 +307,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/coll/notrepo/f/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -279,6 +320,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -287,6 +333,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -295,6 +346,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/b/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -303,6 +359,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/b/d/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -311,6 +372,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/c/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -319,6 +385,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/notrepo/e/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -327,6 +398,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/notrepo/e/e2/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -335,6 +411,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/notrepo/f/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -343,6 +424,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/rcoll/notrepo/f/f2/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -351,6 +437,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -359,6 +450,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -367,6 +463,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/b/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -375,6 +476,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/c/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -383,6 +489,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/notrepo/e/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -391,6 +502,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/star/webdir/notrepo/f/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -399,6 +515,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -407,6 +528,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/a/.hg/patches/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -415,6 +541,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/b/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -423,6 +554,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/b/d/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -431,6 +567,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/c/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -439,6 +580,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/notrepo/e/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -447,6 +593,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/notrepo/e/e2/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -455,6 +606,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/notrepo/f/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -463,6 +619,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/starstar/webdir/notrepo/f/f2/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity0">
@@ -471,6 +632,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/astar/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   <tr class="parity1">
@@ -479,6 +645,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/astar/.hg/patches/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   </table>
@@ -532,6 +703,7 @@ should succeed, slashy names
           <th><a href="?sort=contact">Contact</a></th>
           <th><a href="?sort=lastchange">Last modified</a></th>
           <th>&nbsp;</th>
+          <th>&nbsp;</th>
       </tr>
       
   <tr class="parity0">
@@ -540,6 +712,11 @@ should succeed, slashy names
   <td>&#70;&#111;&#111;&#32;&#66;&#97;&#114;&#32;&#60;&#102;&#111;&#111;&#46;&#98;&#97;&#114;&#64;&#101;&#120;&#97;&#109;&#112;&#108;&#101;&#46;&#99;&#111;&#109;&#62;</td>
   <td class="age">*</td> (glob)
   <td class="indexlinks"></td>
+  <td>
+  <a href="/t/a/atom-log" title="subscribe to repository atom feed">
+  <img class="atom-logo" src="/static/feed-icon-14x14.png" alt="subscribe to repository atom feed">
+  </a>
+  </td>
   </tr>
   
   </table>
@@ -898,6 +1075,7 @@ test inexistent and inaccessible repo should be ignored silently
           <th><a href="?sort=description">Description</a></th>
           <th><a href="?sort=contact">Contact</a></th>
           <th><a href="?sort=lastchange">Last modified</a></th>
+          <th>&nbsp;</th>
           <th>&nbsp;</th>
       </tr>
       

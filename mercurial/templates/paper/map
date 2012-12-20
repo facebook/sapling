@@ -213,6 +213,13 @@ indexentry = '
     <td>{contact|obfuscate}</td>
     <td class="age">{lastchange|rfc822date}</td>
     <td class="indexlinks">{archives%indexarchiveentry}</td>
+    <td>
+        {if(isdirectory, '',
+            '<a href="{url}atom-log" title="subscribe to repository atom feed">
+                <img class="atom-logo" src="{staticurl}feed-icon-14x14.png" alt="subscribe to repository atom feed">
+            </a>'
+            )}
+    </td>
   </tr>\n'
 indexarchiveentry = '<a href="{url}archive/{node|short}{extension|urlescape}">&nbsp;&darr;{type|escape}</a>'
 index = index.tmpl
