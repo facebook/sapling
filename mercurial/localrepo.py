@@ -15,6 +15,7 @@ import merge as mergemod
 import tags as tagsmod
 from lock import release
 import weakref, errno, os, time, inspect
+import branchmap
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
@@ -682,7 +683,7 @@ class localrepository(object):
         if lrev < catip:
             ctxgen = (self[r] for r in cl.revs(lrev + 1, catip))
             self._updatebranchcache(partial, ctxgen)
-            self._writebranchcache(partial, cl.node(catip), catip)
+            branchmap.write(self, partial, cl.node(catip), catip)
             lrev = catip
         # If cacheable tip were lower than actual tip, we need to update the
         # cache up to tip. This update (from cacheable to actual tip) is not
@@ -761,18 +762,6 @@ class localrepository(object):
                 self.ui.warn(str(inst), '\n')
             partial, last, lrev = {}, nullid, nullrev
         return partial, last, lrev
-
-    @unfilteredmethod # Until we get a smarter cache management
-    def _writebranchcache(self, branches, tip, tiprev):
-        try:
-            f = self.opener("cache/branchheads", "w", atomictemp=True)
-            f.write("%s %s\n" % (hex(tip), tiprev))
-            for label, nodes in branches.iteritems():
-                for node in nodes:
-                    f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
-            f.close()
-        except (IOError, OSError):
-            pass
 
     @unfilteredmethod # Until we get a smarter cache management
     def _updatebranchcache(self, partial, ctxgen):
@@ -1578,8 +1567,8 @@ class localrepository(object):
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
             self._updatebranchcache(self._branchcache, ctxgen)
-            self._writebranchcache(self._branchcache, self.changelog.tip(),
-                                   tiprev)
+            branchmap.write(self, self._branchcache, self.changelog.tip(),
+                            tiprev)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
@@ -2634,7 +2623,7 @@ class localrepository(object):
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
-                    self._writebranchcache(self.branchcache,
+                    branchmap.write(self, self.branchcache,
                             self[rtiprev].node(), rtiprev)
             self.invalidate()
             return len(self.heads()) + 1
