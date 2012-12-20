@@ -15,7 +15,6 @@ import socket
 import stat
 import struct
 import sys
-import tempfile
 
 class AlreadyStartedException(Exception):
     pass
