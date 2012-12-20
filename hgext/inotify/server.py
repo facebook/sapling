@@ -334,7 +334,7 @@ class socketlistener(object):
                 lambda p: os.path.join(root, '.hg', p),
                 'inotify')
         except (OSError, socket.error), err:
-            if err.errno == errno.EADDRINUSE:
+            if err.args[0] == errno.EADDRINUSE:
                 raise AlreadyStartedException(_('cannot start: '
                                                 'socket is already bound'))
             raise
