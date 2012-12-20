@@ -177,7 +177,7 @@ def main():
         if o in ('-c', '--count'):
             count = int(a)
         elif o in ('-s', '--seed'):
-            seed = long(a)
+            seed = long(a, base=0) # accepts base 10 or 16 strings
         elif o == '--build':
             buildprobtable(sys.stdout,
                            'find .hg/store/data -type f && '
