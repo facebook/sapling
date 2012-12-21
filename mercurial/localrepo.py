@@ -1425,6 +1425,18 @@ class localrepository(object):
             cache.update(self, ctxgen)
             cache.write(self)
 
+        # When one tries to:
+        # 1) destroy nodes thus calling this method (e.g. strip)
+        # 2) use phasecache somewhere (e.g. commit)
+        #
+        # then 2) will fail because the phasecache contains nodes that were
+        # removed. We can either remove phasecache from the filecache,
+        # causing it to reload next time it is accessed, or simply filter
+        # the removed nodes now and write the updated cache.
+        if '_phasecache' in self._filecache:
+            self._phasecache.filterunknown(self)
+            self._phasecache.write()
+
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
         # heads immediately after a strip/rollback.  That in turn
