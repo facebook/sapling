@@ -1816,9 +1816,11 @@ class localrepository(object):
                         if unfi.obsstore:
                             # this message are here for 80 char limit reason
                             mso = _("push includes obsolete changeset: %s!")
-                            msu = _("push includes unstable changeset: %s!")
-                            msb = _("push includes bumped changeset: %s!")
-                            msd = _("push includes divergent changeset: %s!")
+                            mst = "push includes %s changeset: %s!"
+                            # plain versions for i18n tool to detect them
+                            _("push includes unstable changeset: %s!")
+                            _("push includes bumped changeset: %s!")
+                            _("push includes divergent changeset: %s!")
                             # If we are to push if there is at least one
                             # obsolete or unstable changeset in missing, at
                             # least one of the missinghead will be obsolete or
@@ -1827,12 +1829,10 @@ class localrepository(object):
                                 ctx = unfi[node]
                                 if ctx.obsolete():
                                     raise util.Abort(mso % ctx)
-                                elif ctx.unstable():
-                                    raise util.Abort(msu % ctx)
-                                elif ctx.bumped():
-                                    raise util.Abort(msb % ctx)
-                                elif ctx.divergent():
-                                    raise util.Abort(msd % ctx)
+                                elif ctx.troubled():
+                                    raise util.Abort(_(mst)
+                                                     % (ctx.troubles()[0],
+                                                        ctx))
                         discovery.checkheads(unfi, remote, outgoing,
                                              remoteheads, newbranch,
                                              bool(inc))
