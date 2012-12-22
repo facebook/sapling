@@ -229,7 +229,6 @@ class localrepository(object):
 
 
         self._branchcache = None
-        self._branchcachetip = None
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
@@ -979,7 +978,6 @@ class localrepository(object):
             del self.__dict__['_tagscache']
 
         self.unfiltered()._branchcache = None # in UTF-8
-        self.unfiltered()._branchcachetip = None
         self.invalidatevolatilesets()
 
     def invalidatevolatilesets(self):
@@ -1440,7 +1438,8 @@ class localrepository(object):
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
             branchmap.update(self, self._branchcache, ctxgen)
-            branchmap.write(self, self._branchcache, self.changelog.tip(),
+            self._branchcache.tipnode = self.changelog.tip()
+            branchmap.write(self, self._branchcache, self._branchcache.tipnode,
                             tiprev)
 
         # Ensure the persistent tag cache is updated.  Doing it now
@@ -2495,9 +2494,10 @@ class localrepository(object):
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
-                    self._branchcache = branchmap.branchcache(rbranchmap)
-                    rtipnode = self._branchcachetip = self[rtiprev].node()
-                    branchmap.write(self, self._branchcache, rtipnode, rtiprev)
+                    cache = branchmap.branchcache(rbranchmap,
+                                                  self[rtiprev].node())
+                    self._branchcache = cache
+                    branchmap.write(self, cache, cache.tipnode, rtiprev)
             self.invalidate()
             return len(self.heads()) + 1
         finally:

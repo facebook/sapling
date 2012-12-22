@@ -15,7 +15,7 @@ def read(repo):
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
-        return branchcache(), nullid, nullrev
+        return branchcache(), nullrev
 
     try:
         last, lrev = lines.pop(0).split(" ", 1)
@@ -32,13 +32,14 @@ def read(repo):
                 raise ValueError('invalidating branch cache because node '+
                                  '%s does not exist' % node)
             partial.setdefault(label, []).append(bin(node))
+        partial.tipnode = last
     except KeyboardInterrupt:
         raise
     except Exception, inst:
         if repo.ui.debugflag:
             repo.ui.warn(str(inst), '\n')
-        partial, last, lrev =  branchcache(), nullid, nullrev
-    return partial, last, lrev
+        partial, lrev = branchcache(), nullrev
+    return partial, lrev
 
 def write(repo, branches, tip, tiprev):
     try:
@@ -115,15 +116,14 @@ def updatecache(repo):
     repo = repo.unfiltered()  # Until we get a smarter cache management
     cl = repo.changelog
     tip = cl.tip()
-    if repo._branchcache is not None and repo._branchcachetip == tip:
+    partial = repo._branchcache
+    if partial is not None and partial.tipnode == tip:
         return
 
-    oldtip = repo._branchcachetip
-    if oldtip is None or oldtip not in cl.nodemap:
-        partial, last, lrev = read(repo)
+    if partial is None or partial.tipnode not in cl.nodemap:
+        partial, lrev = read(repo)
     else:
-        lrev = cl.rev(oldtip)
-        partial = repo._branchcache
+        lrev = cl.rev(partial.tipnode)
 
     catip = repo._cacheabletip()
     # if lrev == catip: cache is already up to date
@@ -132,7 +132,8 @@ def updatecache(repo):
     if lrev < catip:
         ctxgen = (repo[r] for r in cl.revs(lrev + 1, catip))
         update(repo, partial, ctxgen)
-        write(repo, partial, cl.node(catip), catip)
+        partial.tipnode = cl.node(catip)
+        write(repo, partial, partial.tipnode, catip)
         lrev = catip
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
@@ -141,9 +142,12 @@ def updatecache(repo):
     if lrev < tiprev:
         ctxgen = (repo[r] for r in cl.revs(lrev + 1, tiprev))
         update(repo, partial, ctxgen)
+        partial.tipnode = cl.node(tiprev)
     repo._branchcache = partial
-    repo._branchcachetip = tip
 
 class branchcache(dict):
     """A dict like object that hold branches heads cache"""
 
+    def __init__(self, entries=(), tipnode=nullid):
+        super(branchcache, self).__init__(entries)
+        self.tipnode = tipnode
