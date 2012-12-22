@@ -666,7 +666,7 @@ class localrepository(object):
         '''returns a dictionary {branch: [branchheads]}'''
         if self.changelog.filteredrevs:
             # some changeset are excluded we can't use the cache
-            bmap = {}
+            bmap = branchmap.branchcache()
             branchmap.update(self, bmap, (self[r] for r in self))
             return bmap
         else:
@@ -2495,7 +2495,7 @@ class localrepository(object):
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
-                    self._branchcache = rbranchmap
+                    self._branchcache = branchmap.branchcache(rbranchmap)
                     rtipnode = self._branchcachetip = self[rtiprev].node()
                     branchmap.write(self, self._branchcache, rtipnode, rtiprev)
             self.invalidate()

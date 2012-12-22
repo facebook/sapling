@@ -9,13 +9,13 @@ from node import bin, hex, nullid, nullrev
 import encoding
 
 def read(repo):
-    partial = {}
+    partial = branchcache()
     try:
         f = repo.opener("cache/branchheads")
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
-        return {}, nullid, nullrev
+        return branchcache(), nullid, nullrev
 
     try:
         last, lrev = lines.pop(0).split(" ", 1)
@@ -37,7 +37,7 @@ def read(repo):
     except Exception, inst:
         if repo.ui.debugflag:
             repo.ui.warn(str(inst), '\n')
-        partial, last, lrev = {}, nullid, nullrev
+        partial, last, lrev =  branchcache(), nullid, nullrev
     return partial, last, lrev
 
 def write(repo, branches, tip, tiprev):
@@ -143,3 +143,7 @@ def updatecache(repo):
         update(repo, partial, ctxgen)
     repo._branchcache = partial
     repo._branchcachetip = tip
+
+class branchcache(dict):
+    """A dict like object that hold branches heads cache"""
+
