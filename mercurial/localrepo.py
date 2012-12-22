@@ -2492,12 +2492,12 @@ class localrepository(object):
                 for bheads in rbranchmap.itervalues():
                     rbheads.extend(bheads)
 
-                self.branchcache = rbranchmap
                 if rbheads:
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
-                    branchmap.write(self, self.branchcache,
-                            self[rtiprev].node(), rtiprev)
+                    self._branchcache = rbranchmap
+                    rtipnode = self._branchcachetip = self[rtiprev].node()
+                    branchmap.write(self, self._branchcache, rtipnode, rtiprev)
             self.invalidate()
             return len(self.heads()) + 1
         finally:
