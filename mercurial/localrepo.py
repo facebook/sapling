@@ -666,7 +666,7 @@ class localrepository(object):
         if self.changelog.filteredrevs:
             # some changeset are excluded we can't use the cache
             bmap = branchmap.branchcache()
-            branchmap.update(self, bmap, (self[r] for r in self))
+            bmap.update(self, (self[r] for r in self))
             return bmap
         else:
             branchmap.updatecache(self)
@@ -1437,7 +1437,7 @@ class localrepository(object):
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
             cache = self._branchcache
-            branchmap.update(self, cache, ctxgen)
+            cache.update(self, ctxgen)
             cache.write(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now

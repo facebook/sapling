@@ -42,87 +42,6 @@ def read(repo):
         partial = branchcache()
     return partial
 
-def update(repo, partial, ctxgen):
-    """Given a branchhead cache, partial, that may have extra nodes or be
-    missing heads, and a generator of nodes that are at least a superset of
-    heads missing, this function updates partial to be correct.
-    """
-    cl = repo.changelog
-    # collect new branch entries
-    newbranches = {}
-    for c in ctxgen:
-        newbranches.setdefault(c.branch(), []).append(c.node())
-    # if older branchheads are reachable from new ones, they aren't
-    # really branchheads. Note checking parents is insufficient:
-    # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-    for branch, newnodes in newbranches.iteritems():
-        bheads = partial.setdefault(branch, [])
-        # Remove candidate heads that no longer are in the repo (e.g., as
-        # the result of a strip that just happened).  Avoid using 'node in
-        # self' here because that dives down into branchcache code somewhat
-        # recursively.
-        bheadrevs = [cl.rev(node) for node in bheads
-                     if cl.hasnode(node)]
-        newheadrevs = [cl.rev(node) for node in newnodes
-                       if cl.hasnode(node)]
-        ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
-        # Remove duplicates - nodes that are in newheadrevs and are already
-        # in bheadrevs.  This can happen if you strip a node whose parent
-        # was already a head (because they're on different branches).
-        bheadrevs = sorted(set(bheadrevs).union(newheadrevs))
-
-        # Starting from tip means fewer passes over reachable.  If we know
-        # the new candidates are not ancestors of existing heads, we don't
-        # have to examine ancestors of existing heads
-        if ctxisnew:
-            iterrevs = sorted(newheadrevs)
-        else:
-            iterrevs = list(bheadrevs)
-
-        # This loop prunes out two kinds of heads - heads that are
-        # superseded by a head in newheadrevs, and newheadrevs that are not
-        # heads because an existing head is their descendant.
-        while iterrevs:
-            latest = iterrevs.pop()
-            if latest not in bheadrevs:
-                continue
-            ancestors = set(cl.ancestors([latest],
-                                                     bheadrevs[0]))
-            if ancestors:
-                bheadrevs = [b for b in bheadrevs if b not in ancestors]
-        partial[branch] = [cl.node(rev) for rev in bheadrevs]
-        tiprev = max(bheadrevs)
-        if tiprev > partial.tiprev:
-            partial.tipnode = cl.node(tiprev)
-            partial.tiprev = tiprev
-
-
-    # There may be branches that cease to exist when the last commit in the
-    # branch was stripped.  This code filters them out.  Note that the
-    # branch that ceased to exist may not be in newbranches because
-    # newbranches is the set of candidate heads, which when you strip the
-    # last commit in a branch will be the parent branch.
-    droppednodes = []
-    for branch in partial.keys():
-        nodes = [head for head in partial[branch]
-                 if cl.hasnode(head)]
-        if not nodes:
-            droppednodes.extend(nodes)
-            del partial[branch]
-    try:
-        node = cl.node(partial.tiprev)
-    except IndexError:
-        node = None
-    if ((partial.tipnode != node)
-        or (partial.tipnode in droppednodes)):
-        # cache key are not valid anymore
-        partial.tipnode = nullid
-        partial.tiprev = nullrev
-        for heads in partial.values():
-            tiprev = max(cl.rev(node) for node in heads)
-            if tiprev > partial.tiprev:
-                partial.tipnode = cl.node(tiprev)
-                partial.tiprev = tiprev
 
 
 def updatecache(repo):
@@ -142,7 +61,7 @@ def updatecache(repo):
     #                             write on disk
     if partial.tiprev < catip:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, catip))
-        update(repo, partial, ctxgen)
+        partial.update(repo, ctxgen)
         partial.write(repo)
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
@@ -150,7 +69,7 @@ def updatecache(repo):
     tiprev = len(repo) - 1
     if partial.tiprev < tiprev:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, tiprev))
-        update(repo, partial, ctxgen)
+        partial.update(repo, ctxgen)
     repo._branchcache = partial
 
 class branchcache(dict):
@@ -171,3 +90,84 @@ class branchcache(dict):
             f.close()
         except (IOError, OSError):
             pass
+
+    def update(self, repo, ctxgen):
+        """Given a branchhead cache, self, that may have extra nodes or be
+        missing heads, and a generator of nodes that are at least a superset of
+        heads missing, this function updates self to be correct.
+        """
+        cl = repo.changelog
+        # collect new branch entries
+        newbranches = {}
+        for c in ctxgen:
+            newbranches.setdefault(c.branch(), []).append(c.node())
+        # if older branchheads are reachable from new ones, they aren't
+        # really branchheads. Note checking parents is insufficient:
+        # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
+        for branch, newnodes in newbranches.iteritems():
+            bheads = self.setdefault(branch, [])
+            # Remove candidate heads that no longer are in the repo (e.g., as
+            # the result of a strip that just happened).  Avoid using 'node in
+            # self' here because that dives down into branchcache code somewhat
+            # recursively.
+            bheadrevs = [cl.rev(node) for node in bheads
+                         if cl.hasnode(node)]
+            newheadrevs = [cl.rev(node) for node in newnodes
+                           if cl.hasnode(node)]
+            ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
+            # Remove duplicates - nodes that are in newheadrevs and are already
+            # in bheadrevs.  This can happen if you strip a node whose parent
+            # was already a head (because they're on different branches).
+            bheadrevs = sorted(set(bheadrevs).union(newheadrevs))
+
+            # Starting from tip means fewer passes over reachable.  If we know
+            # the new candidates are not ancestors of existing heads, we don't
+            # have to examine ancestors of existing heads
+            if ctxisnew:
+                iterrevs = sorted(newheadrevs)
+            else:
+                iterrevs = list(bheadrevs)
+
+            # This loop prunes out two kinds of heads - heads that are
+            # superseded by a head in newheadrevs, and newheadrevs that are not
+            # heads because an existing head is their descendant.
+            while iterrevs:
+                latest = iterrevs.pop()
+                if latest not in bheadrevs:
+                    continue
+                ancestors = set(cl.ancestors([latest],
+                                                         bheadrevs[0]))
+                if ancestors:
+                    bheadrevs = [b for b in bheadrevs if b not in ancestors]
+            self[branch] = [cl.node(rev) for rev in bheadrevs]
+            tiprev = max(bheadrevs)
+            if tiprev > self.tiprev:
+                self.tipnode = cl.node(tiprev)
+                self.tiprev = tiprev
+
+        # There may be branches that cease to exist when the last commit in the
+        # branch was stripped.  This code filters them out.  Note that the
+        # branch that ceased to exist may not be in newbranches because
+        # newbranches is the set of candidate heads, which when you strip the
+        # last commit in a branch will be the parent branch.
+        droppednodes = []
+        for branch in self.keys():
+            nodes = [head for head in self[branch]
+                     if cl.hasnode(head)]
+            if not nodes:
+                droppednodes.extend(nodes)
+                del self[branch]
+        try:
+            node = cl.node(self.tiprev)
+        except IndexError:
+            node = None
+        if ((self.tipnode != node)
+            or (self.tipnode in droppednodes)):
+            # cache key are not valid anymore
+            self.tipnode = nullid
+            self.tiprev = nullrev
+            for heads in self.values():
+                tiprev = max(cl.rev(node) for node in heads)
+                if tiprev > self.tiprev:
+                    self.tipnode = cl.node(tiprev)
+                    self.tiprev = tiprev

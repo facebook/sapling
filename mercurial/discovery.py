@@ -196,7 +196,7 @@ def _headssummary(repo, remote, outgoing):
     newmap = branchmap.branchcache((branch, heads[1])
                                  for branch, heads in headssum.iteritems()
                                  if heads[0] is not None)
-    branchmap.update(repo, newmap, missingctx)
+    newmap.update(repo, missingctx)
     for branch, newheads in newmap.iteritems():
         headssum[branch][1][:] = newheads
     return headssum
