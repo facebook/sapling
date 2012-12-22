@@ -47,6 +47,7 @@ def update(repo, partial, ctxgen):
     missing heads, and a generator of nodes that are at least a superset of
     heads missing, this function updates partial to be correct.
     """
+    cl = repo.changelog
     # collect new branch entries
     newbranches = {}
     for c in ctxgen:
@@ -60,10 +61,10 @@ def update(repo, partial, ctxgen):
         # the result of a strip that just happened).  Avoid using 'node in
         # self' here because that dives down into branchcache code somewhat
         # recursively.
-        bheadrevs = [repo.changelog.rev(node) for node in bheads
-                     if repo.changelog.hasnode(node)]
-        newheadrevs = [repo.changelog.rev(node) for node in newnodes
-                       if repo.changelog.hasnode(node)]
+        bheadrevs = [cl.rev(node) for node in bheads
+                     if cl.hasnode(node)]
+        newheadrevs = [cl.rev(node) for node in newnodes
+                       if cl.hasnode(node)]
         ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
         # Remove duplicates - nodes that are in newheadrevs and are already
         # in bheadrevs.  This can happen if you strip a node whose parent
@@ -85,11 +86,11 @@ def update(repo, partial, ctxgen):
             latest = iterrevs.pop()
             if latest not in bheadrevs:
                 continue
-            ancestors = set(repo.changelog.ancestors([latest],
+            ancestors = set(cl.ancestors([latest],
                                                      bheadrevs[0]))
             if ancestors:
                 bheadrevs = [b for b in bheadrevs if b not in ancestors]
-        partial[branch] = [repo.changelog.node(rev) for rev in bheadrevs]
+        partial[branch] = [cl.node(rev) for rev in bheadrevs]
 
     # There may be branches that cease to exist when the last commit in the
     # branch was stripped.  This code filters them out.  Note that the
@@ -98,7 +99,7 @@ def update(repo, partial, ctxgen):
     # last commit in a branch will be the parent branch.
     for branch in partial.keys():
         nodes = [head for head in partial[branch]
-                 if repo.changelog.hasnode(head)]
+                 if cl.hasnode(head)]
         if not nodes:
             del partial[branch]
 
