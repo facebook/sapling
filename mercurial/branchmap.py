@@ -42,11 +42,11 @@ def read(repo):
         partial = branchcache()
     return partial
 
-def write(repo, branches, tip, tiprev):
+def write(repo, cache):
     try:
         f = repo.opener("cache/branchheads", "w", atomictemp=True)
-        f.write("%s %s\n" % (hex(tip), tiprev))
-        for label, nodes in branches.iteritems():
+        f.write("%s %s\n" % (hex(cache.tipnode), cache.tiprev))
+        for label, nodes in cache.iteritems():
             for node in nodes:
                 f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
         f.close()
@@ -133,7 +133,7 @@ def updatecache(repo):
         update(repo, partial, ctxgen)
         partial.tipnode = cl.node(catip)
         partial.tiprev = catip
-        write(repo, partial, partial.tipnode, partial.tiprev)
+        write(repo, partial)
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
     # written to disk since it's not cacheable.
