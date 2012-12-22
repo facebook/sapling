@@ -1434,13 +1434,13 @@ class localrepository(object):
         # it, Otherwise, since nodes were destroyed, the cache is stale and this
         # will be caught the next time it is read.
         if newheadnodes:
-            tiprev = len(self) - 1
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
-            branchmap.update(self, self._branchcache, ctxgen)
-            self._branchcache.tipnode = self.changelog.tip()
-            branchmap.write(self, self._branchcache, self._branchcache.tipnode,
-                            tiprev)
+            cache = self._branchcache
+            branchmap.update(self, cache, ctxgen)
+            cache.tipnode = self.changelog.tip()
+            cache.tiprev = self.changelog.rev(cache.tipnode)
+            branchmap.write(self, cache, cache.tipnode, cache.tiprev)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
@@ -2495,9 +2495,10 @@ class localrepository(object):
                     rtiprev = max((int(self.changelog.rev(node))
                             for node in rbheads))
                     cache = branchmap.branchcache(rbranchmap,
-                                                  self[rtiprev].node())
+                                                  self[rtiprev].node(),
+                                                  rtiprev)
                     self._branchcache = cache
-                    branchmap.write(self, cache, cache.tipnode, rtiprev)
+                    branchmap.write(self, cache, cache.tipnode, cache.tiprev)
             self.invalidate()
             return len(self.heads()) + 1
         finally:
