@@ -22,7 +22,7 @@ def read(repo):
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
-        return branchcache()
+        return None
 
     try:
         cachekey = lines.pop(0).split(" ", 2)
@@ -53,7 +53,7 @@ def read(repo):
                 msg += ' (%s)' % repo.filtername
             msg += ': %s\n'
             repo.ui.warn(msg % inst)
-        partial = branchcache()
+        partial = None
     return partial
 
 
@@ -65,6 +65,8 @@ def updatecache(repo):
 
     if partial is None or not partial.validfor(repo):
         partial = read(repo)
+        if partial is None:
+            partial = branchcache()
 
     catip = repo._cacheabletip()
     # if partial.tiprev == catip: cache is already up to date
