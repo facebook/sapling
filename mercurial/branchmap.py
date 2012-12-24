@@ -10,8 +10,11 @@ import encoding
 import util
 
 def _filename(repo):
-    """name of a branchcache file for a given repo"""
-    return "cache/branchheads"
+    """name of a branchcache file for a given repo or repoview"""
+    filename = "cache/branchheads"
+    if repo.filtername:
+        filename = '%s-%s' % (filename, repo.filtername)
+    return filename
 
 def read(repo):
     try:
