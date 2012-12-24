@@ -9,9 +9,13 @@ from node import bin, hex, nullid, nullrev
 import encoding
 import util
 
+def _filename(repo):
+    """name of a branchcache file for a given repo"""
+    return "cache/branchheads"
+
 def read(repo):
     try:
-        f = repo.opener("cache/branchheads")
+        f = repo.opener(_filename(repo))
         lines = f.read().split('\n')
         f.close()
     except (IOError, OSError):
@@ -117,7 +121,7 @@ class branchcache(dict):
 
     def write(self, repo):
         try:
-            f = repo.opener("cache/branchheads", "w", atomictemp=True)
+            f = repo.opener(_filename(repo), "w", atomictemp=True)
             cachekey = [hex(self.tipnode), str(self.tiprev)]
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
