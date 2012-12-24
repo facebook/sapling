@@ -229,7 +229,7 @@ class localrepository(object):
             self._writerequirements()
 
 
-        self._branchcache = None
+        self._branchcaches = {}
         self.filterpats = {}
         self._datafilters = {}
         self._transref = self._lockref = self._wlockref = None
@@ -664,14 +664,10 @@ class localrepository(object):
 
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
-        if self.changelog.filteredrevs:
-            # some changeset are excluded we can't use the cache
-            bmap = branchmap.branchcache()
-            bmap.update(self, (self[r] for r in self))
-            return bmap
-        else:
-            branchmap.updatecache(self)
-            return self._branchcache
+        if self.filtername and not self.changelog.filteredrevs:
+            return self.unfiltered().branchmap()
+        branchmap.updatecache(self)
+        return self._branchcaches[self.filtername]
 
 
     def _branchtip(self, heads):
@@ -978,7 +974,7 @@ class localrepository(object):
             # can't use delattr on proxy
             del self.__dict__['_tagscache']
 
-        self.unfiltered()._branchcache = None # in UTF-8
+        self.unfiltered()._branchcaches.clear()
         self.invalidatevolatilesets()
 
     def invalidatevolatilesets(self):
@@ -1437,7 +1433,7 @@ class localrepository(object):
         if newheadnodes:
             ctxgen = (self[node] for node in newheadnodes
                       if self.changelog.hasnode(node))
-            cache = self._branchcache
+            cache = self._branchcaches[None]
             cache.update(self, ctxgen)
             cache.write(self)
 
@@ -2500,8 +2496,8 @@ class localrepository(object):
                     cache = branchmap.branchcache(rbranchmap,
                                                   self[rtiprev].node(),
                                                   rtiprev)
-                    self._branchcache = cache
-                    cache.write(self)
+                    self._branchcaches[None] = cache
+                    cache.write(self.unfiltered())
             self.invalidate()
             return len(self.heads()) + 1
         finally:

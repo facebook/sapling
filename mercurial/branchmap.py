@@ -59,9 +59,9 @@ def read(repo):
 
 
 def updatecache(repo):
-    repo = repo.unfiltered()  # Until we get a smarter cache management
     cl = repo.changelog
-    partial = repo._branchcache
+    filtername = repo.filtername
+    partial = repo._branchcaches.get(filtername)
 
     if partial is None or not partial.validfor(repo):
         partial = read(repo)
@@ -81,7 +81,7 @@ def updatecache(repo):
     if partial.tiprev < tiprev:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, tiprev))
         partial.update(repo, ctxgen)
-    repo._branchcache = partial
+    repo._branchcaches[repo.filtername] = partial
 
 class branchcache(dict):
     """A dict like object that hold branches heads cache"""

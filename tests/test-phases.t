@@ -173,6 +173,21 @@ visible shared between the initial repo and the push destination.
 
 :note: The "(+1 heads)" is wrong as we do not had any visible head
 
+check that branch cache with "unserved" filter are properly computed and stored
+
+  $ ls ../push-dest/.hg/cache/branchheads*
+  ../push-dest/.hg/cache/branchheads
+  ../push-dest/.hg/cache/branchheads-unserved
+  $ cat ../push-dest/.hg/cache/branchheads
+  6d6770faffce199f1fddd1cf87f6f026138cf061 6
+  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
+  2713879da13d6eea1ff22b442a5a87cb31a7ce6a default
+  6d6770faffce199f1fddd1cf87f6f026138cf061 default
+  $ cat ../push-dest/.hg/cache/branchheads-unserved
+  cf9fe039dfd67e829edf6522a45de057b5c86519 4
+  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
+  cf9fe039dfd67e829edf6522a45de057b5c86519 default
+
 
 Restore condition prior extra insertion.
   $ hg -q --config extensions.mq= strip .
