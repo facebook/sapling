@@ -4288,7 +4288,7 @@ def merge(ui, repo, node=None, **opts):
 
     if not node and repo._bookmarkcurrent:
         bmheads = repo.bookmarkheads(repo._bookmarkcurrent)
-        curhead = repo[repo._bookmarkcurrent]
+        curhead = repo[repo._bookmarkcurrent].node()
         if len(bmheads) == 2:
             if curhead == bmheads[0]:
                 node = bmheads[1]
