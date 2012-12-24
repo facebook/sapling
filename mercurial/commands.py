@@ -4629,9 +4629,12 @@ def phase(ui, repo, *revs, **opts):
                 phases.retractboundary(repo, targetphase, nodes)
         finally:
             lock.release()
-        newdata = repo._phasecache.getphaserevs(repo)
-        cl = repo.changelog
+        # moving revision from public to draft may hide them
+        # We have to check result on an unfiltered repository
+        unfi = repo.unfiltered()
+        newdata = repo._phasecache.getphaserevs(unfi)
         changes = sum(o != newdata[i] for i, o in enumerate(olddata))
+        cl = unfi.changelog
         rejected = [n for n in nodes
                     if newdata[cl.rev(n)] < targetphase]
         if rejected:
