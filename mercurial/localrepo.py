@@ -147,6 +147,7 @@ class localrepository(object):
                                         'dotencode'))
     openerreqs = set(('revlogv1', 'generaldelta'))
     requirements = ['revlogv1']
+    filtername = None
 
     def _baserequirements(self, create):
         return self.requirements[:]
