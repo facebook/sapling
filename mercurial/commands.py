@@ -4630,9 +4630,10 @@ def phase(ui, repo, *revs, **opts):
         finally:
             lock.release()
         newdata = repo._phasecache.getphaserevs(repo)
+        cl = repo.changelog
         changes = sum(o != newdata[i] for i, o in enumerate(olddata))
         rejected = [n for n in nodes
-                    if newdata[repo[n].rev()] < targetphase]
+                    if newdata[cl.rev(n)] < targetphase]
         if rejected:
             ui.warn(_('cannot move %i changesets to a more permissive '
                       'phase, use --force\n') % len(rejected))
