@@ -60,7 +60,7 @@ def updatecache(repo):
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
     # written to disk since it's not cacheable.
-    tiprev = len(repo) - 1
+    tiprev = cl.rev(cl.tip())
     if partial.tiprev < tiprev:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, tiprev))
         partial.update(repo, ctxgen)
