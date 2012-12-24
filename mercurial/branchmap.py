@@ -9,7 +9,6 @@ from node import bin, hex, nullid, nullrev
 import encoding
 
 def read(repo):
-    partial = branchcache()
     try:
         f = repo.opener("cache/branchheads")
         lines = f.read().split('\n')
@@ -20,7 +19,8 @@ def read(repo):
     try:
         last, lrev = lines.pop(0).split(" ", 1)
         last, lrev = bin(last), int(lrev)
-        if lrev >= len(repo) or repo[lrev].node() != last:
+        partial = branchcache(tipnode=last, tiprev=lrev)
+        if not partial.validfor(repo):
             # invalidate the cache
             raise ValueError('invalidating branch cache (tip differs)')
         for l in lines:
@@ -32,8 +32,6 @@ def read(repo):
                 raise ValueError('invalidating branch cache because node '+
                                  '%s does not exist' % node)
             partial.setdefault(label, []).append(bin(node))
-        partial.tipnode = last
-        partial.tiprev = lrev
     except KeyboardInterrupt:
         raise
     except Exception, inst:
@@ -47,12 +45,9 @@ def read(repo):
 def updatecache(repo):
     repo = repo.unfiltered()  # Until we get a smarter cache management
     cl = repo.changelog
-    tip = cl.tip()
     partial = repo._branchcache
-    if partial is not None and partial.tipnode == tip:
-        return
 
-    if partial is None or partial.tipnode not in cl.nodemap:
+    if partial is None or not partial.validfor(repo):
         partial = read(repo)
 
     catip = repo._cacheabletip()
@@ -79,6 +74,17 @@ class branchcache(dict):
         super(branchcache, self).__init__(entries)
         self.tipnode = tipnode
         self.tiprev = tiprev
+
+    def validfor(self, repo):
+        """Is the cache content valide regarding a repo
+
+        - False when cached tipnode are unknown or if we detect a strip.
+        - True when cache is up to date or a subset of current repo."""
+        try:
+            return self.tipnode == repo.changelog.node(self.tiprev)
+        except IndexError:
+            return False
+
 
     def write(self, repo):
         try:
@@ -157,12 +163,8 @@ class branchcache(dict):
             if not nodes:
                 droppednodes.extend(nodes)
                 del self[branch]
-        try:
-            node = cl.node(self.tiprev)
-        except IndexError:
-            node = None
-        if ((self.tipnode != node)
-            or (self.tipnode in droppednodes)):
+        if ((not self.validfor(repo)) or (self.tipnode in droppednodes)):
+
             # cache key are not valid anymore
             self.tipnode = nullid
             self.tiprev = nullrev
