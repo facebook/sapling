@@ -1438,8 +1438,6 @@ class localrepository(object):
                       if self.changelog.hasnode(node))
             cache = self._branchcache
             branchmap.update(self, cache, ctxgen)
-            cache.tipnode = self.changelog.tip()
-            cache.tiprev = self.changelog.rev(cache.tipnode)
             cache.write(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now

@@ -91,17 +91,39 @@ def update(repo, partial, ctxgen):
             if ancestors:
                 bheadrevs = [b for b in bheadrevs if b not in ancestors]
         partial[branch] = [cl.node(rev) for rev in bheadrevs]
+        tiprev = max(bheadrevs)
+        if tiprev > partial.tiprev:
+            partial.tipnode = cl.node(tiprev)
+            partial.tiprev = tiprev
+
 
     # There may be branches that cease to exist when the last commit in the
     # branch was stripped.  This code filters them out.  Note that the
     # branch that ceased to exist may not be in newbranches because
     # newbranches is the set of candidate heads, which when you strip the
     # last commit in a branch will be the parent branch.
+    droppednodes = []
     for branch in partial.keys():
         nodes = [head for head in partial[branch]
                  if cl.hasnode(head)]
         if not nodes:
+            droppednodes.extend(nodes)
             del partial[branch]
+    try:
+        node = cl.node(partial.tiprev)
+    except IndexError:
+        node = None
+    if ((partial.tipnode != node)
+        or (partial.tipnode in droppednodes)):
+        # cache key are not valid anymore
+        partial.tipnode = nullid
+        partial.tiprev = nullrev
+        for heads in partial.values():
+            tiprev = max(cl.rev(node) for node in heads)
+            if tiprev > partial.tiprev:
+                partial.tipnode = cl.node(tiprev)
+                partial.tiprev = tiprev
+
 
 def updatecache(repo):
     repo = repo.unfiltered()  # Until we get a smarter cache management
@@ -121,8 +143,6 @@ def updatecache(repo):
     if partial.tiprev < catip:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, catip))
         update(repo, partial, ctxgen)
-        partial.tipnode = cl.node(catip)
-        partial.tiprev = catip
         partial.write(repo)
     # If cacheable tip were lower than actual tip, we need to update the
     # cache up to tip. This update (from cacheable to actual tip) is not
@@ -131,8 +151,6 @@ def updatecache(repo):
     if partial.tiprev < tiprev:
         ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, tiprev))
         update(repo, partial, ctxgen)
-        partial.tipnode = cl.node(tiprev)
-        partial.tiprev = tiprev
     repo._branchcache = partial
 
 class branchcache(dict):
