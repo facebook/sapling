@@ -75,9 +75,27 @@
   $ echo f > f
   $ hg commit -Am "f"
   adding f
-  $ hg up -C e
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg bookmarks -r 4 "e@diverged"
+  $ hg up -q -C "e@diverged"
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg parents
+  changeset:   4:a0546fcfe0fb
+  bookmark:    e@diverged
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     d
+  
+  changeset:   5:26bee9c5bcf3
+  bookmark:    e
+  parent:      3:b8f96cf4688b
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     e
+  
+  $ hg up -C e
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bookmarks
      b                         1:d2ae7f538514
      c                         3:b8f96cf4688b
