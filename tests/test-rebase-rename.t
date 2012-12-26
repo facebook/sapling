@@ -20,7 +20,10 @@
   $ hg ci -Am B
   adding b
 
-  $ hg up -q -C 0
+  $ hg mv b b-renamed
+  $ hg ci -m 'rename B'
+
+  $ hg up -q -C 1
 
   $ hg mv a a-renamed
 
@@ -28,28 +31,32 @@
   created new head
 
   $ hg tglog
-  @  2: 'rename A'
+  @  3: 'rename A'
   |
-  | o  1: 'B'
+  | o  2: 'rename B'
   |/
+  o  1: 'B'
+  |
   o  0: 'A'
   
 
 Rename is tracked:
 
   $ hg tlog -p --git -r tip
-  2: 'rename A' 
+  3: 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
   
 Rebase the revision containing the rename:
 
-  $ hg rebase -s 2 -d 1
+  $ hg rebase -s 3 -d 2
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  2: 'rename A'
+  @  3: 'rename A'
+  |
+  o  2: 'rename B'
   |
   o  1: 'B'
   |
@@ -59,11 +66,32 @@ Rebase the revision containing the rename:
 Rename is not lost:
 
   $ hg tlog -p --git -r tip
-  2: 'rename A' 
+  3: 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
   
+
+Rebased revision does not contain information about b (issue3739)
+
+  $ hg log -r 3 --debug
+  changeset:   3:3b905b1064f14ace3ad02353b79dd42d32981655
+  tag:         tip
+  phase:       draft
+  parent:      2:920a371a5635af23a26a011ca346cecd1cfcb942
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    3:c4a62b2b64593c8fe0523d4c1ba2e243a8bd4dce
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      a-renamed
+  files-:      a
+  extra:       branch=default
+  extra:       rebase_source=89af05cb38a281f891c6f5581dd027092da29166
+  description:
+  rename A
+  
+  
+
   $ cd ..
 
 
@@ -78,47 +106,75 @@ Rename is not lost:
   $ hg ci -Am B
   adding b
 
-  $ hg up -q -C 0
+  $ hg cp b b-copied
+  $ hg ci -Am 'copy B'
+
+  $ hg up -q -C 1
 
   $ hg cp a a-copied
   $ hg ci -m 'copy A'
   created new head
 
   $ hg tglog
-  @  2: 'copy A'
+  @  3: 'copy A'
   |
-  | o  1: 'B'
+  | o  2: 'copy B'
   |/
+  o  1: 'B'
+  |
   o  0: 'A'
   
 Copy is tracked:
 
   $ hg tlog -p --git -r tip
-  2: 'copy A' 
+  3: 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied
   
 Rebase the revision containing the copy:
 
-  $ hg rebase -s 2 -d 1
+  $ hg rebase -s 3 -d 2
   saved backup bundle to $TESTTMP/b/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  2: 'copy A'
+  @  3: 'copy A'
+  |
+  o  2: 'copy B'
   |
   o  1: 'B'
   |
   o  0: 'A'
   
+
 Copy is not lost:
 
   $ hg tlog -p --git -r tip
-  2: 'copy A' 
+  3: 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied
   
+
+Rebased revision does not contain information about b (issue3739)
+
+  $ hg log -r 3 --debug
+  changeset:   3:98f6e6dbf45ab54079c2237fbd11066a5c41a11d
+  tag:         tip
+  phase:       draft
+  parent:      2:39e588434882ff77d01229d169cdc77f29e8855e
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    3:2232f329d66fffe3930d43479ae624f66322b04d
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      a-copied
+  extra:       branch=default
+  extra:       rebase_source=0a8162ff18a8900df8df8ef7ac0046955205613e
+  description:
+  copy A
+  
+  
+
   $ cd ..
 
 

@@ -145,12 +145,16 @@ def _forwardcopies(a, b):
 
     return cm
 
-def _backwardcopies(a, b):
-    # because the forward mapping is 1:n, we can lose renames here
-    # in particular, we find renames better than copies
+def _backwardrenames(a, b):
+    # Even though we're not taking copies into account, 1:n rename situations
+    # can still exist (e.g. hg cp a b; hg mv a c). In those cases we
+    # arbitrarily pick one of the renames.
     f = _forwardcopies(b, a)
     r = {}
     for k, v in f.iteritems():
+        # remove copies
+        if v in a:
+            continue
         r[v] = k
     return r
 
@@ -162,8 +166,8 @@ def pathcopies(x, y):
     if a == x:
         return _forwardcopies(x, y)
     if a == y:
-        return _backwardcopies(x, y)
-    return _chain(x, y, _backwardcopies(x, a), _forwardcopies(a, y))
+        return _backwardrenames(x, y)
+    return _chain(x, y, _backwardrenames(x, a), _forwardcopies(a, y))
 
 def mergecopies(repo, c1, c2, ca):
     """

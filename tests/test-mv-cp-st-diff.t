@@ -670,7 +670,6 @@ single copy
   
   % hg st -C --rev . --rev 0
   M a
-    b
   R b
   
   % hg diff --git --rev . --rev 0
@@ -728,7 +727,6 @@ single copy
   
   % hg st -C --rev . --rev 2
   M a
-    b
   A x/y
   R b
   
@@ -1072,7 +1070,6 @@ copy chain
   
   % hg st -C --rev . --rev 0
   M a
-    b
   R b
   R c
   
@@ -1148,7 +1145,6 @@ copy chain
   
   % hg st -C --rev . --rev 2
   M a
-    b
   A x/y
   R b
   R c
