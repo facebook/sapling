@@ -213,14 +213,15 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         action.append((f, m) + args)
 
-    action, copy = [], {}
+    action, copy, movewithdir = [], {}, {}
 
     if overwrite:
         pa = p1
     elif pa == p2: # backwards
         pa = p1.p1()
     elif pa and repo.ui.configbool("merge", "followcopies", True):
-        copy, diverge, renamedelete = copies.mergecopies(repo, p1, p2, pa)
+        ret = copies.mergecopies(repo, p1, p2, pa)
+        copy, movewithdir, diverge, renamedelete = ret
         for of, fl in diverge.iteritems():
             act("divergent renames", "dr", of, fl)
         for of, fl in renamedelete.iteritems():
@@ -233,6 +234,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())
+    copied.update(movewithdir.values())
 
     if '.hgsubstate' in m1:
         # check whether sub state is modified
@@ -259,14 +261,14 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 act("versions differ", "m", f, f, f, rflags, False)
         elif f in copied: # files we'll deal with on m2 side
             pass
-        elif f in copy:
+        elif f in movewithdir: # directory rename
+            f2 = movewithdir[f]
+            act("remote renamed directory to " + f2, "d", f, None, f2,
+                m1.flags(f))
+        elif f in copy: # case 2 A,B/B/B or case 4,21 A/B/B
             f2 = copy[f]
-            if f2 not in m2: # directory rename
-                act("remote renamed directory to " + f2, "d",
-                    f, None, f2, m1.flags(f))
-            else: # case 2 A,B/B/B or case 4,21 A/B/B
-                act("local copied/moved to " + f2, "m",
-                    f, f2, f, fmerge(f, f2, f2), False)
+            act("local copied/moved to " + f2, "m", f, f2, f,
+                fmerge(f, f2, f2), False)
         elif f in ma: # clean, a different, no remote
             if n != ma[f]:
                 if repo.ui.promptchoice(
@@ -286,12 +288,13 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in m1 or f in copied: # files already visited
             continue
-        if f in copy:
+        if f in movewithdir:
+            f2 = movewithdir[f]
+            act("local renamed directory to " + f2, "d", None, f, f2,
+                m2.flags(f))
+        elif f in copy:
             f2 = copy[f]
-            if f2 not in m1: # directory rename
-                act("local renamed directory to " + f2, "d",
-                    None, f, f2, m2.flags(f))
-            elif f2 in m2: # rename case 1, A/A,B/A
+            if f2 in m2: # rename case 1, A/A,B/A
                 act("remote copied to " + f, "m",
                     f2, f, f, fmerge(f2, f, f2), False)
             else: # case 3,20 A/B/A
