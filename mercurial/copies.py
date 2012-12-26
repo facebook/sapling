@@ -318,7 +318,8 @@ def mergecopies(repo, c1, c2, ca):
                 note += "!"
             if f in renamedelete2:
                 note += "%"
-            repo.ui.debug("   %s -> %s %s\n" % (f, fullcopy[f], note))
+            repo.ui.debug("   src: '%s' -> dst: '%s' %s\n" % (fullcopy[f], f,
+                                                              note))
     del diverge2
 
     if not fullcopy:
@@ -362,7 +363,8 @@ def mergecopies(repo, c1, c2, ca):
         return copy, movewithdir, diverge, renamedelete
 
     for d in dirmove:
-        repo.ui.debug("  dir %s -> %s\n" % (d, dirmove[d]))
+        repo.ui.debug("   discovered dir src: '%s' -> dst: '%s'\n" %
+                      (d, dirmove[d]))
 
     # check unaccounted nonoverlapping files against directory moves
     for f in u1 + u2:
@@ -373,7 +375,8 @@ def mergecopies(repo, c1, c2, ca):
                     df = dirmove[d] + f[len(d):]
                     if df not in copy:
                         movewithdir[f] = df
-                        repo.ui.debug("  file %s -> %s\n" % (f, df))
+                        repo.ui.debug(("   pending file src: '%s' -> "
+                                       "dst: '%s'\n") % (f, df))
                     break
 
     return copy, movewithdir, diverge, renamedelete

@@ -81,7 +81,7 @@ $4 = expected result
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -116,7 +116,7 @@ $4 = expected result
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -154,7 +154,7 @@ $4 = expected result
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -189,7 +189,7 @@ $4 = expected result
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -223,7 +223,7 @@ $4 = expected result
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a 
+     src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -253,7 +253,7 @@ $4 = expected result
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a 
+     src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -280,7 +280,7 @@ $4 = expected result
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a 
+     src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -312,7 +312,7 @@ $4 = expected result
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a 
+     src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -370,8 +370,8 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files in other:
      c
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     c -> a !
-     b -> a !
+     src: 'a' -> dst: 'c' !
+     src: 'a' -> dst: 'b' !
     checking for directory renames
    a: divergent renames -> dr
   resolving manifests
@@ -649,7 +649,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -683,7 +683,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -721,7 +721,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
     unmatched files in other:
      c
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False

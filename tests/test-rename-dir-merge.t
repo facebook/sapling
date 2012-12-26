@@ -31,11 +31,11 @@
      b/a
      b/b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b/a -> a/a 
-     b/b -> a/b 
+     src: 'a/a' -> dst: 'b/a' 
+     src: 'a/b' -> dst: 'b/b' 
     checking for directory renames
-    dir a/ -> b/
-    file a/c -> b/c
+     discovered dir src: 'a/' -> dst: 'b/'
+     pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
    overwrite: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
@@ -82,11 +82,11 @@
     unmatched files in other:
      a/c
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b/a -> a/a 
-     b/b -> a/b 
+     src: 'a/a' -> dst: 'b/a' 
+     src: 'a/b' -> dst: 'b/b' 
     checking for directory renames
-    dir a/ -> b/
-    file a/c -> b/c
+     discovered dir src: 'a/' -> dst: 'b/'
+     pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
    overwrite: False, partial: False
    ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb

@@ -131,7 +131,7 @@ Graft out of order, skipping a merge and a duplicate
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     b -> a *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False

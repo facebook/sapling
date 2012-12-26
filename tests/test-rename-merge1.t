@@ -29,9 +29,9 @@
      b
      b2
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     c2 -> a2 !
-     b -> a *
-     b2 -> a2 !
+     src: 'a2' -> dst: 'c2' !
+     src: 'a' -> dst: 'b' *
+     src: 'a2' -> dst: 'b2' !
     checking for directory renames
    a2: divergent renames -> dr
   resolving manifests
@@ -176,7 +176,7 @@ Check for issue3074
     unmatched files in other:
      newfile
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     newfile -> file %
+     src: 'file' -> dst: 'newfile' %
     checking for directory renames
    file: rename and delete -> rd
   resolving manifests

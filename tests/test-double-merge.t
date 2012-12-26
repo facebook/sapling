@@ -30,7 +30,7 @@ we get conflicts that shouldn't be there
     unmatched files in other:
      bar
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     bar -> foo *
+     src: 'foo' -> dst: 'bar' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False

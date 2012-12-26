@@ -25,8 +25,8 @@
      b
      c
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     c -> a *
-     b -> a *
+     src: 'a' -> dst: 'c' *
+     src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False

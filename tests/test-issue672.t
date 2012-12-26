@@ -29,7 +29,7 @@ http://mercurial.selenic.com/bts/issue672
     unmatched files in other:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     1a -> 1 
+     src: '1' -> dst: '1a' 
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -60,7 +60,7 @@ http://mercurial.selenic.com/bts/issue672
     unmatched files in local:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     1a -> 1 *
+     src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
@@ -83,7 +83,7 @@ http://mercurial.selenic.com/bts/issue672
     unmatched files in other:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
-     1a -> 1 *
+     src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
    overwrite: False, partial: False
