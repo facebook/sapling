@@ -2395,7 +2395,11 @@ class localrepository(object):
             tr.close()
 
             if changesets > 0:
-                branchmap.updatecache(self)
+                if srctype != 'strip':
+                    # During strip, branchcache is invalid but coming call to
+                    # `destroyed` will repair it.
+                    # In other case we can safely update cache on disk.
+                    branchmap.updatecache(self)
                 def runhooks():
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")
