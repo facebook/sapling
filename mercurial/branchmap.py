@@ -22,21 +22,20 @@ def read(repo):
         partial = branchcache(tipnode=last, tiprev=lrev)
         if not partial.validfor(repo):
             # invalidate the cache
-            raise ValueError('invalidating branch cache (tip differs)')
+            raise ValueError('tip differs')
         for l in lines:
             if not l:
                 continue
             node, label = l.split(" ", 1)
             label = encoding.tolocal(label.strip())
             if not node in repo:
-                raise ValueError('invalidating branch cache because node '+
-                                 '%s does not exist' % node)
+                raise ValueError('node %s does not exist' % node)
             partial.setdefault(label, []).append(bin(node))
     except KeyboardInterrupt:
         raise
     except Exception, inst:
         if repo.ui.debugflag:
-            repo.ui.warn(str(inst), '\n')
+            repo.ui.warn(('invalid branchheads cache: %s\n') % inst)
         partial = branchcache()
     return partial
 
