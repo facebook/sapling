@@ -135,6 +135,7 @@
 # checkin        (в конфиге для encode/decode) сейчас фиксация ???
 # lookup         поиск ???
 # facility       ???
+# bumped         ???
 # obsolete marker маркер устаревшей ревизии
 #
 #
@@ -173,7 +174,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-09-25 15:43+0400\n"
+"POT-Creation-Date: 2012-12-25 17:19+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -741,7 +742,7 @@ msgid ""
 "email to the Bugzilla email interface to submit comments to bugs.\n"
 "The From: address in the email is set to the email address of the Mercurial\n"
 "user, so the comment appears to come from the Mercurial user. In the event\n"
-"that the Mercurial user email is not recognised by Bugzilla as a Bugzilla\n"
+"that the Mercurial user email is not recognized by Bugzilla as a Bugzilla\n"
 "user, the email associated with the Bugzilla username used to log into\n"
 "Bugzilla is used instead as the source of the comment. Marking bugs fixed\n"
 "works on all supported Bugzilla versions."
@@ -762,7 +763,7 @@ msgstr "Общие параметры для всех режимов досту�
 
 msgid ""
 "bugzilla.version\n"
-"  This access type to use. Values recognised are:"
+"  The access type to use. Values recognized are:"
 msgstr ""
 "bugzilla.version\n"
 "  Тип доступа. Возможны следующие значения:"
@@ -1856,12 +1857,12 @@ msgstr ""
 msgid ""
 "    The authormap is a simple text file that maps each source commit\n"
 "    author to a destination commit author. It is handy for source SCMs\n"
-"    that use unix logins to identify authors (eg: CVS). One line per\n"
+"    that use unix logins to identify authors (e.g.: CVS). One line per\n"
 "    author mapping and the line format is::"
 msgstr ""
-"    authormap - это обычный текстовый файл, который позволяет \n"
-"    заменить в конечном хранилище имена авторов фиксаций из\n"
-"    исходного хранилища. Это удобно в случае когда исходная SCM\n"
+"    authormap - это обычный текстовый файл, который позволяет\n"
+"    заменить в конечном хранилище имена авторов ревизий из\n"
+"    исходного хранилища. Это удобно в случае, когда исходная SCM\n"
 "    использует unix-логины в качестве имен авторов (например, CVS).\n"
 "    Каждая строка соответствует одному имени. Формат строки::"
 
@@ -3746,7 +3747,7 @@ msgid ""
 "  # Style to use (optional)\n"
 "  #style = foo\n"
 "  # The URL of the CIA notification service (optional)\n"
-"  # You can use mailto: URLs to send by email, eg\n"
+"  # You can use mailto: URLs to send by email, e.g.\n"
 "  # mailto:cia@cia.vc\n"
 "  # Make sure to set email.from if you do this.\n"
 "  #url = http://cia.vc/\n"
@@ -4291,18 +4292,12 @@ msgstr ""
 "ревизии\n"
 "#\n"
 
-msgid "cannot edit history that would orphan nodes"
-msgstr "нельзя редактировать историю, если это оставляет висячие узлы"
-
-msgid "can't edit history with merges"
-msgstr "нельзя редактировать историю со слияниями"
-
-#, python-format
-msgid "%s: empty changeset"
-msgstr "%s: пустой набор изменений"
-
 msgid "Fix up the change and run hg histedit --continue"
 msgstr "Исправьте изменение и запустите hg histedit --continue"
+
+#, python-format
+msgid "%s: empty changeset\n"
+msgstr "%s: пустой набор изменений\n"
 
 msgid ""
 "Make changes as needed, you may commit or record as needed now.\n"
@@ -4311,6 +4306,10 @@ msgstr ""
 "Внесите изменения при необходимости, при этом, если хотите, можно\n"
 "выполнять commit или record. Когда закончите, выполните\n"
 "hg histedit --continue для продолжения."
+
+#, python-format
+msgid "%s: empty changeset"
+msgstr "%s: пустой набор изменений"
 
 msgid "Read history edits from the specified file."
 msgstr "Читать изменения истории из указанного файла."
@@ -4369,16 +4368,24 @@ msgstr ""
 msgid "histedit requires exactly one parent revision"
 msgstr "histedit требует ровно одну родительскую ревизию"
 
-msgid "histedit: Should update metadata for the following changes:\n"
-msgstr "histedit: Необходимо обновить метаданные для следующих изменений:\n"
+msgid "nothing to edit\n"
+msgstr "нечего редактировать\n"
 
 #, python-format
-msgid "histedit:  %s to %s\n"
-msgstr "histedit: %s to %s\n"
+msgid "working directory parent is not a descendant of %s"
+msgstr "родитель рабочего каталога не является потомком %s"
 
 #, python-format
-msgid "histedit:     moving bookmarks %s\n"
-msgstr "histedit:     перемещаются закладки %s\n"
+msgid "update to %s or descendant and run \"hg histedit --continue\" again"
+msgstr ""
+"обновитеcь до %s или его потомка и выполните \"hg histedit --continue\" снова"
+
+msgid "cannot edit history that would orphan nodes"
+msgstr "нельзя редактировать историю, если это оставляет висячие узлы"
+
+#, python-format
+msgid "cannot edit immutable changeset: %s"
+msgstr "невозможно редактировать неизменяемый набор изменений: %s"
 
 msgid "must specify a rule for each changeset once"
 msgstr "для каждой ревизии требуется указать одно правило"
@@ -4397,6 +4404,10 @@ msgstr "перечислен неизвестный набор изменени�
 #, python-format
 msgid "unknown action \"%s\""
 msgstr "неизвестное действие \"%s\""
+
+#, python-format
+msgid "histedit: moving bookmarks %s from %s to %s\n"
+msgstr "histedit: перемещаются закладки %s из %s в %s\n"
 
 msgid "accelerate status report using Linux's inotify service"
 msgstr "ускоренные уведомления об изменениях с использованием Linux inotify"
@@ -5190,6 +5201,10 @@ msgid "converting revisions"
 msgstr "преобразование ревизий"
 
 #, python-format
+msgid "missing largefile '%s' from revision %s"
+msgstr "отсутствует большой файл '%s' из ревизии %s"
+
+#, python-format
 msgid "renamed/copied largefile %s becomes symlink"
 msgstr ""
 "переименованный/скопированный большой файл %s становится символической "
@@ -5409,9 +5424,21 @@ msgstr "%s не удален, он и так не отслеживается\n"
 msgid "largefiles: No remote repo\n"
 msgstr "largefiles: Нет отдалённого хранилища\n"
 
+msgid "largefiles: no files to upload\n"
+msgstr "largefiles: нет файлов для загрузки\n"
+
 msgid "largefiles to upload:\n"
 msgstr "больших файлов для отправки:\n"
 
+#. i18n: column positioning for "hg summary"
+msgid "largefiles: (no remote repo)\n"
+msgstr "largefiles: (нет отдаленного хранилища)\n"
+
+#. i18n: column positioning for "hg summary"
+msgid "largefiles: (no files to upload)\n"
+msgstr "largefiles: (нет для загрузки)\n"
+
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "largefiles: %d to upload\n"
 msgstr "largefiles: %d для загрузки\n"
@@ -7120,8 +7147,10 @@ msgstr ""
 "    Чтобы удалить существующую очередь, используйте --delete. Нельзя\n"
 "    удалить текущую активную очередь."
 
-msgid "patches applied - cannot set new queue active"
-msgstr "патчи наложены - невозможно сделать новую очередь активной"
+msgid "new queue created, but cannot make active as patches are applied"
+msgstr ""
+"новая очередь создана, но невозможно сделать ее активной,\n"
+"т.к. есть наложенные патчи"
 
 msgid "cannot delete queue that does not exist"
 msgstr "невозможно удалить несуществующую очередь"
@@ -7181,8 +7210,14 @@ msgstr "%d наложено"
 msgid "%d unapplied"
 msgstr "%d неналожено"
 
+#. i18n: column positioning for "hg summary"
+#, python-format
+msgid "mq:     %s\n"
+msgstr "mq:         %s\n"
+
+#. i18n: column positioning for "hg summary"
 msgid "mq:     (empty queue)\n"
-msgstr "mq:     (очередь пуста)\n"
+msgstr "mq:         (очередь пуста)\n"
 
 msgid ""
 "``mq()``\n"
@@ -7253,31 +7288,52 @@ msgstr ""
 
 msgid ""
 "  [usersubs]\n"
-"  # key is subscriber email, value is a comma-separated list of repo glob\n"
-"  # patterns\n"
+"  # key is subscriber email, value is a comma-separated list of repo "
+"patterns\n"
 "  user@host = pattern"
 msgstr ""
 "  [usersubs]\n"
-"  # ключ - email подписчика, значение - разделенный запятыми список "
-"шаблонов\n"
-"  # в стиле glob (glob patterns)\n"
+"  # ключ - email подписчика, значение - разделенный запятыми список шаблонов "
+"хранилищ\n"
 "  пользователь@хост = шаблон"
 
 msgid ""
 "  [reposubs]\n"
-"  # key is glob pattern, value is a comma-separated list of subscriber\n"
-"  # emails\n"
+"  # key is repo pattern, value is a comma-separated list of subscriber "
+"emails\n"
 "  pattern = user@host"
 msgstr ""
 "  [reposubs]\n"
 "  # ключ - шаблон в стиле glob, значение - разделенный запятыми список\n"
 "  # email-адресов\n"
-"  шаблон = пользователь@хост"
+"  pattern = пользователь@хост"
 
 msgid ""
-"Glob patterns are matched against absolute path to repository\n"
-"root."
-msgstr "Шаблоны сопоставляются с абсолютными путями к корню хранилища."
+"A ``pattern`` is a ``glob`` matching the absolute path to a repository,\n"
+"optionally combined with a revset expression. A revset expression, if\n"
+"present, is separated from the glob by a hash. Example::"
+msgstr ""
+"Здесь ``pattern`` - шаблон формата ``glob``, совпадающий с абсолютным путем\n"
+"хранилища, вместе с необязательным выражением revset. Если выражение revset\n"
+"присутствует, оно отделяется от пути с помощью ``#``. Например::"
+
+msgid ""
+"  [reposubs]\n"
+"  */widgets#branch(release) = qa-team@example.com"
+msgstr ""
+"  [reposubs]\n"
+"  */widgets#branch(release) = qa-team@example.com"
+
+msgid ""
+"This sends to ``qa-team@example.com`` whenever a changeset on the "
+"``release``\n"
+"branch triggers a notification in any repository ending in ``widgets``."
+msgstr ""
+"С такими настройками письма будут отправляться на адрес ``qa-team@example."
+"com``\n"
+"при каждом изменении на ветке ``release`` в любом хранилище, оканчивающемся "
+"на\n"
+"``widgets``."
 
 msgid ""
 "In order to place them under direct user management, ``[usersubs]`` and\n"
@@ -7811,11 +7867,11 @@ msgid "    Finally, the patch itself, as generated by :hg:`export`."
 msgstr "    Наконец, сам патч, как его сгенерировала :hg:`export`."
 
 msgid ""
-"    With the -d/--diffstat or -c/--confirm options, you will be presented\n"
+"    With the -d/--diffstat or --confirm options, you will be presented\n"
 "    with a final summary of all messages and asked for confirmation before\n"
 "    the messages are sent."
 msgstr ""
-"    Если указан параметр -d/--diffstat или -c/--confirm, вам будет\n"
+"    Если указан параметр -d/--diffstat или --confirm, вам будет\n"
 "    показана итоговая сводка всех сообщений и будет запрошено\n"
 "    подтверждение отправки."
 
@@ -8441,11 +8497,6 @@ msgstr "нет изменений, ревизия %d пропущена\n"
 msgid "rebase merging completed\n"
 msgstr "слияние перебазирования завершено\n"
 
-msgid "warning: new changesets detected on source branch, not stripping\n"
-msgstr ""
-"внимание: новые наборы изменений обнаружены на ветке-источнике, не "
-"срезаются\n"
-
 msgid "rebase completed\n"
 msgstr "перебазирование завершено\n"
 
@@ -8488,6 +8539,11 @@ msgstr "не могу перебазировать несколько корне
 
 msgid "source is ancestor of destination"
 msgstr "источник является предком ревизии назначения"
+
+msgid "warning: new changesets detected on source branch, not stripping\n"
+msgstr ""
+"внимание: новые наборы изменений обнаружены на ветке-источнике, не "
+"срезаются\n"
 
 #, python-format
 msgid "updating bookmark %s\n"
@@ -8607,12 +8663,12 @@ msgid " and "
 msgstr " и "
 
 #, python-format
-msgid "record this change to %r?"
-msgstr "записать это изменение файла %r?"
+msgid "record this change to '%s'?"
+msgstr "записать это изменение в '%s'?"
 
 #, python-format
-msgid "record change %d/%d to %r?"
-msgstr "записать изменение %d/%d в %r?"
+msgid "record change %d/%d to '%s'?"
+msgstr "записать изменение %d/%d в '%s'?"
 
 msgid "hg record [OPTION]... [FILE]..."
 msgstr "hg record [ПАРАМЕТР]... [ФАЙЛ]..."
@@ -9483,10 +9539,6 @@ msgid "malformed line in .hg/bookmarks: %r\n"
 msgstr "плохая строка в .hg/bookmarks: %r\n"
 
 #, python-format
-msgid "bookmark '%s' contains illegal character"
-msgstr "закладка '%s' содержит недопустимый символ"
-
-#, python-format
 msgid "branch %s not found"
 msgstr "ветка %s не найдена"
 
@@ -9530,6 +9582,9 @@ msgstr "%s: не комплект Mercurial"
 #, python-format
 msgid "%s: unknown bundle version %s"
 msgstr "%s: неизвестная версия комплекта %s"
+
+msgid "no node"
+msgstr "нет узла"
 
 msgid "empty username"
 msgstr "пустое имя пользователя"
@@ -9645,69 +9700,85 @@ msgid "child process failed to start"
 msgstr "не удалось запустить дочерний процесс"
 
 # может сделать "набор изм-й" или "ревизия" для экономии места?
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "changeset:   %d:%s\n"
-msgstr "набор изменений:  %d:%s\n"
+msgstr "набор изм-й:   %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "branch:      %s\n"
-msgstr "ветка:            %s\n"
+msgstr "ветка:         %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "bookmark:    %s\n"
-msgstr "закладка:         %s\n"
+msgstr "закладка:      %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "tag:         %s\n"
-msgstr "метка:            %s\n"
+msgstr "метка:         %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "phase:       %s\n"
-msgstr "фаза:             %s\n"
+msgstr "фаза:          %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "parent:      %d:%s\n"
-msgstr "родитель:         %d:%s\n"
+msgstr "родитель:      %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "manifest:    %d:%s\n"
-msgstr "манифест:         %d:%s\n"
+msgstr "манифест:      %d:%s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "user:        %s\n"
-msgstr "пользователь:     %s\n"
+msgstr "автор:         %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "date:        %s\n"
-msgstr "дата:             %s\n"
+msgstr "дата:          %s\n"
 
-msgid "files+:"
-msgstr "файлов+:"
-
-msgid "files-:"
-msgstr "файлов-:"
-
+#. i18n: column positioning for "hg log"
 msgid "files:"
 msgstr "файлы:"
 
+#. i18n: column positioning for "hg log"
+msgid "files+:"
+msgstr "файлов+:"
+
+#. i18n: column positioning for "hg log"
+msgid "files-:"
+msgstr "файлов-:"
+
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "files:       %s\n"
-msgstr "файлы:            %s\n"
+msgstr "файлы:         %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "copies:      %s\n"
-msgstr "скопировано:      %s\n"
+msgstr "скопировано:   %s\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "extra:       %s=%s\n"
-msgstr "дополнительно:    %s=%s\n"
+msgstr "доп-но.:       %s=%s\n"
 
 msgid "description:\n"
 msgstr "описание:\n"
 
+#. i18n: column positioning for "hg log"
 #, python-format
 msgid "summary:     %s\n"
-msgstr "сводка:           %s\n"
+msgstr "сводка:        %s\n"
 
 #, python-format
 msgid "%s: no key named '%s'"
@@ -10427,7 +10498,7 @@ msgstr ""
 "          hg bisect --bad"
 
 msgid ""
-"      - mark the current revision, or a known revision, to be skipped (eg. "
+"      - mark the current revision, or a known revision, to be skipped (e.g. "
 "if\n"
 "        that revision is not usable because of another issue)::"
 msgstr ""
@@ -10635,6 +10706,25 @@ msgstr ""
 "    -i/--inactive не задан. Если не указано ИМЯ, текущая активная закладка\n"
 "    будет помечена как неактивная.    "
 
+msgid "bookmark names cannot consist entirely of whitespace"
+msgstr "имя закладки не может состоять из одних пробелов"
+
+#, python-format
+msgid "bookmark '%s' already exists (use -f to force)"
+msgstr "закладка '%s' уже существует (-f - принудительно) "
+
+msgid "a bookmark cannot have the name of an existing branch"
+msgstr "закладка не может называться так же, как существующая ветка"
+
+msgid "--delete and --rename are incompatible"
+msgstr "нельзя одновременно использовать --delete и --rename"
+
+msgid "--rev is incompatible with --delete"
+msgstr "нельзя указывать одновременно --rev и --delete"
+
+msgid "--rev is incompatible with --rename"
+msgstr "--rev несовместим с --rename"
+
 msgid "bookmark name required"
 msgstr "укажите имя закладки"
 
@@ -10642,24 +10732,14 @@ msgstr "укажите имя закладки"
 msgid "bookmark '%s' does not exist"
 msgstr "закладки '%s' не существует"
 
-#, python-format
-msgid "bookmark '%s' already exists (use -f to force)"
-msgstr "закладка '%s' уже существует (-f - принудительно) "
-
 msgid "new bookmark name required"
 msgstr "укажите новое имя закладки"
 
-msgid "bookmark name cannot contain newlines"
-msgstr "имя закладки не может содержать символ перевода строки"
-
-msgid "bookmark names cannot consist entirely of whitespace"
-msgstr "имя закладки не может состоять из одних пробелов"
-
-msgid "a bookmark cannot have the name of an existing branch"
-msgstr "закладка не может называться так же, как существующая ветка"
-
 msgid "no bookmarks set\n"
 msgstr "нет ни одной закладки\n"
+
+msgid "no active bookmark\n"
+msgstr "нет активных закладок\n"
 
 msgid "set branch name even if it shadows an existing branch"
 msgstr "использовать имя ветки, даже если оно скрывает уже существующую ветку"
@@ -11447,10 +11527,10 @@ msgstr "показать журнал изменений или граф инд�
 
 msgid ""
 "    If you pass a revlog index, the revlog's DAG is emitted. If you list\n"
-"    revision numbers, they get labelled in the output as rN."
+"    revision numbers, they get labeled in the output as rN."
 msgstr ""
 "    Если вы передадите индекс revlog, отображается граф revlog. Если вы\n"
-"    укажете номера ревизий, они помечаются как rN."
+"    укажете номера ревизий, в выводе они помечаются как rN."
 
 msgid ""
 "    Otherwise, the changelog DAG of the current repo is emitted.\n"
@@ -11631,6 +11711,9 @@ msgstr ""
 "    Каждый идентификатор должен быть полным 16-ричным идентификатором узла.\n"
 "    Возвращает список нулей и единиц, означающих неизвестен/известен.\n"
 "    "
+
+msgid "markers flag"
+msgstr "markers flag"
 
 msgid "[OBSOLETED [REPLACEMENT] [REPL... ]"
 msgstr "[УСТАРЕВШЕЕ [ЗАМЕНА] [ЗАМЕНА... ]"
@@ -12381,12 +12464,12 @@ msgstr ""
 "используйте \"hg help %s\" чтобы получить полную справку\n"
 
 #, python-format
-msgid ""
-"\n"
-"use \"hg -v help %s\" to show more info\n"
-msgstr ""
-"\n"
-"используйте \"hg -v help %s\" для дополнительной информации\n"
+msgid "use \"hg -v help %s\" to show more complete help and the global options"
+msgstr "\"hg -v help %s\" - полная справка и глобальные параметры"
+
+#, python-format
+msgid "use \"hg -v help %s\" to show the global options"
+msgstr "\"hg -v help %s\" - показать глобальные параметры"
 
 msgid "basic commands:"
 msgstr "Основные команды:"
@@ -12424,6 +12507,10 @@ msgid "use \"hg -v help%s\" to show builtin aliases and global options"
 msgstr ""
 "используйте \"hg -v help%s\" чтобы посмотреть встроенные псевдонимы и "
 "глобальные параметры"
+
+#, python-format
+msgid "use \"hg help -v %s\" to show more complete help"
+msgstr "используйте \"hg -v help %s\" для более подробной информации"
 
 #, python-format
 msgid ""
@@ -13615,6 +13702,10 @@ msgstr ""
 "    "
 
 #, python-format
+msgid "not removing %s: no tracked files\n"
+msgstr "%s не удален: нет отслеживаемых файлов\n"
+
+#, python-format
 msgid "not removing %s: file is untracked\n"
 msgstr "%s не удален: файл не контролируется\n"
 
@@ -14246,9 +14337,10 @@ msgstr ""
 "    С опцией --remote также проверяет пути по умолчанию на наличие\n"
 "    входящих и исходящих изменений. Это может занять много времени."
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "parent: %d:%s "
-msgstr "родитель: %d:%s "
+msgstr "родитель:   %d:%s "
 
 msgid " (empty repository)"
 msgstr " (пустое хранилище)"
@@ -14256,12 +14348,14 @@ msgstr " (пустое хранилище)"
 msgid " (no revision checked out)"
 msgstr " (нет извлеченной ревизии)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "branch: %s\n"
-msgstr "ветка: %s\n"
+msgstr "ветка:      %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "bookmarks:"
-msgstr "закладки:"
+msgstr "закладки:   "
 
 #, python-format
 msgid "%d modified"
@@ -14318,17 +14412,21 @@ msgstr " (без изменений)"
 msgid " (new branch head)"
 msgstr " (новая голова ветки)"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "commit: %s\n"
-msgstr "фиксация: %s\n"
+msgstr "фиксация:   %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "update: (current)\n"
 msgstr "обновление: (текущее)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets (update)\n"
 msgstr "обновление: %d новых наборов изменений (обновление)\n"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "update: %d new changesets, %d branch heads (merge)\n"
 msgstr "обновление: %d новых наборов изменений, %d голов (слияние)\n"
@@ -14348,12 +14446,14 @@ msgstr "%d исходящих закладок"
 msgid "%d outgoing bookmarks"
 msgstr "%d исходящих закладок"
 
+#. i18n: column positioning for "hg summary"
 #, python-format
 msgid "remote: %s\n"
-msgstr "отдалённо: %s\n"
+msgstr "отдалённый: %s\n"
 
+#. i18n: column positioning for "hg summary"
 msgid "remote: (synced)\n"
-msgstr "отдалённо: (синхронизировано)\n"
+msgstr "отдалённый: (синхронизировано)\n"
 
 msgid "force tag"
 msgstr "установить метку принудительно"
@@ -14650,6 +14750,14 @@ msgstr ""
 "    сверяя хэши и контрольные суммы каждого элемента в журнале\n"
 "    изменений, манифесте и отслеживаемых файлах, а также целостность\n"
 "    их взаимосвязей и индексов."
+
+msgid ""
+"    Please see http://mercurial.selenic.com/wiki/RepositoryCorruption\n"
+"    for more information about recovery from corruption of the\n"
+"    repository."
+msgstr ""
+"    Подробнее о восстановлении поврежденного хранилища см.\n"
+"    http://mercurial.selenic.com/wiki/RepositoryCorruption ."
 
 msgid "output version and copyright information"
 msgstr "показать версию и копирайт"
@@ -15062,6 +15170,10 @@ msgstr "*** не удалось импортировать расширение 
 #, python-format
 msgid "warning: error finding commands in %s\n"
 msgstr "внимание: не удалось найти команды в %s\n"
+
+#, python-format
+msgid "invalid value %r for option %s, expected int"
+msgstr "неверное значение %r параметра %s, ожидается целое число"
 
 #, python-format
 msgid "couldn't find merge tool %s\n"
@@ -16820,9 +16932,9 @@ msgid ""
 "``post-<command>``\n"
 "  Run after successful invocations of the associated command. The\n"
 "  contents of the command line are passed as ``$HG_ARGS`` and the result\n"
-"  code in ``$HG_RESULT``. Parsed command line arguments are passed as \n"
+"  code in ``$HG_RESULT``. Parsed command line arguments are passed as\n"
 "  ``$HG_PATS`` and ``$HG_OPTS``. These contain string representations of\n"
-"  the python data internally passed to <command>. ``$HG_OPTS`` is a \n"
+"  the python data internally passed to <command>. ``$HG_OPTS`` is a\n"
 "  dictionary of options (with unspecified options set to their defaults).\n"
 "  ``$HG_PATS`` is a list of arguments. Hook failure is ignored."
 msgstr ""
@@ -16844,7 +16956,7 @@ msgid ""
 "  are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain string\n"
 "  representations of the data internally passed to <command>. ``$HG_OPTS``\n"
 "  is a  dictionary of options (with unspecified options set to their\n"
-"  defaults). ``$HG_PATS`` is a list of arguments. If the hook returns \n"
+"  defaults). ``$HG_PATS`` is a list of arguments. If the hook returns\n"
 "  failure, the command doesn't execute and Mercurial returns the failure\n"
 "  code."
 msgstr ""
@@ -16855,8 +16967,8 @@ msgstr ""
 "  и ``$HG_OPTS``. Они содержат строковое представление данных\n"
 "  Python, передаваемых <команде> внутренней реализацией. ``$HG_OPTS`` -\n"
 "  это словарь опций (опущенные опции установлены в значения по\n"
-"  умолчанию).``$HG_PATS`` - список аргументов. Неудачное завершение\n"
-"  хука игнорируется."
+"  умолчанию).``$HG_PATS`` - список аргументов. Если хук возвращает ошибку,\n"
+"  команда не выполняется, и Mercurial возвращает код ошибки."
 
 msgid ""
 "``prechangegroup``\n"
@@ -17524,9 +17636,34 @@ msgstr ""
 "    если хранилище назначения не задано."
 
 msgid ""
+"Custom paths can be defined by assigning the path to a name that later can "
+"be\n"
+"used from the command line. Example::"
+msgstr ""
+"Собственные пути могут быть определены с помощью задания имени-псевдонима для\n"
+"пути, которое может использоваться в командной строке. Например::"
+
+msgid ""
+"    [paths]\n"
+"    my_path = http://example.com/path"
+msgstr ""
+"    [paths]\n"
+"    my_path = http://example.com/path"
+
+msgid "To push to the path defined in ``my_path`` run the command::"
+msgstr ""
+"Чтобы протолкнуть изменения по пути, определенному в ``my_path``,\n"
+"выполните команду::"
+
+msgid "    hg push my_path"
+msgstr "    hg push my_path"
+
+msgid ""
+"\n"
 "``phases``\n"
 "----------"
 msgstr ""
+"\n"
 "``phases``\n"
 "----------"
 
@@ -18661,7 +18798,7 @@ msgstr ""
 
 msgid ""
 "``stripes``\n"
-"    How many lines a \"zebra stripe\" should span in multiline output.\n"
+"    How many lines a \"zebra stripe\" should span in multi-line output.\n"
 "    Default is 1; set to 0 to disable."
 msgstr ""
 "``stripes``\n"
@@ -20350,7 +20487,7 @@ msgstr ""
 "  - paths\n"
 "  - collections"
 
-msgid "The ``web`` options are thorougly described in :hg:`help config`."
+msgid "The ``web`` options are thoroughly described in :hg:`help config`."
 msgstr "Настройки секции ``web`` подробно описаны в :hg:`help config`."
 
 msgid ""
@@ -21859,6 +21996,13 @@ msgstr ""
 msgid "clone from remote to remote not supported"
 msgstr "клонирование с отдаленной машины на отдаленную не поддерживается"
 
+msgid "updating to bookmark @\n"
+msgstr "обновление на закладку @\n"
+
+#, python-format
+msgid "updating to bookmark @ on branch %s\n"
+msgstr "обновление на закладку @ на ветке %s\n"
+
 #, python-format
 msgid "updating to branch %s\n"
 msgstr "обновляемся на ветку %s\n"
@@ -22054,10 +22198,6 @@ msgid "warning: ignoring unknown working parent %s!\n"
 msgstr "внимание: игнорируем неизвестного родителя %s рабочей копии!\n"
 
 #, python-format
-msgid "%r cannot be used in a tag name"
-msgstr "%r нельзя использовать в имени метки"
-
-#, python-format
 msgid "warning: tag %s conflicts with existing branch name\n"
 msgstr "внимание: метка %s конфликтует с существующим именем ветки\n"
 
@@ -22180,12 +22320,17 @@ msgid "destination does not support push"
 msgstr "хранилище назначения не поддерживает push"
 
 #, python-format
-msgid "push includes an obsolete changeset: %s!"
+msgid "push includes obsolete changeset: %s!"
 msgstr "push включает устаревшую ревизию: %s!"
 
 #, python-format
-msgid "push includes an unstable changeset: %s!"
+msgid "push includes unstable changeset: %s!"
 msgstr "push включает нестабильную ревизию: %s!"
+
+# NOT-SURE bad
+#, python-format
+msgid "push includes bumped changeset: %s!"
+msgstr "push включает \"прибитую\" (bumped) ревизию: %s!"
 
 # CHECK ME NOT-SURE
 #, python-format
@@ -22491,6 +22636,9 @@ msgstr ""
 "ошибка разбора маркера устаревшей ревизии: слишком малая длина метаданных,\n"
 "ожидалось %d байт, получено %d"
 
+msgid "bad obsolescence marker detected: invalid successors nullid"
+msgstr "неверный маркер устаревшей ревизии: неверный nullid потомков"
+
 #, python-format
 msgid "unknown key: %r"
 msgstr "неизвестный ключ: %r"
@@ -22677,9 +22825,6 @@ msgstr "индекс %s имеет неизвестный формат %d"
 msgid "index %s is corrupted"
 msgstr "индекс %s поврежден"
 
-msgid "no node"
-msgstr "нет узла"
-
 msgid "ambiguous identifier"
 msgstr "неоднозначный идентификатор"
 
@@ -22762,7 +22907,7 @@ msgstr ""
 
 msgid ""
 "    - ``good``, ``bad``, ``skip``: csets explicitly marked as good/bad/skip\n"
-"    - ``goods``, ``bads``      : csets topologicaly good/bad\n"
+"    - ``goods``, ``bads``      : csets topologically good/bad\n"
 "    - ``range``              : csets taking part in the bisection\n"
 "    - ``pruned``             : csets that are goods, bads or skipped\n"
 "    - ``untested``           : csets whose fate is yet unknown\n"
@@ -22775,8 +22920,8 @@ msgstr ""
 "    - ``range``              : находящиеся в рамках бисекции\n"
 "    - ``pruned``             : goods, bads или пропущенные\n"
 "    - ``untested``           : те, чья судьба ещё неизвестна\n"
-"    - ``ignored``            : игнорируемые ввиду топологии графа ревизий    "
-"- ``current``            : обрабатываемый в данный момент"
+"    - ``ignored``            : игнорируемые ввиду топологии графа ревизий\n"
+"    - ``current``            : обрабатываемый в данный момент"
 
 #. i18n: "bisect" is a keyword
 msgid "bisect requires a string"
@@ -22832,6 +22977,20 @@ msgstr ""
 "регулярным\n"
 "    выражением. Чтобы найти ветку, имя которой начинается с символов\n"
 "    `re:`, используйте префикс `literal:`."
+
+msgid ""
+"``bumped()``\n"
+"    Mutable changesets marked as successors of public changesets."
+msgstr ""
+"``bumped()``\n"
+"    Изменяемые (mutable) ревизии, помеченные как потомки публичных ревизий."
+
+msgid "    Only non-public and non-obsolete changesets can be `bumped`."
+msgstr "    Только непубличные и неустаревшие ревизии могут быть `bumped`."
+
+#. i18n: "bumped" is a keyword
+msgid "bumped takes no arguments"
+msgstr "bumped не требует аргументов"
 
 msgid ""
 "``children(set)``\n"
@@ -23112,6 +23271,17 @@ msgstr ""
 "    Элементы множества, у которых в этом множестве нет детей."
 
 msgid ""
+"``hidden()``\n"
+"    Hidden changesets."
+msgstr ""
+"``hidden()``\n"
+"    Скрытые наборы изменений."
+
+#. i18n: "hidden" is a keyword
+msgid "hidden takes no arguments"
+msgstr "hidden не требует аргументов"
+
+msgid ""
 "``keyword(string)``\n"
 "    Search commit message, user name, and names of changed files for\n"
 "    string. The match is case-insensitive."
@@ -23179,6 +23349,17 @@ msgstr ""
 #. i18n: "merge" is a keyword
 msgid "merge takes no arguments"
 msgstr "merge не требует аргументов"
+
+msgid ""
+"``branchpoint()``\n"
+"    Changesets with more than one child."
+msgstr ""
+"``branchpoint()``\n"
+"    Наборы изменений, имеющие более одного дочернего набора изменений."
+
+#. i18n: "branchpoint" is a keyword
+msgid "branchpoint takes no arguments"
+msgstr "branchpoint не требует аргументов"
 
 msgid ""
 "``min(set)``\n"
@@ -23579,6 +23760,10 @@ msgstr "пустой запрос"
 #, python-format
 msgid "no changes found (ignored %d secret changesets)\n"
 msgstr "изменений не найдено (игнорируем %d секретных наборов изменений)\n"
+
+#, python-format
+msgid "%r cannot be used in a name"
+msgstr "%r нельзя использовать в имени"
 
 # }}} revsets
 #, python-format
@@ -24000,10 +24185,10 @@ msgstr ""
 
 msgid ""
 ":escape: Any text. Replaces the special XML/XHTML characters \"&\", \"<\"\n"
-"    and \">\" with XML entities."
+"    and \">\" with XML entities, and filters out NUL characters."
 msgstr ""
 ":escape: Произвольный текст. Заменяет спецсимволы XML/XHTML \"&\", \"<\"\n"
-"    и \">\" соответствующими сущностями XML."
+"    и \">\" соответствующими сущностями XML и отфильтровывает NUL-символы."
 
 msgid ":fill68: Any text. Wraps the text to fit in 68 columns."
 msgstr ":fill68: Произвольный текст. Делает строки не длиннее 68 символов."
@@ -24178,6 +24363,15 @@ msgid ":emailuser: Any text. Returns the user portion of an email address."
 msgstr ""
 ":emailuser: Произвольный текст. Возвращает пользователя из email-адреса."
 
+msgid "fill expects one or two arguments"
+msgstr "fill требует один или два аргумента"
+
+msgid "fill expects an integer width"
+msgstr "fill ожидает целое число в качестве ширины"
+
+msgid "date expects one or two arguments"
+msgstr "date требует один или два аргумента"
+
 msgid ":author: String. The unmodified author of the changeset."
 msgstr ":author: Строка. Неизмененный автор набора изменений."
 
@@ -24271,6 +24465,40 @@ msgstr ""
 ":node: Строка. Хэш набора изменений в виде 40-значной шестнадцатеричной\n"
 "    строки."
 
+msgid ""
+":p1rev: Integer. The repository-local revision number of the changeset's\n"
+"    first parent, or -1 if the changeset has no parents."
+msgstr ""
+":p1rev: целое число. Локальный номер ревизии первого родителя набора\n"
+"    изменений, либо -1, если родителей у него нет."
+
+msgid ""
+":p2rev: Integer. The repository-local revision number of the changeset's\n"
+"    second parent, or -1 if the changeset has no second parent."
+msgstr ""
+":p2rev: целое число. Локальный номер ревизии второго родителя набора\n"
+"    изменений, либо -1, если второго родителе у него нет."
+
+msgid ""
+":p1node: String. The identification hash of the changeset's first parent,\n"
+"    as a 40 digit hexadecimal string. If the changeset has no parents, all\n"
+"    digits are 0."
+msgstr ""
+":p1node: Строка. Хэш первого родителя набора изменений в виде 40-значного\n"
+"    шестнадцатиричного числа. Если у данного набора изменений родителя нет,\n"
+"    все цифры равны 0."
+
+msgid ""
+":p2node: String. The identification hash of the changeset's second\n"
+"    parent, as a 40 digit hexadecimal string. If the changeset has no "
+"second\n"
+"    parent, all digits are 0."
+msgstr ""
+":p2node: Строка. Хэш второго родителя набора изменений в виде 40-значного\n"
+"    шестнадцатиричного числа. Если у данного набора изменений второго "
+"родителя\n"
+"    нет, все цифры равны 0."
+
 msgid ":phase: String. The changeset phase name."
 msgstr ":phase: Строка. Имя фазы набора изменений."
 
@@ -24308,8 +24536,28 @@ msgid "expected template specifier"
 msgstr "ожидается спецификатор шаблона"
 
 #, python-format
+msgid "template filter '%s' is not compatible with keyword '%s'"
+msgstr "фильтр шаблона '%s' несовместм с ключевым словом '%s'"
+
+#, python-format
 msgid "filter %s expects one argument"
 msgstr "фильтр %s требует один аргумент"
+
+#. i18n: "join" is a keyword
+msgid "join expects one or two arguments"
+msgstr "join требует один или два аргумента"
+
+#. i18n: "sub" is a keyword
+msgid "sub expects three arguments"
+msgstr "sub требует трех аргументов"
+
+#. i18n: "if" is a keyword
+msgid "if expects two or three arguments"
+msgstr "if требует два или три аргумента"
+
+#. i18n: "ifeq" is a keyword
+msgid "ifeq expects three or four arguments"
+msgstr "ifeq требует трех или четырех аргументов"
 
 msgid "unmatched quotes"
 msgstr "незакрытые кавычки"
@@ -24698,6 +24946,36 @@ msgstr "поиск отдаленных изменений"
 
 msgid "push failed:"
 msgstr "ошибка при проталкивании:"
+
+#~ msgid "can't edit history with merges"
+#~ msgstr "нельзя редактировать историю со слияниями"
+
+#~ msgid "histedit: Should update metadata for the following changes:\n"
+#~ msgstr "histedit: Необходимо обновить метаданные для следующих изменений:\n"
+
+#~ msgid "histedit:  %s to %s\n"
+#~ msgstr "histedit: %s to %s\n"
+
+#~ msgid "patches applied - cannot set new queue active"
+#~ msgstr "патчи наложены - невозможно сделать новую очередь активной"
+
+#~ msgid ""
+#~ "Glob patterns are matched against absolute path to repository\n"
+#~ "root."
+#~ msgstr "Шаблоны сопоставляются с абсолютными путями к корню хранилища."
+
+#~ msgid "bookmark '%s' contains illegal character"
+#~ msgstr "закладка '%s' содержит недопустимый символ"
+
+#~ msgid "bookmark name cannot contain newlines"
+#~ msgstr "имя закладки не может содержать символ перевода строки"
+
+#~ msgid ""
+#~ "\n"
+#~ "use \"hg -v help %s\" to show more info\n"
+#~ msgstr ""
+#~ "\n"
+#~ "используйте \"hg -v help %s\" для дополнительной информации\n"
 
 # BUG one line?
 #~ msgid ""
@@ -25152,9 +25430,6 @@ msgstr "ошибка при проталкивании:"
 
 #~ msgid "[OPTION]... REVISION..."
 #~ msgstr "[ПАРАМЕТР]... РЕВИЗИЯ..."
-
-#~ msgid "use \"hg -v help %s\" to show more info"
-#~ msgstr "используйте \"hg -v help %s\" для дополнительной информации"
 
 #~ msgid "There is no Mercurial repository here (.hg not found)"
 #~ msgstr "Здесь нет хранилища Mercurial (.hg не обнаружен)"
