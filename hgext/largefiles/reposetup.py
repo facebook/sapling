@@ -168,10 +168,8 @@ def reposetup(ui, repo):
                 m = copy.copy(match)
                 m._files = tostandins(m._files)
 
-                # Get ignored files here even if we weren't asked for them; we
-                # must use the result here for filtering later
                 result = super(lfilesrepo, self).status(node1, node2, m,
-                    True, clean, unknown, listsubrepos)
+                    ignored, clean, unknown, listsubrepos)
                 if working:
                     try:
                         # Any non-largefiles that were explicitly listed must be
@@ -272,6 +270,8 @@ def reposetup(ui, repo):
                             return lfutil.splitstandin(f)
                         return f
                     result = [[toname(f) for f in items] for items in result]
+
+                lfdirstate.write()
 
                 if not listunknown:
                     result[4] = []

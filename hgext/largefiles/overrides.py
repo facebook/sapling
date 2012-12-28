@@ -567,6 +567,7 @@ def overriderevert(orig, ui, repo, *pats, **opts):
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         (modified, added, removed, missing, unknown, ignored, clean) = \
             lfutil.lfdirstatestatus(lfdirstate, repo, repo['.'].rev())
+        lfdirstate.write()
         for lfile in modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
         for lfile in missing:
