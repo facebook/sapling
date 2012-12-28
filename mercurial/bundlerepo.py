@@ -286,11 +286,6 @@ class bundlerepository(localrepo.localrepository):
     def getcwd(self):
         return os.getcwd() # always outside the repo
 
-    def _cacheabletip(self):
-        # we should not cache data from the bundle on disk
-        ret = super(bundlerepository, self)._cacheabletip()
-        return min(self.changelog.disktiprev, ret)
-
 
 def instance(ui, path, create):
     if create:
