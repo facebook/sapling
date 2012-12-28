@@ -163,48 +163,46 @@ def reposetup(ui, repo):
                 result = super(lfilesrepo, self).status(node1, node2, m,
                     ignored, clean, unknown, listsubrepos)
                 if working:
-                    try:
 
-                        def sfindirstate(f):
-                            sf = lfutil.standin(f)
-                            dirstate = self.dirstate
-                            return sf in dirstate or sf in dirstate.dirs()
-                        match._files = [f for f in match._files
-                                        if sfindirstate(f)]
-                        # Don't waste time getting the ignored and unknown
-                        # files from lfdirstate
-                        s = lfdirstate.status(match, [], False,
-                                listclean, False)
-                        (unsure, modified, added, removed, missing, _unknown,
-                                _ignored, clean) = s
-                        if parentworking:
-                            for lfile in unsure:
-                                standin = lfutil.standin(lfile)
-                                if standin not in ctx1:
-                                    # from second parent
-                                    modified.append(lfile)
-                                elif ctx1[standin].data().strip() \
-                                        != lfutil.hashfile(self.wjoin(lfile)):
+                    def sfindirstate(f):
+                        sf = lfutil.standin(f)
+                        dirstate = self.dirstate
+                        return sf in dirstate or sf in dirstate.dirs()
+
+                    match._files = [f for f in match._files
+                                    if sfindirstate(f)]
+                    # Don't waste time getting the ignored and unknown
+                    # files from lfdirstate
+                    s = lfdirstate.status(match, [], False,
+                            listclean, False)
+                    (unsure, modified, added, removed, missing, _unknown,
+                            _ignored, clean) = s
+                    if parentworking:
+                        for lfile in unsure:
+                            standin = lfutil.standin(lfile)
+                            if standin not in ctx1:
+                                # from second parent
+                                modified.append(lfile)
+                            elif ctx1[standin].data().strip() \
+                                    != lfutil.hashfile(self.wjoin(lfile)):
+                                modified.append(lfile)
+                            else:
+                                clean.append(lfile)
+                                lfdirstate.normal(lfile)
+                    else:
+                        tocheck = unsure + modified + added + clean
+                        modified, added, clean = [], [], []
+
+                        for lfile in tocheck:
+                            standin = lfutil.standin(lfile)
+                            if inctx(standin, ctx1):
+                                if ctx1[standin].data().strip() != \
+                                        lfutil.hashfile(self.wjoin(lfile)):
                                     modified.append(lfile)
                                 else:
                                     clean.append(lfile)
-                                    lfdirstate.normal(lfile)
-                        else:
-                            tocheck = unsure + modified + added + clean
-                            modified, added, clean = [], [], []
-
-                            for lfile in tocheck:
-                                standin = lfutil.standin(lfile)
-                                if inctx(standin, ctx1):
-                                    if ctx1[standin].data().strip() != \
-                                            lfutil.hashfile(self.wjoin(lfile)):
-                                        modified.append(lfile)
-                                    else:
-                                        clean.append(lfile)
-                                else:
-                                    added.append(lfile)
-                    finally:
-                        pass
+                            else:
+                                added.append(lfile)
 
                     # Standins no longer found in lfdirstate has been removed
                     for standin in ctx1.manifest():
