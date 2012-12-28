@@ -1430,8 +1430,12 @@ def getgraphlogrevs(repo, pats, opts):
     # Default --rev value depends on --follow but --follow behaviour
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
+    possiblyunsorted = False # whether revs might need sorting
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
+        # Don't sort here because _makegraphlogrevset might depend on the
+        # order of revs
+        possiblyunsorted = True
     else:
         if follow and len(repo) > 0:
             revs = repo.revs('reverse(:.)')
@@ -1441,6 +1445,8 @@ def getgraphlogrevs(repo, pats, opts):
     if not revs:
         return iter([]), None, None
     expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)
+    if possiblyunsorted:
+        revs.sort(reverse=True)
     if expr:
         matcher = revset.match(repo.ui, expr)
         revs = increasingrevs(repo, revs, matcher)
