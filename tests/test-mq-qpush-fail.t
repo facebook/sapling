@@ -61,7 +61,6 @@ test corrupt status file
   patch queue now empty
   $ cp .hg/patches/status.orig .hg/patches/status
   $ hg qpush
-  mq status file refers to unknown node * (glob)
   abort: working directory revision is not qtip
   [255]
   $ rm .hg/patches/status .hg/patches/status.orig

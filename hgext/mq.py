@@ -3469,26 +3469,6 @@ def reposetup(ui, repo):
 
             return result
 
-        def _cacheabletip(self):
-            q = self.mq
-            cl = self.changelog
-            qbase = None
-            if not q.applied:
-                if getattr(self, '_committingpatch', False):
-                    # Committing a new patch, must be tip
-                    qbase = len(cl) - 1
-            else:
-                qbasenode = q.applied[0].node
-                try:
-                    qbase = self.unfiltered().changelog.rev(qbasenode)
-                except error.LookupError:
-                    self.ui.warn(_('mq status file refers to unknown node %s\n')
-                                 % short(qbasenode))
-            ret = super(mqrepo, self)._cacheabletip()
-            if qbase is not None:
-                ret = min(qbase - 1, ret)
-            return ret
-
     if repo.local():
         repo.__class__ = mqrepo
 
