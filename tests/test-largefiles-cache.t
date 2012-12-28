@@ -47,7 +47,7 @@ but there is no cache file for it.  So, hg must treat it as
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
-  error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally
+  error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally (glob)
   0 largefiles updated, 0 removed
   $ hg status
   ! large
@@ -64,7 +64,7 @@ Update working directory to tip, again.
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
-  error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally
+  error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally (glob)
   0 largefiles updated, 0 removed
   $ hg status
   ! large
