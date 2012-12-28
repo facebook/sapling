@@ -418,7 +418,26 @@ class filectx(object):
 
     @propertycache
     def _changectx(self):
-        return changectx(self._repo, self._changeid)
+        try:
+            return changectx(self._repo, self._changeid)
+        except error.RepoLookupError:
+            # Linkrev may point to any revision in the repository.  When the
+            # repository is filtered this may lead to `filectx` trying to build
+            # `changectx` for filtered revision. In such case we fallback to
+            # creating `changectx` on the unfiltered version of the reposition.
+            # This fallback should not be an issue because`changectx` from
+            # `filectx` are not used in complexe operation that care about
+            # filtering.
+            #
+            # This fallback is a cheap and dirty fix that prevent several
+            # crash. It does not ensure the behavior is correct. However the
+            # behavior was not correct before filtering either and "incorrect
+            # behavior" is seen as better as "crash"
+            #
+            # Linkrevs have several serious troubles with filtering that are
+            # complicated to solve. Proper handling of the issue here should be
+            # considered when solving linkrev issue are on the table.
+            return changectx(self._repo.unfiltered(), self._changeid)
 
     @propertycache
     def _filelog(self):
