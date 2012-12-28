@@ -288,6 +288,15 @@ remote transplant with pull
   1  b1
   0  r1
 
+remote transplant without pull
+
+  $ hg pull -q http://localhost:$HGPORT/
+  $ hg transplant -s http://localhost:$HGPORT/ 2 4
+  searching for changes
+  skipping already applied revision 2:8d9279348abb
+  applying 722f4667af76
+  722f4667af76 transplanted to 76e321915884
+
 transplant --continue
 
   $ hg init ../tc
