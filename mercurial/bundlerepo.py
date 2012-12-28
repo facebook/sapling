@@ -14,7 +14,7 @@ were part of the actual repository.
 from node import nullid
 from i18n import _
 import os, tempfile, shutil
-import changegroup, util, mdiff, discovery, cmdutil
+import changegroup, util, mdiff, discovery, cmdutil, scmutil
 import localrepo, changelog, manifest, filelog, revlog, error
 
 class bundlerevlog(revlog.revlog):
@@ -28,6 +28,7 @@ class bundlerevlog(revlog.revlog):
         # len(index[r]). If the tuple is bigger than 7, it is a bundle
         # (it is bigger since we store the node to which the delta is)
         #
+        opener = scmutil.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
         self.basemap = {}
