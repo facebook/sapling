@@ -1329,11 +1329,7 @@ class queue(object):
                 # created while patching
                 for f in all_files:
                     if f not in repo.dirstate:
-                        try:
-                            util.unlinkpath(repo.wjoin(f))
-                        except OSError, inst:
-                            if inst.errno != errno.ENOENT:
-                                raise
+                        util.unlinkpath(repo.wjoin(f), ignoremissing=True)
                 self.ui.warn(_('done\n'))
                 raise
 
@@ -1442,11 +1438,7 @@ class queue(object):
                 self.backup(repo, tobackup)
 
                 for f in a:
-                    try:
-                        util.unlinkpath(repo.wjoin(f))
-                    except OSError, e:
-                        if e.errno != errno.ENOENT:
-                            raise
+                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
                     repo.dirstate.drop(f)
                 for f in m + r:
                     fctx = ctx[f]

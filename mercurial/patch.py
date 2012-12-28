@@ -439,11 +439,7 @@ class fsbackend(abstractbackend):
                 util.setflags(self._join(fname), False, True)
 
     def unlink(self, fname):
-        try:
-            util.unlinkpath(self._join(fname))
-        except OSError, inst:
-            if inst.errno != errno.ENOENT:
-                raise
+        util.unlinkpath(self._join(fname), ignoremissing=True)
 
     def writerej(self, fname, failed, total, lines):
         fname = fname + ".rej"

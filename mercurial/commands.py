@@ -4957,11 +4957,7 @@ def remove(ui, repo, *pats, **opts):
             for f in list:
                 if f in added:
                     continue # we never unlink added files on remove
-                try:
-                    util.unlinkpath(repo.wjoin(f))
-                except OSError, inst:
-                    if inst.errno != errno.ENOENT:
-                        raise
+                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         repo[None].forget(list)
     finally:
         wlock.release()

@@ -382,11 +382,10 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
             try:
-                util.unlinkpath(repo.wjoin(f))
+                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
             except OSError, inst:
-                if inst.errno != errno.ENOENT:
-                    repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                                 (f, inst.strerror))
+                repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                             (f, inst.strerror))
             removed += 1
         elif m == "m": # merge
             if f == '.hgsubstate': # subrepo states need updating

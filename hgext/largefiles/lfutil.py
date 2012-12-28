@@ -36,11 +36,7 @@ def reporemove(repo, list, unlink=False):
         try:
             if unlink:
                 for f in list:
-                    try:
-                        util.unlinkpath(repo.wjoin(f))
-                    except OSError, inst:
-                        if inst.errno != errno.ENOENT:
-                            raise
+                    util.unlinkpath(repo.wjoin(f), ignoremissing=True)
             repo[None].forget(list)
         finally:
             wlock.release()
