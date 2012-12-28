@@ -152,7 +152,7 @@ issue3712: test colorization of subrepo diff
    c
    c
   \x1b[0;32m+aa\x1b[0m (esc)
-  \x1b[0;1mdiff --git a/sub/b b/sub/b\x1b[0m (esc)
+  \x1b[0;1mdiff --git a/sub/b b/sub/b\x1b[0m (glob) (esc)
   \x1b[0;31;1m--- a/sub/b\x1b[0m (esc)
   \x1b[0;32;1m+++ b/sub/b\x1b[0m (esc)
   \x1b[0;35m@@ -1,1 +1,2 @@\x1b[0m (esc)

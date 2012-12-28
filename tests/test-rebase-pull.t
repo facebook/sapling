@@ -144,7 +144,7 @@ pull --rebase works when a specific revision is pulled (issue3619)
   adding L1
   created new head
   $ hg pull --rev tip --rebase
-  pulling from $TESTTMP/a
+  pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets
   adding manifests
