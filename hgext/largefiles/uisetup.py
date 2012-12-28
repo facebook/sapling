@@ -59,6 +59,11 @@ def uisetup(ui):
                      _('verify largefile contents not just existence'))]
     entry[1].extend(verifyopt)
 
+    entry = extensions.wrapcommand(commands.table, 'debugstate',
+                                   overrides.overridedebugstate)
+    debugstateopt = [('', 'large', None, _('display largefiles dirstate'))]
+    entry[1].extend(debugstateopt)
+
     entry = extensions.wrapcommand(commands.table, 'outgoing',
         overrides.overrideoutgoing)
     outgoingopt = [('', 'large', None, _('display outgoing largefiles'))]

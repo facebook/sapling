@@ -17,8 +17,8 @@
   > EOF
 
 Create the repo with a couple of revisions of both large and normal
-files, testing that status correctly shows largefiles and that summary output
-is correct.
+files.
+Test status and dirstate of largefiles and that summary output is correct.
 
   $ hg init a
   $ cd a
@@ -35,6 +35,17 @@ is correct.
   A normal1
   A sub/large2
   A sub/normal2
+  $ touch large1 sub/large2
+  $ sleep 1
+  $ hg st
+  $ hg debugstate --nodates
+  n 644         41 .hglf/large1
+  n 644         41 .hglf/sub/large2
+  n 644          8 normal1
+  n 644          8 sub/normal2
+  $ hg debugstate --large
+  n 644          7 large1
+  n 644          7 sub/large2
   $ echo normal11 > normal1
   $ echo normal22 > sub/normal2
   $ echo large11 > large1

@@ -256,6 +256,13 @@ def overrideverify(orig, ui, repo, *pats, **opts):
         result = result or lfcommands.verifylfiles(ui, repo, all, contents)
     return result
 
+def overridedebugstate(orig, ui, repo, *pats, **opts):
+    large = opts.pop('large', False)
+    if large:
+        lfcommands.debugdirstate(ui, repo)
+    else:
+        orig(ui, repo, *pats, **opts)
+
 # Override needs to refresh standins so that update's normal merge
 # will go through properly. Then the other update hook (overriding repo.update)
 # will get the new files. Filemerge is also overridden so that the merge
