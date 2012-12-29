@@ -103,6 +103,7 @@ disable color.
 import os
 
 from mercurial import commands, dispatch, extensions, ui as uimod, util
+from mercurial import templater
 from mercurial.i18n import _
 
 testedwith = 'internal'
@@ -354,6 +355,28 @@ class colorui(uimod.ui):
                               for s in msg.split('\n')])
         return msg
 
+def templatelabel(context, mapping, args):
+    if len(args) != 2:
+        # i18n: "label" is a keyword
+        raise error.ParseError(_("label expects two arguments"))
+
+    thing = templater.stringify(args[1][0](context, mapping, args[1][1]))
+    thing = templater.runtemplate(context, mapping,
+                                  templater.compiletemplate(thing, context))
+
+    # apparently, repo could be a string that is the favicon?
+    repo = mapping.get('repo', '')
+    if isinstance(repo, str):
+        return thing
+
+    label = templater.stringify(args[0][0](context, mapping, args[0][1]))
+    label = templater.runtemplate(context, mapping,
+                                  templater.compiletemplate(label, context))
+
+    thing = templater.stringify(thing)
+    label = templater.stringify(label)
+
+    return repo.ui.label(thing, label)
 
 def uisetup(ui):
     global _terminfo_params
@@ -370,6 +393,7 @@ def uisetup(ui):
             configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
+    templater.funcs['label'] = templatelabel
 
 def extsetup(ui):
     commands.globalopts.append(
