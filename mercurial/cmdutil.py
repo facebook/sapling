@@ -1401,6 +1401,7 @@ def getgraphlogrevs(repo, pats, opts):
     """
     if not len(repo):
         return [], None, None
+    limit = loglimit(opts)
     # Default --rev value depends on --follow but --follow behaviour
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
@@ -1435,7 +1436,22 @@ def getgraphlogrevs(repo, pats, opts):
         # --hidden is still experimental and not worth a dedicated revset
         # yet. Fortunately, filtering revision number is fast.
         hiddenrevs = repo.hiddenrevs
-        revs = [r for r in revs if r not in hiddenrevs]
+        nrevs = []
+        taken = 0
+        if limit is not None:
+            for i in xrange(len(revs)):
+                if taken >= limit:
+                    break
+                r = revs[i]
+                if r not in hiddenrevs:
+                    nrevs.append(r)
+                    taken += 1
+            revs = nrevs
+        else:
+            revs = [r for r in revs if r not in hiddenrevs]
+    elif limit is not None:
+        revs = revs[:limit]
+
     return revs, expr, filematcher
 
 def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
@@ -1470,9 +1486,6 @@ def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
 def graphlog(ui, repo, *pats, **opts):
     # Parameters are identical to log command ones
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
-    limit = loglimit(opts)
-    if limit is not None:
-        revs = revs[:limit]
     revdag = graphmod.dagwalker(repo, revs)
 
     getrenamed = None
