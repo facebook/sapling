@@ -1619,7 +1619,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
-    wlock = lock = None
+    wlock = lock = newid = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
@@ -1782,6 +1782,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             ui.note(_('stripping amended changeset %s\n') % old)
             repair.strip(ui, repo, old.node(), topic='amend-backup')
     finally:
+        if newid is None:
+            repo.dirstate.invalidate()
         lockmod.release(wlock, lock)
     return newid
 

@@ -58,11 +58,34 @@ Amending changeset with changes in working dir:
   summary:     base
   
 
-Add new file:
+Check proper abort for empty message
 
+  $ cat > editor.sh << '__EOF__'
+  > #!/bin/sh
+  > echo "" > "$1"
+  > __EOF__
   $ echo b > b
-  $ hg ci --amend -Am 'amend base1 new file'
-  adding b
+  $ hg add b
+  $ hg summary
+  parent: 1:43f1ba15f28a tip
+   amend base1
+  branch: default
+  commit: 1 added, 1 unknown
+  update: (current)
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  transaction abort!
+  rollback completed
+  abort: empty commit message
+  [255]
+  $ hg summary
+  parent: 1:43f1ba15f28a tip
+   amend base1
+  branch: default
+  commit: 1 added, 1 unknown
+  update: (current)
+
+Add new file:
+  $ hg ci --amend -m 'amend base1 new file'
   saved backup bundle to $TESTTMP/.hg/strip-backup/43f1ba15f28a-amend-backup.hg (glob)
 
 Remove file that was added in amended commit:
