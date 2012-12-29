@@ -1453,7 +1453,8 @@ def getgraphlogrevs(repo, pats, opts):
     if not opts.get('hidden'):
         # --hidden is still experimental and not worth a dedicated revset
         # yet. Fortunately, filtering revision number is fast.
-        revs = (r for r in revs if r not in repo.hiddenrevs)
+        hiddenrevs = repo.hiddenrevs
+        revs = (r for r in revs if r not in hiddenrevs)
     else:
         revs = iter(revs)
     return revs, expr, filematcher
