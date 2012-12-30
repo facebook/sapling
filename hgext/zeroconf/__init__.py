@@ -27,10 +27,9 @@ You can discover Zeroconf-enabled repositories by running
 import socket, time, os
 
 import Zeroconf
-from mercurial import ui, hg, encoding, util, dispatch
+from mercurial import ui, hg, encoding, dispatch
 from mercurial import extensions
-from mercurial.hgweb import hgweb_mod
-from mercurial.hgweb import hgwebdir_mod
+from mercurial.hgweb import server as servermod
 
 testedwith = 'internal'
 
@@ -102,27 +101,29 @@ def publish(name, desc, path, port):
                                address = localip, weight = 0, priority = 0)
     server.registerService(svc)
 
-class hgwebzc(hgweb_mod.hgweb):
-    def __init__(self, repo, name=None, baseui=None):
-        super(hgwebzc, self).__init__(repo, name=name, baseui=baseui)
-        name = self.reponame or os.path.basename(self.repo.root)
-        path = self.repo.ui.config("web", "prefix", "").strip('/')
-        desc = self.repo.ui.config("web", "description", name)
-        publish(name, desc, path,
-                util.getport(self.repo.ui.config("web", "port", 8000)))
+def zc_create_server(create_server, ui, app):
+    httpd = create_server(ui, app)
+    port = httpd.port
 
-class hgwebdirzc(hgwebdir_mod.hgwebdir):
-    def __init__(self, conf, baseui=None):
-        super(hgwebdirzc, self).__init__(conf, baseui=baseui)
-        prefix = self.ui.config("web", "prefix", "").strip('/') + '/'
-        for repo, path in self.repos:
-            u = self.ui.copy()
+    try:
+        repos = app.repos
+    except AttributeError:
+        # single repo
+        name = app.reponame or os.path.basename(app.repo.root)
+        path = app.repo.ui.config("web", "prefix", "").strip('/')
+        desc = app.repo.ui.config("web", "description", name)
+        publish(name, desc, path, port)
+    else:
+        # webdir
+        prefix = app.ui.config("web", "prefix", "").strip('/') + '/'
+        for repo, path in repos:
+            u = app.ui.copy()
             u.readconfig(os.path.join(path, '.hg', 'hgrc'))
             name = os.path.basename(repo)
             path = (prefix + repo).strip('/')
             desc = u.config('web', 'description', name)
-            publish(name, desc, path,
-                    util.getport(u.config("web", "port", 8000)))
+            publish(name, desc, path, port)
+    return httpd
 
 # listen
 
@@ -184,5 +185,4 @@ extensions.wrapfunction(dispatch, '_runcommand', cleanupafterdispatch)
 extensions.wrapfunction(ui.ui, 'config', config)
 extensions.wrapfunction(ui.ui, 'configitems', configitems)
 extensions.wrapfunction(hg, 'defaultdest', defaultdest)
-hgweb_mod.hgweb = hgwebzc
-hgwebdir_mod.hgwebdir = hgwebdirzc
+extensions.wrapfunction(servermod, 'create_server', zc_create_server)
