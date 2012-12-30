@@ -243,6 +243,24 @@ Moving bookmarks, preserve active bookmark:
      book1                     1:48bb6e53a15f
    * book2                     1:48bb6e53a15f
 
+abort does not loose bookmarks
+
+  $ cat > editor.sh << '__EOF__'
+  > #!/bin/sh
+  > echo "" > "$1"
+  > __EOF__
+  $ echo a >> a
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit --amend
+  transaction abort!
+  rollback completed
+  abort: empty commit message
+  [255]
+  $ hg book
+     book1                     1:48bb6e53a15f
+   * book2                     1:48bb6e53a15f
+  $ hg revert -Caq
+  $ rm editor.sh
+
   $ echo '[defaults]' >> $HGRCPATH
   $ echo "commit=-d '0 0'" >> $HGRCPATH
 
