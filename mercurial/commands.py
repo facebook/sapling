@@ -1296,7 +1296,7 @@ def commit(ui, repo, *pats, **opts):
             raise util.Abort(_('cannot amend merge changesets'))
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot amend while merging'))
-        if old.children():
+        if (not obsolete._enabled) and old.children():
             raise util.Abort(_('cannot amend changeset with children'))
 
         e = cmdutil.commiteditor
