@@ -279,4 +279,30 @@ not be rebased.
   32af7686d403cf45b5d95f2d70cebea587ac806a cf44d2f5a9f4297a62be94cbdd3dff7c7dc54258 0 {'date': '*', 'user': 'test'} (glob)
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 7c6027df6a99d93f461868e5433f63bde20b6dfb 0 {'date': '*', 'user': 'test'} (glob)
 
-  $ cd ..
+Test ui.prevent-unstable option
+------------------------------------
+
+  $ hg log -r 'children(8)'
+  9:cf44d2f5a9f4 D (no-eol)
+  $ hg rebase -r 8
+  $ hg log -G
+  @  11:0d8f238b634c C
+  |
+  o  10:7c6027df6a99 B
+  |
+  | o  9:cf44d2f5a9f4 D
+  | |
+  | x  8:e273c5e7d2d2 C
+  | |
+  o |  7:02de42196ebe H
+  | |
+  | o  6:eea13746799a G
+  |/|
+  o |  5:24b6387c8c8c F
+  | |
+  | o  4:9520eea781bc E
+  |/
+  o  0:cd010b8cd998 A
+  
+
+

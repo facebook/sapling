@@ -194,8 +194,9 @@ def rebase(ui, repo, **opts):
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination\n')
                 result = None
-            elif not keepf and repo.revs('first(children(%ld) - %ld)-hidden()',
-                                         rebaseset, rebaseset):
+            elif (not (keepf or obsolete._enabled)
+                  and repo.revs('first(children(%ld) - %ld)-hidden()',
+                                rebaseset, rebaseset)):
                 raise util.Abort(
                     _("can't remove original changesets with"
                       " unrebased descendants"),
