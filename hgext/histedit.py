@@ -593,7 +593,8 @@ def between(repo, old, new, keep):
     When keep is false, the specified set can't have children."""
     ctxs = list(repo.set('%n::%n', old, new))
     if ctxs and not keep:
-        if repo.revs('(%ld::) - (%ld + hidden())', ctxs, ctxs):
+        if (not obsolete._enabled and
+            repo.revs('(%ld::) - (%ld + hidden())', ctxs, ctxs)):
             raise util.Abort(_('cannot edit history that would orphan nodes'))
         root = ctxs[0] # list is already sorted by repo.set
         if not root.phase():

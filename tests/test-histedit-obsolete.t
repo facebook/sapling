@@ -141,3 +141,15 @@ Check that histedit respect phases
   $ hg histedit -r '.~2'
   abort: cannot edit immutable changeset: cb9a9f314b8b
   [255]
+
+
++Test ui.prevent-unstable option
++------------------------------------
+
+  $ hg up '.^'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg phase --force --draft .
+  $ hg log -r 'children(.)'
+  9:7c044e3e33a9 f (no-eol)
+  $ hg histedit -r '.'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
