@@ -7,6 +7,7 @@
 
 from node import bin, hex, nullid, nullrev
 import encoding
+import util
 
 def read(repo):
     try:
@@ -69,10 +70,33 @@ def updatecache(repo):
 class branchcache(dict):
     """A dict like object that hold branches heads cache"""
 
-    def __init__(self, entries=(), tipnode=nullid, tiprev=nullrev):
+    def __init__(self, entries=(), tipnode=nullid, tiprev=nullrev,
+                 filteredhash=None):
         super(branchcache, self).__init__(entries)
         self.tipnode = tipnode
         self.tiprev = tiprev
+        self.filteredhash = filteredhash
+
+    def _hashfiltered(self, repo):
+        """build hash of revision filtered in the current cache
+
+        Tracking tipnode and tiprev is not enough to ensure validaty of the
+        cache as they do not help to distinct cache that ignored various
+        revision bellow tiprev.
+
+        To detect such difference, we build a cache of all ignored revisions.
+        """
+        cl = repo.changelog
+        if not cl.filteredrevs:
+            return None
+        key = None
+        revs = sorted(r for r in cl.filteredrevs if r <= self.tiprev)
+        if revs:
+            s = util.sha1()
+            for rev in revs:
+                s.update('%s;' % rev)
+            key = s.digest()
+        return key
 
     def validfor(self, repo):
         """Is the cache content valide regarding a repo
@@ -80,7 +104,8 @@ class branchcache(dict):
         - False when cached tipnode are unknown or if we detect a strip.
         - True when cache is up to date or a subset of current repo."""
         try:
-            return self.tipnode == repo.changelog.node(self.tiprev)
+            return ((self.tipnode == repo.changelog.node(self.tiprev))
+                    and (self.filteredhash == self._hashfiltered(repo)))
         except IndexError:
             return False
 
@@ -172,3 +197,4 @@ class branchcache(dict):
                 if tiprev > self.tiprev:
                     self.tipnode = cl.node(tiprev)
                     self.tiprev = tiprev
+        self.filteredhash = self._hashfiltered(repo)
