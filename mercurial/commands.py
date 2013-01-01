@@ -1531,7 +1531,8 @@ def debugbuilddag(ui, repo, text=None,
                     if len(ps) > 1:
                         p2 = repo[ps[1]]
                         pa = p1.ancestor(p2)
-                        base, local, other = [x[fn].data() for x in pa, p1, p2]
+                        base, local, other = [x[fn].data() for x in (pa, p1,
+                                                                     p2)]
                         m3 = simplemerge.Merge3Text(base, local, other)
                         ml = [l.strip() for l in m3.merge_lines()]
                         ml.append("")
