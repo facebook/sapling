@@ -18,9 +18,14 @@ def read(repo):
         return branchcache()
 
     try:
-        last, lrev = lines.pop(0).split(" ", 1)
+        cachekey = lines.pop(0).split(" ", 2)
+        last, lrev = cachekey[:2]
         last, lrev = bin(last), int(lrev)
-        partial = branchcache(tipnode=last, tiprev=lrev)
+        filteredhash = None
+        if len(cachekey) > 2:
+            filteredhash = bin(cachekey[2])
+        partial = branchcache(tipnode=last, tiprev=lrev,
+                              filteredhash=filteredhash)
         if not partial.validfor(repo):
             # invalidate the cache
             raise ValueError('tip differs')
@@ -113,7 +118,10 @@ class branchcache(dict):
     def write(self, repo):
         try:
             f = repo.opener("cache/branchheads", "w", atomictemp=True)
-            f.write("%s %s\n" % (hex(self.tipnode), self.tiprev))
+            cachekey = [hex(self.tipnode), str(self.tiprev)]
+            if self.filteredhash is not None:
+                cachekey.append(hex(self.filteredhash))
+            f.write(" ".join(cachekey) + '\n')
             for label, nodes in self.iteritems():
                 for node in nodes:
                     f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
