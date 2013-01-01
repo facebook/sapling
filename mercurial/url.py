@@ -164,7 +164,7 @@ if has_https:
                     if sock is not None:
                         sock.close()
 
-            raise socket.error, msg
+            raise socket.error(msg)
 
 class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
