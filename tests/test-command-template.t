@@ -1348,7 +1348,8 @@ Age filter:
 
   >>> from datetime import datetime
   >>> fp = open('a', 'w')
-  >>> fp.write(str(datetime.now().year + 8) + '-01-01 00:00')
+  >>> n = datetime.now()
+  >>> fp.write('%d-%d-%d 00:00' % ((n.year + 7), n.month, n.day))
   >>> fp.close()
   $ hg add a
   $ hg commit -m future -d "`cat a`"
