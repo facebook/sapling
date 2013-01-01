@@ -129,6 +129,7 @@ pypats = [
     (r'(?<!def)\s+(cmp)\(', "cmp is not available in Python 3+"),
     (r'\breduce\s*\(.*', "reduce is not available in Python 3+"),
     (r'\.has_key\b', "dict.has_key is not available in Python 3+"),
+    (r'\s<>\s', '<> operator is not available in Python 3+, use !='),
     (r'^\s*\t', "don't use tabs"),
     (r'\S;\s*\n', "semicolon"),
     (r'[^_]_\("[^"]+"\s*%', "don't use % inside _()"),
