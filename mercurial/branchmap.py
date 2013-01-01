@@ -48,7 +48,11 @@ def read(repo):
         raise
     except Exception, inst:
         if repo.ui.debugflag:
-            repo.ui.warn(('invalid branchheads cache: %s\n') % inst)
+            msg = 'invalid branchheads cache'
+            if repo.filtername is not None:
+                msg += ' (%s)' % repo.filtername
+            msg += ': %s\n'
+            repo.ui.warn(msg % inst)
         partial = branchcache()
     return partial
 
