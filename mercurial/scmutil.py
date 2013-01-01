@@ -959,4 +959,4 @@ class filecache(object):
         try:
             del obj.__dict__[self.name]
         except KeyError:
-            raise AttributeError, self.name
+            raise AttributeError(self.name)
