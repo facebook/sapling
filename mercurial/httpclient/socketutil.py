@@ -70,7 +70,7 @@ except AttributeError:
                 continue
             break
         if not sock:
-            raise socket.error, msg
+            raise socket.error(msg)
         return sock
 
 if ssl:
