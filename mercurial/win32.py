@@ -370,7 +370,7 @@ def unlink(f):
             if e.errno != errno.EEXIST:
                 raise
     else:
-        raise IOError, (errno.EEXIST, "No usable temporary filename found")
+        raise IOError(errno.EEXIST, "No usable temporary filename found")
 
     try:
         os.unlink(temp)
