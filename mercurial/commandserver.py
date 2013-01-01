@@ -42,7 +42,7 @@ class channeledoutput(object):
 
     def __getattr__(self, attr):
         if attr in ('isatty', 'fileno'):
-            raise AttributeError, attr
+            raise AttributeError(attr)
         return getattr(self.in_, attr)
 
 class channeledinput(object):
@@ -122,7 +122,7 @@ class channeledinput(object):
 
     def __getattr__(self, attr):
         if attr in ('isatty', 'fileno'):
-            raise AttributeError, attr
+            raise AttributeError(attr)
         return getattr(self.in_, attr)
 
 class server(object):
