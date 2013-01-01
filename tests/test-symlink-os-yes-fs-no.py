@@ -24,7 +24,7 @@ commands.status(u, repo)
 # now disable symlink support -- this is what os.symlink would do on a
 # non-symlink file system
 def symlink_failure(src, dst):
-    raise OSError, (1, "Operation not permitted")
+    raise OSError(1, "Operation not permitted")
 os.symlink = symlink_failure
 
 # dereference links as if a Samba server has exported this to a
