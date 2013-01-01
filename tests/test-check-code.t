@@ -159,3 +159,14 @@
    > except:
    warning: naked except clause
   [1]
+
+  $ cat > raise-format.py <<EOF
+  > raise SomeException, message
+  > # this next line is okay
+  > raise SomeException(arg1, arg2)
+  > EOF
+  $ "$check_code" raise-format.py
+  raise-format.py:1:
+   > raise SomeException, message
+   don't use old-style two-argument raise, use Exception(message)
+  [1]

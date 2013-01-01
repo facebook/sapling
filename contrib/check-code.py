@@ -185,6 +185,8 @@ pypats = [
     (r'[^^+=*/!<>&| %-](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
     (r'raise Exception', "don't raise generic exceptions"),
+    (r'raise [^,(]+, (\([^\)]+\)|[^,\(\)]+)$',
+     "don't use old-style two-argument raise, use Exception(message)"),
     (r' is\s+(not\s+)?["\'0-9-]', "object comparison with literal"),
     (r' [=!]=\s+(True|False|None)',
      "comparison with singleton, use 'is' or 'is not' instead"),
