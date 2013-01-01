@@ -355,7 +355,7 @@ def reposetup(ui, repo):
                 lfdirstate = lfutil.openlfdirstate(ui, self)
                 for standin in standins:
                     lfile = lfutil.splitstandin(standin)
-                    if lfdirstate[lfile] <> 'r':
+                    if lfdirstate[lfile] != 'r':
                         lfutil.updatestandin(self, standin)
                         lfdirstate.normal(lfile)
                     else:
