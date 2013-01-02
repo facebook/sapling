@@ -40,10 +40,34 @@ def computemutable(repo):
         return frozenset(repo.revs('draft() + secret()'))
     return frozenset()
 
+def computeimpactable(repo):
+    """Everything impactable by mutable revision
+
+    The mutable filter still have some chance to get invalidated. This will
+    happen when:
+
+    - you garbage collect hidden changeset,
+    - public phase is moved backward,
+    - something is changed in the filtering (this could be fixed)
+
+    This filter out any mutable changeset and any public changeset that may be
+    impacted by something happening to a mutable revision.
+
+    This is achieved by filtered everything with a revision number egal or
+    higher than the first mutable changeset is filtered."""
+    assert not repo.changelog.filteredrevs
+    cl = repo.changelog
+    firstmutable = len(cl)
+    for roots in repo._phasecache.phaseroots[1:]:
+        if roots:
+            firstmutable = min(firstmutable, min(cl.rev(r) for r in roots))
+    return frozenset(xrange(firstmutable, len(cl)))
+
 # function to compute filtered set
 filtertable = {'hidden': computehidden,
                'unserved': computeunserved,
-               'mutable':  computemutable}
+               'mutable':  computemutable,
+               'impactable':  computeimpactable}
 ### Nearest subset relation
 # Nearest subset of filter X is a filter Y so that:
 # * Y is included in X,
@@ -52,7 +76,8 @@ filtertable = {'hidden': computehidden,
 # the ordering may be partial
 subsettable = {None: 'hidden',
                'hidden': 'unserved',
-               'unserved': 'mutable'}
+               'unserved': 'mutable',
+               'mutable': 'impactable'}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
