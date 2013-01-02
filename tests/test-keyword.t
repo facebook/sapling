@@ -748,8 +748,10 @@ Commit with multi-line message and custom expansion
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   invalid branchheads cache: tip differs
+  invalid branchheads cache (unserved): tip differs
   a
   invalid branchheads cache: tip differs
+  invalid branchheads cache (unserved): tip differs
   overwriting a expanding keywords
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
   $ rm log

@@ -8,6 +8,7 @@
 
 import copy
 import phases
+import util
 
 
 def computehidden(repo):
@@ -29,9 +30,20 @@ def computeunserved(repo):
         return frozenset(repo.revs('hidden() + secret()'))
     return frozenset()
 
+def computemutable(repo):
+    """compute the set of revision that should be filtered when used a server
+
+    Secret and hidden changeset should not pretend to be here."""
+    assert not repo.changelog.filteredrevs
+    # fast check to avoid revset call on huge repo
+    if util.any(repo._phasecache.phaseroots[1:]):
+        return frozenset(repo.revs('draft() + secret()'))
+    return frozenset()
+
 # function to compute filtered set
 filtertable = {'hidden': computehidden,
-               'unserved': computeunserved}
+               'unserved': computeunserved,
+               'mutable':  computemutable}
 ### Nearest subset relation
 # Nearest subset of filter X is a filter Y so that:
 # * Y is included in X,
@@ -39,7 +51,8 @@ filtertable = {'hidden': computehidden,
 # This create and ordering used for branchmap purpose.
 # the ordering may be partial
 subsettable = {None: 'hidden',
-               'hidden': 'unserved'}
+               'hidden': 'unserved',
+               'unserved': 'mutable'}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""

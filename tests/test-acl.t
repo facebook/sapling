@@ -341,6 +341,7 @@ fred is allowed inside foo/
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -412,6 +413,7 @@ Empty [acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -480,6 +482,7 @@ fred is allowed inside foo/, but not foo/bar/ (case matters)
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -553,6 +556,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -623,6 +627,7 @@ fred is allowed inside foo/, but not foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -695,6 +700,7 @@ barney is allowed everywhere
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -853,6 +859,7 @@ file specified by acl.config does not exist
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -927,6 +934,7 @@ betty is allowed inside foo/ by a acl.config file
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1012,6 +1020,7 @@ acl.config can set only [acl.allow]/[acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1243,6 +1252,7 @@ OS-level groups
   query 1; heads
   searching for changes
   all remote heads known locally
+  invalid branchheads cache (unserved): tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:

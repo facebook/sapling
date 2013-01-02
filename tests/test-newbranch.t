@@ -176,7 +176,7 @@ Pushing just rev 0:
   $ hg push -qr 0 ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-unserved ===
+  === .hg/cache/branchheads-mutable ===
   db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 0
   db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 default
 
@@ -185,7 +185,7 @@ Pushing everything:
   $ hg push -qf ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-unserved ===
+  === .hg/cache/branchheads-mutable ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
   1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 foo
