@@ -262,8 +262,12 @@ class vfs(abstractvfs):
     def _cansymlink(self):
         return util.checklink(self.base)
 
+    @util.propertycache
+    def _chmod(self):
+        return util.checkexec(self.base)
+
     def _fixfilemode(self, name):
-        if self.createmode is None:
+        if self.createmode is None or not self._chmod:
             return
         os.chmod(name, self.createmode & 0666)
 

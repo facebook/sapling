@@ -184,7 +184,13 @@ class hgwebdir(object):
                         fname = virtual[7:]
                     else:
                         fname = req.form['static'][0]
-                    static = templater.templatepath('static')
+                    static = self.ui.config("web", "static", None,
+                                            untrusted=False)
+                    if not static:
+                        tp = self.templatepath or templater.templatepath()
+                        if isinstance(tp, str):
+                            tp = [tp]
+                        static = [os.path.join(p, 'static') for p in tp]
                     return (staticfile(static, fname, req),)
 
                 # top-level index
