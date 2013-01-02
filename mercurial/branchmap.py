@@ -117,6 +117,9 @@ class branchcache(dict):
         except IndexError:
             return False
 
+    def copy(self):
+        """return an deep copy of the branchcache object"""
+        return branchcache(self, self.tipnode, self.tiprev, self.filteredhash)
 
     def write(self, repo):
         try:
