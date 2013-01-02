@@ -24,7 +24,7 @@
   >     echo % $3 and $4 disallowed should both give 403
   >     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "archive/tip.$3" | head -n 1
   >     "$TESTDIR/get-with-headers.py" localhost:$HGPORT "archive/tip.$4" | head -n 1
-  >     "$TESTDIR/killdaemons.py"
+  >     "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   >     cat errors.log
   >     cp .hg/hgrc-base .hg/hgrc
   > }
@@ -93,7 +93,7 @@ invalid arch type should give 404
       testing: test-archive-2c0277f05ed4/foo   OK
   No errors detected in compressed data of archive.zip.
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
   $ hg archive -t tar test.tar
   $ tar tf test.tar
@@ -224,19 +224,19 @@ enable progress extension:
   > width = 60
   > EOF
 
-  $ hg archive ../with-progress 2>&1 | "$TESTDIR/filtercr.py"
-  
-  archiving [                                           ] 0/4
-  archiving [                                           ] 0/4
-  archiving [=========>                                 ] 1/4
-  archiving [=========>                                 ] 1/4
-  archiving [====================>                      ] 2/4
-  archiving [====================>                      ] 2/4
-  archiving [===============================>           ] 3/4
-  archiving [===============================>           ] 3/4
-  archiving [==========================================>] 4/4
-  archiving [==========================================>] 4/4
-                                                              \r (esc)
+  $ hg archive ../with-progress
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/4\r (no-eol) (esc)
+  archiving [                                           ] 0/4\r (no-eol) (esc)
+  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
+  archiving [=========>                                 ] 1/4\r (no-eol) (esc)
+  archiving [====================>                      ] 2/4\r (no-eol) (esc)
+  archiving [====================>                      ] 2/4\r (no-eol) (esc)
+  archiving [===============================>           ] 3/4\r (no-eol) (esc)
+  archiving [===============================>           ] 3/4\r (no-eol) (esc)
+  archiving [==========================================>] 4/4\r (no-eol) (esc)
+  archiving [==========================================>] 4/4\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 cleanup after progress extension test:
 
@@ -268,5 +268,33 @@ old file -- date clamped to 1980
   *0*80*00:00*old/old (glob)
   *-----* (glob)
   \s*147\s+2 files (re)
+
+  $ cd ..
+
+issue3600: check whether "hg archive" can create archive files which
+are extracted with expected timestamp, even though TZ is not
+configured as GMT.
+
+  $ mkdir issue3600
+  $ cd issue3600
+
+  $ hg init repo
+  $ echo a > repo/a
+  $ hg -R repo add repo/a
+  $ hg -R repo commit -m '#0' -d '456789012 21600'
+  $ cat > show_mtime.py <<EOF
+  > import sys, os
+  > print int(os.stat(sys.argv[1]).st_mtime)
+  > EOF
+
+  $ hg -R repo archive --prefix tar-extracted archive.tar
+  $ (TZ=UTC-3; export TZ; tar xf archive.tar)
+  $ python show_mtime.py tar-extracted/a
+  456789012
+
+  $ hg -R repo archive --prefix zip-extracted archive.zip
+  $ (TZ=UTC-3; export TZ; unzip -q archive.zip)
+  $ python show_mtime.py zip-extracted/a
+  456789012
 
   $ cd ..

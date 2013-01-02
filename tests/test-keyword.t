@@ -509,9 +509,9 @@ amend
   $ hg --debug commit --amend -d '15 1' -m 'amend without changes' | grep keywords
   overwriting a expanding keywords
   $ hg -q id
-  577e60613a88
+  67d8c481a6be
   $ head -1 a
-  expand $Id: a,v 577e60613a88 1970/01/01 00:00:15 test $
+  expand $Id: a,v 67d8c481a6be 1970/01/01 00:00:15 test $
 
   $ hg -q strip -n tip
 
@@ -727,7 +727,7 @@ Cat and hg cat files before custom expansion
   ignore $Id$
   a
 
-Write custom keyword and prepare multiline commit message
+Write custom keyword and prepare multi-line commit message
 
   $ echo '$Xinfo$' >> a
   $ cat <<EOF >> log
@@ -745,7 +745,7 @@ Interrupted commit should not change state
   ? c
   ? log
 
-Commit with multiline message and custom expansion
+Commit with multi-line message and custom expansion
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   a
@@ -814,7 +814,7 @@ Clone to test global and local configurations
 
   $ cd ..
 
-Expansion in destinaton with global configuration
+Expansion in destination with global configuration
 
   $ hg --quiet clone Test globalconf
   $ cat globalconf/a
@@ -998,7 +998,7 @@ Prepare merge and resolve tests
 
   $ echo '$Id$' > m
   $ hg add m
-  $ hg commit -m 4kw 
+  $ hg commit -m 4kw
   $ echo foo >> m
   $ hg commit -m 5foo
 

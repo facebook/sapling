@@ -128,7 +128,7 @@
   >     catlogd 6
   > 
   >     drop 6
-  >     
+  > 
   > 
   >     echo ==== qnew -u
   >     hg qnew -u jane 6.patch

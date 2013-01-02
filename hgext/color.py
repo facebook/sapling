@@ -224,6 +224,13 @@ except ImportError:
     _terminfo_params = False
 
 _styles = {'grep.match': 'red bold',
+           'grep.linenumber': 'green',
+           'grep.rev': 'green',
+           'grep.change': 'green',
+           'grep.sep': 'cyan',
+           'grep.filename': 'magenta',
+           'grep.user': 'magenta',
+           'grep.date': 'magenta',
            'bookmarks.current': 'green',
            'branches.active': 'none',
            'branches.closed': 'black bold',
@@ -499,5 +506,5 @@ else:
                 orig(m.group(2), **opts)
                 m = re.match(ansire, m.group(3))
         finally:
-            # Explicity reset original attributes
+            # Explicitly reset original attributes
             _kernel32.SetConsoleTextAttribute(stdout, origattr)

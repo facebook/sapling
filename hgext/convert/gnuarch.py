@@ -89,7 +89,7 @@ class gnuarch_source(converter_source, commandline):
 
             # Get the complete list of revisions for that tree version
             output, status = self.runlines('revisions', '-r', '-f', treeversion)
-            self.checkexit(status, 'failed retrieveing revisions for %s'
+            self.checkexit(status, 'failed retrieving revisions for %s'
                            % treeversion)
 
             # No new iteration unless a revision has a continuation-of header

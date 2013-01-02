@@ -66,6 +66,7 @@ edit the history
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -156,16 +157,21 @@ folding and creating no new change doesn't break:
 
   $ HGEDITOR='python editor.py' hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file file
-  Hunk #1 FAILED at 2
-  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  merging file
+  warning: conflicts during merge.
+  merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
   [255]
-There were conflicts, but we'll continue without resolving. This
+There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
   $ hg status
+  M file
   ? editor.py
-  ? file.rej
+  ? file.orig
+  $ hg resolve -l
+  U file
+  $ hg revert -r 'p1()' file
+  $ hg resolve --mark file
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
@@ -216,12 +222,19 @@ dropped revision.
   > EOF
   $ HGEDITOR="cat $EDITED >" hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  patching file file
-  Hunk #1 FAILED at 2
-  1 out of 1 hunks FAILED -- saving rejects to file file.rej
+  merging file
+  warning: conflicts during merge.
+  merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
   [255]
-  $ echo 5 >> file
+  $ cat > file << EOF
+  > 1
+  > 2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ hg resolve --mark file
   $ hg commit -m '+5.2'
   created new head
   $ echo 6 >> file
@@ -232,7 +245,51 @@ dropped revision.
   +5.2
   ***
   +6
+  
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: changed file
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
+  $ hg log -G
+  @  changeset:   1:e29e02896e6c
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     +4
+  |
+  o  changeset:   0:0189ba417d34
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1+2+3
+  
+  $ hg export tip
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  # Node ID e29e02896e6c2b149d2228a0a64b4f3a9a4237f3
+  # Parent  0189ba417d34df9dda55f88b637dcae9917b5964
+  +4
+  ***
+  +5.2
+  ***
+  +6
+  
+  diff -r 0189ba417d34 -r e29e02896e6c file
+  --- a/file	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/file	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,3 +1,6 @@
+   1
+   2
+   3
+  +4
+  +5
+  +6
   $ cd ..
 

@@ -9,7 +9,7 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httppeer, localrepo, merge, sshpeer, sshserver, wireproto
+    httppeer, localrepo, merge, scmutil, sshpeer, sshserver, wireproto
 from mercurial.i18n import _
 from mercurial.hgweb import hgweb_mod, protocol, webcommands
 from mercurial.subrepo import hgsubrepo
@@ -30,8 +30,10 @@ def uisetup(ui):
                                    '(default: 10)'))]
     entry[1].extend(addopt)
 
-    entry = extensions.wrapcommand(commands.table, 'addremove',
-            overrides.overrideaddremove)
+    # The scmutil function is called both by the (trivial) addremove command,
+    # and in the process of handling commit -A (issue3542)
+    entry = extensions.wrapfunction(scmutil, 'addremove',
+                                    overrides.scmutiladdremove)
     entry = extensions.wrapcommand(commands.table, 'remove',
                                    overrides.overrideremove)
     entry = extensions.wrapcommand(commands.table, 'forget',
@@ -166,3 +168,10 @@ def uisetup(ui):
         if name == 'transplant':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'transplant',
                 overrides.overridetransplant)
+        if name == 'convert':
+            convcmd = getattr(module, 'convcmd')
+            hgsink = getattr(convcmd, 'mercurial_sink')
+            extensions.wrapfunction(hgsink, 'before',
+                                    overrides.mercurialsinkbefore)
+            extensions.wrapfunction(hgsink, 'after',
+                                    overrides.mercurialsinkafter)

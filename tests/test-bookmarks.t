@@ -154,6 +154,19 @@ list bookmarks
    * Y                         2:db815d6d32e6
      Z                         0:f7b1eb17ad24
 
+bookmarks from a revset
+  $ hg bookmark -r '.^1' REVSET
+  $ hg bookmark -r ':tip' TIP
+  $ hg bookmarks
+     REVSET                    0:f7b1eb17ad24
+   * TIP                       2:db815d6d32e6
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+
+  $ hg bookmark -d REVSET
+  $ hg bookmark -d TIP
+
 rename without new name
 
   $ hg bookmark -m Y
@@ -201,13 +214,61 @@ reject bookmark name with newline
 
   $ hg bookmark '
   > '
-  abort: bookmark name cannot contain newlines
+  abort: bookmark names cannot consist entirely of whitespace
   [255]
+
+  $ hg bookmark -m Z '
+  > '
+  abort: bookmark names cannot consist entirely of whitespace
+  [255]
+
+bookmark with reserved name
+
+  $ hg bookmark tip
+  abort: the name 'tip' is reserved
+  [255]
+
+  $ hg bookmark .
+  abort: the name '.' is reserved
+  [255]
+
+  $ hg bookmark null
+  abort: the name 'null' is reserved
+  [255]
+
 
 bookmark with existing name
 
   $ hg bookmark Z
   abort: bookmark 'Z' already exists (use -f to force)
+  [255]
+
+  $ hg bookmark -m Y Z
+  abort: bookmark 'Z' already exists (use -f to force)
+  [255]
+
+bookmark with name of branch
+
+  $ hg bookmark default
+  abort: a bookmark cannot have the name of an existing branch
+  [255]
+
+  $ hg bookmark -m Y default
+  abort: a bookmark cannot have the name of an existing branch
+  [255]
+
+incompatible options
+
+  $ hg bookmark -m Y -d Z
+  abort: --delete and --rename are incompatible
+  [255]
+
+  $ hg bookmark -r 1 -d Z
+  abort: --rev is incompatible with --delete
+  [255]
+
+  $ hg bookmark -r 1 -m Z Y
+  abort: --rev is incompatible with --rename
   [255]
 
 force bookmark with existing name
@@ -234,10 +295,19 @@ bookmark name with whitespace only
   abort: bookmark names cannot consist entirely of whitespace
   [255]
 
+  $ hg bookmark -m Y ' '
+  abort: bookmark names cannot consist entirely of whitespace
+  [255]
+
 invalid bookmark
 
   $ hg bookmark 'foo:bar'
-  abort: bookmark 'foo:bar' contains illegal character
+  abort: ':' cannot be used in a name
+  [255]
+
+  $ hg bookmark 'foo
+  > bar'
+  abort: '\n' cannot be used in a name
   [255]
 
 the bookmark extension should be ignored now that it is part of core
@@ -293,10 +363,10 @@ test clone
      a@                        2:db815d6d32e6
      x  y                      2:db815d6d32e6
   $ hg clone . cloned-bookmarks
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
-     @                         2:db815d6d32e6
+   * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
@@ -311,10 +381,10 @@ test clone with pull protocol
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 3 files (+1 heads)
-  updating to branch default
+  updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
-     @                         2:db815d6d32e6
+   * @                         2:db815d6d32e6
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
@@ -323,6 +393,22 @@ test clone with pull protocol
 
   $ hg bookmark -d @
   $ hg bookmark -d a@
+
+test clone with a bookmark named "default" (issue3677)
+
+  $ hg bookmark -r 1 -f -i default
+  $ hg clone . cloned-bookmark-default
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmark-default bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
+     default                   1:925d80f479bb
+     x  y                      2:db815d6d32e6
+  $ hg -R cloned-bookmark-default parents -q
+  2:db815d6d32e6
+  $ hg bookmark -d default
 
 test clone with a specific revision
 
@@ -335,6 +421,17 @@ test clone with a specific revision
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-rev bookmarks
      X2                        1:925d80f479bb
+
+test clone with update to a bookmark
+
+  $ hg clone -u Z . cloned-bookmarks-update
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks-update bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+   * Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
 
 create bundle with two heads
 

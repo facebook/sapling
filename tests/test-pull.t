@@ -68,7 +68,7 @@ Issue622: hg init && hg pull -u URL doesn't checkout default branch
 
 Test 'file:' uri handling:
 
-  $ hg pull -q file://../test-doesnt-exist
+  $ hg pull -q file://../test-does-not-exist
   abort: file:// URLs can only refer to localhost
   [255]
 

@@ -2,9 +2,18 @@
   $ "$TESTDIR/hghave" mtn || exit 80
 
 Monotone directory is called .monotone on *nix and monotone
-on Windows. Having a variable here ease test patching.
+on Windows.
+
+#if windows
+
+  $ mtndir=monotone
+
+#else
 
   $ mtndir=.monotone
+
+#endif
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
   $ echo 'graphlog =' >> $HGRCPATH
@@ -210,7 +219,9 @@ test diverging directory moves
 
 test large file support (> 32kB)
 
-  $ python -c 'for x in range(10000): print x' > large-file
+  >>> fp = file('large-file', 'wb')
+  >>> for x in xrange(10000): fp.write('%d\n' % x)
+  >>> fp.close()
   $ $TESTDIR/md5sum.py large-file
   5d6de8a95c3b6bf9e0ffb808ba5299c1  large-file
   $ mtn add large-file

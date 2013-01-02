@@ -73,7 +73,7 @@ def readauthforuri(ui, uri, user):
     if '://' in uri:
         scheme, hostpath = uri.split('://', 1)
     else:
-        # py2.4.1 doesn't provide the full URI
+        # Python 2.4.1 doesn't provide the full URI
         scheme, hostpath = 'http', uri
     bestuser = None
     bestlen = 0
@@ -233,7 +233,11 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
     def http_open(self, req):
         if req.get_full_url().startswith('https'):
             return self.https_open(req)
-        return self.do_open(HTTPConnection, req, False)
+        def makehttpcon(*args, **kwargs):
+            k2 = dict(kwargs)
+            k2['use_ssl'] = False
+            return HTTPConnection(*args, **k2)
+        return self.do_open(makehttpcon, req, False)
 
     def https_open(self, req):
         # req.get_full_url() does not contain credentials and we may

@@ -503,6 +503,20 @@ def pushkey(repo, proto, namespace, key, old, new):
     else:
         new = encoding.tolocal(new) # normal path
 
+    if util.safehasattr(proto, 'restore'):
+
+        proto.redirect()
+
+        try:
+            r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
+                             encoding.tolocal(old), new) or False
+        except util.Abort:
+            r = False
+
+        output = proto.restore()
+
+        return '%s\n%s' % (int(r), output)
+
     r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
                      encoding.tolocal(old), new)
     return '%s\n' % int(r)
@@ -516,7 +530,7 @@ def stream(repo, proto):
     it is serving. Client checks to see if it understands the format.
 
     The format is simple: the server writes out a line with the amount
-    of files, then the total amount of bytes to be transfered (separated
+    of files, then the total amount of bytes to be transferred (separated
     by a space). Then, for each file, the server first writes the filename
     and filesize (separated by the null character), then the file contents.
     '''
@@ -545,12 +559,33 @@ def stream(repo, proto):
         repo.ui.debug('%d files, %d bytes to transfer\n' %
                       (len(entries), total_bytes))
         yield '%d %d\n' % (len(entries), total_bytes)
-        for name, size in entries:
-            repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-            # partially encode name over the wire for backwards compat
-            yield '%s\0%d\n' % (store.encodedir(name), size)
-            for chunk in util.filechunkiter(repo.sopener(name), limit=size):
-                yield chunk
+
+        sopener = repo.sopener
+        oldaudit = sopener.mustaudit
+        debugflag = repo.ui.debugflag
+        sopener.mustaudit = False
+
+        try:
+            for name, size in entries:
+                if debugflag:
+                    repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+                # partially encode name over the wire for backwards compat
+                yield '%s\0%d\n' % (store.encodedir(name), size)
+                if size <= 65536:
+                    fp = sopener(name)
+                    try:
+                        data = fp.read(size)
+                    finally:
+                        fp.close()
+                    yield data
+                else:
+                    for chunk in util.filechunkiter(sopener(name), limit=size):
+                        yield chunk
+        # replace with "finally:" when support for python 2.4 has been dropped
+        except Exception:
+            sopener.mustaudit = oldaudit
+            raise
+        sopener.mustaudit = oldaudit
 
     return streamres(streamer(repo, entries, total_bytes))
 

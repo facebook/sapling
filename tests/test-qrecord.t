@@ -74,7 +74,7 @@ help record (record)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help record" to show more info
+  use "hg -v help record" to show the global options
 
 help (no mq, so no qrecord)
 
@@ -85,7 +85,7 @@ help (no mq, so no qrecord)
   
       See "hg help qnew" & "hg help record" for more information and usage.
   
-  use "hg -v help qrecord" to show more info
+  use "hg -v help qrecord" to show the global options
 
   $ hg init a
 
@@ -108,20 +108,20 @@ qrecord patch (mq not present)
 
 help (bad mq)
 
-  $ echo "mq=nonexistant" >> $HGRCPATH
+  $ echo "mq=nonexistent" >> $HGRCPATH
   $ hg help qrecord
-  *** failed to import extension mq from nonexistant: [Errno 2] * (glob)
+  *** failed to import extension mq from nonexistent: [Errno *] * (glob)
   hg qrecord [OPTION]... PATCH [FILE]...
   
   interactively record a new patch
   
       See "hg help qnew" & "hg help record" for more information and usage.
   
-  use "hg -v help qrecord" to show more info
+  use "hg -v help qrecord" to show the global options
 
 help (mq present)
 
-  $ sed 's/mq=nonexistant/mq=/' $HGRCPATH > hgrc.tmp
+  $ sed 's/mq=nonexistent/mq=/' $HGRCPATH > hgrc.tmp
   $ mv hgrc.tmp $HGRCPATH
 
   $ hg help qrecord
@@ -150,7 +150,7 @@ help (mq present)
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help qrecord" to show more info
+  use "hg -v help qrecord" to show the global options
 
   $ cd a
 

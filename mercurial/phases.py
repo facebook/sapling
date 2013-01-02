@@ -103,7 +103,8 @@ Note: old client behave as a publishing server with draft only content
 import errno
 from node import nullid, nullrev, bin, hex, short
 from i18n import _
-import util
+import util, error
+import obsolete
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
@@ -195,7 +196,7 @@ class phasecache(object):
         return self._phaserevs
 
     def phase(self, repo, rev):
-        # We need a repo argument here to be able to build _phaserev
+        # We need a repo argument here to be able to build _phaserevs
         # if necessary. The repository instance is not stored in
         # phasecache to avoid reference cycles. The changelog instance
         # is not stored because it is a filecache() property and can
@@ -244,6 +245,7 @@ class phasecache(object):
             # declare deleted root in the target phase
             if targetphase != 0:
                 self.retractboundary(repo, targetphase, delroots)
+        obsolete.clearobscaches(repo)
 
     def retractboundary(self, repo, targetphase, nodes):
         # Be careful to preserve shallow-copied values: do not update
@@ -260,6 +262,7 @@ class phasecache(object):
             ctxs = repo.set('roots(%ln::)', currentroots)
             currentroots.intersection_update(ctx.node() for ctx in ctxs)
             self._updateroots(targetphase, currentroots)
+        obsolete.clearobscaches(repo)
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
@@ -312,7 +315,7 @@ def listphases(repo):
     return keys
 
 def pushphase(repo, nhex, oldphasestr, newphasestr):
-    """List phases root for serialisation over pushkey"""
+    """List phases root for serialization over pushkey"""
     lock = repo.lock()
     try:
         currentphase = repo[nhex].phase()
@@ -363,7 +366,7 @@ def newheads(repo, heads, roots):
     """compute new head of a subset minus another
 
     * `heads`: define the first subset
-    * `rroots`: define the second we substract to the first"""
+    * `roots`: define the second we subtract from the first"""
     revset = repo.set('heads((%ln + parents(%ln)) - (%ln::%ln))',
                       heads, roots, roots, heads)
     return [c.node() for c in revset]
@@ -385,3 +388,6 @@ def newcommitphase(ui):
             msg = _("phases.new-commit: not a valid phase name ('%s')")
             raise error.ConfigError(msg % v)
 
+def hassecret(repo):
+    """utility function that check if a repo have any secret changeset."""
+    return bool(repo._phasecache.phaseroots[2])

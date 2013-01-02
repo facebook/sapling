@@ -9,6 +9,7 @@
 
 #include <Python.h>
 #include <ctype.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "util.h"
@@ -72,7 +73,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 	for (start = cur = str, zero = NULL; cur < str + len; cur++) {
 		PyObject *file = NULL, *node = NULL;
 		PyObject *flags = NULL;
-		int nlen;
+		ptrdiff_t nlen;
 
 		if (!*cur) {
 			zero = cur;
@@ -94,7 +95,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 
 		nlen = cur - zero - 1;
 
-		node = unhexlify(zero + 1, nlen > 40 ? 40 : nlen);
+		node = unhexlify(zero + 1, nlen > 40 ? 40 : (int)nlen);
 		if (!node)
 			goto bail;
 
@@ -1505,11 +1506,16 @@ bail:
 
 static char parsers_doc[] = "Efficient content parsing.";
 
+PyObject *encodedir(PyObject *self, PyObject *args);
+PyObject *pathencode(PyObject *self, PyObject *args);
+
 static PyMethodDef methods[] = {
 	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
+	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
+	{"pathencode", pathencode, METH_VARARGS, "fncache-encode a path\n"},
 	{NULL, NULL}
 };
 

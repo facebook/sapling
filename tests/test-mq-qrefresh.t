@@ -207,7 +207,8 @@ qrefresh --short tests:
 
   $ echo 'orphan' > orphanchild
   $ hg add orphanchild
-  $ hg qrefresh nonexistingfilename # clear patch
+  $ hg qrefresh nonexistentfilename # clear patch
+  nonexistentfilename: * (glob)
   $ hg qrefresh --short 1/base
   $ hg qrefresh --short 2/base
 

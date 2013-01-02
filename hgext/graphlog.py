@@ -52,3 +52,5 @@ def graphlog(ui, repo, *pats, **opts):
     directory.
     """
     return cmdutil.graphlog(ui, repo, *pats, **opts)
+
+commands.inferrepo += " glog"

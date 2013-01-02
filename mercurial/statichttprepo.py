@@ -64,7 +64,7 @@ def build_opener(ui, authinfo):
     urlopener = url.opener(ui, authinfo)
     urlopener.add_handler(byterange.HTTPRangeHandler())
 
-    class statichttpopener(scmutil.abstractopener):
+    class statichttpvfs(scmutil.abstractvfs):
         def __init__(self, base):
             self.base = base
 
@@ -74,7 +74,13 @@ def build_opener(ui, authinfo):
             f = "/".join((self.base, urllib.quote(path)))
             return httprangereader(f, urlopener)
 
-    return statichttpopener
+        def join(self, path):
+            if path:
+                return os.path.join(self.base, path)
+            else:
+                return self.base
+
+    return statichttpvfs
 
 class statichttppeer(localrepo.localpeer):
     def local(self):

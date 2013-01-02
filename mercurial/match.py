@@ -49,7 +49,7 @@ class match(object):
         a pattern is one of:
         'glob:<glob>' - a glob relative to cwd
         're:<regexp>' - a regular expression
-        'path:<path>' - a path relative to canonroot
+        'path:<path>' - a path relative to repository root
         'relglob:<glob>' - an unrooted glob (*.c matches C files in all dirs)
         'relpath:<path>' - a path relative to cwd
         'relre:<regexp>' - a regexp that needn't match the start of a name

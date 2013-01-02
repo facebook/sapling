@@ -13,7 +13,7 @@
 # tokenizer is an iterator that returns type, value pairs
 # elements is a mapping of types to binding strength, prefix and infix actions
 # an action is a tree node name, a tree label, and an optional match
-# __call__(program) parses program into a labelled tree
+# __call__(program) parses program into a labeled tree
 
 import error
 from i18n import _

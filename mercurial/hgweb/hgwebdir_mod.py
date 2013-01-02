@@ -293,9 +293,11 @@ class hgwebdir(object):
                     except OSError:
                         continue
 
+                    # add '/' to the name to make it obvious that
+                    # the entry is a directory, not a regular repository
                     row = dict(contact="",
                                contact_sort="",
-                               name=name,
+                               name=name + '/',
                                name_sort=name,
                                url=url,
                                description="",

@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
 #if windows
   $ hg clone http://localhost:$HGPORT/ copy
@@ -25,10 +25,27 @@ one pull
   >     httpd.serve_forever()
   > 
   > signal.signal(signal.SIGTERM, lambda x, y: sys.exit(0))
+  > fp = file('dumb.pid', 'wb')
+  > fp.write(str(os.getpid()) + '\n')
+  > fp.close()
   > run()
   > EOF
   $ python dumb.py 2>/dev/null &
-  $ echo $! >> $DAEMON_PIDS
+
+Cannot just read $!, it will not be set to the right value on Windows/MinGW
+
+  $ cat > wait.py <<EOF
+  > import time
+  > while True:
+  >     try:
+  >         if '\n' in file('dumb.pid', 'rb').read():
+  >             break
+  >     except IOError:
+  >         pass
+  >     time.sleep(0.2)
+  > EOF
+  $ python wait.py
+  $ cat dumb.pid >> $DAEMON_PIDS
   $ hg init remote
   $ cd remote
   $ echo foo > bar
@@ -97,8 +114,8 @@ trying to push
 trying clone -r
 
   $ cd ..
-  $ hg clone -r donotexist static-http://localhost:$HGPORT/remote local0
-  abort: unknown revision 'donotexist'!
+  $ hg clone -r doesnotexist static-http://localhost:$HGPORT/remote local0
+  abort: unknown revision 'doesnotexist'!
   [255]
   $ hg clone -r 0 static-http://localhost:$HGPORT/remote local0
   adding changesets
@@ -171,4 +188,4 @@ test with non-repo
   $ hg clone static-http://localhost:$HGPORT/notarepo local3
   abort: 'http://localhost:$HGPORT/notarepo' does not appear to be an hg repository!
   [255]
-  $ kill $!
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS

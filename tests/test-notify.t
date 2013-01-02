@@ -42,16 +42,22 @@
   repository:
   
     [usersubs]
-    # key is subscriber email, value is a comma-separated list of repo glob
-    # patterns
+    # key is subscriber email, value is a comma-separated list of repo patterns
     user@host = pattern
   
     [reposubs]
-    # key is glob pattern, value is a comma-separated list of subscriber
-    # emails
+    # key is repo pattern, value is a comma-separated list of subscriber emails
     pattern = user@host
   
-  Glob patterns are matched against absolute path to repository root.
+  A "pattern" is a "glob" matching the absolute path to a repository, optionally
+  combined with a revset expression. A revset expression, if present, is
+  separated from the glob by a hash. Example:
+  
+    [reposubs]
+    */widgets#branch(release) = qa-team@example.com
+  
+  This sends to "qa-team@example.com" whenever a changeset on the "release"
+  branch triggers a notification in any repository ending in "widgets".
   
   In order to place them under direct user management, "[usersubs]" and
   "[reposubs]" sections may be placed in a separate "hgrc" file and incorporated
@@ -473,3 +479,77 @@ long lines
   ononononononononononononononononononononononononononononononononononononono=
   nonononononononononononono
   
+ revset selection: send to address that matches branch and repo
+
+  $ cat << EOF >> $HGRCPATH
+  > [hooks]
+  > incoming.notify = python:hgext.notify.hook
+  > 
+  > [notify]
+  > sources = pull
+  > test = True
+  > diffstat = False
+  > maxdiff = 0
+  > 
+  > [reposubs]
+  > */a#branch(test) = will_no_be_send@example.com
+  > */b#branch(test) = notify@example.com
+  > EOF
+  $ hg --cwd a branch test
+  marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo a >> a/a
+  $ hg --cwd a ci -m test -d '1 0'
+  $ hg --traceback --cwd b pull ../a | \
+  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  pulling from ../a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  X-Test: foo
+  Date: * (glob)
+  Subject: test
+  From: test@test.com
+  X-Hg-Notification: changeset fbbcbc516f2f
+  Message-Id: <hg.fbbcbc516f2f.*.*@*> (glob)
+  To: baz@test.com, foo@bar, notify@example.com
+  
+  changeset fbbcbc516f2f in b
+  description: test
+  (run 'hg update' to get a working copy)
+
+revset selection: don't send to address that waits for mails
+from different branch
+
+  $ hg --cwd a update default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo a >> a/a
+  $ hg --cwd a ci -m test -d '1 0'
+  $ hg --traceback --cwd b pull ../a | \
+  >   python -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  pulling from ../a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 0 files (+1 heads)
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  X-Test: foo
+  Date: * (glob)
+  Subject: test
+  From: test@test.com
+  X-Hg-Notification: changeset 38b42fa092de
+  Message-Id: <hg.38b42fa092de.*.*@*> (glob)
+  To: baz@test.com, foo@bar
+  
+  changeset 38b42fa092de in b
+  description: test
+  (run 'hg heads' to see heads)
+

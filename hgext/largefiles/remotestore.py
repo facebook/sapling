@@ -4,7 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''remote largefile store; the base class for servestore'''
+'''remote largefile store; the base class for wirestore'''
 
 import urllib2
 

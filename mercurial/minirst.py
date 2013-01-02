@@ -133,7 +133,7 @@ def splitparagraphs(blocks):
     def match(lines, i, itemre, singleline):
         """Does itemre match an item at line i?
 
-        A list item can be followed by an idented line or another list
+        A list item can be followed by an indented line or another list
         item (but only if singleline is True).
         """
         line1 = lines[i]

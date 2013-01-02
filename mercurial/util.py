@@ -1,4 +1,4 @@
-# util.py - Mercurial utility functions and platform specfic implementations
+# util.py - Mercurial utility functions and platform specific implementations
 #
 #  Copyright 2005 K. Thananchayan <thananck@yahoo.com>
 #  Copyright 2005-2007 Matt Mackall <mpm@selenic.com>
@@ -7,7 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""Mercurial utility functions and platform specfic implementations.
+"""Mercurial utility functions and platform specific implementations.
 
 This contains helper routines that are independent of the SCM core and
 hide platform-specific details from the core.
@@ -62,6 +62,7 @@ setflags = platform.setflags
 setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
 spawndetached = platform.spawndetached
+split = platform.split
 sshargs = platform.sshargs
 statfiles = platform.statfiles
 termwidth = platform.termwidth
@@ -799,7 +800,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
     return temp
 
 class atomictempfile(object):
-    '''writeable file object that atomically updates a file
+    '''writable file object that atomically updates a file
 
     All writes will go to a temporary copy of the original file. Call
     close() when you are done writing, and atomictempfile will rename
@@ -898,7 +899,7 @@ class chunkbuffer(object):
         """Read L bytes of data from the iterator of chunks of data.
         Returns less than L bytes if the iterator runs dry."""
         left = l
-        buf = ''
+        buf = []
         queue = self._queue
         while left > 0:
             # refill the queue
@@ -916,11 +917,11 @@ class chunkbuffer(object):
             left -= len(chunk)
             if left < 0:
                 queue.appendleft(chunk[left:])
-                buf += chunk[:left]
+                buf.append(chunk[:left])
             else:
-                buf += chunk
+                buf.append(chunk)
 
-        return buf
+        return ''.join(buf)
 
 def filechunkiter(f, size=65536, limit=None):
     """Create a generator that produces the data in the file size
@@ -1239,7 +1240,7 @@ def MBTextWrapper(**kwargs):
         so overriding is needed to use width information of each characters.
 
         In addition, characters classified into 'ambiguous' width are
-        treated as wide in east asian area, but as narrow in other.
+        treated as wide in East Asian area, but as narrow in other.
 
         This requires use decision to determine width of such characters.
         """
@@ -1300,7 +1301,7 @@ def MBTextWrapper(**kwargs):
                 width = self.width - len(indent)
 
                 # First chunk on line is whitespace -- drop it, unless this
-                # is the very beginning of the text (ie. no lines started yet).
+                # is the very beginning of the text (i.e. no lines started yet).
                 if self.drop_whitespace and chunks[-1].strip() == '' and lines:
                     del chunks[-1]
 
@@ -1477,7 +1478,11 @@ _hextochr = dict((a + b, chr(int(a + b, 16)))
                  for a in _hexdig for b in _hexdig)
 
 def _urlunquote(s):
-    """unquote('abc%20def') -> 'abc def'."""
+    """Decode HTTP/HTML % encoding.
+
+    >>> _urlunquote('abc%20def')
+    'abc def'
+    """
     res = s.split('%')
     # fastpath
     if len(res) == 1:

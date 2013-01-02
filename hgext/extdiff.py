@@ -109,7 +109,7 @@ def snapshot(ui, repo, files, node, tmproot):
     return dirname, fns_and_mtime
 
 def dodiff(ui, repo, diffcmd, diffopts, pats, opts):
-    '''Do the actuall diff:
+    '''Do the actual diff:
 
     - copy to a temp structure if diffing 2 internal revisions
     - copy to a temp structure if diffing working revision with
@@ -329,3 +329,5 @@ use %(path)s to diff repository (or selected files)
         cmdtable[cmd] = (save(cmd, path, diffopts),
                          cmdtable['extdiff'][1][1:],
                          _('hg %s [OPTION]... [FILE]...') % cmd)
+
+commands.inferrepo += " extdiff"

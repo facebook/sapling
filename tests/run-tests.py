@@ -54,6 +54,7 @@ import tempfile
 import time
 import re
 import threading
+import killdaemons as killmod
 
 processlock = threading.Lock()
 
@@ -282,21 +283,6 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
-def splitnewlines(text):
-    '''like str.splitlines, but only split on newlines.
-    keep line endings.'''
-    i = 0
-    lines = []
-    while True:
-        n = text.find('\n', i)
-        if n == -1:
-            last = text[i:]
-            if last:
-                lines.append(last)
-            return lines
-        lines.append(text[i:n + 1])
-        i = n + 1
-
 def parsehghaveoutput(lines):
     '''Parse hghave log lines.
     Return tuple of lists (missing, failed):
@@ -348,29 +334,8 @@ def terminate(proc):
         pass
 
 def killdaemons():
-    # Kill off any leftover daemon processes
-    try:
-        fp = open(DAEMON_PIDS)
-        for line in fp:
-            try:
-                pid = int(line)
-            except ValueError:
-                continue
-            try:
-                os.kill(pid, 0)
-                vlog('# Killing daemon process %d' % pid)
-                os.kill(pid, signal.SIGTERM)
-                time.sleep(0.1)
-                os.kill(pid, 0)
-                vlog('# Daemon process %d is stuck - really killing it' % pid)
-                os.kill(pid, signal.SIGKILL)
-            except OSError, err:
-                if err.errno != errno.ESRCH:
-                    raise
-        fp.close()
-        os.unlink(DAEMON_PIDS)
-    except IOError:
-        pass
+    return killmod.killdaemons(DAEMON_PIDS, tryhard=False, remove=True,
+                               logfn=vlog)
 
 def cleanup(options):
     if not options.keep_tmpdir:
@@ -511,11 +476,8 @@ def pytest(test, wd, options, replacements):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
-    return run(cmd, wd, options, replacements)
-
-def shtest(test, wd, options, replacements):
-    cmd = '%s "%s"' % (options.shell, test)
-    vlog("# Running", cmd)
+    if os.name == 'nt':
+        replacements.append((r'\r\n', '\n'))
     return run(cmd, wd, options, replacements)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
@@ -529,8 +491,10 @@ def stringescape(s):
 
 def rematch(el, l):
     try:
-        # ensure that the regex matches to the end of the string
-        return re.match(el + r'\Z', l)
+        # use \Z to ensure that the regex matches to the end of the string
+        if os.name == 'nt':
+            return re.match(el + r'\r?\n\Z', l)
+        return re.match(el + r'\n\Z', l)
     except re.error:
         # el is an invalid regex
         return False
@@ -559,14 +523,14 @@ def globmatch(el, l):
 def linematch(el, l):
     if el == l: # perfect match (fast)
         return True
-    if (el and
-        (el.endswith(" (re)\n") and rematch(el[:-6] + '\n', l) or
-         el.endswith(" (glob)\n") and globmatch(el[:-8] + '\n', l) or
-         el.endswith(" (esc)\n") and
-             (el[:-7].decode('string-escape') + '\n' == l or
-              el[:-7].decode('string-escape').replace('\r', '') +
-                  '\n' == l and os.name == 'nt'))):
-        return True
+    if el:
+        if el.endswith(" (esc)\n"):
+            el = el[:-7].decode('string-escape') + '\n'
+        if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+            return True
+        if (el.endswith(" (re)\n") and rematch(el[:-6], l) or
+            el.endswith(" (glob)\n") and globmatch(el[:-8], l)):
+            return True
     return False
 
 def tsttest(test, wd, options, replacements):
@@ -704,14 +668,13 @@ def tsttest(test, wd, options, replacements):
     pos = -1
     postout = []
     ret = 0
-    for n, l in enumerate(output):
+    for l in output:
         lout, lcmd = l, None
         if salt in l:
             lout, lcmd = l.split(salt, 1)
 
         if lout:
-            if lcmd:
-                # output block had no trailing newline, clean up
+            if not lout.endswith('\n'):
                 lout += ' (no-eol)\n'
 
             # find the expected output at the current position
@@ -782,7 +745,7 @@ def run(cmd, wd, options, replacements):
 
     for s, r in replacements:
         output = re.sub(s, r, output)
-    return ret, splitnewlines(output)
+    return ret, output.splitlines(True)
 
 def runone(options, test):
     '''tristate output:
@@ -906,10 +869,7 @@ def runone(options, test):
         runner = tsttest
         ref = testpath
     else:
-        # do not try to run non-executable programs
-        if not os.access(testpath, os.X_OK):
-            return skip("not executable")
-        runner = shtest
+        return skip("unknown test type")
 
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
@@ -921,7 +881,6 @@ def runone(options, test):
         (r':%s\b' % (options.port + 2), ':$HGPORT2'),
         ]
     if os.name == 'nt':
-        replacements.append((r'\r\n', '\n'))
         replacements.append(
             (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
                      c in '/\\' and r'[/\\]' or
@@ -945,7 +904,7 @@ def runone(options, test):
         refout = None                   # to match "out is None"
     elif os.path.exists(ref):
         f = open(ref, "r")
-        refout = list(splitnewlines(f.read()))
+        refout = f.read().splitlines(True)
         f.close()
     else:
         refout = []
@@ -956,6 +915,11 @@ def runone(options, test):
         for line in out:
             f.write(line)
         f.close()
+
+    def describe(ret):
+        if ret < 0:
+            return 'killed by signal %d' % -ret
+        return 'returned error code %d' % ret
 
     if skipped:
         mark = 's'
@@ -984,13 +948,13 @@ def runone(options, test):
                 showdiff(refout, out, ref, err)
             iolock.release()
         if ret:
-            fail("output changed and returned error code %d" % ret, ret)
+            fail("output changed and " + describe(ret), ret)
         else:
             fail("output changed", ret)
         ret = 1
     elif ret:
         mark = '!'
-        fail("returned error code %d" % ret, ret)
+        fail(describe(ret), ret)
     else:
         success()
 
@@ -1231,6 +1195,10 @@ def main():
             # can't remove on solaris
             os.environ[k] = ''
             del os.environ[k]
+    if 'HG' in os.environ:
+        # can't remove on solaris
+        os.environ['HG'] = ''
+        del os.environ['HG']
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()

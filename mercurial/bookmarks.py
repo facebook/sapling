@@ -7,14 +7,8 @@
 
 from mercurial.i18n import _
 from mercurial.node import hex
-from mercurial import encoding, error, util
+from mercurial import encoding, error, util, obsolete, phases
 import errno, os
-
-def valid(mark):
-    for c in (':', '\0', '\n', '\r'):
-        if c in mark:
-            return False
-    return True
 
 def read(repo):
     '''Parse .hg/bookmarks file and return a dictionary
@@ -58,7 +52,7 @@ def readcurrent(repo):
             raise
         return None
     try:
-        # No readline() in posixfile_nt, reading everything is cheap
+        # No readline() in osutil.posixfile, reading everything is cheap
         mark = encoding.tolocal((file.readlines() or [''])[0])
         if mark == '' or mark not in repo._bookmarks:
             mark = None
@@ -79,10 +73,6 @@ def write(repo):
 
     if repo._bookmarkcurrent not in refs:
         setcurrent(repo, None)
-    for mark in refs.keys():
-        if not valid(mark):
-            raise util.Abort(_("bookmark '%s' contains illegal "
-                "character" % mark))
 
     wlock = repo.wlock()
     try:
@@ -113,9 +103,6 @@ def setcurrent(repo, mark):
 
     if mark not in repo._bookmarks:
         mark = ''
-    if not valid(mark):
-        raise util.Abort(_("bookmark '%s' contains illegal "
-            "character" % mark))
 
     wlock = repo.wlock()
     try:
@@ -159,7 +146,7 @@ def update(repo, parents, node):
         if mark and marks[mark] in parents:
             old = repo[marks[mark]]
             new = repo[node]
-            if new in old.descendants() and mark == cur:
+            if old.descendant(new) and mark == cur:
                 marks[cur] = new.node()
                 update = True
             if mark != cur:
@@ -209,21 +196,25 @@ def updatefromremote(ui, repo, remote, path):
                 cl = repo[nl]
                 if cl.rev() >= cr.rev():
                     continue
-                if cr in cl.descendants():
+                if validdest(repo, cl, cr):
                     repo._bookmarks[k] = cr.node()
                     changed = True
                     ui.status(_("updating bookmark %s\n") % k)
                 else:
+                    if k == '@':
+                        kd = ''
+                    else:
+                        kd = k
                     # find a unique @ suffix
                     for x in range(1, 100):
-                        n = '%s@%d' % (k, x)
+                        n = '%s@%d' % (kd, x)
                         if n not in repo._bookmarks:
                             break
                     # try to use an @pathalias suffix
                     # if an @pathalias already exists, we overwrite (update) it
                     for p, u in ui.configitems("paths"):
                         if path == u:
-                            n = '%s@%s' % (k, p)
+                            n = '%s@%s' % (kd, p)
 
                     repo._bookmarks[n] = cr.node()
                     changed = True
@@ -237,18 +228,49 @@ def updatefromremote(ui, repo, remote, path):
     if changed:
         write(repo)
 
-def diff(ui, repo, remote):
+def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))
 
-    lmarks = repo.listkeys('bookmarks')
-    rmarks = remote.listkeys('bookmarks')
+    smarks = src.listkeys('bookmarks')
+    dmarks = dst.listkeys('bookmarks')
 
-    diff = sorted(set(rmarks) - set(lmarks))
+    diff = sorted(set(smarks) - set(dmarks))
     for k in diff:
-        mark = ui.debugflag and rmarks[k] or rmarks[k][:12]
+        mark = ui.debugflag and smarks[k] or smarks[k][:12]
         ui.write("   %-25s %s\n" % (k, mark))
 
     if len(diff) <= 0:
         ui.status(_("no changed bookmarks found\n"))
         return 1
     return 0
+
+def validdest(repo, old, new):
+    """Is the new bookmark destination a valid update from the old one"""
+    if old == new:
+        # Old == new -> nothing to update.
+        return False
+    elif not old:
+        # old is nullrev, anything is valid.
+        # (new != nullrev has been excluded by the previous check)
+        return True
+    elif repo.obsstore:
+        # We only need this complicated logic if there is obsolescence
+        # XXX will probably deserve an optimised revset.
+        nm = repo.changelog.nodemap
+        validdests = set([old])
+        plen = -1
+        # compute the whole set of successors or descendants
+        while len(validdests) != plen:
+            plen = len(validdests)
+            succs = set(c.node() for c in validdests)
+            for c in validdests:
+                if c.phase() > phases.public:
+                    # obsolescence marker does not apply to public changeset
+                    succs.update(obsolete.allsuccessors(repo.obsstore,
+                                                        [c.node()]))
+            known = (n for n in succs if n in nm)
+            validdests = set(repo.set('%ln::', known))
+        validdests.remove(old)
+        return new in validdests
+    else:
+        return old.descendant(new)

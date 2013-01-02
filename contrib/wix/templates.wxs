@@ -33,7 +33,6 @@
           <File Name="map-cmdline.default" />
           <File Name="map-cmdline.bisect" />
           <File Name="map-cmdline.xml" />
-          <File Name="template-vars.txt" />
         </Component>
 
         <Directory Id="templates.atomdir" Name="atom">

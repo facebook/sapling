@@ -10,7 +10,9 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, bookmarks, graphmod, revset, phases
+import subrepo, context, repair, bookmarks, graphmod, revset, phases, obsolete
+import changelog
+import lock as lockmod
 
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
@@ -547,30 +549,37 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         prev = (parents and parents[0]) or nullid
 
         shouldclose = False
-        if not fp:
+        if not fp and len(template) > 0:
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
             fp = makefileobj(repo, template, node, desc=desc, total=total,
                              seqno=seqno, revwidth=revwidth, mode='ab')
             if fp != template:
                 shouldclose = True
-        if fp != sys.stdout and util.safehasattr(fp, 'name'):
+        if fp and fp != sys.stdout and util.safehasattr(fp, 'name'):
             repo.ui.note("%s\n" % fp.name)
 
-        fp.write("# HG changeset patch\n")
-        fp.write("# User %s\n" % ctx.user())
-        fp.write("# Date %d %d\n" % ctx.date())
-        if branch and branch != 'default':
-            fp.write("# Branch %s\n" % branch)
-        fp.write("# Node ID %s\n" % hex(node))
-        fp.write("# Parent  %s\n" % hex(prev))
-        if len(parents) > 1:
-            fp.write("# Parent  %s\n" % hex(parents[1]))
-        fp.write(ctx.description().rstrip())
-        fp.write("\n\n")
+        if not fp:
+            write = repo.ui.write
+        else:
+            def write(s, **kw):
+                fp.write(s)
 
-        for chunk in patch.diff(repo, prev, node, opts=opts):
-            fp.write(chunk)
+
+        write("# HG changeset patch\n")
+        write("# User %s\n" % ctx.user())
+        write("# Date %d %d\n" % ctx.date())
+        if branch and branch != 'default':
+            write("# Branch %s\n" % branch)
+        write("# Node ID %s\n" % hex(node))
+        write("# Parent  %s\n" % hex(prev))
+        if len(parents) > 1:
+            write("# Parent  %s\n" % hex(parents[1]))
+        write(ctx.description().rstrip())
+        write("\n\n")
+
+        for chunk, label in patch.diffui(repo, prev, node, opts=opts):
+            write(chunk, label=label)
 
         if shouldclose:
             fp.close()
@@ -618,7 +627,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                 # subpath. The best we can do is to ignore it.
                 tempnode2 = None
             submatch = matchmod.narrowmatcher(subpath, match)
-            sub.diff(diffopts, tempnode2, submatch, changes=changes,
+            sub.diff(ui, diffopts, tempnode2, submatch, changes=changes,
                      stat=stat, fp=fp, prefix=prefix)
 
 class changeset_printer(object):
@@ -678,55 +687,71 @@ class changeset_printer(object):
         parents = [(p, hexfunc(log.node(p)))
                    for p in self._meaningful_parentrevs(log, rev)]
 
+        # i18n: column positioning for "hg log"
         self.ui.write(_("changeset:   %d:%s\n") % (rev, hexfunc(changenode)),
-                      label='log.changeset')
+                      label='log.changeset changeset.%s' % ctx.phasestr())
 
         branch = ctx.branch()
         # don't show the default branch name
         if branch != 'default':
+            # i18n: column positioning for "hg log"
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
         for bookmark in self.repo.nodebookmarks(changenode):
+            # i18n: column positioning for "hg log"
             self.ui.write(_("bookmark:    %s\n") % bookmark,
                     label='log.bookmark')
         for tag in self.repo.nodetags(changenode):
+            # i18n: column positioning for "hg log"
             self.ui.write(_("tag:         %s\n") % tag,
                           label='log.tag')
         if self.ui.debugflag and ctx.phase():
+            # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % _(ctx.phasestr()),
                           label='log.phase')
         for parent in parents:
+            # i18n: column positioning for "hg log"
             self.ui.write(_("parent:      %d:%s\n") % parent,
-                          label='log.parent')
+                          label='log.parent changeset.%s' % ctx.phasestr())
 
         if self.ui.debugflag:
             mnode = ctx.manifestnode()
+            # i18n: column positioning for "hg log"
             self.ui.write(_("manifest:    %d:%s\n") %
                           (self.repo.manifest.rev(mnode), hex(mnode)),
                           label='ui.debug log.manifest')
+        # i18n: column positioning for "hg log"
         self.ui.write(_("user:        %s\n") % ctx.user(),
                       label='log.user')
+        # i18n: column positioning for "hg log"
         self.ui.write(_("date:        %s\n") % date,
                       label='log.date')
 
         if self.ui.debugflag:
             files = self.repo.status(log.parents(changenode)[0], changenode)[:3]
-            for key, value in zip([_("files:"), _("files+:"), _("files-:")],
-                                  files):
+            for key, value in zip([# i18n: column positioning for "hg log"
+                                   _("files:"),
+                                   # i18n: column positioning for "hg log"
+                                   _("files+:"),
+                                   # i18n: column positioning for "hg log"
+                                   _("files-:")], files):
                 if value:
                     self.ui.write("%-12s %s\n" % (key, " ".join(value)),
                                   label='ui.debug log.files')
         elif ctx.files() and self.ui.verbose:
+            # i18n: column positioning for "hg log"
             self.ui.write(_("files:       %s\n") % " ".join(ctx.files()),
                           label='ui.note log.files')
         if copies and self.ui.verbose:
             copies = ['%s (%s)' % c for c in copies]
+            # i18n: column positioning for "hg log"
             self.ui.write(_("copies:      %s\n") % ' '.join(copies),
                           label='ui.note log.copies')
 
         extra = ctx.extra()
         if extra and self.ui.debugflag:
             for key, value in sorted(extra.items()):
+                # i18n: column positioning for "hg log"
                 self.ui.write(_("extra:       %s=%s\n")
                               % (key, value.encode('string_escape')),
                               label='ui.debug log.extra')
@@ -740,6 +765,7 @@ class changeset_printer(object):
                               label='ui.note log.description')
                 self.ui.write("\n\n")
             else:
+                # i18n: column positioning for "hg log"
                 self.ui.write(_("summary:     %s\n") %
                               description.splitlines()[0],
                               label='log.summary')
@@ -991,12 +1017,13 @@ def walkchangerevs(repo, match, opts, prepare):
 
     if not len(repo):
         return []
-
-    if follow:
-        defrange = '%s:0' % repo['.'].rev()
+    if opts.get('rev'):
+        revs = scmutil.revrange(repo, opts.get('rev'))
+    elif follow:
+        revs = repo.revs('reverse(:.)')
     else:
-        defrange = '-1:0'
-    revs = scmutil.revrange(repo, opts.get('rev') or [defrange])
+        revs = list(repo)
+        revs.reverse()
     if not revs:
         return []
     wanted = set()
@@ -1102,6 +1129,17 @@ def walkchangerevs(repo, match, opts, prepare):
                 wanted.add(rev)
                 if copied:
                     copies.append(copied)
+
+        # We decided to fall back to the slowpath because at least one
+        # of the paths was not a file. Check to see if at least one of them
+        # existed in history, otherwise simply return
+        if slowpath:
+            for path in match.files():
+                if path == '.' or path in repo.store:
+                    break
+                else:
+                    return []
+
     if slowpath:
         # We have to read the changelog to match filenames against
         # changed files
@@ -1258,7 +1296,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
     opts['branch'] = opts.get('branch', []) + opts.get('only_branch', [])
     opts['branch'] = [repo.lookupbranch(b) for b in opts['branch']]
     # pats/include/exclude are passed to match.match() directly in
-    # _matchfile() revset but walkchangerevs() builds its matcher with
+    # _matchfiles() revset but walkchangerevs() builds its matcher with
     # scmutil.match(). The difference is input pats are globbed on
     # platforms without shell expansion (windows).
     pctx = repo[None]
@@ -1277,6 +1315,18 @@ def _makegraphlogrevset(repo, pats, opts, revs):
                     raise util.Abort(
                         _('cannot follow nonexistent file: "%s"') % f)
                 slowpath = True
+
+        # We decided to fall back to the slowpath because at least one
+        # of the paths was not a file. Check to see if at least one of them
+        # existed in history - in that case, we'll continue down the
+        # slowpath; otherwise, we can turn off the slowpath
+        if slowpath:
+            for path in match.files():
+                if path == '.' or path in repo.store:
+                    break
+            else:
+                slowpath = False
+
     if slowpath:
         # See walkchangerevs() slow path.
         #
@@ -1304,7 +1354,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
             fnopats = (('_ancestors', '_fancestors'),
                        ('_descendants', '_fdescendants'))
             if pats:
-                # follow() revset inteprets its file argument as a
+                # follow() revset interprets its file argument as a
                 # manifest entry, so use match.files(), not pats.
                 opts[fpats[followfirst]] = list(match.files())
             else:
@@ -1384,9 +1434,10 @@ def getgraphlogrevs(repo, pats, opts):
         revs = scmutil.revrange(repo, opts['rev'])
     else:
         if follow and len(repo) > 0:
-            revs = scmutil.revrange(repo, ['.:0'])
+            revs = repo.revs('reverse(:.)')
         else:
-            revs = range(len(repo) - 1, -1, -1)
+            revs = list(repo.changelog)
+            revs.reverse()
     if not revs:
         return iter([]), None, None
     expr, filematcher = _makegraphlogrevset(repo, pats, opts, revs)
@@ -1568,135 +1619,170 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
 
-    wlock = repo.wlock()
+    wlock = lock = None
     try:
-        # First, do a regular commit to record all changes in the working
-        # directory (if there are any)
-        ui.callhooks = False
+        wlock = repo.wlock()
+        lock = repo.lock()
+        tr = repo.transaction('amend')
         try:
-            node = commit(ui, repo, commitfunc, pats, opts)
-        finally:
-            ui.callhooks = True
-        ctx = repo[node]
-
-        # Participating changesets:
-        #
-        # node/ctx o - new (intermediate) commit that contains changes from
-        #          |   working dir to go into amending commit (or a workingctx
-        #          |   if there were no changes)
-        #          |
-        # old      o - changeset to amend
-        #          |
-        # base     o - parent of amending changeset
-
-        # Update extra dict from amended commit (e.g. to preserve graft source)
-        extra.update(old.extra())
-
-        # Also update it from the intermediate commit or from the wctx
-        extra.update(ctx.extra())
-
-        files = set(old.files())
-
-        # Second, we use either the commit we just did, or if there were no
-        # changes the parent of the working directory as the version of the
-        # files in the final amend commit
-        if node:
-            ui.note(_('copying changeset %s to %s\n') % (ctx, base))
-
-            user = ctx.user()
-            date = ctx.date()
-            message = ctx.description()
-            # Recompute copies (avoid recording a -> b -> a)
-            copied = copies.pathcopies(base, ctx)
-
-            # Prune files which were reverted by the updates: if old introduced
-            # file X and our intermediate commit, node, renamed that file, then
-            # those two files are the same and we can discard X from our list
-            # of files. Likewise if X was deleted, it's no longer relevant
-            files.update(ctx.files())
-
-            def samefile(f):
-                if f in ctx.manifest():
-                    a = ctx.filectx(f)
-                    if f in base.manifest():
-                        b = base.filectx(f)
-                        return (not a.cmp(b)
-                                and a.flags() == b.flags())
-                    else:
-                        return False
-                else:
-                    return f not in base.manifest()
-            files = [f for f in files if not samefile(f)]
-
-            def filectxfn(repo, ctx_, path):
-                try:
-                    fctx = ctx[path]
-                    flags = fctx.flags()
-                    mctx = context.memfilectx(fctx.path(), fctx.data(),
-                                              islink='l' in flags,
-                                              isexec='x' in flags,
-                                              copied=copied.get(path))
-                    return mctx
-                except KeyError:
-                    raise IOError
-        else:
-            ui.note(_('copying changeset %s to %s\n') % (old, base))
-
-            # Use version of files as in the old cset
-            def filectxfn(repo, ctx_, path):
-                try:
-                    return old.filectx(path)
-                except KeyError:
-                    raise IOError
-
             # See if we got a message from -m or -l, if not, open the editor
             # with the message of the changeset to amend
-            user = opts.get('user') or old.user()
-            date = opts.get('date') or old.date()
             message = logmessage(ui, opts)
+            # ensure logfile does not conflict with later enforcement of the
+            # message. potential logfile content has been processed by
+            # `logmessage` anyway.
+            opts.pop('logfile')
+            # First, do a regular commit to record all changes in the working
+            # directory (if there are any)
+            ui.callhooks = False
+            try:
+                opts['message'] = 'temporary amend commit for %s' % old
+                node = commit(ui, repo, commitfunc, pats, opts)
+            finally:
+                ui.callhooks = True
+            ctx = repo[node]
+
+            # Participating changesets:
+            #
+            # node/ctx o - new (intermediate) commit that contains changes
+            #          |   from working dir to go into amending commit
+            #          |   (or a workingctx if there were no changes)
+            #          |
+            # old      o - changeset to amend
+            #          |
+            # base     o - parent of amending changeset
+
+            # Update extra dict from amended commit (e.g. to preserve graft
+            # source)
+            extra.update(old.extra())
+
+            # Also update it from the intermediate commit or from the wctx
+            extra.update(ctx.extra())
+
+            files = set(old.files())
+
+            # Second, we use either the commit we just did, or if there were no
+            # changes the parent of the working directory as the version of the
+            # files in the final amend commit
+            if node:
+                ui.note(_('copying changeset %s to %s\n') % (ctx, base))
+
+                user = ctx.user()
+                date = ctx.date()
+                # Recompute copies (avoid recording a -> b -> a)
+                copied = copies.pathcopies(base, ctx)
+
+                # Prune files which were reverted by the updates: if old
+                # introduced file X and our intermediate commit, node,
+                # renamed that file, then those two files are the same and
+                # we can discard X from our list of files. Likewise if X
+                # was deleted, it's no longer relevant
+                files.update(ctx.files())
+
+                def samefile(f):
+                    if f in ctx.manifest():
+                        a = ctx.filectx(f)
+                        if f in base.manifest():
+                            b = base.filectx(f)
+                            return (not a.cmp(b)
+                                    and a.flags() == b.flags())
+                        else:
+                            return False
+                    else:
+                        return f not in base.manifest()
+                files = [f for f in files if not samefile(f)]
+
+                def filectxfn(repo, ctx_, path):
+                    try:
+                        fctx = ctx[path]
+                        flags = fctx.flags()
+                        mctx = context.memfilectx(fctx.path(), fctx.data(),
+                                                  islink='l' in flags,
+                                                  isexec='x' in flags,
+                                                  copied=copied.get(path))
+                        return mctx
+                    except KeyError:
+                        raise IOError
+            else:
+                ui.note(_('copying changeset %s to %s\n') % (old, base))
+
+                # Use version of files as in the old cset
+                def filectxfn(repo, ctx_, path):
+                    try:
+                        return old.filectx(path)
+                    except KeyError:
+                        raise IOError
+
+                user = opts.get('user') or old.user()
+                date = opts.get('date') or old.date()
+            editmsg = False
             if not message:
-                cctx = context.workingctx(repo, old.description(), user, date,
-                                          extra,
-                                          repo.status(base.node(), old.node()))
-                message = commitforceeditor(repo, cctx, [])
+                editmsg = True
+                message = old.description()
 
-        new = context.memctx(repo,
-                             parents=[base.node(), nullid],
-                             text=message,
-                             files=files,
-                             filectxfn=filectxfn,
-                             user=user,
-                             date=date,
-                             extra=extra)
-        ph = repo.ui.config('phases', 'new-commit', phases.draft)
-        try:
-            repo.ui.setconfig('phases', 'new-commit', old.phase())
-            newid = repo.commitctx(new)
+            pureextra = extra.copy()
+            extra['amend_source'] = old.hex()
+
+            new = context.memctx(repo,
+                                 parents=[base.node(), nullid],
+                                 text=message,
+                                 files=files,
+                                 filectxfn=filectxfn,
+                                 user=user,
+                                 date=date,
+                                 extra=extra)
+            if editmsg:
+                new._text = commitforceeditor(repo, new, [])
+
+            newdesc =  changelog.stripdesc(new.description())
+            if ((not node)
+                and newdesc == old.description()
+                and user == old.user()
+                and date == old.date()
+                and pureextra == old.extra()):
+                # nothing changed. continuing here would create a new node
+                # anyway because of the amend_source noise.
+                #
+                # This not what we expect from amend.
+                return old.node()
+
+            ph = repo.ui.config('phases', 'new-commit', phases.draft)
+            try:
+                repo.ui.setconfig('phases', 'new-commit', old.phase())
+                newid = repo.commitctx(new)
+            finally:
+                repo.ui.setconfig('phases', 'new-commit', ph)
+            if newid != old.node():
+                # Reroute the working copy parent to the new changeset
+                repo.setparents(newid, nullid)
+
+                # Move bookmarks from old parent to amend commit
+                bms = repo.nodebookmarks(old.node())
+                if bms:
+                    for bm in bms:
+                        repo._bookmarks[bm] = newid
+                    bookmarks.write(repo)
+            #commit the whole amend process
+            if obsolete._enabled and newid != old.node():
+                # mark the new changeset as successor of the rewritten one
+                new = repo[newid]
+                obs = [(old, (new,))]
+                if node:
+                    obs.append((ctx, ()))
+
+                obsolete.createmarkers(repo, obs)
+            tr.close()
         finally:
-            repo.ui.setconfig('phases', 'new-commit', ph)
-        if newid != old.node():
-            # Reroute the working copy parent to the new changeset
-            repo.setparents(newid, nullid)
-
-            # Move bookmarks from old parent to amend commit
-            bms = repo.nodebookmarks(old.node())
-            if bms:
-                for bm in bms:
-                    repo._bookmarks[bm] = newid
-                bookmarks.write(repo)
-
+            tr.release()
+        if (not obsolete._enabled) and newid != old.node():
             # Strip the intermediate commit (if there was one) and the amended
             # commit
-            lock = repo.lock()
-            try:
-                if node:
-                    ui.note(_('stripping intermediate changeset %s\n') % ctx)
-                ui.note(_('stripping amended changeset %s\n') % old)
-                repair.strip(ui, repo, old.node(), topic='amend-backup')
-            finally:
-                lock.release()
+            if node:
+                ui.note(_('stripping intermediate changeset %s\n') % ctx)
+            ui.note(_('stripping amended changeset %s\n') % old)
+            repair.strip(ui, repo, old.node(), topic='amend-backup')
     finally:
-        wlock.release()
+        lockmod.release(wlock, lock)
     return newid
 
 def commiteditor(repo, ctx, subs):

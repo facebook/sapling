@@ -386,6 +386,13 @@ _hg_cmd_qsave()
     fi
 }
 
+_hg_cmd_rebase() {
+   if [[ "$prev" = @(-s|--source|-d|--dest|-b|--base|-r|--rev) ]]; then
+       _hg_labels
+       return
+   fi
+}
+
 _hg_cmd_strip()
 {
     _hg_labels

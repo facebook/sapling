@@ -43,7 +43,7 @@ def _create_auth_baton(pool):
         svn.client.get_ssl_client_cert_pw_file_provider(pool),
         svn.client.get_ssl_server_trust_file_provider(pool),
         ]
-    # Platform-dependant authentication methods
+    # Platform-dependent authentication methods
     getprovider = getattr(svn.core, 'svn_auth_get_platform_specific_provider',
                           None)
     if getprovider:

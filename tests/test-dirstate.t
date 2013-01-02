@@ -52,5 +52,11 @@ Status must not set a's entry to unset (issue1790):
   $ hg status
   $ hg debugstate
   n 644          2 2021-01-01 12:00:00 a
-  $ cd ..
+
+Test modulo storage/comparison of absurd dates:
+
+  $ touch -t 195001011200 a
+  $ hg st
+  $ hg debugstate
+  n 644          2 2018-01-19 15:14:08 a
 

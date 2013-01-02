@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
@@ -631,4 +631,8 @@ test transplanting a patch turning into a no-op
   applying 7a7d57e15850
   skipping emptied changeset 7a7d57e15850
   $ cd ..
+
+Explicitly kill daemons to let the test exit on Windows
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 

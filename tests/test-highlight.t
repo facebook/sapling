@@ -545,7 +545,7 @@ hgweb highlightcss friendly
 errors encountered
 
   $ cat errors.log
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 Change the pygments style
 
@@ -579,7 +579,7 @@ errors encountered
   $ hg ci -Ama
   adding eucjp.txt
   $ hgserveget () {
-  >     "$TESTDIR/killdaemons.py"
+  >     "$TESTDIR/killdaemons.py" $DAEMON_PIDS
   >     echo % HGENCODING="$1" hg serve
   >     HGENCODING="$1" hg serve -p $HGPORT -d -n test --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS

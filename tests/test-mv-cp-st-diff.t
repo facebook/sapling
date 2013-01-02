@@ -187,7 +187,7 @@ $4 - test description
   +y1
   
   
-  $ tb "add a a1" "add a a2" "hg cp a b" "copy in working dir" 
+  $ tb "add a a1" "add a a2" "hg cp a b" "copy in working dir"
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   created new head

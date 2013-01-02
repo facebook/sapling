@@ -12,7 +12,7 @@ import os
 import shutil
 
 from mercurial import util, match as match_, hg, node, context, error, \
-    cmdutil, scmutil
+    cmdutil, scmutil, commands
 from mercurial.i18n import _
 from mercurial.lock import release
 
@@ -65,7 +65,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
         dstlock = rdst.lock()
 
         # Get a list of all changesets in the source.  The easy way to do this
-        # is to simply walk the changelog, using changelog.nodesbewteen().
+        # is to simply walk the changelog, using changelog.nodesbetween().
         # Take a look at mercurial/revlog.py:639 for more details.
         # Use a generator instead of a list to decrease memory usage
         ctxs = (rsrc[ctx] for ctx in rsrc.changelog.nodesbetween(None,
@@ -141,7 +141,17 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
 
             hash = fctx.data().strip()
             path = lfutil.findfile(rsrc, hash)
-            ### TODO: What if the file is not cached?
+
+            # If one file is missing, likely all files from this rev are
+            if path is None:
+                cachelfiles(ui, rsrc, ctx.node())
+                path = lfutil.findfile(rsrc, hash)
+
+                if path is None:
+                    raise util.Abort(
+                        _("missing largefile \'%s\' from revision %s")
+                         % (f, node.hex(ctx.node())))
+
             data = ''
             fd = None
             try:
@@ -177,7 +187,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
         if f not in lfiles and f not in normalfiles:
             islfile = _islfile(f, ctx, matcher, size)
             # If this file was renamed or copied then copy
-            # the lfileness of its predecessor
+            # the largefile-ness of its predecessor
             if f in ctx.manifest():
                 fctx = ctx.filectx(f)
                 renamed = fctx.renamed()
@@ -389,7 +399,7 @@ def cachelfiles(ui, repo, node, filelist=None):
         # If we are mid-merge, then we have to trust the standin that is in the
         # working copy to have the correct hashvalue.  This is because the
         # original hg.merge() already updated the standin as part of the normal
-        # merge process -- we just have to udpate the largefile to match.
+        # merge process -- we just have to update the largefile to match.
         if (getattr(repo, "_ismerging", False) and
              os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
             expectedhash = lfutil.readstandin(repo, lfile)
@@ -444,11 +454,13 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
             cachelfiles(ui, repo, '.', lfiles)
 
         updated, removed = 0, 0
-        for i in map(lambda f: _updatelfile(repo, lfdirstate, f), lfiles):
-            # increment the appropriate counter according to _updatelfile's
-            # return value
-            updated += i > 0 and i or 0
-            removed -= i < 0 and i or 0
+        for f in lfiles:
+            i = _updatelfile(repo, lfdirstate, f)
+            if i:
+                if i > 0:
+                    updated += i
+                else:
+                    removed -= i
             if printmessage and (removed or updated) and not printed:
                 ui.status(_('getting changed largefiles\n'))
                 printed = True
@@ -547,3 +559,5 @@ cmdtable = {
                   ],
                   _('hg lfconvert SOURCE DEST [FILE ...]')),
     }
+
+commands.inferrepo += " lfconvert"

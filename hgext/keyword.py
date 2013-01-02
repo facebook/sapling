@@ -7,7 +7,7 @@
 #
 # $Id$
 #
-# Keyword expansion hack against the grain of a DSCM
+# Keyword expansion hack against the grain of a Distributed SCM
 #
 # There are many good reasons why this is not needed in a distributed
 # SCM, still it may be useful in very small projects based on single
@@ -89,6 +89,7 @@ from mercurial.i18n import _
 import os, re, shutil, tempfile
 
 commands.optionalrepo += ' kwdemo'
+commands.inferrepo += ' kwexpand kwfiles kwshrink'
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -117,7 +118,7 @@ colortable = {
 def utcdate(text):
     ''':utcdate: Date. Returns a UTC-date in this format: "2009/08/18 11:00:13".
     '''
-    return util.datestr((text[0], 0), '%Y/%m/%d %H:%M:%S')
+    return util.datestr((util.parsedate(text)[0], 0), '%Y/%m/%d %H:%M:%S')
 # date like in svn's $Date
 def svnisodate(text):
     ''':svnisodate: Date. Returns a date in this format: "2009-08-18 13:00:13
@@ -129,7 +130,7 @@ def svnutcdate(text):
     ''':svnutcdate: Date. Returns a UTC-date in this format: "2009-08-18
     11:00:13Z".
     '''
-    return util.datestr((text[0], 0), '%Y-%m-%d %H:%M:%SZ')
+    return util.datestr((util.parsedate(text)[0], 0), '%Y-%m-%d %H:%M:%SZ')
 
 templatefilters.filters.update({'utcdate': utcdate,
                                 'svnisodate': svnisodate,
@@ -168,7 +169,7 @@ def _shrinktext(text, subfunc):
     return subfunc(r'$\1$', text)
 
 def _preselect(wstatus, changed):
-    '''Retrieves modfied and added files from a working directory state
+    '''Retrieves modified and added files from a working directory state
     and returns the subset of each contained in given changed files
     retrieved from a change context.'''
     modified, added = wstatus[:2]

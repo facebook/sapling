@@ -25,7 +25,7 @@ var colors = [
 function Graph() {
 	
 	this.canvas = document.getElementById('graph');
-	if (navigator.userAgent.indexOf('MSIE') >= 0) this.canvas = window.G_vmlCanvasManager.initElement(this.canvas);
+	if (window.G_vmlCanvasManager) this.canvas = window.G_vmlCanvasManager.initElement(this.canvas);
 	this.ctx = this.canvas.getContext('2d');
 	this.ctx.strokeStyle = 'rgb(0, 0, 0)';
 	this.ctx.fillStyle = 'rgb(0, 0, 0)';

@@ -32,7 +32,7 @@ class HTTPRangeHandler(urllib2.BaseHandler):
 
     This was extremely simple. The Range header is a HTTP feature to
     begin with so all this class does is tell urllib2 that the
-    "206 Partial Content" reponse from the HTTP server is what we
+    "206 Partial Content" response from the HTTP server is what we
     expected.
 
     Example:
@@ -64,7 +64,7 @@ class HTTPRangeHandler(urllib2.BaseHandler):
 
 class RangeableFileObject(object):
     """File object wrapper to enable raw range handling.
-    This was implemented primarilary for handling range
+    This was implemented primarily for handling range
     specifications for file:// urls. This object effectively makes
     a file object look like it consists only of a range of bytes in
     the stream.
@@ -431,7 +431,7 @@ def range_tuple_normalize(range_tup):
     Return a tuple whose first element is guaranteed to be an int
     and whose second element will be '' (meaning: the last byte) or
     an int. Finally, return None if the normalized tuple == (0,'')
-    as that is equivelant to retrieving the entire file.
+    as that is equivalent to retrieving the entire file.
     """
     if range_tup is None:
         return None

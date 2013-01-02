@@ -260,31 +260,33 @@ Enable progress extension for archive tests:
 Test archiving to a directory tree (the doubled lines in the output
 only show up in the test output, not in real usage):
 
-  $ hg archive --subrepos ../archive 2>&1 | "$TESTDIR/filtercr.py"
-  
-  archiving [                                           ] 0/3
-  archiving [                                           ] 0/3
-  archiving [=============>                             ] 1/3
-  archiving [=============>                             ] 1/3
-  archiving [===========================>               ] 2/3
-  archiving [===========================>               ] 2/3
-  archiving [==========================================>] 3/3
-  archiving [==========================================>] 3/3
-                                                              
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [====================================>] 3/3
-  archiving (foo) [====================================>] 3/3
-                                                              
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-                                                              \r (esc)
+  $ hg archive --subrepos ../archive
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+                                                              \r (no-eol) (esc)
   $ find ../archive | sort
   ../archive
   ../archive/.hg_archival.txt
@@ -300,65 +302,69 @@ only show up in the test output, not in real usage):
 
 Test archiving to zip file (unzip output is unstable):
 
-  $ hg archive --subrepos ../archive.zip 2>&1 | "$TESTDIR/filtercr.py"
-  
-  archiving [                                           ] 0/3
-  archiving [                                           ] 0/3
-  archiving [=============>                             ] 1/3
-  archiving [=============>                             ] 1/3
-  archiving [===========================>               ] 2/3
-  archiving [===========================>               ] 2/3
-  archiving [==========================================>] 3/3
-  archiving [==========================================>] 3/3
-                                                              
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [====================================>] 3/3
-  archiving (foo) [====================================>] 3/3
-                                                              
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-                                                              \r (esc)
+  $ hg archive --subrepos ../archive.zip
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+                                                              \r (no-eol) (esc)
 
 Test archiving a revision that references a subrepo that is not yet
 cloned:
 
   $ hg clone -U . ../empty
   $ cd ../empty
-  $ hg archive --subrepos -r tip ../archive.tar.gz 2>&1 | "$TESTDIR/filtercr.py"
-  
-  archiving [                                           ] 0/3
-  archiving [                                           ] 0/3
-  archiving [=============>                             ] 1/3
-  archiving [=============>                             ] 1/3
-  archiving [===========================>               ] 2/3
-  archiving [===========================>               ] 2/3
-  archiving [==========================================>] 3/3
-  archiving [==========================================>] 3/3
-                                                              
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [                                     ] 0/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [===========>                         ] 1/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [=======================>             ] 2/3
-  archiving (foo) [====================================>] 3/3
-  archiving (foo) [====================================>] 3/3
-                                                              
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [                                 ] 0/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-  archiving (foo/bar) [================================>] 1/1 (glob)
-                                                              
+  $ hg archive --subrepos -r tip ../archive.tar.gz
+  \r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [                                           ] 0/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [=============>                             ] 1/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [===========================>               ] 2/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+  archiving [==========================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [                                     ] 0/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [===========>                         ] 1/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [=======================>             ] 2/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+  archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
+                                                              \r (no-eol) (esc)
   cloning subrepo foo from $TESTTMP/repo/foo
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
-  
+
 The newly cloned subrepos contain no working copy:
 
   $ hg -R foo summary

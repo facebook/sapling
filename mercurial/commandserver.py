@@ -137,7 +137,7 @@ class server(object):
         if logpath:
             global logfile
             if logpath == '-':
-                # write log on a special 'd'ebug channel
+                # write log on a special 'd' (debug) channel
                 logfile = channeledoutput(sys.stdout, sys.stdout, 'd')
             else:
                 logfile = open(logpath, 'a')

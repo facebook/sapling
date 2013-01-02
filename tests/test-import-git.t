@@ -322,12 +322,12 @@ Multiple binary files:
 
 Filenames with spaces:
 
-  $ hg import -d "1000000 0" -m spaces - <<EOF
+  $ sed 's,EOL$,,g' <<EOF | hg import -d "1000000 0" -m spaces -
   > diff --git a/foo bar b/foo bar
   > new file mode 100644
   > index 0000000..257cc56
   > --- /dev/null
-  > +++ b/foo bar	
+  > +++ b/foo bar	EOL
   > @@ -0,0 +1 @@
   > +foo
   > EOF
@@ -384,7 +384,7 @@ Move text file and patch as binary
   b
   \x00 (no-eol) (esc)
 
-  $ hg st --copies --change . 
+  $ hg st --copies --change .
   A binary2
     text2
   R text2

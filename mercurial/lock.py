@@ -97,7 +97,12 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        locker = util.readlock(self.f)
+        try:
+            locker = util.readlock(self.f)
+        except OSError, why:
+            if why.errno == errno.ENOENT:
+                return None
+            raise
         try:
             host, pid = locker.split(":", 1)
         except ValueError:
@@ -122,8 +127,8 @@ class lock(object):
     def release(self):
         """release the lock and execute callback function if any
 
-        If the lock have been aquired multiple time, the actual release is
-        delayed to the last relase call."""
+        If the lock has been acquired multiple times, the actual release is
+        delayed to the last release call."""
         if self.held > 1:
             self.held -= 1
         elif self.held == 1:

@@ -8,44 +8,43 @@ plain
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.refresh=0 \
   > --config progress.format=topic,bar,number \
-  > --config progress.width=60 2>&1 | \
-  > python "$TESTDIR/filtercr.py"
-  
-  building [                                          ]  0/12
-  building [                                          ]  0/12
-  building [                                          ]  0/12
-  building [                                          ]  0/12
-  building [==>                                       ]  1/12
-  building [==>                                       ]  1/12
-  building [==>                                       ]  1/12
-  building [==>                                       ]  1/12
-  building [======>                                   ]  2/12
-  building [======>                                   ]  2/12
-  building [=========>                                ]  3/12
-  building [=========>                                ]  3/12
-  building [=============>                            ]  4/12
-  building [=============>                            ]  4/12
-  building [=============>                            ]  4/12
-  building [=============>                            ]  4/12
-  building [=============>                            ]  4/12
-  building [=============>                            ]  4/12
-  building [================>                         ]  5/12
-  building [================>                         ]  5/12
-  building [====================>                     ]  6/12
-  building [====================>                     ]  6/12
-  building [=======================>                  ]  7/12
-  building [=======================>                  ]  7/12
-  building [===========================>              ]  8/12
-  building [===========================>              ]  8/12
-  building [===========================>              ]  8/12
-  building [===========================>              ]  8/12
-  building [==============================>           ]  9/12
-  building [==============================>           ]  9/12
-  building [==================================>       ] 10/12
-  building [==================================>       ] 10/12
-  building [=====================================>    ] 11/12
-  building [=====================================>    ] 11/12
-                                                              \r (esc)
+  > --config progress.width=60
+  \r (no-eol) (esc)
+  building [                                          ]  0/12\r (no-eol) (esc)
+  building [                                          ]  0/12\r (no-eol) (esc)
+  building [                                          ]  0/12\r (no-eol) (esc)
+  building [                                          ]  0/12\r (no-eol) (esc)
+  building [==>                                       ]  1/12\r (no-eol) (esc)
+  building [==>                                       ]  1/12\r (no-eol) (esc)
+  building [==>                                       ]  1/12\r (no-eol) (esc)
+  building [==>                                       ]  1/12\r (no-eol) (esc)
+  building [======>                                   ]  2/12\r (no-eol) (esc)
+  building [======>                                   ]  2/12\r (no-eol) (esc)
+  building [=========>                                ]  3/12\r (no-eol) (esc)
+  building [=========>                                ]  3/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [=============>                            ]  4/12\r (no-eol) (esc)
+  building [================>                         ]  5/12\r (no-eol) (esc)
+  building [================>                         ]  5/12\r (no-eol) (esc)
+  building [====================>                     ]  6/12\r (no-eol) (esc)
+  building [====================>                     ]  6/12\r (no-eol) (esc)
+  building [=======================>                  ]  7/12\r (no-eol) (esc)
+  building [=======================>                  ]  7/12\r (no-eol) (esc)
+  building [===========================>              ]  8/12\r (no-eol) (esc)
+  building [===========================>              ]  8/12\r (no-eol) (esc)
+  building [===========================>              ]  8/12\r (no-eol) (esc)
+  building [===========================>              ]  8/12\r (no-eol) (esc)
+  building [==============================>           ]  9/12\r (no-eol) (esc)
+  building [==============================>           ]  9/12\r (no-eol) (esc)
+  building [==================================>       ] 10/12\r (no-eol) (esc)
+  building [==================================>       ] 10/12\r (no-eol) (esc)
+  building [=====================================>    ] 11/12\r (no-eol) (esc)
+  building [=====================================>    ] 11/12\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
 
 tags
   $ cat .hg/localtags

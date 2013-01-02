@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
 hide outer repo
   $ hg init
@@ -151,3 +151,6 @@ test --mq works and uses correct repository config
   [1]
   $ hg --cwd d log --mq --template '{rev} {desc|firstline}\n'
   0 b.patch
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+

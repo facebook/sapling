@@ -328,7 +328,7 @@ def spawndetached(args):
     env += '\0'
 
     args = subprocess.list2cmdline(args)
-    # Not running the command in shell mode makes python26 hang when
+    # Not running the command in shell mode makes Python 2.6 hang when
     # writing to hgweb output socket.
     comspec = os.environ.get("COMSPEC", "cmd.exe")
     args = comspec + " /c " + args

@@ -55,7 +55,7 @@ class basestore(object):
     def get(self, files):
         '''Get the specified largefiles from the store and write to local
         files under repo.root.  files is a list of (filename, hash)
-        tuples.  Return (success, missing), lists of files successfuly
+        tuples.  Return (success, missing), lists of files successfully
         downloaded and those not found in the store.  success is a list
         of (filename, hash) tuples; missing is a list of filenames that
         we could not get.  (The detailed error message will already have

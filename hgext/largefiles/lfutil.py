@@ -52,9 +52,8 @@ def repoforget(repo, list):
 
 def findoutgoing(repo, remote, force):
     from mercurial import discovery
-    common, _anyinc, _heads = discovery.findcommonincoming(repo,
-        remote.peer(), force=force)
-    return repo.changelog.findmissing(common)
+    outgoing = discovery.findcommonoutgoing(repo, remote.peer(), force=force)
+    return outgoing.missing
 
 # -- Private worker functions ------------------------------------------
 
@@ -141,7 +140,7 @@ class largefilesdirstate(dirstate.dirstate):
     def normallookup(self, f):
         return super(largefilesdirstate, self).normallookup(unixpath(f))
 
-def openlfdirstate(ui, repo):
+def openlfdirstate(ui, repo, create=True):
     '''
     Return a dirstate object that tracks largefiles: i.e. its root is
     the repo root, but it is saved in .hg/largefiles/dirstate.
@@ -154,7 +153,7 @@ def openlfdirstate(ui, repo):
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
     # largefiles operation in a new clone.
-    if not os.path.exists(os.path.join(admin, 'dirstate')):
+    if create and not os.path.exists(os.path.join(admin, 'dirstate')):
         util.makedirs(admin)
         matcher = getstandinmatcher(repo)
         for standin in dirstatewalk(repo.dirstate, matcher):
@@ -216,7 +215,7 @@ def copyfromcache(repo, hash, filename):
     return True
 
 def copytostore(repo, rev, file, uploaded=False):
-    hash = readstandin(repo, file)
+    hash = readstandin(repo, file, rev)
     if instore(repo, hash):
         return
     copytostoreabsolute(repo, repo.wjoin(file), hash)
@@ -235,7 +234,7 @@ def copytostoreabsolute(repo, file, hash):
     util.makedirs(os.path.dirname(storepath(repo, hash)))
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
-    else:
+    elif not getattr(repo, "_isconverting", False):
         dst = util.atomictempfile(storepath(repo, hash),
                                   createmode=repo.store.createmode)
         for chunk in util.filechunkiter(open(file, 'rb')):
@@ -296,8 +295,8 @@ def standin(filename):
     '''Return the repo-relative path to the standin for the specified big
     file.'''
     # Notes:
-    # 1) Most callers want an absolute path, but _createstandin() needs
-    #    it repo-relative so lfadd() can pass it to repoadd().  So leave
+    # 1) Some callers want an absolute path, but for instance addlargefiles
+    #    needs it repo-relative so it can be passed to repoadd().  So leave
     #    it up to the caller to use repo.wjoin() to get an absolute path.
     # 2) Join with '/' because that's what dirstate always uses, even on
     #    Windows. Change existing separator to '/' first in case we are
@@ -435,8 +434,11 @@ def unixpath(path):
     return util.pconvert(os.path.normpath(path))
 
 def islfilesrepo(repo):
-    return ('largefiles' in repo.requirements and
-            util.any(shortname + '/' in f[0] for f in repo.store.datafiles()))
+    if ('largefiles' in repo.requirements and
+            util.any(shortname + '/' in f[0] for f in repo.store.datafiles())):
+        return True
+
+    return util.any(openlfdirstate(repo.ui, repo, False))
 
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):

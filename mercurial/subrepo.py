@@ -330,7 +330,7 @@ class abstractsubrepo(object):
     def status(self, rev2, **opts):
         return [], [], [], [], [], [], []
 
-    def diff(self, diffopts, node2, match, prefix, **opts):
+    def diff(self, ui, diffopts, node2, match, prefix, **opts):
         pass
 
     def outgoing(self, ui, dest, opts):
@@ -395,7 +395,11 @@ class hgsubrepo(abstractsubrepo):
         if not os.path.exists(os.path.join(root, '.hg')):
             create = True
             util.makedirs(root)
-        self._repo = hg.repository(r.ui, root, create=create)
+        self._repo = hg.repository(r.baseui, root, create=create)
+        for s, k in [('ui', 'commitsubrepos')]:
+            v = r.ui.config(s, k)
+            if v:
+                self._repo.ui.setconfig(s, k, v)
         self._initrepo(r, state[0], create)
 
     def _initrepo(self, parentrepo, source, create):
@@ -433,14 +437,14 @@ class hgsubrepo(abstractsubrepo):
                                % (inst, subrelpath(self)))
             return [], [], [], [], [], [], []
 
-    def diff(self, diffopts, node2, match, prefix, **opts):
+    def diff(self, ui, diffopts, node2, match, prefix, **opts):
         try:
             node1 = node.bin(self._state[1])
             # We currently expect node2 to come from substate and be
             # in hex format
             if node2 is not None:
                 node2 = node.bin(node2)
-            cmdutil.diffordiffstat(self._repo.ui, self._repo, diffopts,
+            cmdutil.diffordiffstat(ui, self._repo, diffopts,
                                    node1, node2, match,
                                    prefix=os.path.join(prefix, self._path),
                                    listsubrepos=True, **opts)
@@ -497,13 +501,13 @@ class hgsubrepo(abstractsubrepo):
         if revision not in self._repo:
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
-            other = hg.peer(self._repo.ui, {}, srcurl)
+            other = hg.peer(self._repo, {}, srcurl)
             if len(self._repo) == 0:
                 self._repo.ui.status(_('cloning subrepo %s from %s\n')
                                      % (subrelpath(self), srcurl))
                 parentrepo = self._repo._subparent
                 shutil.rmtree(self._repo.path)
-                other, cloned = hg.clone(self._repo._subparent.ui, {},
+                other, cloned = hg.clone(self._repo._subparent.baseui, {},
                                          other, self._repo.root,
                                          update=False)
                 self._repo = cloned.local()
@@ -519,7 +523,7 @@ class hgsubrepo(abstractsubrepo):
         self._get(state)
         source, revision, kind = state
         self._repo.ui.debug("getting subrepo %s\n" % self._path)
-        hg.clean(self._repo, revision, False)
+        hg.updaterepo(self._repo, revision, overwrite)
 
     def merge(self, state):
         self._get(state)
@@ -562,7 +566,7 @@ class hgsubrepo(abstractsubrepo):
         dsturl = _abssource(self._repo, True)
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
-        other = hg.peer(self._repo.ui, {'ssh': ssh}, dsturl)
+        other = hg.peer(self._repo, {'ssh': ssh}, dsturl)
         return self._repo.push(other, force, newbranch=newbranch)
 
     def outgoing(self, ui, dest, opts):
@@ -655,6 +659,10 @@ class svnsubrepo(abstractsubrepo):
             cmd.append(path)
         env = dict(os.environ)
         # Avoid localized output, preserve current locale for everything else.
+        lc_all = env.get('LC_ALL')
+        if lc_all:
+            env['LANG'] = lc_all
+            del env['LC_ALL']
         env['LC_MESSAGES'] = 'C'
         p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -670,8 +678,8 @@ class svnsubrepo(abstractsubrepo):
 
     @propertycache
     def _svnversion(self):
-        output, err = self._svncommand(['--version'], filename=None)
-        m = re.search(r'^svn,\s+version\s+(\d+)\.(\d+)', output)
+        output, err = self._svncommand(['--version', '--quiet'], filename=None)
+        m = re.search(r'^(\d+)\.(\d+)', output)
         if not m:
             raise util.Abort(_('cannot retrieve svn tool version'))
         return (int(m.group(1)), int(m.group(2)))
@@ -888,7 +896,7 @@ class gitsubrepo(abstractsubrepo):
     def _gitnodir(self, commands, env=None, stream=False, cwd=None):
         """Calls the git command
 
-        The methods tries to call the git command. versions previor to 1.6.0
+        The methods tries to call the git command. versions prior to 1.6.0
         are not supported and very probably fail.
         """
         self._ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))

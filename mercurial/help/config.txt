@@ -604,9 +604,9 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``post-<command>``
   Run after successful invocations of the associated command. The
   contents of the command line are passed as ``$HG_ARGS`` and the result
-  code in ``$HG_RESULT``. Parsed command line arguments are passed as 
+  code in ``$HG_RESULT``. Parsed command line arguments are passed as
   ``$HG_PATS`` and ``$HG_OPTS``. These contain string representations of
-  the python data internally passed to <command>. ``$HG_OPTS`` is a 
+  the python data internally passed to <command>. ``$HG_OPTS`` is a
   dictionary of options (with unspecified options set to their defaults).
   ``$HG_PATS`` is a list of arguments. Hook failure is ignored.
 
@@ -616,7 +616,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain string
   representations of the data internally passed to <command>. ``$HG_OPTS``
   is a  dictionary of options (with unspecified options set to their
-  defaults). ``$HG_PATS`` is a list of arguments. If the hook returns 
+  defaults). ``$HG_PATS`` is a list of arguments. If the hook returns
   failure, the command doesn't execute and Mercurial returns the failure
   code.
 
@@ -922,6 +922,17 @@ the following entries.
 ``default-push``
     Optional. Directory or URL to use when pushing if no destination
     is specified.
+
+Custom paths can be defined by assigning the path to a name that later can be
+used from the command line. Example::
+
+    [paths]
+    my_path = http://example.com/path
+
+To push to the path defined in ``my_path`` run the command::
+
+    hg push my_path
+
 
 ``phases``
 ----------
@@ -1431,7 +1442,7 @@ The full set of options is:
     Example: ``http://hgserver/static/``.
 
 ``stripes``
-    How many lines a "zebra stripe" should span in multiline output.
+    How many lines a "zebra stripe" should span in multi-line output.
     Default is 1; set to 0 to disable.
 
 ``style``

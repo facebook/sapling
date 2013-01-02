@@ -23,6 +23,10 @@ pattern error
 
 simple
 
+  $ hg grep '.*'
+  port:4:export
+  port:4:vaportight
+  port:4:import/export
   $ hg grep port port
   port:4:export
   port:4:vaportight
@@ -32,9 +36,9 @@ simple with color
 
   $ hg --config extensions.color= grep --config color.mode=ansi \
   >     --color=always port port
-  port:4:ex\x1b[0;31;1mport\x1b[0m (esc)
-  port:4:va\x1b[0;31;1mport\x1b[0might (esc)
-  port:4:im\x1b[0;31;1mport\x1b[0m/export (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mex\x1b[0;31;1mport\x1b[0m (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mva\x1b[0;31;1mport\x1b[0might (esc)
+  \x1b[0;35mport\x1b[0m\x1b[0;36m:\x1b[0m\x1b[0;32m4\x1b[0m\x1b[0;36m:\x1b[0mim\x1b[0;31;1mport\x1b[0m/export (esc)
 
 all
 
@@ -51,6 +55,8 @@ all
 
 other
 
+  $ hg grep -l port port
+  port:4
   $ hg grep import port
   port:4:import/export
 

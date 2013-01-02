@@ -10,7 +10,7 @@ from i18n import _
 from lock import release
 from node import hex, nullid
 import localrepo, bundlerepo, httppeer, sshpeer, statichttprepo, bookmarks
-import lock, util, extensions, error, node, scmutil
+import lock, util, extensions, error, node, scmutil, phases, url
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -89,6 +89,13 @@ def islocal(repo):
             return False
     return repo.local()
 
+def openpath(ui, path):
+    '''open path with open if local, url.open if remote'''
+    if islocal(path):
+        return util.posixfile(util.urllocalpath(path), 'rb')
+    else:
+        return url.open(ui, path)
+
 def _peerorrepo(ui, path, create=False):
     """return a repository object for the specified path"""
     obj = _peerlookup(path).instance(ui, path, create)
@@ -115,7 +122,7 @@ def peer(uiorrepo, opts, path, create=False):
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
-    return os.path.basename(os.path.normpath(source))
+    return os.path.basename(os.path.normpath(util.url(source).path))
 
 def share(ui, source, dest=None, update=True):
     '''create a shared repository'''
@@ -303,7 +310,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
         copy = False
         if (srcrepo and srcrepo.cancopy() and islocal(dest)
-            and not srcrepo.revs("secret()")):
+            and not phases.hassecret(srcrepo)):
             copy = not pull and not rev
 
         if copy:
@@ -336,14 +343,25 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
 
             destlock = copystore(ui, srcrepo, destpath)
 
+            # Recomputing branch cache might be slow on big repos,
+            # so just copy it
+            dstcachedir = os.path.join(destpath, 'cache')
+            srcbranchcache = srcrepo.sjoin('cache/branchheads')
+            dstbranchcache = os.path.join(dstcachedir, 'branchheads')
+            if os.path.exists(srcbranchcache):
+                if not os.path.exists(dstcachedir):
+                    os.mkdir(dstcachedir)
+                util.copyfile(srcbranchcache, dstbranchcache)
+
             # we need to re-init the repo after manually copying the data
             # into it
-            destpeer = peer(ui, peeropts, dest)
+            destpeer = peer(srcrepo, peeropts, dest)
             srcrepo.hook('outgoing', source='clone',
                           node=node.hex(node.nullid))
         else:
             try:
-                destpeer = peer(ui, peeropts, dest, create=True)
+                destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
+                                # only pass ui when no srcrepo
             except OSError, inst:
                 if inst.errno == errno.EEXIST:
                     dircleanup.close()
@@ -399,17 +417,35 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             if update:
                 if update is not True:
                     checkout = srcpeer.lookup(update)
-                for test in (checkout, 'default', 'tip'):
-                    if test is None:
-                        continue
+                uprev = None
+                status = None
+                if checkout is not None:
                     try:
-                        uprev = destrepo.lookup(test)
-                        break
+                        uprev = destrepo.lookup(checkout)
                     except error.RepoLookupError:
-                        continue
-                bn = destrepo[uprev].branch()
-                destrepo.ui.status(_("updating to branch %s\n") % bn)
+                        pass
+                if uprev is None:
+                    try:
+                        uprev = destrepo._bookmarks['@']
+                        update = '@'
+                        bn = destrepo[uprev].branch()
+                        if bn == 'default':
+                            status = _("updating to bookmark @\n")
+                        else:
+                            status = _("updating to bookmark @ on branch %s\n"
+                                       % bn)
+                    except KeyError:
+                        try:
+                            uprev = destrepo.branchtip('default')
+                        except error.RepoLookupError:
+                            uprev = destrepo.lookup('tip')
+                if not status:
+                    bn = destrepo[uprev].branch()
+                    status = _("updating to branch %s\n") % bn
+                destrepo.ui.status(status)
                 _update(destrepo, uprev)
+                if update in destrepo._bookmarks:
+                    bookmarks.setcurrent(destrepo, update)
 
         return srcpeer, destpeer
     finally:
@@ -423,9 +459,17 @@ def _showstats(repo, stats):
     repo.ui.status(_("%d files updated, %d files merged, "
                      "%d files removed, %d files unresolved\n") % stats)
 
+def updaterepo(repo, node, overwrite):
+    """Update the working directory to node.
+
+    When overwrite is set, changes are clobbered, merged else
+
+    returns stats (see pydoc mercurial.merge.applyupdates)"""
+    return mergemod.update(repo, node, False, overwrite, None)
+
 def update(repo, node):
     """update the working directory to node, merging linear changes"""
-    stats = mergemod.update(repo, node, False, False, None)
+    stats = updaterepo(repo, node, False)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
@@ -436,7 +480,7 @@ _update = update
 
 def clean(repo, node, show_stats=True):
     """forcibly switch the working directory to node, clobbering changes"""
-    stats = mergemod.update(repo, node, False, True, None)
+    stats = updaterepo(repo, node, True)
     if show_stats:
         _showstats(repo, stats)
     return stats[3] > 0

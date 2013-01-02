@@ -7,23 +7,31 @@
  GNU General Public License version 2 or any later version.
 */
 
-#include <Python.h>
+#include <stdio.h>
 #include <windows.h>
 
+#include "hgpythonlib.h"
 
 #ifdef __GNUC__
 int strcat_s(char *d, size_t n, const char *s)
 {
 	return !strncat(d, s, n);
 }
+int strcpy_s(char *d, size_t n, const char *s)
+{
+	return !strncpy(d, s, n);
+}
 #endif
 
 
 static char pyscript[MAX_PATH + 10];
+static char pyhome[MAX_PATH + 10];
+static char envpyhome[MAX_PATH + 10];
+static char pydllfile[MAX_PATH + 10];
 
 int main(int argc, char *argv[])
 {
-	char *dot;
+	char *p;
 	int ret;
 	int i;
 	int n;
@@ -31,6 +39,9 @@ int main(int argc, char *argv[])
 	WIN32_FIND_DATA fdata;
 	HANDLE hfind;
 	const char *err;
+	HMODULE pydll;
+	void (__cdecl *Py_SetPythonHome)(char *home);
+	int (__cdecl *Py_Main)(int argc, char *argv[]);
 
 	if (GetModuleFileName(NULL, pyscript, sizeof(pyscript)) == 0)
 	{
@@ -38,12 +49,13 @@ int main(int argc, char *argv[])
 		goto bail;
 	}
 
-	dot = strrchr(pyscript, '.');
-	if (dot == NULL) {
+	p = strrchr(pyscript, '.');
+	if (p == NULL) {
 		err = "malformed module filename";
 		goto bail;
 	}
-	*dot = 0; /* cut trailing ".exe" */
+	*p = 0; /* cut trailing ".exe" */
+	strcpy_s(pyhome, sizeof(pyhome), pyscript);
 
 	hfind = FindFirstFile(pyscript, &fdata);
 	if (hfind != INVALID_HANDLE_VALUE) {
@@ -52,6 +64,57 @@ int main(int argc, char *argv[])
 	} else {
 		/* file pyscript isn't there, take <pyscript>exe.py */
 		strcat_s(pyscript, sizeof(pyscript), "exe.py");
+	}
+
+	pydll = NULL;
+	if (GetEnvironmentVariable("PYTHONHOME", envpyhome,
+				   sizeof(envpyhome)) == 0)
+	{
+		/* environment var PYTHONHOME is not set */
+
+		p = strrchr(pyhome, '\\');
+		if (p == NULL) {
+			err = "can't find backslash in module filename";
+			goto bail;
+		}
+		*p = 0; /* cut at directory */
+
+		/* check for private Python of HackableMercurial */
+		strcat_s(pyhome, sizeof(pyhome), "\\hg-python");
+
+		hfind = FindFirstFile(pyhome, &fdata);
+		if (hfind != INVALID_HANDLE_VALUE) {
+			/* path pyhome exists, let's use it */
+			FindClose(hfind);
+			strcpy_s(pydllfile, sizeof(pydllfile), pyhome);
+			strcat_s(pydllfile, sizeof(pydllfile), "\\" HGPYTHONLIB);
+			pydll = LoadLibrary(pydllfile);
+			if (pydll == NULL) {
+				err = "failed to load private Python DLL";
+				goto bail;
+			}
+			Py_SetPythonHome = (void*)GetProcAddress(pydll,
+							"Py_SetPythonHome");
+			if (Py_SetPythonHome == NULL) {
+				err = "failed to get Py_SetPythonHome";
+				goto bail;
+			}
+			Py_SetPythonHome(pyhome);
+		}
+	}
+
+	if (pydll == NULL) {
+		pydll = LoadLibrary(HGPYTHONLIB);
+		if (pydll == NULL) {
+			err = "failed to load Python DLL";
+			goto bail;
+		}
+	}
+
+	Py_Main = (void*)GetProcAddress(pydll, "Py_Main");
+	if (Py_Main == NULL) {
+		err = "failed to get Py_Main";
+		goto bail;
 	}
 
 	/*

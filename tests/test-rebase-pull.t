@@ -114,3 +114,55 @@ pull --rebase doesn't update if nothing has been pulled:
   |
 
   $ cd ..
+
+pull --rebase works when a specific revision is pulled (issue3619)
+
+  $ cd a
+  $ hg tglog
+  @  2: 'R1'
+  |
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  
+  $ echo R2 > R2
+  $ hg ci -Am R2
+  adding R2
+  $ echo R3 > R3
+  $ hg ci -Am R3
+  adding R3
+  $ cd ../c
+  $ hg tglog
+  o  2: 'R1'
+  |
+  @  1: 'C2'
+  |
+  o  0: 'C1'
+  
+  $ echo L1 > L1
+  $ hg ci -Am L1
+  adding L1
+  created new head
+  $ hg pull --rev tip --rebase
+  pulling from $TESTTMP/a
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/ff8d69a621f9-backup.hg (glob)
+  $ hg tglog
+  @  5: 'L1'
+  |
+  o  4: 'R3'
+  |
+  o  3: 'R2'
+  |
+  o  2: 'R1'
+  |
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  
+
+

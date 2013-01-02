@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
 Preparing the subrepository 'sub'
 
@@ -70,7 +70,7 @@ subrepo debug for 'main' clone
    source   ../sub
    revision 863c1745b441bd97a8c4a096e87793073f4fb215
 
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 subrepo paths with ssh urls
 

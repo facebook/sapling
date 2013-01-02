@@ -71,8 +71,9 @@ class sshserver(object):
         self.fout.flush()
 
     def sendstream(self, source):
+        write = self.fout.write
         for chunk in source.gen:
-            self.fout.write(chunk)
+            write(chunk)
         self.fout.flush()
 
     def sendpushresponse(self, rsp):

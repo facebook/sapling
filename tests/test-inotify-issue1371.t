@@ -1,6 +1,6 @@
 
   $ "$TESTDIR/hghave" inotify || exit 80
-  $ hg init 
+  $ hg init
   $ touch a b c d e f
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "inotify=" >> $HGRCPATH
@@ -22,7 +22,7 @@ let the daemon finish its stuff
 
   $ sleep 1
 
-eed to test all file opperations
+eed to test all file operations
 
   $ hg rm a
   $ rm b
@@ -41,4 +41,4 @@ eed to test all file opperations
 
 Are we able to kill the service? if not, the service died on some error
 
-  $ kill `cat hg.pid` 
+  $ kill `cat hg.pid`

@@ -61,7 +61,7 @@ class ShortRepository(object):
         return '<ShortRepository: %s>' % self.scheme
 
     def instance(self, ui, url, create):
-        # Should this use urlmod.url(), or is manual parsing better?
+        # Should this use the util.url class, or is manual parsing better?
         url = url.split('://', 1)[1]
         parts = url.split('/', self.parts)
         if len(parts) > self.parts:

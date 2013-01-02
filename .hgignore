@@ -32,6 +32,7 @@ MANIFEST
 MANIFEST.in
 patches
 mercurial/__version__.py
+mercurial/hgpythonlib.h
 mercurial.egg-info
 .DS_Store
 tags

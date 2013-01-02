@@ -3,7 +3,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > convert = 
+  > convert =
   > graphlog =
   > EOF
   $ convert()

@@ -30,17 +30,22 @@ repositories to a given recipient. The ``[reposubs]`` section maps
 multiple recipients to a single repository::
 
   [usersubs]
-  # key is subscriber email, value is a comma-separated list of repo glob
-  # patterns
+  # key is subscriber email, value is a comma-separated list of repo patterns
   user@host = pattern
 
   [reposubs]
-  # key is glob pattern, value is a comma-separated list of subscriber
-  # emails
+  # key is repo pattern, value is a comma-separated list of subscriber emails
   pattern = user@host
 
-Glob patterns are matched against absolute path to repository
-root.
+A ``pattern`` is a ``glob`` matching the absolute path to a repository,
+optionally combined with a revset expression. A revset expression, if
+present, is separated from the glob by a hash. Example::
+
+  [reposubs]
+  */widgets#branch(release) = qa-team@example.com
+
+This sends to ``qa-team@example.com`` whenever a changeset on the ``release``
+branch triggers a notification in any repository ending in ``widgets``.
 
 In order to place them under direct user management, ``[usersubs]`` and
 ``[reposubs]`` sections may be placed in a separate ``hgrc`` file and
@@ -217,14 +222,22 @@ class notifier(object):
         subs = set()
         for user, pats in self.ui.configitems('usersubs'):
             for pat in pats.split(','):
+                if '#' in pat:
+                    pat, revs = pat.split('#', 1)
+                else:
+                    revs = None
                 if fnmatch.fnmatch(self.repo.root, pat.strip()):
-                    subs.add(self.fixmail(user))
+                    subs.add((self.fixmail(user), revs))
         for pat, users in self.ui.configitems('reposubs'):
+            if '#' in pat:
+                pat, revs = pat.split('#', 1)
+            else:
+                revs = None
             if fnmatch.fnmatch(self.repo.root, pat):
                 for user in users.split(','):
-                    subs.add(self.fixmail(user))
-        return [mail.addressencode(self.ui, s, self.charsets, self.test)
-                for s in sorted(subs)]
+                    subs.add((self.fixmail(user), revs))
+        return [(mail.addressencode(self.ui, s, self.charsets, self.test), r)
+                for s, r in sorted(subs)]
 
     def node(self, ctx, **props):
         '''format one changeset, unless it is a suppressed merge.'''
@@ -242,6 +255,21 @@ class notifier(object):
 
     def send(self, ctx, count, data):
         '''send message.'''
+
+        # Select subscribers by revset
+        subs = set()
+        for sub, spec in self.subs:
+            if spec is None:
+                subs.add(sub)
+                continue
+            revs = self.repo.revs('%r and %d:', spec, ctx.rev())
+            if len(revs):
+                subs.add(sub)
+                continue
+        if len(subs) == 0:
+            self.ui.debug('notify: no subscribers to selected repo '
+                          'and revset\n')
+            return
 
         p = email.Parser.Parser()
         try:
@@ -292,7 +320,7 @@ class notifier(object):
             msg['Message-Id'] = ('<hg.%s.%s.%s@%s>' %
                                  (ctx, int(time.time()),
                                   hash(self.repo.root), socket.getfqdn()))
-        msg['To'] = ', '.join(self.subs)
+        msg['To'] = ', '.join(sorted(subs))
 
         msgtext = msg.as_string()
         if self.test:
@@ -301,9 +329,9 @@ class notifier(object):
                 self.ui.write('\n')
         else:
             self.ui.status(_('notify: sending %d subscribers %d changes\n') %
-                           (len(self.subs), count))
+                           (len(subs), count))
             mail.sendmail(self.ui, util.email(msg['From']),
-                          self.subs, msgtext, mbox=self.mbox)
+                          subs, msgtext, mbox=self.mbox)
 
     def diff(self, ctx, ref=None):
 

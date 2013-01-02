@@ -404,7 +404,8 @@ Test \r (carriage return) as used in "DOS" line endings:
   -goodbye world
   +hello world\r (esc)
   +\r (esc)
-  +goodbye\rworld (esc)
+  +goodbye\r (no-eol) (esc)
+  world
 
 No completely blank lines to ignore:
 
@@ -417,7 +418,8 @@ No completely blank lines to ignore:
   -goodbye world
   +hello world\r (esc)
   +\r (esc)
-  +goodbye\rworld (esc)
+  +goodbye\r (no-eol) (esc)
+  world
 
 Only new line noticed:
 

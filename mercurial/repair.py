@@ -114,7 +114,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     newbmtarget = repo.revs('sort(heads((::%ld) - (%ld)), -rev)',
                             tostrip, tostrip)
     if newbmtarget:
-        newbmtarget = newbmtarget[0]
+        newbmtarget = repo[newbmtarget[0]].node()
     else:
         newbmtarget = '.'
 

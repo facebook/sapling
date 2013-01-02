@@ -52,6 +52,28 @@ Literal match ending in " (re)":
   $ echo 'foo (re)'
   foo (re)
 
+Windows: \r\n is handled like \n and can be escaped:
+
+#if windows
+  $ printf 'crlf\r\ncr\r\tcrlf\r\ncrlf\r\n'
+  crlf
+  cr\r (no-eol) (esc)
+  \tcrlf (esc)
+  crlf\r (esc)
+#endif
+
+Combining esc with other markups - and handling lines ending with \r instead of \n:
+
+  $ printf 'foo/bar\r'
+  foo/bar\r (no-eol) (glob) (esc)
+#if windows
+  $ printf 'foo\\bar\r'
+  foo/bar\r (no-eol) (glob) (esc)
+#endif
+  $ printf 'foo/bar\rfoo/bar\r'
+  foo.bar\r \(no-eol\) (re) (esc)
+  foo.bar\r \(no-eol\) (re)
+
 testing hghave
 
   $ "$TESTDIR/hghave" true
@@ -95,5 +117,5 @@ Conditional sections based on hghave:
 
 Exit code:
 
-  $ (exit 1) 
+  $ (exit 1)
   [1]

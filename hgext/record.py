@@ -33,7 +33,7 @@ def scanpatch(fp):
     - ('file',    [header_lines + fromfile + tofile])
     - ('context', [context_lines])
     - ('hunk',    [hunk_lines])
-    - ('range',   (-start,len, +start,len, diffp))
+    - ('range',   (-start,len, +start,len, proc))
     """
     lr = patch.linereader(fp)
 
@@ -81,7 +81,7 @@ def scanpatch(fp):
 class header(object):
     """patch header
 
-    XXX shoudn't we move this to mercurial/patch.py ?
+    XXX shouldn't we move this to mercurial/patch.py ?
     """
     diffgit_re = re.compile('diff --git a/(.*) b/(.*)$')
     diff_re = re.compile('diff -r .* (.*)$')
@@ -393,11 +393,11 @@ the hunk is left unchanged.
             if skipfile is None and skipall is None:
                 chunk.pretty(ui)
             if total == 1:
-                msg = _('record this change to %r?') % chunk.filename()
+                msg = _("record this change to '%s'?") % chunk.filename()
             else:
                 idx = pos - len(h.hunks) + i
-                msg = _('record change %d/%d to %r?') % (idx, total,
-                                                         chunk.filename())
+                msg = _("record change %d/%d to '%s'?") % (idx, total,
+                                                           chunk.filename())
             r, skipfile, skipall, newpatches = prompt(skipfile,
                     skipall, msg, chunk)
             if r:
@@ -495,6 +495,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
     if not ui.interactive():
         raise util.Abort(_('running non-interactively, use %s instead') %
                          cmdsuggest)
+
+    # make sure username is set before going interactive
+    ui.username()
 
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
@@ -664,3 +667,5 @@ def uisetup(ui):
 def _wrapcmd(cmd, table, wrapfn, msg):
     entry = extensions.wrapcommand(table, cmd, wrapfn)
     entry[1].append(('i', 'interactive', None, msg))
+
+commands.inferrepo += " record qrecord"

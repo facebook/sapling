@@ -14,7 +14,7 @@ This extension is deprecated. You should use :hg:`log -r
 "children(REV)"` instead.
 '''
 
-from mercurial import cmdutil
+from mercurial import cmdutil, commands
 from mercurial.commands import templateopts
 from mercurial.i18n import _
 
@@ -48,3 +48,5 @@ cmdtable = {
          ] + templateopts,
          _('hg children [-r REV] [FILE]')),
 }
+
+commands.inferrepo += " children"

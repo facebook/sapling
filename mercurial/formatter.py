@@ -26,6 +26,7 @@ class baseformatter(object):
         self._item = {}
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
+        self._item.update(data)
     def write(self, fields, deftext, *fielddata, **opts):
         '''do default text output while assigning data to item'''
         for k, v in zip(fields.split(), fielddata):

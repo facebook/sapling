@@ -72,7 +72,7 @@ def _picktool(repo, ui, path, binary, symlink):
     if force:
         toolpath = _findtool(ui, force)
         if toolpath:
-            return (force, '"' + toolpath + '"')
+            return (force, util.shellquote(toolpath))
         else:
             # mimic HGMERGE if given tool not found
             return (force, force)
@@ -87,7 +87,7 @@ def _picktool(repo, ui, path, binary, symlink):
         mf = match.match(repo.root, '', [pat])
         if mf(path) and check(tool, pat, symlink, False):
             toolpath = _findtool(ui, tool)
-            return (tool, '"' + toolpath + '"')
+            return (tool, util.shellquote(toolpath))
 
     # then merge tools
     tools = {}
@@ -106,7 +106,7 @@ def _picktool(repo, ui, path, binary, symlink):
     for p, t in tools:
         if check(t, None, symlink, binary):
             toolpath = _findtool(ui, t)
-            return (t, '"' + toolpath + '"')
+            return (t, util.shellquote(toolpath))
 
     # internal merge or prompt as last resort
     if symlink or binary:
@@ -255,7 +255,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
             out, a = a, back # read input from backup, write to original
         replace = dict(local=a, base=b, other=c, output=out)
         args = util.interpolate(r'\$', replace, args,
-                                lambda s: '"%s"' % util.localpath(s))
+                                lambda s: util.shellquote(util.localpath(s)))
         r = util.system(toolpath + ' ' + args, cwd=repo.root, environ=env,
                         out=ui.fout)
         return True, r

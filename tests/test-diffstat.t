@@ -68,5 +68,5 @@ Filename with spaces git diffstat:
   $ hg diff --stat --git
    file with spaces |  Bin 
    1 files changed, 0 insertions(+), 0 deletions(-)
-	
+
   $ cd ..

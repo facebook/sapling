@@ -22,7 +22,7 @@ configure it, set the following options in your hgrc::
   # Style to use (optional)
   #style = foo
   # The URL of the CIA notification service (optional)
-  # You can use mailto: URLs to send by email, eg
+  # You can use mailto: URLs to send by email, e.g.
   # mailto:cia@cia.vc
   # Make sure to set email.from if you do this.
   #url = http://cia.vc/

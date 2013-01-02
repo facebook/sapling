@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil, phases
+from mercurial import extensions, patch, scmutil, phases, obsolete
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -184,7 +184,8 @@ def rebase(ui, repo, **opts):
                 rebaseset = repo.revs(
                     '(children(ancestor(%ld, %d)) and ::(%ld))::',
                     base, dest, base)
-
+            # temporary top level filtering of extinct revisions
+            rebaseset = repo.revs('%ld - hidden()', rebaseset)
             if rebaseset:
                 root = min(rebaseset)
             else:
@@ -193,8 +194,8 @@ def rebase(ui, repo, **opts):
             if not rebaseset:
                 repo.ui.debug('base is ancestor of destination\n')
                 result = None
-            elif not keepf and list(repo.revs('first(children(%ld) - %ld)',
-                                              rebaseset, rebaseset)):
+            elif not keepf and repo.revs('first(children(%ld) - %ld)-hidden()',
+                                         rebaseset, rebaseset):
                 raise util.Abort(
                     _("can't remove original changesets with"
                       " unrebased descendants"),
@@ -310,15 +311,10 @@ def rebase(ui, repo, **opts):
                     nstate[repo[k].node()] = repo[v].node()
 
         if not keepf:
-            # Remove no more useful revisions
-            rebased = [rev for rev in state if state[rev] != nullmerge]
-            if rebased:
-                if set(repo.changelog.descendants([min(rebased)])) - set(state):
-                    ui.warn(_("warning: new changesets detected "
-                              "on source branch, not stripping\n"))
-                else:
-                    # backup the old csets by default
-                    repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+            collapsedas = None
+            if collapsef:
+                collapsedas = newrev
+            clearrebased(ui, repo, state, collapsedas)
 
         if currentbookmarks:
             updatebookmarks(repo, nstate, currentbookmarks, **opts)
@@ -664,6 +660,31 @@ def buildstate(repo, dest, rebaseset, collapse):
         state.update(dict.fromkeys(detachset, nullmerge))
     return repo['.'].rev(), dest.rev(), state
 
+def clearrebased(ui, repo, state, collapsedas=None):
+    """dispose of rebased revision at the end of the rebase
+
+    If `collapsedas` is not None, the rebase was a collapse whose result if the
+    `collapsedas` node."""
+    if obsolete._enabled:
+        markers = []
+        for rev, newrev in sorted(state.items()):
+            if newrev >= 0:
+                if collapsedas is not None:
+                    newrev = collapsedas
+                markers.append((repo[rev], (repo[newrev],)))
+        if markers:
+            obsolete.createmarkers(repo, markers)
+    else:
+        rebased = [rev for rev in state if state[rev] != nullmerge]
+        if rebased:
+            if set(repo.changelog.descendants([min(rebased)])) - set(state):
+                ui.warn(_("warning: new changesets detected "
+                          "on source branch, not stripping\n"))
+            else:
+                # backup the old csets by default
+                repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+
+
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
@@ -685,6 +706,10 @@ def pullrebase(orig, ui, repo, *args, **opts):
             commands.postincoming = origpostincoming
         revspostpull = len(repo)
         if revspostpull > revsprepull:
+            # --rev option from pull conflict with rebase own --rev
+            # dropping it
+            if 'rev' in opts:
+                del opts['rev']
             rebase(ui, repo, **opts)
             branch = repo[None].branch()
             dest = repo[branch].rev()

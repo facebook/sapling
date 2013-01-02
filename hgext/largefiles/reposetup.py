@@ -100,11 +100,11 @@ def reposetup(ui, repo):
                 if isinstance(node1, context.changectx):
                     ctx1 = node1
                 else:
-                    ctx1 = repo[node1]
+                    ctx1 = self[node1]
                 if isinstance(node2, context.changectx):
                     ctx2 = node2
                 else:
-                    ctx2 = repo[node2]
+                    ctx2 = self[node2]
                 working = ctx2.rev() is None
                 parentworking = working and ctx1 == self['.']
 
@@ -140,7 +140,7 @@ def reposetup(ui, repo):
                     if not working:
                         return files
                     newfiles = []
-                    dirstate = repo.dirstate
+                    dirstate = self.dirstate
                     for f in files:
                         sf = lfutil.standin(f)
                         if sf in dirstate:
@@ -156,7 +156,7 @@ def reposetup(ui, repo):
                 # Create a function that we can use to override what is
                 # normally the ignore matcher.  We've already checked
                 # for ignored files on the first dirstate walk, and
-                # unecessarily re-checking here causes a huge performance
+                # unnecessarily re-checking here causes a huge performance
                 # hit because lfdirstate only knows about largefiles
                 def _ignoreoverride(self):
                     return False
@@ -181,7 +181,7 @@ def reposetup(ui, repo):
 
                         def sfindirstate(f):
                             sf = lfutil.standin(f)
-                            dirstate = repo.dirstate
+                            dirstate = self.dirstate
                             return sf in dirstate or sf in dirstate.dirs()
                         match._files = [f for f in match._files
                                         if sfindirstate(f)]
@@ -192,7 +192,7 @@ def reposetup(ui, repo):
                         (unsure, modified, added, removed, missing, unknown,
                                 ignored, clean) = s
                         # Replace the list of ignored and unknown files with
-                        # the previously caclulated lists, and strip out the
+                        # the previously calculated lists, and strip out the
                         # largefiles
                         lfiles = set(lfdirstate._map)
                         ignored = set(result[5]).difference(lfiles)
@@ -244,13 +244,13 @@ def reposetup(ui, repo):
                     # files are not really removed if it's still in
                     # lfdirstate. This happens in merges where files
                     # change type.
-                    removed = [f for f in removed if f not in repo.dirstate]
+                    removed = [f for f in removed if f not in self.dirstate]
                     result[2] = [f for f in result[2] if f not in lfdirstate]
 
                     # Unknown files
                     unknown = set(unknown).difference(ignored)
                     result[4] = [f for f in unknown
-                                 if (repo.dirstate[f] == '?' and
+                                 if (self.dirstate[f] == '?' and
                                      not lfutil.isstandin(f))]
                     # Ignored files were calculated earlier by the dirstate,
                     # and we already stripped out the largefiles from the list
@@ -292,7 +292,7 @@ def reposetup(ui, repo):
                 force=False, editor=False, extra={}):
             orig = super(lfilesrepo, self).commit
 
-            wlock = repo.wlock()
+            wlock = self.wlock()
             try:
                 # Case 0: Rebase or Transplant
                 # We have to take the time to pull down the new largefiles now.
@@ -301,9 +301,9 @@ def reposetup(ui, repo):
                 # or in the first commit after the rebase or transplant.
                 # updatelfiles will update the dirstate to mark any pulled
                 # largefiles as modified
-                if getattr(repo, "_isrebasing", False) or \
-                        getattr(repo, "_istransplanting", False):
-                    lfcommands.updatelfiles(repo.ui, repo, filelist=None,
+                if getattr(self, "_isrebasing", False) or \
+                        getattr(self, "_istransplanting", False):
+                    lfcommands.updatelfiles(self.ui, self, filelist=None,
                                             printmessage=False)
                     result = orig(text=text, user=user, date=date, match=match,
                                     force=force, editor=editor, extra=extra)
@@ -319,7 +319,7 @@ def reposetup(ui, repo):
                     # otherwise to update all standins if the largefiles are
                     # large.
                     lfdirstate = lfutil.openlfdirstate(ui, self)
-                    dirtymatch = match_.always(repo.root, repo.getcwd())
+                    dirtymatch = match_.always(self.root, self.getcwd())
                     s = lfdirstate.status(dirtymatch, [], False, False, False)
                     modifiedfiles = []
                     for i in s:
@@ -345,9 +345,9 @@ def reposetup(ui, repo):
                     if result is not None:
                         for lfile in lfdirstate:
                             if lfile in modifiedfiles:
-                                if (not os.path.exists(repo.wjoin(
+                                if (not os.path.exists(self.wjoin(
                                    lfutil.standin(lfile)))) or \
-                                   (not os.path.exists(repo.wjoin(lfile))):
+                                   (not os.path.exists(self.wjoin(lfile))):
                                     lfdirstate.drop(lfile)
 
                     # This needs to be after commit; otherwise precommit hooks
@@ -355,11 +355,8 @@ def reposetup(ui, repo):
                     lfdirstate.write()
                     return result
 
-                for f in match.files():
-                    if lfutil.isstandin(f):
-                        raise util.Abort(
-                            _('file "%s" is a largefile standin') % f,
-                            hint=('commit the largefile itself instead'))
+                lfiles = lfutil.listlfiles(self)
+                match._files = self._subdirlfs(match.files(), lfiles)
 
                 # Case 2: user calls commit with specified patterns: refresh
                 # any matching big files.
@@ -390,7 +387,6 @@ def reposetup(ui, repo):
                 # standins corresponding to the big files requested by the
                 # user.  Have to modify _files to prevent commit() from
                 # complaining "not tracked" for big files.
-                lfiles = lfutil.listlfiles(repo)
                 match = copy.copy(match)
                 origmatchfn = match.matchfn
 
@@ -431,14 +427,14 @@ def reposetup(ui, repo):
                 wlock.release()
 
         def push(self, remote, force=False, revs=None, newbranch=False):
-            o = lfutil.findoutgoing(repo, remote, force)
+            o = lfutil.findoutgoing(self, remote, force)
             if o:
                 toupload = set()
-                o = repo.changelog.nodesbetween(o, revs)[0]
+                o = self.changelog.nodesbetween(o, revs)[0]
                 for n in o:
-                    parents = [p for p in repo.changelog.parents(n)
+                    parents = [p for p in self.changelog.parents(n)
                                if p != node_.nullid]
-                    ctx = repo[n]
+                    ctx = self[n]
                     files = set(ctx.files())
                     if len(parents) == 2:
                         mc = ctx.manifest()
@@ -462,6 +458,60 @@ def reposetup(ui, repo):
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
             return super(lfilesrepo, self).push(remote, force, revs,
                 newbranch)
+
+        def _subdirlfs(self, files, lfiles):
+            '''
+            Adjust matched file list
+            If we pass a directory to commit whose only commitable files
+            are largefiles, the core commit code aborts before finding
+            the largefiles.
+            So we do the following:
+            For directories that only have largefiles as matches,
+            we explicitly add the largefiles to the matchlist and remove
+            the directory.
+            In other cases, we leave the match list unmodified.
+            '''
+            actualfiles = []
+            dirs = []
+            regulars = []
+
+            for f in files:
+                if lfutil.isstandin(f + '/'):
+                    raise util.Abort(
+                        _('file "%s" is a largefile standin') % f,
+                        hint=('commit the largefile itself instead'))
+                # Scan directories
+                if os.path.isdir(self.wjoin(f)):
+                    dirs.append(f)
+                else:
+                    regulars.append(f)
+
+            for f in dirs:
+                matcheddir = False
+                d = self.dirstate.normalize(f) + '/'
+                # Check for matched normal files
+                for mf in regulars:
+                    if self.dirstate.normalize(mf).startswith(d):
+                        actualfiles.append(f)
+                        matcheddir = True
+                        break
+                if not matcheddir:
+                    # If no normal match, manually append
+                    # any matching largefiles
+                    for lf in lfiles:
+                        if self.dirstate.normalize(lf).startswith(d):
+                            actualfiles.append(lf)
+                            if not matcheddir:
+                                actualfiles.append(lfutil.standin(f))
+                                matcheddir = True
+                # Nothing in dir, so readd it
+                # and let commit reject it
+                if not matcheddir:
+                    actualfiles.append(f)
+
+            # Always add normal files
+            actualfiles += regulars
+            return actualfiles
 
     repo.__class__ = lfilesrepo
 

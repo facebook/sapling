@@ -12,7 +12,7 @@ from mercurial.hgweb import common
 from mercurial.i18n import _
 
 def _splitURI(uri):
-    """ Return path and query splited from uri
+    """Return path and query that has been split from uri
 
     Just like CGI environment, the path is unquoted, the query is
     not.

@@ -713,8 +713,8 @@ class ui(object):
         With stock hg, this is simply a debug message that is hidden
         by default, but with extensions or GUI tools it may be
         visible. 'topic' is the current operation, 'item' is a
-        non-numeric marker of the current position (ie the currently
-        in-process file), 'pos' is the current numeric position (ie
+        non-numeric marker of the current position (i.e. the currently
+        in-process file), 'pos' is the current numeric position (i.e.
         revision, bytes, etc.), unit is a corresponding unit label,
         and total is the highest expected pos.
 

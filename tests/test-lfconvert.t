@@ -1,13 +1,17 @@
+  $ USERCACHE="$TESTTMP/cache"; export USERCACHE
+  $ mkdir "${USERCACHE}"
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > largefiles =
   > share =
   > graphlog =
   > mq =
+  > convert =
   > [largefiles]
   > minsize = 0.5
   > patterns = **.other
   >     **.dat
+  > usercache=${USERCACHE}
   > EOF
 
 "lfconvert" works
@@ -270,3 +274,84 @@ round-trip: converting back to a normal (non-largefiles) repo with
   pass
 
   $ cd ..
+
+Clearing the usercache ensures that commitctx doesn't try to cache largefiles
+from the working dir on a convert.
+  $ rm "${USERCACHE}"/*
+  $ hg convert largefiles-repo
+  assuming destination largefiles-repo-hg
+  initializing destination largefiles-repo-hg repository
+  scanning source...
+  sorting...
+  converting...
+  6 add large, normal1
+  5 add sub/*
+  4 rename sub/ to stuff/
+  3 add normal3, modify sub/*
+  2 remove large, normal3
+  1 merge
+  0 add anotherlarge (should be a largefile)
+
+  $ hg -R largefiles-repo-hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  o  6:17126745edfd  add anotherlarge (should be a largefile)
+  |
+  o    5:9cc5aa7204f0  merge
+  |\
+  | o  4:a5a02de7a8e4  remove large, normal3
+  | |
+  | o  3:55759520c76f  add normal3, modify sub/*
+  | |
+  o |  2:261ad3f3f037  rename sub/ to stuff/
+  |/
+  o  1:334e5237836d  add sub/*
+  |
+  o  0:d4892ec57ce2  add large, normal1
+  
+Verify will fail (for now) if the usercache is purged before converting, since
+largefiles are not cached in the converted repo's local store by the conversion
+process.
+  $ hg -R largefiles-repo-hg verify --large --lfa
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 7 changesets, 12 total revisions
+  searching 7 changesets for largefiles
+  changeset 0:d4892ec57ce2: large missing
+    (looked for hash 2e000fa7e85759c7f4c254d4d9c33ef481e459a7)
+  changeset 1:334e5237836d: sub/maybelarge.dat missing
+    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
+  changeset 2:261ad3f3f037: stuff/maybelarge.dat missing
+    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
+  changeset 3:55759520c76f: sub/maybelarge.dat missing
+    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
+  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat missing
+    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
+  changeset 6:17126745edfd: anotherlarge missing
+    (looked for hash 3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3)
+  verified existence of 6 revisions of 4 largefiles
+  [1]
+  $ hg -R largefiles-repo-hg showconfig paths
+
+
+Avoid a traceback if a largefile isn't available (issue3519)
+
+Ensure the largefile can be cached in the source if necessary
+  $ hg clone -U largefiles-repo issue3519
+  $ rm -f "${USERCACHE}"/*
+  $ hg lfconvert --to-normal issue3519 normalized3519
+  initializing destination normalized3519
+
+Ensure the abort message is useful if a largefile is entirely unavailable
+  $ rm -rf normalized3519
+  $ rm "${USERCACHE}"/*
+  $ rm issue3519/.hg/largefiles/*
+  $ rm largefiles-repo/.hg/largefiles/*
+  $ hg lfconvert --to-normal issue3519 normalized3519
+  initializing destination normalized3519
+  large: can't get file locally
+  (no default or default-push path set in hgrc)
+  abort: missing largefile 'large' from revision d4892ec57ce212905215fad1d9018f56b99202ad
+  [255]
+
+

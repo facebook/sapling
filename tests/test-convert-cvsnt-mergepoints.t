@@ -43,7 +43,7 @@ checkout #1: add foo.txt
   $ cvscall -Q add foo
   $ cd foo
   $ echo foo > foo.txt
-  $ cvscall -Q add foo.txt 
+  $ cvscall -Q add foo.txt
   $ cvsci -m "add foo.txt" foo.txt
   $ cd ../..
   $ rm -rf cvsworktmp

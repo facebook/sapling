@@ -12,6 +12,8 @@
 # |/
 # o  0:b608b9236435
 
+  $ mkdir b1
+  $ cd b1
   $ hg init
   $ echo foo > foo
   $ echo zero > a
@@ -47,6 +49,14 @@ Initial repo state:
   o  0:60829823a42a
   
 
+Make sure update doesn't assume b1 is a repository if invoked from outside:
+
+  $ cd ..
+  $ hg update b1
+  abort: no repository found in '$TESTTMP' (.hg not found)!
+  [255]
+  $ cd b1
+
 Test helper functions:
 
   $ revtest () {
@@ -61,7 +71,7 @@ Test helper functions:
   >     hg up $opt $targetrev
   >     hg parent --template 'parent={rev}\n'
   >     hg stat -S
-  > }    
+  > }
 
   $ norevtest () {
   >     msg=$1
@@ -74,7 +84,7 @@ Test helper functions:
   >     hg up $opt
   >     hg parent --template 'parent={rev}\n'
   >     hg stat -S
-  > }    
+  > }
 
 Test cases are documented in a table in the update function of merge.py.
 Cases are run as shown in that table, row by row.

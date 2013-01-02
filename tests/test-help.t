@@ -15,7 +15,6 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -37,7 +36,6 @@ Short help:
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -222,7 +220,6 @@ Test short command list with verbose option
    init          create a new repository in the given directory
    log, history  show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove, rm    remove the specified files on the next commit
@@ -279,7 +276,7 @@ Test short command list with verbose option
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help add" to show more info
+  use "hg -v help add" to show more complete help and the global options
 
 Verbose help for add
 
@@ -392,9 +389,12 @@ Test command without options
       manifest, and tracked files, as well as the integrity of their crosslinks
       and indices.
   
+      Please see http://mercurial.selenic.com/wiki/RepositoryCorruption for more
+      information about recovery from corruption of the repository.
+  
       Returns 0 on success, 1 if errors are encountered.
   
-  use "hg -v help verify" to show more info
+  use "hg -v help verify" to show the global options
 
   $ hg help diff
   hg diff [OPTION]... ([-c REV] | [-r REV1 [-r REV2]]) [FILE]...
@@ -447,7 +447,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help diff" to show more info
+  use "hg -v help diff" to show more complete help and the global options
 
   $ hg help status
   hg status [OPTION]... [FILE]...
@@ -510,7 +510,7 @@ Test command without options
   
   [+] marked option can be specified multiple times
   
-  use "hg -v help status" to show more info
+  use "hg -v help status" to show more complete help and the global options
 
   $ hg -q help status
   hg status [OPTION]... [FILE]...
@@ -533,7 +533,6 @@ Test command without options
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -561,7 +560,6 @@ Test command without options
    init          create a new repository in the given directory
    log           show revision history of entire repository or files
    merge         merge working directory with another revision
-   phase         set or show the current phase name
    pull          pull changes from the specified source
    push          push changes to the specified destination
    remove        remove the specified files on the next commit
@@ -596,7 +594,7 @@ Test command with no help text
   
   (no help text available)
   
-  use "hg -v help nohelp" to show more info
+  use "hg -v help nohelp" to show the global options
 
   $ hg help -k nohelp
   Commands:
@@ -802,3 +800,76 @@ Test keyword search help
   
    qclone clone main and patch repository at same time
 
+Test omit indicating for help
+
+  $ cat > addverboseitems.py <<EOF
+  > '''extension to test omit indicating.
+  > 
+  > This paragraph is never omitted (for extension)
+  > 
+  > .. container:: verbose
+  > 
+  >   This paragraph is omitted,
+  >   if :hg:\`help\` is invoked witout \`\`-v\`\` (for extension)
+  > 
+  > This paragraph is never omitted, too (for extension)
+  > '''
+  > 
+  > from mercurial import help, commands
+  > testtopic = """This paragraph is never omitted (for topic).
+  > 
+  > .. container:: verbose
+  > 
+  >   This paragraph is omitted,
+  >   if :hg:\`help\` is invoked witout \`\`-v\`\` (for topic)
+  > 
+  > This paragraph is never omitted, too (for topic)
+  > """
+  > def extsetup(ui):
+  >     help.helptable.append((["topic-containing-verbose"],
+  >                            "This is the topic to test omit indicating.",
+  >                            lambda : testtopic))
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "addverboseitems = `pwd`/addverboseitems.py" >> $HGRCPATH
+  $ hg help addverboseitems
+  addverboseitems extension - extension to test omit indicating.
+  
+  This paragraph is never omitted (for extension)
+  
+  This paragraph is never omitted, too (for extension)
+  
+  use "hg help -v addverboseitems" to show more complete help
+  
+  no commands defined
+  $ hg help -v addverboseitems
+  addverboseitems extension - extension to test omit indicating.
+  
+  This paragraph is never omitted (for extension)
+  
+  This paragraph is omitted, if "hg help" is invoked witout "-v" (for extension)
+  
+  This paragraph is never omitted, too (for extension)
+  
+  no commands defined
+  $ hg help topic-containing-verbose
+  This is the topic to test omit indicating.
+  
+      This paragraph is never omitted (for topic).
+  
+      This paragraph is never omitted, too (for topic)
+  
+  use "hg help -v topic-containing-verbose" to show more complete help
+  $ hg help -v topic-containing-verbose
+  This is the topic to test omit indicating.
+  
+      This paragraph is never omitted (for topic).
+  
+      This paragraph is omitted, if "hg help" is invoked witout "-v" (for topic)
+  
+      This paragraph is never omitted, too (for topic)
+
+Test usage of section marks in help documents
+
+  $ cd "$TESTDIR"/../doc
+  $ python check-seclevel.py

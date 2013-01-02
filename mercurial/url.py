@@ -175,7 +175,7 @@ class httpconnection(keepalive.HTTPConnection):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.host, self.port))
             if _generic_proxytunnel(self):
-                # we do not support client x509 certificates
+                # we do not support client X.509 certificates
                 self.sock = sslutil.ssl_wrap_socket(self.sock, None, None)
         else:
             keepalive.HTTPConnection.connect(self)
@@ -278,7 +278,8 @@ def _generic_proxytunnel(self):
     res.will_close = res._check_close()
 
     # do we have a Content-Length?
-    # NOTE: RFC 2616, S4.4, #3 says we ignore this if tr_enc is "chunked"
+    # NOTE: RFC 2616, section 4.4, #3 says we ignore this if
+    # transfer-encoding is "chunked"
     length = res.msg.getheader('content-length')
     if length and not res.chunked:
         try:

@@ -160,4 +160,15 @@ case changes.
   $ hg status -A
   C MiXeDcAsE
 
+  $ hg qpop -a
+  popping refresh-casechange
+  patch queue now empty
+  $ hg qnew refresh-pattern
+  $ hg status
+  $ echo A > A
+  $ hg add
+  adding A
+  $ hg qrefresh a # issue 3271, qrefresh with file handled case wrong
+  $ hg status # empty status means the qrefresh worked
+
   $ cd ..

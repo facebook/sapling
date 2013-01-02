@@ -592,7 +592,8 @@ Keys work:
 
   $ for key in author branch branches date desc file_adds file_dels file_mods \
   >         file_copies file_copies_switch files \
-  >         manifest node parents rev tags diffstat extras; do
+  >         manifest node parents rev tags diffstat extras \
+  >         p1rev p2rev p1node p2node; do
   >     for mode in '' --verbose --debug; do
   >         hg log $mode --template "$key$mode: {$key}\n"
   >     done
@@ -1095,7 +1096,114 @@ Keys work:
   extras--debug: branch=default
   extras--debug: branch=default
   extras--debug: branch=default
-
+  p1rev: 7
+  p1rev: -1
+  p1rev: 5
+  p1rev: 3
+  p1rev: 3
+  p1rev: 2
+  p1rev: 1
+  p1rev: 0
+  p1rev: -1
+  p1rev--verbose: 7
+  p1rev--verbose: -1
+  p1rev--verbose: 5
+  p1rev--verbose: 3
+  p1rev--verbose: 3
+  p1rev--verbose: 2
+  p1rev--verbose: 1
+  p1rev--verbose: 0
+  p1rev--verbose: -1
+  p1rev--debug: 7
+  p1rev--debug: -1
+  p1rev--debug: 5
+  p1rev--debug: 3
+  p1rev--debug: 3
+  p1rev--debug: 2
+  p1rev--debug: 1
+  p1rev--debug: 0
+  p1rev--debug: -1
+  p2rev: -1
+  p2rev: -1
+  p2rev: 4
+  p2rev: -1
+  p2rev: -1
+  p2rev: -1
+  p2rev: -1
+  p2rev: -1
+  p2rev: -1
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--verbose: 4
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--verbose: -1
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p2rev--debug: 4
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p2rev--debug: -1
+  p1node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+  p1node: 0000000000000000000000000000000000000000
+  p1node: 13207e5a10d9fd28ec424934298e176197f2c67f
+  p1node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node: 97054abb4ab824450e9164180baf491ae0078465
+  p1node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+  p1node: 1e4e1b8f71e05681d422154f5421e385fec3454f
+  p1node: 0000000000000000000000000000000000000000
+  p1node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+  p1node--verbose: 0000000000000000000000000000000000000000
+  p1node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
+  p1node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node--verbose: 97054abb4ab824450e9164180baf491ae0078465
+  p1node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+  p1node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
+  p1node--verbose: 0000000000000000000000000000000000000000
+  p1node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+  p1node--debug: 0000000000000000000000000000000000000000
+  p1node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
+  p1node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+  p1node--debug: 97054abb4ab824450e9164180baf491ae0078465
+  p1node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+  p1node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
+  p1node--debug: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--verbose: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: bbe44766e73d5f11ed2177f1838de10c53ef3e74
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
+  p2node--debug: 0000000000000000000000000000000000000000
 
 Filters work:
 
@@ -1245,7 +1353,7 @@ Age filter:
   $ hg add a
   $ hg commit -m future -d "`cat a`"
 
-  $ hg log -l1 --template '{date|age}\n' 
+  $ hg log -l1 --template '{date|age}\n'
   7 years from now
 
 Error on syntax:
@@ -1253,6 +1361,30 @@ Error on syntax:
   $ echo 'x = "f' >> t
   $ hg log
   abort: t:3: unmatched quotes
+  [255]
+
+Behind the scenes, this will throw TypeError
+
+  $ hg log -l 3 --template '{date|obfuscate}\n'
+  abort: template filter 'obfuscate' is not compatible with keyword 'date'
+  [255]
+
+Behind the scenes, this will throw a ValueError
+
+  $ hg log -l 3 --template 'line: {desc|shortdate}\n'
+  abort: template filter 'shortdate' is not compatible with keyword 'desc'
+  [255]
+
+Behind the scenes, this will throw AttributeError
+
+  $ hg log -l 3 --template 'line: {date|escape}\n'
+  abort: template filter 'escape' is not compatible with keyword 'date'
+  [255]
+
+Behind the scenes, this will throw ValueError
+
+  $ hg tip --template '{author|email|date}\n'
+  abort: template filter 'datefilter' is not compatible with keyword 'author'
   [255]
 
   $ cd ..
@@ -1388,3 +1520,8 @@ Test recursive showlist template (issue1989):
   10,test
   branch: test
 
+Test new-style inline templating:
+
+  $ hg log -R latesttag -r tip --template 'modified files: {file_mods % " {file}\n"}\n'
+  modified files:  .hgtags
+  

@@ -17,6 +17,13 @@ def verify(repo):
     finally:
         lock.release()
 
+def _normpath(f):
+    # under hg < 2.4, convert didn't sanitize paths properly, so a
+    # converted repo may contain repeated slashes
+    while '//' in f:
+        f = f.replace('//', '/')
+    return f
+
 def _verify(repo):
     mflinkrevs = {}
     filelinkrevs = {}
@@ -96,16 +103,16 @@ def _verify(repo):
             p1, p2 = obj.parents(node)
             if p1 not in seen and p1 != nullid:
                 err(lr, _("unknown parent 1 %s of %s") %
-                    (short(p1), short(n)), f)
+                    (short(p1), short(node)), f)
             if p2 not in seen and p2 != nullid:
                 err(lr, _("unknown parent 2 %s of %s") %
-                    (short(p2), short(p1)), f)
+                    (short(p2), short(node)), f)
         except Exception, inst:
             exc(lr, _("checking parents of %s") % short(node), inst, f)
 
         if node in seen:
-            err(lr, _("duplicate revision %d (%d)") % (i, seen[n]), f)
-        seen[n] = i
+            err(lr, _("duplicate revision %d (%d)") % (i, seen[node]), f)
+        seen[node] = i
         return lr
 
     if os.path.exists(repo.sjoin("journal")):
@@ -120,7 +127,7 @@ def _verify(repo):
     havemf = len(mf) > 0
 
     ui.status(_("checking changesets\n"))
-    hasmanifest = False
+    refersmf = False
     seen = {}
     checklog(cl, "changelog", 0)
     total = len(repo)
@@ -133,17 +140,17 @@ def _verify(repo):
             changes = cl.read(n)
             if changes[0] != nullid:
                 mflinkrevs.setdefault(changes[0], []).append(i)
-                hasmanifest = True
+                refersmf = True
             for f in changes[3]:
-                filelinkrevs.setdefault(f, []).append(i)
+                filelinkrevs.setdefault(_normpath(f), []).append(i)
         except Exception, inst:
-            hasmanifest = True
+            refersmf = True
             exc(i, _("unpacking changeset %s") % short(n), inst)
     ui.progress(_('checking'), None)
 
     ui.status(_("checking manifests\n"))
     seen = {}
-    if hasmanifest:
+    if refersmf:
         # Do not check manifest if there are only changelog entries with
         # null manifests.
         checklog(mf, "manifest", 0)
@@ -162,7 +169,7 @@ def _verify(repo):
                 if not f:
                     err(lr, _("file without name in manifest"))
                 elif f != "/dev/null":
-                    filenodes.setdefault(f, {}).setdefault(fn, lr)
+                    filenodes.setdefault(_normpath(f), {}).setdefault(fn, lr)
         except Exception, inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
     ui.progress(_('checking'), None)
@@ -209,7 +216,7 @@ def _verify(repo):
         if not f:
             err(None, _("cannot decode filename '%s'") % f2)
         elif size > 0 or not revlogv1:
-            storefiles.add(f)
+            storefiles.add(_normpath(f))
 
     files = sorted(set(filenodes) | set(filelinkrevs))
     total = len(files)

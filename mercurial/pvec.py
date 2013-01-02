@@ -57,7 +57,7 @@ _depthbits = 24
 _depthbytes = _depthbits / 8
 _vecbytes = _bytes - _depthbytes
 _vecbits = _vecbytes * 8
-_radius = (_vecbits - 30) / 2 # high probability vecs are related
+_radius = (_vecbits - 30) / 2 # high probability vectors are related
 
 def _bin(bs):
     '''convert a bytestring to a long'''

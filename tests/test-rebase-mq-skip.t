@@ -39,7 +39,7 @@ already has one local mq patch
   $ hg add p1
   $ hg qref -m P1
 
-  $ hg export qtip > p1.patch 
+  $ hg export qtip > p1.patch
 
   $ hg up -q -C 1
 

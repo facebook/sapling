@@ -12,15 +12,15 @@ create a little extension that has 3 side-effects:
   > from mercurial import extensions, node, revlog
   > 
   > def reposetup(ui, repo):
-  >     def wrapcommit(orig, *args, **kwargs):
-  >         result = orig(*args, **kwargs)
-  >         tip1 = node.short(repo.changelog.tip())
-  >         tip2 = node.short(repo.lookup(tip1))
-  >         assert tip1 == tip2
-  >         ui.write('new tip: %s\n' % tip1)
-  >         return result
-  > 
-  >     extensions.wrapfunction(repo, 'commit', wrapcommit)
+  >     class wraprepo(repo.__class__):
+  >         def commit(self, *args, **kwargs):
+  >             result = super(wraprepo, self).commit(*args, **kwargs)
+  >             tip1 = node.short(repo.changelog.tip())
+  >             tip2 = node.short(repo.lookup(tip1))
+  >             assert tip1 == tip2
+  >             ui.write('new tip: %s\n' % tip1)
+  >             return result
+  >     repo.__class__ = wraprepo
   > 
   > def extsetup(ui):
   >     revlog._maxinline = 8             # split out 00changelog.d early

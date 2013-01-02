@@ -66,7 +66,7 @@
 				 using select() for socket reads
 				 tested on Debian unstable with Python 2.2.2"""
 
-"""0.05 update - ensure case insensitivty on domain names
+"""0.05 update - ensure case insensitivity on domain names
                  support for unicast DNS queries"""
 
 """0.04 update - added some unit tests
@@ -114,7 +114,7 @@ _FLAGS_QR_MASK = 0x8000 # query response mask
 _FLAGS_QR_QUERY = 0x0000 # query
 _FLAGS_QR_RESPONSE = 0x8000 # response
 
-_FLAGS_AA = 0x0400 # Authorative answer
+_FLAGS_AA = 0x0400 # Authoritative answer
 _FLAGS_TC = 0x0200 # Truncated
 _FLAGS_RD = 0x0100 # Recursion desired
 _FLAGS_RA = 0x8000 # Recursion available
@@ -335,7 +335,7 @@ class DNSRecord(DNSEntry):
 		raise AbstractMethodException
 
 	def toString(self, other):
-		"""String representation with addtional information"""
+		"""String representation with additional information"""
 		arg = "%s/%s,%s" % (self.ttl, self.getRemainingTTL(currentTimeMillis()), other)
 		return DNSEntry.toString(self, "record", arg)
 
@@ -650,7 +650,7 @@ class DNSOutgoing(object):
 			if now == 0 or not record.isExpired(now):
 				self.answers.append((record, now))
 
-	def addAuthorativeAnswer(self, record):
+	def addAuthoritativeAnswer(self, record):
 		"""Adds an authoritative answer"""
 		self.authorities.append(record)
 
@@ -904,7 +904,7 @@ class Listener(object):
 	to cache information as it arrives.
 
 	It requires registration with an Engine object in order to have
-	the read() method called when a socket is availble for reading."""
+	the read() method called when a socket is available for reading."""
 
 	def __init__(self, zeroconf):
 		self.zeroconf = zeroconf
@@ -1140,7 +1140,7 @@ class ServiceInfo(object):
 		return self.port
 
 	def getPriority(self):
-		"""Pirority accessor"""
+		"""Priority accessor"""
 		return self.priority
 
 	def getWeight(self):
@@ -1259,7 +1259,7 @@ class Zeroconf(object):
 			# SO_REUSEADDR should be equivalent to SO_REUSEPORT for
 			# multicast UDP sockets (p 731, "TCP/IP Illustrated,
 			# Volume 2"), but some BSD-derived systems require
-			# SO_REUSEPORT to be specified explicity.  Also, not all
+			# SO_REUSEPORT to be specified explicitly.  Also, not all
 			# versions of Python have SO_REUSEPORT available.  So
 			# if you're on a BSD-based system, and haven't upgraded
 			# to Python 2.3 yet, you may find this library doesn't
@@ -1272,10 +1272,8 @@ class Zeroconf(object):
 			self.socket.bind(self.group)
 		except Exception:
 			# Some versions of linux raise an exception even though
-			# the SO_REUSE* options have been set, so ignore it
-			#
+			# SO_REUSEADDR and SO_REUSEPORT have been set, so ignore it
 			pass
-		#self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.intf) + socket.inet_aton('0.0.0.0'))
 		self.socket.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(_MDNS_ADDR) + socket.inet_aton('0.0.0.0'))
 
 		self.listeners = []
@@ -1433,7 +1431,7 @@ class Zeroconf(object):
 			out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
 			self.debug = out
 			out.addQuestion(DNSQuestion(info.type, _TYPE_PTR, _CLASS_IN))
-			out.addAuthorativeAnswer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, _DNS_TTL, info.name))
+			out.addAuthoritativeAnswer(DNSPointer(info.type, _TYPE_PTR, _CLASS_IN, _DNS_TTL, info.name))
 			self.send(out)
 			i += 1
 			nextTime += _CHECK_TIME

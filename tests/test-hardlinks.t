@@ -197,7 +197,6 @@ r4 has hardlinks in the working dir (not just inside .hg):
   2 r4/.hg/00changelog.i
   2 r4/.hg/branch
   2 r4/.hg/cache/branchheads
-  2 r4/.hg/cache/tags
   2 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
@@ -228,7 +227,6 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   2 r4/.hg/00changelog.i
   1 r4/.hg/branch
   2 r4/.hg/cache/branchheads
-  2 r4/.hg/cache/tags
   1 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt

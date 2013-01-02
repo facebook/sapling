@@ -20,6 +20,16 @@ expandglobs = False
 umask = os.umask(0)
 os.umask(umask)
 
+def split(p):
+    '''Same as os.path.split, but faster'''
+    ht = p.rsplit('/', 1)
+    if len(ht) == 1:
+        return '', p
+    nh = ht[0].rstrip('/')
+    if nh:
+        return nh, ht[1]
+    return ht
+
 def openhardlinks():
     '''return true if it is safe to hold open file handles to hardlinks'''
     return True

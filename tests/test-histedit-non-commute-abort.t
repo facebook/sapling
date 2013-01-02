@@ -73,23 +73,21 @@ log before edit
 edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
+  remote changed e which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: Fix up the change and run hg histedit --continue
 
-fix up (pre abort)
-  $ echo a > e
-  $ hg add e
-  $ hg histedit --continue 2>&1 | fixbundle
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  file e already exists
-  1 out of 1 hunks FAILED -- saving rejects to file e.rej
-  abort: Fix up the change and run hg histedit --continue
 
 abort the edit
   $ hg histedit --abort 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after abort
+  $ hg resolve -l
   $ hg log --graph
   @  changeset:   6:bfa474341cc9
   |  tag:         tip

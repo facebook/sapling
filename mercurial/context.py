@@ -11,6 +11,7 @@ import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import copies
 import match as matchmod
 import os, errno, stat
+import obsolete as obsmod
 
 propertycache = util.propertycache
 
@@ -232,38 +233,22 @@ class changectx(object):
 
     def obsolete(self):
         """True if the changeset is obsolete"""
-        return (self.node() in self._repo.obsstore.precursors
-                and self.phase() > phases.public)
+        return self.rev() in obsmod.getrevs(self._repo, 'obsolete')
 
     def extinct(self):
         """True if the changeset is extinct"""
-        # We should just compute a cache a check againts it.
-        # see revset implementation for details
-        #
-        # But this naive implementation does not require cache
-        if self.phase() <= phases.public:
-            return False
-        if not self.obsolete():
-            return False
-        for desc in self.descendants():
-            if not desc.obsolete():
-                return False
-        return True
+        return self.rev() in obsmod.getrevs(self._repo, 'extinct')
 
     def unstable(self):
         """True if the changeset is not obsolete but it's ancestor are"""
-        # We should just compute /(obsolete()::) - obsolete()/
-        # and keep it in a cache.
-        #
-        # But this naive implementation does not require cache
-        if self.phase() <= phases.public:
-            return False
-        if self.obsolete():
-            return False
-        for anc in self.ancestors():
-            if anc.obsolete():
-                return True
-        return False
+        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
+
+    def bumped(self):
+        """True if the changeset try to be a successor of a public changeset
+
+        Only non-public and non-obsolete changesets may be bumped.
+        """
+        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
 
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
@@ -309,6 +294,10 @@ class changectx(object):
             n2 = c2._parents[0]._node
         n = self._repo.changelog.ancestor(self._node, n2)
         return changectx(self._repo, n)
+
+    def descendant(self, other):
+        """True if other is descendant of this changeset"""
+        return self._repo.changelog.descendant(self._rev, other._rev)
 
     def walk(self, match):
         fset = set(match.files())
@@ -489,6 +478,10 @@ class filectx(object):
         return self._changectx.branch()
     def extra(self):
         return self._changectx.extra()
+    def phase(self):
+        return self._changectx.phase()
+    def phasestr(self):
+        return self._changectx.phasestr()
     def manifest(self):
         return self._changectx.manifest()
     def changectx(self):
@@ -885,8 +878,7 @@ class workingctx(changectx):
         p = self._repo.dirstate.parents()
         if p[1] == nullid:
             p = p[:-1]
-        self._parents = [changectx(self._repo, x) for x in p]
-        return self._parents
+        return [changectx(self._repo, x) for x in p]
 
     def status(self, ignored=False, clean=False, unknown=False):
         """Explicit status query
@@ -1168,7 +1160,7 @@ class workingfilectx(filectx):
 
         returns True if different than fctx.
         """
-        # fctx should be a filectx (not a wfctx)
+        # fctx should be a filectx (not a workingfilectx)
         # invert comparison to reuse the same code path
         return fctx.cmp(self)
 

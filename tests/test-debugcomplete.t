@@ -201,7 +201,6 @@ Show all commands + options
   init: ssh, remotecmd, insecure
   log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   merge: force, rev, preview, tool
-  phase: public, draft, secret, force, rev
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure
   remove: after, force, include, exclude
@@ -237,7 +236,7 @@ Show all commands + options
   debugindexdot: 
   debuginstall: 
   debugknown: 
-  debugobsolete: date, user
+  debugobsolete: flags, date, user
   debugpushkey: 
   debugpvec: 
   debugrebuildstate: rev
@@ -261,6 +260,7 @@ Show all commands + options
   outgoing: force, rev, newest-first, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
   parents: rev, style, template
   paths: 
+  phase: public, draft, secret, force, rev
   recover: 
   rename: after, force, include, exclude, dry-run
   resolve: all, list, mark, unmark, no-status, tool, include, exclude

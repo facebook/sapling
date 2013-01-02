@@ -9,11 +9,13 @@ test issue352
   $ A=`printf 'he\rllo'`
   $ echo foo > "$A"
   $ hg add
-  adding he\rllo (esc)
+  adding he\r (no-eol) (esc)
+  llo
   abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
   [255]
   $ hg ci -A -m m
-  adding he\rllo (esc)
+  adding he\r (no-eol) (esc)
+  llo
   abort: '\n' and '\r' disallowed in filenames: 'he\rllo'
   [255]
   $ rm "$A"
@@ -31,7 +33,9 @@ test issue352
   [255]
   $ echo foo > "$A"
   $ hg debugwalk
-  f  he\rllo  he\rllo (esc)
+  f  he\r (no-eol) (esc)
+  llo  he\r (no-eol) (esc)
+  llo
   f  hell
   o  hell
   o

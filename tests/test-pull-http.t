@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" serve || exit 80
+  $ "$TESTDIR/hghave" killdaemons || exit 80
 
   $ hg init test
   $ cd test
@@ -28,7 +28,7 @@ Cloning with a password in the URL should not save the password in .hg/hgrc:
   $ cat test3/.hg/hgrc
   [paths]
   default = http://foo@localhost:$HGPORT/
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 expect error, cloning not allowed
 
@@ -40,7 +40,7 @@ expect error, cloning not allowed
   requesting all changes
   abort: authorization failed
   [255]
-  $ "$TESTDIR/killdaemons.py"
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
 serve errors
 
@@ -49,7 +49,7 @@ serve errors
   >     hg serve -p $HGPORT -d --pid-file=hg.pid -E errors.log
   >     cat hg.pid >> $DAEMON_PIDS
   >     hg --cwd ../test pull http://localhost:$HGPORT/
-  >     kill `cat hg.pid`
+  >     "$TESTDIR/killdaemons.py" hg.pid
   >     echo % serve errors
   >     cat errors.log
   > }

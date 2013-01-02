@@ -27,6 +27,13 @@ def nochangesfound(ui, repo, excluded=None):
     else:
         ui.status(_("no changes found\n"))
 
+def checknewlabel(repo, lbl, kind):
+    if lbl in ['tip', '.', 'null']:
+        raise util.Abort(_("the name '%s' is reserved") % lbl)
+    for c in (':', '\0', '\n', '\r'):
+        if c in lbl:
+            raise util.Abort(_("%r cannot be used in a name") % c)
+
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
     if '\r' in f or '\n' in f:
@@ -167,7 +174,7 @@ class pathauditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
-class abstractopener(object):
+class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
     def __init__(self, *args, **kwargs):
@@ -204,9 +211,6 @@ class abstractopener(object):
         finally:
             fp.close()
 
-    def mkdir(self, path=None):
-        return os.mkdir(self.join(path))
-
     def exists(self, path=None):
         return os.path.exists(self.join(path))
 
@@ -219,8 +223,17 @@ class abstractopener(object):
     def makedirs(self, path=None, mode=None):
         return util.makedirs(self.join(path), mode)
 
-class opener(abstractopener):
-    '''Open files relative to a base directory
+    def mkdir(self, path=None):
+        return os.mkdir(self.join(path))
+
+    def readdir(self, path=None, stat=None, skip=None):
+        return osutil.listdir(self.join(path), stat, skip)
+
+    def stat(self, path=None):
+        return os.stat(self.join(path))
+
+class vfs(abstractvfs):
+    '''Operate files relative to a base directory
 
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
@@ -229,13 +242,21 @@ class opener(abstractopener):
         if expand:
             base = os.path.realpath(util.expandpath(base))
         self.base = base
-        self._audit = audit
-        if audit:
-            self.auditor = pathauditor(base)
-        else:
-            self.auditor = util.always
+        self._setmustaudit(audit)
         self.createmode = None
         self._trustnlink = None
+
+    def _getmustaudit(self):
+        return self._audit
+
+    def _setmustaudit(self, onoff):
+        self._audit = onoff
+        if onoff:
+            self.auditor = pathauditor(self.base)
+        else:
+            self.auditor = util.always
+
+    mustaudit = property(_getmustaudit, _setmustaudit)
 
     @util.propertycache
     def _cansymlink(self):
@@ -258,7 +279,7 @@ class opener(abstractopener):
             mode += "b" # for that other OS
 
         nlink = -1
-        dirname, basename = os.path.split(f)
+        dirname, basename = util.split(f)
         # If basename is empty, then the path is malformed because it points
         # to a directory. Let the posixfile() call below raise IOError.
         if basename and mode not in ('r', 'rb'):
@@ -313,10 +334,7 @@ class opener(abstractopener):
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
                               (src, err.strerror), linkname)
         else:
-            f = self(dst, "w")
-            f.write(src)
-            f.close()
-            self._fixfilemode(dst)
+            self.write(dst, src)
 
     def audit(self, path):
         self.auditor(path)
@@ -327,15 +345,37 @@ class opener(abstractopener):
         else:
             return self.base
 
-class filteropener(abstractopener):
-    '''Wrapper opener for filtering filenames with a function.'''
+opener = vfs
 
-    def __init__(self, opener, filter):
+class auditvfs(object):
+    def __init__(self, vfs):
+        self.vfs = vfs
+
+    def _getmustaudit(self):
+        return self.vfs.mustaudit
+
+    def _setmustaudit(self, onoff):
+        self.vfs.mustaudit = onoff
+
+    mustaudit = property(_getmustaudit, _setmustaudit)
+
+class filtervfs(abstractvfs, auditvfs):
+    '''Wrapper vfs for filtering filenames with a function.'''
+
+    def __init__(self, vfs, filter):
+        auditvfs.__init__(self, vfs)
         self._filter = filter
-        self._orig = opener
 
     def __call__(self, path, *args, **kwargs):
-        return self._orig(self._filter(path), *args, **kwargs)
+        return self.vfs(self._filter(path), *args, **kwargs)
+
+    def join(self, path):
+        if path:
+            return self.vfs.join(self._filter(path))
+        else:
+            return self.vfs.join(path)
+
+filteropener = filtervfs
 
 def canonpath(root, cwd, myname, auditor=None):
     '''return the canonical path of myname, given cwd and root'''
@@ -375,7 +415,7 @@ def canonpath(root, cwd, myname, auditor=None):
                 name = os.path.join(*rel)
                 auditor(name)
                 return util.pconvert(name)
-            dirname, basename = os.path.split(name)
+            dirname, basename = util.split(name)
             rel.append(basename)
             if dirname == name:
                 break
@@ -619,7 +659,7 @@ def revrange(repo, revs):
 
         # fall through to new-style queries if old-style fails
         m = revset.match(repo.ui, spec)
-        dl = [r for r in m(repo, xrange(len(repo))) if r not in seen]
+        dl = [r for r in m(repo, list(repo)) if r not in seen]
         l.extend(dl)
         seen.update(dl)
 

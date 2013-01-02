@@ -45,6 +45,8 @@
   (branches are permanent and global, did you want a bookmark?)
   $ hg commit -d '5 0' -m "Adding c branch"
 
+reserved names
+
   $ hg branch tip
   abort: the name 'tip' is reserved
   [255]
@@ -54,6 +56,34 @@
   $ hg branch .
   abort: the name '.' is reserved
   [255]
+
+invalid characters
+
+  $ hg branch 'foo:bar'
+  abort: ':' cannot be used in a name
+  [255]
+
+  $ hg branch 'foo
+  > bar'
+  abort: '\n' cannot be used in a name
+  [255]
+
+verify update will accept invalid legacy branch names
+
+  $ hg init test-invalid-branch-name
+  $ cd test-invalid-branch-name
+  $ hg pull -u "$TESTDIR"/bundles/test-invalid-branch-name.hg
+  pulling from *test-invalid-branch-name.hg (glob)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 2 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg update '"colon:test"'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..
 
   $ echo 'd' >d
   $ hg add d

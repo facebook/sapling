@@ -78,7 +78,7 @@ Abort:
   $ cd ..
 
 
-Constrcut new repo:
+Construct new repo:
 
   $ hg init b
   $ cd b

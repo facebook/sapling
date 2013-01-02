@@ -254,8 +254,14 @@ class revlog(object):
     def __len__(self):
         return len(self.index) - 1
     def __iter__(self):
-        for i in xrange(len(self)):
-            yield i
+        return iter(xrange(len(self)))
+    def revs(self, start=0, stop=None):
+        """iterate over all rev in this revlog (from start to stop)"""
+        if stop is None:
+            stop = len(self)
+        else:
+            stop += 1
+        return xrange(start, stop)
 
     @util.propertycache
     def nodemap(self):
@@ -374,7 +380,7 @@ class revlog(object):
             return
 
         seen = set(revs)
-        for i in xrange(first + 1, len(self)):
+        for i in self.revs(start=first + 1):
             for x in self.parentrevs(i):
                 if x != nullrev and x in seen:
                     seen.add(i)
@@ -547,9 +553,9 @@ class revlog(object):
         # Our topologically sorted list of output nodes.
         orderedout = []
         # Don't start at nullid since we don't want nullid in our output list,
-        # and if nullid shows up in descedents, empty parents will look like
+        # and if nullid shows up in descendants, empty parents will look like
         # they're descendants.
-        for r in xrange(max(lowestrev, 0), highestrev + 1):
+        for r in self.revs(start=max(lowestrev, 0), stop=highestrev + 1):
             n = self.node(r)
             isdescendant = False
             if lowestrev == nullrev:  # Everybody is a descendant of nullid
@@ -600,16 +606,20 @@ class revlog(object):
         try:
             return self.index.headrevs()
         except AttributeError:
-            pass
+            return self._headrevs()
+
+    def _headrevs(self):
         count = len(self)
         if not count:
             return [nullrev]
-        ishead = [1] * (count + 1)
+        # we won't iter over filtered rev so nobody is a head at start
+        ishead = [0] * (count + 1)
         index = self.index
-        for r in xrange(count):
+        for r in self:
+            ishead[r] = 1  # I may be an head
             e = index[r]
-            ishead[e[5]] = ishead[e[6]] = 0
-        return [r for r in xrange(count) if ishead[r]]
+            ishead[e[5]] = ishead[e[6]] = 0  # my parent are not
+        return [r for r, val in enumerate(ishead) if val]
 
     def heads(self, start=None, stop=None):
         """return the list of all nodes that have no children
@@ -634,7 +644,7 @@ class revlog(object):
         heads = set((startrev,))
 
         parentrevs = self.parentrevs
-        for r in xrange(startrev + 1, len(self)):
+        for r in self.revs(start=startrev + 1):
             for p in parentrevs(r):
                 if p in reachable:
                     if r not in stoprevs:
@@ -649,7 +659,7 @@ class revlog(object):
         """find the children of a given node"""
         c = []
         p = self.rev(node)
-        for r in range(p + 1, len(self)):
+        for r in self.revs(start=p + 1):
             prevs = [pr for pr in self.parentrevs(r) if pr != nullrev]
             if prevs:
                 for pr in prevs:
@@ -1015,7 +1025,7 @@ class revlog(object):
         see addrevision for argument descriptions.
         invariants:
         - text is optional (can be None); if not set, cachedelta must be set.
-          if both are set, they must correspond to eachother.
+          if both are set, they must correspond to each other.
         """
         btext = [text]
         def buildtext():

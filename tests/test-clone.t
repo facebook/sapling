@@ -318,8 +318,43 @@ Branch 'default' is checked out:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     hacked default
   
+Test clone with a branch named "@" (issue3677)
 
-  $ rm -r ua
+  $ hg -R ua branch @
+  marked working directory as branch @
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg -R ua commit -m 'created branch @'
+  $ hg clone ua atbranch
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R atbranch heads
+  changeset:   16:798b6d97153e
+  branch:      @
+  tag:         tip
+  parent:      12:f21241060d6a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     created branch @
+  
+  changeset:   15:0aae7cf88f0d
+  branch:      stable
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     another change for branch stable
+  
+  changeset:   12:f21241060d6a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     hacked default
+  
+  $ hg -R atbranch parents
+  changeset:   12:f21241060d6a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     hacked default
+  
+
+  $ rm -r ua atbranch
 
 
 Testing #<branch>:
@@ -468,6 +503,27 @@ iterable in addbranchrevs()
   $ rm -r ua
 
 
+Test clone with special '@' bookmark:
+  $ cd a
+  $ hg bookmark -r a7949464abda @  # branch point of stable from default
+  $ hg clone . ../i
+  updating to bookmark @
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -i ../i
+  a7949464abda
+  $ rm -r ../i
+
+  $ hg bookmark -f -r stable @
+  $ hg bookmarks
+     @                         15:0aae7cf88f0d
+  $ hg clone . ../i
+  updating to bookmark @ on branch stable
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -i ../i
+  0aae7cf88f0d
+  $ cd "$TESTTMP"
+
+
 Testing failures:
 
   $ mkdir fail
@@ -533,7 +589,7 @@ Default destination, same directory
 
 destination directory not empty
 
-  $ mkdir a 
+  $ mkdir a
   $ echo stuff > a/a
   $ hg clone q a
   abort: destination 'a' is not empty
@@ -558,7 +614,7 @@ leave existing directory in place after clone failure
   $ test -d d/.hg
   [1]
 
-reenable perm to allow deletion
+re-enable perm to allow deletion
 
   $ chmod +rx c/.hg/store/data
 

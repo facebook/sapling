@@ -46,7 +46,7 @@ test what happens if we want to trick hg
   $ rm dir/a.o
   $ rm dir/b.o
   $ mkdir dir/a.o
-  $ ln -s nonexist dir/b.o
+  $ ln -s nonexistent dir/b.o
   $ mkfifo a.c
 
 it should show a.c, dir/a.o and dir/b.o deleted

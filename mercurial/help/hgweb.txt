@@ -11,7 +11,7 @@ but recognizes only the following sections:
   - paths
   - collections
 
-The ``web`` options are thorougly described in :hg:`help config`.
+The ``web`` options are thoroughly described in :hg:`help config`.
 
 The ``paths`` section maps URL paths to paths of repositories in the
 filesystem. hgweb will not expose the filesystem directly - only

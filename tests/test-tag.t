@@ -40,8 +40,14 @@
   $ hg tag -r 0 x y z y y z
   abort: tag names must be unique
   [255]
-  $ hg tag tap nada dot tip null .
+  $ hg tag tap nada dot tip
   abort: the name 'tip' is reserved
+  [255]
+  $ hg tag .
+  abort: the name '.' is reserved
+  [255]
+  $ hg tag null
+  abort: the name 'null' is reserved
   [255]
   $ hg tag "bleah"
   abort: tag 'bleah' already exists (use -f to force)
@@ -110,10 +116,10 @@ tagging on a non-head revision
 
   $ hg tag -l 'xx
   > newline'
-  abort: '\n' cannot be used in a tag name
+  abort: '\n' cannot be used in a name
   [255]
   $ hg tag -l 'xx:xx'
-  abort: ':' cannot be used in a tag name
+  abort: ':' cannot be used in a name
   [255]
 
 cloning local tags

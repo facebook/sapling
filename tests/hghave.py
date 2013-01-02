@@ -118,6 +118,9 @@ def has_fifo():
     except OSError:
         return False
 
+def has_killdaemons():
+    return True
+
 def has_cacheable_fs():
     from mercurial import util
 
@@ -149,7 +152,7 @@ def has_docutils():
         return False
 
 def getsvnversion():
-    m = matchoutput('svn --version 2>&1', r'^svn,\s+version\s+(\d+)\.(\d+)')
+    m = matchoutput('svn --version --quiet 2>&1', r'^(\d+)\.(\d+)')
     if not m:
         return (0, 0)
     return (int(m.group(1)), int(m.group(2)))
@@ -286,6 +289,7 @@ checks = {
     "hardlink": (has_hardlink, "hardlinks"),
     "icasefs": (has_icasefs, "case insensitive file system"),
     "inotify": (has_inotify, "inotify extension support"),
+    "killdaemons": (has_killdaemons, 'killdaemons.py support'),
     "lsprof": (has_lsprof, "python lsprof module"),
     "mtn": (has_mtn, "monotone client (>= 1.0)"),
     "outer-repo": (has_outer_repo, "outer repo"),

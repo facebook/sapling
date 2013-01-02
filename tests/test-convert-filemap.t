@@ -226,14 +226,17 @@ final file versions in this repo:
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
   $ hg --cwd foo-copied.repo debugrename copied
   copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
+
+ensure that the filemap contains duplicated slashes (issue3612)
+
   $ cat > renames.fmap <<EOF
   > include dir
   > exclude dir/file2
-  > rename dir dir2
+  > rename dir dir2//dir3
   > include foo
   > include copied
-  > rename foo foo2
-  > rename copied copied2
+  > rename foo foo2/
+  > rename copied ./copied2
   > exclude dir/subdir
   > include dir/subdir/file3
   > EOF
@@ -255,12 +258,19 @@ final file versions in this repo:
   |
   o  1 "1: add bar quux; copy foo to copied" files: copied2
   |
-  o  0 "0: add foo baz dir/" files: dir2/file dir2/subdir/file3 foo2
+  o  0 "0: add foo baz dir/" files: dir2/dir3/file dir2/dir3/subdir/file3 foo2
   
+  $ hg -R renames.repo verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  4 files, 5 changesets, 7 total revisions
+
   $ hg -R renames.repo manifest --debug
   d43feacba7a4f1f2080dde4a4b985bd8a0236d46 644   copied2
-  3e20847584beff41d7cd16136b7331ab3d754be0 644   dir2/file
-  5fe139720576e18e34bcc9f79174db8897c8afe9 644   dir2/subdir/file3
+  3e20847584beff41d7cd16136b7331ab3d754be0 644   dir2/dir3/file
+  5fe139720576e18e34bcc9f79174db8897c8afe9 644   dir2/dir3/subdir/file3
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo2
   $ hg --cwd renames.repo debugrename copied2
   copied2 renamed from foo2:2ed2a3912a0b24502043eae84ee4b279c18b90dd
@@ -284,10 +294,8 @@ filemap errors
   > include
   > EOF
   $ hg -q convert --filemap errors.fmap source errors.repo
-  errors.fmap:1: superfluous / in exclude 'dir/'
   errors.fmap:3: superfluous / in include '/dir'
   errors.fmap:3: superfluous / in rename '/dir'
-  errors.fmap:3: superfluous / in exclude 'dir//dir'
   errors.fmap:4: unknown directive 'out of sync'
   errors.fmap:5: path to exclude is missing
   abort: errors in filemap

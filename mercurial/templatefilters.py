@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import cgi, re, os, time, urllib
-import encoding, node, util
+import encoding, node, util, error
 import hbisect
 
 def addbreaks(text):
@@ -92,9 +92,9 @@ def email(text):
 
 def escape(text):
     """:escape: Any text. Replaces the special XML/XHTML characters "&", "<"
-    and ">" with XML entities.
+    and ">" with XML entities, and filters out NUL characters.
     """
-    return cgi.escape(text, True)
+    return cgi.escape(text.replace('\0', ''), True)
 
 para_re = None
 space_re = None
@@ -221,7 +221,7 @@ def jsonescape(s):
 
 def localdate(text):
     """:localdate: Date. Converts a date to local date."""
-    return (text[0], util.makedate()[1])
+    return (util.parsedate(text)[0], util.makedate()[1])
 
 def nonempty(str):
     """:nonempty: Any text. Returns '(none)' if the string is empty."""
@@ -389,6 +389,35 @@ filters = {
     "user": userfilter,
     "emailuser": emailuser,
     "xmlescape": xmlescape,
+}
+
+def fillfunc(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("fill expects one or two arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    width = 76
+    if len(args) == 2:
+        try:
+            width = int(stringify(args[1][0](context, mapping, args[1][1])))
+        except ValueError:
+            raise error.ParseError(_("fill expects an integer width"))
+
+    return fill(text, width)
+
+def datefunc(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("date expects one or two arguments"))
+
+    date = args[0][0](context, mapping, args[0][1])
+    if len(args) == 2:
+        fmt = stringify(args[1][0](context, mapping, args[1][1]))
+        return util.datestr(date, fmt)
+    return util.datestr(date)
+
+funcs = {
+    "fill": fillfunc,
+    "date": datefunc,
 }
 
 # tell hggettext to extract docstrings from these functions:

@@ -20,6 +20,37 @@ facilitate conflicts resolution, markers include various annotations
 besides old and news changeset identifiers, such as creation date or
 author name.
 
+The old obsoleted changeset is called "precursor" and possible replacements are
+called "successors".  Markers that used changeset X as a precursors are called
+"successor markers of X" because they hold information about the successors of
+X. Markers that use changeset Y as a successors are call "precursor markers of
+Y" because they hold information about the precursors of Y.
+
+Examples:
+
+- When changeset A is replacement by a changeset A', one marker is stored:
+
+    (A, (A'))
+
+- When changesets A and B are folded into a new changeset C two markers are
+  stored:
+
+    (A, (C,)) and (B, (C,))
+
+- When changeset A is simply "pruned" from the graph, a marker in create:
+
+    (A, ())
+
+- When changeset A is split into B and C, a single marker are used:
+
+    (A, (C, C))
+
+  We use a single marker to distinct the "split" case from the "divergence"
+  case. If two independants operation rewrite the same changeset A in to A' and
+  A'' when have an error case: divergent rewriting. We can detect it because
+  two markers will be created independently:
+
+  (A, (B,)) and (A, (C,))
 
 Format
 ------
@@ -52,17 +83,15 @@ The header is followed by the markers. Each marker is made of:
   cannot contain '\0'.
 """
 import struct
-import util, base85
+import util, base85, node
 from i18n import _
-
-# the obsolete feature is not mature enought to be enabled by default.
-# you have to rely on third party extension extension to enable this.
-_enabled = False
 
 _pack = struct.pack
 _unpack = struct.unpack
 
-# the obsolete feature is not mature enought to be enabled by default.
+_SEEK_END = 2 # os.SEEK_END was introduced in Python 2.5
+
+# the obsolete feature is not mature enough to be enabled by default.
 # you have to rely on third party extension extension to enable this.
 _enabled = False
 
@@ -72,6 +101,37 @@ _fmfixed   = '>BIB20s'
 _fmnode = '20s'
 _fmfsize = struct.calcsize(_fmfixed)
 _fnodesize = struct.calcsize(_fmnode)
+
+### obsolescence marker flag
+
+## bumpedfix flag
+#
+# When a changeset A' succeed to a changeset A which became public, we call A'
+# "bumped" because it's a successors of a public changesets
+#
+# o    A' (bumped)
+# |`:
+# | o  A
+# |/
+# o    Z
+#
+# The way to solve this situation is to create a new changeset Ad as children
+# of A. This changeset have the same content than A'. So the diff from A to A'
+# is the same than the diff from A to Ad. Ad is marked as a successors of A'
+#
+# o   Ad
+# |`:
+# | x A'
+# |'|
+# o | A
+# |/
+# o Z
+#
+# But by transitivity Ad is also a successors of A. To avoid having Ad marked
+# as bumped too, we add the `bumpedfix` flag to the marker. <A', (Ad,)>.
+# This flag mean that the successors are an interdiff that fix the bumped
+# situation, breaking the transitivity of "bumped" here.
+bumpedfix = 1
 
 def _readmarkers(data):
     """Read and enumerate markers from raw data"""
@@ -158,11 +218,13 @@ class obsstore(object):
     """Store obsolete markers
 
     Markers can be accessed with two mappings:
-    - precursors: old -> set(new)
-    - successors: new -> set(old)
+    - precursors[x] -> set(markers on precursors edges of x)
+    - successors[x] -> set(markers on successors edges of x)
     """
 
     def __init__(self, sopener):
+        # caches for various obsolescence related cache
+        self.caches = {}
         self._all = []
         # new markers to serialize
         self.precursors = {}
@@ -211,7 +273,7 @@ class obsstore(object):
                 # defined. So we must seek to the end before calling tell(),
                 # or we may get a zero offset for non-zero sized files on
                 # some platforms (issue3543).
-                f.seek(0, 2) # os.SEEK_END
+                f.seek(0, _SEEK_END)
                 offset = f.tell()
                 transaction.add('obsstore', offset)
                 # offset == 0: new file - add the version header
@@ -222,19 +284,24 @@ class obsstore(object):
                 # call 'filecacheentry.refresh()'  here
                 f.close()
             self._load(new)
+            # new marker *may* have changed several set. invalidate the cache.
+            self.caches.clear()
         return len(new)
 
-    def mergemarkers(self, transation, data):
+    def mergemarkers(self, transaction, data):
         markers = _readmarkers(data)
-        self.add(transation, markers)
+        self.add(transaction, markers)
 
     def _load(self, markers):
         for mark in markers:
             self._all.append(mark)
             pre, sucs = mark[:2]
-            self.precursors.setdefault(pre, set()).add(mark)
+            self.successors.setdefault(pre, set()).add(mark)
             for suc in sucs:
-                self.successors.setdefault(suc, set()).add(mark)
+                self.precursors.setdefault(suc, set()).add(mark)
+        if node.nullid in self.precursors:
+            raise util.Abort(_('bad obsolescence marker detected: '
+                               'invalid successors nullid'))
 
 def _encodemarkers(markers, addheader=False):
     # Kept separate from flushmarkers(), it will be reused for
@@ -306,26 +373,154 @@ def allmarkers(repo):
         yield marker(repo, markerdata)
 
 def precursormarkers(ctx):
-    """obsolete marker making this changeset obsolete"""
+    """obsolete marker marking this changeset as a successors"""
     for data in ctx._repo.obsstore.precursors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
 def successormarkers(ctx):
-    """obsolete marker marking this changeset as a successors"""
+    """obsolete marker making this changeset obsolete"""
     for data in ctx._repo.obsstore.successors.get(ctx.node(), ()):
         yield marker(ctx._repo, data)
 
-def anysuccessors(obsstore, node):
-    """Yield every successor of <node>
+def allsuccessors(obsstore, nodes, ignoreflags=0):
+    """Yield node for every successor of <nodes>.
 
-    This this a linear yield unsuitable to detect splitted changeset."""
-    remaining = set([node])
+    Some successors may be unknown locally.
+
+    This is a linear yield unsuited to detecting split changesets."""
+    remaining = set(nodes)
     seen = set(remaining)
     while remaining:
         current = remaining.pop()
         yield current
-        for mark in obsstore.precursors.get(current, ()):
+        for mark in obsstore.successors.get(current, ()):
+            # ignore marker flagged with with specified flag
+            if mark[2] & ignoreflags:
+                continue
             for suc in mark[1]:
                 if suc not in seen:
                     seen.add(suc)
                     remaining.add(suc)
+
+def _knownrevs(repo, nodes):
+    """yield revision numbers of known nodes passed in parameters
+
+    Unknown revisions are silently ignored."""
+    torev = repo.changelog.nodemap.get
+    for n in nodes:
+        rev = torev(n)
+        if rev is not None:
+            yield rev
+
+# mapping of 'set-name' -> <function to compute this set>
+cachefuncs = {}
+def cachefor(name):
+    """Decorator to register a function as computing the cache for a set"""
+    def decorator(func):
+        assert name not in cachefuncs
+        cachefuncs[name] = func
+        return func
+    return decorator
+
+def getrevs(repo, name):
+    """Return the set of revision that belong to the <name> set
+
+    Such access may compute the set and cache it for future use"""
+    if not repo.obsstore:
+        return ()
+    if name not in repo.obsstore.caches:
+        repo.obsstore.caches[name] = cachefuncs[name](repo)
+    return repo.obsstore.caches[name]
+
+# To be simple we need to invalidate obsolescence cache when:
+#
+# - new changeset is added:
+# - public phase is changed
+# - obsolescence marker are added
+# - strip is used a repo
+def clearobscaches(repo):
+    """Remove all obsolescence related cache from a repo
+
+    This remove all cache in obsstore is the obsstore already exist on the
+    repo.
+
+    (We could be smarter here given the exact event that trigger the cache
+    clearing)"""
+    # only clear cache is there is obsstore data in this repo
+    if 'obsstore' in repo._filecache:
+        repo.obsstore.caches.clear()
+
+@cachefor('obsolete')
+def _computeobsoleteset(repo):
+    """the set of obsolete revisions"""
+    obs = set()
+    nm = repo.changelog.nodemap
+    for node in repo.obsstore.successors:
+        rev = nm.get(node)
+        if rev is not None:
+            obs.add(rev)
+    return set(repo.revs('%ld - public()', obs))
+
+@cachefor('unstable')
+def _computeunstableset(repo):
+    """the set of non obsolete revisions with obsolete parents"""
+    return set(repo.revs('(obsolete()::) - obsolete()'))
+
+@cachefor('suspended')
+def _computesuspendedset(repo):
+    """the set of obsolete parents with non obsolete descendants"""
+    return set(repo.revs('obsolete() and obsolete()::unstable()'))
+
+@cachefor('extinct')
+def _computeextinctset(repo):
+    """the set of obsolete parents without non obsolete descendants"""
+    return set(repo.revs('obsolete() - obsolete()::unstable()'))
+
+
+@cachefor('bumped')
+def _computebumpedset(repo):
+    """the set of revs trying to obsolete public revisions"""
+    # get all possible bumped changesets
+    tonode = repo.changelog.node
+    publicnodes = (tonode(r) for r in repo.revs('public()'))
+    successors = allsuccessors(repo.obsstore, publicnodes,
+                               ignoreflags=bumpedfix)
+    # revision public or already obsolete don't count as bumped
+    query = '%ld - obsolete() - public()'
+    return set(repo.revs(query, _knownrevs(repo, successors)))
+
+def createmarkers(repo, relations, flag=0, metadata=None):
+    """Add obsolete markers between changesets in a repo
+
+    <relations> must be an iterable of (<old>, (<new>, ...)) tuple.
+    `old` and `news` are changectx.
+
+    Trying to obsolete a public changeset will raise an exception.
+
+    Current user and date are used except if specified otherwise in the
+    metadata attribute.
+
+    This function operates within a transaction of its own, but does
+    not take any lock on the repo.
+    """
+    # prepare metadata
+    if metadata is None:
+        metadata = {}
+    if 'date' not in metadata:
+        metadata['date'] = '%i %i' % util.makedate()
+    if 'user' not in metadata:
+        metadata['user'] = repo.ui.username()
+    tr = repo.transaction('add-obsolescence-marker')
+    try:
+        for prec, sucs in relations:
+            if not prec.mutable():
+                raise util.Abort("cannot obsolete immutable changeset: %s"
+                                 % prec)
+            nprec = prec.node()
+            nsucs = tuple(s.node() for s in sucs)
+            if nprec in nsucs:
+                raise util.Abort("changeset %s cannot obsolete itself" % prec)
+            repo.obsstore.create(tr, nprec, nsucs, flag, metadata)
+        tr.close()
+    finally:
+        tr.release()

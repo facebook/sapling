@@ -83,7 +83,7 @@ o  (0) root
 
   $ cat > printrevset.py <<EOF
   > from mercurial import extensions, revset, commands, cmdutil
-  >  
+  > 
   > def uisetup(ui):
   >     def printrevset(orig, ui, repo, *pats, **opts):
   >         if opts.get('print_revset'):
@@ -2044,20 +2044,40 @@ Test subdir
 Test --hidden
 
   $ cat > $HGTMP/testhidden.py << EOF
+  > from mercurial import util
   > def reposetup(ui, repo):
   >     for line in repo.opener('hidden'):
   >         ctx = repo[line.strip()]
   >         repo.hiddenrevs.add(ctx.rev())
+  >     if repo.revs('children(%ld) - %ld',  repo.hiddenrevs,  repo.hiddenrevs):
+  >       raise util.Abort('hidden revision with children!')
   > EOF
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "hidden=$HGTMP/testhidden.py" >> .hg/hgrc
-  $ hg id --debug -i -r 0 > .hg/hidden
+  $ hg id --debug -i -r 8 > .hg/hidden
   $ testlog
   []
   []
   $ testlog --hidden
   []
   []
+  $ hg glog --template '{rev} {desc}\n'
+  o  7 Added tag foo-bar for changeset fc281d8ff18d
+  |
+  o    6 merge 5 and 4
+  |\
+  | o  5 add another e
+  | |
+  o |  4 mv dir/b e
+  |/
+  @  3 mv a b; add d
+  |
+  o  2 mv b dir/b
+  |
+  o  1 copy a b
+  |
+  o  0 add a
+  
 
 A template without trailing newline should do something sane
 
@@ -2066,6 +2086,8 @@ A template without trailing newline should do something sane
   |
   o  1 copy a b
   |
+  o  0 add a
+  
 
 Extra newlines must be preserved
 
@@ -2076,6 +2098,9 @@ Extra newlines must be preserved
   o
   |  1 copy a b
   |
+  o
+     0 add a
+  
 
 The almost-empty template should do something sane too ...
 
@@ -2084,5 +2109,7 @@ The almost-empty template should do something sane too ...
   |
   o
   |
+  o
+  
 
   $ cd ..

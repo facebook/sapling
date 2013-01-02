@@ -223,7 +223,7 @@ def toutf8b(s):
 
     Principles of operation:
 
-    - ASCII and UTF-8 data sucessfully round-trips and is understood
+    - ASCII and UTF-8 data successfully round-trips and is understood
       by Unicode-oriented clients
     - filenames and file contents in arbitrary other encodings can have
       be round-tripped or recovered by clueful clients

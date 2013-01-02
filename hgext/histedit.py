@@ -142,20 +142,22 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
-import tempfile
 import os
 
 from mercurial import bookmarks
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
+from mercurial import copies
+from mercurial import context
 from mercurial import hg
 from mercurial import lock as lockmod
 from mercurial import node
-from mercurial import patch
 from mercurial import repair
 from mercurial import scmutil
 from mercurial import util
+from mercurial import obsolete
+from mercurial import merge as mergemod
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -175,82 +177,123 @@ editcomment = _("""# Edit history between %s and %s
 #
 """)
 
-def between(repo, old, new, keep):
-    revs = [old]
-    current = old
-    while current != new:
-        ctx = repo[current]
-        if not keep and len(ctx.children()) > 1:
-            raise util.Abort(_('cannot edit history that would orphan nodes'))
-        if len(ctx.parents()) != 1 and ctx.parents()[1] != node.nullid:
-            raise util.Abort(_("can't edit history with merges"))
-        if not ctx.children():
-            current = new
-        else:
-            current = ctx.children()[0].node()
-            revs.append(current)
-    if len(repo[current].children()) and not keep:
-        raise util.Abort(_('cannot edit history that would orphan nodes'))
-    return revs
+def applychanges(ui, repo, ctx, opts):
+    """Merge changeset from ctx (only) in the current working directory"""
+    wcpar = repo.dirstate.parents()[0]
+    if ctx.p1().node() == wcpar:
+        # edition ar "in place" we do not need to make any merge,
+        # just applies changes on parent for edition
+        cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
+        stats = None
+    else:
+        try:
+            # ui.forcemerge is an internal variable, do not document
+            repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
+            stats = mergemod.update(repo, ctx.node(), True, True, False,
+                                    ctx.p1().node())
+        finally:
+            repo.ui.setconfig('ui', 'forcemerge', '')
+        repo.setparents(wcpar, node.nullid)
+        repo.dirstate.write()
+        # fix up dirstate for copies and renames
+    cmdutil.duplicatecopies(repo, ctx.rev(), ctx.p1().rev())
+    return stats
 
+def collapse(repo, first, last, commitopts):
+    """collapse the set of revisions from first to last as new one.
+
+    Expected commit options are:
+        - message
+        - date
+        - username
+    Commit message is edited in all cases.
+
+    This function works in memory."""
+    ctxs = list(repo.set('%d::%d', first, last))
+    if not ctxs:
+        return None
+    base = first.parents()[0]
+
+    # commit a new version of the old changeset, including the update
+    # collect all files which might be affected
+    files = set()
+    for ctx in ctxs:
+        files.update(ctx.files())
+
+    # Recompute copies (avoid recording a -> b -> a)
+    copied = copies.pathcopies(first, last)
+
+    # prune files which were reverted by the updates
+    def samefile(f):
+        if f in last.manifest():
+            a = last.filectx(f)
+            if f in base.manifest():
+                b = base.filectx(f)
+                return (a.data() == b.data()
+                        and a.flags() == b.flags())
+            else:
+                return False
+        else:
+            return f not in base.manifest()
+    files = [f for f in files if not samefile(f)]
+    # commit version of these files as defined by head
+    headmf = last.manifest()
+    def filectxfn(repo, ctx, path):
+        if path in headmf:
+            fctx = last[path]
+            flags = fctx.flags()
+            mctx = context.memfilectx(fctx.path(), fctx.data(),
+                                      islink='l' in flags,
+                                      isexec='x' in flags,
+                                      copied=copied.get(path))
+            return mctx
+        raise IOError()
+
+    if commitopts.get('message'):
+        message = commitopts['message']
+    else:
+        message = first.description()
+    user = commitopts.get('user')
+    date = commitopts.get('date')
+    extra = first.extra()
+
+    parents = (first.p1().node(), first.p2().node())
+    new = context.memctx(repo,
+                         parents=parents,
+                         text=message,
+                         files=files,
+                         filectxfn=filectxfn,
+                         user=user,
+                         date=date,
+                         extra=extra)
+    new._text = cmdutil.commitforceeditor(repo, new, [])
+    return repo.commitctx(new)
 
 def pick(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     if oldctx.parents()[0] == ctx:
         ui.debug('node %s unchanged\n' % ha)
-        return oldctx, [], [], []
+        return oldctx, []
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-            if not files:
-                ui.warn(_('%s: empty changeset')
-                             % node.hex(ha))
-                return ctx, [], [], []
-        finally:
-            os.unlink(patchfile)
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
+    # drop the second merge parent
     n = repo.commit(text=oldctx.description(), user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
-    return repo[n], [n], [oldctx.node()], []
+    if n is None:
+        ui.warn(_('%s: empty changeset\n')
+                     % node.hex(ha))
+        return ctx, []
+    new = repo[n]
+    return new, [(oldctx.node(), (n,))]
 
 
 def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-        finally:
-            os.unlink(patchfile)
-    except Exception:
-        pass
+    applychanges(ui, repo, oldctx, opts)
     raise util.Abort(_('Make changes as needed, you may commit or record as '
                        'needed now.\nWhen you are finished, run hg'
                        ' histedit --continue to resume.'))
@@ -258,92 +301,58 @@ def edit(ui, repo, ctx, ha, opts):
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-            if not files:
-                ui.warn(_('%s: empty changeset')
-                             % node.hex(ha))
-                return ctx, [], [], []
-        finally:
-            os.unlink(patchfile)
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
+    if n is None:
+        ui.warn(_('%s: empty changeset')
+                     % node.hex(ha))
+        return ctx, []
     return finishfold(ui, repo, ctx, oldctx, n, opts, [])
 
 def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     parent = ctx.parents()[0].node()
     hg.update(repo, parent)
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, parent, newnode, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    files = set()
-    try:
-        patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-    finally:
-        os.unlink(patchfile)
-    newmessage = '\n***\n'.join(
-        [ctx.description()] +
-        [repo[r].description() for r in internalchanges] +
-        [oldctx.description()]) + '\n'
-    # If the changesets are from the same author, keep it.
+    ### prepare new commit data
+    commitopts = opts.copy()
+    # username
     if ctx.user() == oldctx.user():
         username = ctx.user()
     else:
         username = ui.username()
-    newmessage = ui.edit(newmessage, username)
-    n = repo.commit(text=newmessage, user=username,
-                    date=max(ctx.date(), oldctx.date()), extra=oldctx.extra())
-    return repo[n], [n], [oldctx.node(), ctx.node()], [newnode]
+    commitopts['user'] = username
+    # commit message
+    newmessage = '\n***\n'.join(
+        [ctx.description()] +
+        [repo[r].description() for r in internalchanges] +
+        [oldctx.description()]) + '\n'
+    commitopts['message'] = newmessage
+    # date
+    commitopts['date'] = max(ctx.date(), oldctx.date())
+    n = collapse(repo, ctx, repo[newnode], commitopts)
+    if n is None:
+        return ctx, []
+    hg.update(repo, n)
+    replacements = [(oldctx.node(), (newnode,)),
+                     (ctx.node(), (n,)),
+                     (newnode, (n,)),
+                    ]
+    for ich in internalchanges:
+        replacements.append((ich, (n,)))
+    return repo[n], replacements
 
 def drop(ui, repo, ctx, ha, opts):
-    return ctx, [], [repo[ha].node()], []
+    return ctx, [(repo[ha].node(), ())]
 
 
 def message(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
-    fd, patchfile = tempfile.mkstemp(prefix='hg-histedit-')
-    fp = os.fdopen(fd, 'w')
-    diffopts = patch.diffopts(ui, opts)
-    diffopts.git = True
-    diffopts.ignorews = False
-    diffopts.ignorewsamount = False
-    diffopts.ignoreblanklines = False
-    gen = patch.diff(repo, oldctx.parents()[0].node(), ha, opts=diffopts)
-    for chunk in gen:
-        fp.write(chunk)
-    fp.close()
-    try:
-        files = set()
-        try:
-            patch.patch(ui, repo, patchfile, files=files, eolmode=None)
-        finally:
-            os.unlink(patchfile)
-    except Exception:
+    stats = applychanges(ui, repo, oldctx, opts)
+    if stats and stats[3] > 0:
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     message = oldctx.description() + '\n'
@@ -352,17 +361,9 @@ def message(ui, repo, ctx, ha, opts):
                       extra=oldctx.extra())
     newctx = repo[new]
     if oldctx.node() != newctx.node():
-        return newctx, [new], [oldctx.node()], []
+        return newctx, [(oldctx.node(), (new,))]
     # We didn't make an edit, so just indicate no replaced nodes
-    return newctx, [new], [], []
-
-
-def makedesc(c):
-    summary = ''
-    if c.description():
-        summary = c.description().splitlines()[0]
-    line = 'pick %s %d %s' % (c.hex()[:12], c.rev(), summary)
-    return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
+    return newctx, []
 
 actiontable = {'p': pick,
                'pick': pick,
@@ -424,86 +425,20 @@ def histedit(ui, repo, *parent, **opts):
     if opts.get('continue', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --continue'))
-        (parentctxnode, created, replaced,
-         tmpnodes, existing, rules, keep, tip, replacemap) = readstate(repo)
+        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
-        # existing is the list of revisions initially considered by
-        # histedit. Here we use it to list new changesets, descendants
-        # of parentctx without an 'existing' changeset in-between. We
-        # also have to exclude 'existing' changesets which were
-        # previously dropped.
-        descendants = set(c.node() for c in
-                repo.set('(%n::) - %n', parentctxnode, parentctxnode))
-        existing = set(existing)
-        notdropped = set(n for n in existing if n in descendants and
-                (n not in replacemap or replacemap[n] in descendants))
-        # Discover any nodes the user has added in the interim. We can
-        # miss changesets which were dropped and recreated the same.
-        newchildren = list(c.node() for c in repo.set(
-            'sort(%ln - (%ln or %ln::))', descendants, existing, notdropped))
-        action, currentnode = rules.pop(0)
-        if action in ('f', 'fold'):
-            tmpnodes.extend(newchildren)
-        else:
-            created.extend(newchildren)
-
-        m, a, r, d = repo.status()[:4]
-        oldctx = repo[currentnode]
-        message = oldctx.description() + '\n'
-        if action in ('e', 'edit', 'm', 'mess'):
-            message = ui.edit(message, ui.username())
-        elif action in ('f', 'fold'):
-            message = 'fold-temp-revision %s' % currentnode
-        new = None
-        if m or a or r or d:
-            new = repo.commit(text=message, user=oldctx.user(),
-                              date=oldctx.date(), extra=oldctx.extra())
-
-        # If we're resuming a fold and we have new changes, mark the
-        # replacements and finish the fold. If not, it's more like a
-        # drop of the changesets that disappeared, and we can skip
-        # this step.
-        if action in ('f', 'fold') and (new or newchildren):
-            if new:
-                tmpnodes.append(new)
-            else:
-                new = newchildren[-1]
-            (parentctx, created_, replaced_, tmpnodes_) = finishfold(
-                ui, repo, parentctx, oldctx, new, opts, newchildren)
-            replaced.extend(replaced_)
-            created.extend(created_)
-            tmpnodes.extend(tmpnodes_)
-        elif action not in ('d', 'drop'):
-            if new != oldctx.node():
-                replaced.append(oldctx.node())
-            if new:
-                if new != oldctx.node():
-                    created.append(new)
-                parentctx = repo[new]
-
+        parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
+        replacements.extend(repl)
     elif opts.get('abort', False):
         if len(parent) != 0:
             raise util.Abort(_('no arguments allowed with --abort'))
-        (parentctxnode, created, replaced, tmpnodes,
-         existing, rules, keep, tip, replacemap) = readstate(repo)
-        ui.debug('restore wc to old tip %s\n' % node.hex(tip))
-        hg.clean(repo, tip)
-        ui.debug('should strip created nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in created]))
-        ui.debug('should strip temp nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in tmpnodes]))
-        for nodes in (created, tmpnodes):
-            lock = None
-            try:
-                lock = repo.lock()
-                for n in reversed(nodes):
-                    try:
-                        repair.strip(ui, repo, n)
-                    except error.LookupError:
-                        pass
-            finally:
-                lockmod.release(lock)
+        (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
+        mapping, tmpnodes, leafs, _ntm = processreplacement(repo, replacements)
+        ui.debug('restore wc to old parent %s\n' % node.short(topmost))
+        hg.clean(repo, topmost)
+        cleanupnode(ui, repo, 'created', tmpnodes)
+        cleanupnode(ui, repo, 'temp', leafs)
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
@@ -512,23 +447,24 @@ def histedit(ui, repo, *parent, **opts):
             raise util.Abort(_('history edit already in progress, try '
                                '--continue or --abort'))
 
-        tip, empty = repo.dirstate.parents()
-
+        topmost, empty = repo.dirstate.parents()
 
         if len(parent) != 1:
             raise util.Abort(_('histedit requires exactly one parent revision'))
         parent = scmutil.revsingle(repo, parent[0]).node()
 
         keep = opts.get('keep', False)
-        revs = between(repo, parent, tip, keep)
+        revs = between(repo, parent, topmost, keep)
+        if not revs:
+            ui.warn(_('nothing to edit\n'))
+            return 1
 
         ctxs = [repo[r] for r in revs]
-        existing = [r.node() for r in ctxs]
         rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'
-            rules += editcomment % (node.hex(parent)[:12], node.hex(tip)[:12])
+            rules += editcomment % (node.short(parent), node.short(topmost))
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -546,146 +482,150 @@ def histedit(ui, repo, *parent, **opts):
 
         parentctx = repo[parent].parents()[0]
         keep = opts.get('keep', False)
-        replaced = []
-        replacemap = {}
-        tmpnodes = []
-        created = []
+        replacements = []
 
 
     while rules:
-        writestate(repo, parentctx.node(), created, replaced,
-                   tmpnodes, existing, rules, keep, tip, replacemap)
+        writestate(repo, parentctx.node(), rules, keep, topmost, replacements)
         action, ha = rules.pop(0)
-        (parentctx, created_, replaced_, tmpnodes_) = actiontable[action](
-            ui, repo, parentctx, ha, opts)
-
-        if replaced_:
-            clen, rlen = len(created_), len(replaced_)
-            if clen == rlen == 1:
-                ui.debug('histedit: exact replacement of %s with %s\n' % (
-                    node.short(replaced_[0]), node.short(created_[0])))
-
-                replacemap[replaced_[0]] = created_[0]
-            elif clen > rlen:
-                assert rlen == 1, ('unexpected replacement of '
-                                   '%d changes with %d changes' % (rlen, clen))
-                # made more changesets than we're replacing
-                # TODO synthesize patch names for created patches
-                replacemap[replaced_[0]] = created_[-1]
-                ui.debug('histedit: created many, assuming %s replaced by %s' %
-                         (node.short(replaced_[0]), node.short(created_[-1])))
-            elif rlen > clen:
-                if not created_:
-                    # This must be a drop. Try and put our metadata on
-                    # the parent change.
-                    assert rlen == 1
-                    r = replaced_[0]
-                    ui.debug('histedit: %s seems replaced with nothing, '
-                            'finding a parent\n' % (node.short(r)))
-                    pctx = repo[r].parents()[0]
-                    if pctx.node() in replacemap:
-                        ui.debug('histedit: parent is already replaced\n')
-                        replacemap[r] = replacemap[pctx.node()]
-                    else:
-                        replacemap[r] = pctx.node()
-                    ui.debug('histedit: %s best replaced by %s\n' % (
-                        node.short(r), node.short(replacemap[r])))
-                else:
-                    assert len(created_) == 1
-                    for r in replaced_:
-                        ui.debug('histedit: %s replaced by %s\n' % (
-                            node.short(r), node.short(created_[0])))
-                        replacemap[r] = created_[0]
-            else:
-                assert False, (
-                    'Unhandled case in replacement mapping! '
-                    'replacing %d changes with %d changes' % (rlen, clen))
-        created.extend(created_)
-        replaced.extend(replaced_)
-        tmpnodes.extend(tmpnodes_)
+        ui.debug('histedit: processing %s %s\n' % (action, ha))
+        actfunc = actiontable[action]
+        parentctx, replacement_ = actfunc(ui, repo, parentctx, ha, opts)
+        replacements.extend(replacement_)
 
     hg.update(repo, parentctx.node())
 
+    mapping, tmpnodes, created, ntm = processreplacement(repo, replacements)
+    if mapping:
+        for prec, succs in mapping.iteritems():
+            if not succs:
+                ui.debug('histedit: %s is dropped\n' % node.short(prec))
+            else:
+                ui.debug('histedit: %s is replaced by %s\n' % (
+                    node.short(prec), node.short(succs[0])))
+                if len(succs) > 1:
+                    m = 'histedit:                            %s'
+                    for n in succs[1:]:
+                        ui.debug(m % node.short(n))
+
     if not keep:
-        if replacemap:
-            ui.note(_('histedit: Should update metadata for the following '
-                      'changes:\n'))
+        if mapping:
+            movebookmarks(ui, repo, mapping, topmost, ntm)
+            # TODO update mq state
+        if obsolete._enabled:
+            markers = []
+            # sort by revision number because it sound "right"
+            for prec in sorted(mapping, key=repo.changelog.rev):
+                succs = mapping[prec]
+                markers.append((repo[prec],
+                                tuple(repo[s] for s in succs)))
+            if markers:
+                obsolete.createmarkers(repo, markers)
+        else:
+            cleanupnode(ui, repo, 'replaced', mapping)
 
-            def copybms(old, new):
-                if old in tmpnodes or old in created:
-                    # can't have any metadata we'd want to update
-                    return
-                while new in replacemap:
-                    new = replacemap[new]
-                ui.note(_('histedit:  %s to %s\n') % (node.short(old),
-                                                      node.short(new)))
-                octx = repo[old]
-                marks = octx.bookmarks()
-                if marks:
-                    ui.note(_('histedit:     moving bookmarks %s\n') %
-                              ', '.join(marks))
-                    for mark in marks:
-                        repo._bookmarks[mark] = new
-                    bookmarks.write(repo)
-
-            # We assume that bookmarks on the tip should remain
-            # tipmost, but bookmarks on non-tip changesets should go
-            # to their most reasonable successor. As a result, find
-            # the old tip and new tip and copy those bookmarks first,
-            # then do the rest of the bookmark copies.
-            oldtip = sorted(replacemap.keys(), key=repo.changelog.rev)[-1]
-            newtip = sorted(replacemap.values(), key=repo.changelog.rev)[-1]
-            copybms(oldtip, newtip)
-
-            for old, new in sorted(replacemap.iteritems()):
-                copybms(old, new)
-                # TODO update mq state
-
-        ui.debug('should strip replaced nodes %s\n' %
-                 ', '.join([node.hex(n)[:12] for n in replaced]))
-        lock = None
-        try:
-            lock = repo.lock()
-            for n in sorted(replaced, key=lambda x: repo[x].rev()):
-                try:
-                    repair.strip(ui, repo, n)
-                except error.LookupError:
-                    pass
-        finally:
-            lockmod.release(lock)
-
-    ui.debug('should strip temp nodes %s\n' %
-             ', '.join([node.hex(n)[:12] for n in tmpnodes]))
-    lock = None
-    try:
-        lock = repo.lock()
-        for n in reversed(tmpnodes):
-            try:
-                repair.strip(ui, repo, n)
-            except error.LookupError:
-                pass
-    finally:
-        lockmod.release(lock)
+    cleanupnode(ui, repo, 'temp', tmpnodes)
     os.unlink(os.path.join(repo.path, 'histedit-state'))
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
 
 
-def writestate(repo, parentctxnode, created, replaced,
-               tmpnodes, existing, rules, keep, oldtip, replacemap):
+def bootstrapcontinue(ui, repo, parentctx, rules, opts):
+    action, currentnode = rules.pop(0)
+    ctx = repo[currentnode]
+    # is there any new commit between the expected parent and "."
+    #
+    # note: does not take non linear new change in account (but previous
+    #       implementation didn't used them anyway (issue3655)
+    newchildren = [c.node() for c in repo.set('(%d::.)', parentctx)]
+    if not newchildren:
+        # `parentctxnode` should match but no result. This means that
+        # currentnode is not a descendant from parentctxnode.
+        msg = _('working directory parent is not a descendant of %s')
+        hint = _('update to %s or descendant and run "hg histedit '
+                 '--continue" again') % parentctx
+        raise util.Abort(msg % parentctx, hint=hint)
+    newchildren.pop(0)  # remove parentctxnode
+    # Commit dirty working directory if necessary
+    new = None
+    m, a, r, d = repo.status()[:4]
+    if m or a or r or d:
+        # prepare the message for the commit to comes
+        if action in ('f', 'fold'):
+            message = 'fold-temp-revision %s' % currentnode
+        else:
+            message = ctx.description() + '\n'
+        if action in ('e', 'edit', 'm', 'mess'):
+            editor = cmdutil.commitforceeditor
+        else:
+            editor = False
+        new = repo.commit(text=message, user=ctx.user(),
+                          date=ctx.date(), extra=ctx.extra(),
+                          editor=editor)
+        if new is not None:
+            newchildren.append(new)
+
+    replacements = []
+    # track replacements
+    if ctx.node() not in newchildren:
+        # note: new children may be empty when the changeset is dropped.
+        # this happen e.g during conflicting pick where we revert content
+        # to parent.
+        replacements.append((ctx.node(), tuple(newchildren)))
+
+    if action in ('f', 'fold'):
+        # finalize fold operation if applicable
+        if new is None:
+            new = newchildren[-1]
+        else:
+            newchildren.pop()  # remove new from internal changes
+        parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
+                                     newchildren)
+        replacements.extend(repl)
+    elif newchildren:
+        # otherwize update "parentctx" before proceding to further operation
+        parentctx = repo[newchildren[-1]]
+    return parentctx, replacements
+
+
+def between(repo, old, new, keep):
+    """select and validate the set of revision to edit
+
+    When keep is false, the specified set can't have children."""
+    ctxs = list(repo.set('%n::%n', old, new))
+    if ctxs and not keep:
+        if repo.revs('(%ld::) - (%ld + hidden())', ctxs, ctxs):
+            raise util.Abort(_('cannot edit history that would orphan nodes'))
+        root = ctxs[0] # list is already sorted by repo.set
+        if not root.phase():
+            raise util.Abort(_('cannot edit immutable changeset: %s') % root)
+    return [c.node() for c in ctxs]
+
+
+def writestate(repo, parentnode, rules, keep, topmost, replacements):
     fp = open(os.path.join(repo.path, 'histedit-state'), 'w')
-    pickle.dump((parentctxnode, created, replaced,
-                 tmpnodes, existing, rules, keep, oldtip, replacemap),
-                fp)
+    pickle.dump((parentnode, rules, keep, topmost, replacements), fp)
     fp.close()
 
 def readstate(repo):
-    """Returns a tuple of (parentnode, created, replaced, tmp, existing, rules,
-                           keep, oldtip, replacemap ).
+    """Returns a tuple of (parentnode, rules, keep, topmost, replacements).
     """
     fp = open(os.path.join(repo.path, 'histedit-state'))
     return pickle.load(fp)
 
+
+def makedesc(c):
+    """build a initial action line for a ctx `c`
+
+    line are in the form:
+
+      pick <hash> <rev> <summary>
+    """
+    summary = ''
+    if c.description():
+        summary = c.description().splitlines()[0]
+    line = 'pick %s %d %s' % (c, c.rev(), summary)
+    return line[:80]  # trim to 80 chars so it's not stupidly wide in my editor
 
 def verifyrules(rules, repo, ctxs):
     """Verify that there exists exactly one edit rule per given changeset.
@@ -714,3 +654,117 @@ def verifyrules(rules, repo, ctxs):
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     return parsed
+
+def processreplacement(repo, replacements):
+    """process the list of replacements to return
+
+    1) the final mapping between original and created nodes
+    2) the list of temporary node created by histedit
+    3) the list of new commit created by histedit"""
+    allsuccs = set()
+    replaced = set()
+    fullmapping = {}
+    # initialise basic set
+    # fullmapping record all operation recorded in replacement
+    for rep in replacements:
+        allsuccs.update(rep[1])
+        replaced.add(rep[0])
+        fullmapping.setdefault(rep[0], set()).update(rep[1])
+    new = allsuccs - replaced
+    tmpnodes = allsuccs & replaced
+    # Reduce content fullmapping  into direct relation between original nodes
+    # and final node created during history edition
+    # Dropped changeset are replaced by an empty list
+    toproceed = set(fullmapping)
+    final = {}
+    while toproceed:
+        for x in list(toproceed):
+            succs = fullmapping[x]
+            for s in list(succs):
+                if s in toproceed:
+                    # non final node with unknown closure
+                    # We can't process this now
+                    break
+                elif s in final:
+                    # non final node, replace with closure
+                    succs.remove(s)
+                    succs.update(final[s])
+            else:
+                final[x] = succs
+                toproceed.remove(x)
+    # remove tmpnodes from final mapping
+    for n in tmpnodes:
+        del final[n]
+    # we expect all changes involved in final to exist in the repo
+    # turn `final` into list (topologically sorted)
+    nm = repo.changelog.nodemap
+    for prec, succs in final.items():
+        final[prec] = sorted(succs, key=nm.get)
+
+    # computed topmost element (necessary for bookmark)
+    if new:
+        newtopmost = sorted(new, key=repo.changelog.rev)[-1]
+    elif not final:
+        # Nothing rewritten at all. we won't need `newtopmost`
+        # It is the same as `oldtopmost` and `processreplacement` know it
+        newtopmost = None
+    else:
+        # every body died. The newtopmost is the parent of the root.
+        newtopmost = repo[sorted(final, key=repo.changelog.rev)[0]].p1().node()
+
+    return final, tmpnodes, new, newtopmost
+
+def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
+    """Move bookmark from old to newly created node"""
+    if not mapping:
+        # if nothing got rewritten there is not purpose for this function
+        return
+    moves = []
+    for bk, old in repo._bookmarks.iteritems():
+        if old == oldtopmost:
+            # special case ensure bookmark stay on tip. 
+            #
+            # This is arguably a feature and we may only want that for the
+            # active bookmark. But the behavior is kept compatible with the old
+            # version for now.
+            moves.append((bk, newtopmost))
+            continue
+        base = old
+        new = mapping.get(base, None)
+        if new is None:
+            continue
+        while not new:
+            # base is killed, trying with parent
+            base = repo[base].p1().node()
+            new = mapping.get(base, (base,))
+            # nothing to move
+        moves.append((bk, new[-1]))
+    if moves:
+        for mark, new in moves:
+            old = repo._bookmarks[mark]
+            ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
+                    % (mark, node.short(old), node.short(new)))
+            repo._bookmarks[mark] = new
+        bookmarks.write(repo)
+
+def cleanupnode(ui, repo, name, nodes):
+    """strip a group of nodes from the repository
+
+    The set of node to strip may contains unknown nodes."""
+    ui.debug('should strip %s nodes %s\n' %
+             (name, ', '.join([node.short(n) for n in nodes])))
+    lock = None
+    try:
+        lock = repo.lock()
+        # Find all node that need to be stripped
+        # (we hg %lr instead of %ln to silently ignore unknown item
+        nm = repo.changelog.nodemap
+        nodes = [n for n in nodes if n in nm]
+        roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
+        for c in roots:
+            # We should process node in reverse order to strip tip most first.
+            # but this trigger a bug in changegroup hook.
+            # This would reduce bundle overhead
+            repair.strip(ui, repo, c)
+    finally:
+        lockmod.release(lock)

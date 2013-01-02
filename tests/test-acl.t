@@ -889,7 +889,7 @@ file specified by acl.config does not exist
   added 3 changesets with 3 changes to 3 files
   calling hook pretxnchangegroup.acl: hgext.acl.hook
   acl: checking access for user "barney"
-  error: pretxnchangegroup.acl hook raised an exception: [Errno 2] *: '../acl.config' (glob)
+  error: pretxnchangegroup.acl hook raised an exception: [Errno *] *: '../acl.config' (glob)
   transaction abort!
   rollback completed
   abort: *: ../acl.config (glob)
