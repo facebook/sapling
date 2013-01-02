@@ -140,7 +140,6 @@ Extension disabled for lack of acl.sources
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -202,7 +201,6 @@ No [acl.allow]/[acl.deny]
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -274,7 +272,6 @@ Empty [acl.allow]
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -773,7 +770,6 @@ wilma can change files with a .txt extension
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1091,7 +1087,6 @@ fred is always allowed
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1167,7 +1162,6 @@ no one is allowed inside foo/Bar/
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1319,7 +1313,6 @@ OS-level groups
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   3 changesets found
   list of changesets:
@@ -1517,7 +1510,6 @@ Branch acl deny test
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1829,7 +1821,6 @@ push foobar into the remote
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1917,7 +1908,6 @@ Branch acl conflicting deny
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -2073,7 +2063,6 @@ Non-astro users must be denied
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache: tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:

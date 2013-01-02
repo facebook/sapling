@@ -652,8 +652,6 @@ class localrepository(object):
 
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
-        if self.filtername and not self.changelog.filteredrevs:
-            return self.unfiltered().branchmap()
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
 
