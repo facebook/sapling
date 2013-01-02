@@ -17,7 +17,7 @@ def computeunserved(repo):
     # fast path in simple case to avoid impact of non optimised code
     if phases.hassecret(repo) or repo.obsstore:
         return frozenset(repo.revs('hidden() + secret()'))
-    return ()
+    return frozenset()
 
 # function to compute filtered set
 filtertable = {'unserved': computeunserved}

@@ -124,7 +124,7 @@ class changelog(revlog.revlog):
         self._realopener = opener
         self._delayed = False
         self._divert = False
-        self.filteredrevs = ()
+        self.filteredrevs = frozenset()
 
     def tip(self):
         """filtered version of revlog.tip"""
