@@ -191,7 +191,7 @@ class zipit(object):
                                0x5455,     # block type: "extended-timestamp"
                                1 + 4,      # size of this block
                                1,          # "modification time is present"
-                               self.mtime) # time of last modification (UTC)
+                               int(self.mtime)) # last modification (UTC)
         self.z.writestr(i, data)
 
     def done(self):
