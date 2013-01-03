@@ -29,7 +29,7 @@ def annotatesubrepoerror(func):
             raise ex
         except error.Abort, ex:
             subrepo = subrelpath(self)
-            errormsg = _('%s (in subrepo %s)') % (str(ex), subrepo)
+            errormsg = str(ex) + ' ' + _('(in subrepo %s)') % subrepo
             # avoid handling this exception by raising a SubrepoAbort exception
             raise SubrepoAbort(errormsg, hint=ex.hint, subrepo=subrepo)
         return res
