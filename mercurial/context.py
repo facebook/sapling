@@ -12,6 +12,7 @@ import copies
 import match as matchmod
 import os, errno, stat
 import obsolete as obsmod
+import repoview
 
 propertycache = util.propertycache
 
@@ -211,7 +212,7 @@ class changectx(object):
     def mutable(self):
         return self.phase() > phases.public
     def hidden(self):
-        return self._rev in self._repo.hiddenrevs
+        return self._rev in repoview.filteredrevs(self._repo, 'hidden')
 
     def parents(self):
         """return contexts for each parent changeset"""
