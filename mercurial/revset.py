@@ -13,6 +13,7 @@ import match as matchmod
 from i18n import _
 import encoding
 import obsolete as obsmod
+import repoview
 
 def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
@@ -892,7 +893,8 @@ def hidden(repo, subset, x):
     """
     # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
-    return [r for r in subset if r in repo.hiddenrevs]
+    hiddenrevs = repoview.filteredrevs(repo, 'hidden')
+    return [r for r in subset if r in hiddenrevs]
 
 def keyword(repo, subset, x):
     """``keyword(string)``
