@@ -211,6 +211,7 @@ def push(repo, dest, force, revs):
 
         tip_ctx = repo[outgoing[-1]].p1()
         svnbranch = tip_ctx.branch()
+        modified_files = {}
         for i in range(len(outgoing) - 1, -1, -1):
             # 2. Pick the oldest changeset that needs to be pushed
             current_ctx = repo[outgoing[i]]
@@ -223,28 +224,35 @@ def push(repo, dest, force, revs):
                 return 0
 
             # 3. Move the changeset to the tip of the branch if necessary
-            util.swap_out_encoding(old_encoding)
-            try:
-                def extrafn(ctx, extra):
-                    extra['branch'] = ctx.branch()
-
-                ui.status('rebasing %s onto %s \n' % (current_ctx, tip_ctx))
-                hgrebase.rebase(ui, repo,
-                                dest=node.hex(tip_ctx.node()),
-                                rev=[node.hex(current_ctx.node())],
-                                extrafn=extrafn, keep=True)
-            finally:
-                util.swap_out_encoding()
-
-            # Don't trust the pre-rebase repo and context.
-            repo = getlocalpeer(ui, {}, meta.path)
-            tip_ctx = repo[tip_ctx.node()]
-            for c in tip_ctx.descendants():
-                rebasesrc = c.extra().get('rebase_source')
-                if rebasesrc and node.bin(rebasesrc) == current_ctx.node():
-                    current_ctx = c
-                    temporary_commits.append(c.node())
+            conflicts = False
+            for file in current_ctx.files():
+                if file in modified_files:
+                    conflicts = True
                     break
+
+            if conflicts or current_ctx.branch() != svnbranch:
+                util.swap_out_encoding(old_encoding)
+                try:
+                    def extrafn(ctx, extra):
+                        extra['branch'] = ctx.branch()
+
+                    ui.status('rebasing %s onto %s \n' % (current_ctx, tip_ctx))
+                    hgrebase.rebase(ui, repo,
+                                    dest=node.hex(tip_ctx.node()),
+                                    rev=[node.hex(current_ctx.node())],
+                                    extrafn=extrafn, keep=True)
+                finally:
+                    util.swap_out_encoding()
+
+                # Don't trust the pre-rebase repo and context.
+                repo = getlocalpeer(ui, {}, meta.path)
+                tip_ctx = repo[tip_ctx.node()]
+                for c in tip_ctx.descendants():
+                    rebasesrc = c.extra().get('rebase_source')
+                    if rebasesrc and node.bin(rebasesrc) == current_ctx.node():
+                        current_ctx = c
+                        temporary_commits.append(c.node())
+                        break
 
             # 4. Push the changeset to subversion
             tip_hash = hashes[tip_ctx.node()][0]
@@ -267,6 +275,11 @@ def push(repo, dest, force, revs):
             for c in tip_ctx.descendants():
                 if c.node() in hashes and c.branch() == svnbranch:
                     tip_ctx = c
+
+                    # Remember what files have been modified since the
+                    # whole push started.
+                    for file in c.files():
+                        modified_files[file] = True
 
             # 7. Rebase any children of the commit we just pushed
             # that are not in the outgoing set

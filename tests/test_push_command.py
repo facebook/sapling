@@ -551,6 +551,35 @@ class PushTests(test_util.TestBase):
         self.assertEqual(commit1.files(), ['gamma', ])
         self.assertFalse(commit1.mutable())
 
+    def test_push_two_that_modify_same_file(self):
+        '''
+        Push performs a rebase if two commits touch the same file.
+        This test verifies that code path works.
+        '''
+
+        oldlen = len(self.repo)
+        oldtiphash = self.repo['default'].node()
+
+        changes = [('gamma', 'gamma', 'sometext')]
+        newhash = self.commitchanges(changes)
+        changes = [('gamma', 'gamma', 'sometext\n moretext'),
+                   ('delta', 'delta', 'sometext\n moretext'),
+                  ]
+        newhash = self.commitchanges(changes)
+
+        repo = self.repo
+        hg.update(repo, newhash)
+        commands.push(repo.ui, repo)
+        self.assertEqual(len(self.repo), oldlen + 2)
+
+        # verify that both commits are pushed
+        commit1 = self.repo['tip']
+        self.assertEqual(commit1.files(), ['delta', 'gamma'])
+        self.assertFalse(commit1.mutable())
+        commit2 = commit1.parents()[0]
+        self.assertEqual(commit2.files(), ['gamma'])
+        self.assertFalse(commit2.mutable())
+
 
 def suite():
     test_classes = [PushTests, ]
