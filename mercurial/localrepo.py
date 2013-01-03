@@ -350,23 +350,6 @@ class localrepository(object):
             self.ui.warn(msg % len(list(store)))
         return store
 
-    @property
-    @unfiltered
-    def hiddenrevs(self):
-        """hiddenrevs: revs that should be hidden by command and tools
-
-        This set is carried on the repo to ease initialization and lazy
-        loading; it'll probably move back to changelog for efficiency and
-        consistency reasons.
-
-        Note that the hiddenrevs will needs invalidations when
-        - a new changesets is added (possible unstable above extinct)
-        - a new obsolete marker is added (possible new extinct changeset)
-
-        hidden changesets cannot have non-hidden descendants
-        """
-        return repoview.filteredrevs(self, 'hidden')
-
     @storecache('00changelog.i')
     def changelog(self):
         c = changelog.changelog(self.sopener)
