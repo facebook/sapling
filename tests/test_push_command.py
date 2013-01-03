@@ -522,6 +522,36 @@ class PushTests(test_util.TestBase):
         self.pushrevisions()
         self.assertEqual(['alpha'], list(self.repo['tip'].manifest()))
 
+    def test_push_without_pushing_children(self):
+        '''
+        Verify that a push of a nontip node, keeps the tip child
+        on top of the pushed commit.
+        '''
+
+        oldlen = len(self.repo)
+        oldtiphash = self.repo['default'].node()
+
+        changes = [('gamma', 'gamma', 'sometext')]
+        newhash1 = self.commitchanges(changes)
+
+        changes = [('delta', 'delta', 'sometext')]
+        newhash2 = self.commitchanges(changes)
+
+        # push only the first commit
+        repo = self.repo
+        hg.update(repo, newhash1)
+        commands.push(repo.ui, repo)
+        self.assertEqual(len(self.repo), oldlen + 2)
+
+        # verify that the first commit is pushed, and the second is not
+        commit2 = self.repo['tip']
+        self.assertEqual(commit2.files(), ['delta', ])
+        self.assertTrue(commit2.mutable())
+        commit1 = commit2.parents()[0]
+        self.assertEqual(commit1.files(), ['gamma', ])
+        self.assertFalse(commit1.mutable())
+
+
 def suite():
     test_classes = [PushTests, ]
     all_tests = []

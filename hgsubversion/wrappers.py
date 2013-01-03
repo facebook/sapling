@@ -188,6 +188,8 @@ def push(repo, dest, force, revs):
         checkpush(force, revs)
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
+
+    temporary_commits = []
     try:
         # TODO: implement --rev/#rev support
         # TODO: do credentials specified in the URL still work?
@@ -203,106 +205,110 @@ def push(repo, dest, force, revs):
         ui.status('searching for changes\n')
         hashes = meta.revmap.hashes()
         outgoing = util.outgoing_revisions(repo, hashes, workingrev.node())
-        to_strip=[]
         if not (outgoing and len(outgoing)):
             ui.status('no changes found\n')
             return 1 # so we get a sane exit status, see hg's commands.push
-        while outgoing:
 
-            # 2. Commit oldest revision that needs to be pushed
-            oldest = outgoing.pop(-1)
-            old_ctx = repo[oldest]
-            old_pars = old_ctx.parents()
-            if len(old_pars) != 1:
+        tip_ctx = repo[outgoing[-1]].p1()
+        svnbranch = tip_ctx.branch()
+        for i in range(len(outgoing) - 1, -1, -1):
+            # 2. Pick the oldest changeset that needs to be pushed
+            current_ctx = repo[outgoing[i]]
+            original_ctx = current_ctx
+
+            if len(current_ctx.parents()) != 1:
                 ui.status('Found a branch merge, this needs discussion and '
                           'implementation.\n')
                 # results in nonzero exit status, see hg's commands.py
                 return 0
-            # We will commit to svn against this node's parent rev. Any
-            # file-level conflicts here will result in an error reported
-            # by svn.
-            base_ctx = old_pars[0]
-            base_revision = hashes[base_ctx.node()][0]
-            svnbranch = base_ctx.branch()
-            # Find most recent svn commit we have on this branch. This
-            # node will become the nearest known ancestor of the pushed
-            # rev.
-            oldtipctx = base_ctx
-            old_children = oldtipctx.descendants()
-            seen = set(c.node() for c in old_children)
-            samebranchchildren = [c for c in old_children
-                    if c.branch() == svnbranch and c.node() in hashes]
-            if samebranchchildren:
-                # The following relies on descendants being sorted by rev.
-                oldtipctx = samebranchchildren[-1]
-            # All set, so commit now.
-            try:
-                pushmod.commit(ui, repo, old_ctx, meta, base_revision, svn)
-            except pushmod.NoFilesException:
-                ui.warn("Could not push revision %s because it had no changes "
-                        "in svn.\n" % old_ctx)
-                return 1
 
-            # 3. Fetch revisions from svn
-            # TODO: this probably should pass in the source explicitly -
-            # rev too?
-            r = repo.pull(dest, force=force)
-            assert not r or r == 0
-
-            # 4. Find the new head of the target branch
-            # We expect to get our own new commit back, but we might
-            # also get other commits that happened since our last pull,
-            # or even right after our own commit (race).
-            for c in oldtipctx.descendants():
-                if c.node() not in seen and c.branch() == svnbranch:
-                    newtipctx = c
-
-            # 5. Rebase all children of the currently-pushing rev to the
-            # new head
-            #
-            # there may be commits descended from the one we just
-            # pushed to svn that we aren't going to push to svn in
-            # this operation
-            oldhex = node.hex(old_ctx.node())
-            needs_rebase_set = "%s:: and not(%s)" % (oldhex, oldhex)
-            def extrafn(ctx, extra):
-                extra['branch'] = ctx.branch()
-
+            # 3. Move the changeset to the tip of the branch if necessary
             util.swap_out_encoding(old_encoding)
             try:
-                hgrebase.rebase(ui, repo, dest=node.hex(newtipctx.node()),
-                                rev=[needs_rebase_set],
-                                extrafn=extrafn,
-                                # We actually want to strip one more rev than
-                                # we're rebasing
-                                keep=True)
+                def extrafn(ctx, extra):
+                    extra['branch'] = ctx.branch()
+
+                ui.status('rebasing %s onto %s \n' % (current_ctx, tip_ctx))
+                hgrebase.rebase(ui, repo,
+                                dest=node.hex(tip_ctx.node()),
+                                rev=[node.hex(current_ctx.node())],
+                                extrafn=extrafn, keep=True)
             finally:
                 util.swap_out_encoding()
 
-            to_strip.append(old_ctx.node())
-            # don't trust the pre-rebase repo.  Do not reuse
-            # contexts across this.
-            newtip = newtipctx.node()
+            # Don't trust the pre-rebase repo and context.
             repo = getlocalpeer(ui, {}, meta.path)
-            newtipctx = repo[newtip]
+            tip_ctx = repo[tip_ctx.node()]
+            for c in tip_ctx.descendants():
+                rebasesrc = c.extra().get('rebase_source')
+                if rebasesrc and node.bin(rebasesrc) == current_ctx.node():
+                    current_ctx = c
+                    temporary_commits.append(c.node())
+                    break
 
-            rebasemap = dict()
-            for child in newtipctx.descendants():
-                rebasesrc = child.extra().get('rebase_source')
-                if rebasesrc:
-                    rebasemap[node.bin(rebasesrc)] = child.node()
-            outgoing = [rebasemap.get(n) or n for n in outgoing]
+            # 4. Push the changeset to subversion
+            tip_hash = hashes[tip_ctx.node()][0]
+            try:
+                ui.status('committing %s\n' % current_ctx)
+                pushmod.commit(ui, repo, current_ctx, meta, tip_hash, svn)
+            except pushmod.NoFilesException:
+                ui.warn("Could not push revision %s because it had no changes "
+                        "in svn.\n" % current_ctx)
+                return
 
+            # 5. Pull the latest changesets from subversion, which will
+            # include the one we just committed (and possibly others).
+            r = repo.pull(dest, force=force)
+            assert not r or r == 0
             meta = repo.svnmeta(svn.uuid, svn.subdir)
             hashes = meta.revmap.hashes()
+
+            # 6. Move our tip to the latest pulled tip
+            for c in tip_ctx.descendants():
+                if c.node() in hashes and c.branch() == svnbranch:
+                    tip_ctx = c
+
+            # 7. Rebase any children of the commit we just pushed
+            # that are not in the outgoing set
+            for c in original_ctx.children():
+                if not c.node() in hashes and not c.node() in outgoing:
+                    util.swap_out_encoding(old_encoding)
+                    try:
+                        def extrafn(ctx, extra):
+                            extra['branch'] = ctx.branch()
+
+                        ui.status('rebasing non-outgoing %s onto %s\n' % (c, tip_ctx))
+                        needs_rebase_set = "%s::" % node.hex(c.node())
+                        hgrebase.rebase(ui, repo,
+                                        dest=node.hex(tip_ctx.node()),
+                                        rev=[needs_rebase_set],
+                                        extrafn=extrafn, keep=True)
+                    finally:
+                        util.swap_out_encoding()
+
+
         util.swap_out_encoding(old_encoding)
         try:
             hg.update(repo, repo['tip'].node())
         finally:
             util.swap_out_encoding()
-        repair.strip(ui, repo, to_strip, "all")
+
+        # strip the original changesets since the push was successful
+        repair.strip(ui, repo, outgoing, "all")
     finally:
-        util.swap_out_encoding(old_encoding)
+        try:
+            # It's always safe to delete the temporary commits.
+            # The originals are not deleted unless the push
+            # completely succeeded.
+            if temporary_commits:
+                # If the repo is on a temporary commit, get off before
+                # the strip.
+                parent = repo[None].p1()
+                if parent.node() in temporary_commits:
+                    hg.update(repo, parent.p1().node())
+                repair.strip(ui, repo, temporary_commits, backup=None)
+        finally:
+            util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
 
 
