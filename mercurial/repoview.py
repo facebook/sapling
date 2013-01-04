@@ -9,6 +9,7 @@
 import copy
 import phases
 import util
+import obsolete, bookmarks, revset
 
 
 def computehidden(repo):
@@ -16,10 +17,19 @@ def computehidden(repo):
 
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
-    if repo.obsstore:
-        ### hide extinct changeset that are not accessible by any mean
-        hiddenquery = 'extinct() - ::(parents() + bookmark())'
-        return frozenset(repo.revs(hiddenquery))
+    hideable = obsolete.getrevs(repo, 'obsolete')
+    if hideable:
+        cl = repo.changelog
+        firsthideable = min(hideable)
+        revs = cl.revs(start=firsthideable)
+        blockers = [r for r in revset._children(repo, revs, hideable)
+                      if r not in hideable]
+        for par in repo[None].parents():
+            blockers.append(par.rev())
+        for bm in bookmarks.listbookmarks(repo).values():
+            blockers.append(repo[bm].rev())
+        blocked = cl.ancestors(blockers, inclusive=True)
+        return frozenset(r for r in hideable if r not in blocked)
     return frozenset()
 
 def computeunserved(repo):
