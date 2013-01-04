@@ -1346,10 +1346,10 @@ Age filter:
 
   $ hg log --template '{date|age}\n' > /dev/null || exit 1
 
-  >>> from datetime import datetime
+  >>> from datetime import datetime, timedelta
   >>> fp = open('a', 'w')
-  >>> n = datetime.now()
-  >>> fp.write('%d-%d-%d 00:00' % ((n.year + 7), n.month, n.day))
+  >>> n = datetime.now() + timedelta(366 * 7)
+  >>> fp.write('%d-%d-%d 00:00' % (n.year, n.month, n.day))
   >>> fp.close()
   $ hg add a
   $ hg commit -m future -d "`cat a`"

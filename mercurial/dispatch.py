@@ -217,11 +217,11 @@ def _runcatch(req):
         ct = tuplever(compare)
         worst = None, ct, ''
         for name, mod in extensions.extensions():
-            testedwith = getattr(mod, 'testedwith', 'unknown')
+            testedwith = getattr(mod, 'testedwith', '')
             report = getattr(mod, 'buglink', _('the extension author.'))
-            if testedwith == 'unknown':
+            if not testedwith.strip():
                 # We found an untested extension. It's likely the culprit.
-                worst = name, testedwith, report
+                worst = name, 'unknown', report
                 break
             if compare not in testedwith.split() and testedwith != 'internal':
                 tested = [tuplever(v) for v in testedwith.split()]
