@@ -261,8 +261,10 @@ def perfrevlog(ui, repo, file_, **opts):
 
     timer(d)
 
-@command('perfrevset')
+@command('perfrevset',[],
+         "REVSET")
 def perfrevset(ui, repo, expr):
+    """benchmark the execution time of a revset"""
     def d():
         repo.revs(expr)
     timer(d)
