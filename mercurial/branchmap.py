@@ -139,7 +139,8 @@ class branchcache(dict):
                 for node in nodes:
                     f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
             f.close()
-        except (IOError, OSError):
+        except (IOError, OSError, util.Abort):
+            # Abort may be raise by read only opener
             pass
 
     def update(self, repo, ctxgen):
