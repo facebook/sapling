@@ -109,24 +109,6 @@ allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
 phasenames = ['public', 'draft', 'secret']
 
-def _filterunknown(ui, changelog, phaseroots):
-    """remove unknown nodes from the phase boundary
-
-    Nothing is lost as unknown nodes only hold data for their descendants.
-    """
-    updated = False
-    nodemap = changelog.nodemap # to filter unknown nodes
-    for phase, nodes in enumerate(phaseroots):
-        missing = [node for node in nodes if node not in nodemap]
-        if missing:
-            for mnode in missing:
-                ui.debug(
-                    'removing unknown node %s from %i-phase boundary\n'
-                    % (short(mnode), phase))
-            nodes.symmetric_difference_update(missing)
-            updated = True
-    return updated
-
 def _readroots(repo, phasedefaults=None):
     """Read phase roots from disk
 
@@ -156,8 +138,6 @@ def _readroots(repo, phasedefaults=None):
             for f in phasedefaults:
                 roots = f(repo, roots)
         dirty = True
-    if _filterunknown(repo.ui, repo.changelog, roots):
-        dirty = True
     return roots, dirty
 
 class phasecache(object):
@@ -165,8 +145,9 @@ class phasecache(object):
         if _load:
             # Cheap trick to allow shallow-copy without copy module
             self.phaseroots, self.dirty = _readroots(repo, phasedefaults)
-            self.opener = repo.sopener
             self._phaserevs = None
+            self.filterunknown(repo)
+            self.opener = repo.sopener
 
     def copy(self):
         # Shallow copy meant to ensure isolation in
@@ -266,6 +247,26 @@ class phasecache(object):
             currentroots.intersection_update(ctx.node() for ctx in ctxs)
             self._updateroots(targetphase, currentroots)
         repo.invalidatevolatilesets()
+
+    def filterunknown(self, repo):
+        """remove unknown nodes from the phase boundary
+
+        Nothing is lost as unknown nodes only hold data for their descendants.
+        """
+        filtered = False
+        nodemap = repo.changelog.nodemap # to filter unknown nodes
+        for phase, nodes in enumerate(self.phaseroots):
+            missing = [node for node in nodes if node not in nodemap]
+            if missing:
+                for mnode in missing:
+                    repo.ui.debug(
+                        'removing unknown node %s from %i-phase boundary\n'
+                        % (short(mnode), phase))
+                nodes.symmetric_difference_update(missing)
+                filtered = True
+        if filtered:
+            self.dirty = True
+            self._phaserevs = None
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
