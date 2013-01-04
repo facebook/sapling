@@ -1,7 +1,8 @@
 # perf.py - performance test routines
 '''helper extension to measure performance'''
 
-from mercurial import cmdutil, scmutil, util, match, commands
+from mercurial import cmdutil, scmutil, util, match, commands, obsolete
+from mercurial import repoview
 import time, os, sys
 
 cmdtable = {}
@@ -275,3 +276,28 @@ def perfrevset(ui, repo, expr, clear=False):
             repo.invalidatevolatilesets()
         repo.revs(expr)
     timer(d)
+
+@command('perfvolatilesets')
+def perfvolatilesets(ui, repo):
+    """benchmark the computation of various volatile set
+
+    Volatile set computes element related to filtering and obsolescence."""
+    repo = repo.unfiltered()
+
+    def getobs(name):
+        def d():
+            repo.invalidatevolatilesets()
+            obsolete.getrevs(repo, name)
+        return d
+
+    for name in sorted(obsolete.cachefuncs):
+        timer(getobs(name), title=name)
+
+    def getfiltered(name):
+        def d():
+            repo.invalidatevolatilesets()
+            repoview.filteredrevs(repo, name)
+        return d
+
+    for name in sorted(repoview.filtertable):
+        timer(getfiltered(name), title=name)
