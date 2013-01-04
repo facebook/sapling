@@ -498,6 +498,16 @@ No declared supported version, extension complains:
   ** Python * (glob)
   ** Mercurial Distributed SCM * (glob)
   ** Extensions loaded: throw
+empty declaration of supported version, extension complains:
+  $ echo "testedwith = ''" >> throw.py
+  $ hg --config extensions.throw=throw.py throw 2>&1 | egrep '^\*\*'
+  ** Unknown exception encountered with possibly-broken third-party extension throw
+  ** which supports versions unknown of Mercurial.
+  ** Please disable throw and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw
 If the extension specifies a buglink, show that:
   $ echo 'buglink = "http://example.com/bts"' >> throw.py
   $ rm -f throw.pyc throw.pyo
