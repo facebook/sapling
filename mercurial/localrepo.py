@@ -650,18 +650,6 @@ class localrepository(object):
                 marks.append(bookmark)
         return sorted(marks)
 
-    def _cacheabletip(self):
-        """tip-most revision stable enought to used in persistent cache
-
-        This function is overwritten by MQ to ensure we do not write cache for
-        a part of the history that will likely change.
-
-        Efficient handling of filtered revision in branchcache should offer a
-        better alternative. But we are using this approach until it is ready.
-        """
-        cl = self.changelog
-        return cl.rev(cl.tip())
-
     def branchmap(self):
         '''returns a dictionary {branch: [branchheads]}'''
         if self.filtername and not self.changelog.filteredrevs:
