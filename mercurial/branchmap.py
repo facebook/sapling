@@ -68,21 +68,11 @@ def updatecache(repo):
         if partial is None:
             partial = branchcache()
 
-    catip = repo._cacheabletip()
-    # if partial.tiprev == catip: cache is already up to date
-    # if partial.tiprev >  catip: we have uncachable element in `partial` can't
-    #                             write on disk
-    if partial.tiprev < catip:
-        ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, catip))
+    revs = list(cl.revs(start=partial.tiprev +1))
+    if revs:
+        ctxgen = (repo[r] for r in revs)
         partial.update(repo, ctxgen)
         partial.write(repo)
-    # If cacheable tip were lower than actual tip, we need to update the
-    # cache up to tip. This update (from cacheable to actual tip) is not
-    # written to disk since it's not cacheable.
-    tiprev = cl.rev(cl.tip())
-    if partial.tiprev < tiprev:
-        ctxgen = (repo[r] for r in cl.revs(partial.tiprev + 1, tiprev))
-        partial.update(repo, ctxgen)
     repo._branchcaches[repo.filtername] = partial
 
 class branchcache(dict):
