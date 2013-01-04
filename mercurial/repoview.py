@@ -38,8 +38,17 @@ def computeunserved(repo):
     Secret and hidden changeset should not pretend to be here."""
     assert not repo.changelog.filteredrevs
     # fast path in simple case to avoid impact of non optimised code
-    if phases.hassecret(repo) or repo.obsstore:
-        return frozenset(repo.revs('hidden() + secret()'))
+    hiddens = filteredrevs(repo, 'hidden')
+    if phases.hassecret(repo):
+        cl = repo.changelog
+        secret = phases.secret
+        getphase = repo._phasecache.phase
+        first = min(cl.rev(n) for n in repo._phasecache.phaseroots[secret])
+        revs = cl.revs(start=first)
+        secrets = set(r for r in revs if getphase(repo, r) >= secret)
+        return frozenset(hiddens | secrets)
+    else:
+        return hiddens
     return frozenset()
 
 def computemutable(repo):
