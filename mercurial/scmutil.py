@@ -382,6 +382,18 @@ class filtervfs(abstractvfs, auditvfs):
 
 filteropener = filtervfs
 
+class readonlyvfs(abstractvfs, auditvfs):
+    '''Wrapper vfs preventing any writing.'''
+
+    def __init__(self, vfs):
+        auditvfs.__init__(self, vfs)
+
+    def __call__(self, path, mode='r', *args, **kw):
+        if mode not in ('r', 'rb'):
+            raise util.Abort('this vfs is read only')
+        return self.vfs(path, mode, *args, **kw)
+
+
 def canonpath(root, cwd, myname, auditor=None):
     '''return the canonical path of myname, given cwd and root'''
     if util.endswithsep(root):
