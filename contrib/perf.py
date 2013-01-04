@@ -4,6 +4,9 @@
 from mercurial import cmdutil, scmutil, util, match, commands
 import time, os, sys
 
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+
 def timer(func, title=None):
     results = []
     begin = time.time()
@@ -29,6 +32,7 @@ def timer(func, title=None):
     sys.stderr.write("! wall %f comb %f user %f sys %f (best of %d)\n"
                      % (m[0], m[1] + m[2], m[1], m[2], count))
 
+@command('perfwalk')
 def perfwalk(ui, repo, *pats):
     try:
         m = scmutil.match(repo[None], pats, {})
@@ -40,6 +44,9 @@ def perfwalk(ui, repo, *pats):
         except Exception:
             timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
 
+@command('perfstatus',
+         [('u', 'unknown', False,
+           'ask status to look for unknown files')])
 def perfstatus(ui, repo, **opts):
     #m = match.always(repo.root, repo.getcwd())
     #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False,
@@ -55,6 +62,7 @@ def clearcaches(cl):
         cl._nodecache = {nullid: nullrev}
         cl._nodepos = None
 
+@command('perfheads')
 def perfheads(ui, repo):
     cl = repo.changelog
     def d():
@@ -62,6 +70,7 @@ def perfheads(ui, repo):
         clearcaches(cl)
     timer(d)
 
+@command('perftags')
 def perftags(ui, repo):
     import mercurial.changelog, mercurial.manifest
     def t():
@@ -71,6 +80,7 @@ def perftags(ui, repo):
         return len(repo.tags())
     timer(t)
 
+@command('perfancestors')
 def perfancestors(ui, repo):
     heads = repo.changelog.headrevs()
     def d():
@@ -78,6 +88,7 @@ def perfancestors(ui, repo):
             pass
     timer(d)
 
+@command('perfancestorset')
 def perfancestorset(ui, repo, revset):
     revs = repo.revs(revset)
     heads = repo.changelog.headrevs()
@@ -87,6 +98,7 @@ def perfancestorset(ui, repo, revset):
             rev in s
     timer(d)
 
+@command('perfdirstate')
 def perfdirstate(ui, repo):
     "a" in repo.dirstate
     def d():
@@ -94,6 +106,7 @@ def perfdirstate(ui, repo):
         "a" in repo.dirstate
     timer(d)
 
+@command('perfdirstatedirs')
 def perfdirstatedirs(ui, repo):
     "a" in repo.dirstate
     def d():
@@ -101,6 +114,7 @@ def perfdirstatedirs(ui, repo):
         del repo.dirstate._dirs
     timer(d)
 
+@command('perfdirstatewrite')
 def perfdirstatewrite(ui, repo):
     ds = repo.dirstate
     "a" in ds
@@ -109,6 +123,7 @@ def perfdirstatewrite(ui, repo):
         ds.write()
     timer(d)
 
+@command('perfmanifest')
 def perfmanifest(ui, repo):
     def d():
         t = repo.manifest.tip()
@@ -117,6 +132,7 @@ def perfmanifest(ui, repo):
         repo.manifest._cache = None
     timer(d)
 
+@command('perfchangeset')
 def perfchangeset(ui, repo, rev):
     n = repo[rev].node()
     def d():
@@ -124,6 +140,7 @@ def perfchangeset(ui, repo, rev):
         #repo.changelog._cache = None
     timer(d)
 
+@command('perfindex')
 def perfindex(ui, repo):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
@@ -133,12 +150,14 @@ def perfindex(ui, repo):
         cl.rev(n)
     timer(d)
 
+@command('perfstartup')
 def perfstartup(ui, repo):
     cmd = sys.argv[0]
     def d():
         os.system("HGRCPATH= %s version -q > /dev/null" % cmd)
     timer(d)
 
+@command('perfparents')
 def perfparents(ui, repo):
     nl = [repo.changelog.node(i) for i in xrange(1000)]
     def d():
@@ -146,13 +165,16 @@ def perfparents(ui, repo):
             repo.changelog.parents(n)
     timer(d)
 
+@command('perflookup')
 def perflookup(ui, repo, rev):
     timer(lambda: len(repo.lookup(rev)))
 
+@command('perfrevrange')
 def perfrevrange(ui, repo, *specs):
     revrange = scmutil.revrange
     timer(lambda: len(revrange(repo, specs)))
 
+@command('perfnodelookup')
 def perfnodelookup(ui, repo, rev):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
@@ -163,12 +185,15 @@ def perfnodelookup(ui, repo, rev):
         clearcaches(cl)
     timer(d)
 
+@command('perflog',
+         [('', 'rename', False, 'ask log to follow renames')])
 def perflog(ui, repo, **opts):
     ui.pushbuffer()
     timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
                                copies=opts.get('rename')))
     ui.popbuffer()
 
+@command('perftemplating')
 def perftemplating(ui, repo):
     ui.pushbuffer()
     timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
@@ -176,15 +201,18 @@ def perftemplating(ui, repo):
                                ' {author|person}: {desc|firstline}\n'))
     ui.popbuffer()
 
+@command('perfcca')
 def perfcca(ui, repo):
     timer(lambda: scmutil.casecollisionauditor(ui, False, repo.dirstate))
 
+@command('perffncacheload')
 def perffncacheload(ui, repo):
     s = repo.store
     def d():
         s.fncache._load()
     timer(d)
 
+@command('perffncachewrite')
 def perffncachewrite(ui, repo):
     s = repo.store
     s.fncache._load()
@@ -193,6 +221,7 @@ def perffncachewrite(ui, repo):
         s.fncache.write()
     timer(d)
 
+@command('perffncacheencode')
 def perffncacheencode(ui, repo):
     s = repo.store
     s.fncache._load()
@@ -201,6 +230,7 @@ def perffncacheencode(ui, repo):
             s.encode(p)
     timer(d)
 
+@command('perfdiffwd')
 def perfdiffwd(ui, repo):
     """Profile diff of working directory changes"""
     options = {
@@ -218,6 +248,9 @@ def perfdiffwd(ui, repo):
         title = 'diffopts: %s' % (diffopt and ('-' + diffopt) or 'none')
         timer(d, title)
 
+@command('perfrevlog',
+         [('d', 'dist', 100, 'distance between the revisions')],
+         "[INDEXFILE]")
 def perfrevlog(ui, repo, file_, **opts):
     from mercurial import revlog
     dist = opts['dist']
@@ -228,41 +261,8 @@ def perfrevlog(ui, repo, file_, **opts):
 
     timer(d)
 
+@command('perfrevset')
 def perfrevset(ui, repo, expr):
     def d():
         repo.revs(expr)
     timer(d)
-
-cmdtable = {
-    'perfcca': (perfcca, []),
-    'perffncacheload': (perffncacheload, []),
-    'perffncachewrite': (perffncachewrite, []),
-    'perffncacheencode': (perffncacheencode, []),
-    'perflookup': (perflookup, []),
-    'perfrevrange': (perfrevrange, []),
-    'perfnodelookup': (perfnodelookup, []),
-    'perfparents': (perfparents, []),
-    'perfstartup': (perfstartup, []),
-    'perfstatus': (perfstatus,
-                   [('u', 'unknown', False,
-                     'ask status to look for unknown files')]),
-    'perfwalk': (perfwalk, []),
-    'perfmanifest': (perfmanifest, []),
-    'perfchangeset': (perfchangeset, []),
-    'perfindex': (perfindex, []),
-    'perfheads': (perfheads, []),
-    'perftags': (perftags, []),
-    'perfancestors': (perfancestors, []),
-    'perfancestorset': (perfancestorset, [], "REVSET"),
-    'perfdirstate': (perfdirstate, []),
-    'perfdirstatedirs': (perfdirstate, []),
-    'perfdirstatewrite': (perfdirstatewrite, []),
-    'perflog': (perflog,
-                [('', 'rename', False, 'ask log to follow renames')]),
-    'perftemplating': (perftemplating, []),
-    'perfdiffwd': (perfdiffwd, []),
-    'perfrevlog': (perfrevlog,
-                   [('d', 'dist', 100, 'distance between the revisions')],
-                   "[INDEXFILE]"),
-    'perfrevset': (perfrevset, [], "REVSET")
-}
