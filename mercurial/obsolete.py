@@ -660,7 +660,13 @@ def _computeobsoleteset(repo):
 @cachefor('unstable')
 def _computeunstableset(repo):
     """the set of non obsolete revisions with obsolete parents"""
-    return set(repo.revs('(obsolete()::) - obsolete()'))
+    # revset is not efficient enough here
+    # we do (obsolete()::) - obsolete() by hand
+    obs = getrevs(repo, 'obsolete')
+    if not obs:
+        return set()
+    cl = repo.changelog
+    return set(r for r in cl.descendants(obs) if r not in obs)
 
 @cachefor('suspended')
 def _computesuspendedset(repo):
