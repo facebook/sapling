@@ -157,15 +157,6 @@ def perfnodelookup(ui, repo, rev):
     import mercurial.revlog
     mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
     n = repo[rev].node()
-    def d():
-        cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
-        cl.rev(n)
-    timer(d)
-
-def perfnodelookup(ui, repo, rev):
-    import mercurial.revlog
-    mercurial.revlog._prereadsize = 2**24 # disable lazy parser in old hg
-    n = repo[rev].node()
     cl = mercurial.revlog.revlog(repo.sopener, "00changelog.i")
     def d():
         cl.rev(n)
