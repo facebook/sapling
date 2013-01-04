@@ -649,12 +649,13 @@ def clearobscaches(repo):
 def _computeobsoleteset(repo):
     """the set of obsolete revisions"""
     obs = set()
-    nm = repo.changelog.nodemap
+    getrev = repo.changelog.nodemap.get
+    getphase = repo._phasecache.phase
     for node in repo.obsstore.successors:
-        rev = nm.get(node)
-        if rev is not None:
+        rev = getrev(node)
+        if rev is not None and getphase(repo, rev):
             obs.add(rev)
-    return set(repo.revs('%ld - public()', obs))
+    return obs
 
 @cachefor('unstable')
 def _computeunstableset(repo):
