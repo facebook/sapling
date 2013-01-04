@@ -1413,16 +1413,6 @@ class localrepository(object):
         code to update the branchheads cache, rather than having future code
         decide it's invalid and regenerating it from scratch.
         '''
-        # If we have info, newheadnodes, on how to update the branch cache, do
-        # it, Otherwise, since nodes were destroyed, the cache is stale and this
-        # will be caught the next time it is read.
-        if newheadnodes:
-            ctxgen = (self[node] for node in newheadnodes
-                      if self.changelog.hasnode(node))
-            cache = self._branchcaches[None]
-            cache.update(self, ctxgen)
-            cache.write(self)
-
         # When one tries to:
         # 1) destroy nodes thus calling this method (e.g. strip)
         # 2) use phasecache somewhere (e.g. commit)
@@ -1434,6 +1424,16 @@ class localrepository(object):
         if '_phasecache' in self._filecache:
             self._phasecache.filterunknown(self)
             self._phasecache.write()
+
+        # If we have info, newheadnodes, on how to update the branch cache, do
+        # it, Otherwise, since nodes were destroyed, the cache is stale and this
+        # will be caught the next time it is read.
+        if newheadnodes:
+            ctxgen = (self[node] for node in newheadnodes
+                      if self.changelog.hasnode(node))
+            cache = self._branchcaches[None]
+            cache.update(self, ctxgen)
+            cache.write(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
