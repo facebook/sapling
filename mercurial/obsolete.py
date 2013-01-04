@@ -677,7 +677,7 @@ def _computesuspendedset(repo):
 @cachefor('extinct')
 def _computeextinctset(repo):
     """the set of obsolete parents without non obsolete descendants"""
-    return set(repo.revs('obsolete() - obsolete()::unstable()'))
+    return getrevs(repo, 'obsolete') - getrevs(repo, 'suspended')
 
 
 @cachefor('bumped')
