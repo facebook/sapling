@@ -278,7 +278,7 @@ def perfrevset(ui, repo, expr, clear=False):
     timer(d)
 
 @command('perfvolatilesets')
-def perfvolatilesets(ui, repo):
+def perfvolatilesets(ui, repo, *names):
     """benchmark the computation of various volatile set
 
     Volatile set computes element related to filtering and obsolescence."""
@@ -290,7 +290,11 @@ def perfvolatilesets(ui, repo):
             obsolete.getrevs(repo, name)
         return d
 
-    for name in sorted(obsolete.cachefuncs):
+    allobs = sorted(obsolete.cachefuncs)
+    if names:
+        allobs = [n for n in allobs if n in names]
+
+    for name in allobs:
         timer(getobs(name), title=name)
 
     def getfiltered(name):
@@ -299,5 +303,9 @@ def perfvolatilesets(ui, repo):
             repoview.filteredrevs(repo, name)
         return d
 
-    for name in sorted(repoview.filtertable):
+    allfilter = sorted(repoview.filtertable)
+    if names:
+        allfilter = [n for n in allfilter if n in names]
+
+    for name in allfilter:
         timer(getfiltered(name), title=name)
