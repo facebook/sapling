@@ -1391,7 +1391,10 @@ class localrepository(object):
         changes to stay in memory (waiting for the next unlock), or vanish
         completely.
         '''
-        pass
+        # It simplifies the logic around updating the branchheads cache if we
+        # only have to consider the effect of the stripped revisions and not
+        # revisions missing because the cache is out-of-date.
+        branchmap.updatecache(self)
 
     @unfilteredmethod
     def destroyed(self, newheadnodes=None):
