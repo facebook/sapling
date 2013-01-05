@@ -341,8 +341,3 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
 def visibleheads(repo):
     """return the set of visible head of this repo"""
     return repo.filtered('unserved').heads()
-
-
-def visiblebranchmap(repo):
-    """return a branchmap for the visible set"""
-    return repo.filtered('unserved').branchmap()
