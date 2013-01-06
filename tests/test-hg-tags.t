@@ -24,6 +24,8 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  adding reference refs/tags/alpha
+  updating reference refs/heads/master
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   1:d529e9229f6d

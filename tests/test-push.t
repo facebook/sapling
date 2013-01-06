@@ -31,6 +31,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  adding reference refs/heads/beta
 
   $ cd ..
 
@@ -104,6 +105,7 @@ this should also fail
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
 this should fail, no changes to push
 The exit code for this was broken in Mercurial (incorrectly returning 0) until

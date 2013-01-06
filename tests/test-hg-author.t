@@ -26,6 +26,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo gamma >> beta
   $ fn_hg_commit -u "test <test@example.com> (comment)" -m 'modify beta'
@@ -34,6 +35,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo gamma > gamma
   $ hg add gamma
@@ -43,6 +45,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo delta > delta
   $ hg add delta
@@ -52,6 +55,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo epsilon > epsilon
   $ hg add epsilon
@@ -61,6 +65,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo zeta > zeta
   $ hg add zeta
@@ -70,6 +75,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo eta > eta
   $ hg add eta
@@ -79,6 +85,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ echo theta > theta
   $ hg add theta
@@ -88,6 +95,7 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   8:d3c51ce68cfd

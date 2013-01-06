@@ -74,6 +74,7 @@ hg status shall NOT report .hgsub and .hgsubstate as untracked - either ignored 
   searching for changes
   adding objects
   added 1 commits with 2 trees and 1 blobs
+  updating reference refs/heads/master
   $ cd ..
   $ cd gitrepo1
 there shall be two gitlink entries, with values matching that in .hgsubstate

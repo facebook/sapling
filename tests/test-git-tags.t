@@ -43,5 +43,6 @@ Load commonly used test logic
   searching for changes
   adding objects
   added 1 commits with 1 trees and 1 blobs
+  updating reference refs/heads/master
 
   $ cd ..
