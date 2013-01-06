@@ -75,6 +75,8 @@ make sure that only beta is in the manifest
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  adding objects
+  added 5 commits with 6 trees and 3 blobs
 
   $ cd ..
   $ git --git-dir=gitrepo2 log --pretty=medium

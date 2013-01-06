@@ -871,16 +871,40 @@ class GitHandler(object):
     def upload_pack(self, remote, revs, force):
         client, path = self.get_transport_and_path(remote)
         old_refs = {}
+        change_totals = {}
+
         def changed(refs):
+            self.ui.status(_("searching for changes\n"))
             old_refs.update(refs)
             to_push = revs or set(self.local_heads().values() + self.tags.values())
             return self.get_changed_refs(refs, to_push, force)
 
-        genpack = self.git.object_store.generate_pack_contents
+        def genpack(have, want):
+            commits = []
+            for mo in self.git.object_store.find_missing_objects(have, want):
+                (sha, name) = mo
+                o = self.git.object_store[sha]
+                t = type(o)
+                change_totals[t] = change_totals.get(t, 0) + 1
+                if isinstance(o, Commit):
+                    commits.append(sha)
+            commit_count = len(commits)
+            self.ui.note(_("%d commits found\n") % commit_count)
+            if commit_count > 0:
+                self.ui.debug(_("list of commits:\n"))
+                for commit in commits:
+                    self.ui.debug("%s\n" % commit)
+                self.ui.status(_("adding objects\n"))
+            return self.git.object_store.generate_pack_contents(have, want)
+
         try:
-            self.ui.status(_("searching for changes\n"))
-            self.ui.note(_("creating and sending data\n"))
             new_refs = client.send_pack(path, changed, genpack)
+            if len(change_totals) > 0:
+                self.ui.status(_("added %d commits with %d trees"
+                                 " and %d blobs\n") %
+                               (change_totals.get(Commit, 0),
+                                change_totals.get(Tree, 0),
+                                change_totals.get(Blob, 0)))
             return old_refs, new_refs
         except (HangupException, GitProtocolError), e:
             raise hgutil.Abort(_("git remote error: ") + str(e))

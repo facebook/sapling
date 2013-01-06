@@ -29,6 +29,8 @@ Load commonly used test logic
   $ hg push -r beta
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ cd ..
 
@@ -100,6 +102,8 @@ this should also fail
   $ hg push -fr master
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
 this should fail, no changes to push
 The exit code for this was broken in Mercurial (incorrectly returning 0) until

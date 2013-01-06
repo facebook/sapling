@@ -41,6 +41,8 @@ Load commonly used test logic
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  adding objects
+  added 3 commits with 6 trees and 3 blobs
   $ cd ..
 
   $ git --git-dir=gitrepo2 log --pretty=medium

@@ -94,6 +94,8 @@ Git 1.8.0, so we accept the output of either version.
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  adding objects
+  added 4 commits with 4 trees and 4 blobs
 
   $ cd ..
 Latin1 commit messages started being automatically converted to UTF-8 in

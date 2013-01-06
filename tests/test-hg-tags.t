@@ -22,6 +22,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   1:d529e9229f6d

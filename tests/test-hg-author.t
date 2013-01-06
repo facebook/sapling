@@ -24,12 +24,16 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo gamma >> beta
   $ fn_hg_commit -u "test <test@example.com> (comment)" -m 'modify beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo gamma > gamma
   $ hg add gamma
@@ -37,6 +41,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo delta > delta
   $ hg add delta
@@ -44,6 +50,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo epsilon > epsilon
   $ hg add epsilon
@@ -51,6 +59,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo zeta > zeta
   $ hg add zeta
@@ -58,6 +68,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo eta > eta
   $ hg add eta
@@ -65,6 +77,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ echo theta > theta
   $ hg add theta
@@ -72,6 +86,8 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 1 blobs
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   8:d3c51ce68cfd

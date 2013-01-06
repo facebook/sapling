@@ -69,6 +69,8 @@ Load commonly used test logic
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  adding objects
+  added 5 commits with 5 trees and 4 blobs
   $ cd ..
 
   $ git --git-dir=gitrepo2 log --pretty=medium | sed s/\\.\\.\\.//g

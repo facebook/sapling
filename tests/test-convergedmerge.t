@@ -51,6 +51,8 @@ Load commonly used test logic
   $ hg push -r master ../gitrepo
   pushing to ../gitrepo
   searching for changes
+  adding objects
+  added 5 commits with 3 trees and 3 blobs
   $ cd ..
 
   $ hg clone gitrepo hgrepo2 | grep -v '^updating'
