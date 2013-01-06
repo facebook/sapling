@@ -337,7 +337,3 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     # 6. Check for unsynced changes on involved branches.
     if unsynced:
         repo.ui.warn(_("note: unsynced remote changes!\n"))
-
-def visibleheads(repo):
-    """return the set of visible head of this repo"""
-    return repo.filtered('unserved').heads()
