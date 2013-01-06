@@ -66,7 +66,7 @@ class localpeer(peer.peerrepository):
 
     def __init__(self, repo, caps=MODERNCAPS):
         peer.peerrepository.__init__(self)
-        self._repo = repo
+        self._repo = repo.filtered('unserved')
         self.ui = repo.ui
         self._caps = repo._restrictcapabilities(caps)
         self.requirements = repo.requirements

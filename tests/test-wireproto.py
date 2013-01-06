@@ -25,6 +25,9 @@ class serverrepo(object):
     def greet(self, name):
         return "Hello, " + name
 
+    def filtered(self, name):
+        return self
+
 def mangle(s):
     return ''.join(chr(ord(c) + 1) for c in s)
 def unmangle(s):
