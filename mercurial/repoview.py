@@ -21,6 +21,13 @@ def computeunserved(repo):
 
 # function to compute filtered set
 filtertable = {'unserved': computeunserved}
+### Nearest subset relation
+# Nearest subset of filter X is a filter Y so that:
+# * Y is included in X,
+# * X - Y is as small as possible.
+# This create and ordering used for branchmap purpose.
+# the ordering may be partial
+subsettable = {None: 'unserved'}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
