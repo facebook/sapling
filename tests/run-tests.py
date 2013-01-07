@@ -356,33 +356,35 @@ def cleanup(options):
 def usecorrectpython():
     # some tests run python interpreter. they must use same
     # interpreter we use or bad things will happen.
-    exedir, exename = os.path.split(sys.executable)
-    if exename in ('python', 'python.exe'):
-        path = findprogram(exename)
-        if os.path.dirname(path) == exedir:
-            return
-    else:
-        exename = 'python'
-        if sys.platform == 'win32':
-            exename = 'python.exe'
+    pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
     if getattr(os, 'symlink', None):
         vlog("# Making python executable in test path a symlink to '%s'" %
              sys.executable)
-        mypython = os.path.join(BINDIR, exename)
+        mypython = os.path.join(BINDIR, pyexename)
         try:
-            os.symlink(sys.executable, mypython)
+            if os.readlink(mypython) == sys.executable:
+                return
+            os.unlink(mypython)
         except OSError, err:
-            # child processes may race, which is harmless
-            if err.errno != errno.EEXIST:
+            if err.errno != errno.ENOENT:
                 raise
+        if findprogram(pyexename) != sys.executable:
+            try:
+                os.symlink(sys.executable, mypython)
+            except OSError, err:
+                # child processes may race, which is harmless
+                if err.errno != errno.EEXIST:
+                    raise
     else:
-        vlog("# Modifying search path to find %s in '%s'" % (exename, exedir))
+        exedir, exename = os.path.split(sys.executable)
+        vlog("# Modifying search path to find %s as %s in '%s'" %
+             (exename, pyexename, exedir))
         path = os.environ['PATH'].split(os.pathsep)
         while exedir in path:
             path.remove(exedir)
         os.environ['PATH'] = os.pathsep.join([exedir] + path)
-        if not findprogram(exename):
-            print "WARNING: Cannot find %s in search path" % exename
+        if not findprogram(pyexename):
+            print "WARNING: Cannot find %s in search path" % pyexename
 
 def installhg(options):
     vlog("# Performing temporary installation of HG")
