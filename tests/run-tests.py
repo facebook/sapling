@@ -602,10 +602,13 @@ def tsttest(test, wd, options, replacements):
         tdir = TESTDIR.replace('\\', '/')
         proc = Popen4('%s -c "%s/hghave %s"' %
                       (options.shell, tdir, ' '.join(reqs)), wd, 0)
-        proc.communicate()
+        stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
+        if ret == 2:
+            print stdout
+            sys.exit(1)
         return ret == 0
 
     f = open(test)

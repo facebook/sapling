@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
         if feature not in checks:
             error('skipped: unknown feature: ' + feature)
-            continue
+            sys.exit(2)
 
         check, desc = checks[feature]
         try:
