@@ -217,28 +217,28 @@ Test copies and moves from a directory other than root (issue3516)
   ./foo
   $ cd ../../a
 
-#if hgweb
+#if serve
 Test display of largefiles in hgweb
 
   $ hg serve -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/?style=raw'
   200 Script output follows
-
-
+  
+  
   drwxr-xr-x sub
   -rw-r--r-- 41 large3
   -rw-r--r-- 9 normal3
-
-
+  
+  
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/tip/sub/?style=raw'
   200 Script output follows
-
-
+  
+  
   -rw-r--r-- 41 large4
   -rw-r--r-- 9 normal4
-
-
+  
+  
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 #endif
 
