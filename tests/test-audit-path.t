@@ -86,7 +86,7 @@ attack /tmp/test
   $ hg manifest -r4
   /tmp/test
   $ hg update -Cr4
-  abort: *: $TESTTMP/target//tmp/test (glob)
+  abort: *: '$TESTTMP/target//tmp/test' (glob)
   [255]
 
   $ cd ..

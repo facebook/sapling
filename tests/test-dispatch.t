@@ -46,6 +46,12 @@ Missing arg:
 
   $ cd "$TESTTMP"
 
+OSError ... and with filename even when it is empty
+
+  $ hg -R a archive ''
+  abort: No such file or directory: ''
+  [255]
+
 #if no-outer-repo
 
 No repo:
