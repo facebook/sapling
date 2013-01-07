@@ -1406,6 +1406,8 @@ def getgraphlogrevs(repo, pats, opts):
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
     possiblyunsorted = False # whether revs might need sorting
+    if not opts.get('hidden'):
+        repo = repo.filtered('hidden')
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
         # Don't sort here because _makegraphlogrevset might depend on the
@@ -1432,24 +1434,7 @@ def getgraphlogrevs(repo, pats, opts):
         # again to fix that.
         revs = matcher(repo, revs)
         revs.sort(reverse=True)
-    if not opts.get('hidden'):
-        # --hidden is still experimental and not worth a dedicated revset
-        # yet. Fortunately, filtering revision number is fast.
-        hiddenrevs = repo.hiddenrevs
-        nrevs = []
-        taken = 0
-        if limit is not None:
-            for i in xrange(len(revs)):
-                if taken >= limit:
-                    break
-                r = revs[i]
-                if r not in hiddenrevs:
-                    nrevs.append(r)
-                    taken += 1
-            revs = nrevs
-        else:
-            revs = [r for r in revs if r not in hiddenrevs]
-    elif limit is not None:
+    if limit is not None:
         revs = revs[:limit]
 
     return revs, expr, filematcher
