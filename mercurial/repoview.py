@@ -9,6 +9,16 @@
 import copy
 import phases
 
+
+def computehidden(repo):
+    """compute the set of hidden revision to filter
+
+    During most operation hidden should be filtered."""
+    assert not repo.changelog.filteredrevs
+    if repo.obsstore:
+        return frozenset(repo.revs('hidden()'))
+    return frozenset()
+
 def computeunserved(repo):
     """compute the set of revision that should be filtered when used a server
 
@@ -20,14 +30,16 @@ def computeunserved(repo):
     return frozenset()
 
 # function to compute filtered set
-filtertable = {'unserved': computeunserved}
+filtertable = {'hidden': computehidden,
+               'unserved': computeunserved}
 ### Nearest subset relation
 # Nearest subset of filter X is a filter Y so that:
 # * Y is included in X,
 # * X - Y is as small as possible.
 # This create and ordering used for branchmap purpose.
 # the ordering may be partial
-subsettable = {None: 'unserved'}
+subsettable = {None: 'hidden',
+               'hidden': 'unserved'}
 
 def filteredrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""

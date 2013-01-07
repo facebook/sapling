@@ -176,9 +176,9 @@ visible shared between the initial repo and the push destination.
 check that branch cache with "unserved" filter are properly computed and stored
 
   $ ls ../push-dest/.hg/cache/branchheads*
-  ../push-dest/.hg/cache/branchheads
+  ../push-dest/.hg/cache/branchheads-hidden
   ../push-dest/.hg/cache/branchheads-unserved
-  $ cat ../push-dest/.hg/cache/branchheads
+  $ cat ../push-dest/.hg/cache/branchheads-hidden
   6d6770faffce199f1fddd1cf87f6f026138cf061 6
   b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
   2713879da13d6eea1ff22b442a5a87cb31a7ce6a default
