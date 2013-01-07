@@ -58,7 +58,9 @@ def computemutable(repo):
     assert not repo.changelog.filteredrevs
     # fast check to avoid revset call on huge repo
     if util.any(repo._phasecache.phaseroots[1:]):
-        return frozenset(repo.revs('draft() + secret()'))
+        getphase = repo._phasecache.phase
+        maymutable = filteredrevs(repo, 'impactable')
+        return frozenset(r for r in maymutable if getphase(repo, r))
     return frozenset()
 
 def computeimpactable(repo):
