@@ -66,7 +66,7 @@ new directories are setgid
   00700 ./.hg/
   00600 ./.hg/00changelog.i
   00770 ./.hg/cache/
-  00660 ./.hg/cache/branchheads
+  00660 ./.hg/cache/branchheads-unserved
   00660 ./.hg/dirstate
   00660 ./.hg/last-message.txt
   00600 ./.hg/requires
@@ -111,7 +111,7 @@ group can still write everything
   00770 ../push/.hg/
   00660 ../push/.hg/00changelog.i
   00770 ../push/.hg/cache/
-  00660 ../push/.hg/cache/branchheads
+  00660 ../push/.hg/cache/branchheads-unserved
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i

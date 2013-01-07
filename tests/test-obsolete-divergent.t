@@ -62,6 +62,7 @@ A_1 have two direct and divergent successors A_1 and A_1
   $ newcase direct
   $ hg debugobsolete `getid A_0` `getid A_1`
   $ hg debugobsolete `getid A_0` `getid A_2`
+  invalid branchheads cache (unserved): tip differs
   $ hg log -G --hidden
   o  3:392fd25390da A_2
   |
@@ -103,6 +104,7 @@ indirect divergence with known changeset
   $ newcase indirect_known
   $ hg debugobsolete `getid A_0` `getid A_1`
   $ hg debugobsolete `getid A_0` `getid A_2`
+  invalid branchheads cache (unserved): tip differs
   $ mkcommit A_3
   created new head
   $ hg debugobsolete `getid A_2` `getid A_3`
@@ -141,6 +143,7 @@ indirect divergence with known changeset
   $ newcase indirect_unknown
   $ hg debugobsolete `getid A_0` aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa `getid A_1`
+  invalid branchheads cache (unserved): tip differs
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg log -G --hidden
   o  3:392fd25390da A_2
@@ -172,6 +175,7 @@ do not take unknown node in account if they are final
   $ newcase final-unknown
   $ hg debugobsolete `getid A_0` `getid A_1`
   $ hg debugobsolete `getid A_1` `getid A_2`
+  invalid branchheads cache (unserved): tip differs
   $ hg debugobsolete `getid A_0` bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ hg debugobsolete bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccccccccccccccccccc
   $ hg debugobsolete `getid A_1` dddddddddddddddddddddddddddddddddddddddd
@@ -188,6 +192,7 @@ divergence that converge again is not divergence anymore
   $ newcase converged_divergence
   $ hg debugobsolete `getid A_0` `getid A_1`
   $ hg debugobsolete `getid A_0` `getid A_2`
+  invalid branchheads cache (unserved): tip differs
   $ mkcommit A_3
   created new head
   $ hg debugobsolete `getid A_1` `getid A_3`
@@ -434,6 +439,7 @@ successors-set. (report [A,B] not [A] + [A,B])
   $ newcase subset
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
+  invalid branchheads cache (unserved): tip differs
   $ hg debugsuccessorssets 'desc('A_0')'
   007dc284c1f8
       82623d38b9ba 392fd25390da

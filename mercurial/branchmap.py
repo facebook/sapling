@@ -7,7 +7,7 @@
 
 from node import bin, hex, nullid, nullrev
 import encoding
-import util
+import util, repoview
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
@@ -63,16 +63,24 @@ def updatecache(repo):
     filtername = repo.filtername
     partial = repo._branchcaches.get(filtername)
 
+    revs = []
     if partial is None or not partial.validfor(repo):
         partial = read(repo)
         if partial is None:
-            partial = branchcache()
-
-    revs = list(cl.revs(start=partial.tiprev +1))
+            subsetname = repoview.subsettable.get(filtername)
+            if subsetname is None:
+                partial = branchcache()
+            else:
+                subset = repo.filtered(subsetname)
+                partial = subset.branchmap().copy()
+                extrarevs = subset.changelog.filteredrevs - cl.filteredrevs
+                revs.extend(r for  r in extrarevs if r <= partial.tiprev)
+    revs.extend(cl.revs(start=partial.tiprev + 1))
     if revs:
         ctxgen = (repo[r] for r in revs)
         partial.update(repo, ctxgen)
         partial.write(repo)
+    assert partial.validfor(repo)
     repo._branchcaches[repo.filtername] = partial
 
 class branchcache(dict):
