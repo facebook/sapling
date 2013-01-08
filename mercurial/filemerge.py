@@ -204,6 +204,10 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
     Uses the internal non-interactive simple merge algorithm for merging
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file."""
+    tool, toolpath, binary, symlink = toolconf
+    if symlink:
+        return False, 1
+
     r = _premerge(repo, toolconf, files)
     if r:
         a, b, c, back = files

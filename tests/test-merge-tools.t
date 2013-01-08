@@ -832,3 +832,20 @@ cat is a bad merge-tool and doesn't change:
   # hg stat
   M f
   ? f.orig
+
+#if symlink
+
+internal merge cannot handle symlinks and shouldn't try:
+
+  $ hg update -q -C 1
+  $ rm f
+  $ ln -s symlink f
+  $ hg commit -qm 'f is symlink'
+  $ hg merge -r 2 --tool internal:merge
+  merging f
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+
+#endif
