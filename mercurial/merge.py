@@ -318,7 +318,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     return action
 
 def actionkey(a):
-    return a[1] == 'r' and -1 or 0, a
+    return a[1] == "r" and -1 or 0, a
 
 def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     """apply the merge action list to the working directory
@@ -340,7 +340,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     # prescan for merges
     for a in action:
         f, m = a[:2]
-        if m == 'm': # merge
+        if m == "m": # merge
             f2, fd, flags, move = a[2:]
             if f == '.hgsubstate': # merged internally
                 continue
