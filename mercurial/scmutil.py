@@ -252,9 +252,9 @@ class vfs(abstractvfs):
     def _setmustaudit(self, onoff):
         self._audit = onoff
         if onoff:
-            self.auditor = pathauditor(self.base)
+            self.audit = pathauditor(self.base)
         else:
-            self.auditor = util.always
+            self.audit = util.always
 
     mustaudit = property(_getmustaudit, _setmustaudit)
 
@@ -276,7 +276,7 @@ class vfs(abstractvfs):
             r = util.checkosfilename(path)
             if r:
                 raise util.Abort("%s: %r" % (r, path))
-        self.auditor(path)
+        self.audit(path)
         f = self.join(path)
 
         if not text and "b" not in mode:
@@ -321,7 +321,7 @@ class vfs(abstractvfs):
         return fp
 
     def symlink(self, src, dst):
-        self.auditor(dst)
+        self.audit(dst)
         linkname = self.join(dst)
         try:
             os.unlink(linkname)
@@ -340,9 +340,6 @@ class vfs(abstractvfs):
                               (src, err.strerror), linkname)
         else:
             self.write(dst, src)
-
-    def audit(self, path):
-        self.auditor(path)
 
     def join(self, path):
         if path:
