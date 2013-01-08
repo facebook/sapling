@@ -395,12 +395,11 @@ testing debugcvsps
   Author: * (glob)
   Branch: HEAD
   Tag: (none) 
-  Branchpoints: branch 
   Log:
   ci1
   
   Members: 
-  	a:1.1->1.2 
+  	b/c:1.2->1.3 
   
   ---------------------
   PatchSet 6 
@@ -408,11 +407,12 @@ testing debugcvsps
   Author: * (glob)
   Branch: HEAD
   Tag: (none) 
+  Branchpoints: branch 
   Log:
   ci1
   
   Members: 
-  	b/c:1.2->1.3 
+  	a:1.1->1.2 
   
   ---------------------
   PatchSet 7 
