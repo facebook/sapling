@@ -17,7 +17,9 @@ def computehidden(repo):
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
     if repo.obsstore:
-        return frozenset(repo.revs('hidden()'))
+        ### hide extinct changeset that are not accessible by any mean
+        hiddenquery = 'extinct() - ::(. + bookmark())'
+        return frozenset(repo.revs(hiddenquery))
     return frozenset()
 
 def computeunserved(repo):

@@ -364,12 +364,7 @@ class localrepository(object):
 
         hidden changesets cannot have non-hidden descendants
         """
-        hidden = set()
-        if self.obsstore:
-            ### hide extinct changeset that are not accessible by any mean
-            hiddenquery = 'extinct() - ::(. + bookmark())'
-            hidden.update(self.revs(hiddenquery))
-        return hidden
+        return repoview.filteredrevs(self, 'hidden')
 
     @storecache('00changelog.i')
     def changelog(self):
