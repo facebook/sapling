@@ -746,6 +746,18 @@ Interrupted commit should not change state
 
 Commit with multi-line message and custom expansion
 
+|Note:
+|
+| After the last rollback, the "unserved" branchheads cache became invalid, but
+| all changeset in the repo were public. So filtering wise:
+|   "mutable" == "unserved" == ø.
+|
+| As the "unserved" cache is invalid, we fall back to "mutable" cache. But not
+| update is needed between "mutable" and "unserved" cache and the "unserved"
+| cache is not updated on disk. The on disk version therefor stay invalid for
+| some time. This explains why the "unserved" branchheads cache is detect
+| invalid here.
+
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   invalid branchheads cache: tip differs
   invalid branchheads cache (unserved): tip differs
