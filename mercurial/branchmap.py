@@ -77,8 +77,7 @@ def updatecache(repo):
                 revs.extend(r for  r in extrarevs if r <= partial.tiprev)
     revs.extend(cl.revs(start=partial.tiprev + 1))
     if revs:
-        ctxgen = (repo[r] for r in revs)
-        partial.update(repo, ctxgen)
+        partial.update(repo, revs)
         partial.write(repo)
     assert partial.validfor(repo)
     repo._branchcaches[repo.filtername] = partial
@@ -144,12 +143,13 @@ class branchcache(dict):
             # Abort may be raise by read only opener
             pass
 
-    def update(self, repo, ctxgen):
+    def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
         missing heads, and a generator of nodes that are at least a superset of
         heads missing, this function updates self to be correct.
         """
         cl = repo.changelog
+        ctxgen = (repo[r] for r in revgen)
         # collect new branch entries
         newbranches = {}
         for c in ctxgen:

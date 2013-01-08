@@ -1406,10 +1406,11 @@ class localrepository(object):
         # it, Otherwise, since nodes were destroyed, the cache is stale and this
         # will be caught the next time it is read.
         if newheadnodes:
-            ctxgen = (self[node] for node in newheadnodes
-                      if self.changelog.hasnode(node))
+            cl = self.changelog
+            revgen = (cl.rev(node) for node in newheadnodes
+                      if cl.hasnode(node))
             cache = self._branchcaches[None]
-            cache.update(self, ctxgen)
+            cache.update(self, revgen)
             cache.write(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now
