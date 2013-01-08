@@ -255,18 +255,18 @@ Modify end of plain file with username unset
   [255]
 
 
-Modify end of plain file
+Modify end of plain file, also test that diffopts are accounted for
 
   $ HGUSER="test"
   $ export HGUSER
-  $ hg record -d '8 0' -m end plain <<EOF
+  $ hg record --config diff.showfunc=true -d '8 0' -m end plain <<EOF
   > y
   > y
   > EOF
   diff --git a/plain b/plain
   1 hunks, 1 lines changed
   examine changes to 'plain'? [Ynesfdaq?] 
-  @@ -8,3 +8,4 @@
+  @@ -8,3 +8,4 @@ 7
    8
    9
    10
