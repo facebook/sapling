@@ -402,11 +402,6 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
                     updated += 1
                 else:
                     merged += 1
-            if (move and repo.dirstate.normalize(fd) != f
-                and os.path.lexists(repo.wjoin(f))):
-                repo.ui.debug("removing %s\n" % f)
-                audit(f)
-                os.unlink(repo.wjoin(f))
         elif m == "g": # get
             flags = a[2]
             repo.ui.note(_("getting %s\n") % f)
