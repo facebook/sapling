@@ -248,6 +248,7 @@ Test short command list with verbose option
       --profile           print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
+      --hidden            consider hidden changesets
   
   [+] marked option can be specified multiple times
   
@@ -334,6 +335,7 @@ Verbose help for add
       --profile           print command execution profile
       --version           output version information and exit
    -h --help              display help and exit
+      --hidden            consider hidden changesets
   
   [+] marked option can be specified multiple times
 

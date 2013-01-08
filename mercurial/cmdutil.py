@@ -1406,8 +1406,6 @@ def getgraphlogrevs(repo, pats, opts):
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
     possiblyunsorted = False # whether revs might need sorting
-    if not opts.get('hidden'):
-        repo = repo.filtered('hidden')
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts['rev'])
         # Don't sort here because _makegraphlogrevset might depend on the

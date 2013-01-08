@@ -492,9 +492,9 @@ Test that amend does not make it easy to create obsoletescence cycle
 ---------------------------------------------------------------------
 
 
-  $ hg id -r 14
+  $ hg id -r 14 --hidden
   b650e6ee8614 (a)
-  $ hg revert -ar 14
+  $ hg revert -ar 14 --hidden
   reverting a
   $ hg commit --amend
   $ hg id

@@ -39,7 +39,6 @@ testedwith = 'internal'
      _('show changesets within the given named branch'), _('BRANCH')),
     ('P', 'prune', [],
      _('do not display revision or any of its ancestors'), _('REV')),
-    ('', 'hidden', False, _('show hidden changesets (DEPRECATED)')),
     ] + commands.logopts + commands.walkopts,
     _('[OPTION]... [FILE]'))
 def graphlog(ui, repo, *pats, **opts):

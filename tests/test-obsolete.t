@@ -11,7 +11,7 @@
   >    hg ci -m "add $1"
   > }
   $ getid() {
-  >    hg id --debug -ir "desc('$1')"
+  >    hg id --debug --hidden -ir "desc('$1')"
   > }
 
   $ cat > debugkeys.py <<EOF
@@ -130,7 +130,7 @@ Check that graphlog detect that a changeset is obsolete:
 
 Check that public changeset are not accounted as obsolete:
 
-  $ hg phase --public 2
+  $ hg --hidden phase --public 2
   $ hg --config 'extensions.graphlog=' glog
   @  changeset:   5:5601fb93a350
   |  tag:         tip

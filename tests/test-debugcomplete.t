@@ -123,6 +123,7 @@ Show the global options
   --encoding
   --encodingmode
   --help
+  --hidden
   --noninteractive
   --profile
   --quiet
@@ -153,6 +154,7 @@ Show the options for the "serve" command
   --encodingmode
   --errorlog
   --help
+  --hidden
   --ipv6
   --name
   --noninteractive
@@ -200,7 +202,7 @@ Show all commands + options
   export: output, switch-parent, rev, text, git, nodates
   forget: include, exclude
   init: ssh, remotecmd, insecure
-  log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, hidden, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
+  log: follow, follow-first, date, copies, keyword, rev, removed, only-merges, user, only-branch, branch, prune, patch, git, limit, no-merges, stat, graph, style, template, include, exclude
   merge: force, rev, preview, tool
   pull: update, force, rev, bookmark, branch, ssh, remotecmd, insecure
   push: force, rev, bookmark, branch, new-branch, ssh, remotecmd, insecure

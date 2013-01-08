@@ -576,6 +576,7 @@ Copy and show added kwfiles
 Commit and show expansion in original and copy
 
   $ hg --debug commit -ma2c -d '1 0' -u 'User Name <user@example.com>'
+  invalid branchheads cache (unserved): tip differs
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
   overwriting c expanding keywords
@@ -759,7 +760,6 @@ Commit with multi-line message and custom expansion
 | invalid here.
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
-  invalid branchheads cache: tip differs
   invalid branchheads cache (unserved): tip differs
   a
   invalid branchheads cache: tip differs
@@ -805,7 +805,6 @@ remove with status checks
   $ hg debugrebuildstate
   $ hg remove a
   $ hg --debug commit -m rma
-  invalid branchheads cache: tip differs
   invalid branchheads cache: tip differs
   committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
   $ hg status
@@ -917,7 +916,6 @@ kwexpand x/a should abort
   [255]
   $ cd x
   $ hg --debug commit -m xa -d '3 0' -u 'User Name <user@example.com>'
-  invalid branchheads cache: tip differs
   x/a
    x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
   invalid branchheads cache: tip differs

@@ -136,7 +136,6 @@ Test for invalid branch cache:
   $ cp .hg/bc-invalid $branchcache
 
   $ hg --debug log -r foo
-  invalid branchheads cache: tip differs
   changeset:   4:adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6
   branch:      foo
   tag:         tip

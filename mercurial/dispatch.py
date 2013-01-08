@@ -710,6 +710,10 @@ def _dispatch(req):
                 repo = hg.repository(ui, path=path)
                 if not repo.local():
                     raise util.Abort(_("repository '%s' is not local") % path)
+                if not options['hidden']:
+                    repo = repo.filtered('hidden')
+                else:
+                    repo = repo.unfiltered()
                 repo.ui.setconfig("bundle", "mainreporoot", repo.root)
             except error.RequirementError:
                 raise

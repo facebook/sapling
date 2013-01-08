@@ -27,7 +27,7 @@ Enable obsolete
   >    hg ci -m "$1"
   > }
   $ getid() {
-  >    hg id --debug -ir "desc('$1')"
+  >    hg id --debug --hidden -ir "desc('$1')"
   > }
 
 setup repo
@@ -72,7 +72,7 @@ A_1 have two direct and divergent successors A_1 and A_1
   |/
   @  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -119,7 +119,7 @@ indirect divergence with known changeset
   |/
   o  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -154,7 +154,7 @@ indirect divergence with known changeset
   |/
   @  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -180,7 +180,7 @@ do not take unknown node in account if they are final
   $ hg debugobsolete bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccccccccccccccccccc
   $ hg debugobsolete `getid A_1` dddddddddddddddddddddddddddddddddddddddd
 
-  $ hg debugsuccessorssets 'desc('A_0')'
+  $ hg debugsuccessorssets --hidden 'desc('A_0')'
   007dc284c1f8
       392fd25390da
 
@@ -208,7 +208,7 @@ divergence that converge again is not divergence anymore
   |/
   o  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -236,7 +236,7 @@ split is not divergences
   |/
   @  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -277,7 +277,7 @@ Even when subsequente rewriting happen
   |/
   o  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -333,7 +333,7 @@ Check more complexe obsolescence graft (with divergence)
   |/
   @  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -400,7 +400,7 @@ fix the divergence
   |/
   @  0:d20a80d4def3 base
   
-  $ hg debugsuccessorssets 'all()'
+  $ hg debugsuccessorssets --hidden 'all()'
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
@@ -440,7 +440,7 @@ successors-set. (report [A,B] not [A] + [A,B])
   $ hg debugobsolete `getid A_0` `getid A_2`
   $ hg debugobsolete `getid A_0` `getid A_1` `getid A_2`
   invalid branchheads cache (unserved): tip differs
-  $ hg debugsuccessorssets 'desc('A_0')'
+  $ hg debugsuccessorssets --hidden 'desc('A_0')'
   007dc284c1f8
       82623d38b9ba 392fd25390da
 
