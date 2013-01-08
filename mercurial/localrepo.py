@@ -350,7 +350,8 @@ class localrepository(object):
             self.ui.warn(msg % len(list(store)))
         return store
 
-    @unfilteredpropertycache
+    @property
+    @unfiltered
     def hiddenrevs(self):
         """hiddenrevs: revs that should be hidden by command and tools
 
@@ -961,8 +962,6 @@ class localrepository(object):
     def invalidatevolatilesets(self):
         self.filteredrevcache.clear()
         obsolete.clearobscaches(self)
-        if 'hiddenrevs' in vars(self):
-            del self.hiddenrevs
 
     def invalidatedirstate(self):
         '''Invalidates the dirstate, causing the next call to dirstate
