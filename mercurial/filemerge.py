@@ -171,13 +171,15 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
 
 def _premerge(repo, toolconf, files):
     tool, toolpath, binary, symlink = toolconf
+    if symlink:
+        return 1
     a, b, c, back = files
 
     ui = repo.ui
 
     # do we attempt to simplemerge first?
     try:
-        premerge = _toolbool(ui, tool, "premerge", not (binary or symlink))
+        premerge = _toolbool(ui, tool, "premerge", not binary)
     except error.ConfigError:
         premerge = _toolstr(ui, tool, "premerge").lower()
         valid = 'keep'.split()
