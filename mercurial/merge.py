@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import error, scmutil, util, filemerge, copies, subrepo
+import error, util, filemerge, copies, subrepo
 import errno, os, shutil
 
 class mergestate(object):
@@ -360,7 +360,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             if f != fd and move:
                 moves.append(f)
 
-    audit = scmutil.pathauditor(repo.root)
+    audit = repo.wopener.audit
 
     # remove renamed files after safely stored
     for f in moves:
@@ -393,7 +393,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                                  overwrite)
                 continue
             f2, fd, flags, move = a[2:]
-            repo.wopener.audit(fd)
+            audit(fd)
             r = ms.resolve(fd, wctx, mctx)
             if r is not None and r > 0:
                 unresolved += 1
@@ -443,7 +443,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
                 repo.ui.warn(" %s\n" % nf)
         elif m == "e": # exec
             flags = a[2]
-            repo.wopener.audit(f)
+            audit(f)
             util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
     ms.commit()
     repo.ui.progress(_('updating'), None, total=numupdates, unit=_('files'))
