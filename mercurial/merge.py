@@ -162,18 +162,18 @@ def _forgetremoved(wctx, mctx, branchmerge):
     as removed.
     """
 
-    action = []
+    actions = []
     state = branchmerge and 'r' or 'f'
     for f in wctx.deleted():
         if f not in mctx:
-            action.append((f, state))
+            actions.append((f, state))
 
     if not branchmerge:
         for f in wctx.removed():
             if f not in mctx:
-                action.append((f, "f"))
+                actions.append((f, "f"))
 
-    return action
+    return actions
 
 def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
@@ -211,9 +211,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
 
     def act(msg, m, f, *args):
         repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
-        action.append((f, m) + args)
+        actions.append((f, m) + args)
 
-    action, copy, movewithdir = [], {}, {}
+    actions, copy, movewithdir = [], {}, {}
 
     if overwrite:
         pa = p1
@@ -315,12 +315,12 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 (_("&Changed"), _("&Deleted")), 0) == 0:
                 act("prompt recreating", "g", f, m2.flags(f))
 
-    return action
+    return actions
 
 def actionkey(a):
     return a[1] == "r" and -1 or 0, a
 
-def applyupdates(repo, action, wctx, mctx, actx, overwrite):
+def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
     """apply the merge action list to the working directory
 
     wctx is the working copy context
@@ -335,10 +335,10 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
     ms = mergestate(repo)
     ms.reset(wctx.p1().node())
     moves = []
-    action.sort(key=actionkey)
+    actions.sort(key=actionkey)
 
     # prescan for merges
-    for a in action:
+    for a in actions:
         f, m = a[:2]
         if m == "m": # merge
             f2, fd, flags, move = a[2:]
@@ -369,8 +369,8 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
             audit(f)
             os.unlink(repo.wjoin(f))
 
-    numupdates = len(action)
-    for i, a in enumerate(action):
+    numupdates = len(actions)
+    for i, a in enumerate(actions):
         f, m = a[:2]
         repo.ui.progress(_('updating'), i + 1, item=f, total=numupdates,
                          unit=_('files'))
@@ -452,7 +452,7 @@ def applyupdates(repo, action, wctx, mctx, actx, overwrite):
 
 def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
     "Calculate the actions needed to merge mctx into tctx"
-    action = []
+    actions = []
     folding = not util.checkcase(repo.path)
     if folding:
         # collision check is not needed for clean update
@@ -464,17 +464,17 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
     if not force:
         _checkunknown(repo, tctx, mctx)
     if tctx.rev() is None:
-        action += _forgetremoved(tctx, mctx, branchmerge)
-    action += manifestmerge(repo, tctx, mctx,
-                            ancestor,
-                            force and not branchmerge,
-                            partial)
-    return action
+        actions += _forgetremoved(tctx, mctx, branchmerge)
+    actions += manifestmerge(repo, tctx, mctx,
+                             ancestor,
+                             force and not branchmerge,
+                             partial)
+    return actions
 
-def recordupdates(repo, action, branchmerge):
+def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
 
-    for a in action:
+    for a in actions:
         f, m = a[:2]
         if m == "r": # remove
             if branchmerge:
@@ -632,7 +632,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 pa = p1
 
         ### calculate phase
-        action = calculateupdates(repo, wc, p2, pa, branchmerge, force, partial)
+        actions = calculateupdates(repo, wc, p2, pa,
+                                   branchmerge, force, partial)
 
         ### apply phase
         if not branchmerge: # just jump to the new rev
@@ -640,11 +641,11 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         if not partial:
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
 
-        stats = applyupdates(repo, action, wc, p2, pa, overwrite)
+        stats = applyupdates(repo, actions, wc, p2, pa, overwrite)
 
         if not partial:
             repo.setparents(fp1, fp2)
-            recordupdates(repo, action, branchmerge)
+            recordupdates(repo, actions, branchmerge)
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())
     finally:
