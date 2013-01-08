@@ -19,6 +19,7 @@ class logentry(object):
         .branch    - name of branch this revision is on
         .branches  - revision tuple of branches starting at this revision
         .comment   - commit message
+        .commitid  - CVS commitid or None
         .date      - the commit date as a (time, tz) tuple
         .dead      - true if file revision is dead
         .file      - Name of file
@@ -28,19 +29,17 @@ class logentry(object):
         .revision  - revision number as tuple
         .tags      - list of tags on the file
         .synthetic - is this a synthetic "file ... added on ..." revision?
-        .mergepoint- the branch that has been merged from
-                     (if present in rlog output)
-        .branchpoints- the branches that start at the current entry
+        .mergepoint - the branch that has been merged from (if present in
+                      rlog output) or None
+        .branchpoints - the branches that start at the current entry or empty
     '''
     def __init__(self, **entries):
         self.synthetic = False
         self.__dict__.update(entries)
 
     def __repr__(self):
-        return "<%s at 0x%x: %s %s>" % (self.__class__.__name__,
-                                        id(self),
-                                        self.file,
-                                        ".".join(map(str, self.revision)))
+        items = ("%s=%r"%(k, self.__dict__[k]) for k in sorted(self.__dict__))
+        return "%s(%s)"%(type(self).__name__, ", ".join(items))
 
 class logerror(Exception):
     pass
@@ -113,6 +112,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     re_50 = re.compile('revision ([\\d.]+)(\s+locked by:\s+.+;)?$')
     re_60 = re.compile(r'date:\s+(.+);\s+author:\s+(.+);\s+state:\s+(.+?);'
                        r'(\s+lines:\s+(\+\d+)?\s+(-\d+)?;)?'
+                       r'(\s+commitid:\s+([^;]+);)?'
                        r'(.*mergepoint:\s+([^;]+);)?')
     re_70 = re.compile('branches: (.+);$')
 
@@ -171,6 +171,14 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
         try:
             ui.note(_('reading cvs log cache %s\n') % cachefile)
             oldlog = pickle.load(open(cachefile))
+            for e in oldlog:
+               if not (util.safehasattr(e, 'branchpoints') and
+                       util.safehasattr(e, 'commitid') and
+                       util.safehasattr(e, 'mergepoint')):
+                  ui.status(_('ignoring old cache\n'))
+                  oldlog = []
+                  break
+
             ui.note(_('cache has %d log entries\n') % len(oldlog))
         except Exception, e:
             ui.note(_('error reading cache: %r\n') % e)
@@ -298,7 +306,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             assert match, _('expected revision number')
             e = logentry(rcs=scache(rcs), file=scache(filename),
                     revision=tuple([int(x) for x in match.group(1).split('.')]),
-                    branches=[], parent=None)
+                    branches=[], parent=None, commitid=None, mergepoint=None, branchpoints=set())
+
             state = 6
 
         elif state == 6:
@@ -329,8 +338,11 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             else:
                 e.lines = None
 
-            if match.group(7): # cvsnt mergepoint
-                myrev = match.group(8).split('.')
+            if match.group(7): # cvs 1.12 commitid
+                e.commitid = match.group(8)
+
+            if match.group(9): # cvsnt mergepoint
+                myrev = match.group(10).split('.')
                 if len(myrev) == 2: # head
                     e.mergepoint = 'HEAD'
                 else:
@@ -339,8 +351,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                     assert len(branches) == 1, ('unknown branch: %s'
                                                 % e.mergepoint)
                     e.mergepoint = branches[0]
-            else:
-                e.mergepoint = None
+
             e.comment = []
             state = 7
 
@@ -469,23 +480,22 @@ class changeset(object):
         .author    - author name as CVS knows it
         .branch    - name of branch this changeset is on, or None
         .comment   - commit message
+        .commitid  - CVS commitid or None
         .date      - the commit date as a (time,tz) tuple
         .entries   - list of logentry objects in this changeset
         .parents   - list of one or two parent changesets
         .tags      - list of tags on this changeset
         .synthetic - from synthetic revision "file ... added on branch ..."
-        .mergepoint- the branch that has been merged from
-                     (if present in rlog output)
-        .branchpoints- the branches that start at the current entry
+        .mergepoint- the branch that has been merged from or None
+        .branchpoints- the branches that start at the current entry or empty
     '''
     def __init__(self, **entries):
         self.synthetic = False
         self.__dict__.update(entries)
 
     def __repr__(self):
-        return "<%s at 0x%x: %s>" % (self.__class__.__name__,
-                                     id(self),
-                                     getattr(self, 'id', "(no id)"))
+        items = ("%s=%r"%(k, self.__dict__[k]) for k in sorted(self.__dict__))
+        return "%s(%s)"%(type(self).__name__, ", ".join(items))
 
 def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     '''Convert log into changesets.'''
@@ -493,8 +503,7 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     ui.status(_('creating changesets\n'))
 
     # Merge changesets
-
-    log.sort(key=lambda x: (x.comment, x.author, x.branch, x.date))
+    log.sort(key=lambda x: (x.commitid, x.comment, x.author, x.branch, x.date, x.branchpoints))
 
     changesets = []
     files = set()
@@ -517,22 +526,27 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         # first changeset and bar the next and MYBRANCH and MYBRANCH2
         # should both start off of the bar changeset. No provisions are
         # made to ensure that this is, in fact, what happens.
-        if not (c and
-                  e.comment == c.comment and
-                  e.author == c.author and
-                  e.branch == c.branch and
-                  (not util.safehasattr(e, 'branchpoints') or
-                    not util.safehasattr (c, 'branchpoints') or
-                    e.branchpoints == c.branchpoints) and
-                  ((c.date[0] + c.date[1]) <=
-                   (e.date[0] + e.date[1]) <=
-                   (c.date[0] + c.date[1]) + fuzz) and
-                  e.file not in files):
+        if not (c and e.branchpoints == c.branchpoints and
+                  (   # cvs commitids
+                      (e.commitid is not None and e.commitid == c.commitid)
+                      or
+                      ( # no commitids, use fuzzy commit detection
+                        (e.commitid is None or c.commitid is None) and
+                        e.comment == c.comment and
+                        e.author == c.author and
+                        e.branch == c.branch and
+                        ((c.date[0] + c.date[1]) <=
+                         (e.date[0] + e.date[1]) <=
+                         (c.date[0] + c.date[1]) + fuzz) and
+                        e.file not in files
+                      )
+                  )):
             c = changeset(comment=e.comment, author=e.author,
-                          branch=e.branch, date=e.date, entries=[],
-                          mergepoint=getattr(e, 'mergepoint', None),
-                          branchpoints=getattr(e, 'branchpoints', set()))
+                          branch=e.branch, date=e.date,
+                          entries=[], mergepoint=e.mergepoint,
+                          branchpoints=e.branchpoints, commitid=e.commitid)
             changesets.append(c)
+
             files = set()
             if len(changesets) % 100 == 0:
                 t = '%d %s' % (len(changesets), repr(e.comment)[1:-1])
@@ -808,9 +822,8 @@ def debugcvsps(ui, *args, **opts):
             ui.write(('Branch: %s\n' % (cs.branch or 'HEAD')))
             ui.write(('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
                                   ','.join(cs.tags) or '(none)')))
-            branchpoints = getattr(cs, 'branchpoints', None)
-            if branchpoints:
-                ui.write(('Branchpoints: %s \n' % ', '.join(branchpoints)))
+            if cs.branchpoints:
+                ui.write('Branchpoints: %s \n' % ', '.join(cs.branchpoints))
             if opts["parents"] and cs.parents:
                 if len(cs.parents) > 1:
                     ui.write(('Parents: %s\n' %
