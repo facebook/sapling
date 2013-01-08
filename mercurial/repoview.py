@@ -18,7 +18,7 @@ def computehidden(repo):
     assert not repo.changelog.filteredrevs
     if repo.obsstore:
         ### hide extinct changeset that are not accessible by any mean
-        hiddenquery = 'extinct() - ::(. + bookmark())'
+        hiddenquery = 'extinct() - ::(parents() + bookmark())'
         return frozenset(repo.revs(hiddenquery))
     return frozenset()
 
