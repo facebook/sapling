@@ -14,6 +14,9 @@ class AuthorMap(dict):
 
     If the 'hgsubversion.defaultauthors' configuration option is set to false,
     attempting to obtain an unknown author will fail with an Abort.
+    
+    If the 'hgsubversion.caseignoreauthors' configuration option is set to true,
+    the userid from Subversion is always compared lowercase.
     '''
 
     def __init__(self, ui, path, defaulthost=None):
@@ -26,6 +29,8 @@ class AuthorMap(dict):
         '''
         self.ui = ui
         self.path = path
+        self.use_defaultauthors = self.ui.configbool('hgsubversion', 'defaultauthors', True)
+        self.caseignoreauthors = self.ui.configbool('hgsubversion', 'caseignoreauthors', False)
         if defaulthost:
             self.defaulthost = '@%s' % defaulthost.lstrip('@')
         else:
@@ -63,6 +68,9 @@ class AuthorMap(dict):
             src = src.strip()
             dst = dst.strip()
 
+            if self.caseignoreauthors:
+                src = src.lower()
+
             if writing:
                 if not src in self:
                     self.ui.debug('adding author %s to author map\n' % src)
@@ -83,9 +91,15 @@ class AuthorMap(dict):
         as well as the backing store. '''
         if author is None:
             author = '(no author)'
-        if author in self:
-            result = self.super.__getitem__(author)
-        elif self.ui.configbool('hgsubversion', 'defaultauthors', True):
+
+        if self.caseignoreauthors:
+            search_author = author.lower()
+        else:
+            search_author = author
+
+        if search_author in self:
+            result = self.super.__getitem__(search_author)
+        elif self.use_defaultauthors:
             self[author] = result = '%s%s' % (author, self.defaulthost)
             msg = 'substituting author "%s" for default "%s"\n'
             self.ui.debug(msg % (author, result))

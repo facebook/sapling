@@ -93,6 +93,22 @@ class MapTests(test_util.TestBase):
         all_tests = set(test)
         self.assertEqual(fromself.symmetric_difference(all_tests), set())
 
+    def test_author_map_caseignore(self):
+        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
+        authormap = open(self.authors, 'w')
+        authormap.write('augie=Augie Fackler <durin42@gmail.com> # stuffy\n')
+        authormap.write("Augie Fackler <durin42@gmail.com>\n")
+        authormap.close()
+        ui = self.ui()
+        ui.setconfig('hgsubversion', 'authormap', self.authors)
+        ui.setconfig('hgsubversion', 'caseignoreauthors', True)
+        commands.clone(ui, test_util.fileurl(repo_path),
+                       self.wc_path, authors=self.authors)
+        self.assertEqual(self.repo[0].user(),
+                         'Augie Fackler <durin42@gmail.com>')
+        self.assertEqual(self.repo['tip'].user(),
+                        'evil@5b65bade-98f3-4993-a01f-b7a6710da339')
+
     def _loadwithfilemap(self, svndump, filemapcontent,
             failonmissing=True):
         repo_path = self.load_svndump(svndump)
