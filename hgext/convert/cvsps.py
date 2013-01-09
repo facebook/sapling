@@ -304,9 +304,15 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             # as this state is re-entered for subsequent revisions of a file.
             match = re_50.match(line)
             assert match, _('expected revision number')
-            e = logentry(rcs=scache(rcs), file=scache(filename),
-                    revision=tuple([int(x) for x in match.group(1).split('.')]),
-                    branches=[], parent=None, commitid=None, mergepoint=None, branchpoints=set())
+            e = logentry(rcs=scache(rcs),
+                         file=scache(filename),
+                         revision=tuple([int(x) for x in
+                                         match.group(1).split('.')]),
+                         branches=[],
+                         parent=None,
+                         commitid=None,
+                         mergepoint=None,
+                         branchpoints=set())
 
             state = 6
 
@@ -503,7 +509,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
     ui.status(_('creating changesets\n'))
 
     # Merge changesets
-    log.sort(key=lambda x: (x.commitid, x.comment, x.author, x.branch, x.date, x.branchpoints))
+    log.sort(key=lambda x: (x.commitid, x.comment, x.author, x.branch, x.date,
+                            x.branchpoints))
 
     changesets = []
     files = set()
@@ -527,20 +534,17 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
         # should both start off of the bar changeset. No provisions are
         # made to ensure that this is, in fact, what happens.
         if not (c and e.branchpoints == c.branchpoints and
-                  (   # cvs commitids
-                      (e.commitid is not None and e.commitid == c.commitid)
-                      or
-                      ( # no commitids, use fuzzy commit detection
-                        (e.commitid is None or c.commitid is None) and
-                        e.comment == c.comment and
-                        e.author == c.author and
-                        e.branch == c.branch and
-                        ((c.date[0] + c.date[1]) <=
-                         (e.date[0] + e.date[1]) <=
-                         (c.date[0] + c.date[1]) + fuzz) and
-                        e.file not in files
-                      )
-                  )):
+                (# cvs commitids
+                 (e.commitid is not None and e.commitid == c.commitid) or
+                 (# no commitids, use fuzzy commit detection
+                  (e.commitid is None or c.commitid is None) and
+                   e.comment == c.comment and
+                   e.author == c.author and
+                   e.branch == c.branch and
+                   ((c.date[0] + c.date[1]) <=
+                    (e.date[0] + e.date[1]) <=
+                    (c.date[0] + c.date[1]) + fuzz) and
+                   e.file not in files))):
             c = changeset(comment=e.comment, author=e.author,
                           branch=e.branch, date=e.date,
                           entries=[], mergepoint=e.mergepoint,
@@ -823,7 +827,7 @@ def debugcvsps(ui, *args, **opts):
             ui.write(('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
                                   ','.join(cs.tags) or '(none)')))
             if cs.branchpoints:
-                ui.write('Branchpoints: %s \n' % ', '.join(cs.branchpoints))
+                ui.write(('Branchpoints: %s \n') % ', '.join(cs.branchpoints))
             if opts["parents"] and cs.parents:
                 if len(cs.parents) > 1:
                     ui.write(('Parents: %s\n' %
