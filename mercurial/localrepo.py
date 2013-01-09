@@ -905,9 +905,6 @@ class localrepository(object):
                         self.sjoin('phaseroots'))
         self.invalidate()
 
-        # Discard all cache entries to force reloading everything.
-        self._filecache.clear()
-
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
