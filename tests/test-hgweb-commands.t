@@ -284,7 +284,7 @@ Logs and changes
   </div>
   
   <div class="main">
-  <h2><a href="/">test</a></h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>log</h3>
   
   <form class="search" action="/log">
@@ -386,7 +386,7 @@ Logs and changes
   
   <div class="main">
   
-  <h2><a href="/">test</a></h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span>  <span class="tag">anotherthing</span> </h3>
   
   <form class="search" action="/log">
@@ -528,7 +528,7 @@ Logs and changes
   </div>
   
   <div class="main">
-  <h2><a href="/">test</a></h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>searching for 'base'</h3>
   
   <form class="search" action="/log">
@@ -642,7 +642,7 @@ File-related
   </div>
   
   <div class="main">
-  <h2><a href="/">test</a></h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>view foo @ 1:a4f92ed23982</h3>
   
   <form class="search" action="/log">
@@ -752,8 +752,8 @@ Overviews
   <body>
   
   <div class="page_header">
-  <a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / summary
-  
+  <a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a>
+  <a href="/">Mercurial</a>  / summary
   <form action="/log">
   <input type="hidden" name="style" value="gitweb" />
   <div class="search">
@@ -955,7 +955,8 @@ Overviews
   <body>
   
   <div class="page_header">
-  <a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a><a href="/summary?style=gitweb">test</a> / graph
+  <a href="http://mercurial.selenic.com/" title="Mercurial" style="float: right;">Mercurial</a>
+  <a href="/">Mercurial</a>  / graph
   </div>
   
   <form action="/log">

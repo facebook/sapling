@@ -198,7 +198,7 @@ should succeed, slashy names
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">
-  <h2>Mercurial Repositories</h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   
   <table class="bigtable">
       <tr>
@@ -694,7 +694,7 @@ should succeed, slashy names
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">
-  <h2>Mercurial Repositories</h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> &gt; <a href="/t">t</a> </h2>
   
   <table class="bigtable">
       <tr>
@@ -1067,7 +1067,7 @@ test inexistent and inaccessible repo should be ignored silently
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">
-  <h2>Mercurial Repositories</h2>
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   
   <table class="bigtable">
       <tr>
