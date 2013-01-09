@@ -337,3 +337,10 @@ class changelog(revlog.revlog):
         l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
         text = "\n".join(l)
         return self.addrevision(text, transaction, len(self), p1, p2)
+
+    def branch(self, rev):
+        """return the branch of a revision
+
+	This function exists because creating a changectx object
+	just to access this is costly."""
+        return encoding.tolocal(self.read(rev)[5].get("branch"))
