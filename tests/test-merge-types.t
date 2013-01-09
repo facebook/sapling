@@ -34,16 +34,28 @@ Symlink is local parent, executable is other:
   resolving manifests
    overwrite: False, partial: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
-   conflicting flags for a
-  (n)one, e(x)ec or sym(l)ink? n
-   a: update permissions -> e
+   a: versions differ -> m
+  preserving a for resolve of a
   updating: a 1/1 files (100.00%)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  picked tool 'internal:merge' for a (binary False symlink True)
+  merging a
+  my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
+  warning: internal:merge cannot merge symlinks for a
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ tellmeabout a
-  a is a plain file with content:
-  symlink (no-eol)
+  a is a symlink:
+  a -> symlink
+  $ hg resolve a --tool internal:other
+  $ tellmeabout a
+  a is an executable file with content:
+  a
+  $ hg st
+  M a
+  ? a.orig
 
 Symlink is other parent, executable is local:
 
@@ -55,17 +67,21 @@ Symlink is other parent, executable is local:
   resolving manifests
    overwrite: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
-   conflicting flags for a
-  (n)one, e(x)ec or sym(l)ink? n
-   a: remote is newer -> g
+   a: versions differ -> m
+  preserving a for resolve of a
   updating: a 1/1 files (100.00%)
-  getting a
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  picked tool 'internal:merge' for a (binary False symlink True)
+  merging a
+  my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
+  warning: internal:merge cannot merge symlinks for a
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ tellmeabout a
-  a is a plain file with content:
-  symlink (no-eol)
+  a is an executable file with content:
+  a
 
 Update to link without local change should get us a symlink (issue3316):
 
@@ -74,6 +90,7 @@ Update to link without local change should get us a symlink (issue3316):
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
+  ? a.orig
 
 Update to link with local change should cause a merge prompt (issue3200):
 
@@ -119,18 +136,24 @@ where that was what happened.
   $ ln -s base f
   $ hg ci -qm2
   $ hg merge
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging f
+  warning: internal:merge cannot merge symlinks for f
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ tellmeabout f
   f is a symlink:
-  f -> file
-  content
-  
+  f -> base
 
   $ hg up -Cqr1
   $ hg merge
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging f
+  warning: internal:merge cannot merge symlinks for f
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ tellmeabout f
   f is a plain file with content:
   file
@@ -152,19 +175,27 @@ Test removed 'x' flag merged with change to symlink
   $ ln -s dangling f
   $ hg ci -qm2
   $ hg merge
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging f
+  warning: internal:merge cannot merge symlinks for f
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ tellmeabout f
   f is a symlink:
   f -> dangling
 
   $ hg up -Cqr1
   $ hg merge
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging f
+  warning: internal:merge cannot merge symlinks for f
+  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ tellmeabout f
-  f is a symlink:
-  f -> dangling
+  f is a plain file with content:
+  f
 
   $ cd ..
 
@@ -210,13 +241,10 @@ h: l vs l, different
   $ hg ci -Aqm2
 
   $ hg merge
-   conflicting flags for e
-  (n)one, e(x)ec or sym(l)ink? n
-   conflicting flags for d
-  (n)one, e(x)ec or sym(l)ink? n
   merging a
   warning: conflicts during merge.
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: cannot merge flags for b
   merging b
   warning: conflicts during merge.
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -229,7 +257,7 @@ h: l vs l, different
   merging h
   warning: internal:merge cannot merge symlinks for h
   merging h incomplete! (edit conflicts, then use 'hg resolve --mark')
-  2 files updated, 0 files merged, 0 files removed, 5 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg resolve -l
@@ -246,21 +274,21 @@ h: l vs l, different
   1
   >>>>>>> other
   $ tellmeabout b
-  b is an executable file with content:
+  b is a plain file with content:
   <<<<<<< local
   2
   =======
   1
   >>>>>>> other
   $ tellmeabout c
-  c is an executable file with content:
+  c is a plain file with content:
   x
   $ tellmeabout d
-  d is a plain file with content:
-  2 (no-eol)
+  d is a symlink:
+  d -> 2
   $ tellmeabout e
-  e is a plain file with content:
-  x (no-eol)
+  e is a symlink:
+  e -> x
   $ tellmeabout f
   f is a symlink:
   f -> 2
@@ -273,13 +301,10 @@ h: l vs l, different
 
   $ hg up -Cqr1
   $ hg merge
-   conflicting flags for e
-  (n)one, e(x)ec or sym(l)ink? n
-   conflicting flags for d
-  (n)one, e(x)ec or sym(l)ink? n
   merging a
   warning: conflicts during merge.
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: cannot merge flags for b
   merging b
   warning: conflicts during merge.
   merging b incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -292,7 +317,7 @@ h: l vs l, different
   merging h
   warning: internal:merge cannot merge symlinks for h
   merging h incomplete! (edit conflicts, then use 'hg resolve --mark')
-  1 files updated, 0 files merged, 0 files removed, 5 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ tellmeabout a
@@ -310,13 +335,13 @@ h: l vs l, different
   2
   >>>>>>> other
   $ tellmeabout c
-  c is an executable file with content:
+  c is a plain file with content:
   x
   $ tellmeabout d
-  d is a plain file with content:
+  d is an executable file with content:
   1
   $ tellmeabout e
-  e is a plain file with content:
+  e is an executable file with content:
   x (no-eol)
   $ tellmeabout f
   f is a plain file with content:
