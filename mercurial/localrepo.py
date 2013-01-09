@@ -1447,10 +1447,7 @@ class localrepository(object):
         # head, refresh the tag cache, then immediately add a new head.
         # But I think doing it this way is necessary for the "instant
         # tag cache retrieval" case to work.
-        self.invalidatecaches()
-
-        # Discard all cache entries to force reloading everything.
-        self._filecache.clear()
+        self.invalidate()
 
     def walk(self, match, node=None):
         '''

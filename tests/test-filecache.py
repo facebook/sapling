@@ -4,7 +4,7 @@ if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
                     'cacheable']):
     sys.exit(80)
 
-from mercurial import util, scmutil, extensions
+from mercurial import util, scmutil, extensions, hg, ui
 
 filecache = scmutil.filecache
 
@@ -86,6 +86,21 @@ def fakeuncacheable():
     util.cachestat.cacheable = origcacheable
     util.cachestat.__init__ = originit
 
+def test_filecache_synced():
+    # test old behaviour that caused filecached properties to go out of sync
+    os.system('hg init && echo a >> a && hg ci -qAm.')
+    repo = hg.repository(ui.ui())
+    # first rollback clears the filecache, but changelog to stays in __dict__
+    repo.rollback()
+    repo.commit('.')
+    # second rollback comes along and touches the changelog externally
+    # (file is moved)
+    repo.rollback()
+    # but since changelog isn't under the filecache control anymore, we don't
+    # see that it changed, and return the old changelog without reconstructing
+    # it
+    repo.commit('.')
+
 print 'basic:'
 print
 basic(fakerepo())
@@ -93,3 +108,4 @@ print
 print 'fakeuncacheable:'
 print
 fakeuncacheable()
+test_filecache_synced()
