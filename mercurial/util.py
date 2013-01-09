@@ -482,11 +482,9 @@ def checksignature(func):
 
 def copyfile(src, dest):
     "copy a file, preserving mode and atime/mtime"
+    if os.path.lexists(dest):
+        unlink(dest)
     if os.path.islink(src):
-        try:
-            os.unlink(dest)
-        except OSError:
-            pass
         os.symlink(os.readlink(src), dest)
     else:
         try:
