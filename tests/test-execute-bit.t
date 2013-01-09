@@ -20,7 +20,7 @@ Make sure we notice the change of mode if the cached size == -1:
   M a
 
   $ hg up 0
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id
   d69afc33ff8a
   $ test -x a && echo executable -- bad || echo not executable -- good

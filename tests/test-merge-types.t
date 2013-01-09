@@ -10,7 +10,7 @@
   $ hg ci -mexecutable
 
   $ hg up 0
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm a
   $ ln -s symlink a
   $ hg ci -msymlink
@@ -25,7 +25,7 @@
   (n)one, e(x)ec or sym(l)ink? n
    a: update permissions -> e
   updating: a 1/1 files (100.00%)
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
 

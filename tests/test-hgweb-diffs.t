@@ -689,7 +689,7 @@ comparison new file
 comparison existing file
 
   $ hg up
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg ci -mc
   $ "$TESTDIR/get-with-headers.py" localhost:$HGPORT 'comparison/tip/a'

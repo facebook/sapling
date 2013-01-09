@@ -440,6 +440,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
             flags = a[2]
             audit(f)
             util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
+            updated += 1
     ms.commit()
     repo.ui.progress(_('updating'), None, total=numupdates, unit=_('files'))
 
