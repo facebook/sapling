@@ -405,9 +405,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         elif m == "g": # get
             flags = a[2]
             repo.ui.note(_("getting %s\n") % f)
-            t = mctx.filectx(f).data()
-            repo.wwrite(f, t, flags)
-            t = None
+            repo.wwrite(f, mctx.filectx(f).data(), flags)
             updated += 1
             if f == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
@@ -416,13 +414,11 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
             if f:
                 repo.ui.note(_("moving %s to %s\n") % (f, fd))
                 audit(f)
-                t = wctx.filectx(f).data()
-                repo.wwrite(fd, t, flags)
+                repo.wwrite(fd, wctx.filectx(f).data(), flags)
                 util.unlinkpath(repo.wjoin(f))
             if f2:
                 repo.ui.note(_("getting %s to %s\n") % (f2, fd))
-                t = mctx.filectx(f2).data()
-                repo.wwrite(fd, t, flags)
+                repo.wwrite(fd, mctx.filectx(f2).data(), flags)
             updated += 1
         elif m == "dr": # divergent renames
             fl = a[2]
