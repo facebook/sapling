@@ -6,6 +6,8 @@ import doctest
 
 import mercurial.util
 doctest.testmod(mercurial.util)
+# Only run doctests for the current platform
+doctest.testmod(mercurial.util.platform)
 
 import mercurial.changelog
 doctest.testmod(mercurial.changelog)

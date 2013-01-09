@@ -21,14 +21,26 @@ umask = os.umask(0)
 os.umask(umask)
 
 def split(p):
-    '''Same as os.path.split, but faster'''
+    '''Same as posixpath.split, but faster
+
+    >>> import posixpath
+    >>> for f in ['/absolute/path/to/file',
+    ...           'relative/path/to/file',
+    ...           'file_alone',
+    ...           'path/to/directory/',
+    ...           '/multiple/path//separators',
+    ...           '/file_at_root',
+    ...           '///multiple_leading_separators_at_root',
+    ...           '']:
+    ...     assert split(f) == posixpath.split(f), f
+    '''
     ht = p.rsplit('/', 1)
     if len(ht) == 1:
         return '', p
     nh = ht[0].rstrip('/')
     if nh:
         return nh, ht[1]
-    return ht
+    return ht[0] + '/', ht[1]
 
 def openhardlinks():
     '''return true if it is safe to hold open file handles to hardlinks'''
