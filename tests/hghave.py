@@ -41,6 +41,10 @@ def has_cvs():
     re = r'Concurrent Versions System.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
+def has_cvs112():
+    re = r'Concurrent Versions System \(CVS\) 1.12.*?server'
+    return matchoutput('cvs --version 2>&1', re) and not has_msys()
+
 def has_darcs():
     return matchoutput('darcs --version', r'2\.[2-9]', True)
 
@@ -278,6 +282,7 @@ checks = {
     "bzr114": (has_bzr114, "Canonical's Bazaar client >= 1.14"),
     "cacheable": (has_cacheable_fs, "cacheable filesystem"),
     "cvs": (has_cvs, "cvs client/server"),
+    "cvs112": (has_cvs112, "cvs client/server >= 1.12"),
     "darcs": (has_darcs, "darcs client"),
     "docutils": (has_docutils, "Docutils text processing library"),
     "eol-in-paths": (has_eol_in_paths, "end-of-lines in paths"),
