@@ -172,12 +172,12 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
             ui.note(_('reading cvs log cache %s\n') % cachefile)
             oldlog = pickle.load(open(cachefile))
             for e in oldlog:
-               if not (util.safehasattr(e, 'branchpoints') and
-                       util.safehasattr(e, 'commitid') and
-                       util.safehasattr(e, 'mergepoint')):
-                  ui.status(_('ignoring old cache\n'))
-                  oldlog = []
-                  break
+                if not (util.safehasattr(e, 'branchpoints') and
+                        util.safehasattr(e, 'commitid') and
+                        util.safehasattr(e, 'mergepoint')):
+                    ui.status(_('ignoring old cache\n'))
+                    oldlog = []
+                    break
 
             ui.note(_('cache has %d log entries\n') % len(oldlog))
         except Exception, e:
