@@ -8,7 +8,7 @@
 '''commands to interactively select changes for commit/qrefresh'''
 
 from mercurial.i18n import gettext, _
-from mercurial import cmdutil, commands, extensions, hg, mdiff, patch
+from mercurial import cmdutil, commands, extensions, hg, patch
 from mercurial import util
 import copy, cStringIO, errno, os, re, shutil, tempfile
 
