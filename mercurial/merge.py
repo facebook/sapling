@@ -374,8 +374,6 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         f, m = a[:2]
         repo.ui.progress(_('updating'), i + 1, item=f, total=numupdates,
                          unit=_('files'))
-        if f and f[0] == "/":
-            continue
         if m == "r": # remove
             repo.ui.note(_("removing %s\n") % f)
             audit(f)
