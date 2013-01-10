@@ -483,8 +483,8 @@ def _updatelfile(repo, lfdirstate, lfile):
     abslfile = repo.wjoin(lfile)
     absstandin = repo.wjoin(lfutil.standin(lfile))
     if os.path.exists(absstandin):
-        if os.path.exists(absstandin+'.orig'):
-            shutil.copyfile(abslfile, abslfile+'.orig')
+        if os.path.exists(absstandin + '.orig') and os.path.exists(abslfile):
+            shutil.copyfile(abslfile, abslfile + '.orig')
         expecthash = lfutil.readstandin(repo, lfile)
         if (expecthash != '' and
             (not os.path.exists(abslfile) or
