@@ -1033,9 +1033,7 @@ class localrepository(object):
 
         def unlock():
             self.dirstate.write()
-            ce = self._filecache.get('dirstate')
-            if ce:
-                ce.refresh()
+            self._filecache['dirstate'].refresh()
 
         l = self._lock(self.join("wlock"), wait, unlock,
                        self.invalidatedirstate, _('working directory of %s') %
