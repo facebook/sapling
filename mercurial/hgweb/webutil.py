@@ -77,16 +77,22 @@ class revnav(object):
             # empty repo
             return ({'before': (), 'after': ()},)
 
-        navbefore = [("(0)", self.hex(0))]
-        navafter = []
-
+        targets = []
         for f in _navseq(1, pagelen):
             if f > limit:
                 break
-            if pos + f < limit:
-                navafter.append(("+%d" % f, self.hex(pos + f)))
-            if pos - f >= 0:
-                navbefore.insert(0, ("-%d" % f, self.hex(pos - f)))
+            targets.append(pos + f)
+            targets.append(pos - f)
+        targets.sort()
+
+        navbefore = [("(0)", self.hex(0))]
+        navafter = []
+        for rev in targets:
+            if pos < rev < limit:
+                navafter.append(("+%d" % f, self.hex(rev)))
+            if 0 < rev < pos:
+                navbefore.append(("-%d" % f, self.hex(rev)))
+
 
         navafter.append(("tip", "tip"))
 
