@@ -76,7 +76,7 @@ class revnav(object):
             # empty repo
             return ({'before': (), 'after': ()},)
 
-        navbefore = []
+        navbefore = [("(0)", self.hex(0))]
         navafter = []
 
         for f in _navseq(1, pagelen):
@@ -88,7 +88,6 @@ class revnav(object):
                 navbefore.insert(0, ("-%d" % f, self.hex(pos - f)))
 
         navafter.append(("tip", "tip"))
-        navbefore.insert(0, ("(0)", self.hex(0)))
 
         data = lambda i: {"label": i[0], "node": i[1]}
         return ({'before': lambda **map: (data(i) for i in navbefore),
