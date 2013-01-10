@@ -29,11 +29,11 @@ def _navseq(factor, limit=None):
         yield limit
         if limit >= 20 and limit <= 40:
             yield 50
-    else:
+        factor *= 10
+    while True:
         yield 1 * factor
         yield 3 * factor
-    for f in _navseq(factor * 10):
-        yield f
+        factor *= 10
 
 def revnavgen(pos, pagelen, limit, nodefunc):
     """computes label and revision id for navigation link
