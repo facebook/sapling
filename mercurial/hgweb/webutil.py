@@ -48,6 +48,9 @@ class revnav(object):
         """
         self.nodefunc = nodefunc
 
+    def hex(self, rev):
+        return self.nodefunc(rev).hex()
+
     def gen(self, pos, pagelen, limit):
         """computes label and revision id for navigation link
 
@@ -69,15 +72,13 @@ class revnav(object):
             if f > limit:
                 break
             if pos + f < limit:
-                navafter.append(("+%d" % f,
-                                 hex(self.nodefunc(pos + f).node())))
+                navafter.append(("+%d" % f, self.hex(pos + f)))
             if pos - f >= 0:
-                navbefore.insert(0, ("-%d" % f,
-                                     hex(self.nodefunc(pos - f).node())))
+                navbefore.insert(0, ("-%d" % f, self.hex(pos - f)))
 
         navafter.append(("tip", "tip"))
         try:
-            navbefore.insert(0, ("(0)", hex(self.nodefunc(0).node())))
+            navbefore.insert(0, ("(0)", self.hex(0)))
         except error.RepoError:
             pass
 
