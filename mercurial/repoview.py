@@ -12,12 +12,18 @@ import util
 import obsolete, bookmarks, revset
 
 
+def hideablerevs(repo):
+    """Revisions candidates to be hidden
+
+    This is a standalone function to help extensions to wrap it."""
+    return obsolete.getrevs(repo, 'obsolete')
+
 def computehidden(repo):
     """compute the set of hidden revision to filter
 
     During most operation hidden should be filtered."""
     assert not repo.changelog.filteredrevs
-    hideable = obsolete.getrevs(repo, 'obsolete')
+    hideable = hideablerevs(repo)
     if hideable:
         cl = repo.changelog
         firsthideable = min(hideable)
