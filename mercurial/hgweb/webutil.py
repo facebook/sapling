@@ -66,7 +66,7 @@ def revnavgen(pos, pagelen, limit, nodefunc):
 
     navafter.append(("tip", "tip"))
     try:
-        navbefore.insert(0, ("(0)", hex(nodefunc('0').node())))
+        navbefore.insert(0, ("(0)", hex(nodefunc(0).node())))
     except error.RepoError:
         pass
 
