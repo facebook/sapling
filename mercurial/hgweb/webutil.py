@@ -24,16 +24,16 @@ def up(p):
         return "/"
     return up + "/"
 
-def _navseq(factor, limit=None):
-    if limit:
-        yield limit
-        if limit >= 20 and limit <= 40:
+def _navseq(step, firststep=None):
+    if firststep:
+        yield firststep
+        if firststep >= 20 and firststep <= 40:
             yield 50
-        factor *= 10
+        step *= 10
     while True:
-        yield 1 * factor
-        yield 3 * factor
-        factor *= 10
+        yield 1 * step
+        yield 3 * step
+        step *= 10
 
 def revnavgen(pos, pagelen, limit, nodefunc):
     """computes label and revision id for navigation link
