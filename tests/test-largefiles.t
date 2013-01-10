@@ -1017,12 +1017,16 @@ Rollback on largefiles.
   abort: uncommitted local changes
   [255]
 
-"update --clean" leaves correct largefiles in working copy.
+"update --clean" leaves correct largefiles in working copy, even when there is
+.orig files from revert in .hglf.
 
+  $ echo mistake > sub2/large7
+  $ hg revert sub2/large7
+  $ hg -q update --clean -r null
   $ hg update --clean
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
-  1 largefiles updated, 0 removed
+  3 largefiles updated, 0 removed
   $ cat normal3
   normal3-modified
   $ cat sub/normal4
@@ -1033,6 +1037,20 @@ Rollback on largefiles.
   large6-modified
   $ cat sub2/large7
   large7
+  $ cat sub2/large7.orig
+  mistake
+  $ cat .hglf/sub2/large7.orig
+  9dbfb2c79b1c40981b258c3efa1b10b03f18ad31
+
+demonstrate misfeature: .orig file is overwritten on every update -C,
+also when clean:
+  $ hg update --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  getting changed largefiles
+  0 largefiles updated, 0 removed
+  $ cat sub2/large7.orig
+  large7
+  $ rm sub2/large7.orig .hglf/sub2/large7.orig
 
 Now "update check" is happy.
   $ hg update --check 8
