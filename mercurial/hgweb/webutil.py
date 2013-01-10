@@ -28,8 +28,12 @@ def _navseq(step, firststep=None):
     if firststep:
         yield firststep
         if firststep >= 20 and firststep <= 40:
-            yield 50
-        step *= 10
+            firststep = 50
+            yield firststep
+        assert step > 0
+        assert firststep > 0
+        while step <= firststep:
+            step *= 10
     while True:
         yield 1 * step
         yield 3 * step
@@ -53,13 +57,9 @@ def revnavgen(pos, pagelen, limit, nodefunc):
     navbefore = []
     navafter = []
 
-    last = 0
     for f in _navseq(1, pagelen):
-        if f < pagelen or f <= last:
-            continue
         if f > limit:
             break
-        last = f
         if pos + f < limit:
             navafter.append(("+%d" % f, hex(nodefunc(pos + f).node())))
         if pos - f >= 0:
