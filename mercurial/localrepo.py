@@ -1396,6 +1396,12 @@ class localrepository(object):
         # revisions missing because the cache is out-of-date.
         branchmap.updatecache(self)
 
+        # When using the same lock to commit and strip, the phasecache is left
+        # dirty after committing. Then when we strip, the repo is invalidated,
+        # causing those changes to disappear.
+        if '_phasecache' in vars(self):
+            self._phasecache.write()
+
     @unfilteredmethod
     def destroyed(self, newheadnodes=None):
         '''Inform the repository that nodes have been destroyed.
