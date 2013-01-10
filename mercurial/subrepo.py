@@ -17,7 +17,7 @@ nullstate = ('', '', 'empty')
 class SubrepoAbort(error.Abort):
     """Exception class used to avoid handling a subrepo error more than once"""
     def __init__(self, *args, **kw):
-        super(SubrepoAbort, self).__init__(*args, **kw)
+        error.Abort.__init__(self, *args, **kw)
         self.subrepo = kw.get('subrepo')
 
 def annotatesubrepoerror(func):
