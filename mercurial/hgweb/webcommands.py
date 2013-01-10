@@ -242,7 +242,7 @@ def changelog(web, req, tmpl, shortlog=False):
     pos = end - 1
     parity = paritygen(web.stripecount, offset=start - end)
 
-    changenav = webutil.revnav().gen(pos, revcount, count, web.repo.changectx)
+    changenav = webutil.revnav(web.repo.changectx).gen(pos, revcount, count)
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
                 node=ctx.hex(), rev=pos, changesets=count,
@@ -772,7 +772,7 @@ def filelog(web, req, tmpl):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
-    nav = webutil.revnav().gen(end - 1, revcount, count, nodefunc)
+    nav = webutil.revnav(nodefunc).gen(end - 1, revcount, count)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
                 entries=lambda **x: entries(latestonly=False, **x),
                 latestentry=lambda **x: entries(latestonly=True, **x),
@@ -851,7 +851,7 @@ def graph(web, req, tmpl):
 
     uprev = min(max(0, count - 1), rev + revcount)
     downrev = max(0, rev - revcount)
-    changenav = webutil.revnav().gen(pos, revcount, count, web.repo.changectx)
+    changenav = webutil.revnav(web.repo.changectx).gen(pos, revcount, count)
 
     dag = graphmod.dagwalker(web.repo, range(start, end)[::-1])
     tree = list(graphmod.colored(dag, web.repo))

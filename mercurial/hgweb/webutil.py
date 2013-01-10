@@ -41,13 +41,19 @@ def _navseq(step, firststep=None):
 
 class revnav(object):
 
-    def gen(self, pos, pagelen, limit, nodefunc):
+    def __init__(self, nodefunc):
+        """Navigation generation object
+
+        :nodefun: factory for a changectx from a revision
+        """
+        self.nodefunc = nodefunc
+
+    def gen(self, pos, pagelen, limit):
         """computes label and revision id for navigation link
 
         :pos: is the revision relative to which we generate navigation.
         :pagelen: the size of each navigation page
         :limit: how far shall we link
-        :nodefun: factory for a changectx from a revision
 
         The return is:
             - a single element tuple
@@ -63,13 +69,15 @@ class revnav(object):
             if f > limit:
                 break
             if pos + f < limit:
-                navafter.append(("+%d" % f, hex(nodefunc(pos + f).node())))
+                navafter.append(("+%d" % f,
+                                 hex(self.nodefunc(pos + f).node())))
             if pos - f >= 0:
-                navbefore.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
+                navbefore.insert(0, ("-%d" % f,
+                                     hex(self.nodefunc(pos - f).node())))
 
         navafter.append(("tip", "tip"))
         try:
-            navbefore.insert(0, ("(0)", hex(nodefunc(0).node())))
+            navbefore.insert(0, ("(0)", hex(self.nodefunc(0).node())))
         except error.RepoError:
             pass
 
