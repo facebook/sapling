@@ -863,15 +863,19 @@ def readrequires(opener, supported):
     return requirements
 
 class filecacheentry(object):
-    def __init__(self, path):
+    def __init__(self, path, stat=True):
         self.path = path
-        self.cachestat = filecacheentry.stat(self.path)
+        self.cachestat = None
+        self._cacheable = None
 
-        if self.cachestat:
-            self._cacheable = self.cachestat.cacheable()
-        else:
-            # None means we don't know yet
-            self._cacheable = None
+        if stat:
+            self.cachestat = filecacheentry.stat(self.path)
+
+            if self.cachestat:
+                self._cacheable = self.cachestat.cacheable()
+            else:
+                # None means we don't know yet
+                self._cacheable = None
 
     def refresh(self):
         if self.cacheable():
