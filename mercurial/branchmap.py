@@ -149,11 +149,11 @@ class branchcache(dict):
         heads missing, this function updates self to be correct.
         """
         cl = repo.changelog
-        ctxgen = (repo[r] for r in revgen)
         # collect new branch entries
         newbranches = {}
-        for c in ctxgen:
-            newbranches.setdefault(c.branch(), []).append(c.node())
+        getbranch = cl.branch
+        for r in revgen:
+            newbranches.setdefault(getbranch(r), []).append(cl.node(r))
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
