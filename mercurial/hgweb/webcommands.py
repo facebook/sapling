@@ -196,10 +196,13 @@ def changelog(web, req, tmpl, shortlog=False):
 
     def changelist(latestonly, **map):
         l = [] # build a list in forward order for efficiency
+        revs = []
+        if start < end:
+            revs = web.repo.changelog.revs(start, end - 1)
         if latestonly:
-            revs = (end - 1,)
-        else:
-            revs = xrange(start, end)
+            for r in revs:
+                pass
+            revs = (r,)
         for i in revs:
             ctx = web.repo[i]
             n = ctx.node()
@@ -745,10 +748,11 @@ def filelog(web, req, tmpl):
         l = []
 
         repo = web.repo
+        revs = repo.changelog.revs(start, end - 1)
         if latestonly:
-            revs = (end - 1,)
-        else:
-            revs = xrange(start, end)
+            for r in revs:
+                pass
+            revs = (r,)
         for i in revs:
             iterfctx = fctx.filectx(i)
 
