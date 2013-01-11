@@ -421,7 +421,11 @@ def getstandinsstate(repo):
     matcher = getstandinmatcher(repo)
     for standin in repo.dirstate.walk(matcher, [], False, False):
         lfile = splitstandin(standin)
-        standins.append((lfile, readstandin(repo, lfile)))
+        try:
+            hash = readstandin(repo, lfile)
+        except IOError:
+            hash = None
+        standins.append((lfile, hash))
     return standins
 
 def getlfilestoupdate(oldstandins, newstandins):

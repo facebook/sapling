@@ -1220,9 +1220,16 @@ Test status after merging with a branch that introduces a new largefile:
   $ hg status
   M large
 
+- make sure update of merge with removed largefiles fails as expected
+  $ hg rm sub2/large6
+  $ hg up -r.
+  abort: outstanding uncommitted merges
+  [255]
+
 - revert should be able to revert files introduced in a pending merge
   $ hg revert --all -r .
   removing .hglf/large
+  undeleting .hglf/sub2/large6
 
 Test that a normal file and a largefile with the same name and path cannot
 coexist.
