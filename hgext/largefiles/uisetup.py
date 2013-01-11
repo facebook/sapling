@@ -9,9 +9,9 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httppeer, localrepo, merge, scmutil, sshpeer, sshserver, wireproto
+    httppeer, localrepo, merge, scmutil, sshpeer, wireproto
 from mercurial.i18n import _
-from mercurial.hgweb import hgweb_mod, protocol, webcommands
+from mercurial.hgweb import hgweb_mod, webcommands
 from mercurial.subrepo import hgsubrepo
 
 import overrides
@@ -143,11 +143,6 @@ def uisetup(ui):
     # our largefiles capability unless we replace the actual function as well.
     proto.capabilitiesorig = wireproto.capabilities
     wireproto.capabilities = proto.capabilities
-
-    # these let us reject non-largefiles clients and make them display
-    # our error messages
-    protocol.webproto.refuseclient = proto.webprotorefuseclient
-    sshserver.sshserver.refuseclient = proto.sshprotorefuseclient
 
     # can't do this in reposetup because it needs to have happened before
     # wirerepo.__init__ is called

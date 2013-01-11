@@ -140,19 +140,6 @@ def wirereposetup(ui, repo):
 def capabilities(repo, proto):
     return capabilitiesorig(repo, proto) + ' largefiles=serve'
 
-# duplicate what Mercurial's new out-of-band errors mechanism does, because
-# clients old and new alike both handle it well
-def webprotorefuseclient(self, message):
-    self.req.header([('Content-Type', 'application/hg-error')])
-    return message
-
-def sshprotorefuseclient(self, message):
-    self.ui.write_err('%s\n-\n' % message)
-    self.fout.write('\n')
-    self.fout.flush()
-
-    return ''
-
 def heads(repo, proto):
     if lfutil.islfilesrepo(repo):
         return wireproto.ooberror(LARGEFILES_REQUIRED_MSG)
