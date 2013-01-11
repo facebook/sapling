@@ -142,8 +142,11 @@ def lfdirstatestatus(lfdirstate, repo, rev):
     s = lfdirstate.status(match, [], False, False, False)
     unsure, modified, added, removed, missing, unknown, ignored, clean = s
     for lfile in unsure:
-        if repo[rev][standin(lfile)].data().strip() != \
-                hashfile(repo.wjoin(lfile)):
+        try:
+            fctx = repo[rev][standin(lfile)]
+        except LookupError:
+            fctx = None
+        if not fctx or fctx.data().strip() != hashfile(repo.wjoin(lfile)):
             modified.append(lfile)
         else:
             clean.append(lfile)

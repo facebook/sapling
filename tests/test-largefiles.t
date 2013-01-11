@@ -1220,6 +1220,10 @@ Test status after merging with a branch that introduces a new largefile:
   $ hg status
   M large
 
+- revert should be able to revert files introduced in a pending merge
+  $ hg revert --all -r .
+  removing .hglf/large
+
 Test that a normal file and a largefile with the same name and path cannot
 coexist.
 
