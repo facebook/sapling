@@ -2,7 +2,7 @@
 '''helper extension to measure performance'''
 
 from mercurial import cmdutil, scmutil, util, match, commands, obsolete
-from mercurial import repoview
+from mercurial import repoview, branchmap
 import time, os, sys
 
 cmdtable = {}
@@ -309,3 +309,58 @@ def perfvolatilesets(ui, repo, *names):
 
     for name in allfilter:
         timer(getfiltered(name), title=name)
+
+@command('perfbranchmap',
+         [('f', 'full', False,
+           'Includes build time of subset'),
+         ])
+def perfbranchmap(ui, repo, full=False):
+    """benchmark the update of a branchmap
+
+    This benchmarks the full repo.branchmap() call with read and write disabled
+    """
+    def getbranchmap(filtername):
+        """generate a benchmark function for the filtername"""
+        if filtername is None:
+            view = repo
+        else:
+            view = repo.filtered(filtername)
+        def d():
+            if full:
+                view._branchcaches.clear()
+            else:
+                view._branchcaches.pop(filtername, None)
+            view.branchmap()
+        return d
+    # add filter in smaller subset to bigger subset
+    possiblefilters = set(repoview.filtertable)
+    allfilters = []
+    while possiblefilters:
+        for name in possiblefilters:
+            subset = repoview.subsettable.get(name)
+            if subset not in possiblefilters:
+                break
+        else:
+            assert False, 'subset cycle %s!' % possiblefilters
+        allfilters.append(name)
+        possiblefilters.remove(name)
+
+    # warm the cache
+    if not full:
+        for name in allfilters:
+            repo.filtered(name).branchmap()
+    # add unfiltered
+    allfilters.append(None)
+    oldread = branchmap.read
+    oldwrite = branchmap.branchcache.write
+    try:
+        branchmap.read = lambda repo: None
+        branchmap.write = lambda repo: None
+        for name in allfilters:
+            timer(getbranchmap(name), title=str(name))
+    finally:
+        branchmap.read = oldread
+        branchmap.branchcache.write = oldwrite
+
+
+
