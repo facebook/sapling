@@ -341,6 +341,6 @@ class changelog(revlog.revlog):
     def branch(self, rev):
         """return the branch of a revision
 
-	This function exists because creating a changectx object
-	just to access this is costly."""
+        This function exists because creating a changectx object
+        just to access this is costly."""
         return encoding.tolocal(self.read(rev)[5].get("branch"))
