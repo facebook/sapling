@@ -25,6 +25,19 @@ def up(p):
     return up + "/"
 
 def revnavgen(pos, pagelen, limit, nodefunc):
+    """computes label and revision id for navigation link
+
+    :pos: is the revision relative to which we generate navigation.
+    :pagelen: the size of each navigation page
+    :limit: how far shall we link
+    :nodefun: factory for a changectx from a revision
+
+    The return is:
+        - a single element tuple
+        - containing a dictionary with a `before` and `after` key
+        - values are generator functions taking an arbitrary number of kwargs
+        - yield items are dictionaries with `label` and `node` keys
+    """
     def seq(factor, limit=None):
         if limit:
             yield limit
