@@ -274,7 +274,7 @@ also, the parent of a node that is a child of the node stripped becomes a head
   7:c65502d4178782309ce0574c5ae6ee9485a9bafa default
   6:c772a8b2dc17629cec88a19d09c926c4814b12c7 default
 
-  $ cat $TESTTMP/b2/.hg/cache/branchheads-unserved
+  $ cat $TESTTMP/b2/.hg/cache/branchheads-served
   c65502d4178782309ce0574c5ae6ee9485a9bafa 7
   c772a8b2dc17629cec88a19d09c926c4814b12c7 default
   c65502d4178782309ce0574c5ae6ee9485a9bafa default

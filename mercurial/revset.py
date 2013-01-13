@@ -893,7 +893,7 @@ def hidden(repo, subset, x):
     """
     # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
-    hiddenrevs = repoview.filteredrevs(repo, 'hidden')
+    hiddenrevs = repoview.filterrevs(repo, 'visible')
     return [r for r in subset if r in hiddenrevs]
 
 def keyword(repo, subset, x):

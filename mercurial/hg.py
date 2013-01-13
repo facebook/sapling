@@ -113,7 +113,7 @@ def repository(ui, path='', create=False):
     if not repo:
         raise util.Abort(_("repository '%s' is not local") %
                          (path or peer.url()))
-    return repo.filtered('hidden')
+    return repo.filtered('visible')
 
 def peer(uiorrepo, opts, path, create=False):
     '''return a repository peer for the specified path'''

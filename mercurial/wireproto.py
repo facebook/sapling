@@ -345,7 +345,7 @@ class ooberror(object):
         self.message = message
 
 def dispatch(repo, proto, command):
-    repo = repo.filtered("unserved")
+    repo = repo.filtered("served")
     func, spec = commands[command]
     args = proto.getargs(spec)
     return func(repo, proto, *args)
@@ -362,7 +362,7 @@ def options(cmd, keys, others):
     return opts
 
 def batch(repo, proto, cmds, others):
-    repo = repo.filtered("unserved")
+    repo = repo.filtered("served")
     res = []
     for pair in cmds.split(';'):
         op, args = pair.split(' ', 1)

@@ -122,7 +122,7 @@ Test for invalid branch cache:
   repository tip rolled back to revision 4 (undo commit)
   working directory now based on revisions 4 and 3
 
-  $ cp ${branchcache}-unserved .hg/bc-invalid
+  $ cp ${branchcache}-served .hg/bc-invalid
 
   $ hg log -r foo
   changeset:   4:adf1a74a7f7b
@@ -160,7 +160,7 @@ Test for invalid branch cache:
   $ listbranchcaches
   === .hg/cache/branchheads ===
   corrupted
-  === .hg/cache/branchheads-unserved ===
+  === .hg/cache/branchheads-served ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
   c21617b13b220988e7a2e26290fbe4325ffa7139 bar
   1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
@@ -175,7 +175,7 @@ Pushing just rev 0:
   $ hg push -qr 0 ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-impactable ===
+  === .hg/cache/branchheads-base ===
   db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 0
   db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 default
 
@@ -184,7 +184,7 @@ Pushing everything:
   $ hg push -qf ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-impactable ===
+  === .hg/cache/branchheads-base ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
   c21617b13b220988e7a2e26290fbe4325ffa7139 bar
   1c28f494dae69a2f8fc815059d257eccf3fcfe75 default

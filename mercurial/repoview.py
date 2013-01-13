@@ -44,7 +44,7 @@ def computeunserved(repo):
     Secret and hidden changeset should not pretend to be here."""
     assert not repo.changelog.filteredrevs
     # fast path in simple case to avoid impact of non optimised code
-    hiddens = filteredrevs(repo, 'hidden')
+    hiddens = filterrevs(repo, 'visible')
     if phases.hassecret(repo):
         cl = repo.changelog
         secret = phases.secret
@@ -65,7 +65,7 @@ def computemutable(repo):
     # fast check to avoid revset call on huge repo
     if util.any(repo._phasecache.phaseroots[1:]):
         getphase = repo._phasecache.phase
-        maymutable = filteredrevs(repo, 'impactable')
+        maymutable = filterrevs(repo, 'base')
         return frozenset(r for r in maymutable if getphase(repo, r))
     return frozenset()
 
@@ -93,22 +93,22 @@ def computeimpactable(repo):
     return frozenset(xrange(firstmutable, len(cl)))
 
 # function to compute filtered set
-filtertable = {'hidden': computehidden,
-               'unserved': computeunserved,
-               'mutable':  computemutable,
-               'impactable':  computeimpactable}
+filtertable = {'visible': computehidden,
+               'served': computeunserved,
+               'immutable':  computemutable,
+               'base':  computeimpactable}
 ### Nearest subset relation
 # Nearest subset of filter X is a filter Y so that:
 # * Y is included in X,
 # * X - Y is as small as possible.
 # This create and ordering used for branchmap purpose.
 # the ordering may be partial
-subsettable = {None: 'hidden',
-               'hidden': 'unserved',
-               'unserved': 'mutable',
-               'mutable': 'impactable'}
+subsettable = {None: 'visible',
+               'visible': 'served',
+               'served': 'immutable',
+               'immutable': 'base'}
 
-def filteredrevs(repo, filtername):
+def filterrevs(repo, filtername):
     """returns set of filtered revision for this filter name"""
     if filtername not in repo.filteredrevcache:
         func = filtertable[filtername]
@@ -162,7 +162,7 @@ class repoview(object):
         this changelog must not be used for writing"""
         # some cache may be implemented later
         cl = copy.copy(self._unfilteredrepo.changelog)
-        cl.filteredrevs = filteredrevs(self._unfilteredrepo, self.filtername)
+        cl.filteredrevs = filterrevs(self._unfilteredrepo, self.filtername)
         return cl
 
     def unfiltered(self):

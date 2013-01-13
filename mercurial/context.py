@@ -212,7 +212,7 @@ class changectx(object):
     def mutable(self):
         return self.phase() > phases.public
     def hidden(self):
-        return self._rev in repoview.filteredrevs(self._repo, 'hidden')
+        return self._rev in repoview.filterrevs(self._repo, 'visible')
 
     def parents(self):
         """return contexts for each parent changeset"""
