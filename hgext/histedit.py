@@ -28,7 +28,7 @@ file open in your editor::
  pick 030b686bedc4 Add gamma
  pick 7c2fd3b9020c Add delta
 
- # Edit history between 633536316234 and 7c2fd3b9020c
+ # Edit history between c561b4e977df and 7c2fd3b9020c
  #
  # Commands:
  #  p, pick = use commit
@@ -47,7 +47,7 @@ would reorganize the file to look like this::
  pick c561b4e977df Add beta
  fold 7c2fd3b9020c Add delta
 
- # Edit history between 633536316234 and 7c2fd3b9020c
+ # Edit history between c561b4e977df and 7c2fd3b9020c
  #
  # Commands:
  #  p, pick = use commit
