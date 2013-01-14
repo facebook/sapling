@@ -176,11 +176,11 @@
                     use local time (as determined by the TZ environment
                     variable) for changeset date/times. The default is False
                     (use UTC).
-      hook.cvslog   Specify a Python function to be called at the end of
+      hooks.cvslog  Specify a Python function to be called at the end of
                     gathering the CVS log. The function is passed a list with
                     the log entries, and can modify the entries in-place, or add
                     or delete them.
-      hook.cvschangesets
+      hooks.cvschangesets
                     Specify a Python function to be called after the changesets
                     are calculated from the CVS log. The function is passed a
                     list with the changeset entries, and can modify the

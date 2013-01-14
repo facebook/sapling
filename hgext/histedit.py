@@ -28,7 +28,7 @@ file open in your editor::
  pick 030b686bedc4 Add gamma
  pick 7c2fd3b9020c Add delta
 
- # Edit history between 633536316234 and 7c2fd3b9020c
+ # Edit history between c561b4e977df and 7c2fd3b9020c
  #
  # Commands:
  #  p, pick = use commit
@@ -47,7 +47,7 @@ would reorganize the file to look like this::
  pick c561b4e977df Add beta
  fold 7c2fd3b9020c Add delta
 
- # Edit history between 633536316234 and 7c2fd3b9020c
+ # Edit history between c561b4e977df and 7c2fd3b9020c
  #
  # Commands:
  #  p, pick = use commit
@@ -108,8 +108,8 @@ you can use ``hg histedit --abort`` to abandon the new changes you
 have made and return to the state before you attempted to edit your
 history.
 
-If we clone the example repository above and add three more changes, such that
-we have the following history::
+If we clone the histedit-ed example repository above and add four more
+changes, such that we have the following history::
 
    @  6[tip]   038383181893   2009-04-27 18:04 -0500   stefan
    |    Add theta
