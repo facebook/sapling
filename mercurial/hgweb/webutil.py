@@ -48,6 +48,14 @@ class revnav(object):
         """
         self.nodefunc = nodefunc
 
+    def __nonzero__(self):
+        """return True if any revision to navigate over"""
+        try:
+            self.nodefunc(0)
+            return True
+        except error.RepoError:
+            return False
+
     def hex(self, rev):
         return self.nodefunc(rev).hex()
 
@@ -64,6 +72,9 @@ class revnav(object):
             - values are generator functions taking arbitrary number of kwargs
             - yield items are dictionaries with `label` and `node` keys
         """
+        if not self:
+            # empty repo
+            return ({'before': (), 'after': ()},)
 
         navbefore = []
         navafter = []
@@ -77,10 +88,7 @@ class revnav(object):
                 navbefore.insert(0, ("-%d" % f, self.hex(pos - f)))
 
         navafter.append(("tip", "tip"))
-        try:
-            navbefore.insert(0, ("(0)", self.hex(0)))
-        except error.RepoError:
-            pass
+        navbefore.insert(0, ("(0)", self.hex(0)))
 
         data = lambda i: {"label": i[0], "node": i[1]}
         return ({'before': lambda **map: (data(i) for i in navbefore),
