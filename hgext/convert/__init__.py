@@ -191,12 +191,12 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         branch indicated in the regex as the second parent of the
         changeset. Default is ``{{mergefrombranch ([-\\w]+)}}``
 
-    :hook.cvslog: Specify a Python function to be called at the end of
+    :hooks.cvslog: Specify a Python function to be called at the end of
         gathering the CVS log. The function is passed a list with the
         log entries, and can modify the entries in-place, or add or
         delete them.
 
-    :hook.cvschangesets: Specify a Python function to be called after
+    :hooks.cvschangesets: Specify a Python function to be called after
         the changesets are calculated from the CVS log. The
         function is passed a list with the changeset entries, and can
         modify the changesets in-place, or add or delete them.
