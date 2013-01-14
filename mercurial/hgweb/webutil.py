@@ -70,13 +70,9 @@ def revnavgen(pos, pagelen, limit, nodefunc):
     except error.RepoError:
         pass
 
-    def gen(l):
-        def f(**map):
-            for label, node in l:
-                yield {"label": label, "node": node}
-        return f
-
-    return (dict(before=gen(navbefore), after=gen(navafter)),)
+    data = lambda i: {"label": i[0], "node": i[1]}
+    return ({'before': lambda **map: (data(i) for i in navbefore),
+             'after':  lambda **map: (data(i) for i in navafter)},)
 
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
