@@ -772,7 +772,7 @@ def filelog(web, req, tmpl):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
-    nav = webutil.revnav(nodefunc).gen(end - 1, revcount, count)
+    nav = webutil.filerevnav(nodefunc).gen(end - 1, revcount, count)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
                 entries=lambda **x: entries(latestonly=False, **x),
                 latestentry=lambda **x: entries(latestonly=True, **x),

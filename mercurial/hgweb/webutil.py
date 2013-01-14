@@ -93,6 +93,9 @@ class revnav(object):
         return ({'before': lambda **map: (data(i) for i in navbefore),
                  'after':  lambda **map: (data(i) for i in navafter)},)
 
+class filerevnav(revnav):
+    pass
+
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
     if len(siblings) == 1 and siblings[0].rev() == hiderev:
