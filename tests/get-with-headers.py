@@ -31,6 +31,8 @@ def request(host, path, show):
     conn.request("GET", '/' + path, None, headers)
     response = conn.getresponse()
     print response.status, reasons.get(response.reason, response.reason)
+    if show[:1] == ['-']:
+        show = [h for h, v in response.getheaders() if h.lower() not in show]
     for h in [h.lower() for h in show]:
         if response.getheader(h, None) is not None:
             print "%s: %s" % (h, response.getheader(h))

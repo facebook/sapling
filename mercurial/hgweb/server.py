@@ -153,7 +153,8 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header(*h)
             if h[0].lower() == 'content-length':
                 self.length = int(h[1])
-        if self.length is None:
+        if (self.length is None and
+            saved_status[0] != common.HTTP_NOT_MODIFIED):
             self._chunked = (not self.close_connection and
                              self.request_version == "HTTP/1.1")
             if self._chunked:
