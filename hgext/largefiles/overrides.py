@@ -170,8 +170,7 @@ def removelargefiles(ui, repo, *pats, **opts):
                 # are removing the file.
                 if getattr(repo, "_isaddremove", False):
                     ui.status(_('removing %s\n') % f)
-                if os.path.exists(repo.wjoin(f)):
-                    util.unlinkpath(repo.wjoin(f))
+                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
             lfdirstate.remove(f)
         lfdirstate.write()
         forget = [lfutil.standin(f) for f in forget]

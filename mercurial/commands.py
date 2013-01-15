@@ -2947,8 +2947,8 @@ def graft(ui, repo, *revs, **opts):
         wlock.release()
 
     # remove state when we complete successfully
-    if not opts.get('dry_run') and os.path.exists(repo.join('graftstate')):
-        util.unlinkpath(repo.join('graftstate'))
+    if not opts.get('dry_run'):
+        util.unlinkpath(repo.join('graftstate'), ignoremissing=True)
 
     return 0
 
