@@ -147,7 +147,7 @@ class converter(object):
         map contains valid revision identifiers and merge the new
         links in the source graph.
         """
-        for c in splicemap:
+        for c in sorted(splicemap):
             if c not in parents:
                 if not self.dest.hascommit(self.map.get(c, c)):
                     # Could be in source but not converted during this run
