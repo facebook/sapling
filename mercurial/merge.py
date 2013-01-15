@@ -342,7 +342,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         f, m = a[:2]
         if m == "m": # merge
             f2, fd, flags, move = a[2:]
-            if f == '.hgsubstate': # merged internally
+            if fd == '.hgsubstate': # merged internally
                 continue
             repo.ui.debug("preserving %s for resolve of %s\n" % (f, fd))
             fcl = wctx[f]
@@ -388,7 +388,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
                              (f, inst.strerror))
             removed += 1
         elif m == "m": # merge
-            if f == '.hgsubstate': # subrepo states need updating
+            if fd == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                                  overwrite)
                 continue
