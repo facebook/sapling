@@ -27,10 +27,12 @@ def _string_escape(text):
 
 def decodeextra(text):
     """
-    >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'}))
-    {'foo': 'bar', 'baz': '\\x002', 'branch': 'default'}
-    >>> decodeextra(encodeextra({'foo': 'bar', 'baz': chr(92) + chr(0) + '2'}))
-    {'foo': 'bar', 'baz': '\\\\\\x002', 'branch': 'default'}
+    >>> from pprint import pprint as pp
+    >>> pp(decodeextra(encodeextra({'foo': 'bar', 'baz': chr(0) + '2'})))
+    {'baz': '\\x002', 'branch': 'default', 'foo': 'bar'}
+    >>> pp(decodeextra(encodeextra({'foo': 'bar',
+    ...                             'baz': chr(92) + chr(0) + '2'})))
+    {'baz': '\\\\\\x002', 'branch': 'default', 'foo': 'bar'}
     """
     extra = _defaultextra.copy()
     for l in text.split('\0'):

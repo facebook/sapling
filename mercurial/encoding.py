@@ -80,8 +80,8 @@ def tolocal(s):
     'foo: \\xc3\\xa4'
     >>> u2 = 'foo: \\xc3\\xa1'
     >>> d = { l: 1, tolocal(u2): 2 }
-    >>> d # no collision
-    {'foo: ?': 1, 'foo: ?': 2}
+    >>> len(d) # no collision
+    2
     >>> 'foo: ?' in d
     False
     >>> l1 = 'foo: \\xe4' # historical latin1 fallback
