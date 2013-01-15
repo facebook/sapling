@@ -263,9 +263,10 @@ Rebase and collapse - E onto H:
 
 
 Test that branchheads cache is updated correctly when doing a strip in which
-the parent of the ancestor node to be stripped does not become a head and
-also, the parent of a node that is a child of the node stripped becomes a head
-(node 3).
+the parent of the ancestor node to be stripped does not become a head and also,
+the parent of a node that is a child of the node stripped becomes a head (node
+3). The code is now much simpler and we could just test a simpler scenario
+We keep it the test this way in case new complexity is injected.
 
   $ hg clone -q -u . b b2
   $ cd b2
@@ -282,7 +283,7 @@ also, the parent of a node that is a child of the node stripped becomes a head
   $ hg strip 4
   saved backup bundle to $TESTTMP/b2/.hg/strip-backup/8a5212ebc852-backup.hg (glob)
 
-  $ cat $TESTTMP/b2/.hg/cache/branchheads
+  $ cat $TESTTMP/b2/.hg/cache/branchheads-served
   c65502d4178782309ce0574c5ae6ee9485a9bafa 4
   2870ad076e541e714f3c2bc32826b5c6a6e5b040 default
   c65502d4178782309ce0574c5ae6ee9485a9bafa default

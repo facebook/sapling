@@ -1398,7 +1398,7 @@ class localrepository(object):
             self._phasecache.write()
 
     @unfilteredmethod
-    def destroyed(self, newheadnodes=None):
+    def destroyed(self):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
         place for anything that has to be done after destroying history.
@@ -1421,16 +1421,9 @@ class localrepository(object):
             self._phasecache.filterunknown(self)
             self._phasecache.write()
 
-        # If we have info, newheadnodes, on how to update the branch cache, do
-        # it, Otherwise, since nodes were destroyed, the cache is stale and this
-        # will be caught the next time it is read.
-        if newheadnodes:
-            cl = self.changelog
-            revgen = (cl.rev(node) for node in newheadnodes
-                      if cl.hasnode(node))
-            cache = self._branchcaches[None]
-            cache.update(self, revgen)
-            cache.write(self)
+        # update branchcache information likely invalidated by the strip.
+        # We rely on branchcache collaboration for this call to be fast
+        branchmap.updatecache(self)
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed

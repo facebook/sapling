@@ -45,7 +45,6 @@ test updating a symlink
   popping updatelink
   now at: symlink.patch
   $ hg qpush --debug
-  invalid branchheads cache (served): tip differs
   applying updatelink
   patching file a
   a

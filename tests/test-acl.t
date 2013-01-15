@@ -1527,7 +1527,6 @@ Branch acl deny test
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1839,7 +1838,6 @@ push foobar into the remote
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -1927,7 +1925,6 @@ Branch acl conflicting deny
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
@@ -2083,7 +2080,6 @@ Non-astro users must be denied
   query 1; heads
   searching for changes
   all remote heads known locally
-  invalid branchheads cache (served): tip differs
   listing keys for "bookmarks"
   4 changesets found
   list of changesets:
