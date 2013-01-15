@@ -39,41 +39,43 @@ def _navseq(step, firststep=None):
         yield 3 * step
         step *= 10
 
-def revnavgen(pos, pagelen, limit, nodefunc):
-    """computes label and revision id for navigation link
+class revnav(object):
 
-    :pos: is the revision relative to which we generate navigation.
-    :pagelen: the size of each navigation page
-    :limit: how far shall we link
-    :nodefun: factory for a changectx from a revision
+    def gen(self, pos, pagelen, limit, nodefunc):
+        """computes label and revision id for navigation link
 
-    The return is:
-        - a single element tuple
-        - containing a dictionary with a `before` and `after` key
-        - values are generator functions taking an arbitrary number of kwargs
-        - yield items are dictionaries with `label` and `node` keys
-    """
+        :pos: is the revision relative to which we generate navigation.
+        :pagelen: the size of each navigation page
+        :limit: how far shall we link
+        :nodefun: factory for a changectx from a revision
 
-    navbefore = []
-    navafter = []
+        The return is:
+            - a single element tuple
+            - containing a dictionary with a `before` and `after` key
+            - values are generator functions taking arbitrary number of kwargs
+            - yield items are dictionaries with `label` and `node` keys
+        """
 
-    for f in _navseq(1, pagelen):
-        if f > limit:
-            break
-        if pos + f < limit:
-            navafter.append(("+%d" % f, hex(nodefunc(pos + f).node())))
-        if pos - f >= 0:
-            navbefore.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
+        navbefore = []
+        navafter = []
 
-    navafter.append(("tip", "tip"))
-    try:
-        navbefore.insert(0, ("(0)", hex(nodefunc(0).node())))
-    except error.RepoError:
-        pass
+        for f in _navseq(1, pagelen):
+            if f > limit:
+                break
+            if pos + f < limit:
+                navafter.append(("+%d" % f, hex(nodefunc(pos + f).node())))
+            if pos - f >= 0:
+                navbefore.insert(0, ("-%d" % f, hex(nodefunc(pos - f).node())))
 
-    data = lambda i: {"label": i[0], "node": i[1]}
-    return ({'before': lambda **map: (data(i) for i in navbefore),
-             'after':  lambda **map: (data(i) for i in navafter)},)
+        navafter.append(("tip", "tip"))
+        try:
+            navbefore.insert(0, ("(0)", hex(nodefunc(0).node())))
+        except error.RepoError:
+            pass
+
+        data = lambda i: {"label": i[0], "node": i[1]}
+        return ({'before': lambda **map: (data(i) for i in navbefore),
+                 'after':  lambda **map: (data(i) for i in navafter)},)
 
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
