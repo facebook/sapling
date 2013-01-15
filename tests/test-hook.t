@@ -369,7 +369,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     ui.note('verbose output from hook\n')
   > 
   > def printtags(ui, repo, **args):
-  >     print repo.tags().keys()
+  >     print sorted(repo.tags())
   > 
   > class container:
   >     unreachable = 1
