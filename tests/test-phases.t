@@ -177,16 +177,26 @@ check that branch cache with "unserved" filter are properly computed and stored
 
   $ ls ../push-dest/.hg/cache/branchheads*
   ../push-dest/.hg/cache/branchheads-served
+  $ cat ../push-dest/.hg/cache/branchheads-served
+  6d6770faffce199f1fddd1cf87f6f026138cf061 6 465891ffab3c47a3c23792f7dc84156e19a90722
+  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
+  6d6770faffce199f1fddd1cf87f6f026138cf061 default
+  $ hg heads -R ../push-dest --template '{rev}:{node} {phase}\n'  #update visible cache too
+  6:6d6770faffce199f1fddd1cf87f6f026138cf061 draft
+  5:2713879da13d6eea1ff22b442a5a87cb31a7ce6a secret
+  3:b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e draft
+  $ ls ../push-dest/.hg/cache/branchheads*
+  ../push-dest/.hg/cache/branchheads-served
   ../push-dest/.hg/cache/branchheads-visible
+  $ cat ../push-dest/.hg/cache/branchheads-served
+  6d6770faffce199f1fddd1cf87f6f026138cf061 6 465891ffab3c47a3c23792f7dc84156e19a90722
+  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
+  6d6770faffce199f1fddd1cf87f6f026138cf061 default
   $ cat ../push-dest/.hg/cache/branchheads-visible
   6d6770faffce199f1fddd1cf87f6f026138cf061 6
   b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
   2713879da13d6eea1ff22b442a5a87cb31a7ce6a default
   6d6770faffce199f1fddd1cf87f6f026138cf061 default
-  $ cat ../push-dest/.hg/cache/branchheads-served
-  cf9fe039dfd67e829edf6522a45de057b5c86519 4
-  b3325c91a4d916bcc4cdc83ea3fe4ece46a42f6e default
-  cf9fe039dfd67e829edf6522a45de057b5c86519 default
 
 
 Restore condition prior extra insertion.

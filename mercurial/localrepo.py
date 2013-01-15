@@ -1367,7 +1367,7 @@ class localrepository(object):
                 # if minimal phase was 0 we don't need to retract anything
                 phases.retractboundary(self, targetphase, [n])
             tr.close()
-            branchmap.updatecache(self)
+            branchmap.updatecache(self.filtered('served'))
             return n
         finally:
             if tr:
@@ -2388,7 +2388,7 @@ class localrepository(object):
                     # During strip, branchcache is invalid but coming call to
                     # `destroyed` will repair it.
                     # In other case we can safely update cache on disk.
-                    branchmap.updatecache(self)
+                    branchmap.updatecache(self.filtered('served'))
                 def runhooks():
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")

@@ -579,6 +579,7 @@ Commit and show expansion in original and copy
   invalid branchheads cache (served): tip differs
   c
    c: copy a:0045e12f6c5791aac80ca6cbfd97709a88307292
+  invalid branchheads cache (served): tip differs
   overwriting c expanding keywords
   committed changeset 2:25736cf2f5cbe41f6be4e6784ef6ecf9f3bbcc7d
   $ cat a c
@@ -762,7 +763,6 @@ Commit with multi-line message and custom expansion
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
   invalid branchheads cache (served): tip differs
   a
-  invalid branchheads cache: tip differs
   invalid branchheads cache (served): tip differs
   overwriting a expanding keywords
   committed changeset 2:bb948857c743469b22bbf51f7ec8112279ca5d83
@@ -805,7 +805,6 @@ remove with status checks
   $ hg debugrebuildstate
   $ hg remove a
   $ hg --debug commit -m rma
-  invalid branchheads cache: tip differs
   committed changeset 3:d14c712653769de926994cf7fbb06c8fbd68f012
   $ hg status
   ? c
@@ -918,7 +917,6 @@ kwexpand x/a should abort
   $ hg --debug commit -m xa -d '3 0' -u 'User Name <user@example.com>'
   x/a
    x/a: copy a:779c764182ce5d43e2b1eb66ce06d7b47bfe342e
-  invalid branchheads cache: tip differs
   overwriting x/a expanding keywords
   committed changeset 3:b4560182a3f9a358179fd2d835c15e9da379c1e4
   $ cat a
