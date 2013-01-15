@@ -309,16 +309,16 @@ after strip of merge parent
 2 different branches: 2 strips
 
   $ hg strip 2 4
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg glog
-  @  changeset:   2:65bd5f99a4a3
+  o  changeset:   2:65bd5f99a4a3
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:ef3a871183d7
+  @  changeset:   1:ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b

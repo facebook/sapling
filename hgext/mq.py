@@ -3032,7 +3032,7 @@ def strip(ui, repo, *revs, **opts):
             del q.applied[start:end]
             q.savedirty()
 
-    revs = list(rootnodes)
+    revs = sorted(rootnodes)
     if update and opts.get('keep'):
         wlock = repo.wlock()
         try:
