@@ -70,7 +70,7 @@ class wsgirequest(object):
         for s in util.filechunkiter(self.inp, limit=length):
             pass
 
-    def respond(self, status, type=None, filename=None, length=0):
+    def respond(self, status, type=None, filename=None, length=None):
         if self._start_response is not None:
 
             self.httphdr(type, filename, length)
@@ -125,7 +125,7 @@ class wsgirequest(object):
     def header(self, headers=[('Content-Type','text/html')]):
         self.headers.extend(headers)
 
-    def httphdr(self, type=None, filename=None, length=0, headers={}):
+    def httphdr(self, type=None, filename=None, length=None, headers={}):
         headers = headers.items()
         if type is not None:
             headers.append(('Content-Type', type))
@@ -134,7 +134,7 @@ class wsgirequest(object):
                         .replace('\\', '\\\\').replace('"', '\\"'))
             headers.append(('Content-Disposition',
                             'inline; filename="%s"' % filename))
-        if length:
+        if length is not None:
             headers.append(('Content-Length', str(length)))
         self.header(headers)
 
