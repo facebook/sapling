@@ -41,8 +41,8 @@ import bookmark by name
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  updating bookmark Y
   adding remote bookmark X
+  updating bookmark Y
   adding remote bookmark Z
   (run 'hg update' to get a working copy)
   $ hg bookmarks
@@ -145,9 +145,9 @@ divergent bookmarks
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  divergent bookmark @ stored as @foo
   divergent bookmark X stored as X@foo
   updating bookmark Z
-  divergent bookmark @ stored as @foo
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg book
      @                         1:9b140be10808
@@ -324,10 +324,10 @@ hgweb
   pulling from http://localhost:$HGPORT/
   no changes found
   divergent bookmark @ stored as @1
-  adding remote bookmark foo
-  adding remote bookmark foobar
   divergent bookmark X stored as X@1
   adding remote bookmark Z
+  adding remote bookmark foo
+  adding remote bookmark foobar
   importing bookmark Z
   $ hg clone http://localhost:$HGPORT/ cloned-bookmarks
   requesting all changes

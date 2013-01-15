@@ -198,7 +198,7 @@ def updatefromremote(ui, repo, remote, path):
     rb = remote.listkeys('bookmarks')
     changed = False
     localmarks = repo._bookmarks
-    for k in rb.keys():
+    for k in sorted(rb):
         if k in localmarks:
             nr, nl = rb[k], localmarks[k]
             if nr in repo:
