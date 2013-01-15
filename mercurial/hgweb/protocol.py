@@ -82,8 +82,9 @@ def call(repo, req, cmd):
         return rsp.gen
     elif isinstance(rsp, wireproto.pushres):
         val = p.restore()
-        req.respond(HTTP_OK, HGTYPE)
-        return ['%d\n%s' % (rsp.res, val)]
+        rsp = '%d\n%s' % (rsp.res, val)
+        req.respond(HTTP_OK, HGTYPE, length=len(rsp))
+        return [rsp]
     elif isinstance(rsp, wireproto.pusherr):
         # drain the incoming bundle
         req.drain()

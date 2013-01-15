@@ -54,6 +54,7 @@ successful force push
   $ cat page2
   Status: 200 Script output follows\r (esc)
   Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 102\r (esc)
   \r (esc)
   1
   adding changesets
@@ -68,6 +69,7 @@ successful push, list of heads
   $ cat page3
   Status: 200 Script output follows\r (esc)
   Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 102\r (esc)
   \r (esc)
   1
   adding changesets
@@ -82,6 +84,7 @@ successful push, SHA1 hash of heads (unbundlehash capability)
   $ cat page4
   Status: 200 Script output follows\r (esc)
   Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 102\r (esc)
   \r (esc)
   1
   adding changesets
