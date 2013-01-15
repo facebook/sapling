@@ -526,7 +526,7 @@ def successorssets(repo, initialnode, cache=None):
             #   Having none means pruned node, multiple successors means split,
             #   single successors are standard replacement.
             #
-            for mark in succmarkers[current]:
+            for mark in sorted(succmarkers[current]):
                 for suc in mark[1]:
                     if suc not in cache:
                         if suc in stackedset:
@@ -563,7 +563,7 @@ def successorssets(repo, initialnode, cache=None):
                 # duplicated entry and successors set that are strict subset of
                 # another one.
                 succssets = []
-                for mark in succmarkers[current]:
+                for mark in sorted(succmarkers[current]):
                     # successors sets contributed by this marker
                     markss = [[]]
                     for suc in mark[1]:

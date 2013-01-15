@@ -76,8 +76,8 @@ A_1 have two direct and divergent successors A_1 and A_1
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      392fd25390da
       82623d38b9ba
+      392fd25390da
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -123,8 +123,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      01f36c5a8fda
       82623d38b9ba
+      01f36c5a8fda
   82623d38b9ba
       82623d38b9ba
   392fd25390da
@@ -158,8 +158,8 @@ indirect divergence with known changeset
   d20a80d4def3
       d20a80d4def3
   007dc284c1f8
-      392fd25390da
       82623d38b9ba
+      392fd25390da
   82623d38b9ba
       82623d38b9ba
   392fd25390da
