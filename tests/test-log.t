@@ -34,6 +34,32 @@ changeset graph
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
+log on directory
+
+  $ hg log dir
+  changeset:   4:7e4639b4691b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:05 1970 +0000
+  summary:     e
+  
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
+  $ hg log somethingthatdoesntexist dir
+  changeset:   4:7e4639b4691b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:05 1970 +0000
+  summary:     e
+  
+  changeset:   2:f8954cd4dc1f
+  user:        test
+  date:        Thu Jan 01 00:00:03 1970 +0000
+  summary:     c
+  
 
 -f, directory
 

@@ -1137,8 +1137,8 @@ def walkchangerevs(repo, match, opts, prepare):
             for path in match.files():
                 if path == '.' or path in repo.store:
                     break
-                else:
-                    return []
+            else:
+                return []
 
     if slowpath:
         # We have to read the changelog to match filenames against
