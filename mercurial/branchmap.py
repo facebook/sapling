@@ -239,14 +239,8 @@ class branchcache(dict):
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
         for branch, newnodes in newbranches.iteritems():
             bheads = self.setdefault(branch, [])
-            # Remove candidate heads that no longer are in the repo (e.g., as
-            # the result of a strip that just happened).  Avoid using 'node in
-            # self' here because that dives down into branchcache code somewhat
-            # recursively.
-            bheadrevs = [cl.rev(node) for node in bheads
-                         if cl.hasnode(node)]
-            newheadrevs = [cl.rev(node) for node in newnodes
-                           if cl.hasnode(node)]
+            bheadrevs = [cl.rev(node) for node in bheads]
+            newheadrevs = [cl.rev(node) for node in newnodes]
             ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
             # Remove duplicates - nodes that are in newheadrevs and are already
             # in bheadrevs.  This can happen if you strip a node whose parent
