@@ -929,11 +929,11 @@ class queue(object):
         self._cleanup(realpatches, numrevs, opts.get('keep'))
 
     def checktoppatch(self, repo):
+        '''check that working directory is at qtip'''
         if self.applied:
             top = self.applied[-1].node
             patch = self.applied[-1].name
-            pp = repo.dirstate.parents()
-            if top not in pp:
+            if repo.dirstate.p1() != top:
                 raise util.Abort(_("working directory revision is not qtip"))
             return top, patch
         return None, None
