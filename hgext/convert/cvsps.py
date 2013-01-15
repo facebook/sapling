@@ -827,7 +827,8 @@ def debugcvsps(ui, *args, **opts):
             ui.write(('Tag%s: %s \n' % (['', 's'][len(cs.tags) > 1],
                                   ','.join(cs.tags) or '(none)')))
             if cs.branchpoints:
-                ui.write(('Branchpoints: %s \n') % ', '.join(cs.branchpoints))
+                ui.write(('Branchpoints: %s \n') %
+                         ', '.join(sorted(cs.branchpoints)))
             if opts["parents"] and cs.parents:
                 if len(cs.parents) > 1:
                     ui.write(('Parents: %s\n' %

@@ -116,7 +116,7 @@ return to trunk and merge MYBRANCH1_2
   Author: user
   Branch: HEAD
   Tag: (none) 
-  Branchpoints: MYBRANCH1_1, MYBRANCH1 
+  Branchpoints: MYBRANCH1, MYBRANCH1_1 
   Log:
   foo.txt
   
