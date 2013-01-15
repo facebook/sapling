@@ -240,11 +240,34 @@ def overridedirty(orig, repo, ignoreupdate=False):
         repo._repo.lfstatus = False
 
 def overridelog(orig, ui, repo, *pats, **opts):
+    def overridematch(ctx, pats=[], opts={}, globbed=False,
+            default='relpath'):
+        """Matcher that merges root directory with .hglf, suitable for log.
+        It is still possible to match .hglf directly.
+        For any listed files run log on the standin too.
+        matchfn tries both the given filename and with .hglf stripped.
+        """
+        match = oldmatch(ctx, pats, opts, globbed, default)
+        m = copy.copy(match)
+        standins = [lfutil.standin(f) for f in m._files]
+        m._files.extend(standins)
+        m._fmap = set(m._files)
+        origmatchfn = m.matchfn
+        def lfmatchfn(f):
+            lf = lfutil.splitstandin(f)
+            if lf is not None and origmatchfn(lf):
+                return True
+            r = origmatchfn(f)
+            return r
+        m.matchfn = lfmatchfn
+        return m
+    oldmatch = installmatchfn(overridematch)
     try:
         repo.lfstatus = True
         return orig(ui, repo, *pats, **opts)
     finally:
         repo.lfstatus = False
+        restorematchfn()
 
 def overrideverify(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', False)

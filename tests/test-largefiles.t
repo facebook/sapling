@@ -987,6 +987,47 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   $ cat sub2/large7
   large7
 
+Log on largefiles
+
+- same output
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub/large4
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' sub/large4
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+
+- .hglf only matches largefiles, without .hglf it matches 9 bco sub/normal
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' sub
+  9:598410d3eb9a  modify normal file largefile in repo d
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
+
+- globbing gives same result
+  $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' 'glob:sub/*'
+  9:598410d3eb9a  modify normal file largefile in repo d
+  8:a381d2c8c80e  modify normal file and largefile in repo b
+  6:4355d653f84f  edit files yet again
+  5:9d5af5072dbd  edit files again
+  4:74c02385b94c  move files
+  1:ce8896473775  edit files
+  0:30d30fe6a5be  add files
+
 Rollback on largefiles.
 
   $ echo large4-modified-again > sub/large4
