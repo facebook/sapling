@@ -2477,8 +2477,14 @@ class localrepository(object):
                     cache = branchmap.branchcache(rbranchmap,
                                                   self[rtiprev].node(),
                                                   rtiprev)
-                    self._branchcaches[None] = cache
-                    cache.write(self.unfiltered())
+                    # Try to stick it as low as possible
+                    # filter above served are unlikely to be fetch from a clone
+                    for candidate in ('base', 'immutable', 'served'):
+                        rview = self.filtered(candidate)
+                        if cache.validfor(rview):
+                            self._branchcaches[candidate] = cache
+                            cache.write(rview)
+                            break
             self.invalidate()
             return len(self.heads()) + 1
         finally:
