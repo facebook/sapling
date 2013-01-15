@@ -46,20 +46,35 @@ Using index:
   applying c.patch
   now at: c.patch
 
-No warnings when using index:
+No warnings when using index ... and update from non-qtip and with pending
+changes in unrelated files:
 
   $ hg qnew bug314159
   $ echo d >> c
   $ hg qrefresh
   $ hg qnew bug141421
-  $ echo e >> c
+  $ echo e >> b
   $ hg qrefresh
 
+  $ hg up -r bug314159
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo f >> a
+  $ echo f >> b
+  $ echo f >> c
+
   $ hg qgoto 1
+  abort: local changes found, refresh first
+  [255]
+  $ hg qgoto 1 -f
   popping bug141421
   popping bug314159
   popping c.patch
   now at: b.patch
+  $ hg st
+  M a
+  M b
+  ? c.orig
+  $ hg up -qCr.
 
   $ hg qgoto 3
   applying c.patch

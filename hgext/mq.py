@@ -1406,8 +1406,6 @@ class queue(object):
             self.applieddirty = True
             end = len(self.applied)
             rev = self.applied[start].node
-            if update:
-                top = self.checktoppatch(repo)[0]
 
             try:
                 heads = repo.changelog.heads(rev)
@@ -1428,7 +1426,7 @@ class queue(object):
             if update:
                 qp = self.qparents(repo, rev)
                 ctx = repo[qp]
-                m, a, r, d = repo.status(qp, top)[:4]
+                m, a, r, d = repo.status(qp, '.')[:4]
                 if d:
                     raise util.Abort(_("deletions found between repo revs"))
 
