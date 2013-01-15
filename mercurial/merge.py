@@ -367,7 +367,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         if os.path.lexists(repo.wjoin(f)):
             repo.ui.debug("removing %s\n" % f)
             audit(f)
-            os.unlink(repo.wjoin(f))
+            util.unlinkpath(repo.wjoin(f))
 
     numupdates = len(actions)
     for i, a in enumerate(actions):
