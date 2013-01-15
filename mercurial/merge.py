@@ -257,7 +257,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             f2 = movewithdir[f]
             act("remote renamed directory to " + f2, "d", f, None, f2,
                 m1.flags(f))
-        elif f in copy: # case 2 A,B/B/B or case 4,21 A/B/B
+        elif f in copy:
             f2 = copy[f]
             act("local copied/moved to " + f2, "m", f, f2, f, False)
         elif f in ma: # clean, a different, no remote
@@ -285,10 +285,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 m2.flags(f))
         elif f in copy:
             f2 = copy[f]
-            if f2 in m2: # rename case 1, A/A,B/A
+            if f2 in m2:
                 act("remote copied to " + f, "m",
                     f2, f, f, False)
-            else: # case 3,20 A/B/A
+            else:
                 act("remote moved to " + f, "m",
                     f2, f, f, True)
         elif f not in ma:
