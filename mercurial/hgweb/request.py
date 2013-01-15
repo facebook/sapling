@@ -70,7 +70,7 @@ class wsgirequest(object):
         for s in util.filechunkiter(self.inp, limit=length):
             pass
 
-    def respond(self, status, type, filename=None, length=None):
+    def respond(self, status, type, filename=None, body=None):
         if self._start_response is not None:
             self.headers.append(('Content-Type', type))
             if filename:
@@ -78,8 +78,8 @@ class wsgirequest(object):
                             .replace('\\', '\\\\').replace('"', '\\"'))
                 self.headers.append(('Content-Disposition',
                                      'inline; filename="%s"' % filename))
-            if length is not None:
-                self.headers.append(('Content-Length', str(length)))
+            if body is not None:
+                self.headers.append(('Content-Length', str(len(body))))
 
             for k, v in self.headers:
                 if not isinstance(v, str):
@@ -103,6 +103,9 @@ class wsgirequest(object):
             self.server_write = self._start_response(status, self.headers)
             self._start_response = None
             self.headers = []
+        if body is not None:
+            self.write(body)
+            self.server_write = None
 
     def write(self, thing):
         if thing:

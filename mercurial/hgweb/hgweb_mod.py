@@ -158,8 +158,9 @@ class hgweb(object):
                                  '').lower() != '100-continue') or
                     req.env.get('X-HgHttp2', '')):
                     req.drain()
-                req.respond(inst, protocol.HGTYPE)
-                return '0\n%s\n' % inst.message
+                req.respond(inst, protocol.HGTYPE,
+                            body='0\n%s\n' % inst.message)
+                return ''
 
         # translate user-visible url structure to internal structure
 

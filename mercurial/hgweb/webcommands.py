@@ -61,8 +61,8 @@ def rawfile(web, req, tmpl):
     if mt.startswith('text/'):
         mt += '; charset="%s"' % encoding.encoding
 
-    req.respond(HTTP_OK, mt, path, len(text))
-    return [text]
+    req.respond(HTTP_OK, mt, path, body=text)
+    return []
 
 def _filerevision(web, tmpl, fctx):
     f = fctx.path()
