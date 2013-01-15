@@ -268,7 +268,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     allmissing = set(outgoing.missing)
     allfuturecommon = set(c.node() for c in repo.set('%ld', outgoing.common))
     allfuturecommon.update(allmissing)
-    for branch, heads in headssum.iteritems():
+    for branch, heads in sorted(headssum.iteritems()):
         if heads[0] is None:
             # Maybe we should abort if we push more that one head
             # for new branches ?
@@ -312,7 +312,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             unsynced = True
         if len(newhs) > len(oldhs):
             # strip updates to existing remote heads from the new heads list
-            dhs = list(newhs - bookmarkedheads - oldhs)
+            dhs = sorted(newhs - bookmarkedheads - oldhs)
         if dhs:
             if error is None:
                 if branch not in ('default', None):

@@ -457,7 +457,7 @@ Prepush -r should not allow you to sneak in new heads:
   $ hg push ../l -b b
   pushing to ../l
   searching for changes
-  abort: push creates new remote head e7e31d71180f on branch 'a'!
+  abort: push creates new remote head 451211cc22b0 on branch 'a'!
   (did you forget to merge? use push -f to force)
   [255]
 
