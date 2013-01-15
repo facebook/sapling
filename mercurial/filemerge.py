@@ -208,6 +208,8 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files):
     the partially merged file."""
     tool, toolpath, binary, symlink = toolconf
     if symlink:
+        repo.ui.warn(_('warning: internal:merge cannot merge symlinks '
+                       'for %s\n') % fcd.path())
         return False, 1
 
     r = _premerge(repo, toolconf, files)
