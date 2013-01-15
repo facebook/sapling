@@ -59,6 +59,7 @@ class hgweb(object):
         else:
             self.repo = repo
 
+        self.repo =  self.repo.filtered('served')
         self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
         self.repo.ui.setconfig('ui', 'nontty', 'true')
         hook.redirect(True)
@@ -95,6 +96,7 @@ class hgweb(object):
             self.mtime = st.st_mtime
             self.size = st.st_size
             self.repo = hg.repository(self.repo.ui, self.repo.root)
+            self.repo =  self.repo.filtered('served')
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))
             self.maxshortchanges = int(self.config("web", "maxshortchanges",
