@@ -82,7 +82,7 @@ incremental conversion
   pulling from branch0 into branch2
   4 changesets found
   0 c3
-  pulling from branch2 into branch3
-  5 changesets found
   pulling from branch1 into branch3
+  5 changesets found
+  pulling from branch2 into branch3
   1 changesets found
