@@ -800,13 +800,12 @@ def archive(web, req, tmpl):
     name = "%s-%s" % (reponame, arch_version)
     mimetype, artype, extension, encoding = web.archive_specs[type_]
     headers = [
-        ('Content-Type', mimetype),
         ('Content-Disposition', 'attachment; filename=%s%s' % (name, extension))
-    ]
+        ]
     if encoding:
         headers.append(('Content-Encoding', encoding))
     req.header(headers)
-    req.respond(HTTP_OK)
+    req.respond(HTTP_OK, mimetype)
 
     ctx = webutil.changectx(web.repo, req)
     archival.archive(web.repo, req, cnode, artype, prefix=name,

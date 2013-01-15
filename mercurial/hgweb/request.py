@@ -70,12 +70,10 @@ class wsgirequest(object):
         for s in util.filechunkiter(self.inp, limit=length):
             pass
 
-    def respond(self, status, type=None, filename=None, length=None):
+    def respond(self, status, type, filename=None, length=None):
         if self._start_response is not None:
 
             self.httphdr(type, filename, length)
-            if not self.headers:
-                raise RuntimeError("request.write called before headers sent")
 
             for k, v in self.headers:
                 if not isinstance(v, str):
@@ -125,10 +123,9 @@ class wsgirequest(object):
     def header(self, headers=[('Content-Type','text/html')]):
         self.headers.extend(headers)
 
-    def httphdr(self, type=None, filename=None, length=None, headers={}):
+    def httphdr(self, type, filename=None, length=None, headers={}):
         headers = headers.items()
-        if type is not None:
-            headers.append(('Content-Type', type))
+        headers.append(('Content-Type', type))
         if filename:
             filename = (filename.split('/')[-1]
                         .replace('\\', '\\\\').replace('"', '\\"'))
