@@ -158,8 +158,8 @@ Graft out of order, skipping a merge and a duplicate
   resolving manifests
    overwrite: False, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
-   e: versions differ -> m
    d: remote is newer -> g
+   e: versions differ -> m
   preserving e for resolve of e
   updating: d 1/2 files (50.00%)
   getting d

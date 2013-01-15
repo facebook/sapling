@@ -68,8 +68,8 @@
   resolving manifests
    overwrite: True, partial: False
    ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
-   side2: other deleted -> r
    side1: other deleted -> r
+   side2: other deleted -> r
    main: remote created -> g
   updating: side1 1/3 files (33.33%)
   removing side1

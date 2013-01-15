@@ -31,8 +31,8 @@
   resolving manifests
    overwrite: False, partial: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
-   a: remote moved to c -> m
    a: remote moved to b -> m
+   a: remote moved to c -> m
   preserving a for resolve of b
   preserving a for resolve of c
   removing a

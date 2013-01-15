@@ -39,9 +39,9 @@
   resolving manifests
    overwrite: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
-   a/c: remote renamed directory to b/c -> d
-   a/b: other deleted -> r
    a/a: other deleted -> r
+   a/b: other deleted -> r
+   a/c: remote renamed directory to b/c -> d
    b/a: remote created -> g
    b/b: remote created -> g
   updating: a/a 1/5 files (20.00%)
