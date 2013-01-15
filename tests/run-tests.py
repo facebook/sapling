@@ -1125,8 +1125,8 @@ def runchildren(options, tests):
         pid, status, fp = waitq.get()
         try:
             childresults = pickle.load(fp)
-        except pickle.UnpicklingError:
-            pass
+        except (pickle.UnpicklingError, EOFError):
+            sys.exit(255)
         else:
             passed += len(childresults['p'])
             skipped += len(childresults['s'])
@@ -1221,7 +1221,8 @@ def runtests(options, tests):
             outputcoverage(options)
     except KeyboardInterrupt:
         failed = True
-        print "\ninterrupted!"
+        if not options.child:
+            print "\ninterrupted!"
 
     if failed:
         sys.exit(1)
