@@ -105,16 +105,11 @@ class wsgirequest(object):
             self.headers = []
 
     def write(self, thing):
-        if util.safehasattr(thing, "__iter__"):
-            for part in thing:
-                self.write(part)
-        else:
-            thing = str(thing)
-            try:
-                self.server_write(thing)
-            except socket.error, inst:
-                if inst[0] != errno.ECONNRESET:
-                    raise
+        try:
+            self.server_write(thing)
+        except socket.error, inst:
+            if inst[0] != errno.ECONNRESET:
+                raise
 
     def writelines(self, lines):
         for line in lines:
