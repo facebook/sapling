@@ -19,7 +19,7 @@ vimdiff.args=$local $other $base
 vimdiff.check=changed
 vimdiff.priority=-10
 
-merge.checkconflicts=True
+merge.check=conflicts
 merge.priority=-100
 
 gpyfm.gui=True
@@ -43,7 +43,7 @@ diffmerge.regkeyalt=Software\Wow6432Node\SourceGear\SourceGear DiffMerge\
 diffmerge.regname=Location
 diffmerge.priority=-7
 diffmerge.args=-nosplash -merge -title1=local -title2=merged -title3=other $local $base $other -result=$output
-diffmerge.checkchanged=True
+diffmerge.check=changed
 diffmerge.gui=True
 diffmerge.diffargs=--nosplash --title1='$plabel1' --title2='$clabel' $parent $child
 
@@ -59,7 +59,7 @@ p4merge.diffargs=$parent $child
 tortoisemerge.args=/base:$base /mine:$local /theirs:$other /merged:$output
 tortoisemerge.regkey=Software\TortoiseSVN
 tortoisemerge.regkeyalt=Software\Wow6432Node\TortoiseSVN
-tortoisemerge.checkchanged=True
+tortoisemerge.check=changed
 tortoisemerge.gui=True
 tortoisemerge.priority=-8
 tortoisemerge.diffargs=/base:$parent /mine:$child /basename:'$plabel1' /minename:'$clabel'
@@ -93,7 +93,7 @@ winmerge.args=/e /x /wl /ub /dl other /dr local $other $local $output
 winmerge.regkey=Software\Thingamahoochie\WinMerge
 winmerge.regkeyalt=Software\Wow6432Node\Thingamahoochie\WinMerge\
 winmerge.regname=Executable
-winmerge.checkchanged=True
+winmerge.check=changed
 winmerge.gui=True
 winmerge.priority=-10
 winmerge.diffargs=/r /e /x /ub /wl /dl '$plabel1' /dr '$clabel' $parent $child
@@ -119,6 +119,5 @@ UltraCompare.args = $base $local $other -title1 base -title3 other
 UltraCompare.priority = -2
 UltraCompare.gui = True
 UltraCompare.binary = True
-UltraCompare.checkconflicts = True
-UltraCompare.checkchanged = True
+UltraCompare.check = conflicts,changed
 UltraCompare.diffargs=$child $parent -title1 $clabel -title2 $plabel1

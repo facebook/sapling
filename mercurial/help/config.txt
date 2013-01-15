@@ -850,14 +850,6 @@ Supported arguments:
   ``prompt``
     Always prompt for merge success, regardless of success reported by tool.
 
-``checkchanged``
-  True is equivalent to ``check = changed``.
-  Default: False
-
-``checkconflicts``
-  True is equivalent to ``check = conflicts``.
-  Default: False
-
 ``fixeol``
   Attempt to fix up EOL changes caused by the merge tool.
   Default: False
