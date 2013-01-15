@@ -804,7 +804,7 @@ def archive(web, req, tmpl):
         ]
     if encoding:
         headers.append(('Content-Encoding', encoding))
-    req.header(headers)
+    req.headers.extend(headers)
     req.respond(HTTP_OK, mimetype)
 
     ctx = webutil.changectx(web.repo, req)

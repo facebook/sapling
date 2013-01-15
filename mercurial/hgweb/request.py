@@ -72,15 +72,21 @@ class wsgirequest(object):
 
     def respond(self, status, type, filename=None, length=None):
         if self._start_response is not None:
-
-            self.httphdr(type, filename, length)
+            self.headers.append(('Content-Type', type))
+            if filename:
+                filename = (filename.split('/')[-1]
+                            .replace('\\', '\\\\').replace('"', '\\"'))
+                self.headers.append(('Content-Disposition',
+                                     'inline; filename="%s"' % filename))
+            if length is not None:
+                self.headers.append(('Content-Length', str(length)))
 
             for k, v in self.headers:
                 if not isinstance(v, str):
-                    raise TypeError('header value must be string: %r' % v)
+                    raise TypeError('header value must be string: %r' % (v,))
 
             if isinstance(status, ErrorResponse):
-                self.header(status.headers)
+                self.headers.extend(status.headers)
                 if status.code == HTTP_NOT_MODIFIED:
                     # RFC 2616 Section 10.3.5: 304 Not Modified has cases where
                     # it MUST NOT include any headers other than these and no
@@ -119,21 +125,6 @@ class wsgirequest(object):
 
     def close(self):
         return None
-
-    def header(self, headers=[('Content-Type','text/html')]):
-        self.headers.extend(headers)
-
-    def httphdr(self, type, filename=None, length=None, headers={}):
-        headers = headers.items()
-        headers.append(('Content-Type', type))
-        if filename:
-            filename = (filename.split('/')[-1]
-                        .replace('\\', '\\\\').replace('"', '\\"'))
-            headers.append(('Content-Disposition',
-                            'inline; filename="%s"' % filename))
-        if length is not None:
-            headers.append(('Content-Length', str(length)))
-        self.header(headers)
 
 def wsgiapplication(app_maker):
     '''For compatibility with old CGI scripts. A plain hgweb() or hgwebdir()
