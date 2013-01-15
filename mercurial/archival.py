@@ -106,7 +106,6 @@ class tarit(object):
                 self.fileobj = gzfileobj
                 return tarfile.TarFile.taropen(name, mode, gzfileobj)
             else:
-                self.fileobj = fileobj
                 return tarfile.open(name, mode + kind, fileobj)
 
         if isinstance(dest, str):
