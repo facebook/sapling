@@ -151,7 +151,7 @@ def _backwardrenames(a, b):
     # arbitrarily pick one of the renames.
     f = _forwardcopies(b, a)
     r = {}
-    for k, v in f.iteritems():
+    for k, v in sorted(f.iteritems()):
         # remove copies
         if v in a:
             continue

@@ -337,12 +337,12 @@ One file is copied to many destinations and removed:
 Reversed:
 
   $ hg diff --git -r -1 -r -2
-  diff --git a/brand-new3 b/brand-new2
-  rename from brand-new3
+  diff --git a/brand-new3-2 b/brand-new2
+  rename from brand-new3-2
   rename to brand-new2
-  diff --git a/brand-new3-2 b/brand-new3-2
+  diff --git a/brand-new3 b/brand-new3
   deleted file mode 100644
-  --- a/brand-new3-2
+  --- a/brand-new3
   +++ /dev/null
   @@ -1,1 +0,0 @@
   -
