@@ -162,9 +162,9 @@ Test for invalid branch cache:
   corrupted
   === .hg/cache/branchheads-unserved ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
+  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
   1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 foo
-  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
 
 Push should update the branch cache:
 
@@ -186,9 +186,9 @@ Pushing everything:
   $ (cd ../target/; listbranchcaches)
   === .hg/cache/branchheads-impactable ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
+  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
   1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 foo
-  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
 
 Update with no arguments: tipmost revision of the current branch:
 

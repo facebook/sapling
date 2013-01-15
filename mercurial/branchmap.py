@@ -135,7 +135,7 @@ class branchcache(dict):
             if self.filteredhash is not None:
                 cachekey.append(hex(self.filteredhash))
             f.write(" ".join(cachekey) + '\n')
-            for label, nodes in self.iteritems():
+            for label, nodes in sorted(self.iteritems()):
                 for node in nodes:
                     f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
             f.close()
