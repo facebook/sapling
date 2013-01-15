@@ -24,6 +24,17 @@ def up(p):
         return "/"
     return up + "/"
 
+def _navseq(factor, limit=None):
+    if limit:
+        yield limit
+        if limit >= 20 and limit <= 40:
+            yield 50
+    else:
+        yield 1 * factor
+        yield 3 * factor
+    for f in _navseq(factor * 10):
+        yield f
+
 def revnavgen(pos, pagelen, limit, nodefunc):
     """computes label and revision id for navigation link
 
@@ -38,22 +49,12 @@ def revnavgen(pos, pagelen, limit, nodefunc):
         - values are generator functions taking an arbitrary number of kwargs
         - yield items are dictionaries with `label` and `node` keys
     """
-    def seq(factor, limit=None):
-        if limit:
-            yield limit
-            if limit >= 20 and limit <= 40:
-                yield 50
-        else:
-            yield 1 * factor
-            yield 3 * factor
-        for f in seq(factor * 10):
-            yield f
 
     navbefore = []
     navafter = []
 
     last = 0
-    for f in seq(1, pagelen):
+    for f in _navseq(1, pagelen):
         if f < pagelen or f <= last:
             continue
         if f > limit:
