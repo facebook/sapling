@@ -500,7 +500,7 @@ Test that amend does not make it easy to create obsoletescence cycle
   $ hg id
   b99e5df575f7 (a) tip
 
-Test ui.prevent-unstable
+Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------
 
   $ hg up '.^'

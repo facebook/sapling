@@ -143,8 +143,8 @@ Check that histedit respect phases
   [255]
 
 
-+Test ui.prevent-unstable option
-+------------------------------------
+Test that rewriting leaving instability behind is allowed
+---------------------------------------------------------------------
 
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
