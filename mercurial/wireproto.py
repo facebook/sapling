@@ -545,8 +545,9 @@ def stream(repo, proto):
         try:
             repo.ui.debug('scanning\n')
             for name, ename, size in repo.store.walk():
-                entries.append((name, size))
-                total_bytes += size
+                if size:
+                    entries.append((name, size))
+                    total_bytes += size
         finally:
             lock.release()
     except error.LockError:
