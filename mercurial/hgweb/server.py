@@ -133,10 +133,12 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.saved_headers = []
         self.sent_headers = False
         self.length = None
+        self._chunked = None
         for chunk in self.server.application(env, self._start_response):
             self._write(chunk)
         if not self.sent_headers:
             self.send_headers()
+        self._done()
 
     def send_headers(self):
         if not self.saved_status:
@@ -145,16 +147,19 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         saved_status = self.saved_status.split(None, 1)
         saved_status[0] = int(saved_status[0])
         self.send_response(*saved_status)
-        should_close = True
+        self.length = None
+        self._chunked = False
         for h in self.saved_headers:
             self.send_header(*h)
             if h[0].lower() == 'content-length':
-                should_close = False
                 self.length = int(h[1])
-        # The value of the Connection header is a list of case-insensitive
-        # tokens separated by commas and optional whitespace.
-        if should_close:
-            self.send_header('Connection', 'close')
+        if self.length is None:
+            self._chunked = (not self.close_connection and
+                             self.request_version == "HTTP/1.1")
+            if self._chunked:
+                self.send_header('Transfer-Encoding', 'chunked')
+            else:
+                self.send_header('Connection', 'close')
         self.end_headers()
         self.sent_headers = True
 
@@ -177,8 +182,15 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 raise AssertionError("Content-length header sent, but more "
                                      "bytes than specified are being written.")
             self.length = self.length - len(data)
+        elif self._chunked and data:
+            data = '%x\r\n%s\r\n' % (len(data), data)
         self.wfile.write(data)
         self.wfile.flush()
+
+    def _done(self):
+        if self._chunked:
+            self.wfile.write('0\r\n\r\n')
+            self.wfile.flush()
 
 class _httprequesthandleropenssl(_httprequesthandler):
     """HTTPS handler based on pyOpenSSL"""
