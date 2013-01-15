@@ -377,7 +377,7 @@ class svn_source(converter_source):
             rpath = self.url.strip('/')
             branchnames = svn.client.ls(rpath + '/' + quote(branches),
                                         rev, False, self.ctx)
-            for branch in branchnames.keys():
+            for branch in sorted(branchnames):
                 module = '%s/%s/%s' % (oldmodule, branches, branch)
                 if not isdir(module, self.last_changed):
                     continue
