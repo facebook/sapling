@@ -136,6 +136,8 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.length = None
         for chunk in self.server.application(env, self._start_response):
             self._write(chunk)
+        if not self.sent_headers:
+            self.send_headers()
 
     def send_headers(self):
         if not self.saved_status:
