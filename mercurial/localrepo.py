@@ -1386,11 +1386,6 @@ class localrepository(object):
         changes to stay in memory (waiting for the next unlock), or vanish
         completely.
         '''
-        # It simplifies the logic around updating the branchheads cache if we
-        # only have to consider the effect of the stripped revisions and not
-        # revisions missing because the cache is out-of-date.
-        branchmap.updatecache(self)
-
         # When using the same lock to commit and strip, the phasecache is left
         # dirty after committing. Then when we strip, the repo is invalidated,
         # causing those changes to disappear.
@@ -1421,9 +1416,10 @@ class localrepository(object):
             self._phasecache.filterunknown(self)
             self._phasecache.write()
 
-        # update branchcache information likely invalidated by the strip.
-        # We rely on branchcache collaboration for this call to be fast
-        branchmap.updatecache(self)
+        # update the 'served' branch cache to help read only server process
+        # Thanks to branchcach collaboration this is done from the nearest
+        # filtered subset and it is expected to be fast.
+        branchmap.updatecache(self.filtered('served'))
 
         # Ensure the persistent tag cache is updated.  Doing it now
         # means that the tag cache only has to worry about destroyed
