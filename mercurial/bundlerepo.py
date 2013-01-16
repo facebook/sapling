@@ -25,8 +25,7 @@ class bundlerevlog(revlog.revlog):
         # (start).
         #
         # basemap is indexed with revisions coming from the bundle, and it
-        # maps to the corresponding node that is the base of the corresponding
-        # delta.
+        # maps to the node that is the base of the corresponding delta.
         #
         # To differentiate a rev in the bundle from a rev in the revlog, we
         # check revision against basemap.
@@ -37,7 +36,7 @@ class bundlerevlog(revlog.revlog):
         n = len(self)
         self.disktiprev = n - 1
         chain = None
-        self.bundlenodes = []
+        self.bundlerevs = set() # used by 'bundle()' revset expression
         while True:
             chunkdata = bundle.deltachunk(chain)
             if not chunkdata:
@@ -53,10 +52,10 @@ class bundlerevlog(revlog.revlog):
             start = bundle.tell() - size
 
             link = linkmapper(cs)
-            self.bundlenodes.append(node)
             if node in self.nodemap:
                 # this can happen if two branches make the same change
                 chain = node
+                self.bundlerevs.add(self.nodemap[node])
                 continue
 
             for p in (p1, p2):
@@ -69,6 +68,7 @@ class bundlerevlog(revlog.revlog):
             self.basemap[n] = deltabase
             self.index.insert(-1, e)
             self.nodemap[node] = n
+            self.bundlerevs.add(n)
             chain = node
             n += 1
 

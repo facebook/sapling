@@ -450,11 +450,10 @@ def bundle(repo, subset, x):
     Bundle must be specified by the -R option."""
 
     try:
-        bundlenodes = repo.changelog.bundlenodes
+        bundlerevs = repo.changelog.bundlerevs
     except AttributeError:
         raise util.Abort(_("no bundle provided - specify with -R"))
-    revs = set(repo[n].rev() for n in bundlenodes)
-    return [r for r in subset if r in revs]
+    return [r for r in subset if r in bundlerevs]
 
 def checkstatus(repo, subset, pat, field):
     m = None
