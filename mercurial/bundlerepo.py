@@ -109,17 +109,16 @@ class bundlerevlog(revlog.revlog):
 
         text = None
         chain = []
-        iter_node = node
+        iterrev = rev
         # reconstruct the revision if it is from a changegroup
-        while rev in self.basemap:
-            if self._cache and self._cache[0] == iter_node:
+        while iterrev in self.basemap:
+            if self._cache and self._cache[1] == iterrev:
                 text = self._cache[2]
                 break
-            chain.append(rev)
-            iter_node = self.basemap[rev]
-            rev = self.rev(iter_node)
+            chain.append(iterrev)
+            iterrev = self.rev(self.basemap[iterrev])
         if text is None:
-            text = revlog.revlog.revision(self, iter_node)
+            text = revlog.revlog.revision(self, iterrev)
 
         while chain:
             delta = self._chunk(chain.pop())
@@ -128,9 +127,9 @@ class bundlerevlog(revlog.revlog):
         p1, p2 = self.parents(node)
         if node != revlog.hash(text, p1, p2):
             raise error.RevlogError(_("integrity check failed on %s:%d")
-                                     % (self.datafile, self.rev(node)))
+                                     % (self.datafile, rev))
 
-        self._cache = (node, self.rev(node), text)
+        self._cache = (node, rev, text)
         return text
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
