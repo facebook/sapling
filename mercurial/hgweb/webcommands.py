@@ -194,9 +194,13 @@ def changelog(web, req, tmpl, shortlog=False):
         except error.RepoError:
             return _search(web, req, tmpl) # XXX redirect to 404 page?
 
-    def changelist(limit=0, **map):
+    def changelist(latestonly, **map):
         l = [] # build a list in forward order for efficiency
-        for i in xrange(start, end):
+        if latestonly:
+            revs = (end - 1,)
+        else:
+            revs = xrange(start, end)
+        for i in revs:
             ctx = web.repo[i]
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
@@ -217,9 +221,6 @@ def changelog(web, req, tmpl, shortlog=False):
                       "inbranch": webutil.nodeinbranch(web.repo, ctx),
                       "branches": webutil.nodebranchdict(web.repo, ctx)
                      })
-        if limit > 0:
-            l = l[-limit:]
-
         for e in reversed(l):
             yield e
 
@@ -245,8 +246,8 @@ def changelog(web, req, tmpl, shortlog=False):
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
                 node=ctx.hex(), rev=pos, changesets=count,
-                entries=lambda **x: changelist(limit=0,**x),
-                latestentry=lambda **x: changelist(limit=1,**x),
+                entries=lambda **x: changelist(latestonly=False, **x),
+                latestentry=lambda **x: changelist(latestonly=True, **x),
                 archives=web.archivelist("tip"), revcount=revcount,
                 morevars=morevars, lessvars=lessvars)
 
@@ -401,14 +402,13 @@ def tags(web, req, tmpl):
     i = list(reversed(web.repo.tagslist()))
     parity = paritygen(web.stripecount)
 
-    def entries(notip=False, limit=0, **map):
-        count = 0
-        for k, n in i:
-            if notip and k == "tip":
-                continue
-            if limit > 0 and count >= limit:
-                continue
-            count = count + 1
+    def entries(notip, latestonly, **map):
+        t = i
+        if notip:
+            t = [(k, n) for k, n in i if k != "tip"]
+        if latestonly:
+            t = t[:1]
+        for k, n in t:
             yield {"parity": parity.next(),
                    "tag": k,
                    "date": web.repo[n].date(),
@@ -416,20 +416,20 @@ def tags(web, req, tmpl):
 
     return tmpl("tags",
                 node=hex(web.repo.changelog.tip()),
-                entries=lambda **x: entries(False, 0, **x),
-                entriesnotip=lambda **x: entries(True, 0, **x),
-                latestentry=lambda **x: entries(True, 1, **x))
+                entries=lambda **x: entries(False, False, **x),
+                entriesnotip=lambda **x: entries(True, False, **x),
+                latestentry=lambda **x: entries(True, True, **x))
 
 def bookmarks(web, req, tmpl):
     i = web.repo._bookmarks.items()
     parity = paritygen(web.stripecount)
 
-    def entries(limit=0, **map):
-        count = 0
-        for k, n in sorted(i):
-            if limit > 0 and count >= limit:
-                continue
-            count = count + 1
+    def entries(latestonly, **map):
+        if latestonly:
+            t = [min(i)]
+        else:
+            t = sorted(i)
+        for k, n in t:
             yield {"parity": parity.next(),
                    "bookmark": k,
                    "date": web.repo[n].date(),
@@ -437,8 +437,8 @@ def bookmarks(web, req, tmpl):
 
     return tmpl("bookmarks",
                 node=hex(web.repo.changelog.tip()),
-                entries=lambda **x: entries(0, **x),
-                latestentry=lambda **x: entries(1, **x))
+                entries=lambda **x: entries(latestonly=False, **x),
+                latestentry=lambda **x: entries(latestonly=True, **x))
 
 def branches(web, req, tmpl):
     tips = []
@@ -741,11 +741,15 @@ def filelog(web, req, tmpl):
     end = min(count, start + revcount) # last rev on this page
     parity = paritygen(web.stripecount, offset=start - end)
 
-    def entries(limit=0, **map):
+    def entries(latestonly, **map):
         l = []
 
         repo = web.repo
-        for i in xrange(start, end):
+        if latestonly:
+            revs = (end - 1,)
+        else:
+            revs = xrange(start, end)
+        for i in revs:
             iterfctx = fctx.filectx(i)
 
             l.append({"parity": parity.next(),
@@ -764,18 +768,14 @@ def filelog(web, req, tmpl):
                       "branch": webutil.nodebranchnodefault(iterfctx),
                       "inbranch": webutil.nodeinbranch(repo, iterfctx),
                       "branches": webutil.nodebranchdict(repo, iterfctx)})
-
-        if limit > 0:
-            l = l[-limit:]
-
         for e in reversed(l):
             yield e
 
     nodefunc = lambda x: fctx.filectx(fileid=x)
     nav = webutil.revnavgen(end - 1, revcount, count, nodefunc)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
-                entries=lambda **x: entries(limit=0, **x),
-                latestentry=lambda **x: entries(limit=1, **x),
+                entries=lambda **x: entries(latestonly=False, **x),
+                latestentry=lambda **x: entries(latestonly=True, **x),
                 revcount=revcount, morevars=morevars, lessvars=lessvars)
 
 def archive(web, req, tmpl):
