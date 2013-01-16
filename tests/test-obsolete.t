@@ -643,16 +643,52 @@ Do not warn about new head when the new head is a successors of a remote one
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
+check hgweb does not explode
+====================================
+
+  $ hg unbundle $TESTDIR/bundles/hgweb+obs.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 62 changesets with 63 changes to 9 files (+60 heads)
+  (run 'hg heads .' to see heads, 'hg merge' to merge)
+  $ for node in `hg log -r 'desc(babar_)' --template '{node}\n'`;
+  > do
+  >    hg debugobsolete $node
+  > done
+  $ hg up tip
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+#check changelog view
+#
+#  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'shortlog/'
+#  200 Script output follows
+
+#check graph view
+#
+#  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'graph'
+#  200 Script output follows
+
+check filelog view
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'
+  200 Script output follows
+
+  $ kill `cat hg.pid`
+
 Checking _enable=False warning if obsolete marker exists
 
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "obs=!" >> $HGRCPATH
   $ hg log -r tip
-  obsolete feature not enabled but 8 markers found!
-  changeset:   6:3de5eca88c00
+  obsolete feature not enabled but 68 markers found!
+  changeset:   68:c15e9edfca13
   tag:         tip
-  parent:      3:6f9641995072
+  parent:      7:50c51b361e60
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     add obsolete_e
+  summary:     add celestine
   
