@@ -176,6 +176,22 @@ editcomment = _("""# Edit history between %s and %s
 #
 """)
 
+def commitfuncfor(repo, src):
+    """Build a commit function for the replacement of <src>
+
+    This function ensure we apply the same treatement to all changesets.
+
+    No such treatment is done yet.
+
+    Note that fold have its own separated logic because its handling is a bit
+    different and not easily factored out of the fold method.
+    """
+    def commitfunc(**kwargs):
+        return repo.commit(**kwargs)
+    return commitfunc
+
+
+
 def applychanges(ui, repo, ctx, opts):
     """Merge changeset from ctx (only) in the current working directory"""
     wcpar = repo.dirstate.parents()[0]
@@ -279,8 +295,9 @@ def pick(ui, repo, ctx, ha, opts):
         raise util.Abort(_('Fix up the change and run '
                            'hg histedit --continue'))
     # drop the second merge parent
-    n = repo.commit(text=oldctx.description(), user=oldctx.user(),
-                    date=oldctx.date(), extra=oldctx.extra())
+    commit = commitfuncfor(repo, oldctx)
+    n = commit(text=oldctx.description(), user=oldctx.user(),
+               date=oldctx.date(), extra=oldctx.extra())
     if n is None:
         ui.warn(_('%s: empty changeset\n')
                      % node.hex(ha))
@@ -356,8 +373,9 @@ def message(ui, repo, ctx, ha, opts):
                            'hg histedit --continue'))
     message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
-    new = repo.commit(text=message, user=oldctx.user(), date=oldctx.date(),
-                      extra=oldctx.extra())
+    commit = commitfuncfor(repo, oldctx)
+    new = commit(text=message, user=oldctx.user(), date=oldctx.date(),
+                 extra=oldctx.extra())
     newctx = repo[new]
     if oldctx.node() != newctx.node():
         return newctx, [(oldctx.node(), (new,))]
@@ -558,9 +576,10 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
             editor = cmdutil.commitforceeditor
         else:
             editor = False
-        new = repo.commit(text=message, user=ctx.user(),
-                          date=ctx.date(), extra=ctx.extra(),
-                          editor=editor)
+        commit = commitfuncfor(repo, ctx)
+        new = commit(text=message, user=ctx.user(),
+                     date=ctx.date(), extra=ctx.extra(),
+                     editor=editor)
         if new is not None:
             newchildren.append(new)
 
@@ -722,7 +741,7 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
     moves = []
     for bk, old in sorted(repo._bookmarks.iteritems()):
         if old == oldtopmost:
-            # special case ensure bookmark stay on tip. 
+            # special case ensure bookmark stay on tip.
             #
             # This is arguably a feature and we may only want that for the
             # active bookmark. But the behavior is kept compatible with the old
