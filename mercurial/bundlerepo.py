@@ -130,11 +130,7 @@ class bundlerevlog(revlog.revlog):
             delta = self._chunk(chain.pop())
             text = mdiff.patches(text, [delta])
 
-        p1, p2 = self.parents(node)
-        if node != revlog.hash(text, p1, p2):
-            raise error.RevlogError(_("integrity check failed on %s:%d")
-                                     % (self.datafile, rev))
-
+        self._checkhash(text, node, rev)
         self._cache = (node, rev, text)
         return text
 
