@@ -306,3 +306,26 @@ Test that rewriting leaving instability behind is allowed
   
 
 
+Test multiple root handling
+------------------------------------
+
+  $ hg rebase --dest 4 --rev '7+11+9'
+  $ hg log -G
+  @  14:00891d85fcfc C
+  |
+  | o  13:102b4c1d889b D
+  |/
+  | o  12:bfe264faf697 H
+  |/
+  | o  10:7c6027df6a99 B
+  | |
+  | x  7:02de42196ebe H
+  | |
+  +---o  6:eea13746799a G
+  | |/
+  | o  5:24b6387c8c8c F
+  | |
+  o |  4:9520eea781bc E
+  |/
+  o  0:cd010b8cd998 A
+  

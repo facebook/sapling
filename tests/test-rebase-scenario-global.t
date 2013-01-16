@@ -542,6 +542,108 @@ We would expect heads are I, F if it was supported
   $ hg clone -q -u . ah ah6
   $ cd ah6
   $ hg rebase -r '(4+6)::' -d 1
-  abort: can't rebase multiple roots
-  [255]
+  saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-backup.hg (glob)
+  $ hg tglog
+  @  8: 'I'
+  |
+  o  7: 'H'
+  |
+  o  6: 'G'
+  |
+  | o  5: 'F'
+  | |
+  | o  4: 'E'
+  |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  o |  1: 'B'
+  |/
+  o  0: 'A'
+  
   $ cd ..
+
+More complexe rebase with multiple roots
+each root have a different common ancestor with the destination and this is a detach
+
+(setup)
+
+  $ hg clone -q -u . a a8
+  $ cd a8
+  $ echo I > I
+  $ hg add I
+  $ hg commit -m I
+  $ hg up 4
+  1 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ echo I > J
+  $ hg add J
+  $ hg commit -m J
+  created new head
+  $ echo I > K
+  $ hg add K
+  $ hg commit -m K
+  $ hg tglog
+  @  10: 'K'
+  |
+  o  9: 'J'
+  |
+  | o  8: 'I'
+  | |
+  | o  7: 'H'
+  | |
+  +---o  6: 'G'
+  | |/
+  | o  5: 'F'
+  | |
+  o |  4: 'E'
+  |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  
+(actual test)
+
+  $ hg rebase --dest 'desc(G)' --rev 'desc(K) + desc(I)'
+  saved backup bundle to $TESTTMP/a8/.hg/strip-backup/23a4ace37988-backup.hg (glob)
+  $ hg log --rev 'children(desc(G))'
+  changeset:   9:adb617877056
+  parent:      6:eea13746799a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     I
+  
+  changeset:   10:882431a34a0e
+  tag:         tip
+  parent:      6:eea13746799a
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     K
+  
+  $ hg tglog
+  @  10: 'K'
+  |
+  | o  9: 'I'
+  |/
+  | o  8: 'J'
+  | |
+  | | o  7: 'H'
+  | | |
+  o---+  6: 'G'
+  |/ /
+  | o  5: 'F'
+  | |
+  o |  4: 'E'
+  |/
+  | o  3: 'D'
+  | |
+  | o  2: 'C'
+  | |
+  | o  1: 'B'
+  |/
+  o  0: 'A'
+  

@@ -574,9 +574,9 @@ def abort(repo, originalwd, target, state):
         merge.update(repo, repo[originalwd].rev(), False, True, False)
         rebased = filter(lambda x: x > -1 and x != target, state.values())
         if rebased:
-            strippoint = min(rebased)
+            strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
             # no backup of rebased cset versions needed
-            repair.strip(repo.ui, repo, repo[strippoint].node())
+            repair.strip(repo.ui, repo, strippoints)
         clearstatus(repo)
         repo.ui.warn(_('rebase aborted\n'))
         return 0
@@ -599,65 +599,65 @@ def buildstate(repo, dest, rebaseset, collapse):
     roots = list(repo.set('roots(%ld)', rebaseset))
     if not roots:
         raise util.Abort(_('no matching revisions'))
-    if len(roots) > 1:
-        raise util.Abort(_("can't rebase multiple roots"))
-    root = roots[0]
+    roots.sort()
+    state = {}
+    detachset = set()
+    for root in roots:
+        commonbase = root.ancestor(dest)
+        if commonbase == root:
+            raise util.Abort(_('source is ancestor of destination'))
+        if commonbase == dest:
+            samebranch = root.branch() == dest.branch()
+            if not collapse and samebranch and root in dest.children():
+                repo.ui.debug('source is a child of destination\n')
+                return None
 
-    commonbase = root.ancestor(dest)
-    if commonbase == root:
-        raise util.Abort(_('source is ancestor of destination'))
-    if commonbase == dest:
-        samebranch = root.branch() == dest.branch()
-        if not collapse and samebranch and root in dest.children():
-            repo.ui.debug('source is a child of destination\n')
-            return None
-
-    repo.ui.debug('rebase onto %d starting from %d\n' % (dest, root))
-    state = dict.fromkeys(rebaseset, nullrev)
-    # Rebase tries to turn <dest> into a parent of <root> while
-    # preserving the number of parents of rebased changesets:
-    #
-    # - A changeset with a single parent will always be rebased as a
-    #   changeset with a single parent.
-    #
-    # - A merge will be rebased as merge unless its parents are both
-    #   ancestors of <dest> or are themselves in the rebased set and
-    #   pruned while rebased.
-    #
-    # If one parent of <root> is an ancestor of <dest>, the rebased
-    # version of this parent will be <dest>. This is always true with
-    # --base option.
-    #
-    # Otherwise, we need to *replace* the original parents with
-    # <dest>. This "detaches" the rebased set from its former location
-    # and rebases it onto <dest>. Changes introduced by ancestors of
-    # <root> not common with <dest> (the detachset, marked as
-    # nullmerge) are "removed" from the rebased changesets.
-    #
-    # - If <root> has a single parent, set it to <dest>.
-    #
-    # - If <root> is a merge, we cannot decide which parent to
-    #   replace, the rebase operation is not clearly defined.
-    #
-    # The table below sums up this behavior:
-    #
-    # +--------------------+----------------------+-------------------------+
-    # |                    |     one parent       |  merge                  |
-    # +--------------------+----------------------+-------------------------+
-    # | parent in ::<dest> | new parent is <dest> | parents in ::<dest> are |
-    # |                    |                      | remapped to <dest>      |
-    # +--------------------+----------------------+-------------------------+
-    # | unrelated source   | new parent is <dest> | ambiguous, abort        |
-    # +--------------------+----------------------+-------------------------+
-    #
-    # The actual abort is handled by `defineparents`
-    if len(root.parents()) <= 1:
-        # ancestors of <root> not ancestors of <dest>
-        detachset = repo.changelog.findmissingrevs([commonbase.rev()],
-                                                   [root.rev()])
-        state.update(dict.fromkeys(detachset, nullmerge))
-        # detachset can have root, and we definitely want to rebase that
-        state[root.rev()] = nullrev
+        repo.ui.debug('rebase onto %d starting from %s\n' % (dest, roots))
+        state.update(dict.fromkeys(rebaseset, nullrev))
+        # Rebase tries to turn <dest> into a parent of <root> while
+        # preserving the number of parents of rebased changesets:
+        #
+        # - A changeset with a single parent will always be rebased as a
+        #   changeset with a single parent.
+        #
+        # - A merge will be rebased as merge unless its parents are both
+        #   ancestors of <dest> or are themselves in the rebased set and
+        #   pruned while rebased.
+        #
+        # If one parent of <root> is an ancestor of <dest>, the rebased
+        # version of this parent will be <dest>. This is always true with
+        # --base option.
+        #
+        # Otherwise, we need to *replace* the original parents with
+        # <dest>. This "detaches" the rebased set from its former location
+        # and rebases it onto <dest>. Changes introduced by ancestors of
+        # <root> not common with <dest> (the detachset, marked as
+        # nullmerge) are "removed" from the rebased changesets.
+        #
+        # - If <root> has a single parent, set it to <dest>.
+        #
+        # - If <root> is a merge, we cannot decide which parent to
+        #   replace, the rebase operation is not clearly defined.
+        #
+        # The table below sums up this behavior:
+        #
+        # +------------------+----------------------+-------------------------+
+        # |                  |     one parent       |  merge                  |
+        # +------------------+----------------------+-------------------------+
+        # | parent in        | new parent is <dest> | parents in ::<dest> are |
+        # | ::<dest>         |                      | remapped to <dest>      |
+        # +------------------+----------------------+-------------------------+
+        # | unrelated source | new parent is <dest> | ambiguous, abort        |
+        # +------------------+----------------------+-------------------------+
+        #
+        # The actual abort is handled by `defineparents`
+        if len(root.parents()) <= 1:
+            # ancestors of <root> not ancestors of <dest>
+            detachset.update(repo.changelog.findmissingrevs([commonbase.rev()],
+                                                            [root.rev()]))
+    for r in detachset:
+        if r not in state:
+            state[r] = nullmerge
     return repo['.'].rev(), dest.rev(), state
 
 def clearrebased(ui, repo, state, collapsedas=None):
@@ -677,12 +677,16 @@ def clearrebased(ui, repo, state, collapsedas=None):
     else:
         rebased = [rev for rev in state if state[rev] != nullmerge]
         if rebased:
-            if set(repo.changelog.descendants([min(rebased)])) - set(state):
-                ui.warn(_("warning: new changesets detected "
-                          "on source branch, not stripping\n"))
-            else:
+            stripped = []
+            for root in repo.set('roots(%ld)', rebased):
+                if set(repo.changelog.descendants([root.rev()])) - set(state):
+                    ui.warn(_("warning: new changesets detected "
+                              "on source branch, not stripping\n"))
+                else:
+                    stripped.append(root.node())
+            if stripped:
                 # backup the old csets by default
-                repair.strip(ui, repo, repo[min(rebased)].node(), "all")
+                repair.strip(ui, repo, stripped, "all")
 
 
 def pullrebase(orig, ui, repo, *args, **opts):
