@@ -20,14 +20,16 @@ import localrepo, changelog, manifest, filelog, revlog, error
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle, linkmapper):
         # How it works:
-        # to retrieve a revision, we need to know the offset of
-        # the revision in the bundle (an unbundle object).
+        # To retrieve a revision, we need to know the offset of the revision in
+        # the bundle (an unbundle object). We store this offset in the index
+        # (start).
         #
-        # We store this offset in the index (start), to differentiate a
-        # rev in the bundle and from a rev in the revlog, we check
-        # len(index[r]). If the tuple is bigger than 7, it is a bundle
-        # (it is bigger since we store the node to which the delta is)
+        # basemap is indexed with revisions coming from the bundle, and it
+        # maps to the corresponding node that is the base of the corresponding
+        # delta.
         #
+        # To differentiate a rev in the bundle from a rev in the revlog, we
+        # check revision against basemap.
         opener = scmutil.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
@@ -385,4 +387,3 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
         other.close()
 
     return (localrepo, csets, cleanup)
-
