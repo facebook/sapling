@@ -488,9 +488,8 @@ ride of)
   | |
 
 
-Test that amend does not make it easy to create obsoletescence cycle
+Test that amend does not make it easy to create obsolescence cycle
 ---------------------------------------------------------------------
-
 
   $ hg id -r 14 --hidden
   b650e6ee8614 (a)
