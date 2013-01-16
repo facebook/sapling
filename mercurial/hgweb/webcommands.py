@@ -857,8 +857,11 @@ def graph(web, req, tmpl):
     downrev = max(0, rev - revcount)
     changenav = webutil.revnav(web.repo).gen(pos, revcount, count)
 
-    dag = graphmod.dagwalker(web.repo, range(start, end)[::-1])
-    tree = list(graphmod.colored(dag, web.repo))
+    tree = []
+    if start < end:
+        revs = list(web.repo.changelog.revs(end - 1, start))
+        dag = graphmod.dagwalker(web.repo, revs)
+        tree = list(graphmod.colored(dag, web.repo))
 
     def getcolumns(tree):
         cols = 0

@@ -684,15 +684,15 @@ check changelog view
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'shortlog/'
   200 Script output follows
 
-#check graph view
-#
-#  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'graph'
-#  200 Script output follows
+check graph view
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'graph'
+  200 Script output follows
+
 check filelog view
 
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'
   200 Script output follows
-
   $ kill `cat hg.pid`
 
 Checking _enable=False warning if obsolete marker exists
