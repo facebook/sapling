@@ -255,8 +255,6 @@ class bundlerepository(localrepo.localrepository):
                     if not c:
                         break
 
-        if f[0] == '/':
-            f = f[1:]
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
             return bundlefilelog(self.sopener, f, self.bundle,
