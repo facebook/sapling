@@ -34,7 +34,6 @@ class bundlerevlog(revlog.revlog):
         self.bundle = bundle
         self.basemap = {}
         n = len(self)
-        self.disktiprev = n - 1
         chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
         while True:
