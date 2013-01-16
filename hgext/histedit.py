@@ -186,11 +186,17 @@ def commitfuncfor(repo, src):
     Note that fold have its own separated logic because its handling is a bit
     different and not easily factored out of the fold method.
     """
+    phasemin = src.phase()
     def commitfunc(**kwargs):
-        extra = kwargs.get('extra', {}).copy()
-        extra['histedit_source'] = src.hex()
-        kwargs['extra'] = extra
-        return repo.commit(**kwargs)
+        phasebackup = repo.ui.backupconfig('phases', 'new-commit')
+        try:
+            repo.ui.setconfig('phases', 'new-commit', phasemin)
+            extra = kwargs.get('extra', {}).copy()
+            extra['histedit_source'] = src.hex()
+            kwargs['extra'] = extra
+            return repo.commit(**kwargs)
+        finally:
+            repo.ui.restoreconfig(phasebackup)
     return commitfunc
 
 
@@ -357,7 +363,13 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     #       This is sufficient to solve issue3681 anyway
     extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
     commitopts['extra'] = extra
-    n = collapse(repo, ctx, repo[newnode], commitopts)
+    phasebackup = repo.ui.backupconfig('phases', 'new-commit')
+    try:
+        phasemin = max(ctx.phase(), oldctx.phase())
+        repo.ui.setconfig('phases', 'new-commit', phasemin)
+        n = collapse(repo, ctx, repo[newnode], commitopts)
+    finally:
+        repo.ui.restoreconfig(phasebackup)
     if n is None:
         return ctx, []
     hg.update(repo, n)
