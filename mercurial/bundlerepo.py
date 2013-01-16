@@ -71,29 +71,23 @@ class bundlerevlog(revlog.revlog):
             chain = node
             n += 1
 
-    def inbundle(self, rev):
-        """is rev from the bundle"""
-        if rev < 0:
-            return False
-        return rev in self.basemap
-
     def _chunk(self, rev):
         # Warning: in case of bundle, the diff is against self.basemap,
         # not against rev - 1
         # XXX: could use some caching
-        if not self.inbundle(rev):
+        if rev not in self.basemap:
             return revlog.revlog._chunk(self, rev)
         self.bundle.seek(self.start(rev))
         return self.bundle.read(self.length(rev))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if self.inbundle(rev1) and self.inbundle(rev2):
+        if rev1 in self.basemap and rev2 in self.basemap:
             # hot path for bundle
             revb = self.rev(self.basemap[rev2])
             if revb == rev1:
                 return self._chunk(rev2)
-        elif not self.inbundle(rev1) and not self.inbundle(rev2):
+        elif rev1 not in self.basemap and rev2 not in self.basemap:
             return revlog.revlog.revdiff(self, rev1, rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
@@ -117,7 +111,7 @@ class bundlerevlog(revlog.revlog):
         chain = []
         iter_node = node
         # reconstruct the revision if it is from a changegroup
-        while self.inbundle(rev):
+        while rev in self.basemap:
             if self._cache and self._cache[0] == iter_node:
                 text = self._cache[2]
                 break
