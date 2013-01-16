@@ -174,13 +174,13 @@ just continue this time
 
 log after edit
   $ hg log --graph
-  @  changeset:   6:8e082d1a72ea
+  @  changeset:   6:7efe1373e4bc
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:13b04d775b81
+  o  changeset:   5:e334d87a1e55
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -255,13 +255,13 @@ second edit also fails, but just continue
 
 post message fix
   $ hg log --graph
-  @  changeset:   6:f14da722aa4b
+  @  changeset:   6:521c4c32c5e2
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:382ff1adf0ed
+  o  changeset:   5:f4f088e8adf6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     pick 65a9a84f33fd 3 c

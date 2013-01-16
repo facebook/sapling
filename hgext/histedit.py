@@ -181,12 +181,15 @@ def commitfuncfor(repo, src):
 
     This function ensure we apply the same treatement to all changesets.
 
-    No such treatment is done yet.
+    - Add a 'histedit_source' entry in extra.
 
     Note that fold have its own separated logic because its handling is a bit
     different and not easily factored out of the fold method.
     """
     def commitfunc(**kwargs):
+        extra = kwargs.get('extra', {}).copy()
+        extra['histedit_source'] = src.hex()
+        kwargs['extra'] = extra
         return repo.commit(**kwargs)
     return commitfunc
 
@@ -270,7 +273,7 @@ def collapse(repo, first, last, commitopts):
         message = first.description()
     user = commitopts.get('user')
     date = commitopts.get('date')
-    extra = first.extra()
+    extra = commitopts.get('extra')
 
     parents = (first.p1().node(), first.p2().node())
     new = context.memctx(repo,
@@ -348,6 +351,12 @@ def finishfold(ui, repo, ctx, oldctx, newnode, opts, internalchanges):
     commitopts['message'] = newmessage
     # date
     commitopts['date'] = max(ctx.date(), oldctx.date())
+    extra = ctx.extra().copy()
+    # histedit_source
+    # note: ctx is likely a temporary commit but that the best we can do here
+    #       This is sufficient to solve issue3681 anyway
+    extra['histedit_source'] = '%s,%s' % (ctx.hex(), oldctx.hex())
+    commitopts['extra'] = extra
     n = collapse(repo, ctx, repo[newnode], commitopts)
     if n is None:
         return ctx, []

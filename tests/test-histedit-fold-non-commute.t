@@ -136,13 +136,13 @@ just continue this time
 
 log after edit
   $ hg log --graph
-  @  changeset:   5:2696a654c663
+  @  changeset:   5:d9cf42e54966
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   4:ec2c1cf833a8
+  o  changeset:   4:10486af2e984
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d

@@ -88,13 +88,13 @@ commit, then edit the revision
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
-  @  changeset:   6:bf757c081cd0
+  @  changeset:   6:b5f70786f9b0
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:d6b15fed32d4
+  o  changeset:   5:a5e1ba2f7afb
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     foobaz
@@ -128,8 +128,26 @@ commit, then edit the revision
   $ hg cat e
   a
 
+check histedit_source
+
+  $ hg log --debug --rev 5
+  changeset:   5:a5e1ba2f7afb899ef1581cea528fd885d2fca70d
+  phase:       draft
+  parent:      4:1a60820cd1f6004a362aa622ebc47d59bc48eb34
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    5:5ad3be8791f39117565557781f5464363b918a45
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       e
+  extra:       branch=default
+  extra:       histedit_source=e860deea161a2f77de56603b340ebbb4536308ae
+  description:
+  foobaz
+  
+  
+
   $ cat > $EDITED <<EOF
-  > edit bf757c081cd0 f
+  > edit b5f70786f9b0 f
   > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -139,11 +157,13 @@ commit, then edit the revision
   A f
   $ HGEDITOR='true' hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-backup.hg (glob)
+
   $ hg status
 
 log after edit
   $ hg log --limit 1
-  changeset:   6:bf757c081cd0
+  changeset:   6:a107ee126658
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -160,7 +180,7 @@ say we'll change the message, but don't.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
-  changeset:   6:bf757c081cd0
+  changeset:   6:1fd3b2fe7754
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -169,18 +189,18 @@ say we'll change the message, but don't.
 
 modify the message
   $ cat > $EDITED <<EOF
-  > mess bf757c081cd0 f
+  > mess 1fd3b2fe7754 f
   > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
-  changeset:   6:0b16746f8e89
+  changeset:   6:5585e802ef99
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     mess bf757c081cd0 f
+  summary:     mess 1fd3b2fe7754 f
   
 
 rollback should not work after a histedit

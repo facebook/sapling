@@ -96,17 +96,19 @@ editing a changeset without any actual change would corrupt the repository
   When you are finished, run hg histedit --continue to resume.
   $ continueediting true "(leaving commit message unaltered)"
   % finalize changeset editing (leaving commit message unaltered)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 
 check state of working copy
   $ hg id
-  652413bf663e tip
+  794fe033d0a0 tip
 
   $ graphlog "log after history editing"
   % log after history editing
-  @  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  @  5 794fe033d0a030f8df77c5de945fca35c9181c30 "f"
   |
-  o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  o  4 04d2fab980779f332dec458cc944f28de8b43435 "e"
   |
   o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
@@ -152,12 +154,14 @@ check state of working copy
   When you are finished, run hg histedit --continue to resume.
   $ graphlog "log after first edit"
   % log after first edit
-  o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  @  6 e5ae3ca2f1ffdbd89ec41ebc273a231f7c3022f2 "d"
   |
-  o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
-  |
-  @  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |
+  | o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  | |
+  | o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  | |
+  | o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  |/
   o  2 177f92b773850b59254aa5e923436f921b55483b "c"
   |
   o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"

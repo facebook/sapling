@@ -84,30 +84,30 @@
   > pick 652413bf663e 5 f
   > EOF
   $ hg histedit 1 --commands commands.txt --verbose | grep histedit
-  histedit: moving bookmarks also-two from 177f92b77385 to d36c0562f908
-  histedit: moving bookmarks five from 652413bf663e to 0efacef7cb48
-  histedit: moving bookmarks four from e860deea161a to ae467701c500
-  histedit: moving bookmarks three from 055a42cdd887 to ae467701c500
-  histedit: moving bookmarks two from 177f92b77385 to d36c0562f908
+  histedit: moving bookmarks also-two from 177f92b77385 to b346ab9a313d
+  histedit: moving bookmarks five from 652413bf663e to cacdfd884a93
+  histedit: moving bookmarks four from e860deea161a to 59d9f330561f
+  histedit: moving bookmarks three from 055a42cdd887 to 59d9f330561f
+  histedit: moving bookmarks two from 177f92b77385 to b346ab9a313d
   histedit: moving bookmarks will-move-backwards from d2ae7f538514 to cb9a9f314b8b
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/d2ae7f538514-backup.hg (glob)
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/34a9919932c1-backup.hg (glob)
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/96e494a2d553-backup.hg (glob)
   $ hg log --graph
-  @  changeset:   3:0efacef7cb48
+  @  changeset:   3:cacdfd884a93
   |  bookmark:    five
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   2:ae467701c500
+  o  changeset:   2:59d9f330561f
   |  bookmark:    four
   |  bookmark:    three
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   1:d36c0562f908
+  o  changeset:   1:b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
   |  user:        test
@@ -121,11 +121,11 @@
      summary:     a
   
   $ HGEDITOR=cat hg histedit 1
-  pick d36c0562f908 1 c
-  pick ae467701c500 2 d
-  pick 0efacef7cb48 3 f
+  pick b346ab9a313d 1 c
+  pick 59d9f330561f 2 d
+  pick cacdfd884a93 3 f
   
-  # Edit history between d36c0562f908 and 0efacef7cb48
+  # Edit history between b346ab9a313d and cacdfd884a93
   #
   # Commands:
   #  p, pick = use commit
@@ -136,21 +136,21 @@
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > commands.txt << EOF
-  > pick d36c0562f908 1 c
-  > pick 0efacef7cb48 3 f
-  > pick ae467701c500 2 d
+  > pick b346ab9a313d 1 c
+  > pick cacdfd884a93 3 f
+  > pick 59d9f330561f 2 d
   > EOF
   $ hg histedit 1 --commands commands.txt --verbose | grep histedit
-  histedit: moving bookmarks five from 0efacef7cb48 to 1be9c35b4cb2
-  histedit: moving bookmarks four from ae467701c500 to 1be9c35b4cb2
-  histedit: moving bookmarks three from ae467701c500 to 1be9c35b4cb2
-  saved backup bundle to $TESTTMP/r/.hg/strip-backup/ae467701c500-backup.hg (glob)
+  histedit: moving bookmarks five from cacdfd884a93 to c04e50810e4b
+  histedit: moving bookmarks four from 59d9f330561f to c04e50810e4b
+  histedit: moving bookmarks three from 59d9f330561f to c04e50810e4b
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/59d9f330561f-backup.hg (glob)
 
 We expect 'five' to stay at tip, since the tipmost bookmark is most
 likely the useful signal.
 
   $ hg log --graph
-  @  changeset:   3:1be9c35b4cb2
+  @  changeset:   3:c04e50810e4b
   |  bookmark:    five
   |  bookmark:    four
   |  bookmark:    three
@@ -159,12 +159,12 @@ likely the useful signal.
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
   |
-  o  changeset:   2:7c044e3e33a9
+  o  changeset:   2:c13eb81022ca
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   1:d36c0562f908
+  o  changeset:   1:b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
   |  user:        test
