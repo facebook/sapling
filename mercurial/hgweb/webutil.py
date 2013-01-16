@@ -41,23 +41,24 @@ def _navseq(step, firststep=None):
 
 class revnav(object):
 
-    def __init__(self, nodefunc):
+    def __init__(self, repo):
         """Navigation generation object
 
-        :nodefun: factory for a changectx from a revision
+        :repo: repo object we generate nav for
         """
-        self.nodefunc = nodefunc
+        # used for hex generation
+        self._revlog = repo.changelog
 
     def __nonzero__(self):
         """return True if any revision to navigate over"""
         try:
-            self.nodefunc(0)
+            self._revlog.node(0)
             return True
         except error.RepoError:
             return False
 
     def hex(self, rev):
-        return self.nodefunc(rev).hex()
+        return hex(self._revlog.node(rev))
 
     def gen(self, pos, pagelen, limit):
         """computes label and revision id for navigation link
@@ -94,7 +95,21 @@ class revnav(object):
                  'after':  lambda **map: (data(i) for i in navafter)},)
 
 class filerevnav(revnav):
-    pass
+
+    def __init__(self, repo, path):
+        """Navigation generation object
+
+        :repo: repo object we generate nav for
+        :path: path of the file we generate nav for
+        """
+        # used for iteration
+        self._changelog = repo.unfiltered().changelog
+        # used for hex generation
+        self._revlog = repo.file(path)
+
+    def hex(self, rev):
+        return hex(self._changelog.node(self._revlog.linkrev(rev)))
+
 
 def _siblings(siblings=[], hiderev=None):
     siblings = [s for s in siblings if s.node() != nullid]
