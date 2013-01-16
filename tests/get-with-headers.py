@@ -16,6 +16,10 @@ twice = False
 if '--twice' in sys.argv:
     sys.argv.remove('--twice')
     twice = True
+headeronly = False
+if '--headeronly' in sys.argv:
+    sys.argv.remove('--headeronly')
+    headeronly = True
 
 reasons = {'Not modified': 'Not Modified'} # python 2.4
 
@@ -37,13 +41,13 @@ def request(host, path, show):
     for h in [h.lower() for h in show]:
         if response.getheader(h, None) is not None:
             print "%s: %s" % (h, response.getheader(h))
+    if not headeronly:
+        print
+        data = response.read()
+        sys.stdout.write(data)
 
-    print
-    data = response.read()
-    sys.stdout.write(data)
-
-    if twice and response.getheader('ETag', None):
-        tag = response.getheader('ETag')
+        if twice and response.getheader('ETag', None):
+            tag = response.getheader('ETag')
 
     return response.status
 
