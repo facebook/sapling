@@ -14,6 +14,7 @@ Enable obsolete
   > publish=False
   > [extensions]'
   > histedit=
+  > rebase=
   > 
   > obs=${TESTTMP}/obs.py
   > EOF
@@ -148,8 +149,25 @@ Test that rewriting leaving instability behind is allowed
 
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg phase --force --draft .
+  $ hg ph --force --draft '.'
   $ hg log -r 'children(.)'
   9:c13eb81022ca f (no-eol)
-  $ hg histedit -r '.'
+  $ cat > commands.txt <<EOF
+  > edit b346ab9a313d 6 c
+  > EOF
+  $ hg histedit -r '.' --commands commands.txt
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding c
+  abort: Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+  [255]
+  $ echo c >> c
+  $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg log -r 'unstable()'
+  9:c13eb81022ca f (no-eol)
+
+stabilise
+
+  $ hg rebase  -r 'unstable()' -d .
