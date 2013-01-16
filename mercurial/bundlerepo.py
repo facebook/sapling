@@ -76,10 +76,9 @@ class bundlerevlog(revlog.revlog):
         if rev < 0:
             return False
         return rev in self.basemap
-    def bundlebase(self, rev):
-        return self.basemap[rev]
+
     def _chunk(self, rev):
-        # Warning: in case of bundle, the diff is against bundlebase,
+        # Warning: in case of bundle, the diff is against self.basemap,
         # not against rev - 1
         # XXX: could use some caching
         if not self.inbundle(rev):
@@ -91,14 +90,14 @@ class bundlerevlog(revlog.revlog):
         """return or calculate a delta between two revisions"""
         if self.inbundle(rev1) and self.inbundle(rev2):
             # hot path for bundle
-            revb = self.rev(self.bundlebase(rev2))
+            revb = self.rev(self.basemap[rev2])
             if revb == rev1:
                 return self._chunk(rev2)
         elif not self.inbundle(rev1) and not self.inbundle(rev2):
             return revlog.revlog.revdiff(self, rev1, rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
-                         self.revision(self.node(rev2)))
+                              self.revision(self.node(rev2)))
 
     def revision(self, nodeorrev):
         """return an uncompressed revision of a given node or revision
@@ -123,7 +122,7 @@ class bundlerevlog(revlog.revlog):
                 text = self._cache[2]
                 break
             chain.append(rev)
-            iter_node = self.bundlebase(rev)
+            iter_node = self.basemap[rev]
             rev = self.rev(iter_node)
         if text is None:
             text = revlog.revlog.revision(self, iter_node)
