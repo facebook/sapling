@@ -25,14 +25,14 @@ class bundlerevlog(revlog.revlog):
         # (start).
         #
         # basemap is indexed with revisions coming from the bundle, and it
-        # maps to the node that is the base of the corresponding delta.
+        # maps to the revision that is the base of the corresponding delta.
         #
         # To differentiate a rev in the bundle from a rev in the revlog, we
         # check revision against basemap.
         opener = scmutil.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
-        self.basemap = {}
+        self.basemap = {} # mapping rev to delta base rev
         n = len(self)
         chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
@@ -61,10 +61,16 @@ class bundlerevlog(revlog.revlog):
                 if p not in self.nodemap:
                     raise error.LookupError(p, self.indexfile,
                                             _("unknown parent"))
+
+            if deltabase not in self.nodemap:
+                raise LookupError(deltabase, self.indexfile,
+                                  _('unknown delta base'))
+
+            baserev = self.rev(deltabase)
             # start, size, full unc. size, base (unused), link, p1, p2, node
             e = (revlog.offset_type(start, 0), size, -1, -1, link,
                  self.rev(p1), self.rev(p2), node)
-            self.basemap[n] = deltabase
+            self.basemap[n] = baserev
             self.index.insert(-1, e)
             self.nodemap[node] = n
             self.bundlerevs.add(n)
@@ -84,7 +90,7 @@ class bundlerevlog(revlog.revlog):
         """return or calculate a delta between two revisions"""
         if rev1 in self.basemap and rev2 in self.basemap:
             # hot path for bundle
-            revb = self.rev(self.basemap[rev2])
+            revb = self.basemap[rev2]
             if revb == rev1:
                 return self._chunk(rev2)
         elif rev1 not in self.basemap and rev2 not in self.basemap:
@@ -116,7 +122,7 @@ class bundlerevlog(revlog.revlog):
                 text = self._cache[2]
                 break
             chain.append(iterrev)
-            iterrev = self.rev(self.basemap[iterrev])
+            iterrev = self.basemap[iterrev]
         if text is None:
             text = revlog.revlog.revision(self, iterrev)
 
