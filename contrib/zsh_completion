@@ -213,6 +213,13 @@ _hg_mergerevs() {
   heads=(${heads:#$myrev})
 
   (( $#heads )) && _describe -t heads 'heads' heads
+
+  branches=(${(f)"$(_hg_cmd heads --template '{branch}\\n')"})
+  # exclude own revision
+  myrev=$(_hg_cmd log -r . --template '{branch}\\n')
+  branches=(${branches:#$myrev})
+
+  (( $#branches )) && _describe -t branches 'branches' branches
 }
 
 _hg_files() {
