@@ -125,31 +125,12 @@ check hidden revision are ignored (6 have hidden children 7 and 8)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
-Check that histedit respect phases
-=========================================
-
-(not directly related to the test file but doesn't deserve it's own test case)
-
-  $ hg log -G
-  @  9:c13eb81022ca f
-  |
-  o  6:b346ab9a313d c
-  |
-  o  0:cb9a9f314b8b a
-  
-  $ hg ph -pv '.^'
-  phase changed for 2 changesets
-  $ hg histedit -r '.~2'
-  abort: cannot edit immutable changeset: cb9a9f314b8b
-  [255]
-
 
 Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------
 
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg ph --force --draft '.'
   $ hg log -r 'children(.)'
   9:c13eb81022ca f (no-eol)
   $ cat > commands.txt <<EOF
@@ -171,3 +152,28 @@ Test that rewriting leaving instability behind is allowed
 stabilise
 
   $ hg rebase  -r 'unstable()' -d .
+
+Check that histedit respect phases
+=========================================
+
+(not directly related to the test file but doesn't deserve it's own test case)
+
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > logtemplate= {rev}:{node|short} ({phase}) {desc|firstline}\n
+  > EOF
+
+  $ hg ph -pv '.^'
+  phase changed for 2 changesets
+  $ hg log -G
+  @  11:b449568bf7fc (draft) f
+  |
+  o  10:40db8afa467b (public) c
+  |
+  o  0:cb9a9f314b8b (public) a
+  
+  $ hg histedit -r '.~2'
+  abort: cannot edit immutable changeset: cb9a9f314b8b
+  [255]
+
+
