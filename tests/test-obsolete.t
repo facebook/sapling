@@ -679,16 +679,15 @@ check hgweb does not explode
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
-#check changelog view
-#
-#  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'shortlog/'
-#  200 Script output follows
+check changelog view
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'shortlog/'
+  200 Script output follows
 
 #check graph view
 #
 #  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'graph'
 #  200 Script output follows
-
 check filelog view
 
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'

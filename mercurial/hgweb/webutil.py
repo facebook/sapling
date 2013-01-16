@@ -88,6 +88,8 @@ class revnav(object):
         navbefore = [("(0)", self.hex(0))]
         navafter = []
         for rev in targets:
+            if rev not in self._revlog:
+                continue
             if pos < rev < limit:
                 navafter.append(("+%d" % f, self.hex(rev)))
             if 0 < rev < pos:
