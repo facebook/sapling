@@ -186,6 +186,23 @@ check that summary does not report them
   update: 3 new changesets, 4 branch heads (merge)
   remote: 3 outgoing
 
+check that various commands work well with filtering
+
+  $ hg tip
+  changeset:   5:5601fb93a350
+  tag:         tip
+  parent:      1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add new_3_c
+  
+  $ hg log -r 6
+  abort: unknown revision '6'!
+  [255]
+  $ hg log -r 4
+  abort: unknown revision '4'!
+  [255]
+
 Check that public changeset are not accounted as obsolete:
 
   $ hg --hidden phase --public 2

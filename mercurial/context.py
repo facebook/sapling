@@ -67,7 +67,7 @@ class changectx(object):
             self._rev = r
             self._node = repo.changelog.node(r)
             return
-        except (ValueError, OverflowError):
+        except (ValueError, OverflowError, IndexError):
             pass
 
         if len(changeid) == 40:
