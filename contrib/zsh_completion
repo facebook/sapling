@@ -174,11 +174,10 @@ _hg_tags() {
 
   _hg_cmd tags | while read tag
   do
-    tags+=(${tag/ #    [0-9]#:*})
+    tags+=(${tag/ #[0-9]#:*})
   done
   (( $#tags )) && _describe -t tags 'tags' tags
 }
-
 _hg_bookmarks() {
   typeset -a bookmark bookmarks
 
@@ -198,7 +197,7 @@ _hg_branches() {
 
   _hg_cmd branches | while read branch
   do
-    branches+=(${branch/ #    [0-9]#:*})
+    branches+=(${branch/ #[0-9]#:*})
   done
   (( $#branches )) && _describe -t branches 'branches' branches
 }
