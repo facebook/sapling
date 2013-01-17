@@ -90,6 +90,8 @@ def computeimpactable(repo):
     for roots in repo._phasecache.phaseroots[1:]:
         if roots:
             firstmutable = min(firstmutable, min(cl.rev(r) for r in roots))
+    # protect from nullrev root
+    firstmutable = max(0, firstmutable)
     return frozenset(xrange(firstmutable, len(cl)))
 
 # function to compute filtered set
