@@ -207,9 +207,9 @@ _hg_mergerevs() {
   typeset -a heads
   local myrev
 
-  heads=(${(f)"$(_hg_cmd heads --template '{rev}\\n')"})
+  heads=(${(f)"$(_hg_cmd heads --template '{rev}:{branch}\\n')"})
   # exclude own revision
-  myrev=$(_hg_cmd log -r . --template '{rev}\\n')
+  myrev=$(_hg_cmd log -r . --template '{rev}:{branch}\\n')
   heads=(${heads:#$myrev})
 
   (( $#heads )) && _describe -t heads 'heads' heads
