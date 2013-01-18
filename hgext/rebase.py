@@ -312,7 +312,7 @@ def rebase(ui, repo, **opts):
             collapsedas = None
             if collapsef:
                 collapsedas = newrev
-            clearrebased(ui, repo, state, collapsedas)
+            clearrebased(ui, repo, state, skipped, collapsedas)
 
         if currentbookmarks:
             updatebookmarks(repo, nstate, currentbookmarks, **opts)
@@ -660,7 +660,7 @@ def buildstate(repo, dest, rebaseset, collapse):
             state[r] = nullmerge
     return repo['.'].rev(), dest.rev(), state
 
-def clearrebased(ui, repo, state, collapsedas=None):
+def clearrebased(ui, repo, state, skipped, collapsedas=None):
     """dispose of rebased revision at the end of the rebase
 
     If `collapsedas` is not None, the rebase was a collapse whose result if the
@@ -669,9 +669,13 @@ def clearrebased(ui, repo, state, collapsedas=None):
         markers = []
         for rev, newrev in sorted(state.items()):
             if newrev >= 0:
-                if collapsedas is not None:
-                    newrev = collapsedas
-                markers.append((repo[rev], (repo[newrev],)))
+                if rev in skipped:
+                    succs = ()
+                elif collapsedas is not None:
+                    succs = (repo[collapsedas],)
+                else:
+                    succs = (repo[newrev],)
+                markers.append((repo[rev], succs))
         if markers:
             obsolete.createmarkers(repo, markers)
     else:
