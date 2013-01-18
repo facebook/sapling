@@ -181,10 +181,10 @@
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   f  mammals/skunk                   mammals/skunk
   $ hg debugwalk ..
-  abort: .. not under root
+  abort: .. not under root '$TESTTMP/t'
   [255]
   $ hg debugwalk beans/../..
-  abort: beans/../.. not under root
+  abort: beans/../.. not under root '$TESTTMP/t'
   [255]
   $ hg debugwalk .hg
   abort: path contains illegal component: .hg (glob)
@@ -209,7 +209,7 @@ Test absolute paths:
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk `pwd`/..
-  abort: $TESTTMP/t/.. not under root
+  abort: $TESTTMP/t/.. not under root '$TESTTMP/t'
   [255]
 
 Test patterns:

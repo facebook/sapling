@@ -435,7 +435,7 @@ def canonpath(root, cwd, myname, auditor=None):
                 break
             name = dirname
 
-        raise util.Abort('%s not under root' % myname)
+        raise util.Abort(_("%s not under root '%s'") % (myname, root))
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     '''yield every hg repository under path, always recursively.

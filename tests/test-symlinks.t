@@ -82,7 +82,7 @@ try symlink outside repo to file inside
 this should fail
 
   $ hg status ../z && { echo hg mistakenly exited with status 0; exit 1; } || :
-  abort: ../z not under root
+  abort: ../z not under root '$TESTTMP/x'
   $ cd ..
 
 

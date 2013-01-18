@@ -593,7 +593,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ../foo
-  abort: ../foo not under root
+  abort: ../foo not under root '$TESTTMP'
   [255]
   $ hg status -C
 
@@ -612,7 +612,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ..
-  abort: ../a1 not under root (glob)
+  abort: ../a1 not under root '$TESTTMP'
   [255]
   $ hg status -C
 
@@ -631,7 +631,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ (cd d1/d11; hg rename ../../d2/b ../../../foo)
-  abort: ../../../foo not under root
+  abort: ../../../foo not under root '$TESTTMP'
   [255]
   $ hg status -C
 
