@@ -155,6 +155,8 @@ class repoview(object):
     def __init__(self, repo, filtername):
         object.__setattr__(self, '_unfilteredrepo', repo)
         object.__setattr__(self, 'filtername', filtername)
+        object.__setattr__(self, '_clcachekey', None)
+        object.__setattr__(self, '_clcache', None)
 
     # not a cacheproperty on purpose we shall implement a proper cache later
     @property
@@ -163,8 +165,29 @@ class repoview(object):
 
         this changelog must not be used for writing"""
         # some cache may be implemented later
-        cl = copy.copy(self._unfilteredrepo.changelog)
-        cl.filteredrevs = filterrevs(self._unfilteredrepo, self.filtername)
+        unfi = self._unfilteredrepo
+        unfichangelog = unfi.changelog
+        revs = filterrevs(unfi, self.filtername)
+        cl = self._clcache
+        newkey = (len(unfichangelog), unfichangelog.tip(), hash(revs))
+        if cl is not None:
+            # we need to check curkey too for some obscure reason.
+            # MQ test show a corruption of the underlying repo (in _clcache)
+            # without change in the cachekey.
+            oldfilter = cl.filteredrevs
+            try:
+                cl.filterrevs = ()  # disable filtering for tip
+                curkey = (len(cl), cl.tip(), hash(oldfilter))
+            finally:
+                cl.filteredrevs = oldfilter
+            if newkey != self._clcachekey or newkey != curkey:
+                cl = None
+        # could have been made None by the previous if
+        if cl is None:
+            cl = copy.copy(unfichangelog)
+            cl.filteredrevs = revs
+            object.__setattr__(self, '_clcache', cl)
+            object.__setattr__(self, '_clcachekey', newkey)
         return cl
 
     def unfiltered(self):
