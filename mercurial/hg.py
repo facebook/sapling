@@ -9,8 +9,8 @@
 from i18n import _
 from lock import release
 from node import hex, nullid
-import localrepo, bundlerepo, httppeer, sshpeer, statichttprepo, bookmarks
-import lock, util, extensions, error, node, scmutil, phases, url
+import localrepo, bundlerepo, unionrepo, httppeer, sshpeer, statichttprepo
+import bookmarks, lock, util, extensions, error, node, scmutil, phases, url
 import cmdutil, discovery
 import merge as mergemod
 import verify as verifymod
@@ -64,6 +64,7 @@ def parseurl(path, branches=None):
 
 schemes = {
     'bundle': bundlerepo,
+    'union': unionrepo,
     'file': _local,
     'http': httppeer,
     'https': httppeer,
