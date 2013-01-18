@@ -7,7 +7,7 @@
 
 from mercurial.node import bin, nullid
 from mercurial import util
-import struct, zlib
+import struct, zlib, cStringIO
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -87,3 +87,29 @@ def parse_dirstate(dmap, copymap, st):
             copymap[f] = c
         dmap[f] = e[:4]
     return parents
+
+def pack_dirstate(dmap, copymap, pl, now):
+    now = int(now)
+    cs = cStringIO.StringIO()
+    write = cs.write
+    write("".join(pl))
+    for f, e in dmap.iteritems():
+        if e[0] == 'n' and e[3] == now:
+            # The file was last modified "simultaneously" with the current
+            # write to dirstate (i.e. within the same second for file-
+            # systems with a granularity of 1 sec). This commonly happens
+            # for at least a couple of files on 'update'.
+            # The user could change the file without changing its size
+            # within the same second. Invalidate the file's stat data in
+            # dirstate, forcing future 'status' calls to compare the
+            # contents of the file. This prevents mistakenly treating such
+            # files as clean.
+            e = (e[0], 0, -1, -1)   # mark entry as 'unset'
+            dmap[f] = e
+
+        if f in copymap:
+            f = "%s\0%s" % (f, copymap[f])
+        e = _pack(">cllll", e[0], e[1], e[2], e[3], len(f))
+        write(e)
+        write(f)
+    return cs.getvalue()

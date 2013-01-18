@@ -326,7 +326,8 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		if (getintat(v, 3, &mtime) == -1)
 			goto bail;
 		if (*s == 'n' && mtime == (uint32_t)now) {
-			/* See dirstate.py:write for why we do this. */
+			/* See pure/parsers.py:pack_dirstate for why we do
+			 * this. */
 			if (PyDict_SetItem(map, k, dirstate_unset) == -1)
 				goto bail;
 			mode = 0, size = -1, mtime = -1;

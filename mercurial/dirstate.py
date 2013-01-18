@@ -9,10 +9,8 @@ import errno
 from node import nullid
 from i18n import _
 import scmutil, util, ignore, osutil, parsers, encoding
-import struct, os, stat, errno
-import cStringIO
+import os, stat, errno
 
-_format = ">cllll"
 propertycache = util.propertycache
 filecache = scmutil.filecache
 _rangemask = 0x7fffffff
@@ -508,38 +506,7 @@ class dirstate(object):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime
-        copymap = self._copymap
-        try:
-            finish(parsers.pack_dirstate(self._map, copymap, self._pl, now))
-            return
-        except AttributeError:
-            pass
-
-        now = int(now)
-        cs = cStringIO.StringIO()
-        pack = struct.pack
-        write = cs.write
-        write("".join(self._pl))
-        for f, e in self._map.iteritems():
-            if e[0] == 'n' and e[3] == now:
-                # The file was last modified "simultaneously" with the current
-                # write to dirstate (i.e. within the same second for file-
-                # systems with a granularity of 1 sec). This commonly happens
-                # for at least a couple of files on 'update'.
-                # The user could change the file without changing its size
-                # within the same second. Invalidate the file's stat data in
-                # dirstate, forcing future 'status' calls to compare the
-                # contents of the file. This prevents mistakenly treating such
-                # files as clean.
-                e = (e[0], 0, -1, -1)   # mark entry as 'unset'
-                self._map[f] = e
-
-            if f in copymap:
-                f = "%s\0%s" % (f, copymap[f])
-            e = pack(_format, e[0], e[1], e[2], e[3], len(f))
-            write(e)
-            write(f)
-        finish(cs.getvalue())
+        finish(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
 
     def _dirignore(self, f):
         if f == '.':
