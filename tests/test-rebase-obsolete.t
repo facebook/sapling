@@ -366,11 +366,11 @@ Test multiple root handling
 
   $ hg rebase --dest 4 --rev '7+11+9'
   $ hg log -G
-  @  14:00891d85fcfc C
+  @  14:1e8370e38cca C
   |
   | o  13:102b4c1d889b D
-  |/
-  | o  12:bfe264faf697 H
+  | |
+  o |  12:bfe264faf697 H
   |/
   | o  10:7c6027df6a99 B
   | |

@@ -23,6 +23,7 @@ from mercurial.i18n import _
 import os, errno
 
 nullmerge = -2
+revignored = -3
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -392,6 +393,15 @@ def rebasenode(repo, rev, p1, state, collapse):
     # have to allow merging with it.
     return merge.update(repo, rev, True, True, False, base, collapse)
 
+def nearestrebased(repo, rev, state):
+    """return the nearest ancestors of rev in the rebase result"""
+    rebased = [r for r in state if state[r] > nullmerge]
+    candidates = repo.revs('max(%ld  and (::%d))', rebased, rev)
+    if candidates:
+        return state[candidates[0]]
+    else:
+        return None
+
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
     parents = repo[rev].parents()
@@ -403,6 +413,10 @@ def defineparents(repo, rev, target, state, targetancestors):
     elif P1n in state:
         if state[P1n] == nullmerge:
             p1 = target
+        elif state[P1n] == revignored:
+            p1 = nearestrebased(repo, P1n, state)
+            if p1 is None:
+                p1 = target
         else:
             p1 = state[P1n]
     else: # P1n external
@@ -415,6 +429,11 @@ def defineparents(repo, rev, target, state, targetancestors):
         if P2n in state:
             if p1 == target: # P1n in targetancestors or external
                 p1 = state[P2n]
+            elif state[P2n] == revignored:
+                p2 = nearestrebased(repo, P2n, state)
+                if p2 is None:
+                    # no ancestors rebased yet, detach
+                    p2 = target
             else:
                 p2 = state[P2n]
         else: # P2n external
@@ -532,10 +551,10 @@ def restorestatus(repo):
                 keepbranches = bool(int(l))
             else:
                 oldrev, newrev = l.split(':')
-                if newrev != str(nullmerge):
-                    state[repo[oldrev].rev()] = repo[newrev].rev()
-                else:
+                if newrev in (str(nullmerge), str(revignored)):
                     state[repo[oldrev].rev()] = int(newrev)
+                else:
+                    state[repo[oldrev].rev()] = repo[newrev].rev()
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:
@@ -658,6 +677,15 @@ def buildstate(repo, dest, rebaseset, collapse):
     for r in detachset:
         if r not in state:
             state[r] = nullmerge
+    if len(roots) > 1:
+        # If we have multiple roots, we may have "hole" in the rebase set.
+        # Rebase roots that descend from those "hole" should not be detached as
+        # other root are. We use the special `revignored` to inform rebase that
+        # the revision should be ignored but that `defineparent` should search
+        # a rebase destination that make sense regarding rebaset topology.
+        rebasedomain = set(repo.revs('%ld::%ld', rebaseset, rebaseset))
+        for ignored in set(rebasedomain) - set(rebaseset):
+            state[ignored] = revignored
     return repo['.'].rev(), dest.rev(), state
 
 def clearrebased(ui, repo, state, skipped, collapsedas=None):
