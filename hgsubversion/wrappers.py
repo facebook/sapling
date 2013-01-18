@@ -14,6 +14,7 @@ from mercurial import i18n
 from mercurial import extensions
 from mercurial import repair
 
+import os
 import replay
 import pushmod
 import stupid as stupidmod
@@ -287,6 +288,11 @@ def push(repo, dest, force, revs):
                 if not c.node() in hashes and not c.node() in outgoing:
                     util.swap_out_encoding(old_encoding)
                     try:
+                        # Path changed as subdirectories were getting
+                        # deleted during push.
+                        saved_path = os.getcwd()
+                        os.chdir(repo.root)
+
                         def extrafn(ctx, extra):
                             extra['branch'] = ctx.branch()
 
@@ -297,6 +303,7 @@ def push(repo, dest, force, revs):
                                         rev=[needs_rebase_set],
                                         extrafn=extrafn, keep=True)
                     finally:
+                        os.chdir(saved_path)
                         util.swap_out_encoding()
 
 

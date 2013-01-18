@@ -580,6 +580,50 @@ class PushTests(test_util.TestBase):
         self.assertEqual(commit2.files(), ['gamma'])
         self.assertFalse(commit2.mutable())
 
+    def test_push_in_subdir(self, commit=True):
+        repo = self.repo
+        old_tip = repo['tip'].node()
+        def file_callback(repo, memctx, path):
+            if path == 'adding_file' or path == 'newdir/new_file':
+                testData = 'fooFirstFile'
+                if path == 'newdir/new_file':
+                    testData = 'fooNewFile'
+                return context.memfilectx(path=path,
+                                          data=testData,
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError(errno.EINVAL, 'Invalid operation: ' + path)
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'automated test',
+                             ['adding_file'],
+                             file_callback,
+                             'an_author',
+                             '2012-12-13 20:59:48 -0500',
+                             {'branch': 'default', })
+        new_hash = repo.commitctx(ctx)
+        p = os.path.join(repo.root, "newdir")
+        os.mkdir(p)
+        ctx = context.memctx(repo,
+                             (repo['default'].node(), node.nullid),
+                             'automated test',
+                             ['newdir/new_file'],
+                             file_callback,
+                             'an_author',
+                             '2012-12-13 20:59:48 -0500',
+                             {'branch': 'default', })
+        os.chdir(p)
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        self.pushrevisions()
+        tip = self.repo['tip']
+        self.assertNotEqual(tip.node(), old_tip)
+        self.assertEqual(p, os.getcwd())
+        self.assertEqual(tip['adding_file'].data(), 'fooFirstFile')
+        self.assertEqual(tip['newdir/new_file'].data(), 'fooNewFile')
+        self.assertEqual(tip.branch(), 'default')
+
 
 def suite():
     test_classes = [PushTests, ]
