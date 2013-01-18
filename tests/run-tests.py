@@ -751,8 +751,7 @@ def run(cmd, wd, options, replacements):
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
     if options.debug:
-        proc = subprocess.Popen(cmd, shell=True, cwd=wd, stdin=subprocess.PIPE)
-        proc.stdin.close()
+        proc = subprocess.Popen(cmd, shell=True, cwd=wd)
         ret = proc.wait()
         return (ret, None)
 
