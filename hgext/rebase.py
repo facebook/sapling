@@ -292,7 +292,7 @@ def rebase(ui, repo, **opts):
             else:
                 commitmsg = 'Collapsed revision'
                 for rebased in state:
-                    if rebased not in skipped and state[rebased] != nullmerge:
+                    if rebased not in skipped and state[rebased] > nullmerge:
                         commitmsg += '\n* %s' % repo[rebased].description()
                 commitmsg = ui.edit(commitmsg, repo.ui.username())
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
@@ -305,7 +305,7 @@ def rebase(ui, repo, **opts):
             # Nodeids are needed to reset bookmarks
             nstate = {}
             for k, v in state.iteritems():
-                if v != nullmerge:
+                if v > nullmerge:
                     nstate[repo[k].node()] = repo[v].node()
 
         if not keepf:
@@ -479,7 +479,7 @@ def updatebookmarks(repo, nstate, originalbookmarks, **opts):
     marks = repo._bookmarks
     for k, v in originalbookmarks.iteritems():
         if v in nstate:
-            if nstate[v] != nullmerge:
+            if nstate[v] > nullmerge:
                 # update the bookmarks for revs that have moved
                 marks[k] = nstate[v]
 
@@ -497,7 +497,7 @@ def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
     f.write('%d\n' % int(keepbranches))
     for d, v in state.iteritems():
         oldrev = repo[d].hex()
-        if v != nullmerge:
+        if v > nullmerge:
             newrev = repo[v].hex()
         else:
             newrev = v
@@ -679,7 +679,7 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
         if markers:
             obsolete.createmarkers(repo, markers)
     else:
-        rebased = [rev for rev in state if state[rev] != nullmerge]
+        rebased = [rev for rev in state if state[rev] > nullmerge]
         if rebased:
             stripped = []
             for root in repo.set('roots(%ld)', rebased):
