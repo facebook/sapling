@@ -490,7 +490,20 @@ class cachestat(object):
 
     def __eq__(self, other):
         try:
-            return self.stat == other.stat
+            # Only dev, ino, size, mtime and atime are likely to change. Out
+            # of these, we shouldn't compare atime but should compare the
+            # rest. However, one of the other fields changing indicates
+            # something fishy going on, so return False if anything but atime
+            # changes.
+            return (self.stat.st_mode == other.stat.st_mode and
+                    self.stat.st_ino == other.stat.st_ino and
+                    self.stat.st_dev == other.stat.st_dev and
+                    self.stat.st_nlink == other.stat.st_nlink and
+                    self.stat.st_uid == other.stat.st_uid and
+                    self.stat.st_gid == other.stat.st_gid and
+                    self.stat.st_size == other.stat.st_size and
+                    self.stat.st_mtime == other.stat.st_mtime and
+                    self.stat.st_ctime == other.stat.st_ctime)
         except AttributeError:
             return False
 
