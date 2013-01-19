@@ -79,7 +79,7 @@ def updatecache(repo):
     if revs:
         partial.update(repo, revs)
         partial.write(repo)
-    assert partial.validfor(repo)
+    assert partial.validfor(repo), filtername
     repo._branchcaches[repo.filtername] = partial
 
 class branchcache(dict):
