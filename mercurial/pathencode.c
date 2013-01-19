@@ -696,21 +696,21 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	return 0;
 }
 
+#define MAXENCODE 4096 * 3
+
 static PyObject *hashencode(const char *src, Py_ssize_t len)
 {
-	const Py_ssize_t baselen = (len - 5) * 3;
-#ifndef _MSC_VER
-	/* alloca is surprisingly slow, so avoid when possible */
-	char dired[baselen];
-	char lowered[baselen];
-	char auxed[baselen];
-#else
-	char *dired = alloca(baselen);
-	char *lowered = alloca(baselen);
-	char *auxed = alloca(baselen);
-#endif
-	Py_ssize_t dirlen, lowerlen, auxlen;
+	char dired[MAXENCODE];
+	char lowered[MAXENCODE];
+	char auxed[MAXENCODE];
+	Py_ssize_t dirlen, lowerlen, auxlen, baselen;
 	char sha[20];
+
+	baselen = (len - 5) * 3;
+	if (baselen >= MAXENCODE) {
+		PyErr_SetString(PyExc_ValueError, "string too long");
+		return NULL;
+	}
 
 	dirlen = _encodedir(dired, baselen, src, len);
 	if (sha1hash(sha, dired, dirlen - 1) == -1)
