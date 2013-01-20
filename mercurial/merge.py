@@ -228,7 +228,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 break
 
     # Compare manifests
-    for f, n in sorted(m1.iteritems()):
+    visit = m1.iteritems()
+    if repo.ui.debugflag:
+        visit = sorted(visit)
+    for f, n in visit:
         if partial and not partial(f):
             continue
         if f in m2:
@@ -274,7 +277,10 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             else:
                 act("other deleted", "r", f)
 
-    for f, n in sorted(m2.iteritems()):
+    visit = m2.iteritems()
+    if repo.ui.debugflag:
+        visit = sorted(visit)
+    for f, n in visit:
         if partial and not partial(f):
             continue
         if f in m1 or f in copied: # files already visited
