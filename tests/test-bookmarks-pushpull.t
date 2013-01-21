@@ -128,15 +128,15 @@ divergent bookmarks
   $ echo c2 > f2
   $ hg ci -Am2
   adding f2
-  $ hg book -f @
-  $ hg book -f X
+  $ hg book -if @
+  $ hg book -if X
   $ hg book
      @                         1:9b140be10808
-   * X                         1:9b140be10808
+     X                         1:9b140be10808
      Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
      foo                       -1:000000000000
-     foobar                    1:9b140be10808
+   * foobar                    1:9b140be10808
 
   $ hg pull --config paths.foo=../a foo
   pulling from $TESTTMP/a (glob)
@@ -152,12 +152,12 @@ divergent bookmarks
   $ hg book
      @                         1:9b140be10808
      @foo                      2:0d2164f0ce0d
-   * X                         1:9b140be10808
+     X                         1:9b140be10808
      X@foo                     2:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
-     foobar                    1:9b140be10808
+   * foobar                    1:9b140be10808
   $ hg push -f ../a
   pushing to ../a
   searching for changes
