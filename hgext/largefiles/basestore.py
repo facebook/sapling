@@ -26,7 +26,7 @@ class StoreError(Exception):
         self.detail = detail
 
     def longmessage(self):
-        return (_("error getting %s from %s for %s: %s\n") %
+        return (_("error getting id %s from url %s for file %s: %s\n") %
                  (self.hash, self.url, self.filename, self.detail))
 
     def __str__(self):
