@@ -173,7 +173,7 @@ visible shared between the initial repo and the push destination.
 
 :note: The "(+1 heads)" is wrong as we do not had any visible head
 
-check that branch cache with "unserved" filter are properly computed and stored
+check that branch cache with "served" filter are properly computed and stored
 
   $ ls ../push-dest/.hg/cache/branchheads*
   ../push-dest/.hg/cache/branchheads-served

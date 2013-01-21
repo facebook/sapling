@@ -72,7 +72,7 @@ def computemutable(repo):
 def computeimpactable(repo):
     """Everything impactable by mutable revision
 
-    The mutable filter still have some chance to get invalidated. This will
+    The immutable filter still have some chance to get invalidated. This will
     happen when:
 
     - you garbage collect hidden changeset,

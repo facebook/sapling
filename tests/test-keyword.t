@@ -751,14 +751,14 @@ Commit with multi-line message and custom expansion
 
 |Note:
 |
-| After the last rollback, the "unserved" branchheads cache became invalid, but
+| After the last rollback, the "served" branchheads cache became invalid, but
 | all changesets in the repo were public. For filtering this means:
-|   "mutable" == "unserved" == ø.
+|   "immutable" == "served" == ø.
 |
-| As the "unserved" cache is invalid, we fall back to the "mutable" cache. But
-| no update is needed between "mutable" and "unserved" and the "unserved" cache
+| As the "served" cache is invalid, we fall back to the "immutable" cache. But
+| no update is needed between "immutable" and "served" and the "served" cache
 | is not updated on disk. The on-disk version therefore stays invalid for some
-| time. This explains why the "unserved" branchheads cache is detected as
+| time. This explains why the "served" branchheads cache is detected as
 | invalid here.
 
   $ hg --debug commit -l log -d '2 0' -u 'User Name <user@example.com>'
