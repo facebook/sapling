@@ -134,6 +134,19 @@ def unsetcurrent(repo):
     finally:
         wlock.release()
 
+def iscurrent(repo, mark=None, parents=None):
+    '''Tell whether the current bookmark is also active
+
+    I.e., the bookmark listed in .hg/bookmarks.current also points to a
+    parent of the working directory.
+    '''
+    if not mark:
+        mark = repo._bookmarkcurrent
+    if not parents:
+        parents = [p.node() for p in repo[None].parents()]
+    marks = repo._bookmarks
+    return (mark in marks and marks[mark] in parents)
+
 def updatecurrentbookmark(repo, oldnode, curbranch):
     try:
         return update(repo, oldnode, repo.branchtip(curbranch))

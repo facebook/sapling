@@ -5961,7 +5961,12 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     # with no argument, we also move the current bookmark, if any
     movemarkfrom = None
     if rev is None:
-        movemarkfrom = repo['.'].node()
+        curmark = repo._bookmarkcurrent
+        if bookmarks.iscurrent(repo):
+            movemarkfrom = repo['.'].node()
+        elif curmark:
+            ui.status(_("updating to active bookmark %s\n") % curmark)
+            rev = curmark
 
     # if we defined a bookmark, we have to remember the original bookmark name
     brev = rev
