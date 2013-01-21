@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2012-10-23 11:38-0200\n"
+"POT-Creation-Date: 2013-01-21 11:21-0200\n"
 "PO-Revision-Date: 2011-06-28 09:55+0200\n"
 "Last-Translator: Wagner Bruna <wbruna@yahoo.com>\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -1564,6 +1564,10 @@ msgstr "aviso: falha ao definir modo de coloração para %s\n"
 msgid "ignoring unknown color/effect %r (configured in color.%s)\n"
 msgstr "ignorando cor/efeito desconhecido %r (configurado em color.%s)\n"
 
+#. i18n: "label" is a keyword
+msgid "label expects two arguments"
+msgstr "label exige dois argumentos"
+
 #. i18n: 'always', 'auto', and 'never' are keywords and should
 #. not be translated
 msgid "when to colorize (boolean, always, auto, or never)"
@@ -1948,22 +1952,31 @@ msgstr ""
 "        ``{{mergefrombranch ([-\\w]+)}}``"
 
 msgid ""
-"    :hook.cvslog: Specify a Python function to be called at the end of\n"
+"    :convert.localtimezone: use local time (as determined by the TZ\n"
+"        environment variable) for changeset date/times. The default\n"
+"        is False (use UTC)."
+msgstr ""
+"    :convert.localtimezone: use o fuso horário local (determinado\n"
+"        pela variável de ambiente TZ) para horários e datas de\n"
+"        revisões. O padrão é False (usará UTC)."
+
+msgid ""
+"    :hooks.cvslog: Specify a Python function to be called at the end of\n"
 "        gathering the CVS log. The function is passed a list with the\n"
 "        log entries, and can modify the entries in-place, or add or\n"
 "        delete them."
 msgstr ""
-"    :hook.cvslog: Especifica uma função Python a ser chamada ao término\n"
+"    :hooks.cvslog: Especifica uma função Python a ser chamada ao término\n"
 "        da coleta do log do CVS. Essa função recebe uma lista com as\n"
 "        entradas do log, e pode modificar, adicionar ou remover entradas."
 
 msgid ""
-"    :hook.cvschangesets: Specify a Python function to be called after\n"
+"    :hooks.cvschangesets: Specify a Python function to be called after\n"
 "        the changesets are calculated from the CVS log. The\n"
 "        function is passed a list with the changeset entries, and can\n"
 "        modify the changesets in-place, or add or delete them."
 msgstr ""
-"    :hook.cvschangesets: Especifica uma função Python a ser chamada\n"
+"    :hooks.cvschangesets: Especifica uma função Python a ser chamada\n"
 "        após os conjuntos de mudanças serem calculados a partir do\n"
 "        log do CVS. Essa função recebe uma lista com as entradas do\n"
 "        conjunto de mudanças, e pode modificar, adicionar ou\n"
@@ -2415,6 +2428,9 @@ msgstr "não é uma sandbox do CVS"
 msgid "reading cvs log cache %s\n"
 msgstr "lendo cache de log do CVS %s\n"
 
+msgid "ignoring old cache\n"
+msgstr "ignorando cache antigo\n"
+
 #, python-format
 msgid "cache has %d log entries\n"
 msgstr "cache possui %d entradas de log\n"
@@ -2523,6 +2539,10 @@ msgstr "não é possível recuperar cabeças do git"
 #, python-format
 msgid "cannot read %r object at %s"
 msgstr "não é possível ler objeto %r em %s"
+
+#, python-format
+msgid "cannot read submodules config file in %s"
+msgstr "não é possível ler arquivo de configuração de submódulos em %s"
 
 #, python-format
 msgid "cannot read changes in %s"
@@ -3540,9 +3560,6 @@ msgstr "mostra apenas revisões dentro do ramo nomeado especificado"
 msgid "do not display revision or any of its ancestors"
 msgstr "não exibe revisão ou qualquer de seus ancestrais"
 
-msgid "show hidden changesets (DEPRECATED)"
-msgstr "exibe revisões ocultas (OBSOLETO)"
-
 msgid "[OPTION]... [FILE]"
 msgstr "[OPÇÃO]... [ARQUIVO]"
 
@@ -3880,7 +3897,7 @@ msgstr ""
 " pick 7c2fd3b9020c Add delta"
 
 msgid ""
-" # Edit history between 633536316234 and 7c2fd3b9020c\n"
+" # Edit history between c561b4e977df and 7c2fd3b9020c\n"
 " #\n"
 " # Commands:\n"
 " #  p, pick = use commit\n"
@@ -3890,7 +3907,7 @@ msgid ""
 " #  m, mess = edit message without changing commit content\n"
 " #"
 msgstr ""
-" # Editar o histórico entre 633536316234 e 7c2fd3b9020c\n"
+" # Editar o histórico entre c561b4e977df e 7c2fd3b9020c\n"
 " #\n"
 " # Comandos:\n"
 " #  p, pick = use a revisão\n"
@@ -4037,11 +4054,11 @@ msgstr ""
 "à tentativa de edição de histórico."
 
 msgid ""
-"If we clone the example repository above and add three more changes, such that\n"
-"we have the following history::"
+"If we clone the histedit-ed example repository above and add four more\n"
+"changes, such that we have the following history::"
 msgstr ""
 "Se clonarmos o repositório de exemplo acima e adicionarmos mais\n"
-"três mudanças, de modo que tenhamos o seguinte histórico::"
+"quatro mudanças, de modo que tenhamos o seguinte histórico::"
 
 msgid ""
 "   @  6[tip]   038383181893   2009-04-27 18:04 -0500   stefan\n"
@@ -4389,13 +4406,6 @@ msgstr "varrendo novamente por mudança no .hgignore\n"
 
 msgid "cannot start: socket is already bound"
 msgstr "não é possível iniciar: o socket já está associado"
-
-msgid ""
-"cannot start: tried linking .hg/inotify.sock to a temporary socket but "
-".hg/inotify.sock already exists"
-msgstr ""
-"não é possível iniciar: tentou lincar .hg/inotify.sock para um socket "
-"temporário mas .hg/inotify.sock já existe"
 
 #, python-format
 msgid "answering query for %r\n"
@@ -4993,6 +5003,10 @@ msgstr ""
 "    normais; após essa conversão, o repositório DEST poderá ser\n"
 "    usado normalmente, sem a extensão largefiles."
 
+#, python-format
+msgid "error getting %s from %s for %s: %s\n"
+msgstr "erro ao obter id %s a partir da url %s para o arquivo %s: %s\n"
+
 msgid "getting largefiles"
 msgstr "obtendo largefiles"
 
@@ -5148,17 +5162,19 @@ msgid "no files specified"
 msgstr "nenhum arquivo especificado"
 
 #, python-format
-msgid "not removing %s: %s (use forget to undo)\n"
-msgstr "%s não removido: %s (use forget para desfazer)\n"
+msgid "not removing %s: file still exists\n"
+msgstr "arquivo %s não removido: o arquivo ainda existe\n"
 
-msgid "file still exists"
-msgstr "o arquivo já existe"
+#, python-format
+msgid "not removing %s: file is modified (use -f to force removal)\n"
+msgstr ""
+"%s não removido: o arquivo foi modificado (use -f para forçar a remoção)\n"
 
-msgid "file is modified"
-msgstr "o arquivo foi modificado"
-
-msgid "file has been marked for add"
-msgstr "o arquivo foi marcado para adição"
+#, python-format
+msgid "not removing %s: file has been marked for add (use forget to undo)\n"
+msgstr ""
+"%s não removido: o arquivo foi marcado para adição (use forget para "
+"desfazer)\n"
 
 #, python-format
 msgid "removing %s\n"
@@ -5357,6 +5373,9 @@ msgstr "verifica todas as revisões de largefiles, não apenas a revisão atual"
 
 msgid "verify largefile contents not just existence"
 msgstr "verifica conteúdos de largefiles, não apenas existência"
+
+msgid "display largefiles dirstate"
+msgstr "mostra o dirstate de largefiles"
 
 msgid "display outgoing largefiles"
 msgstr "exibe largefiles a serem enviados"
@@ -8321,9 +8340,6 @@ msgstr "não se pode rebasear para um patch mq aplicado"
 msgid "no matching revisions"
 msgstr "nenhuma revisão correspondente"
 
-msgid "can't rebase multiple roots"
-msgstr "não é possível rebasear múltiplas raízes"
-
 msgid "source is ancestor of destination"
 msgstr "origem é ancestral do destino"
 
@@ -9327,9 +9343,8 @@ msgstr "nenhum marcador modificado encontrado\n"
 msgid "unknown parent"
 msgstr "pai desconhecido"
 
-#, python-format
-msgid "integrity check failed on %s:%d"
-msgstr "checagem de integridade falhou em %s:%d"
+msgid "unknown delta base"
+msgstr "base de delta desconhecida"
 
 msgid "cannot create new bundle repository"
 msgstr "não é possível criar novo repositório de bundle"
@@ -9719,6 +9734,9 @@ msgstr "exibe informação de versão e sai"
 
 msgid "display help and exit"
 msgstr "exibe ajuda e sai"
+
+msgid "consider hidden changesets"
+msgstr "considera revisões ocultas"
 
 msgid "do not perform actions, just print output"
 msgstr "não realiza ações, apenas imprime a saída"
@@ -10279,6 +10297,15 @@ msgid ""
 msgstr ""
 "          hg bisect --skip\n"
 "          hg bisect --skip 23"
+
+msgid ""
+"      - skip all revisions that do not touch directories ``foo`` or ``bar``"
+msgstr ""
+"      - omite todas as revisões que não mexerem nos diretórios ``foo`` ou "
+"``bar``"
+
+msgid "          hg bisect --skip '!( file(\"path:foo\") & file(\"path:bar\") )'"
+msgstr "          hg bisect --skip '!( file(\"path:foo\") & file(\"path:bar\") )'"
 
 msgid "      - forget the current bisection::"
 msgstr "      - esquece a bissecção atual::"
@@ -11599,6 +11626,77 @@ msgstr "cópia: %s -> %s\n"
 
 msgid "revision to check"
 msgstr "revisão para verificar"
+
+msgid "[REV]"
+msgstr "[REV]"
+
+msgid "show set of successors for revision"
+msgstr "mostra conjunto de sucessores da revisão"
+
+msgid ""
+"    A successors set of changeset A is a consistent group of revisions that\n"
+"    succeed A. It contains non-obsolete changesets only."
+msgstr ""
+"    Um conjunto de sucessores de uma revisão A é um grupo consistente de\n"
+"    revisões que sucedem A. Pode conter apenas revisões não obsoletas."
+
+msgid ""
+"    In most cases a changeset A has a single successors set containing a single\n"
+"    successors (changeset A replaced by A')."
+msgstr ""
+"    Na maior parte dos casos uma revisão A possui um único conjunto\n"
+"    de sucessores contendo um único sucessor (revisão A substituída por A')."
+
+msgid ""
+"    A changeset that is made obsolete with no successors are called \"pruned\".\n"
+"    Such changesets have no successors sets at all."
+msgstr ""
+"    Uma revisão sem sucessores tornada obsoleta é chamada \"podada\".\n"
+"    Tais revisões não possuem nenhum conjunto de sucessores."
+
+msgid ""
+"    A changeset that has been \"split\" will have a successors set containing\n"
+"    more than one successors."
+msgstr ""
+"    Uma revisão que tenha sido \"dividida\" terá um conjunto de\n"
+"    sucessores contendo mais de um sucessor."
+
+msgid ""
+"    A changeset that has been rewritten in multiple different ways is called\n"
+"    \"divergent\". Such changesets have multiple successor sets (each of which\n"
+"    may also be split, i.e. have multiple successors)."
+msgstr ""
+"    Uma revisão que tenha sido reescrita de múltiplas formas diferentes\n"
+"    é chamada \"divergente\". Tais revisões possuem múltiplos conjuntos\n"
+"    de sucessores (cada um dos quais pode também ser dividido, isto é,\n"
+"    ter múltiplos sucessores)."
+
+msgid "    Results are displayed as follows::"
+msgstr "    Os resultados são mostrados da seguinte maneira::"
+
+msgid ""
+"        <rev1>\n"
+"            <successors-1A>\n"
+"        <rev2>\n"
+"            <successors-2A>\n"
+"            <successors-2B1> <successors-2B2> <successors-2B3>"
+msgstr ""
+"        <rev1>\n"
+"            <sucessores-1A>\n"
+"        <rev2>\n"
+"            <sucessores-2A>\n"
+"            <sucessores-2B1> <sucessores-2B2> <sucessores-2B3>"
+
+msgid ""
+"    Here rev2 has two possible (i.e. divergent) successors sets. The first\n"
+"    holds one element, whereas the second holds three (i.e. the changeset has\n"
+"    been split).\n"
+"    "
+msgstr ""
+"    Aqui, rev2 possui dois (ou seja, divergentes) possíveis conjuntos\n"
+"    de sucessores. O primeiro possui um elemento, e o segundo possui\n"
+"    três (a revisão foi dividida).\n"
+"    "
 
 msgid "show how files match on given patterns"
 msgstr "mostra como os arquivos casam com os padrões pedidos"
@@ -13497,22 +13595,6 @@ msgstr "%s não removido: nenhum arquivo rastreado\n"
 msgid "not removing %s: file is untracked\n"
 msgstr "arquivo %s não removido: arquivo não rastreado\n"
 
-#, python-format
-msgid "not removing %s: file still exists (use -f to force removal)\n"
-msgstr ""
-"%s não removido: o arquivo ainda existe (use -f para forçar a remoção)\n"
-
-#, python-format
-msgid "not removing %s: file is modified (use -f to force removal)\n"
-msgstr ""
-"%s não removido: o arquivo foi modificado (use -f para forçar a remoção)\n"
-
-#, python-format
-msgid "not removing %s: file has been marked for add (use forget to undo)\n"
-msgstr ""
-"%s não removido: o arquivo foi marcado para adição (use forget para "
-"desfazer)\n"
-
 msgid "record a rename that has already occurred"
 msgstr "grava uma renomeação que já ocorreu"
 
@@ -14594,12 +14676,12 @@ msgid "cannot include %s (%s)"
 msgstr "não é possível incluir %s (%s)"
 
 #, python-format
-msgid "working directory has unknown parent '%s'!"
-msgstr "diretório de trabalho tem pai desconhecido '%s'!"
-
-#, python-format
 msgid "unknown revision '%s'"
 msgstr "revisão desconhecida '%s'"
+
+#, python-format
+msgid "working directory has unknown parent '%s'!"
+msgstr "diretório de trabalho tem pai desconhecido '%s'!"
 
 msgid "not found in manifest"
 msgstr "não encontrado no manifesto"
@@ -14819,6 +14901,10 @@ msgstr "abortado: erro: %s\n"
 
 msgid "broken pipe\n"
 msgstr "pipe quebrado\n"
+
+#, python-format
+msgid "abort: %s: '%s'\n"
+msgstr "abortado: %s: '%s'\n"
 
 msgid "interrupted!\n"
 msgstr "interrompido!\n"
@@ -15047,6 +15133,10 @@ msgid "merging %s incomplete! (edit conflicts, then use 'hg resolve --mark')\n"
 msgstr ""
 "a mesclagem de %s está incompleta! (edite os conflitos, e em seguida use 'hg"
 " resolve --mark')\n"
+
+#, python-format
+msgid "warning: internal:merge cannot merge symlinks for %s\n"
+msgstr "aviso: internal:merge não é capaz de mesclar links simbólicos para %s\n"
 
 msgid ""
 "``internal:dump``\n"
@@ -17316,24 +17406,6 @@ msgstr ""
 "    Sempre perguntar se a mesclagem teve sucesso, sem levar em conta o informado pela ferramenta."
 
 msgid ""
-"``checkchanged``\n"
-"  True is equivalent to ``check = changed``.\n"
-"  Default: False"
-msgstr ""
-"``checkchanged``\n"
-"  True equivale a ``check = changed``.\n"
-"  Padrão: False"
-
-msgid ""
-"``checkconflicts``\n"
-"  True is equivalent to ``check = conflicts``.\n"
-"  Default: False"
-msgstr ""
-"``checkconflicts``\n"
-"  True equivale a ``check = conflicts``.\n"
-"  Padrão: False"
-
-msgid ""
 "``fixeol``\n"
 "  Attempt to fix up EOL changes caused by the merge tool.\n"
 "  Default: False"
@@ -18319,6 +18391,15 @@ msgstr ""
 "    (OBSOLETA) Determina se revisões estarão disponíveis para download\n"
 "    em formato .zip.\n"
 "    O padrão é False."
+
+msgid ""
+"``archivesubrepos``\n"
+"    Whether to recurse into subrepositories when archiving. Default is\n"
+"    False."
+msgstr ""
+"``archivesubrepos``\n"
+"    Determina se sub-repositórios devem ser percorridos recursivamente\n"
+"    em uma operação archive. O padrão é False."
 
 msgid ""
 "``baseurl``\n"
@@ -22306,6 +22387,10 @@ msgid "push includes bumped changeset: %s!"
 msgstr "push inclui revisão colidida: %s!"
 
 #, python-format
+msgid "push includes divergent changeset: %s!"
+msgstr "push inclui uma revisão divergente: %s!"
+
+#, python-format
 msgid "updating %s to public failed!\n"
 msgstr "a atualização da fase de %s para pública falhou!\n"
 
@@ -22343,6 +22428,9 @@ msgstr "adicionando mudanças em arquivos\n"
 
 msgid "received file revlog group is empty"
 msgstr "grupo recebido de arquivos revlog vazio"
+
+msgid "received spurious file revlog entry"
+msgstr "recebida entrada de revlog de arquivo espúria"
 
 #, python-format
 msgid "missing file data for %s:%s - run hg verify"
@@ -22452,6 +22540,10 @@ msgid "diff context lines count must be an integer, not %r"
 msgstr "o número de linhas de contexto de diff deve ser um inteiro, e não %r"
 
 #, python-format
+msgid "warning: cannot merge flags for %s\n"
+msgstr "aviso: não é possível mesclar flags para %s\n"
+
+#, python-format
 msgid "%s: untracked file differs\n"
 msgstr "%s: arquivo não rastreado é diferente\n"
 
@@ -22464,23 +22556,6 @@ msgstr ""
 #, python-format
 msgid "case-folding collision between %s and %s"
 msgstr "conflito de maiúsculas e minúsculas entre %s e %s"
-
-#, python-format
-msgid ""
-" conflicting flags for %s\n"
-"(n)one, e(x)ec or sym(l)ink?"
-msgstr ""
-" modo conflitante para %s\n"
-"(n)enhum, e(x)ecutável ou (l)ink simbólico?"
-
-msgid "&None"
-msgstr "&Nenhum"
-
-msgid "E&xec"
-msgstr "E&xecutável"
-
-msgid "Sym&link"
-msgstr "&Link simbólico"
 
 msgid "resolving manifests\n"
 msgstr "examinando manifestos\n"
@@ -22793,14 +22868,15 @@ msgid "incompatible revision flag %x"
 msgstr "marcação de revisão incompatível %x"
 
 #, python-format
+msgid "integrity check failed on %s:%d"
+msgstr "checagem de integridade falhou em %s:%d"
+
+#, python-format
 msgid "%s not found in the transaction"
 msgstr "%s não encontrado na transação"
 
 msgid "consistency error in delta"
 msgstr "erro de consistência no delta"
-
-msgid "unknown delta base"
-msgstr "base de delta desconhecida"
 
 #, python-format
 msgid "can't use %s here"
@@ -22943,6 +23019,19 @@ msgid "bumped takes no arguments"
 msgstr "bumped não tem argumentos"
 
 msgid ""
+"``bundle()``\n"
+"    Changesets in the bundle."
+msgstr ""
+"``bundle()``\n"
+"    Revisões no bundle."
+
+msgid "    Bundle must be specified by the -R option."
+msgstr "    Um bundle deve ser especificado pela opção -R."
+
+msgid "no bundle provided - specify with -R"
+msgstr "nenhum bundle fornecido - especifique com -R"
+
+msgid ""
 "``children(set)``\n"
 "    Child changesets of changesets in set."
 msgstr ""
@@ -23031,6 +23120,18 @@ msgstr ""
 "    Revisões criadas por operações graft, transplant ou rebase\n"
 "    que tiveram como origem revisões no conjunto. Se o conjunto\n"
 "    não for especificado, será o mesmo que especificar all()."
+
+msgid ""
+"``divergent()``\n"
+"    Final successors of changesets with an alternative set of final successors."
+msgstr ""
+"``divergent()``\n"
+"    Sucessores finais de revisões com um conjunto alternativo de\n"
+"    sucessores finais."
+
+#. i18n: "divergent" is a keyword
+msgid "divergent takes no arguments"
+msgstr "divergent não tem argumentos"
 
 msgid ""
 "``draft()``\n"
@@ -23730,6 +23831,10 @@ msgstr "o caminho %r percorre o link simbólico %r"
 msgid "could not symlink to %r: %s"
 msgstr "impossível criar link simbólico para %r: %s"
 
+#, python-format
+msgid "%s not under root '%s'"
+msgstr "%s não está sob a raiz '%s'"
+
 msgid "empty revision range"
 msgstr "faixa de revisões vazia"
 
@@ -23892,6 +23997,10 @@ msgid "invalid entry in fncache, line %s"
 msgstr "entrada inválida na fncache, linha %s"
 
 #, python-format
+msgid "(in subrepo %s)"
+msgstr "(no sub-repositório %s)"
+
+#, python-format
 msgid "warning: subrepo spec file %s not found\n"
 msgstr "aviso: arquivo spec de sub-repositório %s não encontrado\n"
 
@@ -23955,9 +24064,8 @@ msgstr ""
 " as origens do sub-repositório %s diferem (na versão do diretório de trabalho)\n"
 "usar origem (l)ocal (%s) ou (r)emota (%s)?\n"
 
-#, python-format
-msgid "default path for subrepository %s not found"
-msgstr "o caminho padrão para o sub-repositório %s não foi encontrado"
+msgid "default path for subrepository not found"
+msgstr "o caminho padrão para o sub-repositório não foi encontrado"
 
 #, python-format
 msgid "unknown subrepo type %s"
