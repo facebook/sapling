@@ -45,27 +45,27 @@ but there is no cache file for it.  So, hg must treat it as
 "missing"(!) file.
 
   $ hg update
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally (glob)
   0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   ! large
 
 Update working directory to null: this cleanup .hg/largefiles/dirstate
 
   $ hg update null
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   getting changed largefiles
   0 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Update working directory to tip, again.
 
   $ hg update
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   error getting 7f7097b041ccf68cc5561e9600da4655d21c6d18 from file:$TESTTMP/mirror for large: can't get file locally (glob)
   0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   ! large
   $ cd ..

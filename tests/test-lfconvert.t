@@ -78,9 +78,9 @@ Test link+rename largefile codepath
 "lfconvert" converts content correctly
   $ cd largefiles-repo
   $ hg up
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate
   .hglf/large
   .hglf/sub/maybelarge.dat
@@ -187,9 +187,9 @@ lfconvert with rename, merge, and remove
   normal1
   stuff/normal2
   $ hg update
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat stuff/normal2
   alsonormal
   blah

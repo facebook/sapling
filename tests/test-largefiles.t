@@ -506,9 +506,9 @@ accident.
 Test addremove with -R
 
   $ hg up -C
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm normal3
   $ rm sub/large4
   $ echo "testing addremove with patterns" > testaddremove.dat
@@ -524,9 +524,9 @@ Test addremove with -R
 Test 3364
   $ hg clone . ../addrm
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../addrm
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
@@ -604,9 +604,9 @@ Test 3507 (both normal files and largefiles were a problem)
   C sub2/large6
   C sub2/large7
   $ hg up -C '.^'
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg remove large
   $ hg addremove --traceback
   $ hg ci -m "removed large"
@@ -715,9 +715,9 @@ Clone a largefiles repo.
 
   $ hg clone . ../b
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../b
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   7:daea875e9014  add/edit more largefiles
@@ -745,9 +745,9 @@ Clone a largefiles repo.
   adding file changes
   added 4 changesets with 10 changes to 4 files
   updating to branch default
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd c
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   3:9e8fbc4bce62  copy files
@@ -767,9 +767,9 @@ Old revisions of a clone have correct largefiles content (this also
 tests update).
 
   $ hg update -r 1
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat large1
   large11
   $ cat sub/large2
@@ -781,17 +781,17 @@ Test cloning with --all-largefiles flag
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles a a-backup
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   8 additional largefiles cached
 
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles -u 0 a a-clone0
   updating to branch default
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   9 additional largefiles cached
   $ hg -R a-clone0 sum
   parent: 0:30d30fe6a5be 
@@ -803,9 +803,9 @@ Test cloning with --all-largefiles flag
   $ rm "${USERCACHE}"/*
   $ hg clone --all-largefiles -u 1 a a-clone1
   updating to branch default
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   8 additional largefiles cached
   $ hg -R a-clone1 sum
   parent: 1:ce8896473775 
@@ -828,9 +828,9 @@ Test cloning with --all-largefiles flag
   $ hg clone ../a
   destination directory: a
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 Ensure base clone command argument validation
@@ -854,9 +854,9 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding file changes
   added 2 changesets with 8 changes to 4 files
   updating to branch default
-  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   2 largefiles updated, 0 removed
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm "${USERCACHE}"/*
   $ cd a-backup
   $ hg pull --all-largefiles --config paths.default-push=bogus/path
@@ -877,9 +877,9 @@ revisions (this was a very bad bug that took a lot of work to fix).
 
   $ hg clone a d
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd b
   $ echo large4-modified > sub/large4
   $ echo normal3-modified > normal3
@@ -897,9 +897,9 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ cd ..
   $ hg clone d e
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd d
 
 More rebase testing, but also test that the largefiles are downloaded from
@@ -1065,9 +1065,9 @@ Rollback on largefiles.
   $ hg revert sub2/large7
   $ hg -q update --clean -r null
   $ hg update --clean
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat normal3
   normal3-modified
   $ cat sub/normal4
@@ -1086,22 +1086,22 @@ Rollback on largefiles.
 demonstrate misfeature: .orig file is overwritten on every update -C,
 also when clean:
   $ hg update --clean
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   0 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat sub2/large7.orig
   large7
   $ rm sub2/large7.orig .hglf/sub2/large7.orig
 
 Now "update check" is happy.
   $ hg update --check 8
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg update --check
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test removing empty largefiles directories on update
   $ test -d sub2 && echo "sub2 exists"
@@ -1190,14 +1190,14 @@ correctly.
   adding file changes
   added 8 changesets with 24 changes to 10 files
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone temp f
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 # Delete the largefiles in the largefiles system cache so that we have an
 # opportunity to test that caching after a pull works.
   $ rm "${USERCACHE}"/*
@@ -1289,9 +1289,9 @@ Test that transplanting a largefile change works correctly.
   adding file changes
   added 9 changesets with 26 changes to 10 files
   updating to branch default
-  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   3 largefiles updated, 0 removed
+  5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd g
   $ hg transplant -s ../d 598410d3eb9a
   searching for changes
@@ -1551,7 +1551,6 @@ Clone over http, with largefiles being pulled on update, not on clone.
    .hglf/f1: remote created -> g
   updating: .hglf/f1 1/1 files (100.00%)
   getting .hglf/f1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   using http://localhost:$HGPORT2/
   sending capabilities command
@@ -1561,6 +1560,7 @@ Clone over http, with largefiles being pulled on update, not on clone.
   sending getlfile command
   found 02a439e5c31c526465ab1a0ca1f431f76b827b90 in store
   1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls http-clone-usercache/*
   http-clone-usercache/02a439e5c31c526465ab1a0ca1f431f76b827b90
@@ -1601,9 +1601,9 @@ We have to simulate that here by setting $HOME and removing write permissions
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   getting changed largefiles
   1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
   $ chmod -R u+w alice/pubrepo
   $ HOME="$ORIGHOME"
@@ -1755,23 +1755,48 @@ Lock in subrepo, otherwise the change isn't archived
   A normal.txt
   Invoking status precommit hook
   M .hgsubstate
-  $ hg archive -S lf_subrepo_archive
-  $ find lf_subrepo_archive | sort
-  lf_subrepo_archive
-  lf_subrepo_archive/.hg_archival.txt
-  lf_subrepo_archive/.hgsub
-  lf_subrepo_archive/.hgsubstate
-  lf_subrepo_archive/a
-  lf_subrepo_archive/a/b
-  lf_subrepo_archive/a/b/c
-  lf_subrepo_archive/a/b/c/d
-  lf_subrepo_archive/a/b/c/d/e.large.txt
-  lf_subrepo_archive/a/b/c/d/e.normal.txt
-  lf_subrepo_archive/a/b/c/x
-  lf_subrepo_archive/a/b/c/x/y.normal.txt
-  lf_subrepo_archive/subrepo
-  lf_subrepo_archive/subrepo/large.txt
-  lf_subrepo_archive/subrepo/normal.txt
+  $ hg archive -S ../lf_subrepo_archive
+  $ find ../lf_subrepo_archive | sort
+  ../lf_subrepo_archive
+  ../lf_subrepo_archive/.hg_archival.txt
+  ../lf_subrepo_archive/.hgsub
+  ../lf_subrepo_archive/.hgsubstate
+  ../lf_subrepo_archive/a
+  ../lf_subrepo_archive/a/b
+  ../lf_subrepo_archive/a/b/c
+  ../lf_subrepo_archive/a/b/c/d
+  ../lf_subrepo_archive/a/b/c/d/e.large.txt
+  ../lf_subrepo_archive/a/b/c/d/e.normal.txt
+  ../lf_subrepo_archive/a/b/c/x
+  ../lf_subrepo_archive/a/b/c/x/y.normal.txt
+  ../lf_subrepo_archive/subrepo
+  ../lf_subrepo_archive/subrepo/large.txt
+  ../lf_subrepo_archive/subrepo/normal.txt
+
+Test update with subrepos.
+
+  $ hg update 0
+  getting changed largefiles
+  0 largefiles updated, 1 removed
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg status -S
+  $ hg update tip
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status -S
+# modify a large file
+  $ echo "modified" > subrepo/large.txt
+  $ hg st -S
+  M subrepo/large.txt
+# update -C should revert the change.
+  $ hg update -C
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  getting changed largefiles
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status -S
 
 Test archiving a revision that references a subrepo that is not yet
 cloned (see test-subrepo-recursion.t):

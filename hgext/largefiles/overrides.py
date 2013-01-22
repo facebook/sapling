@@ -669,18 +669,18 @@ def overriderevert(orig, ui, repo, *pats, **opts):
     finally:
         wlock.release()
 
-def hgupdate(orig, repo, node):
-    # Only call updatelfiles the standins that have changed to save time
-    oldstandins = lfutil.getstandinsstate(repo)
-    result = orig(repo, node)
-    newstandins = lfutil.getstandinsstate(repo)
-    filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
-    lfcommands.updatelfiles(repo.ui, repo, filelist=filelist, printmessage=True)
-    return result
+def hgupdaterepo(orig, repo, node, overwrite):
+    if not overwrite:
+        # Only call updatelfiles on the standins that have changed to save time
+        oldstandins = lfutil.getstandinsstate(repo)
 
-def hgclean(orig, repo, node, show_stats=True):
-    result = orig(repo, node, show_stats)
-    lfcommands.updatelfiles(repo.ui, repo)
+    result = orig(repo, node, overwrite)
+
+    filelist = None
+    if not overwrite:
+        newstandins = lfutil.getstandinsstate(repo)
+        filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+    lfcommands.updatelfiles(repo.ui, repo, filelist=filelist)
     return result
 
 def hgmerge(orig, repo, node, force=None, remind=True):

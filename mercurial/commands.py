@@ -2473,13 +2473,13 @@ def debugsuccessorssets(ui, repo, *revs):
     succeed A. It contains non-obsolete changesets only.
 
     In most cases a changeset A has a single successors set containing a single
-    successors (changeset A replaced by A').
+    successor (changeset A replaced by A').
 
     A changeset that is made obsolete with no successors are called "pruned".
     Such changesets have no successors sets at all.
 
     A changeset that has been "split" will have a successors set containing
-    more than one successors.
+    more than one successor.
 
     A changeset that has been rewritten in multiple different ways is called
     "divergent". Such changesets have multiple successor sets (each of which
