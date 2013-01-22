@@ -508,3 +508,58 @@ command
 ensure that we still don't have a working dir
 
   $ hg parents
+
+
+Check that bisect does not break on obsolete changesets
+=========================================================
+
+  $ cat > ${TESTTMP}/obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
+tip is obsolete
+---------------------
+
+  $ hg debugobsolete `hg id --debug -i -r tip`
+  $ hg bisect --reset
+  $ hg bisect --good 15
+  $ hg bisect --bad 30
+  Testing changeset 22:06c7993750ce (15 changesets remaining, ~3 tests)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bisect --command true
+  changeset 22:06c7993750ce: good
+  changeset 26:3efc6fd51aeb: good
+  changeset 28:8e0c2264c8af: good
+  changeset 29:b5bd63375ab9: good
+  The first bad revision is:
+  changeset:   30:ed2d2f24b11c
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:30 1970 +0000
+  summary:     msg 30
+  
+
+Changeset in the bad:good range is obsolete
+---------------------------------------------
+
+  $ hg up 30
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 'a' >> a
+  $ hg ci -m "msg 32" -d "32 0"
+  $ hg bisect --reset
+  $ hg bisect --good .
+  $ hg bisect --bad 25
+  Testing changeset 28:8e0c2264c8af (6 changesets remaining, ~2 tests)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bisect --command true
+  changeset 28:8e0c2264c8af: good
+  changeset 26:3efc6fd51aeb: good
+  The first good revision is:
+  changeset:   26:3efc6fd51aeb
+  user:        test
+  date:        Thu Jan 01 00:00:26 1970 +0000
+  summary:     msg 26
+  

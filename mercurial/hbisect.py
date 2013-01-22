@@ -38,7 +38,7 @@ def bisect(changelog, state):
         # set nodes descended from goodrevs
         for rev in goodrevs:
             ancestors[rev] = []
-        for rev in xrange(goodrev + 1, len(changelog)):
+        for rev in changelog.revs(goodrev + 1):
             for prev in clparents(rev):
                 if ancestors[prev] == []:
                     ancestors[rev] = []
@@ -46,7 +46,7 @@ def bisect(changelog, state):
         # clear good revs from array
         for rev in goodrevs:
             ancestors[rev] = None
-        for rev in xrange(len(changelog), goodrev, -1):
+        for rev in changelog.revs(len(changelog), goodrev):
             if ancestors[rev] is None:
                 for prev in clparents(rev):
                     ancestors[prev] = None
