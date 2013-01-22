@@ -123,4 +123,36 @@ manifest after edit
   e
   f
 
+Drop the last changeset
+
+  $ cat > $EDITED <<EOF
+  > pick ee283cb5f2d5 e
+  > pick a4f7421b80f7 f
+  > drop f518305ce889 d
+  > EOF
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit ee283cb5f2d5 2>&1 | fixbundle
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log --graph
+  @  changeset:   3:a4f7421b80f7
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     f
+  |
+  o  changeset:   2:ee283cb5f2d5
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     e
+  |
+  o  changeset:   1:d2ae7f538514
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b
+  |
+  o  changeset:   0:cb9a9f314b8b
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+
   $ cd ..

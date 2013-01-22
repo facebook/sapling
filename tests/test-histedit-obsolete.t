@@ -153,6 +153,56 @@ stabilise
 
   $ hg rebase  -r 'unstable()' -d .
 
+Test dropping of changeset on the top of the stack
+-------------------------------------------------------
+
+Nothing is rewritten below, the working directory parent must be change for the
+dropped changeset to be hidden.
+
+  $ cd ..
+  $ hg clone base droplast
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd droplast
+  $ cat > commands.txt <<EOF
+  > pick 40db8afa467b 10 c
+  > drop b449568bf7fc 11 f
+  > EOF
+  $ hg histedit -r '40db8afa467b' --commands commands.txt
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G
+  @  10:40db8afa467b c
+  |
+  o  0:cb9a9f314b8b a
+  
+
+With rewritten ancestors
+
+  $ echo e > e
+  $ hg add e
+  $ hg commit -m g
+  $ echo f > f
+  $ hg add f
+  $ hg commit -m h
+  $ cat > commands.txt <<EOF
+  > pick 47a8561c0449 12 g
+  > pick 40db8afa467b 10 c
+  > drop 1b3b05f35ff0 13 h
+  > EOF
+  $ hg histedit -r '40db8afa467b' --commands commands.txt
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G
+  @  15:ee6544123ab8 c
+  |
+  o  14:269e713e9eae g
+  |
+  o  0:cb9a9f314b8b a
+  
+  $ cd ../base
+
+
 
 Test phases support
 ===========================================
