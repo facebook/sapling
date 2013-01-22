@@ -109,11 +109,7 @@ def uisetup(ui):
     entry = extensions.wrapfunction(commands, 'revert',
                                     overrides.overriderevert)
 
-    # clone uses hg._update instead of hg.update even though they are the
-    # same function... so wrap both of them)
-    extensions.wrapfunction(hg, 'update', overrides.hgupdate)
-    extensions.wrapfunction(hg, '_update', overrides.hgupdate)
-    extensions.wrapfunction(hg, 'clean', overrides.hgclean)
+    extensions.wrapfunction(hg, 'updaterepo', overrides.hgupdaterepo)
     extensions.wrapfunction(hg, 'merge', overrides.hgmerge)
 
     extensions.wrapfunction(archival, 'archive', overrides.overridearchive)

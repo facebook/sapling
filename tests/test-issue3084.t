@@ -16,9 +16,9 @@ $HOME/.cache/largefiles.
   $ hg commit -m "Add foo as a largefile"
 
   $ hg update -r 0
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   getting changed largefiles
   0 largefiles updated, 1 removed
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo "normal" > foo
   $ hg add foo
