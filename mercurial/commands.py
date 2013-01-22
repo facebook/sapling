@@ -5866,7 +5866,7 @@ def tip(ui, repo, **opts):
     Returns 0 on success.
     """
     displayer = cmdutil.show_changeset(ui, repo, opts)
-    displayer.show(repo[len(repo) - 1])
+    displayer.show(repo['tip'])
     displayer.close()
 
 @command('unbundle',

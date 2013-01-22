@@ -44,8 +44,8 @@ class changectx(object):
             self._rev = nullrev
             return
         if changeid == 'tip':
-            self._rev = len(repo.changelog) - 1
-            self._node = repo.changelog.node(self._rev)
+            self._node = repo.changelog.tip()
+            self._rev = repo.changelog.rev(self._node)
             return
         if len(changeid) == 20:
             try:

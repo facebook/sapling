@@ -55,6 +55,17 @@ Killing a single changeset without replacement
   $ hg debugobsolete -d '0 0' `getid kill_me` -u babar
   $ hg debugobsolete
   97b7c2d76b1845ed3eb988cd612611e72406cef0 0 {'date': '0 0', 'user': 'babar'}
+
+(test that mercurial is not confused)
+
+  $ hg up null --quiet # having 0 as parent prevents it to be hidden
+  $ hg tip
+  changeset:   -1:000000000000
+  tag:         tip
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+  $ hg up --hidden tip --quiet
   $ cd ..
 
 Killing a single changeset with replacement
