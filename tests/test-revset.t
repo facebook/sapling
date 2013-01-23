@@ -758,6 +758,37 @@ test revsets started with 40-chars hash (issue3669)
   $ hg log -r "${ISSUE3669_TIP}^" --template '{rev}\n'
   8
 
+test or-ed indirect predicates (issue3775)
+
+  $ log '6 or 6^1' | sort
+  5
+  6
+  $ log '6^1 or 6' | sort
+  5
+  6
+  $ log '4 or 4~1' | sort
+  2
+  4
+  $ log '4~1 or 4' | sort
+  2
+  4
+  $ log '(0 or 2):(4 or 6) or 0 or 6' | sort
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  $ log '0 or 6 or (0 or 2):(4 or 6)' | sort
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+
 tests for 'remote()' predicate:
 #.  (csets in remote) (id)            (remote)
 1.  less than local   current branch  "default"

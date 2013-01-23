@@ -223,13 +223,9 @@ def symbolset(repo, subset, x):
     return stringset(repo, subset, x)
 
 def rangeset(repo, subset, x, y):
-    m = getset(repo, subset, x)
-    if not m:
-        m = getset(repo, list(repo), x)
-
-    n = getset(repo, subset, y)
-    if not n:
-        n = getset(repo, list(repo), y)
+    cl = repo.changelog
+    m = getset(repo, cl, x)
+    n = getset(repo, cl, y)
 
     if not m or not n:
         return []
@@ -326,7 +322,7 @@ def ancestorspec(repo, subset, x, n):
         raise error.ParseError(_("~ expects a number"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, cl, x):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
@@ -1139,7 +1135,7 @@ def parentspec(repo, subset, x, n):
         raise error.ParseError(_("^ expects a number 0, 1, or 2"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, cl, x):
         if n == 0:
             ps.add(r)
         elif n == 1:
