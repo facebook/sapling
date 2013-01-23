@@ -18,6 +18,8 @@ Many date formats are valid. Here are some examples:
 - ``12-6``
 - ``12/6``
 - ``12/6/6`` (Dec 6 2006)
+- ``today`` (midnight)
+- ``yesterday`` (midnight)
 
 Lastly, there is Mercurial's internal format:
 

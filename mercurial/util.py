@@ -1027,6 +1027,14 @@ def parsedate(date, formats=None, bias={}):
 
     The date may be a "unixtime offset" string or in one of the specified
     formats. If the date already is a (unixtime, offset) tuple, it is returned.
+
+    >>> parsedate(' today ') == parsedate(\
+                                  datetime.date.today().strftime('%b %d'))
+    True
+    >>> parsedate( 'yesterday ') == parsedate((datetime.date.today() -\
+                                               datetime.timedelta(days=1)\
+                                              ).strftime('%b %d'))
+    True
     """
     if not date:
         return 0, 0
@@ -1035,6 +1043,13 @@ def parsedate(date, formats=None, bias={}):
     if not formats:
         formats = defaultdateformats
     date = date.strip()
+
+    if date == _('today'):
+        date = datetime.date.today().strftime('%b %d')
+    elif date == _('yesterday'):
+        date = (datetime.date.today() -
+                datetime.timedelta(days=1)).strftime('%b %d')
+
     try:
         when, offset = map(int, date.split(' '))
     except ValueError:
