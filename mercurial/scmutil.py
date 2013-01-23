@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
+from mercurial.node import nullrev
 import util, error, osutil, revset, similar, encoding, phases
 import match as matchmod
 import os, errno, re, stat, sys, glob
@@ -647,6 +648,8 @@ def revrange(repo, revs):
                 start, end = spec.split(_revrangesep, 1)
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
+                if end == nullrev and start <= 0:
+                    start = nullrev
                 rangeiter = repo.changelog.revs(start, end)
                 if not seen and not l:
                     # by far the most common case: revs = ["-1:0"]

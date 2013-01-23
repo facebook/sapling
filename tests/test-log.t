@@ -1296,4 +1296,13 @@ test hg log on non-existent files and on directories
   changeset:   0:65624cd9070a
   $ hg log -l1 .d6/f1 | grep changeset
   changeset:   0:65624cd9070a
+
+issue3772: hg log -r :null showing revision 0 as well
+
+  $ hg log -r :null
+  changeset:   -1:000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+
   $ cd ..
