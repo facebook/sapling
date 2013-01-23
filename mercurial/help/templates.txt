@@ -38,3 +38,61 @@ You can also use a chain of filters to get the desired output::
 List of filters:
 
 .. filtersmarker
+
+Note that a filter is nothing more than a function call, i.e.
+``expr|filter`` is equivalent to ``filter(expr)``.
+
+In addition to filters, there are some basic built-in functions:
+
+- if(expr, then[, else])
+
+- ifeq(expr, expr, then[, else])
+
+- sub(pat, repl, expr)
+
+- join(list, sep)
+
+- label(label, expr)
+
+- date(date[, fmt])
+
+- fill(text[, width])
+
+Also, for any expression that returns a list, there is a list operator:
+
+- expr % "{template}"
+
+Some sample command line templates:
+
+- Format lists, e.g. files::
+
+   $ hg log -r 0 --template "files:\n{files % '  {file}\n'}"
+
+- Join the list of files with a ", "::
+
+   $ hg log -r 0 --template "files: {join(files, ', ')}\n"
+
+- Format date::
+
+   $ hg log -r 0 --template "{date(date, '%Y')}\n"
+
+- Output the description set to a fill-width of 30::
+
+   $ hg log -r 0 --template "{fill(desc, '30')}"
+
+- Use a conditional to test for the default branch::
+
+   $ hg log -r 0 --template "{ifeq(branch, 'default', 'on the main branch',
+   'on branch {branch}')}\n"
+
+- Append a newline if not empty::
+
+   $ hg tip --template "{if(author, '{author}\n')}"
+
+- Label the output for use with the color extension::
+
+   $ hg log -r 0 --template "{label('changeset.{phase}', node|short)}\n"
+
+- Invert the firstline filter, i.e. everything but the first line::
+
+   $ hg log -r 0 --template "{sub(r'^.*\n?\n?', '', desc)}\n"
