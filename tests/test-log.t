@@ -1304,5 +1304,10 @@ issue3772: hg log -r :null showing revision 0 as well
   user:        
   date:        Thu Jan 01 00:00:00 1970 +0000
   
+  $ hg log -r null:null
+  changeset:   -1:000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
 
   $ cd ..
