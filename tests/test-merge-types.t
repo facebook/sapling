@@ -35,7 +35,7 @@ Symlink is local parent, executable is other:
    overwrite: False, partial: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
@@ -68,7 +68,7 @@ Symlink is other parent, executable is local:
    overwrite: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
@@ -102,7 +102,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    overwrite: False, partial: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool 'internal:prompt' for a (binary False symlink True)

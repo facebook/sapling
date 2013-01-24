@@ -137,7 +137,7 @@ Graft out of order, skipping a merge and a duplicate
    overwrite: False, partial: False
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    b: local copied/moved to a -> m
-  preserving b for resolve of b
+    preserving b for resolve of b
   updating: b 1/1 files (100.00%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging b and a to b
@@ -160,7 +160,7 @@ Graft out of order, skipping a merge and a duplicate
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
    d: remote is newer -> g
    e: versions differ -> m
-  preserving e for resolve of e
+    preserving e for resolve of e
   updating: d 1/2 files (50.00%)
   getting d
   updating: e 2/2 files (100.00%)

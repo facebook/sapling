@@ -32,9 +32,9 @@
    overwrite: False, partial: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
    a: remote moved to b -> m
+    preserving a for resolve of b
    a: remote moved to c -> m
-  preserving a for resolve of b
-  preserving a for resolve of c
+    preserving a for resolve of c
   removing a
   updating: a 1/2 files (50.00%)
   picked tool 'internal:merge' for b (binary False symlink False)

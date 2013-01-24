@@ -47,8 +47,8 @@
    overwrite: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    a: versions differ -> m
+    preserving a for resolve of a
    b: remote created -> g
-  preserving a for resolve of a
   updating: a 1/2 files (50.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -67,9 +67,9 @@
   resolving manifests
    overwrite: False, partial: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
-   a: versions differ -> m
    b: other deleted -> r
-  preserving a for resolve of a
+   a: versions differ -> m
+    preserving a for resolve of a
   updating: b 1/2 files (50.00%)
   removing b
   updating: a 2/2 files (100.00%)
@@ -101,8 +101,8 @@
    overwrite: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    a: versions differ -> m
+    preserving a for resolve of a
    b: remote created -> g
-  preserving a for resolve of a
   updating: a 1/2 files (50.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -179,9 +179,9 @@ create a second head
    overwrite: False, partial: False
    ancestor: c19d34741b0a, local: 1e71731e6fbb+, remote: 83c51d0caff4
    a: versions differ -> m
+    preserving a for resolve of a
    b: versions differ -> m
-  preserving a for resolve of a
-  preserving b for resolve of b
+    preserving b for resolve of b
   updating: a 1/2 files (50.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a

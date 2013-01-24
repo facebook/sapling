@@ -176,12 +176,12 @@ def _forgetremoved(wctx, mctx, branchmerge):
     state = branchmerge and 'r' or 'f'
     for f in wctx.deleted():
         if f not in mctx:
-            actions.append((f, state, None))
+            actions.append((f, state, None, "forget deleted"))
 
     if not branchmerge:
         for f in wctx.removed():
             if f not in mctx:
-                actions.append((f, "f", None))
+                actions.append((f, "f", None, "forget removed"))
 
     return actions
 
@@ -194,8 +194,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     """
 
     def act(msg, m, f, *args):
-        repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
-        actions.append((f, m, args))
+        actions.append((f, m, args, msg))
 
     actions, copy, movewithdir = [], {}, {}
 
@@ -342,12 +341,13 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     # prescan for merges
     for a in actions:
-        f, m, args = a
+        f, m, args, msg = a
+        repo.ui.debug(" %s: %s -> %s\n" % (f, msg, m))
         if m == "m": # merge
             f2, fd, move = args
             if fd == '.hgsubstate': # merged internally
                 continue
-            repo.ui.debug("preserving %s for resolve of %s\n" % (f, fd))
+            repo.ui.debug("  preserving %s for resolve of %s\n" % (f, fd))
             fcl = wctx[f]
             fco = mctx[f2]
             if mctx == actx: # backwards, use working dir parent as ancestor
@@ -374,7 +374,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     numupdates = len(actions)
     for i, a in enumerate(actions):
-        f, m, args = a
+        f, m, args, msg = a
         repo.ui.progress(_('updating'), i + 1, item=f, total=numupdates,
                          unit=_('files'))
         if m == "r": # remove
@@ -468,7 +468,7 @@ def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
 
     for a in actions:
-        f, m, args = a
+        f, m, args, msg = a
         if m == "r": # remove
             if branchmerge:
                 repo.dirstate.remove(f)

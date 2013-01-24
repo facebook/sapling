@@ -33,13 +33,13 @@
      src: 'a2' -> dst: 'b2' !
      src: 'a2' -> dst: 'c2' !
     checking for directory renames
-   a2: divergent renames -> dr
   resolving manifests
    overwrite: False, partial: False
    ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
    a: remote moved to b -> m
+    preserving a for resolve of b
+   a2: divergent renames -> dr
    b2: remote created -> g
-  preserving a for resolve of b
   removing a
   updating: a 1/3 files (33.33%)
   picked tool 'internal:merge' for b (binary False symlink False)
@@ -178,10 +178,10 @@ Check for issue3074
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
      src: 'file' -> dst: 'newfile' %
     checking for directory renames
-   file: rename and delete -> rd
   resolving manifests
    overwrite: False, partial: False
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
+   file: rename and delete -> rd
    newfile: remote created -> g
   updating: file 1/2 files (50.00%)
   note: possible conflict - file was deleted and renamed to:
