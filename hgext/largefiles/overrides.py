@@ -368,7 +368,7 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, overwrite, partial):
         if overwrite:
             processed.append(action)
             continue
-        f, m = action[:2]
+        f, m, args = action
 
         choices = (_('&Largefile'), _('&Normal file'))
         if m == "g" and lfutil.splitstandin(f) in p1 and f in p2:
@@ -379,10 +379,10 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, overwrite, partial):
             msg = _('%s has been turned into a largefile\n'
                     'use (l)argefile or keep as (n)ormal file?') % lfile
             if repo.ui.promptchoice(msg, choices, 0) == 0:
-                processed.append((lfile, "r"))
-                processed.append((standin, "g", p2.flags(standin)))
+                processed.append((lfile, "r", None))
+                processed.append((standin, "g", (p2.flags(standin),)))
             else:
-                processed.append((standin, "r"))
+                processed.append((standin, "r", None))
         elif m == "g" and lfutil.standin(f) in p1 and f in p2:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
@@ -391,10 +391,10 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, overwrite, partial):
             msg = _('%s has been turned into a normal file\n'
                     'keep as (l)argefile or use (n)ormal file?') % lfile
             if repo.ui.promptchoice(msg, choices, 0) == 0:
-                processed.append((lfile, "r"))
+                processed.append((lfile, "r", None))
             else:
-                processed.append((standin, "r"))
-                processed.append((lfile, "g", p2.flags(lfile)))
+                processed.append((standin, "r", None))
+                processed.append((lfile, "g", (p2.flags(lfile),)))
         else:
             processed.append(action)
 
