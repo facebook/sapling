@@ -227,6 +227,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 m1['.hgsubstate'] += "+"
                 break
 
+    prompts = []
     # Compare manifests
     visit = m1.iteritems()
     if repo.ui.debugflag:
@@ -265,13 +266,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             act("local copied/moved to " + f2, "m", f, f2, f, False)
         elif f in ma: # clean, a different, no remote
             if n != ma[f]:
-                if repo.ui.promptchoice(
-                    _(" local changed %s which remote deleted\n"
-                      "use (c)hanged version or (d)elete?") % f,
-                    (_("&Changed"), _("&Delete")), 0):
-                    act("prompt delete", "r", f)
-                else:
-                    act("prompt keep", "a", f)
+                prompts.append((f, "cd")) # prompt changed/deleted
             elif n[20:] == "a": # added, no remote
                 act("remote deleted", "f", f)
             else:
@@ -305,12 +300,24 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             else:
                 act("remote created", "g", f, m2.flags(f))
         elif n != ma[f]:
+            prompts.append((f, "dc")) # prompt deleted/changed
+
+    for f, m in sorted(prompts):
+        if m == "cd":
+            if repo.ui.promptchoice(
+                _(" local changed %s which remote deleted\n"
+                  "use (c)hanged version or (d)elete?") % f,
+                (_("&Changed"), _("&Delete")), 0):
+                act("prompt delete", "r", f)
+            else:
+                act("prompt keep", "a", f)
+        elif m == "dc":
             if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?") % f,
                 (_("&Changed"), _("&Deleted")), 0) == 0:
                 act("prompt recreating", "g", f, m2.flags(f))
-
+        else: assert False, m
     return actions
 
 def actionkey(a):
