@@ -274,7 +274,7 @@ def overrideverify(orig, ui, repo, *pats, **opts):
     contents = opts.pop('lfc', False)
 
     result = orig(ui, repo, *pats, **opts)
-    if large:
+    if large or all or contents:
         result = result or lfcommands.verifylfiles(ui, repo, all, contents)
     return result
 
