@@ -1188,8 +1188,9 @@ def clone(ui, source, dest=None, **opts):
       d) the changeset specified with -r
       e) the tipmost head specified with -b
       f) the tipmost head specified with the url#branch source syntax
-      g) the tipmost head of the default branch
-      h) tip
+      g) the revision marked with the '@' bookmark, if present
+      h) the tipmost head of the default branch
+      i) tip
 
       Examples:
 
