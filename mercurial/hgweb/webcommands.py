@@ -188,7 +188,7 @@ def changelog(web, req, tmpl, shortlog=False):
         if 'rev' in req.form:
             hi = req.form['rev'][0]
         else:
-            hi = len(web.repo) - 1
+            hi = 'tip'
         try:
             ctx = web.repo[hi]
         except error.RepoError:
