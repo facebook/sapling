@@ -1370,4 +1370,20 @@ Test paging
 
   $ cat errors.log
 
+issue3774
+
+  $ hg phase -fs 4
+  $ hg bookmark -r4 secret
+  $ cat > hgweb.cgi <<HGWEB
+  > from mercurial import demandimport; demandimport.enable()
+  > from mercurial.hgweb import hgweb
+  > from mercurial.hgweb import wsgicgi
+  > app = hgweb('.', 'test')
+  > wsgicgi.launch(app)
+  > HGWEB
+  $ . "$TESTDIR/cgienv"
+  $ PATH_INFO=/bookmarks; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi
+
   $ cd ..

@@ -424,7 +424,7 @@ def tags(web, req, tmpl):
                 latestentry=lambda **x: entries(True, True, **x))
 
 def bookmarks(web, req, tmpl):
-    i = web.repo._bookmarks.items()
+    i = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
     parity = paritygen(web.stripecount)
 
     def entries(latestonly, **map):
