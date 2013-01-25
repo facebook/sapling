@@ -1412,8 +1412,10 @@ Cat a largefile
   normal3-modified
   $ hg cat -r '.^' normal3
   normal3-modified
-  $ hg cat -r '.^' sub/large4
+  $ hg cat -r '.^' sub/large4 doesntexist
   large4-modified
+  doesntexist: no such file in rev a381d2c8c80e
+  [1]
 
 Test that renaming a largefile results in correct output for status
 
@@ -2010,6 +2012,8 @@ Test actions on largefiles using relative paths from subdir
   $ echo more >> anotherlarge
   $ hg st .
   M anotherlarge
+  $ hg cat anotherlarge
+  anotherlarge
   $ hg revert anotherlarge
   $ hg st
   ? sub/anotherlarge.orig

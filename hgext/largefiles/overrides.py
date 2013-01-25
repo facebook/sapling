@@ -1149,10 +1149,25 @@ def overridetransplant(orig, ui, repo, *revs, **opts):
 
 def overridecat(orig, ui, repo, file1, *pats, **opts):
     ctx = scmutil.revsingle(repo, opts.get('rev'))
-    if not lfutil.standin(file1) in ctx:
-        result = orig(ui, repo, file1, *pats, **opts)
-        return result
-    return lfcommands.catlfile(repo, file1, ctx.rev(), opts.get('output'))
+    err = 1
+    notbad = set()
+    m = scmutil.match(ctx, (file1,) + pats, opts)
+    origmatchfn = m.matchfn
+    def lfmatchfn(f):
+        lf = lfutil.splitstandin(f)
+        if lf is None:
+            return origmatchfn(f)
+        notbad.add(lf)
+        return origmatchfn(lf)
+    m.matchfn = lfmatchfn
+    m.bad = lambda f, msg: f not in notbad
+    for f in ctx.walk(m):
+        lf = lfutil.splitstandin(f)
+        if lf is None:
+            err = orig(ui, repo, f, **opts)
+        else:
+            err = lfcommands.catlfile(repo, lf, ctx.rev(), opts.get('output'))
+    return err
 
 def mercurialsinkbefore(orig, sink):
     sink.repo._isconverting = True
