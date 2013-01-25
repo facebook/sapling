@@ -1987,6 +1987,34 @@ Test commit's addremove option prior to the first commit
   .hglf/large.dat
   .hglf/large2.dat
 
+Test actions on largefiles using relative paths from subdir
+
+  $ mkdir sub
+  $ cd sub
+  $ echo anotherlarge > anotherlarge
+  $ hg add --large anotherlarge
+  $ hg st
+  A sub/anotherlarge
+  $ hg st anotherlarge
+  A anotherlarge
+  $ hg commit -m anotherlarge anotherlarge
+  Invoking status precommit hook
+  A sub/anotherlarge
+  $ hg log anotherlarge
+  changeset:   1:9627a577c5e9
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     anotherlarge
+  
+  $ echo more >> anotherlarge
+  $ hg st .
+  M anotherlarge
+  $ hg revert anotherlarge
+  $ hg st
+  ? sub/anotherlarge.orig
+  $ cd ..
+
   $ cd ..
 
 issue3651: summary/outgoing with largefiles shows "no remote repo"

@@ -224,13 +224,7 @@ def getstandinmatcher(repo, pats=[], opts={}):
     '''Return a match object that applies pats to the standin directory'''
     standindir = repo.wjoin(shortname)
     if pats:
-        # patterns supplied: search standin directory relative to current dir
-        cwd = repo.getcwd()
-        if os.path.isabs(cwd):
-            # cwd is an absolute path for hg -R <reponame>
-            # work relative to the repository root in this case
-            cwd = ''
-        pats = [os.path.join(standindir, cwd, pat) for pat in pats]
+        pats = [os.path.join(standindir, pat) for pat in pats]
     elif os.path.isdir(standindir):
         # no patterns: relative to repo root
         pats = [standindir]
