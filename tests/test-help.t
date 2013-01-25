@@ -790,9 +790,10 @@ Test keyword search help
   
   Commands:
   
-   clone  make a copy of an existing repository
-   paths  show aliases for remote repositories
-   update update working directory (or switch revisions)
+   bookmarks track a line of development with movable markers
+   clone     make a copy of an existing repository
+   paths     show aliases for remote repositories
+   update    update working directory (or switch revisions)
   
   Extensions:
   
