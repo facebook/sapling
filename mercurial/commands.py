@@ -785,6 +785,10 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     repositories to support bookmarks. For versions prior to 1.8, this means
     the bookmarks extension must be enabled.
 
+    If you set a bookmark called '@', new clones of the repository will
+    have that revision checked out (and the bookmark made active) by
+    default.
+
     With -i/--inactive, the new bookmark will not be made the active
     bookmark. If -r/--rev is given, the new bookmark will not be made
     active even if -i/--inactive is not given. If no NAME is given, the
@@ -1145,6 +1149,9 @@ def clone(ui, source, dest=None, **opts):
     --pull, even for local source repositories. Note that specifying a
     tag will include the tagged changeset but not the changeset
     containing the tag.
+
+    If the source repository has a bookmark called '@' set, that
+    revision will be checked out in the new repository by default.
 
     To check out a particular version, use -u/--update, or
     -U/--noupdate to create a clone with no working directory.
