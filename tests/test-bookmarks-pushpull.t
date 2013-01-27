@@ -171,6 +171,18 @@ divergent bookmarks
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
 
+revsets should not ignore divergent bookmarks
+
+  $ hg bookmark -fr 1 Z
+  $ hg log -r 'bookmark()' --template '{rev}:{node|short} {bookmarks}\n'
+  0:4e3505fd9583 Y
+  1:9b140be10808 @ X Z foobar
+  2:0d2164f0ce0d @foo X@foo
+  $ hg log -r 'bookmark("X@foo")' --template '{rev}:{node|short} {bookmarks}\n'
+  2:0d2164f0ce0d @foo X@foo
+  $ hg log -r 'bookmark("re:X@foo")' --template '{rev}:{node|short} {bookmarks}\n'
+  2:0d2164f0ce0d @foo X@foo
+
 update a remote bookmark from a non-head to a head
 
   $ hg up -q Y
@@ -299,7 +311,7 @@ hgweb
   @	9b140be1080824d768c5a4691a564088eede71f9
   X	9b140be1080824d768c5a4691a564088eede71f9
   Y	c922c0139ca03858f655e4a2af4dd02796a63969
-  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  Z	9b140be1080824d768c5a4691a564088eede71f9
   foo	0000000000000000000000000000000000000000
   foobar	9b140be1080824d768c5a4691a564088eede71f9
   $ hg out -B http://localhost:$HGPORT/

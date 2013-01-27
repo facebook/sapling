@@ -8,7 +8,6 @@
 import re
 import parser, util, error, discovery, hbisect, phases
 import node
-import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
 import encoding
@@ -375,14 +374,14 @@ def bookmark(repo, subset, x):
                        _('the argument to bookmark must be a string'))
         kind, pattern, matcher = _stringmatcher(bm)
         if kind == 'literal':
-            bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
+            bmrev = repo._bookmarks.get(bm, None)
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
             bmrev = repo[bmrev].rev()
             return [r for r in subset if r == bmrev]
         else:
             matchrevs = set()
-            for name, bmrev in bookmarksmod.listbookmarks(repo).iteritems():
+            for name, bmrev in repo._bookmarks.iteritems():
                 if matcher(name):
                     matchrevs.add(bmrev)
             if not matchrevs:
@@ -394,7 +393,7 @@ def bookmark(repo, subset, x):
             return [r for r in subset if r in bmrevs]
 
     bms = set([repo[r].rev()
-               for r in bookmarksmod.listbookmarks(repo).values()])
+               for r in repo._bookmarks.values()])
     return [r for r in subset if r in bms]
 
 def branch(repo, subset, x):
