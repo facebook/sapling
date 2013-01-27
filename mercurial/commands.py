@@ -5574,13 +5574,9 @@ def summary(ui, repo, **opts):
         current = repo._bookmarkcurrent
         # i18n: column positioning for "hg summary"
         ui.write(_('bookmarks:'), label='log.bookmark')
-        if current is not None:
-            try:
-                marks.remove(current)
-                ui.write(' *' + current, label='bookmarks.current')
-            except ValueError:
-                # current bookmark not in parent ctx marks
-                pass
+        if current is not None and current in marks:
+            ui.write(' *' + current, label='bookmarks.current')
+            marks.remove(current)
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
