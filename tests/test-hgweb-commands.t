@@ -1370,7 +1370,7 @@ Test paging
 
   $ cat errors.log
 
-issue3774
+bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
 
   $ hg phase -fs 4
   $ hg bookmark -r4 secret
