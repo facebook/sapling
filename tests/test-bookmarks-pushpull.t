@@ -47,7 +47,7 @@ import bookmark by name
   (run 'hg update' to get a working copy)
   $ hg bookmarks
      X                         0:4e3505fd9583
-     Y                         0:4e3505fd9583
+   * Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
   $ hg debugpushkey ../a namespaces
   bookmarks	
@@ -64,7 +64,7 @@ import bookmark by name
   importing bookmark X
   $ hg bookmark
      X                         0:4e3505fd9583
-     Y                         0:4e3505fd9583
+   * Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
 
 export bookmark by name

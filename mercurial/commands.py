@@ -873,7 +873,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     else: # show bookmarks
         for bmark, n in sorted(marks.iteritems()):
             current = repo._bookmarkcurrent
-            if bmark == current and n == cur:
+            if bmark == current:
                 prefix, label = '*', 'bookmarks.current'
             else:
                 prefix, label = ' ', ''
