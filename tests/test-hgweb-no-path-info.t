@@ -39,6 +39,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   >     'wsgi.multiprocess': False,
   >     'wsgi.run_once': False,
   >     'REQUEST_METHOD': 'GET',
+  >     'PATH_INFO': '/',
   >     'SCRIPT_NAME': '',
   >     'SERVER_NAME': '127.0.0.1',
   >     'SERVER_PORT': os.environ['HGPORT'],
@@ -49,6 +50,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   >     content = app(env, startrsp)
   >     sys.stdout.write(output.getvalue())
   >     sys.stdout.write(''.join(content))
+  >     getattr(content, 'close', lambda : None)()
   >     print '---- ERRORS'
   >     print errors.getvalue()
   > 
@@ -101,7 +103,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   [('Content-Type', 'text/plain; charset=ascii')]
   ---- DATA
   
-  repo/
+  /repo/
   
   ---- ERRORS
   
