@@ -1386,4 +1386,10 @@ bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
   $ QUERY_STRING='style=raw'
   $ python hgweb.cgi
 
+listbookmarks hides secret bookmarks
+
+  $ PATH_INFO=/; export PATH_INFO
+  $ QUERY_STRING='cmd=listkeys&namespace=bookmarks'
+  $ python hgweb.cgi
+
   $ cd ..

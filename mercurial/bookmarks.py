@@ -183,9 +183,10 @@ def listbookmarks(repo):
     marks = getattr(repo, '_bookmarks', {})
 
     d = {}
+    hasnode = repo.changelog.hasnode
     for k, v in marks.iteritems():
         # don't expose local divergent bookmarks
-        if '@' not in k or k.endswith('@'):
+        if hasnode(v) and ('@' not in k or k.endswith('@')):
             d[k] = hex(v)
     return d
 
