@@ -807,6 +807,14 @@ Test cloning with --all-largefiles flag
   2 largefiles updated, 0 removed
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   8 additional largefiles cached
+  $ hg -R a-clone1 verify --large --lfa --lfc
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  10 files, 8 changesets, 24 total revisions
+  searching 8 changesets for largefiles
+  verified contents of 13 revisions of 6 largefiles
   $ hg -R a-clone1 sum
   parent: 1:ce8896473775 
    edit files
@@ -1170,6 +1178,12 @@ revert some files to an older revision
 
 "verify --large" actually verifies largefiles
 
+- Where Do We Come From? What Are We? Where Are We Going?
+  $ pwd
+  $TESTTMP/e
+  $ hg paths
+  default = $TESTTMP/d
+
   $ hg verify --large
   checking changesets
   checking manifests
@@ -1178,6 +1192,59 @@ revert some files to an older revision
   10 files, 10 changesets, 28 total revisions
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
+
+- introduce missing blob in local store repo and make sure that this is caught:
+  $ mv $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 .
+  $ hg verify --large
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  10 files, 10 changesets, 28 total revisions
+  searching 1 changesets for largefiles
+  changeset 9:598410d3eb9a: sub/large4 missing
+    (looked for hash e166e74c7303192238d60af5a9c4ce9bef0b7928)
+  verified existence of 1 revisions of 1 largefiles
+  [1]
+
+- introduce corruption and make sure that it is caught when checking content:
+  $ echo '5 cents' > $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
+  $ hg verify -q --large --lfc
+  searching 1 changesets for largefiles
+  changeset 9:598410d3eb9a: sub/large4: contents differ
+    ($TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928:
+    expected hash e166e74c7303192238d60af5a9c4ce9bef0b7928,
+    but got 1f19b76d5b3cad1472c87efb42b582c97e040060)
+  verified contents of 1 revisions of 1 largefiles
+  [1]
+
+- cleanup
+  $ mv e166e74c7303192238d60af5a9c4ce9bef0b7928 $TESTTMP/d/.hg/largefiles/
+
+- verifying all revisions will fail because we didn't clone all largefiles to d:
+  $ echo 'T-shirt' > $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  $ hg verify -q --large --lfa --lfc
+  searching 10 changesets for largefiles
+  changeset 0:30d30fe6a5be: large1 missing
+    (looked for hash 4669e532d5b2c093a78eca010077e708a071bb64)
+  changeset 1:ce8896473775: large1 missing
+    (looked for hash 5f78770c0e77ba4287ad6ef3071c9bf9c379742f)
+  changeset 2:51a0ae4d5864: sub/large2: contents differ
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
+    but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
+  changeset 3:9e8fbc4bce62: large1: contents differ
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
+    but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
+  changeset 4:74c02385b94c: large3: contents differ
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
+    but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
+  verified contents of 13 revisions of 6 largefiles
+
+- cleanup
+  $ rm $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
 
 Merging does not revert to old versions of largefiles and also check
 that merging after having pulled from a non-default remote works
