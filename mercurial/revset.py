@@ -277,20 +277,32 @@ def adds(repo, subset, x):
     return checkstatus(repo, subset, pat, 1)
 
 def ancestor(repo, subset, x):
-    """``ancestor(single, single)``
-    Greatest common ancestor of the two changesets.
+    """``ancestor(*changeset)``
+    Greatest common ancestor of the changesets.
+
+    Accepts 0 or more changesets.
+    Will return empty list when passed no args.
+    Greatest common ancestor of a single changeset is that changeset.
     """
     # i18n: "ancestor" is a keyword
-    l = getargs(x, 2, 2, _("ancestor requires two arguments"))
-    r = list(repo)
-    a = getset(repo, r, l[0])
-    b = getset(repo, r, l[1])
-    if len(a) != 1 or len(b) != 1:
-        # i18n: "ancestor" is a keyword
-        raise error.ParseError(_("ancestor arguments must be single revisions"))
-    an = [repo[a[0]].ancestor(repo[b[0]]).rev()]
+    l = getlist(x)
+    rl = list(repo)
+    anc = None
 
-    return [r for r in an if r in subset]
+    # (getset(repo, rl, i) for i in l) generates a list of lists
+    rev = repo.changelog.rev
+    ancestor = repo.changelog.ancestor
+    node = repo.changelog.node
+    for revs in (getset(repo, rl, i) for i in l):
+        for r in revs:
+            if anc is None:
+                anc = r
+            else:
+                anc = rev(ancestor(node(anc), node(r)))
+
+    if anc is not None and anc in subset:
+        return [anc]
+    return []
 
 def _ancestors(repo, subset, x, followfirst=False):
     args = getset(repo, list(repo), x)

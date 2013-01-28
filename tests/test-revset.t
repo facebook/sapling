@@ -218,17 +218,29 @@ quoting needed
   $ log 'date(2005) and 1::'
   4
 
+ancestor can accept 0 or more arguments
+
+  $ log 'ancestor()'
   $ log 'ancestor(1)'
-  hg: parse error: ancestor requires two arguments
-  [255]
+  1
   $ log 'ancestor(4,5)'
   1
   $ log 'ancestor(4,5) and 4'
+  $ log 'ancestor(0,0,1,3)'
+  0
+  $ log 'ancestor(3,1,5,3,5,1)'
+  1
+  $ log 'ancestor(0,1,3,5)'
+  0
+  $ log 'ancestor(1,2,3,4,5)'
+  1
   $ log 'ancestors(5)'
   0
   1
   3
   5
+  $ log 'ancestor(ancestors(5))'
+  0
   $ log 'author(bob)'
   2
   $ log 'author("re:bob|test")'
