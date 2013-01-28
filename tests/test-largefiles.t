@@ -1578,9 +1578,10 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ cd ..
 
 putlfile errors are shown (issue3123)
-Corrupt the cached largefile in r7 and in the usercache (required for testing on vfat)
-  $ echo corruption > "$TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8"
-  $ echo corruption > "$USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8"
+Corrupt the cached largefile in r7 and move it out of the servers usercache
+  $ mv r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 .
+  $ echo 'client side corruption' > r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ rm "$USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8"
   $ hg init empty
   $ hg serve -R empty -d -p $HGPORT1 --pid-file hg.pid \
   >   --config 'web.allow_push=*' --config web.push_ssl=False
@@ -1591,6 +1592,19 @@ Corrupt the cached largefile in r7 and in the usercache (required for testing on
   remote: largefiles: failed to put 4cdac4d8b084d0b599525cf732437fb337d422a8 into store: largefile contents do not match hash
   abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/ (glob)
   [255]
+  $ mv 4cdac4d8b084d0b599525cf732437fb337d422a8 r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+Push of file that exists on server but is corrupted - magic healing is nice ... but too magic
+  $ echo "server side corruption" > empty/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ hg push -R r7 http://localhost:$HGPORT1
+  pushing to http://localhost:$HGPORT1/
+  searching for changes
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 2 changes to 2 files
+  $ cat empty/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  c2
   $ rm -rf empty
 
 Push a largefiles repository to a served empty repository
