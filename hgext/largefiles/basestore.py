@@ -67,7 +67,7 @@ class basestore(object):
             ui.note(_('getting %s:%s\n') % (filename, hash))
 
             storefilename = lfutil.storepath(self.repo, hash)
-            tmpfile = util.atomictempfile(storefilename,
+            tmpfile = util.atomictempfile(storefilename + '.tmp',
                                           createmode=self.repo.store.createmode)
 
             try:
@@ -75,16 +75,17 @@ class basestore(object):
             except StoreError, err:
                 ui.warn(err.longmessage())
                 hhash = ""
+            tmpfile.close() # has probably already been closed!
 
             if hhash != hash:
                 if hhash != "":
                     ui.warn(_('%s: data corruption (expected %s, got %s)\n')
                             % (filename, hash, hhash))
-                tmpfile.discard() # no-op if it's already closed
+                util.unlink(storefilename + '.tmp')
                 missing.append(filename)
                 continue
 
-            tmpfile.close()
+            util.rename(storefilename + '.tmp', storefilename)
             lfutil.linktousercache(self.repo, hash)
             success.append((filename, hhash))
 

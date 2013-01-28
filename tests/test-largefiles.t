@@ -1584,14 +1584,12 @@ largefiles pulled on update - a largefile corrupted on the server:
   $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
   getting changed largefiles
   f1: data corruption (expected 02a439e5c31c526465ab1a0ca1f431f76b827b90, got 6a7bb2556144babe3899b25e5428123735bb1e27)
-  1 largefiles updated, 0 removed
+  0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R http-clone st
-  M f1
-  $ cat http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
-  corruption
-  $ cat http-clone/f1
-  corruption
+  ! f1
+  $ [ ! -f http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
+  $ [ ! -f http-clone/f1 ]
   $ [ ! -f http-clone-usercache ]
   $ hg -R http-clone verify --large --lfc
   checking changesets
