@@ -1234,8 +1234,14 @@ static int index_slice_del(indexObject *self, PyObject *item)
 				self->ntrev = (int)start;
 		}
 		self->length = start + 1;
-		if (start < self->raw_length)
+		if (start < self->raw_length) {
+			if (self->cache) {
+				Py_ssize_t i;
+				for (i = start; i < self->raw_length; i++)
+					Py_CLEAR(self->cache[i]);
+			}
 			self->raw_length = start;
+		}
 		goto done;
 	}
 
