@@ -106,8 +106,9 @@ class basestore(object):
             cctx = self.repo[rev]
             cset = "%d:%s" % (cctx.rev(), node.short(cctx.node()))
 
-            failed = util.any(self._verifyfile(
-                cctx, cset, contents, standin, verified) for standin in cctx)
+            for standin in cctx:
+                if self._verifyfile(cctx, cset, contents, standin, verified):
+                    failed = True
 
         numrevs = len(verified)
         numlfiles = len(set([fname for (fname, fnode) in verified]))

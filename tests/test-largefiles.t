@@ -1204,7 +1204,7 @@ revert some files to an older revision
   searching 1 changesets for largefiles
   changeset 9:598410d3eb9a: sub/large4 missing
     (looked for hash e166e74c7303192238d60af5a9c4ce9bef0b7928)
-  verified existence of 1 revisions of 1 largefiles
+  verified existence of 3 revisions of 3 largefiles
   [1]
 
 - introduce corruption and make sure that it is caught when checking content:
@@ -1215,7 +1215,7 @@ revert some files to an older revision
     ($TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928:
     expected hash e166e74c7303192238d60af5a9c4ce9bef0b7928,
     but got 1f19b76d5b3cad1472c87efb42b582c97e040060)
-  verified contents of 1 revisions of 1 largefiles
+  verified contents of 3 revisions of 3 largefiles
   [1]
 
 - cleanup
@@ -1227,9 +1227,11 @@ revert some files to an older revision
   searching 10 changesets for largefiles
   changeset 0:30d30fe6a5be: large1 missing
     (looked for hash 4669e532d5b2c093a78eca010077e708a071bb64)
+  changeset 0:30d30fe6a5be: sub/large2 missing
+    (looked for hash 1deebade43c8c498a3c8daddac0244dc55d1331d)
   changeset 1:ce8896473775: large1 missing
     (looked for hash 5f78770c0e77ba4287ad6ef3071c9bf9c379742f)
-  changeset 2:51a0ae4d5864: sub/large2: contents differ
+  changeset 1:ce8896473775: sub/large2: contents differ
     ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
@@ -1241,7 +1243,12 @@ revert some files to an older revision
     ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
-  verified contents of 13 revisions of 6 largefiles
+  changeset 4:74c02385b94c: sub/large4: contents differ
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
+    but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
+  verified contents of 15 revisions of 6 largefiles
+  [1]
 
 - cleanup
   $ rm $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
