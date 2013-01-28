@@ -361,7 +361,7 @@ Rollback//Transaction support
 
   $ cd ..
 
-Try to pull markers
+Try to push markers
 
   $ hg init tmpd
   $ hg -R tmpb push tmpd
