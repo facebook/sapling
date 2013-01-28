@@ -63,18 +63,16 @@ def getlfile(repo, proto, sha):
     return wireproto.streamres(generator())
 
 def statlfile(repo, proto, sha):
-    '''Return '2\n' if the largefile is missing, '1\n' if it has a
-    mismatched checksum, or '0\n' if it is in good condition'''
+    '''Return '2\n' if the largefile is missing, '0\n' if it seems to be in
+    good condition.
+
+    The value 1 is reserved for mismatched checksum, but that is too expensive
+    to be verified on every stat and must be caught be running 'hg verify'
+    server side.'''
     filename = lfutil.findfile(repo, sha)
     if not filename:
         return '2\n'
-    fd = None
-    try:
-        fd = open(filename, 'rb')
-        return lfutil.hexsha1(fd) == sha and '0\n' or '1\n'
-    finally:
-        if fd:
-            fd.close()
+    return '0\n'
 
 def wirereposetup(ui, repo):
     class lfileswirerepository(repo.__class__):
