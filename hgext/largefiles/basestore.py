@@ -165,6 +165,7 @@ def _openstore(repo, remote=None, put=False):
             path = ''
             remote = repo
         else:
+            path, _branches = hg.parseurl(path)
             remote = hg.peer(repo, {}, path)
 
     # The path could be a scheme so use Mercurial's normal functionality

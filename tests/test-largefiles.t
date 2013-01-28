@@ -1619,7 +1619,7 @@ Push a largefiles repository to a served empty repository
   >   --config 'web.allow_push=*' --config web.push_ssl=False
   $ cat hg.pid >> $DAEMON_PIDS
   $ rm "${USERCACHE}"/*
-  $ hg push -R r8 http://localhost:$HGPORT2
+  $ hg push -R r8 http://localhost:$HGPORT2/#default
   pushing to http://localhost:$HGPORT2/
   searching for changes
   searching for changes
@@ -1632,8 +1632,7 @@ Push a largefiles repository to a served empty repository
 
 Clone over http, no largefiles pulled on clone.
 
-  $ hg clone http://localhost:$HGPORT2/ http-clone -U
-  requesting all changes
+  $ hg clone http://localhost:$HGPORT2/#default http-clone -U
   adding changesets
   adding manifests
   adding file changes
