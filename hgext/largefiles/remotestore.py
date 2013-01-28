@@ -74,7 +74,7 @@ class remotestore(basestore.basestore):
         return lfutil.copyandhash(lfutil.blockstream(infile), tmpfile)
 
     def _verify(self, hashes):
-        return self._stat(hashes)
+        return dict((h, s == 0) for (h, s) in self._stat(hashes).iteritems())
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)
