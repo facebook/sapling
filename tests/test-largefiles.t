@@ -1574,18 +1574,16 @@ largefiles pulled on update - a largefile missing on the server:
   $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
   $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
   getting changed largefiles
-  error getting id 02a439e5c31c526465ab1a0ca1f431f76b827b90 from url http://localhost:$HGPORT2/ for file f1: HTTP Error 500: Internal Server Error
-  0 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  abort: remotestore: largefile 02a439e5c31c526465ab1a0ca1f431f76b827b90 is missing
+  [255]
   $ hg -R http-clone up -Cqr null
 
 largefiles pulled on update - a largefile corrupted on the server:
   $ echo corruption > empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
   $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
   getting changed largefiles
-  f1: data corruption (expected 02a439e5c31c526465ab1a0ca1f431f76b827b90, got 6a7bb2556144babe3899b25e5428123735bb1e27)
-  0 largefiles updated, 0 removed
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  abort: remotestore: largefile 02a439e5c31c526465ab1a0ca1f431f76b827b90 is invalid
+  [255]
   $ hg -R http-clone st
   ! f1
   $ [ ! -f http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
@@ -1602,7 +1600,6 @@ largefiles pulled on update - a largefile corrupted on the server:
   verified contents of 1 revisions of 1 largefiles
   [1]
   $ hg -R http-clone up -Cqr null
-  $ rm http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
 
 largefiles pulled on update - no server side problems:
   $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
