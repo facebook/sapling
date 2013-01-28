@@ -92,6 +92,20 @@ push from alpha to beta should update phase even if nothing is transferred
   |
   o  0 public a-A - 054250a37db4
   
+  $ hg push -r 2 ../beta
+  pushing to ../beta
+  searching for changes
+  no changes found
+  [1]
+  $ hgph
+  @  3 draft a-D - b555f63b6063
+  |
+  o  2 public a-C - 54acac6f23ab
+  |
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
   $ hg push ../beta
   pushing to ../beta
   searching for changes

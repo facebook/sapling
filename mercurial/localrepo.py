@@ -1899,7 +1899,8 @@ class localrepository(object):
                     # We can pick:
                     # * missingheads part of common (::commonheads)
                     common = set(outgoing.common)
-                    cheads = [node for node in revs if node in common]
+                    nm = self.changelog.nodemap
+                    cheads = [node for node in revs if nm[node] in common]
                     # and
                     # * commonheads parents on missing
                     revset = unfi.set('%ln and parents(roots(%ln))',
