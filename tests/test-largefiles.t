@@ -1539,11 +1539,75 @@ Push a largefiles repository to a served empty repository
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  $ [ -f "${USERCACHE}"/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
+  $ [ -f empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
 
-Clone over http, with largefiles being pulled on update, not on clone.
+Clone over http, no largefiles pulled on clone.
 
-  $ hg clone -q http://localhost:$HGPORT2/ http-clone -U
+  $ hg clone http://localhost:$HGPORT2/ http-clone -U
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
 
+test 'verify' with remotestore:
+
+  $ rm "${USERCACHE}"/02a439e5c31c526465ab1a0ca1f431f76b827b90
+  $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
+  $ hg -R http-clone verify --large --lfa
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+  searching 1 changesets for largefiles
+  changeset 0:cf03e5bb9936: f1 missing
+  verified existence of 1 revisions of 1 largefiles
+  [1]
+  $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
+  $ hg -R http-clone -q verify --large --lfa
+  searching 1 changesets for largefiles
+  verified existence of 1 revisions of 1 largefiles
+
+largefiles pulled on update - a largefile missing on the server:
+  $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
+  $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
+  getting changed largefiles
+  error getting id 02a439e5c31c526465ab1a0ca1f431f76b827b90 from url http://localhost:$HGPORT2/ for file f1: HTTP Error 500: Internal Server Error
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R http-clone up -Cqr null
+
+largefiles pulled on update - a largefile corrupted on the server:
+  $ echo corruption > empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
+  $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
+  getting changed largefiles
+  f1: data corruption (expected 02a439e5c31c526465ab1a0ca1f431f76b827b90, got 6a7bb2556144babe3899b25e5428123735bb1e27)
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R http-clone st
+  M f1
+  $ cat http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
+  corruption
+  $ cat http-clone/f1
+  corruption
+  $ [ ! -f http-clone-usercache ]
+  $ hg -R http-clone verify --large --lfc
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+  searching 1 changesets for largefiles
+  changeset 0:cf03e5bb9936: f1: contents differ
+  verified contents of 1 revisions of 1 largefiles
+  [1]
+  $ hg -R http-clone up -Cqr null
+  $ rm http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
+
+largefiles pulled on update - no server side problems:
+  $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
   $ hg -R http-clone --debug up --config largefiles.usercache=http-clone-usercache
   resolving manifests
    overwrite: False, partial: False
@@ -1565,7 +1629,7 @@ Clone over http, with largefiles being pulled on update, not on clone.
   $ ls http-clone-usercache/*
   http-clone-usercache/02a439e5c31c526465ab1a0ca1f431f76b827b90
 
-  $ rm -rf empty http-clone http-clone-usercache
+  $ rm -rf empty http-clone*
 
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS

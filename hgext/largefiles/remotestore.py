@@ -87,7 +87,8 @@ class remotestore(basestore.basestore):
 
         verified.add(key)
 
-        stat = self._stat(hash)
+        expecthash = fctx.data()[0:40]
+        stat = self._stat([expecthash])[expecthash]
         if not stat:
             return False
         elif stat == 1:
