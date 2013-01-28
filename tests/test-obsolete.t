@@ -318,11 +318,38 @@ Exchange Test
 Destination repo does not have any data
 ---------------------------------------
 
-Try to pull markers
-(extinct changeset are excluded but marker are pushed)
+Simple incoming test
 
   $ hg init tmpc
   $ cd tmpc
+  $ hg incoming ../tmpb
+  comparing with ../tmpb
+  changeset:   0:1f0dee641bb7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a
+  
+  changeset:   1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add b
+  
+  changeset:   2:245bde4270cd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_c
+  
+  changeset:   6:6f9641995072
+  tag:         tip
+  parent:      1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add n3w_3_c
+  
+
+Try to pull markers
+(extinct changeset are excluded but marker are pushed)
+
   $ hg pull ../tmpb
   pulling from ../tmpb
   requesting all changes
@@ -663,6 +690,16 @@ Do not warn about new head when the new head is a successors of a remote one
   $ mkcommit obsolete_e
   created new head
   $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'`
+  $ hg outgoing ../tmpf # parasite hg outgoing testin
+  comparing with ../tmpf
+  searching for changes
+  changeset:   6:3de5eca88c00
+  tag:         tip
+  parent:      3:6f9641995072
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add obsolete_e
+  
   $ hg push ../tmpf
   pushing to ../tmpf
   searching for changes
