@@ -73,3 +73,15 @@ marker to obsolete him)
   adding file changes
   added 1 changesets with 0 changes to 1 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
+
+check that bundle is not affected
+
+  $ hg bundle --hidden --rev f89bcc95eba5 --base "f89bcc95eba5^" ../f89bcc95eba5.hg
+  1 changesets found
+  $ hg --hidden --config extensions.mq= strip --no-backup f89bcc95eba5
+  $ hg unbundle ../f89bcc95eba5.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads)
