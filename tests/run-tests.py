@@ -1252,7 +1252,7 @@ def main():
     os.environ['no_proxy'] = ''
     os.environ['NO_PROXY'] = ''
     os.environ['TERM'] = 'xterm'
-    os.environ['PYTHONHASHSEED'] = 'random'
+    os.environ['PYTHONHASHSEED'] = os.environ.get('PYTHONHASHSEED', 'random')
 
     # unset env related to hooks
     for k in os.environ.keys():
