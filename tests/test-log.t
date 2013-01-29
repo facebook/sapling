@@ -1201,6 +1201,15 @@ test that second parent prevent a changeset to be hidden too
   $ hg log --template='{rev}:{node}\n'
   1:a765632148dc55d38c35c4f247c618701886cb2f
   0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
+  $ hg debugsetparents 1
+  $ hg up -q null
+
+bookmarks prevent a changeset being hidden
+
+  $ hg bookmark --hidden -r 1 X
+  $ hg log --template '{rev}:{node}\n'
+  1:a765632148dc55d38c35c4f247c618701886cb2f
+  0:9f758d63dcde62d547ebfb08e1e7ee96535f2b05
 
 clear extensions configuration
   $ echo '[extensions]' >> $HGRCPATH
