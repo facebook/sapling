@@ -1688,10 +1688,14 @@ class localrepository(object):
                                            "changegroupsubset."))
                 else:
                     cg = remote.changegroupsubset(fetch, heads, 'pull')
-                clstart = len(self.changelog)
+                # we use unfiltered changelog here because hidden revision must
+                # be taken in account for phase synchronization. They may
+                # becomes public and becomes visible again.
+                cl = self.unfiltered().changelog
+                clstart = len(cl)
                 result = self.addchangegroup(cg, 'pull', remote.url())
-                clend = len(self.changelog)
-                added = [self.changelog.node(r) for r in xrange(clstart, clend)]
+                clend = len(cl)
+                added = [cl.node(r) for r in xrange(clstart, clend)]
 
             # compute target subset
             if heads is None:

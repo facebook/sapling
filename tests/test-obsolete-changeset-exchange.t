@@ -53,3 +53,23 @@ Push it. The bundle should not refer to the extinct changeset.
   crosschecking files in changesets and manifests
   checking files
   2 files, 2 changesets, 2 total revisions
+
+Adding a changeset going extinct locally
+------------------------------------------
+
+Pull a changeset that will immediatly goes extinct (because you already have a
+marker to obsolete him)
+(test resolution of issue3788)
+
+  $ hg phase --draft --force f89bcc95eba5
+  $ hg phase -R ../other --draft --force f89bcc95eba5
+  $ hg commit --amend -m "A''"
+  $ hg --hidden --config extensions.mq= strip  --no-backup f89bcc95eba5
+  $ hg pull ../other
+  pulling from ../other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
