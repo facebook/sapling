@@ -195,6 +195,11 @@ if sys.platform == 'darwin':
 
     def normcase(path):
         try:
+            path.decode('ascii') # throw exception for non-ASCII character
+            return path.lower()
+        except UnicodeDecodeError:
+            pass
+        try:
             u = path.decode('utf-8')
         except UnicodeDecodeError:
             # percent-encode any characters that don't round-trip
