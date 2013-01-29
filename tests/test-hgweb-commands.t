@@ -1392,4 +1392,12 @@ listbookmarks hides secret bookmarks
   $ QUERY_STRING='cmd=listkeys&namespace=bookmarks'
   $ python hgweb.cgi
 
+search works with filtering
+
+  $ PATH_INFO=/log; export PATH_INFO
+  $ QUERY_STRING='rev=babar'
+  $ python hgweb.cgi > search
+  $ grep Status search
+  Status: 200 Script output follows\r (esc)
+
   $ cd ..

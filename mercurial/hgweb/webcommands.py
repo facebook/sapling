@@ -129,9 +129,10 @@ def _search(web, req, tmpl):
         qw = lower(query).split()
 
         def revgen():
+            cl = web.repo.changelog
             for i in xrange(len(web.repo) - 1, 0, -100):
                 l = []
-                for j in xrange(max(0, i - 100), i + 1):
+                for j in cl.revs(max(0, i - 100), i + 1):
                     ctx = web.repo[j]
                     l.append(ctx)
                 l.reverse()
