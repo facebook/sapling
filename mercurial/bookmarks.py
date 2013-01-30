@@ -156,6 +156,20 @@ def updatecurrentbookmark(repo, oldnode, curbranch):
         else:
             raise util.Abort(_("branch %s not found") % curbranch)
 
+def deletedivergent(repo, deletefrom, bm):
+    '''Delete divergent versions of bm on nodes in deletefrom.
+
+    Return True if at least one bookmark was deleted, False otherwise.'''
+    deleted = False
+    marks = repo._bookmarks
+    divergent = [b for b in marks if b.split('@', 1)[0] == bm.split('@', 1)[0]]
+    for mark in divergent:
+        if mark and marks[mark] in deletefrom:
+            if mark != bm:
+                del marks[mark]
+                deleted = True
+    return deleted
+
 def update(repo, parents, node):
     marks = repo._bookmarks
     update = False
@@ -163,16 +177,16 @@ def update(repo, parents, node):
     if not cur:
         return False
 
-    toupdate = [b for b in marks if b.split('@', 1)[0] == cur.split('@', 1)[0]]
-    for mark in toupdate:
-        if mark and marks[mark] in parents:
-            old = repo[marks[mark]]
-            new = repo[node]
-            if old.descendant(new) and mark == cur:
-                marks[cur] = new.node()
-                update = True
-            if mark != cur:
-                del marks[mark]
+    if marks[cur] in parents:
+        old = repo[marks[cur]]
+        new = repo[node]
+        if old.descendant(new):
+            marks[cur] = new.node()
+            update = True
+
+    if deletedivergent(repo, parents, cur):
+        update = True
+
     if update:
         marks.write()
     return update
