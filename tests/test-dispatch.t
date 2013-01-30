@@ -46,10 +46,11 @@ Missing arg:
 
   $ cd "$TESTTMP"
 
-OSError ... and with filename even when it is empty
+OSError "No such file or directory" / "The system cannot find the path
+specified" should include filename even when it is empty
 
   $ hg -R a archive ''
-  abort: No such file or directory: ''
+  abort: *: '' (glob)
   [255]
 
 #if no-outer-repo

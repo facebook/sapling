@@ -1182,7 +1182,7 @@ revert some files to an older revision
   $ pwd
   $TESTTMP/e
   $ hg paths
-  default = $TESTTMP/d
+  default = $TESTTMP/d (glob)
 
   $ hg verify --large
   checking changesets
@@ -1212,7 +1212,7 @@ revert some files to an older revision
   $ hg verify -q --large --lfc
   searching 1 changesets for largefiles
   changeset 9:598410d3eb9a: sub/large4: contents differ
-    ($TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928:
+    ($TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928: (glob)
     expected hash e166e74c7303192238d60af5a9c4ce9bef0b7928,
     but got 1f19b76d5b3cad1472c87efb42b582c97e040060)
   verified contents of 3 revisions of 3 largefiles
@@ -1232,19 +1232,19 @@ revert some files to an older revision
   changeset 1:ce8896473775: large1 missing
     (looked for hash 5f78770c0e77ba4287ad6ef3071c9bf9c379742f)
   changeset 1:ce8896473775: sub/large2: contents differ
-    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4: (glob)
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
   changeset 3:9e8fbc4bce62: large1: contents differ
-    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4: (glob)
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
   changeset 4:74c02385b94c: large3: contents differ
-    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4: (glob)
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
   changeset 4:74c02385b94c: sub/large4: contents differ
-    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4:
+    ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4: (glob)
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
   verified contents of 15 revisions of 6 largefiles
@@ -1343,8 +1343,8 @@ Test status after merging with a branch that introduces a new largefile:
 
 - revert should be able to revert files introduced in a pending merge
   $ hg revert --all -r .
-  removing .hglf/large
-  undeleting .hglf/sub2/large6
+  removing .hglf/large (glob)
+  undeleting .hglf/sub2/large6 (glob)
 
 Test that a normal file and a largefile with the same name and path cannot
 coexist.

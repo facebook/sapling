@@ -708,6 +708,8 @@ Do not warn about new head when the new head is a successors of a remote one
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
 
+#if serve
+
 check hgweb does not explode
 ====================================
 
@@ -756,3 +758,4 @@ Checking _enable=False warning if obsolete marker exists
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add celestine
   
+#endif
