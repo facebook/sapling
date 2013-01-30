@@ -91,9 +91,9 @@ class revnav(object):
             if rev not in self._revlog:
                 continue
             if pos < rev < limit:
-                navafter.append(("+%d" % f, self.hex(rev)))
+                navafter.append(("+%d" % abs(rev - pos), self.hex(rev)))
             if 0 < rev < pos:
-                navbefore.append(("-%d" % f, self.hex(rev)))
+                navbefore.append(("-%d" % abs(rev - pos), self.hex(rev)))
 
 
         navafter.append(("tip", "tip"))
