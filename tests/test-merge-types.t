@@ -197,6 +197,26 @@ Test removed 'x' flag merged with change to symlink
   f is a plain file with content:
   f
 
+Test removed 'x' flag merged with content change - both ways
+
+  $ hg up -Cqr0
+  $ echo change > f
+  $ hg ci -qm3
+  $ hg merge -r1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ tellmeabout f
+  f is a plain file with content:
+  change
+
+  $ hg up -qCr1
+  $ hg merge -r3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ tellmeabout f
+  f is a plain file with content:
+  change
+
   $ cd ..
 
 Test merge with no common ancestor:

@@ -251,7 +251,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             elif nol and n2 == a: # remote only changed 'x'
                 act("update permissions", "e", f, fl2)
             elif nol and n == a: # local only changed 'x'
-                act("remote is newer", "g", f, fl)
+                act("remote is newer", "g", f, fl1)
             else: # both changed something
                 act("versions differ", "m", f, f, f, False)
         elif f in copied: # files we'll deal with on m2 side
