@@ -454,8 +454,12 @@ def histedit(ui, repo, *parent, **opts):
         if revs:
             revs = [repo.lookup(rev) for rev in revs]
 
-        parent = discovery.findcommonoutgoing(
-            repo, other, [], force=opts.get('force')).missing[0:1]
+        # hexlify nodes from outgoing, because we're going to parse
+        # parent[0] using revsingle below, and if the binary hash
+        # contains special revset characters like ":" the revset
+        # parser can choke.
+        parent = [node.hex(n) for n in discovery.findcommonoutgoing(
+            repo, other, [], force=opts.get('force')).missing[0:1]]
     else:
         if opts.get('force'):
             raise util.Abort(_('--force only allowed with --outgoing'))
