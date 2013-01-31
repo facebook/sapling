@@ -56,17 +56,35 @@ Move only rebased bookmarks
   $ cd a1
   $ hg up -q Z
 
+Test deleting divergent bookmarks from dest (issue3685)
+
+  $ hg book -r 3 Z@diverge
+
+... and also test that bookmarks not on dest or not being moved aren't deleted
+
+  $ hg book -r 3 X@diverge
+  $ hg book -r 0 Y@diverge
+
+  $ hg tglog
+  o  3: 'D' bookmarks: W X@diverge Z@diverge
+  |
+  | @  2: 'C' bookmarks: Y Z
+  | |
+  | o  1: 'B' bookmarks: X
+  |/
+  o  0: 'A' bookmarks: Y@diverge
+  
   $ hg rebase -s Y -d 3
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
   @  3: 'C' bookmarks: Y Z
   |
-  o  2: 'D' bookmarks: W
+  o  2: 'D' bookmarks: W X@diverge
   |
   | o  1: 'B' bookmarks: X
   |/
-  o  0: 'A' bookmarks:
+  o  0: 'A' bookmarks: Y@diverge
   
 Keep bookmarks to the correct rebased changeset
 
