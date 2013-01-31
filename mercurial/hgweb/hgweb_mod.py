@@ -233,10 +233,10 @@ class hgweb(object):
 
             return content
 
-        except error.LookupError, err:
+        except (error.LookupError, error.RepoLookupError), err:
             req.respond(HTTP_NOT_FOUND, ctype)
             msg = str(err)
-            if 'manifest' not in msg:
+            if util.safehasattr(err, 'name') and 'manifest' not in msg:
                 msg = 'revision not found: %s' % err.name
             return tmpl('error', error=msg)
         except (error.RepoError, error.RevlogError), inst:

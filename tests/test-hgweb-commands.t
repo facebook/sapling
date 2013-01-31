@@ -1392,4 +1392,33 @@ search works with filtering
   $ grep Status search
   Status: 200 Script output follows\r (esc)
 
+proper status for filtered revision
+
+
+(missing rev)
+
+  $ PATH_INFO=/rev/5; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi #> search
+  Status: 404 Not Found\r (esc)
+  ETag: *\r (glob) (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  
+  error: unknown revision '5'
+
+
+
+(filtered rev)
+
+  $ PATH_INFO=/rev/4; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi #> search
+  Status: 404 Not Found\r (esc)
+  ETag: *\r (glob) (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  
+  error: unknown revision '4'
+
   $ cd ..
