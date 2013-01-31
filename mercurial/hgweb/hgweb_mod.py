@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-from mercurial import ui, hg, hook, error, encoding, templater, util
+from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
 from common import get_stat, ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -61,7 +61,7 @@ class hgweb(object):
         else:
             self.repo = repo
 
-        self.repo =  self.repo.filtered('served')
+        self.repo = self._getview(self.repo)
         self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
         self.repo.ui.setconfig('ui', 'nontty', 'true')
         hook.redirect(True)
@@ -88,6 +88,15 @@ class hgweb(object):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
+    def _getview(self, repo):
+        viewconfig = self.config('web', 'view', 'served')
+        if viewconfig == 'all':
+            return repo.unfiltered()
+        elif viewconfig in repoview.filtertable:
+            return repo.filtered(viewconfig)
+        else:
+            return repo.filtered('served')
+
     def refresh(self, request=None):
         if request:
             self.repo.ui.environ = request.env
@@ -98,7 +107,7 @@ class hgweb(object):
             self.mtime = st.st_mtime
             self.size = st.st_size
             self.repo = hg.repository(self.repo.ui, self.repo.root)
-            self.repo =  self.repo.filtered('served')
+            self.repo = self._getview(self.repo)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))
             self.maxshortchanges = int(self.config("web", "maxshortchanges",

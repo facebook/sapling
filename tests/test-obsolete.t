@@ -743,6 +743,24 @@ check filelog view
 
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'
   200 Script output follows
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/68'
+  200 Script output follows
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  500 Internal Server Error
+  [1]
+
+check that web.view config option:
+
+  $ kill `cat hg.pid`
+  $ cat >> .hg/hgrc << EOF
+  > [web]
+  > view=all
+  > EOF
+  $ wait
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  200 Script output follows
   $ kill `cat hg.pid`
 
 Checking _enable=False warning if obsolete marker exists
