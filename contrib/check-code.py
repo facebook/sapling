@@ -78,7 +78,7 @@ testpats = [
   [
     (r'^function', "don't use 'function', use old style"),
     (r'^diff.*-\w*N', "don't use 'diff -N'"),
-    (r'\$PWD', "don't use $PWD, use `pwd`"),
+    (r'\$PWD|\${PWD}', "don't use $PWD, use `pwd`"),
     (r'^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\^', "^ must be quoted"),
   ]
 ]

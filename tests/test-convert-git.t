@@ -307,7 +307,7 @@ test sub modules
   $ echo 'sub' >> foo
   $ git add foo
   $ commit -a -m 'addfoo'
-  $ BASE=${PWD}
+  $ BASE=`pwd`
   $ cd ..
   $ mkdir git-repo6
   $ cd git-repo6
