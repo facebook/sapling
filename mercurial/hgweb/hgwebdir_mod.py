@@ -133,6 +133,12 @@ class hgwebdir(object):
         if self.stripecount:
             self.stripecount = int(self.stripecount)
         self._baseurl = self.ui.config('web', 'baseurl')
+        prefix = self.ui.config('web', 'prefix', '')
+        if prefix.startswith('/'):
+            prefix = prefix[1:]
+        if prefix.endswith('/'):
+            prefix = prefix[:-1]
+        self.prefix = prefix
         self.lastrefresh = time.time()
 
     def run(self):
@@ -395,7 +401,7 @@ class hgwebdir(object):
         self.updatereqenv(req.env)
 
         return tmpl("index", entries=entries, subdir=subdir,
-                    pathdef=makebreadcrumb('/' + subdir),
+                    pathdef=makebreadcrumb('/' + subdir, self.prefix),
                     sortcolumn=sortcolumn, descending=descending,
                     **dict(sort))
 

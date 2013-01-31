@@ -24,7 +24,7 @@ perms = {
     'pushkey': 'push',
 }
 
-def makebreadcrumb(url):
+def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
 
     A 'URL breadcrumb' is a list of URL-name pairs,
@@ -33,6 +33,8 @@ def makebreadcrumb(url):
     '''
     if url.endswith('/'):
         url = url[:-1]
+    if prefix:
+        url = '/' + prefix + url
     relpath = url
     if relpath.startswith('/'):
         relpath = relpath[1:]
