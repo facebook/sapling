@@ -498,9 +498,8 @@ def updatebookmarks(repo, nstate, originalbookmarks, **opts):
     marks = repo._bookmarks
     for k, v in originalbookmarks.iteritems():
         if v in nstate:
-            if nstate[v] > nullmerge:
-                # update the bookmarks for revs that have moved
-                marks[k] = nstate[v]
+            # update the bookmarks for revs that have moved
+            marks[k] = nstate[v]
 
     marks.write()
 
