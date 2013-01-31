@@ -423,6 +423,7 @@ class hgsubrepo(abstractsubrepo):
             v = r.ui.config(s, k)
             if v:
                 self._repo.ui.setconfig(s, k, v)
+        self._repo.ui.setconfig('ui', '_usedassubrepo', 'True')
         self._initrepo(r, state[0], create)
 
     @annotatesubrepoerror

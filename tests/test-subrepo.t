@@ -1062,3 +1062,27 @@ Forgetting an explicit path in a subrepo untracks the file
   ? s/f19
   $ rm s/f19
   $ cd ..
+
+Courtesy phases synchronisation to publishing server does not block the push
+(issue3781)
+
+  $ cp -r main issue3781
+  $ cp -r main issue3781-dest
+  $ cd issue3781-dest/s
+  $ hg phase tip # show we have draft changeset
+  5: draft
+  $ chmod a-w .hg/store/phaseroots # prevent phase push
+  $ cd ../../issue3781
+  $ cat >> .hg/hgrc << EOF
+  > [paths]
+  > default=../issue3781-dest/
+  > EOF
+  $ hg push
+  pushing to $TESTTMP/issue3781-dest
+  pushing subrepo s to $TESTTMP/issue3781-dest/s
+  searching for changes
+  no changes found
+  searching for changes
+  no changes found
+  [1]
+

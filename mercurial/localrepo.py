@@ -1874,6 +1874,20 @@ class localrepository(object):
                     cheads.extend(c.node() for c in revset)
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
+                if (self.ui.configbool('ui', '_usedassubrepo', False)
+                    and remotephases    # server supports phases
+                    and ret is None # nothing was pushed
+                    and remotephases.get('publishing', False)):
+                    # When:
+                    # - this is a subrepo push
+                    # - and remote support phase
+                    # - and no changeset was pushed
+                    # - and remote is publishing
+                    # We may be in issue 3871 case!
+                    # We drop the possible phase synchronisation done by
+                    # courtesy to publish changesets possibly locally draft
+                    # on the remote.
+                    remotephases = {'publishing': 'True'}
                 if not remotephases: # old server or public only repo
                     phases.advanceboundary(self, phases.public, cheads)
                     # don't push any phase data as there is nothing to push
