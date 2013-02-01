@@ -293,7 +293,7 @@ def changeset(web, req, tmpl):
                 node=ctx.hex(),
                 parent=webutil.parents(ctx),
                 child=webutil.children(ctx),
-                currentbaseline=basectx.hex(),
+                basenode=basectx.hex(),
                 changesettag=showtags,
                 changesetbookmark=showbookmarks,
                 changesetbranch=showbranch,
