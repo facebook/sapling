@@ -88,6 +88,11 @@ def rebase(ui, repo, **opts):
     the whole branch. If you specify neither ``-s`` nor ``-b``, rebase
     uses the parent of the working directory as the base.
 
+    For advanced usage, a third way is available through the ``--rev``
+    option. It allows you to specify an arbitrary set of changesets to
+    rebase. Descendants of revs you specify with this option are not
+    automatically included in the rebase.
+
     By default, rebase recreates the changesets in the source branch
     as descendants of dest and then destroys the originals. Use
     ``--keep`` to preserve the original source changesets. Some
