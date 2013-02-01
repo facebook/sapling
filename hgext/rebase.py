@@ -68,6 +68,9 @@ def rebase(ui, repo, **opts):
     same rebase or they will end up with duplicated changesets after
     pulling in your rebased changesets.
 
+    In its default configuration, Mercurial will prevent you from
+    rebasing published changes. See :hg:`help phases` for details.
+
     If you don't specify a destination changeset (``-d/--dest``),
     rebase uses the tipmost head of the current named branch as the
     destination. (The destination changeset is not modified by
