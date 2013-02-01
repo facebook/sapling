@@ -447,14 +447,6 @@ Logs and changes
       </div>
     </td>
   </tr>
-  <tr>
-   <th class="author">change baseline</th>
-   <td class="author"></td>
-  </tr>
-  <tr>
-   <th class="author">current baseline</th>
-   <td class="author"><a href="/rev/000000000000">000000000000</a></td>
-  </tr>
   </table>
   
   <div class="overflow">
