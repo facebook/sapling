@@ -8160,6 +8160,13 @@ msgstr ""
 "    repositórios, que aparecerão como duplicatas das revisões rebaseadas."
 
 msgid ""
+"    In its default configuration, Mercurial will prevent you from\n"
+"    rebasing published changes. See :hg:`help phases` for details."
+msgstr ""
+"    Em sua configuração padrão, o Mercurial impede que revisões\n"
+"    públicas sejam rebaseadas. Veja :hg:`help phases` para mais detalhes."
+
+msgid ""
 "    If you don't specify a destination changeset (``-d/--dest``),\n"
 "    rebase uses the tipmost head of the current named branch as the\n"
 "    destination. (The destination changeset is not modified by\n"
