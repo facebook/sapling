@@ -57,10 +57,21 @@ class AbstractReader(object):
     def __init__(self):
         self._finished = False
         self._done_chunks = []
+        self.available_data = 0
 
-    @property
-    def available_data(self):
-        return sum(map(len, self._done_chunks))
+    def addchunk(self, data):
+        self._done_chunks.append(data)
+        self.available_data += len(data)
+
+    def pushchunk(self, data):
+        self._done_chunks.insert(0, data)
+        self.available_data += len(data)
+
+    def popchunk(self):
+        b = self._done_chunks.pop(0)
+        self.available_data -= len(b)
+
+        return b
 
     def done(self):
         return self._finished
@@ -83,6 +94,7 @@ class AbstractReader(object):
             self._done_chunks.insert(0, reinsert)
         result = ''.join(blocks)
         assert len(result) == amt or (self._finished and len(result) < amt)
+        self.available_data -= amt
         return result
 
     def _load(self, data): # pragma: no cover
@@ -121,7 +133,7 @@ class AbstractSimpleReader(AbstractReader):
             assert not self._finished, (
                 'tried to add data (%r) to a closed reader!' % data)
         logger.debug('%s read an additional %d data', self.name, len(data))
-        self._done_chunks.append(data)
+        self.addchunk(data)
 
 
 class CloseIsEndReader(AbstractSimpleReader):
@@ -190,6 +202,6 @@ class ChunkedReader(AbstractReader):
                 self._finished = True
                 logger.debug('closing chunked reader due to chunk of length 0')
                 return
-            self._done_chunks.append(data[block_start:block_start + amt])
+            self.addchunk(data[block_start:block_start + amt])
             position = block_start + amt + len(self._eol)
 # no-check-code
