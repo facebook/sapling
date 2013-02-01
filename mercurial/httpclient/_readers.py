@@ -96,6 +96,29 @@ class AbstractReader(object):
 
         return result
 
+    def readto(self, delimstr, blocks = None):
+        """return available data chunks up to the first one in which delimstr
+        occurs. No data will be returned after delimstr -- the chunk in which
+        it occurs will be split and the remainder pushed back onto the available
+        data queue. If blocks is supplied chunks will be added to blocks, otherwise
+        a new list will be allocated.
+        """
+        if blocks is None:
+            blocks = []
+
+        while self._done_chunks:
+            b = self.popchunk()
+            i = b.find(delimstr) + len(delimstr)
+            if i:
+                if i < len(b):
+                    self.pushchunk(b[i:])
+                blocks.append(b[:i])
+                break
+            else:
+                blocks.append(b)
+
+        return blocks
+
     def _load(self, data): # pragma: no cover
         """Subclasses must implement this.
 
