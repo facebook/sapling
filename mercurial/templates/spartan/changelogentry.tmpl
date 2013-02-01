@@ -5,7 +5,7 @@
  </tr>
  <tr>
   <th class="revision">changeset {rev}:</th>
-  <td class="node"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+  <td class="node"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
  </tr>
  {parent%changelogparent}
  {child%changelogchild}
@@ -19,7 +19,7 @@
   <td class="date">{date|rfc822date}</td>
  </tr>
  <tr>
-  <th class="files"><a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
+  <th class="files"><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>:</th>
   <td class="files">{files}</td>
  </tr>
 </table>

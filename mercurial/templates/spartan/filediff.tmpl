@@ -4,17 +4,17 @@
 <body>
 
 <div class="buttons">
-<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a>
-<a href="{url}shortlog/{rev}{sessionvars%urlparameter}">shortlog</a>
-<a href="{url}graph{sessionvars%urlparameter}">graph</a>
-<a href="{url}tags{sessionvars%urlparameter}">tags</a>
-<a href="{url}branches{sessionvars%urlparameter}">branches</a>
-<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
-<a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a>
-<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
-<a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
-<a href="{url}raw-diff/{node|short}/{file|urlescape}">raw</a>
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}log/{rev}{sessionvars%urlparameter}">changelog</a>
+<a href="{url|urlescape}shortlog/{rev}{sessionvars%urlparameter}">shortlog</a>
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
+<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a>
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a>
+<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
+<a href="{url|urlescape}raw-diff/{node|short}/{file|urlescape}">raw</a>
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 </div>
 
 <h2><a href="/">Mercurial</a> {pathdef%breadcrumb} / {file|escape}</h2>
@@ -22,7 +22,7 @@
 <table id="filediffEntry">
 <tr>
  <th class="revision">revision {rev}:</th>
- <td class="revision"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+ <td class="revision"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
 </tr>
 {parent%filediffparent}
 {child%filediffchild}

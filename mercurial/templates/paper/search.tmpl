@@ -7,15 +7,15 @@
 <div class="menu">
 <div class="logo">
 <a href="{logourl}">
-<img src="{staticurl}{logoimg}" width=75 height=90 border=0 alt="mercurial"></a>
+<img src="{staticurl|urlescape}{logoimg}" width=75 height=90 border=0 alt="mercurial"></a>
 </div>
 <ul>
-<li><a href="{url}shortlog{sessionvars%urlparameter}">log</a></li>
-<li><a href="{url}graph{sessionvars%urlparameter}">graph</a></li>
-<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
-<li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+<li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+<li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
+<li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
 </ul>
 </div>
 
@@ -23,7 +23,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>searching for '{query|escape}'</h3>
 
-<form class="search" action="{url}log">
+<form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p><input name="rev" id="search1" type="text" size="30"></p>
 <div id="hint">find changesets by author, revision,
@@ -31,8 +31,8 @@ files, or words in the commit message</div>
 </form>
 
 <div class="navigate">
-<a href="{url}search/{lessvars%urlparameter}">less</a>
-<a href="{url}search/{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}search/{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}search/{morevars%urlparameter}">more</a>
 </div>
 
 <table class="bigtable">
@@ -45,8 +45,8 @@ files, or words in the commit message</div>
 </table>
 
 <div class="navigate">
-<a href="{url}search/{lessvars%urlparameter}">less</a>
-<a href="{url}search/{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}search/{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}search/{morevars%urlparameter}">more</a>
 </div>
 
 </div>

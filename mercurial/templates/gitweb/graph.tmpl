@@ -1,10 +1,10 @@
 {header}
 <title>{repo|escape}: Graph</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
-<!--[if IE]><script type="text/javascript" src="{staticurl}excanvas.js"></script><![endif]-->
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
+<!--[if IE]><script type="text/javascript" src="{staticurl|urlescape}excanvas.js"></script><![endif]-->
 </head>
 <body>
 
@@ -13,25 +13,25 @@
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / graph
 </div>
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <div class="search">
 <input type="text" name="rev"  />
 </div>
 </form>
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log/{rev}{sessionvars%urlparameter}">changelog</a> |
 graph |
-<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a> |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a> |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
-<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
 | {changenav%navgraph}<br/>
 </div>
 
@@ -89,7 +89,7 @@ graph.vertex = function(x, y, color, parity, cur) \{
 	}
 	
 	var item = '<li style="' + nstyle + '"><span class="desc">';
-	item += '<a class="list" href="{url}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '"><b>' + cur[3] + '</b></a>';
+	item += '<a class="list" href="{url|urlescape}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '"><b>' + cur[3] + '</b></a>';
 	item += '</span> ' + tagspan + '';
 	item += '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
 
@@ -103,8 +103,8 @@ graph.render(data);
 </script>
 
 <div class="page_nav">
-<a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
 | {changenav%navgraph}
 </div>
 

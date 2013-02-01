@@ -1,7 +1,7 @@
 {header}
- <id>{urlbase}{url}</id>
- <link rel="self" href="{urlbase}{url}atom-tags"/>
- <link rel="alternate" href="{urlbase}{url}tags"/>
+ <id>{urlbase}{url|urlescape}</id>
+ <link rel="self" href="{urlbase}{url|urlescape}atom-tags"/>
+ <link rel="alternate" href="{urlbase}{url|urlescape}tags"/>
  <title>{repo|escape}: branches</title>
  <summary>{repo|escape} branch history</summary>
  <author><name>Mercurial SCM</name></author>

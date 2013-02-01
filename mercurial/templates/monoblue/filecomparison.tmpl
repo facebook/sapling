@@ -1,7 +1,7 @@
 {header}
 <title>{repo|escape}: comparison {file|escape}</title>
-    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
-    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
+    <link rel="alternate" type="application/atom+xml" href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
+    <link rel="alternate" type="application/rss+xml" href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 
 <body>
@@ -9,7 +9,7 @@
     <div class="page-header">
         <h1 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb} / file comparison</h1>
 
-        <form action="{url}log">
+        <form action="{url|urlescape}log">
             {sessionvars%hiddenformentry}
             <dl class="search">
                 <dt><label>Search: </label></dt>
@@ -18,25 +18,25 @@
         </form>
 
         <ul class="page-nav">
-            <li><a href="{url}summary{sessionvars%urlparameter}">summary</a></li>
-            <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
-            <li><a href="{url}log{sessionvars%urlparameter}">changelog</a></li>
-            <li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
-            <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-            <li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-            <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></li>
-            <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+            <li><a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a></li>
+            <li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a></li>
+            <li><a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a></li>
+            <li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+            <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+            <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+            <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
+            <li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></li>
+            <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
         </ul>
     </div>
 
     <ul class="submenu">
-        <li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
-        <li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
-        <li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
-        <li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
+        <li><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+        <li><a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
+        <li><a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
+        <li><a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
         <li class="current">comparison</li>
-        <li><a href="{url}raw-diff/{node|short}/{file|urlescape}">raw</a></li>
+        <li><a href="{url|urlescape}raw-diff/{node|short}/{file|urlescape}">raw</a></li>
     </ul>
 
     <h2 class="no-link no-border">comparison: {file|escape}</h2>
@@ -45,7 +45,7 @@
     <dl class="overview">
         {branch%filerevbranch}
         <dt>changeset {rev}</dt>
-        <dd><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
+        <dd><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
         {parent%filecompparent}
         {child%filecompchild}
     </dl>

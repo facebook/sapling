@@ -1,8 +1,8 @@
 {header}
     <title>{repo|escape}: graph</title>
-    <link rel="alternate" type="application/atom+xml" href="{url}atom-log" title="Atom feed for {repo|escape}"/>
-    <link rel="alternate" type="application/rss+xml" href="{url}rss-log" title="RSS feed for {repo|escape}"/>
-    <!--[if IE]><script type="text/javascript" src="{staticurl}excanvas.js"></script><![endif]-->
+    <link rel="alternate" type="application/atom+xml" href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
+    <link rel="alternate" type="application/rss+xml" href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
+    <!--[if IE]><script type="text/javascript" src="{staticurl|urlescape}excanvas.js"></script><![endif]-->
 </head>
 
 <body>
@@ -10,7 +10,7 @@
     <div class="page-header">
         <h1 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb} / graph</h1>
 
-        <form action="{url}log">
+        <form action="{url|urlescape}log">
             {sessionvars%hiddenformentry}
             <dl class="search">
                 <dt><label>Search: </label></dt>
@@ -19,15 +19,15 @@
         </form>
 
         <ul class="page-nav">
-            <li><a href="{url}summary{sessionvars%urlparameter}">summary</a></li>
-            <li><a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a></li>
-            <li><a href="{url}changelog{sessionvars%urlparameter}">changelog</a></li>
+            <li><a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a></li>
+            <li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a></li>
+            <li><a href="{url|urlescape}changelog{sessionvars%urlparameter}">changelog</a></li>
             <li class="current">graph</li>
-            <li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-            <li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-            <li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a></li>
-	    <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+            <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+            <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+            <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
+            <li><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a></li>
+	    <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
         </ul>
     </div>
 
@@ -86,7 +86,7 @@
         }
 
         var item = '<li style="' + nstyle + '"><span class="desc">';
-        item += '<a href="{url}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '">' + cur[3] + '</a>';
+        item += '<a href="{url|urlescape}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '">' + cur[3] + '</a>';
         item += '</span>' + tagspan + '<span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
 
         return [bg, item];
@@ -99,8 +99,8 @@
     </script>
 
     <div class="page-path">
-        <a href="{url}graph/{rev}{lessvars%urlparameter}">less</a>
-        <a href="{url}graph/{rev}{morevars%urlparameter}">more</a>
+        <a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
+        <a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
         | {changenav%navgraph}
     </div>
 

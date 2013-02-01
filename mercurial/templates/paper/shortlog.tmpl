@@ -1,9 +1,9 @@
 {header}
 <title>{repo|escape}: log</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}" />
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}" />
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}" />
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}" />
 </head>
 <body>
 
@@ -11,29 +11,29 @@
 <div class="menu">
 <div class="logo">
 <a href="{logourl}">
-<img src="{staticurl}{logoimg}" alt="mercurial" /></a>
+<img src="{staticurl|urlescape}{logoimg}" alt="mercurial" /></a>
 </div>
 <ul>
 <li class="active">log</li>
-<li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
-<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+<li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+<li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
-<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
-<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+<li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
 </ul>
 <ul>
 {archives%archiveentry}
 </ul>
 <ul>
- <li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+ <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
 </ul>
 <p>
 <div class="atom-logo">
-<a href="{url}atom-log" title="subscribe to atom feed">
-<img class="atom-logo" src="{staticurl}feed-icon-14x14.png" alt="atom feed">
+<a href="{url|urlescape}atom-log" title="subscribe to atom feed">
+<img class="atom-logo" src="{staticurl|urlescape}feed-icon-14x14.png" alt="atom feed">
 </a>
 </div>
 </div>
@@ -42,7 +42,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>log</h3>
 
-<form class="search" action="{url}log">
+<form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p><input name="rev" id="search1" type="text" size="30" /></p>
 <div id="hint">find changesets by author, revision,
@@ -50,8 +50,8 @@ files, or words in the commit message</div>
 </form>
 
 <div class="navigate">
-<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}shortlog/{rev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navshort}
 </div>
 
@@ -65,8 +65,8 @@ files, or words in the commit message</div>
 </table>
 
 <div class="navigate">
-<a href="{url}shortlog/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url}shortlog/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}shortlog/{rev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}shortlog/{rev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navshort}
 </div>
 

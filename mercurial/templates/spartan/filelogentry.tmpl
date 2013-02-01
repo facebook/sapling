@@ -1,14 +1,14 @@
 <table class="logEntry parity{parity}">
  <tr>
   <th><span class="age">{date|rfc822date}</span>:</th>
-  <th class="firstline"><a href="{url}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a></th>
+  <th class="firstline"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{desc|strip|firstline|escape|nonempty}</a></th>
  </tr>
  <tr>
   <th class="revision">revision {filerev}:</td>
   <td class="node">
-   <a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a>
-   <a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(diff)</a>
-   <a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(annotate)</a>
+   <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a>
+   <a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(diff)</a>
+   <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">(annotate)</a>
   </td>
  </tr>
  {rename%filelogrename}

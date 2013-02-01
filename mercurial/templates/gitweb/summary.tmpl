@@ -1,16 +1,16 @@
 {header}
 <title>{repo|escape}: Summary</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
 <div class="page_header">
 <a href="{logourl}" title="Mercurial" style="float: right;">Mercurial</a>
 <a href="/">Mercurial</a> {pathdef%breadcrumb} / summary
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <div class="search">
 <input type="text" name="rev"  />
@@ -20,14 +20,14 @@
 
 <div class="page_nav">
 summary |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
-<a href="{url}graph{sessionvars%urlparameter}">graph</a> |
-<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>{archives%archiveentry} |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a> |
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>{archives%archiveentry} |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 </div>
 
@@ -38,29 +38,29 @@ summary |
 <tr><td>last change</td><td>{lastchange|rfc822date}</td></tr>
 </table>
 
-<div><a  class="title" href="{url}shortlog{sessionvars%urlparameter}">changes</a></div>
+<div><a  class="title" href="{url|urlescape}shortlog{sessionvars%urlparameter}">changes</a></div>
 <table cellspacing="0">
 {shortlog}
-<tr class="light"><td colspan="4"><a class="list" href="{url}shortlog{sessionvars%urlparameter}">...</a></td></tr>
+<tr class="light"><td colspan="4"><a class="list" href="{url|urlescape}shortlog{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
-<div><a class="title" href="{url}tags{sessionvars%urlparameter}">tags</a></div>
+<div><a class="title" href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></div>
 <table cellspacing="0">
 {tags}
-<tr class="light"><td colspan="3"><a class="list" href="{url}tags{sessionvars%urlparameter}">...</a></td></tr>
+<tr class="light"><td colspan="3"><a class="list" href="{url|urlescape}tags{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
-<div><a class="title" href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></div>
+<div><a class="title" href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></div>
 <table cellspacing="0">
 {bookmarks%bookmarkentry}
-<tr class="light"><td colspan="3"><a class="list" href="{url}bookmarks{sessionvars%urlparameter}">...</a></td></tr>
+<tr class="light"><td colspan="3"><a class="list" href="{url|urlescape}bookmarks{sessionvars%urlparameter}">...</a></td></tr>
 </table>
 
-<div><a class="title" href="{url}branches{sessionvars%urlparameter}">branches</a></div>
+<div><a class="title" href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></div>
 <table cellspacing="0">
 {branches%branchentry}
 <tr class="light">
-  <td colspan="4"><a class="list"  href="{url}branches{sessionvars%urlparameter}">...</a></td>
+  <td colspan="4"><a class="list"  href="{url|urlescape}branches{sessionvars%urlparameter}">...</a></td>
 </tr>
 </table>
 {footer}

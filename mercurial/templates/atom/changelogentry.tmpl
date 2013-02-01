@@ -1,7 +1,7 @@
  <entry>
   <title>{desc|strip|firstline|strip|escape|nonempty}</title>
-  <id>{urlbase}{url}#changeset-{node}</id>
-  <link href="{urlbase}{url}rev/{node|short}"/>
+  <id>{urlbase}{url|urlescape}#changeset-{node}</id>
+  <link href="{urlbase}{url|urlescape}rev/{node|short}"/>
   <author>
    <name>{author|person|escape}</name>
    <email>{author|email|obfuscate}</email>

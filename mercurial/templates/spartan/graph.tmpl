@@ -1,25 +1,25 @@
 {header}
 <title>{repo|escape}: graph</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}: tags">
+   href="{url|urlescape}atom-tags" title="Atom feed for {repo|escape}: tags">
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}: tags">
-<!--[if IE]><script type="text/javascript" src="{staticurl}excanvas.js"></script><![endif]-->
+   href="{url|urlescape}rss-tags" title="RSS feed for {repo|escape}: tags">
+<!--[if IE]><script type="text/javascript" src="{staticurl|urlescape}excanvas.js"></script><![endif]-->
 </head>
 <body>
 
 <div class="buttons">
-<a href="{url}log{sessionvars%urlparameter}">changelog</a>
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a>
-<a href="{url}tags{sessionvars%urlparameter}">tags</a>
-<a href="{url}branches{sessionvars%urlparameter}">branches</a>
-<a href="{url}file/{node|short}/{sessionvars%urlparameter}">files</a>
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a>
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url|urlescape}file/{node|short}/{sessionvars%urlparameter}">files</a>
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 </div>
 
 <h2><a href="/">Mercurial</a> {pathdef%breadcrumb} / graph</h2>
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p>
 <label for="search1">search:</label>
@@ -54,7 +54,7 @@ graph.vertex = function(x, y, color, parity, cur) \{
 	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
 	var nstyle = 'padding-left: ' + left + 'px;';
 	var item = '<li style="' + nstyle + '"><span class="desc">';
-	item += '<a href="{url}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '">' + cur[3] + '</a>';
+	item += '<a href="{url|urlescape}rev/' + cur[0] + '{sessionvars%urlparameter}" title="' + cur[0] + '">' + cur[3] + '</a>';
 	item += '</span><span class="info">' + cur[5] + ', by ' + cur[4] + '</span></li>';
 
 	return [bg, item];
@@ -66,7 +66,7 @@ graph.render(data);
 // stop hiding script -->
 </script>
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p>
 <label for="search1">search:</label>
