@@ -747,7 +747,7 @@ check filelog view
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/68'
   200 Script output follows
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
-  500 Internal Server Error
+  404 Not Found
   [1]
 
 check that web.view config option:
