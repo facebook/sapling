@@ -12,6 +12,7 @@ import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import subrepo, context, repair, graphmod, revset, phases, obsolete
 import changelog
+import bookmarks
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -1793,6 +1794,8 @@ def commitforceeditor(repo, ctx, subs):
         edittext.append(_("HG: branch merge"))
     if ctx.branch():
         edittext.append(_("HG: branch '%s'") % ctx.branch())
+    if bookmarks.iscurrent(repo):
+        edittext.append(_("HG: bookmark '%s'") % repo._bookmarkcurrent)
     edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])
     edittext.extend([_("HG: changed %s") % f for f in modified])

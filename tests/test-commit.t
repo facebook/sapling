@@ -263,6 +263,7 @@ test commit message content
   $ cd commitmsg
   $ echo changed > changed
   $ echo removed > removed
+  $ hg book currentbookmark
   $ hg ci -qAm init
 
   $ hg rm removed
@@ -277,6 +278,7 @@ test commit message content
   HG: --
   HG: user: test
   HG: branch 'default'
+  HG: bookmark 'currentbookmark'
   HG: added added
   HG: changed changed
   HG: removed removed
