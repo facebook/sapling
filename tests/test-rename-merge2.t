@@ -617,7 +617,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    overwrite: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
-   local changed a which remote deleted
+  local changed a which remote deleted
   use (c)hanged version or (d)elete? c
    a: prompt keep -> a
    b: versions differ -> m

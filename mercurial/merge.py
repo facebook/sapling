@@ -298,7 +298,7 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     for f, m in sorted(prompts):
         if m == "cd":
             if repo.ui.promptchoice(
-                _(" local changed %s which remote deleted\n"
+                _("local changed %s which remote deleted\n"
                   "use (c)hanged version or (d)elete?") % f,
                 (_("&Changed"), _("&Delete")), 0):
                 act("prompt delete", "r", f)
