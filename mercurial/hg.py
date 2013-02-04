@@ -122,7 +122,7 @@ def peer(uiorrepo, opts, path, create=False):
 
 def defaultdest(source):
     '''return default destination of clone if none is given'''
-    return os.path.basename(os.path.normpath(util.url(source).path))
+    return os.path.basename(os.path.normpath(util.url(source).path or ''))
 
 def share(ui, source, dest=None, update=True):
     '''create a shared repository'''
