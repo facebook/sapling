@@ -317,18 +317,12 @@ process.
   checking files
   8 files, 7 changesets, 12 total revisions
   searching 7 changesets for largefiles
-  changeset 0:d4892ec57ce2: large missing
-    (looked for hash 2e000fa7e85759c7f4c254d4d9c33ef481e459a7)
-  changeset 1:334e5237836d: sub/maybelarge.dat missing
-    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
-  changeset 2:261ad3f3f037: stuff/maybelarge.dat missing
-    (looked for hash 34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c)
-  changeset 3:55759520c76f: sub/maybelarge.dat missing
-    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
-  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat missing
-    (looked for hash 76236b6a2c6102826c61af4297dd738fb3b1de38)
-  changeset 6:17126745edfd: anotherlarge missing
-    (looked for hash 3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3)
+  changeset 0:d4892ec57ce2: large references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/2e000fa7e85759c7f4c254d4d9c33ef481e459a7
+  changeset 1:334e5237836d: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
+  changeset 2:261ad3f3f037: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/34e163be8e43c5631d8b92e9c43ab0bf0fa62b9c
+  changeset 3:55759520c76f: sub/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38
+  changeset 5:9cc5aa7204f0: stuff/maybelarge.dat references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/76236b6a2c6102826c61af4297dd738fb3b1de38
+  changeset 6:17126745edfd: anotherlarge references missing $TESTTMP/largefiles-repo-hg/.hg/largefiles/3b71f43ff30f4b15b5cd85dd9e95ebc7e84eb5a3
   verified existence of 6 revisions of 4 largefiles
   [1]
   $ hg -R largefiles-repo-hg showconfig paths

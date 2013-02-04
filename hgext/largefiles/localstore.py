@@ -63,23 +63,19 @@ class localstore(basestore.basestore):
             return False
 
         expecthash = fctx.data()[0:40]
+        storepath = lfutil.storepath(self.remote, expecthash)
         verified.add(key)
         if not lfutil.instore(self.remote, expecthash):
             self.ui.warn(
-                _('changeset %s: %s missing\n'
-                  '  (looked for hash %s)\n')
-                % (cset, filename, expecthash))
+                _('changeset %s: %s references missing %s\n')
+                % (cset, filename, storepath))
             return True                 # failed
 
         if contents:
-            storepath = lfutil.storepath(self.remote, expecthash)
             actualhash = lfutil.hashfile(storepath)
             if actualhash != expecthash:
                 self.ui.warn(
-                    _('changeset %s: %s: contents differ\n'
-                      '  (%s:\n'
-                      '  expected hash %s,\n'
-                      '  but got %s)\n')
-                    % (cset, filename, storepath, expecthash, actualhash))
+                    _('changeset %s: %s references corrupted %s\n')
+                    % (cset, filename, storepath))
                 return True             # failed
         return False
