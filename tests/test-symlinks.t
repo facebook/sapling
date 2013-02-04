@@ -149,6 +149,10 @@ directory moved and symlinked
   adding foo/a
   $ mv foo bar
   $ ln -s bar foo
+  $ hg status
+  ! foo/a
+  ? bar/a
+  ? foo
 
 now addremove should remove old files
 
