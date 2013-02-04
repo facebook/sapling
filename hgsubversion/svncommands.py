@@ -117,9 +117,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     numrevs = len(repo) - startrev
 
-    subdirfile = open(os.path.join(svnmetadir, 'subdir'), 'w')
-    subdirfile.write(subdir.strip('/'))
-    subdirfile.close()
+    write_if_needed(os.path.join(svnmetadir, 'subdir'), subdir.strip('/'))
 
     # ctx.children() visits all revisions in the repository after ctx. Calling
     # it would make us use O(revisions^2) time, so we perform an extra traversal
@@ -195,9 +193,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 layout = 'single'
             else:
                 layout = 'standard'
-            f = open(os.path.join(svnmetadir, 'layout'), 'w')
-            f.write(layout)
-            f.close()
+            write_if_needed(os.path.join(svnmetadir, 'layout'), layout)
         elif layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
                                                 ' defect in replay')
