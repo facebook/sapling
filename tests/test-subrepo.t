@@ -1078,7 +1078,7 @@ Courtesy phases synchronisation to publishing server does not block the push
   > default=../issue3781-dest/
   > EOF
   $ hg push
-  pushing to $TESTTMP/issue3781-dest
+  pushing to $TESTTMP/issue3781-dest (glob)
   pushing subrepo s to $TESTTMP/issue3781-dest/s
   searching for changes
   no changes found
