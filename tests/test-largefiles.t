@@ -831,6 +831,8 @@ Test cloning with --all-largefiles flag
   commit: (clean)
   update: 8 new changesets (update)
 
+Show computed destination directory:
+
   $ mkdir xyz
   $ cd xyz
   $ hg clone ../a
@@ -840,6 +842,12 @@ Test cloning with --all-largefiles flag
   3 largefiles updated, 0 removed
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+Clone URL without path:
+
+  $ hg clone file://
+  abort: repository / not found!
+  [255]
 
 Ensure base clone command argument validation
 
