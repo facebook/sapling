@@ -741,20 +741,20 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             audit_path(abs)
         except (OSError, util.Abort):
             good = False
-        rel = m.rel(abs)
-        exact = m.exact(abs)
 
         st = walkresults[abs]
         dstate = repo.dirstate[abs]
         if good and dstate == '?':
             unknown.append(abs)
-            if repo.ui.verbose or not exact:
+            if repo.ui.verbose or not m.exact(abs):
+                rel = m.rel(abs)
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
         elif (dstate != 'r' and
               (not good or not st or
                (stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)))):
             deleted.append(abs)
-            if repo.ui.verbose or not exact:
+            if repo.ui.verbose or not m.exact(abs):
+                rel = m.rel(abs)
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
         # for finding renames
         elif dstate == 'r':
