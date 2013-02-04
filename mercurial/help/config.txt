@@ -996,6 +996,10 @@ profiling is done using lsprof.
     ``inlinetime``.
     Default: inlinetime.
 
+``limit``
+    Number of lines to show. Specific to the ``ls`` instrumenting profiler.
+    Default: 30.
+
 ``nested``
     Show at most this number of lines of drill-down info in a tree structure
     after each main entry. This can help explain the difference between Total

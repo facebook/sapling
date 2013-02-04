@@ -748,6 +748,7 @@ def _dispatch(req):
 def lsprofile(ui, func, fp):
     format = ui.config('profiling', 'format', default='text')
     field = ui.config('profiling', 'sort', default='inlinetime')
+    limit = ui.configint('profiling', 'limit', default=30)
     climit = ui.configint('profiling', 'nested', default=5)
 
     if format not in ['text', 'kcachegrind']:
@@ -776,7 +777,7 @@ def lsprofile(ui, func, fp):
             # format == 'text'
             stats = lsprof.Stats(p.getstats())
             stats.sort(field)
-            stats.pprint(limit=30, file=fp, climit=climit)
+            stats.pprint(limit=limit, file=fp, climit=climit)
 
 def statprofile(ui, func, fp):
     try:
