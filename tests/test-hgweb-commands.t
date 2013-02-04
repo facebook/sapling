@@ -1376,13 +1376,20 @@ bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
   $ . "$TESTDIR/cgienv"
   $ PATH_INFO=/bookmarks; export PATH_INFO
   $ QUERY_STRING='style=raw'
-  $ python hgweb.cgi
+  $ python hgweb.cgi | grep -v ETag:
+  Status: 200 Script output follows\r (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
 
 listbookmarks hides secret bookmarks
 
   $ PATH_INFO=/; export PATH_INFO
   $ QUERY_STRING='cmd=listkeys&namespace=bookmarks'
   $ python hgweb.cgi
+  Status: 200 Script output follows\r (esc)
+  Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 0\r (esc)
+  \r (esc)
 
 search works with filtering
 

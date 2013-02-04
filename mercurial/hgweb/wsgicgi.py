@@ -77,5 +77,7 @@ def launch(application):
     try:
         for chunk in content:
             write(chunk)
+        if not headers_sent:
+            write('')   # send headers now if body was empty
     finally:
         getattr(content, 'close', lambda : None)()
