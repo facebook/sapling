@@ -742,20 +742,22 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             good = False
         rel = m.rel(abs)
         exact = m.exact(abs)
-        if good and abs not in repo.dirstate:
+
+        dstate = repo.dirstate[abs]
+        if good and dstate == '?':
             unknown.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif (repo.dirstate[abs] != 'r' and
+        elif (dstate != 'r' and
               (not good or not os.path.lexists(target) or
                (os.path.isdir(target) and not os.path.islink(target)))):
             deleted.append(abs)
             if repo.ui.verbose or not exact:
                 repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
         # for finding renames
-        elif repo.dirstate[abs] == 'r':
+        elif dstate == 'r':
             removed.append(abs)
-        elif repo.dirstate[abs] == 'a':
+        elif dstate == 'a':
             added.append(abs)
     copies = {}
     if similarity > 0:
