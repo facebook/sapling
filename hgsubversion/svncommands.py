@@ -38,6 +38,20 @@ def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     return _buildmeta(ui, repo, args, partial=False,
                       skipuuid=unsafe_skip_uuid_check)
 
+def write_if_needed(path, content):
+    try:
+        fp = open(path)
+        mustwrite = fp.read() != content
+        fp.close()
+    except IOError, err:
+        if err.errno != errno.ENOENT:
+            raise
+        mustwrite = True
+    if mustwrite:
+        fp = open(path, 'w')
+        fp.write(content)
+        fp.close()
+
 def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     if repo is None:
@@ -195,9 +209,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if uuid != svn.uuid:
                     raise hgutil.Abort('remote svn repository identifier '
                                        'does not match')
-            uuidfile = open(os.path.join(svnmetadir, 'uuid'), 'w')
-            uuidfile.write(svn.uuid)
-            uuidfile.close()
+            write_if_needed(os.path.join(svnmetadir, 'uuid'), uuid)
 
         # don't reflect closed branches
         if (ctx.extra().get('close') and not ctx.files() or
