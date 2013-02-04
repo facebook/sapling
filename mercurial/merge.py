@@ -193,9 +193,6 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
     partial = function to filter file lists
     """
 
-    def act(msg, m, f, *args):
-        actions.append((f, m, args, msg))
-
     actions, copy, movewithdir = [], {}, {}
 
     if overwrite:
@@ -206,9 +203,9 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
         ret = copies.mergecopies(repo, p1, p2, pa)
         copy, movewithdir, diverge, renamedelete = ret
         for of, fl in diverge.iteritems():
-            act("divergent renames", "dr", of, fl)
+            actions.append((of, "dr", (fl,), "divergent renames"))
         for of, fl in renamedelete.iteritems():
-            act("rename and delete", "rd", of, fl)
+            actions.append((of, "rd", (fl,), "rename and delete"))
 
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" overwrite: %s, partial: %s\n"
@@ -242,31 +239,32 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 pass # remote unchanged - keep local
             elif n == a and fl1 == fla: # local unchanged - use remote
                 if n == n2: # optimization: keep local content
-                    act("update permissions", "e", f, fl2)
+                    actions.append((f, "e", (fl2,), "update permissions"))
                 else:
-                    act("remote is newer", "g", f, fl2)
+                    actions.append((f, "g", (fl2,), "remote is newer"))
             elif nol and n2 == a: # remote only changed 'x'
-                act("update permissions", "e", f, fl2)
+                actions.append((f, "e", (fl2,), "update permissions"))
             elif nol and n == a: # local only changed 'x'
-                act("remote is newer", "g", f, fl1)
+                actions.append((f, "g", (fl1,), "remote is newer"))
             else: # both changed something
-                act("versions differ", "m", f, f, f, False)
+                actions.append((f, "m", (f, f, False), "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
         elif f in movewithdir: # directory rename
             f2 = movewithdir[f]
-            act("remote renamed directory to " + f2, "d", f, None, f2,
-                m1.flags(f))
+            actions.append((f, "d", (None, f2, m1.flags(f)),
+                            "remote renamed directory to " + f2))
         elif f in copy:
             f2 = copy[f]
-            act("local copied/moved to " + f2, "m", f, f2, f, False)
+            actions.append((f, "m", (f2, f, False),
+                            "local copied/moved to " + f2))
         elif f in ma: # clean, a different, no remote
             if n != ma[f]:
                 prompts.append((f, "cd")) # prompt changed/deleted
             elif n[20:] == "a": # added, no remote
-                act("remote deleted", "f", f)
+                actions.append((f, "f", None, "remote deleted"))
             else:
-                act("other deleted", "r", f)
+                actions.append((f, "r", None, "other deleted"))
 
     for f, n in m2.iteritems():
         if partial and not partial(f):
@@ -275,23 +273,23 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             continue
         if f in movewithdir:
             f2 = movewithdir[f]
-            act("local renamed directory to " + f2, "d", None, f, f2,
-                m2.flags(f))
+            actions.append((None, "d", (f, f2, m2.flags(f)),
+                            "local renamed directory to " + f2))
         elif f in copy:
             f2 = copy[f]
             if f2 in m2:
-                act("remote copied to " + f, "m",
-                    f2, f, f, False)
+                actions.append((f2, "m", (f, f, False),
+                                "remote copied to " + f))
             else:
-                act("remote moved to " + f, "m",
-                    f2, f, f, True)
+                actions.append((f2, "m", (f, f, True),
+                                "remote moved to " + f))
         elif f not in ma:
             if (not overwrite
                 and _checkunknownfile(repo, p1, p2, f)):
-                act("remote differs from untracked local",
-                    "m", f, f, f, False)
+                actions.append((f, "m", (f, f, False),
+                                "remote differs from untracked local"))
             else:
-                act("remote created", "g", f, m2.flags(f))
+                actions.append((f, "g", (m2.flags(f),), "remote created"))
         elif n != ma[f]:
             prompts.append((f, "dc")) # prompt deleted/changed
 
@@ -301,15 +299,15 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
                 _("local changed %s which remote deleted\n"
                   "use (c)hanged version or (d)elete?") % f,
                 (_("&Changed"), _("&Delete")), 0):
-                act("prompt delete", "r", f)
+                actions.append((f, "r", None, "prompt delete"))
             else:
-                act("prompt keep", "a", f)
+                actions.append((f, "a", None, "prompt keep"))
         elif m == "dc":
             if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?") % f,
                 (_("&Changed"), _("&Deleted")), 0) == 0:
-                act("prompt recreating", "g", f, m2.flags(f))
+                actions.append((f, "g", (m2.flags(f),), "prompt recreating"))
         else: assert False, m
     return actions
 
