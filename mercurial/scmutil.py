@@ -752,17 +752,14 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     ctx = repo[None]
     walkresults = repo.dirstate.walk(m, sorted(ctx.substate), True, False)
     for abs in sorted(walkresults):
-        good = audit_path.check(abs)
-
         st = walkresults[abs]
         dstate = repo.dirstate[abs]
-        if good and dstate == '?':
+        if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
             if repo.ui.verbose or not m.exact(abs):
                 rel = m.rel(abs)
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif (dstate != 'r' and
-              (not good or not st or
+        elif (dstate != 'r' and (not st or
                (stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)))):
             deleted.append(abs)
             if repo.ui.verbose or not m.exact(abs):
