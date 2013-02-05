@@ -184,6 +184,13 @@ class pathauditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
+    def check(self, path):
+        try:
+            self(path)
+            return True
+        except (OSError, util.Abort):
+            return False
+
 class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
@@ -745,11 +752,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     ctx = repo[None]
     walkresults = repo.dirstate.walk(m, sorted(ctx.substate), True, False)
     for abs in sorted(walkresults):
-        good = True
-        try:
-            audit_path(abs)
-        except (OSError, util.Abort):
-            good = False
+        good = audit_path.check(abs)
 
         st = walkresults[abs]
         dstate = repo.dirstate[abs]
