@@ -376,6 +376,12 @@ class GitHandler(object):
         commit = Commit()
 
         (time, timezone) = ctx.date()
+        # work around to bad timezone offets - dulwich does not handle
+        # sub minute based timezones. In the one known case, it was a
+        # manual edit that led to the unusual value. Based on that,
+        # there is no reason to round one way or the other, so do the
+        # simplest and round down.
+        timezone -= (timezone % 60)
         commit.author = self.get_git_author(ctx)
         commit.author_time = int(time)
         commit.author_timezone = -timezone
