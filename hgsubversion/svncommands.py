@@ -67,13 +67,19 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
     url = repo.ui.expandpath(dest or repo.ui.config('paths', 'default-push') or
                              repo.ui.config('paths', 'default') or '')
-    svn = svnrepo.svnremoterepo(ui, url).svn
-    subdir = svn.subdir
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
     uuidpath = os.path.join(svnmetadir, 'uuid')
     uuid = read_if_exists(uuidpath)
+
+    subdirpath = os.path.join(svnmetadir, 'subdir')
+    subdir = read_if_exists(subdirpath)
+    svn = None
+    if subdir is None:
+        svn = svnrepo.svnremoterepo(ui, url).svn
+        subdir = svn.subdir
+        open(subdirpath, 'wb').write(subdir.strip('/'))
 
     youngest = 0
     startrev = 0
@@ -119,8 +125,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     closed = set()
 
     numrevs = len(repo) - startrev
-
-    write_if_needed(os.path.join(svnmetadir, 'subdir'), subdir.strip('/'))
 
     # ctx.children() visits all revisions in the repository after ctx. Calling
     # it would make us use O(revisions^2) time, so we perform an extra traversal
@@ -205,6 +209,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         if uuid is None:
             uuid = convinfo[4:40]
             if not skipuuid:
+                if svn is None:
+                    svn = svnrepo.svnremoterepo(ui, url).svn
                 if uuid != svn.uuid:
                     raise hgutil.Abort('remote svn repository identifier '
                                        'does not match')
