@@ -38,17 +38,19 @@ def rebuildmeta(ui, repo, args, unsafe_skip_uuid_check=False, **opts):
     return _buildmeta(ui, repo, args, partial=False,
                       skipuuid=unsafe_skip_uuid_check)
 
-def write_if_needed(path, content):
-    try:
-        fp = open(path)
-        mustwrite = fp.read() != content
+def read_if_exists(path):
+     try:
+        fp = open(path, 'rb')
+        d = fp.read()
         fp.close()
-    except IOError, err:
-        if err.errno != errno.ENOENT:
-            raise
-        mustwrite = True
-    if mustwrite:
-        fp = open(path, 'w')
+        return d
+     except IOError, err:
+         if err.errno != errno.ENOENT:
+             raise
+
+def write_if_needed(path, content):
+    if read_if_exists(path) != content:
+        fp = open(path, 'wb')
         fp.write(content)
         fp.close()
 
