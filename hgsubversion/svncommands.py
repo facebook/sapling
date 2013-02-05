@@ -65,7 +65,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         dest = args[0]
     elif len(args) > 1:
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
-    uuid = None
     url = repo.ui.expandpath(dest or repo.ui.config('paths', 'default-push') or
                              repo.ui.config('paths', 'default') or '')
     svn = svnrepo.svnremoterepo(ui, url).svn
@@ -73,6 +72,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     svnmetadir = os.path.join(repo.path, 'svn')
     if not os.path.exists(svnmetadir):
         os.makedirs(svnmetadir)
+    uuidpath = os.path.join(svnmetadir, 'uuid')
+    uuid = read_if_exists(uuidpath)
 
     youngest = 0
     startrev = 0
@@ -207,7 +208,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if uuid != svn.uuid:
                     raise hgutil.Abort('remote svn repository identifier '
                                        'does not match')
-            write_if_needed(os.path.join(svnmetadir, 'uuid'), uuid)
+            write_if_needed(uuidpath, uuid)
 
         # don't reflect closed branches
         if (ctx.extra().get('close') and not ctx.files() or
