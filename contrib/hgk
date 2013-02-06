@@ -109,7 +109,12 @@ bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 # end of win32 section
 } else {
 
-if {[ttk::style theme use] eq "default"} {
+if {[catch {
+    set theme [ttk::style theme use]
+}]} {
+    set theme $::ttk::currentTheme
+}
+if {$theme eq "default"} {
     ttk::style theme use clam
 }
 
