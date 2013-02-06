@@ -1399,6 +1399,14 @@ search works with filtering
   $ grep Status search
   Status: 200 Script output follows\r (esc)
 
+summary works with filtering (issue3810)
+
+  $ PATH_INFO=/summary; export PATH_INFO
+  $ QUERY_STRING='style=monoblue'; export QUERY_STRING
+  $ python hgweb.cgi > summary.out
+  $ grep "^Status" summary.out
+  Status: 200 Script output follows\r (esc)
+
 proper status for filtered revision
 
 

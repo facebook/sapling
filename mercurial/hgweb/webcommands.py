@@ -497,8 +497,8 @@ def summary(web, req, tmpl):
 
     def bookmarks(**map):
         parity = paritygen(web.stripecount)
-        b = web.repo._bookmarks.items()
-        for k, n in sorted(b)[:10]:  # limit to 10 bookmarks
+        marks = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
+        for k, n in sorted(marks)[:10]:  # limit to 10 bookmarks
             yield {'parity': parity.next(),
                    'bookmark': k,
                    'date': web.repo[n].date(),
@@ -518,7 +518,10 @@ def summary(web, req, tmpl):
     def changelist(**map):
         parity = paritygen(web.stripecount, offset=start - end)
         l = [] # build a list in forward order for efficiency
-        for i in xrange(start, end):
+        revs = []
+        if start < end:
+            revs = web.repo.changelog.revs(start, end - 1)
+        for i in revs:
             ctx = web.repo[i]
             n = ctx.node()
             hn = hex(n)
