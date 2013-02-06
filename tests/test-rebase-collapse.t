@@ -496,15 +496,15 @@ Interactions between collapse and keepbranches
   $ hg ci -Am 'A'
   adding a
 
-  $ hg branch '1'
-  marked working directory as branch 1
+  $ hg branch 'one'
+  marked working directory as branch one
   (branches are permanent and global, did you want a bookmark?)
   $ echo 'b' > b
   $ hg ci -Am 'B'
   adding b
 
-  $ hg branch '2'
-  marked working directory as branch 2
+  $ hg branch 'two'
+  marked working directory as branch two
   (branches are permanent and global, did you want a bookmark?)
   $ echo 'c' > c
   $ hg ci -Am 'C'
@@ -518,9 +518,9 @@ Interactions between collapse and keepbranches
   $ hg tglog
   @  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   
@@ -546,9 +546,9 @@ Interactions between collapse and keepbranches
   |/
   o  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   
@@ -559,9 +559,9 @@ Interactions between collapse and keepbranches
   |
   o  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   

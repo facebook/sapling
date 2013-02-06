@@ -34,6 +34,11 @@ def checknewlabel(repo, lbl, kind):
     for c in (':', '\0', '\n', '\r'):
         if c in lbl:
             raise util.Abort(_("%r cannot be used in a name") % c)
+    try:
+        int(lbl)
+        raise util.Abort(_("a %s cannot have an integer as its name") % kind)
+    except ValueError:
+        pass
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
