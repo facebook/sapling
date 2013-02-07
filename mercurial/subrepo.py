@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom, shutil, posixpath
+import errno, os, re, xml.dom.minidom, shutil, posixpath, sys
 import stat, subprocess, tarfile
 from i18n import _
 import config, scmutil, util, node, error, cmdutil, bookmarks, match as matchmod
@@ -41,6 +41,7 @@ class SubrepoAbort(error.Abort):
     def __init__(self, *args, **kw):
         error.Abort.__init__(self, *args, **kw)
         self.subrepo = kw.get('subrepo')
+        self.cause = kw.get('cause')
 
 def annotatesubrepoerror(func):
     def decoratedmethod(self, *args, **kargs):
@@ -53,7 +54,8 @@ def annotatesubrepoerror(func):
             subrepo = subrelpath(self)
             errormsg = str(ex) + ' ' + _('(in subrepo %s)') % subrepo
             # avoid handling this exception by raising a SubrepoAbort exception
-            raise SubrepoAbort(errormsg, hint=ex.hint, subrepo=subrepo)
+            raise SubrepoAbort(errormsg, hint=ex.hint, subrepo=subrepo,
+                               cause=sys.exc_info())
         return res
     return decoratedmethod
 
