@@ -100,6 +100,16 @@ class hgweb(object):
                                        untrusted=untrusted)
 
     def _getview(self, repo):
+        """The 'web.view' config controls changeset filter to hgweb. Possible
+        values are ``served``, ``visible`` and ``all``. Default is ``served``.
+        The ``served`` filter only shows changesets that can be pulled from the
+        hgweb instance.  The``visible`` filter includes secret changesets but
+        still excludes "hidden" one.
+
+        See the repoview module for details.
+
+        The option has been around undocumented since Mercurial 2.5, but no
+        user ever asked about it. So we better keep it undocumented for now."""
         viewconfig = repo.ui.config('web', 'view', 'served',
                                     untrusted=True)
         if viewconfig == 'all':
