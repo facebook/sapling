@@ -569,6 +569,7 @@ Interactions between collapse and keepbranches
   # HG changeset patch
   # User user1
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID f338eb3c2c7cc5b5915676a2376ba7ac558c5213
   # Parent  41acb9dca9eb976e84cd21fcb756b4afa5a35c09
   E

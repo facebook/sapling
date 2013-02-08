@@ -44,6 +44,7 @@ http://mercurial.selenic.com/bts/issue1175
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 89e8e4be0de296fa3d6dd7825ccc44d7dc0f1f3b
   # Parent  7fc86ba705e717a721dbc361bf8c9bc05a18ca2f
   5

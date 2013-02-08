@@ -123,6 +123,7 @@ Exporting revision -2 to a file:
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 5f17a83f5fbd9414006a5e563eab4c8a00729efd
   # Parent  747d3c68f8ec44bb35816bfcd59aeb50b9654c2f
   foo-10
@@ -169,6 +170,7 @@ Check for color output
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID * (glob)
   # Parent * (glob)
    !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~

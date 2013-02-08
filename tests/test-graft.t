@@ -84,6 +84,7 @@ Graft a rename:
   # HG changeset patch
   # User foo
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID ef0ef43d49e79e81ddafdc7997401ba0041efc82
   # Parent  68795b066622ca79a25816a662041d8f78f3cd9e
   2
@@ -324,6 +325,7 @@ Resolve conflicted graft
   # HG changeset patch
   # User bar
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 64ecd9071ce83c6e62f538d8ce7709d53f32ebf7
   # Parent  4bdb9a9d0b84ffee1d30f0dfc7744cade17aa19c
   1
@@ -351,6 +353,7 @@ Resolve conflicted graft with rename
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 2e80e1351d6ed50302fe1e05f8bd1d4d412b6e11
   # Parent  e5a51ae854a8bbaaf25cc5c6a57ff46042dadbb4
   2

@@ -295,6 +295,7 @@ dropped revision.
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 10c647b2cdd54db0603ecb99b2ff5ce66d5a5323
   # Parent  0189ba417d34df9dda55f88b637dcae9917b5964
   +4

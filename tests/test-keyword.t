@@ -528,6 +528,7 @@ Keywords should not be expanded in patch
   # HG changeset patch
   # User User Name <user@example.com>
   # Date 1 0
+  #      Thu Jan 01 00:00:01 1970 +0000
   # Node ID 40a904bbbe4cd4ab0a1f28411e35db26341a40ad
   # Parent  ef63ca68695bc9495032c6fda1350c71e6d256e9
   cndiff

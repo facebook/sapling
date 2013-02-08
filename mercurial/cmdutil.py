@@ -575,6 +575,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         write("# HG changeset patch\n")
         write("# User %s\n" % ctx.user())
         write("# Date %d %d\n" % ctx.date())
+        write("#      %s\n" % util.datestr(ctx.date()))
         if branch and branch != 'default':
             write("# Branch %s\n" % branch)
         write("# Node ID %s\n" % hex(node))
