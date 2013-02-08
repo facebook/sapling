@@ -8,11 +8,13 @@
 
 import os
 from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
+from mercurial.templatefilters import websub
+from mercurial.i18n import _
 from common import get_stat, ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
-import webcommands, protocol, webutil
+import webcommands, protocol, webutil, re
 
 perms = {
     'changegroup': 'pull',
@@ -73,6 +75,7 @@ class hgweb(object):
         # a repo owner may set web.templates in .hg/hgrc to get any file
         # readable by the user running the CGI script
         self.templatepath = self.config('web', 'templates')
+        self.websubtable = self.loadwebsub()
 
     # The CGI scripts are often run by a user different from the repo owner.
     # Trust the settings from the .hg/hgrc files by default.
@@ -258,6 +261,45 @@ class hgweb(object):
                 return ['']
             return tmpl('error', error=inst.message)
 
+    def loadwebsub(self):
+        websubtable = []
+        websubdefs = self.repo.ui.configitems('websub')
+        for key, pattern in websubdefs:
+            # grab the delimiter from the character after the "s"
+            unesc = pattern[1]
+            delim = re.escape(unesc)
+
+            # identify portions of the pattern, taking care to avoid escaped
+            # delimiters. the replace format and flags are optional, but
+            # delimiters are required.
+            match = re.match(
+                r'^s%s(.+)(?:(?<=\\\\)|(?<!\\))%s(.*)%s([ilmsux])*$'
+                % (delim, delim, delim), pattern)
+            if not match:
+                self.repo.ui.warn(_("websub: invalid pattern for %s: %s\n")
+                                  % (key, pattern))
+                continue
+
+            # we need to unescape the delimiter for regexp and format
+            delim_re = re.compile(r'(?<!\\)\\%s' % delim)
+            regexp = delim_re.sub(unesc, match.group(1))
+            format = delim_re.sub(unesc, match.group(2))
+
+            # the pattern allows for 6 regexp flags, so set them if necessary
+            flagin = match.group(3)
+            flags = 0
+            if flagin:
+                for flag in flagin.upper():
+                    flags |= re.__dict__[flag]
+
+            try:
+                regexp = re.compile(regexp, flags)
+                websubtable.append((regexp, format))
+            except re.error:
+                self.repo.ui.warn(_("websub: invalid regexp for %s: %s\n")
+                                  % (key, regexp))
+        return websubtable
+
     def templater(self, req):
 
         # determine scheme, port and server name
@@ -311,9 +353,13 @@ class hgweb(object):
                              or req.env.get('REPO_NAME')
                              or req.url.strip('/') or self.repo.root)
 
+        def websubfilter(text):
+            return websub(text, self.websubtable)
+
         # create the templater
 
         tmpl = templater.templater(mapfile,
+                                   filters={"websub": websubfilter},
                                    defaults={"url": req.url,
                                              "logourl": logourl,
                                              "logoimg": logoimg,
