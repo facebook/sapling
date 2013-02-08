@@ -320,7 +320,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
             headers = email.message_from_string(headers)
             return addinfourl(fp, headers, req.get_full_url())
         except ftplib.all_errors, msg:
-            raise IOError('ftp error', msg), sys.exc_info()[2]
+            raise IOError('ftp error', msg)
 
     def connect_ftp(self, user, passwd, host, port, dirs):
         fw = ftpwrapper(user, passwd, host, port, dirs)
@@ -350,7 +350,7 @@ class ftpwrapper(urllib.ftpwrapper):
             try:
                 self.ftp.nlst(file)
             except ftplib.error_perm, reason:
-                raise IOError('ftp error', reason), sys.exc_info()[2]
+                raise IOError('ftp error', reason)
             # Restore the transfer mode!
             self.ftp.voidcmd(cmd)
             # Try to retrieve as a file
@@ -364,7 +364,7 @@ class ftpwrapper(urllib.ftpwrapper):
                     fp = RangeableFileObject(fp, (rest,''))
                     return (fp, retrlen)
                 elif not str(reason).startswith('550'):
-                    raise IOError('ftp error', reason), sys.exc_info()[2]
+                    raise IOError('ftp error', reason)
         if not conn:
             # Set transfer mode to ASCII!
             self.ftp.voidcmd('TYPE A')
