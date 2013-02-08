@@ -133,6 +133,11 @@ class basestore(object):
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         '''Perform the actual verification of a file in the store.
+        'cset' is only used in warnings.
+        'contents' controls verification of content hash.
+        'standin' is the standin path of the largefile to verify.
+        'verified' is maintained as a set of already verified files.
+        Returns _true_ if it is a standin and any problems are found!
         '''
         raise NotImplementedError('abstract method')
 

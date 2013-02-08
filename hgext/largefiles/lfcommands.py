@@ -368,9 +368,9 @@ def uploadlfiles(ui, rsrc, rdst, files):
     ui.progress(_('uploading largefiles'), None)
 
 def verifylfiles(ui, repo, all=False, contents=False):
-    '''Verify that every big file revision in the current changeset
+    '''Verify that every largefile revision in the current changeset
     exists in the central store.  With --contents, also verify that
-    the contents of each big file revision are correct (SHA-1 hash
+    the contents of each local largefile file revision are correct (SHA-1 hash
     matches the revision ID).  With --all, check every changeset in
     this repository.'''
     if all:
