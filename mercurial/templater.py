@@ -207,6 +207,19 @@ def buildfunc(exp, context):
         f = context._filters[n]
         return (runfilter, (args[0][0], args[0][1], f))
 
+def get(context, mapping, args):
+    if len(args) != 2:
+        # i18n: "get" is a keyword
+        raise error.ParseError(_("get() expects two arguments"))
+
+    dictarg = args[0][0](context, mapping, args[0][1])
+    if not util.safehasattr(dictarg, 'get'):
+        # i18n: "get" is a keyword
+        raise error.ParseError(_("get() expects a dict as first argument"))
+
+    key = args[1][0](context, mapping, args[1][1])
+    yield dictarg.get(key)
+
 def join(context, mapping, args):
     if not (1 <= len(args) <= 2):
         # i18n: "join" is a keyword
@@ -285,11 +298,12 @@ methods = {
     }
 
 funcs = {
+    "get": get,
     "if": if_,
     "ifeq": ifeq,
     "join": join,
-    "sub": sub,
     "label": label,
+    "sub": sub,
 }
 
 # template engine

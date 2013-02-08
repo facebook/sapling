@@ -44,19 +44,21 @@ Note that a filter is nothing more than a function call, i.e.
 
 In addition to filters, there are some basic built-in functions:
 
+- date(date[, fmt])
+
+- fill(text[, width])
+
+- get(dict, key)
+
 - if(expr, then[, else])
 
 - ifeq(expr, expr, then[, else])
-
-- sub(pat, repl, expr)
 
 - join(list, sep)
 
 - label(label, expr)
 
-- date(date[, fmt])
-
-- fill(text[, width])
+- sub(pat, repl, expr)
 
 Also, for any expression that returns a list, there is a list operator:
 
