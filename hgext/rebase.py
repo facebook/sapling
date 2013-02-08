@@ -15,7 +15,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 '''
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil, phases, obsolete
+from mercurial import extensions, patch, scmutil, phases, obsolete, error
 from mercurial.commands import templateopts
 from mercurial.node import nullrev
 from mercurial.lock import release
@@ -269,8 +269,9 @@ def rebase(ui, repo, **opts):
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
                         stats = rebasenode(repo, rev, p1, state, collapsef)
                         if stats and stats[3] > 0:
-                            raise util.Abort(_('unresolved conflicts (see hg '
-                                        'resolve, then hg rebase --continue)'))
+                            raise error.InterventionRequired(
+                                _('unresolved conflicts (see hg '
+                                  'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '')
                 cmdutil.duplicatecopies(repo, rev, target)

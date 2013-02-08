@@ -141,7 +141,7 @@ rebase --continue with bookmarks present (issue3802)
   merging c
   warning: conflicts during merge.
   merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
   $ echo 'c' > c
   $ hg resolve --mark c

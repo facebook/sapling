@@ -69,7 +69,7 @@ Rebasing B onto E - check keep: and phases
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Solve the conflict and go on:
@@ -122,7 +122,7 @@ Rebase F onto E - check keepbranches:
   merging A
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
 
 Solve the conflict and go on:

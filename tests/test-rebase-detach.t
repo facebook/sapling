@@ -372,7 +372,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   merging H
   warning: conflicts during merge.
   merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
   [255]
   $ hg resolve --all -t internal:local
   $ hg rebase -c
