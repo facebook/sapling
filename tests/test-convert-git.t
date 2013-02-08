@@ -281,24 +281,6 @@ convert author committer
   abort: --sourcesort is not supported by this data source
   [255]
 
-damage git repository and convert again
-
-  $ cat > damage.py <<EOF
-  > import os
-  > import stat
-  > for root, dirs, files in os.walk('git-repo4/.git/objects'):
-  >     if files:
-  >         path = os.path.join(root, files[0])
-  >         if os.name == 'nt':
-  >             os.chmod(path, stat.S_IWUSR)
-  >         os.remove(path)
-  >         break
-  > EOF
-  $ python damage.py
-  $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | \
-  >     grep 'abort:' | sed 's/abort:.*/abort:/g'
-  abort:
-
 test sub modules
 
   $ mkdir git-repo5
@@ -345,3 +327,32 @@ convert sub modules
   $ cd git-repo5
   $ cat foo
   sub
+
+  $ cd ../..
+
+damaged git repository tests:
+In case the hard-coded hashes change, the following commands can be used to
+list the hashes and their corresponding types in the repository:
+cd git-repo4/.git/objects
+find . -type f | cut -c 3- | sed 's_/__' | xargs -n 1 -t git cat-file -t
+cd ../../..
+
+damage git repository by renaming a commit object
+  $ COMMIT_OBJ=1c/0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
+  $ mv git-repo4/.git/objects/$COMMIT_OBJ git-repo4/.git/objects/$COMMIT_OBJ.tmp
+  $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
+  abort: cannot read tags from git-repo4/.git
+  $ mv git-repo4/.git/objects/$COMMIT_OBJ.tmp git-repo4/.git/objects/$COMMIT_OBJ
+damage git repository by renaming a blob object
+
+  $ BLOB_OBJ=8b/137891791fe96927ad78e64b0aad7bded08bdc
+  $ mv git-repo4/.git/objects/$BLOB_OBJ git-repo4/.git/objects/$BLOB_OBJ.tmp
+  $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
+  abort: cannot read 'blob' object at 8b137891791fe96927ad78e64b0aad7bded08bdc
+  $ mv git-repo4/.git/objects/$BLOB_OBJ.tmp git-repo4/.git/objects/$BLOB_OBJ
+damage git repository by renaming a tree object
+
+  $ TREE_OBJ=72/49f083d2a63a41cc737764a86981eb5f3e4635
+  $ mv git-repo4/.git/objects/$TREE_OBJ git-repo4/.git/objects/$TREE_OBJ.tmp
+  $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
+  abort: cannot read changes in 1c0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
