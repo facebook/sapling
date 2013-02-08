@@ -1230,6 +1230,8 @@ class localrepository(object):
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
 
+            cctx = context.workingctx(self, text, user, date, extra, changes)
+
             if (not force and not extra.get("close") and not merge
                 and not (changes[0] or changes[1] or changes[2])
                 and wctx.branch() == wctx.p1().branch()):
@@ -1244,7 +1246,6 @@ class localrepository(object):
                     raise util.Abort(_("unresolved merge conflicts "
                                        "(see hg help resolve)"))
 
-            cctx = context.workingctx(self, text, user, date, extra, changes)
             if editor:
                 cctx._text = editor(self, cctx, subs)
             edited = (text != cctx._text)
