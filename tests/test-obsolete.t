@@ -776,4 +776,92 @@ Checking _enable=False warning if obsolete marker exists
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add celestine
   
+
+reenable for later test
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
+#endif
+
+Test incoming/outcoming with changesets obsoleted remotely, known locally
+===============================================================================
+
+This test issue 3805
+
+  $ hg init repo-issue3805
+  $ cd repo-issue3805
+  $ echo "foo" > foo
+  $ hg ci -Am "A"
+  adding foo
+  $ hg clone . ../other-issue3805
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "bar" >> foo
+  $ hg ci --amend
+  $ cd ../other-issue3805
+  $ hg log -G
+  @  changeset:   0:193e9254ce7e
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+  $ hg log -G -R ../repo-issue3805
+  @  changeset:   2:3816541e5485
+     tag:         tip
+     parent:      -1:000000000000
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+  $ hg incoming
+  comparing with $TESTTMP/tmpe/repo-issue3805
+  searching for changes
+  changeset:   2:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg incoming --bundle ../issue3805.hg
+  comparing with $TESTTMP/tmpe/repo-issue3805
+  searching for changes
+  changeset:   2:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg outgoing
+  comparing with $TESTTMP/tmpe/repo-issue3805
+  searching for changes
+  no changes found
+  [1]
+
+#if serve
+
+  $ hg serve -R ../repo-issue3805 -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg incoming http://localhost:$HGPORT
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  changeset:   1:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg outgoing http://localhost:$HGPORT
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+
 #endif

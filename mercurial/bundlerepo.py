@@ -367,6 +367,11 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             localrepo = bundlerepo = bundlerepository(ui, repo.root, fname)
             # this repo contains local and other now, so filter out local again
             common = repo.heads()
+    if localrepo:
+        # Part of common may be remotely filtered
+        # So use an unfiltered version
+        # The discovery process probably need cleanup to avoid that
+        localrepo = localrepo.unfiltered()
 
     csets = localrepo.changelog.findmissing(common, rheads)
 
