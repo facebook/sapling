@@ -1660,7 +1660,13 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # Also update it from the intermediate commit or from the wctx
             extra.update(ctx.extra())
 
-            files = set(old.files())
+            if len(old.parents()) > 1:
+                # ctx.files() isn't reliable for merges, so fall back to the
+                # slower repo.status() method
+                files = set([fn for st in repo.status(base, old)[:3]
+                             for fn in st])
+            else:
+                files = set(old.files())
 
             # Second, we use either the commit we just did, or if there were no
             # changes the parent of the working directory as the version of the
@@ -1725,7 +1731,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             extra['amend_source'] = old.hex()
 
             new = context.memctx(repo,
-                                 parents=[base.node(), nullid],
+                                 parents=[base.node(), old.p2().node()],
                                  text=message,
                                  files=files,
                                  filectxfn=filectxfn,

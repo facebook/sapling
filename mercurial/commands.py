@@ -1315,8 +1315,6 @@ def commit(ui, repo, *pats, **opts):
         old = repo['.']
         if old.phase() == phases.public:
             raise util.Abort(_('cannot amend public changesets'))
-        if len(old.parents()) > 1:
-            raise util.Abort(_('cannot amend merge changesets'))
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot amend while merging'))
         if (not obsolete._enabled) and old.children():
