@@ -142,7 +142,7 @@ rebase --continue with bookmarks present (issue3802)
   warning: conflicts during merge.
   merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
   $ echo 'c' > c
   $ hg resolve --mark c
   $ hg rebase --continue

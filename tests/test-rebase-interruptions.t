@@ -62,7 +62,7 @@ Rebasing B onto E:
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
 Force a commit on C during the interruption:
 
@@ -98,7 +98,7 @@ Resume the rebasing:
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
 Solve the conflict and go on:
 
@@ -152,7 +152,7 @@ Rebasing B onto E:
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
 Force a commit on B' during the interruption:
 
@@ -223,7 +223,7 @@ Rebasing B onto E:
   warning: conflicts during merge.
   merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
 Change phase on B and B'
 

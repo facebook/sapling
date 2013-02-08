@@ -373,7 +373,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   warning: conflicts during merge.
   merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
   $ hg resolve --all -t internal:local
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)

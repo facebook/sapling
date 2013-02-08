@@ -141,7 +141,7 @@ Test that rewriting leaving instability behind is allowed
   adding c
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
-  [255]
+  [1]
   $ echo c >> c
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -280,7 +280,7 @@ New-commit as draft (default)
   adding f
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
-  [255]
+  [1]
   $ echo f >> f
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -330,7 +330,7 @@ New-commit as draft (default)
   adding f
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
-  [255]
+  [1]
   $ echo f >> f
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

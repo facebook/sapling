@@ -109,7 +109,7 @@ already has one local mq patch
 
   $ HGMERGE=internal:fail hg rebase
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
   $ HGMERGE=internal:local hg resolve --all
 

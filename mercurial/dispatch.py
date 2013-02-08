@@ -153,6 +153,7 @@ def _runcatch(req):
             commands.help_(ui, 'shortlist')
     except error.InterventionRequired, inst:
         ui.warn("%s\n" % inst)
+        return 1
     except util.Abort, inst:
         ui.warn(_("abort: %s\n") % inst)
         if inst.hint:

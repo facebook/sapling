@@ -417,7 +417,7 @@ Test --tool parameter:
 
   $ hg rebase -s 2 -d 1 --tool internal:fail
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  [1]
 
   $ hg resolve -l
   U c2

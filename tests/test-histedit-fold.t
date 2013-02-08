@@ -183,7 +183,7 @@ folding and creating no new change doesn't break:
   warning: conflicts during merge.
   merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
-  [255]
+  [1]
 There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
   $ hg status
@@ -248,7 +248,7 @@ dropped revision.
   warning: conflicts during merge.
   merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
-  [255]
+  [1]
   $ cat > file << EOF
   > 1
   > 2
