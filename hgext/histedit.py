@@ -301,8 +301,8 @@ def pick(ui, repo, ctx, ha, opts):
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(_('Fix up the change and run '
+                                           'hg histedit --continue'))
     # drop the second merge parent
     commit = commitfuncfor(repo, oldctx)
     n = commit(text=oldctx.description(), user=oldctx.user(),
@@ -319,17 +319,17 @@ def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     applychanges(ui, repo, oldctx, opts)
-    raise util.Abort(_('Make changes as needed, you may commit or record as '
-                       'needed now.\nWhen you are finished, run hg'
-                       ' histedit --continue to resume.'))
+    raise error.InterventionRequired(
+        _('Make changes as needed, you may commit or record as needed now.\n'
+          'When you are finished, run hg histedit --continue to resume.'))
 
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(
+            _('Fix up the change and run hg histedit --continue'))
     n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
     if n is None:
@@ -390,8 +390,8 @@ def message(ui, repo, ctx, ha, opts):
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(
+            _('Fix up the change and run hg histedit --continue'))
     message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
     commit = commitfuncfor(repo, oldctx)

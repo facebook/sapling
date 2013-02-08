@@ -91,7 +91,7 @@ edit the history
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 fix up
   $ echo 'I can haz no commute' > e
@@ -125,7 +125,7 @@ fix up
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 just continue this time
   $ hg revert -r 'p1()' e

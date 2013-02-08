@@ -92,7 +92,7 @@ editing a changeset without any actual change would corrupt the repository
   | edit e860deea161a 4 e
   | pick 652413bf663e 5 f
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ continueediting true "(leaving commit message unaltered)"
   % finalize changeset editing (leaving commit message unaltered)
@@ -145,12 +145,12 @@ check state of working copy
   | edit e860deea161a 4 e
   | pick 652413bf663e 5 f
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ continueediting true "(leaving commit message unaltered)"
   % finalize changeset editing (leaving commit message unaltered)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ graphlog "log after first edit"
   % log after first edit

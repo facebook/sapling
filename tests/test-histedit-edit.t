@@ -63,7 +63,7 @@ log before edit
 edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
 
 Go at a random point and try to continue
@@ -151,7 +151,7 @@ check histedit_source
   > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ hg status
   A f

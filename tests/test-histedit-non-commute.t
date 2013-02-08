@@ -92,7 +92,7 @@ edit the history
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 abort the edit
   $ hg histedit --abort 2>&1 | fixbundle
@@ -150,7 +150,7 @@ edit the history
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 fix up
   $ echo 'I can haz no commute' > e
@@ -160,7 +160,7 @@ fix up
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 This failure is caused by 7b4e2f4b7bcd "e" not rebasing the non commutative
 former children.
@@ -236,7 +236,7 @@ edit the history, this time with a fold action
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
@@ -245,7 +245,7 @@ edit the history, this time with a fold action
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 second edit also fails, but just continue
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
