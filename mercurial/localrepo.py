@@ -1233,11 +1233,11 @@ class localrepository(object):
             cctx = context.workingctx(self, text, user, date, extra, changes)
 
             if (not force and not extra.get("close") and not merge
-                and not (changes[0] or changes[1] or changes[2])
+                and not cctx.files()
                 and wctx.branch() == wctx.p1().branch()):
                 return None
 
-            if merge and changes[3]:
+            if merge and cctx.deleted():
                 raise util.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate(self)
