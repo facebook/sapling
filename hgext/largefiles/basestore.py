@@ -43,7 +43,8 @@ class basestore(object):
         raise NotImplementedError('abstract method')
 
     def exists(self, hashes):
-        '''Check to see if the store contains the given hashes.'''
+        '''Check to see if the store contains the given hashes. Given an
+        iterable of hashes it returns a mapping from hash to bool.'''
         raise NotImplementedError('abstract method')
 
     def get(self, files):

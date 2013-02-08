@@ -29,7 +29,7 @@ class remotestore(basestore.basestore):
             _('remotestore: put %s to remote store %s') % (source, self.url))
 
     def exists(self, hashes):
-        return self._verify(hashes)
+        return dict((h, s == 0) for (h, s) in self._stat(hashes).iteritems())
 
     def sendfile(self, filename, hash):
         self.ui.debug('remotestore: sendfile(%s, %s)\n' % (filename, hash))
@@ -75,9 +75,6 @@ class remotestore(basestore.basestore):
         if length is not None:
             infile = lfutil.limitreader(infile, length)
         return lfutil.copyandhash(lfutil.blockstream(infile), tmpfile)
-
-    def _verify(self, hashes):
-        return dict((h, s == 0) for (h, s) in self._stat(hashes).iteritems())
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)
