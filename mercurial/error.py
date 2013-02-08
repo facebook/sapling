@@ -33,6 +33,9 @@ class ManifestLookupError(LookupError):
 class CommandError(Exception):
     """Exception raised on errors in parsing the command line."""
 
+class InterventionRequired(Exception):
+    """Exception raised when a command requires human intervention."""
+
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""
     def __init__(self, *args, **kw):
