@@ -37,7 +37,7 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
    a/a: other deleted -> r
    a/b: other deleted -> r
@@ -88,7 +88,7 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb
    None: local renamed directory to b/c -> d
   updating:None 1/1 files (100.00%)

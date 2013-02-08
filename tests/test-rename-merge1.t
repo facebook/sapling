@@ -34,7 +34,7 @@
      src: 'a2' -> dst: 'c2' !
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
    a: remote moved to b -> m
     preserving a for resolve of b
@@ -179,7 +179,7 @@ Check for issue3074
      src: 'file' -> dst: 'newfile' %
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
    file: rename and delete -> rd
    newfile: remote created -> g

@@ -185,14 +185,15 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
     return actions
 
-def manifestmerge(repo, p1, p2, pa, overwrite, partial):
+def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
     """
     Merge p1 and p2 with ancestor pa and generate merge action list
 
-    overwrite = whether we clobber working files
+    branchmerge and force are as passed in to update
     partial = function to filter file lists
     """
 
+    overwrite = force and not branchmerge
     actions, copy, movewithdir = [], {}, {}
 
     if overwrite:
@@ -208,8 +209,8 @@ def manifestmerge(repo, p1, p2, pa, overwrite, partial):
             actions.append((of, "rd", (fl,), "rename and delete"))
 
     repo.ui.note(_("resolving manifests\n"))
-    repo.ui.debug(" overwrite: %s, partial: %s\n"
-                  % (bool(overwrite), bool(partial)))
+    repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
+                  % (bool(branchmerge), bool(force), bool(partial)))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, p1, p2))
 
     m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
@@ -452,7 +453,7 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
         actions += _forgetremoved(tctx, mctx, branchmerge)
     actions += manifestmerge(repo, tctx, mctx,
                              ancestor,
-                             force and not branchmerge,
+                             branchmerge, force,
                              partial)
     return actions
 

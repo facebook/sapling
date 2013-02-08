@@ -134,7 +134,7 @@ Graft out of order, skipping a merge and a duplicate
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    b: local copied/moved to a -> m
     preserving b for resolve of b
@@ -147,7 +147,7 @@ Graft out of order, skipping a merge and a duplicate
   grafting revision 5
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
    e: remote is newer -> g
   updating: e 1/1 files (100.00%)
@@ -156,7 +156,7 @@ Graft out of order, skipping a merge and a duplicate
   grafting revision 4
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
    d: remote is newer -> g
    e: versions differ -> m

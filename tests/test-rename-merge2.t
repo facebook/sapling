@@ -84,7 +84,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
    a: remote copied to b -> m
     preserving a for resolve of b
@@ -119,7 +119,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: f4db7e329e71
    a: remote is newer -> g
    b: local copied/moved to a -> m
@@ -157,7 +157,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: bdb19105162a
    a: remote moved to b -> m
     preserving a for resolve of b
@@ -192,7 +192,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
    b: local copied/moved to a -> m
     preserving b for resolve of b
@@ -226,7 +226,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: 4ce40f5aca24
    b: remote created -> g
    rev: versions differ -> m
@@ -256,7 +256,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
    rev: versions differ -> m
     preserving rev for resolve of rev
@@ -283,7 +283,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 94b33a1b7f2d+, remote: bdb19105162a
    a: other deleted -> r
    b: remote created -> g
@@ -315,7 +315,7 @@ $4 = expected result
      src: 'a' -> dst: 'b' 
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
    rev: versions differ -> m
     preserving rev for resolve of rev
@@ -336,7 +336,7 @@ $4 = expected result
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    b: versions differ -> m
     preserving b for resolve of b
@@ -374,7 +374,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'c' !
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
    a: divergent renames -> dr
    c: remote created -> g
@@ -404,7 +404,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
    b: versions differ -> m
     preserving b for resolve of b
@@ -432,7 +432,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    a: other deleted -> r
    b: versions differ -> m
@@ -462,7 +462,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    a: remote is newer -> g
    b: versions differ -> m
@@ -493,7 +493,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 59318016310c+, remote: bdb19105162a
    a: other deleted -> r
    b: versions differ -> m
@@ -523,7 +523,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 8dbce441892a
    a: remote is newer -> g
    b: versions differ -> m
@@ -554,7 +554,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    b: versions differ -> m
     preserving b for resolve of b
@@ -582,7 +582,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
   remote changed a which local deleted
   use (c)hanged version or leave (d)eleted? c
@@ -615,7 +615,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
   local changed a which remote deleted
   use (c)hanged version or (d)elete? c
@@ -652,7 +652,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 49b6d8032493
    a: remote moved to b -> m
     preserving a for resolve of b
@@ -686,7 +686,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
    b: local copied/moved to a -> m
     preserving b for resolve of b
@@ -724,7 +724,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 2b958612230f
    b: local copied/moved to a -> m
     preserving b for resolve of b

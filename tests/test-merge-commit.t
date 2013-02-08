@@ -69,7 +69,7 @@ This should use bar@rev2 as the ancestor:
   $ hg --debug merge 3
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 0555950ead28
    bar: versions differ -> m
     preserving bar for resolve of bar
@@ -156,7 +156,7 @@ This should use bar@rev2 as the ancestor:
   $ hg --debug merge 3
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 3ffa6b9e35f0
    bar: versions differ -> m
     preserving bar for resolve of bar

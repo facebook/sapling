@@ -29,7 +29,7 @@
      src: 'a' -> dst: 'c' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: b8bf91eeebbc, local: add3f11052fa+, remote: 17c05bb7fcb6
    a: remote moved to b -> m
     preserving a for resolve of b

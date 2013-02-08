@@ -32,7 +32,7 @@ http://mercurial.selenic.com/bts/issue672
      src: '1' -> dst: '1a' 
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
    1: other deleted -> r
    1a: remote created -> g
@@ -63,7 +63,7 @@ http://mercurial.selenic.com/bts/issue672
      src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
    1a: local copied/moved to 1 -> m
     preserving 1a for resolve of 1a
@@ -86,7 +86,7 @@ http://mercurial.selenic.com/bts/issue672
      src: '1' -> dst: '1a' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: c64f439569a9, local: 746e9549ea96+, remote: e327dca35ac8
    1: remote moved to 1a -> m
     preserving 1 for resolve of 1a

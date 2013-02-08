@@ -66,7 +66,7 @@
 
   $ hg update --debug -C 1
   resolving manifests
-   overwrite: True, partial: False
+   branchmerge: False, force: True, partial: False
    ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
    side1: other deleted -> r
    side2: other deleted -> r
