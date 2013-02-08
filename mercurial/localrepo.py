@@ -1279,11 +1279,7 @@ class localrepository(object):
 
             # update bookmarks, dirstate and mergestate
             bookmarks.update(self, [p1, p2], ret)
-            for f in changes[0] + changes[1]:
-                self.dirstate.normal(f)
-            for f in changes[2]:
-                self.dirstate.drop(f)
-            self.dirstate.setparents(ret)
+            cctx.markcommitted(ret)
             ms.reset()
         finally:
             wlock.release()

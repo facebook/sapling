@@ -1138,6 +1138,22 @@ class workingctx(changectx):
             finally:
                 wlock.release()
 
+    def markcommitted(self, node):
+        """Perform post-commit cleanup necessary after commiting this workingctx
+
+        Specifically, this updates backing stores this working context
+        wraps to reflect the fact that the changes reflected by this
+        workingctx have been committed.  For example, it marks
+        modified and added files as normal in the dirstate.
+
+        """
+
+        for f in self.modified() + self.added():
+            self._repo.dirstate.normal(f)
+        for f in self.removed():
+            self._repo.dirstate.drop(f)
+        self._repo.dirstate.setparents(node)
+
     def dirs(self):
         return set(self._repo.dirstate.dirs())
 
