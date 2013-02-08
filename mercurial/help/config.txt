@@ -1001,9 +1001,8 @@ profiling is done using lsprof.
     Default: 30.
 
 ``nested``
-    Show at most this number of lines of drill-down info in a tree structure
-    after each main entry. This can help explain the difference between Total
-    and Inline.
+    Show at most this number of lines of drill-down info after each main entry.
+    This can help explain the difference between Total and Inline.
     Specific to the ``ls`` instrumenting profiler.
     Default: 5.
 

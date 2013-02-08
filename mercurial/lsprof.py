@@ -50,9 +50,9 @@ class Stats(object):
             ccount = 0
             if climit and e.calls:
                 for se in e.calls:
-                    file.write(cols % ("+%s" % se.callcount, se.reccallcount,
+                    file.write(cols % (se.callcount, se.reccallcount,
                                        se.totaltime, se.inlinetime,
-                                       "+%s" % label(se.code)))
+                                       "    %s" % label(se.code)))
                     count += 1
                     ccount += 1
                     if limit is not None and count == limit:
