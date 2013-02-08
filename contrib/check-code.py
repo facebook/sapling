@@ -80,6 +80,7 @@ testpats = [
     (r'^diff.*-\w*N', "don't use 'diff -N'"),
     (r'\$PWD|\${PWD}', "don't use $PWD, use `pwd`"),
     (r'^([^"\'\n]|("[^"\n]*")|(\'[^\'\n]*\'))*\^', "^ must be quoted"),
+    (r'kill (`|\$\()', "don't use kill, use killdaemons.py")
   ]
 ]
 
