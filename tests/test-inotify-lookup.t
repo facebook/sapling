@@ -11,4 +11,4 @@
   $ hg st
   $ cat a
   a
-  $ kill `cat .hg/inotify.pid`
+  $ "$TESTDIR/killdaemons.py" .hg/inotify.pid
