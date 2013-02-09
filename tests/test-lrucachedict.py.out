@@ -1,0 +1,26 @@
+'a' in d: True
+d['a']: va
+'b' in d: True
+d['b']: vb
+'c' in d: True
+d['c']: vc
+'d' in d: True
+d['d']: vd
+'a' in d: False
+'b' in d: True
+d['b']: vb
+'c' in d: True
+d['c']: vc
+'d' in d: True
+d['d']: vd
+'e' in d: True
+d['e']: ve
+'b' in d: True
+d['b']: vb2
+'c' in d: True
+d['c']: vc2
+'d' in d: True
+d['d']: vd
+'e' in d: False
+'f' in d: True
+d['f']: vf

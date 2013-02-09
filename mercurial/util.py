@@ -211,6 +211,31 @@ except AttributeError:
                     del self[i]
                     break
 
+class lrucachedict(object):
+    '''cache most recent gets from or sets to this dictionary'''
+    def __init__(self, maxsize):
+        self._cache = {}
+        self._maxsize = maxsize
+        self._order = deque()
+
+    def __getitem__(self, key):
+        value = self._cache[key]
+        self._order.remove(key)
+        self._order.append(key)
+        return value
+
+    def __setitem__(self, key, value):
+        if key not in self._cache:
+            if len(self._cache) >= self._maxsize:
+                del self._cache[self._order.popleft()]
+        else:
+            self._order.remove(key)
+        self._cache[key] = value
+        self._order.append(key)
+
+    def __contains__(self, key):
+        return key in self._cache
+
 def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}
