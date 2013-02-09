@@ -342,10 +342,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
 def actionkey(a):
     return a[1] == "r" and -1 or 0, a
 
-def getremove(repo, wctx, mctx, overwrite, args):
+def getremove(repo, mctx, overwrite, args):
     """apply usually-non-interactive updates to the working directory
 
-    wctx is the working copy context
     mctx is the context to be merged into the working copy
 
     yields tuples for progress updates
@@ -355,8 +354,6 @@ def getremove(repo, wctx, mctx, overwrite, args):
         f = arg[0]
         if arg[1] == 'r':
             repo.ui.note(_("removing %s\n") % f)
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
             audit(f)
             try:
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
@@ -366,8 +363,6 @@ def getremove(repo, wctx, mctx, overwrite, args):
         else:
             repo.ui.note(_("getting %s\n") % f)
             repo.wwrite(f, mctx.filectx(f).data(), arg[2][0])
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
         yield i, f
 
 def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
@@ -426,9 +421,16 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
     removed = len([a for a in workeractions if a[1] == 'r'])
     actions = [a for a in actions if a[1] not in 'gr']
 
-    for i, item in getremove(repo, wctx, mctx, overwrite, workeractions):
+    hgsub = [a[1] for a in workeractions if a[0] == '.hgsubstate']
+    if hgsub and hgsub[0] == 'r':
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+
+    for i, item in getremove(repo, mctx, overwrite, workeractions):
         repo.ui.progress(_('updating'), i + 1, item=item, total=numupdates,
                          unit=_('files'))
+
+    if hgsub and hgsub[0] == 'g':
+        subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
     z = len(workeractions)
 
