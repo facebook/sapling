@@ -883,7 +883,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding file changes
   added 6 changesets with 16 changes to 8 files
   (run 'hg update' to get a working copy)
-  caching new largefiles
+  caching largefiles for 1 heads
   3 largefiles cached
   3 additional largefiles cached
   $ cd ..
@@ -974,7 +974,7 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching new largefiles
+  caching largefiles for 1 heads
   0 largefiles cached
   $ hg rebase
   Invoking status precommit hook
@@ -1273,7 +1273,7 @@ correctly.
   adding file changes
   added 2 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching new largefiles
+  caching largefiles for 1 heads
   2 largefiles cached
   $ hg merge
   merging sub/large4

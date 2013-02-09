@@ -735,10 +735,11 @@ def overridepull(orig, ui, repo, source=None, **opts):
         # will run into a problem later if we try to merge or rebase with one of
         # these heads, so cache the largefiles now directly into the system
         # cache.
-        ui.status(_("caching new largefiles\n"))
         numcached = 0
         heads = lfutil.getcurrentheads(repo)
         newheads = set(heads).difference(set(oldheads))
+        if len(newheads) > 0:
+            ui.status(_("caching largefiles for %s heads\n" % len(newheads)))
         for head in newheads:
             (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
             numcached += len(cached)
