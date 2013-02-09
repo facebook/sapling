@@ -9,12 +9,7 @@
   >    cat hg.pid >> "$DAEMON_PIDS"
   >    echo % errors
   >    cat errors.log
-  >    if [ "$KILLQUIETLY" = "Y" ]; then
-  >        kill `cat hg.pid` 2>/dev/null
-  >    else
-  >        kill `cat hg.pid`
-  >    fi
-  >    while kill -0 `cat hg.pid` 2>/dev/null; do sleep 0; done
+  >    "$TESTDIR/killdaemons.py" hg.pid
   > }
 
   $ hg init test
