@@ -91,13 +91,28 @@
   foo-foo_10.patch
   foo-foo_11.patch
 
+Doing it again clobbers the files rather than appending:
+  $ hg export -v -o "foo-%m.patch" 2:3
+  exporting patches:
+  foo-foo_2.patch
+  foo-foo_3.patch
+  $ grep HG foo-foo_2.patch | wc -l
+  \s*1 (re)
+  $ grep HG foo-foo_3.patch | wc -l
+  \s*1 (re)
+
 Exporting 4 changesets to a file:
 
   $ hg export -o export_internal 1 2 3 4
   $ grep HG export_internal | wc -l
   \s*4 (re)
 
-Exporting 4 changesets to a file:
+Doing it again clobbers the file rather than appending:
+  $ hg export -o export_internal 1 2 3 4
+  $ grep HG export_internal | wc -l
+  \s*4 (re)
+
+Exporting 4 changesets to stdout:
 
   $ hg export 1 2 3 4 | grep HG | wc -l
   \s*4 (re)

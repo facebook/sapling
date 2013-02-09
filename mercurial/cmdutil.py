@@ -170,7 +170,8 @@ def makefilename(repo, pat, node, desc=None,
                          inst.args[0])
 
 def makefileobj(repo, pat, node=None, desc=None, total=None,
-                seqno=None, revwidth=None, mode='wb', pathname=None):
+                seqno=None, revwidth=None, mode='wb', modemap={},
+                pathname=None):
 
     writable = mode not in ('r', 'rb')
 
@@ -196,9 +197,11 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
         return pat
     if util.safehasattr(pat, 'read') and 'r' in mode:
         return pat
-    return open(makefilename(repo, pat, node, desc, total, seqno, revwidth,
-                              pathname),
-                mode)
+    fn = makefilename(repo, pat, node, desc, total, seqno, revwidth, pathname)
+    mode = modemap.get(fn, mode)
+    if mode == 'wb':
+        modemap[fn] = 'ab'
+    return open(fn, mode)
 
 def openrevlog(repo, cmd, file_, opts):
     """opens the changelog, manifest, a filelog or a given revlog"""
@@ -539,6 +542,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
     total = len(revs)
     revwidth = max([len(str(rev)) for rev in revs])
+    filemode = {}
 
     def single(rev, seqno, fp):
         ctx = repo[rev]
@@ -554,7 +558,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
             fp = makefileobj(repo, template, node, desc=desc, total=total,
-                             seqno=seqno, revwidth=revwidth, mode='ab')
+                             seqno=seqno, revwidth=revwidth, mode='wb',
+                             modemap=filemode)
             if fp != template:
                 shouldclose = True
         if fp and fp != sys.stdout and util.safehasattr(fp, 'name'):
