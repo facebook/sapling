@@ -37,7 +37,6 @@ http://mercurial.selenic.com/bts/issue672
    1: other deleted -> r
    1a: remote created -> g
   removing 1
-  updating: 1 1/2 files (50.00%)
   getting 1a
   updating: 1a 2/2 files (100.00%)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
