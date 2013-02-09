@@ -238,7 +238,6 @@ from urllib import splitport, splituser, splitpasswd, splitattr, \
                    unquote, addclosehook, addinfourl
 import ftplib
 import socket
-import sys
 import mimetypes
 import email
 
