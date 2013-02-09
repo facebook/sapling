@@ -10,10 +10,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 \
   > || false
-  tests/test-hgweb-raw.t:0:
-   >   $ while kill `cat hg.pid` 2>/dev/null; do sleep 0; done
-   don't use kill, use killdaemons.py
-   don't use kill, use killdaemons.py
   tests/test-inotify-debuginotify.t:0:
    >   $ kill `cat hg.pid`
    don't use kill, use killdaemons.py
