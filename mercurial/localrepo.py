@@ -99,8 +99,9 @@ class localpeer(peer.peerrepository):
     def known(self, nodes):
         return self._repo.known(nodes)
 
-    def getbundle(self, source, heads=None, common=None):
-        return self._repo.getbundle(source, heads=heads, common=common)
+    def getbundle(self, source, heads=None, common=None, bundlecaps=None):
+        return self._repo.getbundle(source, heads=heads, common=common,
+                                    bundlecaps=None)
 
     # TODO We might want to move the next two calls into legacypeer and add
     # unbundle instead.
@@ -1674,6 +1675,7 @@ class localrepository(object):
                     heads = rheads
 
                 if remote.capable('getbundle'):
+                    # TODO: get bundlecaps from remote
                     cg = remote.getbundle('pull', common=common,
                                           heads=heads or rheads)
                 elif heads is None:
@@ -1836,15 +1838,17 @@ class localrepository(object):
                                              remoteheads, newbranch,
                                              bool(inc))
 
+                    # TODO: get bundlecaps from remote
+                    bundlecaps = None
                     # create a changegroup from local
                     if revs is None and not outgoing.excluded:
                         # push everything,
                         # use the fast path, no race possible on push
-                        bundler = changegroup.bundle10()
+                        bundler = changegroup.bundle10(bundlecaps)
                         cg = self._changegroup(outgoing.missing, bundler,
                                                'push')
                     else:
-                        cg = self.getlocalbundle('push', outgoing)
+                        cg = self.getlocalbundle('push', outgoing, bundlecaps)
 
                     # apply changegroup to remote
                     if unbundle:
@@ -1991,21 +1995,21 @@ class localrepository(object):
         bundler = changegroup.bundle10()
         return self._changegroupsubset(common, csets, heads, bundler, source)
 
-    def getlocalbundle(self, source, outgoing):
+    def getlocalbundle(self, source, outgoing, bundlecaps=None):
         """Like getbundle, but taking a discovery.outgoing as an argument.
 
         This is only implemented for local repos and reuses potentially
         precomputed sets in outgoing."""
         if not outgoing.missing:
             return None
-        bundler = changegroup.bundle10()
+        bundler = changegroup.bundle10(bundlecaps)
         return self._changegroupsubset(outgoing.common,
                                        outgoing.missing,
                                        outgoing.missingheads,
                                        bundler,
                                        source)
 
-    def getbundle(self, source, heads=None, common=None):
+    def getbundle(self, source, heads=None, common=None, bundlecaps=None):
         """Like changegroupsubset, but returns the set difference between the
         ancestors of heads and the ancestors common.
 
@@ -2023,7 +2027,8 @@ class localrepository(object):
         if not heads:
             heads = cl.heads()
         return self.getlocalbundle(source,
-                                   discovery.outgoing(cl, common, heads))
+                                   discovery.outgoing(cl, common, heads),
+                                   bundlecaps=bundlecaps)
 
     @unfilteredmethod
     def _changegroupsubset(self, commonrevs, csets, heads, bundler, source):

@@ -1096,13 +1096,16 @@ def bundle(ui, repo, fname, dest=None, **opts):
         base = ['null']
     else:
         base = scmutil.revrange(repo, opts.get('base'))
+    # TODO: get desired bundlecaps from command line.
+    bundlecaps = None
     if base:
         if dest:
             raise util.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
-        cg = repo.getbundle('bundle', heads=heads, common=common)
+        cg = repo.getbundle('bundle', heads=heads, common=common,
+                            bundlecaps=bundlecaps)
         outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -1114,7 +1117,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 onlyheads=heads,
                                                 force=opts.get('force'),
                                                 portable=True)
-        cg = repo.getlocalbundle('bundle', outgoing)
+        cg = repo.getlocalbundle('bundle', outgoing, bundlecaps)
     if not cg:
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
@@ -1913,6 +1916,8 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
         args['common'] = [bin(s) for s in common]
     if head:
         args['heads'] = [bin(s) for s in head]
+    # TODO: get desired bundlecaps from command line.
+    args['bundlecaps'] = None
     bundle = repo.getbundle('debug', **args)
 
     bundletype = opts.get('type', 'bzip2').lower()

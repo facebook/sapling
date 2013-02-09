@@ -225,8 +225,11 @@ def readbundle(fh, fname):
 
 class bundle10(object):
     deltaheader = _BUNDLE10_DELTA_HEADER
-    def __init__(self):
-        pass
+    def __init__(self, bundlecaps=None):
+        # Set of capabilities we can use to build the bundle.
+        if bundlecaps is None:
+            bundlecaps = set()
+        self._bundlecaps = bundlecaps
     def start(self, lookup):
         self._lookup = lookup
     def close(self):
