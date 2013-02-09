@@ -2399,6 +2399,12 @@ class localrepository(object):
                     for n in added:
                         self.hook("incoming", node=hex(n), source=srctype,
                                   url=url)
+
+                    heads = self.heads()
+                    self.ui.log("incoming",
+                                _("%s incoming changes - new heads: %s\n"),
+                                len(added),
+                                ', '.join([hex(c[:6]) for c in heads]))
                 self._afterlock(runhooks)
 
         finally:
