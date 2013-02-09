@@ -342,6 +342,34 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
 def actionkey(a):
     return a[1] == "r" and -1 or 0, a
 
+def getremove(repo, wctx, mctx, overwrite, args):
+    """apply usually-non-interactive updates to the working directory
+
+    wctx is the working copy context
+    mctx is the context to be merged into the working copy
+
+    yields tuples for progress updates
+    """
+    audit = repo.wopener.audit
+    for i, arg in enumerate(args):
+        f = arg[0]
+        if arg[1] == 'r':
+            repo.ui.note(_("removing %s\n") % f)
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+            audit(f)
+            try:
+                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+            except OSError, inst:
+                repo.ui.warn(_("update failed to remove %s: %s!\n") %
+                             (f, inst.strerror))
+        else:
+            repo.ui.note(_("getting %s\n") % f)
+            repo.wwrite(f, mctx.filectx(f).data(), arg[2][0])
+            if f == '.hgsubstate': # subrepo states need updating
+                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
+        yield i, f
+
 def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
     """apply the merge action list to the working directory
 
@@ -393,22 +421,22 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
             util.unlinkpath(repo.wjoin(f))
 
     numupdates = len(actions)
+    workeractions = [a for a in actions if a[1] in 'gr']
+    updated = len([a for a in workeractions if a[1] == 'g'])
+    removed = len([a for a in workeractions if a[1] == 'r'])
+    actions = [a for a in actions if a[1] not in 'gr']
+
+    for i, item in getremove(repo, wctx, mctx, overwrite, workeractions):
+        repo.ui.progress(_('updating'), i + 1, item=item, total=numupdates,
+                         unit=_('files'))
+
+    z = len(workeractions)
+
     for i, a in enumerate(actions):
         f, m, args, msg = a
-        repo.ui.progress(_('updating'), i + 1, item=f, total=numupdates,
+        repo.ui.progress(_('updating'), z + i + 1, item=f, total=numupdates,
                          unit=_('files'))
-        if m == "r": # remove
-            repo.ui.note(_("removing %s\n") % f)
-            audit(f)
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
-            try:
-                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
-            except OSError, inst:
-                repo.ui.warn(_("update failed to remove %s: %s!\n") %
-                             (f, inst.strerror))
-            removed += 1
-        elif m == "m": # merge
+        if m == "m": # merge
             if fd == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                                  overwrite)
@@ -423,13 +451,6 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
                     updated += 1
                 else:
                     merged += 1
-        elif m == "g": # get
-            flags, = args
-            repo.ui.note(_("getting %s\n") % f)
-            repo.wwrite(f, mctx.filectx(f).data(), flags)
-            updated += 1
-            if f == '.hgsubstate': # subrepo states need updating
-                subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
         elif m == "d": # directory rename
             f2, fd, flags = args
             if f:
