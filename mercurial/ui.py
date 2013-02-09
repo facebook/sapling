@@ -681,11 +681,11 @@ class ui(object):
 
         return t
 
-    def traceback(self, exc=None):
-        '''print exception traceback if traceback printing enabled.
+    def traceback(self, exc=None, force=False):
+        '''print exception traceback if traceback printing enabled or forced.
         only to call in exception handler. returns true if traceback
         printed.'''
-        if self.tracebackflag:
+        if self.tracebackflag or force:
             if exc is None:
                 exc = sys.exc_info()
             cause = getattr(exc[1], 'cause', None)
@@ -703,7 +703,7 @@ class ui(object):
             else:
                 traceback.print_exception(exc[0], exc[1], exc[2],
                                           file=self.ferr)
-        return self.tracebackflag
+        return self.tracebackflag or force
 
     def geteditor(self):
         '''return editor to use'''
