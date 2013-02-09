@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import error, util, filemerge, copies, subrepo
+import error, util, filemerge, copies, subrepo, worker
 import errno, os, shutil
 
 class mergestate(object):
@@ -432,7 +432,9 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
     z = 0
-    for i, item in getremove(repo, mctx, overwrite, workeractions):
+    prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
+                         workeractions)
+    for i, item in prog:
         z += i
         repo.ui.progress(_('updating'), z, item=item, total=numupdates,
                          unit=_('files'))
