@@ -247,6 +247,7 @@ def _runcatch(req):
                     (_("** Mercurial Distributed SCM (version %s)\n") % myver) +
                     (_("** Extensions loaded: %s\n") %
                      ", ".join([x[0] for x in extensions.extensions()])))
+        ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
         ui.warn(warning)
         raise
 
@@ -738,10 +739,16 @@ def _dispatch(req):
     msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
     ui.log("command", msg + "\n")
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
+    starttime = time.time()
+    ret = None
     try:
-        return runcommand(lui, repo, cmd, fullargs, ui, options, d,
-                          cmdpats, cmdoptions)
+        ret = runcommand(lui, repo, cmd, fullargs, ui, options, d,
+                         cmdpats, cmdoptions)
+        return ret
     finally:
+        duration = time.time() - starttime
+        ui.log("commandfinish", _("%s exited %s after %0.2f seconds\n"),
+               cmd, ret, duration)
         if repo and repo != req.repo:
             repo.close()
 
