@@ -52,6 +52,7 @@ import signal
 import sys
 import tempfile
 import time
+import random
 import re
 import threading
 import killdaemons as killmod
@@ -1253,7 +1254,11 @@ def main():
     os.environ['no_proxy'] = ''
     os.environ['NO_PROXY'] = ''
     os.environ['TERM'] = 'xterm'
-    os.environ['PYTHONHASHSEED'] = os.environ.get('PYTHONHASHSEED', 'random')
+    if 'PYTHONHASHSEED' not in os.environ:
+        # use a random python hash seed all the time
+        # we do the randomness ourself to know what seed is used
+        os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
+        print 'python hash seed:', os.environ['PYTHONHASHSEED']
 
     # unset env related to hooks
     for k in os.environ.keys():
