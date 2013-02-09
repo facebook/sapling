@@ -251,3 +251,8 @@ Test issue 3764 (interpreting 'today' and 'yesterday')
   $ hg ci -d "`sed -n '2p' dates`" -m "the time traveler's code"
   $ hg log -d yesterday --template '{desc}\n'
   the time traveler's code
+  $ echo "foo" >> a
+  $ hg commit -d now -m 'Explicitly committed now.'
+  $ hg log -d today --template '{desc}\n'
+  Explicitly committed now.
+  today is a good day to code

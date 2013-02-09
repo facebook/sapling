@@ -1060,6 +1060,12 @@ def parsedate(date, formats=None, bias={}):
                                                datetime.timedelta(days=1)\
                                               ).strftime('%b %d'))
     True
+    >>> now, tz = makedate()
+    >>> strnow, strtz = parsedate('now')
+    >>> (strnow - now) < 1
+    True
+    >>> tz == strtz
+    True
     """
     if not date:
         return 0, 0
@@ -1069,6 +1075,8 @@ def parsedate(date, formats=None, bias={}):
         formats = defaultdateformats
     date = date.strip()
 
+    if date == _('now'):
+        return makedate()
     if date == _('today'):
         date = datetime.date.today().strftime('%b %d')
     elif date == _('yesterday'):
