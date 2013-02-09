@@ -752,7 +752,7 @@ check filelog view
 
 check that web.view config option:
 
-  $ kill `cat hg.pid`
+  $ "$TESTDIR/killdaemons.py" hg.pid
   $ cat >> .hg/hgrc << EOF
   > [web]
   > view=all
@@ -761,7 +761,7 @@ check that web.view config option:
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
   200 Script output follows
-  $ kill `cat hg.pid`
+  $ "$TESTDIR/killdaemons.py" hg.pid
 
 Checking _enable=False warning if obsolete marker exists
 

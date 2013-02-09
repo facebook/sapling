@@ -10,10 +10,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 \
   > || false
-  tests/test-obsolete.t:0:
-   >   $ kill `cat hg.pid`
-   don't use kill, use killdaemons.py
-   don't use kill, use killdaemons.py
   tests/test-serve.t:0:
    >   >        kill `cat hg.pid`
    don't use kill, use killdaemons.py
