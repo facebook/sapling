@@ -41,4 +41,4 @@ eed to test all file operations
 
 Are we able to kill the service? if not, the service died on some error
 
-  $ kill `cat hg.pid`
+  $ "$TESTDIR/killdaemons.py" hg.pid
