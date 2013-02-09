@@ -75,3 +75,31 @@ def reposetup(ui, repo):
         return
 
     ui.setrepo(repo)
+
+@command('^blackbox',
+    [('l', 'limit', 10, _('the number of events to show')),
+    ],
+    _('hg blackbox [OPTION]...'))
+def blackbox(ui, repo, *revs, **opts):
+    '''view the recent repository events
+    '''
+
+    if not os.path.exists(repo.join('blackbox.log')):
+        return
+
+    limit = opts.get('limit')
+    blackbox = repo.opener('blackbox.log', 'r')
+    lines = blackbox.read().split('\n')
+
+    count = 0
+    output = []
+    for line in reversed(lines):
+        if count >= limit:
+            break
+
+        # count the commands by matching lines like: 2013/01/23 19:13:36 root>
+        if re.match('^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} .*> .*', line):
+            count += 1
+        output.append(line)
+
+    ui.status('\n'.join(reversed(output)))
