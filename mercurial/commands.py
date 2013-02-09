@@ -5579,7 +5579,7 @@ def summary(ui, repo, **opts):
                 ui.write(' *' + current, label='bookmarks.current')
                 marks.remove(current)
             else:
-                ui.write('[%s]' % current, label='bookmarks.current')
+                ui.write(' [%s]' % current, label='bookmarks.current')
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
