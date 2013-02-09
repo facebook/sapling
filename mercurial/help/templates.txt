@@ -60,6 +60,8 @@ In addition to filters, there are some basic built-in functions:
 
 - sub(pat, repl, expr)
 
+- rstdoc(text, style)
+
 Also, for any expression that returns a list, there is a list operator:
 
 - expr % "{template}"

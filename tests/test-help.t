@@ -1503,65 +1503,65 @@ Dish up an empty repo; serve it cold.
   <div id="hint">find changesets by author, revision,
   files, or words in the commit message</div>
   </form>
-  <pre>
+  <div id="doc">
+  <p>
   hg add [OPTION]... [FILE]...
-  
+  </p>
+  <p>
   add the specified files on the next commit
-  
-      Schedule files to be version controlled and added to the repository.
-  
-      The files will be added to the repository at the next commit. To undo an
-      add before that, see &quot;hg forget&quot;.
-  
-      If no names are given, add all files to the repository.
-  
-      An example showing how new (unknown) files are added automatically by &quot;hg
-      add&quot;:
-  
-        $ ls
-        foo.c
-        $ hg status
-        ? foo.c
-        $ hg add
-        adding foo.c
-        $ hg status
-        A foo.c
-  
-      Returns 0 if all files are successfully added.
-  
+  </p>
+  <p>
+  Schedule files to be version controlled and added to the
+  repository.
+  </p>
+  <p>
+  The files will be added to the repository at the next commit. To
+  undo an add before that, see "hg forget".
+  </p>
+  <p>
+  If no names are given, add all files to the repository.
+  </p>
+  <p>
+  Returns 0 if all files are successfully added.
+  </p>
+  <p>
   options:
-  
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-   -S --subrepos            recurse into subrepositories
-   -n --dry-run             do not perform actions, just print output
-  
+  </p>
+  <table>
+   <tr><th>-I</th><th>--include PATTERN [+]</th><th>include names matching the given patterns</th></tr>
+   <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
+   <tr><td>-S</td><td>--subrepos</td><td>recurse into subrepositories</td></tr>
+   <tr><td>-n</td><td>--dry-run</td><td>do not perform actions, just print output</td></tr>
+  </table>
+  <p>
   [+] marked option can be specified multiple times
-  
+  </p>
+  <p>
   global options:
-  
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-  
+  </p>
+  <table>
+   <tr><th>-R</th><th>--repository REPO</th><th>repository root directory or name of overlay bundle file</th></tr>
+   <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
+   <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+   <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>
+   <tr><td>-v</td><td>--verbose</td><td>enable additional output</td></tr>
+   <tr><td></td><td>--config CONFIG [+]</td><td>set/override config option (use 'section.name=value')</td></tr>
+   <tr><td></td><td>--debug</td><td>enable debugging output</td></tr>
+   <tr><td></td><td>--debugger</td><td>start debugger</td></tr>
+   <tr><td></td><td>--encoding ENCODE</td><td>set the charset encoding (default: ascii)</td></tr>
+   <tr><td></td><td>--encodingmode MODE</td><td>set the charset encoding mode (default: strict)</td></tr>
+   <tr><td></td><td>--traceback</td><td>always print a traceback on exception</td></tr>
+   <tr><td></td><td>--time</td><td>time how long the command takes</td></tr>
+   <tr><td></td><td>--profile</td><td>print command execution profile</td></tr>
+   <tr><td></td><td>--version</td><td>output version information and exit</td></tr>
+   <tr><td>-h</td><td>--help</td><td>display help and exit</td></tr>
+   <tr><td></td><td>--hidden</td><td>consider hidden changesets</td></tr>
+  </table>
+  <p>
   [+] marked option can be specified multiple times
+  </p>
   
-  </pre>
+  </div>
   </div>
   </div>
   
@@ -1615,74 +1615,65 @@ Dish up an empty repo; serve it cold.
   <div id="hint">find changesets by author, revision,
   files, or words in the commit message</div>
   </form>
-  <pre>
+  <div id="doc">
+  <p>
   hg remove [OPTION]... FILE...
-  
+  </p>
+  <p>
   aliases: rm
-  
+  </p>
+  <p>
   remove the specified files on the next commit
-  
-      Schedule the indicated files for removal from the current branch.
-  
-      This command schedules the files to be removed at the next commit. To undo
-      a remove before that, see &quot;hg revert&quot;. To undo added files, see &quot;hg
-      forget&quot;.
-  
-      -A/--after can be used to remove only files that have already been
-      deleted, -f/--force can be used to force deletion, and -Af can be used to
-      remove files from the next revision without deleting them from the working
-      directory.
-  
-      The following table details the behavior of remove for different file
-      states (columns) and option combinations (rows). The file states are Added
-      [A], Clean [C], Modified [M] and Missing [!] (as reported by &quot;hg status&quot;).
-      The actions are Warn, Remove (from branch) and Delete (from disk):
-  
-           A C  M  !
-      --------------
-      none W RD W  R
-      -f   R RD RD R
-      -A   W W  W  R
-      -Af  R R  R  R
-  
-      Note that remove never deletes files in Added [A] state from the working
-      directory, not even if option --force is specified.
-  
-      Returns 0 on success, 1 if any warnings encountered.
-  
+  </p>
+  <p>
+  Schedule the indicated files for removal from the current branch.
+  </p>
+  <p>
+  This command schedules the files to be removed at the next commit.
+  To undo a remove before that, see "hg revert". To undo added
+  files, see "hg forget".
+  </p>
+  <p>
+  Returns 0 on success, 1 if any warnings encountered.
+  </p>
+  <p>
   options:
-  
-   -A --after               record delete for missing files
-   -f --force               remove (and delete) file even if added or modified
-   -I --include PATTERN [+] include names matching the given patterns
-   -X --exclude PATTERN [+] exclude names matching the given patterns
-  
+  </p>
+  <table>
+   <tr><th>-A</th><th>--after</th><th>record delete for missing files</th></tr>
+   <tr><td>-f</td><td>--force</td><td>remove (and delete) file even if added or modified</td></tr>
+   <tr><td>-I</td><td>--include PATTERN [+]</td><td>include names matching the given patterns</td></tr>
+   <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
+  </table>
+  <p>
   [+] marked option can be specified multiple times
-  
+  </p>
+  <p>
   global options:
-  
-   -R --repository REPO   repository root directory or name of overlay bundle
-                          file
-      --cwd DIR           change working directory
-   -y --noninteractive    do not prompt, automatically pick the first choice for
-                          all prompts
-   -q --quiet             suppress output
-   -v --verbose           enable additional output
-      --config CONFIG [+] set/override config option (use 'section.name=value')
-      --debug             enable debugging output
-      --debugger          start debugger
-      --encoding ENCODE   set the charset encoding (default: ascii)
-      --encodingmode MODE set the charset encoding mode (default: strict)
-      --traceback         always print a traceback on exception
-      --time              time how long the command takes
-      --profile           print command execution profile
-      --version           output version information and exit
-   -h --help              display help and exit
-      --hidden            consider hidden changesets
-  
+  </p>
+  <table>
+   <tr><th>-R</th><th>--repository REPO</th><th>repository root directory or name of overlay bundle file</th></tr>
+   <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
+   <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+   <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>
+   <tr><td>-v</td><td>--verbose</td><td>enable additional output</td></tr>
+   <tr><td></td><td>--config CONFIG [+]</td><td>set/override config option (use 'section.name=value')</td></tr>
+   <tr><td></td><td>--debug</td><td>enable debugging output</td></tr>
+   <tr><td></td><td>--debugger</td><td>start debugger</td></tr>
+   <tr><td></td><td>--encoding ENCODE</td><td>set the charset encoding (default: ascii)</td></tr>
+   <tr><td></td><td>--encodingmode MODE</td><td>set the charset encoding mode (default: strict)</td></tr>
+   <tr><td></td><td>--traceback</td><td>always print a traceback on exception</td></tr>
+   <tr><td></td><td>--time</td><td>time how long the command takes</td></tr>
+   <tr><td></td><td>--profile</td><td>print command execution profile</td></tr>
+   <tr><td></td><td>--version</td><td>output version information and exit</td></tr>
+   <tr><td>-h</td><td>--help</td><td>display help and exit</td></tr>
+   <tr><td></td><td>--hidden</td><td>consider hidden changesets</td></tr>
+  </table>
+  <p>
   [+] marked option can be specified multiple times
+  </p>
   
-  </pre>
+  </div>
   </div>
   </div>
   
@@ -1736,38 +1727,50 @@ Dish up an empty repo; serve it cold.
   <div id="hint">find changesets by author, revision,
   files, or words in the commit message</div>
   </form>
-  <pre>
+  <div id="doc">
+  <p>
   Specifying Single Revisions
+  </p>
+  <p>
+  Mercurial supports several ways to specify individual revisions.
+  </p>
+  <p>
+  A plain integer is treated as a revision number. Negative integers are
+  treated as sequential offsets from the tip, with -1 denoting the tip,
+  -2 denoting the revision prior to the tip, and so forth.
+  </p>
+  <p>
+  A 40-digit hexadecimal string is treated as a unique revision
+  identifier.
+  </p>
+  <p>
+  A hexadecimal string less than 40 characters long is treated as a
+  unique revision identifier and is referred to as a short-form
+  identifier. A short-form identifier is only valid if it is the prefix
+  of exactly one full-length identifier.
+  </p>
+  <p>
+  Any other string is treated as a bookmark, tag, or branch name. A
+  bookmark is a movable pointer to a revision. A tag is a permanent name
+  associated with a revision. A branch name denotes the tipmost revision
+  of that branch. Bookmark, tag, and branch names must not contain the ":"
+  character.
+  </p>
+  <p>
+  The reserved name "tip" always identifies the most recent revision.
+  </p>
+  <p>
+  The reserved name "null" indicates the null revision. This is the
+  revision of an empty repository, and the parent of revision 0.
+  </p>
+  <p>
+  The reserved name "." indicates the working directory parent. If no
+  working directory is checked out, it is equivalent to null. If an
+  uncommitted merge is in progress, "." is the revision of the first
+  parent.
+  </p>
   
-      Mercurial supports several ways to specify individual revisions.
-  
-      A plain integer is treated as a revision number. Negative integers are
-      treated as sequential offsets from the tip, with -1 denoting the tip, -2
-      denoting the revision prior to the tip, and so forth.
-  
-      A 40-digit hexadecimal string is treated as a unique revision identifier.
-  
-      A hexadecimal string less than 40 characters long is treated as a unique
-      revision identifier and is referred to as a short-form identifier. A
-      short-form identifier is only valid if it is the prefix of exactly one
-      full-length identifier.
-  
-      Any other string is treated as a bookmark, tag, or branch name. A bookmark
-      is a movable pointer to a revision. A tag is a permanent name associated
-      with a revision. A branch name denotes the tipmost revision of that
-      branch. Bookmark, tag, and branch names must not contain the &quot;:&quot;
-      character.
-  
-      The reserved name &quot;tip&quot; always identifies the most recent revision.
-  
-      The reserved name &quot;null&quot; indicates the null revision. This is the revision
-      of an empty repository, and the parent of revision 0.
-  
-      The reserved name &quot;.&quot; indicates the working directory parent. If no
-      working directory is checked out, it is equivalent to null. If an
-      uncommitted merge is in progress, &quot;.&quot; is the revision of the first parent.
-  
-  </pre>
+  </div>
   </div>
   </div>
   

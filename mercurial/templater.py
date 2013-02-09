@@ -9,6 +9,7 @@ from i18n import _
 import sys, os, re
 import util, config, templatefilters, parser, error
 import types
+import minirst
 
 # template parsing
 
@@ -287,6 +288,16 @@ def label(context, mapping, args):
     t = stringify(args[1][0](context, mapping, args[1][1]))
     yield runtemplate(context, mapping, compiletemplate(t, context))
 
+def rstdoc(context, mapping, args):
+    if len(args) != 2:
+        # i18n: "rstdoc" is a keyword
+        raise error.ParseError(_("rstdoc expects two arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    style = stringify(args[1][0](context, mapping, args[1][1]))
+
+    return minirst.format(text, style=style)
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -303,6 +314,7 @@ funcs = {
     "ifeq": ifeq,
     "join": join,
     "label": label,
+    "rstdoc": rstdoc,
     "sub": sub,
 }
 

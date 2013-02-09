@@ -993,11 +993,9 @@ def help(web, req, tmpl):
                     othercommands=othercommands, title='Index')
 
     u = webutil.wsgiui()
-    u.pushbuffer()
     u.verbose = True
     try:
-        commands.help_(u, topicname)
+        doc = helpmod.help_(u, topicname)
     except error.UnknownCommand:
         raise ErrorResponse(HTTP_NOT_FOUND)
-    doc = u.popbuffer()
     return tmpl('help', topic=topicname, doc=doc)
