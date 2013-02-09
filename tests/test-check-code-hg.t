@@ -14,9 +14,6 @@ New errors are not allowed. Warnings are strongly discouraged.
    >   $ while kill `cat hg.pid` 2>/dev/null; do sleep 0; done
    don't use kill, use killdaemons.py
    don't use kill, use killdaemons.py
-  tests/test-https.t:0:
-   >   $ while kill `cat hg1.pid` 2>/dev/null; do sleep 0; done
-   don't use kill, use killdaemons.py
   tests/test-inotify-debuginotify.t:0:
    >   $ kill `cat hg.pid`
    don't use kill, use killdaemons.py

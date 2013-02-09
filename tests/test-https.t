@@ -233,11 +233,13 @@ Fingerprints
   (check hostfingerprint configuration)
   [255]
 
+
 - ignores that certificate doesn't match hostname
   $ hg -R copy-pull id https://127.0.0.1:$HGPORT/
   5fed3813f7f5
 
-  $ while kill `cat hg1.pid` 2>/dev/null; do sleep 0; done
+HGPORT1 is reused below for tinyproxy tests. Kill that server.
+  $ "$TESTDIR/killdaemons.py" hg1.pid
 
 Prepare for connecting through proxy
 
