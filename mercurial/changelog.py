@@ -183,7 +183,7 @@ class changelog(revlog.revlog):
         """filtered version of revlog.rev"""
         r = super(changelog, self).rev(node)
         if r in self.filteredrevs:
-            raise error.LookupError(node, self.indexfile, _('no node'))
+            raise error.LookupError(hex(node), self.indexfile, _('no node'))
         return r
 
     def node(self, rev):
