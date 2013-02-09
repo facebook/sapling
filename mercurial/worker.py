@@ -52,3 +52,16 @@ def worthwhile(ui, costperop, nops):
     workers = _numworkers(ui)
     benefit = linear - (_startupcost * workers + linear / workers)
     return benefit >= 0.15
+
+def partition(lst, nslices):
+    '''partition a list into N slices of equal size'''
+    n = len(lst)
+    chunk, slop = n / nslices, n % nslices
+    end = 0
+    for i in xrange(nslices):
+        start = end
+        end = start + chunk
+        if slop:
+            end += 1
+            slop -= 1
+        yield lst[start:end]
