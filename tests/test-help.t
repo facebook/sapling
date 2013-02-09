@@ -1531,7 +1531,7 @@ Dish up an empty repo; serve it cold.
   options:
   </p>
   <table>
-   <tr><th>-I</th><th>--include PATTERN [+]</th><th>include names matching the given patterns</th></tr>
+   <tr><td>-I</td><td>--include PATTERN [+]</td><td>include names matching the given patterns</td></tr>
    <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
    <tr><td>-S</td><td>--subrepos</td><td>recurse into subrepositories</td></tr>
    <tr><td>-n</td><td>--dry-run</td><td>do not perform actions, just print output</td></tr>
@@ -1543,7 +1543,7 @@ Dish up an empty repo; serve it cold.
   global options:
   </p>
   <table>
-   <tr><th>-R</th><th>--repository REPO</th><th>repository root directory or name of overlay bundle file</th></tr>
+   <tr><td>-R</td><td>--repository REPO</td><td>repository root directory or name of overlay bundle file</td></tr>
    <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
    <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
    <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>
@@ -1643,7 +1643,7 @@ Dish up an empty repo; serve it cold.
   options:
   </p>
   <table>
-   <tr><th>-A</th><th>--after</th><th>record delete for missing files</th></tr>
+   <tr><td>-A</td><td>--after</td><td>record delete for missing files</td></tr>
    <tr><td>-f</td><td>--force</td><td>remove (and delete) file even if added or modified</td></tr>
    <tr><td>-I</td><td>--include PATTERN [+]</td><td>include names matching the given patterns</td></tr>
    <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
@@ -1655,7 +1655,7 @@ Dish up an empty repo; serve it cold.
   global options:
   </p>
   <table>
-   <tr><th>-R</th><th>--repository REPO</th><th>repository root directory or name of overlay bundle file</th></tr>
+   <tr><td>-R</td><td>--repository REPO</td><td>repository root directory or name of overlay bundle file</td></tr>
    <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
    <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
    <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>

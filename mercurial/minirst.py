@@ -558,10 +558,7 @@ def formathtml(blocks):
             for row in table:
                 l = []
                 for v in zip(row):
-                    if not t:
-                        l.append('<th>%s</th>' % v)
-                    else:
-                        l.append('<td>%s</td>' % v)
+                    l.append('<td>%s</td>' % v)
                 t.append(' <tr>%s</tr>\n' % ''.join(l))
             out.append('<table>\n%s</table>\n' % ''.join(t))
         elif btype == 'definition':
