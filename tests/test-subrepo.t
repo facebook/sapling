@@ -210,7 +210,6 @@ merge tests
   subrepo merge f0d2028bf86d+ 1831e14459c4 1f14a2e2d3ec
     subrepo t: other changed, get t:6747d179aa9a688023c4b0cad32e4c92bb7f34ad:hg
   getting subrepo t
-    searching for copies back to rev 1
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: 60ca1237c194, local: 60ca1237c194+, remote: 6747d179aa9a

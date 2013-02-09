@@ -200,6 +200,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
         pa = wctx
     elif pa == p2: # backwards
         pa = wctx.p1()
+    elif not branchmerge and not wctx.dirty(missing=True):
+        pass
     elif pa and repo.ui.configbool("merge", "followcopies", True):
         ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete = ret
