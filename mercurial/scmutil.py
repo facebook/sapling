@@ -18,6 +18,10 @@ def nochangesfound(ui, repo, excluded=None):
     secretlist = []
     if excluded:
         for n in excluded:
+            if n not in repo:
+                # discovery should not have included the filtered revision,
+                # we have to explicitly exclude it until discovery is cleanup.
+                continue
             ctx = repo[n]
             if ctx.phase() >= phases.secret and not ctx.extinct():
                 secretlist.append(n)
