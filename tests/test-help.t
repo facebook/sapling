@@ -1519,7 +1519,7 @@ Dish up an empty repo; serve it cold.
   </p>
   <p>
   The files will be added to the repository at the next commit. To
-  undo an add before that, see "hg forget".
+  undo an add before that, see &quot;hg forget&quot;.
   </p>
   <p>
   If no names are given, add all files to the repository.
@@ -1633,8 +1633,8 @@ Dish up an empty repo; serve it cold.
   </p>
   <p>
   This command schedules the files to be removed at the next commit.
-  To undo a remove before that, see "hg revert". To undo added
-  files, see "hg forget".
+  To undo a remove before that, see &quot;hg revert&quot;. To undo added
+  files, see &quot;hg forget&quot;.
   </p>
   <p>
   Returns 0 on success, 1 if any warnings encountered.
@@ -1754,20 +1754,20 @@ Dish up an empty repo; serve it cold.
   Any other string is treated as a bookmark, tag, or branch name. A
   bookmark is a movable pointer to a revision. A tag is a permanent name
   associated with a revision. A branch name denotes the tipmost revision
-  of that branch. Bookmark, tag, and branch names must not contain the ":"
+  of that branch. Bookmark, tag, and branch names must not contain the &quot;:&quot;
   character.
   </p>
   <p>
-  The reserved name "tip" always identifies the most recent revision.
+  The reserved name &quot;tip&quot; always identifies the most recent revision.
   </p>
   <p>
-  The reserved name "null" indicates the null revision. This is the
+  The reserved name &quot;null&quot; indicates the null revision. This is the
   revision of an empty repository, and the parent of revision 0.
   </p>
   <p>
-  The reserved name "." indicates the working directory parent. If no
+  The reserved name &quot;.&quot; indicates the working directory parent. If no
   working directory is checked out, it is equivalent to null. If an
-  uncommitted merge is in progress, "." is the revision of the first
+  uncommitted merge is in progress, &quot;.&quot; is the revision of the first
   parent.
   </p>
   
