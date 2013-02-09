@@ -11,10 +11,3 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ hg manifest 2>/dev/null \
   >   | xargs "$check_code" --warnings --nolineno --per-file=0 \
   >   || false
-  tests/test-serve.t:0:
-   >   >        kill `cat hg.pid`
-   don't use kill, use killdaemons.py
-  tests/test-serve.t:0:
-   >   >        kill `cat hg.pid` 2>/dev/null
-   don't use kill, use killdaemons.py
-  [1]
