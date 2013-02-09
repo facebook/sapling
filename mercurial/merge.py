@@ -350,7 +350,8 @@ def getremove(repo, mctx, overwrite, args):
     yields tuples for progress updates
     """
     audit = repo.wopener.audit
-    for i, arg in enumerate(args):
+    i = 0
+    for arg in args:
         f = arg[0]
         if arg[1] == 'r':
             repo.ui.note(_("removing %s\n") % f)
@@ -363,6 +364,11 @@ def getremove(repo, mctx, overwrite, args):
         else:
             repo.ui.note(_("getting %s\n") % f)
             repo.wwrite(f, mctx.filectx(f).data(), arg[2][0])
+        if i == 100:
+            yield i, f
+            i = 0
+        i += 1
+    if i > 0:
         yield i, f
 
 def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
@@ -425,14 +431,14 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
     if hgsub and hgsub[0] == 'r':
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
+    z = 0
     for i, item in getremove(repo, mctx, overwrite, workeractions):
-        repo.ui.progress(_('updating'), i + 1, item=item, total=numupdates,
+        z += i
+        repo.ui.progress(_('updating'), z, item=item, total=numupdates,
                          unit=_('files'))
 
     if hgsub and hgsub[0] == 'g':
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
-
-    z = len(workeractions)
 
     for i, a in enumerate(actions):
         f, m, args, msg = a
