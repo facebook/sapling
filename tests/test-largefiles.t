@@ -1679,8 +1679,8 @@ largefiles pulled on update - no server side problems:
    branchmerge: False, force: False, partial: False
    ancestor: 000000000000, local: 000000000000+, remote: cf03e5bb9936
    .hglf/f1: remote created -> g
-  updating: .hglf/f1 1/1 files (100.00%)
   getting .hglf/f1
+  updating: .hglf/f1 1/1 files (100.00%)
   getting changed largefiles
   using http://localhost:$HGPORT2/
   sending capabilities command

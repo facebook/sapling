@@ -150,8 +150,8 @@ Graft out of order, skipping a merge and a duplicate
    branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
    e: remote is newer -> g
-  updating: e 1/1 files (100.00%)
   getting e
+  updating: e 1/1 files (100.00%)
   e
   grafting revision 4
     searching for copies back to rev 1
@@ -161,8 +161,8 @@ Graft out of order, skipping a merge and a duplicate
    d: remote is newer -> g
    e: versions differ -> m
     preserving e for resolve of e
-  updating: d 1/2 files (50.00%)
   getting d
+  updating: d 1/2 files (50.00%)
   updating: e 2/2 files (100.00%)
   picked tool 'internal:merge' for e (binary False symlink False)
   merging e

@@ -49,12 +49,12 @@
    a: versions differ -> m
     preserving a for resolve of a
    b: remote created -> g
-  updating: a 1/2 files (50.00%)
+  getting b
+  updating: b 1/2 files (50.00%)
+  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
-  updating: b 2/2 files (100.00%)
-  getting b
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb
@@ -70,8 +70,8 @@
    b: other deleted -> r
    a: versions differ -> m
     preserving a for resolve of a
-  updating: b 1/2 files (50.00%)
   removing b
+  updating: b 1/2 files (50.00%)
   updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -103,12 +103,12 @@
    a: versions differ -> m
     preserving a for resolve of a
    b: remote created -> g
-  updating: a 1/2 files (50.00%)
+  getting b
+  updating: b 1/2 files (50.00%)
+  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
-  updating: b 2/2 files (100.00%)
-  getting b
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb

@@ -71,12 +71,12 @@
    side1: other deleted -> r
    side2: other deleted -> r
    main: remote created -> g
-  updating: side1 1/3 files (33.33%)
   removing side1
-  updating: side2 2/3 files (66.67%)
+  updating: side1 1/3 files (33.33%)
   removing side2
-  updating: main 3/3 files (100.00%)
+  updating: side2 2/3 files (66.67%)
   getting main
+  updating: main 3/3 files (100.00%)
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ ls

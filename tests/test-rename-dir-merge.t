@@ -44,16 +44,16 @@
    a/c: remote renamed directory to b/c -> d
    b/a: remote created -> g
    b/b: remote created -> g
-  updating: a/a 1/5 files (20.00%)
   removing a/a
-  updating: a/b 2/5 files (40.00%)
+  updating: a/a 1/5 files (20.00%)
   removing a/b
-  updating: a/c 3/5 files (60.00%)
-  moving a/c to b/c
-  updating: b/a 4/5 files (80.00%)
+  updating: a/b 2/5 files (40.00%)
   getting b/a
-  updating: b/b 5/5 files (100.00%)
+  updating: b/a 3/5 files (60.00%)
   getting b/b
+  updating: b/b 4/5 files (80.00%)
+  updating: a/c 5/5 files (100.00%)
+  moving a/c to b/c
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
