@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, sys
+import os, sys, time, types
 import extensions, util, demandimport
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
@@ -20,6 +20,8 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     be run as hooks without wrappers to convert return values.'''
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))
+    starttime = time.time()
+
     obj = funcname
     if not util.safehasattr(obj, '__call__'):
         d = funcname.rfind('.')
@@ -92,6 +94,12 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             return True
     finally:
         sys.stdout, sys.stderr, sys.stdin = old
+        duration = time.time() - starttime
+        readablefunc = funcname
+        if isinstance(funcname, types.FunctionType):
+            readablefunc = funcname.__module__ + "." + funcname.__name__
+        ui.log('pythonhook', _('pythonhook-%s: %s finished in %0.2f seconds\n'),
+               name, readablefunc, duration)
     if r:
         if throw:
             raise util.Abort(_('%s hook failed') % hname)
@@ -101,6 +109,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 def _exthook(ui, repo, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
 
+    starttime = time.time()
     env = {}
     for k, v in args.iteritems():
         if util.safehasattr(v, '__call__'):
@@ -121,6 +130,10 @@ def _exthook(ui, repo, name, cmd, args, throw):
         r = util.system(cmd, environ=env, cwd=cwd, out=ui)
     else:
         r = util.system(cmd, environ=env, cwd=cwd, out=ui.fout)
+
+    duration = time.time() - starttime
+    ui.log('exthook', _('exthook-%s: %s finished in %0.2f seconds\n'),
+           name, cmd, duration)
     if r:
         desc, r = util.explainexit(r)
         if throw:
