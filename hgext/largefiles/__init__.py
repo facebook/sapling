@@ -41,11 +41,20 @@ Note that the remote Mercurial must also have the largefiles extension
 enabled for this to work.
 
 When you pull a changeset that affects largefiles from a remote
-repository, Mercurial behaves as normal. However, when you update to
-such a revision, any largefiles needed by that revision are downloaded
-and cached (if they have never been downloaded before). This means
-that network access may be required to update to changesets you have
-not previously updated to.
+repository, the largefiles for the changeset usually won't be
+pulled down until you update to the revision (there is one exception
+to this case).  However, when you update to such a revision, any
+largefiles needed by that revision are downloaded and cached (if
+they have never been downloaded before).  This means that network
+access may be required to update to changesets you have no
+previously updated to.
+
+The one exception to the "largefiles won't be pulled until you update
+to a revision that changes them" rule is when you pull new heads.
+Because you could be pulling new heads (that you may later want to
+merge with) from a non-default location (that Mercurial won't know
+about later), when you pull new heads, largefiles revisions for those
+heads are downloaded and cached locally.
 
 If you already have large files tracked by Mercurial without the
 largefiles extension, you will need to convert your repository in
