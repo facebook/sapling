@@ -264,6 +264,8 @@ class hgweb(object):
     def loadwebsub(self):
         websubtable = []
         websubdefs = self.repo.ui.configitems('websub')
+        # we must maintain interhg backwards compatibility
+        websubdefs += self.repo.ui.configitems('interhg')
         for key, pattern in websubdefs:
             # grab the delimiter from the character after the "s"
             unesc = pattern[1]
