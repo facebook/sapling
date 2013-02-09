@@ -38,4 +38,4 @@ empty again
   directories being watched:
     /
     .hg/
-  $ kill `cat hg.pid`
+  $ "$TESTDIR/killdaemons.py" hg.pid
