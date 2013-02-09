@@ -686,11 +686,23 @@ class ui(object):
         only to call in exception handler. returns true if traceback
         printed.'''
         if self.tracebackflag:
-            if exc:
+            if exc is None:
+                exc = sys.exc_info()
+            cause = getattr(exc[1], 'cause', None)
+
+            if cause is not None:
+                causetb = traceback.format_tb(cause[2])
+                exctb = traceback.format_tb(exc[2])
+                exconly = traceback.format_exception_only(cause[0], cause[1])
+
+                # exclude frame where 'exc' was chained and rethrown from exctb
+                self.write_err('Traceback (most recent call last):\n',
+                               ''.join(exctb[:-1]),
+                               ''.join(causetb),
+                               ''.join(exconly))
+            else:
                 traceback.print_exception(exc[0], exc[1], exc[2],
                                           file=self.ferr)
-            else:
-                traceback.print_exc(file=self.ferr)
         return self.tracebackflag
 
     def geteditor(self):
