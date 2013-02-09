@@ -224,7 +224,7 @@ def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
                 m1['.hgsubstate'] += "+"
                 break
 
-    prompts = []
+    aborts, prompts = [], []
     # Compare manifests
     for f, n in m1.iteritems():
         if partial and not partial(f):
@@ -285,14 +285,39 @@ def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
                 actions.append((f2, "m", (f, f, True),
                                 "remote moved to " + f))
         elif f not in ma:
-            if (not overwrite
-                and _checkunknownfile(repo, p1, p2, f)):
-                actions.append((f, "m", (f, f, False),
-                                "remote differs from untracked local"))
-            else:
+            # local unknown, remote created: the logic is described by the
+            # following table:
+            #
+            # force  branchmerge  different  |  action
+            #   n         *           n      |    get
+            #   n         *           y      |   abort
+            #   y         n           *      |    get
+            #   y         y           n      |    get
+            #   y         y           y      |   merge
+            #
+            # Checking whether the files are different is expensive, so we
+            # don't do that when we can avoid it.
+            if force and not branchmerge:
                 actions.append((f, "g", (m2.flags(f),), "remote created"))
+            else:
+                different = _checkunknownfile(repo, p1, p2, f)
+                if force and branchmerge and different:
+                    actions.append((f, "m", (f, f, False),
+                                    "remote differs from untracked local"))
+                elif not force and different:
+                    aborts.append((f, "ud"))
+                else:
+                    actions.append((f, "g", (m2.flags(f),), "remote created"))
         elif n != ma[f]:
             prompts.append((f, "dc")) # prompt deleted/changed
+
+    for f, m in sorted(aborts):
+        if m == "ud":
+            repo.ui.warn(_("%s: untracked file differs\n") % f)
+        else: assert False, m
+    if aborts:
+        raise util.Abort(_("untracked files in working directory differ "
+                           "from files in requested revision"))
 
     for f, m in sorted(prompts):
         if m == "cd":
@@ -447,8 +472,6 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
             _checkcollision(mctx, None)
         else:
             _checkcollision(mctx, (tctx, ancestor))
-    if not force:
-        _checkunknown(repo, tctx, mctx)
     if tctx.rev() is None:
         actions += _forgetremoved(tctx, mctx, branchmerge)
     actions += manifestmerge(repo, tctx, mctx,
