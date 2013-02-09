@@ -185,7 +185,7 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
     return actions
 
-def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
+def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
     """
     Merge p1 and p2 with ancestor pa and generate merge action list
 
@@ -197,11 +197,11 @@ def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
     actions, copy, movewithdir = [], {}, {}
 
     if overwrite:
-        pa = p1
+        pa = wctx
     elif pa == p2: # backwards
-        pa = p1.p1()
+        pa = wctx.p1()
     elif pa and repo.ui.configbool("merge", "followcopies", True):
-        ret = copies.mergecopies(repo, p1, p2, pa)
+        ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete = ret
         for of, fl in diverge.iteritems():
             actions.append((of, "dr", (fl,), "divergent renames"))
@@ -211,16 +211,16 @@ def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
                   % (bool(branchmerge), bool(force), bool(partial)))
-    repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, p1, p2))
+    repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
-    m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
+    m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
     copied = set(copy.values())
     copied.update(movewithdir.values())
 
     if '.hgsubstate' in m1:
         # check whether sub state is modified
-        for s in sorted(p1.substate):
-            if p1.sub(s).dirty():
+        for s in sorted(wctx.substate):
+            if wctx.sub(s).dirty():
                 m1['.hgsubstate'] += "+"
                 break
 
@@ -300,7 +300,7 @@ def manifestmerge(repo, p1, p2, pa, branchmerge, force, partial):
             if force and not branchmerge:
                 actions.append((f, "g", (m2.flags(f),), "remote created"))
             else:
-                different = _checkunknownfile(repo, p1, p2, f)
+                different = _checkunknownfile(repo, wctx, p2, f)
                 if force and branchmerge and different:
                     actions.append((f, "m", (f, f, False),
                                     "remote differs from untracked local"))
