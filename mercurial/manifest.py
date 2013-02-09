@@ -28,7 +28,8 @@ class manifestdict(dict):
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
-        self._mancache = None
+        # we expect to deal with not more than three revs at a time in merge
+        self._mancache = util.lrucachedict(3)
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def parse(self, lines):
@@ -51,12 +52,12 @@ class manifest(revlog.revlog):
     def read(self, node):
         if node == revlog.nullid:
             return manifestdict() # don't upset local cache
-        if self._mancache and self._mancache[0] == node:
-            return self._mancache[1]
+        if node in self._mancache:
+            return self._mancache[node][0]
         text = self.revision(node)
         arraytext = array.array('c', text)
         mapping = self.parse(text)
-        self._mancache = (node, mapping, arraytext)
+        self._mancache[node] = (mapping, arraytext)
         return mapping
 
     def _search(self, m, s, lo=0, hi=None):
@@ -102,8 +103,9 @@ class manifest(revlog.revlog):
     def find(self, node, f):
         '''look up entry for a single file efficiently.
         return (node, flags) pair if found, (None, None) if not.'''
-        if self._mancache and self._mancache[0] == node:
-            return self._mancache[1].get(f), self._mancache[1].flags(f)
+        if node in self._mancache:
+            mapping = self._mancache[node][0]
+            return mapping.get(f), mapping.flags(f)
         text = self.revision(node)
         start, end = self._search(text, f)
         if start == end:
@@ -143,7 +145,7 @@ class manifest(revlog.revlog):
 
         # if we're using the cache, make sure it is valid and
         # parented by the same node we're diffing against
-        if not (changed and self._mancache and p1 and self._mancache[0] == p1):
+        if not (changed and p1 and (p1 in self._mancache)):
             files = sorted(map)
             checkforbidden(files)
 
@@ -156,7 +158,7 @@ class manifest(revlog.revlog):
             cachedelta = None
         else:
             added, removed = changed
-            addlist = self._mancache[2]
+            addlist = self._mancache[p1][1]
 
             checkforbidden(added)
             # combine the changed lists into one list for sorting
@@ -208,6 +210,6 @@ class manifest(revlog.revlog):
             text = util.buffer(arraytext)
 
         n = self.addrevision(text, transaction, link, p1, p2, cachedelta)
-        self._mancache = (n, map, arraytext)
+        self._mancache[n] = (map, arraytext)
 
         return n
