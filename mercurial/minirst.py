@@ -564,7 +564,7 @@ def formathtml(blocks):
                 l = []
                 for v in row:
                     l.append('<td>%s</td>' % escape(v))
-                t.append(' <tr>%s</tr>\n' % ''.join(l))
+                t.append('<tr>%s</tr>\n' % '\n'.join(l))
             out.append('<table>\n%s</table>\n' % ''.join(t))
         elif btype == 'definition':
             openlist('dl', level)

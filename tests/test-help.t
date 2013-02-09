@@ -1531,10 +1531,18 @@ Dish up an empty repo; serve it cold.
   options:
   </p>
   <table>
-   <tr><td>-I</td><td>--include PATTERN [+]</td><td>include names matching the given patterns</td></tr>
-   <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
-   <tr><td>-S</td><td>--subrepos</td><td>recurse into subrepositories</td></tr>
-   <tr><td>-n</td><td>--dry-run</td><td>do not perform actions, just print output</td></tr>
+  <tr><td>-I</td>
+  <td>--include PATTERN [+]</td>
+  <td>include names matching the given patterns</td></tr>
+  <tr><td>-X</td>
+  <td>--exclude PATTERN [+]</td>
+  <td>exclude names matching the given patterns</td></tr>
+  <tr><td>-S</td>
+  <td>--subrepos</td>
+  <td>recurse into subrepositories</td></tr>
+  <tr><td>-n</td>
+  <td>--dry-run</td>
+  <td>do not perform actions, just print output</td></tr>
   </table>
   <p>
   [+] marked option can be specified multiple times
@@ -1543,22 +1551,54 @@ Dish up an empty repo; serve it cold.
   global options:
   </p>
   <table>
-   <tr><td>-R</td><td>--repository REPO</td><td>repository root directory or name of overlay bundle file</td></tr>
-   <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
-   <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
-   <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>
-   <tr><td>-v</td><td>--verbose</td><td>enable additional output</td></tr>
-   <tr><td></td><td>--config CONFIG [+]</td><td>set/override config option (use 'section.name=value')</td></tr>
-   <tr><td></td><td>--debug</td><td>enable debugging output</td></tr>
-   <tr><td></td><td>--debugger</td><td>start debugger</td></tr>
-   <tr><td></td><td>--encoding ENCODE</td><td>set the charset encoding (default: ascii)</td></tr>
-   <tr><td></td><td>--encodingmode MODE</td><td>set the charset encoding mode (default: strict)</td></tr>
-   <tr><td></td><td>--traceback</td><td>always print a traceback on exception</td></tr>
-   <tr><td></td><td>--time</td><td>time how long the command takes</td></tr>
-   <tr><td></td><td>--profile</td><td>print command execution profile</td></tr>
-   <tr><td></td><td>--version</td><td>output version information and exit</td></tr>
-   <tr><td>-h</td><td>--help</td><td>display help and exit</td></tr>
-   <tr><td></td><td>--hidden</td><td>consider hidden changesets</td></tr>
+  <tr><td>-R</td>
+  <td>--repository REPO</td>
+  <td>repository root directory or name of overlay bundle file</td></tr>
+  <tr><td></td>
+  <td>--cwd DIR</td>
+  <td>change working directory</td></tr>
+  <tr><td>-y</td>
+  <td>--noninteractive</td>
+  <td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+  <tr><td>-q</td>
+  <td>--quiet</td>
+  <td>suppress output</td></tr>
+  <tr><td>-v</td>
+  <td>--verbose</td>
+  <td>enable additional output</td></tr>
+  <tr><td></td>
+  <td>--config CONFIG [+]</td>
+  <td>set/override config option (use 'section.name=value')</td></tr>
+  <tr><td></td>
+  <td>--debug</td>
+  <td>enable debugging output</td></tr>
+  <tr><td></td>
+  <td>--debugger</td>
+  <td>start debugger</td></tr>
+  <tr><td></td>
+  <td>--encoding ENCODE</td>
+  <td>set the charset encoding (default: ascii)</td></tr>
+  <tr><td></td>
+  <td>--encodingmode MODE</td>
+  <td>set the charset encoding mode (default: strict)</td></tr>
+  <tr><td></td>
+  <td>--traceback</td>
+  <td>always print a traceback on exception</td></tr>
+  <tr><td></td>
+  <td>--time</td>
+  <td>time how long the command takes</td></tr>
+  <tr><td></td>
+  <td>--profile</td>
+  <td>print command execution profile</td></tr>
+  <tr><td></td>
+  <td>--version</td>
+  <td>output version information and exit</td></tr>
+  <tr><td>-h</td>
+  <td>--help</td>
+  <td>display help and exit</td></tr>
+  <tr><td></td>
+  <td>--hidden</td>
+  <td>consider hidden changesets</td></tr>
   </table>
   <p>
   [+] marked option can be specified multiple times
@@ -1643,10 +1683,18 @@ Dish up an empty repo; serve it cold.
   options:
   </p>
   <table>
-   <tr><td>-A</td><td>--after</td><td>record delete for missing files</td></tr>
-   <tr><td>-f</td><td>--force</td><td>remove (and delete) file even if added or modified</td></tr>
-   <tr><td>-I</td><td>--include PATTERN [+]</td><td>include names matching the given patterns</td></tr>
-   <tr><td>-X</td><td>--exclude PATTERN [+]</td><td>exclude names matching the given patterns</td></tr>
+  <tr><td>-A</td>
+  <td>--after</td>
+  <td>record delete for missing files</td></tr>
+  <tr><td>-f</td>
+  <td>--force</td>
+  <td>remove (and delete) file even if added or modified</td></tr>
+  <tr><td>-I</td>
+  <td>--include PATTERN [+]</td>
+  <td>include names matching the given patterns</td></tr>
+  <tr><td>-X</td>
+  <td>--exclude PATTERN [+]</td>
+  <td>exclude names matching the given patterns</td></tr>
   </table>
   <p>
   [+] marked option can be specified multiple times
@@ -1655,22 +1703,54 @@ Dish up an empty repo; serve it cold.
   global options:
   </p>
   <table>
-   <tr><td>-R</td><td>--repository REPO</td><td>repository root directory or name of overlay bundle file</td></tr>
-   <tr><td></td><td>--cwd DIR</td><td>change working directory</td></tr>
-   <tr><td>-y</td><td>--noninteractive</td><td>do not prompt, automatically pick the first choice for all prompts</td></tr>
-   <tr><td>-q</td><td>--quiet</td><td>suppress output</td></tr>
-   <tr><td>-v</td><td>--verbose</td><td>enable additional output</td></tr>
-   <tr><td></td><td>--config CONFIG [+]</td><td>set/override config option (use 'section.name=value')</td></tr>
-   <tr><td></td><td>--debug</td><td>enable debugging output</td></tr>
-   <tr><td></td><td>--debugger</td><td>start debugger</td></tr>
-   <tr><td></td><td>--encoding ENCODE</td><td>set the charset encoding (default: ascii)</td></tr>
-   <tr><td></td><td>--encodingmode MODE</td><td>set the charset encoding mode (default: strict)</td></tr>
-   <tr><td></td><td>--traceback</td><td>always print a traceback on exception</td></tr>
-   <tr><td></td><td>--time</td><td>time how long the command takes</td></tr>
-   <tr><td></td><td>--profile</td><td>print command execution profile</td></tr>
-   <tr><td></td><td>--version</td><td>output version information and exit</td></tr>
-   <tr><td>-h</td><td>--help</td><td>display help and exit</td></tr>
-   <tr><td></td><td>--hidden</td><td>consider hidden changesets</td></tr>
+  <tr><td>-R</td>
+  <td>--repository REPO</td>
+  <td>repository root directory or name of overlay bundle file</td></tr>
+  <tr><td></td>
+  <td>--cwd DIR</td>
+  <td>change working directory</td></tr>
+  <tr><td>-y</td>
+  <td>--noninteractive</td>
+  <td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+  <tr><td>-q</td>
+  <td>--quiet</td>
+  <td>suppress output</td></tr>
+  <tr><td>-v</td>
+  <td>--verbose</td>
+  <td>enable additional output</td></tr>
+  <tr><td></td>
+  <td>--config CONFIG [+]</td>
+  <td>set/override config option (use 'section.name=value')</td></tr>
+  <tr><td></td>
+  <td>--debug</td>
+  <td>enable debugging output</td></tr>
+  <tr><td></td>
+  <td>--debugger</td>
+  <td>start debugger</td></tr>
+  <tr><td></td>
+  <td>--encoding ENCODE</td>
+  <td>set the charset encoding (default: ascii)</td></tr>
+  <tr><td></td>
+  <td>--encodingmode MODE</td>
+  <td>set the charset encoding mode (default: strict)</td></tr>
+  <tr><td></td>
+  <td>--traceback</td>
+  <td>always print a traceback on exception</td></tr>
+  <tr><td></td>
+  <td>--time</td>
+  <td>time how long the command takes</td></tr>
+  <tr><td></td>
+  <td>--profile</td>
+  <td>print command execution profile</td></tr>
+  <tr><td></td>
+  <td>--version</td>
+  <td>output version information and exit</td></tr>
+  <tr><td>-h</td>
+  <td>--help</td>
+  <td>display help and exit</td></tr>
+  <tr><td></td>
+  <td>--hidden</td>
+  <td>consider hidden changesets</td></tr>
   </table>
   <p>
   [+] marked option can be specified multiple times

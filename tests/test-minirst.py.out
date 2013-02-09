@@ -758,9 +758,15 @@ Empty comment above
 html format:
 ----------------------------------------------------------------------
 <table>
- <tr><td>a</td><td>b</td><td>c</td></tr>
- <tr><td>1</td><td>2</td><td>3</td></tr>
- <tr><td>foo</td><td>bar</td><td>baz this list is very very very long man</td></tr>
+<tr><td>a</td>
+<td>b</td>
+<td>c</td></tr>
+<tr><td>1</td>
+<td>2</td>
+<td>3</td></tr>
+<tr><td>foo</td>
+<td>bar</td>
+<td>baz this list is very very very long man</td></tr>
 </table>
 ----------------------------------------------------------------------
 
