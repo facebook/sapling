@@ -741,7 +741,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
         heads = lfutil.getcurrentheads(repo)
         newheads = set(heads).difference(set(oldheads))
         if len(newheads) > 0:
-            ui.status(_("caching largefiles for %s heads\n" % len(newheads)))
+            ui.status(_("caching largefiles for %s heads\n") % len(newheads))
         for head in newheads:
             (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
             numcached += len(cached)
