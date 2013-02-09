@@ -559,13 +559,17 @@ def formathtml(blocks):
             out.append('<h%d>%s</h%d>\n' % (level, escape(lines[0]), level))
         elif btype == 'table':
             table = b['table']
-            t = []
+            out.append('<table>\n')
             for row in table:
-                l = []
+                out.append('<tr>')
                 for v in row:
-                    l.append('<td>%s</td>' % escape(v))
-                t.append('<tr>%s</tr>\n' % '\n'.join(l))
-            out.append('<table>\n%s</table>\n' % ''.join(t))
+                    out.append('<td>')
+                    out.append(escape(v))
+                    out.append('</td>')
+                    out.append('\n')
+                out.pop()
+                out.append('</tr>\n')
+            out.append('</table>\n')
         elif btype == 'definition':
             openlist('dl', level)
             term = escape(lines[0])
