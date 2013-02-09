@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
+from i18n import _
+import os, util
 
 def countcpus():
     '''try to count the number of CPUs on the system'''
@@ -27,3 +28,27 @@ def countcpus():
         pass
 
     return 1
+
+def _numworkers(ui):
+    s = ui.config('worker', 'numcpus')
+    if s:
+        try:
+            n = int(s)
+            if n >= 1:
+                return n
+        except ValueError:
+            raise util.Abort(_('number of cpus must be an integer'))
+    return min(max(countcpus(), 4), 32)
+
+if os.name == 'posix':
+    _startupcost = 0.01
+else:
+    _startupcost = 1e30
+
+def worthwhile(ui, costperop, nops):
+    '''try to determine whether the benefit of multiple processes can
+    outweigh the cost of starting them'''
+    linear = costperop * nops
+    workers = _numworkers(ui)
+    benefit = linear - (_startupcost * workers + linear / workers)
+    return benefit >= 0.15
