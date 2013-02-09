@@ -349,21 +349,28 @@ def getremove(repo, mctx, overwrite, args):
 
     yields tuples for progress updates
     """
+    verbose = repo.ui.verbose
+    unlink = util.unlinkpath
+    wjoin = repo.wjoin
+    fctx = mctx.filectx
+    wwrite = repo.wwrite
     audit = repo.wopener.audit
     i = 0
     for arg in args:
         f = arg[0]
         if arg[1] == 'r':
-            repo.ui.note(_("removing %s\n") % f)
+            if verbose:
+                repo.ui.note(_("removing %s\n") % f)
             audit(f)
             try:
-                util.unlinkpath(repo.wjoin(f), ignoremissing=True)
+                unlink(wjoin(f), ignoremissing=True)
             except OSError, inst:
                 repo.ui.warn(_("update failed to remove %s: %s!\n") %
                              (f, inst.strerror))
         else:
-            repo.ui.note(_("getting %s\n") % f)
-            repo.wwrite(f, mctx.filectx(f).data(), arg[2][0])
+            if verbose:
+                repo.ui.note(_("getting %s\n") % f)
+            wwrite(f, fctx(f).data(), arg[2][0])
         if i == 100:
             yield i, f
             i = 0
@@ -442,10 +449,13 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
     if hgsub and hgsub[0] == 'g':
         subrepo.submerge(repo, wctx, mctx, wctx, overwrite)
 
+    _updating = _('updating')
+    _files = _('files')
+    progress = repo.ui.progress
+
     for i, a in enumerate(actions):
         f, m, args, msg = a
-        repo.ui.progress(_('updating'), z + i + 1, item=f, total=numupdates,
-                         unit=_('files'))
+        progress(_updating, z + i + 1, item=f, total=numupdates, unit=_files)
         if m == "m": # merge
             if fd == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
@@ -490,7 +500,7 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
             util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
             updated += 1
     ms.commit()
-    repo.ui.progress(_('updating'), None, total=numupdates, unit=_('files'))
+    progress(_updating, None, total=numupdates, unit=_files)
 
     return updated, merged, removed, unresolved
 
