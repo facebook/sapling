@@ -931,13 +931,524 @@ Dish up an empty repo; serve it cold.
   </form>
   <table class="bigtable">
   <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
-  <tr><td><a href="/help/config">config</a></td><td>Configuration Files</td></tr><tr><td><a href="/help/dates">dates</a></td><td>Date Formats</td></tr><tr><td><a href="/help/diffs">diffs</a></td><td>Diff Formats</td></tr><tr><td><a href="/help/environment">environment</a></td><td>Environment Variables</td></tr><tr><td><a href="/help/extensions">extensions</a></td><td>Using Additional Features</td></tr><tr><td><a href="/help/filesets">filesets</a></td><td>Specifying File Sets</td></tr><tr><td><a href="/help/glossary">glossary</a></td><td>Glossary</td></tr><tr><td><a href="/help/hgignore">hgignore</a></td><td>Syntax for Mercurial Ignore Files</td></tr><tr><td><a href="/help/hgweb">hgweb</a></td><td>Configuring hgweb</td></tr><tr><td><a href="/help/merge-tools">merge-tools</a></td><td>Merge Tools</td></tr><tr><td><a href="/help/multirevs">multirevs</a></td><td>Specifying Multiple Revisions</td></tr><tr><td><a href="/help/patterns">patterns</a></td><td>File Name Patterns</td></tr><tr><td><a href="/help/phases">phases</a></td><td>Working with Phases</td></tr><tr><td><a href="/help/revisions">revisions</a></td><td>Specifying Single Revisions</td></tr><tr><td><a href="/help/revsets">revsets</a></td><td>Specifying Revision Sets</td></tr><tr><td><a href="/help/subrepos">subrepos</a></td><td>Subrepositories</td></tr><tr><td><a href="/help/templating">templating</a></td><td>Template Usage</td></tr><tr><td><a href="/help/urls">urls</a></td><td>URL Paths</td></tr><tr><td><a href="/help/topic-containing-verbose">topic-containing-verbose</a></td><td>This is the topic to test omit indicating.</td></tr>
+  
+  <tr><td>
+  <a href="/help/config">
+  config
+  </a>
+  </td><td>
+  Configuration Files
+  </td></tr>
+  <tr><td>
+  <a href="/help/dates">
+  dates
+  </a>
+  </td><td>
+  Date Formats
+  </td></tr>
+  <tr><td>
+  <a href="/help/diffs">
+  diffs
+  </a>
+  </td><td>
+  Diff Formats
+  </td></tr>
+  <tr><td>
+  <a href="/help/environment">
+  environment
+  </a>
+  </td><td>
+  Environment Variables
+  </td></tr>
+  <tr><td>
+  <a href="/help/extensions">
+  extensions
+  </a>
+  </td><td>
+  Using Additional Features
+  </td></tr>
+  <tr><td>
+  <a href="/help/filesets">
+  filesets
+  </a>
+  </td><td>
+  Specifying File Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/glossary">
+  glossary
+  </a>
+  </td><td>
+  Glossary
+  </td></tr>
+  <tr><td>
+  <a href="/help/hgignore">
+  hgignore
+  </a>
+  </td><td>
+  Syntax for Mercurial Ignore Files
+  </td></tr>
+  <tr><td>
+  <a href="/help/hgweb">
+  hgweb
+  </a>
+  </td><td>
+  Configuring hgweb
+  </td></tr>
+  <tr><td>
+  <a href="/help/merge-tools">
+  merge-tools
+  </a>
+  </td><td>
+  Merge Tools
+  </td></tr>
+  <tr><td>
+  <a href="/help/multirevs">
+  multirevs
+  </a>
+  </td><td>
+  Specifying Multiple Revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/patterns">
+  patterns
+  </a>
+  </td><td>
+  File Name Patterns
+  </td></tr>
+  <tr><td>
+  <a href="/help/phases">
+  phases
+  </a>
+  </td><td>
+  Working with Phases
+  </td></tr>
+  <tr><td>
+  <a href="/help/revisions">
+  revisions
+  </a>
+  </td><td>
+  Specifying Single Revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/revsets">
+  revsets
+  </a>
+  </td><td>
+  Specifying Revision Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/subrepos">
+  subrepos
+  </a>
+  </td><td>
+  Subrepositories
+  </td></tr>
+  <tr><td>
+  <a href="/help/templating">
+  templating
+  </a>
+  </td><td>
+  Template Usage
+  </td></tr>
+  <tr><td>
+  <a href="/help/urls">
+  urls
+  </a>
+  </td><td>
+  URL Paths
+  </td></tr>
+  <tr><td>
+  <a href="/help/topic-containing-verbose">
+  topic-containing-verbose
+  </a>
+  </td><td>
+  This is the topic to test omit indicating.
+  </td></tr>
   
   <tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
-  <tr><td><a href="/help/add">add</a></td><td>add the specified files on the next commit</td></tr><tr><td><a href="/help/annotate">annotate</a></td><td>show changeset information by line for each file</td></tr><tr><td><a href="/help/clone">clone</a></td><td>make a copy of an existing repository</td></tr><tr><td><a href="/help/commit">commit</a></td><td>commit the specified files or all outstanding changes</td></tr><tr><td><a href="/help/diff">diff</a></td><td>diff repository (or selected files)</td></tr><tr><td><a href="/help/export">export</a></td><td>dump the header and diffs for one or more changesets</td></tr><tr><td><a href="/help/forget">forget</a></td><td>forget the specified files on the next commit</td></tr><tr><td><a href="/help/init">init</a></td><td>create a new repository in the given directory</td></tr><tr><td><a href="/help/log">log</a></td><td>show revision history of entire repository or files</td></tr><tr><td><a href="/help/merge">merge</a></td><td>merge working directory with another revision</td></tr><tr><td><a href="/help/pull">pull</a></td><td>pull changes from the specified source</td></tr><tr><td><a href="/help/push">push</a></td><td>push changes to the specified destination</td></tr><tr><td><a href="/help/remove">remove</a></td><td>remove the specified files on the next commit</td></tr><tr><td><a href="/help/serve">serve</a></td><td>start stand-alone webserver</td></tr><tr><td><a href="/help/status">status</a></td><td>show changed files in the working directory</td></tr><tr><td><a href="/help/summary">summary</a></td><td>summarize working directory state</td></tr><tr><td><a href="/help/update">update</a></td><td>update working directory (or switch revisions)</td></tr>
+  
+  <tr><td>
+  <a href="/help/add">
+  add
+  </a>
+  </td><td>
+  add the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/annotate">
+  annotate
+  </a>
+  </td><td>
+  show changeset information by line for each file
+  </td></tr>
+  <tr><td>
+  <a href="/help/clone">
+  clone
+  </a>
+  </td><td>
+  make a copy of an existing repository
+  </td></tr>
+  <tr><td>
+  <a href="/help/commit">
+  commit
+  </a>
+  </td><td>
+  commit the specified files or all outstanding changes
+  </td></tr>
+  <tr><td>
+  <a href="/help/diff">
+  diff
+  </a>
+  </td><td>
+  diff repository (or selected files)
+  </td></tr>
+  <tr><td>
+  <a href="/help/export">
+  export
+  </a>
+  </td><td>
+  dump the header and diffs for one or more changesets
+  </td></tr>
+  <tr><td>
+  <a href="/help/forget">
+  forget
+  </a>
+  </td><td>
+  forget the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/init">
+  init
+  </a>
+  </td><td>
+  create a new repository in the given directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/log">
+  log
+  </a>
+  </td><td>
+  show revision history of entire repository or files
+  </td></tr>
+  <tr><td>
+  <a href="/help/merge">
+  merge
+  </a>
+  </td><td>
+  merge working directory with another revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/pull">
+  pull
+  </a>
+  </td><td>
+  pull changes from the specified source
+  </td></tr>
+  <tr><td>
+  <a href="/help/push">
+  push
+  </a>
+  </td><td>
+  push changes to the specified destination
+  </td></tr>
+  <tr><td>
+  <a href="/help/remove">
+  remove
+  </a>
+  </td><td>
+  remove the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/serve">
+  serve
+  </a>
+  </td><td>
+  start stand-alone webserver
+  </td></tr>
+  <tr><td>
+  <a href="/help/status">
+  status
+  </a>
+  </td><td>
+  show changed files in the working directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/summary">
+  summary
+  </a>
+  </td><td>
+  summarize working directory state
+  </td></tr>
+  <tr><td>
+  <a href="/help/update">
+  update
+  </a>
+  </td><td>
+  update working directory (or switch revisions)
+  </td></tr>
   
   <tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
-  <tr><td><a href="/help/addremove">addremove</a></td><td>add all new files, delete all missing files</td></tr><tr><td><a href="/help/archive">archive</a></td><td>create an unversioned archive of a repository revision</td></tr><tr><td><a href="/help/backout">backout</a></td><td>reverse effect of earlier changeset</td></tr><tr><td><a href="/help/bisect">bisect</a></td><td>subdivision search of changesets</td></tr><tr><td><a href="/help/bookmarks">bookmarks</a></td><td>track a line of development with movable markers</td></tr><tr><td><a href="/help/branch">branch</a></td><td>set or show the current branch name</td></tr><tr><td><a href="/help/branches">branches</a></td><td>list repository named branches</td></tr><tr><td><a href="/help/bundle">bundle</a></td><td>create a changegroup file</td></tr><tr><td><a href="/help/cat">cat</a></td><td>output the current or given revision of files</td></tr><tr><td><a href="/help/copy">copy</a></td><td>mark files as copied for the next commit</td></tr><tr><td><a href="/help/graft">graft</a></td><td>copy changes from other branches onto the current branch</td></tr><tr><td><a href="/help/grep">grep</a></td><td>search for a pattern in specified files and revisions</td></tr><tr><td><a href="/help/heads">heads</a></td><td>show current repository heads or show branch heads</td></tr><tr><td><a href="/help/help">help</a></td><td>show help for a given topic or a help overview</td></tr><tr><td><a href="/help/identify">identify</a></td><td>identify the working copy or specified revision</td></tr><tr><td><a href="/help/import">import</a></td><td>import an ordered set of patches</td></tr><tr><td><a href="/help/incoming">incoming</a></td><td>show new changesets found in source</td></tr><tr><td><a href="/help/locate">locate</a></td><td>locate files matching specific patterns</td></tr><tr><td><a href="/help/manifest">manifest</a></td><td>output the current or given revision of the project manifest</td></tr><tr><td><a href="/help/nohelp">nohelp</a></td><td>(no help text available)</td></tr><tr><td><a href="/help/outgoing">outgoing</a></td><td>show changesets not found in the destination</td></tr><tr><td><a href="/help/parents">parents</a></td><td>show the parents of the working directory or revision</td></tr><tr><td><a href="/help/paths">paths</a></td><td>show aliases for remote repositories</td></tr><tr><td><a href="/help/phase">phase</a></td><td>set or show the current phase name</td></tr><tr><td><a href="/help/recover">recover</a></td><td>roll back an interrupted transaction</td></tr><tr><td><a href="/help/rename">rename</a></td><td>rename files; equivalent of copy + remove</td></tr><tr><td><a href="/help/resolve">resolve</a></td><td>redo merges or set/view the merge status of files</td></tr><tr><td><a href="/help/revert">revert</a></td><td>restore files to their checkout state</td></tr><tr><td><a href="/help/rollback">rollback</a></td><td>roll back the last transaction (dangerous)</td></tr><tr><td><a href="/help/root">root</a></td><td>print the root (top) of the current working directory</td></tr><tr><td><a href="/help/showconfig">showconfig</a></td><td>show combined config settings from all hgrc files</td></tr><tr><td><a href="/help/tag">tag</a></td><td>add one or more tags for the current or given revision</td></tr><tr><td><a href="/help/tags">tags</a></td><td>list repository tags</td></tr><tr><td><a href="/help/tip">tip</a></td><td>show the tip revision</td></tr><tr><td><a href="/help/unbundle">unbundle</a></td><td>apply one or more changegroup files</td></tr><tr><td><a href="/help/verify">verify</a></td><td>verify the integrity of the repository</td></tr><tr><td><a href="/help/version">version</a></td><td>output version and copyright information</td></tr>
+  
+  <tr><td>
+  <a href="/help/addremove">
+  addremove
+  </a>
+  </td><td>
+  add all new files, delete all missing files
+  </td></tr>
+  <tr><td>
+  <a href="/help/archive">
+  archive
+  </a>
+  </td><td>
+  create an unversioned archive of a repository revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/backout">
+  backout
+  </a>
+  </td><td>
+  reverse effect of earlier changeset
+  </td></tr>
+  <tr><td>
+  <a href="/help/bisect">
+  bisect
+  </a>
+  </td><td>
+  subdivision search of changesets
+  </td></tr>
+  <tr><td>
+  <a href="/help/bookmarks">
+  bookmarks
+  </a>
+  </td><td>
+  track a line of development with movable markers
+  </td></tr>
+  <tr><td>
+  <a href="/help/branch">
+  branch
+  </a>
+  </td><td>
+  set or show the current branch name
+  </td></tr>
+  <tr><td>
+  <a href="/help/branches">
+  branches
+  </a>
+  </td><td>
+  list repository named branches
+  </td></tr>
+  <tr><td>
+  <a href="/help/bundle">
+  bundle
+  </a>
+  </td><td>
+  create a changegroup file
+  </td></tr>
+  <tr><td>
+  <a href="/help/cat">
+  cat
+  </a>
+  </td><td>
+  output the current or given revision of files
+  </td></tr>
+  <tr><td>
+  <a href="/help/copy">
+  copy
+  </a>
+  </td><td>
+  mark files as copied for the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/graft">
+  graft
+  </a>
+  </td><td>
+  copy changes from other branches onto the current branch
+  </td></tr>
+  <tr><td>
+  <a href="/help/grep">
+  grep
+  </a>
+  </td><td>
+  search for a pattern in specified files and revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/heads">
+  heads
+  </a>
+  </td><td>
+  show current repository heads or show branch heads
+  </td></tr>
+  <tr><td>
+  <a href="/help/help">
+  help
+  </a>
+  </td><td>
+  show help for a given topic or a help overview
+  </td></tr>
+  <tr><td>
+  <a href="/help/identify">
+  identify
+  </a>
+  </td><td>
+  identify the working copy or specified revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/import">
+  import
+  </a>
+  </td><td>
+  import an ordered set of patches
+  </td></tr>
+  <tr><td>
+  <a href="/help/incoming">
+  incoming
+  </a>
+  </td><td>
+  show new changesets found in source
+  </td></tr>
+  <tr><td>
+  <a href="/help/locate">
+  locate
+  </a>
+  </td><td>
+  locate files matching specific patterns
+  </td></tr>
+  <tr><td>
+  <a href="/help/manifest">
+  manifest
+  </a>
+  </td><td>
+  output the current or given revision of the project manifest
+  </td></tr>
+  <tr><td>
+  <a href="/help/nohelp">
+  nohelp
+  </a>
+  </td><td>
+  (no help text available)
+  </td></tr>
+  <tr><td>
+  <a href="/help/outgoing">
+  outgoing
+  </a>
+  </td><td>
+  show changesets not found in the destination
+  </td></tr>
+  <tr><td>
+  <a href="/help/parents">
+  parents
+  </a>
+  </td><td>
+  show the parents of the working directory or revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/paths">
+  paths
+  </a>
+  </td><td>
+  show aliases for remote repositories
+  </td></tr>
+  <tr><td>
+  <a href="/help/phase">
+  phase
+  </a>
+  </td><td>
+  set or show the current phase name
+  </td></tr>
+  <tr><td>
+  <a href="/help/recover">
+  recover
+  </a>
+  </td><td>
+  roll back an interrupted transaction
+  </td></tr>
+  <tr><td>
+  <a href="/help/rename">
+  rename
+  </a>
+  </td><td>
+  rename files; equivalent of copy + remove
+  </td></tr>
+  <tr><td>
+  <a href="/help/resolve">
+  resolve
+  </a>
+  </td><td>
+  redo merges or set/view the merge status of files
+  </td></tr>
+  <tr><td>
+  <a href="/help/revert">
+  revert
+  </a>
+  </td><td>
+  restore files to their checkout state
+  </td></tr>
+  <tr><td>
+  <a href="/help/rollback">
+  rollback
+  </a>
+  </td><td>
+  roll back the last transaction (dangerous)
+  </td></tr>
+  <tr><td>
+  <a href="/help/root">
+  root
+  </a>
+  </td><td>
+  print the root (top) of the current working directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/showconfig">
+  showconfig
+  </a>
+  </td><td>
+  show combined config settings from all hgrc files
+  </td></tr>
+  <tr><td>
+  <a href="/help/tag">
+  tag
+  </a>
+  </td><td>
+  add one or more tags for the current or given revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/tags">
+  tags
+  </a>
+  </td><td>
+  list repository tags
+  </td></tr>
+  <tr><td>
+  <a href="/help/tip">
+  tip
+  </a>
+  </td><td>
+  show the tip revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/unbundle">
+  unbundle
+  </a>
+  </td><td>
+  apply one or more changegroup files
+  </td></tr>
+  <tr><td>
+  <a href="/help/verify">
+  verify
+  </a>
+  </td><td>
+  verify the integrity of the repository
+  </td></tr>
+  <tr><td>
+  <a href="/help/version">
+  version
+  </a>
+  </td><td>
+  output version and copyright information
+  </td></tr>
   </table>
   </div>
   </div>

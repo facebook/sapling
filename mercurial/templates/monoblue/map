@@ -11,7 +11,14 @@ notfound = notfound.tmpl
 help = help.tmpl
 helptopics = helptopics.tmpl
 
-helpentry = '<tr><td><a href="{url|urlescape}help/{topic|escape}{sessionvars%urlparameter}">{topic|escape}</a></td><td>{summary|escape}</td></tr>'
+helpentry = '
+  <tr><td>
+    <a href="{url|urlescape}help/{topic|escape}{sessionvars%urlparameter}">
+      {topic|escape}
+    </a>
+  </td><td>
+    {summary|escape}
+  </td></tr>'
 
 naventry = '<a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
