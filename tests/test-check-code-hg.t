@@ -10,9 +10,6 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ hg manifest | xargs "$check_code" --warnings --nolineno --per-file=0 \
   > || false
-  tests/test-inotify-issue1556.t:0:
-   >   $ kill `cat hg.pid`
-   don't use kill, use killdaemons.py
   tests/test-inotify-lookup.t:0:
    >   $ kill `cat .hg/inotify.pid`
    don't use kill, use killdaemons.py
