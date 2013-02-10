@@ -637,7 +637,7 @@ def fstat(fp):
 
 def checkcase(path):
     """
-    Check whether the given path is on a case-sensitive filesystem
+    Return true if the given path is on a case-sensitive filesystem
 
     Requires a path (like /foo/.hg) ending with a foldable final
     directory component.
