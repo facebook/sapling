@@ -197,7 +197,8 @@ class hgwebdir(object):
                         if isinstance(tp, str):
                             tp = [tp]
                         static = [os.path.join(p, 'static') for p in tp]
-                    return (staticfile(static, fname, req),)
+                    staticfile(static, fname, req)
+                    return []
 
                 # top-level index
                 elif not virtual:

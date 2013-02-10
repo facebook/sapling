@@ -129,7 +129,7 @@ def staticfile(directory, fname, req):
     for part in parts:
         if (part in ('', os.curdir, os.pardir) or
             os.sep in part or os.altsep is not None and os.altsep in part):
-            return ""
+            return
     fpath = os.path.join(*parts)
     if isinstance(directory, str):
         directory = [directory]
@@ -144,7 +144,6 @@ def staticfile(directory, fname, req):
         data = fp.read()
         fp.close()
         req.respond(HTTP_OK, ct, body=data)
-        return ""
     except TypeError:
         raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal filename')
     except OSError, err:
