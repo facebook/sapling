@@ -36,10 +36,9 @@ http://mercurial.selenic.com/bts/issue672
    ancestor: 81f4b099af3d, local: c64f439569a9+, remote: c12dcd37c90a
    1: other deleted -> r
    1a: remote created -> g
-  updating: 1 1/2 files (50.00%)
   removing 1
-  updating: 1a 2/2 files (100.00%)
   getting 1a
+  updating: 1a 2/2 files (100.00%)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

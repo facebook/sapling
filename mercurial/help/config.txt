@@ -1463,3 +1463,15 @@ The full set of options is:
 
 ``templates``
     Where to find the HTML templates. Default is install path.
+
+``worker``
+----------
+
+Parallel master/worker configuration. We currently perform working
+directory updates in parallel on Unix-like systems, which greatly
+helps performance.
+
+``numcpus``
+    Number of CPUs to use for parallel operations. Default is 4 or the
+    number of CPUs on the system, whichever is larger. A zero or
+    negative value is treated as ``use the default``.

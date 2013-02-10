@@ -214,8 +214,8 @@ merge tests
    branchmerge: False, force: False, partial: False
    ancestor: 60ca1237c194, local: 60ca1237c194+, remote: 6747d179aa9a
    t: remote is newer -> g
-  updating: t 1/1 files (100.00%)
   getting t
+  updating: t 1/1 files (100.00%)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugsub
