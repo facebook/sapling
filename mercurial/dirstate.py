@@ -703,7 +703,11 @@ class dirstate(object):
                     # Report ignored items in the dmap as long as they are not
                     # under a symlink directory.
                     if ignore(nf) and audit_path.check(nf):
-                        results[nf] = util.statfiles([join(nf)])[0]
+                        try:
+                            results[nf] = lstat(join(nf))
+                        except OSError:
+                            # file doesn't exist
+                            results[nf] = None
                     else:
                         # It's either missing or under a symlink directory
                         results[nf] = None
