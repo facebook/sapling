@@ -515,12 +515,12 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
             _checkcollision(mctx, None)
         else:
             _checkcollision(mctx, (tctx, ancestor))
-    if tctx.rev() is None:
-        actions += _forgetremoved(tctx, mctx, branchmerge)
     actions += manifestmerge(repo, tctx, mctx,
                              ancestor,
                              branchmerge, force,
                              partial)
+    if tctx.rev() is None:
+        actions += _forgetremoved(tctx, mctx, branchmerge)
     return actions
 
 def recordupdates(repo, actions, branchmerge):
