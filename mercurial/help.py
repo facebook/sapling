@@ -394,7 +394,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         else:
             raise error.UnknownCommand(name)
 
-        rst = ["%s\n\n" % header]
+        rst = [minirst.section(header)]
+
         # description
         if not doc:
             rst.append("    %s\n" % _("(no help text available)"))

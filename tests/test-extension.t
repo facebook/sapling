@@ -353,6 +353,7 @@ Test help topic with same name as extension
 
   $ hg help multirevs
   Specifying Multiple Revisions
+  """""""""""""""""""""""""""""
   
       When Mercurial accepts more than one revision, they may be specified
       individually, or provided as a topologically continuous range, separated

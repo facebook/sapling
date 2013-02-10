@@ -22,6 +22,18 @@ import re
 import util, encoding
 from i18n import _
 
+def section(s):
+    return "%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s))
+
+def subsection(s):
+    return "%s\n%s\n\n" % (s, '=' * encoding.colwidth(s))
+
+def subsubsection(s):
+    return "%s\n%s\n\n" % (s, "-" * encoding.colwidth(s))
+
+def subsubsubsection(s):
+    return "%s\n%s\n\n" % (s, "." * encoding.colwidth(s))
+
 def replace(text, substs):
     '''
     Apply a list of (find, replace) pairs to a text.

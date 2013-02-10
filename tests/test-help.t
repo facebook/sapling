@@ -712,6 +712,7 @@ Test a help topic
 
   $ hg help revs
   Specifying Single Revisions
+  """""""""""""""""""""""""""
   
       Mercurial supports several ways to specify individual revisions.
   
@@ -857,6 +858,7 @@ Test omit indicating for help
   no commands defined
   $ hg help topic-containing-verbose
   This is the topic to test omit indicating.
+  """"""""""""""""""""""""""""""""""""""""""
   
       This paragraph is never omitted (for topic).
   
@@ -865,6 +867,7 @@ Test omit indicating for help
   use "hg help -v topic-containing-verbose" to show more complete help
   $ hg help -v topic-containing-verbose
   This is the topic to test omit indicating.
+  """"""""""""""""""""""""""""""""""""""""""
   
       This paragraph is never omitted (for topic).
   
@@ -1728,9 +1731,7 @@ Dish up an empty repo; serve it cold.
   files, or words in the commit message</div>
   </form>
   <div id="doc">
-  <p>
-  Specifying Single Revisions
-  </p>
+  <h1>Specifying Single Revisions</h1>
   <p>
   Mercurial supports several ways to specify individual revisions.
   </p>
