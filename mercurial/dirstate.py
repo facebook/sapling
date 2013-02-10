@@ -9,7 +9,7 @@ import errno
 from node import nullid
 from i18n import _
 import scmutil, util, ignore, osutil, parsers, encoding
-import os, stat, errno
+import os, stat, errno, gc
 
 propertycache = util.propertycache
 filecache = scmutil.filecache
@@ -285,7 +285,23 @@ class dirstate(object):
         if not st:
             return
 
-        p = parsers.parse_dirstate(self._map, self._copymap, st)
+        # Python's garbage collector triggers a GC each time a certain number
+        # of container objects (the number being defined by
+        # gc.get_threshold()) are allocated. parse_dirstate creates a tuple
+        # for each file in the dirstate. The C version then immediately marks
+        # them as not to be tracked by the collector. However, this has no
+        # effect on when GCs are triggered, only on what objects the GC looks
+        # into. This means that O(number of files) GCs are unavoidable.
+        # Depending on when in the process's lifetime the dirstate is parsed,
+        # this can get very expensive. As a workaround, disable GC while
+        # parsing the dirstate.
+        gcenabled = gc.isenabled()
+        gc.disable()
+        try:
+            p = parsers.parse_dirstate(self._map, self._copymap, st)
+        finally:
+            if gcenabled:
+                gc.enable()
         if not self._dirtypl:
             self._pl = p
 
