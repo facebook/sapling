@@ -3812,7 +3812,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
     def checkexact(repo, n, nodeid):
         if opts.get('exact') and hex(n) != nodeid:
-            repo.rollback()
             raise util.Abort(_('patch is damaged or loses information'))
 
     def tryone(ui, hunk, parents):
