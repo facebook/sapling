@@ -2035,13 +2035,6 @@ class localrepository(object):
         commonrevs = outgoing.common
         csets = outgoing.missing
         heads = outgoing.missingheads
-        cl = bundler._changelog
-        mf = bundler._manifest
-        mfs = {} # needed manifests
-        fnodes = {} # needed file nodes
-        changedfiles = set()
-        fstate = ['', {}]
-
         # We go through the fast path if we get told to, or if all (unfiltered
         # heads have been requested (since we then know there all linkrevs will
         # be pulled by the client).
@@ -2051,70 +2044,7 @@ class localrepository(object):
 
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(csets, source)
-
-        # filter any nodes that claim to be part of the known set
-        def prune(revlog, missing):
-            rr, rl = revlog.rev, revlog.linkrev
-            return [n for n in missing
-                    if rl(rr(n)) not in commonrevs]
-
-        progress = self.ui.progress
-        _bundling = _('bundling')
-        _changesets = _('changesets')
-        _manifests = _('manifests')
-        _files = _('files')
-
-        def lookup(revlog, x):
-            count = bundler.count
-            if revlog == cl:
-                c = cl.read(x)
-                changedfiles.update(c[3])
-                mfs.setdefault(c[0], x)
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_changesets, total=count[1])
-                return x
-            elif revlog == mf:
-                clnode = mfs[x]
-                if not fastpathlinkrev:
-                    mdata = mf.readfast(x)
-                    for f, n in mdata.iteritems():
-                        if f in changedfiles:
-                            fnodes[f].setdefault(n, clnode)
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_manifests, total=count[1])
-                return clnode
-            else:
-                progress(_bundling, count[0], item=fstate[0],
-                         unit=_files, total=count[1])
-                return fstate[1][x]
-
-        bundler.start(lookup)
-
-        def getmfnodes():
-            for f in changedfiles:
-                fnodes[f] = {}
-            bundler.count[:] = [0, len(mfs)]
-            return prune(mf, mfs)
-        def getfiles():
-            mfs.clear()
-            return changedfiles
-        def getfilenodes(fname, filerevlog):
-            if fastpathlinkrev:
-                ln, llr = filerevlog.node, filerevlog.linkrev
-                def genfilenodes():
-                    for r in filerevlog:
-                        linkrev = llr(r)
-                        if linkrev not in commonrevs:
-                            yield filerevlog.node(r), cl.node(linkrev)
-                fnodes[fname] = dict(genfilenodes())
-            fstate[0] = fname
-            fstate[1] = fnodes.pop(fname, {})
-            return prune(filerevlog, fstate[1])
-
-        gengroup = bundler.generate(csets, getmfnodes, getfiles, getfilenodes,
-                                    source)
+        gengroup = bundler.generate(commonrevs, csets, fastpathlinkrev, source)
         return changegroup.unbundle10(util.chunkbuffer(gengroup), 'UN')
 
     def changegroup(self, basenodes, source):

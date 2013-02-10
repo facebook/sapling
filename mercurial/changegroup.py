@@ -291,7 +291,7 @@ class bundle10(object):
 
         yield self.close()
 
-    def generate(self, clnodes, getmfnodes, getfiles, getfilenodes, source):
+    def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
         cl = self._changelog
@@ -300,6 +300,69 @@ class bundle10(object):
         progress = repo.ui.progress
         count = self.count
         _bundling = _('bundling')
+        _changesets = _('changesets')
+        _manifests = _('manifests')
+        _files = _('files')
+
+        mfs = {} # needed manifests
+        fnodes = {} # needed file nodes
+        changedfiles = set()
+        fstate = ['', {}]
+
+        # filter any nodes that claim to be part of the known set
+        def prune(revlog, missing):
+            rr, rl = revlog.rev, revlog.linkrev
+            return [n for n in missing
+                    if rl(rr(n)) not in commonrevs]
+
+        def lookup(revlog, x):
+            if revlog == cl:
+                c = cl.read(x)
+                changedfiles.update(c[3])
+                mfs.setdefault(c[0], x)
+                count[0] += 1
+                progress(_bundling, count[0],
+                         unit=_changesets, total=count[1])
+                return x
+            elif revlog == mf:
+                clnode = mfs[x]
+                if not fastpathlinkrev:
+                    mdata = mf.readfast(x)
+                    for f, n in mdata.iteritems():
+                        if f in changedfiles:
+                            fnodes[f].setdefault(n, clnode)
+                count[0] += 1
+                progress(_bundling, count[0],
+                         unit=_manifests, total=count[1])
+                return clnode
+            else:
+                progress(_bundling, count[0], item=fstate[0],
+                         unit=_files, total=count[1])
+                return fstate[1][x]
+
+        self.start(lookup)
+
+        def getmfnodes():
+            for f in changedfiles:
+                fnodes[f] = {}
+            count[:] = [0, len(mfs)]
+            return prune(mf, mfs)
+        def getfiles():
+            mfs.clear()
+            return changedfiles
+        def getfilenodes(fname, filerevlog):
+            if fastpathlinkrev:
+                ln, llr = filerevlog.node, filerevlog.linkrev
+                def genfilenodes():
+                    for r in filerevlog:
+                        linkrev = llr(r)
+                        if linkrev not in commonrevs:
+                            yield filerevlog.node(r), cl.node(linkrev)
+                fnodes[fname] = dict(genfilenodes())
+            fstate[0] = fname
+            fstate[1] = fnodes.pop(fname, {})
+            return prune(filerevlog, fstate[1])
+
 
         count[:] = [0, len(clnodes)]
         for chunk in self.group(clnodes, cl, reorder=reorder):
