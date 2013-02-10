@@ -2709,11 +2709,12 @@ def diff(ui, repo, *pats, **opts):
     ('', 'switch-parent', None, _('diff against the second parent')),
     ('r', 'rev', [], _('revisions to export'), _('REV')),
     ] + diffopts,
-    _('[OPTION]... [-o OUTFILESPEC] [-r] REV...'))
+    _('[OPTION]... [-o OUTFILESPEC] [-r] [REV]...'))
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
 
     Print the changeset header and diffs for one or more revisions.
+    If no revision is given, the parent of the working directory is used.
 
     The information shown in the changeset header is: author, date,
     branch name (if non-default), changeset hash, parent(s) and commit
@@ -2769,6 +2770,8 @@ def export(ui, repo, *changesets, **opts):
     Returns 0 on success.
     """
     changesets += tuple(opts.get('rev', []))
+    if not changesets:
+        changesets = ['.']
     revs = scmutil.revrange(repo, changesets)
     if not revs:
         raise util.Abort(_("export requires at least one changeset"))

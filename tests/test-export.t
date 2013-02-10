@@ -148,8 +148,23 @@ Checking if only alphanumeric characters are used in the file name (%m option):
 Catch exporting unknown revisions (especially empty revsets, see issue3353)
 
   $ hg export
-  abort: export requires at least one changeset
-  [255]
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 197ecd81a57f760b54f34a58817ad5b04991fa47
+  # Parent  f3acbafac161ec68f1598af38f794f28847ca5d3
+   !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+  
+  diff -r f3acbafac161 -r 197ecd81a57f foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -10,3 +10,4 @@
+   foo-9
+   foo-10
+   foo-11
+  +line
+
   $ hg export ""
   hg: parse error: empty query
   [255]
