@@ -446,7 +446,7 @@ def reposetup(ui, repo):
             the largefiles.
             So we do the following:
             For directories that only have largefiles as matches,
-            we explicitly add the largefiles to the matchlist and remove
+            we explicitly add the largefiles to the match list and remove
             the directory.
             In other cases, we leave the match list unmodified.
             '''

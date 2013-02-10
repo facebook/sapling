@@ -564,7 +564,7 @@ We would expect heads are I, F if it was supported
   
   $ cd ..
 
-More complexe rebase with multiple roots
+More complex rebase with multiple roots
 each root have a different common ancestor with the destination and this is a detach
 
 (setup)

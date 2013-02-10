@@ -426,12 +426,12 @@ class filectx(object):
             # repository is filtered this may lead to `filectx` trying to build
             # `changectx` for filtered revision. In such case we fallback to
             # creating `changectx` on the unfiltered version of the reposition.
-            # This fallback should not be an issue because`changectx` from
-            # `filectx` are not used in complexe operation that care about
+            # This fallback should not be an issue because `changectx` from
+            # `filectx` are not used in complex operations that care about
             # filtering.
             #
             # This fallback is a cheap and dirty fix that prevent several
-            # crash. It does not ensure the behavior is correct. However the
+            # crashes. It does not ensure the behavior is correct. However the
             # behavior was not correct before filtering either and "incorrect
             # behavior" is seen as better as "crash"
             #

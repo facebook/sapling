@@ -179,7 +179,7 @@ editcomment = _("""# Edit history between %s and %s
 def commitfuncfor(repo, src):
     """Build a commit function for the replacement of <src>
 
-    This function ensure we apply the same treatement to all changesets.
+    This function ensure we apply the same treatment to all changesets.
 
     - Add a 'histedit_source' entry in extra.
 
@@ -626,7 +626,7 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
                                      newchildren)
         replacements.extend(repl)
     elif newchildren:
-        # otherwize update "parentctx" before proceding to further operation
+        # otherwise update "parentctx" before proceeding to further operation
         parentctx = repo[newchildren[-1]]
     return parentctx, replacements
 

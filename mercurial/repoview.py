@@ -149,7 +149,7 @@ class repoview(object):
         repoview.method() --> repo.__class__.method(repoview)
 
     The inheritance has to be done dynamically because `repo` can be of any
-    subclasses of `localrepo`. Eg: `bundlerepo` or `httprepo`.
+    subclasses of `localrepo`. Eg: `bundlerepo` or `statichttprepo`.
     """
 
     def __init__(self, repo, filtername):
@@ -158,7 +158,7 @@ class repoview(object):
         object.__setattr__(self, '_clcachekey', None)
         object.__setattr__(self, '_clcache', None)
 
-    # not a cacheproperty on purpose we shall implement a proper cache later
+    # not a propertycache on purpose we shall implement a proper cache later
     @property
     def changelog(self):
         """return a filtered version of the changeset
@@ -210,7 +210,7 @@ class repoview(object):
     def __delattr__(self, attr):
         return delattr(self._unfilteredrepo, attr)
 
-    # The `requirement` attribut is initialiazed during __init__. But
+    # The `requirements` attribute is initialized during __init__. But
     # __getattr__ won't be called as it also exists on the class. We need
     # explicit forwarding to main repo here
     @property

@@ -95,7 +95,7 @@ class branchcache(dict):
     def _hashfiltered(self, repo):
         """build hash of revision filtered in the current cache
 
-        Tracking tipnode and tiprev is not enough to ensure validaty of the
+        Tracking tipnode and tiprev is not enough to ensure validity of the
         cache as they do not help to distinct cache that ignored various
         revision bellow tiprev.
 
@@ -114,9 +114,9 @@ class branchcache(dict):
         return key
 
     def validfor(self, repo):
-        """Is the cache content valide regarding a repo
+        """Is the cache content valid regarding a repo
 
-        - False when cached tipnode are unknown or if we detect a strip.
+        - False when cached tipnode is unknown or if we detect a strip.
         - True when cache is up to date or a subset of current repo."""
         try:
             return ((self.tipnode == repo.changelog.node(self.tiprev))

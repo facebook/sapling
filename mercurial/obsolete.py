@@ -46,7 +46,7 @@ Examples:
     (A, (C, C))
 
   We use a single marker to distinct the "split" case from the "divergence"
-  case. If two independants operation rewrite the same changeset A in to A' and
+  case. If two independents operation rewrite the same changeset A in to A' and
   A'' when have an error case: divergent rewriting. We can detect it because
   two markers will be created independently:
 
@@ -129,8 +129,9 @@ _fnodesize = struct.calcsize(_fmnode)
 #
 # But by transitivity Ad is also a successors of A. To avoid having Ad marked
 # as bumped too, we add the `bumpedfix` flag to the marker. <A', (Ad,)>.
-# This flag mean that the successors are an interdiff that fix the bumped
-# situation, breaking the transitivity of "bumped" here.
+# This flag mean that the successors express the changes between the public and
+# bumped version and fix the situation, breaking the transitivity of
+# "bumped" here.
 bumpedfix = 1
 
 def _readmarkers(data):
@@ -510,7 +511,7 @@ def successorssets(repo, initialnode, cache=None):
             #     In such a situation, we arbitrary set the successors sets of
             #     the node to nothing (node pruned) to break the cycle.
             #
-            #     If no break was encountered we proceeed to phase 2.
+            #     If no break was encountered we proceed to phase 2.
             #
             # Phase 2 computes successors sets of CURRENT (case 4); see details
             # in phase 2 itself.
@@ -551,13 +552,13 @@ def successorssets(repo, initialnode, cache=None):
                 # successors sets of all its "successors" node.
                 #
                 # Each different marker is a divergence in the obsolescence
-                # history. It contributes successors sets dictinct from other
+                # history. It contributes successors sets distinct from other
                 # markers.
                 #
                 # Within a marker, a successor may have divergent successors
                 # sets. In such a case, the marker will contribute multiple
                 # divergent successors sets. If multiple successors have
-                # divergents successors sets, a cartesian product is used.
+                # divergent successors sets, a cartesian product is used.
                 #
                 # At the end we post-process successors sets to remove
                 # duplicated entry and successors set that are strict subset of

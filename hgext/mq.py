@@ -282,7 +282,7 @@ def newcommit(repo, phase, *args, **kwargs):
     if phase is not None:
         backup = repo.ui.backupconfig('phases', 'new-commit')
     # Marking the repository as committing an mq patch can be used
-    # to optimize operations like _branchtags().
+    # to optimize operations like branchtags().
     repo._committingpatch = True
     try:
         if phase is not None:
@@ -1571,7 +1571,7 @@ class queue(object):
             r = list(dd)
             a = list(aa)
 
-            # create 'match' that includes the files to be recommited.
+            # create 'match' that includes the files to be recommitted.
             # apply matchfn via repo.status to ensure correct case handling.
             cm, ca, cr, cd = repo.status(patchparent, match=matchfn)[:4]
             allmatches = set(cm + ca + cr + cd)

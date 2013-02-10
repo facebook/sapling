@@ -268,7 +268,7 @@ def perfrevlog(ui, repo, file_, **opts):
 def perfrevset(ui, repo, expr, clear=False):
     """benchmark the execution time of a revset
 
-    Use the --clean option if need to evaluate the impact of build volative
+    Use the --clean option if need to evaluate the impact of build volatile
     revisions set cache on the revset execution. Volatile cache hold filtered
     and obsolete related cache."""
     def d():

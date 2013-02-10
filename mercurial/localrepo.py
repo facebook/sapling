@@ -49,7 +49,7 @@ class filteredpropertycache(propertycache):
 
 
 def hasunfilteredcache(repo, name):
-    """check if an repo and a unfilteredproperty cached value for <name>"""
+    """check if a repo has an unfilteredpropertycache value for <name>"""
     return name in vars(repo.unfiltered())
 
 def unfilteredmethod(orig):
@@ -310,13 +310,13 @@ class localrepository(object):
     def unfiltered(self):
         """Return unfiltered version of the repository
 
-        Intended to be ovewritten by filtered repo."""
+        Intended to be overwritten by filtered repo."""
         return self
 
     def filtered(self, name):
         """Return a filtered version of a repository"""
         # build a new class with the mixin and the current class
-        # (possibily subclass of the repo)
+        # (possibly subclass of the repo)
         class proxycls(repoview.repoview, self.unfiltered().__class__):
             pass
         return proxycls(self, name)
@@ -962,7 +962,7 @@ class localrepository(object):
             delattr(self.unfiltered(), 'dirstate')
 
     def invalidate(self):
-        unfiltered = self.unfiltered() # all filecaches are stored on unfiltered
+        unfiltered = self.unfiltered() # all file caches are stored unfiltered
         for k in self._filecache:
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
@@ -1397,12 +1397,6 @@ class localrepository(object):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
         place for anything that has to be done after destroying history.
-
-        If you know the branchheadcache was uptodate before nodes were removed
-        and you also know the set of candidate new heads that may have resulted
-        from the destruction, you can set newheadnodes.  This will enable the
-        code to update the branchheads cache, rather than having future code
-        decide it's invalid and regenerating it from scratch.
         '''
         # When one tries to:
         # 1) destroy nodes thus calling this method (e.g. strip)
@@ -1417,7 +1411,7 @@ class localrepository(object):
             self._phasecache.write()
 
         # update the 'served' branch cache to help read only server process
-        # Thanks to branchcach collaboration this is done from the nearest
+        # Thanks to branchcache collaboration this is done from the nearest
         # filtered subset and it is expected to be fast.
         branchmap.updatecache(self.filtered('served'))
 

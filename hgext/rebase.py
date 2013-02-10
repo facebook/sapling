@@ -692,8 +692,8 @@ def buildstate(repo, dest, rebaseset, collapse):
         # If we have multiple roots, we may have "hole" in the rebase set.
         # Rebase roots that descend from those "hole" should not be detached as
         # other root are. We use the special `revignored` to inform rebase that
-        # the revision should be ignored but that `defineparent` should search
-        # a rebase destination that make sense regarding rebaset topology.
+        # the revision should be ignored but that `defineparents` should search
+        # a rebase destination that make sense regarding rebased topology.
         rebasedomain = set(repo.revs('%ld::%ld', rebaseset, rebaseset))
         for ignored in set(rebasedomain) - set(rebaseset):
             state[ignored] = revignored
