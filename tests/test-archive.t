@@ -101,6 +101,18 @@ invalid arch type should give 404
       testing: test-archive-2c0277f05ed4/foo   OK
   No errors detected in compressed data of archive.zip.
 
+test that we can download single directories and files
+
+  $ python getarchive.py "$TIP" gz baz | gunzip | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/baz/bletch
+  $ python getarchive.py "$TIP" gz foo | gunzip | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/foo
+
+test that we reject unsafe patterns
+
+  $ python getarchive.py "$TIP" gz relre:baz
+  HTTP Error 403: Archive pattern not allowed: relre:baz
+
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
   $ hg archive -t tar test.tar

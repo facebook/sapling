@@ -816,6 +816,19 @@ def archive(web, req, tmpl):
     if cnode == key or key == 'tip':
         arch_version = short(cnode)
     name = "%s-%s" % (reponame, arch_version)
+
+    ctx = webutil.changectx(web.repo, req)
+    pats = []
+    file = req.form.get('file', None)
+    if file:
+        file = file[0]
+        patandfile = file.split(':')
+        if len(patandfile) > 1 and patandfile[0].lower() in ('glob', 'relglob',
+                'path', 'relpath', 're', 'relre', 'set'):
+            msg = 'Archive pattern not allowed: %s' % file
+            raise ErrorResponse(HTTP_FORBIDDEN, msg)
+        pats = ['path:' + file]
+
     mimetype, artype, extension, encoding = web.archive_specs[type_]
     headers = [
         ('Content-Disposition', 'attachment; filename=%s%s' % (name, extension))
@@ -825,9 +838,9 @@ def archive(web, req, tmpl):
     req.headers.extend(headers)
     req.respond(HTTP_OK, mimetype)
 
-    ctx = webutil.changectx(web.repo, req)
+    matchfn = scmutil.match(ctx, pats, default='path')
     archival.archive(web.repo, req, cnode, artype, prefix=name,
-                     matchfn=scmutil.match(ctx, []),
+                     matchfn=matchfn,
                      subrepos=web.configbool("web", "archivesubrepos"))
     return []
 
