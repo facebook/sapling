@@ -250,6 +250,8 @@ class obsstore(object):
         """
         if metadata is None:
             metadata = {}
+        if 'date' not in metadata:
+            metadata['date'] = "%d %d" % util.makedate()
         if len(prec) != 20:
             raise ValueError(prec)
         for succ in succs:
