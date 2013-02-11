@@ -677,9 +677,26 @@ class dirstate(object):
         # step 3: report unseen items in the dmap hash
         if not skipstep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
-            nf = iter(visit).next
-            for st in util.statfiles([join(i) for i in visit]):
-                results[nf()] = st
+            if unknown:
+                # unknown == True means we walked the full directory tree above.
+                # So if a file is not seen it was either a) not matching matchfn
+                # b) ignored, c) missing, or d) under a symlink directory.
+                audit_path = scmutil.pathauditor(self._root)
+
+                for nf in iter(visit):
+                    # Report ignored items in the dmap as long as they are not
+                    # under a symlink directory.
+                    if ignore(nf) and audit_path.check(nf):
+                        results[nf] = util.statfiles([join(nf)])[0]
+                    else:
+                        # It's either missing or under a symlink directory
+                        results[nf] = None
+            else:
+                # We may not have walked the full directory tree above,
+                # so stat everything we missed.
+                nf = iter(visit).next
+                for st in util.statfiles([join(i) for i in visit]):
+                    results[nf()] = st
         for s in subrepos:
             del results[s]
         del results['.hg']

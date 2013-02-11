@@ -1463,6 +1463,39 @@ The full set of options is:
 ``templates``
     Where to find the HTML templates. Default is install path.
 
+``websub``
+----------
+
+Web substitution filter definition. You can use this section to
+define a set of regular expression substitution patterns which
+let you automatically modify the hgweb server output.
+
+The default hgweb templates only apply these substitution patterns
+on the revision description fields. You can apply them anywhere
+you want when you create your own templates by adding calls to the
+"websub" filter (usually after calling the "escape" filter).
+
+This can be used, for example, to convert issue references to links
+to your issue tracker, or to convert "markdown-like" syntax into
+HTML (see the examples below).
+
+Each entry in this section names a substitution filter.
+The value of each entry defines the substitution expression itself.
+The websub expressions follow the old interhg extension syntax,
+which in turn imitates the Unix sed replacement syntax::
+
+    pattername = s/SEARCH_REGEX/REPLACE_EXPRESSION/[i]
+
+You can use any separator other than "/". The final "i" is optional
+and indicates that the search must be case insensitive.
+
+Examples::
+
+    [websub]
+    issues = s|issue(\d+)|<a href="http://bts.example.org/issue\1">issue\1</a>|i
+    italic = s/\b_(\S+)_\b/<i>\1<\/i>/
+    bold = s/\*\b(\S+)\b\*/<b>\1<\/b>/
+
 ``worker``
 ----------
 

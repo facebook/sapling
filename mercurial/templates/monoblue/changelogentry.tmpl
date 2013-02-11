@@ -2,5 +2,5 @@
 <ul class="changelog-entry">
     <li class="age">{date|rfc822date}</li>
     <li>by <span class="name">{author|obfuscate}</span> <span class="revdate">[{date|rfc822date}] rev {rev}</span></li>
-    <li class="description">{desc|strip|escape|addbreaks|nonempty}</li>
+    <li class="description">{desc|strip|escape|websub|addbreaks|nonempty}</li>
 </ul>
