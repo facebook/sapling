@@ -391,6 +391,15 @@ filters = {
     "xmlescape": xmlescape,
 }
 
+def websub(text, websubtable):
+    """:websub: Any text. Only applies to hgweb. Applies the regular
+    expression replacements defined in the websub section.
+    """
+    if websubtable:
+        for regexp, format in websubtable:
+            text = regexp.sub(format, text)
+    return text
+
 def fillfunc(context, mapping, args):
     if not (1 <= len(args) <= 2):
         raise error.ParseError(_("fill expects one or two arguments"))
