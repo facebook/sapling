@@ -1555,4 +1555,24 @@ Test that qfinish preserve phase when mq.secret=false
   1: secret
   2: secret
 
+Test that secret mq patch does not break hgweb
+
+  $ cat > hgweb.cgi <<HGWEB
+  > from mercurial import demandimport; demandimport.enable()
+  > from mercurial.hgweb import hgweb
+  > from mercurial.hgweb import wsgicgi
+  > import cgitb
+  > cgitb.enable()
+  > app = hgweb('.', 'test')
+  > wsgicgi.launch(app)
+  > HGWEB
+  $ . "$TESTDIR/cgienv"
+  $ PATH_INFO=/tags; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi | grep -v ETag:
+  Status: 200 Script output follows\r (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  tip	[0-9a-f]{40} (re)
+
   $ cd ..
