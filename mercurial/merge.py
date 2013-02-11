@@ -196,6 +196,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
     overwrite = force and not branchmerge
     actions, copy, movewithdir = [], {}, {}
 
+    followcopies = False
     if overwrite:
         pa = wctx
     elif pa == p2: # backwards
@@ -203,6 +204,13 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
     elif not branchmerge and not wctx.dirty(missing=True):
         pass
     elif pa and repo.ui.configbool("merge", "followcopies", True):
+        followcopies = True
+
+    # manifests fetched in order are going to be faster, so prime the caches
+    [x.manifest() for x in
+     sorted(wctx.parents() + [p2, pa], key=lambda x: x.rev())]
+
+    if followcopies:
         ret = copies.mergecopies(repo, wctx, p2, pa)
         copy, movewithdir, diverge, renamedelete = ret
         for of, fl in diverge.iteritems():
@@ -515,12 +523,12 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
             _checkcollision(mctx, None)
         else:
             _checkcollision(mctx, (tctx, ancestor))
-    if tctx.rev() is None:
-        actions += _forgetremoved(tctx, mctx, branchmerge)
     actions += manifestmerge(repo, tctx, mctx,
                              ancestor,
                              branchmerge, force,
                              partial)
+    if tctx.rev() is None:
+        actions += _forgetremoved(tctx, mctx, branchmerge)
     return actions
 
 def recordupdates(repo, actions, branchmerge):
