@@ -2106,7 +2106,9 @@ def debugknown(ui, repopath, *ids, **opts):
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
-    """create arbitrary obsolete marker"""
+    """create arbitrary obsolete marker
+
+    With no arguments it it display the list obsolescence marker."""
     def parsenodeid(s):
         try:
             # We do not use revsingle/revrange functions here to accept
