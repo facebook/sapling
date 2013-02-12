@@ -456,6 +456,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     wlock = repo.wlock()
     try:
         branch = repo.dirstate.branch()
+        bheads = repo.branchheads(branch)
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
         rctx = scmutil.revsingle(repo, hex(parent))
@@ -467,11 +468,17 @@ def backout(ui, repo, node=None, rev=None, **opts):
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
 
+        e = cmdutil.commiteditor
         if not opts['message'] and not opts['logfile']:
             # we don't translate commit messages
             opts['message'] = "Backed out changeset %s" % short(node)
-            opts['force_editor'] = True
-        commit(ui, repo, **opts)
+            e = cmdutil.commitforceeditor
+
+        def commitfunc(ui, repo, message, match, opts):
+            return repo.commit(message, opts.get('user'), opts.get('date'),
+                               match, editor=e)
+        newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
+        cmdutil.commitstatus(repo, newnode, branch, bheads)
 
         def nice(node):
             return '%d:%s' % (repo.changelog.rev(node), short(node))
