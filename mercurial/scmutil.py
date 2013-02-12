@@ -307,7 +307,7 @@ class vfs(abstractvfs):
             if basename:
                 if atomictemp:
                     if not os.path.isdir(dirname):
-                        util.makedirs(dirname, self.createmode)
+                        util.ensuredirs(dirname, self.createmode)
                     return util.atomictempfile(f, mode, self.createmode)
                 try:
                     if 'w' in mode:
@@ -326,7 +326,7 @@ class vfs(abstractvfs):
                         raise
                     nlink = 0
                     if not os.path.isdir(dirname):
-                        util.makedirs(dirname, self.createmode)
+                        util.ensuredirs(dirname, self.createmode)
                 if nlink > 0:
                     if self._trustnlink is None:
                         self._trustnlink = nlink > 1 or util.checknlink(f)
@@ -347,7 +347,7 @@ class vfs(abstractvfs):
 
         dirname = os.path.dirname(linkname)
         if not os.path.exists(dirname):
-            util.makedirs(dirname, self.createmode)
+            util.ensuredirs(dirname, self.createmode)
 
         if self._cansymlink:
             try:
