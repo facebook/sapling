@@ -458,12 +458,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
         branch = repo.dirstate.branch()
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
-        revert_opts = opts.copy()
-        revert_opts['date'] = None
-        revert_opts['all'] = True
-        revert_opts['rev'] = hex(parent)
-        revert_opts['no_backup'] = None
-        revert(ui, repo, **revert_opts)
+        rctx = scmutil.revsingle(repo, hex(parent))
+        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
         if not opts.get('merge') and op1 != node:
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
