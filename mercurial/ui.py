@@ -739,7 +739,7 @@ class ui(object):
         else:
             self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
 
-    def log(self, service, message):
+    def log(self, service, *msg, **opts):
         '''hook for logging facility extensions
 
         service should be a readily-identifiable subsystem, which will
