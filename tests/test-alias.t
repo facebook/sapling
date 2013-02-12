@@ -17,6 +17,7 @@
   > no-R = status -R elsewhere
   > no--repo = status --repo elsewhere
   > no--repository = status --repository elsewhere
+  > no--config = status --config a.config=1
   > mylog = log
   > lognull = log -r null
   > shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
@@ -106,6 +107,8 @@ invalid options
   error in definition for alias 'no--repository': --repository may only be given on the command line
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
+  $ hg no--config
+  error in definition for alias 'no--config': --config may only be given on the command line
 
 optional repository
 

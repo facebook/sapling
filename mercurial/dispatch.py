@@ -334,7 +334,7 @@ class cmdalias(object):
         self.cmdname = cmd = args.pop(0)
         args = map(util.expandpath, args)
 
-        for invalidarg in ("--cwd", "-R", "--repository", "--repo"):
+        for invalidarg in ("--cwd", "-R", "--repository", "--repo", "--config"):
             if _earlygetopt([invalidarg], args):
                 def fn(ui, *args):
                     ui.warn(_("error in definition for alias '%s': %s may only "
