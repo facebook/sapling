@@ -467,12 +467,12 @@ def backout(ui, repo, node=None, rev=None, **opts):
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
 
-        commit_opts = opts.copy()
-        if not commit_opts['message'] and not commit_opts['logfile']:
+        if not opts['message'] and not opts['logfile']:
             # we don't translate commit messages
-            commit_opts['message'] = "Backed out changeset %s" % short(node)
-            commit_opts['force_editor'] = True
-        commit(ui, repo, **commit_opts)
+            opts['message'] = "Backed out changeset %s" % short(node)
+            opts['force_editor'] = True
+        commit(ui, repo, **opts)
+
         def nice(node):
             return '%d:%s' % (repo.changelog.rev(node), short(node))
         ui.status(_('changeset %s backs out changeset %s\n') %
