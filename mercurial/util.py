@@ -882,13 +882,20 @@ def makedirs(name, mode=None):
 
 def ensuredirs(name, mode=None):
     """race-safe recursive directory creation"""
+    if os.path.isdir(name):
+        return
+    parent = os.path.dirname(os.path.abspath(name))
+    if parent != name:
+        ensuredirs(parent, mode)
     try:
-        makedirs(name, mode)
+        os.mkdir(name)
     except OSError, err:
         if err.errno == errno.EEXIST and os.path.isdir(name):
             # someone else seems to have won a directory creation race
             return
         raise
+    if mode is not None:
+        os.chmod(name, mode)
 
 def readfile(path):
     fp = open(path, 'rb')
