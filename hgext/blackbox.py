@@ -1,5 +1,6 @@
-# worker.py - master-slave parallelism support
+# blackbox.py - log repository events to a file for post-mortem debugging
 #
+# Copyright 2010 Nicolas Dumazet
 # Copyright 2013 Facebook, Inc.
 #
 # This software may be used and distributed according to the terms of the
