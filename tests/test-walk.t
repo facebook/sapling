@@ -155,7 +155,7 @@
   abort: path 'mammals/.hg' is inside nested repo 'mammals' (glob)
   [255]
   $ hg debugwalk ../.hg
-  abort: path contains illegal component: .hg (glob)
+  abort: path contains illegal component: .hg
   [255]
   $ cd ..
 
@@ -187,10 +187,10 @@
   abort: beans/../.. not under root '$TESTTMP/t' (glob)
   [255]
   $ hg debugwalk .hg
-  abort: path contains illegal component: .hg (glob)
+  abort: path contains illegal component: .hg
   [255]
   $ hg debugwalk beans/../.hg
-  abort: path contains illegal component: .hg (glob)
+  abort: path contains illegal component: .hg
   [255]
   $ hg debugwalk beans/../.hg/data
   abort: path contains illegal component: .hg/data (glob)
