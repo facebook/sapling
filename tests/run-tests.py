@@ -541,6 +541,8 @@ def rematch(el, l):
 def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
     # matches \ on windows. Escaping of these caracters is supported.
+    if el + '\n' == l:
+        return True
     i, n = 0, len(el)
     res = ''
     while i < n:
