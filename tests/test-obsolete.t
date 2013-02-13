@@ -816,7 +816,7 @@ This test issue 3805
      summary:     A
   
   $ hg incoming
-  comparing with $TESTTMP/tmpe/repo-issue3805
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
   changeset:   2:3816541e5485
   tag:         tip
@@ -826,7 +826,7 @@ This test issue 3805
   summary:     A
   
   $ hg incoming --bundle ../issue3805.hg
-  comparing with $TESTTMP/tmpe/repo-issue3805
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
   changeset:   2:3816541e5485
   tag:         tip
@@ -836,7 +836,7 @@ This test issue 3805
   summary:     A
   
   $ hg outgoing
-  comparing with $TESTTMP/tmpe/repo-issue3805
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
   no changes found
   [1]
