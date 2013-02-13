@@ -98,7 +98,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         readablefunc = funcname
         if isinstance(funcname, types.FunctionType):
             readablefunc = funcname.__module__ + "." + funcname.__name__
-        ui.log('pythonhook', _('pythonhook-%s: %s finished in %0.2f seconds\n'),
+        ui.log('pythonhook', 'pythonhook-%s: %s finished in %0.2f seconds\n',
                name, readablefunc, duration)
     if r:
         if throw:
@@ -132,7 +132,7 @@ def _exthook(ui, repo, name, cmd, args, throw):
         r = util.system(cmd, environ=env, cwd=cwd, out=ui.fout)
 
     duration = time.time() - starttime
-    ui.log('exthook', _('exthook-%s: %s finished in %0.2f seconds\n'),
+    ui.log('exthook', 'exthook-%s: %s finished in %0.2f seconds\n',
            name, cmd, duration)
     if r:
         desc, r = util.explainexit(r)

@@ -747,7 +747,7 @@ def _dispatch(req):
         return ret
     finally:
         duration = time.time() - starttime
-        ui.log("commandfinish", _("%s exited %s after %0.2f seconds\n"),
+        ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
                cmd, ret, duration)
         if repo and repo != req.repo:
             repo.close()
