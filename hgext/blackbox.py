@@ -24,7 +24,7 @@ Examples:
 
 from mercurial import util, cmdutil
 from mercurial.i18n import _
-import os, getpass, re, string
+import os, getpass, re
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
