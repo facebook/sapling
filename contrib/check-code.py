@@ -105,7 +105,10 @@ utestpats = [
      "use (glob) to match Windows paths too"),
   ],
   # warnings
-  []
+  [
+    (r'^  [^*?/\n]* \(glob\)$',
+     "warning: glob match with no glob character (?*/)"),
+  ]
 ]
 
 for i in [0, 1]:
