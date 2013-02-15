@@ -14,6 +14,19 @@ propertycache = util.propertycache
 
 nullstate = ('', '', 'empty')
 
+
+def _getstorehashcachename(remotepath):
+    '''get a unique filename for the store hash cache of a remote repository'''
+    return util.sha1(remotepath).hexdigest()[0:12]
+
+def _calcfilehash(filename):
+    data = ''
+    if os.path.exists(filename):
+        fd = open(filename)
+        data = fd.read()
+        fd.close()
+    return util.sha1(data).hexdigest()
+
 class SubrepoAbort(error.Abort):
     """Exception class used to avoid handling a subrepo error more than once"""
     def __init__(self, *args, **kw):
