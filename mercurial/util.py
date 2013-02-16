@@ -873,10 +873,10 @@ class atomictempfile(object):
         if safehasattr(self, '_fp'): # constructor actually did something
             self.discard()
 
-def makedirs(name, mode=None):
+def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance"""
     try:
-        os.mkdir(name)
+        makedir(name, notindexed)
     except OSError, err:
         if err.errno == errno.EEXIST:
             return
@@ -885,8 +885,8 @@ def makedirs(name, mode=None):
         parent = os.path.dirname(os.path.abspath(name))
         if parent == name:
             raise
-        makedirs(parent, mode)
-        os.mkdir(name)
+        makedirs(parent, mode, notindexed)
+        makedir(name, notindexed)
     if mode is not None:
         os.chmod(name, mode)
 
