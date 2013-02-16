@@ -313,6 +313,13 @@ def subrepo(ctx, path):
 
 class abstractsubrepo(object):
 
+    def storeclean(self, path):
+        """
+        returns true if the repository has not changed since it was last
+        cloned from or pushed to a given repository.
+        """
+        return False
+
     def dirty(self, ignoreupdate=False):
         """returns true if the dirstate of the subrepo is dirty or does not
         match current stored state. If ignoreupdate is true, only check
