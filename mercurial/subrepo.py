@@ -14,10 +14,19 @@ propertycache = util.propertycache
 
 nullstate = ('', '', 'empty')
 
+def _expandedabspath(path):
+    '''
+    get a path or url and if it is a path expand it and return an absolute path
+    '''
+    expandedpath = util.urllocalpath(util.expandpath(path))
+    u = util.url(expandedpath)
+    if not u.scheme:
+        path = util.normpath(os.path.abspath(u.path))
+    return path
 
 def _getstorehashcachename(remotepath):
     '''get a unique filename for the store hash cache of a remote repository'''
-    return util.sha1(remotepath).hexdigest()[0:12]
+    return util.sha1(_expandedabspath(remotepath)).hexdigest()[0:12]
 
 def _calcfilehash(filename):
     data = ''
@@ -475,10 +484,10 @@ class hgsubrepo(abstractsubrepo):
         require a push to a given remote path.'''
         # sort the files that will be hashed in increasing (likely) file size
         filelist = ('bookmarks', 'store/phaseroots', 'store/00changelog.i')
-        yield '# %s\n' % remotepath
+        yield '# %s\n' % _expandedabspath(remotepath)
         for relname in filelist:
             absname = os.path.normpath(self._repo.join(relname))
-            yield '%s = %s\n' % (absname, _calcfilehash(absname))
+            yield '%s = %s\n' % (relname, _calcfilehash(absname))
 
     def _getstorehashcachepath(self, remotepath):
         '''get a unique path for the store hash cache'''
@@ -691,6 +700,12 @@ class hgsubrepo(abstractsubrepo):
                 return False
 
         dsturl = _abssource(self._repo, True)
+        if not force:
+            if self.storeclean(dsturl):
+                self._repo.ui.status(
+                    _('no changes made to subrepo %s since last push to %s\n')
+                    % (subrelpath(self), dsturl))
+                return None
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
         other = hg.peer(self._repo, {'ssh': ssh}, dsturl)
