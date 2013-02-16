@@ -446,6 +446,72 @@ class hgsubrepo(abstractsubrepo):
         self._repo.ui.setconfig('ui', '_usedassubrepo', 'True')
         self._initrepo(r, state[0], create)
 
+    def storeclean(self, path):
+        clean = True
+        lock = self._repo.lock()
+        itercache = self._calcstorehash(path)
+        try:
+            for filehash in self._readstorehashcache(path):
+                if filehash != itercache.next():
+                    clean = False
+                    break
+        except StopIteration:
+            # the cached and current pull states have a different size
+            clean = False
+        if clean:
+            try:
+                itercache.next()
+                # the cached and current pull states have a different size
+                clean = False
+            except StopIteration:
+                pass
+        lock.release()
+        return clean
+
+    def _calcstorehash(self, remotepath):
+        '''calculate a unique "store hash"
+
+        This method is used to to detect when there are changes that may
+        require a push to a given remote path.'''
+        # sort the files that will be hashed in increasing (likely) file size
+        filelist = ('bookmarks', 'store/phaseroots', 'store/00changelog.i')
+        yield '# %s\n' % remotepath
+        for relname in filelist:
+            absname = os.path.normpath(self._repo.join(relname))
+            yield '%s = %s\n' % (absname, _calcfilehash(absname))
+
+    def _getstorehashcachepath(self, remotepath):
+        '''get a unique path for the store hash cache'''
+        return self._repo.join(os.path.join(
+            'cache', 'storehash', _getstorehashcachename(remotepath)))
+
+    def _readstorehashcache(self, remotepath):
+        '''read the store hash cache for a given remote repository'''
+        cachefile = self._getstorehashcachepath(remotepath)
+        if not os.path.exists(cachefile):
+            return ''
+        fd = open(cachefile, 'r')
+        pullstate = fd.readlines()
+        fd.close()
+        return pullstate
+
+    def _cachestorehash(self, remotepath):
+        '''cache the current store hash
+
+        Each remote repo requires its own store hash cache, because a subrepo
+        store may be "clean" versus a given remote repo, but not versus another
+        '''
+        cachefile = self._getstorehashcachepath(remotepath)
+        lock = self._repo.lock()
+        storehash = list(self._calcstorehash(remotepath))
+        cachedir = os.path.dirname(cachefile)
+        if not os.path.exists(cachedir):
+            util.makedirs(cachedir, notindexed=True)
+        fd = open(cachefile, 'w')
+        fd.writelines(storehash)
+        fd.close()
+        lock.release()
+
     @annotatesubrepoerror
     def _initrepo(self, parentrepo, source, create):
         self._repo._subparent = parentrepo
@@ -564,13 +630,18 @@ class hgsubrepo(abstractsubrepo):
                                          update=False)
                 self._repo = cloned.local()
                 self._initrepo(parentrepo, source, create=True)
+                self._cachestorehash(srcurl)
             else:
                 self._repo.ui.status(_('pulling subrepo %s from %s\n')
                                      % (subrelpath(self), srcurl))
+                cleansub = self.storeclean(srcurl)
                 remotebookmarks = other.listkeys('bookmarks')
                 self._repo.pull(other)
                 bookmarks.updatefromremote(self._repo.ui, self._repo,
                                            remotebookmarks, srcurl)
+                if cleansub:
+                    # keep the repo clean after pull
+                    self._cachestorehash(srcurl)
 
     @annotatesubrepoerror
     def get(self, state, overwrite=False):
@@ -623,7 +694,11 @@ class hgsubrepo(abstractsubrepo):
         self._repo.ui.status(_('pushing subrepo %s to %s\n') %
             (subrelpath(self), dsturl))
         other = hg.peer(self._repo, {'ssh': ssh}, dsturl)
-        return self._repo.push(other, force, newbranch=newbranch)
+        res = self._repo.push(other, force, newbranch=newbranch)
+
+        # the repo is now clean
+        self._cachestorehash(dsturl)
+        return res
 
     @annotatesubrepoerror
     def outgoing(self, ui, dest, opts):
