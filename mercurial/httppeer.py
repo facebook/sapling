@@ -151,7 +151,7 @@ class httppeer(wireproto.wirepeer):
             raise error.RepoError(
                 _("'%s' does not appear to be an hg repository:\n"
                   "---%%<--- (%s)\n%s\n---%%<---\n")
-                % (safeurl, proto or 'no content-type', resp.read()))
+                % (safeurl, proto or 'no content-type', resp.read(1024)))
 
         if proto.startswith('application/mercurial-'):
             try:
