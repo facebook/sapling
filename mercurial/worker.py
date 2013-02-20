@@ -92,11 +92,16 @@ def _posixworker(ui, func, staticargs, args):
     def cleanup():
         # python 2.4 is too dumb for try/yield/finally
         signal.signal(signal.SIGINT, oldhandler)
-        problems = 0
+        problem = None
         for i in xrange(workers):
-            problems |= os.wait()[1]
-        if problems:
-            sys.exit(1)
+            pid, st = os.wait()
+            st = _exitstatus(st)
+            if st and not problem:
+                problem = st
+        if problem:
+            if problem < 0:
+                os.kill(os.getpid(), -problem)
+            sys.exit(problem)
     try:
         for line in fp:
             l = line.split(' ', 1)
@@ -106,8 +111,19 @@ def _posixworker(ui, func, staticargs, args):
         raise
     cleanup()
 
+def _posixexitstatus(code):
+    '''convert a posix exit status into the same form returned by
+    os.spawnv
+
+    returns None if the process was stopped instead of exiting'''
+    if os.WIFEXITED(code):
+        return os.WEXITSTATUS(code)
+    elif os.WIFSIGNALED(code):
+        return -os.WTERMSIG(code)
+
 if os.name != 'nt':
     _platformworker = _posixworker
+    _exitstatus = _posixexitstatus
 
 def partition(lst, nslices):
     '''partition a list into N slices of equal size'''
