@@ -75,9 +75,12 @@ def worker(ui, costperarg, func, staticargs, args):
 def _posixworker(ui, func, staticargs, args):
     rfd, wfd = os.pipe()
     workers = _numworkers(ui)
+    oldhandler = signal.getsignal(signal.SIGINT)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
     for pargs in partition(args, workers):
         pid = os.fork()
         if pid == 0:
+            signal.signal(signal.SIGINT, oldhandler)
             try:
                 os.close(rfd)
                 for i, item in func(*(staticargs + (pargs,))):
@@ -87,8 +90,6 @@ def _posixworker(ui, func, staticargs, args):
                 os._exit(255)
     os.close(wfd)
     fp = os.fdopen(rfd, 'rb', 0)
-    oldhandler = signal.getsignal(signal.SIGINT)
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
     def cleanup():
         # python 2.4 is too dumb for try/yield/finally
         signal.signal(signal.SIGINT, oldhandler)
