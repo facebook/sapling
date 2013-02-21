@@ -253,6 +253,7 @@ pulling new git branch should not create tracking branch named 'origin/b2'
 (issue3870)
   $ cd ../td/s
   $ git remote set-url origin $TESTTMP/tb/s
+  $ git branch --no-track oldtesting
   $ cd ..
   $ hg pull -q ../tb
   $ hg up
