@@ -1,5 +1,6 @@
 import os
 import osutil
+import util
 import _winreg
 
 def systemrcpath():
