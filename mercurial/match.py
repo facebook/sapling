@@ -62,6 +62,7 @@ class match(object):
         self._files = []
         self._anypats = bool(include or exclude)
         self._ctx = ctx
+        self._always = False
 
         if include:
             pats = _normalize(include, 'glob', root, cwd, auditor)
@@ -103,6 +104,7 @@ class match(object):
                     m = lambda f: not em(f)
                 else:
                     m = lambda f: True
+                    self._always = True
 
         self.matchfn = m
         self._fmap = set(self._files)
@@ -130,7 +132,7 @@ class match(object):
     def anypats(self):
         return self._anypats
     def always(self):
-        return False
+        return self._always
 
 class exact(match):
     def __init__(self, root, cwd, files):
@@ -139,8 +141,7 @@ class exact(match):
 class always(match):
     def __init__(self, root, cwd):
         match.__init__(self, root, cwd, [])
-    def always(self):
-        return True
+        self._always = True
 
 class narrowmatcher(match):
     """Adapt a matcher to work on a subdirectory only.
@@ -175,6 +176,7 @@ class narrowmatcher(match):
         self._cwd = matcher._cwd
         self._path = path
         self._matcher = matcher
+        self._always = matcher._always
 
         self._files = [f[len(path) + 1:] for f in matcher._files
                        if f.startswith(path + "/")]
