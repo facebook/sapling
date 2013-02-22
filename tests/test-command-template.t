@@ -43,6 +43,9 @@ Second branch starting at nullrev:
   $ hg mv second fourth
   $ hg commit -m third -d "2020-01-01 10:01"
 
+  $ hg log --template '{file_copies % "{source} -> {name}\n"}' -r .
+  second -> fourth
+
 Quoting for ui.logtemplate
 
   $ hg tip --config "ui.logtemplate={rev}\n"

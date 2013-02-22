@@ -244,8 +244,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies',
-                    element='file', **args)
+    f = _showlist('file_copy', c, plural='file_copies', **args)
+    return _hybrid(f, c)
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -256,8 +256,8 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies',
-                    element='file', **args)
+    f = _showlist('file_copy', c, plural='file_copies', **args)
+    return _hybrid(f, c)
 
 def showfiledels(**args):
     """:file_dels: List of strings. Files removed by this changeset."""
