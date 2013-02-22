@@ -1210,6 +1210,13 @@ def walkchangerevs(repo, match, opts, prepare):
             if ff.match(x):
                 wanted.discard(x)
 
+    # Choose a small initial window if we will probably only visit a
+    # few commits.
+    limit = loglimit(opts)
+    windowsize = 8
+    if limit:
+        windowsize = min(limit, windowsize)
+
     # Now that wanted is correctly initialized, we can iterate over the
     # revision range, yielding only revisions in wanted.
     def iterate():
@@ -1221,7 +1228,7 @@ def walkchangerevs(repo, match, opts, prepare):
             def want(rev):
                 return rev in wanted
 
-        for i, window in increasingwindows(0, len(revs)):
+        for i, window in increasingwindows(0, len(revs), windowsize):
             nrevs = [rev for rev in revs[i:i + window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)

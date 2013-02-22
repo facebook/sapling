@@ -4215,10 +4215,10 @@ def log(ui, repo, *pats, **opts):
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
 
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
-        if count == limit:
-            break
         if displayer.flush(ctx.rev()):
             count += 1
+        if count == limit:
+            break
     displayer.close()
 
 @command('manifest',

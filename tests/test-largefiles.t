@@ -883,9 +883,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding file changes
   added 6 changesets with 16 changes to 8 files
   (run 'hg update' to get a working copy)
-  caching largefiles for 1 heads
-  3 largefiles cached
-  3 additional largefiles cached
+  6 additional largefiles cached
   $ cd ..
 
 Rebasing between two repositories does not revert largefiles to old
@@ -974,8 +972,6 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching largefiles for 1 heads
-  0 largefiles cached
   $ hg rebase
   Invoking status precommit hook
   M sub/normal4
@@ -1265,7 +1261,8 @@ correctly.
   $ hg commit -m "Modify large4 to test merge"
   Invoking status precommit hook
   M sub/large4
-  $ hg pull ../e
+# Test --cache-largefiles flag
+  $ hg pull --cache-largefiles ../e
   pulling from ../e
   searching for changes
   adding changesets
