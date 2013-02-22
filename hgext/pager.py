@@ -94,6 +94,8 @@ def _pagersubprocess(ui, p):
 
     @atexit.register
     def killpager():
+        if util.safehasattr(signal, "SIGINT"):
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
         pager.stdin.close()
         os.dup2(stdout, sys.stdout.fileno())
         os.dup2(stderr, sys.stderr.fileno())
