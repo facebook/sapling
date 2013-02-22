@@ -508,9 +508,15 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     ui.status(_('creating changesets\n'))
 
+    # try to order commitids by date
+    mindate = {}
+    for e in log:
+        if e.commitid:
+            mindate[e.commitid] = min(e.date, mindate.get(e.commitid))
+
     # Merge changesets
-    log.sort(key=lambda x: (x.commitid, x.comment, x.author, x.branch, x.date,
-                            x.branchpoints))
+    log.sort(key=lambda x: (mindate.get(x.commitid), x.commitid, x.comment,
+                            x.author, x.branch, x.date, x.branchpoints))
 
     changesets = []
     files = set()
