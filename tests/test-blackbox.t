@@ -57,7 +57,7 @@ clone, commit, pull
   (run 'hg update' to get a working copy)
   $ hg blackbox -l 3
   1970/01/01 00:00:00 bob> pull
-  1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62 (glob)
+  1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62
   1970/01/01 00:00:00 bob> pull exited None after * seconds (glob)
 
 extension and python hooks - use the eol extension for a pythonhook

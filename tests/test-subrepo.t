@@ -269,9 +269,9 @@ clone
   $ cd ..
   $ hg clone t tc
   updating to branch default
-  cloning subrepo s from $TESTTMP/t/s (glob)
+  cloning subrepo s from $TESTTMP/t/s
   cloning subrepo s/ss from $TESTTMP/t/s/ss (glob)
-  cloning subrepo t from $TESTTMP/t/t (glob)
+  cloning subrepo t from $TESTTMP/t/t
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd tc
   $ hg debugsub
@@ -292,10 +292,10 @@ push
   pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s
   searching for changes
   no changes found
-  pushing subrepo t to $TESTTMP/t/t (glob)
+  pushing subrepo t to $TESTTMP/t/t
   searching for changes
   adding changesets
   adding manifests
@@ -317,7 +317,7 @@ push -f
   pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s
   searching for changes
   abort: push creates new remote head 12a213df6fa9! (in subrepo s)
   (did you forget to merge? use push -f to force)
@@ -327,13 +327,13 @@ push -f
   pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   no changes found
-  pushing subrepo s to $TESTTMP/t/s (glob)
+  pushing subrepo s to $TESTTMP/t/s
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  pushing subrepo t to $TESTTMP/t/t (glob)
+  pushing subrepo t to $TESTTMP/t/t
   searching for changes
   no changes found
   searching for changes
@@ -366,7 +366,7 @@ pull
 should pull t
 
   $ hg up
-  pulling subrepo t from $TESTTMP/t/t (glob)
+  pulling subrepo t from $TESTTMP/t/t
   searching for changes
   adding changesets
   adding manifests
@@ -572,7 +572,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   adding .hgsub
   $ hg clone repo repo2
   updating to branch default
-  cloning subrepo s from $TESTTMP/repo/s (glob)
+  cloning subrepo s from $TESTTMP/repo/s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -q -R repo2 pull -u
   $ echo 1 > repo2/s/a
