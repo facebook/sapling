@@ -48,7 +48,7 @@ clone, commit, pull
   adding c
   $ cd ../blackboxtest2
   $ hg pull
-  pulling from $TESTTMP/blackboxtest
+  pulling from $TESTTMP/blackboxtest (glob)
   searching for changes
   adding changesets
   adding manifests
