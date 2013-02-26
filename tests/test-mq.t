@@ -1567,12 +1567,13 @@ Test that secret mq patch does not break hgweb
   > wsgicgi.launch(app)
   > HGWEB
   $ . "$TESTDIR/cgienv"
+#if msys
+  $ PATH_INFO=//tags; export PATH_INFO
+#else
   $ PATH_INFO=/tags; export PATH_INFO
+#endif
   $ QUERY_STRING='style=raw'
-  $ python hgweb.cgi | grep -v ETag:
-  Status: 200 Script output follows\r (esc)
-  Content-Type: text/plain; charset=ascii\r (esc)
-  \r (esc)
+  $ python hgweb.cgi | grep '^tip'
   tip	[0-9a-f]{40} (re)
 
   $ cd ..
