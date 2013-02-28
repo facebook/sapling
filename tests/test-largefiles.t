@@ -1261,6 +1261,42 @@ revert some files to an older revision
 
 - cleanup
   $ rm $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  $ rm -f .hglf/sub/*.orig
+
+Update to revision with missing largefile - and make sure it really is missing
+
+  $ rm ${USERCACHE}/7838695e10da2bb75ac1156565f40a2595fa2fa0
+  $ hg up -r 6
+  getting changed largefiles
+  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  1 largefiles updated, 2 removed
+  4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ rm normal3
+  $ echo >> sub/normal4
+  $ hg ci -m 'commit with missing files'
+  Invoking status precommit hook
+  M sub/normal4
+  ! large3
+  ! normal3
+  created new head
+  $ hg st
+  ! large3
+  ! normal3
+  $ hg up -r.
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st
+  ! large3
+  ! normal3
+  $ hg up -Cr.
+  getting changed largefiles
+  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st
+  ! large3
+  $ hg rollback
+  repository tip rolled back to revision 9 (undo commit)
+  working directory now based on revision 6
 
 Pulling 0 revisions with --all-largefiles should not fetch for all revisions
 
