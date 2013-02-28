@@ -450,7 +450,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if printmessage and lfiles:
             ui.status(_('getting changed largefiles\n'))
             printed = True
-            cachelfiles(ui, repo, '.', lfiles)
+            cachelfiles(ui, repo, None, lfiles)
 
         updated, removed = 0, 0
         for f in lfiles:

@@ -1298,6 +1298,25 @@ Update to revision with missing largefile - and make sure it really is missing
   repository tip rolled back to revision 9 (undo commit)
   working directory now based on revision 6
 
+Merge with revision with missing largefile - and make sure it tries to fetch it.
+
+  $ hg up -Cqr null
+  $ echo f > f
+  $ hg ci -Am branch
+  adding f
+  Invoking status precommit hook
+  A f
+  created new head
+  $ hg merge -r 6
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  1 largefiles updated, 0 removed
+
+  $ hg rollback -q
+  $ hg up -Cq
+
 Pulling 0 revisions with --all-largefiles should not fetch for all revisions
 
   $ hg pull --all-largefiles
