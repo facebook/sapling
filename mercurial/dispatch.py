@@ -737,7 +737,7 @@ def _dispatch(req):
         ui.warn(_("warning: --repository ignored\n"))
 
     msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
-    ui.log("command", msg + "\n")
+    ui.log("command", '%s\n', msg)
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
     starttime = time.time()
     ret = None
