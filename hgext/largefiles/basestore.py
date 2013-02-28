@@ -60,6 +60,8 @@ class basestore(object):
         missing = []
         ui = self.ui
 
+        util.makedirs(lfutil.storepath(self.repo, ''))
+
         at = 0
         for filename, hash in files:
             ui.progress(_('getting largefiles'), at, unit='lfile',

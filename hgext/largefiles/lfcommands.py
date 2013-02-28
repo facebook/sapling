@@ -8,7 +8,7 @@
 
 '''High-level command function for lfconvert, plus the cmdtable.'''
 
-import os
+import os, errno
 import shutil
 
 from mercurial import util, match as match_, hg, node, context, error, \
@@ -403,22 +403,13 @@ def cachelfiles(ui, repo, node, filelist=None):
     toget = []
 
     for lfile in lfiles:
-        # If we are mid-merge, then we have to trust the standin that is in the
-        # working copy to have the correct hashvalue.  This is because the
-        # original hg.merge() already updated the standin as part of the normal
-        # merge process -- we just have to update the largefile to match.
-        if (getattr(repo, "_ismerging", False) and
-             os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
-            expectedhash = lfutil.readstandin(repo, lfile)
-        else:
+        try:
             expectedhash = repo[node][lfutil.standin(lfile)].data().strip()
-
-        # if it exists and its hash matches, it might have been locally
-        # modified before updating and the user chose 'local'.  in this case,
-        # it will not be in any store, so don't look for it.
-        if ((not os.path.exists(repo.wjoin(lfile)) or
-             expectedhash != lfutil.hashfile(repo.wjoin(lfile))) and
-            not lfutil.findfile(repo, expectedhash)):
+        except IOError, err:
+            if err.errno == errno.ENOENT:
+                continue # node must be None and standin wasn't found in wctx
+            raise
+        if not lfutil.findfile(repo, expectedhash):
             toget.append((lfile, expectedhash))
 
     if toget:
@@ -435,11 +426,12 @@ def downloadlfiles(ui, repo, rev=None):
         pass
     totalsuccess = 0
     totalmissing = 0
-    for ctx in cmdutil.walkchangerevs(repo, matchfn, {'rev' : rev},
-                                      prepare):
-        success, missing = cachelfiles(ui, repo, ctx.node())
-        totalsuccess += len(success)
-        totalmissing += len(missing)
+    if rev != []: # walkchangerevs on empty list would return all revs
+        for ctx in cmdutil.walkchangerevs(repo, matchfn, {'rev' : rev},
+                                          prepare):
+            success, missing = cachelfiles(ui, repo, ctx.node())
+            totalsuccess += len(success)
+            totalmissing += len(missing)
     ui.status(_("%d additional largefiles cached\n") % totalsuccess)
     if totalmissing > 0:
         ui.status(_("%d largefiles failed to download\n") % totalmissing)
@@ -458,7 +450,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if printmessage and lfiles:
             ui.status(_('getting changed largefiles\n'))
             printed = True
-            cachelfiles(ui, repo, '.', lfiles)
+            cachelfiles(ui, repo, None, lfiles)
 
         updated, removed = 0, 0
         for f in lfiles:
@@ -500,6 +492,8 @@ def _updatelfile(repo, lfdirstate, lfile):
                 # use normallookup() to allocate entry in largefiles dirstate,
                 # because lack of it misleads lfilesrepo.status() into
                 # recognition that such cache missing files are REMOVED.
+                if lfile not in repo[None]: # not switched to normal file
+                    util.unlinkpath(abslfile, ignoremissing=True)
                 lfdirstate.normallookup(lfile)
                 return None # don't try to set the mode
             else:

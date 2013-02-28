@@ -299,9 +299,9 @@ def reposetup(ui, repo):
                     lfdirstate = lfutil.openlfdirstate(ui, self)
                     dirtymatch = match_.always(self.root, self.getcwd())
                     s = lfdirstate.status(dirtymatch, [], False, False, False)
-                    modifiedfiles = []
-                    for i in s:
-                        modifiedfiles.extend(i)
+                    (unsure, modified, added, removed, _missing, _unknown,
+                            _ignored, _clean) = s
+                    modifiedfiles = unsure + modified + added + removed
                     lfiles = lfutil.listlfiles(self)
                     # this only loops through largefiles that exist (not
                     # removed/renamed)
