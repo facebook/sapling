@@ -745,7 +745,7 @@ The CA chain and web.cacerts is not used for servers with a fingerprint.
 For example::
 
     [hostfingerprints]
-    hg.intevation.org = 38:76:52:7c:87:26:9a:8f:4a:f8:d3:de:08:45:3b:ea:d6:4b:ee:cc
+    hg.intevation.org = 44:ed:af:1f:97:11:b6:01:7a:48:45:fc:10:3c:b7:f9:d4:89:2a:9d
 
 This feature is only supported when using Python 2.6 or later.
 
