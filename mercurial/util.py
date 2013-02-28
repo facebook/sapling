@@ -1268,7 +1268,18 @@ def ellipsis(text, maxlength=400):
     except (UnicodeDecodeError, UnicodeEncodeError):
         return _ellipsis(text, maxlength)[0]
 
-_byteunits = (
+def unitcountfn(*unittable):
+    '''return a function that renders a readable count of some quantity'''
+
+    def go(count):
+        for multiplier, divisor, format in unittable:
+            if count >= divisor * multiplier:
+                return format % (count / float(divisor))
+        return unittable[-1][2] % count
+
+    return go
+
+bytecount = unitcountfn(
     (100, 1 << 30, _('%.0f GB')),
     (10, 1 << 30, _('%.1f GB')),
     (1, 1 << 30, _('%.2f GB')),
@@ -1280,14 +1291,6 @@ _byteunits = (
     (1, 1 << 10, _('%.2f KB')),
     (1, 1, _('%.0f bytes')),
     )
-
-def bytecount(nbytes):
-    '''return byte count formatted as readable string, with units'''
-
-    for multiplier, divisor, format in _byteunits:
-        if nbytes >= divisor * multiplier:
-            return format % (nbytes / float(divisor))
-    return _byteunits[-1][2] % nbytes
 
 def uirepr(s):
     # Avoid double backslash in Windows path repr()
