@@ -767,17 +767,6 @@ def hgclone(orig, ui, opts, *args, **kwargs):
         sourcerepo, destrepo = result
         repo = destrepo.local()
 
-        # The .hglf directory must exist for the standin matcher to match
-        # anything (which listlfiles uses for each rev), and .hg/largefiles is
-        # assumed to exist by the code that caches the downloaded file.  These
-        # directories exist if clone updated to any rev.  (If the repo does not
-        # have largefiles, download never gets to the point of needing
-        # .hg/largefiles, and the standin matcher won't match anything anyway.)
-        if 'largefiles' in repo.requirements:
-            if opts.get('noupdate'):
-                util.makedirs(repo.wjoin(lfutil.shortname))
-                util.makedirs(repo.join(lfutil.longname))
-
         # Caching is implicitly limited to 'rev' option, since the dest repo was
         # truncated at that point.  The user may expect a download count with
         # this option, so attempt whether or not this is a largefile repo.
