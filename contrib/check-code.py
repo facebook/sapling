@@ -104,6 +104,7 @@ utestpats = [
     (uprefix + r'\s', "don't indent commands, use > for continued lines"),
     (r'^  saved backup bundle to \$TESTTMP.*\.hg$', winglobmsg),
     (r'^  changeset .* references (corrupted|missing) \$TESTTMP/.*[^)]$', winglobmsg),
+    (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
   ],
   # warnings
   [
