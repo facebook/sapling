@@ -84,8 +84,7 @@ Verify that largefiles from pulled branchheads are fetched, also to an empty rep
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   caching new largefiles
-  abort: *: '$TESTTMP/mirror2/.hg/largefiles/.7f7097b041ccf68cc5561e9600da4655d21c6d18.*' (glob)
-  [255]
+  1 largefiles cached
 
 #if unix-permissions
 
