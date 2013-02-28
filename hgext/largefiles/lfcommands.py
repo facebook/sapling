@@ -501,6 +501,8 @@ def _updatelfile(repo, lfdirstate, lfile):
                 # use normallookup() to allocate entry in largefiles dirstate,
                 # because lack of it misleads lfilesrepo.status() into
                 # recognition that such cache missing files are REMOVED.
+                if lfile not in repo[None]: # not switched to normal file
+                    util.unlinkpath(abslfile, ignoremissing=True)
                 lfdirstate.normallookup(lfile)
                 return None # don't try to set the mode
             else:
