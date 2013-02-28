@@ -1224,9 +1224,9 @@ revert some files to an older revision
   changeset 3:9e8fbc4bce62: large1 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
   changeset 4:74c02385b94c: large3 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
   changeset 4:74c02385b94c: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
-  changeset 5:9d5af5072dbd: large3 references missing $TESTTMP/d/.hg/largefiles/baaf12afde9d8d67f25dab6dced0d2bf77dba47c
-  changeset 5:9d5af5072dbd: sub/large4 references missing $TESTTMP/d/.hg/largefiles/aeb2210d19f02886dde00dac279729a48471e2f9
-  changeset 6:4355d653f84f: large3 references missing $TESTTMP/d/.hg/largefiles/7838695e10da2bb75ac1156565f40a2595fa2fa0
+  changeset 5:9d5af5072dbd: large3 references missing $TESTTMP/d/.hg/largefiles/baaf12afde9d8d67f25dab6dced0d2bf77dba47c (glob)
+  changeset 5:9d5af5072dbd: sub/large4 references missing $TESTTMP/d/.hg/largefiles/aeb2210d19f02886dde00dac279729a48471e2f9 (glob)
+  changeset 6:4355d653f84f: large3 references missing $TESTTMP/d/.hg/largefiles/7838695e10da2bb75ac1156565f40a2595fa2fa0 (glob)
   [1]
 
 - cleanup
