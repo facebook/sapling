@@ -225,13 +225,9 @@ def getstandinmatcher(repo, pats=[], opts={}):
     standindir = repo.wjoin(shortname)
     if pats:
         pats = [os.path.join(standindir, pat) for pat in pats]
-    elif os.path.isdir(standindir):
+    else:
         # no patterns: relative to repo root
         pats = [standindir]
-    else:
-        # no patterns and no standin dir: return matcher that matches nothing
-        return match_.match(repo.root, None, [], exact=True)
-
     # no warnings about missing files or directories
     match = scmutil.match(repo[None], pats, opts)
     match.bad = lambda f, msg: None

@@ -73,6 +73,20 @@ Update working directory to tip, again.
   ! large
   $ cd ..
 
+Verify that largefiles from pulled branchheads are fetched, also to an empty repo
+
+  $ hg init mirror2
+  $ hg -R mirror2 pull src -r0
+  pulling from src
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  caching new largefiles
+  abort: *: '$TESTTMP/mirror2/.hg/largefiles/.7f7097b041ccf68cc5561e9600da4655d21c6d18.*' (glob)
+  [255]
+
 #if unix-permissions
 
 Portable way to print file permissions:

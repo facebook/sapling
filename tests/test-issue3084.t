@@ -31,6 +31,8 @@ Normal file in the working copy, keeping the normal version:
   foo has been turned into a largefile
   use (l)argefile or keep as (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  getting changed largefiles
+  0 largefiles updated, 0 removed
 
   $ hg status
   $ cat foo
