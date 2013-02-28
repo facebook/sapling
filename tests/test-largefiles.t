@@ -919,8 +919,12 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ cd d
 
 More rebase testing, but also test that the largefiles are downloaded from
-'default' instead of 'default-push' when no source is specified (issue3584).
-The error messages go away if repo 'b' is created with --all-largefiles.
+'default-push' when no source is specified (issue3584). (The largefile from the
+pulled revision is however not downloaded but found in the local cache.)
+Largefiles are fetched for the new pulled revision, not for existing revisions,
+rebased or not.
+
+  $ [ ! -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg pull --rebase --all-largefiles --config paths.default-push=bogus/path --config paths.default=../b
   pulling from $TESTTMP/b (glob)
   searching for changes
@@ -932,18 +936,9 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   M sub/normal4
   M sub2/large6
   saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file large3: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large4: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id 5f78770c0e77ba4287ad6ef3071c9bf9c379742f from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id 4669e532d5b2c093a78eca010077e708a071bb64 from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id 1deebade43c8c498a3c8daddac0244dc55d1331d from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
   0 additional largefiles cached
-  9 largefiles failed to download
   nothing to rebase
+  $ [ -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -1255,6 +1250,12 @@ revert some files to an older revision
     ($TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4: (glob)
     expected hash eb7338044dc27f9bc59b8dd5a246b065ead7a9c4,
     but got cfef678f24d3e339944138ecdd8fd85ca21d820f)
+  changeset 5:9d5af5072dbd: large3 missing
+    (looked for hash baaf12afde9d8d67f25dab6dced0d2bf77dba47c)
+  changeset 5:9d5af5072dbd: sub/large4 missing
+    (looked for hash aeb2210d19f02886dde00dac279729a48471e2f9)
+  changeset 6:4355d653f84f: large3 missing
+    (looked for hash 7838695e10da2bb75ac1156565f40a2595fa2fa0)
   verified contents of 15 revisions of 6 largefiles
   [1]
 

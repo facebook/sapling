@@ -746,7 +746,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
     if opts.get('all_largefiles'):
         revspostpull = len(repo)
         revs = []
-        for rev in xrange(revsprepull + 1, revspostpull):
+        for rev in xrange(revsprepull, revspostpull):
             revs.append(repo[rev].rev())
         lfcommands.downloadlfiles(ui, repo, revs)
     return result
