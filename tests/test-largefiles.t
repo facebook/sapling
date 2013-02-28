@@ -1262,6 +1262,16 @@ revert some files to an older revision
 - cleanup
   $ rm $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
 
+Pulling 0 revisions with --all-largefiles should not fetch for all revisions
+
+  $ hg pull --all-largefiles
+  pulling from $TESTTMP/d (glob)
+  searching for changes
+  no changes found
+  caching new largefiles
+  0 largefiles cached
+  0 additional largefiles cached
+
 Merging does not revert to old versions of largefiles and also check
 that merging after having pulled from a non-default remote works
 correctly.

@@ -435,11 +435,12 @@ def downloadlfiles(ui, repo, rev=None):
         pass
     totalsuccess = 0
     totalmissing = 0
-    for ctx in cmdutil.walkchangerevs(repo, matchfn, {'rev' : rev},
-                                      prepare):
-        success, missing = cachelfiles(ui, repo, ctx.node())
-        totalsuccess += len(success)
-        totalmissing += len(missing)
+    if rev != []: # walkchangerevs on empty list would return all revs
+        for ctx in cmdutil.walkchangerevs(repo, matchfn, {'rev' : rev},
+                                          prepare):
+            success, missing = cachelfiles(ui, repo, ctx.node())
+            totalsuccess += len(success)
+            totalmissing += len(missing)
     ui.status(_("%d additional largefiles cached\n") % totalsuccess)
     if totalmissing > 0:
         ui.status(_("%d largefiles failed to download\n") % totalmissing)
