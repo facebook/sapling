@@ -12,20 +12,24 @@
   $ hg init a
   $ cd a
 
+  $ mkdir d
   $ echo a > a
   $ hg ci -Am A
   adding a
 
-  $ echo b > b
+  $ echo b > d/b
   $ hg ci -Am B
-  adding b
+  adding d/b
 
-  $ hg mv b b-renamed
+  $ hg mv d d-renamed
+  moving d/b to d-renamed/b
   $ hg ci -m 'rename B'
 
   $ hg up -q -C 1
 
   $ hg mv a a-renamed
+  $ echo x > d/x
+  $ hg add d/x
 
   $ hg ci -m 'rename A'
   created new head
@@ -47,6 +51,12 @@ Rename is tracked:
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
+  diff --git a/d/x b/d/x
+  new file mode 100644
+  --- /dev/null
+  +++ b/d/x
+  @@ -0,0 +1,1 @@
+  +x
   
 Rebase the revision containing the rename:
 
@@ -70,23 +80,29 @@ Rename is not lost:
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
+  diff --git a/d-renamed/x b/d-renamed/x
+  new file mode 100644
+  --- /dev/null
+  +++ b/d-renamed/x
+  @@ -0,0 +1,1 @@
+  +x
   
 
 Rebased revision does not contain information about b (issue3739)
 
   $ hg log -r 3 --debug
-  changeset:   3:3b905b1064f14ace3ad02353b79dd42d32981655
+  changeset:   3:032a9b75e83bff1dcfb6cbfa4ef50a704bf1b569
   tag:         tip
   phase:       draft
-  parent:      2:920a371a5635af23a26a011ca346cecd1cfcb942
+  parent:      2:220d0626d185f372d9d8f69d9c73b0811d7725f7
   parent:      -1:0000000000000000000000000000000000000000
-  manifest:    3:c4a62b2b64593c8fe0523d4c1ba2e243a8bd4dce
+  manifest:    3:035d66b27a1b06b2d12b46d41a39adb7a200c370
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  files+:      a-renamed
+  files+:      a-renamed d-renamed/x
   files-:      a
   extra:       branch=default
-  extra:       rebase_source=89af05cb38a281f891c6f5581dd027092da29166
+  extra:       rebase_source=73a3ee40125d6f0f347082e5831ceccb3f005f8a
   description:
   rename A
   
