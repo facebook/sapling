@@ -149,7 +149,8 @@ def runhg(cmd, env):
     # a missing __init__.py in mercurial/locale, we also ignore that.
     err = [e for e in err.splitlines()
            if not e.startswith(b('Not trusting file')) \
-              and not e.startswith(b('warning: Not importing'))]
+              and not e.startswith(b('warning: Not importing')) \
+              and not e.startswith(b('obsolete feature not enabled'))]
     if err:
         print >> sys.stderr, "stderr from '%s':" % (' '.join(cmd))
         print >> sys.stderr, '\n'.join(['  ' + e for e in err])
