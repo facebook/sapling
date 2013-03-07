@@ -498,13 +498,18 @@ class dirstate(object):
         self._lastnormaltime = 0
         self._dirty = True
 
-    def rebuild(self, parent, files):
+    def rebuild(self, parent, allfiles, changedfiles=None):
+        changedfiles = changedfiles or allfiles
+        oldmap = self._map
         self.clear()
-        for f in files:
-            if 'x' in files.flags(f):
-                self._map[f] = ('n', 0777, -1, 0)
+        for f in allfiles:
+            if f not in changedfiles:
+                self._map[f] = oldmap[f]
             else:
-                self._map[f] = ('n', 0666, -1, 0)
+                if 'x' in allfiles.flags(f):
+                    self._map[f] = ('n', 0777, -1, 0)
+                else:
+                    self._map[f] = ('n', 0666, -1, 0)
         self._pl = (parent, nullid)
         self._dirty = True
 
