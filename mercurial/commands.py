@@ -5889,6 +5889,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
             ui.status(_("updating bookmark %s\n") % repo._bookmarkcurrent)
     elif brev in repo._bookmarks:
         bookmarks.setcurrent(repo, brev)
+        ui.status(_("(activating bookmark %s)\n") % brev)
     elif brev:
         if repo._bookmarkcurrent:
             ui.status(_("(leaving bookmark %s)\n") %

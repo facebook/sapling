@@ -490,6 +490,7 @@ test hg strip -B bookmark
   $ hg bookmark -r 'c' 'delete'
   $ hg up -C todelete
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark todelete)
   $ hg strip -B nostrip
   bookmark 'nostrip' deleted
   abort: empty revision set

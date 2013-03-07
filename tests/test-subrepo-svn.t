@@ -482,6 +482,7 @@ same subrepo should work if the subrepo is clean.
   A    *obstruct/other (glob)
   Checked out revision 1.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark other)
 
 This is surprising, but is also correct based on the current code:
   $ echo "updating should (maybe) fail" > obstruct/other

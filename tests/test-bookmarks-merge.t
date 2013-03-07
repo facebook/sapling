@@ -65,6 +65,7 @@
 
   $ hg up -C e
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark e)
   $ hg merge
   abort: no matching bookmark to merge - please merge with an explicit rev or bookmark
   (run 'hg heads' to see all heads)
@@ -99,6 +100,7 @@
   
   $ hg up -C e
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark e)
   $ hg bookmarks
      b                         1:d2ae7f538514
      c                         3:b8f96cf4688b
