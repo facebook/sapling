@@ -129,13 +129,17 @@ def popen2(cmd, env=None, newlines=False):
     return p.stdin, p.stdout
 
 def popen3(cmd, env=None, newlines=False):
+    stdin, stdout, stderr, p = popen4(cmd, env, newlines)
+    return stdin, stdout, stderr
+
+def popen4(cmd, env=None, newlines=False):
     p = subprocess.Popen(cmd, shell=True, bufsize=-1,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
                          universal_newlines=newlines,
                          env=env)
-    return p.stdin, p.stdout, p.stderr
+    return p.stdin, p.stdout, p.stderr, p
 
 def version():
     """Return version information if available."""
