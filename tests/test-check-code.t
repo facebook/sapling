@@ -163,13 +163,13 @@
    object comparison with literal
   [1]
 
-  $ cat > warning.py <<EOF
+  $ cat > for-nolineno.py <<EOF
   > except:
   > EOF
-  $ "$check_code" warning.py --warning --nolineno
-  warning.py:0:
+  $ "$check_code" for-nolineno.py --nolineno
+  for-nolineno.py:0:
    > except:
-   warning: naked except clause
+   naked except clause
   [1]
 
   $ cat > raise-format.py <<EOF
