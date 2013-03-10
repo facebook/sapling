@@ -2471,11 +2471,12 @@ proc selectline {l isnew} {
     $ctext mark set fmark.0 0.0
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
-    $ctext insert end "Revision: [lindex $info 6]\n"
+    $ctext insert end "Changeset: [lindex $info 6]\n"
     if {[llength [lindex $info 7]] > 0} {
         $ctext insert end "Branch: [lindex $info 7]\n"
     }
-    $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
+    $ctext insert end "User: [lindex $info 1]\n"
+    $ctext insert end "Date: [lindex $info 2]\n"
     if {[info exists idbookmarks($id)]} {
 	$ctext insert end "Bookmarks:"
 	foreach bookmark $idbookmarks($id) {
@@ -3600,7 +3601,7 @@ proc lineclick {x y id isnew} {
     $ctext tag bind link0 <1> [list selbyid $id]
     set info $commitinfo($id)
     $ctext insert end "\n\t[lindex $info 0]\n"
-    $ctext insert end "\tAuthor:\t[lindex $info 1]\n"
+    $ctext insert end "\tUser:\t[lindex $info 1]\n"
     $ctext insert end "\tDate:\t[lindex $info 2]\n"
     if {[info exists children($id)]} {
 	$ctext insert end "\nChildren:"
@@ -3612,7 +3613,7 @@ proc lineclick {x y id isnew} {
 	    $ctext insert end $child [list link link$i]
 	    $ctext tag bind link$i <1> [list selbyid $child]
 	    $ctext insert end "\n\t[lindex $info 0]"
-	    $ctext insert end "\n\tAuthor:\t[lindex $info 1]"
+	    $ctext insert end "\n\tUser:\t[lindex $info 1]"
 	    $ctext insert end "\n\tDate:\t[lindex $info 2]\n"
 	}
     }
