@@ -380,11 +380,11 @@ proc parsecommit {id contents listed olds} {
 	}
     }
     if {$audate != {}} {
-	set audate [clock format $audate -format "%Y-%m-%d %H:%M:%S"]
+	set audate [clock format $audate]
     }
     if {$comdate != {}} {
 	set cdate($id) $comdate
-	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
+	set comdate [clock format $comdate]
     }
     set commitinfo($id) [list $headline $auname $audate \
 			     $comname $comdate $comment $rev $branch $bookmark]
