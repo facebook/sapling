@@ -149,7 +149,8 @@ def runhg(cmd, env):
     # a missing __init__.py in mercurial/locale, we also ignore that.
     err = [e for e in err.splitlines()
            if not e.startswith(b('Not trusting file')) \
-              and not e.startswith(b('warning: Not importing'))]
+              and not e.startswith(b('warning: Not importing')) \
+              and not e.startswith(b('obsolete feature not enabled'))]
     if err:
         print >> sys.stderr, "stderr from '%s':" % (' '.join(cmd))
         print >> sys.stderr, '\n'.join(['  ' + e for e in err])
@@ -519,11 +520,36 @@ if sys.platform == 'darwin' and os.path.exists('/usr/bin/xcodebuild'):
 
 setup(name='mercurial',
       version=setupversion,
-      author='Matt Mackall',
-      author_email='mpm@selenic.com',
+      author='Matt Mackall and many others',
+      author_email='mercurial@selenic.com',
       url='http://mercurial.selenic.com/',
-      description='Scalable distributed SCM',
-      license='GNU GPLv2+',
+      download_url='http://mercurial.selenic.com/release/',
+      description=('Fast scalable distributed SCM (revision control, version '
+                   'control) system'),
+      long_description=('Mercurial is a distributed SCM tool written in Python.'
+                        ' It is used by a number of large projects that require'
+                        ' fast, reliable distributed revision control, such as '
+                        'Mozilla.'),
+      license='GNU GPLv2 or any later version',
+      classifiers=[
+          'Development Status :: 6 - Mature',
+          'Environment :: Console',
+          'Intended Audience :: Developers',
+          'Intended Audience :: System Administrators',
+          'License :: OSI Approved :: GNU General Public License (GPL)',
+          'Natural Language :: Danish',
+          'Natural Language :: English',
+          'Natural Language :: German',
+          'Natural Language :: Italian',
+          'Natural Language :: Japanese',
+          'Natural Language :: Portuguese (Brazilian)',
+          'Operating System :: Microsoft :: Windows',
+          'Operating System :: OS Independent',
+          'Operating System :: POSIX',
+          'Programming Language :: C',
+          'Programming Language :: Python',
+          'Topic :: Software Development :: Version Control',
+      ],
       scripts=scripts,
       packages=packages,
       py_modules=pymodules,
