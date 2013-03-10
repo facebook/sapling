@@ -3742,13 +3742,11 @@ proc mkpatch {} {
     set patchtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Generate patch"
-    grid $top.title - -pady 10
     ttk::label $top.from -text "From:"
     ttk::entry $top.fromsha1 -width 40
     $top.fromsha1 insert 0 $oldid
     $top.fromsha1 conf -state readonly
-    grid $top.from $top.fromsha1 -sticky w
+    grid $top.from $top.fromsha1 -sticky w -pady {10 0}
     ttk::entry $top.fromhead -width 60
     $top.fromhead insert 0 $oldhead
     $top.fromhead conf -state readonly
@@ -3778,6 +3776,7 @@ proc mkpatch {} {
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
     popupify $top
+    wm title $top "Generate a patch"
 }
 
 proc mkpatchrev {} {
@@ -3823,13 +3822,11 @@ proc mktag {} {
     set mktagtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Create tag"
-    grid $top.title - -pady 10
     ttk::label $top.id -text "ID:"
     ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
-    grid $top.id $top.sha1 -sticky w
+    grid $top.id $top.sha1 -sticky w -pady {10 0}
     ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
@@ -3846,6 +3843,7 @@ proc mktag {} {
     grid $top.buts - -pady 10 -sticky ew
     focus $top.tag
     popupify $top
+    wm title $top "Create a tag"
 }
 
 proc domktag {} {
@@ -3904,13 +3902,11 @@ proc writecommit {} {
     set wrcomtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Write commit to file"
-    grid $top.title - -pady 10
     ttk::label $top.id -text "ID:"
     ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
-    grid $top.id $top.sha1 -sticky w
+    grid $top.id $top.sha1 -sticky w -pady {10 0}
     ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
@@ -3931,6 +3927,7 @@ proc writecommit {} {
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
     popupify $top
+    wm title $top "Write commit to a file"
 }
 
 proc wrcomgo {} {
