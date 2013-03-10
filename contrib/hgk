@@ -30,6 +30,8 @@ if {[catch {package require Ttk}]} {
     interp alias {} ttk::label {} label
     interp alias {} ttk::scrollbar {} scrollbar
     interp alias {} ttk::optionMenu {} tk_optionMenu
+
+    proc updatepalette {} {}
 } else {
     proc ::ttk::optionMenu {w varName firstValue args} {
         upvar #0 $varName var
@@ -45,6 +47,11 @@ if {[catch {package require Ttk}]} {
             $w.menu add radiobutton -label $i -variable $varName
         }
         return $w.menu
+    }
+    proc updatepalette {} {
+        catch {
+            tk_setPalette background [ttk::style lookup client -background]
+        }
     }
 }
 
@@ -120,6 +127,7 @@ if {$theme eq "default"} {
 
 }
 
+updatepalette
 
 # Unify right mouse button handling.
 # See "mouse buttons on macintosh" thread on comp.lang.tcl
