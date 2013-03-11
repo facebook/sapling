@@ -662,10 +662,12 @@ try:
 except ImportError:
     _re2 = False
 
-def compilere(pat):
+def compilere(pat, flags=0):
     '''Compile a regular expression, using re2 if possible
 
-    For best performance, use only re2-compatible regexp features.'''
+    For best performance, use only re2-compatible regexp features. The
+    only flags from the re module that are re2-compatible are
+    IGNORECASE and MULTILINE.'''
     global _re2
     if _re2 is None:
         try:
@@ -673,12 +675,16 @@ def compilere(pat):
             _re2 = True
         except ImportError:
             _re2 = False
-    if _re2:
+    if _re2 and (flags & ~(re.IGNORECASE | re.MULTILINE)) == 0:
+        if flags & re.IGNORECASE:
+            pat = '(?i)' + pat
+        if flags & re.MULTILINE:
+            pat = '(?m)' + pat
         try:
             return re2.compile(pat)
         except re2.error:
             pass
-    return re.compile(pat)
+    return re.compile(pat, flags)
 
 _fspathcache = {}
 def fspath(name, root):
