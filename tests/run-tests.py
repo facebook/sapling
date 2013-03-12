@@ -1277,6 +1277,9 @@ def main():
         # can't remove on solaris
         os.environ['HG'] = ''
         del os.environ['HG']
+    if 'HGPROF' in os.environ:
+        os.environ['HGPROF'] = ''
+        del os.environ['HGPROF']
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()

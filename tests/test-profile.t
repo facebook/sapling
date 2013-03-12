@@ -8,8 +8,6 @@ test --time
 
 test --profile
 
-  $ export -n HGPROF
-
   $ hg --profile st 2>../out
   $ grep CallCount ../out > /dev/null || cat ../out
 
