@@ -119,6 +119,7 @@ def strip(ui, repo, nodelist, backup="all", topic='backup'):
     if backup == "all":
         backupfile = _bundle(repo, stripbases, cl.heads(), node, topic)
         repo.ui.status(_("saved backup bundle to %s\n") % backupfile)
+        repo.ui.log("backupbundle", "saved backup bundle to %s\n", backupfile)
     if saveheads or savebases:
         # do not compress partial bundle if we remove it from disk later
         chgrpfile = _bundle(repo, savebases, saveheads, node, 'temp',

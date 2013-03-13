@@ -16,6 +16,7 @@ setup
   > [extensions]
   > blackbox=
   > mock=`pwd`/mock.py
+  > mq=
   > EOF
   $ hg init blackboxtest
   $ cd blackboxtest
@@ -59,6 +60,20 @@ clone, commit, pull
   1970/01/01 00:00:00 bob> pull
   1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62
   1970/01/01 00:00:00 bob> pull exited None after * seconds (glob)
+
+backup bundles get logged
+
+  $ touch d
+  $ hg commit -Amd
+  adding d
+  created new head
+  $ hg strip tip
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
+  $ hg blackbox -l 3
+  1970/01/01 00:00:00 bob> strip tip
+  1970/01/01 00:00:00 bob> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
+  1970/01/01 00:00:00 bob> strip exited 0 after * seconds (glob)
 
 extension and python hooks - use the eol extension for a pythonhook
 
