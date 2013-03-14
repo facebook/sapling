@@ -255,7 +255,7 @@ _hg_command_specific()
 	    _hg_status "mar"
 	;;
 	remove)
-	    _hg_status "d"
+	    _hg_status "mcd"
 	;;
 	forget)
 	    _hg_status "a"
