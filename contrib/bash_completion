@@ -82,7 +82,7 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$(_hg_cmd status -n$1 .)"
+    local files="$(_hg_cmd status -n$1 "glob:$cur**")"
     local IFS=$'\n'
     compopt -o filenames 2>/dev/null
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
