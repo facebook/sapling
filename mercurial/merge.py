@@ -185,12 +185,14 @@ def _forgetremoved(wctx, mctx, branchmerge):
 
     return actions
 
-def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
+def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
+                  acceptremote=False):
     """
     Merge p1 and p2 with ancestor pa and generate merge action list
 
     branchmerge and force are as passed in to update
     partial = function to filter file lists
+    acceptremote = accept the incoming changes without prompting
     """
 
     overwrite = force and not branchmerge
@@ -331,7 +333,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
 
     for f, m in sorted(prompts):
         if m == "cd":
-            if repo.ui.promptchoice(
+            if acceptremote:
+                actions.append((f, "r", None, "remote delete"))
+            elif repo.ui.promptchoice(
                 _("local changed %s which remote deleted\n"
                   "use (c)hanged version or (d)elete?") % f,
                 (_("&Changed"), _("&Delete")), 0):
@@ -339,7 +343,9 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial):
             else:
                 actions.append((f, "a", None, "prompt keep"))
         elif m == "dc":
-            if repo.ui.promptchoice(
+            if acceptremote:
+                actions.append((f, "g", (m2.flags(f),), "remote recreating"))
+            elif repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?") % f,
                 (_("&Changed"), _("&Deleted")), 0) == 0:
@@ -512,7 +518,8 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     return updated, merged, removed, unresolved
 
-def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
+def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial,
+                     acceptremote=False):
     "Calculate the actions needed to merge mctx into tctx"
     actions = []
     folding = not util.checkcase(repo.path)
@@ -526,7 +533,7 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial):
     actions += manifestmerge(repo, tctx, mctx,
                              ancestor,
                              branchmerge, force,
-                             partial)
+                             partial, acceptremote)
     if tctx.rev() is None:
         actions += _forgetremoved(tctx, mctx, branchmerge)
     return actions
@@ -602,10 +609,11 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
     partial = a function to filter file lists (dirstate not updated)
-    mergeancestor = if false, merging with an ancestor (fast-forward)
-      is only allowed between different named branches. This flag
-      is used by rebase extension as a temporary fix and should be
-      avoided in general.
+    mergeancestor = whether it is merging with an ancestor. If true,
+      we should accept the incoming changes for any prompts that occur.
+      If false, merging with an ancestor (fast-forward) is only allowed
+      between different named branches. This flag is used by rebase extension
+      as a temporary fix and should be avoided in general.
 
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
@@ -693,7 +701,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
         ### calculate phase
         actions = calculateupdates(repo, wc, p2, pa,
-                                   branchmerge, force, partial)
+                                   branchmerge, force, partial, mergeancestor)
 
         ### apply phase
         if not branchmerge: # just jump to the new rev

@@ -719,6 +719,30 @@ Test stripping a revision with another child
 
   $ cd ..
 
+Test collapsing changes that add then remove a file
 
+  $ hg init collapseaddremove
+  $ cd collapseaddremove
 
+  $ touch base
+  $ hg commit -Am base
+  adding base
+  $ touch a
+  $ hg commit -Am a
+  adding a
+  $ hg rm a
+  $ touch b
+  $ hg commit -Am b
+  adding b
+  $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
+  saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/*-backup.hg (glob)
+  $ hg tglog
+  @  1: 'collapsed'
+  |
+  o  0: 'base'
+  
+  $ hg manifest
+  b
+  base
 
+  $ cd ..
