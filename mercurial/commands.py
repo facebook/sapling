@@ -808,8 +808,15 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         scmutil.checknewlabel(repo, mark, 'bookmark')
         return mark
 
-    def checkconflict(repo, mark, force=False):
+    def checkconflict(repo, mark, force=False, target=None):
         if mark in marks and not force:
+            if target:
+                anc = repo.changelog.ancestors([repo[target].rev()])
+                bmctx = repo[marks[mark]]
+                if bmctx.rev() in anc:
+                    ui.status(_("moving bookmark '%s' forward from %s\n") %
+                              (mark, short(bmctx.node())))
+                    return
             raise util.Abort(_("bookmark '%s' already exists "
                                "(use -f to force)") % mark)
         if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
@@ -852,11 +859,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if inactive and mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
             return
-        checkconflict(repo, mark, force)
+        tgt = cur
         if rev:
-            marks[mark] = scmutil.revsingle(repo, rev).node()
-        else:
-            marks[mark] = cur
+            tgt = scmutil.revsingle(repo, rev).node()
+        checkconflict(repo, mark, force, tgt)
+        marks[mark] = tgt
         if not inactive and cur == marks[mark]:
             bookmarks.setcurrent(repo, mark)
         marks.write()
