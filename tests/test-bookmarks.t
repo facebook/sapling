@@ -280,7 +280,15 @@ incompatible options
 force bookmark with existing name
 
   $ hg bookmark -f X2
+
+force bookmark back to where it was, should deactivate it
+
   $ hg bookmark -fr1 X2
+  $ hg bookmarks
+     X2                        1:925d80f479bb
+     Y                         2:db815d6d32e6
+     Z                         0:f7b1eb17ad24
+     x  y                      2:db815d6d32e6
 
 forward bookmark to descendant without --force
 
@@ -360,7 +368,7 @@ test rollback
   $ hg bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
-   * Z                         2:db815d6d32e6
+     Z                         2:db815d6d32e6
      x  y                      2:db815d6d32e6
 
 activate bookmark on working dir parent without --force

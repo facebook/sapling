@@ -869,6 +869,8 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         marks[mark] = tgt
         if not inactive and cur == marks[mark]:
             bookmarks.setcurrent(repo, mark)
+        elif cur != tgt and mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
         marks.write()
 
     # Same message whether trying to deactivate the current bookmark (-i
