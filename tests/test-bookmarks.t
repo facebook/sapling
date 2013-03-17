@@ -285,7 +285,7 @@ force bookmark with existing name
 forward bookmark to descendant without --force
 
   $ hg bookmark Z
-  moving bookmark 'Z' forward from 663762316562
+  moving bookmark 'Z' forward from f7b1eb17ad24
 
 list bookmarks
 
