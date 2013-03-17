@@ -811,6 +811,9 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     def checkconflict(repo, mark, force=False, target=None):
         if mark in marks and not force:
             if target:
+                if marks[mark] == target and target == cur:
+                    # re-activating a bookmark
+                    return
                 anc = repo.changelog.ancestors([repo[target].rev()])
                 bmctx = repo[marks[mark]]
                 if bmctx.rev() in anc:

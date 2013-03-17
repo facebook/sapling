@@ -363,6 +363,11 @@ test rollback
    * Z                         2:db815d6d32e6
      x  y                      2:db815d6d32e6
 
+activate bookmark on working dir parent without --force
+
+  $ hg bookmark --inactive Z
+  $ hg bookmark Z
+
 test clone
 
   $ hg bookmark -r 2 -i @
