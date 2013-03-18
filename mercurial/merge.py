@@ -471,11 +471,11 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
         f, m, args, msg = a
         progress(_updating, z + i + 1, item=f, total=numupdates, unit=_files)
         if m == "m": # merge
+            f2, fd, move = args
             if fd == '.hgsubstate': # subrepo states need updating
                 subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
                                  overwrite)
                 continue
-            f2, fd, move = args
             audit(fd)
             r = ms.resolve(fd, wctx, mctx)
             if r is not None and r > 0:
