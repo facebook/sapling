@@ -1496,8 +1496,6 @@ def tag(repo, subset, x):
             s = set([repo[tn].rev()])
         else:
             s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
-            if not s:
-                raise util.Abort(_("no tags exist that match '%s'") % pattern)
     else:
         s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
     return [r for r in subset if r in s]

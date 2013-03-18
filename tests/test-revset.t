@@ -437,8 +437,6 @@ we can use patterns when searching for tags
   $ log 'tag("literal:1.0")'
   6
   $ log 'tag("re:0..*")'
-  abort: no tags exist that match '0..*'
-  [255]
 
   $ log 'tag(unknown)'
   abort: tag 'unknown' does not exist
