@@ -239,8 +239,8 @@ bookmark with reserved name
 
 bookmark with existing name
 
-  $ hg bookmark Z
-  abort: bookmark 'Z' already exists (use -f to force)
+  $ hg bookmark X2
+  abort: bookmark 'X2' already exists (use -f to force)
   [255]
 
   $ hg bookmark -m Y Z
@@ -279,7 +279,13 @@ incompatible options
 
 force bookmark with existing name
 
-  $ hg bookmark -f Z
+  $ hg bookmark -f X2
+  $ hg bookmark -fr1 X2
+
+forward bookmark to descendant without --force
+
+  $ hg bookmark Z
+  moving bookmark 'Z' forward from f7b1eb17ad24
 
 list bookmarks
 

@@ -232,7 +232,7 @@ indexarchiveentry = '<a href="{url|urlescape}archive/{node|short}{extension|urle
 index = index.tmpl
 archiveentry = '
   <li>
-    <a href="{url|urlescape}archive/{node|short}{extension|urlescape}">{type|escape}</a>
+    <a href="{url|urlescape}archive/{node|short}{extension|urlescape}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a>
   </li>'
 notfound = notfound.tmpl
 error = error.tmpl

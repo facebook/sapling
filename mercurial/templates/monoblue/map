@@ -245,7 +245,7 @@ filelogentry = '
       {rename%filelogrename}
     </td>
   </tr>'
-archiveentry = '<li><a href="{url|urlescape}archive/{node|short}{extension}">{type|escape}</a></li>'
+archiveentry = '<li><a href="{url|urlescape}archive/{node|short}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a></li>'
 indexentry = '
   <tr class="parity{parity}">
     <td><a href="{url|urlescape}{sessionvars%urlparameter}">{name|escape}</a></td>

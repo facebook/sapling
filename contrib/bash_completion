@@ -1,4 +1,4 @@
-# bash completion for the Mercurial distributed SCM
+# bash completion for the Mercurial distributed SCM -*- sh -*-
 
 # Docs:
 #
@@ -82,7 +82,7 @@ _hg_repos()
 
 _hg_status()
 {
-    local files="$(_hg_cmd status -n$1 .)"
+    local files="$(_hg_cmd status -n$1 "glob:$cur**")"
     local IFS=$'\n'
     compopt -o filenames 2>/dev/null
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
@@ -255,7 +255,7 @@ _hg_command_specific()
 	    _hg_status "mar"
 	;;
 	remove)
-	    _hg_status "d"
+	    _hg_status "mcd"
 	;;
 	forget)
 	    _hg_status "a"
