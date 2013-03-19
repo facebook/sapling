@@ -684,15 +684,8 @@ def hgupdaterepo(orig, repo, node, overwrite):
     return result
 
 def hgmerge(orig, repo, node, force=None, remind=True):
-    # Mark the repo as being in the middle of a merge, so that
-    # updatelfiles() will know that it needs to trust the standins in
-    # the working copy, not in the standins in the current node
-    repo._ismerging = True
-    try:
-        result = orig(repo, node, force, remind)
-        lfcommands.updatelfiles(repo.ui, repo)
-    finally:
-        repo._ismerging = False
+    result = orig(repo, node, force, remind)
+    lfcommands.updatelfiles(repo.ui, repo)
     return result
 
 # When we rebase a repository with remotely changed largefiles, we need to
@@ -746,7 +739,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
     if opts.get('all_largefiles'):
         revspostpull = len(repo)
         revs = []
-        for rev in xrange(revsprepull + 1, revspostpull):
+        for rev in xrange(revsprepull, revspostpull):
             revs.append(repo[rev].rev())
         lfcommands.downloadlfiles(ui, repo, revs)
     return result

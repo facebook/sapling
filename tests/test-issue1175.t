@@ -31,7 +31,7 @@ http://mercurial.selenic.com/bts/issue1175
   b
    b: searching for copy revision for a
    b: copy a:b80de5d138758541c5f05265ad144ab9fa86d1db
-  committed changeset 5:89e8e4be0de296fa3d6dd7825ccc44d7dc0f1f3b
+  committed changeset 5:732aafbecb501a198b3cc9323ad3899ff04ccf95
 
   $ hg verify
   checking changesets
@@ -44,8 +44,8 @@ http://mercurial.selenic.com/bts/issue1175
   # HG changeset patch
   # User test
   # Date 0 0
-  # Node ID 89e8e4be0de296fa3d6dd7825ccc44d7dc0f1f3b
-  # Parent  7fc86ba705e717a721dbc361bf8c9bc05a18ca2f
+  # Node ID 732aafbecb501a198b3cc9323ad3899ff04ccf95
+  # Parent  1d1625283f71954f21d14c3d44d0ad3c019c597f
   5
   
   diff --git a/b b/b
