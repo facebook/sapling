@@ -374,10 +374,13 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
         f, m, args, msg = action
 
         choices = (_('&Largefile'), _('&Normal file'))
-        if m == "g" and lfutil.splitstandin(f) in p1 and f in p2:
+
+        splitstandin = lfutil.splitstandin(f)
+        if (m == "g" and splitstandin is not None and
+            splitstandin in p1 and f in p2):
             # Case 1: normal file in the working copy, largefile in
             # the second parent
-            lfile = lfutil.splitstandin(f)
+            lfile = splitstandin
             standin = f
             msg = _('%s has been turned into a largefile\n'
                     'use (l)argefile or keep as (n)ormal file?') % lfile
