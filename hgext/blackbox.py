@@ -57,11 +57,20 @@ def wrapui(ui):
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = getpass.getuser()
                 formattedmsg = msg[0] % msg[1:]
-                blackbox.write('%s %s> %s' % (date, user, formattedmsg))
+                try:
+                    blackbox.write('%s %s> %s' % (date, user, formattedmsg))
+                except IOError, err:
+                    self.debug('warning: cannot write to blackbox.log: %s\n' %
+                               err.strerror)
                 lastblackbox = blackbox
 
         def setrepo(self, repo):
-            self._blackbox = repo.opener('blackbox.log', 'a')
+            try:
+                self._blackbox = repo.opener('blackbox.log', 'a')
+            except IOError, err:
+                self.debug('warning: cannot write to blackbox.log: %s\n' %
+                           err.strerror)
+                self._blackbox = None
 
     ui.__class__ = blackboxui
 

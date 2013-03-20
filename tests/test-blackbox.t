@@ -61,6 +61,48 @@ clone, commit, pull
   1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62
   1970/01/01 00:00:00 bob> pull exited None after * seconds (glob)
 
+we must not cause a failure if we cannot write to the log
+
+  $ hg rollback
+  repository tip rolled back to revision 1 (undo pull)
+  $ chmod 000 .hg/blackbox.log
+  $ hg --debug incoming
+  warning: cannot write to blackbox.log: Permission denied
+  comparing with $TESTTMP/blackboxtest
+  query 1; heads
+  searching for changes
+  all local heads known remotely
+  changeset:   2:d02f48003e62c24e2659d97d30f2a83abe5d5d51
+  tag:         tip
+  phase:       draft
+  parent:      1:6563da9dcf87b1949716e38ff3e3dfaa3198eb06
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    2:ab9d46b053ebf45b7996f2922b9893ff4b63d892
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files+:      c
+  extra:       branch=default
+  description:
+  c
+  
+  
+  $ hg pull
+  pulling from $TESTTMP/blackboxtest
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+
+a failure reading from the log is fine
+
+  $ hg blackbox -l 3
+  abort: Permission denied: $TESTTMP/blackboxtest2/.hg/blackbox.log
+  [255]
+
+  $ chmod 600 .hg/blackbox.log
+
 backup bundles get logged
 
   $ touch d
