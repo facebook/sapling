@@ -1,0 +1,274 @@
+# This file contains code dealing specifically with converting Mercurial
+# repositories to Git repositories. Code in this file is meant to be a generic
+# library and should be usable outside the context of hg-git or an hg command.
+
+import os
+import stat
+
+import dulwich.objects as dulobjs
+import mercurial.node
+
+import util
+
+
+class IncrementalChangesetExporter(object):
+    """Incrementally export Mercurial changesets to Git trees.
+
+    The purpose of this class is to facilitate Git tree export that is more
+    optimal than brute force.
+
+    A "dumb" implementations of Mercurial to Git export would iterate over
+    every file present in a Mercurial changeset and would convert each to
+    a Git blob and then conditionally add it to a Git repository if it didn't
+    yet exist. This is suboptimal because the overhead associated with
+    obtaining every file's raw content and converting it to a Git blob is
+    not trivial!
+
+    This class works around the suboptimality of brute force export by
+    leveraging the information stored in Mercurial - the knowledge of what
+    changed between changesets - to only export Git objects corresponding to
+    changes in Mercurial. In the context of converting Mercurial repositories
+    to Git repositories, we only export objects Git (possibly) hasn't seen yet.
+    This prevents a lot of redundant work and is thus faster.
+
+    Callers instantiate an instance of this class against a mercurial.localrepo
+    instance. They then associate it with a specific changesets by calling
+    update_changeset(). On each call to update_changeset(), the instance
+    computes the difference between the current and new changesets and emits
+    Git objects that haven't yet been encountered during the lifetime of the
+    class instance. In other words, it expresses Mercurial changeset deltas in
+    terms of Git objects. Callers then (usually) take this set of Git objects
+    and add them to the Git repository.
+
+    This class only emits Git blobs and trees, not commits.
+
+    The tree calculation part of this class is essentially a reimplementation
+    of dulwich.index.commit_tree. However, since our implementation reuses
+    Tree instances and only recalculates SHA-1 when things change, we are
+    more efficient.
+    """
+
+    def __init__(self, hg_repo):
+        """Create an instance against a mercurial.localrepo."""
+        self._hg = hg_repo
+
+        # Our current revision.
+        self._rev = mercurial.node.nullrev
+
+        # Path to dulwich.objects.Tree.
+        self._dirs = {}
+
+        # Mercurial file nodeid to Git blob SHA-1. Used to prevent redundant
+        # blob calculation.
+        self._blob_cache = {}
+
+    @property
+    def root_tree_sha(self):
+        """The SHA-1 of the root Git tree.
+
+        This is needed to construct a Git commit object.
+        """
+        return self._dirs[''].id
+
+    def update_changeset(self, ctx):
+        """Set the tree to track a new Mercurial changeset.
+
+        This is a generator of 2-tuples. The first item in each tuple is a
+        dulwich object, either a Blob or a Tree. The second item is the
+        corresponding Mercurial nodeid for the item, if any. Only blobs will
+        have nodeids. Trees do not correspond to a specific nodeid, so it does
+        not make sense to emit a nodeid for them.
+
+        When exporting trees from Mercurial, callers typically write the
+        returned dulwich object to the Git repo via the store's add_object().
+
+        Some emitted objects may already exist in the Git repository. This
+        class does not know about the Git repository, so it's up to the caller
+        to conditionally add the object, etc.
+
+        Emitted objects are those that have changed since the last call to
+        update_changeset. If this is the first call to update_chanageset, all
+        objects in the tree are emitted.
+        """
+        # Our general strategy is to accumulate dulwich.objects.Blob and
+        # dulwich.objects.Tree instances for the current Mercurial changeset.
+        # We do this incremental by iterating over the Mercurial-reported
+        # changeset delta. We rely on the behavior of Mercurial to lazy
+        # calculate a Tree's SHA-1 when we modify it. This is critical to
+        # performance.
+
+        # In theory we should be able to look at changectx.files(). This is
+        # *much* faster. However, it may not be accurate, especially with older
+        # repositories, which may not record things like deleted files
+        # explicitly in the manifest (which is where files() gets its data).
+        # The only reliable way to get the full set of changes is by looking at
+        # the full manifest. And, the easy way to compare two manifests is
+        # localrepo.status().
+        modified, added, removed = self._hg.status(self._rev, ctx.rev())[0:3]
+
+        # We first process file removals so we can prune dead trees.
+        for path in sorted(removed, key=len, reverse=True):
+            d = os.path.dirname(path)
+            tree = self._dirs.get(d, dulobjs.Tree())
+
+            del tree[os.path.basename(path)]
+
+            # If removing this file made the tree empty, we should delete this
+            # tree. This could result in parent trees losing their only child
+            # and so on.
+            if not len(tree):
+                self._remove_tree(d)
+                continue
+
+            self._dirs[d] = tree
+
+        # For every file that changed or was added, we need to calculate the
+        # corresponding Git blob and its tree entry. We emit the blob
+        # immediately and update trees to be aware of its presence.
+        for path in sorted(set(modified) | set(added), key=len, reverse=True):
+            # Handle special Mercurial paths.
+            if path == '.hgsubstate':
+                self._handle_subrepos(ctx)
+                continue
+
+            if path == '.hgsub':
+                continue
+
+            d = os.path.dirname(path)
+            tree = self._dirs.setdefault(d, dulobjs.Tree())
+
+            fctx = ctx[path]
+
+            entry, blob = IncrementalChangesetExporter.tree_entry(fctx,
+                self._blob_cache)
+            if blob is not None:
+                yield (blob, fctx.filenode())
+
+            tree.add(*entry)
+
+        # Now that all the trees represent the current changeset, recalculate
+        # the tree IDs and emit them. Note that we wait until now to calculate
+        # tree SHA-1s. This is an important difference between us and
+        # dulwich.index.commit_tree(), which builds new Tree instances for each
+        # series of blobs.
+        for obj in self._populate_tree_entries():
+            yield (obj, None)
+
+        self._rev = ctx.rev()
+
+    def _remove_tree(self, path):
+        """Remove a (presumably empty) tree from the current changeset.
+
+        A now-empty tree may be the only child of its parent. So, we traverse
+        up the chain to the root tree, deleting any empty trees along the way.
+        """
+        try:
+            del self._dirs[path]
+        except KeyError:
+            return
+
+        # Now we traverse up to the parent and delete any references.
+        if path == '':
+            return
+
+        basename = os.path.basename(path)
+        parent = os.path.dirname(path)
+        while True:
+            tree = self._dirs.get(parent, None)
+
+            # No parent entry. Nothing to remove or update.
+            if tree is None:
+                return
+
+            try:
+                del tree[basename]
+            except KeyError:
+                return
+
+            if len(tree):
+                return
+
+            # The parent tree is empty. Se, we can delete it.
+            del self._dirs[parent]
+
+            if parent == '':
+                return
+
+            basename = os.path.basename(parent)
+            parent = os.path.dirname(parent)
+
+    def _populate_tree_entries(self):
+        self._dirs.setdefault('', dulobjs.Tree())
+
+        # Fill in missing directories.
+        for path in self._dirs.keys():
+            parent = os.path.dirname(path)
+
+            while parent != '':
+                parent_tree = self._dirs.get(parent, None)
+
+                if parent_tree is not None:
+                    break
+
+                self._dirs[parent] = dulobjs.Tree()
+                parent = os.path.dirname(parent)
+
+        # TODO only emit trees that have been modified.
+        for d in sorted(self._dirs.keys(), key=len, reverse=True):
+            tree = self._dirs[d]
+            yield tree
+
+            if d == '':
+                continue
+
+            parent_tree = self._dirs[os.path.dirname(d)]
+
+            # Accessing the tree's ID is what triggers SHA-1 calculation and is
+            # the expensive part (at least if the tree has been modified since
+            # the last time we retrieved its ID).
+            parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
+
+    def _handle_subrepos(self, ctx):
+        substate = util.parse_hgsubstate(ctx['.hgsubstate'].data().splitlines())
+        sub = util.OrderedDict()
+
+        if '.hgsub' in ctx:
+            sub = util.parse_hgsub(ctx['.hgsub'].data().splitlines())
+
+        for path, sha in substate.iteritems():
+            # Ignore non-Git repositories keeping state in .hgsubstate.
+            if path in sub and not sub[path].startswith('[git]'):
+                continue
+
+            d = os.path.dirname(path)
+            tree = self._dirs.setdefault(d, dulobjs.Tree())
+            tree.add(os.path.basename(path), dulobjs.S_IFGITLINK, sha)
+
+    @staticmethod
+    def tree_entry(fctx, blob_cache):
+        """Compute a dulwich TreeEntry from a filectx.
+
+        A side effect is the TreeEntry is stored in the passed cache.
+
+        Returns a 2-tuple of (dulwich.objects.TreeEntry, dulwich.objects.Blob).
+        """
+        blob_id = blob_cache.get(fctx.filenode(), None)
+        blob = None
+
+        if blob_id is None:
+            blob = dulobjs.Blob.from_string(fctx.data())
+            blob_id = blob.id
+            blob_cache[fctx.filenode()] = blob_id
+
+        flags = fctx.flags()
+
+        if 'l' in flags:
+            mode = 0120000
+        elif 'x' in flags:
+            mode = 0100755
+        else:
+            mode = 0100644
+
+        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode, blob_id),
+                blob)
+
