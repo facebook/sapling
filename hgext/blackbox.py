@@ -25,7 +25,7 @@ Examples:
 
 from mercurial import util, cmdutil
 from mercurial.i18n import _
-import os, getpass, re
+import os, re
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -55,7 +55,7 @@ def wrapui(ui):
 
             if blackbox:
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
-                user = getpass.getuser()
+                user = util.getuser()
                 formattedmsg = msg[0] % msg[1:]
                 try:
                     blackbox.write('%s %s> %s' % (date, user, formattedmsg))

@@ -1,7 +1,6 @@
 setup
   $ cat > mock.py <<EOF
   > from mercurial import util
-  > import getpass
   > 
   > def makedate():
   >     return 0, 0
@@ -10,7 +9,7 @@ setup
   > # mock the date and user apis so the output is always the same
   > def uisetup(ui):
   >     util.makedate = makedate
-  >     getpass.getuser = getuser
+  >     util.getuser = getuser
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
