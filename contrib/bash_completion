@@ -88,20 +88,6 @@ _hg_status()
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
-_hg_tags()
-{
-    local tags="$(_hg_cmd tags -q)"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur"))
-}
-
-_hg_branches()
-{
-    local branches="$(_hg_cmd branches -q)"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$branches' -- "$cur"))
-}
-
 _hg_bookmarks()
 {
     local bookmarks="$(_hg_cmd bookmarks -q)"
@@ -111,9 +97,9 @@ _hg_bookmarks()
 
 _hg_labels()
 {
-    _hg_tags
-    _hg_branches
-    _hg_bookmarks
+    local labels="$(_hg_cmd debuglabelcomplete "$cur")"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$labels' -- "$cur"))
 }
 
 # this is "kind of" ugly...

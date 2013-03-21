@@ -2072,6 +2072,22 @@ def debugknown(ui, repopath, *ids, **opts):
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
+@command('debuglabelcomplete', [], _('LABEL...'))
+def debuglabelcomplete(ui, repo, *args):
+    '''complete "labels" - tags, open branch names, bookmark names'''
+
+    labels = set()
+    labels.update(t[0] for t in repo.tagslist())
+    labels.update(repo[n].branch() for n in repo.heads())
+    labels.update(repo._bookmarks.keys())
+    completions = set()
+    if not args:
+        args = ['']
+    for a in args:
+        completions.update(l for l in labels if l.startswith(a))
+    ui.write('\n'.join(sorted(completions)))
+    ui.write('\n')
+
 @command('debugobsolete',
         [('', 'flags', 0, _('markers flag')),
         ] + commitopts2,
