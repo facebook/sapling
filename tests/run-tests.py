@@ -1244,8 +1244,7 @@ def main():
         checktools()
 
         if len(args) == 0:
-            args = os.listdir(".")
-        args.sort()
+            args = sorted(os.listdir("."))
 
     tests = args
 
