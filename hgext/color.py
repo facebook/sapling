@@ -379,7 +379,6 @@ def templatelabel(context, mapping, args):
     return repo.ui.label(thing, label)
 
 def uisetup(ui):
-    global _terminfo_params
     if ui.plain():
         return
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
