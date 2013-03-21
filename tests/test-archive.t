@@ -108,10 +108,15 @@ test that we can download single directories and files
   $ python getarchive.py "$TIP" gz foo | gunzip | tar tf - 2>/dev/null
   test-archive-2c0277f05ed4/foo
 
+test that we detect file patterns that match no files
+
+  $ python getarchive.py "$TIP" gz foobar
+  HTTP Error 404: file(s) not found: foobar
+
 test that we reject unsafe patterns
 
   $ python getarchive.py "$TIP" gz relre:baz
-  HTTP Error 403: Archive pattern not allowed: relre:baz
+  HTTP Error 404: file(s) not found: relre:baz
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
