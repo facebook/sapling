@@ -5093,7 +5093,7 @@ def serve(ui, repo, **opts):
                                     " here (.hg not found)"))
         o = repo.root
 
-    app = hgweb.hgweb(o, baseui=ui)
+    app = hgweb.hgweb(o, baseui=baseui)
 
     class service(object):
         def init(self):
