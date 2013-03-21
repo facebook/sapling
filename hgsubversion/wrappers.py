@@ -118,7 +118,8 @@ def incoming(orig, ui, repo, origsource='default', **opts):
     return ret
 
 
-def findcommonoutgoing(repo, other, onlyheads=None, force=False, commoninc=None):
+def findcommonoutgoing(repo, other, onlyheads=None, force=False,
+                       commoninc=None, portable=False):
     assert other.capable('subversion')
     # split off #rev; TODO implement --revision/#rev support
     svn = other.svn
