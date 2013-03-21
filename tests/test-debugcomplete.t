@@ -86,6 +86,7 @@ Show debug commands if there are no other candidates
   debugindexdot
   debuginstall
   debugknown
+  debuglabelcomplete
   debugobsolete
   debugpushkey
   debugpvec
@@ -239,6 +240,7 @@ Show all commands + options
   debugindexdot: 
   debuginstall: 
   debugknown: 
+  debuglabelcomplete: 
   debugobsolete: flags, date, user
   debugpushkey: 
   debugpvec: 
