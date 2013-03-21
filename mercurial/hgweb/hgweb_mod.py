@@ -65,7 +65,9 @@ class hgweb(object):
 
         self.repo = self._getview(self.repo)
         self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
+        self.repo.baseui.setconfig('ui', 'report_untrusted', 'off')
         self.repo.ui.setconfig('ui', 'nontty', 'true')
+        self.repo.baseui.setconfig('ui', 'nontty', 'true')
         hook.redirect(True)
         self.mtime = -1
         self.size = -1
@@ -101,16 +103,14 @@ class hgweb(object):
             return repo.filtered('served')
 
     def refresh(self, request=None):
-        if request:
-            self.repo.ui.environ = request.env
         st = get_stat(self.repo.spath)
         # compare changelog size in addition to mtime to catch
         # rollbacks made less than a second ago
         if st.st_mtime != self.mtime or st.st_size != self.size:
             self.mtime = st.st_mtime
             self.size = st.st_size
-            self.repo = hg.repository(self.repo.ui, self.repo.root)
-            self.repo = self._getview(self.repo)
+            r = hg.repository(self.repo.baseui, self.repo.root)
+            self.repo = self._getview(r)
             self.maxchanges = int(self.config("web", "maxchanges", 10))
             self.stripecount = int(self.config("web", "stripes", 1))
             self.maxshortchanges = int(self.config("web", "maxshortchanges",
@@ -119,6 +119,8 @@ class hgweb(object):
             self.allowpull = self.configbool("web", "allowpull", True)
             encoding.encoding = self.config("web", "encoding",
                                             encoding.encoding)
+        if request:
+            self.repo.ui.environ = request.env
 
     def run(self):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
