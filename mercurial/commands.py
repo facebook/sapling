@@ -5091,7 +5091,7 @@ def serve(ui, repo, **opts):
         if not repo:
             raise error.RepoError(_("there is no Mercurial repository"
                                     " here (.hg not found)"))
-        o = repo.root
+        o = repo
 
     app = hgweb.hgweb(o, baseui=baseui)
 
