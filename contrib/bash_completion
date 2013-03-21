@@ -294,13 +294,6 @@ complete -o bashdefault -o default -F _hg hg \
 # Completion for commands provided by extensions
 
 # bookmarks
-_hg_bookmarks()
-{
-    local bookmarks="$(_hg_cmd bookmarks --quiet )"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$bookmarks' -- "$cur"))
-}
-
 _hg_cmd_bookmarks()
 {
     if [[ "$prev" = @(-d|--delete|-m|--rename) ]]; then
