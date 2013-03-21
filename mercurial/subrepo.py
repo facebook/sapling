@@ -423,6 +423,7 @@ class abstractsubrepo(object):
             ui.progress(_('archiving (%s)') % relpath, i + 1,
                         unit=_('files'), total=total)
         ui.progress(_('archiving (%s)') % relpath, None)
+        return total
 
     def walk(self, match):
         '''
@@ -580,14 +581,15 @@ class hgsubrepo(abstractsubrepo):
     @annotatesubrepoerror
     def archive(self, ui, archiver, prefix, match=None):
         self._get(self._state + ('hg',))
-        abstractsubrepo.archive(self, ui, archiver, prefix, match)
-
+        total = abstractsubrepo.archive(self, ui, archiver, prefix, match)
         rev = self._state[1]
         ctx = self._repo[rev]
         for subpath in ctx.substate:
             s = subrepo(ctx, subpath)
             submatch = matchmod.narrowmatcher(subpath, match)
-            s.archive(ui, archiver, os.path.join(prefix, self._path), submatch)
+            total += s.archive(
+                ui, archiver, os.path.join(prefix, self._path), submatch)
+        return total
 
     @annotatesubrepoerror
     def dirty(self, ignoreupdate=False):
@@ -1383,9 +1385,10 @@ class gitsubrepo(abstractsubrepo):
                 os.remove(path)
 
     def archive(self, ui, archiver, prefix, match=None):
+        total = 0
         source, revision = self._state
         if not revision:
-            return
+            return total
         self._fetch(source, revision)
 
         # Parse git's native archive command.
@@ -1406,9 +1409,11 @@ class gitsubrepo(abstractsubrepo):
                 data = tar.extractfile(info).read()
             archiver.addfile(os.path.join(prefix, self._path, info.name),
                              info.mode, info.issym(), data)
+            total += 1
             ui.progress(_('archiving (%s)') % relpath, i + 1,
                         unit=_('files'))
         ui.progress(_('archiving (%s)') % relpath, None)
+        return total
 
 
     @annotatesubrepoerror

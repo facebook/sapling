@@ -289,6 +289,16 @@ old file -- date clamped to 1980
   *-----* (glob)
   \s*147\s+2 files (re)
 
+show an error when a provided pattern matches no files
+
+  $ hg archive -I file_that_does_not_exist.foo ../empty.zip
+  abort: no files match the archive pattern
+  [255]
+
+  $ hg archive -X * ../empty.zip
+  abort: no files match the archive pattern
+  [255]
+
   $ cd ..
 
 issue3600: check whether "hg archive" can create archive files which
