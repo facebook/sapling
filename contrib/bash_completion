@@ -80,6 +80,14 @@ _hg_repos()
     done
 }
 
+_hg_debugpathcomplete()
+{
+    local files="$(_hg_cmd debugpathcomplete $1 "$cur")"
+    local IFS=$'\n'
+    compopt -o filenames 2>/dev/null
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
+}
+
 _hg_status()
 {
     local files="$(_hg_cmd status -n$1 "glob:$cur**")"
@@ -241,16 +249,16 @@ _hg_command_specific()
 	    _hg_status "mar"
 	;;
 	remove)
-	    _hg_status "mcd"
+	    _hg_debugpathcomplete -n
 	;;
 	forget)
-	    _hg_status "a"
+	    _hg_debugpathcomplete -fa
 	;;
 	diff)
 	    _hg_status "mar"
 	;;
 	revert)
-	    _hg_status "mard"
+	    _hg_debugpathcomplete
 	;;
 	clone)
 	    local count=$(_hg_count_non_option)
