@@ -223,6 +223,9 @@ class dirstate(object):
         for x in sorted(self._map):
             yield x
 
+    def iteritems(self):
+        return self._map.iteritems()
+
     def parents(self):
         return [self._validate(p) for p in self._pl]
 

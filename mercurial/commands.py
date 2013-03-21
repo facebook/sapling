@@ -2137,6 +2137,73 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                                          sorted(m.metadata().items()))))
             ui.write('\n')
 
+@command('debugpathcomplete',
+         [('f', 'full', None, _('complete an entire path')),
+          ('n', 'normal', None, _('show only normal files')),
+          ('a', 'added', None, _('show only added files')),
+          ('r', 'removed', None, _('show only removed files'))],
+         _('FILESPEC...'))
+def debugpathcomplete(ui, repo, *specs, **opts):
+    '''complete part or all of a tracked path
+
+    This command supports shells that offer path name completion. It
+    currently completes only files already known to the dirstate.
+
+    Completion extends only to the next path segment unless
+    --full is specified, in which case entire paths are used.'''
+
+    def complete(path, acceptable):
+        dirstate = repo.dirstate
+        spec = os.path.normpath(os.path.join(os.getcwd(), path))
+        rootdir = repo.root + os.sep
+        if spec != repo.root and not spec.startswith(rootdir):
+            return [], []
+        if os.path.isdir(spec):
+            spec += '/'
+        spec = spec[len(rootdir):]
+        fixpaths = os.sep != '/'
+        if fixpaths:
+            spec = spec.replace(os.sep, '/')
+        speclen = len(spec)
+        fullpaths = opts['full']
+        files, dirs = set(), set()
+        adddir, addfile = dirs.add, files.add
+        for f, st in dirstate.iteritems():
+            if f.startswith(spec) and st[0] in acceptable:
+                if fixpaths:
+                    f = f.replace('/', os.sep)
+                if fullpaths:
+                    addfile(f)
+                    continue
+                s = f.find(os.sep, speclen)
+                if s >= 0:
+                    adddir(f[:s+1])
+                else:
+                    addfile(f)
+        return files, dirs
+
+    acceptable = ''
+    if opts['normal']:
+        acceptable += 'nm'
+    if opts['added']:
+        acceptable += 'a'
+    if opts['removed']:
+        acceptable += 'r'
+    cwd = repo.getcwd()
+    if not specs:
+        specs = ['.']
+
+    files, dirs = set(), set()
+    for spec in specs:
+        f, d = complete(spec, acceptable or 'nmar')
+        files.update(f)
+        dirs.update(d)
+    for d in dirs:
+        files.add(d + 'a')
+        files.add(d + 'b')
+    ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
+    ui.write('\n')
+
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
     '''access the pushkey key/value protocol
