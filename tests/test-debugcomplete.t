@@ -88,6 +88,7 @@ Show debug commands if there are no other candidates
   debugknown
   debuglabelcomplete
   debugobsolete
+  debugpathcomplete
   debugpushkey
   debugpvec
   debugrebuildstate
@@ -242,6 +243,7 @@ Show all commands + options
   debugknown: 
   debuglabelcomplete: 
   debugobsolete: flags, date, user
+  debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
   debugrebuildstate: rev
