@@ -67,7 +67,7 @@ def wrapui(ui):
         def setrepo(self, repo):
             try:
                 self._blackbox = repo.opener('blackbox.log', 'a')
-            except IOError, err:
+            except (IOError, OSError), err:
                 self.debug('warning: cannot write to blackbox.log: %s\n' %
                            err.strerror)
                 self._blackbox = None
