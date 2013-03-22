@@ -2177,7 +2177,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
                     continue
                 s = f.find(os.sep, speclen)
                 if s >= 0:
-                    adddir(f[:s+1])
+                    adddir(f[:s + 1])
                 else:
                     addfile(f)
         return files, dirs
