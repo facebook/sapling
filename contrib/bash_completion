@@ -229,7 +229,7 @@ _hg_command_specific()
 	    fi
 	    _hg_labels
 	;;
-	manifest|update)
+	manifest|update|up|checkout|co)
 	    _hg_labels
 	;;
 	pull|push|outgoing|incoming)
@@ -245,10 +245,10 @@ _hg_command_specific()
 	merge)
 	    _hg_labels
 	;;
-	commit|record)
+	commit|ci|record)
 	    _hg_status "mar"
 	;;
-	remove)
+	remove|rm)
 	    _hg_debugpathcomplete -n
 	;;
 	forget)
