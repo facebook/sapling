@@ -2198,9 +2198,11 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         f, d = complete(spec, acceptable or 'nmar')
         files.update(f)
         dirs.update(d)
-    for d in dirs:
-        files.add(d + 'a')
-        files.add(d + 'b')
+    if not files and len(dirs) == 1:
+        # force the shell to consider a completion that matches one
+        # directory and zero files to be ambiguous
+        dirs.add(iter(dirs).next() + '.')
+    files.update(dirs)
     ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
     ui.write('\n')
 
