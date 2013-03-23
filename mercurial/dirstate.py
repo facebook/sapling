@@ -580,6 +580,7 @@ class dirstate(object):
             dirignore = util.always
 
         matchfn = match.matchfn
+        matchalways = match.always()
         badfn = match.bad
         dmap = self._map
         normpath = util.normpath
@@ -687,15 +688,15 @@ class dirstate(object):
                         if not ignore(nf):
                             match.dir(nf)
                             wadd(nf)
-                        if nf in dmap and matchfn(nf):
+                        if nf in dmap and (matchalways or matchfn(nf)):
                             results[nf] = None
                     elif kind == regkind or kind == lnkkind:
                         if nf in dmap:
-                            if matchfn(nf):
+                            if matchalways or matchfn(nf):
                                 results[nf] = st
-                        elif matchfn(nf) and not ignore(nf):
+                        elif (matchalways or matchfn(nf)) and not ignore(nf):
                             results[nf] = st
-                    elif nf in dmap and matchfn(nf):
+                    elif nf in dmap and (matchalways or matchfn(nf)):
                         results[nf] = None
 
         for s in subrepos:
