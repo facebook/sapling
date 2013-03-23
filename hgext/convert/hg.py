@@ -386,6 +386,9 @@ class mercurial_source(converter_source):
     def hasnativeorder(self):
         return True
 
+    def hasnativeclose(self):
+        return True
+
     def lookuprev(self, rev):
         try:
             return hex(self.repo.lookup(rev))
