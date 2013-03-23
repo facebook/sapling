@@ -705,7 +705,12 @@ class dirstate(object):
 
         # step 3: report unseen items in the dmap hash
         if not skipstep3 and not exact:
-            visit = sorted([f for f in dmap if f not in results and matchfn(f)])
+            if not results and matchalways:
+                visit = dmap.keys()
+            else:
+                visit = [f for f in dmap if f not in results and matchfn(f)]
+            visit.sort()
+
             if unknown:
                 # unknown == True means we walked the full directory tree above.
                 # So if a file is not seen it was either a) not matching matchfn
