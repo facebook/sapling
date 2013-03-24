@@ -238,7 +238,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     aborts, prompts = [], []
     # Compare manifests
-    for f, n in m1.iteritems():
+    for f, n1 in m1.iteritems():
         if partial and not partial(f):
             continue
         if f in m2:
@@ -246,18 +246,18 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             fl1, fl2, fla = m1.flags(f), m2.flags(f), ma.flags(f)
             nol = 'l' not in fl1 + fl2 + fla
             a = ma.get(f, nullid)
-            if n == n2 and fl1 == fl2:
+            if n1 == n2 and fl1 == fl2:
                 pass # same - keep local
             elif n2 == a and fl2 == fla:
                 pass # remote unchanged - keep local
-            elif n == a and fl1 == fla: # local unchanged - use remote
-                if n == n2: # optimization: keep local content
+            elif n1 == a and fl1 == fla: # local unchanged - use remote
+                if n1 == n2: # optimization: keep local content
                     actions.append((f, "e", (fl2,), "update permissions"))
                 else:
                     actions.append((f, "g", (fl2,), "remote is newer"))
             elif nol and n2 == a: # remote only changed 'x'
                 actions.append((f, "e", (fl2,), "update permissions"))
-            elif nol and n == a: # local only changed 'x'
+            elif nol and n1 == a: # local only changed 'x'
                 actions.append((f, "g", (fl1,), "remote is newer"))
             else: # both changed something
                 actions.append((f, "m", (f, f, False), "versions differ"))
@@ -272,14 +272,14 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             actions.append((f, "m", (f2, f, False),
                             "local copied/moved to " + f2))
         elif f in ma: # clean, a different, no remote
-            if n != ma[f]:
+            if n1 != ma[f]:
                 prompts.append((f, "cd")) # prompt changed/deleted
-            elif n[20:] == "a": # added, no remote
+            elif n1[20:] == "a": # added, no remote
                 actions.append((f, "f", None, "remote deleted"))
             else:
                 actions.append((f, "r", None, "other deleted"))
 
-    for f, n in m2.iteritems():
+    for f, n2 in m2.iteritems():
         if partial and not partial(f):
             continue
         if f in m1 or f in copied: # files already visited
@@ -320,7 +320,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     aborts.append((f, "ud"))
                 else:
                     actions.append((f, "g", (m2.flags(f),), "remote created"))
-        elif n != ma[f]:
+        elif n2 != ma[f]:
             prompts.append((f, "dc")) # prompt deleted/changed
 
     for f, m in sorted(aborts):
