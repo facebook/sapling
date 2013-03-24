@@ -275,7 +275,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             pass
         elif n1 and f in movewithdir: # directory rename
             f2 = movewithdir[f]
-            actions.append((f, "d", (None, f2, m1.flags(f)),
+            actions.append((f, "d", (None, f2, fl1),
                             "remote renamed directory to " + f2))
         elif n1 and f in copy:
             f2 = copy[f]
@@ -290,7 +290,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 actions.append((f, "r", None, "other deleted"))
         elif n2 and f in movewithdir:
             f2 = movewithdir[f]
-            actions.append((None, "d", (f, f2, m2.flags(f)),
+            actions.append((None, "d", (f, f2, fl2),
                             "local renamed directory to " + f2))
         elif n2 and f in copy:
             f2 = copy[f]
@@ -314,7 +314,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             # Checking whether the files are different is expensive, so we
             # don't do that when we can avoid it.
             if force and not branchmerge:
-                actions.append((f, "g", (m2.flags(f),), "remote created"))
+                actions.append((f, "g", (fl2,), "remote created"))
             else:
                 different = _checkunknownfile(repo, wctx, p2, f)
                 if force and branchmerge and different:
@@ -323,7 +323,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 elif not force and different:
                     aborts.append((f, "ud"))
                 else:
-                    actions.append((f, "g", (m2.flags(f),), "remote created"))
+                    actions.append((f, "g", (fl2,), "remote created"))
         elif n2 and n2 != ma[f]:
             prompts.append((f, "dc")) # prompt deleted/changed
 
