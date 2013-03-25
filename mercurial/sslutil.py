@@ -99,7 +99,7 @@ class validator(object):
         self.ui = ui
         self.host = host
 
-    def __call__(self, sock):
+    def __call__(self, sock, strict=False):
         host = self.host
         cacerts = self.ui.config('web', 'cacerts')
         hostfingerprint = self.ui.config('hostfingerprints', host)
@@ -107,6 +107,9 @@ class validator(object):
             if hostfingerprint:
                 raise util.Abort(_("host fingerprint for %s can't be "
                                    "verified (Python too old)") % host)
+            if strict:
+                raise util.Abort(_("certificate for %s can't be verified "
+                                   "(Python too old)") % host)
             if self.ui.configbool('ui', 'reportoldssl', True):
                 self.ui.warn(_("warning: certificate for %s can't be verified "
                                "(Python too old)\n") % host)
@@ -142,6 +145,11 @@ class validator(object):
                                         '--insecure to connect insecurely') %
                                       nicefingerprint)
             self.ui.debug('%s certificate successfully verified\n' % host)
+        elif strict:
+            raise util.Abort(_('%s certificate with fingerprint %s not '
+                               'verified') % (host, nicefingerprint),
+                             hint=_('check hostfingerprints or web.cacerts '
+                                     'config setting'))
         else:
             self.ui.warn(_('warning: %s certificate with fingerprint %s not '
                            'verified (check hostfingerprints or web.cacerts '
