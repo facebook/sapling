@@ -698,6 +698,10 @@ class dirstate(object):
                     elif nf in dmap and matchfn(nf):
                         results[nf] = None
 
+        for s in subrepos:
+            del results[s]
+        del results['.hg']
+
         # step 3: report unseen items in the dmap hash
         if not skipstep3 and not exact:
             visit = sorted([f for f in dmap if f not in results and matchfn(f)])
@@ -725,9 +729,6 @@ class dirstate(object):
                 nf = iter(visit).next
                 for st in util.statfiles([join(i) for i in visit]):
                     results[nf()] = st
-        for s in subrepos:
-            del results[s]
-        del results['.hg']
         return results
 
     def status(self, match, subrepos, ignored, clean, unknown):
