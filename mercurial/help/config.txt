@@ -1052,6 +1052,16 @@ Configuration for extensions that need to send email messages.
     Optional. Method to enable TLS when connecting to mail server: starttls,
     smtps or none. Default: none.
 
+``verifycert``
+    Optional. Verification for the certificate of mail server, when
+    ``tls`` is starttls or smtps. "strict", "loose" or False. For
+    "strict" or "loose", the certificate is verified as same as the
+    verification for HTTPS connections (see ``[hostfingerprints]`` and
+    ``[web] cacerts`` also). For "strict", sending email is also
+    aborted, if there is no configuration for mail server in
+    ``[hostfingerprints]`` and ``[web] cacerts``.  --insecure for
+    :hg:`email` overwrites this as "loose". Default: "strict".
+
 ``username``
     Optional. User name for authenticating with the SMTP server.
     Default: none.

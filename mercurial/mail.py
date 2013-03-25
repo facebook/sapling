@@ -92,14 +92,25 @@ def _smtp(ui):
     smtps = tls == 'smtps'
     if (starttls or smtps) and not util.safehasattr(socket, 'ssl'):
         raise util.Abort(_("can't use TLS: Python SSL support not installed"))
-    if smtps:
-        ui.note(_('(using smtps)\n'))
-        s = smtplib.SMTP_SSL(local_hostname=local_hostname)
-    else:
-        s = smtplib.SMTP(local_hostname=local_hostname)
     mailhost = ui.config('smtp', 'host')
     if not mailhost:
         raise util.Abort(_('smtp.host not configured - cannot send mail'))
+    verifycert = ui.config('smtp', 'verifycert', 'strict')
+    if verifycert not in ['strict', 'loose']:
+        if util.parsebool(verifycert) is not False:
+            raise util.Abort(_('invalid smtp.verifycert configuration: %s')
+                             % (verifycert))
+    if (starttls or smtps) and verifycert:
+        sslkwargs = sslutil.sslkwargs(ui, mailhost)
+    else:
+        sslkwargs = {}
+    if smtps:
+        ui.note(_('(using smtps)\n'))
+        s = SMTPS(sslkwargs, local_hostname=local_hostname)
+    elif starttls:
+        s = STARTTLS(sslkwargs, local_hostname=local_hostname)
+    else:
+        s = smtplib.SMTP(local_hostname=local_hostname)
     mailport = util.getport(ui.config('smtp', 'port', 25))
     ui.note(_('sending mail: smtp host %s, port %s\n') %
             (mailhost, mailport))
@@ -109,6 +120,9 @@ def _smtp(ui):
         s.ehlo()
         s.starttls()
         s.ehlo()
+    if (starttls or smtps) and verifycert:
+        ui.note(_('(verifying remote certificate)\n'))
+        sslutil.validator(ui, mailhost)(s.sock, verifycert == 'strict')
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
     if username and not password:
