@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import mdiff, parsers, error, revlog, util
+import mdiff, parsers, error, revlog, util, dicthelpers
 import array, struct
 
 class manifestdict(dict):
@@ -25,6 +25,8 @@ class manifestdict(dict):
         self._flags[f] = flags
     def copy(self):
         return manifestdict(self, dict.copy(self._flags))
+    def flagsdiff(self, d2):
+        return dicthelpers.diff(self._flags, d2._flags, "")
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
