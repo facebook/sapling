@@ -35,7 +35,7 @@ vdiff on hovered and selected revisions.
 '''
 
 import os
-from mercurial import commands, util, patch, revlog, scmutil, phases
+from mercurial import commands, util, patch, revlog, scmutil
 from mercurial.node import nullid, nullrev, short
 from mercurial.i18n import _
 
