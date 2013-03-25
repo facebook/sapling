@@ -2,7 +2,7 @@
 '''helper extension to measure performance'''
 
 from mercurial import cmdutil, scmutil, util, match, commands, obsolete
-from mercurial import repoview, branchmap
+from mercurial import repoview, branchmap, merge
 import time, os, sys
 
 cmdtable = {}
@@ -122,6 +122,22 @@ def perfdirstatewrite(ui, repo):
     def d():
         ds._dirty = True
         ds.write()
+    timer(d)
+
+@command('perfmergecalculate',
+         [('r', 'rev', '.', 'rev to merge against')])
+def perfmergecalculate(ui, repo, rev):
+    wctx = repo[None]
+    rctx = scmutil.revsingle(repo, rev, rev)
+    ancestor = wctx.ancestor(rctx)
+    # we don't want working dir files to be stat'd in the benchmark, so prime
+    # that cache
+    wctx.dirty()
+    def d():
+        # acceptremote is True because we don't want prompts in the middle of
+        # our benchmark
+        merge.calculateupdates(repo, wctx, rctx, ancestor, False, False, False,
+                               acceptremote=True)
     timer(d)
 
 @command('perfmanifest')
