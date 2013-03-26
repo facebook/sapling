@@ -47,6 +47,15 @@ def wrapui(ui):
 
             if util.safehasattr(self, '_blackbox'):
                 blackbox = self._blackbox
+            elif util.safehasattr(self, '_bbopener'):
+                try:
+                    self._blackbox = self._bbopener('blackbox.log', 'a')
+                except (IOError, OSError), err:
+                    self.debug('warning: cannot write to blackbox.log: %s\n' %
+                               err.strerror)
+                    del self._bbopener
+                    self._blackbox = None
+                blackbox = self._blackbox
             else:
                 # certain ui instances exist outside the context of
                 # a repo, so just default to the last blackbox that
@@ -65,12 +74,7 @@ def wrapui(ui):
                 lastblackbox = blackbox
 
         def setrepo(self, repo):
-            try:
-                self._blackbox = repo.opener('blackbox.log', 'a')
-            except (IOError, OSError), err:
-                self.debug('warning: cannot write to blackbox.log: %s\n' %
-                           err.strerror)
-                self._blackbox = None
+            self._bbopener = repo.opener
 
     ui.__class__ = blackboxui
 
