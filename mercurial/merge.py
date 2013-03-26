@@ -7,7 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
-import error, util, filemerge, copies, subrepo, worker
+import error, util, filemerge, copies, subrepo, worker, dicthelpers
 import errno, os, shutil
 
 class mergestate(object):
@@ -238,17 +238,27 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     aborts, prompts = [], []
     # Compare manifests
-    for f, n1 in m1.iteritems():
+    fdiff = dicthelpers.diff(m1, m2)
+    flagsdiff = m1.flagsdiff(m2)
+    diff12 = dicthelpers.join(fdiff, flagsdiff)
+
+    for f, (n12, fl12) in diff12.iteritems():
+        if n12:
+            n1, n2 = n12
+        else: # file contents didn't change, but flags did
+            n1 = n2 = m1[f]
+        if fl12:
+            fl1, fl2 = fl12
+        else: # flags didn't change, file contents did
+            fl1 = fl2 = m1.flags(f)
+
         if partial and not partial(f):
             continue
-        if f in m2:
-            n2 = m2[f]
-            fl1, fl2, fla = m1.flags(f), m2.flags(f), ma.flags(f)
+        if n1 and n2:
+            fla = ma.flags(f)
             nol = 'l' not in fl1 + fl2 + fla
             a = ma.get(f, nullid)
-            if n1 == n2 and fl1 == fl2:
-                pass # same - keep local
-            elif n2 == a and fl2 == fla:
+            if n2 == a and fl2 == fla:
                 pass # remote unchanged - keep local
             elif n1 == a and fl1 == fla: # local unchanged - use remote
                 if n1 == n2: # optimization: keep local content
@@ -263,32 +273,26 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 actions.append((f, "m", (f, f, False), "versions differ"))
         elif f in copied: # files we'll deal with on m2 side
             pass
-        elif f in movewithdir: # directory rename
+        elif n1 and f in movewithdir: # directory rename
             f2 = movewithdir[f]
             actions.append((f, "d", (None, f2, m1.flags(f)),
                             "remote renamed directory to " + f2))
-        elif f in copy:
+        elif n1 and f in copy:
             f2 = copy[f]
             actions.append((f, "m", (f2, f, False),
                             "local copied/moved to " + f2))
-        elif f in ma: # clean, a different, no remote
+        elif n1 and f in ma: # clean, a different, no remote
             if n1 != ma[f]:
                 prompts.append((f, "cd")) # prompt changed/deleted
             elif n1[20:] == "a": # added, no remote
                 actions.append((f, "f", None, "remote deleted"))
             else:
                 actions.append((f, "r", None, "other deleted"))
-
-    for f, n2 in m2.iteritems():
-        if partial and not partial(f):
-            continue
-        if f in m1 or f in copied: # files already visited
-            continue
-        if f in movewithdir:
+        elif n2 and f in movewithdir:
             f2 = movewithdir[f]
             actions.append((None, "d", (f, f2, m2.flags(f)),
                             "local renamed directory to " + f2))
-        elif f in copy:
+        elif n2 and f in copy:
             f2 = copy[f]
             if f2 in m2:
                 actions.append((f2, "m", (f, f, False),
@@ -296,7 +300,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
             else:
                 actions.append((f2, "m", (f, f, True),
                                 "remote moved to " + f))
-        elif f not in ma:
+        elif n2 and f not in ma:
             # local unknown, remote created: the logic is described by the
             # following table:
             #
@@ -320,7 +324,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     aborts.append((f, "ud"))
                 else:
                     actions.append((f, "g", (m2.flags(f),), "remote created"))
-        elif n2 != ma[f]:
+        elif n2 and n2 != ma[f]:
             prompts.append((f, "dc")) # prompt deleted/changed
 
     for f, m in sorted(aborts):
