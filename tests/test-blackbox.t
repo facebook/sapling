@@ -67,7 +67,7 @@ we must not cause a failure if we cannot write to the log
   $ chmod 000 .hg/blackbox.log
   $ hg --debug incoming
   warning: cannot write to blackbox.log: Permission denied
-  comparing with $TESTTMP/blackboxtest
+  comparing with $TESTTMP/blackboxtest (glob)
   query 1; heads
   searching for changes
   all local heads known remotely
@@ -86,7 +86,7 @@ we must not cause a failure if we cannot write to the log
   
   
   $ hg pull
-  pulling from $TESTTMP/blackboxtest
+  pulling from $TESTTMP/blackboxtest (glob)
   searching for changes
   adding changesets
   adding manifests
