@@ -1590,9 +1590,9 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(forget)
     return bad, forgot
 
-def duplicatecopies(repo, rev, p1):
-    "Reproduce copies found in the source revision in the dirstate for grafts"
-    for dst, src in copies.pathcopies(repo[p1], repo[rev]).iteritems():
+def duplicatecopies(repo, rev, fromrev):
+    '''reproduce copies from fromrev to rev in the dirstate'''
+    for dst, src in copies.pathcopies(repo[fromrev], repo[rev]).iteritems():
         repo.dirstate.copy(src, dst)
 
 def commit(ui, repo, commitfunc, pats, opts):
