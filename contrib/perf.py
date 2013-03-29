@@ -377,6 +377,3 @@ def perfbranchmap(ui, repo, full=False):
     finally:
         branchmap.read = oldread
         branchmap.branchcache.write = oldwrite
-
-
-
