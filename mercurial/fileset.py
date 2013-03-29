@@ -353,6 +353,29 @@ def encoding(mctx, x):
 
     return s
 
+def eol(mctx, x):
+    """``eol(style)``
+    File contains newlines of the given style (dos, unix, mac). Binary
+    files are excluded, files with mixed line endings match multiple
+    styles.
+    """
+
+    # i18n: "encoding" is a keyword
+    enc = getstring(x, _("encoding requires an encoding name"))
+
+    s = []
+    for f in mctx.existing():
+        d = mctx.ctx[f].data()
+        if util.binary(d):
+            continue
+        if (enc == 'dos' or enc == 'win') and '\r\n' in d:
+            s.append(f)
+        elif enc == 'unix' and re.search('(?<!\r)\n', d):
+            s.append(f)
+        elif enc == 'mac' and re.search('\r(?!\n)', d):
+            s.append(f)
+    return s
+
 def copied(mctx, x):
     """``copied()``
     File that is recorded as being copied.
@@ -395,6 +418,7 @@ symbols = {
     'copied': copied,
     'deleted': deleted,
     'encoding': encoding,
+    'eol': eol,
     'exec': exec_,
     'grep': grep,
     'ignored': ignored,

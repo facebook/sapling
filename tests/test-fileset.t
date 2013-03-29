@@ -226,3 +226,21 @@ Test with a revision
   b2
   c1
 
+  >>> open('dos', 'wb').write("dos\r\n")
+  >>> open('mixed', 'wb').write("dos\r\nunix\n")
+  >>> open('mac', 'wb').write("mac\r")
+  $ hg add dos mixed mac
+
+  $ fileset 'eol(dos)'
+  dos
+  mixed
+  $ fileset 'eol(unix)'
+  .hgsub
+  .hgsubstate
+  a1
+  b1
+  b2
+  c1
+  mixed
+  $ fileset 'eol(mac)'
+  mac
