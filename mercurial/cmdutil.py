@@ -1593,7 +1593,10 @@ def forget(ui, repo, match, prefix, explicitonly):
 def duplicatecopies(repo, rev, fromrev):
     '''reproduce copies from fromrev to rev in the dirstate'''
     for dst, src in copies.pathcopies(repo[fromrev], repo[rev]).iteritems():
-        repo.dirstate.copy(src, dst)
+        # copies.pathcopies returns backward renames, so dst might not
+        # actually be in the dirstate
+        if repo.dirstate[dst] in "nma":
+            repo.dirstate.copy(src, dst)
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
