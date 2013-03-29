@@ -701,9 +701,14 @@ class filectx(object):
                     needed[p] = needed.get(p, 0) + 1
             if ready:
                 visit.pop()
-                curr = decorate(f.data(), f)
+                reusable = f in hist
+                if reusable:
+                    curr = hist[f]
+                else:
+                    curr = decorate(f.data(), f)
                 for p in pl:
-                    curr = pair(hist[p], curr)
+                    if not reusable:
+                        curr = pair(hist[p], curr)
                     if needed[p] == 1:
                         del hist[p]
                     else:
