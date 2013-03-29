@@ -1416,9 +1416,8 @@ class localrepository(object):
         # removed. We can either remove phasecache from the filecache,
         # causing it to reload next time it is accessed, or simply filter
         # the removed nodes now and write the updated cache.
-        if '_phasecache' in self._filecache:
-            self._phasecache.filterunknown(self)
-            self._phasecache.write()
+        self._phasecache.filterunknown(self)
+        self._phasecache.write()
 
         # update the 'served' branch cache to help read only server process
         # Thanks to branchcach collaboration this is done from the nearest
