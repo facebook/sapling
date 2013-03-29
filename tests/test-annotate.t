@@ -267,6 +267,114 @@ annotate file without '\n' on last line
   [0-9]+: a (re)
   [0-9]+: b (re)
 
+Issue3841: check annotation of the file of which filelog includes
+merging between the revision and its ancestor
+
+to reproduce the situation with recent Mercurial, this script uses (1)
+"hg debugsetparents" to merge without ancestor check by "hg merge",
+and (2) the extension to allow filelog merging between the revision
+and its ancestor by overriding "repo._filecommit".
+
+  $ cat > ../legacyrepo.py <<EOF
+  > from mercurial import node, util
+  > def reposetup(ui, repo):
+  >     class legacyrepo(repo.__class__):
+  >         def _filecommit(self, fctx, manifest1, manifest2,
+  >                         linkrev, tr, changelist):
+  >             fname = fctx.path()
+  >             text = fctx.data()
+  >             flog = self.file(fname)
+  >             fparent1 = manifest1.get(fname, node.nullid)
+  >             fparent2 = manifest2.get(fname, node.nullid)
+  >             meta = {}
+  >             copy = fctx.renamed()
+  >             if copy and copy[0] != fname:
+  >                 raise util.Abort('copying is not supported')
+  >             if fparent2 != node.nullid:
+  >                 changelist.append(fname)
+  >                 return flog.add(text, meta, tr, linkrev,
+  >                                 fparent1, fparent2)
+  >             raise util.Abort('only merging is supported')
+  >     repo.__class__ = legacyrepo
+  > EOF
+
+  $ cat > baz <<EOF
+  > 1
+  > 2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ hg add baz
+  $ hg commit -m "baz:0"
+
+  $ cat > baz <<EOF
+  > 1 baz:1
+  > 2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ hg commit -m "baz:1"
+
+  $ cat > baz <<EOF
+  > 1 baz:1
+  > 2 baz:2
+  > 3
+  > 4
+  > 5
+  > EOF
+  $ hg debugsetparents 17 17
+  $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
+  $ hg debugindexdot .hg/store/data/baz.i
+  digraph G {
+  	-1 -> 0
+  	0 -> 1
+  	1 -> 2
+  	1 -> 2
+  }
+  $ hg annotate baz
+  17: 1 baz:1
+  18: 2 baz:2
+  16: 3
+  16: 4
+  16: 5
+
+  $ cat > baz <<EOF
+  > 1 baz:1
+  > 2 baz:2
+  > 3 baz:3
+  > 4
+  > 5
+  > EOF
+  $ hg commit -m "baz:3"
+
+  $ cat > baz <<EOF
+  > 1 baz:1
+  > 2 baz:2
+  > 3 baz:3
+  > 4 baz:4
+  > 5
+  > EOF
+  $ hg debugsetparents 19 18
+  $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
+  $ hg debugindexdot .hg/store/data/baz.i
+  digraph G {
+  	-1 -> 0
+  	0 -> 1
+  	1 -> 2
+  	1 -> 2
+  	2 -> 3
+  	3 -> 4
+  	2 -> 4
+  }
+  $ hg annotate baz
+  17: 1 baz:1
+  18: 2 baz:2
+  19: 3 baz:3
+  20: 4 baz:4
+  16: 5
+
 Test annotate with whitespace options
 
   $ cd ..

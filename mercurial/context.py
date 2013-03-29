@@ -689,7 +689,8 @@ class filectx(object):
         needed = {base: 1}
         while visit:
             f = visit[-1]
-            if f not in pcache:
+            pcached = f in pcache
+            if not pcached:
                 pcache[f] = parents(f)
 
             ready = True
@@ -698,6 +699,7 @@ class filectx(object):
                 if p not in hist:
                     ready = False
                     visit.append(p)
+                if not pcached:
                     needed[p] = needed.get(p, 0) + 1
             if ready:
                 visit.pop()
