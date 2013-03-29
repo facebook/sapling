@@ -29,7 +29,18 @@ def _diffjoin(d1, d2, default, compare):
     return res
 
 def diff(d1, d2, default=None):
+    '''Return all key-value pairs that are different between d1 and d2.
+
+    This includes keys that are present in one dict but not the other, and
+    keys whose values are different. The return value is a dict with values
+    being pairs of values from d1 and d2 respectively, and missing values
+    represented as default.'''
     return _diffjoin(d1, d2, default, True)
 
 def join(d1, d2, default=None):
+    '''Return all key-value pairs from both d1 and d2.
+
+    This is akin to an outer join in relational algebra. The return value is a
+    dict with values being pairs of values from d1 and d2 respectively, and
+    missing values represented as default.'''
     return _diffjoin(d1, d2, default, False)
