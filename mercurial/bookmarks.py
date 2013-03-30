@@ -223,12 +223,12 @@ def pushbookmark(repo, key, old, new):
 
 def updatefromremote(ui, repo, remote, path):
     ui.debug("checking for updated bookmarks\n")
-    rb = remote.listkeys('bookmarks')
+    remotemarks = remote.listkeys('bookmarks')
     changed = False
     localmarks = repo._bookmarks
-    for k in sorted(rb):
+    for k in sorted(remotemarks):
         if k in localmarks:
-            nr, nl = rb[k], localmarks[k]
+            nr, nl = remotemarks[k], localmarks[k]
             if nr in repo:
                 cr = repo[nr]
                 cl = repo[nl]
@@ -257,9 +257,9 @@ def updatefromremote(ui, repo, remote, path):
                     localmarks[n] = cr.node()
                     changed = True
                     ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
-        elif rb[k] in repo:
+        elif remotemarks[k] in repo:
             # add remote bookmarks for changes we already have
-            localmarks[k] = repo[rb[k]].node()
+            localmarks[k] = repo[remotemarks[k]].node()
             changed = True
             ui.status(_("adding remote bookmark %s\n") % k)
 
