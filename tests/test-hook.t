@@ -232,6 +232,7 @@ test that prelistkeys can prevent listing keys
   abort: prelistkeys hook exited with status 1
   [255]
   $ cd ../a
+  $ rm .hg/hgrc
 
 prechangegroup hook can prevent incoming changes
 
