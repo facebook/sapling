@@ -4499,11 +4499,11 @@ def pull(ui, repo, source="default", **opts):
     if opts.get('bookmark'):
         if not revs:
             revs = []
-        rb = other.listkeys('bookmarks')
+        remotebookmarks = other.listkeys('bookmarks')
         for b in opts['bookmark']:
-            if b not in rb:
+            if b not in remotebookmarks:
                 raise util.Abort(_('remote bookmark %s not found!') % b)
-            revs.append(rb[b])
+            revs.append(remotebookmarks[b])
 
     if revs:
         try:
@@ -4530,7 +4530,7 @@ def pull(ui, repo, source="default", **opts):
         for b in opts['bookmark']:
             # explicit pull overrides local bookmark if any
             ui.status(_("importing bookmark %s\n") % b)
-            marks[b] = repo[rb[b]].node()
+            marks[b] = repo[remotebookmarks[b]].node()
         marks.write()
 
     return ret
