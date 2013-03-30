@@ -547,9 +547,10 @@ class hgsubrepo(abstractsubrepo):
             else:
                 self._repo.ui.status(_('pulling subrepo %s from %s\n')
                                      % (subrelpath(self), srcurl))
+                remotebookmarks = other.listkeys('bookmarks')
                 self._repo.pull(other)
-                bookmarks.updatefromremote(self._repo.ui, self._repo, other,
-                                           srcurl)
+                bookmarks.updatefromremote(self._repo.ui, self._repo,
+                                           remotebookmarks, srcurl)
 
     @annotatesubrepoerror
     def get(self, state, overwrite=False):

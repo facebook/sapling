@@ -58,7 +58,6 @@ expect error, pulling not allowed
 
   $ req
   pulling from http://localhost:$HGPORT/
-  searching for changes
   abort: authorization failed
   % serve errors
 

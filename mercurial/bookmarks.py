@@ -221,9 +221,8 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
-def updatefromremote(ui, repo, remote, path):
+def updatefromremote(ui, repo, remotemarks, path):
     ui.debug("checking for updated bookmarks\n")
-    remotemarks = remote.listkeys('bookmarks')
     changed = False
     localmarks = repo._bookmarks
     for k in sorted(remotemarks):

@@ -204,6 +204,39 @@ update a remote bookmark from a non-head to a head
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
 
+update a bookmark in the middle of a client pulling changes
+
+  $ cd ..
+  $ hg clone -q a pull-race
+  $ hg clone -q pull-race pull-race2
+  $ cd pull-race
+  $ hg up -q Y
+  $ echo c4 > f2
+  $ hg ci -Am4
+  $ echo c5 > f3
+  $ cat <<EOF > .hg/hgrc
+  > [hooks]
+  > outgoing.makecommit = hg ci -Am5; echo committed in pull-race
+  > EOF
+  $ cd ../pull-race2
+  $ hg pull
+  pulling from $TESTTMP/pull-race (glob)
+  searching for changes
+  adding changesets
+  adding f3
+  committed in pull-race
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark Y
+  (run 'hg update' to get a working copy)
+  $ hg book
+   * @                         1:0d2164f0ce0d
+     X                         1:0d2164f0ce0d
+     Y                         4:b0a5eff05604
+     Z                         1:0d2164f0ce0d
+  $ cd ../b
+
 diverging a remote bookmark fails
 
   $ hg up -q 4e3505fd9583
