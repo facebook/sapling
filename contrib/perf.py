@@ -99,6 +99,15 @@ def perfancestorset(ui, repo, revset):
             rev in s
     timer(d)
 
+@command('perfdirs')
+def perfdirs(ui, repo):
+    dirstate = repo.dirstate
+    'a' in dirstate
+    def d():
+        dirstate.dirs()
+        del dirstate._dirs
+    timer(d)
+
 @command('perfdirstate')
 def perfdirstate(ui, repo):
     "a" in repo.dirstate
