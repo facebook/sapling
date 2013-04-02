@@ -54,6 +54,15 @@ def perfstatus(ui, repo, **opts):
     #                                                False))))
     timer(lambda: sum(map(len, repo.status(**opts))))
 
+@command('perfaddremove')
+def perfaddremove(ui, repo):
+    try:
+        oldquiet = repo.ui.quiet
+        repo.ui.quiet = True
+        timer(lambda: scmutil.addremove(repo, dry_run=True))
+    finally:
+        repo.ui.quiet = oldquiet
+
 def clearcaches(cl):
     # behave somewhat consistently across internal API changes
     if util.safehasattr(cl, 'clearcaches'):
