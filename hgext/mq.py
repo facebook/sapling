@@ -1204,9 +1204,7 @@ class queue(object):
         diffopts = self.diffopts()
         wlock = repo.wlock()
         try:
-            heads = []
-            for b, ls in repo.branchmap().iteritems():
-                heads += ls
+            heads = [h for hs in repo.branchmap().itervalues() for h in hs]
             if not heads:
                 heads = [nullid]
             if repo.dirstate.p1() not in heads and not exact:
