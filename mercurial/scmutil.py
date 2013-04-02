@@ -678,8 +678,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     ctx = repo[None]
     dirstate = repo.dirstate
     walkresults = dirstate.walk(m, sorted(ctx.substate), True, False)
-    for abs in walkresults:
-        st = walkresults[abs]
+    for abs, st in walkresults.iteritems():
         dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
