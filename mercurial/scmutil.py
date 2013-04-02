@@ -686,8 +686,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             if repo.ui.verbose or not m.exact(abs):
                 rel = m.rel(abs)
                 repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif (dstate != 'r' and (not st or
-               (stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)))):
+        elif dstate != 'r' and not st:
             deleted.append(abs)
             if repo.ui.verbose or not m.exact(abs):
                 rel = m.rel(abs)
