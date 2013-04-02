@@ -683,19 +683,26 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
-            if repo.ui.verbose or not m.exact(abs):
-                rel = m.rel(abs)
-                repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
         elif dstate != 'r' and not st:
             deleted.append(abs)
-            if repo.ui.verbose or not m.exact(abs):
-                rel = m.rel(abs)
-                repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
         # for finding renames
         elif dstate == 'r':
             removed.append(abs)
         elif dstate == 'a':
             added.append(abs)
+
+    unknownset = set(unknown)
+    toprint = unknownset.copy()
+    toprint.update(deleted)
+    for abs in sorted(toprint):
+        if repo.ui.verbose or not m.exact(abs):
+            rel = m.rel(abs)
+            if abs in unknownset:
+                status = _('adding %s\n') % ((pats and rel) or abs)
+            else:
+                status = _('removing %s\n') % ((pats and rel) or abs)
+            repo.ui.status(status)
+
     copies = {}
     if similarity > 0:
         for old, new, score in similar.findrenames(repo,
