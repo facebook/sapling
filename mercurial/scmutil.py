@@ -676,10 +676,11 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     m.bad = lambda x, y: rejected.append(x)
 
     ctx = repo[None]
-    walkresults = repo.dirstate.walk(m, sorted(ctx.substate), True, False)
+    dirstate = repo.dirstate
+    walkresults = dirstate.walk(m, sorted(ctx.substate), True, False)
     for abs in sorted(walkresults):
         st = walkresults[abs]
-        dstate = repo.dirstate[abs]
+        dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
             if repo.ui.verbose or not m.exact(abs):
