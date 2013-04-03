@@ -154,11 +154,14 @@ class dirstate(object):
     def flagfunc(self, buildfallback):
         if self._checklink and self._checkexec:
             def f(x):
-                p = self._join(x)
-                if os.path.islink(p):
-                    return 'l'
-                if util.isexec(p):
-                    return 'x'
+                try:
+                    st = os.lstat(self._join(x))
+                    if util.statislink(st):
+                        return 'l'
+                    if util.statisexec(st):
+                        return 'x'
+                except OSError:
+                    pass
                 return ''
             return f
 
