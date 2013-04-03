@@ -676,26 +676,32 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     m.bad = lambda x, y: rejected.append(x)
 
     ctx = repo[None]
-    walkresults = repo.dirstate.walk(m, sorted(ctx.substate), True, False)
-    for abs in sorted(walkresults):
-        st = walkresults[abs]
-        dstate = repo.dirstate[abs]
+    dirstate = repo.dirstate
+    walkresults = dirstate.walk(m, sorted(ctx.substate), True, False)
+    for abs, st in walkresults.iteritems():
+        dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
-            if repo.ui.verbose or not m.exact(abs):
-                rel = m.rel(abs)
-                repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif (dstate != 'r' and (not st or
-               (stat.S_ISDIR(st.st_mode) and not stat.S_ISLNK(st.st_mode)))):
+        elif dstate != 'r' and not st:
             deleted.append(abs)
-            if repo.ui.verbose or not m.exact(abs):
-                rel = m.rel(abs)
-                repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
         # for finding renames
         elif dstate == 'r':
             removed.append(abs)
         elif dstate == 'a':
             added.append(abs)
+
+    unknownset = set(unknown)
+    toprint = unknownset.copy()
+    toprint.update(deleted)
+    for abs in sorted(toprint):
+        if repo.ui.verbose or not m.exact(abs):
+            rel = m.rel(abs)
+            if abs in unknownset:
+                status = _('adding %s\n') % ((pats and rel) or abs)
+            else:
+                status = _('removing %s\n') % ((pats and rel) or abs)
+            repo.ui.status(status)
+
     copies = {}
     if similarity > 0:
         for old, new, score in similar.findrenames(repo,
@@ -721,49 +727,6 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         if f in m.files():
             return 1
     return 0
-
-def updatedir(ui, repo, patches, similarity=0):
-    '''Update dirstate after patch application according to metadata'''
-    if not patches:
-        return []
-    copies = []
-    removes = set()
-    cfiles = patches.keys()
-    cwd = repo.getcwd()
-    if cwd:
-        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
-    for f in patches:
-        gp = patches[f]
-        if not gp:
-            continue
-        if gp.op == 'RENAME':
-            copies.append((gp.oldpath, gp.path))
-            removes.add(gp.oldpath)
-        elif gp.op == 'COPY':
-            copies.append((gp.oldpath, gp.path))
-        elif gp.op == 'DELETE':
-            removes.add(gp.path)
-
-    wctx = repo[None]
-    for src, dst in copies:
-        dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
-    if (not similarity) and removes:
-        wctx.remove(sorted(removes), True)
-
-    for f in patches:
-        gp = patches[f]
-        if gp and gp.mode:
-            islink, isexec = gp.mode
-            dst = repo.wjoin(gp.path)
-            # patch won't create empty files
-            if gp.op == 'ADD' and not os.path.lexists(dst):
-                flags = (isexec and 'x' or '') + (islink and 'l' or '')
-                repo.wwrite(gp.path, '', flags)
-            util.setflags(dst, islink, isexec)
-    addremove(repo, cfiles, similarity=similarity)
-    files = patches.keys()
-    files.extend([r for r in removes if r not in files])
-    return sorted(files)
 
 def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For

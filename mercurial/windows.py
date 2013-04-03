@@ -337,3 +337,11 @@ def lookupreg(key, valname=None, scope=None):
             pass
 
 expandglobs = True
+
+def statislink(st):
+    '''check whether a stat result is a symlink'''
+    return False
+
+def statisexec(st):
+    '''check whether a stat result is an executable file'''
+    return False
