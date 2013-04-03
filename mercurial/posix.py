@@ -557,3 +557,11 @@ class unixdomainserver(socket.socket):
         if self.realpath != self.path:
             okayifmissing(os.unlink, self.realpath)
             okayifmissing(os.rmdir, os.path.dirname(self.realpath))
+
+def statislink(st):
+    '''check whether a stat result is a symlink'''
+    return st and stat.S_ISLNK(st.st_mode)
+
+def statisexec(st):
+    '''check whether a stat result is an executable file'''
+    return st and (st.st_mode & 0100 != 0)
