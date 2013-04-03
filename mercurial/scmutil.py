@@ -703,7 +703,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                 status = _('removing %s\n') % ((pats and rel) or abs)
             repo.ui.status(status)
 
-    copies = {}
+    renames = {}
     if similarity > 0:
         for old, new, score in similar.findrenames(repo,
                 added + unknown, removed + deleted, similarity):
@@ -711,7 +711,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                 repo.ui.status(_('recording removal of %s as rename to %s '
                                  '(%d%% similar)\n') %
                                (m.rel(old), m.rel(new), score * 100))
-            copies[new] = old
+            renames[new] = old
 
     if not dry_run:
         wctx = repo[None]
@@ -719,7 +719,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         try:
             wctx.forget(deleted)
             wctx.add(unknown)
-            for new, old in copies.iteritems():
+            for new, old in renames.iteritems():
                 wctx.copy(old, new)
         finally:
             wlock.release()
