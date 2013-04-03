@@ -703,15 +703,8 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                 status = _('removing %s\n') % ((pats and rel) or abs)
             repo.ui.status(status)
 
-    renames = {}
-    if similarity > 0:
-        for old, new, score in similar.findrenames(repo,
-                added + unknown, removed + deleted, similarity):
-            if repo.ui.verbose or not m.exact(old) or not m.exact(new):
-                repo.ui.status(_('recording removal of %s as rename to %s '
-                                 '(%d%% similar)\n') %
-                               (m.rel(old), m.rel(new), score * 100))
-            renames[new] = old
+    renames = _findrenames(repo, m, added + unknown, removed + deleted,
+                           similarity)
 
     if not dry_run:
         wctx = repo[None]
@@ -754,6 +747,21 @@ def _interestingfiles(repo, matcher):
             added.append(abs)
 
     return added, unknown, deleted, removed
+
+def _findrenames(repo, matcher, added, removed, similarity):
+    '''Find renames from removed files to added ones.'''
+    renames = {}
+    if similarity > 0:
+        for old, new, score in similar.findrenames(repo, added, removed,
+                                                   similarity):
+            if (repo.ui.verbose or not matcher.exact(old)
+                or not matcher.exact(new)):
+                repo.ui.status(_('recording removal of %s as rename to %s '
+                                 '(%d%% similar)\n') %
+                               (matcher.rel(old), matcher.rel(new),
+                                score * 100))
+            renames[new] = old
+    return renames
 
 def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For
