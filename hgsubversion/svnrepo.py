@@ -122,7 +122,7 @@ class svnremoterepo(peerrepository):
         if path is None:
             path = self.ui.config('paths', 'default')
         if not path:
-            raise hgutil.Abort('no Subversion URL specified')
+            raise hgutil.Abort('no Subversion URL specified. Expect[path] default= or [path] default-push= SVN URL entries in hgrc.')
         self.path = path
         self.capabilities = set(['lookup', 'subversion'])
         pws = self.ui.config('hgsubversion', 'password_stores', None)
