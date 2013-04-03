@@ -707,15 +707,7 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
                            similarity)
 
     if not dry_run:
-        wctx = repo[None]
-        wlock = repo.wlock()
-        try:
-            wctx.forget(deleted)
-            wctx.add(unknown)
-            for new, old in renames.iteritems():
-                wctx.copy(old, new)
-        finally:
-            wlock.release()
+        _markchanges(repo, unknown, deleted, renames)
 
     for f in rejected:
         if f in m.files():
@@ -762,6 +754,19 @@ def _findrenames(repo, matcher, added, removed, similarity):
                                 score * 100))
             renames[new] = old
     return renames
+
+def _markchanges(repo, unknown, deleted, renames):
+    '''Marks the files in unknown as added, the files in deleted as removed,
+    and the files in renames as copied.'''
+    wctx = repo[None]
+    wlock = repo.wlock()
+    try:
+        wctx.forget(deleted)
+        wctx.add(unknown)
+        for new, old in renames.iteritems():
+            wctx.copy(old, new)
+    finally:
+        wlock.release()
 
 def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For
