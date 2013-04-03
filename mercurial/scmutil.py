@@ -685,26 +685,11 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     if similarity is None:
         similarity = float(opts.get('similarity') or 0)
     # we'd use status here, except handling of symlinks and ignore is tricky
-    added, unknown, deleted, removed = [], [], [], []
-    audit_path = pathauditor(repo.root)
     m = match(repo[None], pats, opts)
     rejected = []
     m.bad = lambda x, y: rejected.append(x)
 
-    ctx = repo[None]
-    dirstate = repo.dirstate
-    walkresults = dirstate.walk(m, sorted(ctx.substate), True, False)
-    for abs, st in walkresults.iteritems():
-        dstate = dirstate[abs]
-        if dstate == '?' and audit_path.check(abs):
-            unknown.append(abs)
-        elif dstate != 'r' and not st:
-            deleted.append(abs)
-        # for finding renames
-        elif dstate == 'r':
-            removed.append(abs)
-        elif dstate == 'a':
-            added.append(abs)
+    added, unknown, deleted, removed = _interestingfiles(repo, m)
 
     unknownset = set(unknown)
     toprint = unknownset.copy()
@@ -743,6 +728,32 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         if f in m.files():
             return 1
     return 0
+
+def _interestingfiles(repo, matcher):
+    '''Walk dirstate with matcher, looking for files that addremove would care
+    about.
+
+    This is different from dirstate.status because it doesn't care about
+    whether files are modified or clean.'''
+    added, unknown, deleted, removed = [], [], [], []
+    audit_path = pathauditor(repo.root)
+
+    ctx = repo[None]
+    dirstate = repo.dirstate
+    walkresults = dirstate.walk(matcher, sorted(ctx.substate), True, False)
+    for abs, st in walkresults.iteritems():
+        dstate = dirstate[abs]
+        if dstate == '?' and audit_path.check(abs):
+            unknown.append(abs)
+        elif dstate != 'r' and not st:
+            deleted.append(abs)
+        # for finding renames
+        elif dstate == 'r':
+            removed.append(abs)
+        elif dstate == 'a':
+            added.append(abs)
+
+    return added, unknown, deleted, removed
 
 def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For
