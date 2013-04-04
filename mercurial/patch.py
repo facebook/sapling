@@ -481,7 +481,7 @@ class workingbackend(fsbackend):
 
     def close(self):
         wctx = self.repo[None]
-        addremoved = set(self.changed)
+        changed = set(self.changed)
         for src, dst in self.copied:
             scmutil.dirstatecopy(self.ui, self.repo, wctx, src, dst)
         if self.removed:
@@ -491,14 +491,10 @@ class workingbackend(fsbackend):
                     # File was deleted and no longer belongs to the
                     # dirstate, it was probably marked added then
                     # deleted, and should not be considered by
-                    # addremove().
-                    addremoved.discard(f)
-        if addremoved:
-            cwd = self.repo.getcwd()
-            if cwd:
-                addremoved = [util.pathto(self.repo.root, cwd, f)
-                              for f in addremoved]
-            scmutil.addremove(self.repo, addremoved, similarity=self.similarity)
+                    # marktouched().
+                    changed.discard(f)
+        if changed:
+            scmutil.marktouched(self.repo, changed, self.similarity)
         return sorted(self.changed)
 
 class filestore(object):
@@ -1397,12 +1393,7 @@ def _externalpatch(ui, repo, patcher, patchname, strip, files,
                 ui.warn(line + '\n')
     finally:
         if files:
-            cfiles = list(files)
-            cwd = repo.getcwd()
-            if cwd:
-                cfiles = [util.pathto(repo.root, cwd, f)
-                          for f in cfiles]
-            scmutil.addremove(repo, cfiles, similarity=similarity)
+            scmutil.marktouched(repo, files, similarity)
     code = fp.close()
     if code:
         raise PatchError(_("patch command failed: %s") %
