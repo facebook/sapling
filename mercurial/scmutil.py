@@ -714,6 +714,36 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
             return 1
     return 0
 
+def marktouched(repo, files, similarity=0.0):
+    '''Assert that files have somehow been operated upon. files are relative to
+    the repo root.'''
+    m = matchfiles(repo, files)
+    rejected = []
+    m.bad = lambda x, y: rejected.append(x)
+
+    added, unknown, deleted, removed = _interestingfiles(repo, m)
+
+    if repo.ui.verbose:
+        unknownset = set(unknown)
+        toprint = unknownset.copy()
+        toprint.update(deleted)
+        for abs in sorted(toprint):
+            if abs in unknownset:
+                status = _('adding %s\n') % abs
+            else:
+                status = _('removing %s\n') % abs
+            repo.ui.status(status)
+
+    renames = _findrenames(repo, m, added + unknown, removed + deleted,
+                           similarity)
+
+    _markchanges(repo, unknown, deleted, renames)
+
+    for f in rejected:
+        if f in m.files():
+            return 1
+    return 0
+
 def _interestingfiles(repo, matcher):
     '''Walk dirstate with matcher, looking for files that addremove would care
     about.
