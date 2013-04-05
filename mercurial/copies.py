@@ -133,11 +133,13 @@ def _forwardcopies(a, b):
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
     cm = {}
-    for f in b:
-        if f not in a:
-            ofctx = _tracefile(b[f], a)
-            if ofctx:
-                cm[f] = ofctx.path()
+    missing = set(b.manifest().iterkeys())
+    missing.difference_update(a.manifest().iterkeys())
+
+    for f in missing:
+        ofctx = _tracefile(b[f], a)
+        if ofctx:
+            cm[f] = ofctx.path()
 
     # combine copies from dirstate if necessary
     if w is not None:

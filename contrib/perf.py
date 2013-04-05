@@ -2,7 +2,7 @@
 '''helper extension to measure performance'''
 
 from mercurial import cmdutil, scmutil, util, match, commands, obsolete
-from mercurial import repoview, branchmap, merge
+from mercurial import repoview, branchmap, merge, copies
 import time, os, sys
 
 cmdtable = {}
@@ -156,6 +156,14 @@ def perfmergecalculate(ui, repo, rev):
         # our benchmark
         merge.calculateupdates(repo, wctx, rctx, ancestor, False, False, False,
                                acceptremote=True)
+    timer(d)
+
+@command('perfpathcopies', [], "REV REV")
+def perfpathcopies(ui, repo, rev1, rev2):
+    ctx1 = scmutil.revsingle(repo, rev1, rev1)
+    ctx2 = scmutil.revsingle(repo, rev2, rev2)
+    def d():
+        copies.pathcopies(ctx1, ctx2)
     timer(d)
 
 @command('perfmanifest')
