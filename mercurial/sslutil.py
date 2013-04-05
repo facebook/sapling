@@ -111,9 +111,15 @@ class validator(object):
                 self.ui.warn(_("warning: certificate for %s can't be verified "
                                "(Python too old)\n") % host)
             return
+
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise util.Abort(_('%s ssl connection error') % host)
-        peercert = sock.getpeercert(True)
+        try:
+            peercert = sock.getpeercert(True)
+            peercert2 = sock.getpeercert()
+        except AttributeError:
+            raise util.Abort(_('%s ssl connection error') % host)
+
         if not peercert:
             raise util.Abort(_('%s certificate error: '
                                'no certificate received') % host)
@@ -129,7 +135,7 @@ class validator(object):
             self.ui.debug('%s certificate matched fingerprint %s\n' %
                           (host, nicefingerprint))
         elif cacerts:
-            msg = _verifycert(sock.getpeercert(), host)
+            msg = _verifycert(peercert2, host)
             if msg:
                 raise util.Abort(_('%s certificate error: %s') % (host, msg),
                                  hint=_('configure hostfingerprint %s or use '
