@@ -2917,9 +2917,13 @@ def graft(ui, repo, *revs, **opts):
         return -1
 
     # check for ancestors of dest branch
-    for rev in repo.revs('::. and %ld', revs):
-        ui.warn(_('skipping ancestor revision %s\n') % rev)
-        revs.remove(rev)
+    crev = repo['.'].rev()
+    ancestors = repo.changelog.ancestors([crev], inclusive=True)
+    # don't mutate while iterating, create a copy
+    for rev in list(revs):
+        if rev in ancestors:
+            ui.warn(_('skipping ancestor revision %s\n') % rev)
+            revs.remove(rev)
     if not revs:
         return -1
 
