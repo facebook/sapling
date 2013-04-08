@@ -67,7 +67,7 @@ def tokenizer(data):
                 pos += 1
             sym = program[s:pos]
             try:
-                yield('string', str(int(sym)), s)
+                yield ('string', str(int(sym)), s)
             except ValueError:
                 yield ('symbol', sym, s)
             pos -= 1
