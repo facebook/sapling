@@ -14195,10 +14195,10 @@ msgid "show only added files"
 msgstr "показать только добавленные файлы"
 
 msgid "show only removed files"
-msgstr "показать только отдалённые файлы"
+msgstr "показать только удалённые файлы"
 
 msgid "show only deleted (but tracked) files"
-msgstr "показать только отдалённые (но отслеживаемые) файлы"
+msgstr "показать только удалённые (но отслеживаемые) файлы"
 
 msgid "show only files without changes"
 msgstr "показать только неизмененные файлы"
