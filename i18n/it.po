@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
 "POT-Creation-Date: 2011-03-22 22:04+0100\n"
-"PO-Revision-Date: 2011-03-15 17:05+0100\n"
+"PO-Revision-Date: 2013-04-05 14:47+0100\n"
 "Last-Translator: Stefano Tortarolo <stefano.tortarolo@gmail.com>\n"
 "Language-Team: Italian <Italian>\n"
 "Language: it\n"
@@ -14,6 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 1.5.5\n"
 
 #, python-format
 msgid " (default: %s)"
@@ -1862,13 +1863,13 @@ msgid ""
 "used.\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s should not have CRLF line endings"
-msgstr "  %s in %s non dovrebbe avere %s fine riga"
+msgstr "%s non dovrebbe avere fine riga CRLF"
 
-#, fuzzy, python-format
+#, python-format
 msgid "%s should not have LF line endings"
-msgstr "  %s in %s non dovrebbe avere %s fine riga"
+msgstr "%s non dovrebbe avere fine riga LF"
 
 #, python-format
 msgid "warning: ignoring .hgeol file due to parse error at %s: %s\n"
@@ -5439,17 +5440,15 @@ msgstr ""
 msgid "hardlinks are not supported on this system"
 msgstr "hardlink non supportati su questo sistema"
 
-#, fuzzy
 msgid "must specify local origin repository"
-msgstr "%s non è un repository locale Mercurial"
+msgstr "è necessario specificare il repository di origine locale"
 
 #, python-format
 msgid "relinking %s to %s\n"
 msgstr "sto ricollegando %s a %s\n"
 
-#, fuzzy
 msgid "there is nothing to relink\n"
-msgstr "non c'è nulla di cui fare il merge"
+msgstr "non c'è nulla di cui fare il relink\n"
 
 #, python-format
 msgid "tip has %d files, estimated total number of files: %s\n"
@@ -5649,7 +5648,7 @@ msgid "no such option\n"
 msgstr "nessuna opzione\n"
 
 msgid "transplant changesets from another branch"
-msgstr ""
+msgstr "trapianta changeset da un'altro branch"
 
 msgid ""
 "    Selected changesets will be applied on top of the current working\n"
@@ -6023,11 +6022,11 @@ msgid "the name '%s' is reserved"
 msgstr "il nome '%s' è riservato"
 
 msgid "options --message and --logfile are mutually exclusive"
-msgstr ""
+msgstr "le opzioni --message e --logfile sono mutualmente esclusive"
 
 #, python-format
 msgid "can't read commit message '%s': %s"
-msgstr ""
+msgstr "impossibile leggere il messaggio di commit '%s': %s"
 
 msgid "limit must be a positive integer"
 msgstr "limit dev'essere un intero positivo "
@@ -6116,7 +6115,7 @@ msgid "(consider using --after)\n"
 msgstr "(considera di usare --after)\n"
 
 msgid "child process failed to start"
-msgstr "avvio fallito del processo figlio"
+msgstr "fallito l'avvio del processo figlio"
 
 #, python-format
 msgid "changeset:   %d:%s\n"
@@ -6128,7 +6127,7 @@ msgstr "branch:      %s\n"
 
 #, python-format
 msgid "bookmark:    %s\n"
-msgstr "segnalibro:    %s\n"
+msgstr "segnalibro:  %s\n"
 
 #, python-format
 msgid "tag:         %s\n"
@@ -6161,11 +6160,11 @@ msgstr "file:"
 
 #, python-format
 msgid "files:       %s\n"
-msgstr "file:       %s\n"
+msgstr "file:        %s\n"
 
 #, python-format
 msgid "copies:      %s\n"
-msgstr "copie:      %s\n"
+msgstr "copie:       %s\n"
 
 #, python-format
 msgid "extra:       %s=%s\n"
@@ -13379,13 +13378,13 @@ msgstr "impossibile fare il commit di external svn"
 msgid "not removing repo %s because it has changes.\n"
 msgstr "non rimuovo il repository %s in quanto contiene modifiche\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "cloning subrepo %s\n"
-msgstr "clonazione in corso del subrepository %s da %s\n"
+msgstr "clonazione in corso del subrepository %s\n"
 
-#, fuzzy, python-format
+#, python-format
 msgid "pulling subrepo %s\n"
-msgstr "pull in corso del subrepository %s da %s\n"
+msgstr "pull in corso del subrepository %s\n"
 
 #, python-format
 msgid "revision %s does not exist in subrepo %s\n"
@@ -13463,7 +13462,7 @@ msgstr "\"%s\" non è nel map del template"
 
 #, python-format
 msgid "template file %s: %s"
-msgstr ""
+msgstr "file template %s: %s"
 
 msgid "cannot use transaction when it is already committed/aborted"
 msgstr ""
