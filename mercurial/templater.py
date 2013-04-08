@@ -66,7 +66,10 @@ def tokenizer(data):
                     break
                 pos += 1
             sym = program[s:pos]
-            yield ('symbol', sym, s)
+            try:
+                yield('string', str(int(sym)), s)
+            except ValueError:
+                yield ('symbol', sym, s)
             pos -= 1
         elif c == '}':
             pos += 1
