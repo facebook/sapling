@@ -245,3 +245,60 @@ Test handling of invalid urls
   [255]
 
   $ cd ..
+
+Test handling common incoming revisions between "default" and
+"default-push"
+
+  $ hg -R clone rollback
+  repository tip rolled back to revision 1 (undo pull)
+  working directory now based on revision 0
+
+  $ cd repo
+
+  $ hg update -q -C default
+  $ echo modified >> bar
+  $ hg commit -m "new head to push current default head"
+  $ hg -q push -r ".^1" '../clone'
+
+  $ hg -q outgoing '../clone'
+  2:faba9097cad4
+  4:d515801a8f3d
+
+  $ hg summary --remote --config paths.default='../clone#default' --config paths.default-push='../clone#foo'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 2 outgoing
+
+  $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ hg clone -q -r 0 . ../another
+  $ hg -q outgoing '../another#default'
+  3:4cd725637392
+  4:d515801a8f3d
+
+  $ hg summary --remote --config paths.default='../another#default' --config paths.default-push='../clone#default'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ cd ..

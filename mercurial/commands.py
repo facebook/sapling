@@ -5464,6 +5464,7 @@ def summary(ui, repo, **opts):
     if opts.get('remote'):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))
+        sbranch = branches[0]
         other = hg.peer(repo, {}, source)
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
@@ -5478,11 +5479,13 @@ def summary(ui, repo, **opts):
             t.append(_('1 or more incoming'))
 
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
+        dbranch = branches[0]
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         if source != dest:
             other = hg.peer(repo, {}, dest)
-            commoninc = None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        if (source != dest or (sbranch is not None and sbranch != dbranch)):
+            commoninc = None
         if revs:
             revs = [repo.lookup(rev) for rev in revs]
         repo.ui.pushbuffer()
