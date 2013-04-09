@@ -27,10 +27,11 @@ def reposetup(ui, repo):
     if not repo.local():
         return proto.wirereposetup(ui, repo)
 
+    origclass = localrepo.localrepository
+    repoclass = repo.__class__
     for name in ('status', 'commitctx', 'commit', 'push'):
-        method = getattr(repo, name)
-        if (isinstance(method, types.FunctionType) and
-            method.func_name == 'wrap'):
+        if (getattr(origclass, name) != getattr(repoclass, name) or
+            isinstance(getattr(repo, name), types.FunctionType)):
             ui.warn(_('largefiles: repo method %r appears to have already been'
                     ' wrapped by another extension: '
                     'largefiles may behave incorrectly\n')
