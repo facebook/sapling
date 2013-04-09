@@ -5481,8 +5481,10 @@ def summary(ui, repo, **opts):
             other = hg.peer(repo, {}, dest)
             commoninc = None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        if revs:
+            revs = [repo.lookup(rev) for rev in revs]
         repo.ui.pushbuffer()
-        outgoing = discovery.findcommonoutgoing(repo, other,
+        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs,
                                                 commoninc=commoninc)
         repo.ui.popbuffer()
         o = outgoing.missing

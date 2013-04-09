@@ -80,8 +80,25 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
+  $ hg -q outgoing '../clone'
+  2:faba9097cad4
+  3:4cd725637392
+  $ hg summary --remote --config paths.default='../clone'
+  parent: 3:4cd725637392 tip
+   add bar
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
   2:faba9097cad4
+  $ hg summary --remote --config paths.default='../clone#foo'
+  parent: 3:4cd725637392 tip
+   add bar
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
 
   $ hg -q push '../clone#foo'
 
