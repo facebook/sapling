@@ -459,7 +459,7 @@ def histedit(ui, repo, *parent, **opts):
         # contains special revset characters like ":" the revset
         # parser can choke.
         parent = [node.hex(n) for n in discovery.findcommonoutgoing(
-            repo, other, [], force=opts.get('force')).missing[0:1]]
+            repo, other, revs, force=opts.get('force')).missing[0:1]]
     else:
         if opts.get('force'):
             raise util.Abort(_('--force only allowed with --outgoing'))
