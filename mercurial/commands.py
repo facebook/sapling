@@ -5467,9 +5467,11 @@ def summary(ui, repo, **opts):
         other = hg.peer(repo, {}, source)
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
+        if revs:
+            revs = [other.lookup(rev) for rev in revs]
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
-        commoninc = discovery.findcommonincoming(repo, other)
+        commoninc = discovery.findcommonincoming(repo, other, heads=revs)
         _common, incoming, _rheads = commoninc
         repo.ui.popbuffer()
         if incoming:

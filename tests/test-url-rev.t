@@ -100,6 +100,16 @@ Changing original repo:
   update: (current)
   remote: 1 outgoing
 
+  $ hg -q --cwd ../clone incoming '../repo#foo'
+  2:faba9097cad4
+  $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
+  parent: 1:cd2a86ecc814 tip
+   change a
+  branch: foo
+  commit: (clean)
+  update: (current)
+  remote: 1 or more incoming
+
   $ hg -q push '../clone#foo'
 
   $ hg --cwd ../clone heads
@@ -115,6 +125,16 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
+  $ hg -q --cwd ../clone incoming '../repo#foo'
+  [1]
+  $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
+  parent: 1:cd2a86ecc814 
+   change a
+  branch: foo
+  commit: (clean)
+  update: 1 new changesets (update)
+  remote: (synced)
+
   $ cd ..
 
   $ cd clone
