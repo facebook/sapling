@@ -329,8 +329,10 @@ Test debuglabelcomplete
   Fum
   default
   fee
+  fie
   fo
   tip
   $ hg debuglabelcomplete f
   fee
+  fie
   fo
