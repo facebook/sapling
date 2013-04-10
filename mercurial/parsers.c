@@ -1528,8 +1528,12 @@ static PyMethodDef methods[] = {
 	{NULL, NULL}
 };
 
+void dirs_module_init(PyObject *mod);
+
 static void module_init(PyObject *mod)
 {
+	dirs_module_init(mod);
+
 	indexType.tp_new = PyType_GenericNew;
 	if (PyType_Ready(&indexType) < 0)
 		return;

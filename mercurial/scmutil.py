@@ -7,7 +7,7 @@
 
 from i18n import _
 from mercurial.node import nullrev
-import util, error, osutil, revset, similar, encoding, phases
+import util, error, osutil, revset, similar, encoding, phases, parsers
 import match as matchmod
 import os, errno, re, stat, glob
 
@@ -926,6 +926,9 @@ class dirs(object):
 
     def __contains__(self, d):
         return d in self._dirs
+
+if util.safehasattr(parsers, 'dirs'):
+    dirs = parsers.dirs
 
 def finddirs(path):
     pos = path.rfind('/')

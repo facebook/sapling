@@ -427,7 +427,8 @@ extmodules = [
     Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
-    Extension('mercurial.parsers', ['mercurial/parsers.c',
+    Extension('mercurial.parsers', ['mercurial/dirs.c',
+                                    'mercurial/parsers.c',
                                     'mercurial/pathencode.c']),
     ]
 
