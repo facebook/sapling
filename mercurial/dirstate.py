@@ -25,20 +25,6 @@ class rootcache(filecache):
     def join(self, obj, fname):
         return obj._join(fname)
 
-def _incdirs(dirs, path):
-    for base in scmutil.finddirs(path):
-        if base in dirs:
-            dirs[base] += 1
-            return
-        dirs[base] = 1
-
-def _decdirs(dirs, path):
-    for base in scmutil.finddirs(path):
-        if dirs[base] > 1:
-            dirs[base] -= 1
-            return
-        del dirs[base]
-
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -107,11 +93,7 @@ class dirstate(object):
 
     @propertycache
     def _dirs(self):
-        dirs = {}
-        for f, s in self._map.iteritems():
-            if s[0] != 'r':
-                _incdirs(dirs, f)
-        return dirs
+        return scmutil.dirs(self._map, 'r')
 
     def dirs(self):
         return self._dirs
@@ -331,7 +313,7 @@ class dirstate(object):
 
     def _droppath(self, f):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
-            _decdirs(self._dirs, f)
+            self._dirs.delpath(f)
 
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]
@@ -347,7 +329,7 @@ class dirstate(object):
                     raise util.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
         if oldstate in "?r" and "_dirs" in self.__dict__:
-            _incdirs(self._dirs, f)
+            self._dirs.addpath(f)
         self._dirty = True
         self._map[f] = (state, mode, size, mtime)
 

@@ -374,16 +374,7 @@ class changectx(object):
 
     @propertycache
     def _dirs(self):
-        dirs = set()
-        for f in self._manifest:
-            pos = f.rfind('/')
-            while pos != -1:
-                f = f[:pos]
-                if f in dirs:
-                    break # dirs already contains this and above
-                dirs.add(f)
-                pos = f.rfind('/')
-        return dirs
+        return scmutil.dirs(self._manifest)
 
     def dirs(self):
         return self._dirs
@@ -1155,7 +1146,7 @@ class workingctx(changectx):
         self._repo.dirstate.setparents(node)
 
     def dirs(self):
-        return set(self._repo.dirstate.dirs())
+        return self._repo.dirstate.dirs()
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular
