@@ -890,3 +890,9 @@ class filecache(object):
             del obj.__dict__[self.name]
         except KeyError:
             raise AttributeError(self.name)
+
+def finddirs(path):
+    pos = path.rfind('/')
+    while pos != -1:
+        yield path[:pos]
+        pos = path.rfind('/', 0, pos)

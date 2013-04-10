@@ -25,21 +25,15 @@ class rootcache(filecache):
     def join(self, obj, fname):
         return obj._join(fname)
 
-def _finddirs(path):
-    pos = path.rfind('/')
-    while pos != -1:
-        yield path[:pos]
-        pos = path.rfind('/', 0, pos)
-
 def _incdirs(dirs, path):
-    for base in _finddirs(path):
+    for base in scmutil.finddirs(path):
         if base in dirs:
             dirs[base] += 1
             return
         dirs[base] = 1
 
 def _decdirs(dirs, path):
-    for base in _finddirs(path):
+    for base in scmutil.finddirs(path):
         if dirs[base] > 1:
             dirs[base] -= 1
             return
@@ -346,7 +340,7 @@ class dirstate(object):
             if f in self._dirs:
                 raise util.Abort(_('directory %r already in dirstate') % f)
             # shadows
-            for d in _finddirs(f):
+            for d in scmutil.finddirs(f):
                 if d in self._dirs:
                     break
                 if d in self._map and self[d] != 'r':
@@ -540,7 +534,7 @@ class dirstate(object):
             return False
         if self._ignore(f):
             return True
-        for p in _finddirs(f):
+        for p in scmutil.finddirs(f):
             if self._ignore(p):
                 return True
         return False
