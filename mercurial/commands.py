@@ -1299,10 +1299,6 @@ def commit(ui, repo, *pats, **opts):
 
     extra = {}
     if opts.get('close_branch'):
-        if repo['.'].node() not in repo.branchheads():
-            # The topo heads set is included in the branch heads set of the
-            # current branch, so it's sufficient to test branchheads
-            raise util.Abort(_('can only close branch heads'))
         extra['close'] = 1
 
     branch = repo[None].branch()

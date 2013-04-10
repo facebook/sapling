@@ -78,9 +78,6 @@
   $ hg branch all
   marked working directory as branch all
   (branches are permanent and global, did you want a bookmark?)
-  $ hg ci --close-branch -Aqm8
-  abort: can only close branch heads
-  [255]
 
   $ hg co 4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
