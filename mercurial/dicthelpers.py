@@ -11,23 +11,23 @@ def diff(d1, d2, default=None):
     This includes keys that are present in one dict but not the other, and
     keys whose values are different. The return value is a dict with values
     being pairs of values from d1 and d2 respectively, and missing values
-    represented as default.'''
+    treated as default, so if a value is missing from one dict and the same as
+    default in the other, it will not be returned.'''
     res = {}
     if d1 is d2:
         # same dict, so diff is empty
         return res
 
     for k1, v1 in d1.iteritems():
-        if k1 in d2:
-            v2 = d2[k1]
-            if v1 != v2:
-                res[k1] = (v1, v2)
-        else:
-            res[k1] = (v1, default)
+        v2 = d2.get(k1, default)
+        if v1 != v2:
+            res[k1] = (v1, v2)
 
     for k2 in d2:
         if k2 not in d1:
-            res[k2] = (default, d2[k2])
+            v2 = d2[k2]
+            if v2 != default:
+                res[k2] = (default, v2)
 
     return res
 

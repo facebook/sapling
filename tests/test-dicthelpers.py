@@ -49,5 +49,11 @@ class testdicthelpers(unittest.TestCase):
                                              'c': ('baz', 456),
                                              'd': (456, 'quux')})
 
+        # check that we compare against default
+        self.assertEqual(diff(d1, d2, 'baz'), {'a': ('foo', 'foo2'),
+                                               'd': ('baz', 'quux')})
+        self.assertEqual(diff(d1, d2, 'quux'), {'a': ('foo', 'foo2'),
+                                                'c': ('baz', 'quux')})
+
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
