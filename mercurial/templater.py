@@ -199,9 +199,6 @@ def buildfunc(exp, context):
     if n in funcs:
         f = funcs[n]
         return (f, args)
-    if n in templatefilters.funcs:
-        f = templatefilters.funcs[n]
-        return (f, args)
     if n in context._filters:
         if len(args) != 1:
             raise error.ParseError(_("filter %s expects one argument") % n)
@@ -301,6 +298,30 @@ def rstdoc(context, mapping, args):
 
     return minirst.format(text, style=style, keep=['verbose'])
 
+def fill(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("fill expects one or two arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    width = 76
+    if len(args) == 2:
+        try:
+            width = int(stringify(args[1][0](context, mapping, args[1][1])))
+        except ValueError:
+            raise error.ParseError(_("fill expects an integer width"))
+
+    return templatefilters.fill(text, width)
+
+def date(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("date expects one or two arguments"))
+
+    date = args[0][0](context, mapping, args[0][1])
+    if len(args) == 2:
+        fmt = stringify(args[1][0](context, mapping, args[1][1]))
+        return util.datestr(date, fmt)
+    return util.datestr(date)
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -319,6 +340,8 @@ funcs = {
     "label": label,
     "rstdoc": rstdoc,
     "sub": sub,
+    "fill": fill,
+    "date": date,
 }
 
 # template engine
