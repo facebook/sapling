@@ -19,6 +19,9 @@
  *
  * We modify Python integers for refcounting, but those integers are
  * never visible to Python code.
+ *
+ * We mutate strings in-place, but leave them immutable once they can
+ * be seen by Python code.
  */
 typedef struct {
 	PyObject_HEAD
@@ -40,6 +43,7 @@ static inline Py_ssize_t _finddir(PyObject *path, Py_ssize_t pos)
 
 static int _addpath(PyObject *dirs, PyObject *path)
 {
+	const char *cpath = PyString_AS_STRING(path);
 	Py_ssize_t pos = PyString_GET_SIZE(path);
 	PyObject *key = NULL;
 	int ret = -1;
@@ -47,15 +51,24 @@ static int _addpath(PyObject *dirs, PyObject *path)
 	while ((pos = _finddir(path, pos - 1)) != -1) {
 		PyObject *val;
 
-		key = PyString_FromStringAndSize(PyString_AS_STRING(path), pos);
-
-		if (key == NULL)
-			goto bail;
+		/* It's likely that every prefix already has an entry
+		   in our dict. Try to avoid allocating and
+		   deallocating a string for each prefix we check. */
+		if (key != NULL)
+			((PyStringObject *)key)->ob_shash = -1;
+		else {
+			/* Force Python to not reuse a small shared string. */
+			key = PyString_FromStringAndSize(cpath,
+							 pos < 2 ? 2 : pos);
+			if (key == NULL)
+				goto bail;
+		}
+		PyString_GET_SIZE(key) = pos;
+		PyString_AS_STRING(key)[pos] = '\0';
 
 		val = PyDict_GetItem(dirs, key);
 		if (val != NULL) {
 			PyInt_AS_LONG(val) += 1;
-			Py_CLEAR(key);
 			continue;
 		}
 
