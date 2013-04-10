@@ -1360,12 +1360,6 @@ Age filter:
   $ hg log -l1 --template '{date|age}\n'
   7 years from now
 
-Filter with int function argument:
-
-  $ hg log --template '{fill(author, 20)}\n' -r 0
-  User Name
-  <user@hostname>
-
 Error on syntax:
 
   $ echo 'x = "f' >> t
