@@ -14,6 +14,11 @@
 /*
  * This is a multiset of directory names, built from the files that
  * appear in a dirstate or manifest.
+ *
+ * A few implementation notes:
+ *
+ * We modify Python integers for refcounting, but those integers are
+ * never visible to Python code.
  */
 typedef struct {
 	PyObject_HEAD
@@ -36,12 +41,11 @@ static inline Py_ssize_t _finddir(PyObject *path, Py_ssize_t pos)
 static int _addpath(PyObject *dirs, PyObject *path)
 {
 	Py_ssize_t pos = PyString_GET_SIZE(path);
-	PyObject *newval = NULL, *key = NULL;
+	PyObject *key = NULL;
 	int ret = -1;
 
 	while ((pos = _finddir(path, pos - 1)) != -1) {
 		PyObject *val;
-		long v = 0;
 
 		key = PyString_FromStringAndSize(PyString_AS_STRING(path), pos);
 
@@ -49,25 +53,29 @@ static int _addpath(PyObject *dirs, PyObject *path)
 			goto bail;
 
 		val = PyDict_GetItem(dirs, key);
-		if (val != NULL)
-			v = PyInt_AS_LONG(val);
+		if (val != NULL) {
+			PyInt_AS_LONG(val) += 1;
+			Py_CLEAR(key);
+			continue;
+		}
 
-		newval = PyInt_FromLong(v + 1);
+		/* Force Python to not reuse a small shared int. */
+		val = PyInt_FromLong(0x1eadbeef);
 
-		if (newval == NULL)
+		if (val == NULL)
 			goto bail;
 
-		ret = PyDict_SetItem(dirs, key, newval);
+		PyInt_AS_LONG(val) = 1;
+		ret = PyDict_SetItem(dirs, key, val);
+		Py_DECREF(val);
 		if (ret == -1)
 			goto bail;
 		Py_CLEAR(key);
-		Py_CLEAR(newval);
 	}
 	ret = 0;
 
 bail:
 	Py_XDECREF(key);
-	Py_XDECREF(newval);
 
 	return ret;
 }
@@ -75,12 +83,11 @@ bail:
 static int _delpath(PyObject *dirs, PyObject *path)
 {
 	Py_ssize_t pos = PyString_GET_SIZE(path);
-	PyObject *newval = NULL, *key = NULL;
+	PyObject *key = NULL;
 	int ret = -1;
 
 	while ((pos = _finddir(path, pos - 1)) != -1) {
 		PyObject *val;
-		long v;
 
 		key = PyString_FromStringAndSize(PyString_AS_STRING(path), pos);
 
@@ -93,29 +100,16 @@ static int _delpath(PyObject *dirs, PyObject *path)
 					"expected a value, found none");
 			goto bail;
 		}
-		v = PyInt_AS_LONG(val);
 
-		if (v <= 1) {
-			if (PyDict_DelItem(dirs, key) == -1)
-				goto bail;
-			continue;
-		}
-		newval = PyInt_FromLong(v - 1);
-
-		if (newval == NULL)
-			goto bail;
-
-		ret = PyDict_SetItem(dirs, key, newval);
-		if (ret == -1)
+		if (--PyInt_AS_LONG(val) <= 0 &&
+		    PyDict_DelItem(dirs, key) == -1)
 			goto bail;
 		Py_CLEAR(key);
-		Py_CLEAR(newval);
 	}
 	ret = 0;
 
 bail:
 	Py_XDECREF(key);
-	Py_XDECREF(newval);
 
 	return ret;
 }
