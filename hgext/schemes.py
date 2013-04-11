@@ -62,7 +62,10 @@ class ShortRepository(object):
 
     def instance(self, ui, url, create):
         # Should this use the util.url class, or is manual parsing better?
-        url = url.split('://', 1)[1]
+        try:
+            url = url.split('://', 1)[1]
+        except IndexError:
+            raise util.Abort(_("no '://' in scheme url '%s'") % url)
         parts = url.split('/', self.parts)
         if len(parts) > self.parts:
             tail = parts[-1]
