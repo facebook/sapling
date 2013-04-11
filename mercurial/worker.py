@@ -89,6 +89,11 @@ def _posixworker(ui, func, staticargs, args):
                 os._exit(0)
             except KeyboardInterrupt:
                 os._exit(255)
+            except: # re-raises (close enough for debugging anyway)
+                try:
+                    ui.traceback()
+                finally:
+                    os._exit(255)
         pids.append(pid)
     pids.reverse()
     os.close(wfd)
