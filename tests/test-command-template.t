@@ -1531,3 +1531,7 @@ Test new-style inline templating:
   $ hg log -R latesttag -r tip --template 'modified files: {file_mods % " {file}\n"}\n'
   modified files:  .hgtags
   
+Test the sub function of templating for expansion:
+
+  $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
+  xx

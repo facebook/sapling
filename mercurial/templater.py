@@ -251,6 +251,8 @@ def sub(context, mapping, args):
     pat = stringify(args[0][0](context, mapping, args[0][1]))
     rpl = stringify(args[1][0](context, mapping, args[1][1]))
     src = stringify(args[2][0](context, mapping, args[2][1]))
+    src = stringify(runtemplate(context, mapping,
+                                compiletemplate(src, context)))
     yield re.sub(pat, rpl, src)
 
 def if_(context, mapping, args):
