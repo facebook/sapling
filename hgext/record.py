@@ -531,7 +531,11 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         fp.seek(0)
 
         # 1. filter patch, so we have intending-to apply subset of it
-        chunks = filterpatch(ui, parsepatch(fp))
+        try:
+            chunks = filterpatch(ui, parsepatch(fp))
+        except patch.PatchError, err:
+            raise util.Abort(_('error parsing patch: %s') % err)
+
         del fp
 
         contenders = set()

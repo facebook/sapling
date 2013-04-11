@@ -1176,6 +1176,53 @@ Invalid patch
   +That change will not be committed
   +That is the second line
   +That line has been added
+
+Malformed patch - error handling
+
+  $ cat > editor.sh << '__EOF__'
+  > sed -e '/^@/p' "$1" > tmp
+  > mv tmp "$1"
+  > __EOF__
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record <<EOF
+  > y
+  > e
+  > EOF
+  diff --git a/editedfile b/editedfile
+  1 hunks, 3 lines changed
+  examine changes to 'editedfile'? [Ynesfdaq?] 
+  @@ -1,3 +1,3 @@
+  -This is the first line
+  -This change will be committed
+  -This is the third line
+  +This change will not be committed
+  +This is the second line
+  +This line has been added
+  record this change to 'editedfile'? [Ynesfdaq?] 
+  abort: error parsing patch: unhandled transition: range -> range
+  [255]
+
+  $ cat > editor.sh << '__EOF__'
+  > sed -e '/^@/iother' "$1" > tmp
+  > mv tmp "$1"
+  > __EOF__
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record <<EOF
+  > y
+  > e
+  > EOF
+  diff --git a/editedfile b/editedfile
+  1 hunks, 3 lines changed
+  examine changes to 'editedfile'? [Ynesfdaq?] 
+  @@ -1,3 +1,3 @@
+  -This is the first line
+  -This change will be committed
+  -This is the third line
+  +This change will not be committed
+  +This is the second line
+  +This line has been added
+  record this change to 'editedfile'? [Ynesfdaq?] 
+  abort: error parsing patch: unknown patch content: 'other\n'
+  [255]
+
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
