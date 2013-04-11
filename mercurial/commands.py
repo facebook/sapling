@@ -5601,7 +5601,7 @@ def tag(ui, repo, name1, *names, **opts):
         # don't allow tagging the null rev
         if (not opts.get('remove') and
             scmutil.revsingle(repo, rev_).rev() == nullrev):
-            raise util.Abort(_("null revision specified"))
+            raise util.Abort(_("cannot tag null revision"))
 
         repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
     finally:
