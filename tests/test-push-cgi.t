@@ -35,17 +35,17 @@ test preparation
   1 changesets found
   $ CONTENT_LENGTH=279; export CONTENT_LENGTH;
 
-expect unsynced changes
+expect failure because heads doesn't match (formerly known as 'unsynced changes')
 
   $ QUERY_STRING="cmd=unbundle&heads=0000000000000000000000000000000000000000"; export QUERY_STRING
   $ python hgweb.cgi <bundle.hg >page1 2>&1
   $ cat page1
   Status: 200 Script output follows\r (esc)
   Content-Type: application/mercurial-0.1\r (esc)
-  Content-Length: 19\r (esc)
+  Content-Length: 64\r (esc)
   \r (esc)
   0
-  unsynced changes
+  repository changed while preparing changes - please try again
 
 successful force push
 
