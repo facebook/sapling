@@ -580,14 +580,15 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
     # note: does not take non linear new change in account (but previous
     #       implementation didn't used them anyway (issue3655)
     newchildren = [c.node() for c in repo.set('(%d::.)', parentctx)]
-    if not newchildren:
-        # `parentctxnode` should match but no result. This means that
-        # currentnode is not a descendant from parentctxnode.
-        msg = _('%s is not an ancestor of working directory')
-        hint = _('update to %s or descendant and run "hg histedit '
-                 '--continue" again') % parentctx
-        raise util.Abort(msg % parentctx, hint=hint)
-    newchildren.pop(0)  # remove parentctxnode
+    if parentctx.node() != node.nullid:
+        if not newchildren:
+            # `parentctxnode` should match but no result. This means that
+            # currentnode is not a descendant from parentctxnode.
+            msg = _('%s is not an ancestor of working directory')
+            hint = _('update to %s or descendant and run "hg histedit '
+                     '--continue" again') % parentctx
+            raise util.Abort(msg % parentctx, hint=hint)
+        newchildren.pop(0)  # remove parentctxnode
     # Commit dirty working directory if necessary
     new = None
     m, a, r, d = repo.status()[:4]
