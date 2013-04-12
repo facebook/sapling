@@ -61,8 +61,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                               " here (.hg not found)")
 
     dest = None
+    validateuuid = False
     if len(args) == 1:
         dest = args[0]
+        validateuuid = True
     elif len(args) > 1:
         raise hgutil.Abort('rebuildmeta takes 1 or no arguments')
     url = repo.ui.expandpath(dest or repo.ui.config('paths', 'default-push') or
@@ -206,7 +208,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                                 ' defect in replay')
 
         # write repository uuid if required
-        if uuid is None:
+        if uuid is None or validateuuid:
+            validateuuid = False
             uuid = convinfo[4:40]
             if not skipuuid:
                 if svn is None:
