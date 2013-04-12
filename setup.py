@@ -297,9 +297,10 @@ class hgbuildpy(build_py):
                     self.py_modules.append("mercurial.pure.%s" % ext.name[10:])
             self.distribution.ext_modules = []
         else:
-            if not os.path.exists(os.path.join(get_python_inc(), 'Python.h')):
+            h = os.path.join(get_python_inc(), 'Python.h')
+            if not os.path.exists(h):
                 raise SystemExit('Python headers are required to build '
-                                 'Mercurial')
+                                 'Mercurial but weren\'t found in %s' % h)
 
     def find_modules(self):
         modules = build_py.find_modules(self)
