@@ -259,6 +259,7 @@ class TestBase(unittest.TestCase):
         self.hgrc = os.path.join(self.tmpdir, '.hgrc')
         os.environ['HGRCPATH'] = self.hgrc
         rc = open(self.hgrc, 'w')
+        rc.write('[ui]\nusername=test-user\n')
         for l in '[extensions]', 'hgsubversion=':
             print >> rc, l
 
@@ -543,4 +544,3 @@ files:     {files}
 
     def draw(self, repo):
         sys.stdout.write(self.getgraph(repo))
-
