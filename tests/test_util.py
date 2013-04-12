@@ -22,6 +22,7 @@ from mercurial import dispatch as dispatchmod
 from mercurial import hg
 from mercurial import i18n
 from mercurial import node
+from mercurial import scmutil
 from mercurial import ui
 from mercurial import util
 from mercurial import extensions
@@ -258,6 +259,7 @@ class TestBase(unittest.TestCase):
             'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
         self.hgrc = os.path.join(self.tmpdir, '.hgrc')
         os.environ['HGRCPATH'] = self.hgrc
+        scmutil._rcpath = None
         rc = open(self.hgrc, 'w')
         rc.write('[ui]\nusername=test-user\n')
         for l in '[extensions]', 'hgsubversion=':
