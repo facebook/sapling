@@ -697,7 +697,7 @@ Amend a merge changeset (with renames during the merge):
   
   $ hg debugrename aa
   aa not renamed
-  $ hg debugrename -r .^ aa
+  $ hg debugrename -r '.^' aa
   aa renamed from a:a80d06849b333b8a3d5c445f8ba3142010dcdc9e
 
 Amend a merge changeset (with manifest-level conflicts):
