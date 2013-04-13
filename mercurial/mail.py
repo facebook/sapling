@@ -7,7 +7,7 @@
 
 from i18n import _
 import util, encoding, sslutil
-import os, smtplib, socket, quopri, time
+import os, smtplib, socket, quopri, time, sys
 import email.Header, email.MIMEText, email.Utils
 
 _oldheaderinit = email.Header.Header.__init__
@@ -72,7 +72,7 @@ if util.safehasattr(smtplib.SMTP, '_get_socket'):
 
         def _get_socket(self, host, port, timeout):
             if self.debuglevel > 0:
-                print >> stderr, 'connect:', (host, port)
+                print >> sys.stderr, 'connect:', (host, port)
             new_socket = socket.create_connection((host, port), timeout)
             new_socket = sslutil.ssl_wrap_socket(new_socket,
                                                  self.keyfile, self.certfile,
