@@ -769,8 +769,6 @@ def checknlink(testfile):
             except OSError:
                 pass
 
-    return False
-
 def endswithsep(path):
     '''Check path ends with os.sep or os.altsep.'''
     return path.endswith(os.sep) or os.altsep and path.endswith(os.altsep)
