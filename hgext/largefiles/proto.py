@@ -16,6 +16,11 @@ LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
                            '\n\nPlease enable it in your Mercurial config '
                            'file.\n')
 
+# these will all be replaced by largefiles.uisetup
+capabilitiesorig = None
+ssholdcallstream = None
+httpoldcallstream = None
+
 def putlfile(repo, proto, sha):
     '''Put a largefile into a repository's local store and into the
     user cache.'''
