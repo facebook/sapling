@@ -10,7 +10,7 @@
 from i18n import _
 import changelog, byterange, url, error
 import localrepo, manifest, util, scmutil, store
-import urllib, urllib2, errno
+import urllib, urllib2, errno, os
 
 class httprangereader(object):
     def __init__(self, url, opener):
