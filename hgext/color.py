@@ -103,7 +103,7 @@ disable color.
 import os
 
 from mercurial import commands, dispatch, extensions, ui as uimod, util
-from mercurial import templater
+from mercurial import templater, error
 from mercurial.i18n import _
 
 testedwith = 'internal'
