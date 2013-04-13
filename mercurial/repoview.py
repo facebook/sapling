@@ -54,7 +54,6 @@ def computeunserved(repo):
         return frozenset(hiddens | secrets)
     else:
         return hiddens
-    return frozenset()
 
 def computemutable(repo):
     """compute the set of revision that should be filtered when used a server
