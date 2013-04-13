@@ -294,10 +294,10 @@ class transplanter(object):
 
         return n
 
-    def resume(self, repo, source, opts=None):
+    def resume(self, repo, source, opts):
         '''recover last transaction and apply remaining changesets'''
         if os.path.exists(os.path.join(self.path, 'journal')):
-            n, node = self.recover(repo)
+            n, node = self.recover(repo, opts)
             self.ui.status(_('%s transplanted as %s\n') % (short(node),
                                                            short(n)))
         seriespath = os.path.join(self.path, 'series')
@@ -312,7 +312,7 @@ class transplanter(object):
 
         self.apply(repo, source, revmap, merges, opts)
 
-    def recover(self, repo):
+    def recover(self, repo, opts):
         '''commit working directory using journal metadata'''
         node, user, date, message, parents = self.readlog()
         merge = False
