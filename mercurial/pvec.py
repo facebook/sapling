@@ -169,7 +169,7 @@ class pvec(object):
             self._bs = hashorctx
             self._depth, self._vec = _split(base85.b85decode(hashorctx))
         else:
-            self._vec = ctxpvec(ctx)
+            self._vec = ctxpvec(hashorctx)
 
     def __str__(self):
         return self._bs
