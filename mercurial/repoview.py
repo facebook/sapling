@@ -36,7 +36,6 @@ def computehidden(repo):
             blockers.append(repo[bm].rev())
         blocked = cl.ancestors(blockers, inclusive=True)
         return frozenset(r for r in hideable if r not in blocked)
-    return frozenset()
 
 def computeunserved(repo):
     """compute the set of revision that should be filtered when used a server
