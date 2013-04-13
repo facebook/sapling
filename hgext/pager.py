@@ -47,7 +47,7 @@ used. Use a boolean value like yes, no, on, off, or use auto for
 normal behavior.
 '''
 
-import atexit, sys, os, signal, subprocess
+import atexit, sys, os, signal, subprocess, errno, shlex
 from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
