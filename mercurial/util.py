@@ -1694,7 +1694,6 @@ class url(object):
                 parts = path[2:].split('/', 1)
                 if len(parts) > 1:
                     self.host, path = parts
-                    path = path
                 else:
                     self.host = parts[0]
                     path = None
