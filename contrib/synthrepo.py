@@ -35,7 +35,7 @@ A few obvious properties that are not currently handled realistically:
 - Symlinks and binary files are ignored
 '''
 
-import bisect, collections, json, os, random, time
+import bisect, collections, json, os, random, time, sys
 from mercurial import cmdutil, context, patch, scmutil, url, util, hg
 from mercurial.i18n import _
 from mercurial.node import nullrev, nullid
