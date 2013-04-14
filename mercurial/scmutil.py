@@ -263,6 +263,9 @@ class abstractvfs(object):
     def readlink(self, path):
         return os.readlink(self.join(path))
 
+    def setflags(self, path, l, x):
+        return util.setflags(self.join(path), l, x)
+
     def stat(self, path=None):
         return os.stat(self.join(path))
 
