@@ -735,7 +735,7 @@ class localrepository(object):
         return self.wopener(f, mode)
 
     def _link(self, f):
-        return os.path.islink(self.wjoin(f))
+        return self.wvfs.islink(f)
 
     def _loadfilter(self, filter):
         if filter not in self.filterpats:
