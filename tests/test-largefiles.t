@@ -913,6 +913,27 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   (run 'hg update' to get a working copy)
   6 additional largefiles cached
 
+redo pull with --lfrev and check it pulls largefiles for the right revs
+
+  $ hg rollback
+  repository tip rolled back to revision 1 (undo pull)
+  $ hg pull -v --lfrev 'heads(0:)'
+  pulling from $TESTTMP/a (glob)
+  searching for changes
+  all local heads known remotely
+  6 changesets found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 16 changes to 8 files
+  calling hook changegroup.lfiles: <function checkrequireslfiles at *> (glob)
+  (run 'hg update' to get a working copy)
+  pulling largefiles for revision 7
+  found 971fb41e78fea4f8e0ba5244784239371cb00591 in store
+  found 0d6d75887db61b2c7e6c74b5dd8fc6ad50c0cc30 in store
+  found bb3151689acb10f0c3125c560d5e63df914bc1af in store
+  0 largefiles cached
+
 lfpull
 
   $ hg lfpull -r : --config largefiles.usercache=usercache-lfpull

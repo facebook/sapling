@@ -753,6 +753,14 @@ def overridepull(orig, ui, repo, source=None, **opts):
         for rev in xrange(revsprepull, revspostpull):
             revs.append(repo[rev].rev())
         lfcommands.downloadlfiles(ui, repo, revs)
+    lfrevs = opts.get('lfrev', [])
+    if lfrevs and revspostpull > revsprepull:
+        numcached = 0
+        for rev in scmutil.revrange(repo, lfrevs):
+            ui.note(_('pulling largefiles for revision %s\n') % rev)
+            (cached, missing) = lfcommands.cachelfiles(ui, repo, rev)
+            numcached += len(cached)
+        ui.status(_("%d largefiles cached\n") % numcached)
     return result
 
 def overrideclone(orig, ui, source, dest=None, **opts):

@@ -81,7 +81,9 @@ def uisetup(ui):
     pullopt = [('', 'all-largefiles', None,
                  _('download all pulled versions of largefiles')),
                ('', 'cache-largefiles', None,
-                 _('caches new largefiles in all pulled heads'))]
+                 _('caches new largefiles in all pulled heads')),
+               ('', 'lfrev', [],
+                _('download largefiles for these revisions'), _('REV'))]
     entry[1].extend(pullopt)
     entry = extensions.wrapcommand(commands.table, 'clone',
                                    overrides.overrideclone)

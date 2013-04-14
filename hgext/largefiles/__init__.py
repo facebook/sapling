@@ -50,11 +50,13 @@ copy to the latest pulled revision (and thereby downloading any new
 largefiles).
 
 If you want to pull largefiles you don't need for update yet, then
-you can use the `lfpull` command.
+you can use pull with the `--lfrev` option or the :hg:`lfpull` command.
 
 If you just want to ensure that you will have the largefiles needed to
 merge or rebase with new heads that you are pulling, then you can pull
-with `--cache-largefiles` flag to pre-emptively download any largefiles
+with `--lfrev "head(0:)"` flag to pre-emptively download any largefiles
+that are in the heads after pulling. You can also pull with the
+`--cache-largefiles` flag to pre-emptively download any largefiles
 that are new in the heads you are pulling.
 
 Keep in mind that network access may now be required to update to
