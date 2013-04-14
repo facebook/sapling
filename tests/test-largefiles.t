@@ -911,7 +911,7 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding file changes
   added 6 changesets with 16 changes to 8 files
   (run 'hg update' to get a working copy)
-  6 additional largefiles cached
+  6 largefiles cached
 
 redo pull with --lfrev and check it pulls largefiles for the right revs
 
@@ -1002,7 +1002,7 @@ rebased or not.
   M sub/normal4
   M sub2/large6
   saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
-  0 additional largefiles cached
+  0 largefiles cached
   nothing to rebase
   $ [ -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
@@ -1361,7 +1361,6 @@ Pulling 0 revisions with --all-largefiles should not fetch for all revisions
   pulling from $TESTTMP/d (glob)
   searching for changes
   no changes found
-  0 additional largefiles cached
 
 Merging does not revert to old versions of largefiles and also check
 that merging after having pulled from a non-default remote works

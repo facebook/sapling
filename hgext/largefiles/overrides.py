@@ -732,12 +732,9 @@ def overridepull(orig, ui, repo, source=None, **opts):
     else:
         result = orig(ui, repo, source, **opts)
     revspostpull = len(repo)
-    if opts.get('all_largefiles'):
-        revs = []
-        for rev in xrange(revsprepull, revspostpull):
-            revs.append(repo[rev].rev())
-        lfcommands.downloadlfiles(ui, repo, revs)
     lfrevs = opts.get('lfrev', [])
+    if opts.get('all_largefiles'):
+        lfrevs.append('pulled()')
     if lfrevs and revspostpull > revsprepull:
         numcached = 0
         repo.firstpulled = revsprepull # for pulled() revset expression
