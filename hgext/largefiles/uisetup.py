@@ -79,7 +79,7 @@ def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'pull',
                                    overrides.overridepull)
     pullopt = [('', 'all-largefiles', None,
-                 _('download all pulled versions of largefiles')),
+                 _('download all pulled versions of largefiles (DEPRECATED)')),
                ('', 'lfrev', [],
                 _('download largefiles for these revisions'), _('REV'))]
     entry[1].extend(pullopt)
