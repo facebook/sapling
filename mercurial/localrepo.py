@@ -811,7 +811,7 @@ class localrepository(object):
                 _("abandoned transaction found - run hg recover"))
 
         self._writejournal(desc)
-        renames = [(x, undoname(x)) for x in self._journalfiles()]
+        renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
 
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                      self.sjoin("journal"),
@@ -821,13 +821,15 @@ class localrepository(object):
         return tr
 
     def _journalfiles(self):
-        return (self.sjoin('journal'), self.join('journal.dirstate'),
-                self.join('journal.branch'), self.join('journal.desc'),
-                self.join('journal.bookmarks'),
-                self.sjoin('journal.phaseroots'))
+        return ((self.svfs, 'journal'),
+                (self.vfs, 'journal.dirstate'),
+                (self.vfs, 'journal.branch'),
+                (self.vfs, 'journal.desc'),
+                (self.vfs, 'journal.bookmarks'),
+                (self.svfs, 'journal.phaseroots'))
 
     def undofiles(self):
-        return [undoname(x) for x in self._journalfiles()]
+        return [vfs.join(undoname(x)) for vfs, x in self._journalfiles()]
 
     def _writejournal(self, desc):
         self.opener.write("journal.dirstate",
@@ -2575,9 +2577,9 @@ class localrepository(object):
 def aftertrans(files):
     renamefiles = [tuple(t) for t in files]
     def a():
-        for src, dest in renamefiles:
+        for vfs, src, dest in renamefiles:
             try:
-                util.rename(src, dest)
+                vfs.rename(src, dest)
             except OSError: # journal file does not yet exist
                 pass
     return a
