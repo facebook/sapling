@@ -49,6 +49,9 @@ when pulling is thus to use --update, which will update your working
 copy to the latest pulled revision (and thereby downloading any new
 largefiles).
 
+If you want to pull largefiles you don't need for update yet, then
+you can use the `lfpull` command.
+
 If you just want to ensure that you will have the largefiles needed to
 merge or rebase with new heads that you are pulling, then you can pull
 with `--cache-largefiles` flag to pre-emptively download any largefiles

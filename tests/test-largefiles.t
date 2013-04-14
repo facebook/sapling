@@ -912,6 +912,23 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   added 6 changesets with 16 changes to 8 files
   (run 'hg update' to get a working copy)
   6 additional largefiles cached
+
+lfpull
+
+  $ hg lfpull -r : --config largefiles.usercache=usercache-lfpull
+  2 largefiles cached
+  $ hg lfpull -v -r 4+2 --config largefiles.usercache=usercache-lfpull
+  pulling largefiles for revision 4
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  pulling largefiles for revision 2
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  0 largefiles cached
+
+  $ ls usercache-lfpull/* | sort
+  usercache-lfpull/1deebade43c8c498a3c8daddac0244dc55d1331d
+  usercache-lfpull/4669e532d5b2c093a78eca010077e708a071bb64
+
   $ cd ..
 
 Rebasing between two repositories does not revert largefiles to old
