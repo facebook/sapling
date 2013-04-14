@@ -917,7 +917,7 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
 
   $ hg rollback
   repository tip rolled back to revision 1 (undo pull)
-  $ hg pull -v --lfrev 'heads(0:)'
+  $ hg pull -v --lfrev 'heads(pulled())+min(pulled())'
   pulling from $TESTTMP/a (glob)
   searching for changes
   all local heads known remotely
@@ -932,6 +932,8 @@ redo pull with --lfrev and check it pulls largefiles for the right revs
   found 971fb41e78fea4f8e0ba5244784239371cb00591 in store
   found 0d6d75887db61b2c7e6c74b5dd8fc6ad50c0cc30 in store
   found bb3151689acb10f0c3125c560d5e63df914bc1af in store
+  pulling largefiles for revision 2
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
   0 largefiles cached
 
 lfpull

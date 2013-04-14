@@ -9,7 +9,7 @@
 '''setup for largefiles extension: uisetup'''
 
 from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httppeer, localrepo, merge, scmutil, sshpeer, wireproto
+    httppeer, localrepo, merge, scmutil, sshpeer, wireproto, revset
 from mercurial.i18n import _
 from mercurial.hgweb import hgweb_mod, webcommands
 from mercurial.subrepo import hgsubrepo
@@ -85,6 +85,8 @@ def uisetup(ui):
                ('', 'lfrev', [],
                 _('download largefiles for these revisions'), _('REV'))]
     entry[1].extend(pullopt)
+    revset.symbols['pulled'] = overrides.pulledrevsetsymbol
+
     entry = extensions.wrapcommand(commands.table, 'clone',
                                    overrides.overrideclone)
     cloneopt = [('', 'all-largefiles', None,

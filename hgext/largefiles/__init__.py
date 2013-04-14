@@ -52,10 +52,14 @@ largefiles).
 If you want to pull largefiles you don't need for update yet, then
 you can use pull with the `--lfrev` option or the :hg:`lfpull` command.
 
+If you know you are pulling from a non-default location and want do
+download all the largefiles that corresponds to the new changesets at
+the same time, then you can pull with `--lfrev "pulled()"`.
+
 If you just want to ensure that you will have the largefiles needed to
 merge or rebase with new heads that you are pulling, then you can pull
-with `--lfrev "head(0:)"` flag to pre-emptively download any largefiles
-that are in the heads after pulling. You can also pull with the
+with `--lfrev "head(pulled())"` flag to pre-emptively download any largefiles
+that are new in the heads you are pulling. You can also pull with the
 `--cache-largefiles` flag to pre-emptively download any largefiles
 that are new in the heads you are pulling.
 

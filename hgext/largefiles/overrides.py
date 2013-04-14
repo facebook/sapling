@@ -756,12 +756,42 @@ def overridepull(orig, ui, repo, source=None, **opts):
     lfrevs = opts.get('lfrev', [])
     if lfrevs and revspostpull > revsprepull:
         numcached = 0
-        for rev in scmutil.revrange(repo, lfrevs):
-            ui.note(_('pulling largefiles for revision %s\n') % rev)
-            (cached, missing) = lfcommands.cachelfiles(ui, repo, rev)
-            numcached += len(cached)
+        repo.firstpulled = revsprepull # for pulled() revset expression
+        try:
+            for rev in scmutil.revrange(repo, lfrevs):
+                ui.note(_('pulling largefiles for revision %s\n') % rev)
+                (cached, missing) = lfcommands.cachelfiles(ui, repo, rev)
+                numcached += len(cached)
+        finally:
+            del repo.firstpulled
         ui.status(_("%d largefiles cached\n") % numcached)
     return result
+
+def pulledrevsetsymbol(repo, subset, x):
+    """``pulled()``
+    Changesets that just has been pulled.
+
+    Only available with largefiles from pull --lfrev expressions.
+
+    .. container:: verbose
+
+      Some examples:
+
+      - pull largefiles for all new changesets::
+
+          hg pull -lfrev "pulled()"
+
+      - pull largefiles for all new branch heads::
+
+          hg pull -lfrev "head(pulled()) and not closed()"
+
+    """
+
+    try:
+        firstpulled = repo.firstpulled
+    except AttributeError:
+        raise util.Abort(_("pulled() only available in --lfrev"))
+    return [r for r in subset if r >= firstpulled]
 
 def overrideclone(orig, ui, source, dest=None, **opts):
     d = dest
