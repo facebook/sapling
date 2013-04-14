@@ -904,17 +904,15 @@ class localrepository(object):
         self.destroying()
         transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
         if self.vfs.exists('undo.bookmarks'):
-            util.rename(self.join('undo.bookmarks'),
-                        self.join('bookmarks'))
+            self.vfs.rename('undo.bookmarks', 'bookmarks')
         if self.svfs.exists('undo.phaseroots'):
-            util.rename(self.sjoin('undo.phaseroots'),
-                        self.sjoin('phaseroots'))
+            self.svfs.rename('undo.phaseroots', 'phaseroots')
         self.invalidate()
 
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
-            util.rename(self.join('undo.dirstate'), self.join('dirstate'))
+            self.vfs.rename('undo.dirstate', 'dirstate')
             try:
                 branch = self.opener.read('undo.branch')
                 self.dirstate.setbranch(encoding.tolocal(branch))

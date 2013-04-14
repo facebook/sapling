@@ -254,6 +254,9 @@ class abstractvfs(object):
     def readdir(self, path=None, stat=None, skip=None):
         return osutil.listdir(self.join(path), stat, skip)
 
+    def rename(self, src, dst):
+        return util.rename(self.join(src), self.join(dst))
+
     def stat(self, path=None):
         return os.stat(self.join(path))
 
