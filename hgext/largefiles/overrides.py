@@ -704,6 +704,9 @@ def hgmerge(orig, repo, node, force=None, remind=True):
 # working copy
 def overridepull(orig, ui, repo, source=None, **opts):
     revsprepull = len(repo)
+    if not source:
+        source = 'default'
+    repo.lfpullsource = source
     if opts.get('rebase', False):
         repo._isrebasing = True
         try:
@@ -717,9 +720,6 @@ def overridepull(orig, ui, repo, source=None, **opts):
             def _dummy(*args, **kwargs):
                 pass
             commands.postincoming = _dummy
-            if not source:
-                source = 'default'
-            repo.lfpullsource = source
             try:
                 result = commands.pull(ui, repo, source, **opts)
             finally:
@@ -730,9 +730,6 @@ def overridepull(orig, ui, repo, source=None, **opts):
         finally:
             repo._isrebasing = False
     else:
-        if not source:
-            source = 'default'
-        repo.lfpullsource = source
         oldheads = lfutil.getcurrentheads(repo)
         result = orig(ui, repo, source, **opts)
         if opts.get('cache_largefiles'):
@@ -750,8 +747,8 @@ def overridepull(orig, ui, repo, source=None, **opts):
                 (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
                 numcached += len(cached)
             ui.status(_("%d largefiles cached\n") % numcached)
+    revspostpull = len(repo)
     if opts.get('all_largefiles'):
-        revspostpull = len(repo)
         revs = []
         for rev in xrange(revsprepull, revspostpull):
             revs.append(repo[rev].rev())
