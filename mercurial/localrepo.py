@@ -806,7 +806,7 @@ class localrepository(object):
             return tr.nest()
 
         # abort here if the journal already exists
-        if os.path.exists(self.sjoin("journal")):
+        if self.svfs.exists("journal"):
             raise error.RepoError(
                 _("abandoned transaction found - run hg recover"))
 
@@ -844,7 +844,7 @@ class localrepository(object):
     def recover(self):
         lock = self.lock()
         try:
-            if os.path.exists(self.sjoin("journal")):
+            if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("journal"),
                                      self.ui.warn)
@@ -861,7 +861,7 @@ class localrepository(object):
         try:
             wlock = self.wlock()
             lock = self.lock()
-            if os.path.exists(self.sjoin("undo")):
+            if self.svfs.exists("undo"):
                 return self._rollback(dryrun, force)
             else:
                 self.ui.warn(_("no rollback information available\n"))
@@ -903,10 +903,10 @@ class localrepository(object):
         parents = self.dirstate.parents()
         self.destroying()
         transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
-        if os.path.exists(self.join('undo.bookmarks')):
+        if self.vfs.exists('undo.bookmarks'):
             util.rename(self.join('undo.bookmarks'),
                         self.join('bookmarks'))
-        if os.path.exists(self.sjoin('undo.phaseroots')):
+        if self.svfs.exists('undo.phaseroots'):
             util.rename(self.sjoin('undo.phaseroots'),
                         self.sjoin('phaseroots'))
         self.invalidate()
