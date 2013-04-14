@@ -106,12 +106,17 @@ class IncrementalChangesetExporter(object):
         # localrepo.status().
         modified, added, removed = self._hg.status(self._rev, ctx.rev())[0:3]
 
+        # We track which directories/trees have modified in this update and we
+        # only export those.
+        dirty_trees = set()
+
         # We first process file removals so we can prune dead trees.
-        for path in sorted(removed, key=len, reverse=True):
+        for path in removed:
             d = os.path.dirname(path)
             tree = self._dirs.get(d, dulobjs.Tree())
 
             del tree[os.path.basename(path)]
+            dirty_trees.add(d)
 
             # If removing this file made the tree empty, we should delete this
             # tree. This could result in parent trees losing their only child
@@ -125,10 +130,10 @@ class IncrementalChangesetExporter(object):
         # For every file that changed or was added, we need to calculate the
         # corresponding Git blob and its tree entry. We emit the blob
         # immediately and update trees to be aware of its presence.
-        for path in sorted(set(modified) | set(added), key=len, reverse=True):
+        for path in set(modified) | set(added):
             # Handle special Mercurial paths.
             if path == '.hgsubstate':
-                self._handle_subrepos(ctx)
+                self._handle_subrepos(ctx, dirty_trees)
                 continue
 
             if path == '.hgsub':
@@ -136,6 +141,7 @@ class IncrementalChangesetExporter(object):
 
             d = os.path.dirname(path)
             tree = self._dirs.setdefault(d, dulobjs.Tree())
+            dirty_trees.add(d)
 
             fctx = ctx[path]
 
@@ -151,7 +157,7 @@ class IncrementalChangesetExporter(object):
         # tree SHA-1s. This is an important difference between us and
         # dulwich.index.commit_tree(), which builds new Tree instances for each
         # series of blobs.
-        for obj in self._populate_tree_entries():
+        for obj in self._populate_tree_entries(dirty_trees):
             yield (obj, None)
 
         self._rev = ctx.rev()
@@ -197,7 +203,7 @@ class IncrementalChangesetExporter(object):
             basename = os.path.basename(parent)
             parent = os.path.dirname(parent)
 
-    def _populate_tree_entries(self):
+    def _populate_tree_entries(self, dirty_trees):
         self._dirs.setdefault('', dulobjs.Tree())
 
         # Fill in missing directories.
@@ -213,9 +219,27 @@ class IncrementalChangesetExporter(object):
                 self._dirs[parent] = dulobjs.Tree()
                 parent = os.path.dirname(parent)
 
-        # TODO only emit trees that have been modified.
-        for d in sorted(self._dirs.keys(), key=len, reverse=True):
-            tree = self._dirs[d]
+        for dirty in list(dirty_trees):
+            parent = os.path.dirname(dirty)
+
+            while parent != '':
+                if parent in dirty_trees:
+                    break
+
+                dirty_trees.add(parent)
+                parent = os.path.dirname(parent)
+
+        # The root tree is always dirty but doesn't always get updated.
+        dirty_trees.add('')
+
+        # We only need to recalculate and export dirty trees.
+        for d in sorted(dirty_trees, key=len, reverse=True):
+            # Only happens for deleted directories.
+            try:
+                tree = self._dirs[d]
+            except KeyError:
+                continue
+
             yield tree
 
             if d == '':
@@ -225,10 +249,14 @@ class IncrementalChangesetExporter(object):
 
             # Accessing the tree's ID is what triggers SHA-1 calculation and is
             # the expensive part (at least if the tree has been modified since
-            # the last time we retrieved its ID).
+            # the last time we retrieved its ID). Also, assigning an entry to a
+            # tree (even if it already exists) invalidates the existing tree
+            # and incurs SHA-1 recalculation. So, it's in our interest to avoid
+            # invalidating trees. Since we only update the entries of dirty
+            # trees, this should hold true.
             parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
 
-    def _handle_subrepos(self, ctx):
+    def _handle_subrepos(self, ctx, dirty_trees):
         substate = util.parse_hgsubstate(ctx['.hgsubstate'].data().splitlines())
         sub = util.OrderedDict()
 
@@ -241,6 +269,7 @@ class IncrementalChangesetExporter(object):
                 continue
 
             d = os.path.dirname(path)
+            dirty_trees.add(d)
             tree = self._dirs.setdefault(d, dulobjs.Tree())
             tree.add(os.path.basename(path), dulobjs.S_IFGITLINK, sha)
 
