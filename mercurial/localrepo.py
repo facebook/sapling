@@ -153,7 +153,7 @@ class localrepository(object):
         return self.requirements[:]
 
     def __init__(self, baseui, path=None, create=False):
-        self.wvfs = scmutil.vfs(path, expand=True)
+        self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
         self.wopener = self.wvfs
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")

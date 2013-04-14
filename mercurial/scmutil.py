@@ -263,9 +263,11 @@ class vfs(abstractvfs):
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
     '''
-    def __init__(self, base, audit=True, expand=False):
-        if expand:
-            base = os.path.realpath(util.expandpath(base))
+    def __init__(self, base, audit=True, expandpath=False, realpath=False):
+        if expandpath:
+            base = util.expandpath(base)
+        if realpath:
+            base = os.path.realpath(base)
         self.base = base
         self._setmustaudit(audit)
         self.createmode = None
