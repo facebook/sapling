@@ -2246,10 +2246,10 @@ def debugpvec(ui, repo, a, b=None):
              (abs(pa._depth - pb._depth), pvec._hamming(pa._vec, pb._vec),
               pa.distance(pb), rel))
 
-@command('debugrebuildstate',
+@command('debugrebuilddirstate|debugrebuildstate',
     [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
     _('[-r REV]'))
-def debugrebuildstate(ui, repo, rev):
+def debugrebuilddirstate(ui, repo, rev):
     """rebuild the dirstate as it would look like for the given revision
 
     If no revision is specified the first current parent will be used.

@@ -92,7 +92,7 @@ Show debug commands if there are no other candidates
   debugpathcomplete
   debugpushkey
   debugpvec
-  debugrebuildstate
+  debugrebuilddirstate
   debugrename
   debugrevlog
   debugrevspec
@@ -247,7 +247,7 @@ Show all commands + options
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
-  debugrebuildstate: rev
+  debugrebuilddirstate: rev
   debugrename: rev
   debugrevlog: changelog, manifest, dump
   debugrevspec: 
