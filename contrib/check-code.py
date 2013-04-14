@@ -19,7 +19,8 @@ def repquote(m):
 def reppython(m):
     comment = m.group('comment')
     if comment:
-        return "#" * len(comment)
+        l = len(comment.rstrip())
+        return "#" * l + comment[l:]
     return repquote(m)
 
 def repcomment(m):

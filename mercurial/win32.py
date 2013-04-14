@@ -52,7 +52,7 @@ class _BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
                 ('nFileIndexHigh', _DWORD),
                 ('nFileIndexLow', _DWORD)]
 
-# CreateFile 
+# CreateFile
 _FILE_SHARE_READ = 0x00000001
 _FILE_SHARE_WRITE = 0x00000002
 _FILE_SHARE_DELETE = 0x00000004
