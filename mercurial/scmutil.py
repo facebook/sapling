@@ -260,6 +260,9 @@ class abstractvfs(object):
     def rename(self, src, dst):
         return util.rename(self.join(src), self.join(dst))
 
+    def readlink(self, path):
+        return os.readlink(self.join(path))
+
     def stat(self, path=None):
         return os.stat(self.join(path))
 

@@ -783,7 +783,7 @@ class localrepository(object):
 
     def wread(self, filename):
         if self._link(filename):
-            data = os.readlink(self.wjoin(filename))
+            data = self.wvfs.readlink(filename)
         else:
             data = self.wopener.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
