@@ -237,6 +237,15 @@ pyfilters = [
           (?P=quote))""", reppython),
 ]
 
+txtfilters = []
+
+txtpats = [
+  [
+    ('\s$', 'trailing whitespace'),
+  ],
+  []
+]
+
 cpats = [
   [
     (r'//', "don't use //-style comments"),
@@ -292,6 +301,7 @@ checks = [
      inrevlogpats),
     ('layering violation ui in util', r'mercurial/util\.py', pyfilters,
      inutilpats),
+    ('txt', r'.*\.txt$', txtfilters, txtpats),
 ]
 
 class norepeatlogger(object):

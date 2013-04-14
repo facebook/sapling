@@ -7,7 +7,7 @@ patterns.
 Alternate pattern notations must be specified explicitly.
 
 .. note::
-  Patterns specified in ``.hgignore`` are not rooted. 
+  Patterns specified in ``.hgignore`` are not rooted.
   Please see :hg:`help hgignore` for details.
 
 To use a plain path name without any pattern matching, start it with

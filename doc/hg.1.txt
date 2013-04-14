@@ -84,7 +84,7 @@ Files
     This file can be used to define local tags which are not shared among
     repositories. The file format is the same as for ``.hgtags``, but it is
     encoded using the local system encoding.
-    
+
 Some commands (e.g. revert) produce backup files ending in ``.orig``,
 if the ``.orig`` file already exists and is not tracked by Mercurial,
 it will be overwritten.
