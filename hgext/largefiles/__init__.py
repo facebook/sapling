@@ -41,24 +41,23 @@ Note that the remote Mercurial must also have the largefiles extension
 enabled for this to work.
 
 When you pull a changeset that affects largefiles from a remote
-repository, the largefiles for the changeset won't be pulled down.
-Instead, when you later update to such a revision, any largefiles
-needed by that revision are downloaded and cached (if they have
-never been downloaded before).  This means that network access may
-be required to update to changesets you have previously updated to.
+repository, the largefiles for the changeset will by default not be
+pulled down. However, when you update to such a revision, any
+largefiles needed by that revision are downloaded and cached (if
+they have never been downloaded before). One way to pull largefiles
+when pulling is thus to use --update, which will update your working
+copy to the latest pulled revision (and thereby downloading any new
+largefiles).
 
-If you know you are pulling from a non-default location and want to
-ensure that you will have the largefiles needed to merge or rebase
-with new heads that you are pulling, then you can pull with the
---cache-largefiles flag to pre-emptively download any largefiles
+If you just want to ensure that you will have the largefiles needed to
+merge or rebase with new heads that you are pulling, then you can pull
+with `--cache-largefiles` flag to pre-emptively download any largefiles
 that are new in the heads you are pulling.
 
-The one exception to the "largefiles won't be pulled until you update
-to a revision that changes them" rule is when you pull new heads.
-Because you could be pulling new heads (that you may later want to
-merge with) from a non-default location (that Mercurial won't know
-about later), when you pull new heads, largefiles revisions for those
-heads are downloaded and cached locally.
+Keep in mind that network access may now be required to update to
+changesets that you have not previously updated to. The nature of the
+largefiles extension means that updating is no longer guaranteed to
+be a local-only operation.
 
 If you already have large files tracked by Mercurial without the
 largefiles extension, you will need to convert your repository in
