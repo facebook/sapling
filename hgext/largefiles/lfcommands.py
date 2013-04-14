@@ -530,24 +530,6 @@ def _updatelfile(repo, lfdirstate, lfile):
         lfdirstate.drop(lfile)
     return ret
 
-def catlfile(repo, lfile, rev, filename):
-    hash = lfutil.readstandin(repo, lfile, rev)
-    if not lfutil.inusercache(repo.ui, hash):
-        store = basestore._openstore(repo)
-        success, missing = store.get([(lfile, hash)])
-        if len(success) != 1:
-            raise util.Abort(
-                _('largefile %s is not in cache and could not be downloaded')
-                    % lfile)
-    path = lfutil.usercachepath(repo.ui, hash)
-    fpout = cmdutil.makefileobj(repo, filename)
-    fpin = open(path, "rb")
-    for chunk in lfutil.blockstream(fpin):
-        fpout.write(chunk)
-    fpout.close()
-    fpin.close()
-    return 0
-
 # -- hg commands declarations ------------------------------------------------
 
 cmdtable = {

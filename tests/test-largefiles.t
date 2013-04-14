@@ -1486,7 +1486,10 @@ Cat a largefile
   $ hg cat -r '.^' sub/large4 doesntexist
   large4-modified
   doesntexist: no such file in rev a381d2c8c80e
-  [1]
+  $ hg --cwd sub cat -r '.^' large4
+  large4-modified
+  $ hg --cwd sub cat -r '.^' ../normal3
+  normal3-modified
 
 Test that renaming a largefile results in correct output for status
 

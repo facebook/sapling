@@ -19,6 +19,7 @@ from hgext import rebase
 
 import lfutil
 import lfcommands
+import basestore
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
@@ -1155,13 +1156,37 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         notbad.add(lf)
         return origmatchfn(lf)
     m.matchfn = lfmatchfn
-    m.bad = lambda f, msg: f not in notbad
+    origbadfn = m.bad
+    def lfbadfn(f, msg):
+        if not f in notbad:
+            return origbadfn(f, msg)
+    m.bad = lfbadfn
     for f in ctx.walk(m):
+        fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
+                                 pathname=f)
         lf = lfutil.splitstandin(f)
         if lf is None:
-            err = orig(ui, repo, f, **opts)
+            # duplicating unreachable code from commands.cat
+            data = ctx[f].data()
+            if opts.get('decode'):
+                data = repo.wwritedata(f, data)
+            fp.write(data)
         else:
-            err = lfcommands.catlfile(repo, lf, ctx.rev(), opts.get('output'))
+            hash = lfutil.readstandin(repo, lf, ctx.rev())
+            if not lfutil.inusercache(repo.ui, hash):
+                store = basestore._openstore(repo)
+                success, missing = store.get([(lf, hash)])
+                if len(success) != 1:
+                    raise util.Abort(
+                        _('largefile %s is not in cache and could not be '
+                          'downloaded')  % lf)
+            path = lfutil.usercachepath(repo.ui, hash)
+            fpin = open(path, "rb")
+            for chunk in lfutil.blockstream(fpin):
+                fp.write(chunk)
+            fpin.close()
+        fp.close()
+        err = 0
     return err
 
 def mercurialsinkbefore(orig, sink):
