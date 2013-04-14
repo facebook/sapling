@@ -1130,7 +1130,7 @@ class workingctx(changectx):
                 wlock.release()
 
     def markcommitted(self, node):
-        """Perform post-commit cleanup necessary after commiting this workingctx
+        """Perform post-commit cleanup necessary after committing this ctx
 
         Specifically, this updates backing stores this working context
         wraps to reflect the fact that the changes reflected by this

@@ -3044,7 +3044,7 @@ def strip(ui, repo, *revs, **opts):
             descendantrevs = repo.revs("%s::." % uctx.rev())
             changedfiles = []
             for rev in descendantrevs:
-                # blindy reset the files, regardless of what actually changed
+                # blindly reset the files, regardless of what actually changed
                 changedfiles.extend(repo[rev].files())
 
             # reset files that only changed in the dirstate too

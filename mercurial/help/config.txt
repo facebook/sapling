@@ -1494,7 +1494,7 @@ The value of each entry defines the substitution expression itself.
 The websub expressions follow the old interhg extension syntax,
 which in turn imitates the Unix sed replacement syntax::
 
-    pattername = s/SEARCH_REGEX/REPLACE_EXPRESSION/[i]
+    patternname = s/SEARCH_REGEX/REPLACE_EXPRESSION/[i]
 
 You can use any separator other than "/". The final "i" is optional
 and indicates that the search must be case insensitive.
