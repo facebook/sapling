@@ -2494,7 +2494,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     finally:
         wlock.release()
 
-@command('debugstate',
+@command('debugdirstate|debugstate',
     [('', 'nodates', None, _('do not display the saved mtime')),
     ('', 'datesort', None, _('sort by saved mtime'))],
     _('[OPTION]...'))

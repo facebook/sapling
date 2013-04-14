@@ -77,6 +77,7 @@ Show debug commands if there are no other candidates
   debugdag
   debugdata
   debugdate
+  debugdirstate
   debugdiscovery
   debugfileset
   debugfsinfo
@@ -96,7 +97,6 @@ Show debug commands if there are no other candidates
   debugrevlog
   debugrevspec
   debugsetparents
-  debugstate
   debugsub
   debugsuccessorssets
   debugwalk
@@ -232,6 +232,7 @@ Show all commands + options
   debugdag: tags, branches, dots, spaces
   debugdata: changelog, manifest
   debugdate: extended
+  debugdirstate: nodates, datesort
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
   debugfileset: rev
   debugfsinfo: 
@@ -251,7 +252,6 @@ Show all commands + options
   debugrevlog: changelog, manifest, dump
   debugrevspec: 
   debugsetparents: 
-  debugstate: nodates, datesort
   debugsub: rev
   debugsuccessorssets: 
   debugwalk: include, exclude
