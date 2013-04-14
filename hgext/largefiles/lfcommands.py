@@ -542,7 +542,8 @@ def catlfile(repo, lfile, rev, filename):
     path = lfutil.usercachepath(repo.ui, hash)
     fpout = cmdutil.makefileobj(repo, filename)
     fpin = open(path, "rb")
-    fpout.write(fpin.read())
+    for chunk in lfutil.blockstream(fpin):
+        fpout.write(chunk)
     fpout.close()
     fpin.close()
     return 0
