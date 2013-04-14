@@ -1391,7 +1391,7 @@ correctly.
   Invoking status precommit hook
   M sub/large4
 # Test --cache-largefiles flag
-  $ hg pull --cache-largefiles ../e
+  $ hg pull --lfrev 'heads(pulled())' ../e
   pulling from ../e
   searching for changes
   adding changesets
@@ -1399,7 +1399,6 @@ correctly.
   adding file changes
   added 2 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching largefiles for 1 heads
   2 largefiles cached
   $ hg merge
   merging sub/large4

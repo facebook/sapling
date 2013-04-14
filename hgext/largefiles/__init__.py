@@ -59,8 +59,6 @@ the same time, then you can pull with `--lfrev "pulled()"`.
 If you just want to ensure that you will have the largefiles needed to
 merge or rebase with new heads that you are pulling, then you can pull
 with `--lfrev "head(pulled())"` flag to pre-emptively download any largefiles
-that are new in the heads you are pulling. You can also pull with the
-`--cache-largefiles` flag to pre-emptively download any largefiles
 that are new in the heads you are pulling.
 
 Keep in mind that network access may now be required to update to

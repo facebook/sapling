@@ -730,23 +730,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
         finally:
             repo._isrebasing = False
     else:
-        oldheads = lfutil.getcurrentheads(repo)
         result = orig(ui, repo, source, **opts)
-        if opts.get('cache_largefiles'):
-            # If you are pulling from a remote location that is not your
-            # default location, you may want to cache largefiles for new heads
-            # that have been pulled, so you can easily merge or rebase with
-            # them later
-            numcached = 0
-            heads = lfutil.getcurrentheads(repo)
-            newheads = set(heads).difference(set(oldheads))
-            if len(newheads) > 0:
-                ui.status(_("caching largefiles for %s heads\n") %
-                          len(newheads))
-            for head in newheads:
-                (cached, missing) = lfcommands.cachelfiles(ui, repo, head)
-                numcached += len(cached)
-            ui.status(_("%d largefiles cached\n") % numcached)
     revspostpull = len(repo)
     if opts.get('all_largefiles'):
         revs = []
