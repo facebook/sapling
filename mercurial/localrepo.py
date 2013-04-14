@@ -209,8 +209,10 @@ class localrepository(object):
 
         self.sharedpath = self.path
         try:
-            s = os.path.realpath(self.opener.read("sharedpath").rstrip('\n'))
-            if not os.path.exists(s):
+            vfs = scmutil.vfs(self.vfs.read("sharedpath").rstrip('\n'),
+                              realpath=True)
+            s = vfs.base
+            if not vfs.exists():
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)
             self.sharedpath = s
