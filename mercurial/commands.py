@@ -2248,9 +2248,19 @@ def debugpvec(ui, repo, a, b=None):
 
 @command('debugrebuildstate',
     [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
-    _('[-r REV] [REV]'))
-def debugrebuildstate(ui, repo, rev="tip"):
-    """rebuild the dirstate as it would look like for the given revision"""
+    _('[-r REV]'))
+def debugrebuildstate(ui, repo, rev):
+    """rebuild the dirstate as it would look like for the given revision
+
+    If no revision is specified the first current parent will be used.
+
+    The dirstate will be set to the files of the given revision.
+    The actual working directory content or existing dirstate
+    information such as adds or removes is not considered.
+
+    One use of this command is to make the next :hg:`status` invocation
+    check the actual file content.
+    """
     ctx = scmutil.revsingle(repo, rev)
     wlock = repo.wlock()
     try:
