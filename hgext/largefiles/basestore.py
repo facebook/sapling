@@ -38,7 +38,7 @@ class basestore(object):
         self.url = url
 
     def put(self, source, hash):
-        '''Put source file into the store under <filename>/<hash>.'''
+        '''Put source file into the store so it can be retrieved by hash.'''
         raise NotImplementedError('abstract method')
 
     def exists(self, hashes):

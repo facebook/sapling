@@ -25,8 +25,7 @@ class localstore(basestore.basestore):
     def put(self, source, hash):
         if lfutil.instore(self.remote, hash):
             return
-        lfutil.link(lfutil.storepath(self.repo, hash),
-                lfutil.storepath(self.remote, hash))
+        lfutil.link(source, lfutil.storepath(self.remote, hash))
 
     def exists(self, hashes):
         retval = {}
