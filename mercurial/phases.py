@@ -266,7 +266,15 @@ class phasecache(object):
                 filtered = True
         if filtered:
             self.dirty = True
-            self._phaserevs = None
+        # filterunknown is called by repo.destroyed, we may have no changes in
+        # root but phaserevs contents is certainly invalide (or at least we
+        # have not proper way to check that. related to issue 3858.
+        #
+        # The other caller is __init__ that have no _phaserevs initialized
+        # anyway. If this change we should consider adding a dedicated
+        # "destroyed" function to phasecache or a proper cache key mechanisme
+        # (see branchmap one)
+        self._phaserevs = None
 
 def advanceboundary(repo, targetphase, nodes):
     """Add nodes to a phase changing other nodes phases if necessary.
