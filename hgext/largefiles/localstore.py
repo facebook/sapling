@@ -36,11 +36,8 @@ class localstore(basestore.basestore):
 
 
     def _getfile(self, tmpfile, filename, hash):
-        if lfutil.instore(self.remote, hash):
-            path = lfutil.storepath(self.remote, hash)
-        elif lfutil.inusercache(self.ui, hash):
-            path = lfutil.usercachepath(self.ui, hash)
-        else:
+        path = lfutil.findfile(self.remote, hash)
+        if not path:
             raise basestore.StoreError(filename, hash, self.url,
                 _("can't get file locally"))
         fd = open(path, 'rb')
