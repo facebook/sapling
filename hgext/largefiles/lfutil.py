@@ -290,7 +290,7 @@ def writestandin(repo, standin, hash, executable):
 def copyandhash(instream, outfile):
     '''Read bytes from instream (iterable) and write them to outfile,
     computing the SHA-1 hash of the data along the way.  Close outfile
-    when done and return the binary hash.'''
+    when done and return the hash.'''
     hasher = util.sha1('')
     for data in instream:
         hasher.update(data)
@@ -301,7 +301,7 @@ def copyandhash(instream, outfile):
     # outfile was opened just to copy and hash.
     outfile.close()
 
-    return hasher.digest()
+    return hasher.hexdigest()
 
 def hashrepofile(repo, file):
     return hashfile(repo.wjoin(file))

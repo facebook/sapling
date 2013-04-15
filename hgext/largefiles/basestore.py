@@ -8,7 +8,6 @@
 
 '''base class for store implementations and store-related utility code'''
 
-import binascii
 import re
 
 from mercurial import util, node, hg
@@ -74,7 +73,7 @@ class basestore(object):
                                           createmode=self.repo.store.createmode)
 
             try:
-                hhash = binascii.hexlify(self._getfile(tmpfile, filename, hash))
+                hhash = self._getfile(tmpfile, filename, hash)
             except StoreError, err:
                 ui.warn(err.longmessage())
                 hhash = ""
@@ -128,7 +127,7 @@ class basestore(object):
     def _getfile(self, tmpfile, filename, hash):
         '''Fetch one revision of one file from the store and write it
         to tmpfile.  Compute the hash of the file on-the-fly as it
-        downloads and return the binary hash.  Close tmpfile.  Raise
+        downloads and return the hash.  Close tmpfile.  Raise
         StoreError if unable to download the file (e.g. it does not
         exist in the store).'''
         raise NotImplementedError('abstract method')
