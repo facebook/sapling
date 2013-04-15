@@ -18,6 +18,15 @@ HTTP_METHOD_NOT_ALLOWED = 405
 HTTP_SERVER_ERROR = 500
 
 
+def ismember(ui, username, userlist):
+    """Check if username is a member of userlist.
+
+    If userlist has a single '*' member, all users are considered members.
+    Can be overriden by extensions to provide more complex authorization
+    schemes.
+    """
+    return userlist == ['*'] or username in userlist
+
 def checkauthz(hgweb, req, op):
     '''Check permission for operation based on request data (including
     authentication info). Return if op allowed, else raise an ErrorResponse
@@ -26,12 +35,11 @@ def checkauthz(hgweb, req, op):
     user = req.env.get('REMOTE_USER')
 
     deny_read = hgweb.configlist('web', 'deny_read')
-    if deny_read and (not user or deny_read == ['*'] or user in deny_read):
+    if deny_read and (not user or ismember(hgweb.repo.ui, user, deny_read)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
     allow_read = hgweb.configlist('web', 'allow_read')
-    result = (not allow_read) or (allow_read == ['*'])
-    if not (result or user in allow_read):
+    if allow_read and (not ismember(hgweb.repo.ui, user, allow_read)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'read not authorized')
 
     if op == 'pull' and not hgweb.allowpull:
@@ -51,12 +59,11 @@ def checkauthz(hgweb, req, op):
         raise ErrorResponse(HTTP_FORBIDDEN, 'ssl required')
 
     deny = hgweb.configlist('web', 'deny_push')
-    if deny and (not user or deny == ['*'] or user in deny):
+    if deny and (not user or ismember(hgweb.repo.ui, user, deny)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 
     allow = hgweb.configlist('web', 'allow_push')
-    result = allow and (allow == ['*'] or user in allow)
-    if not result:
+    if not (allow and ismember(hgweb.repo.ui, user, allow)):
         raise ErrorResponse(HTTP_UNAUTHORIZED, 'push not authorized')
 
 # Hooks for hgweb permission checks; extensions can add hooks here.

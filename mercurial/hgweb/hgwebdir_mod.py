@@ -10,7 +10,7 @@ import os, re, time
 from mercurial.i18n import _
 from mercurial import ui, hg, scmutil, util, templater
 from mercurial import error, encoding
-from common import ErrorResponse, get_mtime, staticfile, paritygen, \
+from common import ErrorResponse, get_mtime, staticfile, paritygen, ismember, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from hgweb_mod import hgweb, makebreadcrumb
 from request import wsgirequest
@@ -164,12 +164,12 @@ class hgwebdir(object):
         user = req.env.get('REMOTE_USER')
 
         deny_read = ui.configlist('web', 'deny_read', untrusted=True)
-        if deny_read and (not user or deny_read == ['*'] or user in deny_read):
+        if deny_read and (not user or ismember(ui, user, deny_read)):
             return False
 
         allow_read = ui.configlist('web', 'allow_read', untrusted=True)
         # by default, allow reading if no allow_read option has been set
-        if (not allow_read) or (allow_read == ['*']) or (user in allow_read):
+        if (not allow_read) or ismember(ui, user, allow_read):
             return True
 
         return False
