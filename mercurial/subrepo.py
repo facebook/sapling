@@ -764,7 +764,7 @@ class hgsubrepo(abstractsubrepo):
             opts['rev'] = substate[1]
 
             pats = []
-            if not opts['all']:
+            if not opts.get('all'):
                 pats = ['set:modified()']
             self.filerevert(ui, *pats, **opts)
 
@@ -774,7 +774,7 @@ class hgsubrepo(abstractsubrepo):
     def filerevert(self, ui, *pats, **opts):
         ctx = self._repo[opts['rev']]
         parents = self._repo.dirstate.parents()
-        if opts['all']:
+        if opts.get('all'):
             pats = ['set:modified()']
         else:
             pats = []
