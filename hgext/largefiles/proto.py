@@ -123,11 +123,9 @@ def wirereposetup(ui, repo):
                 self._abort(error.ResponseError(_("unexpected response:"),
                                                 length))
 
-            # Mercurial doesn't close SSH connections after writing a stream
-            infile = lfutil.limitreader(stream, length)
-            for chunk in util.filechunkiter(infile, 128 * 1024):
+            # SSH streams will block if reading more than length
+            for chunk in util.filechunkiter(stream, 128 * 1024, length):
                 yield chunk
-            infile.close()
 
         @batchable
         def statlfile(self, sha):

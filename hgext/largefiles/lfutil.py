@@ -309,21 +309,6 @@ def hashfile(file):
     fd.close()
     return hasher.hexdigest()
 
-class limitreader(object):
-    def __init__(self, f, limit):
-        self.f = f
-        self.limit = limit
-
-    def read(self, length):
-        if self.limit == 0:
-            return ''
-        length = length > self.limit and self.limit or length
-        self.limit -= length
-        return self.f.read(length)
-
-    def close(self):
-        pass
-
 def writehash(hash, filename, executable):
     util.makedirs(os.path.dirname(filename))
     util.writefile(filename, hash + '\n')
