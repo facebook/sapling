@@ -45,6 +45,7 @@ class localstore(basestore.basestore):
             return lfutil.copyandhash(fd, tmpfile)
         finally:
             fd.close()
+            tmpfile.close()
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)

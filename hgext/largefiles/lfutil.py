@@ -289,18 +289,11 @@ def writestandin(repo, standin, hash, executable):
 
 def copyandhash(instream, outfile):
     '''Read bytes from instream (iterable) and write them to outfile,
-    computing the SHA-1 hash of the data along the way.  Close outfile
-    when done and return the hash.'''
+    computing the SHA-1 hash of the data along the way. Return the hash.'''
     hasher = util.sha1('')
     for data in instream:
         hasher.update(data)
         outfile.write(data)
-
-    # Blecch: closing a file that somebody else opened is rude and
-    # wrong. But it's so darn convenient and practical! After all,
-    # outfile was opened just to copy and hash.
-    outfile.close()
-
     return hasher.hexdigest()
 
 def hashrepofile(repo, file):
