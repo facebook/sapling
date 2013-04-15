@@ -1198,7 +1198,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
                           'downloaded')  % lf)
             path = lfutil.usercachepath(repo.ui, hash)
             fpin = open(path, "rb")
-            for chunk in lfutil.blockstream(fpin):
+            for chunk in util.filechunkiter(fpin, 128 * 1024):
                 fp.write(chunk)
             fpin.close()
         fp.close()

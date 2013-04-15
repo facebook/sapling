@@ -74,7 +74,11 @@ class remotestore(basestore.basestore):
         # Mercurial does not close its SSH connections after writing a stream
         if length is not None:
             infile = lfutil.limitreader(infile, length)
-        return lfutil.copyandhash(lfutil.blockstream(infile), tmpfile)
+        try:
+            return lfutil.copyandhash(util.filechunkiter(infile, 128 * 1024),
+                                      tmpfile)
+        finally:
+            infile.close()
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)

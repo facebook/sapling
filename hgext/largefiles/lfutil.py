@@ -311,7 +311,7 @@ def hashfile(file):
         return ''
     hasher = util.sha1('')
     fd = open(file, 'rb')
-    for data in blockstream(fd):
+    for data in util.filechunkiter(fd, 128 * 1024):
         hasher.update(data)
     fd.close()
     return hasher.hexdigest()
@@ -330,16 +330,6 @@ class limitreader(object):
 
     def close(self):
         pass
-
-def blockstream(infile, blocksize=128 * 1024):
-    """Generator that yields blocks of data from infile and closes infile."""
-    while True:
-        data = infile.read(blocksize)
-        if not data:
-            break
-        yield data
-    # same blecch as copyandhash() above
-    infile.close()
 
 def writehash(hash, filename, executable):
     util.makedirs(os.path.dirname(filename))
