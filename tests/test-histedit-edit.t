@@ -216,9 +216,9 @@ rollback should not work after a histedit
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 0 2>&1
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding a
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
-  [255]
+  [1]
   $ HGEDITOR=true hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-backup.hg (glob)
