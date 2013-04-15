@@ -1306,7 +1306,7 @@ Update to revision with missing largefile - and make sure it really is missing
   $ rm ${USERCACHE}/7838695e10da2bb75ac1156565f40a2595fa2fa0
   $ hg up -r 6
   getting changed largefiles
-  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d
   1 largefiles updated, 2 removed
   4 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ rm normal3
@@ -1327,7 +1327,7 @@ Update to revision with missing largefile - and make sure it really is missing
   ! normal3
   $ hg up -Cr.
   getting changed largefiles
-  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d
   0 largefiles updated, 0 removed
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
@@ -1349,7 +1349,7 @@ Merge with revision with missing largefile - and make sure it tries to fetch it.
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
-  error getting id 7838695e10da2bb75ac1156565f40a2595fa2fa0 from url file:$TESTTMP/d for file large3: can't get file locally (glob)
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d
   1 largefiles updated, 0 removed
 
   $ hg rollback -q
@@ -1773,8 +1773,11 @@ largefiles pulled on update - a largefile missing on the server:
   $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
   $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
   getting changed largefiles
-  abort: remotestore: largefile 02a439e5c31c526465ab1a0ca1f431f76b827b90 is missing
-  [255]
+  f1: largefile 02a439e5c31c526465ab1a0ca1f431f76b827b90 not available from http://localhost:$HGPORT2/
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R http-clone st
+  ! f1
   $ hg -R http-clone up -Cqr null
 
 largefiles pulled on update - a largefile corrupted on the server:
@@ -1811,9 +1814,9 @@ largefiles pulled on update - no server side problems:
   getting changed largefiles
   using http://localhost:$HGPORT2/
   sending capabilities command
+  sending batch command
   getting largefiles: 0/1 lfile (0.00%)
   getting f1:02a439e5c31c526465ab1a0ca1f431f76b827b90
-  sending batch command
   sending getlfile command
   found 02a439e5c31c526465ab1a0ca1f431f76b827b90 in store
   1 largefiles updated, 0 removed

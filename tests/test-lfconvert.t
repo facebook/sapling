@@ -343,7 +343,7 @@ Ensure the abort message is useful if a largefile is entirely unavailable
   $ rm largefiles-repo/.hg/largefiles/*
   $ hg lfconvert --to-normal issue3519 normalized3519
   initializing destination normalized3519
-  error getting id 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 from url file:$TESTTMP/largefiles-repo for file large: can't get file locally (glob)
+  large: largefile 2e000fa7e85759c7f4c254d4d9c33ef481e459a7 not available from file:$TESTTMP/largefiles-repo
   abort: missing largefile 'large' from revision d4892ec57ce212905215fad1d9018f56b99202ad
   [255]
 

@@ -26,8 +26,9 @@ class wirestore(remotestore.remotestore):
         return self.remote.getlfile(hash)
 
     def _stat(self, hashes):
-        '''For each hash, return 2 if the largefile is missing, 1 if it has a
-        mismatched checksum, or 0 if it is in good condition'''
+        '''For each hash, return 0 if it is available, other values if not.
+        It is usually 2 if the largefile is missing, but might be 1 the server
+        has a corrupted copy.'''
         batch = self.remote.batch()
         futures = {}
         for hash in hashes:

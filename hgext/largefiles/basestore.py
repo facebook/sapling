@@ -62,11 +62,18 @@ class basestore(object):
         util.makedirs(lfutil.storepath(self.repo, ''))
 
         at = 0
+        available = self.exists(set(hash for (_filename, hash) in files))
         for filename, hash in files:
             ui.progress(_('getting largefiles'), at, unit='lfile',
                 total=len(files))
             at += 1
             ui.note(_('getting %s:%s\n') % (filename, hash))
+
+            if not available.get(hash):
+                ui.warn(_('%s: largefile %s not available from %s\n')
+                        % (filename, hash, self.url))
+                missing.append(filename)
+                continue
 
             storefilename = lfutil.storepath(self.repo, hash)
             tmpfile = util.atomictempfile(storefilename + '.tmp',

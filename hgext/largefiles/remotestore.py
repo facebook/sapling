@@ -47,16 +47,6 @@ class remotestore(basestore.basestore):
                 fd.close()
 
     def _getfile(self, tmpfile, filename, hash):
-        # quit if the largefile isn't there
-        stat = self._stat([hash])[hash]
-        if stat == 1:
-            raise util.Abort(_('remotestore: largefile %s is invalid') % hash)
-        elif stat == 2:
-            raise util.Abort(_('remotestore: largefile %s is missing') % hash)
-        elif stat != 0:
-            raise RuntimeError('error getting file: unexpected response from '
-                               'statlfile (%r)' % stat)
-
         try:
             chunks = self._get(hash)
         except urllib2.HTTPError, e:
