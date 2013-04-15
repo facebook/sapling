@@ -9,7 +9,6 @@
 '''largefiles utility code: must not import other modules in this package.'''
 
 import os
-import errno
 import platform
 import shutil
 import stat
@@ -127,14 +126,7 @@ def openlfdirstate(ui, repo, create=True):
         matcher = getstandinmatcher(repo)
         for standin in repo.dirstate.walk(matcher, [], False, False):
             lfile = splitstandin(standin)
-            hash = readstandin(repo, lfile)
             lfdirstate.normallookup(lfile)
-            try:
-                if hash == hashfile(repo.wjoin(lfile)):
-                    lfdirstate.normal(lfile)
-            except OSError, err:
-                if err.errno != errno.ENOENT:
-                    raise
     return lfdirstate
 
 def lfdirstatestatus(lfdirstate, repo, rev):
