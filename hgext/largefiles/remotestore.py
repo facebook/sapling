@@ -79,7 +79,6 @@ class remotestore(basestore.basestore):
                                       tmpfile)
         finally:
             infile.close()
-            tmpfile.close()
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)

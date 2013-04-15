@@ -77,7 +77,7 @@ class basestore(object):
             except StoreError, err:
                 ui.warn(err.longmessage())
                 hhash = ""
-            tmpfile.close() # has probably already been closed!
+            tmpfile.close()
 
             if hhash != hash:
                 if hhash != "":
