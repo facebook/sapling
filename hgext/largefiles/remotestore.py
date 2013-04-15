@@ -58,7 +58,7 @@ class remotestore(basestore.basestore):
                                'statlfile (%r)' % stat)
 
         try:
-            length, infile = self._get(hash)
+            chunks = self._get(hash)
         except urllib2.HTTPError, e:
             # 401s get converted to util.Aborts; everything else is fine being
             # turned into a StoreError
@@ -71,14 +71,7 @@ class remotestore(basestore.basestore):
         except IOError, e:
             raise basestore.StoreError(filename, hash, self.url, str(e))
 
-        # Mercurial does not close its SSH connections after writing a stream
-        if length is not None:
-            infile = lfutil.limitreader(infile, length)
-        try:
-            return lfutil.copyandhash(util.filechunkiter(infile, 128 * 1024),
-                                      tmpfile)
-        finally:
-            infile.close()
+        return lfutil.copyandhash(chunks, tmpfile)
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)

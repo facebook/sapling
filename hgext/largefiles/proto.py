@@ -114,6 +114,7 @@ def wirereposetup(ui, repo):
                         _('putlfile failed (unexpected response):'), ret)
 
         def getlfile(self, sha):
+            """returns an iterable with the chunks of the file with sha sha"""
             stream = self._callstream("getlfile", sha=sha)
             length = stream.readline()
             try:
@@ -121,7 +122,12 @@ def wirereposetup(ui, repo):
             except ValueError:
                 self._abort(error.ResponseError(_("unexpected response:"),
                                                 length))
-            return (length, stream)
+
+            # Mercurial doesn't close SSH connections after writing a stream
+            infile = lfutil.limitreader(stream, length)
+            for chunk in util.filechunkiter(infile, 128 * 1024):
+                yield chunk
+            infile.close()
 
         @batchable
         def statlfile(self, sha):
