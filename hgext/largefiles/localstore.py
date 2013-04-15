@@ -8,9 +8,6 @@
 
 '''store class for local filesystem'''
 
-import os
-
-from mercurial import util
 from mercurial.i18n import _
 
 import lfutil
@@ -26,7 +23,6 @@ class localstore(basestore.basestore):
         super(localstore, self).__init__(ui, repo, self.remote.url())
 
     def put(self, source, hash):
-        util.makedirs(os.path.dirname(lfutil.storepath(self.remote, hash)))
         if lfutil.instore(self.remote, hash):
             return
         lfutil.link(lfutil.storepath(self.repo, hash),

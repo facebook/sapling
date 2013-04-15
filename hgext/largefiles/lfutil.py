@@ -39,6 +39,7 @@ def getminsize(ui, assumelfiles, opt, default=10):
     return lfsize
 
 def link(src, dest):
+    util.makedirs(os.path.dirname(dest))
     try:
         util.oslink(src, dest)
     except OSError:
@@ -86,7 +87,6 @@ def findfile(repo, hash):
     elif inusercache(repo.ui, hash):
         repo.ui.note(_('found %s in system cache\n') % hash)
         path = storepath(repo, hash)
-        util.makedirs(os.path.dirname(path))
         link(usercachepath(repo.ui, hash), path)
         return path
     return None
@@ -203,10 +203,10 @@ def copyalltostore(repo, node):
 
 
 def copytostoreabsolute(repo, file, hash):
-    util.makedirs(os.path.dirname(storepath(repo, hash)))
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     elif not getattr(repo, "_isconverting", False):
+        util.makedirs(os.path.dirname(storepath(repo, hash)))
         dst = util.atomictempfile(storepath(repo, hash),
                                   createmode=repo.store.createmode)
         for chunk in util.filechunkiter(open(file, 'rb')):
@@ -217,7 +217,6 @@ def copytostoreabsolute(repo, file, hash):
 def linktousercache(repo, hash):
     path = usercachepath(repo.ui, hash)
     if path:
-        util.makedirs(os.path.dirname(path))
         link(storepath(repo, hash), path)
 
 def getstandinmatcher(repo, pats=[], opts={}):
