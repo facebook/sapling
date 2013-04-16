@@ -71,8 +71,8 @@ test generic hooks
 
   $ hg id
   pre-identify hook: HG_ARGS=id HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'insecure': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None} HG_PATS=[]
-  warning: pre-identify hook exited with status 1
-  [1]
+  abort: pre-identify hook exited with status 1
+  [255]
   $ hg cat b
   pre-cat hook: HG_ARGS=cat b HG_OPTS={'decode': None, 'exclude': [], 'include': [], 'output': '', 'rev': ''} HG_PATS=['b']
   b

@@ -511,10 +511,8 @@ def _earlygetopt(aliases, args):
 
 def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
-    ret = hook.hook(lui, repo, "pre-%s" % cmd, False, args=" ".join(fullargs),
-                    pats=cmdpats, opts=cmdoptions)
-    if ret:
-        return ret
+    hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
+              pats=cmdpats, opts=cmdoptions)
     ret = _runcommand(ui, options, cmd, d)
     # run post-hook, passing command result
     hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
