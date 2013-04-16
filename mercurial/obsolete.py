@@ -405,6 +405,33 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
                     seen.add(suc)
                     remaining.add(suc)
 
+def foreground(repo, nodes):
+    """return all nodes in the "foreground" of other node
+
+    The foreground of a revision is anything reachable using parent -> children
+    or precursor -> sucessor relation. It is very similars to "descendant" but
+    augmented with obsolescence information.
+
+    Beware that possible obsolescence cycle may result if complexe situation.
+    """
+    repo = repo.unfiltered()
+    foreground = set(repo.set('%ln::', nodes))
+    if repo.obsstore:
+        # We only need this complicated logic if there is obsolescence
+        # XXX will probably deserve an optimised revset.
+        nm = repo.changelog.nodemap
+        plen = -1
+        # compute the whole set of successors or descendants
+        while len(foreground) != plen:
+            plen = len(foreground)
+            succs = set(c.node() for c in foreground)
+            mutable = [c.node() for c in foreground if c.mutable()]
+            succs.update(allsuccessors(repo.obsstore, mutable))
+            known = (n for n in succs if n in nm)
+            foreground = set(repo.set('%ln::', known))
+    return set(c.node() for c in foreground)
+
+
 def successorssets(repo, initialnode, cache=None):
     """Return all set of successors of initial nodes
 

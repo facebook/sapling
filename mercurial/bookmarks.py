@@ -292,19 +292,7 @@ def validdest(repo, old, new):
         # (new != nullrev has been excluded by the previous check)
         return True
     elif repo.obsstore:
-        # We only need this complicated logic if there is obsolescence
-        # XXX will probably deserve an optimised revset.
-        nm = repo.changelog.nodemap
-        validdests = set([old])
-        plen = -1
-        # compute the whole set of successors or descendants
-        while len(validdests) != plen:
-            plen = len(validdests)
-            succs = set(c.node() for c in validdests)
-            mutable = [c.node() for c in validdests if c.mutable()]
-            succs.update(obsolete.allsuccessors(repo.obsstore, mutable))
-            known = (n for n in succs if n in nm)
-            validdests = set(repo.set('%ln::', known))
-        return new in validdests
+        return new.node() in obsolete.foreground(repo, [old.node()])
     else:
+        # still an independant clause as it is lazyer (and therefore faster)
         return old.descendant(new)
