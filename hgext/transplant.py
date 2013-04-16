@@ -7,7 +7,8 @@
 
 '''command to transplant changesets from another branch
 
-This extension allows you to transplant patches from another branch.
+This extension allows you to transplant changes to another parent revision,
+possibly in another repository. The transplant is done using 'diff' patches.
 
 Transplanted patches are recorded in .hg/transplant/transplants, as a
 map from a changeset hash to its hash in the source repository.
@@ -492,7 +493,7 @@ def browserevs(ui, repo, nodes, opts):
     return (transplants, merges)
 
 @command('transplant',
-    [('s', 'source', '', _('pull patches from REPO'), _('REPO')),
+    [('s', 'source', '', _('transplant changesets from REPO'), _('REPO')),
     ('b', 'branch', [], _('use this source changeset as head'), _('REV')),
     ('a', 'all', None, _('pull all changesets up to the --branch revisions')),
     ('p', 'prune', [], _('skip over REV'), _('REV')),
@@ -502,7 +503,7 @@ def browserevs(ui, repo, nodes, opts):
     ('e', 'edit', False, _('invoke editor on commit messages')),
     ('', 'log', None, _('append transplant info to log message')),
     ('c', 'continue', None, _('continue last transplant session '
-                              'after repair')),
+                              'after fixing conflicts')),
     ('', 'filter', '',
      _('filter changesets through command'), _('CMD'))],
     _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
@@ -512,9 +513,13 @@ def transplant(ui, repo, *revs, **opts):
 
     Selected changesets will be applied on top of the current working
     directory with the log of the original changeset. The changesets
-    are copied and will thus appear twice in the history. Use the
-    rebase extension instead if you want to move a whole branch of
-    unpublished changesets.
+    are copied and will thus appear twice in the history with different
+    identities.
+
+    Consider using the graft command if everything is inside the same
+    repository - it will use merges and will usually give a better result.
+    Use the rebase extension if the changesets are unpublished and you want
+    to move them instead of copying them.
 
     If --log is specified, log messages will have a comment appended
     of the form::
@@ -525,8 +530,8 @@ def transplant(ui, repo, *revs, **opts):
     Its argument will be invoked with the current changelog message as
     $1 and the patch as $2.
 
-    If --source/-s is specified, selects changesets from the named
-    repository.
+    --source/-s specifies another repository to use for selecting changesets,
+    just as if it temporarily had been pulled.
     If --branch/-b is specified, these revisions will be used as
     heads when deciding which changsets to transplant, just as if only
     these revisions had been pulled.
@@ -576,7 +581,7 @@ def transplant(ui, repo, *revs, **opts):
         if opts.get('continue'):
             if opts.get('branch') or opts.get('all') or opts.get('merge'):
                 raise util.Abort(_('--continue is incompatible with '
-                                   'branch, all or merge'))
+                                   '--branch, --all and --merge'))
             return
         if not (opts.get('source') or revs or
                 opts.get('merge') or opts.get('branch')):
