@@ -143,6 +143,7 @@ try:
 except ImportError:
     import pickle
 import os
+import sys
 
 from mercurial import cmdutil
 from mercurial import discovery
@@ -515,7 +516,10 @@ def histedit(ui, repo, *parent, **opts):
             f.write(rules)
             f.close()
         else:
-            f = open(rules)
+            if rules == '-':
+                f = sys.stdin
+            else:
+                f = open(rules)
             rules = f.read()
             f.close()
         rules = [l for l in (r.strip() for r in rules.splitlines())

@@ -49,14 +49,12 @@ log before edit
   o  0:cb9a9f314b8b a
   
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
+  $ hg histedit 177f92b77385 --commands - 2>&1 <<EOF | fixbundle
   > pick e860deea161a e
   > pick 652413bf663e f
   > fold 177f92b77385 c
   > pick 055a42cdd887 d
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -67,9 +65,9 @@ log before edit
 
 log after edit
   $ hg logt --graph
-  @  4:7e0a290363ed d
+  @  4:9c277da72c9b d
   |
-  o  3:5e24935bad3d pick e860deea161a e
+  o  3:6de59d13424a f
   |
   o  2:ee283cb5f2d5 e
   |
@@ -138,6 +136,7 @@ folded content is dropped during a merge. The folded commit should properly disa
   o  0:0189ba417d34 1+2+3
   
 
+  $ EDITED="$TESTTMP/editedhistory"
   $ cat > $EDITED <<EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
