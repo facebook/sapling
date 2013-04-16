@@ -711,10 +711,7 @@ class revlog(object):
         if self.descendant(start, end):
             return self.node(start)
 
-        def parents(rev):
-            return [p for p in self.parentrevs(rev) if p != nullrev]
-
-        c = ancestor.ancestor(a, b, parents)
+        c = ancestor.ancestor(a, b, self.parentrevs)
         if c is None:
             return nullid
 
