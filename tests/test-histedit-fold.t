@@ -114,7 +114,7 @@ check histedit_source
 folding and creating no new change doesn't break:
 -------------------------------------------------
 
-folded content is dropped during a merge.
+folded content is dropped during a merge. The folded commit should properly disapear.
 
   $ mkdir fold-to-empty-test
   $ cd fold-to-empty-test
@@ -138,16 +138,13 @@ folded content is dropped during a merge.
   o  0:0189ba417d34 1+2+3
   
 
-  $ cat > editor.py <<EOF
-  > import re, sys
-  > rules = sys.argv[1]
-  > data = open(rules).read()
-  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+5)', r'drop \1', data)
-  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+6)', r'fold \1', data)
-  > open(rules, 'w').write(data)
+  $ cat > $EDITED <<EOF
+  > pick 617f94f13c0f 1 +4
+  > drop 888f9082bf99 2 +5
+  > pick 251d831eeec5 3 +6
   > EOF
 
-  $ HGEDITOR='python editor.py' hg histedit 1
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts during merge.
@@ -158,7 +155,6 @@ There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
   $ hg status
   M file
-  ? editor.py
   ? file.orig
   $ hg resolve -l
   U file
