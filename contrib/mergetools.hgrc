@@ -25,7 +25,7 @@ merge.priority=-100
 gpyfm.gui=True
 
 meld.gui=True
-meld.args=--label='local' $local --label='base' $base --label='other' $other -o $output
+meld.args=--label='local' $local --label='merged' $base --label='other' $other -o $output
 meld.check=changed
 meld.diffargs=-a --label='$plabel1' $parent --label='$clabel' $child
 
