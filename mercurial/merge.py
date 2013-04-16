@@ -7,6 +7,7 @@
 
 from node import nullid, nullrev, hex, bin
 from i18n import _
+from mercurial import obsolete
 import error, util, filemerge, copies, subrepo, worker, dicthelpers
 import errno, os, shutil
 
@@ -697,17 +698,26 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                                        "subrepository '%s'") % s)
 
         elif not overwrite:
-            if pa == p1 or pa == p2: # linear
-                pass # all good
-            elif wc.dirty(missing=True):
-                raise util.Abort(_("crosses branches (merge branches or use"
-                                   " --clean to discard changes)"))
-            elif onode is None:
-                raise util.Abort(_("crosses branches (merge branches or update"
-                                   " --check to force update)"))
-            else:
-                # Allow jumping branches if clean and specific rev given
-                pa = p1
+            if pa not in (p1, p2):  # nolinear
+                dirty = wc.dirty(missing=True)
+                if dirty or onode is None:
+                    # Branching is a bit strange to ensure we do the minimal
+                    # amount of call to obsolete.background.
+                    foreground = obsolete.foreground(repo, [p1.node()])
+                    # note: the <node> variable contains a random identifier
+                    if repo[node].node() in foreground:
+                        pa = p1  # allow updating to successors
+                    elif dirty:
+                        msg = _("crosses branches (merge branches or use"
+                                " --clean to discard changes)")
+                        raise util.Abort(msg)
+                    else:  # node is none
+                        msg = _("crosses branches (merge branches or update"
+                                " --check to force update)")
+                        raise util.Abort(msg)
+                else:
+                    # Allow jumping branches if clean and specific rev given
+                    pa = p1
 
         ### calculate phase
         actions = calculateupdates(repo, wc, p2, pa,
