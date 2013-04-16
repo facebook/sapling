@@ -756,7 +756,7 @@ class filectx(object):
             return pl
 
         a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
-        v = ancestor.ancestor(a, b, parents)
+        v = ancestor.genericancestor(a, b, parents)
         if v:
             f, n = v
             return filectx(self._repo, f, fileid=n, filelog=flcache[f])

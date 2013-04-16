@@ -1163,6 +1163,366 @@ static int index_contains(indexObject *self, PyObject *value)
 	}
 }
 
+static inline void index_get_parents(indexObject *self, int rev, int *ps)
+{
+	if (rev >= self->length - 1) {
+		PyObject *tuple = PyList_GET_ITEM(self->added,
+						  rev - self->length + 1);
+		ps[0] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 5));
+		ps[1] = (int)PyInt_AS_LONG(PyTuple_GET_ITEM(tuple, 6));
+	} else {
+		const char *data = index_deref(self, rev);
+		ps[0] = getbe32(data + 24);
+		ps[1] = getbe32(data + 28);
+	}
+}
+
+typedef uint64_t bitmask;
+
+/*
+ * Given a disjoint set of revs, return all candidates for the
+ * greatest common ancestor. In revset notation, this is the set
+ * "heads(::a and ::b and ...)"
+ */
+static PyObject *find_gca_candidates(indexObject *self, const int *revs,
+				     int revcount)
+{
+	const bitmask allseen = (1ull << revcount) - 1;
+	const bitmask poison = 1ull << revcount;
+	PyObject *gca = PyList_New(0);
+	int i, v, interesting, left;
+	int maxrev = -1;
+	bitmask *seen;
+
+	for (i = 0; i < revcount; i++) {
+		if (revs[i] > maxrev)
+			maxrev = revs[i];
+	}
+
+	seen = calloc(sizeof(*seen), maxrev + 1);
+	if (seen == NULL)
+		return PyErr_NoMemory();
+
+	for (i = 0; i < revcount; i++)
+		seen[revs[i]] = 1ull << i;
+
+	interesting = left = revcount;
+
+	for (v = maxrev; v >= 0 && interesting; v--) {
+		long sv = seen[v];
+		int parents[2];
+
+		if (!sv)
+			continue;
+
+		if (sv < poison) {
+			interesting -= 1;
+			if (sv == allseen) {
+				PyObject *obj = PyInt_FromLong(v);
+				if (obj == NULL)
+					goto bail;
+				if (PyList_Append(gca, obj) == -1) {
+					Py_DECREF(obj);
+					goto bail;
+				}
+				sv |= poison;
+				for (i = 0; i < revcount; i++) {
+					if (revs[i] == v) {
+						if (--left <= 1)
+							goto done;
+						break;
+					}
+				}
+			}
+		}
+		index_get_parents(self, v, parents);
+
+		for (i = 0; i < 2; i++) {
+			int p = parents[i];
+			if (p == -1)
+				continue;
+			const long sp = seen[p];
+			if (sv < poison) {
+				if (sp == 0) {
+					seen[p] = sv;
+					interesting++;
+				}
+				else if (sp != sv)
+					seen[p] |= sv;
+			} else {
+				if (sp && sp < poison)
+					interesting--;
+				seen[p] = sv;
+			}
+		}
+	}
+
+done:
+	free(seen);
+	return gca;
+bail:
+	free(seen);
+	Py_XDECREF(gca);
+	return NULL;
+}
+
+/*
+ * Given a disjoint set of revs, return the subset with the longest
+ * path to the root.
+ */
+static PyObject *find_deepest(indexObject *self, PyObject *revs)
+{
+	const Py_ssize_t revcount = PyList_GET_SIZE(revs);
+	static const Py_ssize_t capacity = 24;
+	int *depth, *interesting = NULL;
+	int i, j, v, ninteresting;
+	PyObject *dict = NULL, *keys;
+	long *seen = NULL;
+	int maxrev = -1;
+	long final;
+
+	if (revcount > capacity) {
+		PyErr_Format(PyExc_OverflowError,
+			     "bitset size (%ld) > capacity (%ld)",
+			     revcount, capacity);
+		return NULL;
+	}
+
+	for (i = 0; i < revcount; i++) {
+		int n = (int)PyInt_AsLong(PyList_GET_ITEM(revs, i));
+		if (n > maxrev)
+			maxrev = n;
+	}
+
+	depth = calloc(sizeof(*depth), maxrev + 1);
+	if (depth == NULL)
+		return PyErr_NoMemory();
+
+	seen = calloc(sizeof(*seen), maxrev + 1);
+	if (seen == NULL) {
+		PyErr_NoMemory();
+		goto bail;
+	}
+
+	interesting = calloc(sizeof(*interesting), 2 << revcount);
+	if (interesting == NULL) {
+		PyErr_NoMemory();
+		goto bail;
+	}
+
+	for (i = 0; i < revcount; i++) {
+		int n = (int)PyInt_AsLong(PyList_GET_ITEM(revs, i));
+		long b = 1l << i;
+		depth[n] = 1;
+		seen[n] = b;
+		interesting[b] = 1;
+	}
+
+	ninteresting = (int)revcount;
+
+	for (v = maxrev; v >= 0 && ninteresting > 1; v--) {
+		int dv = depth[v];
+		int parents[2];
+		long sv;
+
+		if (dv == 0)
+			continue;
+
+		sv = seen[v];
+		index_get_parents(self, v, parents);
+
+		for (i = 0; i < 2; i++) {
+			int p = parents[i];
+			long nsp, sp;
+			int dp;
+
+			if (p == -1)
+				continue;
+
+			dp = depth[p];
+			nsp = sp = seen[p];
+			if (dp <= dv) {
+				depth[p] = dv + 1;
+				if (sp != sv) {
+					interesting[sv] += 1;
+					nsp = seen[p] = sv;
+					if (sp) {
+						interesting[sp] -= 1;
+						if (interesting[sp] == 0)
+							ninteresting -= 1;
+					}
+				}
+			}
+			else if (dv == dp - 1) {
+				nsp = sp | sv;
+				if (nsp == sp)
+					continue;
+				seen[p] = nsp;
+				interesting[nsp] += 1;
+				interesting[sp] -= 1;
+				if (interesting[sp] == 0)
+					ninteresting -= 1;
+			}
+		}
+		interesting[sv] -= 1;
+		if (interesting[sv] == 0)
+			ninteresting -= 1;
+	}
+
+	final = 0;
+	j = ninteresting;
+	for (i = 0; i < (int)(2 << revcount) && j > 0; i++) {
+		if (interesting[i] == 0)
+			continue;
+		final |= i;
+		j -= 1;
+	}
+	if (final == 0)
+		return PyList_New(0);
+
+	dict = PyDict_New();
+	if (dict == NULL)
+		goto bail;
+
+	j = ninteresting;
+	for (i = 0; i < revcount && j > 0; i++) {
+		PyObject *key;
+
+		if ((final & (1 << i)) == 0)
+			continue;
+
+		key = PyList_GET_ITEM(revs, i);
+		Py_INCREF(key);
+		Py_INCREF(Py_None);
+		if (PyDict_SetItem(dict, key, Py_None) == -1) {
+			Py_DECREF(key);
+			Py_DECREF(Py_None);
+			goto bail;
+		}
+		j -= 1;
+	}
+
+	keys = PyDict_Keys(dict);
+
+	free(depth);
+	free(seen);
+	free(interesting);
+	Py_DECREF(dict);
+
+	return keys;
+bail:
+	free(depth);
+	free(seen);
+	free(interesting);
+	Py_XDECREF(dict);
+
+	return NULL;
+}
+
+/*
+ * Given a (possibly overlapping) set of revs, return the greatest
+ * common ancestors: those with the longest path to the root.
+ */
+static PyObject *index_ancestors(indexObject *self, PyObject *args)
+{
+	PyObject *ret = NULL, *gca = NULL;
+	Py_ssize_t argcount, i, len;
+	bitmask repeat = 0;
+	int revcount = 0;
+	int *revs;
+
+	argcount = PySequence_Length(args);
+	revs = malloc(argcount * sizeof(*revs));
+	if (argcount > 0 && revs == NULL)
+		return PyErr_NoMemory();
+	len = index_length(self) - 1;
+
+	for (i = 0; i < argcount; i++) {
+		static const int capacity = 24;
+		PyObject *obj = PySequence_GetItem(args, i);
+		bitmask x;
+		long val;
+
+		if (!PyInt_Check(obj)) {
+			PyErr_SetString(PyExc_TypeError,
+					"arguments must all be ints");
+			goto bail;
+		}
+		val = PyInt_AsLong(obj);
+		if (val == -1) {
+			ret = PyList_New(0);
+			goto done;
+		}
+		if (val < 0 || val >= len) {
+			PyErr_SetString(PyExc_IndexError,
+					"index out of range");
+			goto bail;
+		}
+		/* this cheesy bloom filter lets us avoid some more
+		 * expensive duplicate checks in the common set-is-disjoint
+		 * case */
+		x = 1ull << (val & 0x3f);
+		if (repeat & x) {
+			int k;
+			for (k = 0; k < revcount; k++) {
+				if (val == revs[k])
+					goto duplicate;
+			}
+		}
+		else repeat |= x;
+		if (revcount >= capacity) {
+			PyErr_Format(PyExc_OverflowError,
+				     "bitset size (%d) > capacity (%d)",
+				     revcount, capacity);
+			goto bail;
+		}
+		revs[revcount++] = (int)val;
+	duplicate:;
+	}
+
+	if (revcount == 0) {
+		ret = PyList_New(0);
+		goto done;
+	}
+	if (revcount == 1) {
+		PyObject *obj;
+		ret = PyList_New(1);
+		if (ret == NULL)
+			goto bail;
+		obj = PyInt_FromLong(revs[0]);
+		if (obj == NULL)
+			goto bail;
+		PyList_SET_ITEM(ret, 0, obj);
+		goto done;
+	}
+
+	gca = find_gca_candidates(self, revs, revcount);
+	if (gca == NULL)
+		goto bail;
+
+	if (PyList_GET_SIZE(gca) <= 1) {
+		ret = gca;
+		Py_INCREF(gca);
+	}
+	else if (PyList_GET_SIZE(gca) == 1) {
+		ret = PyList_GET_ITEM(gca, 0);
+		Py_INCREF(ret);
+	}
+	else ret = find_deepest(self, gca);
+
+done:
+	free(revs);
+	Py_XDECREF(gca);
+
+	return ret;
+
+bail:
+	free(revs);
+	Py_XDECREF(gca);
+	Py_XDECREF(ret);
+	return NULL;
+}
+
 /*
  * Invalidate any trie entries introduced by added revs.
  */
@@ -1406,6 +1766,8 @@ static PyMappingMethods index_mapping_methods = {
 };
 
 static PyMethodDef index_methods[] = {
+	{"ancestors", (PyCFunction)index_ancestors, METH_VARARGS,
+	 "return the gca set of the given revs"},
 	{"clearcaches", (PyCFunction)index_clearcaches, METH_NOARGS,
 	 "clear the index caches"},
 	{"get", (PyCFunction)index_m_get, METH_VARARGS,

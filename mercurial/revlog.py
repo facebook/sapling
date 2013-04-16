@@ -705,20 +705,15 @@ class revlog(object):
     def ancestor(self, a, b):
         """calculate the least common ancestor of nodes a and b"""
 
-        # fast path, check if it is a descendant
         a, b = self.rev(a), self.rev(b)
-        start, end = sorted((a, b))
-        if self.descendant(start, end):
-            return self.node(start)
-
-        def parents(rev):
-            return [p for p in self.parentrevs(rev) if p != nullrev]
-
-        c = ancestor.ancestor(a, b, parents)
-        if c is None:
-            return nullid
-
-        return self.node(c)
+        try:
+            ancs = self.index.ancestors(a, b)
+        except (AttributeError, OverflowError):
+            ancs = ancestor.ancestors(self.parentrevs, a, b)
+        if ancs:
+            # choose a consistent winner when there's a tie
+            return min(map(self.node, ancs))
+        return nullid
 
     def _match(self, id):
         if isinstance(id, int):
