@@ -1,6 +1,8 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH <<EOF
+  > [alias]
+  > logt = log --template '{rev}:{node|short} {desc|firstline}\n'
   > [extensions]
   > graphlog=
   > histedit=
@@ -27,37 +29,18 @@
   $ initrepo
 
 log before edit
-  $ hg log --graph
-  @  changeset:   5:652413bf663e
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
+  $ hg logt --graph
+  @  5:652413bf663e f
   |
-  o  changeset:   4:e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
+  o  4:e860deea161a e
   |
-  o  changeset:   3:055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
+  o  3:055a42cdd887 d
   |
-  o  changeset:   2:177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
+  o  2:177f92b77385 c
   |
-  o  changeset:   1:d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
+  o  1:d2ae7f538514 b
   |
-  o  changeset:   0:cb9a9f314b8b
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  o  0:cb9a9f314b8b a
   
 
 edit the history
@@ -71,32 +54,16 @@ edit the history
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
-  $ hg log --graph
-  @  changeset:   4:7e0a290363ed
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
+  $ hg logt --graph
+  @  4:7e0a290363ed d
   |
-  o  changeset:   3:5e24935bad3d
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     pick e860deea161a e
+  o  3:5e24935bad3d pick e860deea161a e
   |
-  o  changeset:   2:ee283cb5f2d5
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
+  o  2:ee283cb5f2d5 e
   |
-  o  changeset:   1:d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
+  o  1:d2ae7f538514 b
   |
-  o  changeset:   0:cb9a9f314b8b
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  o  0:cb9a9f314b8b a
   
 
 post-fold manifest
@@ -145,27 +112,14 @@ folding and creating no new change doesn't break:
   $ hg commit -m '+5'
   $ echo 6 >> file
   $ hg commit -m '+6'
-  $ hg log --graph
-  @  changeset:   3:251d831eeec5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +6
+  $ hg logt --graph
+  @  3:251d831eeec5 +6
   |
-  o  changeset:   2:888f9082bf99
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +5
+  o  2:888f9082bf99 +5
   |
-  o  changeset:   1:617f94f13c0f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  o  1:617f94f13c0f +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
 
   $ cat > editor.py <<EOF
@@ -197,17 +151,10 @@ should effectively drop the changes from +6.
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
-  $ hg log --graph
-  @  changeset:   1:617f94f13c0f
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  $ hg logt --graph
+  @  1:617f94f13c0f +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
 
   $ cd ..
@@ -227,7 +174,7 @@ dropped revision.
   $ hg commit -m '+5'
   $ echo 6 >> file
   $ hg commit -m '+6'
-  $ hg log -G --template '{rev}:{node|short} {desc|firstline}\n'
+  $ hg logt -G --template '{rev}:{node|short} {desc|firstline}\n'
   @  3:251d831eeec5 +6
   |
   o  2:888f9082bf99 +5
@@ -279,17 +226,10 @@ dropped revision.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
-  $ hg log -G
-  @  changeset:   1:10c647b2cdd5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  $ hg logt -G
+  @  1:10c647b2cdd5 +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
   $ hg export tip
   # HG changeset patch
