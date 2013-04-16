@@ -706,7 +706,13 @@ class revlog(object):
         """calculate the least common ancestor of nodes a and b"""
 
         a, b = self.rev(a), self.rev(b)
-        ancs = ancestor.ancestors(self.parentrevs, a, b)
+        try:
+            ancs = self.index.ancestors(a, b)
+            old = ancestor.ancestors(self.parentrevs, a, b)
+            assert set(ancs) == old, ('opinions differ over ancestor(%d, %d)' %
+                                      (a, b))
+        except (AttributeError, OverflowError):
+            ancs = ancestor.ancestors(self.parentrevs, a, b)
         if ancs:
             # choose a consistent winner when there's a tie
             return min(map(self.node, ancs))
