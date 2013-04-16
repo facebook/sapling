@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import error, heapq, util
+import heapq, util
 from node import nullrev
 
 def ancestors(pfunc, *orignodes):
@@ -212,51 +212,6 @@ def genericancestor(a, b, pfunc):
                 gx = x.next()
     except StopIteration:
         return None
-
-def finddepths(nodes, pfunc):
-    visit = list(nodes)
-    rootpl = [nullrev, nullrev]
-    depth = {}
-    while visit:
-        vertex = visit[-1]
-        pl = pfunc(vertex)
-        if not pl or pl == rootpl:
-            depth[vertex] = 0
-            visit.pop()
-        else:
-            for p in pl:
-                if p != nullrev and p not in depth:
-                    visit.append(p)
-            if visit[-1] == vertex:
-                dp = [depth[p] for p in pl if p != nullrev]
-                if dp:
-                    depth[vertex] = max(dp) + 1
-                else:
-                    depth[vertex] = 0
-                visit.pop()
-    return depth
-
-def ancestor(a, b, pfunc):
-    xs = ancestors(pfunc, a, b)
-    y = genericancestor(a, b, pfunc)
-    if y == -1:
-        y = None
-    if not xs:
-        if y is None:
-            return None
-        print xs, y
-        raise error.RepoError('ancestors disagree on whether a gca exists')
-    elif y is None:
-        print xs, y
-        raise error.RepoError('ancestors disagree on whether a gca exists')
-    if y in xs:
-        return y
-    xds = finddepths(xs, pfunc)
-    xds = [ds[x] for x in xs]
-    yd = finddepths([y], pfunc)[y]
-    if len([xd != yd for xd in xds]) > 0:
-        raise error.RepoError('ancestor depths do not match')
-    return xs.pop()
 
 def missingancestors(revs, bases, pfunc):
     """Return all the ancestors of revs that are not ancestors of bases.
