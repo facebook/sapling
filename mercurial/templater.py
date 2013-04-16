@@ -228,7 +228,8 @@ def join(context, mapping, args):
 
     joinset = args[0][0](context, mapping, args[0][1])
     if util.safehasattr(joinset, '__call__'):
-        joinset = [x.values()[0] for x in joinset()]
+        jf = joinset.joinfmt
+        joinset = [jf(x) for x in joinset()]
 
     joiner = " "
     if len(args) > 1:

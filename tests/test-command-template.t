@@ -43,6 +43,8 @@ Second branch starting at nullrev:
   $ hg mv second fourth
   $ hg commit -m third -d "2020-01-01 10:01"
 
+  $ hg log --template '{join(file_copies, ",\n")}\n' -r .
+  fourth (second)
   $ hg log --template '{file_copies % "{source} -> {name}\n"}' -r .
   second -> fourth
 
