@@ -1,3 +1,13 @@
+Test histedit extention: Fold commands
+======================================
+
+This test file is dedicated to testing the fold command in non conflicting
+case.
+
+Initialization
+---------------
+
+
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH <<EOF
@@ -8,13 +18,9 @@
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > pick e860deea161a e
-  > pick 652413bf663e f
-  > fold 177f92b77385 c
-  > pick 055a42cdd887 d
-  > EOF
+
+Simple folding
+--------------------
   $ initrepo ()
   > {
   >     hg init r
@@ -43,7 +49,13 @@ log before edit
   o  0:cb9a9f314b8b a
   
 
-edit the history
+  $ EDITED="$TESTTMP/editedhistory"
+  $ cat > $EDITED <<EOF
+  > pick e860deea161a e
+  > pick 652413bf663e f
+  > fold 177f92b77385 c
+  > pick 055a42cdd887 d
+  > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -100,6 +112,10 @@ check histedit_source
   $ cd ..
 
 folding and creating no new change doesn't break:
+-------------------------------------------------
+
+folded content is dropped during a merge.
+
   $ mkdir fold-to-empty-test
   $ cd fold-to-empty-test
   $ hg init
@@ -158,6 +174,11 @@ should effectively drop the changes from +6.
   
 
   $ cd ..
+
+
+Test fold through dropped
+-------------------------
+
 
 Test corner case where folded revision is separated from its parent by a
 dropped revision.
