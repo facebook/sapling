@@ -126,6 +126,13 @@ def wirereposetup(ui, repo):
             # SSH streams will block if reading more than length
             for chunk in util.filechunkiter(stream, 128 * 1024, length):
                 yield chunk
+            # HTTP streams must hit the end to process the last empty
+            # chunk of Chunked-Encoding so the connection can be reused.
+            if issubclass(self.__class__, httppeer.httppeer):
+                chunk = stream.read(1)
+                if chunk:
+                    self._abort(error.ResponseError(_("unexpected response:"),
+                                                    chunk))
 
         @batchable
         def statlfile(self, sha):
