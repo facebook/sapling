@@ -618,14 +618,20 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
         replacements.append((ctx.node(), tuple(newchildren)))
 
     if action in ('f', 'fold'):
-        # finalize fold operation if applicable
-        if new is None:
-            new = newchildren[-1]
+        if newchildren:
+            # finalize fold operation if applicable
+            if new is None:
+                new = newchildren[-1]
+            else:
+                newchildren.pop()  # remove new from internal changes
+            parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
+                                         newchildren)
+            replacements.extend(repl)
         else:
-            newchildren.pop()  # remove new from internal changes
-        parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
-                                     newchildren)
-        replacements.extend(repl)
+            # newchildren is empty if the fold did not result in any commit
+            # this happen when all folded change are discarded during the
+            # merge.
+            replacements.append((ctx.node(), (parentctx.node(),)))
     elif newchildren:
         # otherwise update "parentctx" before proceeding to further operation
         parentctx = repo[newchildren[-1]]

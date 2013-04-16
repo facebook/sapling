@@ -141,7 +141,7 @@ folded content is dropped during a merge. The folded commit should properly disa
   $ cat > $EDITED <<EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
-  > pick 251d831eeec5 3 +6
+  > fold 251d831eeec5 3 +6
   > EOF
 
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 1
