@@ -1022,8 +1022,6 @@ def walkchangerevs(repo, match, opts, prepare):
 
     follow = opts.get('follow') or opts.get('follow_first')
 
-    if not len(repo):
-        return []
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts.get('rev'))
     elif follow:

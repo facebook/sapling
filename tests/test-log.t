@@ -1,3 +1,20 @@
+Log on empty repository: checking consistency
+
+  $ hg init empty
+  $ cd empty
+  $ hg log
+  $ hg log -r 1
+  abort: unknown revision '1'!
+  [255]
+  $ hg log -r -1:0
+  abort: unknown revision '-1'!
+  [255]
+  $ hg log -r 'branch(name)'
+  abort: unknown revision 'name'!
+  [255]
+  $ hg log -r null -q
+  -1:000000000000
+
 The g is crafted to have 2 filelog topological heads in a linear
 changeset graph
 

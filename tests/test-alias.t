@@ -267,10 +267,13 @@ shell aliases with global options
   $ hg init sub
   $ cd sub
   $ hg count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg -v count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg -R .. count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg --cwd .. count 'branch(default)'
   2

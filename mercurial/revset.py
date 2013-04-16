@@ -238,12 +238,10 @@ def rangeset(repo, subset, x, y):
     return [x for x in r if x in s]
 
 def dagrange(repo, subset, x, y):
-    if subset:
-        r = list(repo)
-        xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
-        s = set(subset)
-        return [r for r in xs if r in s]
-    return []
+    r = list(repo)
+    xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
+    s = set(subset)
+    return [r for r in xs if r in s]
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)

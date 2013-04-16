@@ -771,6 +771,10 @@ class revlog(object):
                 nl = [n for n in nl if hex(n).startswith(id)]
                 if len(nl) > 0:
                     if len(nl) == 1:
+                        if nl[0] == nullid:
+                            # dummy null revision always exists,
+                            # it shouldn't be returned here
+                            return None
                         self._pcache[id] = nl[0]
                         return nl[0]
                     raise LookupError(id, self.indexfile,
