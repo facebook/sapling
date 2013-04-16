@@ -428,7 +428,7 @@ actiontable = {'p': pick,
       _('force outgoing even for unrelated repositories')),
      ('r', 'rev', [], _('first revision to be edited'))],
      _("[PARENT]"))
-def histedit(ui, repo, *parent, **opts):
+def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
     """
     # TODO only abort if we try and histedit mq patches, not just
@@ -437,13 +437,43 @@ def histedit(ui, repo, *parent, **opts):
     if mq and mq.applied:
         raise util.Abort(_('source has mq patches applied'))
 
-    parent = list(parent) + opts.get('rev', [])
+    # basic argument incompatibility processing
+    outg = opts.get('outgoing')
+    cont = opts.get('continue')
+    abort = opts.get('abort')
+    force = opts.get('force')
+    rules = opts.get('commands', '')
+    revs = opts.get('rev', [])
+    goal = 'new' # This invocation goal, in new, continue, abort
+    if force and not outg:
+        raise util.Abort(_('--force only allowed with --outgoing'))
+    if cont:
+        if util.any((outg, abort, revs, freeargs, rules)):
+            raise util.Abort(_('no arguments allowed with --continue'))
+        goal = 'continue'
+    elif abort:
+        if util.any((outg, revs, freeargs, rules)):
+            raise util.Abort(_('no arguments allowed with --abort'))
+        goal = 'abort'
+    else:
+        if os.path.exists(os.path.join(repo.path, 'histedit-state')):
+            raise util.Abort(_('history edit already in progress, try '
+                               '--continue or --abort'))
+        if outg:
+            if revs:
+                raise util.Abort(_('no revisions allowed with --outgoing'))
+            if len(freeargs) > 1:
+                raise util.Abort(
+                    _('only one repo argument allowed with --outgoing'))
+        else:
+            parent = list(freeargs) + opts.get('rev', [])
+            if len(parent) != 1:
+                raise util.Abort(
+                    _('histedit requires exactly one parent revision'))
+
     if opts.get('outgoing'):
-        if len(parent) > 1:
-            raise util.Abort(
-                _('only one repo argument allowed with --outgoing'))
-        elif parent:
-            parent = parent[0]
+        if freeargs:
+            parent = freeargs[0]
 
         dest = ui.expandpath(parent or 'default-push', parent or 'default')
         dest, revs = hg.parseurl(dest, None)[:2]
@@ -460,22 +490,17 @@ def histedit(ui, repo, *parent, **opts):
         # contains special revset characters like ":" the revset
         # parser can choke.
         parent = [node.hex(n) for n in discovery.findcommonoutgoing(
-            repo, other, revs, force=opts.get('force')).missing[0:1]]
-    else:
-        if opts.get('force'):
-            raise util.Abort(_('--force only allowed with --outgoing'))
+            repo, other, revs, force=force).missing[0:1]]
+        if not parent:
+            raise util.Abort(_('no outgoing ancestors'))
 
-    if opts.get('continue', False):
-        if len(parent) != 0:
-            raise util.Abort(_('no arguments allowed with --continue'))
+    if goal == 'continue':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
         parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
         replacements.extend(repl)
-    elif opts.get('abort', False):
-        if len(parent) != 0:
-            raise util.Abort(_('no arguments allowed with --abort'))
+    elif goal == 'abort':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
         mapping, tmpnodes, leafs, _ntm = processreplacement(repo, replacements)
         ui.debug('restore wc to old parent %s\n' % node.short(topmost))
@@ -486,14 +511,9 @@ def histedit(ui, repo, *parent, **opts):
         return
     else:
         cmdutil.bailifchanged(repo)
-        if os.path.exists(os.path.join(repo.path, 'histedit-state')):
-            raise util.Abort(_('history edit already in progress, try '
-                               '--continue or --abort'))
 
         topmost, empty = repo.dirstate.parents()
 
-        if len(parent) != 1:
-            raise util.Abort(_('histedit requires exactly one parent revision'))
         parent = scmutil.revsingle(repo, parent[0]).node()
 
         keep = opts.get('keep', False)
@@ -503,7 +523,6 @@ def histedit(ui, repo, *parent, **opts):
                              node.short(parent))
 
         ctxs = [repo[r] for r in revs]
-        rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'

@@ -240,7 +240,7 @@ edit the history, this time with a fold action
 
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
-  $ hg histedit --commands $EDITED --continue 2>&1 | fixbundle
+  $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
