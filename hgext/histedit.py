@@ -404,6 +404,29 @@ def message(ui, repo, ctx, ha, opts):
     # We didn't make an edit, so just indicate no replaced nodes
     return newctx, []
 
+def findoutgoing(ui, repo, remote=None, force=False, opts={}):
+    """utility function to find the first outgoing changeset
+
+    Used by initialisation code"""
+    dest = ui.expandpath(remote or 'default-push', remote or 'default')
+    dest, revs = hg.parseurl(dest, None)[:2]
+    ui.status(_('comparing with %s\n') % util.hidepassword(dest))
+
+    revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
+    other = hg.peer(repo, opts, dest)
+
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+
+    # hexlify nodes from outgoing, because we're going to parse
+    # parent[0] using revsingle below, and if the binary hash
+    # contains special revset characters like ":" the revset
+    # parser can choke.
+    outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
+    if not outgoing.missing:
+        raise util.Abort(_('no outgoing ancestors'))
+    return outgoing.missing[0]
+
 actiontable = {'p': pick,
                'pick': pick,
                'e': edit,
@@ -466,33 +489,11 @@ def histedit(ui, repo, *freeargs, **opts):
                 raise util.Abort(
                     _('only one repo argument allowed with --outgoing'))
         else:
-            parent = list(freeargs) + opts.get('rev', [])
-            if len(parent) != 1:
+            revs.extend(freeargs)
+            if len(revs) != 1:
                 raise util.Abort(
                     _('histedit requires exactly one parent revision'))
 
-    if opts.get('outgoing'):
-        if freeargs:
-            parent = freeargs[0]
-
-        dest = ui.expandpath(parent or 'default-push', parent or 'default')
-        dest, revs = hg.parseurl(dest, None)[:2]
-        ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-
-        revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
-        other = hg.peer(repo, opts, dest)
-
-        if revs:
-            revs = [repo.lookup(rev) for rev in revs]
-
-        # hexlify nodes from outgoing, because we're going to parse
-        # parent[0] using revsingle below, and if the binary hash
-        # contains special revset characters like ":" the revset
-        # parser can choke.
-        parent = [node.hex(n) for n in discovery.findcommonoutgoing(
-            repo, other, revs, force=force).missing[0:1]]
-        if not parent:
-            raise util.Abort(_('no outgoing ancestors'))
 
     if goal == 'continue':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
@@ -513,20 +514,27 @@ def histedit(ui, repo, *freeargs, **opts):
         cmdutil.bailifchanged(repo)
 
         topmost, empty = repo.dirstate.parents()
-
-        parent = scmutil.revsingle(repo, parent[0]).node()
+        if outg:
+            if freeargs:
+                remote = freeargs[0]
+            else:
+                remote = None
+            root = findoutgoing(ui, repo, remote, force, opts)
+        else:
+            root = revs[0]
+            root = scmutil.revsingle(repo, root).node()
 
         keep = opts.get('keep', False)
-        revs = between(repo, parent, topmost, keep)
+        revs = between(repo, root, topmost, keep)
         if not revs:
             raise util.Abort(_('%s is not an ancestor of working directory') %
-                             node.short(parent))
+                             node.short(root))
 
         ctxs = [repo[r] for r in revs]
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'
-            rules += editcomment % (node.short(parent), node.short(topmost))
+            rules += editcomment % (node.short(root), node.short(topmost))
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -545,7 +553,7 @@ def histedit(ui, repo, *freeargs, **opts):
                  if l and not l[0] == '#']
         rules = verifyrules(rules, repo, ctxs)
 
-        parentctx = repo[parent].parents()[0]
+        parentctx = repo[root].parents()[0]
         keep = opts.get('keep', False)
         replacements = []
 
