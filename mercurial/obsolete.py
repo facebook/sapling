@@ -386,6 +386,27 @@ def syncpush(repo, remote):
             msg = _('failed to push some obsolete markers!\n')
             repo.ui.warn(msg)
 
+def syncpull(repo, remote, gettransaction):
+    """utility function to pull bookmark to a remote
+
+    The `gettransaction` is function that return the pull transaction, creating
+    one if necessary. We return the transaction to inform the calling code that
+    a new transaction have been created (when applicable).
+
+    Exists mostly to allow overridding for experimentation purpose"""
+    tr = None
+    if _enabled:
+        repo.ui.debug('fetching remote obsolete markers\n')
+        remoteobs = remote.listkeys('obsolete')
+        if 'dump0' in remoteobs:
+            tr = gettransaction()
+            for key in sorted(remoteobs, reverse=True):
+                if key.startswith('dump'):
+                    data = base85.b85decode(remoteobs[key])
+                    repo.obsstore.mergemarkers(tr, data)
+            repo.invalidatevolatilesets()
+    return tr
+
 def allmarkers(repo):
     """all obsolete markers known in a repository"""
     for markerdata in repo.obsstore:

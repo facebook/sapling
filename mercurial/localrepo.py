@@ -8,7 +8,7 @@ from node import hex, nullid, short
 from i18n import _
 import peer, changegroup, subrepo, discovery, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
-import lock, transaction, store, encoding, base85
+import lock, transaction, store, encoding
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
@@ -1717,17 +1717,15 @@ class localrepository(object):
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
 
-            if obsolete._enabled:
-                self.ui.debug('fetching remote obsolete markers\n')
-                remoteobs = remote.listkeys('obsolete')
-                if 'dump0' in remoteobs:
-                    if tr is None:
-                        tr = self.transaction(trname)
-                    for key in sorted(remoteobs, reverse=True):
-                        if key.startswith('dump'):
-                            data = base85.b85decode(remoteobs[key])
-                            self.obsstore.mergemarkers(tr, data)
-                    self.invalidatevolatilesets()
+            def gettransaction():
+                if tr is None:
+                    return self.transaction(trname)
+                return tr
+
+            obstr = obsolete.syncpull(self, remote, gettransaction)
+            if obstr is not None:
+                tr = obstr
+
             if tr is not None:
                 tr.close()
         finally:
