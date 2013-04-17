@@ -3678,7 +3678,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
                                     editor=editor)
-                    checkexact(repo, n, nodeid)
             else:
                 if opts.get('exact') or opts.get('import_branch'):
                     branch = branch or 'default'
@@ -3700,9 +3699,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                                               editor=cmdutil.commiteditor)
                     repo.savecommitmessage(memctx.description())
                     n = memctx.commit()
-                    checkexact(repo, n, nodeid)
                 finally:
                     store.close()
+            checkexact(repo, n, nodeid)
             if n:
                 # i18n: refers to a short changeset id
                 msg = _('created %s') % short(n)
