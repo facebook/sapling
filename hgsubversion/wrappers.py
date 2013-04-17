@@ -14,6 +14,7 @@ from mercurial import i18n
 from mercurial import extensions
 from mercurial import repair
 
+import layouts
 import os
 import replay
 import pushmod
@@ -356,16 +357,9 @@ def pull(repo, source, heads=[], force=False):
         if not layout in ('auto', 'single', 'standard'):
             raise hgutil.Abort("unknown layout '%s'" % layout)
         if layout == 'auto':
-            try:
-                rootlist = svn.list_dir('', revision=(stopat_rev or None))
-            except svnwrap.SubversionException, e:
-                err = "%s (subversion error: %d)" % (e.args[0], e.args[1])
-                raise hgutil.Abort(err)
-            if sum(map(lambda x: x in rootlist, ('branches', 'tags', 'trunk'))):
-                layout = 'standard'
-            else:
-                layout = 'single'
-            repo.ui.setconfig('hgsubversion', 'layout', layout)
+            layout = layouts.detect.layout_from_subversion(svn,
+                                                           (stopat_rev or None),
+                                                           repo.ui)
             repo.ui.note('using %s layout\n' % layout)
 
         branch = repo.ui.config('hgsubversion', 'branch')
