@@ -70,3 +70,18 @@ def layout_from_file(meta_data_dir, ui=None):
         if ui:
             ui.setconfig('hgsubversion', 'layout', layout)
     return layout
+
+def layout_from_commit(subdir, revpath):
+    """ Guess what the layout is based existing commit info
+
+    Specifically, this compares the subdir for the repository and the
+    revpath as extracted from the convinfo in the commit.
+
+    """
+
+    if (subdir or '/') == revpath:
+        layout = 'single'
+    else:
+        layout = 'standard'
+
+    return layout

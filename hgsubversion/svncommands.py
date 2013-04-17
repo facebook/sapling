@@ -12,6 +12,7 @@ from mercurial import node
 from mercurial import util as hgutil
 from mercurial import error
 
+import layouts
 import maps
 import svnwrap
 import svnrepo
@@ -198,11 +199,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                             'right location in the repo.')
 
         if layout is None:
-            if (subdir or '/') == revpath:
-                layout = 'single'
-            else:
-                layout = 'standard'
-            write_if_needed(os.path.join(svnmetadir, 'layout'), layout)
+            layout = layouts.detect.layout_from_commit(subdir, revpath)
+            existing_layout = layouts.detect.layout_from_file(svnmetadir)
+            if layout != existing_layout:
+                layouts.persist.layout_to_file(svnmetadir, layout)
         elif layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
                                                 ' defect in replay')
