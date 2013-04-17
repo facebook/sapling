@@ -11,3 +11,19 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ hg manifest 2>/dev/null \
   >   | xargs "$check_code" --warnings --nolineno --per-file=0 \
   >   || false
+
+Check Python files without py extension
+
+  $ cp \
+  >   hg \
+  >   hgweb.cgi \
+  >   contrib/convert-repo \
+  >   contrib/dumprevlog \
+  >   contrib/hgweb.fcgi \
+  >   contrib/hgweb.wsgi \
+  >   contrib/simplemerge \
+  >   contrib/undumprevlog \
+  >   "$TESTTMP"/
+  $ for f in "$TESTTMP"/*; do cp "$f" "$f.py"; done
+  $ "$check_code" --warnings --nolineno --per-file=0 "$TESTTMP"/*.py \
+  >   || false

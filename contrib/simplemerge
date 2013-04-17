@@ -44,7 +44,7 @@ def showhelp():
 try:
     for fp in (sys.stdin, sys.stdout, sys.stderr):
         util.setbinary(fp)
-    
+
     opts = {}
     try:
         args = fancyopts.fancyopts(sys.argv[1:], options, opts)
