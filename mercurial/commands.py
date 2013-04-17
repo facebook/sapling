@@ -3603,10 +3603,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     wlock = lock = tr = None
     msgs = []
 
-    def checkexact(repo, n, nodeid):
-        if opts.get('exact') and hex(n) != nodeid:
-            raise util.Abort(_('patch is damaged or loses information'))
-
     def tryone(ui, hunk, parents):
         tmpname, message, user, date, branch, nodeid, p1, p2 = \
             patch.extract(ui, hunk)
@@ -3701,7 +3697,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     n = memctx.commit()
                 finally:
                     store.close()
-            checkexact(repo, n, nodeid)
+            if opts.get('exact') and hex(n) != nodeid:
+                raise util.Abort(_('patch is damaged or loses information'))
             if n:
                 # i18n: refers to a short changeset id
                 msg = _('created %s') % short(n)
