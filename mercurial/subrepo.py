@@ -1266,7 +1266,7 @@ class gitsubrepo(abstractsubrepo):
 
         if remote not in tracking:
             # create a new local tracking branch
-            local = remote.split('/', 2)[2]
+            local = remote.split('/', 3)[3]
             checkout(['-b', local, remote])
         elif self._gitisancestor(branch2rev[tracking[remote]], remote):
             # When updating to a tracked remote branch,
