@@ -6,13 +6,6 @@
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > pick 177f92b77385 c
-  > pick 055a42cdd887 d
-  > edit e860deea161a e
-  > pick 652413bf663e f
-  > EOF
   $ initrepo ()
   > {
   >     hg init r
@@ -61,7 +54,12 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > edit e860deea161a e
+  > pick 652413bf663e f
+  > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
@@ -146,10 +144,9 @@ check histedit_source
   
   
 
-  $ cat > $EDITED <<EOF
+  $ hg histedit tip --commands - 2>&1 <<EOF| fixbundle
   > edit b5f70786f9b0 f
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
@@ -188,19 +185,18 @@ say we'll change the message, but don't.
   
 
 modify the message
-  $ cat > $EDITED <<EOF
+  $ hg histedit tip --commands - 2>&1 << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
-  changeset:   6:5585e802ef99
+  changeset:   6:62feedb1200e
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     mess 1fd3b2fe7754 f
+  summary:     f
   
 
 rollback should not work after a histedit
@@ -211,9 +207,10 @@ rollback should not work after a histedit
   $ cd ..
   $ hg clone -qr0 r r0
   $ cd r0
-  $ echo edit cb9a9f314b8b a > $EDITED
   $ hg phase -fdr0
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 0 2>&1
+  $ hg histedit --commands - 0 2>&1 << EOF
+  > edit cb9a9f314b8b a > $EDITED
+  > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding a
   Make changes as needed, you may commit or record as needed now.

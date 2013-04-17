@@ -86,7 +86,7 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
+  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.

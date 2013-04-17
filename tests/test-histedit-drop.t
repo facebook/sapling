@@ -6,13 +6,6 @@
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > drop 177f92b77385 c
-  > pick e860deea161a e
-  > pick 652413bf663e f
-  > pick 055a42cdd887 d
-  > EOF
   $ initrepo ()
   > {
   >     hg init r
@@ -61,7 +54,12 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF | fixbundle
+  > drop 177f92b77385 c
+  > pick e860deea161a e
+  > pick 652413bf663e f
+  > pick 055a42cdd887 d
+  > EOF
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -125,12 +123,11 @@ manifest after edit
 
 Drop the last changeset
 
-  $ cat > $EDITED <<EOF
+  $ hg histedit ee283cb5f2d5 --commands - 2>&1 << EOF | fixbundle
   > pick ee283cb5f2d5 e
   > pick a4f7421b80f7 f
   > drop f518305ce889 d
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit ee283cb5f2d5 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   3:a4f7421b80f7

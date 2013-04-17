@@ -59,14 +59,13 @@ Enable obsolete
   #  m, mess = edit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cat > commands.txt <<EOF
+  $ hg histedit 1 --commands - --verbose <<EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
   > pick 055a42cdd887 3 d
   > fold e860deea161a 4 e
   > pick 652413bf663e 5 f
   > EOF
-  $ hg histedit 1 --commands commands.txt --verbose | grep histedit
   saved backup bundle to $TESTTMP/base/.hg/strip-backup/96e494a2d553-backup.hg (glob)
   $ hg log --graph --hidden
   @  8:cacdfd884a93 f
@@ -100,12 +99,11 @@ Ensure hidden revision does not prevent histedit
 
 create an hidden revision
 
-  $ cat > commands.txt <<EOF
+  $ hg histedit 6 --commands - << EOF
   > pick b346ab9a313d 6 c
   > drop 59d9f330561f 7 d
   > pick cacdfd884a93 8 f
   > EOF
-  $ hg histedit 6 --commands commands.txt
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
@@ -117,11 +115,10 @@ create an hidden revision
   
 check hidden revision are ignored (6 have hidden children 7 and 8)
 
-  $ cat > commands.txt <<EOF
+  $ hg histedit 6 --commands - << EOF
   > pick b346ab9a313d 6 c
   > pick c13eb81022ca 8 f
   > EOF
-  $ hg histedit 6 --commands commands.txt
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
@@ -133,10 +130,9 @@ Test that rewriting leaving instability behind is allowed
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r 'children(.)'
   9:c13eb81022ca f (no-eol)
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r '.' --commands - <<EOF
   > edit b346ab9a313d 6 c
   > EOF
-  $ hg histedit -r '.' --commands commands.txt
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding c
   Make changes as needed, you may commit or record as needed now.
@@ -164,11 +160,10 @@ dropped changeset to be hidden.
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd droplast
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r '40db8afa467b' --commands - << EOF
   > pick 40db8afa467b 10 c
   > drop b449568bf7fc 11 f
   > EOF
-  $ hg histedit -r '40db8afa467b' --commands commands.txt
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   @  10:40db8afa467b c
@@ -184,12 +179,11 @@ With rewritten ancestors
   $ echo f > f
   $ hg add f
   $ hg commit -m h
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r '40db8afa467b' --commands - << EOF
   > pick 47a8561c0449 12 g
   > pick 40db8afa467b 10 c
   > drop 1b3b05f35ff0 13 h
   > EOF
-  $ hg histedit -r '40db8afa467b' --commands commands.txt
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -267,7 +261,7 @@ New-commit as draft (default)
 
   $ cp -r base simple-draft
   $ cd simple-draft
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > edit b449568bf7fc 11 f
   > pick 6b70183d2492 12 g
   > pick 7395e1ff83bd 13 h
@@ -275,7 +269,6 @@ New-commit as draft (default)
   > pick 3a6c53ee7f3d 15 j
   > pick ee118ab9fa44 16 k
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands commands.txt
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   adding f
   Make changes as needed, you may commit or record as needed now.
@@ -317,7 +310,7 @@ New-commit as draft (default)
   > [phases]
   > new-commit=secret
   > EOF
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > edit b449568bf7fc 11 f
   > pick 6b70183d2492 12 g
   > pick 7395e1ff83bd 13 h
@@ -325,7 +318,6 @@ New-commit as draft (default)
   > pick 3a6c53ee7f3d 15 j
   > pick ee118ab9fa44 16 k
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands commands.txt
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   adding f
   Make changes as needed, you may commit or record as needed now.
@@ -367,7 +359,7 @@ It seems more important to present the secret phase.
 
   $ cp -r base reorder
   $ cd reorder
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > pick b449568bf7fc 11 f
   > pick 3a6c53ee7f3d 15 j
   > pick 6b70183d2492 12 g
@@ -375,7 +367,6 @@ It seems more important to present the secret phase.
   > pick 7395e1ff83bd 13 h
   > pick ee118ab9fa44 16 k
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands commands.txt
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -415,7 +406,7 @@ Note that there is a few reordering in this series for more extensive test
   > [phases]
   > new-commit=secret
   > EOF
-  $ cat > commands.txt <<EOF
+  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
   > pick 7395e1ff83bd 13 h
   > fold b449568bf7fc 11 f
   > pick 6b70183d2492 12 g
@@ -423,7 +414,6 @@ Note that there is a few reordering in this series for more extensive test
   > pick b605fb7503f2 14 i
   > fold ee118ab9fa44 16 k
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands commands.txt
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

@@ -89,7 +89,7 @@ post-fold manifest
 check histedit_source
 
   $ hg log --debug --rev 3
-  changeset:   3:5e24935bad3d5a4486de3b90f233e991465ced72
+  changeset:   3:6de59d13424a8a13acd3e975514aed29dd0d9b2d
   phase:       draft
   parent:      2:ee283cb5f2d5955443f23a27b697a04339e9a39a
   parent:      -1:0000000000000000000000000000000000000000
@@ -100,10 +100,9 @@ check histedit_source
   extra:       branch=default
   extra:       histedit_source=a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3,177f92b773850b59254aa5e923436f921b55483b
   description:
-  pick e860deea161a e
-  pick 652413bf663e f
-  fold 177f92b77385 c
-  pick 055a42cdd887 d
+  f
+  ***
+  c
   
   
 
@@ -136,14 +135,11 @@ folded content is dropped during a merge. The folded commit should properly disa
   o  0:0189ba417d34 1+2+3
   
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
+  $ hg histedit 1 --commands - << EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
   > fold 251d831eeec5 3 +6
   > EOF
-
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts during merge.
@@ -199,13 +195,11 @@ dropped revision.
   |
   o  0:0189ba417d34 1+2+3
   
-  $ EDITED="$TESTTMP/editcommands"
-  $ cat > $EDITED <<EOF
+  $ hg histedit 1 --commands -  << EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
   > fold 251d831eeec5 3 +6
   > EOF
-  $ HGEDITOR="cat $EDITED >" hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts during merge.

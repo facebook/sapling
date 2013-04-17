@@ -87,7 +87,7 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
+  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
@@ -145,7 +145,7 @@ second edit set
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
+  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
@@ -231,7 +231,7 @@ start over
   pick 500cac37a696 6 f
 
 edit the history, this time with a fold action
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
+  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
@@ -240,7 +240,7 @@ edit the history, this time with a fold action
 
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit --continue 2>&1 | fixbundle
+  $ hg histedit --commands $EDITED --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
@@ -255,16 +255,16 @@ second edit also fails, but just continue
 
 post message fix
   $ hg log --graph
-  @  changeset:   6:521c4c32c5e2
+  @  changeset:   6:7efe1373e4bc
   |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
   |
-  o  changeset:   5:f4f088e8adf6
+  o  changeset:   5:e334d87a1e55
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     pick 65a9a84f33fd 3 c
+  |  summary:     does not commute with e
   |
   o  changeset:   4:00f1c5383965
   |  user:        test
