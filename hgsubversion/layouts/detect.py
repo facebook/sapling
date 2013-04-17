@@ -6,6 +6,8 @@ it on.
 
 """
 
+import os.path
+
 from mercurial import util as hgutil
 
 import hgsubversion.svnwrap
@@ -49,4 +51,22 @@ def layout_from_config(ui, allow_auto=False):
         raise hgutil.Abort('layout not yet determined')
     elif layout not in ('auto', 'single', 'standard'):
         raise hgutil.Abort("unknown layout '%s'" % layout)
+    return layout
+
+def layout_from_file(meta_data_dir, ui=None):
+    """ Load the layout in use from the metadata file.
+
+    If you pass the ui arg, we will also write the layout to the
+    config for that ui.
+
+    """
+
+    layout = None
+    layoutfile = os.path.join(meta_data_dir, 'layout')
+    if os.path.exists(layoutfile):
+        f = open(layoutfile)
+        layout = f.read().strip()
+        f.close()
+        if ui:
+            ui.setconfig('hgsubversion', 'layout', layout)
     return layout

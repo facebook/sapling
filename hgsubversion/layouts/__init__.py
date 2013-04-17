@@ -10,7 +10,9 @@ NB: this has a long way to go before it does everything it claims to
 """
 
 import detect
+import persist
 
 __all__ = [
     "detect",
+    "persist",
     ]

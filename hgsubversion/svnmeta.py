@@ -70,13 +70,8 @@ class SVNMeta(object):
             f.close()
         else:
             self.tag_locations = tag_locations
-        if os.path.exists(self.layoutfile):
-            f = open(self.layoutfile)
-            self._layout = f.read().strip()
-            f.close()
-            self.repo.ui.setconfig('hgsubversion', 'layout', self._layout)
-        else:
-            self._layout = None
+        self._layout = layouts.detect.layout_from_file(self.meta_data_dir,
+                                                       ui=self.repo.ui)
         pickle_atomic(self.tag_locations, self.tag_locations_file)
         # ensure nested paths are handled properly
         self.tag_locations.sort()
@@ -109,9 +104,7 @@ class SVNMeta(object):
         # gets called
         if not self._layout or self._layout == 'auto':
             self._layout = layouts.detect.layout_from_config(self.repo.ui)
-            f = open(self.layoutfile, 'w')
-            f.write(self._layout)
-            f.close()
+            layouts.persist.layout_to_file(self.meta_data_dir, self._layout)
         return self._layout
 
     @property
@@ -203,10 +196,6 @@ class SVNMeta(object):
     def tagmapfile(self):
         # called tag-renames for backwards compatibility
         return os.path.join(self.meta_data_dir, 'tag-renames')
-
-    @property
-    def layoutfile(self):
-        return os.path.join(self.meta_data_dir, 'layout')
 
     def fixdate(self, date):
         if date is not None:
