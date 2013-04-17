@@ -224,6 +224,7 @@ pypats = [
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "missing _() in ui message (use () to hide false-positives)"),
+    (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
   ],
   # warnings
   [
