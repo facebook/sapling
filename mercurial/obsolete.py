@@ -370,6 +370,22 @@ def pushmarker(repo, key, old, new):
     finally:
         lock.release()
 
+def syncpush(repo, remote):
+    """utility function to push bookmark to a remote
+
+    Exist mostly to allow overridding for experimentation purpose"""
+    if (_enabled and repo.obsstore and
+        'obsolete' in remote.listkeys('namespaces')):
+        rslts = []
+        remotedata = repo.listkeys('obsolete')
+        for key in sorted(remotedata, reverse=True):
+            # reverse sort to ensure we end with dump0
+            data = remotedata[key]
+            rslts.append(remote.pushkey('obsolete', key, '', data))
+        if [r for r in rslts if not r]:
+            msg = _('failed to push some obsolete markers!\n')
+            repo.ui.warn(msg)
+
 def allmarkers(repo):
     """all obsolete markers known in a repository"""
     for markerdata in repo.obsstore:

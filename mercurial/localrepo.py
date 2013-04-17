@@ -1912,17 +1912,7 @@ class localrepository(object):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
                 self.ui.debug('try to push obsolete markers to remote\n')
-                if (obsolete._enabled and self.obsstore and
-                    'obsolete' in remote.listkeys('namespaces')):
-                    rslts = []
-                    remotedata = self.listkeys('obsolete')
-                    for key in sorted(remotedata, reverse=True):
-                        # reverse sort to ensure we end with dump0
-                        data = remotedata[key]
-                        rslts.append(remote.pushkey('obsolete', key, '', data))
-                    if [r for r in rslts if not r]:
-                        msg = _('failed to push some obsolete markers!\n')
-                        self.ui.warn(msg)
+                obsolete.syncpush(self, remote)
             finally:
                 if lock is not None:
                     lock.release()
