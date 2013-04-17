@@ -1790,7 +1790,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     finally:
         if newid is None:
             repo.dirstate.invalidate()
-        lockmod.release(wlock, lock)
+        lockmod.release(lock, wlock)
     return newid
 
 def commiteditor(repo, ctx, subs):
