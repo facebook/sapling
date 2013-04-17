@@ -353,9 +353,7 @@ def pull(repo, source, heads=[], force=False):
 
         stopat_rev = util.parse_revnum(svn, checkout)
 
-        layout = repo.ui.config('hgsubversion', 'layout', 'auto')
-        if not layout in ('auto', 'single', 'standard'):
-            raise hgutil.Abort("unknown layout '%s'" % layout)
+        layout = layouts.detect.layout_from_config(repo.ui, allow_auto=True)
         if layout == 'auto':
             layout = layouts.detect.layout_from_subversion(svn,
                                                            (stopat_rev or None),

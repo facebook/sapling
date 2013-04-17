@@ -34,3 +34,19 @@ def layout_from_subversion(svn, revision=None, ui=None):
         layout = 'single'
     ui.setconfig('hgsubversion', 'layout', layout)
     return layout
+
+def layout_from_config(ui, allow_auto=False):
+    """ Load the layout we are using based on config
+
+    We will read the config from the ui object.  Pass allow_auto=True
+    if you are doing bootstrapping and can detect the layout in
+    another manner if you get auto.  Otherwise, we will abort if we
+    detect the layout as auto.
+    """
+
+    layout = ui.config('hgsubversion', 'layout', default='auto')
+    if layout == 'auto' and not allow_auto:
+        raise hgutil.Abort('layout not yet determined')
+    elif layout not in ('auto', 'single', 'standard'):
+        raise hgutil.Abort("unknown layout '%s'" % layout)
+    return layout
