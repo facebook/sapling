@@ -198,6 +198,8 @@ def parseargs():
         help="enable Py3k warnings on Python 2.6+")
     parser.add_option('--extra-config-opt', action="append",
                       help='set the given config opt in the test hgrc')
+    parser.add_option('--random', action="store_true",
+                      help='run tests in random order')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -1247,6 +1249,9 @@ def main():
             args = sorted(os.listdir("."))
 
     tests = args
+
+    if options.random:
+        random.shuffle(tests)
 
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
