@@ -1,13 +1,13 @@
 # Brazilian Portuguese translations for Mercurial
 # Traduções do Mercurial para português do Brasil
 # Copyright (C) 2011 Matt Mackall and others
-# 
+#
 # Translators:
 # Diego Oliveira <diego@diegooliveira.com>
 # Wagner Bruna <wbruna@softwareexpress.com.br>
-# 
+#
 # Translation dictionary:
-# 
+#
 # archive             pacote
 # branch              ramificar (v.), ramo (s.)
 # bundle              bundle
@@ -26,7 +26,7 @@
 # tip                 tip (tag), ponta
 # update              atualizar (v.), atualização (s.)
 # working directory   diretório de trabalho
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"

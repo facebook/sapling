@@ -1,8 +1,8 @@
 # Greek translations for Mercurial
 # Ελληνική μετάφραση των μηνυμάτων του Mercurial
-# 
+#
 # Copyright (C) 2009 Matt Mackall και άλλοι
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"

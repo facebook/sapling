@@ -303,7 +303,7 @@ ul.auto-toc {
 div.contents.local {
     -moz-column-width: 10em;
     -moz-column-gap: 1em;
-    
+
     -webkit-column-width: 10em;
     -webkit-column-gap: 1em;
 }

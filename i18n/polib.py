@@ -277,7 +277,7 @@ class _BaseFile(list):
             an instance of :class:`~polib._BaseEntry`.
         """
         return self.find(entry.msgid, by='msgid') is not None
-    
+
     def __eq__(self, other):
         return unicode(self) == unicode(other)
 
@@ -502,7 +502,7 @@ class _BaseFile(list):
             7*4+entries_len*8, # start of value index
             0, keystart        # size and offset of hash table
                                # Important: we don't use hash tables
-        )              
+        )
         output += array.array("i", offsets).tostring()
         output += ids
         output += strs
@@ -631,7 +631,7 @@ class MOFile(_BaseFile):
 
     def __init__(self, *args, **kwargs):
         """
-        Constructor, accepts all keywords arguments accepted by 
+        Constructor, accepts all keywords arguments accepted by
         :class:`~polib._BaseFile` class.
         """
         _BaseFile.__init__(self, *args, **kwargs)
@@ -774,7 +774,7 @@ class _BaseEntry(object):
         Returns the string representation of the entry.
         """
         return unicode(self).encode(self.encoding)
-    
+
     def __eq__(self, other):
         return unicode(self) == unicode(other)
 
@@ -787,7 +787,7 @@ class _BaseEntry(object):
             specialchars_count = 0
             for c in ['\\', '\n', '\r', '\t', '"']:
                 specialchars_count += field.count(c)
-            # comparison must take into account fieldname length + one space 
+            # comparison must take into account fieldname length + one space
             # + 2 quotes (eg. msgid "<string>")
             flength = len(fieldname) + 3
             if plural_index:
@@ -890,9 +890,9 @@ class POEntry(_BaseEntry):
                     filelist.append(fpath)
             filestr = ' '.join(filelist)
             if wrapwidth > 0 and len(filestr) + 3 > wrapwidth:
-                # textwrap split words that contain hyphen, this is not 
-                # what we want for filenames, so the dirty hack is to 
-                # temporally replace hyphens with a char that a file cannot 
+                # textwrap split words that contain hyphen, this is not
+                # what we want for filenames, so the dirty hack is to
+                # temporally replace hyphens with a char that a file cannot
                 # contain, like "*"
                 ret += [l.replace('*', '-') for l in wrap(
                     filestr.replace('-', '*'),
@@ -1099,7 +1099,7 @@ class _POFileParser(object):
         self.add('PP', all,                                              'PP')
         self.add('CT', ['ST', 'HE', 'GC', 'OC', 'FL', 'TC', 'PC', 'PM',
                         'PP', 'MS', 'MX'],                               'CT')
-        self.add('MI', ['ST', 'HE', 'GC', 'OC', 'FL', 'CT', 'TC', 'PC', 
+        self.add('MI', ['ST', 'HE', 'GC', 'OC', 'FL', 'CT', 'TC', 'PC',
                  'PM', 'PP', 'MS', 'MX'],                                'MI')
         self.add('MP', ['TC', 'GC', 'PC', 'PM', 'PP', 'MI'],             'MP')
         self.add('MS', ['MI', 'MP', 'TC'],                               'MS')
@@ -1213,7 +1213,7 @@ class _POFileParser(object):
             # since entries are added when another entry is found, we must add
             # the last entry here (only if there are lines)
             self.instance.append(self.current_entry)
-        # before returning the instance, check if there's metadata and if 
+        # before returning the instance, check if there's metadata and if
         # so extract it in a dict
         firstentry = self.instance[0]
         if firstentry.msgid == '': # metadata found
@@ -1512,7 +1512,7 @@ class _MOFileParser(object):
         # close opened file
         self.fhandle.close()
         return self.instance
-    
+
     def _build_entry(self, msgid, msgstr=None, msgid_plural=None,
                      msgstr_plural=None):
         msgctxt_msgid = msgid.split('\x04')
@@ -1551,7 +1551,7 @@ class TextWrapper(textwrap.TextWrapper):
     drop_whitespace option.
     """
     def __init__(self, *args, **kwargs):
-        drop_whitespace = kwargs.pop('drop_whitespace', True) 
+        drop_whitespace = kwargs.pop('drop_whitespace', True)
         textwrap.TextWrapper.__init__(self, *args, **kwargs)
         self.drop_whitespace = drop_whitespace
 

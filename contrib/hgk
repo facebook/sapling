@@ -562,7 +562,7 @@ proc makewindow {} {
     if {[info exists posx]} {
         wm geometry . +$posx+$posy
     }
-    
+
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
     menu .bar.file

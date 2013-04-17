@@ -16,7 +16,7 @@
   <?endif?>
 
   <Product Id='*'
-    Name='Mercurial $(var.Version) ($(var.Platform))' 
+    Name='Mercurial $(var.Version) ($(var.Platform))'
     UpgradeCode='$(var.ProductUpgradeCode)'
     Language='1033' Codepage='1252' Version='$(var.Version)'
     Manufacturer='Matt Mackall and others'>

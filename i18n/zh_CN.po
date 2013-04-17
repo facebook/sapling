@@ -1,25 +1,25 @@
 # Chinese (simplified) translation for Mercurial
 # This file is distributed under the same license as Mercurial
-# 
+#
 # Copyright (C) 2009 the Mercurial team
 # Dongsheng Song <dongsheng.song@gmail.com>, 2009
-# 
+#
 # Update with pot file:
 #    msgmerge --update zh_CN.po hg.pot
 #    msgfmt --statistics -c zh_CN.po
-# 
+#
 # Please test your translation before commit:
 #    python setup.py build_py -c -d . build_ext -i build_mo
 #    LC_ALL=zh_CN.UTF-8 ./hg
-# 
+#
 # Please format your translation before commit:
 #    msgcat --width=80 --sort-by-file -o zh_CN_new.po zh_CN.po
 #    mv -f zh_CN_new.po zh_CN.po
-# 
+#
 # Please remove '#: filename:line' lines before submit to hg:
 #    msgcat --width=80 --no-location -o zh_CN_new.po zh_CN.po
 #    mv -f zh_CN_new.po zh_CN.po
-# 
+#
 # Dictionary:
 # blame             追溯
 # branch            分支
@@ -42,7 +42,7 @@
 # versioned         受版本控制
 # working copy      工作副本
 # ...
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial 1.3\n"

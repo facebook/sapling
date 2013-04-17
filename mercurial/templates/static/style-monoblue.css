@@ -204,8 +204,8 @@ table tr td {
 table tr td.nowrap {
   white-space: nowrap;
 }
-table tr td.closed { 
-  background-color: #99f; 
+table tr td.closed {
+  background-color: #99f;
 }
 /*
 table tr.parity0:hover,
