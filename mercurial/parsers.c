@@ -1192,6 +1192,7 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 	PyObject *gca = PyList_New(0);
 	int i, v, interesting, left;
 	int maxrev = -1;
+	long sp;
 	bitmask *seen;
 
 	for (i = 0; i < revcount; i++) {
@@ -1241,7 +1242,7 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 			int p = parents[i];
 			if (p == -1)
 				continue;
-			const long sp = seen[p];
+			sp = seen[p];
 			if (sv < poison) {
 				if (sp == 0) {
 					seen[p] = sv;
