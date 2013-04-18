@@ -45,7 +45,7 @@ enum path_state {
 	H,       /* ".h" */
 	HGDI,    /* ".hg", ".d", or ".i" */
 	SPACE,
-	DEFAULT, /* byte of a path component after the first */
+	DEFAULT  /* byte of a path component after the first */
 };
 
 /* state machine for dir-encoding */
@@ -53,7 +53,7 @@ enum dir_state {
 	DDOT,
 	DH,
 	DHGDI,
-	DDEFAULT,
+	DDEFAULT
 };
 
 static inline int inset(const uint32_t bitset[], char c)
