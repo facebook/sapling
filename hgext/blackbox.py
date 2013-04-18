@@ -36,7 +36,7 @@ def wrapui(ui):
     class blackboxui(ui.__class__):
         @util.propertycache
         def track(self):
-            return ui.configlist('blackbox', 'track', ['*'])
+            return self.configlist('blackbox', 'track', ['*'])
 
         def log(self, event, *msg, **opts):
             global lastblackbox
