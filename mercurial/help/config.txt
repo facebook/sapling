@@ -1046,7 +1046,8 @@ Configuration for extensions that need to send email messages.
     Host name of mail server, e.g. "mail.example.com".
 
 ``port``
-    Optional. Port to connect to on mail server. Default: 25.
+    Optional. Port to connect to on mail server. Default: 465 (if
+    ``tls`` is smtps) or 25 (otherwise).
 
 ``tls``
     Optional. Method to enable TLS when connecting to mail server: starttls,

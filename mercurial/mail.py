@@ -111,7 +111,11 @@ def _smtp(ui):
         s = STARTTLS(sslkwargs, local_hostname=local_hostname)
     else:
         s = smtplib.SMTP(local_hostname=local_hostname)
-    mailport = util.getport(ui.config('smtp', 'port', 25))
+    if smtps:
+        defaultport = 465
+    else:
+        defaultport = 25
+    mailport = util.getport(ui.config('smtp', 'port', defaultport))
     ui.note(_('sending mail: smtp host %s, port %s\n') %
             (mailhost, mailport))
     s.connect(host=mailhost, port=mailport)
