@@ -113,6 +113,17 @@ Test unknown changeset
   abort: unknown changeset 0123456789ab listed
   [255]
 
+Test unknown command
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > coin eb57da33312f 2 three
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: unknown action "coin"
+  [255]
+
 Test short version of command
 ---------------------------------------
 
