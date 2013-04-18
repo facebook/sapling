@@ -68,3 +68,34 @@ Run on a revision not ancestors of the current working directory.
   $ hg histedit -r 4
   abort: 08d98a8350f3 is not an ancestor of working directory
   [255]
+  $ hg up --quiet
+
+Test short version of command
+---------------------------------------
+
+Note: we use varying amounts of white space between command name and changeset
+short hash. This tests issue3893.
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick eb57da33312f 2 three
+  > p    c8e68270e35a 3 four
+  > f 08d98a8350f3 4 five
+  > EOF
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting alpha
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  four
+  ***
+  five
+  
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: changed alpha
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)

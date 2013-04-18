@@ -722,10 +722,7 @@ def verifyrules(rules, repo, ctxs):
         if ' ' not in r:
             raise util.Abort(_('malformed line "%s"') % r)
         action, rest = r.split(' ', 1)
-        if ' ' in rest.strip():
-            ha, rest = rest.split(' ', 1)
-        else:
-            ha = r.strip()
+        ha = rest.strip().split(' ', 1)[0]
         try:
             if repo[ha] not in ctxs:
                 raise util.Abort(
