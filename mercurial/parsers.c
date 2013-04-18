@@ -1285,7 +1285,7 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 	if (revcount > capacity) {
 		PyErr_Format(PyExc_OverflowError,
 			     "bitset size (%ld) > capacity (%ld)",
-			     revcount, capacity);
+			     (long)revcount, (long)capacity);
 		return NULL;
 	}
 
