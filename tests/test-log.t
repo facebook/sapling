@@ -88,9 +88,20 @@ log on directory
 
   $ hg log -f -l1 --style something
   abort: style 'something' not found
-  (available styles: changelog, bisect, default, xml, compact)
+  (available styles: changelog, bisect, default, xml, phases, compact)
   [255]
 
+-f, phases style
+
+
+  $ hg log -f -l1 --style phases
+  changeset:   4:7e4639b4691b
+  tag:         tip
+  phase:       draft
+  user:        test
+  date:        Thu Jan 01 00:00:05 1970 +0000
+  summary:     e
+  
 
 -f, but no args
 

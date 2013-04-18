@@ -6,8 +6,8 @@ template-style (--style).
 You can customize output for any "log-like" command: log,
 outgoing, incoming, tip, parents, heads and glog.
 
-Four styles are packaged with Mercurial: default (the style used
-when no explicit preference is passed), compact, changelog,
+Five styles are packaged with Mercurial: default (the style used
+when no explicit preference is passed), compact, changelog, phases
 and xml.
 Usage::
 
