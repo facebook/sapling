@@ -1542,7 +1542,6 @@ have 2 filelog topological heads in a linear changeset graph.
   $ testlog --follow
   []
   []
-  abort: unknown revision '0'!
   $ echo a > a
   $ echo aa > aa
   $ echo f > f
