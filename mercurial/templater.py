@@ -299,18 +299,29 @@ def rstdoc(context, mapping, args):
     return minirst.format(text, style=style, keep=['verbose'])
 
 def fill(context, mapping, args):
-    if not (1 <= len(args) <= 2):
-        raise error.ParseError(_("fill expects one or two arguments"))
+    if not (1 <= len(args) <= 4):
+        raise error.ParseError(_("fill expects one to four arguments"))
 
     text = stringify(args[0][0](context, mapping, args[0][1]))
     width = 76
-    if len(args) == 2:
+    initindent = ''
+    hangindent = ''
+    if 2 <= len(args) <= 4:
         try:
             width = int(stringify(args[1][0](context, mapping, args[1][1])))
         except ValueError:
             raise error.ParseError(_("fill expects an integer width"))
+        try:
+            initindent = stringify(args[2][0](context, mapping, args[2][1]))
+            initindent = stringify(runtemplate(context, mapping,
+                                     compiletemplate(initindent, context)))
+            hangindent = stringify(args[3][0](context, mapping, args[3][1]))
+            hangindent = stringify(runtemplate(context, mapping,
+                                     compiletemplate(hangindent, context)))
+        except IndexError:
+            pass
 
-    return templatefilters.fill(text, width)
+    return templatefilters.fill(text, width, initindent, hangindent)
 
 def date(context, mapping, args):
     if not (1 <= len(args) <= 2):

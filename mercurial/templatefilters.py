@@ -99,8 +99,8 @@ def escape(text):
 para_re = None
 space_re = None
 
-def fill(text, width):
-    '''fill many paragraphs.'''
+def fill(text, width, initindent = '', hangindent = ''):
+    '''fill many paragraphs with optional indentation.'''
     global para_re, space_re
     if para_re is None:
         para_re = re.compile('(\n\n|\n\\s*[-*]\\s*)', re.M)
@@ -121,7 +121,8 @@ def fill(text, width):
             yield text[start:m.start(0)], m.group(1)
             start = m.end(1)
 
-    return "".join([space_re.sub(' ', util.wrap(para, width=width)) + rest
+    return "".join([util.wrap(space_re.sub(' ', util.wrap(para, width)),
+                              width, initindent, hangindent) + rest
                     for para, rest in findparas()])
 
 def fill68(text):
