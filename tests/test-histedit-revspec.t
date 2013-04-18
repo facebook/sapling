@@ -1,7 +1,3 @@
-This test requires parentrevspec support in revsets, so check for that
-and skip the test if we're on an unusual hg that supports .t tests but
-not parentrevspec.
-  $ python -c 'from mercurial import revset ; revset.methods["parentpost"]' || exit 80
 
 Enable extensions used by this test.
   $ cat >>$HGRCPATH <<EOF
