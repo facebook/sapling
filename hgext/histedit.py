@@ -716,7 +716,8 @@ def verifyrules(rules, repo, ctxs):
     or a rule on a changeset outside of the user-given range.
     """
     parsed = []
-    if len(rules) != len(ctxs):
+    expected = set(str(c) for c in ctxs)
+    if len(rules) != len(expected):
         raise util.Abort(_('must specify a rule for each changeset once'))
     for r in rules:
         if ' ' not in r:
@@ -727,7 +728,7 @@ def verifyrules(rules, repo, ctxs):
             ha = str(repo[ha])  # ensure its a short hash
         except error.RepoError:
             raise util.Abort(_('unknown changeset %s listed') % ha)
-        if repo[ha] not in ctxs:
+        if ha not in expected:
             raise util.Abort(
                 _('may not use changesets other than the ones listed'))
         if action not in actiontable:
