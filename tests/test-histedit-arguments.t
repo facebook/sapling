@@ -80,6 +80,17 @@ Test that missing revisions are detected
   abort: must specify a rule for each changeset once
   [255]
 
+Test that extra revisions are detected
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick 6058cbb6cfd7 0 one
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: may not use changesets other than the ones listed
+  [255]
+
 Test short version of command
 ---------------------------------------
 
