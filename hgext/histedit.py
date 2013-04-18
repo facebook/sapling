@@ -718,8 +718,6 @@ def verifyrules(rules, repo, ctxs):
     parsed = []
     expected = set(str(c) for c in ctxs)
     seen = set()
-    if len(rules) != len(expected):
-        raise util.Abort(_('must specify a rule for each changeset once'))
     for r in rules:
         if ' ' not in r:
             raise util.Abort(_('malformed line "%s"') % r)
@@ -738,6 +736,10 @@ def verifyrules(rules, repo, ctxs):
         if action not in actiontable:
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
+    missing = sorted(expected - seen)  # sort to stabilize output
+    if missing:
+        raise util.Abort(_('missing rules for changeset %s') % missing[0],
+                         hint=_('do you want to use the drop action?'))
     return parsed
 
 def processreplacement(repo, replacements):
