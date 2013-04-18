@@ -713,6 +713,7 @@ class filectx(object):
                         curr = pair(hist[p], curr)
                     if needed[p] == 1:
                         del hist[p]
+                        del needed[p]
                     else:
                         needed[p] -= 1
 
