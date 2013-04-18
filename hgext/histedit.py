@@ -724,11 +724,12 @@ def verifyrules(rules, repo, ctxs):
         action, rest = r.split(' ', 1)
         ha = rest.strip().split(' ', 1)[0]
         try:
-            if repo[ha] not in ctxs:
-                raise util.Abort(
-                    _('may not use changesets other than the ones listed'))
+            ha = str(repo[ha])  # ensure its a short hash
         except error.RepoError:
             raise util.Abort(_('unknown changeset %s listed') % ha)
+        if repo[ha] not in ctxs:
+            raise util.Abort(
+                _('may not use changesets other than the ones listed'))
         if action not in actiontable:
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
