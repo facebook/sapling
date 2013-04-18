@@ -102,6 +102,17 @@ Test malformed line
   abort: malformed line "pickeb57da33312f2three"
   [255]
 
+Test unknown changeset
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick 0123456789ab 2 three
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: unknown changeset 0123456789ab listed
+  [255]
+
 Test short version of command
 ---------------------------------------
 
