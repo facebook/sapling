@@ -209,10 +209,6 @@ def rebase(ui, repo, **opts):
                     _("can't remove original changesets with"
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
-            elif not keepf and not repo[root].mutable():
-                raise util.Abort(_("can't rebase immutable changeset %s")
-                                 % repo[root],
-                                 hint=_('see hg help phases for details'))
             else:
                 result = buildstate(repo, dest, rebaseset, collapsef)
 
@@ -220,6 +216,10 @@ def rebase(ui, repo, **opts):
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
                 return 1
+            elif not keepf and not repo[root].mutable():
+                raise util.Abort(_("can't rebase immutable changeset %s")
+                                 % repo[root],
+                                 hint=_('see hg help phases for details'))
             else:
                 originalwd, target, state = result
                 if collapsef:
