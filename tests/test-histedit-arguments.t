@@ -70,6 +70,16 @@ Run on a revision not ancestors of the current working directory.
   [255]
   $ hg up --quiet
 
+Test that missing revisions are detected
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick eb57da33312f 2 three
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: must specify a rule for each changeset once
+  [255]
+
 Test short version of command
 ---------------------------------------
 
