@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import errno, getpass, os, socket, sys, tempfile, traceback
+import errno, getpass, os, re, socket, sys, tempfile, traceback
 import config, scmutil, util, error, formatter
 
 class ui(object):
@@ -261,6 +261,45 @@ class ui(object):
         except ValueError:
             raise error.ConfigError(_("%s.%s is not an integer ('%s')")
                                     % (section, name, v))
+
+    def configbytes(self, section, name, default=0, untrusted=False):
+        """parse a configuration element as a quantity in bytes
+
+        Units can be specified as b (bytes), k or kb (kilobytes), m or
+        mb (megabytes), g or gb (gigabytes).
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'val1', '42')
+        >>> u.configbytes(s, 'val1')
+        42
+        >>> u.setconfig(s, 'val2', '42.5 kb')
+        >>> u.configbytes(s, 'val2')
+        43520
+        >>> u.configbytes(s, 'unknown', '7 MB')
+        7340032
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configbytes(s, 'invalid')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not a byte quantity ('somevalue')
+        """
+
+        orig = string = self.config(section, name)
+        if orig is None:
+            if not isinstance(default, str):
+                return default
+            orig = string = default
+        multiple = 1
+        m = re.match(r'([^kmbg]+?)\s*([kmg]?)b?$', string, re.I)
+        if m:
+            string, key = m.groups()
+            key = key.lower()
+            multiple = dict(k=1024, m=1048576, g=1073741824).get(key, 1)
+        try:
+            return int(float(string) * multiple)
+        except ValueError:
+            raise error.ConfigError(_("%s.%s is not a byte quantity ('%s')")
+                                    % (section, name, orig))
 
     def configlist(self, section, name, default=None, untrusted=False):
         """parse a configuration element as a list of comma/space separated
