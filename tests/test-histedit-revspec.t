@@ -2,7 +2,6 @@
 Enable extensions used by this test.
   $ cat >>$HGRCPATH <<EOF
   > [extensions]
-  > graphlog=
   > histedit=
   > EOF
 
