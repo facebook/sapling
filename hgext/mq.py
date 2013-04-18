@@ -297,7 +297,7 @@ class AbortNoCleanup(error.Abort):
     pass
 
 class queue(object):
-    def __init__(self, ui, path, patchdir=None):
+    def __init__(self, ui, baseui, path, patchdir=None):
         self.basepath = path
         try:
             fh = open(os.path.join(path, 'patches.queue'))
@@ -312,6 +312,7 @@ class queue(object):
         self.path = patchdir or curpath
         self.opener = scmutil.opener(self.path)
         self.ui = ui
+        self.baseui = baseui
         self.applieddirty = False
         self.seriesdirty = False
         self.added = []
@@ -1774,9 +1775,7 @@ class queue(object):
             return True
 
     def qrepo(self, create=False):
-        ui = self.ui.copy()
-        ui.setconfig('paths', 'default', '', overlay=False)
-        ui.setconfig('paths', 'default-push', '', overlay=False)
+        ui = self.baseui.copy()
         if create or os.path.isdir(self.join(".hg")):
             return hg.repository(ui, path=self.path, create=create)
 
@@ -2761,7 +2760,7 @@ def push(ui, repo, patch=None, **opts):
         if not newpath:
             ui.warn(_("no saved queues found, please use -n\n"))
             return 1
-        mergeq = queue(ui, repo.path, newpath)
+        mergeq = queue(ui, repo.baseui, repo.path, newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
@@ -2795,7 +2794,7 @@ def pop(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
-        q = queue(ui, repo.path, repo.join(opts.get('name')))
+        q = queue(ui, repo.baseui, repo.path, repo.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
@@ -3413,7 +3412,7 @@ def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         @util.propertycache
         def mq(self):
-            return queue(self.ui, self.path)
+            return queue(self.ui, self.baseui, self.path)
 
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and not force:
