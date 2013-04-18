@@ -1,3 +1,6 @@
+Test argument handling and various data parsing
+==================================================
+
 
 Enable extensions used by this test.
   $ cat >>$HGRCPATH <<EOF
@@ -39,6 +42,8 @@ Repo setup.
   
 
 Run a dummy edit to make sure we get tip^^ correctly via revsingle.
+--------------------------------------------------------------------
+
   $ HGEDITOR=cat hg histedit "tip^^"
   pick eb57da33312f 2 three
   pick c8e68270e35a 3 four
@@ -56,6 +61,7 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Run on a revision not ancestors of the current working directory.
+--------------------------------------------------------------------
 
   $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
