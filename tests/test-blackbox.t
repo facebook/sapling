@@ -131,5 +131,20 @@ extension and python hooks - use the eol extension for a pythonhook
   1970/01/01 00:00:00 bob> exthook-update: echo hooked finished in * seconds (glob)
   1970/01/01 00:00:00 bob> update exited False after * seconds (glob)
 
+log rotation
+
+  $ echo '[blackbox]' >> .hg/hgrc
+  $ echo 'maxsize = 20 b' >> .hg/hgrc
+  $ echo 'maxfiles = 3' >> .hg/hgrc
+  $ hg status
+  $ hg status
+  $ hg status
+  $ hg tip -q
+  2:d02f48003e62
+  $ ls .hg/blackbox.log*
+  .hg/blackbox.log
+  .hg/blackbox.log.1
+  .hg/blackbox.log.2
+
 cleanup
   $ cd ..

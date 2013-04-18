@@ -21,11 +21,17 @@ Examples:
   [blackbox]
   track = incoming
 
+  [blackbox]
+  # limit the size of a log file
+  maxsize = 1.5 MB
+  # rotate up to N log files when the current one gets too big
+  maxfiles = 3
+
 """
 
 from mercurial import util, cmdutil
 from mercurial.i18n import _
-import os, re
+import errno, os, re
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -38,6 +44,38 @@ def wrapui(ui):
         def track(self):
             return self.configlist('blackbox', 'track', ['*'])
 
+        def _openlogfile(self):
+            def rotate(oldpath, newpath):
+                try:
+                    os.unlink(newpath)
+                except OSError, err:
+                    if err.errno != errno.ENOENT:
+                        self.debug("warning: cannot remove '%s': %s\n" %
+                                   (newpath, err.strerror))
+                try:
+                    if newpath:
+                        os.rename(oldpath, newpath)
+                except OSError, err:
+                    if err.errno != errno.ENOENT:
+                        self.debug("warning: cannot rename '%s' to '%s': %s\n" %
+                                   (newpath, oldpath, err.strerror))
+
+            fp = self._bbopener('blackbox.log', 'a')
+            maxsize = self.configbytes('blackbox', 'maxsize', 1048576)
+            if maxsize > 0:
+                st = os.fstat(fp.fileno())
+                if st.st_size >= maxsize:
+                    path = fp.name
+                    fp.close()
+                    maxfiles = self.configint('blackbox', 'maxfiles', 7)
+                    for i in xrange(maxfiles - 1, 1, -1):
+                        rotate(oldpath='%s.%d' % (path, i - 1),
+                               newpath='%s.%d' % (path, i))
+                    rotate(oldpath=path,
+                           newpath=maxfiles > 0 and path + '.1')
+                    fp = self._bbopener('blackbox.log', 'a')
+            return fp
+
         def log(self, event, *msg, **opts):
             global lastblackbox
             super(blackboxui, self).log(event, *msg, **opts)
@@ -49,7 +87,7 @@ def wrapui(ui):
                 blackbox = self._blackbox
             elif util.safehasattr(self, '_bbopener'):
                 try:
-                    self._blackbox = self._bbopener('blackbox.log', 'a')
+                    self._blackbox = self._openlogfile()
                 except (IOError, OSError), err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
