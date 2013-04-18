@@ -119,7 +119,7 @@ test tag rewriting
   0 add baz
   $ cd new-filemap
   $ hg tags
-  tip                                2:6f4fd1df87fb
+  tip                                2:3c74706b1ff8
   some-tag                           0:ba8636729451
   $ cd ..
 

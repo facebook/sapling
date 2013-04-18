@@ -25,6 +25,9 @@ from mercurial import hg, util, context, bookmarks, error, scmutil
 
 from common import NoRepo, commit, converter_source, converter_sink
 
+import re
+sha1re = re.compile(r'\b[0-9a-f]{6,40}\b')
+
 class mercurial_sink(converter_sink):
     def __init__(self, ui, path):
         converter_sink.__init__(self, ui, path)
@@ -157,6 +160,14 @@ class mercurial_sink(converter_sink):
         p2 = parents.pop(0)
 
         text = commit.desc
+
+        sha1s = re.findall(sha1re, text)
+        for sha1 in sha1s:
+            oldrev = source.lookuprev(sha1)
+            newrev = revmap.get(oldrev)
+            if newrev is not None:
+                text = text.replace(sha1, newrev[:len(sha1)])
+
         extra = commit.extra.copy()
         if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
