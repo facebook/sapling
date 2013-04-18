@@ -1111,6 +1111,12 @@ Rollback on largefiles.
 
   $ echo mistake > sub2/large7
   $ hg revert sub2/large7
+  $ cat sub2/large7
+  large7
+  $ cat sub2/large7.orig
+  mistake
+  $ test ! -f .hglf/sub2/large7.orig
+
   $ hg -q update --clean -r null
   $ hg update --clean
   getting changed largefiles
@@ -1128,18 +1134,16 @@ Rollback on largefiles.
   large7
   $ cat sub2/large7.orig
   mistake
-  $ cat .hglf/sub2/large7.orig
-  9dbfb2c79b1c40981b258c3efa1b10b03f18ad31
+  $ test ! -f .hglf/sub2/large7.orig
 
-demonstrate misfeature: .orig file is overwritten on every update -C,
-also when clean:
+verify that largefile .orig file no longer is overwritten on every update -C:
   $ hg update --clean
   getting changed largefiles
   0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat sub2/large7.orig
-  large7
-  $ rm sub2/large7.orig .hglf/sub2/large7.orig
+  mistake
+  $ rm sub2/large7.orig
 
 Now "update check" is happy.
   $ hg update --check 8

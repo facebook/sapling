@@ -447,6 +447,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
                 if (os.path.exists(absstandin + '.orig') and
                     os.path.exists(abslfile)):
                     shutil.copyfile(abslfile, abslfile + '.orig')
+                    util.unlinkpath(absstandin + '.orig')
                 expecthash = lfutil.readstandin(repo, lfile)
                 if (expecthash != '' and
                     (not os.path.exists(abslfile) or
