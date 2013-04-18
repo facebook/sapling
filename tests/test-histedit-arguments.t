@@ -91,6 +91,17 @@ Test that extra revisions are detected
   abort: may not use changesets other than the ones listed
   [255]
 
+Test malformed line
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pickeb57da33312f2three
+  > pick c8e68270e35a 3 four
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: malformed line "pickeb57da33312f2three"
+  [255]
+
 Test short version of command
 ---------------------------------------
 
