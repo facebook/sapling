@@ -717,6 +717,7 @@ def verifyrules(rules, repo, ctxs):
     """
     parsed = []
     expected = set(str(c) for c in ctxs)
+    seen = set()
     if len(rules) != len(expected):
         raise util.Abort(_('must specify a rule for each changeset once'))
     for r in rules:
@@ -731,6 +732,9 @@ def verifyrules(rules, repo, ctxs):
         if ha not in expected:
             raise util.Abort(
                 _('may not use changesets other than the ones listed'))
+        if ha in seen:
+            raise util.Abort(_('duplicated command for changeset %s') % ha)
+        seen.add(ha)
         if action not in actiontable:
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])

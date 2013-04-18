@@ -124,6 +124,19 @@ Test unknown command
   abort: unknown action "coin"
   [255]
 
+Test duplicated changeset
+---------------------------------------
+
+So one is missing and one appear twice.
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick eb57da33312f 2 three
+  > pick eb57da33312f 2 three
+  > pick 08d98a8350f3 4 five
+  > EOF
+  abort: duplicated command for changeset eb57da33312f
+  [255]
+
 Test short version of command
 ---------------------------------------
 
