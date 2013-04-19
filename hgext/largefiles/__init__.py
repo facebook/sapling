@@ -52,8 +52,8 @@ largefiles).
 If you want to pull largefiles you don't need for update yet, then
 you can use pull with the `--lfrev` option or the :hg:`lfpull` command.
 
-If you know you are pulling from a non-default location and want do
-download all the largefiles that corresponds to the new changesets at
+If you know you are pulling from a non-default location and want to
+download all the largefiles that correspond to the new changesets at
 the same time, then you can pull with `--lfrev "pulled()"`.
 
 If you just want to ensure that you will have the largefiles needed to
