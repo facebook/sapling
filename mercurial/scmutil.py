@@ -41,6 +41,8 @@ def nochangesfound(ui, repo, excluded=None):
         ui.status(_("no changes found\n"))
 
 def checknewlabel(repo, lbl, kind):
+    # Do not use the "kind" parameter in ui output.
+    # It makes strings difficult to translate.
     if lbl in ['tip', '.', 'null']:
         raise util.Abort(_("the name '%s' is reserved") % lbl)
     for c in (':', '\0', '\n', '\r'):
@@ -48,7 +50,7 @@ def checknewlabel(repo, lbl, kind):
             raise util.Abort(_("%r cannot be used in a name") % c)
     try:
         int(lbl)
-        raise util.Abort(_("a %s cannot have an integer as its name") % kind)
+        raise util.Abort(_("cannot use an integer as a name"))
     except ValueError:
         pass
 

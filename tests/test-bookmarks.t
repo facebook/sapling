@@ -260,7 +260,7 @@ bookmark with name of branch
 bookmark with integer name
 
   $ hg bookmark 10
-  abort: a bookmark cannot have an integer as its name
+  abort: cannot use an integer as a name
   [255]
 
 incompatible options
