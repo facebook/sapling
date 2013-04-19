@@ -109,6 +109,16 @@ hg status . in repo root:
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../1/in_b_1\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4min_b_2\x1b[0m (esc)
   \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4m../in_b\x1b[0m (esc)
+
+Make sure --color=never works
+  $ hg status --color=never
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
+
   $ cd ..
 
   $ hg init repo2

@@ -398,8 +398,8 @@ def uisetup(ui):
         ui.__class__ = colorui
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
         mode = _modesetup(ui_, opts)
+        colorui._colormode = mode
         if mode:
-            colorui._colormode = mode
             extstyles()
             configstyles(ui_)
         return orig(ui_, opts, cmd, cmdfunc)
