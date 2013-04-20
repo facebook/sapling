@@ -1178,13 +1178,13 @@ Static files
     background-color: #666;
     padding: 2pt;
     color: white;
-    font-family: sans;
+    font-family: sans-serif;
     font-weight: bold;
   }
   .navigate a {
     background-color: #ccc;
     padding: 2pt;
-    font-family: sans;
+    font-family: sans-serif;
     color: black;
   }
   
