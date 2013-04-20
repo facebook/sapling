@@ -119,6 +119,15 @@ Make sure --color=never works
   ? b/in_b
   ? in_root
 
+Make sure ui.formatted=False works
+  $ hg status --config ui.formatted=False
+  ? a/1/in_a_1
+  ? a/in_a
+  ? b/1/in_b_1
+  ? b/2/in_b_2
+  ? b/in_b
+  ? in_root
+
   $ cd ..
 
   $ hg init repo2
