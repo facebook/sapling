@@ -299,7 +299,7 @@ def rstdoc(context, mapping, args):
     text = stringify(args[0][0](context, mapping, args[0][1]))
     style = stringify(args[1][0](context, mapping, args[1][1]))
 
-    return minirst.format(text, style=style)
+    return minirst.format(text, style=style, keep=['verbose'])
 
 methods = {
     "string": lambda e, c: (runstring, e[1]),

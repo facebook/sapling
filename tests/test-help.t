@@ -1525,6 +1525,20 @@ Dish up an empty repo; serve it cold.
   If no names are given, add all files to the repository.
   </p>
   <p>
+  An example showing how new (unknown) files are added
+  automatically by &quot;hg add&quot;:
+  </p>
+  <pre>
+  \$ ls (re)
+  foo.c
+  \$ hg status (re)
+  ? foo.c
+  \$ hg add (re)
+  adding foo.c
+  \$ hg status (re)
+  A foo.c
+  </pre>
+  <p>
   Returns 0 if all files are successfully added.
   </p>
   <p>
@@ -1675,6 +1689,50 @@ Dish up an empty repo; serve it cold.
   This command schedules the files to be removed at the next commit.
   To undo a remove before that, see &quot;hg revert&quot;. To undo added
   files, see &quot;hg forget&quot;.
+  </p>
+  <p>
+  -A/--after can be used to remove only files that have already
+  been deleted, -f/--force can be used to force deletion, and -Af
+  can be used to remove files from the next revision without
+  deleting them from the working directory.
+  </p>
+  <p>
+  The following table details the behavior of remove for different
+  file states (columns) and option combinations (rows). The file
+  states are Added [A], Clean [C], Modified [M] and Missing [!]
+  (as reported by &quot;hg status&quot;). The actions are Warn, Remove
+  (from branch) and Delete (from disk):
+  </p>
+  <table>
+  <tr><td></td>
+  <td>A</td>
+  <td>C</td>
+  <td>M</td>
+  <td>!</td></tr>
+  <tr><td>none</td>
+  <td>W</td>
+  <td>RD</td>
+  <td>W</td>
+  <td>R</td></tr>
+  <tr><td>-f</td>
+  <td>R</td>
+  <td>RD</td>
+  <td>RD</td>
+  <td>R</td></tr>
+  <tr><td>-A</td>
+  <td>W</td>
+  <td>W</td>
+  <td>W</td>
+  <td>R</td></tr>
+  <tr><td>-Af</td>
+  <td>R</td>
+  <td>R</td>
+  <td>R</td>
+  <td>R</td></tr>
+  </table>
+  <p>
+  Note that remove never deletes files in Added [A] state from the
+  working directory, not even if option --force is specified.
   </p>
   <p>
   Returns 0 on success, 1 if any warnings encountered.
