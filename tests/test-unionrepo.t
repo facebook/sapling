@@ -25,7 +25,8 @@ Create one repository
   $ hg clone -q repo1 --rev 0 repo2
   $ cd repo2
   $ touch repo2-1
-  $ sed '1irepo2-1 at top' f > f.tmp
+  $ sed '1i\
+  > repo2-1 at top' f > f.tmp
   $ mv f.tmp f
   $ hg ci -Aqmrepo2-1
   $ touch repo2-2
