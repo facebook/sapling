@@ -1039,7 +1039,8 @@ Abort early when a merge is in progress
 Editing patch (and ignoring trailing text)
 
   $ cat > editor.sh << '__EOF__'
-  > sed -e 7d -e '5s/^-/ /' -e '/^# ---/itrailing\nditto' "$1" > tmp
+  > sed -e 7d -e '5s/^-/ /' -e '/^# ---/i\
+  > trailing\nditto' "$1" > tmp
   > mv tmp "$1"
   > __EOF__
   $ cat > editedfile << '__EOF__'
@@ -1204,7 +1205,8 @@ Malformed patch - error handling
 random text in random positions is still an error
 
   $ cat > editor.sh << '__EOF__'
-  > sed -e '/^@/iother' "$1" > tmp
+  > sed -e '/^@/i\
+  > other' "$1" > tmp
   > mv tmp "$1"
   > __EOF__
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg record <<EOF
