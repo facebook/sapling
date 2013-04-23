@@ -807,8 +807,13 @@ class dirstate(object):
 
         lnkkind = stat.S_IFLNK
 
-        for fn, st in self.walk(match, subrepos, listunknown,
-                                listignored).iteritems():
+        # We need to do full walks when either
+        # - we're listing all clean files, or
+        # - match.traversedir does something, because match.traversedir should
+        #   be called for every dir in the working dir
+        full = listclean or match.traversedir is not None
+        for fn, st in self.walk(match, subrepos, listunknown, listignored,
+                                full=full).iteritems():
             if fn not in dmap:
                 if (listignored or mexact(fn)) and dirignore(fn):
                     if listignored:
