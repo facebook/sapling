@@ -623,14 +623,20 @@ class dirstate(object):
 
         return results, dirsfound, dirsnotfound
 
-    def walk(self, match, subrepos, unknown, ignored):
+    def walk(self, match, subrepos, unknown, ignored, full=True):
         '''
         Walk recursively through the directory tree, finding all files
         matched by match.
 
+        If full is False, maybe skip some known-clean files.
+
         Return a dict mapping filename to stat-like object (either
         mercurial.osutil.stat instance or return value of os.stat()).
+
         '''
+        # full is a flag that extensions that hook into walk can use -- this
+        # implementation doesn't use it at all. This satisfies the contract
+        # because we only guarantee a "maybe".
 
         def fwarn(f, msg):
             self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
