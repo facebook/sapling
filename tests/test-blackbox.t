@@ -64,6 +64,8 @@ we must not cause a failure if we cannot write to the log
 
   $ hg rollback
   repository tip rolled back to revision 1 (undo pull)
+
+#if unix-permissions
   $ chmod 000 .hg/blackbox.log
   $ hg --debug incoming
   warning: cannot write to blackbox.log: Permission denied
@@ -85,6 +87,7 @@ we must not cause a failure if we cannot write to the log
   c
   
   
+#endif
   $ hg pull
   pulling from $TESTTMP/blackboxtest (glob)
   searching for changes
@@ -95,12 +98,13 @@ we must not cause a failure if we cannot write to the log
   (run 'hg update' to get a working copy)
 
 a failure reading from the log is fine
-
+#if unix-permissions
   $ hg blackbox -l 3
   abort: Permission denied: $TESTTMP/blackboxtest2/.hg/blackbox.log
   [255]
 
   $ chmod 600 .hg/blackbox.log
+#endif
 
 backup bundles get logged
 
