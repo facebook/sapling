@@ -180,6 +180,9 @@ def reposetup(ui, repo):
         for tunnel in ui.configlist('hgsubversion', 'tunnels'):
             hg.schemes['svn+' + tunnel] = svnrepo
 
+    if revset and ui.configbool('hgsubversion', 'nativerevs'):
+        extensions.wrapfunction(revset, 'stringset', util.revset_stringset)
+
 _old_local = hg.schemes['file']
 def _lookup(url):
     if util.islocalrepo(url):
