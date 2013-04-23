@@ -74,7 +74,7 @@ testpats = [
     (r'/dev/u?random', "don't use entropy, use /dev/zero"),
     (r'do\s*true;\s*done', "don't use true as loop body, use sleep 0"),
     (r'^( *)\t', "don't use tabs to indent"),
-    (r'sed .*\'(\d+|/[^/]*/)i[^\\][^\n]',
+    (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
   ],
   # warnings
