@@ -225,13 +225,7 @@ class SVNMeta(object):
         return self.layoutobj.localname(path)
 
     def remotename(self, branch):
-        if self.layout == 'single':
-            return ''
-        if branch == 'default' or branch is None:
-            return 'trunk'
-        elif branch.startswith('../'):
-            return branch[3:]
-        return 'branches/%s' % branch
+        return self.layoutobj.remotename(branch)
 
     def genextra(self, revnum, branch):
         extra = {}

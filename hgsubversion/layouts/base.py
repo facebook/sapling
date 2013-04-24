@@ -18,3 +18,7 @@ class BaseLayout(object):
         """Compute the local name for a branch located at path.
         """
         self.__unimplemented('localname')
+
+    def remotename(self, branch):
+        """Compute a subversion path for a mercurial branch name"""
+        self.__unimplemented('remotename')

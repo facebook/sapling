@@ -7,3 +7,6 @@ class SingleLayout(base.BaseLayout):
 
     def localname(self, path):
         return 'default'
+
+    def remotename(self, branch):
+        return ''
