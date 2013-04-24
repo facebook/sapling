@@ -9,10 +9,36 @@ NB: this has a long way to go before it does everything it claims to
 
 """
 
+from mercurial import util as hgutil
+
 import detect
 import persist
+import single
+import standard
 
 __all__ = [
     "detect",
+    "layout_from_name",
     "persist",
     ]
+
+# This is the authoritative store of what layouts are available.
+# The intention is for extension authors who wish to build their own
+# layout to add it to this dict.
+NAME_TO_CLASS = {
+    "single": single.SingleLayout,
+    "standard": standard.StandardLayout,
+}
+
+
+def layout_from_name(name):
+    """Returns a layout module given the layout name
+
+    You should use one of the layout.detect.* functions to get the
+    name to pass to this function.
+
+    """
+
+    if name not in NAME_TO_CLASS:
+        raise hgutil.Abort('Unknown hgsubversion layout: %s' %name)
+    return NAME_TO_CLASS[name]()

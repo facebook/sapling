@@ -72,6 +72,7 @@ class SVNMeta(object):
             self.tag_locations = tag_locations
         self._layout = layouts.detect.layout_from_file(self.meta_data_dir,
                                                        ui=self.repo.ui)
+        self._layoutobj = None
         pickle_atomic(self.tag_locations, self.tag_locations_file)
         # ensure nested paths are handled properly
         self.tag_locations.sort()
@@ -106,6 +107,12 @@ class SVNMeta(object):
             self._layout = layouts.detect.layout_from_config(self.repo.ui)
             layouts.persist.layout_to_file(self.meta_data_dir, self._layout)
         return self._layout
+
+    @property
+    def layoutobj(self):
+        if not self._layoutobj:
+            self._layoutobj = layouts.layout_from_name(self.layout)
+        return self._layoutobj
 
     @property
     def editor(self):
@@ -215,13 +222,7 @@ class SVNMeta(object):
     def localname(self, path):
         """Compute the local name for a branch located at path.
         """
-        if self.layout == 'single':
-            return 'default'
-        if path == 'trunk':
-            return None
-        elif path.startswith('branches/'):
-            return path[len('branches/'):]
-        return  '../%s' % path
+        return self.layoutobj.localname(path)
 
     def remotename(self, branch):
         if self.layout == 'single':
