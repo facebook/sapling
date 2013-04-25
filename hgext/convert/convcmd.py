@@ -15,7 +15,7 @@ from monotone import monotone_source
 from gnuarch import gnuarch_source
 from bzr import bzr_source
 from p4 import p4_source
-import filemap, common
+import filemap
 
 import os, shutil
 from mercurial import hg, util, encoding
@@ -118,8 +118,38 @@ class converter(object):
             self.readauthormap(opts.get('authormap'))
             self.authorfile = self.dest.authorfile()
 
-        self.splicemap = common.parsesplicemap(opts.get('splicemap'))
+        self.splicemap = self.parsesplicemap(opts.get('splicemap'))
         self.branchmap = mapfile(ui, opts.get('branchmap'))
+
+
+    def parsesplicemap(self, path):
+        """Parse a splicemap, return a child/parents dictionary."""
+        if not path:
+            return {}
+        m = {}
+        try:
+            fp = open(path, 'r')
+            for i, line in enumerate(fp):
+                line = line.splitlines()[0].rstrip()
+                if not line:
+                    # Ignore blank lines
+                    continue
+                try:
+                    child, parents = line.split(' ', 1)
+                    parents = parents.replace(',', ' ').split()
+                except ValueError:
+                    raise util.Abort(_('syntax error in %s(%d): child parent1'
+                                       '[,parent2] expected') % (path, i + 1))
+                pp = []
+                for p in parents:
+                    if p not in pp:
+                        pp.append(p)
+                m[child] = pp
+        except IOError, e:
+            if e.errno != errno.ENOENT:
+                raise
+        return m
+
 
     def walktree(self, heads):
         '''Return a mapping that identifies the uncommitted parents of every

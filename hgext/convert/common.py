@@ -424,34 +424,6 @@ class mapfile(dict):
             self.fp.close()
             self.fp = None
 
-def parsesplicemap(path):
-    """Parse a splicemap, return a child/parents dictionary."""
-    if not path:
-        return {}
-    m = {}
-    try:
-        fp = open(path, 'r')
-        for i, line in enumerate(fp):
-            line = line.splitlines()[0].rstrip()
-            if not line:
-                # Ignore blank lines
-                continue
-            try:
-                child, parents = line.split(' ', 1)
-                parents = parents.replace(',', ' ').split()
-            except ValueError:
-                raise util.Abort(_('syntax error in %s(%d): child parent1'
-                                   '[,parent2] expected') % (path, i + 1))
-            pp = []
-            for p in parents:
-                if p not in pp:
-                    pp.append(p)
-            m[child] = pp
-    except IOError, e:
-        if e.errno != errno.ENOENT:
-            raise
-    return m
-
 def makedatetimestamp(t):
     """Like util.makedate() but for time t instead of current time"""
     delta = (datetime.datetime.utcfromtimestamp(t) -
