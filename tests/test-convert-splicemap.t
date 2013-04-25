@@ -37,6 +37,8 @@
   $ hg ci -Am addaandd
   adding a
   adding d
+  $ INVALIDID1=afd12345af
+  $ INVALIDID2=28173x36ddd1e67bf7098d541130558ef5534a86
   $ CHILDID1=`hg id --debug -i`
   $ echo d >> d
   $ hg ci -Am changed
@@ -53,13 +55,31 @@
   o  0:527cdedf31fb "addaandd" files: a d
   
 
-test invalid splicemap
+test invalid splicemap1
 
   $ cat > splicemap <<EOF
   > $CHILDID2
   > EOF
   $ hg convert --splicemap splicemap repo2 repo1
   abort: syntax error in splicemap(1): child parent1[,parent2] expected
+  [255]
+
+test invalid splicemap2
+
+  $ cat > splicemap <<EOF
+  > $CHILDID2 $PARENTID1, $PARENTID2, $PARENTID2
+  > EOF
+  $ hg convert --splicemap splicemap repo2 repo1
+  abort: syntax error in splicemap(1): child parent1[,parent2] expected
+  [255]
+
+test invalid splicemap3
+
+  $ cat > splicemap <<EOF
+  > $INVALIDID1 $INVALIDID2
+  > EOF
+  $ hg convert --splicemap splicemap repo2 repo1
+  abort: splicemap entry afd12345af is not a valid revision identifier
   [255]
 
 splice repo2 on repo1

@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import base64, errno, subprocess, os, datetime
+import base64, errno, subprocess, os, datetime, re
 import cPickle as pickle
 from mercurial import util
 from mercurial.i18n import _
@@ -62,6 +62,15 @@ class converter_source(object):
         self.rev = rev
 
         self.encoding = 'utf-8'
+
+    def checkhexformat(self, revstr):
+        """ fails if revstr is not a 40 byte hex. mercurial and git both uses
+            such format for their revision numbering
+        """
+        matchobj = re.match(r'[0-9a-fA-F]{40,40}$', revstr)
+        if matchobj is None:
+            raise util.Abort(_('splicemap entry %s is not a valid revision'
+                               ' identifier') % revstr)
 
     def before(self):
         pass
@@ -163,6 +172,13 @@ class converter_source(object):
         Bookmark names are to be UTF-8 strings.
         """
         return {}
+
+    def checkrevformat(self, revstr):
+        """revstr is a string that describes a revision in the given
+           source control system.  Return true if revstr has correct
+           format.
+        """
+        return True
 
 class converter_sink(object):
     """Conversion sink (target) interface"""
