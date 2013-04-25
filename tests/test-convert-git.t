@@ -13,6 +13,10 @@
   $ GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"; export GIT_COMMITTER_NAME
   $ GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"; export GIT_COMMITTER_EMAIL
   $ GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"; export GIT_COMMITTER_DATE
+  $ INVALIDID1=afd12345af
+  $ INVALIDID2=28173x36ddd1e67bf7098d541130558ef5534a86
+  $ VALIDID1=39b3d83f9a69a9ba4ebb111461071a0af0027357
+  $ VALIDID2=8dd6476bd09d9c7776355dc454dafe38efaec5da
   $ count=10
   $ commit()
   > {
@@ -297,6 +301,36 @@ test sub modules
   $ git submodule add ${BASE} >/dev/null 2>/dev/null
   $ commit -a -m 'addsubmodule' >/dev/null 2>/dev/null
   $ cd ..
+
+test invalid splicemap1
+
+  $ cat > splicemap <<EOF
+  > $VALIDID1
+  > EOF
+  $ hg convert --splicemap splicemap git-repo2 git-repo2-splicemap1-hg
+  initializing destination git-repo2-splicemap1-hg repository
+  abort: syntax error in splicemap(1): child parent1[,parent2] expected
+  [255]
+
+test invalid splicemap2
+
+  $ cat > splicemap <<EOF
+  > $VALIDID1 $VALIDID2, $VALIDID2, $VALIDID2
+  > EOF
+  $ hg convert --splicemap splicemap git-repo2 git-repo2-splicemap2-hg
+  initializing destination git-repo2-splicemap2-hg repository
+  abort: syntax error in splicemap(1): child parent1[,parent2] expected
+  [255]
+
+test invalid splicemap3
+
+  $ cat > splicemap <<EOF
+  > $INVALIDID1 $INVALIDID2
+  > EOF
+  $ hg convert --splicemap splicemap git-repo2 git-repo2-splicemap3-hg
+  initializing destination git-repo2-splicemap3-hg repository
+  abort: splicemap entry afd12345af is not a valid revision identifier
+  [255]
 
 convert sub modules
   $ hg convert git-repo6 git-repo6-hg

@@ -296,3 +296,8 @@ class convert_git(converter_source):
                 pass
 
         return bookmarks
+
+    def checkrevformat(self, revstr):
+        """ git revision string is a 40 byte hex """
+        self.checkhexformat(revstr)
+
