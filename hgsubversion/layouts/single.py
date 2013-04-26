@@ -10,3 +10,6 @@ class SingleLayout(base.BaseLayout):
 
     def remotename(self, branch):
         return ''
+
+    def remotepath(self, branch, subdir='/'):
+        return subdir or '/'

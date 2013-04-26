@@ -16,9 +16,25 @@ class BaseLayout(object):
 
     def localname(self, path):
         """Compute the local name for a branch located at path.
+
+        path should be relative to the repo url.
+
         """
         self.__unimplemented('localname')
 
     def remotename(self, branch):
-        """Compute a subversion path for a mercurial branch name"""
+        """Compute a subversion path for a mercurial branch name
+
+        This should return a path relative to the repo url
+
+        """
         self.__unimplemented('remotename')
+
+    def remotepath(self, branch, subdir='/'):
+        """Compute a  subversion path for a mercurial branch name.
+
+        This should return an absolute path, assuming our repo root is at subdir
+        A false subdir shall be taken to mean /.
+
+        """
+        self.__unimplemented('remotepath')

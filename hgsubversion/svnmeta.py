@@ -235,17 +235,10 @@ class SVNMeta(object):
         if subdir and subdir[0] != '/':
             subdir = '/' + subdir
 
-        if self.layout == 'single':
-            path = subdir or '/'
-        else:
-            branchpath = 'trunk'
-            if branch:
-                extra['branch'] = branch
-                if branch.startswith('../'):
-                    branchpath = branch[3:]
-                else:
-                    branchpath = 'branches/%s' % branch
-            path = '%s/%s' % (subdir, branchpath)
+        path = self.layoutobj.remotepath(branch, subdir)
+
+        if branch:
+            extra['branch'] = branch
 
         extra['convert_revision'] = 'svn:%(uuid)s%(path)s@%(rev)s' % {
             'uuid': self.uuid,
