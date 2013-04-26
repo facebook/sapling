@@ -67,8 +67,7 @@ class converter_source(object):
         """ fails if revstr is not a 40 byte hex. mercurial and git both uses
             such format for their revision numbering
         """
-        matchobj = re.match(r'[0-9a-fA-F]{40,40}$', revstr)
-        if matchobj is None:
+        if not re.match(r'[0-9a-fA-F]{40,40}$', revstr):
             raise util.Abort(_('splicemap entry %s is not a valid revision'
                                ' identifier') % revstr)
 

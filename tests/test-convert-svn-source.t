@@ -16,6 +16,8 @@
 #else
   $ SVNREPOURL=file://`python -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #endif
+  $ INVALIDREVISIONID=svn:x2147622-4a9f-4db4-a8d3-13562ff547b2/proj%20B/mytrunk@1
+  $ VALIDREVISIONID=svn:a2147622-4a9f-4db4-a8d3-13562ff547b2/proj%20B/mytrunk/mytrunk@1
 
 Now test that it works with trunk/tags layout, but no branches yet.
 
@@ -168,6 +170,15 @@ Test filemap
   |
   o  0 second letter files: letter2.txt
   
+test invalid splicemap1
+
+  $ cat > splicemap <<EOF
+  > $INVALIDREVISIONID $VALIDREVISIONID
+  > EOF
+  $ hg convert --splicemap splicemap "$SVNREPOURL/proj%20B/mytrunk" smap
+  initializing destination smap repository
+  abort: splicemap entry svn:x2147622-4a9f-4db4-a8d3-13562ff547b2/proj%20B/mytrunk@1 is not a valid revision identifier
+  [255]
 
 Test stop revision
   $ hg convert --rev 1 "$SVNREPOURL/proj%20B/mytrunk" stoprev
