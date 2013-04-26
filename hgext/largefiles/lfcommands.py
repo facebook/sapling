@@ -215,20 +215,12 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                         raise util.Abort(_('largefile %s becomes symlink') % f)
 
                 # largefile was modified, update standins
-                fullpath = rdst.wjoin(f)
-                util.makedirs(os.path.dirname(fullpath))
                 m = util.sha1('')
                 m.update(ctx[f].data())
                 hash = m.hexdigest()
                 if f not in lfiletohash or lfiletohash[f] != hash:
-                    try:
-                        fd = open(fullpath, 'wb')
-                        fd.write(ctx[f].data())
-                    finally:
-                        if fd:
-                            fd.close()
+                    rdst.wwrite(f, ctx[f].data(), ctx[f].flags())
                     executable = 'x' in ctx[f].flags()
-                    os.chmod(fullpath, lfutil.getmode(executable))
                     lfutil.writestandin(rdst, lfutil.standin(f), hash,
                         executable)
                     lfiletohash[f] = hash

@@ -277,7 +277,7 @@ def readstandin(repo, filename, node=None):
 
 def writestandin(repo, standin, hash, executable):
     '''write hash to <repo.root>/<standin>'''
-    writehash(hash, repo.wjoin(standin), executable)
+    repo.wwrite(standin, hash + '\n', executable and 'x' or '')
 
 def copyandhash(instream, outfile):
     '''Read bytes from instream (iterable) and write them to outfile,
@@ -301,22 +301,11 @@ def hashfile(file):
     fd.close()
     return hasher.hexdigest()
 
-def writehash(hash, filename, executable):
-    util.makedirs(os.path.dirname(filename))
-    util.writefile(filename, hash + '\n')
-    os.chmod(filename, getmode(executable))
-
 def getexecutable(filename):
     mode = os.stat(filename).st_mode
     return ((mode & stat.S_IXUSR) and
             (mode & stat.S_IXGRP) and
             (mode & stat.S_IXOTH))
-
-def getmode(executable):
-    if executable:
-        return 0755
-    else:
-        return 0644
 
 def urljoin(first, second, *arg):
     def join(left, right):
