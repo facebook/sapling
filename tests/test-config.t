@@ -1,6 +1,8 @@
 hide outer repo
   $ hg init
 
+Test case sensitive configuration
+
   $ echo '[Section]' >> $HGRCPATH
   $ echo 'KeY = Case Sensitive' >> $HGRCPATH
   $ echo 'key = lower case' >> $HGRCPATH
