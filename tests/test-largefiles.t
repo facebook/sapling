@@ -180,34 +180,6 @@ Test moving largefiles and verify that normal files are also unaffected.
   $ cat sub/large4
   large22
 
-Test repo method wrapping detection
-
-  $ cat > $TESTTMP/wrapping1.py <<EOF
-  > from hgext import largefiles
-  > def reposetup(ui, repo):
-  >     class derived(repo.__class__):
-  >         def push(self, *args, **kwargs):
-  >             return super(derived, self).push(*args, **kwargs)
-  >     repo.__class__ = derived
-  >     largefiles.reposetup(ui, repo)
-  > uisetup = largefiles.uisetup
-  > EOF
-  $ hg --config extensions.largefiles=$TESTTMP/wrapping1.py status
-  largefiles: repo method 'push' appears to have already been wrapped by another extension: largefiles may behave incorrectly
-
-  $ cat > $TESTTMP/wrapping2.py <<EOF
-  > from hgext import largefiles
-  > def reposetup(ui, repo):
-  >     orgpush = repo.push
-  >     def push(*args, **kwargs):
-  >         return orgpush(*args, **kwargs)
-  >     repo.push = push
-  >     largefiles.reposetup(ui, repo)
-  > uisetup = largefiles.uisetup
-  > EOF
-  $ hg --config extensions.largefiles=$TESTTMP/wrapping2.py status
-  largefiles: repo method 'push' appears to have already been wrapped by another extension: largefiles may behave incorrectly
-
 Test copies and moves from a directory other than root (issue3516)
 
   $ cd ..

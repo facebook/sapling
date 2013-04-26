@@ -8,7 +8,6 @@
 
 '''setup for largefiles repositories: reposetup'''
 import copy
-import types
 import os
 
 from mercurial import context, error, manifest, match as match_, util, \
@@ -26,16 +25,6 @@ def reposetup(ui, repo):
     # other largefiles modifications
     if not repo.local():
         return proto.wirereposetup(ui, repo)
-
-    origclass = localrepo.localrepository
-    repoclass = repo.__class__
-    for name in ('status', 'commitctx', 'commit', 'push'):
-        if (getattr(origclass, name) != getattr(repoclass, name) or
-            isinstance(getattr(repo, name), types.FunctionType)):
-            ui.warn(_('largefiles: repo method %r appears to have already been'
-                    ' wrapped by another extension: '
-                    'largefiles may behave incorrectly\n')
-                    % name)
 
     class lfilesrepo(repo.__class__):
         lfstatus = False
