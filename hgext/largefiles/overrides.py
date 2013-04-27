@@ -286,7 +286,9 @@ def overrideverify(orig, ui, repo, *pats, **opts):
 def overridedebugstate(orig, ui, repo, *pats, **opts):
     large = opts.pop('large', False)
     if large:
-        lfcommands.debugdirstate(ui, repo)
+        class fakerepo(object):
+            dirstate = lfutil.openlfdirstate(ui, repo)
+        orig(ui, fakerepo, *pats, **opts)
     else:
         orig(ui, repo, *pats, **opts)
 

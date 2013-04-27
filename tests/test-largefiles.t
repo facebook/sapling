@@ -43,7 +43,7 @@ Test status and dirstate of largefiles and that summary output is correct.
   n 644         41 .hglf/sub/large2
   n 644          8 normal1
   n 644          8 sub/normal2
-  $ hg debugstate --large
+  $ hg debugstate --large --nodates
   n 644          7 large1
   n 644          7 sub/large2
   $ echo normal11 > normal1
