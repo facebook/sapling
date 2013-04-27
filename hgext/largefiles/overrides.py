@@ -1116,9 +1116,11 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
     m = scmutil.match(ctx, (file1,) + pats, opts)
     origmatchfn = m.matchfn
     def lfmatchfn(f):
+        if origmatchfn(f):
+            return True
         lf = lfutil.splitstandin(f)
         if lf is None:
-            return origmatchfn(f)
+            return False
         notbad.add(lf)
         return origmatchfn(lf)
     m.matchfn = lfmatchfn
@@ -1131,7 +1133,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         fp = cmdutil.makefileobj(repo, opts.get('output'), ctx.node(),
                                  pathname=f)
         lf = lfutil.splitstandin(f)
-        if lf is None:
+        if lf is None or origmatchfn(f):
             # duplicating unreachable code from commands.cat
             data = ctx[f].data()
             if opts.get('decode'):

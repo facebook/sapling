@@ -1506,6 +1506,12 @@ Cat a largefile
   large4-modified
   $ hg --cwd sub cat -r '.^' ../normal3
   normal3-modified
+Cat a standin
+  $ hg cat .hglf/sub/large4
+  e166e74c7303192238d60af5a9c4ce9bef0b7928
+  $ hg cat .hglf/normal3
+  .hglf/normal3: no such file in rev 598410d3eb9a
+  [1]
 
 Test that renaming a largefile results in correct output for status
 
