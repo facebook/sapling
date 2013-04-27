@@ -427,9 +427,25 @@ Strip adds, removes, modifies with --keep
   $ hg add b
   $ hg commit -mb
   $ touch c
+
+... with a clean working dir
+
   $ hg add c
   $ hg rm bar
   $ hg commit -mc
+  $ hg status
+  $ hg strip --keep tip
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
+  $ hg status
+  ! bar
+  ? c
+
+... with a dirty working dir
+
+  $ hg add c
+  $ hg rm bar
+  $ hg commit -mc
+  $ hg status
   $ echo b > b
   $ echo d > d
   $ hg strip --keep tip
