@@ -297,15 +297,15 @@ def overridedebugstate(orig, ui, repo, *pats, **opts):
 # will get the new files. Filemerge is also overridden so that the merge
 # will merge standins correctly.
 def overrideupdate(orig, ui, repo, *pats, **opts):
-    lfdirstate = lfutil.openlfdirstate(ui, repo)
-    s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [], False,
-        False, False)
-    (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
-
     # Need to lock between the standins getting updated and their
     # largefiles getting updated
     wlock = repo.wlock()
     try:
+        lfdirstate = lfutil.openlfdirstate(ui, repo)
+        s = lfdirstate.status(match_.always(repo.root, repo.getcwd()),
+            [], False, False, False)
+        (unsure, modified, added, removed, missing, unknown, ignored, clean) = s
+
         if opts['check']:
             mod = len(modified) > 0
             for lfile in unsure:
@@ -322,9 +322,9 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
         if not opts['clean']:
             for lfile in unsure + modified + added:
                 lfutil.updatestandin(repo, lfutil.standin(lfile))
+        return orig(ui, repo, *pats, **opts)
     finally:
         wlock.release()
-    return orig(ui, repo, *pats, **opts)
 
 # Before starting the manifest merge, merge.updates will call
 # _checkunknown to check if there are any files in the merged-in
