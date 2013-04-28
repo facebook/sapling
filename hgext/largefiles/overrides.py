@@ -579,8 +579,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 # Standins are only updated (to match the hash of largefiles) before
 # commits. Update the standins then run the original revert, changing
 # the matcher to hit standins instead of largefiles. Based on the
-# resulting standins update the largefiles. Then return the standins
-# to their proper state
+# resulting standins update the largefiles.
 def overriderevert(orig, ui, repo, *pats, **opts):
     # Because we put the standins in a bad state (by updating them)
     # and then return them to a correct state we need to lock to
@@ -597,8 +596,9 @@ def overriderevert(orig, ui, repo, *pats, **opts):
             if (os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
                 os.unlink(repo.wjoin(lfutil.standin(lfile)))
 
+        oldstandins = lfutil.getstandinsstate(repo)
+
         try:
-            ctx = scmutil.revsingle(repo, opts.get('rev'))
             def overridematch(ctx, pats=[], opts={}, globbed=False,
                     default='relpath'):
                 match = oldmatch(ctx, pats, opts, globbed, default)
@@ -616,50 +616,21 @@ def overriderevert(orig, ui, repo, *pats, **opts):
                 origmatchfn = m.matchfn
                 def matchfn(f):
                     if lfutil.isstandin(f):
-                        # We need to keep track of what largefiles are being
-                        # matched so we know which ones to update later --
-                        # otherwise we accidentally revert changes to other
-                        # largefiles. This is repo-specific, so duckpunch the
-                        # repo object to keep the list of largefiles for us
-                        # later.
-                        if origmatchfn(lfutil.splitstandin(f)) and \
-                                (f in repo[None] or f in ctx):
-                            lfileslist = getattr(repo, '_lfilestoupdate', [])
-                            lfileslist.append(lfutil.splitstandin(f))
-                            repo._lfilestoupdate = lfileslist
-                            return True
-                        else:
-                            return False
+                        return (origmatchfn(lfutil.splitstandin(f)) and
+                                (f in repo[None] or f in ctx))
                     return origmatchfn(f)
                 m.matchfn = matchfn
                 return m
             oldmatch = installmatchfn(overridematch)
-            scmutil.match
-            matches = overridematch(repo[None], pats, opts)
+            overridematch(repo[None], pats, opts)
             orig(ui, repo, *pats, **opts)
         finally:
             restorematchfn()
-        lfileslist = getattr(repo, '_lfilestoupdate', [])
-        lfcommands.updatelfiles(ui, repo, filelist=lfileslist,
-                                printmessage=False)
 
-        # empty out the largefiles list so we start fresh next time
-        repo._lfilestoupdate = []
-        for lfile in modified:
-            if lfile in lfileslist:
-                if os.path.exists(repo.wjoin(lfutil.standin(lfile))) and lfile\
-                        in repo['.']:
-                    lfutil.writestandin(repo, lfutil.standin(lfile),
-                        repo['.'][lfile].data().strip(),
-                        'x' in repo['.'][lfile].flags())
-        lfdirstate = lfutil.openlfdirstate(ui, repo)
-        for lfile in added:
-            standin = lfutil.standin(lfile)
-            if standin not in ctx and (standin in matches or opts.get('all')):
-                if lfile in lfdirstate:
-                    lfdirstate.drop(lfile)
-                util.unlinkpath(repo.wjoin(standin))
-        lfdirstate.write()
+        newstandins = lfutil.getstandinsstate(repo)
+        filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)
+        lfcommands.updatelfiles(ui, repo, filelist, printmessage=False)
+
     finally:
         wlock.release()
 
