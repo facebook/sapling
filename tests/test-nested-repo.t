@@ -8,6 +8,9 @@ Should print nothing:
   $ hg add b
   $ hg st
 
+  $ echo y > b/y
+  $ hg st
+
 Should fail:
 
   $ hg st b/x
