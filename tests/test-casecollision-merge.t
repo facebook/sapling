@@ -20,34 +20,23 @@ this is also case for issue3370.
   $ hg rename a tmp
   $ hg rename tmp A
   $ hg commit -m '#1'
-  $ hg update 0
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo 'modified at #2' > a
+  $ hg update -q 0
+  $ touch x
+  $ hg add x
   $ hg commit -m '#2'
   created new head
 
-  $ hg merge
-  merging a and A to A
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  $ hg merge -q
   $ hg status -A
   M A
-    a
   R a
-  $ cat A
-  modified at #2
+  C x
 
-  $ hg update --clean 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge
-  merging A and a to A
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  $ hg update -q --clean 1
+  $ hg merge -q
   $ hg status -A
-  M A
-    a
-  $ cat A
-  modified at #2
+  M x
+  C A
 
   $ cd ..
 
