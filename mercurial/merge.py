@@ -455,8 +455,10 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     numupdates = len(actions)
     workeractions = [a for a in actions if a[1] in 'gr']
-    updated = len([a for a in workeractions if a[1] == 'g'])
-    removed = len([a for a in workeractions if a[1] == 'r'])
+    updateactions = [a for a in workeractions if a[1] == 'g']
+    updated = len(updateactions)
+    removeactions = [a for a in workeractions if a[1] == 'r']
+    removed = len(removeactions)
     actions = [a for a in actions if a[1] not in 'gr']
 
     hgsub = [a[1] for a in workeractions if a[0] == '.hgsubstate']
@@ -465,7 +467,13 @@ def applyupdates(repo, actions, wctx, mctx, actx, overwrite):
 
     z = 0
     prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
-                         workeractions)
+                         removeactions)
+    for i, item in prog:
+        z += i
+        repo.ui.progress(_('updating'), z, item=item, total=numupdates,
+                         unit=_('files'))
+    prog = worker.worker(repo.ui, 0.001, getremove, (repo, mctx, overwrite),
+                         updateactions)
     for i, item in prog:
         z += i
         repo.ui.progress(_('updating'), z, item=item, total=numupdates,

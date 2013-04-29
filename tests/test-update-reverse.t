@@ -73,6 +73,7 @@
    main: remote created -> g
   removing side1
   removing side2
+  updating: side2 2/3 files (66.67%)
   getting main
   updating: main 3/3 files (100.00%)
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved

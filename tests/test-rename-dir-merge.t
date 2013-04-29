@@ -46,6 +46,7 @@
    b/b: remote created -> g
   removing a/a
   removing a/b
+  updating: a/b 2/5 files (40.00%)
   getting b/a
   getting b/b
   updating: b/b 4/5 files (80.00%)

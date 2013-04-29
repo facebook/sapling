@@ -290,6 +290,7 @@ $4 = expected result
    rev: versions differ -> m
     preserving rev for resolve of rev
   removing a
+  updating: a 1/3 files (33.33%)
   getting b
   updating: b 2/3 files (66.67%)
   updating: rev 3/3 files (100.00%)
