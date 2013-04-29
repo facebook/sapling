@@ -344,7 +344,7 @@ def _roots(patterns):
             r.append('/'.join(root) or '.')
         elif kind in ('relpath', 'path'):
             r.append(name or '.')
-        elif kind == 'relglob':
+        else: # relglob, re, relre
             r.append('.')
     return r
 

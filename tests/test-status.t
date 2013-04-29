@@ -100,6 +100,13 @@ hg status . in repo root:
   ? ../1/in_b_1
   ? in_b_2
   ? ../in_b
+
+combining patterns with root and patterns without a root works
+
+  $ hg st a/in_a re:.*b$
+  ? a/in_a
+  ? b/in_b
+
   $ cd ..
 
   $ hg init repo2
