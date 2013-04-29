@@ -1145,7 +1145,7 @@ class localrepository(object):
 
         if not force:
             vdirs = []
-            match.dir = vdirs.append
+            match.explicitdir = vdirs.append
             match.bad = fail
 
         wlock = self.wlock()
