@@ -97,7 +97,7 @@ def purge(ui, repo, *dirs, **opts):
 
     directories = []
     match = scmutil.match(repo[None], dirs, opts)
-    match.dir = directories.append
+    match.explicitdir = match.traversedir = directories.append
     status = repo.status(match=match, ignored=opts['all'], unknown=True)
 
     for f in sorted(status[4] + status[5]):
