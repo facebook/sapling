@@ -374,10 +374,9 @@ def genignore(ui, repo, force=False, **opts):
     hashes = meta.revmap.hashes()
     parent = util.parentrev(ui, repo, meta, hashes)
     r, br = hashes[parent.node()]
-    if meta.layout == 'single':
-        branchpath = ''
-    else:
-        branchpath = br and ('branches/%s/' % br) or 'trunk/'
+    branchpath = meta.layoutobj.remotename(br)
+    if branchpath:
+        branchpath += '/'
     ignorelines = ['.hgignore', 'syntax:glob']
     dirs = [''] + [d[0] for d in svn.list_files(branchpath, r)
                    if d[1] == 'd']
