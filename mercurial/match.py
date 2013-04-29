@@ -119,12 +119,10 @@ class match(object):
         found/accessed, with an error message
         '''
         pass
-    def dir(self, f):
-        pass
     def explicitdir(self, f):
-        self.dir(f)
+        pass
     def traversedir(self, f):
-        self.dir(f)
+        pass
     def missing(self, f):
         pass
     def exact(self, f):
