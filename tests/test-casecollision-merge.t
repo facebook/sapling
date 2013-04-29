@@ -17,14 +17,17 @@ this is also case for issue3370.
   $ echo a > a
   $ hg add a
   $ hg commit -m '#0'
+  $ hg tag -l A
   $ hg rename a tmp
   $ hg rename tmp A
   $ hg commit -m '#1'
+  $ hg tag -l B
   $ hg update -q 0
   $ touch x
   $ hg add x
   $ hg commit -m '#2'
   created new head
+  $ hg tag -l C
 
   $ hg merge -q
   $ hg status -A
@@ -37,6 +40,46 @@ this is also case for issue3370.
   $ hg status -A
   M x
   C A
+  $ hg commit -m '(D)'
+  $ hg tag -l D
+
+additional test for issue3452:
+
+| this assumes the history below.
+|
+|  (A) -- (C) -- (E) -------
+|      \      \             \
+|       \      \             \
+|         (B) -- (D) -- (F) -- (G)
+|
+|   A: add file 'a'
+|   B: rename from 'a' to 'A'
+|   C: add 'x' (or operation other than modification of 'a')
+|   D: merge C into B
+|   E: modify 'a'
+|   F: modify 'A'
+|   G: merge E into F
+|
+| issue3452 occurs when (B) is recorded before (C)
+
+  $ hg update -q --clean C
+  $ echo "modify 'a' at (E)" > a
+  $ hg commit -m '(E)'
+  created new head
+  $ hg tag -l E
+
+  $ hg update -q --clean D
+  $ echo "modify 'A' at (F)" > A
+  $ hg commit -m '(F)'
+  $ hg tag -l F
+
+  $ hg merge -q --tool internal:other E
+  $ hg status -A
+  M A
+    a
+  C x
+  $ cat A
+  modify 'a' at (E)
 
   $ cd ..
 
@@ -63,7 +106,7 @@ this is also case for issue3370.
   $ hg commit -m '#4'
 
   $ hg merge
-  abort: case-folding collision between A and a
+  abort: case-folding collision between a and A
   [255]
   $ hg parents --template '{rev}\n'
   4

@@ -110,54 +110,6 @@ def _checkunknown(repo, wctx, mctx):
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
 
-def _remains(f, m, ma, workingctx=False):
-    """check whether specified file remains after merge.
-
-    It is assumed that specified file is not contained in the manifest
-    of the other context.
-    """
-    if f in ma:
-        n = m[f]
-        if n != ma[f]:
-            return True # because it is changed locally
-            # even though it doesn't remain, if "remote deleted" is
-            # chosen in manifestmerge()
-        elif workingctx and n[20:] == "a":
-            return True # because it is added locally (linear merge specific)
-        else:
-            return False # because it is removed remotely
-    else:
-        return True # because it is added locally
-
-def _checkcollision(mctx, extractxs):
-    "check for case folding collisions in the destination context"
-    folded = {}
-    for fn in mctx:
-        fold = util.normcase(fn)
-        if fold in folded:
-            raise util.Abort(_("case-folding collision between %s and %s")
-                             % (fn, folded[fold]))
-        folded[fold] = fn
-
-    if extractxs:
-        wctx, actx = extractxs
-        # class to delay looking up copy mapping
-        class pathcopies(object):
-            @util.propertycache
-            def map(self):
-                # {dst@mctx: src@wctx} copy mapping
-                return copies.pathcopies(wctx, mctx)
-        pc = pathcopies()
-
-        for fn in wctx:
-            fold = util.normcase(fn)
-            mfn = folded.get(fold, None)
-            if (mfn and mfn != fn and pc.map.get(mfn) != fn and
-                _remains(fn, wctx.manifest(), actx.manifest(), True) and
-                _remains(mfn, mctx.manifest(), actx.manifest())):
-                raise util.Abort(_("case-folding collision between %s and %s")
-                                 % (mfn, fn))
-
 def _forgetremoved(wctx, mctx, branchmerge):
     """
     Forget removed files
@@ -185,6 +137,62 @@ def _forgetremoved(wctx, mctx, branchmerge):
                 actions.append((f, "f", None, "forget removed"))
 
     return actions
+
+def _checkcollision(repo, wmf, actions, prompts):
+    # build provisional merged manifest up
+    pmmf = set(wmf)
+
+    def addop(f, args):
+        pmmf.add(f)
+    def removeop(f, args):
+        pmmf.discard(f)
+    def nop(f, args):
+        pass
+
+    def renameop(f, args):
+        f2, fd, flags = args
+        if f:
+            pmmf.discard(f)
+        pmmf.add(fd)
+    def mergeop(f, args):
+        f2, fd, move = args
+        if move:
+            pmmf.discard(f)
+        pmmf.add(fd)
+
+    opmap = {
+        "a": addop,
+        "d": renameop,
+        "dr": nop,
+        "e": nop,
+        "f": addop, # untracked file should be kept in working directory
+        "g": addop,
+        "m": mergeop,
+        "r": removeop,
+        "rd": nop,
+    }
+    for f, m, args, msg in actions:
+        op = opmap.get(m)
+        assert op, m
+        op(f, args)
+
+    opmap = {
+        "cd": addop,
+        "dc": addop,
+    }
+    for f, m in prompts:
+        op = opmap.get(m)
+        assert op, m
+        op(f, None)
+
+    # check case-folding collision in provisional merged manifest
+    foldmap = {}
+    for f in sorted(pmmf):
+        fold = util.normcase(f)
+        if fold in foldmap:
+            raise util.Abort(_("case-folding collision between %s and %s")
+                             % (f, foldmap[fold]))
+        foldmap[fold] = f
 
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                   acceptremote=False):
@@ -341,6 +349,14 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     if aborts:
         raise util.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
+
+    if not util.checkcase(repo.path):
+        # check collision between files only in p2 for clean update
+        if (not branchmerge and
+            (force or not wctx.dirty(missing=True, branch=False))):
+            _checkcollision(repo, m2, [], [])
+        else:
+            _checkcollision(repo, m1, actions, prompts)
 
     for f, m in sorted(prompts):
         if m == "cd":
@@ -541,14 +557,6 @@ def calculateupdates(repo, tctx, mctx, ancestor, branchmerge, force, partial,
                      acceptremote=False):
     "Calculate the actions needed to merge mctx into tctx"
     actions = []
-    folding = not util.checkcase(repo.path)
-    if folding:
-        # collision check is not needed for clean update
-        if (not branchmerge and
-            (force or not tctx.dirty(missing=True, branch=False))):
-            _checkcollision(mctx, None)
-        else:
-            _checkcollision(mctx, (tctx, ancestor))
     actions += manifestmerge(repo, tctx, mctx,
                              ancestor,
                              branchmerge, force,
