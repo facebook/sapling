@@ -159,7 +159,7 @@ class client(object):
             vdirs = cs.read(nbytes)
             if vdirs:
                 for vdir in vdirs.split('\0'):
-                    match.dir(vdir)
+                    match.explicitdir(vdir)
 
         return results
 
