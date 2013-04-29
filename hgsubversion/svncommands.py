@@ -413,17 +413,8 @@ def info(ui, repo, **opts):
         return 0
     r, br = hashes[pn]
     subdir = util.getsvnrev(parent)[40:].split('@')[0]
-    if meta.layout == 'single':
-        branchpath = ''
-    elif br == None:
-        branchpath = '/trunk'
-    elif br.startswith('../'):
-        branchpath = '/%s' % br[3:]
-        subdir = subdir.replace('branches/../', '')
-    else:
-        branchpath = '/branches/%s' % br
     remoterepo = svnrepo.svnremoterepo(repo.ui)
-    url = '%s%s' % (remoterepo.svnurl, branchpath)
+    url = meta.layoutobj.remotepath(br, remoterepo.svnurl)
     author = meta.authors.reverselookup(parent.user())
     # cleverly figure out repo root w/o actually contacting the server
     reporoot = url[:len(url)-len(subdir)]
