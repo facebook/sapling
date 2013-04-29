@@ -485,6 +485,18 @@ def _earlygetopt(aliases, args):
 
     The values are listed in the order they appear in args.
     The options and values are removed from args.
+
+    >>> args = ['x', '--cwd', 'foo', 'y']
+    >>> _earlygetopt(['--cwd'], args), args
+    (['foo'], ['x', 'y'])
+
+    >>> args = ['x', '-R', 'foo', 'y']
+    >>> _earlygetopt(['-R'], args), args
+    (['foo'], ['x', 'y'])
+
+    >>> args = ['x', '-Rbar', 'y']
+    >>> _earlygetopt(['-R'], args), args
+    (['bar'], ['x', 'y'])
     """
     try:
         argcount = args.index("--")

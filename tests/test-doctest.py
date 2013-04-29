@@ -27,6 +27,9 @@ doctest.testmod(mercurial.ui)
 import mercurial.url
 doctest.testmod(mercurial.url)
 
+import mercurial.dispatch
+doctest.testmod(mercurial.dispatch)
+
 import mercurial.encoding
 doctest.testmod(mercurial.encoding)
 
