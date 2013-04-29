@@ -99,12 +99,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     file_data = {}
     parent = rev_ctx.parents()[0]
     parent_branch = rev_ctx.parents()[0].branch()
-    branch_path = 'trunk'
-
-    if meta.layout == 'single':
-        branch_path = ''
-    elif parent_branch and parent_branch != 'default':
-        branch_path = 'branches/%s' % parent_branch
+    branch_path = meta.layoutobj.remotename(parent_branch)
 
     extchanges = svnexternals.diff(svnexternals.parse(ui, parent),
                                    svnexternals.parse(ui, rev_ctx))
@@ -139,7 +134,7 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                     copies[file] = renamed[0]
                     base_data = parent[renamed[0]].data()
                 else:
-                    autoprops = svn.autoprops_config.properties(file) 
+                    autoprops = svn.autoprops_config.properties(file)
                     if autoprops:
                         props.setdefault(file, {}).update(autoprops)
 
