@@ -1762,6 +1762,9 @@ class localrepository(object):
         if not remote.canpush():
             raise util.Abort(_("destination does not support push"))
         unfi = self.unfiltered()
+        def localphasemove(nodes, phase=phases.public):
+            """move <nodes> to <phase> in the local source repo"""
+            phases.advanceboundary(self, phase, nodes)
         # get local lock as we might write phase data
         locallock = self.lock()
         try:
@@ -1883,17 +1886,17 @@ class localrepository(object):
                     # on the remote.
                     remotephases = {'publishing': 'True'}
                 if not remotephases: # old server or public only repo
-                    phases.advanceboundary(self, phases.public, cheads)
+                    localphasemove(cheads)
                     # don't push any phase data as there is nothing to push
                 else:
                     ana = phases.analyzeremotephases(self, cheads, remotephases)
                     pheads, droots = ana
                     ### Apply remote phase on local
                     if remotephases.get('publishing', False):
-                        phases.advanceboundary(self, phases.public, cheads)
+                        localphasemove(cheads)
                     else: # publish = False
-                        phases.advanceboundary(self, phases.public, pheads)
-                        phases.advanceboundary(self, phases.draft, cheads)
+                        localphasemove(pheads)
+                        localphasemove(cheads, phases.draft)
                     ### Apply local phase on remote
 
                     # Get the list of all revs draft on remote by public here.
