@@ -381,4 +381,26 @@ to remove a tag of type X which actually only exists as a type Y:
   localtag                           0:bbd179dfa0a7 local
   globaltag                          0:bbd179dfa0a7
 
+Test for issue3911
+
+  $ hg tag -r 0 -l localtag2
+  $ hg tag -l --remove localtag2
+  $ hg tags -v
+  tip                                1:a0b6fe111088
+  localtag                           0:bbd179dfa0a7 local
+  globaltag                          0:bbd179dfa0a7
+
+  $ hg tag -r 1 -f localtag
+  $ hg tags -v
+  tip                                2:5c70a037bb37
+  localtag                           1:a0b6fe111088
+  globaltag                          0:bbd179dfa0a7
+
+  $ hg tag -r 1 localtag2
+  $ hg tags -v
+  tip                                3:bbfb8cd42be2
+  localtag2                          1:a0b6fe111088
+  localtag                           1:a0b6fe111088
+  globaltag                          0:bbd179dfa0a7
+
   $ cd ..
