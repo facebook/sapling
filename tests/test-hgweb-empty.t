@@ -70,7 +70,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/shortlog/-1?revcount=30">less</a>
   <a href="/shortlog/-1?revcount=120">more</a>
-  | rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+  | rev -1: 
   </div>
   
   <table class="bigtable">
@@ -85,7 +85,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/shortlog/-1?revcount=30">less</a>
   <a href="/shortlog/-1?revcount=120">more</a>
-  | rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+  | rev -1: 
   </div>
   
   </div>
@@ -97,6 +97,8 @@ Some tests for hgweb in an empty repository
   </body>
   </html>
   
+  $ echo babar
+  babar
   $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log')
   200 Script output follows
   
@@ -161,7 +163,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/shortlog/-1?revcount=5">less</a>
   <a href="/shortlog/-1?revcount=20">more</a>
-  | rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+  | rev -1: 
   </div>
   
   <table class="bigtable">
@@ -176,7 +178,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/shortlog/-1?revcount=5">less</a>
   <a href="/shortlog/-1?revcount=20">more</a>
-  | rev -1: <a href="/shortlog/000000000000">(0)</a> <a href="/shortlog/tip">tip</a> 
+  | rev -1: 
   </div>
   
   </div>
@@ -250,7 +252,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/graph/-1?revcount=30">less</a>
   <a href="/graph/-1?revcount=120">more</a>
-  | rev -1: <a href="/graph/000000000000">(0)</a> <a href="/graph/tip">tip</a> 
+  | rev -1: 
   </div>
   
   <noscript><p>The revision graph only works with JavaScript-enabled browsers.</p></noscript>
@@ -320,7 +322,7 @@ Some tests for hgweb in an empty repository
   <div class="navigate">
   <a href="/graph/-1?revcount=30">less</a>
   <a href="/graph/-1?revcount=120">more</a>
-  | rev -1: <a href="/graph/000000000000">(0)</a> <a href="/graph/tip">tip</a> 
+  | rev -1: 
   </div>
   
   </div>

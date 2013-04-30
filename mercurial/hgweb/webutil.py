@@ -51,11 +51,7 @@ class revnav(object):
 
     def __nonzero__(self):
         """return True if any revision to navigate over"""
-        try:
-            self._revlog.node(0)
-            return True
-        except error.RepoError:
-            return False
+        return bool(len(self._revlog))
 
     def hex(self, rev):
         return hex(self._revlog.node(rev))
