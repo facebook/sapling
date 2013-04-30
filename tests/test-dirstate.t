@@ -55,8 +55,9 @@ Status must not set a's entry to unset (issue1790):
 
 Test modulo storage/comparison of absurd dates:
 
+#if no-aix
   $ touch -t 195001011200 a
   $ hg st
   $ hg debugstate
   n 644          2 2018-01-19 15:14:08 a
-
+#endif

@@ -274,6 +274,9 @@ def has_tic():
 def has_msys():
     return os.getenv('MSYSTEM')
 
+def has_aix():
+    return sys.platform.startswith("aix")
+
 checks = {
     "true": (lambda: True, "yak shaving"),
     "false": (lambda: False, "nail clipper"),
@@ -314,4 +317,5 @@ checks = {
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
     "windows": (has_windows, "Windows"),
     "msys": (has_msys, "Windows with MSYS"),
+    "aix": (has_aix, "AIX"),
 }
