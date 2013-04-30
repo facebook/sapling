@@ -1764,9 +1764,29 @@ class localrepository(object):
         unfi = self.unfiltered()
         def localphasemove(nodes, phase=phases.public):
             """move <nodes> to <phase> in the local source repo"""
-            phases.advanceboundary(self, phase, nodes)
+            if locallock is not None:
+                phases.advanceboundary(self, phase, nodes)
+            else:
+                # repo is not locked, do not change any phases!
+                # Informs the user that phases should have been moved when
+                # applicable.
+                actualmoves = [n for n in nodes if phase < self[n].phase()]
+                phasestr = phases.phasenames[phase]
+                if actualmoves:
+                    self.ui.status(_('cannot lock source repo, skipping local'
+                                     ' %s phase update\n') % phasestr)
         # get local lock as we might write phase data
-        locallock = self.lock()
+        locallock = None
+        try:
+            locallock = self.lock()
+        except IOError, err:
+            if err.errno != errno.EACCES:
+                raise
+            # source repo cannot be locked.
+            # We do not abort the push, but just disable the local phase
+            # synchronisation.
+            msg = 'cannot lock source repository: %s\n' % err
+            self.ui.debug(msg)
         try:
             self.checkpush(force, revs)
             lock = None
@@ -1918,7 +1938,8 @@ class localrepository(object):
                 if lock is not None:
                     lock.release()
         finally:
-            locallock.release()
+            if locallock is not None:
+                locallock.release()
 
         self.ui.debug("checking for updated bookmarks\n")
         rb = remote.listkeys('bookmarks')
