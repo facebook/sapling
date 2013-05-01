@@ -816,6 +816,11 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
                     return
                 anc = repo.changelog.ancestors([repo[target].rev()])
                 bmctx = repo[marks[mark]]
+                divs = [repo[b].node() for b in marks
+                        if b.split('@', 1)[0] == mark.split('@', 1)[0]]
+                deletefrom = [b for b in divs
+                              if repo[b].rev() in anc or b == target]
+                bookmarks.deletedivergent(repo, deletefrom, mark)
                 if bmctx.rev() in anc:
                     ui.status(_("moving bookmark '%s' forward from %s\n") %
                               (mark, short(bmctx.node())))

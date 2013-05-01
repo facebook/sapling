@@ -590,3 +590,24 @@ tipmost surviving ancestor of the stripped revision.
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0
   
+
+test clearing divergent bookmarks of linear ancestors
+
+  $ hg bookmark Z -r 0
+  $ hg bookmark Z@1 -r 1
+  $ hg bookmark Z@2 -r 2
+  $ hg bookmark Z@3 -r 3
+  $ hg book
+     Z                         0:f7b1eb17ad24
+     Z@1                       1:925d80f479bb
+     Z@2                       2:db815d6d32e6
+   * Z@3                       3:9ba5f110a0b3
+     four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6
+  $ hg bookmark Z
+  moving bookmark 'Z' forward from f7b1eb17ad24
+  $ hg book
+   * Z                         3:9ba5f110a0b3
+     Z@1                       1:925d80f479bb
+     four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6
