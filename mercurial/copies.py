@@ -222,65 +222,8 @@ def mergecopies(repo, c1, c2, ca):
     fullcopy = {}
     diverge = {}
 
-    def related(f1, f2, limit):
-        # Walk back to common ancestor to see if the two files originate
-        # from the same file. Since workingfilectx's rev() is None it messes
-        # up the integer comparison logic, hence the pre-step check for
-        # None (f1 and f2 can only be workingfilectx's initially).
-
-        if f1 == f2:
-            return f1 # a match
-
-        g1, g2 = f1.ancestors(), f2.ancestors()
-        try:
-            f1r, f2r = f1.rev(), f2.rev()
-
-            if f1r is None:
-                f1 = g1.next()
-            if f2r is None:
-                f2 = g2.next()
-
-            while True:
-                f1r, f2r = f1.rev(), f2.rev()
-                if f1r > f2r:
-                    f1 = g1.next()
-                elif f2r > f1r:
-                    f2 = g2.next()
-                elif f1 == f2:
-                    return f1 # a match
-                elif f1r == f2r or f1r < limit or f2r < limit:
-                    return False # copy no longer relevant
-        except StopIteration:
-            return False
-
-    def checkcopies(f, m1, m2):
-        '''check possible copies of f from m1 to m2'''
-        of = None
-        seen = set([f])
-        for oc in ctx(f, m1[f]).ancestors():
-            ocr = oc.rev()
-            of = oc.path()
-            if of in seen:
-                # check limit late - grab last rename before
-                if ocr < limit:
-                    break
-                continue
-            seen.add(of)
-
-            fullcopy[f] = of # remember for dir rename detection
-            if of not in m2:
-                continue # no match, keep looking
-            if m2[of] == ma.get(of):
-                break # no merge needed, quit early
-            c2 = ctx(of, m2[of])
-            cr = related(oc, c2, ca.rev())
-            if cr and (of == f or of == c2.path()): # non-divergent
-                copy[f] = of
-                of = None
-                break
-
-        if of in ma:
-            diverge.setdefault(of, []).append(f)
+    def _checkcopies(f, m1, m2):
+        checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
 
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
@@ -295,9 +238,9 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(u2))
 
     for f in u1:
-        checkcopies(f, m1, m2)
+        _checkcopies(f, m1, m2)
     for f in u2:
-        checkcopies(f, m2, m1)
+        _checkcopies(f, m2, m1)
 
     renamedelete = {}
     renamedelete2 = set()
@@ -386,3 +329,78 @@ def mergecopies(repo, c1, c2, ca):
                     break
 
     return copy, movewithdir, diverge, renamedelete
+
+def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+    """
+    check possible copies of f from m1 to m2
+
+    ctx = function accepting (filename, node) that returns a filectx.
+    f = the filename to check
+    m1 = the source manifest
+    m2 = the destination manifest
+    ca = the changectx of the common ancestor
+    limit = the rev number to not search beyond
+    diverge = record all diverges in this dict
+    copy = record all non-divergent copies in this dict
+    fullcopy = record all copies in this dict
+    """
+
+    ma = ca.manifest()
+
+    def _related(f1, f2, limit):
+        # Walk back to common ancestor to see if the two files originate
+        # from the same file. Since workingfilectx's rev() is None it messes
+        # up the integer comparison logic, hence the pre-step check for
+        # None (f1 and f2 can only be workingfilectx's initially).
+
+        if f1 == f2:
+            return f1 # a match
+
+        g1, g2 = f1.ancestors(), f2.ancestors()
+        try:
+            f1r, f2r = f1.rev(), f2.rev()
+
+            if f1r is None:
+                f1 = g1.next()
+            if f2r is None:
+                f2 = g2.next()
+
+            while True:
+                f1r, f2r = f1.rev(), f2.rev()
+                if f1r > f2r:
+                    f1 = g1.next()
+                elif f2r > f1r:
+                    f2 = g2.next()
+                elif f1 == f2:
+                    return f1 # a match
+                elif f1r == f2r or f1r < limit or f2r < limit:
+                    return False # copy no longer relevant
+        except StopIteration:
+            return False
+
+    of = None
+    seen = set([f])
+    for oc in ctx(f, m1[f]).ancestors():
+        ocr = oc.rev()
+        of = oc.path()
+        if of in seen:
+            # check limit late - grab last rename before
+            if ocr < limit:
+                break
+            continue
+        seen.add(of)
+
+        fullcopy[f] = of # remember for dir rename detection
+        if of not in m2:
+            continue # no match, keep looking
+        if m2[of] == ma.get(of):
+            break # no merge needed, quit early
+        c2 = ctx(of, m2[of])
+        cr = _related(oc, c2, ca.rev())
+        if cr and (of == f or of == c2.path()): # non-divergent
+            copy[f] = of
+            of = None
+            break
+
+    if of in ma:
+        diverge.setdefault(of, []).append(f)
