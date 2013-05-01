@@ -171,6 +171,7 @@ def deletedivergent(repo, deletefrom, bm):
     return deleted
 
 def update(repo, parents, node):
+    deletefrom = parents
     marks = repo._bookmarks
     update = False
     cur = repo._bookmarkcurrent
@@ -180,11 +181,15 @@ def update(repo, parents, node):
     if marks[cur] in parents:
         old = repo[marks[cur]]
         new = repo[node]
+        divs = [repo[b] for b in marks
+                if b.split('@', 1)[0] == cur.split('@', 1)[0]]
+        anc = repo.changelog.ancestors([new.rev()])
+        deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
         if old.descendant(new):
             marks[cur] = new.node()
             update = True
 
-    if deletedivergent(repo, parents, cur):
+    if deletedivergent(repo, deletefrom, cur):
         update = True
 
     if update:
