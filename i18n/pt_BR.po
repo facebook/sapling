@@ -5321,11 +5321,11 @@ msgstr "não é possível obter o arquivo localmente"
 
 #, python-format
 msgid "changeset %s: %s references missing %s\n"
-msgstr ""
+msgstr "revisão %s: %s referencia %s faltando\n"
 
 #, python-format
 msgid "changeset %s: %s references corrupted %s\n"
-msgstr ""
+msgstr "revisão %s: %s referencia %s corrompido\n"
 
 #, python-format
 msgid "%s already a largefile\n"
@@ -5509,14 +5509,6 @@ msgstr "revisão %s: %s: o conteúdo está diferente\n"
 #, python-format
 msgid "changeset %s: %s missing\n"
 msgstr "revisão %s: %s faltando\n"
-
-#, python-format
-msgid ""
-"largefiles: repo method %r appears to have already been wrapped by another "
-"extension: largefiles may behave incorrectly\n"
-msgstr ""
-"largefiles: o método %r do repositório parece já ter sido sobreposto\n"
-"por uma outra extensão: largefiles pode se comportar incorretamente\n"
 
 #, python-format
 msgid "file \"%s\" is a largefile standin"
@@ -22957,6 +22949,12 @@ msgstr ""
 
 msgid "destination does not support push"
 msgstr "o destino não suporta push"
+
+#, python-format
+msgid "cannot lock source repo, skipping local %s phase update\n"
+msgstr ""
+"não é possível travar o repositório de origem, a mudança local para fase "
+"'%s' não será feita\n"
 
 #, python-format
 msgid "push includes obsolete changeset: %s!"
