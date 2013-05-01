@@ -31,7 +31,7 @@ def _packmeta(meta, keys=None):
 
 class filelog(revlog.revlog):
     def __init__(self, opener, path):
-        revlog.revlog.__init__(self, opener,
+        super(filelog, self).__init__(opener,
                         "/".join(("data", path + ".i")))
 
     def read(self, node):
@@ -64,7 +64,7 @@ class filelog(revlog.revlog):
             return len(self.read(node))
 
         # XXX if self.read(node).startswith("\1\n"), this returns (size+4)
-        return revlog.revlog.size(self, rev)
+        return super(filelog, self).size(rev)
 
     def cmp(self, node, text):
         """compare text with a given file revision
@@ -76,7 +76,7 @@ class filelog(revlog.revlog):
         if text.startswith('\1\n'):
             t = '\1\n\1\n' + text
 
-        samehashes = not revlog.revlog.cmp(self, node, t)
+        samehashes = not super(filelog, self).cmp(node, t)
         if samehashes:
             return False
 
