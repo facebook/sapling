@@ -157,6 +157,7 @@ list bookmarks
 bookmarks from a revset
   $ hg bookmark -r '.^1' REVSET
   $ hg bookmark -r ':tip' TIP
+  $ hg up -q TIP
   $ hg bookmarks
      REVSET                    0:f7b1eb17ad24
    * TIP                       2:db815d6d32e6
@@ -601,8 +602,8 @@ test clearing divergent bookmarks of linear ancestors
      Z                         0:f7b1eb17ad24
      Z@1                       1:925d80f479bb
      Z@2                       2:db815d6d32e6
-   * Z@3                       3:9ba5f110a0b3
-     four                      3:9ba5f110a0b3
+     Z@3                       3:9ba5f110a0b3
+   * four                      3:9ba5f110a0b3
      should-end-on-two         2:db815d6d32e6
   $ hg bookmark Z
   moving bookmark 'Z' forward from f7b1eb17ad24
@@ -620,9 +621,9 @@ test clearing only a single divergent bookmark across branches
   $ hg book foo@3 -r 3
   $ hg book foo -r foo@3
   $ hg book
-     Z                         3:9ba5f110a0b3
+   * Z                         3:9ba5f110a0b3
      Z@1                       1:925d80f479bb
-   * foo                       3:9ba5f110a0b3
+     foo                       3:9ba5f110a0b3
      foo@1                     0:f7b1eb17ad24
      foo@2                     2:db815d6d32e6
      four                      3:9ba5f110a0b3

@@ -880,7 +880,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
             tgt = scmutil.revsingle(repo, rev).node()
         checkconflict(repo, mark, force, tgt)
         marks[mark] = tgt
-        if not inactive and cur == marks[mark]:
+        if not inactive and cur == marks[mark] and not rev:
             bookmarks.setcurrent(repo, mark)
         elif cur != tgt and mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)

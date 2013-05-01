@@ -91,14 +91,19 @@ update to tip
   $ hg update tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-set bookmark Y using -r .
+set bookmark Y using -r . but make sure that the active
+bookmark is not activated
 
   $ hg bookmark -r . Y
 
-list bookmarks
+list bookmarks, Y should not be active
 
   $ hg bookmark
-   * Y                         0:719295282060
+     Y                         0:719295282060
+
+now, activate Y
+
+  $ hg up -q Y
 
 set bookmark Z using -i
 
