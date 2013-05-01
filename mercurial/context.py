@@ -398,7 +398,7 @@ class filectx(object):
                 ("bad args: changeid=%r, fileid=%r, changectx=%r"
                  % (changeid, fileid, changectx))
 
-        if filelog:
+        if filelog is not None:
             self._filelog = filelog
 
         if changeid is not None:
@@ -437,7 +437,9 @@ class filectx(object):
 
     @propertycache
     def _changeid(self):
-        if '_changectx' in self.__dict__:
+        if '_changeid' in self.__dict__:
+            return self._changeid
+        elif '_changectx' in self.__dict__:
             return self._changectx.rev()
         else:
             return self._filelog.linkrev(self._filerev)
@@ -1167,7 +1169,7 @@ class workingfilectx(filectx):
         self._changeid = None
         self._filerev = self._filenode = None
 
-        if filelog:
+        if filelog is not None:
             self._filelog = filelog
         if workingctx:
             self._changectx = workingctx
