@@ -611,3 +611,19 @@ test clearing divergent bookmarks of linear ancestors
      Z@1                       1:925d80f479bb
      four                      3:9ba5f110a0b3
      should-end-on-two         2:db815d6d32e6
+
+test clearing only a single divergent bookmark across branches
+
+  $ hg book foo -r 1
+  $ hg book foo@1 -r 0
+  $ hg book foo@2 -r 2
+  $ hg book foo@3 -r 3
+  $ hg book foo -r foo@3
+  $ hg book
+     Z                         3:9ba5f110a0b3
+     Z@1                       1:925d80f479bb
+   * foo                       3:9ba5f110a0b3
+     foo@1                     0:f7b1eb17ad24
+     foo@2                     2:db815d6d32e6
+     four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6

@@ -818,6 +818,14 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
                 bmctx = repo[marks[mark]]
                 divs = [repo[b].node() for b in marks
                         if b.split('@', 1)[0] == mark.split('@', 1)[0]]
+
+                # allow resolving a single divergent bookmark even if moving
+                # the bookmark across branches when a revision is specified
+                # that contains a divergent bookmark
+                if bmctx.rev() not in anc and target in divs:
+                    bookmarks.deletedivergent(repo, [target], mark)
+                    return
+
                 deletefrom = [b for b in divs
                               if repo[b].rev() in anc or b == target]
                 bookmarks.deletedivergent(repo, deletefrom, mark)
