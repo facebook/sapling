@@ -1062,6 +1062,7 @@ A. Clone without secret changeset
   |
   o  0 public a-A - 054250a37db4
   
+#if unix-permissions
 
 Pushing From an unlockable repo
 --------------------------------
@@ -1102,3 +1103,4 @@ server won't turn changeset public.
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
+#endif
