@@ -1319,12 +1319,19 @@ def commit(ui, repo, *pats, **opts):
         raise util.Abort(_('cannot commit an interrupted graft operation'),
                          hint=_('use "hg graft -c" to continue graft'))
 
+    branch = repo[None].branch()
+    bheads = repo.branchheads(branch)
+
     extra = {}
     if opts.get('close_branch'):
         extra['close'] = 1
 
-    branch = repo[None].branch()
-    bheads = repo.branchheads(branch)
+        if not bheads:
+            raise util.Abort(_('can only close branch heads'))
+        elif opts.get('amend'):
+            if repo.parents()[0].p1().branch() != branch and \
+                    repo.parents()[0].p2().branch() != branch:
+                raise util.Abort(_('can only close branch heads'))
 
     if opts.get('amend'):
         if ui.configbool('ui', 'commitsubrepos'):
