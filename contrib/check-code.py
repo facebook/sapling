@@ -109,6 +109,13 @@ utestpats = [
     (r'^  changeset .* references (corrupted|missing) \$TESTTMP/.*[^)]$',
      winglobmsg),
     (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  reverting .*/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  cloning subrepo \S+/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  pushing to \$TESTTMP/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  no changes made to subrepo since.*/.*[^)]$',
+     winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$',
+     winglobmsg, '\$TESTTMP/unix-repo$'),
   ],
   # warnings
   [
