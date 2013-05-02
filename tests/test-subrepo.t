@@ -289,7 +289,7 @@ push
   committing subrepository t
   $ hg push
   pushing to $TESTTMP/t (glob)
-  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss
+  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   pushing subrepo t to $TESTTMP/t/t
   searching for changes
@@ -310,7 +310,7 @@ push -f
   committing subrepository s
   $ hg push
   pushing to $TESTTMP/t (glob)
-  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss
+  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   pushing subrepo s to $TESTTMP/t/s
   searching for changes
   abort: push creates new remote head 12a213df6fa9! (in subrepo s)
@@ -341,7 +341,7 @@ check that unmodified subrepos are not pushed
   $ hg clone . ../tcc
   updating to branch default
   cloning subrepo s from $TESTTMP/tc/s
-  cloning subrepo s/ss from $TESTTMP/tc/s/ss
+  cloning subrepo s/ss from $TESTTMP/tc/s/ss (glob)
   cloning subrepo t from $TESTTMP/tc/t
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -349,7 +349,7 @@ the subrepos on the new clone have nothing to push to its source
 
   $ hg push -R ../tcc .
   pushing to .
-  no changes made to subrepo s/ss since last push to s/ss
+  no changes made to subrepo s/ss since last push to s/ss (glob)
   no changes made to subrepo s since last push to s
   no changes made to subrepo t since last push to t
   searching for changes
@@ -361,7 +361,7 @@ because they were never explicitly pushed to the source
 
   $ hg push ../tcc
   pushing to ../tcc
-  pushing subrepo s/ss to ../tcc/s/ss
+  pushing subrepo s/ss to ../tcc/s/ss (glob)
   searching for changes
   no changes found
   pushing subrepo s to ../tcc/s
@@ -378,7 +378,7 @@ after push their stores become clean
 
   $ hg push ../tcc
   pushing to ../tcc
-  no changes made to subrepo s/ss since last push to ../tcc/s/ss
+  no changes made to subrepo s/ss since last push to ../tcc/s/ss (glob)
   no changes made to subrepo s since last push to ../tcc/s
   no changes made to subrepo t since last push to ../tcc/t
   searching for changes
@@ -392,7 +392,7 @@ its working directory does not make its store dirty
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg push
   pushing to $TESTTMP/t
-  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss
+  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
   searching for changes
@@ -401,7 +401,7 @@ its working directory does not make its store dirty
   $ echo foo >> s/a
   $ hg push
   pushing to $TESTTMP/t
-  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss
+  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
   searching for changes
@@ -416,7 +416,7 @@ committing into a subrepo makes its store (but not its parent's store) dirty
   $ hg -R s/ss commit -m 'test dirty store detection'
   $ hg push
   pushing to $TESTTMP/t
-  pushing subrepo s/ss to $TESTTMP/t/s/ss
+  pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -432,7 +432,7 @@ a subrepo store may be clean versus one repo but not versus another
 
   $ hg push
   pushing to $TESTTMP/t
-  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss
+  no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
   searching for changes
@@ -467,7 +467,7 @@ KeyError
   $ hg backout ".^"
   reverting .hgsubstate
   reverting subrepo s
-  reverting s/a
+  reverting s/a (glob)
   reverting subrepo ss
   reverting subrepo t
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
