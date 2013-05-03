@@ -1120,6 +1120,8 @@ def runchildren(options, tests):
         childopts = ['--child=%d' % wfd, '--port=%d' % (options.port + j * 3)]
         childtmp = os.path.join(HGTMP, 'child%d' % j)
         childopts += ['--tmpdir', childtmp]
+        if options.keep_tmpdir:
+            childopts.append('--keep-tmpdir')
         cmdline = [PYTHON, sys.argv[0]] + opts + childopts + job
         vlog(' '.join(cmdline))
         proc = subprocess.Popen(cmdline, executable=cmdline[0])
@@ -1288,7 +1290,8 @@ def main():
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
-        options.keep_tmpdir = True
+        if not options.child:
+            options.keep_tmpdir = True
         tmpdir = options.tmpdir
         if os.path.exists(tmpdir):
             # Meaning of tmpdir has changed since 1.3: we used to create
