@@ -51,7 +51,7 @@
   getting b/b
   updating: b/b 4/5 files (80.00%)
   updating: a/c 5/5 files (100.00%)
-  moving a/c to b/c
+  moving a/c to b/c (glob)
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
