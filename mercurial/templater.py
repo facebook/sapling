@@ -402,7 +402,7 @@ def stylelist():
         split = file.split(".")
         if split[0] == "map-cmdline":
             stylelist.append(split[1])
-    return ", ".join(stylelist)
+    return ", ".join(sorted(stylelist))
 
 class templater(object):
 

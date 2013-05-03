@@ -458,7 +458,8 @@ Error if style not readable:
 Error if no style:
 
   $ hg log --style notexist
-  abort: style not found: notexist
+  abort: style 'notexist' not found
+  (available styles: bisect, changelog, compact, default, phases, xml)
   [255]
 
 Error if style missing key:
