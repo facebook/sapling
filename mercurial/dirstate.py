@@ -700,7 +700,7 @@ class dirstate(object):
                 for nf in iter(visit):
                     # Report ignored items in the dmap as long as they are not
                     # under a symlink directory.
-                    if ignore(nf) and audit_path.check(nf):
+                    if audit_path.check(nf):
                         try:
                             results[nf] = lstat(join(nf))
                         except OSError:
