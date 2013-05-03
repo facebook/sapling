@@ -394,6 +394,16 @@ class engine(object):
 
 engines = {'default': engine}
 
+def stylelist():
+    path = templatepath()[0]
+    dirlist =  os.listdir(path)
+    stylelist = []
+    for file in dirlist:
+        split = file.split(".")
+        if split[0] == "map-cmdline":
+            stylelist.append(split[1])
+    return ", ".join(stylelist)
+
 class templater(object):
 
     def __init__(self, mapfile, filters={}, defaults={}, cache={},
@@ -415,7 +425,8 @@ class templater(object):
         if not mapfile:
             return
         if not os.path.exists(mapfile):
-            raise util.Abort(_('style not found: %s') % mapfile)
+            raise util.Abort(_("style '%s' not found") % mapfile,
+                             hint=_("available styles: %s") % stylelist())
 
         conf = config.config()
         conf.read(mapfile)

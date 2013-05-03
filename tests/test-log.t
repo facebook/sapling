@@ -84,6 +84,14 @@ log on directory
   abort: cannot follow file not in parent revision: "dir"
   [255]
 
+-f, a wrong style
+
+  $ hg log -f -l1 --style something
+  abort: style 'something' not found
+  (available styles: changelog, bisect, default, xml, compact)
+  [255]
+
+
 -f, but no args
 
   $ hg log -f
