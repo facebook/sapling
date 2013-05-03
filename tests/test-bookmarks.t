@@ -168,10 +168,13 @@ bookmarks from a revset
   $ hg bookmark -d REVSET
   $ hg bookmark -d TIP
 
-rename without new name
+rename without new name or multiple names
 
   $ hg bookmark -m Y
   abort: new bookmark name required
+  [255]
+  $ hg bookmark -m Y Y2 Y3
+  abort: only one new bookmark name allowed
   [255]
 
 delete without name
@@ -417,8 +420,9 @@ test clone with pull protocol
      a@                        2:db815d6d32e6
      x  y                      2:db815d6d32e6
 
-  $ hg bookmark -d @
-  $ hg bookmark -d a@
+delete multiple bookmarks at once
+
+  $ hg bookmark -d @ a@
 
 test clone with a bookmark named "default" (issue3677)
 

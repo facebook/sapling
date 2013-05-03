@@ -43,15 +43,18 @@ list bookmarks
   $ hg bookmarks
    * Z                         -1:000000000000
 
-new bookmark Y
+new bookmarks X and Y, first one made active
 
-  $ hg bookmark Y
+  $ hg bookmark Y X
 
 list bookmarks
 
   $ hg bookmark
+     X                         -1:000000000000
    * Y                         -1:000000000000
      Z                         -1:000000000000
+
+  $ hg bookmark -d X
 
 commit
 

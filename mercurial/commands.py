@@ -767,9 +767,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     ('d', 'delete', False, _('delete a given bookmark')),
     ('m', 'rename', '', _('rename a given bookmark'), _('NAME')),
     ('i', 'inactive', False, _('mark a bookmark inactive'))],
-    _('hg bookmarks [-f] [-d] [-i] [-m NAME] [-r REV] [NAME]'))
-def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
-             rename=None, inactive=False):
+    _('hg bookmarks [OPTIONS]... [NAME]...'))
+def bookmark(ui, repo, *names, **opts):
     '''track a line of development with movable markers
 
     Bookmarks are pointers to certain commits that move when committing.
@@ -796,6 +795,12 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     active even if -i/--inactive is not given. If no NAME is given, the
     current active bookmark will be marked inactive.
     '''
+    force = opts.get('force')
+    rev = opts.get('rev')
+    delete = opts.get('delete')
+    rename = opts.get('rename')
+    inactive = opts.get('inactive')
+
     hexfn = ui.debugflag and hex or short
     marks = repo._bookmarks
     cur   = repo.changectx('.').node()
@@ -846,21 +851,24 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         raise util.Abort(_("--rev is incompatible with --delete"))
     if rename and rev:
         raise util.Abort(_("--rev is incompatible with --rename"))
-    if mark is None and (delete or rev):
+    if not names and (delete or rev):
         raise util.Abort(_("bookmark name required"))
 
     if delete:
-        if mark not in marks:
-            raise util.Abort(_("bookmark '%s' does not exist") % mark)
-        if mark == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
-        del marks[mark]
+        for mark in names:
+            if mark not in marks:
+                raise util.Abort(_("bookmark '%s' does not exist") % mark)
+            if mark == repo._bookmarkcurrent:
+                bookmarks.setcurrent(repo, None)
+            del marks[mark]
         marks.write()
 
     elif rename:
-        if mark is None:
+        if not names:
             raise util.Abort(_("new bookmark name required"))
-        mark = checkformat(mark)
+        elif len(names) > 1:
+            raise util.Abort(_("only one new bookmark name allowed"))
+        mark = checkformat(names[0])
         if rename not in marks:
             raise util.Abort(_("bookmark '%s' does not exist") % rename)
         checkconflict(repo, mark, force)
@@ -870,19 +878,23 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         del marks[rename]
         marks.write()
 
-    elif mark is not None:
-        mark = checkformat(mark)
-        if inactive and mark == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
-            return
-        tgt = cur
-        if rev:
-            tgt = scmutil.revsingle(repo, rev).node()
-        checkconflict(repo, mark, force, tgt)
-        marks[mark] = tgt
-        if not inactive and cur == marks[mark] and not rev:
-            bookmarks.setcurrent(repo, mark)
-        elif cur != tgt and mark == repo._bookmarkcurrent:
+    elif names:
+        newact = None
+        for mark in names:
+            mark = checkformat(mark)
+            if newact is None:
+                newact = mark
+            if inactive and mark == repo._bookmarkcurrent:
+                bookmarks.setcurrent(repo, None)
+                return
+            tgt = cur
+            if rev:
+                tgt = scmutil.revsingle(repo, rev).node()
+            checkconflict(repo, mark, force, tgt)
+            marks[mark] = tgt
+        if not inactive and cur == marks[newact] and not rev:
+            bookmarks.setcurrent(repo, newact)
+        elif cur != tgt and newact == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
         marks.write()
 
