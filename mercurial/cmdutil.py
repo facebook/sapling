@@ -2055,6 +2055,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 checkout(f)
                 normal(f)
 
+            copied = copies.pathcopies(repo[parent], ctx)
+
+            for f in add[0] + undelete[0] + revert[0]:
+                if f in copied:
+                    repo.dirstate.copy(copied[f], f)
+
             if targetsubs:
                 # Revert the subrepos on the revert list
                 for sub in targetsubs:
