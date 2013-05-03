@@ -25,7 +25,11 @@ def readchannel(server):
     else:
         return channel, server.stdout.read(length)
 
-def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None):
+def sep(text):
+    return text.replace('\\', '/')
+
+def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
+               outfilter=lambda x: x):
     print ' runcommand', ' '.join(args)
     sys.stdout.flush()
     server.stdin.write('runcommand\n')
@@ -37,7 +41,7 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None):
     while True:
         ch, data = readchannel(server)
         if ch == 'o':
-            output.write(data)
+            output.write(outfilter(data))
             output.flush()
         elif ch == 'e':
             error.write(data)
@@ -249,7 +253,8 @@ def phasecacheafterstrip(server):
 
     # make it public; draft marker moves to 4:7966c8e3734d
     runcommand(server, ['phase', '-p', '.'])
-    runcommand(server, ['phase', '.'])  # load _phasecache.phaseroots
+    # load _phasecache.phaseroots
+    runcommand(server, ['phase', '.'], outfilter=sep)
 
     # strip 1::4 outside server
     os.system('hg --config extensions.mq= strip 1')
