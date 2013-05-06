@@ -502,7 +502,8 @@ def _updatelfile(repo, lfdirstate, lfile):
         # lfile is added to the repository again. This happens when a
         # largefile is converted back to a normal file: the standin
         # disappears, but a new (normal) file appears as the lfile.
-        if os.path.exists(abslfile) and lfile not in repo[None]:
+        if (os.path.exists(abslfile) and
+            repo.dirstate.normalize(lfile) not in repo[None]):
             util.unlinkpath(abslfile)
             ret = -1
     state = repo.dirstate[lfutil.standin(lfile)]
