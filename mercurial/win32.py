@@ -344,6 +344,12 @@ def spawndetached(args):
 def unlink(f):
     '''try to implement POSIX' unlink semantics on Windows'''
 
+    if os.path.isdir(f):
+        # use EPERM because it is POSIX prescribed value, even though
+        # unlink(2) on directories returns EISDIR on Linux
+        raise IOError(errno.EPERM,
+                      "Unlinking directory not permitted: '%s'" % f)
+
     # POSIX allows to unlink and rename open files. Windows has serious
     # problems with doing that:
     # - Calling os.unlink (or os.rename) on a file f fails if f or any
