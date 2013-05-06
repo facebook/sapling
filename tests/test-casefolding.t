@@ -128,6 +128,8 @@ unlinked by largefiles extension.
   $ hg update -q -C 0
   $ hg status -A
   C a
+  $ hg update -q -C 3
+  $ hg update -q 0
 
   $ cd ..
 
