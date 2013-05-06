@@ -7,7 +7,14 @@
 
 from mercurial.i18n import _
 from mercurial import util
-import os, socket, lz4
+import os, socket, lz4, time
+
+# Statistics for debugging
+fetchcost = 0
+fetches = 0
+fetched = 0
+fetchedbytes = 0
+actualbytes = 0
 
 _downloading = _('downloading')
 
@@ -48,6 +55,9 @@ class fileserverclient(object):
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
+        global fetchedbytes
+        global actualbytes
+
         while count > 0:
             count -= 1
             raw = self.readuntil()
@@ -59,6 +69,8 @@ class fileserverclient(object):
             id = raw[:40]
             size = int(raw[40:])
 
+            fetchedbytes += len(raw) + size + 1
+
             if size == 0:
                 missing.append(id)
                 continue
@@ -66,7 +78,10 @@ class fileserverclient(object):
             data = self.read(size)
             data = lz4.decompress(data)
 
+            actualbytes += len(data)
+
             idcachepath = os.path.join(self.cachepath, id)
+
             f = open(idcachepath, "w")
             try:
                 f.write(data)
@@ -84,6 +99,16 @@ class fileserverclient(object):
         self.socket.connect((self.server, self.port))
 
     def close(self):
+        if fetches:
+            print ("%s fetched over %d fetches - %0.2f MB (%0.2f MB decomp) " +
+                  "over %0.2fs = %0.2f MB/s") % (
+                    fetched,
+                    fetches,
+                    float(fetchedbytes) / 1024 / 1024,
+                    float(actualbytes) / 1024 / 1024,
+                    fetchcost,
+                    float(fetchedbytes) / 1024 / 1024 / max(0.001, fetchcost))
+
         if self.socket:
             self.socket.sendall("\1\1")
             self.socket.close()
@@ -124,6 +149,11 @@ class fileserverclient(object):
             missingids.append((file, id))
 
         if missingids:
+            global fetches, fetched, fetchcost
+            fetches += 1
+            fetched += len(missingids)
+            start = time.time()
             missingids = self.request(missingids)
             if missingids:
                 raise util.Abort(_("unable to download %d files") % len(missingids))
+            fetchcost += time.time() - start
