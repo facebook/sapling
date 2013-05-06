@@ -17,6 +17,7 @@ class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
     def __init__(self, ui):
+        self.ui = ui
         self.socket = None
         self.buffer = ''
         self.server = ui.config("remotefilelog", "serveraddress")
@@ -44,6 +45,9 @@ class fileserverclient(object):
         self.socket.sendall(request)
 
         missing = []
+        total = count
+        self.ui.progress(_downloading, 0, total=count)
+
         while count > 0:
             count -= 1
             raw = self.readuntil()
@@ -68,6 +72,10 @@ class fileserverclient(object):
                 f.write(data)
             finally:
                 f.close()
+
+            self.ui.progress(_downloading, total - count, total=total)
+
+        self.ui.progress(_downloading, None)
 
         return missing
 
