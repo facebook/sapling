@@ -11,6 +11,8 @@ import os, socket, lz4
 
 _downloading = _('downloading')
 
+client = None
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -96,3 +98,24 @@ class fileserverclient(object):
         result = self.buffer[:index]
         self.buffer = self.buffer[(index + 1):]
         return result
+
+    def prefetch(self, storepath, fileids):
+        """downloads the given file versions to the cache
+        """
+        missingids = []
+        for file, id in fileids:
+            # hack
+            if file == '.hgtags':
+                continue
+
+            idcachepath = os.path.join(self.cachepath, id)
+            idlocalpath = os.path.join(storepath, 'localdata', id)
+            if os.path.exists(idcachepath) or os.path.exists(idlocalpath):
+                continue
+
+            missingids.append((file, id))
+
+        if missingids:
+            missingids = self.request(missingids)
+            if missingids:
+                raise util.Abort(_("unable to download %d files") % len(missingids))
