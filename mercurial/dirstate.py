@@ -525,10 +525,10 @@ class dirstate(object):
     def _walkexplicit(self, match, subrepos):
         '''Get stat data about the files explicitly specified by match.
 
-        Return a triple (results, work, dirsnotfound).
+        Return a triple (results, dirsfound, dirsnotfound).
         - results is a mapping from filename to stat result. It also contains
           listings mapping subrepos and .hg to None.
-        - work is a list of files found to be directories.
+        - dirsfound is a list of files found to be directories.
         - dirsnotfound is a list of files that the dirstate thinks are
           directories and that were not found.'''
 
@@ -556,8 +556,8 @@ class dirstate(object):
         regkind = stat.S_IFREG
         lnkkind = stat.S_IFLNK
         join = self._join
-        work = []
-        wadd = work.append
+        dirsfound = []
+        foundadd = dirsfound.append
         dirsnotfound = []
 
         if match.matchfn != match.exact and self._checkcase:
@@ -599,7 +599,7 @@ class dirstate(object):
                         results[nf] = None
                     if matchedir:
                         matchedir(nf)
-                    wadd(nf)
+                    foundadd(nf)
                 elif kind == regkind or kind == lnkkind:
                     results[nf] = st
                 else:
@@ -620,7 +620,7 @@ class dirstate(object):
                     else:
                         badfn(ff, inst.strerror)
 
-        return results, work, dirsnotfound
+        return results, dirsfound, dirsnotfound
 
     def walk(self, match, subrepos, unknown, ignored):
         '''
