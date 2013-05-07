@@ -144,3 +144,52 @@ class remoterevlog(object):
             chain = self.addrevision(text, transaction, link, p1, p2)
 
         return True
+
+    def group(self, nodelist, bundler, reorder=None):
+        if len(nodelist) == 0:
+            yield bundler.close()
+            return
+
+        nodelist = self._sortnodes(nodelist)
+
+        # add the parent of the first rev
+        p = self.parents(nodelist[0])[0]
+        nodelist.insert(0, p)
+
+        # build deltas
+        for i in xrange(len(nodelist) - 1):
+            prev, curr = nodelist[i], nodelist[i + 1]
+            for c in bundler.nodechunk(self, curr, prev):
+                yield c
+
+        yield bundler.close()
+
+    def _sortnodes(self, nodelist):
+        """returns the topologically sorted nodes
+        """
+        if len(nodelist) == 1:
+            return list(nodelist)
+
+        nodes = set(nodelist)
+        parents = {}
+        allparents = set()
+        for n in nodes:
+            parents[n] = self.parents(n)
+            allparents.update(parents[n])
+
+        allparents.intersection_update(nodes)
+
+        result = list()
+        while nodes:
+            root = None
+            for n in nodes:
+                p1, p2 = parents[n]
+                if not p1 in allparents and not p2 in allparents:
+                    root = n
+                    break
+
+            allparents.discard(root)
+            result.append(root)
+            nodes.remove(root)
+
+        return result
