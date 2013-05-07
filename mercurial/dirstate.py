@@ -626,8 +626,7 @@ class dirstate(object):
                         results[nf] = None
                     if matchedir:
                         matchedir(nf)
-                    if not dirignore(nf):
-                        wadd(nf)
+                    wadd(nf)
                 elif kind == regkind or kind == lnkkind:
                     results[nf] = st
                 else:
@@ -648,6 +647,9 @@ class dirstate(object):
                             break
                     else:
                         badfn(ff, inst.strerror)
+
+        work = [d for d in work if not dirignore(d)]
+        wadd = work.append
 
         # step 2: visit subdirectories
         while work:
