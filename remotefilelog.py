@@ -84,6 +84,30 @@ def reposetup(ui, repo):
 def setupclient(ui, repo):
     addshallowcapability();
 
+    fileserverclient.client = fileserverclient.fileserverclient(ui)
+
+    # replace filelog base class
+    filelog.filelog.__bases__ = (remoterevlog.remoterevlog, )
+
+    # prefetch files before update hook
+    def applyupdates(orig, repo, actions, wctx, mctx, actx, overwrite):
+        manifest = mctx.manifest()
+        files = []
+        for f, m, args, msg in [a for a in actions if a[1] == 'g']:
+            files.append((f, hex(manifest[f])))
+        # batch fetch the needed files from the server
+        fileserverclient.client.prefetch(repo.sopener.vfs.base, files)
+        return orig(repo, actions, wctx, mctx, actx, overwrite)
+    wrapfunction(merge, 'applyupdates', applyupdates)
+
+    # close connection
+    def runcommand(orig, *args, **kwargs):
+        try:
+            return orig(*args, **kwargs)
+        finally:
+            fileserverclient.client.close()
+    wrapfunction(dispatch, 'runcommand', runcommand)
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
