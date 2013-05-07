@@ -64,6 +64,26 @@ def reposetup(ui, repo):
         wireproto.commands['getfiles'] = (getfiles, '')
 
     if isserverenabled or isshallowclient:
+        # only put filelogs in changegroups when necessary
+        def shouldaddfilegroups(source):
+            if source == "push":
+                return True
+            if source == "serve":
+                if isshallowclient:
+                    # commits in a shallow repo may not exist in the master server
+                    # so we need to return all the data on a pull
+                    ui.warn("pulling from a shallow repo\n")
+                    return True
+                return not shallowremote
+
+            return not isshallowclient
+
+        def addfilegroups(orig, self):
+            if shouldaddfilegroups(self.source):
+                return orig(self)
+            return []
+        wrapfunction(changegroup.changegroupgen, 'addfilegroups', addfilegroups)
+
         # don't allow streaming clones from a shallow repo
         def stream(repo, proto):
             if isshallowclient:
