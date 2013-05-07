@@ -158,6 +158,9 @@ def setupclient(ui, repo):
     changegroup.subsetchangegroupgen.__bases__ = (partialchangegroupgen, )
     changegroup.bundle10.nodechunk = nodechunk
 
+    # adding changegroup files to the repo
+    wrapfunction(localrepo.localrepository, 'addchangegroupfiles', addchangegroupfiles)
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
@@ -341,3 +344,23 @@ class partialchangegroupgen(changegroup.changegroupgen):
             if clnode:
                 mapping[fnode] = clnode
         return mapping
+
+def addchangegroupfiles(orig, self, source, revmap, trp, pr, needfiles):
+    revisions = 0
+    files = 0
+    while True:
+        chunkdata = source.filelogheader()
+        if not chunkdata:
+            break
+        f = chunkdata["filename"]
+        self.ui.debug("adding %s revisions\n" % f)
+        pr()
+        files += 1
+        fl = self.file(f)
+        if not fl.addgroup(source, revmap, trp):
+            raise util.Abort(_("received file revlog group is empty"))
+        files += 1
+
+    self.ui.progress(_('files'), None)
+
+    return revisions, files
