@@ -141,6 +141,12 @@ def setupclient(ui, repo):
         return self._filelog.size(self._filenode)
     wrapfunction(context.filectx, 'size', filectxsize)
 
+    wrapfunction(context.filectx, 'ancestors', ancestors)
+
+    # prevent strip from considering filelogs
+    def _collectbrokencsets(orig, repo, files, striprev):
+        return orig(repo, [], striprev)
+    wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
@@ -178,3 +184,16 @@ def addshallowcapability():
             cmd += '_shallow'
         return orig(self, cmd, **args)
     wrapfunction(sshpeer.sshpeer, '_callstream', callstream)
+
+def ancestors(orig, self, followfirst=False):
+    visit = {}
+    c = self
+    cut = followfirst and 1 or None
+    queue = []
+    while True:
+        for parent in c.parents()[:cut]:
+            queue.append(parent)
+        if not queue:
+            break
+        c = queue.pop(0)
+        yield c
