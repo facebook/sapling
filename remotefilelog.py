@@ -153,6 +153,11 @@ def setupclient(ui, repo):
 
     wrapfunction(copies, 'checkcopies', checkcopies)
 
+    # changegroup creation
+    changegroup.changegroupgen = partialchangegroupgen
+    changegroup.subsetchangegroupgen.__bases__ = (partialchangegroupgen, )
+    changegroup.bundle10.nodechunk = nodechunk
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
@@ -281,3 +286,58 @@ def checkcopies(orig, ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
 
     if of in ma:
         diverge.setdefault(of, []).append(f)
+
+def nodechunk(self, revlog, node, prev):
+    prefix = ''
+    if prev == nullrev:
+        delta = revlog.revision(node)
+        prefix = mdiff.trivialdiffheader(len(delta))
+    else:
+        delta = revlog.revdiff(prev, node)
+    linknode = self._lookup(revlog, node)
+    p1, p2 = revlog.parents(node)
+    meta = self.builddeltaheader(node, p1, p2, prev, linknode)
+    meta += prefix
+    l = len(meta) + len(delta)
+    yield changegroup.chunkheader(l)
+    yield meta
+    yield delta
+
+class partialchangegroupgen(changegroup.changegroupgen):
+    def __init__(self, repo, csets, source, reorder):
+        super(partialchangegroupgen, self).__init__(repo, csets, source, reorder)
+        self.changedfilenodes = {}
+        self.filecommitmap = {}
+
+    def lookupmanifest(self, node):
+        self.count[0] += 1
+        self.progress(changegroup._bundling, self.count[0],
+                 unit=changegroup._manifests, total=self.count[1])
+
+        cl = self.cl
+        mf = self.mf
+        changedfilenodes = self.changedfilenodes
+        filecommitmap = self.filecommitmap
+
+        clnode = cl.node(mf.linkrev(mf.rev(node)))
+        clfiles = set(cl.read(clnode)[3])
+        for f, n in mf.readfast(node).iteritems():
+            if f in clfiles:
+                filenodes = changedfilenodes.setdefault(f, set())
+                filenodes.add(n)
+                if not (f, n) in filecommitmap:
+                    filecommitmap[(f, n)] = clnode
+
+        return clnode
+
+    def outgoingfilemap(self, filerevlog, fname):
+        # map of outgoing file nodes to changelog nodes
+        fnodes = self.changedfilenodes.get(fname, set())
+        filecommitmap = self.filecommitmap
+
+        mapping = {}
+        for fnode in fnodes:
+            clnode = filecommitmap.get((fname, fnode), None)
+            if clnode:
+                mapping[fnode] = clnode
+        return mapping
