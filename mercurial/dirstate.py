@@ -522,18 +522,15 @@ class dirstate(object):
                 return True
         return False
 
-    def walk(self, match, subrepos, unknown, ignored):
-        '''
-        Walk recursively through the directory tree, finding all files
-        matched by match.
+    def _walkexplicit(self, match, subrepos):
+        '''Get stat data about the files explicitly specified by match.
 
-        Return a dict mapping filename to stat-like object (either
-        mercurial.osutil.stat instance or return value of os.stat()).
-        '''
-
-        def fwarn(f, msg):
-            self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
-            return False
+        Return a triple (results, work, dirsnotfound).
+        - results is a mapping from filename to stat result. It also contains
+          listings mapping subrepos and .hg to None.
+        - work is a list of files found to be directories.
+        - dirsnotfound is a list of files that the dirstate thinks are
+          directories and that were not found.'''
 
         def badtype(mode):
             kind = _('unknown')
@@ -549,24 +546,10 @@ class dirstate(object):
                 kind = _('directory')
             return _('unsupported file type (type is %s)') % kind
 
-        ignore = self._ignore
-        dirignore = self._dirignore
-        if ignored:
-            ignore = util.never
-            dirignore = util.never
-        elif not unknown:
-            # if unknown and ignored are False, skip step 2
-            ignore = util.always
-            dirignore = util.always
-
-        matchfn = match.matchfn
-        matchalways = match.always()
         matchedir = match.explicitdir
-        matchtdir = match.traversedir
         badfn = match.bad
         dmap = self._map
         normpath = util.normpath
-        listdir = osutil.listdir
         lstat = os.lstat
         getkind = stat.S_IFMT
         dirkind = stat.S_IFDIR
@@ -575,17 +558,10 @@ class dirstate(object):
         join = self._join
         work = []
         wadd = work.append
+        dirsnotfound = []
 
-        exact = skipstep3 = False
-        if matchfn == match.exact: # match.exact
-            exact = True
-            dirignore = util.always # skip step 2
-        elif match.files() and not match.anypats(): # match.match, no patterns
-            skipstep3 = True
-
-        if not exact and self._checkcase:
+        if match.matchfn != match.exact and self._checkcase:
             normalize = self._normalize
-            skipstep3 = False
         else:
             normalize = None
 
@@ -606,8 +582,6 @@ class dirstate(object):
         results = dict.fromkeys(subrepos)
         results['.hg'] = None
 
-        # step 1: find all explicit files
-        dirsnotfound = []
         for ff in files:
             if normalize:
                 nf = normalize(normpath(ff), False, True)
@@ -645,6 +619,58 @@ class dirstate(object):
                             break
                     else:
                         badfn(ff, inst.strerror)
+
+        return results, work, dirsnotfound
+
+    def walk(self, match, subrepos, unknown, ignored):
+        '''
+        Walk recursively through the directory tree, finding all files
+        matched by match.
+
+        Return a dict mapping filename to stat-like object (either
+        mercurial.osutil.stat instance or return value of os.stat()).
+        '''
+
+        def fwarn(f, msg):
+            self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
+            return False
+
+        ignore = self._ignore
+        dirignore = self._dirignore
+        if ignored:
+            ignore = util.never
+            dirignore = util.never
+        elif not unknown:
+            # if unknown and ignored are False, skip step 2
+            ignore = util.always
+            dirignore = util.always
+
+        matchfn = match.matchfn
+        matchalways = match.always()
+        matchtdir = match.traversedir
+        dmap = self._map
+        listdir = osutil.listdir
+        lstat = os.lstat
+        dirkind = stat.S_IFDIR
+        regkind = stat.S_IFREG
+        lnkkind = stat.S_IFLNK
+        join = self._join
+
+        exact = skipstep3 = False
+        if matchfn == match.exact: # match.exact
+            exact = True
+            dirignore = util.always # skip step 2
+        elif match.files() and not match.anypats(): # match.match, no patterns
+            skipstep3 = True
+
+        if not exact and self._checkcase:
+            normalize = self._normalize
+            skipstep3 = False
+        else:
+            normalize = None
+
+        # step 1: find all explicit files
+        results, work, dirsnotfound = self._walkexplicit(match, subrepos)
 
         skipstep3 = skipstep3 and not (work or dirsnotfound)
         work = [d for d in work if not dirignore(d)]
