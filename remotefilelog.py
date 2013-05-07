@@ -15,6 +15,37 @@ from mercurial import copies, traceback, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge
 import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 
+shallowremote = False
+localrepo.localrepository.supported.add('shallowrepo')
+
+def uisetup(ui):
+    entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
+    entry[1].append(('', 'shallow', None,
+                     _("create a shallow clone which uses remote file history")))
+
+def extsetup(ui):
+    # the remote client communicates it's shallow capability via hello
+    orig, args = wireproto.commands["hello"]
+    def helloshallow(*args, **kwargs):
+        global shallowremote
+        shallowremote = True
+        return orig(*args, **kwargs)
+    wireproto.commands["hello_shallow"] = (helloshallow, args)
+
+def cloneshallow(orig, ui, repo, *args, **opts):
+    if opts.get('shallow'):
+        addshallowcapability()
+        def stream_in_shallow(orig, self, remote, requirements):
+            # set up the client hooks so the post-clone update works
+            setupclient(self.ui, self)
+
+            requirements.add('shallowrepo')
+
+            return orig(self, remote, requirements)
+        wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
+
+    orig(ui, repo, *args, **opts)
+
 def reposetup(ui, repo):
     if not repo.local():
         return
@@ -32,8 +63,26 @@ def reposetup(ui, repo):
         # support file content requests
         wireproto.commands['getfiles'] = (getfiles, '')
 
+    if isserverenabled or isshallowclient:
+        # don't allow streaming clones from a shallow repo
+        def stream(repo, proto):
+            if isshallowclient:
+                # don't allow cloning from a shallow repo since the cloned
+                # repo would be unable to access local commits
+                raise util.Abort(_("Cannot clone from a shallow repo."))
+
+            return wireproto.stream(repo, proto)
+        wireproto.commands['stream_out'] = (stream, '')
+
+        # don't clone filelogs to shallow clients
+        def _walkstreamfiles(orig, repo):
+            if shallowremote:
+                return repo.store.topfiles()
+            return orig(repo)
+        wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
+
 def setupclient(ui, repo):
-    pass
+    addshallowcapability();
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
@@ -64,3 +113,10 @@ def getfiles(repo, proto):
             proto.fout.flush()
 
     return wireproto.streamres(streamer())
+
+def addshallowcapability():
+    def callstream(orig, self, cmd, **args):
+        if cmd == 'hello':
+            cmd += '_shallow'
+        return orig(self, cmd, **args)
+    wrapfunction(sshpeer.sshpeer, '_callstream', callstream)

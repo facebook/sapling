@@ -7,6 +7,8 @@
 
 import remotefilelog
 
+uisetup = remotefilelog.uisetup
 reposetup = remotefilelog.reposetup
+extsetup = remotefilelog.extsetup
 
 testedwith = 'internal'
