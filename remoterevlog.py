@@ -113,3 +113,34 @@ class remoterevlog(object):
 
     def strip(self, minlink, transaction):
         pass
+
+    def addrevision(self, text, transaction, link, p1, p2, cachedelta=None):
+        node = revlog.hash(text, p1, p2)
+
+        path = os.path.join(self.localpath, hex(node))
+        _writefile(path, p1 + p2 + text)
+
+        return node
+
+    def addgroup(self, bundle, linkmapper, transaction):
+        chain = None
+        while True:
+            chunkdata = bundle.deltachunk(chain)
+            if not chunkdata:
+                break
+            node = chunkdata['node']
+            p1 = chunkdata['p1']
+            p2 = chunkdata['p2']
+            cs = chunkdata['cs']
+            deltabase = chunkdata['deltabase']
+            delta = chunkdata['delta']
+
+            base = self.revision(deltabase)
+            text = mdiff.patch(base, delta)
+            if isinstance(text, buffer):
+                text = str(text)
+
+            link = linkmapper(cs)
+            chain = self.addrevision(text, transaction, link, p1, p2)
+
+        return True
