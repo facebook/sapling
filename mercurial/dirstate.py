@@ -559,6 +559,7 @@ class dirstate(object):
         dirsfound = []
         foundadd = dirsfound.append
         dirsnotfound = []
+        notfoundadd = dirsnotfound.append
 
         if match.matchfn != match.exact and self._checkcase:
             normalize = self._normalize
@@ -615,7 +616,7 @@ class dirstate(object):
                         if fn.startswith(prefix):
                             if matchedir:
                                 matchedir(nf)
-                            dirsnotfound.append(nf)
+                            notfoundadd(nf)
                             break
                     else:
                         badfn(ff, inst.strerror)
