@@ -148,6 +148,11 @@ def setupclient(ui, repo):
         return orig(repo, [], striprev)
     wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
 
+    # tracing copies without rev numbers
+    wrapfunction(copies, '_tracefile', tracefile)
+
+    wrapfunction(copies, 'checkcopies', checkcopies)
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
@@ -197,3 +202,82 @@ def ancestors(orig, self, followfirst=False):
             break
         c = queue.pop(0)
         yield c
+
+def tracefile(orig, fctx, actx):
+    '''return file context that is the ancestor of fctx present in actx'''
+    am = actx.manifest()
+    for f in fctx.ancestors():
+        if am.get(f.path(), None) == f.filenode():
+            return f
+
+def checkcopies(orig, ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+    '''check possible copies of f from m1 to m2'''
+
+    ma = ca.manifest()
+
+    def related(f1, f2):
+        # Walk back to common ancestor to see if the two files originate
+        # from the same file.
+
+        if f1 == f2:
+            return f1 # a match
+
+        g1, g2 = f1.ancestors(), f2.ancestors()
+
+        seen1 = set()
+        seen2 = set()
+        seen1.add(f1.filenode())
+        seen2.add(f2.filenode())
+        while g1 != None or g2 != None:
+            if g1 != None:
+                try:
+                    f1 = g1.next()
+                    if f1.filenode() in seen2:
+                        return f1
+                    seen1.add(f1.filenode())
+                except StopIteration:
+                    g1 = None
+                    if not seen1:
+                        return False
+
+            if g2 != None:
+                try:
+                    f2 = g2.next()
+                    if f2.filenode() in seen1:
+                        return f2
+                    seen2.add(f2.filenode())
+                except StopIteration:
+                    g2 = None
+                    if not seen2:
+                        return False
+
+        return False
+
+    of = None
+    seen = set([f])
+    latestmaof = ma.get(f)
+    for oc in ctx(f, m1[f]).ancestors():
+        of = oc.path()
+        if of in seen:
+            # check limit late - grab last rename before
+            # break if we reach common ancestor
+            if latestmaof == oc.filenode():
+                break
+            continue
+        seen.add(of)
+
+        fullcopy[f] = of # remember for dir rename detection
+        if of not in m2:
+            continue # no match, keep looking
+        latestmaof = ma.get(of)
+        if m2[of] == latestmaof:
+            break # no merge needed, quit early
+        c2 = ctx(of, m2[of])
+        cr = related(oc, c2)
+        if cr and (of == f or of == c2.path()): # non-divergent
+            copy[f] = of
+            of = None
+            break
+
+    if of in ma:
+        diverge.setdefault(of, []).append(f)
