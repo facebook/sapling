@@ -620,7 +620,6 @@ class dirstate(object):
                 st = lstat(join(nf))
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
-                    skipstep3 = False
                     if nf in dmap:
                         #file deleted on disk but still in dirstate
                         results[nf] = None
@@ -643,11 +642,11 @@ class dirstate(object):
                             if matchedir:
                                 matchedir(nf)
                             dirsnotfound.append(nf)
-                            skipstep3 = False
                             break
                     else:
                         badfn(ff, inst.strerror)
 
+        skipstep3 = skipstep3 and not (work or dirsnotfound)
         work = [d for d in work if not dirignore(d)]
         wadd = work.append
 
