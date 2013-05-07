@@ -128,6 +128,20 @@ def setupclient(ui, repo):
             fileserverclient.client.close()
     wrapfunction(dispatch, 'runcommand', runcommand)
 
+    # disappointing hacks below
+
+    # filelog & filectx
+    def filelogsize(orig, self, node):
+        if self.renamed(node):
+            return len(self.read(node))
+        return super(filelog.filelog, self).size(node)
+    wrapfunction(filelog.filelog, 'size', filelogsize)
+
+    def filectxsize(orig, self):
+        return self._filelog.size(self._filenode)
+    wrapfunction(context.filectx, 'size', filectxsize)
+
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
