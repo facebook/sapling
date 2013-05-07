@@ -68,6 +68,18 @@ invalid characters
   abort: '\n' cannot be used in a name
   [255]
 
+trailing or leading spaces should be stripped before testing duplicates
+
+  $ hg branch 'b '
+  abort: a branch of the same name already exists
+  (use 'hg update' to switch to it)
+  [255]
+
+  $ hg branch ' b'
+  abort: a branch of the same name already exists
+  (use 'hg update' to switch to it)
+  [255]
+
 verify update will accept invalid legacy branch names
 
   $ hg init test-invalid-branch-name

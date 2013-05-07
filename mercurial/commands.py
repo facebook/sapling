@@ -943,6 +943,9 @@ def branch(ui, repo, label=None, **opts):
 
     Returns 0 on success.
     """
+    if label:
+        label = label.strip()
+
     if not opts.get('clean') and not label:
         ui.write("%s\n" % repo.dirstate.branch())
         return
