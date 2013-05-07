@@ -607,6 +607,7 @@ class dirstate(object):
         results['.hg'] = None
 
         # step 1: find all explicit files
+        dirsnotfound = []
         for ff in files:
             if normalize:
                 nf = normalize(normpath(ff), False, True)
@@ -642,6 +643,7 @@ class dirstate(object):
                         if fn.startswith(prefix):
                             if matchedir:
                                 matchedir(nf)
+                            dirsnotfound.append(nf)
                             skipstep3 = False
                             break
                     else:
