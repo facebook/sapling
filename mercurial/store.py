@@ -322,13 +322,16 @@ class basicstore(object):
     def datafiles(self):
         return self._walk('data', True)
 
+    def topfiles(self):
+        # yield manifest before changelog
+        return reversed(self._walk('', False))
+
     def walk(self):
         '''yields (unencoded, encoded, size)'''
         # yield data files first
         for x in self.datafiles():
             yield x
-        # yield manifest before changelog
-        for x in reversed(self._walk('', False)):
+        for x in self.topfiles():
             yield x
 
     def copylist(self):
