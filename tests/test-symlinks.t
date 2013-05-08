@@ -160,6 +160,15 @@ now addremove should remove old files
   adding bar/a
   adding foo
   removing foo/a
+
+commit and update back
+
+  $ hg ci -mb
+  $ hg up '.^'
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg up tip
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
   $ cd ..
 
 == root of repository is symlinked ==
