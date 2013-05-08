@@ -17,7 +17,7 @@ from bzr import bzr_source
 from p4 import p4_source
 import filemap
 
-import os, shutil
+import os, shutil, shlex
 from mercurial import hg, util, encoding
 from mercurial.i18n import _
 
@@ -142,26 +142,22 @@ class converter(object):
                 if not line:
                     # Ignore blank lines
                     continue
-                try:
-                    child, parents = line.split(' ', 1)
-                    self.source.checkrevformat(child)
-                    parents = parents.replace(',', ' ').split()
-                    # check if number of parents are upto 2 max
-                    if (len(parents) > 2):
-                        raise util.Abort(_('syntax error in %s(%d): child '\
-                                            'parent1[,parent2] expected') \
-                                            % (path, i + 1))
-                    for parent in parents:
-                        self.source.checkrevformat(parent)
-                except ValueError:
-                    raise util.Abort(_('syntax error in %s(%d): child '\
-                                        'parent1[,parent2] expected') \
-                                        % (path, i + 1))
-                pp = []
-                for p in parents:
-                    if p not in pp:
-                        pp.append(p)
-                m[child] = pp
+                # split line
+                lex = shlex.shlex(line, posix=True)
+                lex.whitespace_split = True
+                lex.whitespace += ','
+                line = list(lex)
+                # check number of parents
+                if not (2 <= len(line) <= 3):
+                    raise util.Abort(_('syntax error in %s(%d): child parent1'
+                                       '[,parent2] expected') % (path, i + 1))
+                for part in line:
+                    self.source.checkrevformat(part)
+                child, p1, p2 = line[0], line[1:2], line[2:]
+                if p1 == p2:
+                    m[child] = p1
+                else:
+                    m[child] = p1 + p2
          # if file does not exist or error reading, exit
         except IOError:
             raise util.Abort(_('splicemap file not found or error reading %s:')
