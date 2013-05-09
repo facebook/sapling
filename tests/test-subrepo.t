@@ -440,7 +440,7 @@ a subrepo store may be clean versus one repo but not versus another
   [1]
   $ hg push ../tcc
   pushing to ../tcc
-  pushing subrepo s/ss to ../tcc/s/ss
+  pushing subrepo s/ss to ../tcc/s/ss (glob)
   searching for changes
   adding changesets
   adding manifests
