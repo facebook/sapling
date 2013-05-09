@@ -112,6 +112,8 @@ utestpats = [
     (r'^  reverting .*/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
     (r'^  cloning subrepo \S+/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
     (r'^  pushing to \$TESTTMP/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  pushing subrepo \S+/\S+ to.*[^)]$', winglobmsg,
+     '\$TESTTMP/unix-repo$'),
     (r'^  moving \S+/.*[^)]$', winglobmsg),
     (r'^  no changes made to subrepo since.*/.*[^)]$',
      winglobmsg, '\$TESTTMP/unix-repo$'),
