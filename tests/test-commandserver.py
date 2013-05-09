@@ -257,7 +257,7 @@ def phasecacheafterstrip(server):
     runcommand(server, ['phase', '.'], outfilter=sep)
 
     # strip 1::4 outside server
-    os.system('hg --config extensions.mq= strip 1')
+    os.system('hg -q --config extensions.mq= strip 1')
 
     # shouldn't raise "7966c8e3734d: no node!"
     runcommand(server, ['branches'])

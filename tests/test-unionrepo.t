@@ -112,7 +112,7 @@ revsets works across repos
 
 annotate works - an indication that linkrevs works
 
-  $ hg --cwd repo1 -R union:../repo2 annotate $TESTTMP/repo1/f -r tip
+  $ hg --cwd repo1 -Runion:../repo2 annotate $TESTTMP/repo1/f -r tip
   3: repo2-1 at top
   0: repo1-0
   1: repo1-1
