@@ -10,7 +10,7 @@
 
 Logs event information to .hg/blackbox.log to help debug and diagnose problems.
 The events that get logged can be configured via the blackbox.track config key.
-Examples:
+Examples::
 
   [blackbox]
   track = *

@@ -333,7 +333,7 @@ def overrideupdate(orig, ui, repo, *pats, **opts):
 # largefiles. This makes the merge proceed and we can then handle this
 # case further in the overridden manifestmerge function below.
 def overridecheckunknownfile(origfn, repo, wctx, mctx, f):
-    if lfutil.standin(f) in wctx:
+    if lfutil.standin(repo.dirstate.normalize(f)) in wctx:
         return False
     return origfn(repo, wctx, mctx, f)
 
