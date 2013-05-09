@@ -31,7 +31,7 @@ def _getstorehashcachename(remotepath):
 def _calcfilehash(filename):
     data = ''
     if os.path.exists(filename):
-        fd = open(filename)
+        fd = open(filename, 'rb')
         data = fd.read()
         fd.close()
     return util.sha1(data).hexdigest()
