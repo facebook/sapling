@@ -7,7 +7,7 @@
 
 from i18n import _
 from node import nullrev
-import mdiff, util
+import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
 
 _BUNDLE10_DELTA_HEADER = "20s20s20s20s"
@@ -231,8 +231,49 @@ class bundle10(object):
         self._lookup = lookup
     def close(self):
         return closechunk()
+
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
+
+    def group(self, nodelist, revlog, reorder=None):
+        """Calculate a delta group, yielding a sequence of changegroup chunks
+        (strings).
+
+        Given a list of changeset revs, return a set of deltas and
+        metadata corresponding to nodes. The first delta is
+        first parent(nodelist[0]) -> nodelist[0], the receiver is
+        guaranteed to have this parent as it has all history before
+        these changesets. In the case firstparent is nullrev the
+        changegroup starts with a full revision.
+        """
+
+        # if we don't have any revisions touched by these changesets, bail
+        if len(nodelist) == 0:
+            yield self.close()
+            return
+
+        # for generaldelta revlogs, we linearize the revs; this will both be
+        # much quicker and generate a much smaller bundle
+        if (revlog._generaldelta and reorder is not False) or reorder:
+            dag = dagutil.revlogdag(revlog)
+            revs = set(revlog.rev(n) for n in nodelist)
+            revs = dag.linearize(revs)
+        else:
+            revs = sorted([revlog.rev(n) for n in nodelist])
+
+        # add the parent of the first rev
+        p = revlog.parentrevs(revs[0])[0]
+        revs.insert(0, p)
+
+        # build deltas
+        for r in xrange(len(revs) - 1):
+            prev, curr = revs[r], revs[r + 1]
+            for c in self.revchunk(revlog, curr, prev):
+                yield c
+
+        yield self.close()
+
+
     def revchunk(self, revlog, rev, prev):
         node = revlog.node(rev)
         p1, p2 = revlog.parentrevs(rev)

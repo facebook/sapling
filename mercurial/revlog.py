@@ -14,7 +14,7 @@ and O(changes) merge between branches.
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev
 from i18n import _
-import ancestor, mdiff, parsers, error, util, dagutil
+import ancestor, mdiff, parsers, error, util
 import struct, zlib, errno
 
 _pack = struct.pack
@@ -1142,44 +1142,6 @@ class revlog(object):
             self._cache = (node, curr, text)
         self._basecache = (curr, chainbase)
         return node
-
-    def group(self, nodelist, bundler, reorder=None):
-        """Calculate a delta group, yielding a sequence of changegroup chunks
-        (strings).
-
-        Given a list of changeset revs, return a set of deltas and
-        metadata corresponding to nodes. The first delta is
-        first parent(nodelist[0]) -> nodelist[0], the receiver is
-        guaranteed to have this parent as it has all history before
-        these changesets. In the case firstparent is nullrev the
-        changegroup starts with a full revision.
-        """
-
-        # if we don't have any revisions touched by these changesets, bail
-        if len(nodelist) == 0:
-            yield bundler.close()
-            return
-
-        # for generaldelta revlogs, we linearize the revs; this will both be
-        # much quicker and generate a much smaller bundle
-        if (self._generaldelta and reorder is not False) or reorder:
-            dag = dagutil.revlogdag(self)
-            revs = set(self.rev(n) for n in nodelist)
-            revs = dag.linearize(revs)
-        else:
-            revs = sorted([self.rev(n) for n in nodelist])
-
-        # add the parent of the first rev
-        p = self.parentrevs(revs[0])[0]
-        revs.insert(0, p)
-
-        # build deltas
-        for r in xrange(len(revs) - 1):
-            prev, curr = revs[r], revs[r + 1]
-            for c in bundler.revchunk(self, curr, prev):
-                yield c
-
-        yield bundler.close()
 
     def addgroup(self, bundle, linkmapper, transaction):
         """

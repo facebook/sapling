@@ -2092,7 +2092,7 @@ class localrepository(object):
             # Create a changenode group generator that will call our functions
             # back to lookup the owning changenode and collect information.
             count[:] = [0, len(csets)]
-            for chunk in cl.group(csets, bundler, reorder=reorder):
+            for chunk in bundler.group(csets, cl, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
@@ -2101,7 +2101,7 @@ class localrepository(object):
             for f in changedfiles:
                 fnodes[f] = {}
             count[:] = [0, len(mfs)]
-            for chunk in mf.group(prune(mf, mfs), bundler, reorder=reorder):
+            for chunk in bundler.group(prune(mf, mfs), mf, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
@@ -2121,7 +2121,7 @@ class localrepository(object):
                 if nodelist:
                     count[0] += 1
                     yield bundler.fileheader(fname)
-                    for chunk in filerevlog.group(nodelist, bundler, reorder):
+                    for chunk in bundler.group(nodelist, filerevlog, reorder):
                         yield chunk
 
             # Signal that no more groups are left.
@@ -2201,12 +2201,12 @@ class localrepository(object):
             # construct a list of all changed files
 
             count[:] = [0, len(nodes)]
-            for chunk in cl.group(nodes, bundler, reorder=reorder):
+            for chunk in bundler.group(nodes, cl, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
             count[:] = [0, len(mfs)]
-            for chunk in mf.group(gennodelst(mf), bundler, reorder=reorder):
+            for chunk in bundler.group(gennodelst(mf), mf, reorder=reorder):
                 yield chunk
             progress(_bundling, None)
 
@@ -2221,7 +2221,7 @@ class localrepository(object):
                 if nodelist:
                     count[0] += 1
                     yield bundler.fileheader(fname)
-                    for chunk in filerevlog.group(nodelist, bundler, reorder):
+                    for chunk in bundler.group(nodelist, filerevlog, reorder):
                         yield chunk
             yield bundler.close()
             progress(_bundling, None)

@@ -119,7 +119,7 @@ def writerevs(ui, r1, r2, order, tr):
     try:
         bundler = changegroup.bundle10()
         bundler.start(lookup)
-        group = util.chunkbuffer(r1.group(order, bundler))
+        group = util.chunkbuffer(bundler.group(order, r1))
         group = changegroup.unbundle10(group, "UN")
         r2.addgroup(group, unlookup, tr)
     finally:
