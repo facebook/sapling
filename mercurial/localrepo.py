@@ -1840,7 +1840,9 @@ class localrepository(object):
                     if revs is None and not outgoing.excluded:
                         # push everything,
                         # use the fast path, no race possible on push
-                        cg = self._changegroup(outgoing.missing, 'push')
+                        bundler = changegroup.bundle10()
+                        cg = self._changegroup(outgoing.missing, bundler,
+                                               'push')
                     else:
                         cg = self.getlocalbundle('push', outgoing)
 
@@ -1986,7 +1988,8 @@ class localrepository(object):
         csets, bases, heads = cl.nodesbetween(bases, heads)
         # We assume that all ancestors of bases are known
         common = cl.ancestors([cl.rev(n) for n in bases])
-        return self._changegroupsubset(common, csets, heads, source)
+        bundler = changegroup.bundle10()
+        return self._changegroupsubset(common, csets, heads, bundler, source)
 
     def getlocalbundle(self, source, outgoing):
         """Like getbundle, but taking a discovery.outgoing as an argument.
@@ -1995,9 +1998,11 @@ class localrepository(object):
         precomputed sets in outgoing."""
         if not outgoing.missing:
             return None
+        bundler = changegroup.bundle10()
         return self._changegroupsubset(outgoing.common,
                                        outgoing.missing,
                                        outgoing.missingheads,
+                                       bundler,
                                        source)
 
     def getbundle(self, source, heads=None, common=None):
@@ -2021,7 +2026,7 @@ class localrepository(object):
                                    discovery.outgoing(cl, common, heads))
 
     @unfilteredmethod
-    def _changegroupsubset(self, commonrevs, csets, heads, source):
+    def _changegroupsubset(self, commonrevs, csets, heads, bundler, source):
 
         cl = self.changelog
         mf = self.manifest
@@ -2034,7 +2039,7 @@ class localrepository(object):
         # can we go through the fast path ?
         heads.sort()
         if heads == sorted(self.heads()):
-            return self._changegroup(csets, source)
+            return self._changegroup(csets, bundler, source)
 
         # slow path
         self.hook('preoutgoing', throw=True, source=source)
@@ -2076,7 +2081,7 @@ class localrepository(object):
                          unit=_files, total=count[1])
                 return fstate[1][x]
 
-        bundler = changegroup.bundle10(lookup)
+        bundler.start(lookup)
         reorder = self.ui.config('bundle', 'reorder', 'auto')
         if reorder == 'auto':
             reorder = None
@@ -2133,7 +2138,7 @@ class localrepository(object):
         return self.changegroupsubset(basenodes, self.heads(), source)
 
     @unfilteredmethod
-    def _changegroup(self, nodes, source):
+    def _changegroup(self, nodes, bundler, source):
         """Compute the changegroup of all nodes that we have that a recipient
         doesn't.  Return a chunkbuffer object whose read() method will return
         successive changegroup chunks.
@@ -2184,7 +2189,7 @@ class localrepository(object):
                     total=count[1], unit=_files)
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
-        bundler = changegroup.bundle10(lookup)
+        bundler.start(lookup)
         reorder = self.ui.config('bundle', 'reorder', 'auto')
         if reorder == 'auto':
             reorder = None

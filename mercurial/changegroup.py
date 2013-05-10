@@ -225,7 +225,9 @@ def readbundle(fh, fname):
 
 class bundle10(object):
     deltaheader = _BUNDLE10_DELTA_HEADER
-    def __init__(self, lookup):
+    def __init__(self):
+        pass
+    def start(self, lookup):
         self._lookup = lookup
     def close(self):
         return closechunk()

@@ -117,7 +117,8 @@ def writerevs(ui, r1, r2, order, tr):
     unlookup = lambda x: int(x, 10)
 
     try:
-        bundler = changegroup.bundle10(lookup)
+        bundler = changegroup.bundle10()
+        bundler.start(lookup)
         group = util.chunkbuffer(r1.group(order, bundler))
         group = changegroup.unbundle10(group, "UN")
         r2.addgroup(group, unlookup, tr)
