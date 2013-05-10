@@ -244,13 +244,14 @@ class bundle10(object):
             reorder = util.parsebool(reorder)
         self._repo = repo
         self._reorder = reorder
+        self._progress = repo.ui.progress
     def close(self):
         return closechunk()
 
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
 
-    def group(self, nodelist, revlog, lookup, reorder=None):
+    def group(self, nodelist, revlog, lookup, units=None, reorder=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -260,8 +261,10 @@ class bundle10(object):
         guaranteed to have this parent as it has all history before
         these changesets. In the case firstparent is nullrev the
         changegroup starts with a full revision.
-        """
 
+        If units is not None, progress detail will be generated, units specifies
+        the type of revlog that is touched (changelog, manifest, etc.).
+        """
         # if we don't have any revisions touched by these changesets, bail
         if len(nodelist) == 0:
             yield self.close()
@@ -281,7 +284,11 @@ class bundle10(object):
         revs.insert(0, p)
 
         # build deltas
+        total = len(revs) - 1
+        msgbundling = _('bundling')
         for r in xrange(len(revs) - 1):
+            if units is not None:
+                self._progress(msgbundling, r + 1, unit=units, total=total)
             prev, curr = revs[r], revs[r + 1]
             linknode = lookup(revlog.node(curr))
             for c in self.revchunk(revlog, curr, prev, linknode):
@@ -295,15 +302,10 @@ class bundle10(object):
         cl = self._changelog
         mf = self._manifest
         reorder = self._reorder
-        progress = repo.ui.progress
-        # Keep track of progress, this is a list since it is modified by revlog
-        # callbacks. First item is the number of items done, second is the
-        # total number to be processed.
-        count = [0, 0]
-        _bundling = _('bundling')
-        _changesets = _('changesets')
-        _manifests = _('manifests')
-        _files = _('files')
+        progress = self._progress
+
+        # for progress output
+        msgbundling = _('bundling')
 
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
@@ -312,8 +314,7 @@ class bundle10(object):
         # filter any nodes that claim to be part of the known set
         def prune(revlog, missing):
             rr, rl = revlog.rev, revlog.linkrev
-            return [n for n in missing
-                    if rl(rr(n)) not in commonrevs]
+            return [n for n in missing if rl(rr(n)) not in commonrevs]
 
         # Callback for the changelog, used to collect changed files and manifest
         # nodes.
@@ -323,9 +324,6 @@ class bundle10(object):
             changedfiles.update(c[3])
             # record the first changeset introducing this manifest version
             mfs.setdefault(c[0], x)
-            count[0] += 1
-            progress(_bundling, count[0],
-                     unit=_changesets, total=count[1])
             return x
 
         # Callback for the manifest, used to collect linkrevs for filelog
@@ -340,31 +338,29 @@ class bundle10(object):
                         # record the first changeset introducing this filelog
                         # version
                         fnodes[f].setdefault(n, clnode)
-            count[0] += 1
-            progress(_bundling, count[0],
-                     unit=_manifests, total=count[1])
             return clnode
 
-        count[:] = [0, len(clnodes)]
-        for chunk in self.group(clnodes, cl, lookupcl, reorder=reorder):
+        for chunk in self.group(clnodes, cl, lookupcl, units=_('changesets'),
+                                reorder=reorder):
             yield chunk
-        progress(_bundling, None)
+        progress(msgbundling, None)
 
         for f in changedfiles:
             fnodes[f] = {}
-        count[:] = [0, len(mfs)]
         mfnodes = prune(mf, mfs)
-        for chunk in self.group(mfnodes, mf, lookupmf, reorder=reorder):
+        for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
+                                reorder=reorder):
             yield chunk
-        progress(_bundling, None)
+        progress(msgbundling, None)
 
         mfs.clear()
-        count[:] = [0, len(changedfiles)]
-        for fname in sorted(changedfiles):
+        total = len(changedfiles)
+        # for progress output
+        msgfiles = _('files')
+        for i, fname in enumerate(sorted(changedfiles)):
             filerevlog = repo.file(fname)
             if not len(filerevlog):
-                raise util.Abort(_("empty or missing revlog for %s")
-                                 % fname)
+                raise util.Abort(_("empty or missing revlog for %s") % fname)
 
             if fastpathlinkrev:
                 ln, llr = filerevlog.node, filerevlog.linkrev
@@ -379,19 +375,18 @@ class bundle10(object):
             # Lookup for filenodes, we collected the linkrev nodes above in the
             # fastpath case and with lookupmf in the slowpath case.
             def lookupfilelog(x):
-                progress(_bundling, count[0], item=fname,
-                         unit=_files, total=count[1])
                 return linkrevnodes[x]
 
             filenodes = prune(filerevlog, linkrevnodes)
             if filenodes:
-                count[0] += 1
+                progress(msgbundling, i + 1, item=fname, unit=msgfiles,
+                         total=total)
                 yield self.fileheader(fname)
                 for chunk in self.group(filenodes, filerevlog, lookupfilelog,
-                                        reorder):
+                                        reorder=reorder):
                     yield chunk
         yield self.close()
-        progress(_bundling, None)
+        progress(msgbundling, None)
 
         if clnodes:
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
