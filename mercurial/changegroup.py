@@ -245,8 +245,6 @@ class bundle10(object):
         self._repo = repo
         self._reorder = reorder
         self.count = [0, 0]
-    def start(self, lookup):
-        self._lookup = lookup
     def close(self):
         return closechunk()
 
@@ -340,17 +338,29 @@ class bundle10(object):
                          unit=_files, total=count[1])
                 return fstate[1][x]
 
-        self.start(lookup)
+        self._lookup = lookup
 
-        def getmfnodes():
-            for f in changedfiles:
-                fnodes[f] = {}
-            count[:] = [0, len(mfs)]
-            return prune(mf, mfs)
-        def getfiles():
-            mfs.clear()
-            return changedfiles
-        def getfilenodes(fname, filerevlog):
+        count[:] = [0, len(clnodes)]
+        for chunk in self.group(clnodes, cl, reorder=reorder):
+            yield chunk
+        progress(_bundling, None)
+
+        for f in changedfiles:
+            fnodes[f] = {}
+        count[:] = [0, len(mfs)]
+        mfnodes = prune(mf, mfs)
+        for chunk in self.group(mfnodes, mf, reorder=reorder):
+            yield chunk
+        progress(_bundling, None)
+
+        mfs.clear()
+        count[:] = [0, len(changedfiles)]
+        for fname in sorted(changedfiles):
+            filerevlog = repo.file(fname)
+            if not len(filerevlog):
+                raise util.Abort(_("empty or missing revlog for %s")
+                                 % fname)
+
             if fastpathlinkrev:
                 ln, llr = filerevlog.node, filerevlog.linkrev
                 def genfilenodes():
@@ -361,30 +371,11 @@ class bundle10(object):
                 fnodes[fname] = dict(genfilenodes())
             fstate[0] = fname
             fstate[1] = fnodes.pop(fname, {})
-            return prune(filerevlog, fstate[1])
-
-
-        count[:] = [0, len(clnodes)]
-        for chunk in self.group(clnodes, cl, reorder=reorder):
-            yield chunk
-        progress(_bundling, None)
-
-        for chunk in self.group(getmfnodes(), mf, reorder=reorder):
-            yield chunk
-        progress(_bundling, None)
-
-        changedfiles = getfiles()
-        count[:] = [0, len(changedfiles)]
-        for fname in sorted(changedfiles):
-            filerevlog = repo.file(fname)
-            if not len(filerevlog):
-                raise util.Abort(_("empty or missing revlog for %s")
-                                 % fname)
-            nodelist = getfilenodes(fname, filerevlog)
-            if nodelist:
+            filenodes = prune(filerevlog, fstate[1])
+            if filenodes:
                 count[0] += 1
                 yield self.fileheader(fname)
-                for chunk in self.group(nodelist, filerevlog, reorder):
+                for chunk in self.group(filenodes, filerevlog, reorder):
                     yield chunk
         yield self.close()
         progress(_bundling, None)
