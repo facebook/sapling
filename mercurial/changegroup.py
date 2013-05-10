@@ -244,14 +244,13 @@ class bundle10(object):
             reorder = util.parsebool(reorder)
         self._repo = repo
         self._reorder = reorder
-        self.count = [0, 0]
     def close(self):
         return closechunk()
 
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
 
-    def group(self, nodelist, revlog, reorder=None):
+    def group(self, nodelist, revlog, lookup, reorder=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
 
@@ -284,7 +283,8 @@ class bundle10(object):
         # build deltas
         for r in xrange(len(revs) - 1):
             prev, curr = revs[r], revs[r + 1]
-            for c in self.revchunk(revlog, curr, prev):
+            linknode = lookup(revlog.node(curr))
+            for c in self.revchunk(revlog, curr, prev, linknode):
                 yield c
 
         yield self.close()
@@ -296,7 +296,10 @@ class bundle10(object):
         mf = self._manifest
         reorder = self._reorder
         progress = repo.ui.progress
-        count = self.count
+        # Keep track of progress, this is a list since it is modified by revlog
+        # callbacks. First item is the number of items done, second is the
+        # total number to be processed.
+        count = [0, 0]
         _bundling = _('bundling')
         _changesets = _('changesets')
         _manifests = _('manifests')
@@ -305,7 +308,6 @@ class bundle10(object):
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
-        fstate = ['', {}]
 
         # filter any nodes that claim to be part of the known set
         def prune(revlog, missing):
@@ -313,35 +315,38 @@ class bundle10(object):
             return [n for n in missing
                     if rl(rr(n)) not in commonrevs]
 
-        def lookup(revlog, x):
-            if revlog == cl:
-                c = cl.read(x)
-                changedfiles.update(c[3])
-                mfs.setdefault(c[0], x)
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_changesets, total=count[1])
-                return x
-            elif revlog == mf:
-                clnode = mfs[x]
-                if not fastpathlinkrev:
-                    mdata = mf.readfast(x)
-                    for f, n in mdata.iteritems():
-                        if f in changedfiles:
-                            fnodes[f].setdefault(n, clnode)
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_manifests, total=count[1])
-                return clnode
-            else:
-                progress(_bundling, count[0], item=fstate[0],
-                         unit=_files, total=count[1])
-                return fstate[1][x]
+        # Callback for the changelog, used to collect changed files and manifest
+        # nodes.
+        # Returns the linkrev node (identity in the changelog case).
+        def lookupcl(x):
+            c = cl.read(x)
+            changedfiles.update(c[3])
+            # record the first changeset introducing this manifest version
+            mfs.setdefault(c[0], x)
+            count[0] += 1
+            progress(_bundling, count[0],
+                     unit=_changesets, total=count[1])
+            return x
 
-        self._lookup = lookup
+        # Callback for the manifest, used to collect linkrevs for filelog
+        # revisions.
+        # Returns the linkrev node (collected in lookupcl).
+        def lookupmf(x):
+            clnode = mfs[x]
+            if not fastpathlinkrev:
+                mdata = mf.readfast(x)
+                for f, n in mdata.iteritems():
+                    if f in changedfiles:
+                        # record the first changeset introducing this filelog
+                        # version
+                        fnodes[f].setdefault(n, clnode)
+            count[0] += 1
+            progress(_bundling, count[0],
+                     unit=_manifests, total=count[1])
+            return clnode
 
         count[:] = [0, len(clnodes)]
-        for chunk in self.group(clnodes, cl, reorder=reorder):
+        for chunk in self.group(clnodes, cl, lookupcl, reorder=reorder):
             yield chunk
         progress(_bundling, None)
 
@@ -349,7 +354,7 @@ class bundle10(object):
             fnodes[f] = {}
         count[:] = [0, len(mfs)]
         mfnodes = prune(mf, mfs)
-        for chunk in self.group(mfnodes, mf, reorder=reorder):
+        for chunk in self.group(mfnodes, mf, lookupmf, reorder=reorder):
             yield chunk
         progress(_bundling, None)
 
@@ -369,13 +374,21 @@ class bundle10(object):
                         if linkrev not in commonrevs:
                             yield filerevlog.node(r), cl.node(linkrev)
                 fnodes[fname] = dict(genfilenodes())
-            fstate[0] = fname
-            fstate[1] = fnodes.pop(fname, {})
-            filenodes = prune(filerevlog, fstate[1])
+
+            linkrevnodes = fnodes.pop(fname, {})
+            # Lookup for filenodes, we collected the linkrev nodes above in the
+            # fastpath case and with lookupmf in the slowpath case.
+            def lookupfilelog(x):
+                progress(_bundling, count[0], item=fname,
+                         unit=_files, total=count[1])
+                return linkrevnodes[x]
+
+            filenodes = prune(filerevlog, linkrevnodes)
             if filenodes:
                 count[0] += 1
                 yield self.fileheader(fname)
-                for chunk in self.group(filenodes, filerevlog, reorder):
+                for chunk in self.group(filenodes, filerevlog, lookupfilelog,
+                                        reorder):
                     yield chunk
         yield self.close()
         progress(_bundling, None)
@@ -383,7 +396,7 @@ class bundle10(object):
         if clnodes:
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
-    def revchunk(self, revlog, rev, prev):
+    def revchunk(self, revlog, rev, prev, linknode):
         node = revlog.node(rev)
         p1, p2 = revlog.parentrevs(rev)
         base = prev
@@ -394,7 +407,6 @@ class bundle10(object):
             prefix = mdiff.trivialdiffheader(len(delta))
         else:
             delta = revlog.revdiff(base, rev)
-        linknode = self._lookup(revlog, node)
         p1n, p2n = revlog.parents(node)
         basenode = revlog.node(base)
         meta = self.builddeltaheader(node, p1n, p2n, basenode, linknode)
