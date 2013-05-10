@@ -1844,7 +1844,7 @@ class localrepository(object):
                     if revs is None and not outgoing.excluded:
                         # push everything,
                         # use the fast path, no race possible on push
-                        bundler = changegroup.bundle10(bundlecaps)
+                        bundler = changegroup.bundle10(self, bundlecaps)
                         cg = self._changegroup(outgoing.missing, bundler,
                                                'push')
                     else:
@@ -1992,7 +1992,7 @@ class localrepository(object):
         csets, bases, heads = cl.nodesbetween(bases, heads)
         # We assume that all ancestors of bases are known
         common = cl.ancestors([cl.rev(n) for n in bases])
-        bundler = changegroup.bundle10()
+        bundler = changegroup.bundle10(self)
         return self._changegroupsubset(common, csets, heads, bundler, source)
 
     def getlocalbundle(self, source, outgoing, bundlecaps=None):
@@ -2002,7 +2002,7 @@ class localrepository(object):
         precomputed sets in outgoing."""
         if not outgoing.missing:
             return None
-        bundler = changegroup.bundle10(bundlecaps)
+        bundler = changegroup.bundle10(self, bundlecaps)
         return self._changegroupsubset(outgoing.common,
                                        outgoing.missing,
                                        outgoing.missingheads,
@@ -2033,13 +2033,12 @@ class localrepository(object):
     @unfilteredmethod
     def _changegroupsubset(self, commonrevs, csets, heads, bundler, source):
 
-        cl = self.changelog
-        mf = self.manifest
+        cl = bundler._changelog
+        mf = bundler._manifest
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
         fstate = ['', {}]
-        count = [0, 0]
 
         # can we go through the fast path ?
         heads.sort()
@@ -2063,6 +2062,7 @@ class localrepository(object):
         _files = _('files')
 
         def lookup(revlog, x):
+            count = bundler.count
             if revlog == cl:
                 c = cl.read(x)
                 changedfiles.update(c[3])
@@ -2087,56 +2087,23 @@ class localrepository(object):
                 return fstate[1][x]
 
         bundler.start(lookup)
-        reorder = self.ui.config('bundle', 'reorder', 'auto')
-        if reorder == 'auto':
-            reorder = None
-        else:
-            reorder = util.parsebool(reorder)
 
-        def gengroup():
-            # Create a changenode group generator that will call our functions
-            # back to lookup the owning changenode and collect information.
-            count[:] = [0, len(csets)]
-            for chunk in bundler.group(csets, cl, reorder=reorder):
-                yield chunk
-            progress(_bundling, None)
-
-            # Create a generator for the manifestnodes that calls our lookup
-            # and data collection functions back.
+        def getmfnodes():
             for f in changedfiles:
                 fnodes[f] = {}
-            count[:] = [0, len(mfs)]
-            for chunk in bundler.group(prune(mf, mfs), mf, reorder=reorder):
-                yield chunk
-            progress(_bundling, None)
-
+            bundler.count[:] = [0, len(mfs)]
+            return prune(mf, mfs)
+        def getfiles():
             mfs.clear()
+            return changedfiles
+        def getfilenodes(fname, filerevlog):
+            fstate[0] = fname
+            fstate[1] = fnodes.pop(fname, {})
+            return prune(filerevlog, fstate[1])
 
-            # Go through all our files in order sorted by name.
-            count[:] = [0, len(changedfiles)]
-            for fname in sorted(changedfiles):
-                filerevlog = self.file(fname)
-                if not len(filerevlog):
-                    raise util.Abort(_("empty or missing revlog for %s")
-                                     % fname)
-                fstate[0] = fname
-                fstate[1] = fnodes.pop(fname, {})
-
-                nodelist = prune(filerevlog, fstate[1])
-                if nodelist:
-                    count[0] += 1
-                    yield bundler.fileheader(fname)
-                    for chunk in bundler.group(nodelist, filerevlog, reorder):
-                        yield chunk
-
-            # Signal that no more groups are left.
-            yield bundler.close()
-            progress(_bundling, None)
-
-            if csets:
-                self.hook('outgoing', node=hex(csets[0]), source=source)
-
-        return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
+        gengroup = bundler.generate(csets, getmfnodes, getfiles, getfilenodes,
+                                    source)
+        return changegroup.unbundle10(util.chunkbuffer(gengroup), 'UN')
 
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)
@@ -2153,12 +2120,11 @@ class localrepository(object):
 
         nodes is the set of nodes to send"""
 
-        cl = self.changelog
-        mf = self.manifest
+        cl = bundler._changelog
+        mf = bundler._manifest
         mfs = {}
         changedfiles = set()
         fstate = ['']
-        count = [0, 0]
 
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(nodes, source)
@@ -2176,6 +2142,7 @@ class localrepository(object):
         _files = _('files')
 
         def lookup(revlog, x):
+            count = bundler.count
             if revlog == cl:
                 c = cl.read(x)
                 changedfiles.update(c[3])
@@ -2195,46 +2162,19 @@ class localrepository(object):
                 return cl.node(revlog.linkrev(revlog.rev(x)))
 
         bundler.start(lookup)
-        reorder = self.ui.config('bundle', 'reorder', 'auto')
-        if reorder == 'auto':
-            reorder = None
-        else:
-            reorder = util.parsebool(reorder)
 
-        def gengroup():
-            '''yield a sequence of changegroup chunks (strings)'''
-            # construct a list of all changed files
+        def getmfnodes():
+            bundler.count[:] = [0, len(mfs)]
+            return gennodelst(mf)
+        def getfiles():
+            return changedfiles
+        def getfilenodes(fname, filerevlog):
+            fstate[0] = fname
+            return gennodelst(filerevlog)
 
-            count[:] = [0, len(nodes)]
-            for chunk in bundler.group(nodes, cl, reorder=reorder):
-                yield chunk
-            progress(_bundling, None)
-
-            count[:] = [0, len(mfs)]
-            for chunk in bundler.group(gennodelst(mf), mf, reorder=reorder):
-                yield chunk
-            progress(_bundling, None)
-
-            count[:] = [0, len(changedfiles)]
-            for fname in sorted(changedfiles):
-                filerevlog = self.file(fname)
-                if not len(filerevlog):
-                    raise util.Abort(_("empty or missing revlog for %s")
-                                     % fname)
-                fstate[0] = fname
-                nodelist = gennodelst(filerevlog)
-                if nodelist:
-                    count[0] += 1
-                    yield bundler.fileheader(fname)
-                    for chunk in bundler.group(nodelist, filerevlog, reorder):
-                        yield chunk
-            yield bundler.close()
-            progress(_bundling, None)
-
-            if nodes:
-                self.hook('outgoing', node=hex(nodes[0]), source=source)
-
-        return changegroup.unbundle10(util.chunkbuffer(gengroup()), 'UN')
+        gengroup = bundler.generate(nodes, getmfnodes, getfiles, getfilenodes,
+                                    source)
+        return changegroup.unbundle10(util.chunkbuffer(gengroup), 'UN')
 
     @unfilteredmethod
     def addchangegroup(self, source, srctype, url, emptyok=False):

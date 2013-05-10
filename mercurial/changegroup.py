@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from node import nullrev
+from node import nullrev, hex
 import mdiff, util, dagutil
 import struct, os, bz2, zlib, tempfile
 
@@ -225,11 +225,26 @@ def readbundle(fh, fname):
 
 class bundle10(object):
     deltaheader = _BUNDLE10_DELTA_HEADER
-    def __init__(self, bundlecaps=None):
+    def __init__(self, repo, bundlecaps=None):
+        """Given a source repo, construct a bundler.
+
+        bundlecaps is optional and can be used to specify the set of
+        capabilities which can be used to build the bundle.
+        """
         # Set of capabilities we can use to build the bundle.
         if bundlecaps is None:
             bundlecaps = set()
         self._bundlecaps = bundlecaps
+        self._changelog = repo.changelog
+        self._manifest = repo.manifest
+        reorder = repo.ui.config('bundle', 'reorder', 'auto')
+        if reorder == 'auto':
+            reorder = None
+        else:
+            reorder = util.parsebool(reorder)
+        self._repo = repo
+        self._reorder = reorder
+        self.count = [0, 0]
     def start(self, lookup):
         self._lookup = lookup
     def close(self):
@@ -276,6 +291,43 @@ class bundle10(object):
 
         yield self.close()
 
+    def generate(self, clnodes, getmfnodes, getfiles, getfilenodes, source):
+        '''yield a sequence of changegroup chunks (strings)'''
+        repo = self._repo
+        cl = self._changelog
+        mf = self._manifest
+        reorder = self._reorder
+        progress = repo.ui.progress
+        count = self.count
+        _bundling = _('bundling')
+
+        count[:] = [0, len(clnodes)]
+        for chunk in self.group(clnodes, cl, reorder=reorder):
+            yield chunk
+        progress(_bundling, None)
+
+        for chunk in self.group(getmfnodes(), mf, reorder=reorder):
+            yield chunk
+        progress(_bundling, None)
+
+        changedfiles = getfiles()
+        count[:] = [0, len(changedfiles)]
+        for fname in sorted(changedfiles):
+            filerevlog = repo.file(fname)
+            if not len(filerevlog):
+                raise util.Abort(_("empty or missing revlog for %s")
+                                 % fname)
+            nodelist = getfilenodes(fname, filerevlog)
+            if nodelist:
+                count[0] += 1
+                yield self.fileheader(fname)
+                for chunk in self.group(nodelist, filerevlog, reorder):
+                    yield chunk
+        yield self.close()
+        progress(_bundling, None)
+
+        if clnodes:
+            repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     def revchunk(self, revlog, rev, prev):
         node = revlog.node(rev)

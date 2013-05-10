@@ -100,7 +100,7 @@ def toposort_postorderreverse(ui, rl):
     result.reverse()
     return result
 
-def writerevs(ui, r1, r2, order, tr):
+def writerevs(ui, repo, r1, r2, order, tr):
 
     ui.status(_('writing revs\n'))
 
@@ -117,7 +117,7 @@ def writerevs(ui, r1, r2, order, tr):
     unlookup = lambda x: int(x, 10)
 
     try:
-        bundler = changegroup.bundle10()
+        bundler = changegroup.bundle10(repo)
         bundler.start(lookup)
         group = util.chunkbuffer(bundler.group(order, r1))
         group = changegroup.unbundle10(group, "UN")
@@ -238,7 +238,7 @@ def shrink(ui, repo, **opts):
                     suboptimal += 1
             ui.note(_('%d suboptimal nodes\n') % suboptimal)
 
-            writerevs(ui, r1, r2, order, tr)
+            writerevs(ui, repo, r1, r2, order, tr)
             report(ui, r1, r2)
             tr.close()
         except: # re-raises
