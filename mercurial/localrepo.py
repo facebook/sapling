@@ -1845,8 +1845,10 @@ class localrepository(object):
                         # push everything,
                         # use the fast path, no race possible on push
                         bundler = changegroup.bundle10(self, bundlecaps)
-                        cg = self._changegroup(outgoing.missing, bundler,
-                                               'push')
+                        cg = self._changegroupsubset(outgoing,
+                                                     bundler,
+                                                     'push',
+                                                     fastpath=True)
                     else:
                         cg = self.getlocalbundle('push', outgoing, bundlecaps)
 
@@ -1989,11 +1991,12 @@ class localrepository(object):
         cl = self.changelog
         if not bases:
             bases = [nullid]
+        # TODO: remove call to nodesbetween.
         csets, bases, heads = cl.nodesbetween(bases, heads)
-        # We assume that all ancestors of bases are known
-        common = cl.ancestors([cl.rev(n) for n in bases])
+        bases = [p for n in bases for p in cl.parents(n) if p != nullid]
+        outgoing = discovery.outgoing(cl, bases, heads)
         bundler = changegroup.bundle10(self)
-        return self._changegroupsubset(common, csets, heads, bundler, source)
+        return self._changegroupsubset(outgoing, bundler, source)
 
     def getlocalbundle(self, source, outgoing, bundlecaps=None):
         """Like getbundle, but taking a discovery.outgoing as an argument.
@@ -2003,11 +2006,7 @@ class localrepository(object):
         if not outgoing.missing:
             return None
         bundler = changegroup.bundle10(self, bundlecaps)
-        return self._changegroupsubset(outgoing.common,
-                                       outgoing.missing,
-                                       outgoing.missingheads,
-                                       bundler,
-                                       source)
+        return self._changegroupsubset(outgoing, bundler, source)
 
     def getbundle(self, source, heads=None, common=None, bundlecaps=None):
         """Like changegroupsubset, but returns the set difference between the
@@ -2031,8 +2030,11 @@ class localrepository(object):
                                    bundlecaps=bundlecaps)
 
     @unfilteredmethod
-    def _changegroupsubset(self, commonrevs, csets, heads, bundler, source):
-
+    def _changegroupsubset(self, outgoing, bundler, source,
+                           fastpath=False):
+        commonrevs = outgoing.common
+        csets = outgoing.missing
+        heads = outgoing.missingheads
         cl = bundler._changelog
         mf = bundler._manifest
         mfs = {} # needed manifests
@@ -2040,12 +2042,13 @@ class localrepository(object):
         changedfiles = set()
         fstate = ['', {}]
 
-        # can we go through the fast path ?
+        # We go through the fast path if we get told to, or if all (unfiltered
+        # heads have been requested (since we then know there all linkrevs will
+        # be pulled by the client).
         heads.sort()
-        if heads == sorted(self.heads()):
-            return self._changegroup(csets, bundler, source)
+        fastpathlinkrev = fastpath or (
+                self.filtername is None and heads == sorted(self.heads()))
 
-        # slow path
         self.hook('preoutgoing', throw=True, source=source)
         self.changegroupinfo(csets, source)
 
@@ -2073,10 +2076,11 @@ class localrepository(object):
                 return x
             elif revlog == mf:
                 clnode = mfs[x]
-                mdata = mf.readfast(x)
-                for f, n in mdata.iteritems():
-                    if f in changedfiles:
-                        fnodes[f].setdefault(n, clnode)
+                if not fastpathlinkrev:
+                    mdata = mf.readfast(x)
+                    for f, n in mdata.iteritems():
+                        if f in changedfiles:
+                            fnodes[f].setdefault(n, clnode)
                 count[0] += 1
                 progress(_bundling, count[0],
                          unit=_manifests, total=count[1])
@@ -2097,6 +2101,14 @@ class localrepository(object):
             mfs.clear()
             return changedfiles
         def getfilenodes(fname, filerevlog):
+            if fastpathlinkrev:
+                ln, llr = filerevlog.node, filerevlog.linkrev
+                def genfilenodes():
+                    for r in filerevlog:
+                        linkrev = llr(r)
+                        if linkrev not in commonrevs:
+                            yield filerevlog.node(r), cl.node(linkrev)
+                fnodes[fname] = dict(genfilenodes())
             fstate[0] = fname
             fstate[1] = fnodes.pop(fname, {})
             return prune(filerevlog, fstate[1])
@@ -2108,73 +2120,6 @@ class localrepository(object):
     def changegroup(self, basenodes, source):
         # to avoid a race we use changegroupsubset() (issue1320)
         return self.changegroupsubset(basenodes, self.heads(), source)
-
-    @unfilteredmethod
-    def _changegroup(self, nodes, bundler, source):
-        """Compute the changegroup of all nodes that we have that a recipient
-        doesn't.  Return a chunkbuffer object whose read() method will return
-        successive changegroup chunks.
-
-        This is much easier than the previous function as we can assume that
-        the recipient has any changenode we aren't sending them.
-
-        nodes is the set of nodes to send"""
-
-        cl = bundler._changelog
-        mf = bundler._manifest
-        mfs = {}
-        changedfiles = set()
-        fstate = ['']
-
-        self.hook('preoutgoing', throw=True, source=source)
-        self.changegroupinfo(nodes, source)
-
-        revset = set([cl.rev(n) for n in nodes])
-
-        def gennodelst(log):
-            ln, llr = log.node, log.linkrev
-            return [ln(r) for r in log if llr(r) in revset]
-
-        progress = self.ui.progress
-        _bundling = _('bundling')
-        _changesets = _('changesets')
-        _manifests = _('manifests')
-        _files = _('files')
-
-        def lookup(revlog, x):
-            count = bundler.count
-            if revlog == cl:
-                c = cl.read(x)
-                changedfiles.update(c[3])
-                mfs.setdefault(c[0], x)
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_changesets, total=count[1])
-                return x
-            elif revlog == mf:
-                count[0] += 1
-                progress(_bundling, count[0],
-                         unit=_manifests, total=count[1])
-                return cl.node(revlog.linkrev(revlog.rev(x)))
-            else:
-                progress(_bundling, count[0], item=fstate[0],
-                    total=count[1], unit=_files)
-                return cl.node(revlog.linkrev(revlog.rev(x)))
-
-        bundler.start(lookup)
-
-        def getmfnodes():
-            bundler.count[:] = [0, len(mfs)]
-            return gennodelst(mf)
-        def getfiles():
-            return changedfiles
-        def getfilenodes(fname, filerevlog):
-            fstate[0] = fname
-            return gennodelst(filerevlog)
-
-        gengroup = bundler.generate(nodes, getmfnodes, getfiles, getfilenodes,
-                                    source)
-        return changegroup.unbundle10(util.chunkbuffer(gengroup), 'UN')
 
     @unfilteredmethod
     def addchangegroup(self, source, srctype, url, emptyok=False):
