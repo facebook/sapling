@@ -696,7 +696,7 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	return 0;
 }
 
-#define MAXENCODE 4096 * 3
+#define MAXENCODE 4096 * 4
 
 static PyObject *hashencode(const char *src, Py_ssize_t len)
 {
