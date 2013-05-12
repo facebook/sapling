@@ -33,7 +33,6 @@ have any clients outside of httpplus.
 """
 
 import httplib
-import itertools
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,33 +58,35 @@ class AbstractReader(object):
         self._done_chunks = []
         self.available_data = 0
 
-    def addchunk(self, data):
+    def _addchunk(self, data):
         self._done_chunks.append(data)
         self.available_data += len(data)
 
-    def pushchunk(self, data):
+    def _pushchunk(self, data):
         self._done_chunks.insert(0, data)
         self.available_data += len(data)
 
-    def popchunk(self):
+    def _popchunk(self):
         b = self._done_chunks.pop(0)
         self.available_data -= len(b)
 
         return b
 
     def done(self):
+        """Returns true if the response body is entirely read."""
         return self._finished
 
     def read(self, amt):
+        """Read amt bytes from the response body."""
         if self.available_data < amt and not self._finished:
             raise ReadNotReady()
         blocks = []
         need = amt
         while self._done_chunks:
-            b = self.popchunk()
+            b = self._popchunk()
             if len(b) > need:
                 nb = b[:need]
-                self.pushchunk(b[need:])
+                self._pushchunk(b[need:])
                 b = nb
             blocks.append(b)
             need -= len(b)
@@ -107,11 +108,11 @@ class AbstractReader(object):
             blocks = []
 
         while self._done_chunks:
-            b = self.popchunk()
+            b = self._popchunk()
             i = b.find(delimstr) + len(delimstr)
             if i:
                 if i < len(b):
-                    self.pushchunk(b[i:])
+                    self._pushchunk(b[i:])
                 blocks.append(b[:i])
                 break
             else:
@@ -154,8 +155,9 @@ class AbstractSimpleReader(AbstractReader):
         if data:
             assert not self._finished, (
                 'tried to add data (%r) to a closed reader!' % data)
-        logger.debug('%s read an additional %d data', self.name, len(data))
-        self.addchunk(data)
+        logger.debug('%s read an additional %d data',
+                     self.name, len(data)) # pylint: disable=E1101
+        self._addchunk(data)
 
 
 class CloseIsEndReader(AbstractSimpleReader):
@@ -172,7 +174,7 @@ class ContentLengthReader(AbstractSimpleReader):
     name = 'content-length'
 
     def __init__(self, amount):
-        AbstractReader.__init__(self)
+        AbstractSimpleReader.__init__(self)
         self._amount = amount
         if amount == 0:
             self._finished = True
@@ -199,7 +201,8 @@ class ChunkedReader(AbstractReader):
         logger.debug('chunked read an additional %d data', len(data))
         position = 0
         if self._leftover_data:
-            logger.debug('chunked reader trying to finish block from leftover data')
+            logger.debug(
+                'chunked reader trying to finish block from leftover data')
             # TODO: avoid this string concatenation if possible
             data = self._leftover_data + data
             position = self._leftover_skip_amt
@@ -224,6 +227,6 @@ class ChunkedReader(AbstractReader):
                 self._finished = True
                 logger.debug('closing chunked reader due to chunk of length 0')
                 return
-            self.addchunk(data[block_start:block_start + amt])
+            self._addchunk(data[block_start:block_start + amt])
             position = block_start + amt + len(self._eol)
 # no-check-code

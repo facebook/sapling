@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 
 try:
     import ssl
-    ssl.wrap_socket  # make demandimporters load the module
+    # make demandimporters load the module
+    ssl.wrap_socket # pylint: disable=W0104
     have_ssl = True
 except ImportError:
     import httplib
@@ -52,12 +53,13 @@ try:
     create_connection = socket.create_connection
 except AttributeError:
     def create_connection(address):
+        """Backport of socket.create_connection from Python 2.6."""
         host, port = address
         msg = "getaddrinfo returns an empty list"
         sock = None
         for res in socket.getaddrinfo(host, port, 0,
                                       socket.SOCK_STREAM):
-            af, socktype, proto, _canonname, sa = res
+            af, socktype, proto, unused_canonname, sa = res
             try:
                 sock = socket.socket(af, socktype, proto)
                 logger.info("connect: (%s, %s)", host, port)
@@ -80,8 +82,11 @@ if ssl:
     CERT_REQUIRED = ssl.CERT_REQUIRED
 else:
     class FakeSocket(httplib.FakeSocket):
-        """Socket wrapper that supports SSL.
-        """
+        """Socket wrapper that supports SSL."""
+
+        # Silence lint about this goofy backport class
+        # pylint: disable=W0232,E1101,R0903,R0913,C0111
+
         # backport the behavior from Python 2.6, which is to busy wait
         # on the socket instead of anything nice. Sigh.
         # See http://bugs.python.org/issue3890 for more info.
@@ -107,11 +112,16 @@ else:
     CERT_OPTIONAL = 1
     CERT_REQUIRED = 2
 
+    # Disable unused-argument because we're making a dumb wrapper
+    # that's like an upstream method.
+    #
+    # pylint: disable=W0613,R0913
     def wrap_socket(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=CERT_NONE,
                 ssl_version=_PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
+        """Backport of ssl.wrap_socket from Python 2.6."""
         if cert_reqs != CERT_NONE and ca_certs:
             raise CertificateValidationUnsupported(
                 'SSL certificate validation requires the ssl module'
@@ -120,6 +130,7 @@ else:
         # borrow httplib's workaround for no ssl.wrap_socket
         sock = FakeSocket(sock, sslob)
         return sock
+    # pylint: enable=W0613,R0913
 
 
 class CertificateValidationUnsupported(Exception):

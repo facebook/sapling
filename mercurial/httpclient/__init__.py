@@ -37,6 +37,9 @@ httplib, but has several additional features:
   * implements ssl inline instead of in a different class
 """
 
+# Many functions in this file have too many arguments.
+# pylint: disable=R0913
+
 import cStringIO
 import errno
 import httplib
@@ -117,6 +120,8 @@ class HTTPResponse(object):
 
     def _close(self):
         if self._reader is not None:
+            # We're a friend of the reader class here.
+            # pylint: disable=W0212
             self._reader._close()
 
     def readline(self):
@@ -137,6 +142,7 @@ class HTTPResponse(object):
         return ''.join(blocks)
 
     def read(self, length=None):
+        """Read data from the response body."""
         # if length is None, unbounded read
         while (not self.complete()  # never select on a finished read
                and (not length  # unbounded, so we wait for complete()
@@ -150,7 +156,8 @@ class HTTPResponse(object):
         return r
 
     def _select(self):
-        r, _, _ = select.select([self.sock], [], [], self._timeout)
+        r, unused_write, unused_err = select.select(
+            [self.sock], [], [], self._timeout)
         if not r:
             # socket was not readable. If the response is not
             # complete, raise a timeout.
@@ -170,13 +177,16 @@ class HTTPResponse(object):
         # raise an exception if this is an invalid situation.
         if not data:
             if self._reader:
+                # We're a friend of the reader class here.
+                # pylint: disable=W0212
                 self._reader._close()
             return False
         else:
             self._load_response(data)
             return True
 
-    def _load_response(self, data):
+    # This method gets replaced by _load later, which confuses pylint.
+    def _load_response(self, data): # pylint: disable=E0202
         # Being here implies we're not at the end of the headers yet,
         # since at the end of this method if headers were completely
         # loaded we replace this method with the load() method of the
@@ -201,7 +211,7 @@ class HTTPResponse(object):
 
         # handle 100-continue response
         hdrs, body = self.raw_response.split(self._end_headers, 1)
-        http_ver, status = hdrs.split(' ', 1)
+        unused_http_ver, status = hdrs.split(' ', 1)
         if status.startswith('100'):
             self.raw_response = body
             self.continued = True
@@ -260,9 +270,13 @@ class HTTPResponse(object):
                 self.will_close = True
 
         if body:
+            # We're a friend of the reader class here.
+            # pylint: disable=W0212
             self._reader._load(body)
         logger.debug('headers complete')
         self.headers = headers
+        # We're a friend of the reader class here.
+        # pylint: disable=W0212
         self._load_response = self._reader._load
 
 
@@ -335,9 +349,9 @@ class HTTPConnection(object):
                                                  self._proxy_port))
             if self.ssl:
                 # TODO proxy header support
-                data = self.buildheaders('CONNECT', '%s:%d' % (self.host,
-                                                               self.port),
-                                         {}, HTTP_VER_1_0)
+                data = self._buildheaders('CONNECT', '%s:%d' % (self.host,
+                                                                self.port),
+                                          {}, HTTP_VER_1_0)
                 sock.send(data)
                 sock.setblocking(0)
                 r = self.response_class(sock, self.timeout, 'CONNECT')
@@ -345,6 +359,9 @@ class HTTPConnection(object):
                     'Timed out waiting for CONNECT response from proxy')
                 while not r.complete():
                     try:
+                        # We're a friend of the response class, so let
+                        # us use the private attribute.
+                        # pylint: disable=W0212
                         if not r._select():
                             if not r.complete():
                                 raise timeout_exc
@@ -376,7 +393,7 @@ class HTTPConnection(object):
         sock.setblocking(0)
         self.sock = sock
 
-    def buildheaders(self, method, path, headers, http_ver):
+    def _buildheaders(self, method, path, headers, http_ver):
         if self.ssl and self.port == 443 or self.port == 80:
             # default port for protocol, so leave it out
             hdrhost = self.host
@@ -437,6 +454,11 @@ class HTTPConnection(object):
             return True
         return False
 
+    def _reconnect(self, where):
+        logger.info('reconnecting during %s', where)
+        self.close()
+        self._connect()
+
     def request(self, method, path, body=None, headers={},
                 expect_continue=False):
         """Send a request to the server.
@@ -474,15 +496,10 @@ class HTTPConnection(object):
                 raise BadRequestData('body has no __len__() nor read()')
 
         self._connect()
-        outgoing_headers = self.buildheaders(
+        outgoing_headers = self._buildheaders(
             method, path, hdrs, self.http_version)
         response = None
         first = True
-
-        def reconnect(where):
-            logger.info('reconnecting during %s', where)
-            self.close()
-            self._connect()
 
         while ((outgoing_headers or body)
                and not (response and response.complete())):
@@ -523,14 +540,17 @@ class HTTPConnection(object):
                     except socket.sslerror, e:
                         if e.args[0] != socket.SSL_ERROR_WANT_READ:
                             raise
-                        logger.debug(
-                            'SSL_ERROR_WANT_READ while sending data, retrying...')
+                        logger.debug('SSL_ERROR_WANT_READ while sending '
+                                     'data, retrying...')
                         continue
                     if not data:
                         logger.info('socket appears closed in read')
                         self.sock = None
                         self._current_response = None
                         if response is not None:
+                            # We're a friend of the response class, so let
+                            # us use the private attribute.
+                            # pylint: disable=W0212
                             response._close()
                         # This if/elif ladder is a bit subtle,
                         # comments in each branch should help.
@@ -550,7 +570,7 @@ class HTTPConnection(object):
                             logger.info(
                                 'Connection appeared closed in read on first'
                                 ' request loop iteration, will retry.')
-                            reconnect('read')
+                            self._reconnect('read')
                             continue
                         else:
                             # We didn't just send the first data hunk,
@@ -563,7 +583,11 @@ class HTTPConnection(object):
                                 'response was missing or incomplete!')
                     logger.debug('read %d bytes in request()', len(data))
                     if response is None:
-                        response = self.response_class(r[0], self.timeout, method)
+                        response = self.response_class(
+                            r[0], self.timeout, method)
+                    # We're a friend of the response class, so let us
+                    # use the private attribute.
+                    # pylint: disable=W0212
                     response._load_response(data)
                     # Jump to the next select() call so we load more
                     # data if the server is still sending us content.
@@ -576,6 +600,8 @@ class HTTPConnection(object):
             if w and out:
                 try:
                     if getattr(out, 'read', False):
+                        # pylint guesses the type of out incorrectly here
+                        # pylint: disable=E1103
                         data = out.read(OUTGOING_BUFFER_SIZE)
                         if not data:
                             continue
@@ -599,14 +625,10 @@ class HTTPConnection(object):
                     elif (e[0] not in (errno.ECONNRESET, errno.EPIPE)
                           and not first):
                         raise
-                    reconnect('write')
+                    self._reconnect('write')
                     amt = self.sock.send(out)
                 logger.debug('sent %d', amt)
                 first = False
-                # stash data we think we sent in case the socket breaks
-                # when we read from it
-                if was_first:
-                    sent_data = out[:amt]
                 if out is body:
                     body = out[amt:]
                 else:
@@ -616,7 +638,6 @@ class HTTPConnection(object):
         # the whole request
         if response is None:
             response = self.response_class(self.sock, self.timeout, method)
-        complete = response.complete()
         data_left = bool(outgoing_headers or body)
         if data_left:
             logger.info('stopped sending request early, '
@@ -629,10 +650,14 @@ class HTTPConnection(object):
         self._current_response = response
 
     def getresponse(self):
+        """Returns the response to the most recent request."""
         if self._current_response is None:
             raise httplib.ResponseNotReady()
         r = self._current_response
         while r.headers is None:
+            # We're a friend of the response class, so let us use the
+            # private attribute.
+            # pylint: disable=W0212
             if not r._select() and not r.complete():
                 raise _readers.HTTPRemoteClosedError()
         if r.will_close:
