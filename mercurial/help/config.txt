@@ -85,6 +85,9 @@ ones.
     be read.  Mercurial checks each of these locations in the specified
     order until one or more configuration files are detected.
 
+.. note:: The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
+   is used when running 32-bit Python on 64-bit Windows.
+
 Syntax
 ======
 
