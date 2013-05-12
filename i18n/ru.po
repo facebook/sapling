@@ -8049,15 +8049,15 @@ msgstr ""
 
 # PROMPT
 msgid "are you sure you want to send (yn)?"
-msgstr "вы уверены, что хотите отправить письмо (yn)?"
+msgstr "вы уверены, что хотите отправить письмо? (Y — да, N — нет)"
 
 # PROMPT
 msgid "&No"
-msgstr "&Нет"
+msgstr "Нет (&N)"
 
 # PROMPT
 msgid "&Yes"
-msgstr "&Да"
+msgstr "Да (&Y)"
 
 msgid "patchbomb canceled"
 msgstr "отправка отменена"
