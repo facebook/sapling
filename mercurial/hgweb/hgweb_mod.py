@@ -176,6 +176,8 @@ class hgweb(object):
                                  '').lower() != '100-continue') or
                     req.env.get('X-HgHttp2', '')):
                     req.drain()
+                else:
+                    req.headers.append(('Connection', 'Close'))
                 req.respond(inst, protocol.HGTYPE,
                             body='0\n%s\n' % inst.message)
                 return ''
