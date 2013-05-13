@@ -14181,7 +14181,7 @@ msgid "&Changed"
 msgstr ""
 
 msgid "&Delete"
-msgstr "&Διαγραφή"
+msgstr ""
 
 #, python-format
 msgid ""
@@ -14190,7 +14190,7 @@ msgid ""
 msgstr ""
 
 msgid "&Deleted"
-msgstr "&Διαγράφηκε"
+msgstr ""
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -14422,7 +14422,7 @@ msgid ""
 msgstr ""
 
 msgid "&Remote"
-msgstr "&Απομακρυσμένο:"
+msgstr ""
 
 #, python-format
 msgid ""
