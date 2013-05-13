@@ -8053,11 +8053,11 @@ msgstr "вы уверены, что хотите отправить письмо
 
 # PROMPT
 msgid "&No"
-msgstr "&Нет"
+msgstr ""
 
 # PROMPT
 msgid "&Yes"
-msgstr "&Да"
+msgstr ""
 
 msgid "patchbomb canceled"
 msgstr "отправка отменена"
