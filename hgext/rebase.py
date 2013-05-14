@@ -779,6 +779,17 @@ def pullrebase(orig, ui, repo, *args, **opts):
             raise util.Abort(_('--tool can only be used with --rebase'))
         orig(ui, repo, *args, **opts)
 
+def summaryhook(ui, repo):
+    if not os.path.exists(repo.join('rebasestate')):
+        return
+    state = restorestatus(repo)[2]
+    numrebased = len([i for i in state.itervalues() if i != -1])
+    # i18n: column positioning for "hg summary"
+    ui.write(_('rebase: %s, %s (rebase --continue)\n') %
+             (ui.label(_('%d rebased'), 'rebase.rebased') % numrebased,
+              ui.label(_('%d remaining'), 'rebase.remaining') %
+              (len(state) - numrebased)))
+
 def uisetup(ui):
     'Replace pull with a decorator to provide --rebase option'
     entry = extensions.wrapcommand(commands.table, 'pull', pullrebase)
@@ -786,3 +797,4 @@ def uisetup(ui):
                      _("rebase working directory to branch head")))
     entry[1].append(('t', 'tool', '',
                      _("specify merge tool for rebase")))
+    cmdutil.summaryhooks.add('rebase', summaryhook)

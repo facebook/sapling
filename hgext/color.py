@@ -60,6 +60,9 @@ Default effects may be overridden from your configuration file::
   tags.normal = green
   tags.local = black bold
 
+  rebase.rebased = blue
+  rebase.remaining = red bold
+
 The available effects in terminfo mode are 'blink', 'bold', 'dim',
 'inverse', 'invisible', 'italic', 'standout', and 'underline'; in
 ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
@@ -250,6 +253,8 @@ _styles = {'grep.match': 'red bold',
            'diffstat.inserted': 'green',
            'ui.prompt': 'yellow',
            'log.changeset': 'yellow',
+           'rebase.rebased': 'blue',
+           'rebase.remaining': 'red bold',
            'resolve.resolved': 'green bold',
            'resolve.unresolved': 'red bold',
            'status.added': 'green bold',

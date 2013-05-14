@@ -427,6 +427,7 @@ Test --tool parameter:
   branch: default
   commit: 1 modified, 1 unresolved (merge)
   update: (current)
+  rebase: 0 rebased, 1 remaining (rebase --continue)
 
   $ hg resolve -l
   U c2
