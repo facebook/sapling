@@ -152,6 +152,14 @@ check histedit_source
   When you are finished, run hg histedit --continue to resume.
   $ hg status
   A f
+
+  $ hg summary
+  parent: 5:a5e1ba2f7afb 
+   foobaz
+  branch: default
+  commit: 1 added (new branch head)
+  update: 1 new changesets (update)
+
   $ HGEDITOR='true' hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-backup.hg (glob)

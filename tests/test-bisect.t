@@ -184,6 +184,12 @@ bisect test
 
   $ hg bisect -r
   $ hg bisect -b
+  $ hg summary
+  parent: 31:58c80a7c8a40 tip
+   msg 31
+  branch: default
+  commit: (clean)
+  update: (current)
   $ hg bisect -g 1
   Testing changeset 16:a2e6ea4973e9 (30 changesets remaining, ~4 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

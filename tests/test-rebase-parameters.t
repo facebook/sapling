@@ -419,6 +419,15 @@ Test --tool parameter:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
+  $ hg summary
+  parent: 1:56daeba07f4b 
+   c2
+  parent: 2:e4e3f3546619 tip
+   c2b
+  branch: default
+  commit: 1 modified, 1 unresolved (merge)
+  update: (current)
+
   $ hg resolve -l
   U c2
 
