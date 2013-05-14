@@ -1924,3 +1924,25 @@ def timed(func):
                              (' ' * _timenesting[0], func.__name__,
                               timecount(elapsed)))
     return wrapper
+
+_sizeunits = (('m', 2**20), ('k', 2**10), ('g', 2**30),
+              ('kb', 2**10), ('mb', 2**20), ('gb', 2**30), ('b', 1))
+
+def sizetoint(s):
+    '''Convert a space specifier to a byte count.
+
+    >>> sizetoint('30')
+    30
+    >>> sizetoint('2.2kb')
+    2252
+    >>> sizetoint('6M')
+    6291456
+    '''
+    t = s.strip().lower()
+    try:
+        for k, u in _sizeunits:
+            if t.endswith(k):
+                return int(float(t[:-len(k)]) * u)
+        return int(t)
+    except ValueError:
+        raise error.ParseError(_("couldn't parse size: %s") % s)

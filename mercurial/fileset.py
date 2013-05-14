@@ -263,23 +263,10 @@ def grep(mctx, x):
         raise error.ParseError(_('invalid match pattern: %s') % e)
     return [f for f in mctx.existing() if r.search(mctx.ctx[f].data())]
 
-_units = dict(k=2**10, K=2**10, kB=2**10, KB=2**10,
-              M=2**20, MB=2**20, G=2**30, GB=2**30)
-
-def _sizetoint(s):
-    try:
-        s = s.strip()
-        for k, v in _units.items():
-            if s.endswith(k):
-                return int(float(s[:-len(k)]) * v)
-        return int(s)
-    except ValueError:
-        raise error.ParseError(_("couldn't parse size: %s") % s)
-
 def _sizetomax(s):
     try:
         s = s.strip()
-        for k, v in _units.items():
+        for k, v in util._sizeunits:
             if s.endswith(k):
                 # max(4k) = 5k - 1, max(4.5k) = 4.6k - 1
                 n = s[:-len(k)]
@@ -306,23 +293,23 @@ def size(mctx, x):
     expr = getstring(x, _("size requires an expression")).strip()
     if '-' in expr: # do we have a range?
         a, b = expr.split('-', 1)
-        a = _sizetoint(a)
-        b = _sizetoint(b)
+        a = util.sizetoint(a)
+        b = util.sizetoint(b)
         m = lambda x: x >= a and x <= b
     elif expr.startswith("<="):
-        a = _sizetoint(expr[2:])
+        a = util.sizetoint(expr[2:])
         m = lambda x: x <= a
     elif expr.startswith("<"):
-        a = _sizetoint(expr[1:])
+        a = util.sizetoint(expr[1:])
         m = lambda x: x < a
     elif expr.startswith(">="):
-        a = _sizetoint(expr[2:])
+        a = util.sizetoint(expr[2:])
         m = lambda x: x >= a
     elif expr.startswith(">"):
-        a = _sizetoint(expr[1:])
+        a = util.sizetoint(expr[1:])
         m = lambda x: x > a
     elif expr[0].isdigit or expr[0] == '.':
-        a = _sizetoint(expr)
+        a = util.sizetoint(expr)
         b = _sizetomax(expr)
         m = lambda x: x >= a and x <= b
     else:
