@@ -3533,8 +3533,7 @@ def mqcommand(orig, ui, repo, *args, **kwargs):
         raise util.Abort(_('no queue repository'))
     return orig(r.ui, r, *args, **kwargs)
 
-def summary(orig, ui, repo, *args, **kwargs):
-    r = orig(ui, repo, *args, **kwargs)
+def summaryhook(ui, repo):
     q = repo.mq
     m = []
     a, u = len(q.applied), len(q.unapplied(repo))
@@ -3548,7 +3547,6 @@ def summary(orig, ui, repo, *args, **kwargs):
     else:
         # i18n: column positioning for "hg summary"
         ui.note(_("mq:     (empty queue)\n"))
-    return r
 
 def revsetmq(repo, subset, x):
     """``mq()``
@@ -3567,7 +3565,7 @@ def extsetup(ui):
     mqopt = [('', 'mq', None, _("operate on patch repository"))]
 
     extensions.wrapcommand(commands.table, 'import', mqimport)
-    extensions.wrapcommand(commands.table, 'summary', summary)
+    cmdutil.summaryhooks.add('mq', summaryhook)
 
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)
