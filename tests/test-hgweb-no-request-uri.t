@@ -49,6 +49,7 @@ should be used from d74fc8dec2b4 onward to route the request.
   >     content = app(env, startrsp)
   >     sys.stdout.write(output.getvalue())
   >     sys.stdout.write(''.join(content))
+  >     getattr(content, 'close', lambda : None)()
   >     print '---- ERRORS'
   >     print errors.getvalue()
   > 

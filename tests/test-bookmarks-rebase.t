@@ -26,6 +26,7 @@ initialize repository
 
   $ hg bookmark -r 1 one
   $ hg bookmark -r 3 two
+  $ hg up -q two
 
 bookmark list
 

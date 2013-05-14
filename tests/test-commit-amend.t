@@ -304,7 +304,7 @@ Same thing, different code path:
   $ hg branches
   default                        2:ce12b0b57d46
 
-Refuse to amend merges:
+Refuse to amend during a merge:
 
   $ hg up -q default
   $ hg merge foo
@@ -314,9 +314,6 @@ Refuse to amend merges:
   abort: cannot amend while merging
   [255]
   $ hg ci -m 'merge'
-  $ hg ci --amend
-  abort: cannot amend merge changesets
-  [255]
 
 Follow copies/renames:
 
@@ -517,4 +514,232 @@ Test that rewriting leaving instability behind is allowed
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     babar
+  
+
+Amend a merge changeset (with renames and conflicts from the second parent):
+
+  $ hg up -q default
+  $ hg branch -q bar
+  $ hg cp a aa
+  $ hg mv z zz
+  $ echo cc > cc
+  $ hg add cc
+  $ hg ci -m aazzcc
+  $ hg up -q default
+  $ echo a >> a
+  $ echo dd > cc
+  $ hg add cc
+  $ hg ci -m aa
+  $ hg merge -q bar
+  warning: conflicts during merge.
+  merging cc incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ hg resolve -m cc
+  $ hg ci -m 'merge bar'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   23:d51446492733
+  tag:         tip
+  parent:      22:30d96aeaf27b
+  parent:      21:1aa437659d19
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar
+  
+  diff --git a/a b/aa
+  copy from a
+  copy to aa
+  diff --git a/cc b/cc
+  --- a/cc
+  +++ b/cc
+  @@ -1,1 +1,5 @@
+  +<<<<<<< local
+   dd
+  +=======
+  +cc
+  +>>>>>>> other
+  diff --git a/z b/zz
+  rename from z
+  rename to zz
+  
+  $ hg debugrename aa
+  aa renamed from a:a80d06849b333b8a3d5c445f8ba3142010dcdc9e
+  $ hg debugrename zz
+  zz renamed from z:69a1b67522704ec122181c0890bd16e9d3e7516a
+  $ hg debugrename cc
+  cc not renamed
+  $ hg ci --amend -m 'merge bar (amend message)'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   24:59de3dce7a79
+  tag:         tip
+  parent:      22:30d96aeaf27b
+  parent:      21:1aa437659d19
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar (amend message)
+  
+  diff --git a/a b/aa
+  copy from a
+  copy to aa
+  diff --git a/cc b/cc
+  --- a/cc
+  +++ b/cc
+  @@ -1,1 +1,5 @@
+  +<<<<<<< local
+   dd
+  +=======
+  +cc
+  +>>>>>>> other
+  diff --git a/z b/zz
+  rename from z
+  rename to zz
+  
+  $ hg debugrename aa
+  aa renamed from a:a80d06849b333b8a3d5c445f8ba3142010dcdc9e
+  $ hg debugrename zz
+  zz renamed from z:69a1b67522704ec122181c0890bd16e9d3e7516a
+  $ hg debugrename cc
+  cc not renamed
+  $ hg mv zz z
+  $ hg ci --amend -m 'merge bar (undo rename)'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   26:7fb89c461f81
+  tag:         tip
+  parent:      22:30d96aeaf27b
+  parent:      21:1aa437659d19
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar (undo rename)
+  
+  diff --git a/a b/aa
+  copy from a
+  copy to aa
+  diff --git a/cc b/cc
+  --- a/cc
+  +++ b/cc
+  @@ -1,1 +1,5 @@
+  +<<<<<<< local
+   dd
+  +=======
+  +cc
+  +>>>>>>> other
+  
+  $ hg debugrename z
+  z not renamed
+
+Amend a merge changeset (with renames during the merge):
+
+  $ hg up -q bar
+  $ echo x > x
+  $ hg add x
+  $ hg ci -m x
+  $ hg up -q default
+  $ hg merge -q bar
+  $ hg mv aa aaa
+  $ echo aa >> aaa
+  $ hg ci -m 'merge bar again'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   28:982d7a34ffee
+  tag:         tip
+  parent:      26:7fb89c461f81
+  parent:      27:4c94d5bc65f5
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar again
+  
+  diff --git a/aa b/aa
+  deleted file mode 100644
+  --- a/aa
+  +++ /dev/null
+  @@ -1,2 +0,0 @@
+  -a
+  -a
+  diff --git a/aaa b/aaa
+  new file mode 100644
+  --- /dev/null
+  +++ b/aaa
+  @@ -0,0 +1,3 @@
+  +a
+  +a
+  +aa
+  diff --git a/x b/x
+  new file mode 100644
+  --- /dev/null
+  +++ b/x
+  @@ -0,0 +1,1 @@
+  +x
+  
+  $ hg debugrename aaa
+  aaa renamed from aa:37d9b5d994eab34eda9c16b195ace52c7b129980
+  $ hg mv aaa aa
+  $ hg ci --amend -m 'merge bar again (undo rename)'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   30:522688c0e71b
+  tag:         tip
+  parent:      26:7fb89c461f81
+  parent:      27:4c94d5bc65f5
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar again (undo rename)
+  
+  diff --git a/aa b/aa
+  --- a/aa
+  +++ b/aa
+  @@ -1,2 +1,3 @@
+   a
+   a
+  +aa
+  diff --git a/x b/x
+  new file mode 100644
+  --- /dev/null
+  +++ b/x
+  @@ -0,0 +1,1 @@
+  +x
+  
+  $ hg debugrename aa
+  aa not renamed
+  $ hg debugrename -r '.^' aa
+  aa renamed from a:a80d06849b333b8a3d5c445f8ba3142010dcdc9e
+
+Amend a merge changeset (with manifest-level conflicts):
+
+  $ hg up -q bar
+  $ hg rm aa
+  $ hg ci -m 'rm aa'
+  $ hg up -q default
+  $ echo aa >> aa
+  $ hg ci -m aa
+  $ hg merge -q bar
+  local changed aa which remote deleted
+  use (c)hanged version or (d)elete? c
+  $ hg ci -m 'merge bar (with conflicts)'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   33:5f9904c491b8
+  tag:         tip
+  parent:      32:01780b896f58
+  parent:      31:67db8847a540
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar (with conflicts)
+  
+  
+  $ hg rm aa
+  $ hg ci --amend -m 'merge bar (with conflicts, amended)'
+  $ hg log --config diff.git=1 -pr .
+  changeset:   35:6ce0c89781a3
+  tag:         tip
+  parent:      32:01780b896f58
+  parent:      31:67db8847a540
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     merge bar (with conflicts, amended)
+  
+  diff --git a/aa b/aa
+  deleted file mode 100644
+  --- a/aa
+  +++ /dev/null
+  @@ -1,4 +0,0 @@
+  -a
+  -a
+  -aa
+  -aa
   

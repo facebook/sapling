@@ -112,7 +112,8 @@ Check hgweb's load order:
   > wsgicgi.launch(application)
   > EOF
 
-  $ SCRIPT_NAME='/' SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
+  $ REQUEST_METHOD='GET' PATH_INFO='/' SCRIPT_NAME='' QUERY_STRING='' \
+  >    SERVER_PORT='80' SERVER_NAME='localhost' python hgweb.cgi \
   >    | grep '^[0-9]) ' # ignores HTML output
   1) foo imported
   1) bar imported
@@ -352,6 +353,7 @@ Test help topic with same name as extension
 
   $ hg help multirevs
   Specifying Multiple Revisions
+  """""""""""""""""""""""""""""
   
       When Mercurial accepts more than one revision, they may be specified
       individually, or provided as a topologically continuous range, separated

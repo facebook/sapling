@@ -11,7 +11,7 @@ for fp in (sys.stdin, sys.stdout, sys.stderr):
 
 opener = scmutil.opener('.', False)
 tr = transaction.transaction(sys.stderr.write, opener, "undump.journal")
-while 1:
+while True:
     l = sys.stdin.readline()
     if not l:
         break

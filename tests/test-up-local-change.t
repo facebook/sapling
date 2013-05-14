@@ -44,17 +44,17 @@
     unmatched files in other:
      b
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    a: versions differ -> m
+    preserving a for resolve of a
    b: remote created -> g
-  preserving a for resolve of a
-  updating: a 1/2 files (50.00%)
+  getting b
+  updating: b 1/2 files (50.00%)
+  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
-  updating: b 2/2 files (100.00%)
-  getting b
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb
@@ -65,13 +65,13 @@
   
   $ hg --debug up 0
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: False, force: False, partial: False
    ancestor: 1e71731e6fbb, local: 1e71731e6fbb+, remote: c19d34741b0a
-   a: versions differ -> m
    b: other deleted -> r
-  preserving a for resolve of a
-  updating: b 1/2 files (50.00%)
+   a: versions differ -> m
+    preserving a for resolve of a
   removing b
+  updating: b 1/2 files (50.00%)
   updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
@@ -98,17 +98,17 @@
     unmatched files in other:
      b
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: False, force: False, partial: False
    ancestor: c19d34741b0a, local: c19d34741b0a+, remote: 1e71731e6fbb
    a: versions differ -> m
+    preserving a for resolve of a
    b: remote created -> g
-  preserving a for resolve of a
-  updating: a 1/2 files (50.00%)
+  getting b
+  updating: b 1/2 files (50.00%)
+  updating: a 2/2 files (100.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
-  updating: b 2/2 files (100.00%)
-  getting b
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   changeset:   1:1e71731e6fbb
@@ -176,12 +176,12 @@ create a second head
   $ hg --debug merge -f
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: c19d34741b0a, local: 1e71731e6fbb+, remote: 83c51d0caff4
    a: versions differ -> m
+    preserving a for resolve of a
    b: versions differ -> m
-  preserving a for resolve of a
-  preserving b for resolve of b
+    preserving b for resolve of b
   updating: a 1/2 files (50.00%)
   picked tool 'true' for a (binary False symlink False)
   merging a

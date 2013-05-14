@@ -80,8 +80,35 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
+  $ hg -q outgoing '../clone'
+  2:faba9097cad4
+  3:4cd725637392
+  $ hg summary --remote --config paths.default='../clone'
+  parent: 3:4cd725637392 tip
+   add bar
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 2 outgoing
   $ hg -q outgoing '../clone#foo'
   2:faba9097cad4
+  $ hg summary --remote --config paths.default='../clone#foo'
+  parent: 3:4cd725637392 tip
+   add bar
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ hg -q --cwd ../clone incoming '../repo#foo'
+  2:faba9097cad4
+  $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
+  parent: 1:cd2a86ecc814 tip
+   change a
+  branch: foo
+  commit: (clean)
+  update: (current)
+  remote: 1 or more incoming
 
   $ hg -q push '../clone#foo'
 
@@ -98,6 +125,16 @@ Changing original repo:
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add a
   
+  $ hg -q --cwd ../clone incoming '../repo#foo'
+  [1]
+  $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
+  parent: 1:cd2a86ecc814 
+   change a
+  branch: foo
+  commit: (clean)
+  update: 1 new changesets (update)
+  remote: (synced)
+
   $ cd ..
 
   $ cd clone
@@ -206,5 +243,62 @@ Test handling of invalid urls
   $ hg id http://foo/?bar
   abort: unsupported URL component: "bar"
   [255]
+
+  $ cd ..
+
+Test handling common incoming revisions between "default" and
+"default-push"
+
+  $ hg -R clone rollback
+  repository tip rolled back to revision 1 (undo pull)
+  working directory now based on revision 0
+
+  $ cd repo
+
+  $ hg update -q -C default
+  $ echo modified >> bar
+  $ hg commit -m "new head to push current default head"
+  $ hg -q push -r ".^1" '../clone'
+
+  $ hg -q outgoing '../clone'
+  2:faba9097cad4
+  4:d515801a8f3d
+
+  $ hg summary --remote --config paths.default='../clone#default' --config paths.default-push='../clone#foo'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 2 outgoing
+
+  $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
+
+  $ hg clone -q -r 0 . ../another
+  $ hg -q outgoing '../another#default'
+  3:4cd725637392
+  4:d515801a8f3d
+
+  $ hg summary --remote --config paths.default='../another#default' --config paths.default-push='../clone#default'
+  parent: 4:d515801a8f3d tip
+   new head to push current default head
+  branch: default
+  commit: (clean)
+  update: (current)
+  remote: 1 outgoing
 
   $ cd ..

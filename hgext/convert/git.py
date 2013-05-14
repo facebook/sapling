@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os
+import subprocess
 from mercurial import util, config
 from mercurial.node import hex, nullid
 from mercurial.i18n import _
@@ -29,13 +30,15 @@ class convert_git(converter_source):
     # cannot remove environment variable. Just assume none have
     # both issues.
     if util.safehasattr(os, 'unsetenv'):
-        def gitopen(self, s, noerr=False):
+        def gitopen(self, s, err=None):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
             try:
-                if noerr:
+                if err == subprocess.PIPE:
                     (stdin, stdout, stderr) = util.popen3(s)
                     return stdout
+                elif err == subprocess.STDOUT:
+                    return self.popen_with_stderr(s)
                 else:
                     return util.popen(s, 'rb')
             finally:
@@ -44,12 +47,24 @@ class convert_git(converter_source):
                 else:
                     os.environ['GIT_DIR'] = prevgitdir
     else:
-        def gitopen(self, s, noerr=False):
-            if noerr:
+        def gitopen(self, s, err=None):
+            if err == subprocess.PIPE:
                 (sin, so, se) = util.popen3('GIT_DIR=%s %s' % (self.path, s))
                 return so
+            elif err == subprocess.STDOUT:
+                    return self.popen_with_stderr(s)
             else:
                 return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
+
+    def popen_with_stderr(self, s):
+        p = subprocess.Popen(s, shell=True, bufsize=-1,
+                             close_fds=util.closefds,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=False,
+                             env=None)
+        return p.stdout
 
     def gitread(self, s):
         fh = self.gitopen(s)
@@ -209,12 +224,15 @@ class convert_git(converter_source):
     def gettags(self):
         tags = {}
         alltags = {}
-        fh = self.gitopen('git ls-remote --tags "%s"' % self.path)
+        fh = self.gitopen('git ls-remote --tags "%s"' % self.path,
+                          err=subprocess.STDOUT)
         prefix = 'refs/tags/'
 
         # Build complete list of tags, both annotated and bare ones
         for line in fh:
             line = line.strip()
+            if line.startswith("error:") or line.startswith("fatal:"):
+                raise util.Abort(_('cannot read tags from %s') % self.path)
             node, tag = line.split(None, 1)
             if not tag.startswith(prefix):
                 continue
@@ -266,7 +284,7 @@ class convert_git(converter_source):
         # Origin heads
         for reftype in gitcmd:
             try:
-                fh = self.gitopen(gitcmd[reftype], noerr=True)
+                fh = self.gitopen(gitcmd[reftype], err=subprocess.PIPE)
                 for line in fh:
                     line = line.strip()
                     rev, name = line.split(None, 1)

@@ -44,7 +44,7 @@ Expected to fail:
   [1]
 
   $ hg push
-  pushing to $TESTTMP/test
+  pushing to $TESTTMP/test (glob)
   searching for changes
   adding changesets
   adding manifests

@@ -69,10 +69,18 @@ invalid arch type should give 404
   >     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
   > except ImportError:
   >     pass
-  > node, archive = sys.argv[1:]
-  > f = urllib2.urlopen('http://127.0.0.1:%s/?cmd=archive;node=%s;type=%s'
-  >                     % (os.environ['HGPORT'], node, archive))
-  > sys.stdout.write(f.read())
+  > if len(sys.argv) <= 3:
+  >     node, archive = sys.argv[1:]
+  >     requeststr = 'cmd=archive;node=%s;type=%s' % (node, archive)
+  > else:
+  >     node, archive, file = sys.argv[1:]
+  >     requeststr = 'cmd=archive;node=%s;type=%s;file=%s' % (node, archive, file)
+  > try:
+  >     f = urllib2.urlopen('http://127.0.0.1:%s/?%s'
+  >                     % (os.environ['HGPORT'], requeststr))
+  >     sys.stdout.write(f.read())
+  > except urllib2.HTTPError, e:
+  >     sys.stderr.write(str(e) + '\n')
   > EOF
   $ python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null
   test-archive-2c0277f05ed4/.hg_archival.txt
@@ -92,6 +100,23 @@ invalid arch type should give 404
       testing: test-archive-2c0277f05ed4/baz/bletch   OK
       testing: test-archive-2c0277f05ed4/foo   OK
   No errors detected in compressed data of archive.zip.
+
+test that we can download single directories and files
+
+  $ python getarchive.py "$TIP" gz baz | gunzip | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/baz/bletch
+  $ python getarchive.py "$TIP" gz foo | gunzip | tar tf - 2>/dev/null
+  test-archive-2c0277f05ed4/foo
+
+test that we detect file patterns that match no files
+
+  $ python getarchive.py "$TIP" gz foobar
+  HTTP Error 404: file(s) not found: foobar
+
+test that we reject unsafe patterns
+
+  $ python getarchive.py "$TIP" gz relre:baz
+  HTTP Error 404: file(s) not found: relre:baz
 
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
 
@@ -268,6 +293,16 @@ old file -- date clamped to 1980
   *0*80*00:00*old/old (glob)
   *-----* (glob)
   \s*147\s+2 files (re)
+
+show an error when a provided pattern matches no files
+
+  $ hg archive -I file_that_does_not_exist.foo ../empty.zip
+  abort: no files match the archive pattern
+  [255]
+
+  $ hg archive -X * ../empty.zip
+  abort: no files match the archive pattern
+  [255]
 
   $ cd ..
 

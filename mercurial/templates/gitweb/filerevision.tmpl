@@ -1,9 +1,9 @@
 {header}
 <title>{repo|escape}: {file|escape}@{node|short}</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
@@ -13,23 +13,23 @@
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
-<a href="{url}graph{sessionvars%urlparameter}">graph</a> |
-<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a> |
-<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
+<a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a> |
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a> |
+<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
 file |
-<a href="{url}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a> |
-<a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
-<a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> |
-<a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
-<a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a> |
-<a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a> |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a> |
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
+<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a> |
+<a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a> |
+<a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a> |
+<a href="{url|urlescape}raw-file/{node|short}/{file|urlescape}">raw</a> |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 </div>
 
@@ -46,7 +46,7 @@ file |
 {branch%filerevbranch}
 <tr>
  <td>changeset {rev}</td>
- <td style="font-family:monospace"><a class="list" href="{url}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
+ <td style="font-family:monospace"><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td></tr>
 {parent%filerevparent}
 {child%filerevchild}
 <tr>
@@ -56,7 +56,7 @@ file |
 </div>
 
 <div class="page_path">
-{desc|strip|escape|addbreaks|nonempty}
+{desc|strip|escape|websub|addbreaks|nonempty}
 </div>
 
 <div class="page_body">

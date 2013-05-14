@@ -113,3 +113,41 @@ Test with --bypass and --exact
   $ hg strip --no-backup tip
 
   $ cd ..
+
+Test that --exact on a bad header doesn't corrupt the repo (issue3616)
+
+  $ hg init repo3
+  $ cd repo3
+  $ echo a>a
+  $ hg ci -Aqm0
+  $ echo a>>a
+  $ hg ci -m1
+  $ echo a>>a
+  $ hg ci -m2
+  $ echo a>a
+  $ echo b>>a
+  $ echo a>>a
+  $ hg ci -m3
+  $ hg export 2 | head -7 > ../a.patch
+  $ hg export tip | tail -n +8 >> ../a.patch
+
+  $ cd ..
+  $ hg clone -qr0 repo3 repo3-clone
+  $ cd repo3-clone
+  $ hg pull -qr1 ../repo3
+
+  $ hg import --exact ../a.patch
+  applying ../a.patch
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  patching file a
+  Hunk #1 succeeded at 1 with fuzz 1 (offset -1 lines).
+  transaction abort!
+  rollback completed
+  abort: patch is damaged or loses information
+  [255]
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 2 changesets, 2 total revisions

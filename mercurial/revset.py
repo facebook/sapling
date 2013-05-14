@@ -8,7 +8,6 @@
 import re
 import parser, util, error, discovery, hbisect, phases
 import node
-import bookmarks as bookmarksmod
 import match as matchmod
 from i18n import _
 import encoding
@@ -223,13 +222,9 @@ def symbolset(repo, subset, x):
     return stringset(repo, subset, x)
 
 def rangeset(repo, subset, x, y):
-    m = getset(repo, subset, x)
-    if not m:
-        m = getset(repo, list(repo), x)
-
-    n = getset(repo, subset, y)
-    if not n:
-        n = getset(repo, list(repo), y)
+    cl = repo.changelog
+    m = getset(repo, cl, x)
+    n = getset(repo, cl, y)
 
     if not m or not n:
         return []
@@ -243,12 +238,10 @@ def rangeset(repo, subset, x, y):
     return [x for x in r if x in s]
 
 def dagrange(repo, subset, x, y):
-    if subset:
-        r = list(repo)
-        xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
-        s = set(subset)
-        return [r for r in xs if r in s]
-    return []
+    r = list(repo)
+    xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
+    s = set(subset)
+    return [r for r in xs if r in s]
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
@@ -282,20 +275,32 @@ def adds(repo, subset, x):
     return checkstatus(repo, subset, pat, 1)
 
 def ancestor(repo, subset, x):
-    """``ancestor(single, single)``
-    Greatest common ancestor of the two changesets.
+    """``ancestor(*changeset)``
+    Greatest common ancestor of the changesets.
+
+    Accepts 0 or more changesets.
+    Will return empty list when passed no args.
+    Greatest common ancestor of a single changeset is that changeset.
     """
     # i18n: "ancestor" is a keyword
-    l = getargs(x, 2, 2, _("ancestor requires two arguments"))
-    r = list(repo)
-    a = getset(repo, r, l[0])
-    b = getset(repo, r, l[1])
-    if len(a) != 1 or len(b) != 1:
-        # i18n: "ancestor" is a keyword
-        raise error.ParseError(_("ancestor arguments must be single revisions"))
-    an = [repo[a[0]].ancestor(repo[b[0]]).rev()]
+    l = getlist(x)
+    rl = list(repo)
+    anc = None
 
-    return [r for r in an if r in subset]
+    # (getset(repo, rl, i) for i in l) generates a list of lists
+    rev = repo.changelog.rev
+    ancestor = repo.changelog.ancestor
+    node = repo.changelog.node
+    for revs in (getset(repo, rl, i) for i in l):
+        for r in revs:
+            if anc is None:
+                anc = r
+            else:
+                anc = rev(ancestor(node(anc), node(r)))
+
+    if anc is not None and anc in subset:
+        return [anc]
+    return []
 
 def _ancestors(repo, subset, x, followfirst=False):
     args = getset(repo, list(repo), x)
@@ -326,7 +331,7 @@ def ancestorspec(repo, subset, x, n):
         raise error.ParseError(_("~ expects a number"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, cl, x):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
@@ -379,14 +384,14 @@ def bookmark(repo, subset, x):
                        _('the argument to bookmark must be a string'))
         kind, pattern, matcher = _stringmatcher(bm)
         if kind == 'literal':
-            bmrev = bookmarksmod.listbookmarks(repo).get(bm, None)
+            bmrev = repo._bookmarks.get(bm, None)
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
             bmrev = repo[bmrev].rev()
             return [r for r in subset if r == bmrev]
         else:
             matchrevs = set()
-            for name, bmrev in bookmarksmod.listbookmarks(repo).iteritems():
+            for name, bmrev in repo._bookmarks.iteritems():
                 if matcher(name):
                     matchrevs.add(bmrev)
             if not matchrevs:
@@ -398,7 +403,7 @@ def bookmark(repo, subset, x):
             return [r for r in subset if r in bmrevs]
 
     bms = set([repo[r].rev()
-               for r in bookmarksmod.listbookmarks(repo).values()])
+               for r in repo._bookmarks.values()])
     return [r for r in subset if r in bms]
 
 def branch(repo, subset, x):
@@ -1139,7 +1144,7 @@ def parentspec(repo, subset, x, n):
         raise error.ParseError(_("^ expects a number 0, 1, or 2"))
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, subset, x):
+    for r in getset(repo, cl, x):
         if n == 0:
             ps.add(r)
         elif n == 1:
@@ -1489,8 +1494,6 @@ def tag(repo, subset, x):
             s = set([repo[tn].rev()])
         else:
             s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
-            if not s:
-                raise util.Abort(_("no tags exist that match '%s'") % pattern)
     else:
         s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
     return [r for r in subset if r in s]

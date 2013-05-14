@@ -4,7 +4,7 @@
   <?include guids.wxi ?>
   <?include defines.wxi ?>
 
-  <?define hg_po_langs = 
+  <?define hg_po_langs =
     da;de;el;fr;it;ja;pt_BR;ro;ru;sv;zh_CN;zh_TW
   ?>
 
@@ -14,8 +14,8 @@
         <Component Id="i18nFolder" Guid="$(var.i18nFolder.guid)" Win64='$(var.IsX64)'>
           <File Name="hggettext" KeyPath="yes" />
           <?foreach LANG in $(var.hg_po_langs) ?>
-            <File Id="hg.$(var.LANG).po" 
-                  Name="$(var.LANG).po" 
+            <File Id="hg.$(var.LANG).po"
+                  Name="$(var.LANG).po"
             />
           <?endforeach?>
         </Component>

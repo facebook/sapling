@@ -14,6 +14,15 @@
   $ echo a > a
   $ hg ci -Am initial
   adding a
+
+invalid scheme
+
+  $ hg log -R z:z
+  abort: no '://' in scheme url 'z:z'
+  [255]
+
+http scheme
+
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg incoming l://

@@ -91,14 +91,19 @@ update to tip
   $ hg update tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-set bookmark Y using -r .
+set bookmark Y using -r . but make sure that the active
+bookmark is not activated
 
   $ hg bookmark -r . Y
 
-list bookmarks
+list bookmarks, Y should not be active
 
   $ hg bookmark
-   * Y                         0:719295282060
+     Y                         0:719295282060
+
+now, activate Y
+
+  $ hg up -q Y
 
 set bookmark Z using -i
 
@@ -133,21 +138,27 @@ deactivate current bookmark while renaming
      X                         0:719295282060
      Z                         0:719295282060
 
-bare update moves the active bookmark forward
+bare update moves the active bookmark forward and clear the divergent bookmarks
 
   $ echo a > a
   $ hg ci -Am1
   adding a
+  $ echo b >> a
+  $ hg ci -Am2
+  $ hg bookmark X@1 -r 1
+  $ hg bookmark X@2 -r 2
   $ hg update X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bookmarks
    * X                         0:719295282060
+     X@1                       1:cc586d725fbe
+     X@2                       2:49e1c4e84c58
      Z                         0:719295282060
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark X
   $ hg bookmarks
-   * X                         1:cc586d725fbe
+   * X                         2:49e1c4e84c58
      Z                         0:719295282060
 
 test deleting .hg/bookmarks.current when explicitly updating

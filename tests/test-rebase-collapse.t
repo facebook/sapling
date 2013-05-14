@@ -496,15 +496,15 @@ Interactions between collapse and keepbranches
   $ hg ci -Am 'A'
   adding a
 
-  $ hg branch '1'
-  marked working directory as branch 1
+  $ hg branch 'one'
+  marked working directory as branch one
   (branches are permanent and global, did you want a bookmark?)
   $ echo 'b' > b
   $ hg ci -Am 'B'
   adding b
 
-  $ hg branch '2'
-  marked working directory as branch 2
+  $ hg branch 'two'
+  marked working directory as branch two
   (branches are permanent and global, did you want a bookmark?)
   $ echo 'c' > c
   $ hg ci -Am 'C'
@@ -518,9 +518,9 @@ Interactions between collapse and keepbranches
   $ hg tglog
   @  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   
@@ -546,9 +546,9 @@ Interactions between collapse and keepbranches
   |/
   o  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   
@@ -559,9 +559,9 @@ Interactions between collapse and keepbranches
   |
   o  3: 'D'
   |
-  | o  2: 'C' 2
+  | o  2: 'C' two
   | |
-  | o  1: 'B' 1
+  | o  1: 'B' one
   |/
   o  0: 'A'
   
@@ -569,6 +569,7 @@ Interactions between collapse and keepbranches
   # HG changeset patch
   # User user1
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID f338eb3c2c7cc5b5915676a2376ba7ac558c5213
   # Parent  41acb9dca9eb976e84cd21fcb756b4afa5a35c09
   E
@@ -718,6 +719,30 @@ Test stripping a revision with another child
 
   $ cd ..
 
+Test collapsing changes that add then remove a file
 
+  $ hg init collapseaddremove
+  $ cd collapseaddremove
 
+  $ touch base
+  $ hg commit -Am base
+  adding base
+  $ touch a
+  $ hg commit -Am a
+  adding a
+  $ hg rm a
+  $ touch b
+  $ hg commit -Am b
+  adding b
+  $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
+  saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/*-backup.hg (glob)
+  $ hg tglog
+  @  1: 'collapsed'
+  |
+  o  0: 'base'
+  
+  $ hg manifest
+  b
+  base
 
+  $ cd ..

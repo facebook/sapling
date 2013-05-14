@@ -37,23 +37,21 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: ce36d17b18fb+, remote: 397f8b00a740
    a/a: other deleted -> r
    a/b: other deleted -> r
    a/c: remote renamed directory to b/c -> d
    b/a: remote created -> g
    b/b: remote created -> g
-  updating: a/a 1/5 files (20.00%)
   removing a/a
-  updating: a/b 2/5 files (40.00%)
   removing a/b
-  updating: a/c 3/5 files (60.00%)
-  moving a/c to b/c
-  updating: b/a 4/5 files (80.00%)
+  updating: a/b 2/5 files (40.00%)
   getting b/a
-  updating: b/b 5/5 files (100.00%)
   getting b/b
+  updating: b/b 4/5 files (80.00%)
+  updating: a/c 5/5 files (100.00%)
+  moving a/c to b/c
   3 files updated, 0 files merged, 2 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -88,7 +86,7 @@
      discovered dir src: 'a/' -> dst: 'b/'
      pending file src: 'a/c' -> dst: 'b/c'
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb
    None: local renamed directory to b/c -> d
   updating:None 1/1 files (100.00%)

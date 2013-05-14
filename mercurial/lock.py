@@ -36,6 +36,7 @@ class lock(object):
         self.releasefn = releasefn
         self.desc = desc
         self.postrelease  = []
+        self.pid = os.getpid()
         self.lock()
 
     def __del__(self):
@@ -71,7 +72,7 @@ class lock(object):
             return
         if lock._host is None:
             lock._host = socket.gethostname()
-        lockname = '%s:%s' % (lock._host, os.getpid())
+        lockname = '%s:%s' % (lock._host, self.pid)
         while not self.held:
             try:
                 util.makelock(lockname, self.f)
@@ -133,6 +134,9 @@ class lock(object):
             self.held -= 1
         elif self.held == 1:
             self.held = 0
+            if os.getpid() != self.pid:
+                # we forked, and are not the parent
+                return
             if self.releasefn:
                 self.releasefn()
             try:

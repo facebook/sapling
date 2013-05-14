@@ -99,7 +99,7 @@ class validator(object):
         self.ui = ui
         self.host = host
 
-    def __call__(self, sock):
+    def __call__(self, sock, strict=False):
         host = self.host
         cacerts = self.ui.config('web', 'cacerts')
         hostfingerprint = self.ui.config('hostfingerprints', host)
@@ -107,13 +107,22 @@ class validator(object):
             if hostfingerprint:
                 raise util.Abort(_("host fingerprint for %s can't be "
                                    "verified (Python too old)") % host)
+            if strict:
+                raise util.Abort(_("certificate for %s can't be verified "
+                                   "(Python too old)") % host)
             if self.ui.configbool('ui', 'reportoldssl', True):
                 self.ui.warn(_("warning: certificate for %s can't be verified "
                                "(Python too old)\n") % host)
             return
+
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise util.Abort(_('%s ssl connection error') % host)
-        peercert = sock.getpeercert(True)
+        try:
+            peercert = sock.getpeercert(True)
+            peercert2 = sock.getpeercert()
+        except AttributeError:
+            raise util.Abort(_('%s ssl connection error') % host)
+
         if not peercert:
             raise util.Abort(_('%s certificate error: '
                                'no certificate received') % host)
@@ -129,13 +138,18 @@ class validator(object):
             self.ui.debug('%s certificate matched fingerprint %s\n' %
                           (host, nicefingerprint))
         elif cacerts:
-            msg = _verifycert(sock.getpeercert(), host)
+            msg = _verifycert(peercert2, host)
             if msg:
                 raise util.Abort(_('%s certificate error: %s') % (host, msg),
                                  hint=_('configure hostfingerprint %s or use '
                                         '--insecure to connect insecurely') %
                                       nicefingerprint)
             self.ui.debug('%s certificate successfully verified\n' % host)
+        elif strict:
+            raise util.Abort(_('%s certificate with fingerprint %s not '
+                               'verified') % (host, nicefingerprint),
+                             hint=_('check hostfingerprints or web.cacerts '
+                                     'config setting'))
         else:
             self.ui.warn(_('warning: %s certificate with fingerprint %s not '
                            'verified (check hostfingerprints or web.cacerts '

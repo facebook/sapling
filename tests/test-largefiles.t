@@ -807,6 +807,14 @@ Test cloning with --all-largefiles flag
   2 largefiles updated, 0 removed
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
   8 additional largefiles cached
+  $ hg -R a-clone1 verify --large --lfa --lfc
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  10 files, 8 changesets, 24 total revisions
+  searching 8 changesets for largefiles
+  verified contents of 13 revisions of 6 largefiles
   $ hg -R a-clone1 sum
   parent: 1:ce8896473775 
    edit files
@@ -823,6 +831,8 @@ Test cloning with --all-largefiles flag
   commit: (clean)
   update: 8 new changesets (update)
 
+Show computed destination directory:
+
   $ mkdir xyz
   $ cd xyz
   $ hg clone ../a
@@ -832,6 +842,12 @@ Test cloning with --all-largefiles flag
   3 largefiles updated, 0 removed
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+Clone URL without path:
+
+  $ hg clone file://
+  abort: repository / not found!
+  [255]
 
 Ensure base clone command argument validation
 
@@ -867,9 +883,47 @@ downloaded from 'default' instead of 'default-push' when no source is specified
   adding file changes
   added 6 changesets with 16 changes to 8 files
   (run 'hg update' to get a working copy)
-  caching new largefiles
-  3 largefiles cached
-  3 additional largefiles cached
+  6 largefiles cached
+
+redo pull with --lfrev and check it pulls largefiles for the right revs
+
+  $ hg rollback
+  repository tip rolled back to revision 1 (undo pull)
+  $ hg pull -v --lfrev 'heads(pulled())+min(pulled())'
+  pulling from $TESTTMP/a (glob)
+  searching for changes
+  all local heads known remotely
+  6 changesets found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 16 changes to 8 files
+  calling hook changegroup.lfiles: <function checkrequireslfiles at *> (glob)
+  (run 'hg update' to get a working copy)
+  pulling largefiles for revision 7
+  found 971fb41e78fea4f8e0ba5244784239371cb00591 in store
+  found 0d6d75887db61b2c7e6c74b5dd8fc6ad50c0cc30 in store
+  found bb3151689acb10f0c3125c560d5e63df914bc1af in store
+  pulling largefiles for revision 2
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  0 largefiles cached
+
+lfpull
+
+  $ hg lfpull -r : --config largefiles.usercache=usercache-lfpull
+  2 largefiles cached
+  $ hg lfpull -v -r 4+2 --config largefiles.usercache=usercache-lfpull
+  pulling largefiles for revision 4
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  pulling largefiles for revision 2
+  found eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 in store
+  0 largefiles cached
+
+  $ ls usercache-lfpull/* | sort
+  usercache-lfpull/1deebade43c8c498a3c8daddac0244dc55d1331d
+  usercache-lfpull/4669e532d5b2c093a78eca010077e708a071bb64
+
   $ cd ..
 
 Rebasing between two repositories does not revert largefiles to old
@@ -903,8 +957,12 @@ revisions (this was a very bad bug that took a lot of work to fix).
   $ cd d
 
 More rebase testing, but also test that the largefiles are downloaded from
-'default' instead of 'default-push' when no source is specified (issue3584).
-The error messages go away if repo 'b' is created with --all-largefiles.
+'default-push' when no source is specified (issue3584). (The largefile from the
+pulled revision is however not downloaded but found in the local cache.)
+Largefiles are fetched for the new pulled revision, not for existing revisions,
+rebased or not.
+
+  $ [ ! -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg pull --rebase --all-largefiles --config paths.default-push=bogus/path --config paths.default=../b
   pulling from $TESTTMP/b (glob)
   searching for changes
@@ -916,18 +974,9 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   M sub/normal4
   M sub2/large6
   saved backup bundle to $TESTTMP/d/.hg/strip-backup/f574fb32bb45-backup.hg (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file large3: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large4: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id 5f78770c0e77ba4287ad6ef3071c9bf9c379742f from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  error getting id 4669e532d5b2c093a78eca010077e708a071bb64 from url file:$TESTTMP/b for file large1: can't get file locally (glob)
-  error getting id 1deebade43c8c498a3c8daddac0244dc55d1331d from url file:$TESTTMP/b for file sub/large2: can't get file locally (glob)
-  0 additional largefiles cached
-  9 largefiles failed to download
+  0 largefiles cached
   nothing to rebase
+  $ [ -f .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 ]
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n'
   9:598410d3eb9a  modify normal file largefile in repo d
   8:a381d2c8c80e  modify normal file and largefile in repo b
@@ -958,8 +1007,6 @@ The error messages go away if repo 'b' is created with --all-largefiles.
   adding file changes
   added 1 changesets with 2 changes to 2 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching new largefiles
-  0 largefiles cached
   $ hg rebase
   Invoking status precommit hook
   M sub/normal4
@@ -1170,6 +1217,12 @@ revert some files to an older revision
 
 "verify --large" actually verifies largefiles
 
+- Where Do We Come From? What Are We? Where Are We Going?
+  $ pwd
+  $TESTTMP/e
+  $ hg paths
+  default = $TESTTMP/d (glob)
+
   $ hg verify --large
   checking changesets
   checking manifests
@@ -1178,6 +1231,108 @@ revert some files to an older revision
   10 files, 10 changesets, 28 total revisions
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
+
+- introduce missing blob in local store repo and make sure that this is caught:
+  $ mv $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 .
+  $ hg verify --large
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  10 files, 10 changesets, 28 total revisions
+  searching 1 changesets for largefiles
+  changeset 9:598410d3eb9a: sub/large4 references missing $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 (glob)
+  verified existence of 3 revisions of 3 largefiles
+  [1]
+
+- introduce corruption and make sure that it is caught when checking content:
+  $ echo '5 cents' > $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
+  $ hg verify -q --large --lfc
+  changeset 9:598410d3eb9a: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 (glob)
+  [1]
+
+- cleanup
+  $ mv e166e74c7303192238d60af5a9c4ce9bef0b7928 $TESTTMP/d/.hg/largefiles/
+
+- verifying all revisions will fail because we didn't clone all largefiles to d:
+  $ echo 'T-shirt' > $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  $ hg verify -q --lfa --lfc
+  changeset 0:30d30fe6a5be: large1 references missing $TESTTMP/d/.hg/largefiles/4669e532d5b2c093a78eca010077e708a071bb64 (glob)
+  changeset 0:30d30fe6a5be: sub/large2 references missing $TESTTMP/d/.hg/largefiles/1deebade43c8c498a3c8daddac0244dc55d1331d (glob)
+  changeset 1:ce8896473775: large1 references missing $TESTTMP/d/.hg/largefiles/5f78770c0e77ba4287ad6ef3071c9bf9c379742f (glob)
+  changeset 1:ce8896473775: sub/large2 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
+  changeset 3:9e8fbc4bce62: large1 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
+  changeset 4:74c02385b94c: large3 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
+  changeset 4:74c02385b94c: sub/large4 references corrupted $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4 (glob)
+  changeset 5:9d5af5072dbd: large3 references missing $TESTTMP/d/.hg/largefiles/baaf12afde9d8d67f25dab6dced0d2bf77dba47c (glob)
+  changeset 5:9d5af5072dbd: sub/large4 references missing $TESTTMP/d/.hg/largefiles/aeb2210d19f02886dde00dac279729a48471e2f9 (glob)
+  changeset 6:4355d653f84f: large3 references missing $TESTTMP/d/.hg/largefiles/7838695e10da2bb75ac1156565f40a2595fa2fa0 (glob)
+  [1]
+
+- cleanup
+  $ rm $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4
+  $ rm -f .hglf/sub/*.orig
+
+Update to revision with missing largefile - and make sure it really is missing
+
+  $ rm ${USERCACHE}/7838695e10da2bb75ac1156565f40a2595fa2fa0
+  $ hg up -r 6
+  getting changed largefiles
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d (glob)
+  1 largefiles updated, 2 removed
+  4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ rm normal3
+  $ echo >> sub/normal4
+  $ hg ci -m 'commit with missing files'
+  Invoking status precommit hook
+  M sub/normal4
+  ! large3
+  ! normal3
+  created new head
+  $ hg st
+  ! large3
+  ! normal3
+  $ hg up -r.
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st
+  ! large3
+  ! normal3
+  $ hg up -Cr.
+  getting changed largefiles
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d (glob)
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st
+  ! large3
+  $ hg rollback
+  repository tip rolled back to revision 9 (undo commit)
+  working directory now based on revision 6
+
+Merge with revision with missing largefile - and make sure it tries to fetch it.
+
+  $ hg up -Cqr null
+  $ echo f > f
+  $ hg ci -Am branch
+  adding f
+  Invoking status precommit hook
+  A f
+  created new head
+  $ hg merge -r 6
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  large3: largefile 7838695e10da2bb75ac1156565f40a2595fa2fa0 not available from file:$TESTTMP/d (glob)
+  1 largefiles updated, 0 removed
+
+  $ hg rollback -q
+  $ hg up -Cq
+
+Pulling 0 revisions with --all-largefiles should not fetch for all revisions
+
+  $ hg pull --all-largefiles
+  pulling from $TESTTMP/d (glob)
+  searching for changes
+  no changes found
 
 Merging does not revert to old versions of largefiles and also check
 that merging after having pulled from a non-default remote works
@@ -1206,7 +1361,8 @@ correctly.
   $ hg commit -m "Modify large4 to test merge"
   Invoking status precommit hook
   M sub/large4
-  $ hg pull ../e
+# Test --cache-largefiles flag
+  $ hg pull --lfrev 'heads(pulled())' ../e
   pulling from ../e
   searching for changes
   adding changesets
@@ -1214,7 +1370,6 @@ correctly.
   adding file changes
   added 2 changesets with 4 changes to 4 files (+1 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  caching new largefiles
   2 largefiles cached
   $ hg merge
   merging sub/large4
@@ -1269,8 +1424,8 @@ Test status after merging with a branch that introduces a new largefile:
 
 - revert should be able to revert files introduced in a pending merge
   $ hg revert --all -r .
-  removing .hglf/large
-  undeleting .hglf/sub2/large6
+  removing .hglf/large (glob)
+  undeleting .hglf/sub2/large6 (glob)
 
 Test that a normal file and a largefile with the same name and path cannot
 coexist.
@@ -1338,8 +1493,13 @@ Cat a largefile
   normal3-modified
   $ hg cat -r '.^' normal3
   normal3-modified
-  $ hg cat -r '.^' sub/large4
+  $ hg cat -r '.^' sub/large4 doesntexist
   large4-modified
+  doesntexist: no such file in rev a381d2c8c80e
+  $ hg --cwd sub cat -r '.^' large4
+  large4-modified
+  $ hg --cwd sub cat -r '.^' ../normal3
+  normal3-modified
 
 Test that renaming a largefile results in correct output for status
 
@@ -1504,9 +1664,10 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ cd ..
 
 putlfile errors are shown (issue3123)
-Corrupt the cached largefile in r7 and in the usercache (required for testing on vfat)
-  $ echo corruption > "$TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8"
-  $ echo corruption > "$USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8"
+Corrupt the cached largefile in r7 and move it out of the servers usercache
+  $ mv r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 .
+  $ echo 'client side corruption' > r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ rm "$USERCACHE/4cdac4d8b084d0b599525cf732437fb337d422a8"
   $ hg init empty
   $ hg serve -R empty -d -p $HGPORT1 --pid-file hg.pid \
   >   --config 'web.allow_push=*' --config web.push_ssl=False
@@ -1517,6 +1678,19 @@ Corrupt the cached largefile in r7 and in the usercache (required for testing on
   remote: largefiles: failed to put 4cdac4d8b084d0b599525cf732437fb337d422a8 into store: largefile contents do not match hash
   abort: remotestore: could not put $TESTTMP/r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8 to remote store http://localhost:$HGPORT1/ (glob)
   [255]
+  $ mv 4cdac4d8b084d0b599525cf732437fb337d422a8 r7/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+Push of file that exists on server but is corrupted - magic healing would be nice ... but too magic
+  $ echo "server side corruption" > empty/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  $ hg push -R r7 http://localhost:$HGPORT1
+  pushing to http://localhost:$HGPORT1/
+  searching for changes
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 2 changes to 2 files
+  $ cat empty/.hg/largefiles/4cdac4d8b084d0b599525cf732437fb337d422a8
+  server side corruption
   $ rm -rf empty
 
 Push a largefiles repository to a served empty repository
@@ -1531,7 +1705,7 @@ Push a largefiles repository to a served empty repository
   >   --config 'web.allow_push=*' --config web.push_ssl=False
   $ cat hg.pid >> $DAEMON_PIDS
   $ rm "${USERCACHE}"/*
-  $ hg push -R r8 http://localhost:$HGPORT2
+  $ hg push -R r8 http://localhost:$HGPORT2/#default
   pushing to http://localhost:$HGPORT2/
   searching for changes
   searching for changes
@@ -1539,24 +1713,82 @@ Push a largefiles repository to a served empty repository
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+  $ [ -f "${USERCACHE}"/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
+  $ [ -f empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
 
-Clone over http, with largefiles being pulled on update, not on clone.
+Clone over http, no largefiles pulled on clone.
 
-  $ hg clone -q http://localhost:$HGPORT2/ http-clone -U
+  $ hg clone http://localhost:$HGPORT2/#default http-clone -U
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
 
+test 'verify' with remotestore:
+
+  $ rm "${USERCACHE}"/02a439e5c31c526465ab1a0ca1f431f76b827b90
+  $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
+  $ hg -R http-clone verify --large --lfa
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+  searching 1 changesets for largefiles
+  changeset 0:cf03e5bb9936: f1 missing
+  verified existence of 1 revisions of 1 largefiles
+  [1]
+  $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
+  $ hg -R http-clone -q verify --large --lfa
+
+largefiles pulled on update - a largefile missing on the server:
+  $ mv empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 .
+  $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
+  getting changed largefiles
+  f1: largefile 02a439e5c31c526465ab1a0ca1f431f76b827b90 not available from http://localhost:$HGPORT2/
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R http-clone st
+  ! f1
+  $ hg -R http-clone up -Cqr null
+
+largefiles pulled on update - a largefile corrupted on the server:
+  $ echo corruption > empty/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90
+  $ hg -R http-clone up --config largefiles.usercache=http-clone-usercache
+  getting changed largefiles
+  f1: data corruption (expected 02a439e5c31c526465ab1a0ca1f431f76b827b90, got 6a7bb2556144babe3899b25e5428123735bb1e27)
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R http-clone st
+  ! f1
+  $ [ ! -f http-clone/.hg/largefiles/02a439e5c31c526465ab1a0ca1f431f76b827b90 ]
+  $ [ ! -f http-clone/f1 ]
+  $ [ ! -f http-clone-usercache ]
+  $ hg -R http-clone verify --large --lfc
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 1 changesets, 1 total revisions
+  searching 1 changesets for largefiles
+  verified contents of 1 revisions of 1 largefiles
+  $ hg -R http-clone up -Cqr null
+
+largefiles pulled on update - no server side problems:
+  $ mv 02a439e5c31c526465ab1a0ca1f431f76b827b90 empty/.hg/largefiles/
   $ hg -R http-clone --debug up --config largefiles.usercache=http-clone-usercache
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: False, force: False, partial: False
    ancestor: 000000000000, local: 000000000000+, remote: cf03e5bb9936
    .hglf/f1: remote created -> g
-  updating: .hglf/f1 1/1 files (100.00%)
   getting .hglf/f1
+  updating: .hglf/f1 1/1 files (100.00%)
   getting changed largefiles
   using http://localhost:$HGPORT2/
   sending capabilities command
+  sending batch command
   getting largefiles: 0/1 lfile (0.00%)
   getting f1:02a439e5c31c526465ab1a0ca1f431f76b827b90
-  sending batch command
   sending getlfile command
   found 02a439e5c31c526465ab1a0ca1f431f76b827b90 in store
   1 largefiles updated, 0 removed
@@ -1565,7 +1797,7 @@ Clone over http, with largefiles being pulled on update, not on clone.
   $ ls http-clone-usercache/*
   http-clone-usercache/02a439e5c31c526465ab1a0ca1f431f76b827b90
 
-  $ rm -rf empty http-clone http-clone-usercache
+  $ rm -rf empty http-clone*
 
 used all HGPORTs, kill all daemons
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
@@ -1841,6 +2073,36 @@ Test commit's addremove option prior to the first commit
   .hglf
   .hglf/large.dat
   .hglf/large2.dat
+
+Test actions on largefiles using relative paths from subdir
+
+  $ mkdir sub
+  $ cd sub
+  $ echo anotherlarge > anotherlarge
+  $ hg add --large anotherlarge
+  $ hg st
+  A sub/anotherlarge
+  $ hg st anotherlarge
+  A anotherlarge
+  $ hg commit -m anotherlarge anotherlarge
+  Invoking status precommit hook
+  A sub/anotherlarge
+  $ hg log anotherlarge
+  changeset:   1:9627a577c5e9
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     anotherlarge
+  
+  $ echo more >> anotherlarge
+  $ hg st .
+  M anotherlarge
+  $ hg cat anotherlarge
+  anotherlarge
+  $ hg revert anotherlarge
+  $ hg st
+  ? sub/anotherlarge.orig
+  $ cd ..
 
   $ cd ..
 

@@ -234,3 +234,25 @@ Test date formats with '>' or '<' accompanied by space characters
   Sat Apr 15 13:30:00 2006 +0000
   Wed Feb 01 13:00:30 2006 -0500
   Wed Feb 01 13:00:30 2006 +0000
+
+Test issue 3764 (interpreting 'today' and 'yesterday')
+  $ echo "hello" >> a
+  >>> import datetime
+  >>> today = datetime.date.today().strftime("%b %d")
+  >>> yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%b %d")
+  >>> dates = open('dates', 'w')
+  >>> dates.write(today + '\n')
+  >>> dates.write(yesterday)
+  >>> dates.close()
+  $ hg ci -d "`sed -n '1p' dates`" -m "today is a good day to code"
+  $ hg log -d today --template '{desc}\n'
+  today is a good day to code
+  $ echo "goodbye" >> a
+  $ hg ci -d "`sed -n '2p' dates`" -m "the time traveler's code"
+  $ hg log -d yesterday --template '{desc}\n'
+  the time traveler's code
+  $ echo "foo" >> a
+  $ hg commit -d now -m 'Explicitly committed now.'
+  $ hg log -d today --template '{desc}\n'
+  Explicitly committed now.
+  today is a good day to code

@@ -7,9 +7,9 @@
 
 from node import hex, bin, nullid, nullrev, short
 from lock import release
-from i18n import _, gettext
+from i18n import _
 import os, re, difflib, time, tempfile, errno
-import hg, scmutil, util, revlog, extensions, copies, error, bookmarks
+import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
 import sshserver, hgweb, hgweb.server, commandserver
@@ -456,14 +456,11 @@ def backout(ui, repo, node=None, rev=None, **opts):
     wlock = repo.wlock()
     try:
         branch = repo.dirstate.branch()
+        bheads = repo.branchheads(branch)
         hg.clean(repo, node, show_stats=False)
         repo.dirstate.setbranch(branch)
-        revert_opts = opts.copy()
-        revert_opts['date'] = None
-        revert_opts['all'] = True
-        revert_opts['rev'] = hex(parent)
-        revert_opts['no_backup'] = None
-        revert(ui, repo, **revert_opts)
+        rctx = scmutil.revsingle(repo, hex(parent))
+        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
         if not opts.get('merge') and op1 != node:
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
@@ -471,13 +468,18 @@ def backout(ui, repo, node=None, rev=None, **opts):
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
 
-        commit_opts = opts.copy()
-        commit_opts['addremove'] = False
-        if not commit_opts['message'] and not commit_opts['logfile']:
+        e = cmdutil.commiteditor
+        if not opts['message'] and not opts['logfile']:
             # we don't translate commit messages
-            commit_opts['message'] = "Backed out changeset %s" % short(node)
-            commit_opts['force_editor'] = True
-        commit(ui, repo, **commit_opts)
+            opts['message'] = "Backed out changeset %s" % short(node)
+            e = cmdutil.commitforceeditor
+
+        def commitfunc(ui, repo, message, match, opts):
+            return repo.commit(message, opts.get('user'), opts.get('date'),
+                               match, editor=e)
+        newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
+        cmdutil.commitstatus(repo, newnode, branch, bheads)
+
         def nice(node):
             return '%d:%s' % (repo.changelog.rev(node), short(node))
         ui.status(_('changeset %s backs out changeset %s\n') %
@@ -785,6 +787,10 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     repositories to support bookmarks. For versions prior to 1.8, this means
     the bookmarks extension must be enabled.
 
+    If you set a bookmark called '@', new clones of the repository will
+    have that revision checked out (and the bookmark made active) by
+    default.
+
     With -i/--inactive, the new bookmark will not be made the active
     bookmark. If -r/--rev is given, the new bookmark will not be made
     active even if -i/--inactive is not given. If no NAME is given, the
@@ -802,8 +808,31 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         scmutil.checknewlabel(repo, mark, 'bookmark')
         return mark
 
-    def checkconflict(repo, mark, force=False):
+    def checkconflict(repo, mark, force=False, target=None):
         if mark in marks and not force:
+            if target:
+                if marks[mark] == target and target == cur:
+                    # re-activating a bookmark
+                    return
+                anc = repo.changelog.ancestors([repo[target].rev()])
+                bmctx = repo[marks[mark]]
+                divs = [repo[b].node() for b in marks
+                        if b.split('@', 1)[0] == mark.split('@', 1)[0]]
+
+                # allow resolving a single divergent bookmark even if moving
+                # the bookmark across branches when a revision is specified
+                # that contains a divergent bookmark
+                if bmctx.rev() not in anc and target in divs:
+                    bookmarks.deletedivergent(repo, [target], mark)
+                    return
+
+                deletefrom = [b for b in divs
+                              if repo[b].rev() in anc or b == target]
+                bookmarks.deletedivergent(repo, deletefrom, mark)
+                if bmctx.rev() in anc:
+                    ui.status(_("moving bookmark '%s' forward from %s\n") %
+                              (mark, short(bmctx.node())))
+                    return
             raise util.Abort(_("bookmark '%s' already exists "
                                "(use -f to force)") % mark)
         if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
@@ -846,13 +875,15 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
         if inactive and mark == repo._bookmarkcurrent:
             bookmarks.setcurrent(repo, None)
             return
-        checkconflict(repo, mark, force)
+        tgt = cur
         if rev:
-            marks[mark] = scmutil.revsingle(repo, rev).node()
-        else:
-            marks[mark] = cur
-        if not inactive and cur == marks[mark]:
+            tgt = scmutil.revsingle(repo, rev).node()
+        checkconflict(repo, mark, force, tgt)
+        marks[mark] = tgt
+        if not inactive and cur == marks[mark] and not rev:
             bookmarks.setcurrent(repo, mark)
+        elif cur != tgt and mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
         marks.write()
 
     # Same message whether trying to deactivate the current bookmark (-i
@@ -869,7 +900,7 @@ def bookmark(ui, repo, mark=None, rev=None, force=False, delete=False,
     else: # show bookmarks
         for bmark, n in sorted(marks.iteritems()):
             current = repo._bookmarkcurrent
-            if bmark == current and n == cur:
+            if bmark == current:
                 prefix, label = '*', 'bookmarks.current'
             else:
                 prefix, label = ' ', ''
@@ -912,6 +943,9 @@ def branch(ui, repo, label=None, **opts):
 
     Returns 0 on success.
     """
+    if label:
+        label = label.strip()
+
     if not opts.get('clean') and not label:
         ui.write("%s\n" % repo.dirstate.branch())
         return
@@ -1062,7 +1096,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
         dest, branches = hg.parseurl(dest, opts.get('branch'))
         other = hg.peer(repo, opts, dest)
-        revs, checkout = hg.addbranchrevs(repo, other, branches, revs)
+        revs, checkout = hg.addbranchrevs(repo, repo, branches, revs)
         heads = revs and map(repo.lookup, revs) or revs
         outgoing = discovery.findcommonoutgoing(repo, other,
                                                 onlyheads=heads,
@@ -1146,6 +1180,9 @@ def clone(ui, source, dest=None, **opts):
     tag will include the tagged changeset but not the changeset
     containing the tag.
 
+    If the source repository has a bookmark called '@' set, that
+    revision will be checked out in the new repository by default.
+
     To check out a particular version, use -u/--update, or
     -U/--noupdate to create a clone with no working directory.
 
@@ -1181,8 +1218,9 @@ def clone(ui, source, dest=None, **opts):
       d) the changeset specified with -r
       e) the tipmost head specified with -b
       f) the tipmost head specified with the url#branch source syntax
-      g) the tipmost head of the default branch
-      h) tip
+      g) the revision marked with the '@' bookmark, if present
+      h) the tipmost head of the default branch
+      i) tip
 
       Examples:
 
@@ -1277,10 +1315,6 @@ def commit(ui, repo, *pats, **opts):
 
     extra = {}
     if opts.get('close_branch'):
-        if repo['.'].node() not in repo.branchheads():
-            # The topo heads set is included in the branch heads set of the
-            # current branch, so it's sufficient to test branchheads
-            raise util.Abort(_('can only close branch heads'))
         extra['close'] = 1
 
     branch = repo[None].branch()
@@ -1293,8 +1327,6 @@ def commit(ui, repo, *pats, **opts):
         old = repo['.']
         if old.phase() == phases.public:
             raise util.Abort(_('cannot amend public changesets'))
-        if len(old.parents()) > 1:
-            raise util.Abort(_('cannot amend merge changesets'))
         if len(repo[None].parents()) > 1:
             raise util.Abort(_('cannot amend while merging'))
         if (not obsolete._enabled) and old.children():
@@ -1353,50 +1385,7 @@ def commit(ui, repo, *pats, **opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-    ctx = repo[node]
-    parents = ctx.parents()
-
-    if (not opts.get('amend') and bheads and node not in bheads and not
-        [x for x in parents if x.node() in bheads and x.branch() == branch]):
-        ui.status(_('created new head\n'))
-        # The message is not printed for initial roots. For the other
-        # changesets, it is printed in the following situations:
-        #
-        # Par column: for the 2 parents with ...
-        #   N: null or no parent
-        #   B: parent is on another named branch
-        #   C: parent is a regular non head changeset
-        #   H: parent was a branch head of the current branch
-        # Msg column: whether we print "created new head" message
-        # In the following, it is assumed that there already exists some
-        # initial branch heads of the current branch, otherwise nothing is
-        # printed anyway.
-        #
-        # Par Msg Comment
-        # N N  y  additional topo root
-        #
-        # B N  y  additional branch root
-        # C N  y  additional topo head
-        # H N  n  usual case
-        #
-        # B B  y  weird additional branch root
-        # C B  y  branch merge
-        # H B  n  merge with named branch
-        #
-        # C C  y  additional head from merge
-        # C H  n  merge with a head
-        #
-        # H H  n  head merge: head count decreases
-
-    if not opts.get('close_branch'):
-        for r in parents:
-            if r.closesbranch() and r.branch() == branch:
-                ui.status(_('reopening closed branch head %d\n') % r)
-
-    if ui.debugflag:
-        ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx.hex()))
-    elif ui.verbose:
-        ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx))
+    cmdutil.commitstatus(repo, node, branch, bheads, opts)
 
 @command('copy|cp',
     [('A', 'after', None, _('record a copy that has already occurred')),
@@ -2093,12 +2082,34 @@ def debugknown(ui, repopath, *ids, **opts):
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
+@command('debuglabelcomplete', [], _('LABEL...'))
+def debuglabelcomplete(ui, repo, *args):
+    '''complete "labels" - tags, open branch names, bookmark names'''
+
+    labels = set()
+    labels.update(t[0] for t in repo.tagslist())
+    labels.update(repo._bookmarks.keys())
+    for heads in repo.branchmap().itervalues():
+        for h in heads:
+            ctx = repo[h]
+            if not ctx.closesbranch():
+                labels.add(ctx.branch())
+    completions = set()
+    if not args:
+        args = ['']
+    for a in args:
+        completions.update(l for l in labels if l.startswith(a))
+    ui.write('\n'.join(sorted(completions)))
+    ui.write('\n')
+
 @command('debugobsolete',
         [('', 'flags', 0, _('markers flag')),
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
-    """create arbitrary obsolete marker"""
+    """create arbitrary obsolete marker
+
+    With no arguments, displays the list of obsolescence markers."""
     def parsenodeid(s):
         try:
             # We do not use revsingle/revrange functions here to accept
@@ -2139,6 +2150,75 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
             ui.write('{%s}' % (', '.join('%r: %r' % t for t in
                                          sorted(m.metadata().items()))))
             ui.write('\n')
+
+@command('debugpathcomplete',
+         [('f', 'full', None, _('complete an entire path')),
+          ('n', 'normal', None, _('show only normal files')),
+          ('a', 'added', None, _('show only added files')),
+          ('r', 'removed', None, _('show only removed files'))],
+         _('FILESPEC...'))
+def debugpathcomplete(ui, repo, *specs, **opts):
+    '''complete part or all of a tracked path
+
+    This command supports shells that offer path name completion. It
+    currently completes only files already known to the dirstate.
+
+    Completion extends only to the next path segment unless
+    --full is specified, in which case entire paths are used.'''
+
+    def complete(path, acceptable):
+        dirstate = repo.dirstate
+        spec = os.path.normpath(os.path.join(os.getcwd(), path))
+        rootdir = repo.root + os.sep
+        if spec != repo.root and not spec.startswith(rootdir):
+            return [], []
+        if os.path.isdir(spec):
+            spec += '/'
+        spec = spec[len(rootdir):]
+        fixpaths = os.sep != '/'
+        if fixpaths:
+            spec = spec.replace(os.sep, '/')
+        speclen = len(spec)
+        fullpaths = opts['full']
+        files, dirs = set(), set()
+        adddir, addfile = dirs.add, files.add
+        for f, st in dirstate.iteritems():
+            if f.startswith(spec) and st[0] in acceptable:
+                if fixpaths:
+                    f = f.replace('/', os.sep)
+                if fullpaths:
+                    addfile(f)
+                    continue
+                s = f.find(os.sep, speclen)
+                if s >= 0:
+                    adddir(f[:s + 1])
+                else:
+                    addfile(f)
+        return files, dirs
+
+    acceptable = ''
+    if opts['normal']:
+        acceptable += 'nm'
+    if opts['added']:
+        acceptable += 'a'
+    if opts['removed']:
+        acceptable += 'r'
+    cwd = repo.getcwd()
+    if not specs:
+        specs = ['.']
+
+    files, dirs = set(), set()
+    for spec in specs:
+        f, d = complete(spec, acceptable or 'nmar')
+        files.update(f)
+        dirs.update(d)
+    if not files and len(dirs) == 1:
+        # force the shell to consider a completion that matches one
+        # directory and zero files to be ambiguous
+        dirs.add(iter(dirs).next() + '.')
+    files.update(dirs)
+    ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
+    ui.write('\n')
 
 @command('debugpushkey', [], _('REPO NAMESPACE [KEY OLD NEW]'))
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
@@ -2182,11 +2262,21 @@ def debugpvec(ui, repo, a, b=None):
              (abs(pa._depth - pb._depth), pvec._hamming(pa._vec, pb._vec),
               pa.distance(pb), rel))
 
-@command('debugrebuildstate',
+@command('debugrebuilddirstate|debugrebuildstate',
     [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
-    _('[-r REV] [REV]'))
-def debugrebuildstate(ui, repo, rev="tip"):
-    """rebuild the dirstate as it would look like for the given revision"""
+    _('[-r REV]'))
+def debugrebuilddirstate(ui, repo, rev):
+    """rebuild the dirstate as it would look like for the given revision
+
+    If no revision is specified the first current parent will be used.
+
+    The dirstate will be set to the files of the given revision.
+    The actual working directory content or existing dirstate
+    information such as adds or removes is not considered.
+
+    One use of this command is to make the next :hg:`status` invocation
+    check the actual file content.
+    """
     ctx = scmutil.revsingle(repo, rev)
     wlock = repo.wlock()
     try:
@@ -2420,7 +2510,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     finally:
         wlock.release()
 
-@command('debugstate',
+@command('debugdirstate|debugstate',
     [('', 'nodates', None, _('do not display the saved mtime')),
     ('', 'datesort', None, _('sort by saved mtime'))],
     _('[OPTION]...'))
@@ -2645,11 +2735,12 @@ def diff(ui, repo, *pats, **opts):
     ('', 'switch-parent', None, _('diff against the second parent')),
     ('r', 'rev', [], _('revisions to export'), _('REV')),
     ] + diffopts,
-    _('[OPTION]... [-o OUTFILESPEC] [-r] REV...'))
+    _('[OPTION]... [-o OUTFILESPEC] [-r] [REV]...'))
 def export(ui, repo, *changesets, **opts):
     """dump the header and diffs for one or more changesets
 
     Print the changeset header and diffs for one or more revisions.
+    If no revision is given, the parent of the working directory is used.
 
     The information shown in the changeset header is: author, date,
     branch name (if non-default), changeset hash, parent(s) and commit
@@ -2705,6 +2796,8 @@ def export(ui, repo, *changesets, **opts):
     Returns 0 on success.
     """
     changesets += tuple(opts.get('rev', []))
+    if not changesets:
+        changesets = ['.']
     revs = scmutil.revrange(repo, changesets)
     if not revs:
         raise util.Abort(_("export requires at least one changeset"))
@@ -2851,9 +2944,13 @@ def graft(ui, repo, *revs, **opts):
         return -1
 
     # check for ancestors of dest branch
-    for rev in repo.revs('::. and %ld', revs):
-        ui.warn(_('skipping ancestor revision %s\n') % rev)
-        revs.remove(rev)
+    crev = repo['.'].rev()
+    ancestors = repo.changelog.ancestors([crev], inclusive=True)
+    # don't mutate while iterating, create a copy
+    for rev in list(revs):
+        if rev in ancestors:
+            ui.warn(_('skipping ancestor revision %s\n') % rev)
+            revs.remove(rev)
     if not revs:
         return -1
 
@@ -2867,7 +2964,9 @@ def graft(ui, repo, *revs, **opts):
 
     # check ancestors for earlier grafts
     ui.debug('scanning for duplicate grafts\n')
-    for ctx in repo.set("::. - ::%ld", revs):
+
+    for rev in repo.changelog.findmissingrevs(revs, [crev]):
+        ctx = repo[rev]
         n = ctx.extra().get('source')
         if n in ids:
             r = repo[n].rev()
@@ -2881,7 +2980,7 @@ def graft(ui, repo, *revs, **opts):
         elif ctx.hex() in ids:
             r = ids[ctx.hex()]
             ui.warn(_('skipping already grafted revision %s '
-                            '(was grafted from %d)\n') % (r, ctx.rev()))
+                            '(was grafted from %d)\n') % (r, rev))
             revs.remove(r)
     if not revs:
         return -1
@@ -2991,7 +3090,7 @@ def grep(ui, repo, pattern, *pats, **opts):
     if opts.get('ignore_case'):
         reflags |= re.I
     try:
-        regexp = re.compile(pattern, reflags)
+        regexp = util.compilere(pattern, reflags)
     except re.error, inst:
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return 1
@@ -3245,7 +3344,7 @@ def heads(ui, repo, *branchrevs, **opts):
      ('k', 'keyword', '', _('show topics matching keyword')),
      ],
     _('[-ec] [TOPIC]'))
-def help_(ui, name=None, unknowncmd=False, full=True, **opts):
+def help_(ui, name=None, **opts):
     """show help for a given topic or a help overview
 
     With no arguments, print a list of commands with short help messages.
@@ -3258,291 +3357,9 @@ def help_(ui, name=None, unknowncmd=False, full=True, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    def helpcmd(name):
-        try:
-            aliases, entry = cmdutil.findcmd(name, table, strict=unknowncmd)
-        except error.AmbiguousCommand, inst:
-            # py3k fix: except vars can't be used outside the scope of the
-            # except block, nor can be used inside a lambda. python issue4617
-            prefix = inst.args[0]
-            select = lambda c: c.lstrip('^').startswith(prefix)
-            rst = helplist(select)
-            return rst
-
-        rst = []
-
-        # check if it's an invalid alias and display its error if it is
-        if getattr(entry[0], 'badalias', False):
-            if not unknowncmd:
-                ui.pushbuffer()
-                entry[0](ui)
-                rst.append(ui.popbuffer())
-            return rst
-
-        # synopsis
-        if len(entry) > 2:
-            if entry[2].startswith('hg'):
-                rst.append("%s\n" % entry[2])
-            else:
-                rst.append('hg %s %s\n' % (aliases[0], entry[2]))
-        else:
-            rst.append('hg %s\n' % aliases[0])
-        # aliases
-        if full and not ui.quiet and len(aliases) > 1:
-            rst.append(_("\naliases: %s\n") % ', '.join(aliases[1:]))
-        rst.append('\n')
-
-        # description
-        doc = gettext(entry[0].__doc__)
-        if not doc:
-            doc = _("(no help text available)")
-        if util.safehasattr(entry[0], 'definition'):  # aliased command
-            if entry[0].definition.startswith('!'):  # shell alias
-                doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
-            else:
-                doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
-        doc = doc.splitlines(True)
-        if ui.quiet or not full:
-            rst.append(doc[0])
-        else:
-            rst.extend(doc)
-        rst.append('\n')
-
-        # check if this command shadows a non-trivial (multi-line)
-        # extension help text
-        try:
-            mod = extensions.find(name)
-            doc = gettext(mod.__doc__) or ''
-            if '\n' in doc.strip():
-                msg = _('use "hg help -e %s" to show help for '
-                        'the %s extension') % (name, name)
-                rst.append('\n%s\n' % msg)
-        except KeyError:
-            pass
-
-        # options
-        if not ui.quiet and entry[1]:
-            rst.append('\n%s\n\n' % _("options:"))
-            rst.append(help.optrst(entry[1], ui.verbose))
-
-        if ui.verbose:
-            rst.append('\n%s\n\n' % _("global options:"))
-            rst.append(help.optrst(globalopts, ui.verbose))
-
-        if not ui.verbose:
-            if not full:
-                rst.append(_('\nuse "hg help %s" to show the full help text\n')
-                           % name)
-            elif not ui.quiet:
-                omitted = _('use "hg -v help %s" to show more complete'
-                            ' help and the global options') % name
-                notomitted = _('use "hg -v help %s" to show'
-                               ' the global options') % name
-                help.indicateomitted(rst, omitted, notomitted)
-
-        return rst
-
-
-    def helplist(select=None):
-        # list of commands
-        if name == "shortlist":
-            header = _('basic commands:\n\n')
-        else:
-            header = _('list of commands:\n\n')
-
-        h = {}
-        cmds = {}
-        for c, e in table.iteritems():
-            f = c.split("|", 1)[0]
-            if select and not select(f):
-                continue
-            if (not select and name != 'shortlist' and
-                e[0].__module__ != __name__):
-                continue
-            if name == "shortlist" and not f.startswith("^"):
-                continue
-            f = f.lstrip("^")
-            if not ui.debugflag and f.startswith("debug"):
-                continue
-            doc = e[0].__doc__
-            if doc and 'DEPRECATED' in doc and not ui.verbose:
-                continue
-            doc = gettext(doc)
-            if not doc:
-                doc = _("(no help text available)")
-            h[f] = doc.splitlines()[0].rstrip()
-            cmds[f] = c.lstrip("^")
-
-        rst = []
-        if not h:
-            if not ui.quiet:
-                rst.append(_('no commands defined\n'))
-            return rst
-
-        if not ui.quiet:
-            rst.append(header)
-        fns = sorted(h)
-        for f in fns:
-            if ui.verbose:
-                commands = cmds[f].replace("|",", ")
-                rst.append(" :%s: %s\n" % (commands, h[f]))
-            else:
-                rst.append(' :%s: %s\n' % (f, h[f]))
-
-        if not name:
-            exts = help.listexts(_('enabled extensions:'), extensions.enabled())
-            if exts:
-                rst.append('\n')
-                rst.extend(exts)
-
-            rst.append(_("\nadditional help topics:\n\n"))
-            topics = []
-            for names, header, doc in help.helptable:
-                topics.append((names[0], header))
-            for t, desc in topics:
-                rst.append(" :%s: %s\n" % (t, desc))
-
-        optlist = []
-        if not ui.quiet:
-            if ui.verbose:
-                optlist.append((_("global options:"), globalopts))
-                if name == 'shortlist':
-                    optlist.append((_('use "hg help" for the full list '
-                                           'of commands'), ()))
-            else:
-                if name == 'shortlist':
-                    msg = _('use "hg help" for the full list of commands '
-                            'or "hg -v" for details')
-                elif name and not full:
-                    msg = _('use "hg help %s" to show the full help '
-                            'text') % name
-                else:
-                    msg = _('use "hg -v help%s" to show builtin aliases and '
-                            'global options') % (name and " " + name or "")
-                optlist.append((msg, ()))
-
-        if optlist:
-            for title, options in optlist:
-                rst.append('\n%s\n' % title)
-                if options:
-                    rst.append('\n%s\n' % help.optrst(options, ui.verbose))
-        return rst
-
-    def helptopic(name):
-        for names, header, doc in help.helptable:
-            if name in names:
-                break
-        else:
-            raise error.UnknownCommand(name)
-
-        rst = ["%s\n\n" % header]
-        # description
-        if not doc:
-            rst.append("    %s\n" % _("(no help text available)"))
-        if util.safehasattr(doc, '__call__'):
-            rst += ["    %s\n" % l for l in doc().splitlines()]
-
-        if not ui.verbose:
-            omitted = (_('use "hg help -v %s" to show more complete help') %
-                       name)
-            help.indicateomitted(rst, omitted)
-
-        try:
-            cmdutil.findcmd(name, table)
-            rst.append(_('\nuse "hg help -c %s" to see help for '
-                       'the %s command\n') % (name, name))
-        except error.UnknownCommand:
-            pass
-        return rst
-
-    def helpext(name):
-        try:
-            mod = extensions.find(name)
-            doc = gettext(mod.__doc__) or _('no help text available')
-        except KeyError:
-            mod = None
-            doc = extensions.disabledext(name)
-            if not doc:
-                raise error.UnknownCommand(name)
-
-        if '\n' not in doc:
-            head, tail = doc, ""
-        else:
-            head, tail = doc.split('\n', 1)
-        rst = [_('%s extension - %s\n\n') % (name.split('.')[-1], head)]
-        if tail:
-            rst.extend(tail.splitlines(True))
-            rst.append('\n')
-
-        if not ui.verbose:
-            omitted = (_('use "hg help -v %s" to show more complete help') %
-                       name)
-            help.indicateomitted(rst, omitted)
-
-        if mod:
-            try:
-                ct = mod.cmdtable
-            except AttributeError:
-                ct = {}
-            modcmds = set([c.split('|', 1)[0] for c in ct])
-            rst.extend(helplist(modcmds.__contains__))
-        else:
-            rst.append(_('use "hg help extensions" for information on enabling '
-                       'extensions\n'))
-        return rst
-
-    def helpextcmd(name):
-        cmd, ext, mod = extensions.disabledcmd(ui, name,
-                                               ui.configbool('ui', 'strict'))
-        doc = gettext(mod.__doc__).splitlines()[0]
-
-        rst = help.listexts(_("'%s' is provided by the following "
-                              "extension:") % cmd, {ext: doc}, indent=4)
-        rst.append('\n')
-        rst.append(_('use "hg help extensions" for information on enabling '
-                   'extensions\n'))
-        return rst
-
-
-    rst = []
-    kw = opts.get('keyword')
-    if kw:
-        matches = help.topicmatch(kw)
-        for t, title in (('topics', _('Topics')),
-                         ('commands', _('Commands')),
-                         ('extensions', _('Extensions')),
-                         ('extensioncommands', _('Extension Commands'))):
-            if matches[t]:
-                rst.append('%s:\n\n' % title)
-                rst.extend(minirst.maketable(sorted(matches[t]), 1))
-                rst.append('\n')
-    elif name and name != 'shortlist':
-        i = None
-        if unknowncmd:
-            queries = (helpextcmd,)
-        elif opts.get('extension'):
-            queries = (helpext,)
-        elif opts.get('command'):
-            queries = (helpcmd,)
-        else:
-            queries = (helptopic, helpcmd, helpext, helpextcmd)
-        for f in queries:
-            try:
-                rst = f(name)
-                i = None
-                break
-            except error.UnknownCommand, inst:
-                i = inst
-        if i:
-            raise i
-    else:
-        # program name
-        if not ui.quiet:
-            rst = [_("Mercurial Distributed SCM\n"), '\n']
-        rst.extend(helplist())
-
     keep = ui.verbose and ['verbose'] or []
-    text = ''.join(rst)
+    text = help.help_(ui, name, **opts)
+
     formatted, pruned = minirst.format(text, textwidth, keep=keep)
     if 'verbose' in pruned:
         keep.append('omitted')
@@ -3802,11 +3619,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     wlock = lock = tr = None
     msgs = []
 
-    def checkexact(repo, n, nodeid):
-        if opts.get('exact') and hex(n) != nodeid:
-            repo.rollback()
-            raise util.Abort(_('patch is damaged or loses information'))
-
     def tryone(ui, hunk, parents):
         tmpname, message, user, date, branch, nodeid, p1, p2 = \
             patch.extract(ui, hunk)
@@ -3878,7 +3690,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
                                     editor=editor)
-                    checkexact(repo, n, nodeid)
             else:
                 if opts.get('exact') or opts.get('import_branch'):
                     branch = branch or 'default'
@@ -3900,9 +3711,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                                               editor=cmdutil.commiteditor)
                     repo.savecommitmessage(memctx.description())
                     n = memctx.commit()
-                    checkexact(repo, n, nodeid)
                 finally:
                     store.close()
+            if opts.get('exact') and hex(n) != nodeid:
+                raise util.Abort(_('patch is damaged or loses information'))
             if n:
                 # i18n: refers to a short changeset id
                 msg = _('created %s') % short(n)
@@ -4247,10 +4059,10 @@ def log(ui, repo, *pats, **opts):
         displayer.show(ctx, copies=copies, matchfn=revmatchfn)
 
     for ctx in cmdutil.walkchangerevs(repo, matchfn, opts, prep):
-        if count == limit:
-            break
         if displayer.flush(ctx.rev()):
             count += 1
+        if count == limit:
+            break
     displayer.close()
 
 @command('manifest',
@@ -4713,14 +4525,15 @@ def pull(ui, repo, source="default", **opts):
     ui.status(_('pulling from %s\n') % util.hidepassword(source))
     revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
 
+    remotebookmarks = other.listkeys('bookmarks')
+
     if opts.get('bookmark'):
         if not revs:
             revs = []
-        rb = other.listkeys('bookmarks')
         for b in opts['bookmark']:
-            if b not in rb:
+            if b not in remotebookmarks:
                 raise util.Abort(_('remote bookmark %s not found!') % b)
-            revs.append(rb[b])
+            revs.append(remotebookmarks[b])
 
     if revs:
         try:
@@ -4731,7 +4544,7 @@ def pull(ui, repo, source="default", **opts):
             raise util.Abort(err)
 
     modheads = repo.pull(other, heads=revs, force=opts.get('force'))
-    bookmarks.updatefromremote(ui, repo, other, source)
+    bookmarks.updatefromremote(ui, repo, remotebookmarks, source)
     if checkout:
         checkout = str(repo.changelog.rev(other.lookup(checkout)))
     repo._subtoppath = source
@@ -4747,7 +4560,7 @@ def pull(ui, repo, source="default", **opts):
         for b in opts['bookmark']:
             # explicit pull overrides local bookmark if any
             ui.status(_("importing bookmark %s\n") % b)
-            marks[b] = repo[rb[b]].node()
+            marks[b] = repo[remotebookmarks[b]].node()
         marks.write()
 
     return ret
@@ -5308,9 +5121,9 @@ def serve(ui, repo, **opts):
         if not repo:
             raise error.RepoError(_("there is no Mercurial repository"
                                     " here (.hg not found)"))
-        o = repo.root
+        o = repo
 
-    app = hgweb.hgweb(o, baseui=ui)
+    app = hgweb.hgweb(o, baseui=baseui)
 
     class service(object):
         def init(self):
@@ -5567,12 +5380,11 @@ def summary(ui, repo, **opts):
         # i18n: column positioning for "hg summary"
         ui.write(_('bookmarks:'), label='log.bookmark')
         if current is not None:
-            try:
-                marks.remove(current)
+            if current in marks:
                 ui.write(' *' + current, label='bookmarks.current')
-            except ValueError:
-                # current bookmark not in parent ctx marks
-                pass
+                marks.remove(current)
+            else:
+                ui.write(' [%s]' % current, label='bookmarks.current')
         for m in marks:
             ui.write(' ' + m, label='log.bookmark')
         ui.write('\n', label='log.bookmark')
@@ -5664,25 +5476,32 @@ def summary(ui, repo, **opts):
     if opts.get('remote'):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))
+        sbranch = branches[0]
         other = hg.peer(repo, {}, source)
         revs, checkout = hg.addbranchrevs(repo, other, branches,
                                           opts.get('rev'))
+        if revs:
+            revs = [other.lookup(rev) for rev in revs]
         ui.debug('comparing with %s\n' % util.hidepassword(source))
         repo.ui.pushbuffer()
-        commoninc = discovery.findcommonincoming(repo, other)
+        commoninc = discovery.findcommonincoming(repo, other, heads=revs)
         _common, incoming, _rheads = commoninc
         repo.ui.popbuffer()
         if incoming:
             t.append(_('1 or more incoming'))
 
         dest, branches = hg.parseurl(ui.expandpath('default-push', 'default'))
+        dbranch = branches[0]
         revs, checkout = hg.addbranchrevs(repo, repo, branches, None)
         if source != dest:
             other = hg.peer(repo, {}, dest)
-            commoninc = None
             ui.debug('comparing with %s\n' % util.hidepassword(dest))
+        if (source != dest or (sbranch is not None and sbranch != dbranch)):
+            commoninc = None
+        if revs:
+            revs = [repo.lookup(rev) for rev in revs]
         repo.ui.pushbuffer()
-        outgoing = discovery.findcommonoutgoing(repo, other,
+        outgoing = discovery.findcommonoutgoing(repo, other, onlyheads=revs,
                                                 commoninc=commoninc)
         repo.ui.popbuffer()
         o = outgoing.missing
@@ -5808,7 +5627,7 @@ def tag(ui, repo, name1, *names, **opts):
         # don't allow tagging the null rev
         if (not opts.get('remove') and
             scmutil.revsingle(repo, rev_).rev() == nullrev):
-            raise util.Abort(_("null revision specified"))
+            raise util.Abort(_("cannot tag null revision"))
 
         repo.tag(names, r, message, opts.get('local'), opts.get('user'), date)
     finally:
@@ -5961,7 +5780,12 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     # with no argument, we also move the current bookmark, if any
     movemarkfrom = None
     if rev is None:
-        movemarkfrom = repo['.'].node()
+        curmark = repo._bookmarkcurrent
+        if bookmarks.iscurrent(repo):
+            movemarkfrom = repo['.'].node()
+        elif curmark:
+            ui.status(_("updating to active bookmark %s\n") % curmark)
+            rev = curmark
 
     # if we defined a bookmark, we have to remember the original bookmark name
     brev = rev

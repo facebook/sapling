@@ -1,48 +1,42 @@
 import os
 import glob
+import unittest
+import silenttestrunner
+
 from mercurial.util import atomictempfile
 
-# basic usage
-def test1_simple():
-    if os.path.exists('foo'):
-        os.remove('foo')
-    file = atomictempfile('foo')
-    (dir, basename) = os.path.split(file._tempname)
-    assert not os.path.isfile('foo')
-    assert basename in glob.glob('.foo-*')
+class testatomictempfile(unittest.TestCase):
+    def test1_simple(self):
+        if os.path.exists('foo'):
+            os.remove('foo')
+        file = atomictempfile('foo')
+        (dir, basename) = os.path.split(file._tempname)
+        self.assertFalse(os.path.isfile('foo'))
+        self.assertTrue(basename in glob.glob('.foo-*'))
 
-    file.write('argh\n')
-    file.close()
+        file.write('argh\n')
+        file.close()
 
-    assert os.path.isfile('foo')
-    assert basename not in glob.glob('.foo-*')
-    print 'OK'
+        self.assertTrue(os.path.isfile('foo'))
+        self.assertTrue(basename not in glob.glob('.foo-*'))
 
-# discard() removes the temp file without making the write permanent
-def test2_discard():
-    if os.path.exists('foo'):
-        os.remove('foo')
-    file = atomictempfile('foo')
-    (dir, basename) = os.path.split(file._tempname)
+    # discard() removes the temp file without making the write permanent
+    def test2_discard(self):
+        if os.path.exists('foo'):
+            os.remove('foo')
+        file = atomictempfile('foo')
+        (dir, basename) = os.path.split(file._tempname)
 
-    file.write('yo\n')
-    file.discard()
+        file.write('yo\n')
+        file.discard()
 
-    assert not os.path.isfile('foo')
-    assert basename not in os.listdir('.')
-    print 'OK'
+        self.assertFalse(os.path.isfile('foo'))
+        self.assertTrue(basename not in os.listdir('.'))
 
-# if a programmer screws up and passes bad args to atomictempfile, they
-# get a plain ordinary TypeError, not infinite recursion
-def test3_oops():
-    try:
-        file = atomictempfile()
-    except TypeError:
-        print "OK"
-    else:
-        print "expected TypeError"
+    # if a programmer screws up and passes bad args to atomictempfile, they
+    # get a plain ordinary TypeError, not infinite recursion
+    def test3_oops(self):
+        self.assertRaises(TypeError, atomictempfile)
 
 if __name__ == '__main__':
-    test1_simple()
-    test2_discard()
-    test3_oops()
+    silenttestrunner.main(__name__)

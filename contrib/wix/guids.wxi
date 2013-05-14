@@ -19,7 +19,7 @@
 
   <!-- help.wxs -->
   <?define helpFolder.guid = {9FA957DB-6DFE-44f2-AD03-293B2791CF17} ?>
-  
+
   <!-- i18n.wxs -->
   <?define i18nFolder.guid = {1BF8026D-CF7C-4174-AEE6-D6B7BF119248} ?>
 

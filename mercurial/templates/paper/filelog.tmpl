@@ -1,9 +1,9 @@
 {header}
 <title>{repo|escape}: {file|escape} history</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log/tip/{file|urlescape}" title="Atom feed for {repo|escape}:{file}" />
+   href="{url|urlescape}atom-log/tip/{file|urlescape}" title="Atom feed for {repo|escape}:{file}" />
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log/tip/{file|urlescape}" title="RSS feed for {repo|escape}:{file}" />
+   href="{url|urlescape}rss-log/tip/{file|urlescape}" title="RSS feed for {repo|escape}:{file}" />
 </head>
 <body>
 
@@ -11,34 +11,34 @@
 <div class="menu">
 <div class="logo">
 <a href="{logourl}">
-<img src="{staticurl}{logoimg}" alt="mercurial" /></a>
+<img src="{staticurl|urlescape}{logoimg}" alt="mercurial" /></a>
 </div>
 <ul>
-<li><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
-<li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
-<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+<li><a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+<li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
-<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
-<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+<li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
 </ul>
 <ul>
-<li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
-<li><a href="{url}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
-<li><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
-<li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
+<li><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+<li><a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
+<li><a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
+<li><a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
 <li class="active">file log</li>
-<li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
+<li><a href="{url|urlescape}raw-file/{node|short}/{file|urlescape}">raw</a></li>
 </ul>
 <ul>
-<li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+<li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
 </ul>
 <p>
 <div class="atom-logo">
-<a href="{url}atom-log/{node|short}/{file|urlescape}" title="subscribe to atom feed">
-<img class="atom-logo" src="{staticurl}feed-icon-14x14.png" alt="atom feed"></a>
+<a href="{url|urlescape}atom-log/{node|short}/{file|urlescape}" title="subscribe to atom feed">
+<img class="atom-logo" src="{staticurl|urlescape}feed-icon-14x14.png" alt="atom feed"></a>
 </div>
 </div>
 
@@ -46,7 +46,7 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>log {file|escape}</h3>
 
-<form class="search" action="{url}log">
+<form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p><input name="rev" id="search1" type="text" size="30" /></p>
 <div id="hint">find changesets by author, revision,
@@ -54,8 +54,8 @@ files, or words in the commit message</div>
 </form>
 
 <div class="navigate">
-<a href="{url}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
-<a href="{url}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
 | {nav%filenav}</div>
 
 <table class="bigtable">
@@ -68,8 +68,8 @@ files, or words in the commit message</div>
 </table>
 
 <div class="navigate">
-<a href="{url}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
-<a href="{url}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}log/{node|short}/{file|urlescape}{morevars%urlparameter}">more</a>
 | {nav%filenav}
 </div>
 

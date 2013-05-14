@@ -29,3 +29,11 @@ try hgweb request
   $ python hgweb.cgi >page1 2>&1
   $ python "$TESTDIR/md5sum.py" page1
   1f424bb22ec05c3c6bc866b6e67efe43  page1
+
+make sure headers are sent even when there is no body
+
+  $ QUERY_STRING="cmd=listkeys&namespace=nosuchnamespace" python hgweb.cgi
+  Status: 200 Script output follows\r (esc)
+  Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 0\r (esc)
+  \r (esc)

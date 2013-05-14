@@ -47,8 +47,8 @@ service entry controls the service name used when reading keys.
 
 from mercurial.i18n import _
 from mercurial.url import passwordmgr
-from mercurial import httpconnection, urllib2, util
-import os
+from mercurial import httpconnection, util
+import os, urllib2
 
 ERRMAX = 128
 

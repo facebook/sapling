@@ -22,6 +22,20 @@ import re
 import util, encoding
 from i18n import _
 
+import cgi
+
+def section(s):
+    return "%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s))
+
+def subsection(s):
+    return "%s\n%s\n\n" % (s, '=' * encoding.colwidth(s))
+
+def subsubsection(s):
+    return "%s\n%s\n\n" % (s, "-" * encoding.colwidth(s))
+
+def subsubsubsection(s):
+    return "%s\n%s\n\n" % (s, "." * encoding.colwidth(s))
+
 def replace(text, substs):
     '''
     Apply a list of (find, replace) pairs to a text.
@@ -512,6 +526,9 @@ def formathtml(blocks):
     headernest = ''
     listnest = []
 
+    def escape(s):
+        return cgi.escape(s, True)
+
     def openlist(start, level):
         if not listnest or listnest[-1][0] != start:
             listnest.append((start, level))
@@ -525,37 +542,38 @@ def formathtml(blocks):
         lines = b['lines']
 
         if btype == 'admonition':
-            admonition = _admonitiontitles[b['admonitiontitle']]
-            text = ' '.join(map(str.strip, lines))
+            admonition = escape(_admonitiontitles[b['admonitiontitle']])
+            text = escape(' '.join(map(str.strip, lines)))
             out.append('<p>\n<b>%s</b> %s\n</p>\n' % (admonition, text))
         elif btype == 'paragraph':
-            out.append('<p>\n%s\n</p>\n' % '\n'.join(lines))
+            out.append('<p>\n%s\n</p>\n' % escape('\n'.join(lines)))
         elif btype == 'margin':
             pass
         elif btype == 'literal':
-            out.append('<pre>\n%s\n</pre>\n' % '\n'.join(lines))
+            out.append('<pre>\n%s\n</pre>\n' % escape('\n'.join(lines)))
         elif btype == 'section':
             i = b['underline']
             if i not in headernest:
                 headernest += i
             level = headernest.index(i) + 1
-            out.append('<h%d>%s</h%d>\n' % (level, lines[0], level))
+            out.append('<h%d>%s</h%d>\n' % (level, escape(lines[0]), level))
         elif btype == 'table':
             table = b['table']
-            t = []
+            out.append('<table>\n')
             for row in table:
-                l = []
-                for v in zip(row):
-                    if not t:
-                        l.append('<th>%s</th>' % v)
-                    else:
-                        l.append('<td>%s</td>' % v)
-                t.append(' <tr>%s</tr>\n' % ''.join(l))
-            out.append('<table>\n%s</table>\n' % ''.join(t))
+                out.append('<tr>')
+                for v in row:
+                    out.append('<td>')
+                    out.append(escape(v))
+                    out.append('</td>')
+                    out.append('\n')
+                out.pop()
+                out.append('</tr>\n')
+            out.append('</table>\n')
         elif btype == 'definition':
             openlist('dl', level)
-            term = lines[0]
-            text = ' '.join(map(str.strip, lines[1:]))
+            term = escape(lines[0])
+            text = escape(' '.join(map(str.strip, lines[1:])))
             out.append(' <dt>%s\n <dd>%s\n' % (term, text))
         elif btype == 'bullet':
             bullet, head = lines[0].split(' ', 1)
@@ -563,16 +581,16 @@ def formathtml(blocks):
                 openlist('ul', level)
             else:
                 openlist('ol', level)
-            out.append(' <li> %s\n' % ' '.join([head] + lines[1:]))
+            out.append(' <li> %s\n' % escape(' '.join([head] + lines[1:])))
         elif btype == 'field':
             openlist('dl', level)
-            key = b['key']
-            text = ' '.join(map(str.strip, lines))
+            key = escape(b['key'])
+            text = escape(' '.join(map(str.strip, lines)))
             out.append(' <dt>%s\n <dd>%s\n' % (key, text))
         elif btype == 'option':
             openlist('dl', level)
-            opt = b['optstr']
-            desc = ' '.join(map(str.strip, lines))
+            opt = escape(b['optstr'])
+            desc = escape(' '.join(map(str.strip, lines)))
             out.append(' <dt>%s\n <dd>%s\n' % (opt, desc))
 
         # close lists if indent level of next block is lower

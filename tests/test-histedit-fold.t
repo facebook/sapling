@@ -1,18 +1,26 @@
+Test histedit extention: Fold commands
+======================================
+
+This test file is dedicated to testing the fold command in non conflicting
+case.
+
+Initialization
+---------------
+
+
   $ . "$TESTDIR/histedit-helpers.sh"
 
   $ cat >> $HGRCPATH <<EOF
+  > [alias]
+  > logt = log --template '{rev}:{node|short} {desc|firstline}\n'
   > [extensions]
   > graphlog=
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > pick e860deea161a e
-  > pick 652413bf663e f
-  > fold 177f92b77385 c
-  > pick 055a42cdd887 d
-  > EOF
+
+Simple folding
+--------------------
   $ initrepo ()
   > {
   >     hg init r
@@ -27,41 +35,26 @@
   $ initrepo
 
 log before edit
-  $ hg log --graph
-  @  changeset:   5:652413bf663e
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
+  $ hg logt --graph
+  @  5:652413bf663e f
   |
-  o  changeset:   4:e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
+  o  4:e860deea161a e
   |
-  o  changeset:   3:055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
+  o  3:055a42cdd887 d
   |
-  o  changeset:   2:177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
+  o  2:177f92b77385 c
   |
-  o  changeset:   1:d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
+  o  1:d2ae7f538514 b
   |
-  o  changeset:   0:cb9a9f314b8b
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  o  0:cb9a9f314b8b a
   
 
-edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ hg histedit 177f92b77385 --commands - 2>&1 <<EOF | fixbundle
+  > pick e860deea161a e
+  > pick 652413bf663e f
+  > fold 177f92b77385 c
+  > pick 055a42cdd887 d
+  > EOF
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -71,32 +64,16 @@ edit the history
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
-  $ hg log --graph
-  @  changeset:   4:7e0a290363ed
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
+  $ hg logt --graph
+  @  4:9c277da72c9b d
   |
-  o  changeset:   3:5e24935bad3d
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     pick e860deea161a e
+  o  3:6de59d13424a f
   |
-  o  changeset:   2:ee283cb5f2d5
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
+  o  2:ee283cb5f2d5 e
   |
-  o  changeset:   1:d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
+  o  1:d2ae7f538514 b
   |
-  o  changeset:   0:cb9a9f314b8b
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     a
+  o  0:cb9a9f314b8b a
   
 
 post-fold manifest
@@ -112,7 +89,7 @@ post-fold manifest
 check histedit_source
 
   $ hg log --debug --rev 3
-  changeset:   3:5e24935bad3d5a4486de3b90f233e991465ced72
+  changeset:   3:6de59d13424a8a13acd3e975514aed29dd0d9b2d
   phase:       draft
   parent:      2:ee283cb5f2d5955443f23a27b697a04339e9a39a
   parent:      -1:0000000000000000000000000000000000000000
@@ -123,16 +100,19 @@ check histedit_source
   extra:       branch=default
   extra:       histedit_source=a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3,177f92b773850b59254aa5e923436f921b55483b
   description:
-  pick e860deea161a e
-  pick 652413bf663e f
-  fold 177f92b77385 c
-  pick 055a42cdd887 d
+  f
+  ***
+  c
   
   
 
   $ cd ..
 
 folding and creating no new change doesn't break:
+-------------------------------------------------
+
+folded content is dropped during a merge. The folded commit should properly disapear.
+
   $ mkdir fold-to-empty-test
   $ cd fold-to-empty-test
   $ hg init
@@ -145,50 +125,31 @@ folding and creating no new change doesn't break:
   $ hg commit -m '+5'
   $ echo 6 >> file
   $ hg commit -m '+6'
-  $ hg log --graph
-  @  changeset:   3:251d831eeec5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +6
+  $ hg logt --graph
+  @  3:251d831eeec5 +6
   |
-  o  changeset:   2:888f9082bf99
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +5
+  o  2:888f9082bf99 +5
   |
-  o  changeset:   1:617f94f13c0f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  o  1:617f94f13c0f +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
 
-  $ cat > editor.py <<EOF
-  > import re, sys
-  > rules = sys.argv[1]
-  > data = open(rules).read()
-  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+5)', r'drop \1', data)
-  > data = re.sub(r'pick ([0-9a-f]{12} 2 \+6)', r'fold \1', data)
-  > open(rules, 'w').write(data)
+  $ hg histedit 1 --commands - << EOF
+  > pick 617f94f13c0f 1 +4
+  > drop 888f9082bf99 2 +5
+  > fold 251d831eeec5 3 +6
   > EOF
-
-  $ HGEDITOR='python editor.py' hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts during merge.
   merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
-  [255]
+  Fix up the change and run hg histedit --continue
+  [1]
 There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
   $ hg status
   M file
-  ? editor.py
   ? file.orig
   $ hg resolve -l
   U file
@@ -197,20 +158,18 @@ should effectively drop the changes from +6.
   $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
-  $ hg log --graph
-  @  changeset:   1:617f94f13c0f
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  $ hg logt --graph
+  @  1:617f94f13c0f +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
 
   $ cd ..
+
+
+Test fold through dropped
+-------------------------
+
 
 Test corner case where folded revision is separated from its parent by a
 dropped revision.
@@ -227,7 +186,7 @@ dropped revision.
   $ hg commit -m '+5'
   $ echo 6 >> file
   $ hg commit -m '+6'
-  $ hg log -G --template '{rev}:{node|short} {desc|firstline}\n'
+  $ hg logt -G --template '{rev}:{node|short} {desc|firstline}\n'
   @  3:251d831eeec5 +6
   |
   o  2:888f9082bf99 +5
@@ -236,19 +195,17 @@ dropped revision.
   |
   o  0:0189ba417d34 1+2+3
   
-  $ EDITED="$TESTTMP/editcommands"
-  $ cat > $EDITED <<EOF
+  $ hg histedit 1 --commands -  << EOF
   > pick 617f94f13c0f 1 +4
   > drop 888f9082bf99 2 +5
   > fold 251d831eeec5 3 +6
   > EOF
-  $ HGEDITOR="cat $EDITED >" hg histedit 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts during merge.
   merging file incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
-  [255]
+  Fix up the change and run hg histedit --continue
+  [1]
   $ cat > file << EOF
   > 1
   > 2
@@ -279,22 +236,16 @@ dropped revision.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-backup.hg (glob)
-  $ hg log -G
-  @  changeset:   1:10c647b2cdd5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     +4
+  $ hg logt -G
+  @  1:10c647b2cdd5 +4
   |
-  o  changeset:   0:0189ba417d34
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     1+2+3
+  o  0:0189ba417d34 1+2+3
   
   $ hg export tip
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 10c647b2cdd54db0603ecb99b2ff5ce66d5a5323
   # Parent  0189ba417d34df9dda55f88b637dcae9917b5964
   +4

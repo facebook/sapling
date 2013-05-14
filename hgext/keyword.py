@@ -384,7 +384,7 @@ def demo(ui, repo, *args, **opts):
     fn = 'demo.txt'
     tmpdir = tempfile.mkdtemp('', 'kwdemo.')
     ui.note(_('creating temporary repository at %s\n') % tmpdir)
-    repo = localrepo.localrepository(ui, tmpdir, True)
+    repo = localrepo.localrepository(repo.baseui, tmpdir, True)
     ui.setconfig('keyword', fn, '')
     svn = ui.configbool('keywordset', 'svn')
     # explicitly set keywordset for demo output

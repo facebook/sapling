@@ -15,7 +15,7 @@ gvimdiff.regkeyalt=Software\Wow6432Node\Vim\GVim
 gvimdiff.regname=path
 gvimdiff.priority=-9
 
-vimdiff.args=$local $other $base
+vimdiff.args=$local $other $base -c 'redraw | echomsg "hg merge conflict, type \":cq\" to abort vimdiff"'
 vimdiff.check=changed
 vimdiff.priority=-10
 
@@ -25,7 +25,8 @@ merge.priority=-100
 gpyfm.gui=True
 
 meld.gui=True
-meld.args=--label='local' $local --label='base' $base --label='other' $other
+meld.args=--label='local' $local --label='merged' $base --label='other' $other -o $output
+meld.check=changed
 meld.diffargs=-a --label='$plabel1' $parent --label='$clabel' $child
 
 tkdiff.args=$local $other -a $base -o $output

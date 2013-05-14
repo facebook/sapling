@@ -112,14 +112,6 @@ revision
       </div>
     </td>
   </tr>
-  <tr>
-   <th class="author">change baseline</th>
-   <td class="author"><a href="/rev/cb9a9f314b8b:c78f6c5cbea9">cb9a9f314b8b</a> </td>
-  </tr>
-  <tr>
-   <th class="author">current baseline</th>
-   <td class="author"><a href="/rev/cb9a9f314b8b">cb9a9f314b8b</a></td>
-  </tr>
   </table>
   
   <div class="overflow">

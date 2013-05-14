@@ -4,14 +4,14 @@
 <body>
 
 <div class="buttons">
-<a href="{url}log{sessionvars%urlparameter}">changelog</a>
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a>
-<a href="{url}graph{sessionvars%urlparameter}">graph</a>
-<a href="{url}tags{sessionvars%urlparameter}">tags</a>
-<a href="{url}branches{sessionvars%urlparameter}">branches</a>
-<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a>
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a>
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a>
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>
 {archives%archiveentry}
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 </div>
 
 <h2>searching for {query|escape}</h2>

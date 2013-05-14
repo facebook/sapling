@@ -71,8 +71,8 @@ test generic hooks
 
   $ hg id
   pre-identify hook: HG_ARGS=id HG_OPTS={'bookmarks': None, 'branch': None, 'id': None, 'insecure': None, 'num': None, 'remotecmd': '', 'rev': '', 'ssh': '', 'tags': None} HG_PATS=[]
-  warning: pre-identify hook exited with status 1
-  [1]
+  abort: pre-identify hook exited with status 1
+  [255]
   $ hg cat b
   pre-cat hook: HG_ARGS=cat b HG_OPTS={'decode': None, 'exclude': [], 'include': [], 'output': '', 'rev': ''} HG_PATS=['b']
   b
@@ -198,7 +198,6 @@ listkeys hook
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
   listkeys hook: HG_NAMESPACE=phases HG_VALUES={'cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b': '1', 'publishing': 'True'}
-  listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   adding remote bookmark bar
   importing bookmark bar
   $ cd ../a
@@ -232,6 +231,7 @@ test that prelistkeys can prevent listing keys
   abort: prelistkeys hook exited with status 1
   [255]
   $ cd ../a
+  $ rm .hg/hgrc
 
 prechangegroup hook can prevent incoming changes
 

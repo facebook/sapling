@@ -9,7 +9,6 @@
 '''largefiles utility code: must not import other modules in this package.'''
 
 import os
-import errno
 import platform
 import shutil
 import stat
@@ -39,6 +38,7 @@ def getminsize(ui, assumelfiles, opt, default=10):
     return lfsize
 
 def link(src, dest):
+    util.makedirs(os.path.dirname(dest))
     try:
         util.oslink(src, dest)
     except OSError:
@@ -86,7 +86,6 @@ def findfile(repo, hash):
     elif inusercache(repo.ui, hash):
         repo.ui.note(_('found %s in system cache\n') % hash)
         path = storepath(repo, hash)
-        util.makedirs(os.path.dirname(path))
         link(usercachepath(repo.ui, hash), path)
         return path
     return None
@@ -127,14 +126,7 @@ def openlfdirstate(ui, repo, create=True):
         matcher = getstandinmatcher(repo)
         for standin in repo.dirstate.walk(matcher, [], False, False):
             lfile = splitstandin(standin)
-            hash = readstandin(repo, lfile)
             lfdirstate.normallookup(lfile)
-            try:
-                if hash == hashfile(repo.wjoin(lfile)):
-                    lfdirstate.normal(lfile)
-            except OSError, err:
-                if err.errno != errno.ENOENT:
-                    raise
     return lfdirstate
 
 def lfdirstatestatus(lfdirstate, repo, rev):
@@ -203,10 +195,10 @@ def copyalltostore(repo, node):
 
 
 def copytostoreabsolute(repo, file, hash):
-    util.makedirs(os.path.dirname(storepath(repo, hash)))
     if inusercache(repo.ui, hash):
         link(usercachepath(repo.ui, hash), storepath(repo, hash))
     elif not getattr(repo, "_isconverting", False):
+        util.makedirs(os.path.dirname(storepath(repo, hash)))
         dst = util.atomictempfile(storepath(repo, hash),
                                   createmode=repo.store.createmode)
         for chunk in util.filechunkiter(open(file, 'rb')):
@@ -217,27 +209,16 @@ def copytostoreabsolute(repo, file, hash):
 def linktousercache(repo, hash):
     path = usercachepath(repo.ui, hash)
     if path:
-        util.makedirs(os.path.dirname(path))
         link(storepath(repo, hash), path)
 
 def getstandinmatcher(repo, pats=[], opts={}):
     '''Return a match object that applies pats to the standin directory'''
     standindir = repo.wjoin(shortname)
     if pats:
-        # patterns supplied: search standin directory relative to current dir
-        cwd = repo.getcwd()
-        if os.path.isabs(cwd):
-            # cwd is an absolute path for hg -R <reponame>
-            # work relative to the repository root in this case
-            cwd = ''
-        pats = [os.path.join(standindir, cwd, pat) for pat in pats]
-    elif os.path.isdir(standindir):
+        pats = [os.path.join(standindir, pat) for pat in pats]
+    else:
         # no patterns: relative to repo root
         pats = [standindir]
-    else:
-        # no patterns and no standin dir: return matcher that matches nothing
-        return match_.match(repo.root, None, [], exact=True)
-
     # no warnings about missing files or directories
     match = scmutil.match(repo[None], pats, opts)
     match.bad = lambda f, msg: None
@@ -296,23 +277,16 @@ def readstandin(repo, filename, node=None):
 
 def writestandin(repo, standin, hash, executable):
     '''write hash to <repo.root>/<standin>'''
-    writehash(hash, repo.wjoin(standin), executable)
+    repo.wwrite(standin, hash + '\n', executable and 'x' or '')
 
 def copyandhash(instream, outfile):
     '''Read bytes from instream (iterable) and write them to outfile,
-    computing the SHA-1 hash of the data along the way.  Close outfile
-    when done and return the binary hash.'''
+    computing the SHA-1 hash of the data along the way. Return the hash.'''
     hasher = util.sha1('')
     for data in instream:
         hasher.update(data)
         outfile.write(data)
-
-    # Blecch: closing a file that somebody else opened is rude and
-    # wrong. But it's so darn convenient and practical! After all,
-    # outfile was opened just to copy and hash.
-    outfile.close()
-
-    return hasher.digest()
+    return hasher.hexdigest()
 
 def hashrepofile(repo, file):
     return hashfile(repo.wjoin(file))
@@ -322,52 +296,16 @@ def hashfile(file):
         return ''
     hasher = util.sha1('')
     fd = open(file, 'rb')
-    for data in blockstream(fd):
+    for data in util.filechunkiter(fd, 128 * 1024):
         hasher.update(data)
     fd.close()
     return hasher.hexdigest()
-
-class limitreader(object):
-    def __init__(self, f, limit):
-        self.f = f
-        self.limit = limit
-
-    def read(self, length):
-        if self.limit == 0:
-            return ''
-        length = length > self.limit and self.limit or length
-        self.limit -= length
-        return self.f.read(length)
-
-    def close(self):
-        pass
-
-def blockstream(infile, blocksize=128 * 1024):
-    """Generator that yields blocks of data from infile and closes infile."""
-    while True:
-        data = infile.read(blocksize)
-        if not data:
-            break
-        yield data
-    # same blecch as copyandhash() above
-    infile.close()
-
-def writehash(hash, filename, executable):
-    util.makedirs(os.path.dirname(filename))
-    util.writefile(filename, hash + '\n')
-    os.chmod(filename, getmode(executable))
 
 def getexecutable(filename):
     mode = os.stat(filename).st_mode
     return ((mode & stat.S_IXUSR) and
             (mode & stat.S_IXGRP) and
             (mode & stat.S_IXOTH))
-
-def getmode(executable):
-    if executable:
-        return 0755
-    else:
-        return 0644
 
 def urljoin(first, second, *arg):
     def join(left, right):
@@ -407,14 +345,6 @@ def islfilesrepo(repo):
 class storeprotonotcapable(Exception):
     def __init__(self, storetypes):
         self.storetypes = storetypes
-
-def getcurrentheads(repo):
-    branches = repo.branchmap()
-    heads = []
-    for branch in branches:
-        newheads = repo.branchheads(branch)
-        heads = heads + newheads
-    return heads
 
 def getstandinsstate(repo):
     standins = []

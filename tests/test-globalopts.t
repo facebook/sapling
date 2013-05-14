@@ -87,7 +87,7 @@ Implicit -R:
   abort: no repository found in '$TESTTMP' (.hg not found)!
   [255]
   $ hg -R b ann a/a
-  abort: a/a not under root '$TESTTMP/b'
+  abort: a/a not under root '$TESTTMP/b' (glob)
   [255]
   $ hg log
   abort: no repository found in '$TESTTMP' (.hg not found)!

@@ -50,7 +50,7 @@ def getrepopath(cvspath):
     >>> getrepopath('/foo/bar')
     '/foo/bar'
     >>> getrepopath('c:/foo/bar')
-    'c:/foo/bar'
+    '/foo/bar'
     >>> getrepopath(':pserver:10/foo/bar')
     '/foo/bar'
     >>> getrepopath(':pserver:10c:/foo/bar')
@@ -58,30 +58,30 @@ def getrepopath(cvspath):
     >>> getrepopath(':pserver:/foo/bar')
     '/foo/bar'
     >>> getrepopath(':pserver:c:/foo/bar')
-    'c:/foo/bar'
+    '/foo/bar'
     >>> getrepopath(':pserver:truc@foo.bar:/foo/bar')
     '/foo/bar'
     >>> getrepopath(':pserver:truc@foo.bar:c:/foo/bar')
-    'c:/foo/bar'
+    '/foo/bar'
+    >>> getrepopath('user@server/path/to/repository')
+    '/path/to/repository'
     """
     # According to CVS manual, CVS paths are expressed like:
     # [:method:][[user][:password]@]hostname[:[port]]/path/to/repository
     #
-    # Unfortunately, Windows absolute paths start with a drive letter
-    # like 'c:' making it harder to parse. Here we assume that drive
-    # letters are only one character long and any CVS component before
-    # the repository path is at least 2 characters long, and use this
-    # to disambiguate.
+    # CVSpath is splitted into parts and then position of the first occurrence
+    # of the '/' char after the '@' is located. The solution is the rest of the
+    # string after that '/' sign including it
+
     parts = cvspath.split(':')
-    if len(parts) == 1:
-        return parts[0]
-    # Here there is an ambiguous case if we have a port number
-    # immediately followed by a Windows driver letter. We assume this
-    # never happens and decide it must be CVS path component,
-    # therefore ignoring it.
-    if len(parts[-2]) > 1:
-        return parts[-1].lstrip('0123456789')
-    return parts[-2] + ':' + parts[-1]
+    atposition = parts[-1].find('@')
+    start = 0
+
+    if atposition != -1:
+        start = atposition
+
+    repopath = parts[-1][parts[-1].find('/', start):]
+    return repopath
 
 def createlog(ui, directory=None, root="", rlog=True, cache=None):
     '''Collect the CVS rlog'''
@@ -508,9 +508,15 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     ui.status(_('creating changesets\n'))
 
+    # try to order commitids by date
+    mindate = {}
+    for e in log:
+        if e.commitid:
+            mindate[e.commitid] = min(e.date, mindate.get(e.commitid))
+
     # Merge changesets
-    log.sort(key=lambda x: (x.commitid, x.comment, x.author, x.branch, x.date,
-                            x.branchpoints))
+    log.sort(key=lambda x: (mindate.get(x.commitid), x.commitid, x.comment,
+                            x.author, x.branch, x.date, x.branchpoints))
 
     changesets = []
     files = set()

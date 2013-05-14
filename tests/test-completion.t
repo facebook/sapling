@@ -77,6 +77,7 @@ Show debug commands if there are no other candidates
   debugdag
   debugdata
   debugdate
+  debugdirstate
   debugdiscovery
   debugfileset
   debugfsinfo
@@ -86,15 +87,16 @@ Show debug commands if there are no other candidates
   debugindexdot
   debuginstall
   debugknown
+  debuglabelcomplete
   debugobsolete
+  debugpathcomplete
   debugpushkey
   debugpvec
-  debugrebuildstate
+  debugrebuilddirstate
   debugrename
   debugrevlog
   debugrevspec
   debugsetparents
-  debugstate
   debugsub
   debugsuccessorssets
   debugwalk
@@ -230,6 +232,7 @@ Show all commands + options
   debugdag: tags, branches, dots, spaces
   debugdata: changelog, manifest
   debugdate: extended
+  debugdirstate: nodates, datesort
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
   debugfileset: rev
   debugfsinfo: 
@@ -239,15 +242,16 @@ Show all commands + options
   debugindexdot: 
   debuginstall: 
   debugknown: 
+  debuglabelcomplete: 
   debugobsolete: flags, date, user
+  debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
-  debugrebuildstate: rev
+  debugrebuilddirstate: rev
   debugrename: rev
   debugrevlog: changelog, manifest, dump
   debugrevspec: 
   debugsetparents: 
-  debugstate: nodates, datesort
   debugsub: rev
   debugsuccessorssets: 
   debugwalk: include, exclude
@@ -278,3 +282,57 @@ Show all commands + options
   unbundle: update
   verify: 
   version: 
+
+  $ hg init a
+  $ cd a
+  $ echo fee > fee
+  $ hg ci -q -Amfee
+  $ hg tag fee
+  $ mkdir fie
+  $ echo dead > fie/dead
+  $ echo live > fie/live
+  $ hg bookmark fo
+  $ hg branch -q fie
+  $ hg ci -q -Amfie
+  $ echo fo > fo
+  $ hg branch -qf default
+  $ hg ci -q -Amfo
+  $ echo Fum > Fum
+  $ hg ci -q -AmFum
+  $ hg bookmark Fum
+
+Test debugpathcomplete
+
+  $ hg debugpathcomplete f
+  fee
+  fie/
+  fo
+  $ hg debugpathcomplete -f f
+  fee
+  fie/dead
+  fie/live
+  fo
+
+  $ hg rm Fum
+  $ hg debugpathcomplete -r F
+  Fum
+
+If one directory and no files match, give an ambiguous answer
+
+  $ hg debugpathcomplete fi
+  fie/
+  fie/.
+
+Test debuglabelcomplete
+
+  $ hg debuglabelcomplete
+  Fum
+  default
+  fee
+  fie
+  fo
+  tip
+  $ hg debuglabelcomplete f
+  fee
+  fie
+  fo

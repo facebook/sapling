@@ -1,5 +1,5 @@
 Mercurial supports a functional language for selecting a set of
-files. 
+files.
 
 Like other file patterns, this pattern type is indicated by a prefix,
 'set:'. The language supports a number of predicates which are joined

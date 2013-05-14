@@ -5,6 +5,7 @@ sys.path.insert(0, "..")
 sys.path.append(os.path.join('..', 'mercurial', 'pure'))
 from mercurial import demandimport; demandimport.enable()
 from mercurial import encoding
+from mercurial import minirst
 from mercurial.commands import table, globalopts
 from mercurial.i18n import _
 from mercurial.help import helptable
@@ -63,28 +64,15 @@ def get_cmd(cmd, cmdtable):
 
     return d
 
-def section(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s)))
-
-def subsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, '=' * encoding.colwidth(s)))
-
-def subsubsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "-" * encoding.colwidth(s)))
-
-def subsubsubsection(ui, s):
-    ui.write("%s\n%s\n\n" % (s, "." * encoding.colwidth(s)))
-
-
 def show_doc(ui):
     # print options
-    section(ui, _("Options"))
+    ui.write(minirst.section(_("Options")))
     for optstr, desc in get_opts(globalopts):
         ui.write("%s\n    %s\n\n" % (optstr, desc))
 
     # print cmds
-    section(ui, _("Commands"))
-    commandprinter(ui, table, subsection)
+    ui.write(minirst.section(_("Commands")))
+    commandprinter(ui, table, minirst.subsection)
 
     # print topics
     for names, sec, doc in helptable:
@@ -95,13 +83,13 @@ def show_doc(ui):
         for name in names:
             ui.write(".. _%s:\n" % name)
         ui.write("\n")
-        section(ui, sec)
+        ui.write(minirst.section(sec))
         if util.safehasattr(doc, '__call__'):
             doc = doc()
         ui.write(doc)
         ui.write("\n")
 
-    section(ui, _("Extensions"))
+    ui.write(minirst.section(_("Extensions")))
     ui.write(_("This section contains help for extensions that are "
                "distributed together with Mercurial. Help for other "
                "extensions is available in the help system."))
@@ -113,12 +101,12 @@ def show_doc(ui):
 
     for extensionname in sorted(allextensionnames()):
         mod = extensions.load(None, extensionname, None)
-        subsection(ui, extensionname)
+        ui.write(minirst.subsection(extensionname))
         ui.write("%s\n\n" % mod.__doc__)
         cmdtable = getattr(mod, 'cmdtable', None)
         if cmdtable:
-            subsubsection(ui, _('Commands'))
-            commandprinter(ui, cmdtable, subsubsubsection)
+            ui.write(minirst.subsubsection(_('Commands')))
+            commandprinter(ui, cmdtable, minirst.subsubsubsection)
 
 def commandprinter(ui, cmdtable, sectionfunc):
     h = {}
@@ -133,7 +121,7 @@ def commandprinter(ui, cmdtable, sectionfunc):
         if f.startswith("debug"):
             continue
         d = get_cmd(h[f], cmdtable)
-        sectionfunc(ui, d['cmd'])
+        ui.write(sectionfunc(d['cmd']))
         # synopsis
         ui.write("::\n\n")
         synopsislines = d['synopsis'].splitlines()

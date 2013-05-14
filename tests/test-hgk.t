@@ -13,6 +13,7 @@ Minimal hgk check
   author test 0 0
   revision 0
   branch default
+  phase draft
   
   adda
 

@@ -2109,4 +2109,17 @@ The almost-empty template should do something sane too ...
   o
   
 
+issue3772
+
+  $ hg glog -r :null
+  o  changeset:   -1:000000000000
+     user:
+     date:        Thu Jan 01 00:00:00 1970 +0000
+  
+  $ hg glog -r null:null
+  o  changeset:   -1:000000000000
+     user:
+     date:        Thu Jan 01 00:00:00 1970 +0000
+  
+
   $ cd ..

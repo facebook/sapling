@@ -107,7 +107,10 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
                         out = self.connection
                     else:
                         out = soc
-                    data = i.recv(8192)
+                    try:
+                        data = i.recv(8192)
+                    except socket.error:
+                        break
                     if data:
                         out.send(data)
                         count = 0

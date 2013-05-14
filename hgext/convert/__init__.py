@@ -61,6 +61,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     --sourcesort  try to preserve source revisions order, only
                   supported by Mercurial sources.
 
+    --closesort   try to move closed revisions as close as possible
+                  to parent branches, only supported by Mercurial
+                  sources.
+
     If ``REVMAP`` isn't given, it will be put in a default location
     (``<dest>/.hg/shamap`` by default). The ``REVMAP`` is a simple
     text file that maps each source commit ID to the destination ID
@@ -318,7 +322,8 @@ cmdtable = {
            _('change branch names while converting'), _('FILE')),
           ('', 'branchsort', None, _('try to sort changesets by branches')),
           ('', 'datesort', None, _('try to sort changesets by date')),
-          ('', 'sourcesort', None, _('preserve source changesets order'))],
+          ('', 'sourcesort', None, _('preserve source changesets order')),
+          ('', 'closesort', None, _('try to reorder closed revisions'))],
          _('hg convert [OPTION]... SOURCE [DEST [REVMAP]]')),
     "debugsvnlog":
         (debugsvnlog,

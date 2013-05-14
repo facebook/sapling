@@ -712,6 +712,7 @@ Test a help topic
 
   $ hg help revs
   Specifying Single Revisions
+  """""""""""""""""""""""""""
   
       Mercurial supports several ways to specify individual revisions.
   
@@ -790,9 +791,10 @@ Test keyword search help
   
   Commands:
   
-   clone  make a copy of an existing repository
-   paths  show aliases for remote repositories
-   update update working directory (or switch revisions)
+   bookmarks track a line of development with movable markers
+   clone     make a copy of an existing repository
+   paths     show aliases for remote repositories
+   update    update working directory (or switch revisions)
   
   Extensions:
   
@@ -856,6 +858,7 @@ Test omit indicating for help
   no commands defined
   $ hg help topic-containing-verbose
   This is the topic to test omit indicating.
+  """"""""""""""""""""""""""""""""""""""""""
   
       This paragraph is never omitted (for topic).
   
@@ -864,6 +867,7 @@ Test omit indicating for help
   use "hg help -v topic-containing-verbose" to show more complete help
   $ hg help -v topic-containing-verbose
   This is the topic to test omit indicating.
+  """"""""""""""""""""""""""""""""""""""""""
   
       This paragraph is never omitted (for topic).
   
@@ -875,3 +879,1047 @@ Test usage of section marks in help documents
 
   $ cd "$TESTDIR"/../doc
   $ python check-seclevel.py
+  $ cd $TESTTMP
+
+#if serve
+
+Test the help pages in hgweb.
+
+Dish up an empty repo; serve it cold.
+
+  $ hg init "$TESTTMP/test"
+  $ hg serve -R "$TESTTMP/test" -n test -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help"
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>Help: Index</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog">log</a></li>
+  <li><a href="/graph">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+  <li class="active">help</li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">find changesets by author, revision,
+  files, or words in the commit message</div>
+  </form>
+  <table class="bigtable">
+  <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
+  
+  <tr><td>
+  <a href="/help/config">
+  config
+  </a>
+  </td><td>
+  Configuration Files
+  </td></tr>
+  <tr><td>
+  <a href="/help/dates">
+  dates
+  </a>
+  </td><td>
+  Date Formats
+  </td></tr>
+  <tr><td>
+  <a href="/help/diffs">
+  diffs
+  </a>
+  </td><td>
+  Diff Formats
+  </td></tr>
+  <tr><td>
+  <a href="/help/environment">
+  environment
+  </a>
+  </td><td>
+  Environment Variables
+  </td></tr>
+  <tr><td>
+  <a href="/help/extensions">
+  extensions
+  </a>
+  </td><td>
+  Using Additional Features
+  </td></tr>
+  <tr><td>
+  <a href="/help/filesets">
+  filesets
+  </a>
+  </td><td>
+  Specifying File Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/glossary">
+  glossary
+  </a>
+  </td><td>
+  Glossary
+  </td></tr>
+  <tr><td>
+  <a href="/help/hgignore">
+  hgignore
+  </a>
+  </td><td>
+  Syntax for Mercurial Ignore Files
+  </td></tr>
+  <tr><td>
+  <a href="/help/hgweb">
+  hgweb
+  </a>
+  </td><td>
+  Configuring hgweb
+  </td></tr>
+  <tr><td>
+  <a href="/help/merge-tools">
+  merge-tools
+  </a>
+  </td><td>
+  Merge Tools
+  </td></tr>
+  <tr><td>
+  <a href="/help/multirevs">
+  multirevs
+  </a>
+  </td><td>
+  Specifying Multiple Revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/patterns">
+  patterns
+  </a>
+  </td><td>
+  File Name Patterns
+  </td></tr>
+  <tr><td>
+  <a href="/help/phases">
+  phases
+  </a>
+  </td><td>
+  Working with Phases
+  </td></tr>
+  <tr><td>
+  <a href="/help/revisions">
+  revisions
+  </a>
+  </td><td>
+  Specifying Single Revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/revsets">
+  revsets
+  </a>
+  </td><td>
+  Specifying Revision Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/subrepos">
+  subrepos
+  </a>
+  </td><td>
+  Subrepositories
+  </td></tr>
+  <tr><td>
+  <a href="/help/templating">
+  templating
+  </a>
+  </td><td>
+  Template Usage
+  </td></tr>
+  <tr><td>
+  <a href="/help/urls">
+  urls
+  </a>
+  </td><td>
+  URL Paths
+  </td></tr>
+  <tr><td>
+  <a href="/help/topic-containing-verbose">
+  topic-containing-verbose
+  </a>
+  </td><td>
+  This is the topic to test omit indicating.
+  </td></tr>
+  
+  <tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
+  
+  <tr><td>
+  <a href="/help/add">
+  add
+  </a>
+  </td><td>
+  add the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/annotate">
+  annotate
+  </a>
+  </td><td>
+  show changeset information by line for each file
+  </td></tr>
+  <tr><td>
+  <a href="/help/clone">
+  clone
+  </a>
+  </td><td>
+  make a copy of an existing repository
+  </td></tr>
+  <tr><td>
+  <a href="/help/commit">
+  commit
+  </a>
+  </td><td>
+  commit the specified files or all outstanding changes
+  </td></tr>
+  <tr><td>
+  <a href="/help/diff">
+  diff
+  </a>
+  </td><td>
+  diff repository (or selected files)
+  </td></tr>
+  <tr><td>
+  <a href="/help/export">
+  export
+  </a>
+  </td><td>
+  dump the header and diffs for one or more changesets
+  </td></tr>
+  <tr><td>
+  <a href="/help/forget">
+  forget
+  </a>
+  </td><td>
+  forget the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/init">
+  init
+  </a>
+  </td><td>
+  create a new repository in the given directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/log">
+  log
+  </a>
+  </td><td>
+  show revision history of entire repository or files
+  </td></tr>
+  <tr><td>
+  <a href="/help/merge">
+  merge
+  </a>
+  </td><td>
+  merge working directory with another revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/pull">
+  pull
+  </a>
+  </td><td>
+  pull changes from the specified source
+  </td></tr>
+  <tr><td>
+  <a href="/help/push">
+  push
+  </a>
+  </td><td>
+  push changes to the specified destination
+  </td></tr>
+  <tr><td>
+  <a href="/help/remove">
+  remove
+  </a>
+  </td><td>
+  remove the specified files on the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/serve">
+  serve
+  </a>
+  </td><td>
+  start stand-alone webserver
+  </td></tr>
+  <tr><td>
+  <a href="/help/status">
+  status
+  </a>
+  </td><td>
+  show changed files in the working directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/summary">
+  summary
+  </a>
+  </td><td>
+  summarize working directory state
+  </td></tr>
+  <tr><td>
+  <a href="/help/update">
+  update
+  </a>
+  </td><td>
+  update working directory (or switch revisions)
+  </td></tr>
+  
+  <tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
+  
+  <tr><td>
+  <a href="/help/addremove">
+  addremove
+  </a>
+  </td><td>
+  add all new files, delete all missing files
+  </td></tr>
+  <tr><td>
+  <a href="/help/archive">
+  archive
+  </a>
+  </td><td>
+  create an unversioned archive of a repository revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/backout">
+  backout
+  </a>
+  </td><td>
+  reverse effect of earlier changeset
+  </td></tr>
+  <tr><td>
+  <a href="/help/bisect">
+  bisect
+  </a>
+  </td><td>
+  subdivision search of changesets
+  </td></tr>
+  <tr><td>
+  <a href="/help/bookmarks">
+  bookmarks
+  </a>
+  </td><td>
+  track a line of development with movable markers
+  </td></tr>
+  <tr><td>
+  <a href="/help/branch">
+  branch
+  </a>
+  </td><td>
+  set or show the current branch name
+  </td></tr>
+  <tr><td>
+  <a href="/help/branches">
+  branches
+  </a>
+  </td><td>
+  list repository named branches
+  </td></tr>
+  <tr><td>
+  <a href="/help/bundle">
+  bundle
+  </a>
+  </td><td>
+  create a changegroup file
+  </td></tr>
+  <tr><td>
+  <a href="/help/cat">
+  cat
+  </a>
+  </td><td>
+  output the current or given revision of files
+  </td></tr>
+  <tr><td>
+  <a href="/help/copy">
+  copy
+  </a>
+  </td><td>
+  mark files as copied for the next commit
+  </td></tr>
+  <tr><td>
+  <a href="/help/graft">
+  graft
+  </a>
+  </td><td>
+  copy changes from other branches onto the current branch
+  </td></tr>
+  <tr><td>
+  <a href="/help/grep">
+  grep
+  </a>
+  </td><td>
+  search for a pattern in specified files and revisions
+  </td></tr>
+  <tr><td>
+  <a href="/help/heads">
+  heads
+  </a>
+  </td><td>
+  show current repository heads or show branch heads
+  </td></tr>
+  <tr><td>
+  <a href="/help/help">
+  help
+  </a>
+  </td><td>
+  show help for a given topic or a help overview
+  </td></tr>
+  <tr><td>
+  <a href="/help/identify">
+  identify
+  </a>
+  </td><td>
+  identify the working copy or specified revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/import">
+  import
+  </a>
+  </td><td>
+  import an ordered set of patches
+  </td></tr>
+  <tr><td>
+  <a href="/help/incoming">
+  incoming
+  </a>
+  </td><td>
+  show new changesets found in source
+  </td></tr>
+  <tr><td>
+  <a href="/help/locate">
+  locate
+  </a>
+  </td><td>
+  locate files matching specific patterns
+  </td></tr>
+  <tr><td>
+  <a href="/help/manifest">
+  manifest
+  </a>
+  </td><td>
+  output the current or given revision of the project manifest
+  </td></tr>
+  <tr><td>
+  <a href="/help/nohelp">
+  nohelp
+  </a>
+  </td><td>
+  (no help text available)
+  </td></tr>
+  <tr><td>
+  <a href="/help/outgoing">
+  outgoing
+  </a>
+  </td><td>
+  show changesets not found in the destination
+  </td></tr>
+  <tr><td>
+  <a href="/help/parents">
+  parents
+  </a>
+  </td><td>
+  show the parents of the working directory or revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/paths">
+  paths
+  </a>
+  </td><td>
+  show aliases for remote repositories
+  </td></tr>
+  <tr><td>
+  <a href="/help/phase">
+  phase
+  </a>
+  </td><td>
+  set or show the current phase name
+  </td></tr>
+  <tr><td>
+  <a href="/help/recover">
+  recover
+  </a>
+  </td><td>
+  roll back an interrupted transaction
+  </td></tr>
+  <tr><td>
+  <a href="/help/rename">
+  rename
+  </a>
+  </td><td>
+  rename files; equivalent of copy + remove
+  </td></tr>
+  <tr><td>
+  <a href="/help/resolve">
+  resolve
+  </a>
+  </td><td>
+  redo merges or set/view the merge status of files
+  </td></tr>
+  <tr><td>
+  <a href="/help/revert">
+  revert
+  </a>
+  </td><td>
+  restore files to their checkout state
+  </td></tr>
+  <tr><td>
+  <a href="/help/rollback">
+  rollback
+  </a>
+  </td><td>
+  roll back the last transaction (dangerous)
+  </td></tr>
+  <tr><td>
+  <a href="/help/root">
+  root
+  </a>
+  </td><td>
+  print the root (top) of the current working directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/showconfig">
+  showconfig
+  </a>
+  </td><td>
+  show combined config settings from all hgrc files
+  </td></tr>
+  <tr><td>
+  <a href="/help/tag">
+  tag
+  </a>
+  </td><td>
+  add one or more tags for the current or given revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/tags">
+  tags
+  </a>
+  </td><td>
+  list repository tags
+  </td></tr>
+  <tr><td>
+  <a href="/help/tip">
+  tip
+  </a>
+  </td><td>
+  show the tip revision
+  </td></tr>
+  <tr><td>
+  <a href="/help/unbundle">
+  unbundle
+  </a>
+  </td><td>
+  apply one or more changegroup files
+  </td></tr>
+  <tr><td>
+  <a href="/help/verify">
+  verify
+  </a>
+  </td><td>
+  verify the integrity of the repository
+  </td></tr>
+  <tr><td>
+  <a href="/help/version">
+  version
+  </a>
+  </td><td>
+  output version and copyright information
+  </td></tr>
+  </table>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/add"
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>Help: add</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog">log</a></li>
+  <li><a href="/graph">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+   <li class="active"><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>Help: add</h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">find changesets by author, revision,
+  files, or words in the commit message</div>
+  </form>
+  <div id="doc">
+  <p>
+  hg add [OPTION]... [FILE]...
+  </p>
+  <p>
+  add the specified files on the next commit
+  </p>
+  <p>
+  Schedule files to be version controlled and added to the
+  repository.
+  </p>
+  <p>
+  The files will be added to the repository at the next commit. To
+  undo an add before that, see &quot;hg forget&quot;.
+  </p>
+  <p>
+  If no names are given, add all files to the repository.
+  </p>
+  <p>
+  An example showing how new (unknown) files are added
+  automatically by &quot;hg add&quot;:
+  </p>
+  <pre>
+  \$ ls (re)
+  foo.c
+  \$ hg status (re)
+  ? foo.c
+  \$ hg add (re)
+  adding foo.c
+  \$ hg status (re)
+  A foo.c
+  </pre>
+  <p>
+  Returns 0 if all files are successfully added.
+  </p>
+  <p>
+  options:
+  </p>
+  <table>
+  <tr><td>-I</td>
+  <td>--include PATTERN [+]</td>
+  <td>include names matching the given patterns</td></tr>
+  <tr><td>-X</td>
+  <td>--exclude PATTERN [+]</td>
+  <td>exclude names matching the given patterns</td></tr>
+  <tr><td>-S</td>
+  <td>--subrepos</td>
+  <td>recurse into subrepositories</td></tr>
+  <tr><td>-n</td>
+  <td>--dry-run</td>
+  <td>do not perform actions, just print output</td></tr>
+  </table>
+  <p>
+  [+] marked option can be specified multiple times
+  </p>
+  <p>
+  global options:
+  </p>
+  <table>
+  <tr><td>-R</td>
+  <td>--repository REPO</td>
+  <td>repository root directory or name of overlay bundle file</td></tr>
+  <tr><td></td>
+  <td>--cwd DIR</td>
+  <td>change working directory</td></tr>
+  <tr><td>-y</td>
+  <td>--noninteractive</td>
+  <td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+  <tr><td>-q</td>
+  <td>--quiet</td>
+  <td>suppress output</td></tr>
+  <tr><td>-v</td>
+  <td>--verbose</td>
+  <td>enable additional output</td></tr>
+  <tr><td></td>
+  <td>--config CONFIG [+]</td>
+  <td>set/override config option (use 'section.name=value')</td></tr>
+  <tr><td></td>
+  <td>--debug</td>
+  <td>enable debugging output</td></tr>
+  <tr><td></td>
+  <td>--debugger</td>
+  <td>start debugger</td></tr>
+  <tr><td></td>
+  <td>--encoding ENCODE</td>
+  <td>set the charset encoding (default: ascii)</td></tr>
+  <tr><td></td>
+  <td>--encodingmode MODE</td>
+  <td>set the charset encoding mode (default: strict)</td></tr>
+  <tr><td></td>
+  <td>--traceback</td>
+  <td>always print a traceback on exception</td></tr>
+  <tr><td></td>
+  <td>--time</td>
+  <td>time how long the command takes</td></tr>
+  <tr><td></td>
+  <td>--profile</td>
+  <td>print command execution profile</td></tr>
+  <tr><td></td>
+  <td>--version</td>
+  <td>output version information and exit</td></tr>
+  <tr><td>-h</td>
+  <td>--help</td>
+  <td>display help and exit</td></tr>
+  <tr><td></td>
+  <td>--hidden</td>
+  <td>consider hidden changesets</td></tr>
+  </table>
+  <p>
+  [+] marked option can be specified multiple times
+  </p>
+  
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/remove"
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>Help: remove</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog">log</a></li>
+  <li><a href="/graph">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+   <li class="active"><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>Help: remove</h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">find changesets by author, revision,
+  files, or words in the commit message</div>
+  </form>
+  <div id="doc">
+  <p>
+  hg remove [OPTION]... FILE...
+  </p>
+  <p>
+  aliases: rm
+  </p>
+  <p>
+  remove the specified files on the next commit
+  </p>
+  <p>
+  Schedule the indicated files for removal from the current branch.
+  </p>
+  <p>
+  This command schedules the files to be removed at the next commit.
+  To undo a remove before that, see &quot;hg revert&quot;. To undo added
+  files, see &quot;hg forget&quot;.
+  </p>
+  <p>
+  -A/--after can be used to remove only files that have already
+  been deleted, -f/--force can be used to force deletion, and -Af
+  can be used to remove files from the next revision without
+  deleting them from the working directory.
+  </p>
+  <p>
+  The following table details the behavior of remove for different
+  file states (columns) and option combinations (rows). The file
+  states are Added [A], Clean [C], Modified [M] and Missing [!]
+  (as reported by &quot;hg status&quot;). The actions are Warn, Remove
+  (from branch) and Delete (from disk):
+  </p>
+  <table>
+  <tr><td></td>
+  <td>A</td>
+  <td>C</td>
+  <td>M</td>
+  <td>!</td></tr>
+  <tr><td>none</td>
+  <td>W</td>
+  <td>RD</td>
+  <td>W</td>
+  <td>R</td></tr>
+  <tr><td>-f</td>
+  <td>R</td>
+  <td>RD</td>
+  <td>RD</td>
+  <td>R</td></tr>
+  <tr><td>-A</td>
+  <td>W</td>
+  <td>W</td>
+  <td>W</td>
+  <td>R</td></tr>
+  <tr><td>-Af</td>
+  <td>R</td>
+  <td>R</td>
+  <td>R</td>
+  <td>R</td></tr>
+  </table>
+  <p>
+  Note that remove never deletes files in Added [A] state from the
+  working directory, not even if option --force is specified.
+  </p>
+  <p>
+  Returns 0 on success, 1 if any warnings encountered.
+  </p>
+  <p>
+  options:
+  </p>
+  <table>
+  <tr><td>-A</td>
+  <td>--after</td>
+  <td>record delete for missing files</td></tr>
+  <tr><td>-f</td>
+  <td>--force</td>
+  <td>remove (and delete) file even if added or modified</td></tr>
+  <tr><td>-I</td>
+  <td>--include PATTERN [+]</td>
+  <td>include names matching the given patterns</td></tr>
+  <tr><td>-X</td>
+  <td>--exclude PATTERN [+]</td>
+  <td>exclude names matching the given patterns</td></tr>
+  </table>
+  <p>
+  [+] marked option can be specified multiple times
+  </p>
+  <p>
+  global options:
+  </p>
+  <table>
+  <tr><td>-R</td>
+  <td>--repository REPO</td>
+  <td>repository root directory or name of overlay bundle file</td></tr>
+  <tr><td></td>
+  <td>--cwd DIR</td>
+  <td>change working directory</td></tr>
+  <tr><td>-y</td>
+  <td>--noninteractive</td>
+  <td>do not prompt, automatically pick the first choice for all prompts</td></tr>
+  <tr><td>-q</td>
+  <td>--quiet</td>
+  <td>suppress output</td></tr>
+  <tr><td>-v</td>
+  <td>--verbose</td>
+  <td>enable additional output</td></tr>
+  <tr><td></td>
+  <td>--config CONFIG [+]</td>
+  <td>set/override config option (use 'section.name=value')</td></tr>
+  <tr><td></td>
+  <td>--debug</td>
+  <td>enable debugging output</td></tr>
+  <tr><td></td>
+  <td>--debugger</td>
+  <td>start debugger</td></tr>
+  <tr><td></td>
+  <td>--encoding ENCODE</td>
+  <td>set the charset encoding (default: ascii)</td></tr>
+  <tr><td></td>
+  <td>--encodingmode MODE</td>
+  <td>set the charset encoding mode (default: strict)</td></tr>
+  <tr><td></td>
+  <td>--traceback</td>
+  <td>always print a traceback on exception</td></tr>
+  <tr><td></td>
+  <td>--time</td>
+  <td>time how long the command takes</td></tr>
+  <tr><td></td>
+  <td>--profile</td>
+  <td>print command execution profile</td></tr>
+  <tr><td></td>
+  <td>--version</td>
+  <td>output version information and exit</td></tr>
+  <tr><td>-h</td>
+  <td>--help</td>
+  <td>display help and exit</td></tr>
+  <tr><td></td>
+  <td>--hidden</td>
+  <td>consider hidden changesets</td></tr>
+  </table>
+  <p>
+  [+] marked option can be specified multiple times
+  </p>
+  
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT "help/revisions"
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>Help: revisions</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="http://mercurial.selenic.com/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog">log</a></li>
+  <li><a href="/graph">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+   <li class="active"><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>Help: revisions</h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">find changesets by author, revision,
+  files, or words in the commit message</div>
+  </form>
+  <div id="doc">
+  <h1>Specifying Single Revisions</h1>
+  <p>
+  Mercurial supports several ways to specify individual revisions.
+  </p>
+  <p>
+  A plain integer is treated as a revision number. Negative integers are
+  treated as sequential offsets from the tip, with -1 denoting the tip,
+  -2 denoting the revision prior to the tip, and so forth.
+  </p>
+  <p>
+  A 40-digit hexadecimal string is treated as a unique revision
+  identifier.
+  </p>
+  <p>
+  A hexadecimal string less than 40 characters long is treated as a
+  unique revision identifier and is referred to as a short-form
+  identifier. A short-form identifier is only valid if it is the prefix
+  of exactly one full-length identifier.
+  </p>
+  <p>
+  Any other string is treated as a bookmark, tag, or branch name. A
+  bookmark is a movable pointer to a revision. A tag is a permanent name
+  associated with a revision. A branch name denotes the tipmost revision
+  of that branch. Bookmark, tag, and branch names must not contain the &quot;:&quot;
+  character.
+  </p>
+  <p>
+  The reserved name &quot;tip&quot; always identifies the most recent revision.
+  </p>
+  <p>
+  The reserved name &quot;null&quot; indicates the null revision. This is the
+  revision of an empty repository, and the parent of revision 0.
+  </p>
+  <p>
+  The reserved name &quot;.&quot; indicates the working directory parent. If no
+  working directory is checked out, it is equivalent to null. If an
+  uncommitted merge is in progress, &quot;.&quot; is the revision of the first
+  parent.
+  </p>
+  
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+
+#endif

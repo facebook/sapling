@@ -181,7 +181,7 @@ def asciiedges(type, char, lines, seen, rev, parents):
     ncols = len(seen)
     nextseen = seen[:]
     nextseen[nodeidx:nodeidx + 1] = newparents
-    edges = [(nodeidx, nextseen.index(p)) for p in knownparents]
+    edges = [(nodeidx, nextseen.index(p)) for p in knownparents if p != nullrev]
 
     while len(newparents) > 2:
         # ascii() only knows how to add or remove a single column between two

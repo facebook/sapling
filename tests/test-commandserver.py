@@ -236,6 +236,27 @@ def hgignore(server):
     f.close()
     runcommand(server, ['status', '-i', '-u'])
 
+def phasecacheafterstrip(server):
+    readchannel(server)
+
+    # create new head, 5:731265503d86
+    runcommand(server, ['update', '-C', '0'])
+    f = open('a', 'ab')
+    f.write('a\n')
+    f.close()
+    runcommand(server, ['commit', '-Am.', 'a'])
+    runcommand(server, ['log', '-Gq'])
+
+    # make it public; draft marker moves to 4:7966c8e3734d
+    runcommand(server, ['phase', '-p', '.'])
+    runcommand(server, ['phase', '.'])  # load _phasecache.phaseroots
+
+    # strip 1::4 outside server
+    os.system('hg -q --config extensions.mq= strip 1')
+
+    # shouldn't raise "7966c8e3734d: no node!"
+    runcommand(server, ['branches'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -258,3 +279,4 @@ if __name__ == '__main__':
     check(rollback)
     check(branch)
     check(hgignore)
+    check(phasecacheafterstrip)

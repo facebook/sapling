@@ -291,16 +291,16 @@ class changectx(object):
             try:
                 return self._manifest[path], self._manifest.flags(path)
             except KeyError:
-                raise error.LookupError(self._node, path,
-                                        _('not found in manifest'))
+                raise error.ManifestLookupError(self._node, path,
+                                                _('not found in manifest'))
         if '_manifestdelta' in self.__dict__ or path in self.files():
             if path in self._manifestdelta:
                 return (self._manifestdelta[path],
                         self._manifestdelta.flags(path))
         node, flag = self._repo.manifest.find(self._changeset[0], path)
         if not node:
-            raise error.LookupError(self._node, path,
-                                    _('not found in manifest'))
+            raise error.ManifestLookupError(self._node, path,
+                                            _('not found in manifest'))
 
         return node, flag
 
@@ -374,16 +374,7 @@ class changectx(object):
 
     @propertycache
     def _dirs(self):
-        dirs = set()
-        for f in self._manifest:
-            pos = f.rfind('/')
-            while pos != -1:
-                f = f[:pos]
-                if f in dirs:
-                    break # dirs already contains this and above
-                dirs.add(f)
-                pos = f.rfind('/')
-        return dirs
+        return scmutil.dirs(self._manifest)
 
     def dirs(self):
         return self._dirs
@@ -426,12 +417,12 @@ class filectx(object):
             # repository is filtered this may lead to `filectx` trying to build
             # `changectx` for filtered revision. In such case we fallback to
             # creating `changectx` on the unfiltered version of the reposition.
-            # This fallback should not be an issue because`changectx` from
-            # `filectx` are not used in complexe operation that care about
+            # This fallback should not be an issue because `changectx` from
+            # `filectx` are not used in complex operations that care about
             # filtering.
             #
             # This fallback is a cheap and dirty fix that prevent several
-            # crash. It does not ensure the behavior is correct. However the
+            # crashes. It does not ensure the behavior is correct. However the
             # behavior was not correct before filtering either and "incorrect
             # behavior" is seen as better as "crash"
             #
@@ -698,7 +689,8 @@ class filectx(object):
         needed = {base: 1}
         while visit:
             f = visit[-1]
-            if f not in pcache:
+            pcached = f in pcache
+            if not pcached:
                 pcache[f] = parents(f)
 
             ready = True
@@ -707,14 +699,21 @@ class filectx(object):
                 if p not in hist:
                     ready = False
                     visit.append(p)
+                if not pcached:
                     needed[p] = needed.get(p, 0) + 1
             if ready:
                 visit.pop()
-                curr = decorate(f.data(), f)
+                reusable = f in hist
+                if reusable:
+                    curr = hist[f]
+                else:
+                    curr = decorate(f.data(), f)
                 for p in pl:
-                    curr = pair(hist[p], curr)
+                    if not reusable:
+                        curr = pair(hist[p], curr)
                     if needed[p] == 1:
                         del hist[p]
+                        del needed[p]
                     else:
                         needed[p] -= 1
 
@@ -765,7 +764,7 @@ class filectx(object):
             return pl
 
         a, b = (self._path, self._filenode), (fc2._path, fc2._filenode)
-        v = ancestor.ancestor(a, b, parents)
+        v = ancestor.genericancestor(a, b, parents)
         if v:
             f, n = v
             return filectx(self._repo, f, fileid=n, filelog=flcache[f])
@@ -1138,8 +1137,24 @@ class workingctx(changectx):
             finally:
                 wlock.release()
 
+    def markcommitted(self, node):
+        """Perform post-commit cleanup necessary after committing this ctx
+
+        Specifically, this updates backing stores this working context
+        wraps to reflect the fact that the changes reflected by this
+        workingctx have been committed.  For example, it marks
+        modified and added files as normal in the dirstate.
+
+        """
+
+        for f in self.modified() + self.added():
+            self._repo.dirstate.normal(f)
+        for f in self.removed():
+            self._repo.dirstate.drop(f)
+        self._repo.dirstate.setparents(node)
+
     def dirs(self):
-        return set(self._repo.dirstate.dirs())
+        return self._repo.dirstate.dirs()
 
 class workingfilectx(filectx):
     """A workingfilectx object makes access to data related to a particular

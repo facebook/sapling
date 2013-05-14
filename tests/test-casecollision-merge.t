@@ -16,38 +16,110 @@ this is also case for issue3370.
 
   $ echo a > a
   $ hg add a
+  $ echo b > b
+  $ hg add b
   $ hg commit -m '#0'
+  $ hg tag -l A
   $ hg rename a tmp
   $ hg rename tmp A
   $ hg commit -m '#1'
-  $ hg update 0
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ echo 'modified at #2' > a
+  $ hg tag -l B
+  $ hg update -q 0
+  $ touch x
+  $ hg add x
   $ hg commit -m '#2'
   created new head
+  $ hg tag -l C
 
-  $ hg merge
-  merging a and A to A
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  $ hg merge -q
   $ hg status -A
   M A
-    a
   R a
-  $ cat A
-  modified at #2
+  C b
+  C x
 
-  $ hg update --clean 1
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge
-  merging A and a to A
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  $ hg update -q --clean 1
+  $ hg merge -q
+  $ hg status -A
+  M x
+  C A
+  C b
+  $ hg commit -m '(D)'
+  $ hg tag -l D
+
+additional test for issue3452:
+
+| this assumes the history below.
+|
+|  (A) -- (C) -- (E) -------
+|      \      \             \
+|       \      \             \
+|         (B) -- (D) -- (F) -- (G)
+|
+|   A: add file 'a'
+|   B: rename from 'a' to 'A'
+|   C: add 'x' (or operation other than modification of 'a')
+|   D: merge C into B
+|   E: modify 'a'
+|   F: modify 'A'
+|   G: merge E into F
+|
+| issue3452 occurs when (B) is recorded before (C)
+
+  $ hg update -q --clean C
+  $ echo "modify 'a' at (E)" > a
+  $ echo "modify 'b' at (E)" > b
+  $ hg commit -m '(E)'
+  created new head
+  $ hg tag -l E
+
+  $ hg update -q --clean D
+  $ echo "modify 'A' at (F)" > A
+  $ hg commit -m '(F)'
+  $ hg tag -l F
+
+  $ hg merge -q --tool internal:other E
   $ hg status -A
   M A
     a
+  M b
+  C x
   $ cat A
-  modified at #2
+  modify 'a' at (E)
+
+test also the case that (B) is recorded after (C), to prevent
+regression by changes in the future.
+
+to avoid unexpected (successful) behavior by filelog unification,
+target file is not 'a'/'A' but 'b'/'B' in this case.
+
+  $ hg update -q --clean A
+  $ hg rename b tmp
+  $ hg rename tmp B
+  $ hg commit -m '(B1)'
+  created new head
+  $ hg tag -l B1
+
+  $ hg merge -q C
+  $ hg status -A
+  M x
+  C B
+  C a
+  $ hg commit -m '(D1)'
+  $ hg tag -l D1
+
+  $ echo "modify 'B' at (F1)" > B
+  $ hg commit -m '(F1)'
+  $ hg tag -l F1
+
+  $ hg merge -q --tool internal:other E
+  $ hg status -A
+  M B
+    b
+  M a
+  C x
+  $ cat B
+  modify 'b' at (E)
 
   $ cd ..
 
@@ -74,7 +146,7 @@ this is also case for issue3370.
   $ hg commit -m '#4'
 
   $ hg merge
-  abort: case-folding collision between A and a
+  abort: case-folding collision between a and A
   [255]
   $ hg parents --template '{rev}\n'
   4

@@ -347,6 +347,11 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
 
+	if (la > UINT_MAX || lb > UINT_MAX) {
+		PyErr_SetString(PyExc_ValueError, "bdiff inputs too large");
+		return NULL;
+	}
+
 	_save = PyEval_SaveThread();
 	an = splitlines(sa, la, &al);
 	bn = splitlines(sb, lb, &bl);
@@ -381,18 +386,9 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	for (h = l.next; h; h = h->next) {
 		if (h->a1 != la || h->b1 != lb) {
 			len = bl[h->b1].l - bl[lb].l;
-
-#define checkputbe32(__x, __c) \
-	if (__x > UINT_MAX) { \
-		PyErr_SetString(PyExc_ValueError, \
-		                "bdiff: value too large for putbe32"); \
-		goto nomem; \
-	} \
-	putbe32((uint32_t)(__x), __c);
-
-			checkputbe32(al[la].l - al->l, rb);
-			checkputbe32(al[h->a1].l - al->l, rb + 4);
-			checkputbe32(len, rb + 8);
+			putbe32((uint32_t)(al[la].l - al->l), rb);
+			putbe32((uint32_t)(al[h->a1].l - al->l), rb + 4);
+			putbe32((uint32_t)len, rb + 8);
 			memcpy(rb + 12, bl[lb].l, len);
 			rb += 12 + len;
 		}

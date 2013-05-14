@@ -1,27 +1,27 @@
 {header}
 <title>{repo|escape}: shortlog</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}">
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}">
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}">
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}">
 </head>
 <body>
 
 <div class="buttons">
-<a href="{url}log/{rev}{sessionvars%urlparameter}">changelog</a>
-<a href="{url}graph{sessionvars%urlparameter}">graph</a>
-<a href="{url}tags{sessionvars%urlparameter}">tags</a>
-<a href="{url}branches{sessionvars%urlparameter}">branches</a>
-<a href="{url}file/{node|short}/{sessionvars%urlparameter}">files</a>
+<a href="{url|urlescape}log/{rev}{sessionvars%urlparameter}">changelog</a>
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a>
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a>
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a>
+<a href="{url|urlescape}file/{node|short}/{sessionvars%urlparameter}">files</a>
 {archives%archiveentry}
-<a href="{url}help{sessionvars%urlparameter}">help</a>
-<a type="application/rss+xml" href="{url}rss-log">rss</a>
-<a type="application/rss+xml" href="{url}atom-log" title="Atom feed for {repo|escape}">atom</a>
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
+<a type="application/rss+xml" href="{url|urlescape}rss-log">rss</a>
+<a type="application/rss+xml" href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}">atom</a>
 </div>
 
 <h2><a href="/">Mercurial</a> {pathdef%breadcrumb} / shortlog</h2>
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p>
 <label for="search1">search:</label>
@@ -32,7 +32,7 @@ navigate: <small class="navigate">{changenav%navshort}</small>
 
 {entries%shortlogentry}
 
-<form action="{url}log">
+<form action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
 <p>
 <label for="search2">search:</label>

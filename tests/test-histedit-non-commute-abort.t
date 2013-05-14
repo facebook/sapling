@@ -6,14 +6,6 @@
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > pick 177f92b77385 c
-  > pick 055a42cdd887 d
-  > pick bfa474341cc9 does not commute with e
-  > pick e860deea161a e
-  > pick 652413bf663e f
-  > EOF
   $ initrepo ()
   > {
   >     hg init r
@@ -71,7 +63,13 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ hg histedit 177f92b77385 --commands - 2>&1 <<EOF | fixbundle
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > pick bfa474341cc9 does not commute with e
+  > pick e860deea161a e
+  > pick 652413bf663e f
+  > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   remote changed e which local deleted
   use (c)hanged version or leave (d)eleted? c
@@ -79,7 +77,7 @@ edit the history
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 
 abort the edit

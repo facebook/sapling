@@ -118,4 +118,4 @@ Some sample queries:
 - Changesets mentioning "bug" or "issue" that are not in a tagged
   release::
 
-    hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tagged())"
+    hg log -r "(keyword(bug) or keyword(issue)) and not ancestors(tag())"

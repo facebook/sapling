@@ -318,11 +318,38 @@ Exchange Test
 Destination repo does not have any data
 ---------------------------------------
 
-Try to pull markers
-(extinct changeset are excluded but marker are pushed)
+Simple incoming test
 
   $ hg init tmpc
   $ cd tmpc
+  $ hg incoming ../tmpb
+  comparing with ../tmpb
+  changeset:   0:1f0dee641bb7
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add a
+  
+  changeset:   1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add b
+  
+  changeset:   2:245bde4270cd
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add original_c
+  
+  changeset:   6:6f9641995072
+  tag:         tip
+  parent:      1:7c3bad9141dc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add n3w_3_c
+  
+
+Try to pull markers
+(extinct changeset are excluded but marker are pushed)
+
   $ hg pull ../tmpb
   pulling from ../tmpb
   requesting all changes
@@ -361,7 +388,7 @@ Rollback//Transaction support
 
   $ cd ..
 
-Try to pull markers
+Try to push markers
 
   $ hg init tmpd
   $ hg -R tmpb push tmpd
@@ -663,6 +690,16 @@ Do not warn about new head when the new head is a successors of a remote one
   $ mkcommit obsolete_e
   created new head
   $ hg debugobsolete `getid 'original_e'` `getid 'obsolete_e'`
+  $ hg outgoing ../tmpf # parasite hg outgoing testin
+  comparing with ../tmpf
+  searching for changes
+  changeset:   6:3de5eca88c00
+  tag:         tip
+  parent:      3:6f9641995072
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add obsolete_e
+  
   $ hg push ../tmpf
   pushing to ../tmpf
   searching for changes
@@ -670,6 +707,8 @@ Do not warn about new head when the new head is a successors of a remote one
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+
+#if serve
 
 check hgweb does not explode
 ====================================
@@ -704,7 +743,25 @@ check filelog view
 
   $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'log/'`hg id --debug --id`/'babar'
   200 Script output follows
-  $ kill `cat hg.pid`
+
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/68'
+  200 Script output follows
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  404 Not Found
+  [1]
+
+check that web.view config option:
+
+  $ "$TESTDIR/killdaemons.py" hg.pid
+  $ cat >> .hg/hgrc << EOF
+  > [web]
+  > view=all
+  > EOF
+  $ wait
+  $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ "$TESTDIR/get-with-headers.py" --headeronly localhost:$HGPORT 'rev/67'
+  200 Script output follows
+  $ "$TESTDIR/killdaemons.py" hg.pid
 
 Checking _enable=False warning if obsolete marker exists
 
@@ -719,3 +776,114 @@ Checking _enable=False warning if obsolete marker exists
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add celestine
   
+
+reenable for later test
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
+#endif
+
+Test incoming/outcoming with changesets obsoleted remotely, known locally
+===============================================================================
+
+This test issue 3805
+
+  $ hg init repo-issue3805
+  $ cd repo-issue3805
+  $ echo "foo" > foo
+  $ hg ci -Am "A"
+  adding foo
+  $ hg clone . ../other-issue3805
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "bar" >> foo
+  $ hg ci --amend
+  $ cd ../other-issue3805
+  $ hg log -G
+  @  changeset:   0:193e9254ce7e
+     tag:         tip
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+  $ hg log -G -R ../repo-issue3805
+  @  changeset:   2:3816541e5485
+     tag:         tip
+     parent:      -1:000000000000
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     A
+  
+  $ hg incoming
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  searching for changes
+  changeset:   2:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg incoming --bundle ../issue3805.hg
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  searching for changes
+  changeset:   2:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg outgoing
+  comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
+  searching for changes
+  no changes found
+  [1]
+
+#if serve
+
+  $ hg serve -R ../repo-issue3805 -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg incoming http://localhost:$HGPORT
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  changeset:   1:3816541e5485
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     A
+  
+  $ hg outgoing http://localhost:$HGPORT
+  comparing with http://localhost:$HGPORT/
+  searching for changes
+  no changes found
+  [1]
+
+  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS
+
+#endif
+
+This test issue 3814
+
+(nothing to push but locally hidden changeset)
+
+  $ cd ..
+  $ hg init repo-issue3814
+  $ cd repo-issue3805
+  $ hg push -r 3816541e5485 ../repo-issue3814
+  pushing to ../repo-issue3814
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ hg out ../repo-issue3814
+  comparing with ../repo-issue3814
+  searching for changes
+  no changes found
+  [1]
+
+

@@ -200,7 +200,11 @@ git=auto: regular diff for regular files and non-binary removals
   % git=auto: git diff for rmbinary
   diff --git a/rmbinary b/rmbinary
   deleted file mode 100644
-  Binary file rmbinary has changed
+  index f76dd238ade08917e6712764a16a22005a50573d..0000000000000000000000000000000000000000
+  GIT binary patch
+  literal 0
+  Hc$@<O00001
+  
   
   % git=auto: git diff for bintoregular
   diff --git a/bintoregular b/bintoregular
@@ -209,6 +213,7 @@ git=auto: regular diff for regular files and non-binary removals
   literal 13
   Uc$`bh%qz(+N=+}#Ni5<5043uE82|tP
   
+
 
 git=warn: regular diff with data loss warnings
 

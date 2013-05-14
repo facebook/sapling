@@ -145,6 +145,11 @@ class converter_source(object):
         """
         return False
 
+    def hasnativeclose(self):
+        """Return true if this source has ability to close branch.
+        """
+        return False
+
     def lookuprev(self, rev):
         """If rev is a meaningful revision reference in source, return
         the referenced identifier in the same format used by getcommit().

@@ -145,13 +145,14 @@ class httppeer(wireproto.wirepeer):
             raise error.OutOfBandError(resp.read())
         # accept old "text/plain" and "application/hg-changegroup" for now
         if not (proto.startswith('application/mercurial-') or
-                proto.startswith('text/plain') or
+                (proto.startswith('text/plain')
+                 and not resp.headers.get('content-length')) or
                 proto.startswith('application/hg-changegroup')):
             self.ui.debug("requested URL: '%s'\n" % util.hidepassword(cu))
             raise error.RepoError(
                 _("'%s' does not appear to be an hg repository:\n"
                   "---%%<--- (%s)\n%s\n---%%<---\n")
-                % (safeurl, proto or 'no content-type', resp.read()))
+                % (safeurl, proto or 'no content-type', resp.read(1024)))
 
         if proto.startswith('application/mercurial-'):
             try:

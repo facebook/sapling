@@ -57,10 +57,21 @@ class AbstractReader(object):
     def __init__(self):
         self._finished = False
         self._done_chunks = []
+        self.available_data = 0
 
-    @property
-    def available_data(self):
-        return sum(map(len, self._done_chunks))
+    def addchunk(self, data):
+        self._done_chunks.append(data)
+        self.available_data += len(data)
+
+    def pushchunk(self, data):
+        self._done_chunks.insert(0, data)
+        self.available_data += len(data)
+
+    def popchunk(self):
+        b = self._done_chunks.pop(0)
+        self.available_data -= len(b)
+
+        return b
 
     def done(self):
         return self._finished
@@ -68,22 +79,45 @@ class AbstractReader(object):
     def read(self, amt):
         if self.available_data < amt and not self._finished:
             raise ReadNotReady()
-        need = [amt]
-        def pred(s):
-            needed = need[0] > 0
-            need[0] -= len(s)
-            return needed
-        blocks = list(itertools.takewhile(pred, self._done_chunks))
-        self._done_chunks = self._done_chunks[len(blocks):]
-        over_read = sum(map(len, blocks)) - amt
-        if over_read > 0 and blocks:
-            logger.debug('need to reinsert %d data into done chunks', over_read)
-            last = blocks[-1]
-            blocks[-1], reinsert = last[:-over_read], last[-over_read:]
-            self._done_chunks.insert(0, reinsert)
+        blocks = []
+        need = amt
+        while self._done_chunks:
+            b = self.popchunk()
+            if len(b) > need:
+                nb = b[:need]
+                self.pushchunk(b[need:])
+                b = nb
+            blocks.append(b)
+            need -= len(b)
+            if need == 0:
+                break
         result = ''.join(blocks)
         assert len(result) == amt or (self._finished and len(result) < amt)
+
         return result
+
+    def readto(self, delimstr, blocks = None):
+        """return available data chunks up to the first one in which delimstr
+        occurs. No data will be returned after delimstr -- the chunk in which
+        it occurs will be split and the remainder pushed back onto the available
+        data queue. If blocks is supplied chunks will be added to blocks, otherwise
+        a new list will be allocated.
+        """
+        if blocks is None:
+            blocks = []
+
+        while self._done_chunks:
+            b = self.popchunk()
+            i = b.find(delimstr) + len(delimstr)
+            if i:
+                if i < len(b):
+                    self.pushchunk(b[i:])
+                blocks.append(b[:i])
+                break
+            else:
+                blocks.append(b)
+
+        return blocks
 
     def _load(self, data): # pragma: no cover
         """Subclasses must implement this.
@@ -121,7 +155,7 @@ class AbstractSimpleReader(AbstractReader):
             assert not self._finished, (
                 'tried to add data (%r) to a closed reader!' % data)
         logger.debug('%s read an additional %d data', self.name, len(data))
-        self._done_chunks.append(data)
+        self.addchunk(data)
 
 
 class CloseIsEndReader(AbstractSimpleReader):
@@ -190,6 +224,6 @@ class ChunkedReader(AbstractReader):
                 self._finished = True
                 logger.debug('closing chunked reader due to chunk of length 0')
                 return
-            self._done_chunks.append(data[block_start:block_start + amt])
+            self.addchunk(data[block_start:block_start + amt])
             position = block_start + amt + len(self._eol)
 # no-check-code

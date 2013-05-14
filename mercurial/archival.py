@@ -13,6 +13,7 @@ import scmutil, util, encoding
 import cStringIO, os, tarfile, time, zipfile
 import zlib, gzip
 import struct
+import error
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
@@ -288,20 +289,25 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         files = [f for f in ctx.manifest().keys() if matchfn(f)]
     else:
         files = ctx.manifest().keys()
-    files.sort()
     total = len(files)
-    repo.ui.progress(_('archiving'), 0, unit=_('files'), total=total)
-    for i, f in enumerate(files):
-        ff = ctx.flags(f)
-        write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
-        repo.ui.progress(_('archiving'), i + 1, item=f,
-                         unit=_('files'), total=total)
-    repo.ui.progress(_('archiving'), None)
+    if total:
+        files.sort()
+        repo.ui.progress(_('archiving'), 0, unit=_('files'), total=total)
+        for i, f in enumerate(files):
+            ff = ctx.flags(f)
+            write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
+            repo.ui.progress(_('archiving'), i + 1, item=f,
+                             unit=_('files'), total=total)
+        repo.ui.progress(_('archiving'), None)
 
     if subrepos:
         for subpath in sorted(ctx.substate):
             sub = ctx.sub(subpath)
             submatch = matchmod.narrowmatcher(subpath, matchfn)
-            sub.archive(repo.ui, archiver, prefix, submatch)
+            total += sub.archive(repo.ui, archiver, prefix, submatch)
+
+    if total == 0:
+        raise error.Abort(_('no files match the archive pattern'))
 
     archiver.done()
+    return total

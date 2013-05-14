@@ -84,6 +84,7 @@ Graft a rename:
   # HG changeset patch
   # User foo
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID ef0ef43d49e79e81ddafdc7997401ba0041efc82
   # Parent  68795b066622ca79a25816a662041d8f78f3cd9e
   2
@@ -134,10 +135,10 @@ Graft out of order, skipping a merge and a duplicate
      src: 'a' -> dst: 'b' *
     checking for directory renames
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    b: local copied/moved to a -> m
-  preserving b for resolve of b
+    preserving b for resolve of b
   updating: b 1/1 files (100.00%)
   picked tool 'internal:merge' for b (binary False symlink False)
   merging b and a to b
@@ -147,22 +148,22 @@ Graft out of order, skipping a merge and a duplicate
   grafting revision 5
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 6b9e5368ca4e+, remote: 97f8bfe72746
    e: remote is newer -> g
-  updating: e 1/1 files (100.00%)
   getting e
+  updating: e 1/1 files (100.00%)
   e
   grafting revision 4
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: True, partial: False
    ancestor: 4c60f11aa304, local: 1905859650ec+, remote: 9c233e8e184d
    d: remote is newer -> g
    e: versions differ -> m
-  preserving e for resolve of e
-  updating: d 1/2 files (50.00%)
+    preserving e for resolve of e
   getting d
+  updating: d 1/2 files (50.00%)
   updating: e 2/2 files (100.00%)
   picked tool 'internal:merge' for e (binary False symlink False)
   merging e
@@ -324,6 +325,7 @@ Resolve conflicted graft
   # HG changeset patch
   # User bar
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 64ecd9071ce83c6e62f538d8ce7709d53f32ebf7
   # Parent  4bdb9a9d0b84ffee1d30f0dfc7744cade17aa19c
   1
@@ -351,6 +353,7 @@ Resolve conflicted graft with rename
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 2e80e1351d6ed50302fe1e05f8bd1d4d412b6e11
   # Parent  e5a51ae854a8bbaaf25cc5c6a57ff46042dadbb4
   2

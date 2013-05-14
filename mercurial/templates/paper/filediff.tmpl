@@ -7,30 +7,30 @@
 <div class="menu">
 <div class="logo">
 <a href="{logourl}">
-<img src="{staticurl}{logoimg}" alt="mercurial" /></a>
+<img src="{staticurl|urlescape}{logoimg}" alt="mercurial" /></a>
 </div>
 <ul>
-<li><a href="{url}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
-<li><a href="{url}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
-<li><a href="{url}tags{sessionvars%urlparameter}">tags</a></li>
-<li><a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
-<li><a href="{url}branches{sessionvars%urlparameter}">branches</a></li>
+<li><a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
+<li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
+<li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
-<li><a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
-<li><a href="{url}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+<li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
 </ul>
 <ul>
-<li><a href="{url}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
-<li><a href="{url}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a></li>
+<li><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a></li>
+<li><a href="{url|urlescape}file/tip/{file|urlescape}{sessionvars%urlparameter}">latest</a></li>
 <li class="active">diff</li>
-<li><a href="{url}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
-<li><a href="{url}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
-<li><a href="{url}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file log</a></li>
-<li><a href="{url}raw-file/{node|short}/{file|urlescape}">raw</a></li>
+<li><a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
+<li><a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
+<li><a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file log</a></li>
+<li><a href="{url|urlescape}raw-file/{node|short}/{file|urlescape}">raw</a></li>
 </ul>
 <ul>
-<li><a href="{url}help{sessionvars%urlparameter}">help</a></li>
+<li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
 </ul>
 </div>
 
@@ -38,14 +38,14 @@
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
 <h3>diff {file|escape} @ {rev}:{node|short}</h3>
 
-<form class="search" action="{url}log">
+<form class="search" action="{url|urlescape}log">
 <p>{sessionvars%hiddenformentry}</p>
 <p><input name="rev" id="search1" type="text" size="30" /></p>
 <div id="hint">find changesets by author, revision,
 files, or words in the commit message</div>
 </form>
 
-<div class="description">{desc|strip|escape|nonempty}</div>
+<div class="description">{desc|strip|escape|websub|nonempty}</div>
 
 <table id="changesetEntry">
 <tr>

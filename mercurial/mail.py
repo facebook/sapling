@@ -6,8 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, encoding
-import os, smtplib, socket, quopri, time
+import util, encoding, sslutil
+import os, smtplib, socket, quopri, time, sys
 import email.Header, email.MIMEText, email.Utils
 
 _oldheaderinit = email.Header.Header.__init__
@@ -30,6 +30,59 @@ def _unifiedheaderinit(self, *args, **kw):
 
 email.Header.Header.__dict__['__init__'] = _unifiedheaderinit
 
+class STARTTLS(smtplib.SMTP):
+    '''Derived class to verify the peer certificate for STARTTLS.
+
+    This class allows to pass any keyword arguments to SSL socket creation.
+    '''
+    def __init__(self, sslkwargs, **kwargs):
+        smtplib.SMTP.__init__(self, **kwargs)
+        self._sslkwargs = sslkwargs
+
+    def starttls(self, keyfile=None, certfile=None):
+        if not self.has_extn("starttls"):
+            msg = "STARTTLS extension not supported by server"
+            raise smtplib.SMTPException(msg)
+        (resp, reply) = self.docmd("STARTTLS")
+        if resp == 220:
+            self.sock = sslutil.ssl_wrap_socket(self.sock, keyfile, certfile,
+                                                **self._sslkwargs)
+            if not util.safehasattr(self.sock, "read"):
+                # using httplib.FakeSocket with Python 2.5.x or earlier
+                self.sock.read = self.sock.recv
+            self.file = smtplib.SSLFakeFile(self.sock)
+            self.helo_resp = None
+            self.ehlo_resp = None
+            self.esmtp_features = {}
+            self.does_esmtp = 0
+        return (resp, reply)
+
+if util.safehasattr(smtplib.SMTP, '_get_socket'):
+    class SMTPS(smtplib.SMTP):
+        '''Derived class to verify the peer certificate for SMTPS.
+
+        This class allows to pass any keyword arguments to SSL socket creation.
+        '''
+        def __init__(self, sslkwargs, keyfile=None, certfile=None, **kwargs):
+            self.keyfile = keyfile
+            self.certfile = certfile
+            smtplib.SMTP.__init__(self, **kwargs)
+            self.default_port = smtplib.SMTP_SSL_PORT
+            self._sslkwargs = sslkwargs
+
+        def _get_socket(self, host, port, timeout):
+            if self.debuglevel > 0:
+                print >> sys.stderr, 'connect:', (host, port)
+            new_socket = socket.create_connection((host, port), timeout)
+            new_socket = sslutil.ssl_wrap_socket(new_socket,
+                                                 self.keyfile, self.certfile,
+                                                 **self._sslkwargs)
+            self.file = smtplib.SSLFakeFile(new_socket)
+            return new_socket
+else:
+    def SMTPS(sslkwargs, keyfile=None, certfile=None, **kwargs):
+        raise util.Abort(_('SMTPS requires Python 2.6 or later'))
+
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
     local_hostname = ui.config('smtp', 'local_hostname')
@@ -39,15 +92,30 @@ def _smtp(ui):
     smtps = tls == 'smtps'
     if (starttls or smtps) and not util.safehasattr(socket, 'ssl'):
         raise util.Abort(_("can't use TLS: Python SSL support not installed"))
-    if smtps:
-        ui.note(_('(using smtps)\n'))
-        s = smtplib.SMTP_SSL(local_hostname=local_hostname)
-    else:
-        s = smtplib.SMTP(local_hostname=local_hostname)
     mailhost = ui.config('smtp', 'host')
     if not mailhost:
         raise util.Abort(_('smtp.host not configured - cannot send mail'))
-    mailport = util.getport(ui.config('smtp', 'port', 25))
+    verifycert = ui.config('smtp', 'verifycert', 'strict')
+    if verifycert not in ['strict', 'loose']:
+        if util.parsebool(verifycert) is not False:
+            raise util.Abort(_('invalid smtp.verifycert configuration: %s')
+                             % (verifycert))
+    if (starttls or smtps) and verifycert:
+        sslkwargs = sslutil.sslkwargs(ui, mailhost)
+    else:
+        sslkwargs = {}
+    if smtps:
+        ui.note(_('(using smtps)\n'))
+        s = SMTPS(sslkwargs, local_hostname=local_hostname)
+    elif starttls:
+        s = STARTTLS(sslkwargs, local_hostname=local_hostname)
+    else:
+        s = smtplib.SMTP(local_hostname=local_hostname)
+    if smtps:
+        defaultport = 465
+    else:
+        defaultport = 25
+    mailport = util.getport(ui.config('smtp', 'port', defaultport))
     ui.note(_('sending mail: smtp host %s, port %s\n') %
             (mailhost, mailport))
     s.connect(host=mailhost, port=mailport)
@@ -56,6 +124,9 @@ def _smtp(ui):
         s.ehlo()
         s.starttls()
         s.ehlo()
+    if (starttls or smtps) and verifycert:
+        ui.note(_('(verifying remote certificate)\n'))
+        sslutil.validator(ui, mailhost)(s.sock, verifycert == 'strict')
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
     if username and not password:

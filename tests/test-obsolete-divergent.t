@@ -1,6 +1,6 @@
 Test file dedicated to testing the divergent troubles from obsolete changeset.
 
-This is the most complexe troubles from far so we isolate it in a dedicated
+This is the most complex troubles from far so we isolate it in a dedicated
 file.
 
 Enable obsolete
@@ -294,7 +294,7 @@ Even when subsequente rewriting happen
       e442cfc57690
   $ hg log -r 'divergent()'
 
-Check more complexe obsolescence graft (with divergence)
+Check more complex obsolescence graft (with divergence)
 
   $ mkcommit B_0; hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

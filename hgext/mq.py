@@ -282,7 +282,7 @@ def newcommit(repo, phase, *args, **kwargs):
     if phase is not None:
         backup = repo.ui.backupconfig('phases', 'new-commit')
     # Marking the repository as committing an mq patch can be used
-    # to optimize operations like _branchtags().
+    # to optimize operations like branchtags().
     repo._committingpatch = True
     try:
         if phase is not None:
@@ -297,7 +297,7 @@ class AbortNoCleanup(error.Abort):
     pass
 
 class queue(object):
-    def __init__(self, ui, path, patchdir=None):
+    def __init__(self, ui, baseui, path, patchdir=None):
         self.basepath = path
         try:
             fh = open(os.path.join(path, 'patches.queue'))
@@ -312,6 +312,7 @@ class queue(object):
         self.path = patchdir or curpath
         self.opener = scmutil.opener(self.path)
         self.ui = ui
+        self.baseui = baseui
         self.applieddirty = False
         self.seriesdirty = False
         self.added = []
@@ -1571,7 +1572,7 @@ class queue(object):
             r = list(dd)
             a = list(aa)
 
-            # create 'match' that includes the files to be recommited.
+            # create 'match' that includes the files to be recommitted.
             # apply matchfn via repo.status to ensure correct case handling.
             cm, ca, cr, cd = repo.status(patchparent, match=matchfn)[:4]
             allmatches = set(cm + ca + cr + cd)
@@ -1774,9 +1775,7 @@ class queue(object):
             return True
 
     def qrepo(self, create=False):
-        ui = self.ui.copy()
-        ui.setconfig('paths', 'default', '', overlay=False)
-        ui.setconfig('paths', 'default-push', '', overlay=False)
+        ui = self.baseui.copy()
         if create or os.path.isdir(self.join(".hg")):
             return hg.repository(ui, path=self.path, create=create)
 
@@ -2761,7 +2760,7 @@ def push(ui, repo, patch=None, **opts):
         if not newpath:
             ui.warn(_("no saved queues found, please use -n\n"))
             return 1
-        mergeq = queue(ui, repo.path, newpath)
+        mergeq = queue(ui, repo.baseui, repo.path, newpath)
         ui.warn(_("merging with queue at: %s\n") % mergeq.path)
     ret = q.push(repo, patch, force=opts.get('force'), list=opts.get('list'),
                  mergeq=mergeq, all=opts.get('all'), move=opts.get('move'),
@@ -2795,7 +2794,7 @@ def pop(ui, repo, patch=None, **opts):
     opts = fixkeepchangesopts(ui, opts)
     localupdate = True
     if opts.get('name'):
-        q = queue(ui, repo.path, repo.join(opts.get('name')))
+        q = queue(ui, repo.baseui, repo.path, repo.join(opts.get('name')))
         ui.warn(_('using patch queue: %s\n') % q.path)
         localupdate = False
     else:
@@ -3037,7 +3036,22 @@ def strip(ui, repo, *revs, **opts):
         wlock = repo.wlock()
         try:
             urev = repo.mq.qparents(repo, revs[0])
-            repo.dirstate.rebuild(urev, repo[urev].manifest())
+            uctx = repo[urev]
+
+            # only reset the dirstate for files that would actually change
+            # between the working context and uctx
+            descendantrevs = repo.revs("%s::." % uctx.rev())
+            changedfiles = []
+            for rev in descendantrevs:
+                # blindly reset the files, regardless of what actually changed
+                changedfiles.extend(repo[rev].files())
+
+            # reset files that only changed in the dirstate too
+            dirstate = repo.dirstate
+            dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+            changedfiles.extend(dirchanges)
+
+            repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
             repo.dirstate.write()
             update = False
         finally:
@@ -3398,7 +3412,7 @@ def reposetup(ui, repo):
     class mqrepo(repo.__class__):
         @util.propertycache
         def mq(self):
-            return queue(self.ui, self.path)
+            return queue(self.ui, self.baseui, self.path)
 
         def abortifwdirpatched(self, errmsg, force=False):
             if self.mq.applied and not force:
@@ -3452,6 +3466,12 @@ def reposetup(ui, repo):
             except error.LookupError:
                 self.ui.warn(_('mq status file refers to unknown node %s\n')
                              % short(mqtags[-1][0]))
+                return result
+
+            # do not add fake tags for filtered revisions
+            included = self.changelog.hasnode
+            mqtags = [mqt for mqt in mqtags if included(mqt[0])]
+            if not mqtags:
                 return result
 
             mqtags.append((mqtags[-1][0], 'qtip'))

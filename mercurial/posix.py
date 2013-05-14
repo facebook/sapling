@@ -194,19 +194,66 @@ if sys.platform == 'darwin':
     import fcntl # only needed on darwin, missing on jython
 
     def normcase(path):
+        '''
+        Normalize a filename for OS X-compatible comparison:
+        - escape-encode invalid characters
+        - decompose to NFD
+        - lowercase
+
+        >>> normcase('UPPER')
+        'upper'
+        >>> normcase('Caf\xc3\xa9')
+        'cafe\\xcc\\x81'
+        >>> normcase('\xc3\x89')
+        'e\\xcc\\x81'
+        >>> normcase('\xb8\xca\xc3\xca\xbe\xc8.JPG') # issue3918
+        '%b8%ca%c3\\xca\\xbe%c8.jpg'
+        '''
+
+        try:
+            path.decode('ascii') # throw exception for non-ASCII character
+            return path.lower()
+        except UnicodeDecodeError:
+            pass
         try:
             u = path.decode('utf-8')
         except UnicodeDecodeError:
-            # percent-encode any characters that don't round-trip
-            p2 = path.decode('utf-8', 'ignore').encode('utf-8')
-            s = ""
-            pos = 0
+            # OS X percent-encodes any bytes that aren't valid utf-8
+            s = ''
+            g = ''
+            l = 0
             for c in path:
-                if p2[pos:pos + 1] == c:
+                o = ord(c)
+                if l and o < 128 or o >= 192:
+                    # we want a continuation byte, but didn't get one
+                    s += ''.join(["%%%02X" % ord(x) for x in g])
+                    g = ''
+                    l = 0
+                if l == 0 and o < 128:
+                    # ascii
                     s += c
-                    pos += 1
+                elif l == 0 and 194 <= o < 245:
+                    # valid leading bytes
+                    if o < 224:
+                        l = 1
+                    elif o < 240:
+                        l = 2
+                    else:
+                        l = 3
+                    g = c
+                elif l > 0 and 128 <= o < 192:
+                    # valid continuations
+                    g += c
+                    l -= 1
+                    if not l:
+                        s += g
+                        g = ''
                 else:
-                    s += "%%%02X" % ord(c)
+                    # invalid
+                    s += "%%%02X" % o
+
+            # any remaining partial characters
+            s += ''.join(["%%%02X" % ord(x) for x in g])
             u = s.decode('utf-8')
 
         # Decompose then lowercase (HFS+ technote specifies lower)
@@ -552,3 +599,11 @@ class unixdomainserver(socket.socket):
         if self.realpath != self.path:
             okayifmissing(os.unlink, self.realpath)
             okayifmissing(os.rmdir, os.path.dirname(self.realpath))
+
+def statislink(st):
+    '''check whether a stat result is a symlink'''
+    return st and stat.S_ISLNK(st.st_mode)
+
+def statisexec(st):
+    '''check whether a stat result is an executable file'''
+    return st and (st.st_mode & 0100 != 0)

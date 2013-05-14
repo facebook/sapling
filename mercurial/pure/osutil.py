@@ -68,7 +68,7 @@ else:
 
     _INVALID_HANDLE_VALUE = _HANDLE(-1).value
 
-    # CreateFile 
+    # CreateFile
     _FILE_SHARE_READ = 0x00000001
     _FILE_SHARE_WRITE = 0x00000002
     _FILE_SHARE_DELETE = 0x00000004

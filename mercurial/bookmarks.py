@@ -134,6 +134,19 @@ def unsetcurrent(repo):
     finally:
         wlock.release()
 
+def iscurrent(repo, mark=None, parents=None):
+    '''Tell whether the current bookmark is also active
+
+    I.e., the bookmark listed in .hg/bookmarks.current also points to a
+    parent of the working directory.
+    '''
+    if not mark:
+        mark = repo._bookmarkcurrent
+    if not parents:
+        parents = [p.node() for p in repo[None].parents()]
+    marks = repo._bookmarks
+    return (mark in marks and marks[mark] in parents)
+
 def updatecurrentbookmark(repo, oldnode, curbranch):
     try:
         return update(repo, oldnode, repo.branchtip(curbranch))
@@ -143,23 +156,42 @@ def updatecurrentbookmark(repo, oldnode, curbranch):
         else:
             raise util.Abort(_("branch %s not found") % curbranch)
 
+def deletedivergent(repo, deletefrom, bm):
+    '''Delete divergent versions of bm on nodes in deletefrom.
+
+    Return True if at least one bookmark was deleted, False otherwise.'''
+    deleted = False
+    marks = repo._bookmarks
+    divergent = [b for b in marks if b.split('@', 1)[0] == bm.split('@', 1)[0]]
+    for mark in divergent:
+        if mark and marks[mark] in deletefrom:
+            if mark != bm:
+                del marks[mark]
+                deleted = True
+    return deleted
+
 def update(repo, parents, node):
+    deletefrom = parents
     marks = repo._bookmarks
     update = False
     cur = repo._bookmarkcurrent
     if not cur:
         return False
 
-    toupdate = [b for b in marks if b.split('@', 1)[0] == cur.split('@', 1)[0]]
-    for mark in toupdate:
-        if mark and marks[mark] in parents:
-            old = repo[marks[mark]]
-            new = repo[node]
-            if old.descendant(new) and mark == cur:
-                marks[cur] = new.node()
-                update = True
-            if mark != cur:
-                del marks[mark]
+    if marks[cur] in parents:
+        old = repo[marks[cur]]
+        new = repo[node]
+        divs = [repo[b] for b in marks
+                if b.split('@', 1)[0] == cur.split('@', 1)[0]]
+        anc = repo.changelog.ancestors([new.rev()])
+        deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
+        if old.descendant(new):
+            marks[cur] = new.node()
+            update = True
+
+    if deletedivergent(repo, deletefrom, cur):
+        update = True
+
     if update:
         marks.write()
     return update
@@ -170,9 +202,10 @@ def listbookmarks(repo):
     marks = getattr(repo, '_bookmarks', {})
 
     d = {}
+    hasnode = repo.changelog.hasnode
     for k, v in marks.iteritems():
         # don't expose local divergent bookmarks
-        if '@' not in k or k.endswith('@'):
+        if hasnode(v) and ('@' not in k or k.endswith('@')):
             d[k] = hex(v)
     return d
 
@@ -193,14 +226,13 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
-def updatefromremote(ui, repo, remote, path):
+def updatefromremote(ui, repo, remotemarks, path):
     ui.debug("checking for updated bookmarks\n")
-    rb = remote.listkeys('bookmarks')
     changed = False
     localmarks = repo._bookmarks
-    for k in sorted(rb):
+    for k in sorted(remotemarks):
         if k in localmarks:
-            nr, nl = rb[k], localmarks[k]
+            nr, nl = remotemarks[k], localmarks[k]
             if nr in repo:
                 cr = repo[nr]
                 cl = repo[nl]
@@ -229,9 +261,9 @@ def updatefromremote(ui, repo, remote, path):
                     localmarks[n] = cr.node()
                     changed = True
                     ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
-        elif rb[k] in repo:
+        elif remotemarks[k] in repo:
             # add remote bookmarks for changes we already have
-            localmarks[k] = repo[rb[k]].node()
+            localmarks[k] = repo[remotemarks[k]].node()
             changed = True
             ui.status(_("adding remote bookmark %s\n") % k)
 
@@ -265,19 +297,7 @@ def validdest(repo, old, new):
         # (new != nullrev has been excluded by the previous check)
         return True
     elif repo.obsstore:
-        # We only need this complicated logic if there is obsolescence
-        # XXX will probably deserve an optimised revset.
-        nm = repo.changelog.nodemap
-        validdests = set([old])
-        plen = -1
-        # compute the whole set of successors or descendants
-        while len(validdests) != plen:
-            plen = len(validdests)
-            succs = set(c.node() for c in validdests)
-            mutable = [c.node() for c in validdests if c.mutable()]
-            succs.update(obsolete.allsuccessors(repo.obsstore, mutable))
-            known = (n for n in succs if n in nm)
-            validdests = set(repo.set('%ln::', known))
-        return new in validdests
+        return new.node() in obsolete.foreground(repo, [old.node()])
     else:
+        # still an independant clause as it is lazyer (and therefore faster)
         return old.descendant(new)

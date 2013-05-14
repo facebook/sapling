@@ -16,6 +16,11 @@ LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
                            '\n\nPlease enable it in your Mercurial config '
                            'file.\n')
 
+# these will all be replaced by largefiles.uisetup
+capabilitiesorig = None
+ssholdcallstream = None
+httpoldcallstream = None
+
 def putlfile(repo, proto, sha):
     '''Put a largefile into a repository's local store and into the
     user cache.'''
@@ -58,23 +63,21 @@ def getlfile(repo, proto, sha):
     # ssh proto does for string responses.
     def generator():
         yield '%d\n' % length
-        for chunk in f:
+        for chunk in util.filechunkiter(f):
             yield chunk
     return wireproto.streamres(generator())
 
 def statlfile(repo, proto, sha):
-    '''Return '2\n' if the largefile is missing, '1\n' if it has a
-    mismatched checksum, or '0\n' if it is in good condition'''
+    '''Return '2\n' if the largefile is missing, '0\n' if it seems to be in
+    good condition.
+
+    The value 1 is reserved for mismatched checksum, but that is too expensive
+    to be verified on every stat and must be caught be running 'hg verify'
+    server side.'''
     filename = lfutil.findfile(repo, sha)
     if not filename:
         return '2\n'
-    fd = None
-    try:
-        fd = open(filename, 'rb')
-        return lfutil.hexsha1(fd) == sha and '0\n' or '1\n'
-    finally:
-        if fd:
-            fd.close()
+    return '0\n'
 
 def wirereposetup(ui, repo):
     class lfileswirerepository(repo.__class__):
@@ -111,6 +114,7 @@ def wirereposetup(ui, repo):
                         _('putlfile failed (unexpected response):'), ret)
 
         def getlfile(self, sha):
+            """returns an iterable with the chunks of the file with sha sha"""
             stream = self._callstream("getlfile", sha=sha)
             length = stream.readline()
             try:
@@ -118,7 +122,17 @@ def wirereposetup(ui, repo):
             except ValueError:
                 self._abort(error.ResponseError(_("unexpected response:"),
                                                 length))
-            return (length, stream)
+
+            # SSH streams will block if reading more than length
+            for chunk in util.filechunkiter(stream, 128 * 1024, length):
+                yield chunk
+            # HTTP streams must hit the end to process the last empty
+            # chunk of Chunked-Encoding so the connection can be reused.
+            if issubclass(self.__class__, httppeer.httppeer):
+                chunk = stream.read(1)
+                if chunk:
+                    self._abort(error.ResponseError(_("unexpected response:"),
+                                                    chunk))
 
         @batchable
         def statlfile(self, sha):

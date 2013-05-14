@@ -133,11 +133,13 @@ def _forwardcopies(a, b):
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
     cm = {}
-    for f in b:
-        if f not in a:
-            ofctx = _tracefile(b[f], a)
-            if ofctx:
-                cm[f] = ofctx.path()
+    missing = set(b.manifest().iterkeys())
+    missing.difference_update(a.manifest().iterkeys())
+
+    for f in missing:
+        ofctx = _tracefile(b[f], a)
+        if ofctx:
+            cm[f] = ofctx.path()
 
     # combine copies from dirstate if necessary
     if w is not None:
@@ -333,8 +335,8 @@ def mergecopies(repo, c1, c2, ca):
 
     # generate a directory move map
     d1, d2 = c1.dirs(), c2.dirs()
-    d1.add('')
-    d2.add('')
+    d1.addpath('/')
+    d2.addpath('/')
     invalid = set()
     dirmove = {}
 

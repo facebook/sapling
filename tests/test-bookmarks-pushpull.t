@@ -47,7 +47,7 @@ import bookmark by name
   (run 'hg update' to get a working copy)
   $ hg bookmarks
      X                         0:4e3505fd9583
-     Y                         0:4e3505fd9583
+   * Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
   $ hg debugpushkey ../a namespaces
   bookmarks	
@@ -64,7 +64,7 @@ import bookmark by name
   importing bookmark X
   $ hg bookmark
      X                         0:4e3505fd9583
-     Y                         0:4e3505fd9583
+   * Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
 
 export bookmark by name
@@ -128,15 +128,15 @@ divergent bookmarks
   $ echo c2 > f2
   $ hg ci -Am2
   adding f2
-  $ hg book -f @
-  $ hg book -f X
+  $ hg book -if @
+  $ hg book -if X
   $ hg book
      @                         1:9b140be10808
-   * X                         1:9b140be10808
+     X                         1:9b140be10808
      Y                         0:4e3505fd9583
      Z                         0:4e3505fd9583
      foo                       -1:000000000000
-     foobar                    1:9b140be10808
+   * foobar                    1:9b140be10808
 
   $ hg pull --config paths.foo=../a foo
   pulling from $TESTTMP/a (glob)
@@ -152,12 +152,12 @@ divergent bookmarks
   $ hg book
      @                         1:9b140be10808
      @foo                      2:0d2164f0ce0d
-   * X                         1:9b140be10808
+     X                         1:9b140be10808
      X@foo                     2:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         2:0d2164f0ce0d
      foo                       -1:000000000000
-     foobar                    1:9b140be10808
+   * foobar                    1:9b140be10808
   $ hg push -f ../a
   pushing to ../a
   searching for changes
@@ -170,6 +170,18 @@ divergent bookmarks
    * X                         1:0d2164f0ce0d
      Y                         0:4e3505fd9583
      Z                         1:0d2164f0ce0d
+
+revsets should not ignore divergent bookmarks
+
+  $ hg bookmark -fr 1 Z
+  $ hg log -r 'bookmark()' --template '{rev}:{node|short} {bookmarks}\n'
+  0:4e3505fd9583 Y
+  1:9b140be10808 @ X Z foobar
+  2:0d2164f0ce0d @foo X@foo
+  $ hg log -r 'bookmark("X@foo")' --template '{rev}:{node|short} {bookmarks}\n'
+  2:0d2164f0ce0d @foo X@foo
+  $ hg log -r 'bookmark("re:X@foo")' --template '{rev}:{node|short} {bookmarks}\n'
+  2:0d2164f0ce0d @foo X@foo
 
 update a remote bookmark from a non-head to a head
 
@@ -191,6 +203,39 @@ update a remote bookmark from a non-head to a head
    * X                         1:0d2164f0ce0d
      Y                         3:f6fc62dde3c0
      Z                         1:0d2164f0ce0d
+
+update a bookmark in the middle of a client pulling changes
+
+  $ cd ..
+  $ hg clone -q a pull-race
+  $ hg clone -q pull-race pull-race2
+  $ cd pull-race
+  $ hg up -q Y
+  $ echo c4 > f2
+  $ hg ci -Am4
+  $ echo c5 > f3
+  $ cat <<EOF > .hg/hgrc
+  > [hooks]
+  > outgoing.makecommit = hg ci -Am5; echo committed in pull-race
+  > EOF
+  $ cd ../pull-race2
+  $ hg pull
+  pulling from $TESTTMP/pull-race (glob)
+  searching for changes
+  adding changesets
+  adding f3
+  committed in pull-race
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating bookmark Y
+  (run 'hg update' to get a working copy)
+  $ hg book
+   * @                         1:0d2164f0ce0d
+     X                         1:0d2164f0ce0d
+     Y                         4:b0a5eff05604
+     Z                         1:0d2164f0ce0d
+  $ cd ../b
 
 diverging a remote bookmark fails
 
@@ -299,7 +344,7 @@ hgweb
   @	9b140be1080824d768c5a4691a564088eede71f9
   X	9b140be1080824d768c5a4691a564088eede71f9
   Y	c922c0139ca03858f655e4a2af4dd02796a63969
-  Z	0d2164f0ce0d8f1d6f94351eba04b794909be66c
+  Z	9b140be1080824d768c5a4691a564088eede71f9
   foo	0000000000000000000000000000000000000000
   foobar	9b140be1080824d768c5a4691a564088eede71f9
   $ hg out -B http://localhost:$HGPORT/

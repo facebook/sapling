@@ -8,7 +8,7 @@ from node import hex, nullid, short
 from i18n import _
 import peer, changegroup, subrepo, discovery, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
-import lock, transaction, store, encoding, base85
+import lock, transaction, store, encoding
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
@@ -49,7 +49,7 @@ class filteredpropertycache(propertycache):
 
 
 def hasunfilteredcache(repo, name):
-    """check if an repo and a unfilteredproperty cached value for <name>"""
+    """check if a repo has an unfilteredpropertycache value for <name>"""
     return name in vars(repo.unfiltered())
 
 def unfilteredmethod(orig):
@@ -153,7 +153,7 @@ class localrepository(object):
         return self.requirements[:]
 
     def __init__(self, baseui, path=None, create=False):
-        self.wvfs = scmutil.vfs(path, expand=True)
+        self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
         self.wopener = self.wvfs
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
@@ -209,8 +209,10 @@ class localrepository(object):
 
         self.sharedpath = self.path
         try:
-            s = os.path.realpath(self.opener.read("sharedpath").rstrip('\n'))
-            if not os.path.exists(s):
+            vfs = scmutil.vfs(self.vfs.read("sharedpath").rstrip('\n'),
+                              realpath=True)
+            s = vfs.base
+            if not vfs.exists():
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)
             self.sharedpath = s
@@ -310,13 +312,13 @@ class localrepository(object):
     def unfiltered(self):
         """Return unfiltered version of the repository
 
-        Intended to be ovewritten by filtered repo."""
+        Intended to be overwritten by filtered repo."""
         return self
 
     def filtered(self, name):
         """Return a filtered version of a repository"""
         # build a new class with the mixin and the current class
-        # (possibily subclass of the repo)
+        # (possibly subclass of the repo)
         class proxycls(repoview.repoview, self.unfiltered().__class__):
             pass
         return proxycls(self, name)
@@ -705,14 +707,18 @@ class localrepository(object):
 
     def setparents(self, p1, p2=nullid):
         copies = self.dirstate.setparents(p1, p2)
+        pctx = self[p1]
         if copies:
             # Adjust copy records, the dirstate cannot do it, it
             # requires access to parents manifests. Preserve them
             # only for entries added to first parent.
-            pctx = self[p1]
             for f in copies:
                 if f not in pctx and copies[f] in pctx:
                     self.dirstate.copy(copies[f], f)
+        if p2 == nullid:
+            for f, s in sorted(self.dirstate.copies().items()):
+                if f not in pctx and s not in pctx:
+                    self.dirstate.copy(None, f)
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision, node, or tag.
@@ -729,7 +735,7 @@ class localrepository(object):
         return self.wopener(f, mode)
 
     def _link(self, f):
-        return os.path.islink(self.wjoin(f))
+        return self.wvfs.islink(f)
 
     def _loadfilter(self, filter):
         if filter not in self.filterpats:
@@ -777,7 +783,7 @@ class localrepository(object):
 
     def wread(self, filename):
         if self._link(filename):
-            data = os.readlink(self.wjoin(filename))
+            data = self.wvfs.readlink(filename)
         else:
             data = self.wopener.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
@@ -789,7 +795,7 @@ class localrepository(object):
         else:
             self.wopener.write(filename, data)
             if 'x' in flags:
-                util.setflags(self.wjoin(filename), False, True)
+                self.wvfs.setflags(filename, False, True)
 
     def wwritedata(self, filename, data):
         return self._filter(self._decodefilterpats, filename, data)
@@ -800,12 +806,12 @@ class localrepository(object):
             return tr.nest()
 
         # abort here if the journal already exists
-        if os.path.exists(self.sjoin("journal")):
+        if self.svfs.exists("journal"):
             raise error.RepoError(
                 _("abandoned transaction found - run hg recover"))
 
         self._writejournal(desc)
-        renames = [(x, undoname(x)) for x in self._journalfiles()]
+        renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
 
         tr = transaction.transaction(self.ui.warn, self.sopener,
                                      self.sjoin("journal"),
@@ -815,13 +821,15 @@ class localrepository(object):
         return tr
 
     def _journalfiles(self):
-        return (self.sjoin('journal'), self.join('journal.dirstate'),
-                self.join('journal.branch'), self.join('journal.desc'),
-                self.join('journal.bookmarks'),
-                self.sjoin('journal.phaseroots'))
+        return ((self.svfs, 'journal'),
+                (self.vfs, 'journal.dirstate'),
+                (self.vfs, 'journal.branch'),
+                (self.vfs, 'journal.desc'),
+                (self.vfs, 'journal.bookmarks'),
+                (self.svfs, 'journal.phaseroots'))
 
     def undofiles(self):
-        return [undoname(x) for x in self._journalfiles()]
+        return [vfs.join(undoname(x)) for vfs, x in self._journalfiles()]
 
     def _writejournal(self, desc):
         self.opener.write("journal.dirstate",
@@ -838,7 +846,7 @@ class localrepository(object):
     def recover(self):
         lock = self.lock()
         try:
-            if os.path.exists(self.sjoin("journal")):
+            if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
                 transaction.rollback(self.sopener, self.sjoin("journal"),
                                      self.ui.warn)
@@ -855,7 +863,7 @@ class localrepository(object):
         try:
             wlock = self.wlock()
             lock = self.lock()
-            if os.path.exists(self.sjoin("undo")):
+            if self.svfs.exists("undo"):
                 return self._rollback(dryrun, force)
             else:
                 self.ui.warn(_("no rollback information available\n"))
@@ -897,18 +905,16 @@ class localrepository(object):
         parents = self.dirstate.parents()
         self.destroying()
         transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
-        if os.path.exists(self.join('undo.bookmarks')):
-            util.rename(self.join('undo.bookmarks'),
-                        self.join('bookmarks'))
-        if os.path.exists(self.sjoin('undo.phaseroots')):
-            util.rename(self.sjoin('undo.phaseroots'),
-                        self.sjoin('phaseroots'))
+        if self.vfs.exists('undo.bookmarks'):
+            self.vfs.rename('undo.bookmarks', 'bookmarks')
+        if self.svfs.exists('undo.phaseroots'):
+            self.svfs.rename('undo.phaseroots', 'phaseroots')
         self.invalidate()
 
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
-            util.rename(self.join('undo.dirstate'), self.join('dirstate'))
+            self.vfs.rename('undo.dirstate', 'dirstate')
             try:
                 branch = self.opener.read('undo.branch')
                 self.dirstate.setbranch(encoding.tolocal(branch))
@@ -962,7 +968,7 @@ class localrepository(object):
             delattr(self.unfiltered(), 'dirstate')
 
     def invalidate(self):
-        unfiltered = self.unfiltered() # all filecaches are stored on unfiltered
+        unfiltered = self.unfiltered() # all file caches are stored unfiltered
         for k in self._filecache:
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
@@ -1230,12 +1236,14 @@ class localrepository(object):
                     elif f not in self.dirstate:
                         fail(f, _("file not tracked!"))
 
+            cctx = context.workingctx(self, text, user, date, extra, changes)
+
             if (not force and not extra.get("close") and not merge
-                and not (changes[0] or changes[1] or changes[2])
+                and not cctx.files()
                 and wctx.branch() == wctx.p1().branch()):
                 return None
 
-            if merge and changes[3]:
+            if merge and cctx.deleted():
                 raise util.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate(self)
@@ -1244,7 +1252,6 @@ class localrepository(object):
                     raise util.Abort(_("unresolved merge conflicts "
                                        "(see hg help resolve)"))
 
-            cctx = context.workingctx(self, text, user, date, extra, changes)
             if editor:
                 cctx._text = editor(self, cctx, subs)
             edited = (text != cctx._text)
@@ -1278,11 +1285,7 @@ class localrepository(object):
 
             # update bookmarks, dirstate and mergestate
             bookmarks.update(self, [p1, p2], ret)
-            for f in changes[0] + changes[1]:
-                self.dirstate.normal(f)
-            for f in changes[2]:
-                self.dirstate.drop(f)
-            self.dirstate.setparents(ret)
+            cctx.markcommitted(ret)
             ms.reset()
         finally:
             wlock.release()
@@ -1397,12 +1400,6 @@ class localrepository(object):
         '''Inform the repository that nodes have been destroyed.
         Intended for use by strip and rollback, so there's a common
         place for anything that has to be done after destroying history.
-
-        If you know the branchheadcache was uptodate before nodes were removed
-        and you also know the set of candidate new heads that may have resulted
-        from the destruction, you can set newheadnodes.  This will enable the
-        code to update the branchheads cache, rather than having future code
-        decide it's invalid and regenerating it from scratch.
         '''
         # When one tries to:
         # 1) destroy nodes thus calling this method (e.g. strip)
@@ -1412,12 +1409,11 @@ class localrepository(object):
         # removed. We can either remove phasecache from the filecache,
         # causing it to reload next time it is accessed, or simply filter
         # the removed nodes now and write the updated cache.
-        if '_phasecache' in self._filecache:
-            self._phasecache.filterunknown(self)
-            self._phasecache.write()
+        self._phasecache.filterunknown(self)
+        self._phasecache.write()
 
         # update the 'served' branch cache to help read only server process
-        # Thanks to branchcach collaboration this is done from the nearest
+        # Thanks to branchcache collaboration this is done from the nearest
         # filtered subset and it is expected to be fast.
         branchmap.updatecache(self.filtered('served'))
 
@@ -1541,12 +1537,12 @@ class localrepository(object):
 
             modified, added, clean = [], [], []
             withflags = mf1.withflags() | mf2.withflags()
-            for fn in mf2:
+            for fn, mf2node in mf2.iteritems():
                 if fn in mf1:
                     if (fn not in deleted and
                         ((fn in withflags and mf1.flags(fn) != mf2.flags(fn)) or
-                         (mf1[fn] != mf2[fn] and
-                          (mf2[fn] or ctx1[fn].cmp(ctx2[fn]))))):
+                         (mf1[fn] != mf2node and
+                          (mf2node or ctx1[fn].cmp(ctx2[fn]))))):
                         modified.append(fn)
                     elif listclean:
                         clean.append(fn)
@@ -1688,10 +1684,14 @@ class localrepository(object):
                                            "changegroupsubset."))
                 else:
                     cg = remote.changegroupsubset(fetch, heads, 'pull')
-                clstart = len(self.changelog)
+                # we use unfiltered changelog here because hidden revision must
+                # be taken in account for phase synchronization. They may
+                # becomes public and becomes visible again.
+                cl = self.unfiltered().changelog
+                clstart = len(cl)
                 result = self.addchangegroup(cg, 'pull', remote.url())
-                clend = len(self.changelog)
-                added = [self.changelog.node(r) for r in xrange(clstart, clend)]
+                clend = len(cl)
+                added = [cl.node(r) for r in xrange(clstart, clend)]
 
             # compute target subset
             if heads is None:
@@ -1717,17 +1717,15 @@ class localrepository(object):
                 # should be seen as public
                 phases.advanceboundary(self, phases.public, subset)
 
-            if obsolete._enabled:
-                self.ui.debug('fetching remote obsolete markers\n')
-                remoteobs = remote.listkeys('obsolete')
-                if 'dump0' in remoteobs:
-                    if tr is None:
-                        tr = self.transaction(trname)
-                    for key in sorted(remoteobs, reverse=True):
-                        if key.startswith('dump'):
-                            data = base85.b85decode(remoteobs[key])
-                            self.obsstore.mergemarkers(tr, data)
-                    self.invalidatevolatilesets()
+            def gettransaction():
+                if tr is None:
+                    return self.transaction(trname)
+                return tr
+
+            obstr = obsolete.syncpull(self, remote, gettransaction)
+            if obstr is not None:
+                tr = obstr
+
             if tr is not None:
                 tr.close()
         finally:
@@ -1764,8 +1762,31 @@ class localrepository(object):
         if not remote.canpush():
             raise util.Abort(_("destination does not support push"))
         unfi = self.unfiltered()
+        def localphasemove(nodes, phase=phases.public):
+            """move <nodes> to <phase> in the local source repo"""
+            if locallock is not None:
+                phases.advanceboundary(self, phase, nodes)
+            else:
+                # repo is not locked, do not change any phases!
+                # Informs the user that phases should have been moved when
+                # applicable.
+                actualmoves = [n for n in nodes if phase < self[n].phase()]
+                phasestr = phases.phasenames[phase]
+                if actualmoves:
+                    self.ui.status(_('cannot lock source repo, skipping local'
+                                     ' %s phase update\n') % phasestr)
         # get local lock as we might write phase data
-        locallock = self.lock()
+        locallock = None
+        try:
+            locallock = self.lock()
+        except IOError, err:
+            if err.errno != errno.EACCES:
+                raise
+            # source repo cannot be locked.
+            # We do not abort the push, but just disable the local phase
+            # synchronisation.
+            msg = 'cannot lock source repository: %s\n' % err
+            self.ui.debug(msg)
         try:
             self.checkpush(force, revs)
             lock = None
@@ -1870,18 +1891,32 @@ class localrepository(object):
                     cheads.extend(c.node() for c in revset)
                 # even when we don't push, exchanging phase data is useful
                 remotephases = remote.listkeys('phases')
+                if (self.ui.configbool('ui', '_usedassubrepo', False)
+                    and remotephases    # server supports phases
+                    and ret is None # nothing was pushed
+                    and remotephases.get('publishing', False)):
+                    # When:
+                    # - this is a subrepo push
+                    # - and remote support phase
+                    # - and no changeset was pushed
+                    # - and remote is publishing
+                    # We may be in issue 3871 case!
+                    # We drop the possible phase synchronisation done by
+                    # courtesy to publish changesets possibly locally draft
+                    # on the remote.
+                    remotephases = {'publishing': 'True'}
                 if not remotephases: # old server or public only repo
-                    phases.advanceboundary(self, phases.public, cheads)
+                    localphasemove(cheads)
                     # don't push any phase data as there is nothing to push
                 else:
                     ana = phases.analyzeremotephases(self, cheads, remotephases)
                     pheads, droots = ana
                     ### Apply remote phase on local
                     if remotephases.get('publishing', False):
-                        phases.advanceboundary(self, phases.public, cheads)
+                        localphasemove(cheads)
                     else: # publish = False
-                        phases.advanceboundary(self, phases.public, pheads)
-                        phases.advanceboundary(self, phases.draft, cheads)
+                        localphasemove(pheads)
+                        localphasemove(cheads, phases.draft)
                     ### Apply local phase on remote
 
                     # Get the list of all revs draft on remote by public here.
@@ -1898,22 +1933,13 @@ class localrepository(object):
                             self.ui.warn(_('updating %s to public failed!\n')
                                             % newremotehead)
                 self.ui.debug('try to push obsolete markers to remote\n')
-                if (obsolete._enabled and self.obsstore and
-                    'obsolete' in remote.listkeys('namespaces')):
-                    rslts = []
-                    remotedata = self.listkeys('obsolete')
-                    for key in sorted(remotedata, reverse=True):
-                        # reverse sort to ensure we end with dump0
-                        data = remotedata[key]
-                        rslts.append(remote.pushkey('obsolete', key, '', data))
-                    if [r for r in rslts if not r]:
-                        msg = _('failed to push some obsolete markers!\n')
-                        self.ui.warn(msg)
+                obsolete.syncpush(self, remote)
             finally:
                 if lock is not None:
                     lock.release()
         finally:
-            locallock.release()
+            if locallock is not None:
+                locallock.release()
 
         self.ui.debug("checking for updated bookmarks\n")
         rb = remote.listkeys('bookmarks')
@@ -2390,6 +2416,12 @@ class localrepository(object):
                     for n in added:
                         self.hook("incoming", node=hex(n), source=srctype,
                                   url=url)
+
+                    newheads = [h for h in self.heads() if h not in oldheads]
+                    self.ui.log("incoming",
+                                "%s incoming changes - new heads: %s\n",
+                                len(added),
+                                ', '.join([hex(c[:6]) for c in newheads]))
                 self._afterlock(runhooks)
 
         finally:
@@ -2557,9 +2589,9 @@ class localrepository(object):
 def aftertrans(files):
     renamefiles = [tuple(t) for t in files]
     def a():
-        for src, dest in renamefiles:
+        for vfs, src, dest in renamefiles:
             try:
-                util.rename(src, dest)
+                vfs.rename(src, dest)
             except OSError: # journal file does not yet exist
                 pass
     return a

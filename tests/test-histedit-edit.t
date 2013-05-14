@@ -6,13 +6,6 @@
   > histedit=
   > EOF
 
-  $ EDITED="$TESTTMP/editedhistory"
-  $ cat > $EDITED <<EOF
-  > pick 177f92b77385 c
-  > pick 055a42cdd887 d
-  > edit e860deea161a e
-  > pick 652413bf663e f
-  > EOF
   $ initrepo ()
   > {
   >     hg init r
@@ -61,9 +54,14 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > edit e860deea161a e
+  > pick 652413bf663e f
+  > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
 
 Go at a random point and try to continue
@@ -73,7 +71,7 @@ Go at a random point and try to continue
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ HGEDITOR='echo foobaz > ' hg histedit --continue
-  abort: working directory parent is not a descendant of 055a42cdd887
+  abort: 055a42cdd887 is not an ancestor of working directory
   (update to 055a42cdd887 or descendant and run "hg histedit --continue" again)
   [255]
   $ hg up 3
@@ -146,12 +144,11 @@ check histedit_source
   
   
 
-  $ cat > $EDITED <<EOF
+  $ hg histedit tip --commands - 2>&1 <<EOF| fixbundle
   > edit b5f70786f9b0 f
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  abort: Make changes as needed, you may commit or record as needed now.
+  Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ hg status
   A f
@@ -188,19 +185,18 @@ say we'll change the message, but don't.
   
 
 modify the message
-  $ cat > $EDITED <<EOF
+  $ hg histedit tip --commands - 2>&1 << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
-  changeset:   6:5585e802ef99
+  changeset:   6:62feedb1200e
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     mess 1fd3b2fe7754 f
+  summary:     f
   
 
 rollback should not work after a histedit
@@ -209,3 +205,17 @@ rollback should not work after a histedit
   [1]
 
   $ cd ..
+  $ hg clone -qr0 r r0
+  $ cd r0
+  $ hg phase -fdr0
+  $ hg histedit --commands - 0 2>&1 << EOF
+  > edit cb9a9f314b8b a > $EDITED
+  > EOF
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding a
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+  [1]
+  $ HGEDITOR=true hg histedit --continue
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-backup.hg (glob)

@@ -1,17 +1,17 @@
 # French translations for Mercurial
 # Traductions françaises de Mercurial
 # Copyright (C) 2009 Matt Mackall <mpm@selenic.com> and others
-# 
+#
 # Quelques règles :
 # - dans l'aide d'une commande, la première ligne descriptive
 #   commence par un verbe au présent sans majuscule
 # - dans l'aide d'une commande, la description des options
 #   utilise un verbe à l'infinitif
-# 
+#
 # Note : la terminologie ci-dessous est loin d'être complète, figée ou
 #        parfaite. À compléter et à améliorer, particulièrement les
 #        termes comportant un point d'interrogation...
-# 
+#
 # Dictionnaire de termes courants :
 #  - to  apply a patch        appliquer un patch
 #  - a   branch               une branche
@@ -46,7 +46,7 @@
 #        untracked            non suivi, non géré, pas sous contrôle du dépôt,
 #                             hors révision ?
 #  - the working directory    le répertoire de travail
-# 
+#
 # Termes très courants repris de l'anglais - à utiliser sans guillemets
 # pour ne pas alourdir inutilement la traduction :
 #  - a   diff                 un diff ? (ou également un patch ? synonymes...)
@@ -54,7 +54,7 @@
 #  - a   patch                un patch
 #  - a   tag                  un tag
 #  - to  tag                  taguer
-# 
+#
 # Termes anglais avec une signification très spécifique, difficile à
 # paraphraser sans alourdir ou perdre le sens - à utiliser avec guillemets :
 #  - a   bundle               un \"bundle\"
@@ -62,7 +62,7 @@
 #  - a   changeset            un \"changeset\"
 #  - a   changegroup          un \"changegroup\"
 #  - the tip                  la révision \"tip\"
-# 
+#
 # Termes dont le classement / la traduction sont à déterminer :
 #  - a   commit               un commit, un \"commit\"
 #  - to  commit               \"committer\" ? (beuark, même dit tous les jours)
@@ -73,7 +73,7 @@
 #  - to  push                 propager ? (utilisé par svn pour commit)
 #                             publier ? pousser ?? envoyer ??
 #  - the series file (mq)     ?
-# 
+#
 # Notes :
 #  - (cédric) je verrais bien l'ajout d'une rubrique générale dans l'aide
 #    (par exemple 'hg help glossary') librement remplissable par chaque équipe
@@ -81,7 +81,7 @@
 #    qui vont être rencontrés dans mercurial - et en particulier permettrait
 #    de faire le lien avec des termes franglisants parfois utilisés
 #    (par ex. fusionner = "merger", etc.) ... ?
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"

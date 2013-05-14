@@ -91,13 +91,28 @@
   foo-foo_10.patch
   foo-foo_11.patch
 
+Doing it again clobbers the files rather than appending:
+  $ hg export -v -o "foo-%m.patch" 2:3
+  exporting patches:
+  foo-foo_2.patch
+  foo-foo_3.patch
+  $ grep HG foo-foo_2.patch | wc -l
+  \s*1 (re)
+  $ grep HG foo-foo_3.patch | wc -l
+  \s*1 (re)
+
 Exporting 4 changesets to a file:
 
   $ hg export -o export_internal 1 2 3 4
   $ grep HG export_internal | wc -l
   \s*4 (re)
 
-Exporting 4 changesets to a file:
+Doing it again clobbers the file rather than appending:
+  $ hg export -o export_internal 1 2 3 4
+  $ grep HG export_internal | wc -l
+  \s*4 (re)
+
+Exporting 4 changesets to stdout:
 
   $ hg export 1 2 3 4 | grep HG | wc -l
   \s*4 (re)
@@ -108,6 +123,7 @@ Exporting revision -2 to a file:
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID 5f17a83f5fbd9414006a5e563eab4c8a00729efd
   # Parent  747d3c68f8ec44bb35816bfcd59aeb50b9654c2f
   foo-10
@@ -132,8 +148,23 @@ Checking if only alphanumeric characters are used in the file name (%m option):
 Catch exporting unknown revisions (especially empty revsets, see issue3353)
 
   $ hg export
-  abort: export requires at least one changeset
-  [255]
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID 197ecd81a57f760b54f34a58817ad5b04991fa47
+  # Parent  f3acbafac161ec68f1598af38f794f28847ca5d3
+   !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+  
+  diff -r f3acbafac161 -r 197ecd81a57f foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -10,3 +10,4 @@
+   foo-9
+   foo-10
+   foo-11
+  +line
+
   $ hg export ""
   hg: parse error: empty query
   [255]
@@ -154,6 +185,7 @@ Check for color output
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID * (glob)
   # Parent * (glob)
    !"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~

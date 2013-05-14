@@ -10,7 +10,7 @@
 "                Bob Hiestand <bob.hiestand@gmail.com> for the fabulous
 "                cvscommand.vim from which this script was directly created by
 "                means of sed commands and minor tweaks.
-" Note:          
+" Note:
 "                For Vim7 the use of Bob Hiestand's vcscommand.vim
 "                <http://www.vim.org/scripts/script.php?script_id=90>
 "                in conjunction with Vladmir Marek's Hg backend

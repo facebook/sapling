@@ -605,7 +605,7 @@ Please see "hg add".
 html format:
 ----------------------------------------------------------------------
 <p>
-Please see "hg add".
+Please see &quot;hg add&quot;.
 </p>
 ----------------------------------------------------------------------
 
@@ -645,7 +645,7 @@ html format:
 <h1>Title</h1>
 <h2>Section</h2>
 <h3>Subsection</h3>
-<h2>Markup: "foo" and "hg help"</h2>
+<h2>Markup: &quot;foo&quot; and &quot;hg help&quot;</h2>
 ----------------------------------------------------------------------
 
 == admonitions ==
@@ -758,9 +758,15 @@ Empty comment above
 html format:
 ----------------------------------------------------------------------
 <table>
- <tr><th>a</th><th>b</th><th>c</th></tr>
- <tr><td>1</td><td>2</td><td>3</td></tr>
- <tr><td>foo</td><td>bar</td><td>baz this list is very very very long man</td></tr>
+<tr><td>a</td>
+<td>b</td>
+<td>c</td></tr>
+<tr><td>1</td>
+<td>2</td>
+<td>3</td></tr>
+<tr><td>foo</td>
+<td>bar</td>
+<td>baz this list is very very very long man</td></tr>
 </table>
 ----------------------------------------------------------------------
 

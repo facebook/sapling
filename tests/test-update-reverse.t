@@ -66,17 +66,16 @@
 
   $ hg update --debug -C 1
   resolving manifests
-   overwrite: True, partial: False
+   branchmerge: False, force: True, partial: False
    ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
    side1: other deleted -> r
    side2: other deleted -> r
    main: remote created -> g
-  updating: side1 1/3 files (33.33%)
   removing side1
-  updating: side2 2/3 files (66.67%)
   removing side2
-  updating: main 3/3 files (100.00%)
+  updating: side2 2/3 files (66.67%)
   getting main
+  updating: main 3/3 files (100.00%)
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ ls

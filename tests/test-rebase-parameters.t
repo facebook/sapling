@@ -416,8 +416,8 @@ Test --tool parameter:
   $ cd b3
 
   $ hg rebase -s 2 -d 1 --tool internal:fail
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
 
   $ hg resolve -l
   U c2

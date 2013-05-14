@@ -7,7 +7,8 @@
 
 '''command to transplant changesets from another branch
 
-This extension allows you to transplant patches from another branch.
+This extension allows you to transplant changes to another parent revision,
+possibly in another repository. The transplant is done using 'diff' patches.
 
 Transplanted patches are recorded in .hg/transplant/transplants, as a
 map from a changeset hash to its hash in the source repository.
@@ -294,10 +295,10 @@ class transplanter(object):
 
         return n
 
-    def resume(self, repo, source, opts=None):
+    def resume(self, repo, source, opts):
         '''recover last transaction and apply remaining changesets'''
         if os.path.exists(os.path.join(self.path, 'journal')):
-            n, node = self.recover(repo)
+            n, node = self.recover(repo, source, opts)
             self.ui.status(_('%s transplanted as %s\n') % (short(node),
                                                            short(n)))
         seriespath = os.path.join(self.path, 'series')
@@ -312,7 +313,7 @@ class transplanter(object):
 
         self.apply(repo, source, revmap, merges, opts)
 
-    def recover(self, repo):
+    def recover(self, repo, source, opts):
         '''commit working directory using journal metadata'''
         node, user, date, message, parents = self.readlog()
         merge = False
@@ -492,10 +493,9 @@ def browserevs(ui, repo, nodes, opts):
     return (transplants, merges)
 
 @command('transplant',
-    [('s', 'source', '', _('pull patches from REPO'), _('REPO')),
-    ('b', 'branch', [],
-     _('pull patches from branch BRANCH'), _('BRANCH')),
-    ('a', 'all', None, _('pull all changesets up to BRANCH')),
+    [('s', 'source', '', _('transplant changesets from REPO'), _('REPO')),
+    ('b', 'branch', [], _('use this source changeset as head'), _('REV')),
+    ('a', 'all', None, _('pull all changesets up to the --branch revisions')),
     ('p', 'prune', [], _('skip over REV'), _('REV')),
     ('m', 'merge', [], _('merge at REV'), _('REV')),
     ('', 'parent', '',
@@ -503,7 +503,7 @@ def browserevs(ui, repo, nodes, opts):
     ('e', 'edit', False, _('invoke editor on commit messages')),
     ('', 'log', None, _('append transplant info to log message')),
     ('c', 'continue', None, _('continue last transplant session '
-                              'after repair')),
+                              'after fixing conflicts')),
     ('', 'filter', '',
      _('filter changesets through command'), _('CMD'))],
     _('hg transplant [-s REPO] [-b BRANCH [-a]] [-p REV] '
@@ -513,9 +513,13 @@ def transplant(ui, repo, *revs, **opts):
 
     Selected changesets will be applied on top of the current working
     directory with the log of the original changeset. The changesets
-    are copied and will thus appear twice in the history. Use the
-    rebase extension instead if you want to move a whole branch of
-    unpublished changesets.
+    are copied and will thus appear twice in the history with different
+    identities.
+
+    Consider using the graft command if everything is inside the same
+    repository - it will use merges and will usually give a better result.
+    Use the rebase extension if the changesets are unpublished and you want
+    to move them instead of copying them.
 
     If --log is specified, log messages will have a comment appended
     of the form::
@@ -526,16 +530,19 @@ def transplant(ui, repo, *revs, **opts):
     Its argument will be invoked with the current changelog message as
     $1 and the patch as $2.
 
-    If --source/-s is specified, selects changesets from the named
-    repository. If --branch/-b is specified, selects changesets from
-    the branch holding the named revision, up to that revision. If
-    --all/-a is specified, all changesets on the branch will be
-    transplanted, otherwise you will be prompted to select the
-    changesets you want.
+    --source/-s specifies another repository to use for selecting changesets,
+    just as if it temporarily had been pulled.
+    If --branch/-b is specified, these revisions will be used as
+    heads when deciding which changsets to transplant, just as if only
+    these revisions had been pulled.
+    If --all/-a is specified, all the revisions up to the heads specified
+    with --branch will be transplanted.
 
-    :hg:`transplant --branch REV --all` will transplant the
-    selected branch (up to the named revision) onto your current
-    working directory.
+    Example:
+
+    - transplant all changes up to REV on top of your current revision::
+
+        hg transplant --branch REV --all
 
     You can optionally mark selected transplanted changesets as merge
     changesets. You will not be prompted to transplant any ancestors
@@ -557,13 +564,16 @@ def transplant(ui, repo, *revs, **opts):
             if match(node):
                 yield node
 
-    def transplantwalk(repo, root, branches, match=util.always):
-        if not branches:
-            branches = repo.heads()
+    def transplantwalk(repo, dest, heads, match=util.always):
+        '''Yield all nodes that are ancestors of a head but not ancestors
+        of dest.
+        If no heads are specified, the heads of repo will be used.'''
+        if not heads:
+            heads = repo.heads()
         ancestors = []
-        for branch in branches:
-            ancestors.append(repo.changelog.ancestor(root, branch))
-        for node in repo.changelog.nodesbetween(ancestors, branches)[0]:
+        for head in heads:
+            ancestors.append(repo.changelog.ancestor(dest, head))
+        for node in repo.changelog.nodesbetween(ancestors, heads)[0]:
             if match(node):
                 yield node
 
@@ -571,11 +581,11 @@ def transplant(ui, repo, *revs, **opts):
         if opts.get('continue'):
             if opts.get('branch') or opts.get('all') or opts.get('merge'):
                 raise util.Abort(_('--continue is incompatible with '
-                                   'branch, all or merge'))
+                                   '--branch, --all and --merge'))
             return
         if not (opts.get('source') or revs or
                 opts.get('merge') or opts.get('branch')):
-            raise util.Abort(_('no source URL, branch tag or revision '
+            raise util.Abort(_('no source URL, branch revision or revision '
                                'list provided'))
         if opts.get('all'):
             if not opts.get('branch'):
@@ -608,12 +618,12 @@ def transplant(ui, repo, *revs, **opts):
     sourcerepo = opts.get('source')
     if sourcerepo:
         peer = hg.peer(repo, opts, ui.expandpath(sourcerepo))
-        branches = map(peer.lookup, opts.get('branch', ()))
+        heads = map(peer.lookup, opts.get('branch', ()))
         source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, peer,
-                                    onlyheads=branches, force=True)
+                                    onlyheads=heads, force=True)
     else:
         source = repo
-        branches = map(source.lookup, opts.get('branch', ()))
+        heads = map(source.lookup, opts.get('branch', ()))
         cleanupfn = None
 
     try:
@@ -623,8 +633,8 @@ def transplant(ui, repo, *revs, **opts):
 
         tf = tp.transplantfilter(repo, source, p1)
         if opts.get('prune'):
-            prune = [source.lookup(r)
-                     for r in scmutil.revrange(source, opts.get('prune'))]
+            prune = set(source.lookup(r)
+                        for r in scmutil.revrange(source, opts.get('prune')))
             matchfn = lambda x: tf(x) and x not in prune
         else:
             matchfn = tf
@@ -637,7 +647,7 @@ def transplant(ui, repo, *revs, **opts):
             if source != repo:
                 alltransplants = incwalk(source, csets, match=matchfn)
             else:
-                alltransplants = transplantwalk(source, p1, branches,
+                alltransplants = transplantwalk(source, p1, heads,
                                                 match=matchfn)
             if opts.get('all'):
                 revs = alltransplants

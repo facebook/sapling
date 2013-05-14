@@ -143,6 +143,7 @@ try:
 except ImportError:
     import pickle
 import os
+import sys
 
 from mercurial import cmdutil
 from mercurial import discovery
@@ -179,7 +180,7 @@ editcomment = _("""# Edit history between %s and %s
 def commitfuncfor(repo, src):
     """Build a commit function for the replacement of <src>
 
-    This function ensure we apply the same treatement to all changesets.
+    This function ensure we apply the same treatment to all changesets.
 
     - Add a 'histedit_source' entry in extra.
 
@@ -301,8 +302,8 @@ def pick(ui, repo, ctx, ha, opts):
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(_('Fix up the change and run '
+                                           'hg histedit --continue'))
     # drop the second merge parent
     commit = commitfuncfor(repo, oldctx)
     n = commit(text=oldctx.description(), user=oldctx.user(),
@@ -319,17 +320,17 @@ def edit(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     applychanges(ui, repo, oldctx, opts)
-    raise util.Abort(_('Make changes as needed, you may commit or record as '
-                       'needed now.\nWhen you are finished, run hg'
-                       ' histedit --continue to resume.'))
+    raise error.InterventionRequired(
+        _('Make changes as needed, you may commit or record as needed now.\n'
+          'When you are finished, run hg histedit --continue to resume.'))
 
 def fold(ui, repo, ctx, ha, opts):
     oldctx = repo[ha]
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(
+            _('Fix up the change and run hg histedit --continue'))
     n = repo.commit(text='fold-temp-revision %s' % ha, user=oldctx.user(),
                     date=oldctx.date(), extra=oldctx.extra())
     if n is None:
@@ -390,8 +391,8 @@ def message(ui, repo, ctx, ha, opts):
     hg.update(repo, ctx.node())
     stats = applychanges(ui, repo, oldctx, opts)
     if stats and stats[3] > 0:
-        raise util.Abort(_('Fix up the change and run '
-                           'hg histedit --continue'))
+        raise error.InterventionRequired(
+            _('Fix up the change and run hg histedit --continue'))
     message = oldctx.description() + '\n'
     message = ui.edit(message, ui.username())
     commit = commitfuncfor(repo, oldctx)
@@ -402,6 +403,29 @@ def message(ui, repo, ctx, ha, opts):
         return newctx, [(oldctx.node(), (new,))]
     # We didn't make an edit, so just indicate no replaced nodes
     return newctx, []
+
+def findoutgoing(ui, repo, remote=None, force=False, opts={}):
+    """utility function to find the first outgoing changeset
+
+    Used by initialisation code"""
+    dest = ui.expandpath(remote or 'default-push', remote or 'default')
+    dest, revs = hg.parseurl(dest, None)[:2]
+    ui.status(_('comparing with %s\n') % util.hidepassword(dest))
+
+    revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
+    other = hg.peer(repo, opts, dest)
+
+    if revs:
+        revs = [repo.lookup(rev) for rev in revs]
+
+    # hexlify nodes from outgoing, because we're going to parse
+    # parent[0] using revsingle below, and if the binary hash
+    # contains special revset characters like ":" the revset
+    # parser can choke.
+    outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
+    if not outgoing.missing:
+        raise util.Abort(_('no outgoing ancestors'))
+    return outgoing.missing[0]
 
 actiontable = {'p': pick,
                'pick': pick,
@@ -427,7 +451,7 @@ actiontable = {'p': pick,
       _('force outgoing even for unrelated repositories')),
      ('r', 'rev', [], _('first revision to be edited'))],
      _("[PARENT]"))
-def histedit(ui, repo, *parent, **opts):
+def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
     """
     # TODO only abort if we try and histedit mq patches, not just
@@ -436,41 +460,48 @@ def histedit(ui, repo, *parent, **opts):
     if mq and mq.applied:
         raise util.Abort(_('source has mq patches applied'))
 
-    parent = list(parent) + opts.get('rev', [])
-    if opts.get('outgoing'):
-        if len(parent) > 1:
-            raise util.Abort(
-                _('only one repo argument allowed with --outgoing'))
-        elif parent:
-            parent = parent[0]
-
-        dest = ui.expandpath(parent or 'default-push', parent or 'default')
-        dest, revs = hg.parseurl(dest, None)[:2]
-        ui.status(_('comparing with %s\n') % util.hidepassword(dest))
-
-        revs, checkout = hg.addbranchrevs(repo, repo, revs, None)
-        other = hg.peer(repo, opts, dest)
-
-        if revs:
-            revs = [repo.lookup(rev) for rev in revs]
-
-        parent = discovery.findcommonoutgoing(
-            repo, other, [], force=opts.get('force')).missing[0:1]
-    else:
-        if opts.get('force'):
-            raise util.Abort(_('--force only allowed with --outgoing'))
-
-    if opts.get('continue', False):
-        if len(parent) != 0:
+    # basic argument incompatibility processing
+    outg = opts.get('outgoing')
+    cont = opts.get('continue')
+    abort = opts.get('abort')
+    force = opts.get('force')
+    rules = opts.get('commands', '')
+    revs = opts.get('rev', [])
+    goal = 'new' # This invocation goal, in new, continue, abort
+    if force and not outg:
+        raise util.Abort(_('--force only allowed with --outgoing'))
+    if cont:
+        if util.any((outg, abort, revs, freeargs, rules)):
             raise util.Abort(_('no arguments allowed with --continue'))
+        goal = 'continue'
+    elif abort:
+        if util.any((outg, revs, freeargs, rules)):
+            raise util.Abort(_('no arguments allowed with --abort'))
+        goal = 'abort'
+    else:
+        if os.path.exists(os.path.join(repo.path, 'histedit-state')):
+            raise util.Abort(_('history edit already in progress, try '
+                               '--continue or --abort'))
+        if outg:
+            if revs:
+                raise util.Abort(_('no revisions allowed with --outgoing'))
+            if len(freeargs) > 1:
+                raise util.Abort(
+                    _('only one repo argument allowed with --outgoing'))
+        else:
+            revs.extend(freeargs)
+            if len(revs) != 1:
+                raise util.Abort(
+                    _('histedit requires exactly one parent revision'))
+
+
+    if goal == 'continue':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
         currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
         parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
         replacements.extend(repl)
-    elif opts.get('abort', False):
-        if len(parent) != 0:
-            raise util.Abort(_('no arguments allowed with --abort'))
+    elif goal == 'abort':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
         mapping, tmpnodes, leafs, _ntm = processreplacement(repo, replacements)
         ui.debug('restore wc to old parent %s\n' % node.short(topmost))
@@ -481,28 +512,29 @@ def histedit(ui, repo, *parent, **opts):
         return
     else:
         cmdutil.bailifchanged(repo)
-        if os.path.exists(os.path.join(repo.path, 'histedit-state')):
-            raise util.Abort(_('history edit already in progress, try '
-                               '--continue or --abort'))
 
         topmost, empty = repo.dirstate.parents()
-
-        if len(parent) != 1:
-            raise util.Abort(_('histedit requires exactly one parent revision'))
-        parent = scmutil.revsingle(repo, parent[0]).node()
+        if outg:
+            if freeargs:
+                remote = freeargs[0]
+            else:
+                remote = None
+            root = findoutgoing(ui, repo, remote, force, opts)
+        else:
+            root = revs[0]
+            root = scmutil.revsingle(repo, root).node()
 
         keep = opts.get('keep', False)
-        revs = between(repo, parent, topmost, keep)
+        revs = between(repo, root, topmost, keep)
         if not revs:
-            ui.warn(_('nothing to edit\n'))
-            return 1
+            raise util.Abort(_('%s is not an ancestor of working directory') %
+                             node.short(root))
 
         ctxs = [repo[r] for r in revs]
-        rules = opts.get('commands', '')
         if not rules:
             rules = '\n'.join([makedesc(c) for c in ctxs])
             rules += '\n\n'
-            rules += editcomment % (node.short(parent), node.short(topmost))
+            rules += editcomment % (node.short(root), node.short(topmost))
             rules = ui.edit(rules, ui.username())
             # Save edit rules in .hg/histedit-last-edit.txt in case
             # the user needs to ask for help after something
@@ -511,14 +543,17 @@ def histedit(ui, repo, *parent, **opts):
             f.write(rules)
             f.close()
         else:
-            f = open(rules)
+            if rules == '-':
+                f = sys.stdin
+            else:
+                f = open(rules)
             rules = f.read()
             f.close()
         rules = [l for l in (r.strip() for r in rules.splitlines())
                  if l and not l[0] == '#']
         rules = verifyrules(rules, repo, ctxs)
 
-        parentctx = repo[parent].parents()[0]
+        parentctx = repo[root].parents()[0]
         keep = opts.get('keep', False)
         replacements = []
 
@@ -576,14 +611,15 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
     # note: does not take non linear new change in account (but previous
     #       implementation didn't used them anyway (issue3655)
     newchildren = [c.node() for c in repo.set('(%d::.)', parentctx)]
-    if not newchildren:
-        # `parentctxnode` should match but no result. This means that
-        # currentnode is not a descendant from parentctxnode.
-        msg = _('working directory parent is not a descendant of %s')
-        hint = _('update to %s or descendant and run "hg histedit '
-                 '--continue" again') % parentctx
-        raise util.Abort(msg % parentctx, hint=hint)
-    newchildren.pop(0)  # remove parentctxnode
+    if parentctx.node() != node.nullid:
+        if not newchildren:
+            # `parentctxnode` should match but no result. This means that
+            # currentnode is not a descendant from parentctxnode.
+            msg = _('%s is not an ancestor of working directory')
+            hint = _('update to %s or descendant and run "hg histedit '
+                     '--continue" again') % parentctx
+            raise util.Abort(msg % parentctx, hint=hint)
+        newchildren.pop(0)  # remove parentctxnode
     # Commit dirty working directory if necessary
     new = None
     m, a, r, d = repo.status()[:4]
@@ -613,16 +649,22 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
         replacements.append((ctx.node(), tuple(newchildren)))
 
     if action in ('f', 'fold'):
-        # finalize fold operation if applicable
-        if new is None:
-            new = newchildren[-1]
+        if newchildren:
+            # finalize fold operation if applicable
+            if new is None:
+                new = newchildren[-1]
+            else:
+                newchildren.pop()  # remove new from internal changes
+            parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
+                                         newchildren)
+            replacements.extend(repl)
         else:
-            newchildren.pop()  # remove new from internal changes
-        parentctx, repl = finishfold(ui, repo, parentctx, ctx, new, opts,
-                                     newchildren)
-        replacements.extend(repl)
+            # newchildren is empty if the fold did not result in any commit
+            # this happen when all folded change are discarded during the
+            # merge.
+            replacements.append((ctx.node(), (parentctx.node(),)))
     elif newchildren:
-        # otherwize update "parentctx" before proceding to further operation
+        # otherwise update "parentctx" before proceeding to further operation
         parentctx = repo[newchildren[-1]]
     return parentctx, replacements
 
@@ -674,25 +716,30 @@ def verifyrules(rules, repo, ctxs):
     or a rule on a changeset outside of the user-given range.
     """
     parsed = []
-    if len(rules) != len(ctxs):
-        raise util.Abort(_('must specify a rule for each changeset once'))
+    expected = set(str(c) for c in ctxs)
+    seen = set()
     for r in rules:
         if ' ' not in r:
             raise util.Abort(_('malformed line "%s"') % r)
         action, rest = r.split(' ', 1)
-        if ' ' in rest.strip():
-            ha, rest = rest.split(' ', 1)
-        else:
-            ha = r.strip()
+        ha = rest.strip().split(' ', 1)[0]
         try:
-            if repo[ha] not in ctxs:
-                raise util.Abort(
-                    _('may not use changesets other than the ones listed'))
+            ha = str(repo[ha])  # ensure its a short hash
         except error.RepoError:
             raise util.Abort(_('unknown changeset %s listed') % ha)
+        if ha not in expected:
+            raise util.Abort(
+                _('may not use changesets other than the ones listed'))
+        if ha in seen:
+            raise util.Abort(_('duplicated command for changeset %s') % ha)
+        seen.add(ha)
         if action not in actiontable:
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
+    missing = sorted(expected - seen)  # sort to stabilize output
+    if missing:
+        raise util.Abort(_('missing rules for changeset %s') % missing[0],
+                         hint=_('do you want to use the drop action?'))
     return parsed
 
 def processreplacement(repo, replacements):

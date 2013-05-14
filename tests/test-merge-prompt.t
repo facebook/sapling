@@ -42,7 +42,7 @@ b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
 Non-interactive merge:
 
   $ hg merge -y
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? c
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? c
@@ -70,7 +70,7 @@ Interactive merge:
   > c
   > d
   > EOF
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? 0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -97,11 +97,11 @@ Interactive merge with bad input:
   > baz
   > c
   > EOF
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? unrecognized response
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? unrecognized response
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? unrecognized response
   remote changed file2 which local deleted
@@ -126,7 +126,7 @@ Interactive merge with not enough input:
   $ hg merge --config ui.interactive=true <<EOF
   > d
   > EOF
-   local changed file1 which remote deleted
+  local changed file1 which remote deleted
   use (c)hanged version or (d)elete? remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? abort: response expected
   [255]

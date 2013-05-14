@@ -32,10 +32,10 @@ Symlink is local parent, executable is other:
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
@@ -65,10 +65,10 @@ Symlink is other parent, executable is local:
   $ hg merge --debug
     searching for copies back to rev 1
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   picked tool 'internal:merge' for a (binary False symlink True)
   merging a
@@ -99,10 +99,10 @@ Update to link with local change should cause a merge prompt (issue3200):
   $ HGMERGE= hg up -y --debug
     searching for copies back to rev 2
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: False, force: False, partial: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
    a: versions differ -> m
-  preserving a for resolve of a
+    preserving a for resolve of a
   updating: a 1/1 files (100.00%)
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool 'internal:prompt' for a (binary False symlink True)
@@ -196,6 +196,26 @@ Test removed 'x' flag merged with change to symlink
   $ tellmeabout f
   f is a plain file with content:
   f
+
+Test removed 'x' flag merged with content change - both ways
+
+  $ hg up -Cqr0
+  $ echo change > f
+  $ hg ci -qm3
+  $ hg merge -r1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ tellmeabout f
+  f is a plain file with content:
+  change
+
+  $ hg up -qCr1
+  $ hg merge -r3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ tellmeabout f
+  f is a plain file with content:
+  change
 
   $ cd ..
 

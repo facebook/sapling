@@ -27,8 +27,14 @@ class LookupError(RevlogError, KeyError):
     def __str__(self):
         return RevlogError.__str__(self)
 
+class ManifestLookupError(LookupError):
+    pass
+
 class CommandError(Exception):
     """Exception raised on errors in parsing the command line."""
+
+class InterventionRequired(Exception):
+    """Exception raised when a command requires human intervention."""
 
 class Abort(Exception):
     """Raised if a command needs to print an error and exit."""

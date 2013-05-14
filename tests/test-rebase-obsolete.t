@@ -385,3 +385,74 @@ Test multiple root handling
   o  0:cd010b8cd998 A
   
   $ cd ..
+
+test on rebase dropping a merge
+
+(setup)
+
+  $ hg init dropmerge
+  $ cd dropmerge
+  $ hg unbundle "$TESTDIR/bundles/rebase.hg"
+  adding changesets
+  adding manifests
+  adding file changes
+  added 8 changesets with 7 changes to 7 files (+2 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg up 3
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge 7
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'M'
+  $ echo I > I
+  $ hg add I
+  $ hg ci -m I
+  $ hg log -G
+  @  9:4bde274eefcf I
+  |
+  o    8:53a6a128b2b7 M
+  |\
+  | o  7:02de42196ebe H
+  | |
+  | | o  6:eea13746799a G
+  | |/|
+  | o |  5:24b6387c8c8c F
+  | | |
+  | | o  4:9520eea781bc E
+  | |/
+  o |  3:32af7686d403 D
+  | |
+  o |  2:5fddd98957c8 C
+  | |
+  o |  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  
+(actual test)
+
+  $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
+  $ hg log -G
+  @  12:acd174b7ab39 I
+  |
+  o  11:6c11a6218c97 H
+  |
+  | o  10:b5313c85b22e D
+  |/
+  | o    8:53a6a128b2b7 M
+  | |\
+  | | x  7:02de42196ebe H
+  | | |
+  o---+  6:eea13746799a G
+  | | |
+  | | o  5:24b6387c8c8c F
+  | | |
+  o---+  4:9520eea781bc E
+   / /
+  x |  3:32af7686d403 D
+  | |
+  o |  2:5fddd98957c8 C
+  | |
+  o |  1:42ccdea3bb16 B
+  |/
+  o  0:cd010b8cd998 A
+  

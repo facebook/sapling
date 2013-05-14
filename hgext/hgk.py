@@ -114,7 +114,8 @@ def catcommit(ui, repo, n, prefix, ctx=None):
     if committer != '':
         ui.write(("committer %s %s %s\n" % (committer, int(date[0]), date[1])))
     ui.write(("revision %d\n" % ctx.rev()))
-    ui.write(("branch %s\n\n" % ctx.branch()))
+    ui.write(("branch %s\n" % ctx.branch()))
+    ui.write(("phase %s\n\n" % ctx.phasestr()))
 
     if prefix != "":
         ui.write("%s%s\n" % (prefix,

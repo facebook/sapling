@@ -164,3 +164,28 @@ testing hgignore:
 adding .hgignore
  runcommand status -i -u
 I ignored-file
+
+testing phasecacheafterstrip:
+
+ runcommand update -C 0
+1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+ runcommand commit -Am. a
+created new head
+ runcommand log -Gq
+@  5:731265503d86
+|
+| o  4:7966c8e3734d
+| |
+| o  3:b9b85890c400
+| |
+| o  2:aef17e88f5f0
+| |
+| o  1:d3a0a68be6de
+|/
+o  0:eff892de26ec
+
+ runcommand phase -p .
+ runcommand phase .
+5: public
+ runcommand branches
+default                        1:731265503d86

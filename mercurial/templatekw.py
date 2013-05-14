@@ -14,9 +14,13 @@ import hbisect
 #  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
 
 class _hybrid(object):
-    def __init__(self, gen, values):
+    def __init__(self, gen, values, joinfmt=None):
         self.gen = gen
         self.values = values
+        if joinfmt:
+            self.joinfmt = joinfmt
+        else:
+            self.joinfmt = lambda x: x.values()[0]
     def __iter__(self):
         return self.gen
     def __call__(self):
@@ -244,8 +248,8 @@ def showfilecopies(**args):
                 copies.append((fn, rename[0]))
 
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies',
-                    element='file', **args)
+    f = _showlist('file_copy', c, plural='file_copies', **args)
+    return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
@@ -256,8 +260,8 @@ def showfilecopiesswitch(**args):
     """
     copies = args['revcache'].get('copies') or []
     c = [{'name': x[0], 'source': x[1]} for x in copies]
-    return showlist('file_copy', c, plural='file_copies',
-                    element='file', **args)
+    f = _showlist('file_copy', c, plural='file_copies', **args)
+    return _hybrid(f, c, lambda x: '%s (%s)' % (x['name'], x['source']))
 
 def showfiledels(**args):
     """:file_dels: List of strings. Files removed by this changeset."""

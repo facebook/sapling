@@ -45,7 +45,7 @@ enum path_state {
 	H,       /* ".h" */
 	HGDI,    /* ".hg", ".d", or ".i" */
 	SPACE,
-	DEFAULT, /* byte of a path component after the first */
+	DEFAULT  /* byte of a path component after the first */
 };
 
 /* state machine for dir-encoding */
@@ -53,7 +53,7 @@ enum dir_state {
 	DDOT,
 	DH,
 	DHGDI,
-	DDEFAULT,
+	DDEFAULT
 };
 
 static inline int inset(const uint32_t bitset[], char c)
@@ -696,7 +696,7 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	return 0;
 }
 
-#define MAXENCODE 4096 * 3
+#define MAXENCODE 4096 * 4
 
 static PyObject *hashencode(const char *src, Py_ssize_t len)
 {

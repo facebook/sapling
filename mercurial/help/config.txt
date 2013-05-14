@@ -85,6 +85,9 @@ ones.
     be read.  Mercurial checks each of these locations in the specified
     order until one or more configuration files are detected.
 
+.. note:: The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
+   is used when running 32-bit Python on 64-bit Windows.
+
 Syntax
 ======
 
@@ -745,7 +748,7 @@ The CA chain and web.cacerts is not used for servers with a fingerprint.
 For example::
 
     [hostfingerprints]
-    hg.intevation.org = 38:76:52:7c:87:26:9a:8f:4a:f8:d3:de:08:45:3b:ea:d6:4b:ee:cc
+    hg.intevation.org = 44:ed:af:1f:97:11:b6:01:7a:48:45:fc:10:3c:b7:f9:d4:89:2a:9d
 
 This feature is only supported when using Python 2.6 or later.
 
@@ -990,6 +993,22 @@ profiling is done using lsprof.
     file exists, it is replaced. Default: None, data is printed on
     stderr
 
+``sort``
+    Sort field.  Specific to the ``ls`` instrumenting profiler.
+    One of ``callcount``, ``reccallcount``, ``totaltime`` and
+    ``inlinetime``.
+    Default: inlinetime.
+
+``limit``
+    Number of lines to show. Specific to the ``ls`` instrumenting profiler.
+    Default: 30.
+
+``nested``
+    Show at most this number of lines of drill-down info after each main entry.
+    This can help explain the difference between Total and Inline.
+    Specific to the ``ls`` instrumenting profiler.
+    Default: 5.
+
 ``revsetalias``
 ---------------
 
@@ -1030,11 +1049,22 @@ Configuration for extensions that need to send email messages.
     Host name of mail server, e.g. "mail.example.com".
 
 ``port``
-    Optional. Port to connect to on mail server. Default: 25.
+    Optional. Port to connect to on mail server. Default: 465 (if
+    ``tls`` is smtps) or 25 (otherwise).
 
 ``tls``
     Optional. Method to enable TLS when connecting to mail server: starttls,
     smtps or none. Default: none.
+
+``verifycert``
+    Optional. Verification for the certificate of mail server, when
+    ``tls`` is starttls or smtps. "strict", "loose" or False. For
+    "strict" or "loose", the certificate is verified as same as the
+    verification for HTTPS connections (see ``[hostfingerprints]`` and
+    ``[web] cacerts`` also). For "strict", sending email is also
+    aborted, if there is no configuration for mail server in
+    ``[hostfingerprints]`` and ``[web] cacerts``.  --insecure for
+    :hg:`email` overwrites this as "loose". Default: "strict".
 
 ``username``
     Optional. User name for authenticating with the SMTP server.
@@ -1446,3 +1476,48 @@ The full set of options is:
 
 ``templates``
     Where to find the HTML templates. Default is install path.
+
+``websub``
+----------
+
+Web substitution filter definition. You can use this section to
+define a set of regular expression substitution patterns which
+let you automatically modify the hgweb server output.
+
+The default hgweb templates only apply these substitution patterns
+on the revision description fields. You can apply them anywhere
+you want when you create your own templates by adding calls to the
+"websub" filter (usually after calling the "escape" filter).
+
+This can be used, for example, to convert issue references to links
+to your issue tracker, or to convert "markdown-like" syntax into
+HTML (see the examples below).
+
+Each entry in this section names a substitution filter.
+The value of each entry defines the substitution expression itself.
+The websub expressions follow the old interhg extension syntax,
+which in turn imitates the Unix sed replacement syntax::
+
+    patternname = s/SEARCH_REGEX/REPLACE_EXPRESSION/[i]
+
+You can use any separator other than "/". The final "i" is optional
+and indicates that the search must be case insensitive.
+
+Examples::
+
+    [websub]
+    issues = s|issue(\d+)|<a href="http://bts.example.org/issue\1">issue\1</a>|i
+    italic = s/\b_(\S+)_\b/<i>\1<\/i>/
+    bold = s/\*\b(\S+)\b\*/<b>\1<\/b>/
+
+``worker``
+----------
+
+Parallel master/worker configuration. We currently perform working
+directory updates in parallel on Unix-like systems, which greatly
+helps performance.
+
+``numcpus``
+    Number of CPUs to use for parallel operations. Default is 4 or the
+    number of CPUs on the system, whichever is larger. A zero or
+    negative value is treated as ``use the default``.

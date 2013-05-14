@@ -94,6 +94,9 @@ tests:
 test-%:
 	cd tests && $(PYTHON) run-tests.py $(TESTFLAGS) $@
 
+check-code:
+	hg manifest | xargs python contrib/check-code.py
+
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES)

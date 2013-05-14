@@ -264,11 +264,11 @@ tagging on null rev
 
   $ hg init empty
   $ hg tag -R empty nullrev
-  abort: null revision specified
+  abort: cannot tag null revision
   [255]
 
   $ hg tag -R empty -r 00000000000 -f nulltag
-  abort: null revision specified
+  abort: cannot tag null revision
   [255]
 
   $ cd ..

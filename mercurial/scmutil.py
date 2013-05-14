@@ -6,9 +6,18 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import util, error, osutil, revset, similar, encoding, phases
+from mercurial.node import nullrev
+import util, error, osutil, revset, similar, encoding, phases, parsers
 import match as matchmod
-import os, errno, re, stat, sys, glob
+import os, errno, re, stat, glob
+
+if os.name == 'nt':
+    import scmwindows as scmplatform
+else:
+    import scmposix as scmplatform
+
+systemrcpath = scmplatform.systemrcpath
+userrcpath = scmplatform.userrcpath
 
 def nochangesfound(ui, repo, excluded=None):
     '''Report no changes for push/pull, excluded is None or a list of
@@ -17,6 +26,10 @@ def nochangesfound(ui, repo, excluded=None):
     secretlist = []
     if excluded:
         for n in excluded:
+            if n not in repo:
+                # discovery should not have included the filtered revision,
+                # we have to explicitly exclude it until discovery is cleanup.
+                continue
             ctx = repo[n]
             if ctx.phase() >= phases.secret and not ctx.extinct():
                 secretlist.append(n)
@@ -28,11 +41,18 @@ def nochangesfound(ui, repo, excluded=None):
         ui.status(_("no changes found\n"))
 
 def checknewlabel(repo, lbl, kind):
+    # Do not use the "kind" parameter in ui output.
+    # It makes strings difficult to translate.
     if lbl in ['tip', '.', 'null']:
         raise util.Abort(_("the name '%s' is reserved") % lbl)
     for c in (':', '\0', '\n', '\r'):
         if c in lbl:
             raise util.Abort(_("%r cannot be used in a name") % c)
+    try:
+        int(lbl)
+        raise util.Abort(_("cannot use an integer as a name"))
+    except ValueError:
+        pass
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
@@ -174,6 +194,13 @@ class pathauditor(object):
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
 
+    def check(self, path):
+        try:
+            self(path)
+            return True
+        except (OSError, util.Abort):
+            return False
+
 class abstractvfs(object):
     """Abstract base class; cannot be instantiated"""
 
@@ -217,6 +244,9 @@ class abstractvfs(object):
     def isdir(self, path=None):
         return os.path.isdir(self.join(path))
 
+    def islink(self, path=None):
+        return os.path.islink(self.join(path))
+
     def makedir(self, path=None, notindexed=True):
         return util.makedir(self.join(path), notindexed)
 
@@ -229,6 +259,15 @@ class abstractvfs(object):
     def readdir(self, path=None, stat=None, skip=None):
         return osutil.listdir(self.join(path), stat, skip)
 
+    def rename(self, src, dst):
+        return util.rename(self.join(src), self.join(dst))
+
+    def readlink(self, path):
+        return os.readlink(self.join(path))
+
+    def setflags(self, path, l, x):
+        return util.setflags(self.join(path), l, x)
+
     def stat(self, path=None):
         return os.stat(self.join(path))
 
@@ -238,9 +277,11 @@ class vfs(abstractvfs):
     This class is used to hide the details of COW semantics and
     remote file access from higher level code.
     '''
-    def __init__(self, base, audit=True, expand=False):
-        if expand:
-            base = os.path.realpath(util.expandpath(base))
+    def __init__(self, base, audit=True, expandpath=False, realpath=False):
+        if expandpath:
+            base = util.expandpath(base)
+        if realpath:
+            base = os.path.realpath(base)
         self.base = base
         self._setmustaudit(audit)
         self.createmode = None
@@ -289,8 +330,7 @@ class vfs(abstractvfs):
             # to a directory. Let the posixfile() call below raise IOError.
             if basename:
                 if atomictemp:
-                    if not os.path.isdir(dirname):
-                        util.makedirs(dirname, self.createmode)
+                    util.ensuredirs(dirname, self.createmode)
                     return util.atomictempfile(f, mode, self.createmode)
                 try:
                     if 'w' in mode:
@@ -308,8 +348,7 @@ class vfs(abstractvfs):
                     if e.errno != errno.ENOENT:
                         raise
                     nlink = 0
-                    if not os.path.isdir(dirname):
-                        util.makedirs(dirname, self.createmode)
+                    util.ensuredirs(dirname, self.createmode)
                 if nlink > 0:
                     if self._trustnlink is None:
                         self._trustnlink = nlink > 1 or util.checknlink(f)
@@ -328,9 +367,7 @@ class vfs(abstractvfs):
         except OSError:
             pass
 
-        dirname = os.path.dirname(linkname)
-        if not os.path.exists(dirname):
-            util.makedirs(dirname, self.createmode)
+        util.ensuredirs(os.path.dirname(linkname), self.createmode)
 
         if self._cansymlink:
             try:
@@ -518,84 +555,6 @@ def rcpath():
             _rcpath = osrcpath()
     return _rcpath
 
-if os.name != 'nt':
-
-    def rcfiles(path):
-        rcs = [os.path.join(path, 'hgrc')]
-        rcdir = os.path.join(path, 'hgrc.d')
-        try:
-            rcs.extend([os.path.join(rcdir, f)
-                        for f, kind in osutil.listdir(rcdir)
-                        if f.endswith(".rc")])
-        except OSError:
-            pass
-        return rcs
-
-    def systemrcpath():
-        path = []
-        if sys.platform == 'plan9':
-            root = 'lib/mercurial'
-        else:
-            root = 'etc/mercurial'
-        # old mod_python does not set sys.argv
-        if len(getattr(sys, 'argv', [])) > 0:
-            p = os.path.dirname(os.path.dirname(sys.argv[0]))
-            path.extend(rcfiles(os.path.join(p, root)))
-        path.extend(rcfiles('/' + root))
-        return path
-
-    def userrcpath():
-        if sys.platform == 'plan9':
-            return [os.environ['home'] + '/lib/hgrc']
-        else:
-            return [os.path.expanduser('~/.hgrc')]
-
-else:
-
-    import _winreg
-
-    def systemrcpath():
-        '''return default os-specific hgrc search path'''
-        rcpath = []
-        filename = util.executablepath()
-        # Use mercurial.ini found in directory with hg.exe
-        progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-        if os.path.isfile(progrc):
-            rcpath.append(progrc)
-            return rcpath
-        # Use hgrc.d found in directory with hg.exe
-        progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
-        if os.path.isdir(progrcd):
-            for f, kind in osutil.listdir(progrcd):
-                if f.endswith('.rc'):
-                    rcpath.append(os.path.join(progrcd, f))
-            return rcpath
-        # else look for a system rcpath in the registry
-        value = util.lookupreg('SOFTWARE\\Mercurial', None,
-                               _winreg.HKEY_LOCAL_MACHINE)
-        if not isinstance(value, str) or not value:
-            return rcpath
-        value = util.localpath(value)
-        for p in value.split(os.pathsep):
-            if p.lower().endswith('mercurial.ini'):
-                rcpath.append(p)
-            elif os.path.isdir(p):
-                for f, kind in osutil.listdir(p):
-                    if f.endswith('.rc'):
-                        rcpath.append(os.path.join(p, f))
-        return rcpath
-
-    def userrcpath():
-        '''return os-specific hgrc search path to the user dir'''
-        home = os.path.expanduser('~')
-        path = [os.path.join(home, 'mercurial.ini'),
-                os.path.join(home, '.hgrc')]
-        userprofile = os.environ.get('USERPROFILE')
-        if userprofile:
-            path.append(os.path.join(userprofile, 'mercurial.ini'))
-            path.append(os.path.join(userprofile, '.hgrc'))
-        return path
-
 def revsingle(repo, revspec, default='.'):
     if not revspec:
         return repo[default]
@@ -647,6 +606,8 @@ def revrange(repo, revs):
                 start, end = spec.split(_revrangesep, 1)
                 start = revfix(repo, start, 0)
                 end = revfix(repo, end, len(repo) - 1)
+                if end == nullrev and start <= 0:
+                    start = nullrev
                 rangeiter = repo.changelog.revs(start, end)
                 if not seen and not l:
                     # by far the most common case: revs = ["-1:0"]
@@ -730,30 +691,33 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
     rejected = []
     m.bad = lambda x, y: rejected.append(x)
 
-    for abs in repo.walk(m):
-        target = repo.wjoin(abs)
-        good = True
-        try:
-            audit_path(abs)
-        except (OSError, util.Abort):
-            good = False
-        rel = m.rel(abs)
-        exact = m.exact(abs)
-        if good and abs not in repo.dirstate:
+    ctx = repo[None]
+    dirstate = repo.dirstate
+    walkresults = dirstate.walk(m, sorted(ctx.substate), True, False)
+    for abs, st in walkresults.iteritems():
+        dstate = dirstate[abs]
+        if dstate == '?' and audit_path.check(abs):
             unknown.append(abs)
-            if repo.ui.verbose or not exact:
-                repo.ui.status(_('adding %s\n') % ((pats and rel) or abs))
-        elif (repo.dirstate[abs] != 'r' and
-              (not good or not os.path.lexists(target) or
-               (os.path.isdir(target) and not os.path.islink(target)))):
+        elif dstate != 'r' and not st:
             deleted.append(abs)
-            if repo.ui.verbose or not exact:
-                repo.ui.status(_('removing %s\n') % ((pats and rel) or abs))
         # for finding renames
-        elif repo.dirstate[abs] == 'r':
+        elif dstate == 'r':
             removed.append(abs)
-        elif repo.dirstate[abs] == 'a':
+        elif dstate == 'a':
             added.append(abs)
+
+    unknownset = set(unknown)
+    toprint = unknownset.copy()
+    toprint.update(deleted)
+    for abs in sorted(toprint):
+        if repo.ui.verbose or not m.exact(abs):
+            rel = m.rel(abs)
+            if abs in unknownset:
+                status = _('adding %s\n') % ((pats and rel) or abs)
+            else:
+                status = _('removing %s\n') % ((pats and rel) or abs)
+            repo.ui.status(status)
+
     copies = {}
     if similarity > 0:
         for old, new, score in similar.findrenames(repo,
@@ -779,49 +743,6 @@ def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
         if f in m.files():
             return 1
     return 0
-
-def updatedir(ui, repo, patches, similarity=0):
-    '''Update dirstate after patch application according to metadata'''
-    if not patches:
-        return []
-    copies = []
-    removes = set()
-    cfiles = patches.keys()
-    cwd = repo.getcwd()
-    if cwd:
-        cfiles = [util.pathto(repo.root, cwd, f) for f in patches.keys()]
-    for f in patches:
-        gp = patches[f]
-        if not gp:
-            continue
-        if gp.op == 'RENAME':
-            copies.append((gp.oldpath, gp.path))
-            removes.add(gp.oldpath)
-        elif gp.op == 'COPY':
-            copies.append((gp.oldpath, gp.path))
-        elif gp.op == 'DELETE':
-            removes.add(gp.path)
-
-    wctx = repo[None]
-    for src, dst in copies:
-        dirstatecopy(ui, repo, wctx, src, dst, cwd=cwd)
-    if (not similarity) and removes:
-        wctx.remove(sorted(removes), True)
-
-    for f in patches:
-        gp = patches[f]
-        if gp and gp.mode:
-            islink, isexec = gp.mode
-            dst = repo.wjoin(gp.path)
-            # patch won't create empty files
-            if gp.op == 'ADD' and not os.path.lexists(dst):
-                flags = (isexec and 'x' or '') + (islink and 'l' or '')
-                repo.wwrite(gp.path, '', flags)
-            util.setflags(dst, islink, isexec)
-    addremove(repo, cfiles, similarity=similarity)
-    files = patches.keys()
-    files.extend([r for r in removes if r not in files])
-    return sorted(files)
 
 def dirstatecopy(ui, repo, wctx, src, dst, dryrun=False, cwd=None):
     """Update the dirstate to reflect the intent of copying src to dst. For
@@ -985,3 +906,48 @@ class filecache(object):
             del obj.__dict__[self.name]
         except KeyError:
             raise AttributeError(self.name)
+
+class dirs(object):
+    '''a multiset of directory names from a dirstate or manifest'''
+
+    def __init__(self, map, skip=None):
+        self._dirs = {}
+        addpath = self.addpath
+        if util.safehasattr(map, 'iteritems') and skip is not None:
+            for f, s in map.iteritems():
+                if s[0] != skip:
+                    addpath(f)
+        else:
+            for f in map:
+                addpath(f)
+
+    def addpath(self, path):
+        dirs = self._dirs
+        for base in finddirs(path):
+            if base in dirs:
+                dirs[base] += 1
+                return
+            dirs[base] = 1
+
+    def delpath(self, path):
+        dirs = self._dirs
+        for base in finddirs(path):
+            if dirs[base] > 1:
+                dirs[base] -= 1
+                return
+            del dirs[base]
+
+    def __iter__(self):
+        return self._dirs.iterkeys()
+
+    def __contains__(self, d):
+        return d in self._dirs
+
+if util.safehasattr(parsers, 'dirs'):
+    dirs = parsers.dirs
+
+def finddirs(path):
+    pos = path.rfind('/')
+    while pos != -1:
+        yield path[:pos]
+        pos = path.rfind('/', 0, pos)

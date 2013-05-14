@@ -86,12 +86,12 @@ log before edit
   
 
 edit the history
-  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 3 2>&1 | fixbundle
+  $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 fix up
   $ echo 'I can haz no commute' > e
@@ -125,7 +125,7 @@ fix up
   merging e
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: Fix up the change and run hg histedit --continue
+  Fix up the change and run hg histedit --continue
 
 just continue this time
   $ hg revert -r 'p1()' e

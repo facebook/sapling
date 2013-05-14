@@ -17,6 +17,7 @@
   > no-R = status -R elsewhere
   > no--repo = status --repo elsewhere
   > no--repository = status --repository elsewhere
+  > no--config = status --config a.config=1
   > mylog = log
   > lognull = log -r null
   > shortlog = log --template '{rev} {node|short} | {date|isodate}\n'
@@ -106,6 +107,8 @@ invalid options
   error in definition for alias 'no--repository': --repository may only be given on the command line
   $ hg help no--repository
   error in definition for alias 'no--repository': --repository may only be given on the command line
+  $ hg no--config
+  error in definition for alias 'no--config': --config may only be given on the command line
 
 optional repository
 
@@ -181,6 +184,7 @@ path expanding
   # HG changeset patch
   # User test
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID e63c23eaa88ae77967edcf4ea194d31167c478b0
   # Parent  0000000000000000000000000000000000000000
   foo
@@ -224,7 +228,7 @@ simple shell aliases
   2
 
   $ hg tglog
-  @  1:7e7f92de180e: 'bar'
+  @  1:042423737847: 'bar'
   |
   o  0:e63c23eaa88a: 'foo'
   
@@ -237,15 +241,15 @@ shadowing
       idalias idaliaslong idaliasshell identify import incoming init
   [255]
   $ hg id
-  7e7f92de180e tip
+  042423737847 tip
   $ hg ida
   hg: command 'ida' is ambiguous:
       idalias idaliaslong idaliasshell
   [255]
   $ hg idalias
-  7e7f92de180e tip
+  042423737847 tip
   $ hg idaliasl
-  7e7f92de180e tip
+  042423737847 tip
   $ hg idaliass
   test
   $ hg parentsshell
@@ -263,10 +267,13 @@ shell aliases with global options
   $ hg init sub
   $ cd sub
   $ hg count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg -v count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg -R .. count 'branch(default)'
+  abort: unknown revision 'default'!
   0
   $ hg --cwd .. count 'branch(default)'
   2

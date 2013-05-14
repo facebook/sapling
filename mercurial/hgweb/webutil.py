@@ -51,11 +51,14 @@ class revnav(object):
 
     def __nonzero__(self):
         """return True if any revision to navigate over"""
+        return self._first() is not None
+
+    def _first(self):
+        """return the minimum non-filtered changeset or None"""
         try:
-            self._revlog.node(0)
-            return True
-        except error.RepoError:
-            return False
+            return iter(self._revlog).next()
+        except StopIteration:
+            return None
 
     def hex(self, rev):
         return hex(self._revlog.node(rev))
@@ -85,15 +88,16 @@ class revnav(object):
             targets.append(pos - f)
         targets.sort()
 
-        navbefore = [("(0)", self.hex(0))]
+        first = self._first()
+        navbefore = [("(%i)" % first, self.hex(first))]
         navafter = []
         for rev in targets:
             if rev not in self._revlog:
                 continue
             if pos < rev < limit:
-                navafter.append(("+%d" % f, self.hex(rev)))
+                navafter.append(("+%d" % abs(rev - pos), self.hex(rev)))
             if 0 < rev < pos:
-                navbefore.append(("-%d" % f, self.hex(rev)))
+                navbefore.append(("-%d" % abs(rev - pos), self.hex(rev)))
 
 
         navafter.append(("tip", "tip"))

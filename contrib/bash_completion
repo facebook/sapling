@@ -1,4 +1,4 @@
-# bash completion for the Mercurial distributed SCM
+# bash completion for the Mercurial distributed SCM -*- sh -*-
 
 # Docs:
 #
@@ -80,26 +80,20 @@ _hg_repos()
     done
 }
 
-_hg_status()
+_hg_debugpathcomplete()
 {
-    local files="$(_hg_cmd status -n$1 .)"
+    local files="$(_hg_cmd debugpathcomplete $1 "$cur")"
     local IFS=$'\n'
     compopt -o filenames 2>/dev/null
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
-_hg_tags()
+_hg_status()
 {
-    local tags="$(_hg_cmd tags -q)"
+    local files="$(_hg_cmd status -n$1 "glob:$cur**")"
     local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$tags' -- "$cur"))
-}
-
-_hg_branches()
-{
-    local branches="$(_hg_cmd branches -q)"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$branches' -- "$cur"))
+    compopt -o filenames 2>/dev/null
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
 _hg_bookmarks()
@@ -111,9 +105,9 @@ _hg_bookmarks()
 
 _hg_labels()
 {
-    _hg_tags
-    _hg_branches
-    _hg_bookmarks
+    local labels="$(_hg_cmd debuglabelcomplete "$cur")"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$labels' -- "$cur"))
 }
 
 # this is "kind of" ugly...
@@ -235,7 +229,7 @@ _hg_command_specific()
 	    fi
 	    _hg_labels
 	;;
-	manifest|update)
+	manifest|update|up|checkout|co)
 	    _hg_labels
 	;;
 	pull|push|outgoing|incoming)
@@ -251,20 +245,20 @@ _hg_command_specific()
 	merge)
 	    _hg_labels
 	;;
-	commit|record)
+	commit|ci|record)
 	    _hg_status "mar"
 	;;
-	remove)
-	    _hg_status "d"
+	remove|rm)
+	    _hg_debugpathcomplete -n
 	;;
 	forget)
-	    _hg_status "a"
+	    _hg_debugpathcomplete -fa
 	;;
 	diff)
 	    _hg_status "mar"
 	;;
 	revert)
-	    _hg_status "mard"
+	    _hg_debugpathcomplete
 	;;
 	clone)
 	    local count=$(_hg_count_non_option)
@@ -294,13 +288,6 @@ complete -o bashdefault -o default -F _hg hg \
 # Completion for commands provided by extensions
 
 # bookmarks
-_hg_bookmarks()
-{
-    local bookmarks="$(_hg_cmd bookmarks --quiet )"
-    local IFS=$'\n'
-    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$bookmarks' -- "$cur"))
-}
-
 _hg_cmd_bookmarks()
 {
     if [[ "$prev" = @(-d|--delete|-m|--rename) ]]; then

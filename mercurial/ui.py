@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import errno, getpass, os, socket, sys, tempfile, traceback
+import errno, getpass, os, re, socket, sys, tempfile, traceback
 import config, scmutil, util, error, formatter
 
 class ui(object):
@@ -261,6 +261,45 @@ class ui(object):
         except ValueError:
             raise error.ConfigError(_("%s.%s is not an integer ('%s')")
                                     % (section, name, v))
+
+    def configbytes(self, section, name, default=0, untrusted=False):
+        """parse a configuration element as a quantity in bytes
+
+        Units can be specified as b (bytes), k or kb (kilobytes), m or
+        mb (megabytes), g or gb (gigabytes).
+
+        >>> u = ui(); s = 'foo'
+        >>> u.setconfig(s, 'val1', '42')
+        >>> u.configbytes(s, 'val1')
+        42
+        >>> u.setconfig(s, 'val2', '42.5 kb')
+        >>> u.configbytes(s, 'val2')
+        43520
+        >>> u.configbytes(s, 'unknown', '7 MB')
+        7340032
+        >>> u.setconfig(s, 'invalid', 'somevalue')
+        >>> u.configbytes(s, 'invalid')
+        Traceback (most recent call last):
+            ...
+        ConfigError: foo.invalid is not a byte quantity ('somevalue')
+        """
+
+        orig = string = self.config(section, name)
+        if orig is None:
+            if not isinstance(default, str):
+                return default
+            orig = string = default
+        multiple = 1
+        m = re.match(r'([^kmbg]+?)\s*([kmg]?)b?$', string, re.I)
+        if m:
+            string, key = m.groups()
+            key = key.lower()
+            multiple = dict(k=1024, m=1048576, g=1073741824).get(key, 1)
+        try:
+            return int(float(string) * multiple)
+        except ValueError:
+            raise error.ConfigError(_("%s.%s is not a byte quantity ('%s')")
+                                    % (section, name, orig))
 
     def configlist(self, section, name, default=None, untrusted=False):
         """parse a configuration element as a list of comma/space separated
@@ -624,7 +663,8 @@ class ui(object):
         if not self.interactive():
             return default
         try:
-            return getpass.getpass(prompt or _('password: '))
+            self.write(self.label(prompt or _('password: '), 'ui.prompt'))
+            return getpass.getpass('')
         except EOFError:
             raise util.Abort(_('response expected'))
     def status(self, *msg, **opts):
@@ -681,17 +721,29 @@ class ui(object):
 
         return t
 
-    def traceback(self, exc=None):
-        '''print exception traceback if traceback printing enabled.
+    def traceback(self, exc=None, force=False):
+        '''print exception traceback if traceback printing enabled or forced.
         only to call in exception handler. returns true if traceback
         printed.'''
-        if self.tracebackflag:
-            if exc:
+        if self.tracebackflag or force:
+            if exc is None:
+                exc = sys.exc_info()
+            cause = getattr(exc[1], 'cause', None)
+
+            if cause is not None:
+                causetb = traceback.format_tb(cause[2])
+                exctb = traceback.format_tb(exc[2])
+                exconly = traceback.format_exception_only(cause[0], cause[1])
+
+                # exclude frame where 'exc' was chained and rethrown from exctb
+                self.write_err('Traceback (most recent call last):\n',
+                               ''.join(exctb[:-1]),
+                               ''.join(causetb),
+                               ''.join(exconly))
+            else:
                 traceback.print_exception(exc[0], exc[1], exc[2],
                                           file=self.ferr)
-            else:
-                traceback.print_exc(file=self.ferr)
-        return self.tracebackflag
+        return self.tracebackflag or force
 
     def geteditor(self):
         '''return editor to use'''
@@ -739,7 +791,7 @@ class ui(object):
         else:
             self.debug('%s:%s %s%s\n' % (topic, item, pos, unit))
 
-    def log(self, service, message):
+    def log(self, service, *msg, **opts):
         '''hook for logging facility extensions
 
         service should be a readily-identifiable subsystem, which will

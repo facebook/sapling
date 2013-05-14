@@ -238,6 +238,32 @@ sync to upstream git, distribute changes
    source   ../gitroot
    revision 32a343883b74769118bb1d3b4b1fbf9156f4dddc
 
+create a new git branch
+
+  $ cd s
+  $ git checkout -b b2
+  Switched to a new branch 'b2'
+  $ echo a>a
+  $ git add a
+  $ git commit -qm 'add a'
+  $ cd ..
+  $ hg commit -m 'add branch in s'
+
+pulling new git branch should not create tracking branch named 'origin/b2'
+(issue3870)
+  $ cd ../td/s
+  $ git remote set-url origin $TESTTMP/tb/s
+  $ git branch --no-track oldtesting
+  $ cd ..
+  $ hg pull -q ../tb
+  $ hg up
+  From $TESTTMP/tb/s
+   * [new branch]      b2         -> origin/b2
+  Previous HEAD position was f47b465... merge
+  Switched to a new branch 'b2'
+  pulling subrepo s from $TESTTMP/tb/s
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 update to a revision without the subrepo, keeping the local git repository
 
   $ cd ../t

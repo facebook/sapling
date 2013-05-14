@@ -55,8 +55,8 @@ Conflicting rebase:
   merging common
   warning: conflicts during merge.
   merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
 
 Abort:
 
@@ -126,8 +126,8 @@ Rebase and abort without generating new changesets:
   merging c
   warning: conflicts during merge.
   merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
 
   $ hg tglog
   @  4:draft 'C1'

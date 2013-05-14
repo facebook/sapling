@@ -11,7 +11,7 @@ from i18n import _, gettext
 
 _extensions = {}
 _order = []
-_ignore = ['hbisect', 'bookmarks', 'parentrevspec']
+_ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg']
 
 def extensions():
     for name in _order:
@@ -50,7 +50,6 @@ def loadpath(path, module_name):
             raise
 
 def load(ui, name, path):
-    # unused ui argument kept for backwards compatibility
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
     else:

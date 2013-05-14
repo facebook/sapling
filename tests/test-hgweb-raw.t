@@ -19,7 +19,7 @@ Test raw style of hgweb
   $ cat hg.pid >> $DAEMON_PIDS
   $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
 
-  $ while kill `cat hg.pid` 2>/dev/null; do sleep 0; done
+  $ "$TESTDIR/killdaemons.py" hg.pid
 
   $ cat getoutput.txt
   200 Script output follows
@@ -40,7 +40,7 @@ Test raw style of hgweb
 
   $ cat hg.pid >> $DAEMON_PIDS
   $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT '?f=bf0ff59095c9;file=sub/some%20text%25.txt;style=raw' content-type content-length content-disposition) >getoutput.txt
-  $ while kill `cat hg.pid` 2>/dev/null; do sleep 0; done
+  $ "$TESTDIR/killdaemons.py" hg.pid
 
   $ cat getoutput.txt
   200 Script output follows

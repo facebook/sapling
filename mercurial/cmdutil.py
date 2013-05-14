@@ -12,6 +12,7 @@ import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import subrepo, context, repair, graphmod, revset, phases, obsolete
 import changelog
+import bookmarks
 import lock as lockmod
 
 def parsealiases(cmd):
@@ -169,7 +170,8 @@ def makefilename(repo, pat, node, desc=None,
                          inst.args[0])
 
 def makefileobj(repo, pat, node=None, desc=None, total=None,
-                seqno=None, revwidth=None, mode='wb', pathname=None):
+                seqno=None, revwidth=None, mode='wb', modemap={},
+                pathname=None):
 
     writable = mode not in ('r', 'rb')
 
@@ -195,9 +197,11 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
         return pat
     if util.safehasattr(pat, 'read') and 'r' in mode:
         return pat
-    return open(makefilename(repo, pat, node, desc, total, seqno, revwidth,
-                              pathname),
-                mode)
+    fn = makefilename(repo, pat, node, desc, total, seqno, revwidth, pathname)
+    mode = modemap.get(fn, mode)
+    if mode == 'wb':
+        modemap[fn] = 'ab'
+    return open(fn, mode)
 
 def openrevlog(repo, cmd, file_, opts):
     """opens the changelog, manifest, a filelog or a given revlog"""
@@ -538,6 +542,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
 
     total = len(revs)
     revwidth = max([len(str(rev)) for rev in revs])
+    filemode = {}
 
     def single(rev, seqno, fp):
         ctx = repo[rev]
@@ -553,7 +558,8 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             desc_lines = ctx.description().rstrip().split('\n')
             desc = desc_lines[0]    #Commit always has a first line.
             fp = makefileobj(repo, template, node, desc=desc, total=total,
-                             seqno=seqno, revwidth=revwidth, mode='ab')
+                             seqno=seqno, revwidth=revwidth, mode='wb',
+                             modemap=filemode)
             if fp != template:
                 shouldclose = True
         if fp and fp != sys.stdout and util.safehasattr(fp, 'name'):
@@ -569,6 +575,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         write("# HG changeset patch\n")
         write("# User %s\n" % ctx.user())
         write("# Date %d %d\n" % ctx.date())
+        write("#      %s\n" % util.datestr(ctx.date()))
         if branch and branch != 'default':
             write("# Branch %s\n" % branch)
         write("# Node ID %s\n" % hex(node))
@@ -1015,8 +1022,6 @@ def walkchangerevs(repo, match, opts, prepare):
 
     follow = opts.get('follow') or opts.get('follow_first')
 
-    if not len(repo):
-        return []
     if opts.get('rev'):
         revs = scmutil.revrange(repo, opts.get('rev'))
     elif follow:
@@ -1203,6 +1208,13 @@ def walkchangerevs(repo, match, opts, prepare):
             if ff.match(x):
                 wanted.discard(x)
 
+    # Choose a small initial window if we will probably only visit a
+    # few commits.
+    limit = loglimit(opts)
+    windowsize = 8
+    if limit:
+        windowsize = min(limit, windowsize)
+
     # Now that wanted is correctly initialized, we can iterate over the
     # revision range, yielding only revisions in wanted.
     def iterate():
@@ -1214,7 +1226,7 @@ def walkchangerevs(repo, match, opts, prepare):
             def want(rev):
                 return rev in wanted
 
-        for i, window in increasingwindows(0, len(revs)):
+        for i, window in increasingwindows(0, len(revs), windowsize):
             nrevs = [rev for rev in revs[i:i + window] if want(rev)]
             for rev in sorted(nrevs):
                 fns = fncache.get(rev)
@@ -1576,10 +1588,13 @@ def forget(ui, repo, match, prefix, explicitonly):
     forgot.extend(forget)
     return bad, forgot
 
-def duplicatecopies(repo, rev, p1):
-    "Reproduce copies found in the source revision in the dirstate for grafts"
-    for dst, src in copies.pathcopies(repo[p1], repo[rev]).iteritems():
-        repo.dirstate.copy(src, dst)
+def duplicatecopies(repo, rev, fromrev):
+    '''reproduce copies from fromrev to rev in the dirstate'''
+    for dst, src in copies.pathcopies(repo[fromrev], repo[rev]).iteritems():
+        # copies.pathcopies returns backward renames, so dst might not
+        # actually be in the dirstate
+        if repo.dirstate[dst] in "nma":
+            repo.dirstate.copy(src, dst)
 
 def commit(ui, repo, commitfunc, pats, opts):
     '''commit the specified files or all outstanding changes'''
@@ -1643,7 +1658,13 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # Also update it from the intermediate commit or from the wctx
             extra.update(ctx.extra())
 
-            files = set(old.files())
+            if len(old.parents()) > 1:
+                # ctx.files() isn't reliable for merges, so fall back to the
+                # slower repo.status() method
+                files = set([fn for st in repo.status(base, old)[:3]
+                             for fn in st])
+            else:
+                files = set(old.files())
 
             # Second, we use either the commit we just did, or if there were no
             # changes the parent of the working directory as the version of the
@@ -1708,7 +1729,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             extra['amend_source'] = old.hex()
 
             new = context.memctx(repo,
-                                 parents=[base.node(), nullid],
+                                 parents=[base.node(), old.p2().node()],
                                  text=message,
                                  files=files,
                                  filectxfn=filectxfn,
@@ -1769,7 +1790,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     finally:
         if newid is None:
             repo.dirstate.invalidate()
-        lockmod.release(wlock, lock)
+        lockmod.release(lock, wlock)
     return newid
 
 def commiteditor(repo, ctx, subs):
@@ -1793,6 +1814,8 @@ def commitforceeditor(repo, ctx, subs):
         edittext.append(_("HG: branch merge"))
     if ctx.branch():
         edittext.append(_("HG: branch '%s'") % ctx.branch())
+    if bookmarks.iscurrent(repo):
+        edittext.append(_("HG: bookmark '%s'") % repo._bookmarkcurrent)
     edittext.extend([_("HG: subrepo %s") % s for s in subs])
     edittext.extend([_("HG: added %s") % f for f in added])
     edittext.extend([_("HG: changed %s") % f for f in modified])
@@ -1811,6 +1834,52 @@ def commitforceeditor(repo, ctx, subs):
         raise util.Abort(_("empty commit message"))
 
     return text
+
+def commitstatus(repo, node, branch, bheads=None, opts={}):
+    ctx = repo[node]
+    parents = ctx.parents()
+
+    if (not opts.get('amend') and bheads and node not in bheads and not
+        [x for x in parents if x.node() in bheads and x.branch() == branch]):
+        repo.ui.status(_('created new head\n'))
+        # The message is not printed for initial roots. For the other
+        # changesets, it is printed in the following situations:
+        #
+        # Par column: for the 2 parents with ...
+        #   N: null or no parent
+        #   B: parent is on another named branch
+        #   C: parent is a regular non head changeset
+        #   H: parent was a branch head of the current branch
+        # Msg column: whether we print "created new head" message
+        # In the following, it is assumed that there already exists some
+        # initial branch heads of the current branch, otherwise nothing is
+        # printed anyway.
+        #
+        # Par Msg Comment
+        # N N  y  additional topo root
+        #
+        # B N  y  additional branch root
+        # C N  y  additional topo head
+        # H N  n  usual case
+        #
+        # B B  y  weird additional branch root
+        # C B  y  branch merge
+        # H B  n  merge with named branch
+        #
+        # C C  y  additional head from merge
+        # C H  n  merge with a head
+        #
+        # H H  n  head merge: head count decreases
+
+    if not opts.get('close_branch'):
+        for r in parents:
+            if r.closesbranch() and r.branch() == branch:
+                repo.ui.status(_('reopening closed branch head %d\n') % r)
+
+    if repo.ui.debugflag:
+        repo.ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx.hex()))
+    elif repo.ui.verbose:
+        repo.ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx))
 
 def revert(ui, repo, ctx, parents, *pats, **opts):
     parent, p2 = parents
@@ -1985,6 +2054,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             for f in undelete[0]:
                 checkout(f)
                 normal(f)
+
+            copied = copies.pathcopies(repo[parent], ctx)
+
+            for f in add[0] + undelete[0] + revert[0]:
+                if f in copied:
+                    repo.dirstate.copy(copied[f], f)
 
             if targetsubs:
                 # Revert the subrepos on the revert list

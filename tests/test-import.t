@@ -34,7 +34,7 @@ import exported patch
   $ hg --cwd b import ../exported-tip.patch
   applying ../exported-tip.patch
 
-message and committer should be same
+message and committer and date should be same
 
   $ hg --cwd b tip
   changeset:   1:1d4bd90af0e4
@@ -853,6 +853,7 @@ in commit message
   # HG changeset patch
   # User User B
   # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
   # Node ID eb56ab91903632294ac504838508cb370c0901d2
   # Parent  0000000000000000000000000000000000000000
   from: tricky!

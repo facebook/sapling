@@ -32,7 +32,7 @@ and make sure that inotify.pidfile works
 
 make sure that pidfile worked. Output should be silent.
 
-  $ kill `cat ../hg2.pid`
+  $ "$TESTDIR/killdaemons.py" ../hg2.pid
   $ cd ../repo1
 
 inserve
@@ -157,7 +157,7 @@ Now, lets add some build products...
 build/x & build/y shouldn't appear in "hg st"
 
   $ hg st
-  $ kill `cat hg.pid`
+  $ "$TESTDIR/killdaemons.py" hg.pid
 
   $ cd ..
 
@@ -179,4 +179,4 @@ Trying to start the server a second time should fail as usual.
   abort: inotify-server: cannot start: socket is already bound
   [255]
 
-  $ kill `cat hg3.pid`
+  $ "$TESTDIR/killdaemons.py" hg3.pid

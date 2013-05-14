@@ -1,9 +1,9 @@
 {header}
 <title>{repo|escape}: Tags</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-tags" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-tags" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-tags" title="RSS feed for {repo|escape}"/>
+   href="{url|urlescape}rss-tags" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
@@ -13,15 +13,15 @@
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
-<a href="{url}graph{sessionvars%urlparameter}">graph</a> |
+<a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a> |
 tags |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
-<a href="{url}file/{node|short}{sessionvars%urlparameter}">files</a> |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a> |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 </div>
 

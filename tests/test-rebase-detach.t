@@ -326,8 +326,6 @@ Verify that target is not selected as external rev (issue3085)
   $ hg ci -m "J"
 
   $ hg rebase -s 8 -d 7 --collapse --config ui.merge=internal:other
-  remote changed E which local deleted
-  use (c)hanged version or leave (d)eleted? c
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
@@ -374,8 +372,8 @@ Ensure --continue restores a correct state (issue3046) and phase:
   merging H
   warning: conflicts during merge.
   merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
-  abort: unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [255]
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
   $ hg resolve --all -t internal:local
   $ hg rebase -c
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/6215fafa5447-backup.hg (glob)

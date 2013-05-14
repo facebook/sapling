@@ -22,18 +22,15 @@ class bundlerevlog(revlog.revlog):
         # How it works:
         # To retrieve a revision, we need to know the offset of the revision in
         # the bundle (an unbundle object). We store this offset in the index
-        # (start).
-        #
-        # basemap is indexed with revisions coming from the bundle, and it
-        # maps to the revision that is the base of the corresponding delta.
+        # (start). The base of the delta is stored in the base field.
         #
         # To differentiate a rev in the bundle from a rev in the revlog, we
-        # check revision against basemap.
+        # check revision against repotiprev.
         opener = scmutil.readonlyvfs(opener)
         revlog.revlog.__init__(self, opener, indexfile)
         self.bundle = bundle
-        self.basemap = {} # mapping rev to delta base rev
         n = len(self)
+        self.repotiprev = n - 1
         chain = None
         self.bundlerevs = set() # used by 'bundle()' revset expression
         while True:
@@ -68,9 +65,8 @@ class bundlerevlog(revlog.revlog):
 
             baserev = self.rev(deltabase)
             # start, size, full unc. size, base (unused), link, p1, p2, node
-            e = (revlog.offset_type(start, 0), size, -1, -1, link,
+            e = (revlog.offset_type(start, 0), size, -1, baserev, link,
                  self.rev(p1), self.rev(p2), node)
-            self.basemap[n] = baserev
             self.index.insert(-1, e)
             self.nodemap[node] = n
             self.bundlerevs.add(n)
@@ -78,22 +74,22 @@ class bundlerevlog(revlog.revlog):
             n += 1
 
     def _chunk(self, rev):
-        # Warning: in case of bundle, the diff is against self.basemap,
-        # not against rev - 1
+        # Warning: in case of bundle, the diff is against what we stored as
+        # delta base, not against rev - 1
         # XXX: could use some caching
-        if rev not in self.basemap:
+        if rev <= self.repotiprev:
             return revlog.revlog._chunk(self, rev)
         self.bundle.seek(self.start(rev))
         return self.bundle.read(self.length(rev))
 
     def revdiff(self, rev1, rev2):
         """return or calculate a delta between two revisions"""
-        if rev1 in self.basemap and rev2 in self.basemap:
+        if rev1 > self.repotiprev and rev2 > self.repotiprev:
             # hot path for bundle
-            revb = self.basemap[rev2]
+            revb = self.index[rev2][3]
             if revb == rev1:
                 return self._chunk(rev2)
-        elif rev1 not in self.basemap and rev2 not in self.basemap:
+        elif rev1 <= self.repotiprev and rev2 <= self.repotiprev:
             return revlog.revlog.revdiff(self, rev1, rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
@@ -117,12 +113,12 @@ class bundlerevlog(revlog.revlog):
         chain = []
         iterrev = rev
         # reconstruct the revision if it is from a changegroup
-        while iterrev in self.basemap:
+        while iterrev > self.repotiprev:
             if self._cache and self._cache[1] == iterrev:
                 text = self._cache[2]
                 break
             chain.append(iterrev)
-            iterrev = self.basemap[iterrev]
+            iterrev = self.index[iterrev][3]
         if text is None:
             text = revlog.revlog.revision(self, iterrev)
 
@@ -364,9 +360,15 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
             bundle = None
         if not localrepo:
             # use the created uncompressed bundlerepo
-            localrepo = bundlerepo = bundlerepository(ui, repo.root, fname)
+            localrepo = bundlerepo = bundlerepository(repo.baseui, repo.root,
+                                                      fname)
             # this repo contains local and other now, so filter out local again
             common = repo.heads()
+    if localrepo:
+        # Part of common may be remotely filtered
+        # So use an unfiltered version
+        # The discovery process probably need cleanup to avoid that
+        localrepo = localrepo.unfiltered()
 
     csets = localrepo.changelog.findmissing(common, rheads)
 

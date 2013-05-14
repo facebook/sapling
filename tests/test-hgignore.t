@@ -124,3 +124,13 @@ Check it does not ignore the current directory '.':
   (?:(?:|.*/)[^/]*(?:/|$))
 
   $ cd ..
+
+Check patterns that match only the directory
+
+  $ echo "^dir\$" > .hgignore
+  $ hg status
+  A dir/b.o
+  ? .hgignore
+  ? a.c
+  ? a.o
+  ? syntax

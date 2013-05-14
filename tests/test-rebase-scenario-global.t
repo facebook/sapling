@@ -276,6 +276,9 @@ C onto A - rebase onto an ancestor:
 Check rebasing public changeset
 
   $ hg pull --config phases.publish=True -q -r 6 . # update phase of 6
+  $ hg rebase -d 0 -b 6
+  nothing to rebase
+  [1]
   $ hg rebase -d 5 -b 6
   abort: can't rebase immutable changeset e1c4361dd923
   (see hg help phases for details)
@@ -564,7 +567,7 @@ We would expect heads are I, F if it was supported
   
   $ cd ..
 
-More complexe rebase with multiple roots
+More complex rebase with multiple roots
 each root have a different common ancestor with the destination and this is a detach
 
 (setup)

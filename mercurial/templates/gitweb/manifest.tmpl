@@ -1,9 +1,9 @@
 {header}
 <title>{repo|escape}: files</title>
 <link rel="alternate" type="application/atom+xml"
-   href="{url}atom-log" title="Atom feed for {repo|escape}"/>
+   href="{url|urlescape}atom-log" title="Atom feed for {repo|escape}"/>
 <link rel="alternate" type="application/rss+xml"
-   href="{url}rss-log" title="RSS feed for {repo|escape}"/>
+   href="{url|urlescape}rss-log" title="RSS feed for {repo|escape}"/>
 </head>
 <body>
 
@@ -13,16 +13,16 @@
 </div>
 
 <div class="page_nav">
-<a href="{url}summary{sessionvars%urlparameter}">summary</a> |
-<a href="{url}shortlog{sessionvars%urlparameter}">shortlog</a> |
-<a href="{url}log{sessionvars%urlparameter}">changelog</a> |
-<a href="{url}graph{sessionvars%urlparameter}">graph</a> |
-<a href="{url}tags{sessionvars%urlparameter}">tags</a> |
-<a href="{url}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
-<a href="{url}branches{sessionvars%urlparameter}">branches</a> |
+<a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a> |
+<a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a> |
+<a href="{url|urlescape}log{sessionvars%urlparameter}">changelog</a> |
+<a href="{url|urlescape}graph{sessionvars%urlparameter}">graph</a> |
+<a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a> |
+<a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
+<a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
 files |
-<a href="{url}rev/{node|short}{sessionvars%urlparameter}">changeset</a> {archives%archiveentry} |
-<a href="{url}help{sessionvars%urlparameter}">help</a>
+<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a> {archives%archiveentry} |
+<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 </div>
 
@@ -32,7 +32,7 @@ files |
 <td style="font-family:monospace">drwxr-xr-x</td>
 <td style="font-family:monospace"></td>
 <td style="font-family:monospace"></td>
-<td><a href="{url}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
+<td><a href="{url|urlescape}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
 <td class="link">&nbsp;</td>
 </tr>
 {dentries%direntry}

@@ -47,7 +47,7 @@ used. Use a boolean value like yes, no, on, off, or use auto for
 normal behavior.
 '''
 
-import atexit, sys, os, signal, subprocess
+import atexit, sys, os, signal, subprocess, errno, shlex
 from mercurial import commands, dispatch, util, extensions
 from mercurial.i18n import _
 
@@ -94,6 +94,8 @@ def _pagersubprocess(ui, p):
 
     @atexit.register
     def killpager():
+        if util.safehasattr(signal, "SIGINT"):
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
         pager.stdin.close()
         os.dup2(stdout, sys.stdout.fileno())
         os.dup2(stderr, sys.stderr.fileno())

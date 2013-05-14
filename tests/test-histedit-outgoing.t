@@ -82,3 +82,24 @@ show the error from unrelated repos
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
+
+test sensitivity to branch in URL:
+
+  $ cd r2
+  $ hg -q update 2
+  $ hg -q branch foo
+  $ hg commit -m 'create foo branch'
+  $ HGEDITOR=cat hg histedit --outgoing '../r#foo' | grep -v comparing | grep -v searching
+  pick f26599ee3441 6 create foo branch
+  
+  # Edit history between f26599ee3441 and f26599ee3441
+  #
+  # Commands:
+  #  p, pick = use commit
+  #  e, edit = use commit, but stop for amending
+  #  f, fold = use commit, but fold into previous commit (combines N and N-1)
+  #  d, drop = remove commit from history
+  #  m, mess = edit message without changing commit content
+  #
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd ..

@@ -314,7 +314,7 @@ def readgitpatch(lr):
     gitpatches = []
     for line in lr:
         line = line.rstrip(' \r\n')
-        if line.startswith('diff --git'):
+        if line.startswith('diff --git a/'):
             m = gitre.match(line)
             if m:
                 if gp:
@@ -1211,7 +1211,7 @@ def iterhunks(fp):
                 emitfile = False
                 yield 'file', (afile, bfile, h, gp and gp.copy() or None)
             yield 'hunk', h
-        elif x.startswith('diff --git'):
+        elif x.startswith('diff --git a/'):
             m = gitre.match(x.rstrip(' \r\n'))
             if not m:
                 continue
@@ -1756,6 +1756,8 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                     else:
                         header.append('deleted file mode %s\n' %
                                       gitmode[man1.flags(f)])
+                        if util.binary(to):
+                            dodiff = 'binary'
                 elif not to or util.binary(to):
                     # regular diffs cannot represent empty file deletion
                     losedatafn(f)
@@ -1813,7 +1815,7 @@ def diffstatdata(lines):
             addresult()
             # set numbers to 0 anyway when starting new file
             adds, removes, isbinary = 0, 0, False
-            if line.startswith('diff --git'):
+            if line.startswith('diff --git a/'):
                 filename = gitre.search(line).group(1)
             elif line.startswith('diff -r'):
                 # format: "diff -r ... -r ... filename"

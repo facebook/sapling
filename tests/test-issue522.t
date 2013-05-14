@@ -29,11 +29,11 @@ revision.
     unmatched files in local:
      bar
   resolving manifests
-   overwrite: False, partial: False
+   branchmerge: True, force: False, partial: False
    ancestor: bbd179dfa0a7, local: 71766447bdbb+, remote: 4d9e78aaceee
    foo: remote is newer -> g
-  updating: foo 1/1 files (100.00%)
   getting foo
+  updating: foo 1/1 files (100.00%)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

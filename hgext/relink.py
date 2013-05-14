@@ -41,7 +41,7 @@ def relink(ui, repo, origin=None, **opts):
     if (not util.safehasattr(util, 'samefile') or
         not util.safehasattr(util, 'samedevice')):
         raise util.Abort(_('hardlinks are not supported on this system'))
-    src = hg.repository(ui, ui.expandpath(origin or 'default-relink',
+    src = hg.repository(repo.baseui, ui.expandpath(origin or 'default-relink',
                                           origin or 'default'))
     ui.status(_('relinking %s to %s\n') % (src.store.path, repo.store.path))
     if repo.root == src.root:

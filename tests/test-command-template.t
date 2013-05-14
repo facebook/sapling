@@ -43,6 +43,11 @@ Second branch starting at nullrev:
   $ hg mv second fourth
   $ hg commit -m third -d "2020-01-01 10:01"
 
+  $ hg log --template '{join(file_copies, ",\n")}\n' -r .
+  fourth (second)
+  $ hg log --template '{file_copies % "{source} -> {name}\n"}' -r .
+  second -> fourth
+
 Quoting for ui.logtemplate
 
   $ hg tip --config "ui.logtemplate={rev}\n"
@@ -1526,3 +1531,7 @@ Test new-style inline templating:
   $ hg log -R latesttag -r tip --template 'modified files: {file_mods % " {file}\n"}\n'
   modified files:  .hgtags
   
+Test the sub function of templating for expansion:
+
+  $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
+  xx

@@ -30,6 +30,8 @@ if {[catch {package require Ttk}]} {
     interp alias {} ttk::label {} label
     interp alias {} ttk::scrollbar {} scrollbar
     interp alias {} ttk::optionMenu {} tk_optionMenu
+
+    proc updatepalette {} {}
 } else {
     proc ::ttk::optionMenu {w varName firstValue args} {
         upvar #0 $varName var
@@ -45,6 +47,11 @@ if {[catch {package require Ttk}]} {
             $w.menu add radiobutton -label $i -variable $varName
         }
         return $w.menu
+    }
+    proc updatepalette {} {
+        catch {
+            tk_setPalette background [ttk::style lookup client -background]
+        }
     }
 }
 
@@ -109,12 +116,18 @@ bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
 # end of win32 section
 } else {
 
-if {[ttk::style theme use] eq "default"} {
+if {[catch {
+    set theme [ttk::style theme use]
+}]} {
+    set theme $::ttk::currentTheme
+}
+if {$theme eq "default"} {
     ttk::style theme use clam
 }
 
 }
 
+updatepalette
 
 # Unify right mouse button handling.
 # See "mouse buttons on macintosh" thread on comp.lang.tcl
@@ -132,6 +145,18 @@ proc gitdir {} {
     } else {
 	return ".hg"
     }
+}
+
+proc popupify {w} {
+    wm resizable $w 0 0
+    wm withdraw $w
+    update
+    set x [expr {([winfo screenwidth .]-[winfo reqwidth $w])/2}]
+    set y [expr {([winfo screenheight .]-[winfo reqheight $w])/2}]
+    wm geometry  $w +$x+$y
+    wm transient $w .
+    wm deiconify $w
+    wm resizable $w 1 1
 }
 
 proc getcommits {rargs} {
@@ -375,11 +400,11 @@ proc parsecommit {id contents listed olds} {
 	}
     }
     if {$audate != {}} {
-	set audate [clock format $audate -format "%Y-%m-%d %H:%M:%S"]
+	set audate [clock format $audate]
     }
     if {$comdate != {}} {
 	set cdate($id) $comdate
-	set comdate [clock format $comdate -format "%Y-%m-%d %H:%M:%S"]
+	set comdate [clock format $comdate]
     }
     set commitinfo($id) [list $headline $auname $audate \
 			     $comname $comdate $comment $rev $branch $bookmark]
@@ -431,16 +456,13 @@ proc readrefs {} {
             exit 2
         }
     }
-    regsub -all "\r\n" $tags "\n" tags
 
-    set lines [split $tags "\n"]
-    foreach f $lines {
-	regexp {(\S+)$} $f full
-	regsub {\s+(\S+)$} $f "" direct
-	set sha [split $full ':']
-	set tag [lindex $sha 1]
-	lappend tagids($direct) $tag
-	lappend idtags($tag) $direct
+    foreach {tag rev} $tags {
+        # we use foreach as Tcl8.4 doesn't support lassign
+        foreach {- id} [split $rev :] {
+            lappend tagids($tag) $id
+            lappend idtags($id) $tag
+        }
     }
 
     set status [catch {exec $env(HG) --config ui.report_untrusted=false heads} heads]
@@ -450,9 +472,8 @@ proc readrefs {} {
             exit 2
         }
     }
-    regsub -all "\r\n" $heads "\n" heads
 
-    set lines [split $heads "\n"]
+    set lines [split $heads \r\n]
     foreach f $lines {
         set match ""
         regexp {changeset:\s+(\S+):(\S+)$} $f match id sha
@@ -524,6 +545,7 @@ proc error_popup msg {
     ttk::button $w.ok -text OK -command "destroy $w"
     pack $w.ok -side bottom -fill x
     bind $w <Visibility> "grab $w; focus $w"
+    popupify $w
     tkwait window $w
 }
 
@@ -540,7 +562,7 @@ proc makewindow {} {
     if {[info exists posx]} {
         wm geometry . +$posx+$posy
     }
-    
+
     menu .bar
     .bar add cascade -label "File" -menu .bar.file
     menu .bar.file
@@ -637,7 +659,7 @@ proc makewindow {} {
 			  findtype Exact IgnCase Regexp]
     set findloc "All fields"
     ttk::optionMenu .ctop.top.bar.findloc findloc "All fields" Headline \
-	Comments Author Committer Files Pickaxe
+	Comments Author Files Pickaxe
     pack .ctop.top.bar.findloc -side right
     pack .ctop.top.bar.findtype -side right
     # for making sure type==Exact whenever loc==Pickaxe
@@ -944,6 +966,7 @@ Use and redistribute under the terms of the GNU General Public License} \
     pack $w.m -side top -fill x -padx 20 -pady 20
     ttk::button $w.ok -text Close -command "destroy $w"
     pack $w.ok -side bottom
+    popupify $w
 }
 
 set aunextcolor 0
@@ -1924,7 +1947,7 @@ proc dofind {} {
 	set oldsel $selectedline
     }
     set didsel 0
-    set fldtypes {Headline Author Date Committer CDate Comment}
+    set fldtypes {Headline Author Date CDate Comment}
     for {set l 0} {$l < $numcommits} {incr l} {
 	set id $lineid($l)
 	set info $commitinfo($id)
@@ -2466,12 +2489,12 @@ proc selectline {l isnew} {
     $ctext mark set fmark.0 0.0
     $ctext mark gravity fmark.0 left
     set info $commitinfo($id)
-    $ctext insert end "Revision: [lindex $info 6]\n"
+    $ctext insert end "Changeset: [lindex $info 6]\n"
     if {[llength [lindex $info 7]] > 0} {
         $ctext insert end "Branch: [lindex $info 7]\n"
     }
-    $ctext insert end "Author: [lindex $info 1]  [lindex $info 2]\n"
-    $ctext insert end "Committer: [lindex $info 3]  [lindex $info 4]\n"
+    $ctext insert end "User: [lindex $info 1]\n"
+    $ctext insert end "Date: [lindex $info 2]\n"
     if {[info exists idbookmarks($id)]} {
 	$ctext insert end "Bookmarks:"
 	foreach bookmark $idbookmarks($id) {
@@ -3596,7 +3619,7 @@ proc lineclick {x y id isnew} {
     $ctext tag bind link0 <1> [list selbyid $id]
     set info $commitinfo($id)
     $ctext insert end "\n\t[lindex $info 0]\n"
-    $ctext insert end "\tAuthor:\t[lindex $info 1]\n"
+    $ctext insert end "\tUser:\t[lindex $info 1]\n"
     $ctext insert end "\tDate:\t[lindex $info 2]\n"
     if {[info exists children($id)]} {
 	$ctext insert end "\nChildren:"
@@ -3608,7 +3631,7 @@ proc lineclick {x y id isnew} {
 	    $ctext insert end $child [list link link$i]
 	    $ctext tag bind link$i <1> [list selbyid $child]
 	    $ctext insert end "\n\t[lindex $info 0]"
-	    $ctext insert end "\n\tAuthor:\t[lindex $info 1]"
+	    $ctext insert end "\n\tUser:\t[lindex $info 1]"
 	    $ctext insert end "\n\tDate:\t[lindex $info 2]\n"
 	}
     }
@@ -3715,13 +3738,11 @@ proc mkpatch {} {
     set patchtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Generate patch"
-    grid $top.title - -pady 10
     ttk::label $top.from -text "From:"
     ttk::entry $top.fromsha1 -width 40
     $top.fromsha1 insert 0 $oldid
     $top.fromsha1 conf -state readonly
-    grid $top.from $top.fromsha1 -sticky w
+    grid $top.from $top.fromsha1 -sticky w -pady {10 0}
     ttk::entry $top.fromhead -width 60
     $top.fromhead insert 0 $oldhead
     $top.fromhead conf -state readonly
@@ -3750,6 +3771,8 @@ proc mkpatch {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
+    popupify $top
+    wm title $top "Generate a patch"
 }
 
 proc mkpatchrev {} {
@@ -3795,13 +3818,11 @@ proc mktag {} {
     set mktagtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Create tag"
-    grid $top.title - -pady 10
     ttk::label $top.id -text "ID:"
     ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
-    grid $top.id $top.sha1 -sticky w
+    grid $top.id $top.sha1 -sticky w -pady {10 0}
     ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
@@ -3817,6 +3838,8 @@ proc mktag {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.tag
+    popupify $top
+    wm title $top "Create a tag"
 }
 
 proc domktag {} {
@@ -3875,13 +3898,11 @@ proc writecommit {} {
     set wrcomtop $top
     catch {destroy $top}
     toplevel $top
-    ttk::label $top.title -text "Write commit to file"
-    grid $top.title - -pady 10
     ttk::label $top.id -text "ID:"
     ttk::entry $top.sha1 -width 40
     $top.sha1 insert 0 $rowmenuid
     $top.sha1 conf -state readonly
-    grid $top.id $top.sha1 -sticky w
+    grid $top.id $top.sha1 -sticky w -pady {10 0}
     ttk::entry $top.head -width 60
     $top.head insert 0 [lindex $commitinfo($rowmenuid) 0]
     $top.head conf -state readonly
@@ -3901,6 +3922,8 @@ proc writecommit {} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.fname
+    popupify $top
+    wm title $top "Write commit to a file"
 }
 
 proc wrcomgo {} {

@@ -9,6 +9,7 @@ from i18n import _
 import sys, os, re
 import util, config, templatefilters, parser, error
 import types
+import minirst
 
 # template parsing
 
@@ -207,6 +208,19 @@ def buildfunc(exp, context):
         f = context._filters[n]
         return (runfilter, (args[0][0], args[0][1], f))
 
+def get(context, mapping, args):
+    if len(args) != 2:
+        # i18n: "get" is a keyword
+        raise error.ParseError(_("get() expects two arguments"))
+
+    dictarg = args[0][0](context, mapping, args[0][1])
+    if not util.safehasattr(dictarg, 'get'):
+        # i18n: "get" is a keyword
+        raise error.ParseError(_("get() expects a dict as first argument"))
+
+    key = args[1][0](context, mapping, args[1][1])
+    yield dictarg.get(key)
+
 def join(context, mapping, args):
     if not (1 <= len(args) <= 2):
         # i18n: "join" is a keyword
@@ -214,7 +228,8 @@ def join(context, mapping, args):
 
     joinset = args[0][0](context, mapping, args[0][1])
     if util.safehasattr(joinset, '__call__'):
-        joinset = [x.values()[0] for x in joinset()]
+        jf = joinset.joinfmt
+        joinset = [jf(x) for x in joinset()]
 
     joiner = " "
     if len(args) > 1:
@@ -236,6 +251,8 @@ def sub(context, mapping, args):
     pat = stringify(args[0][0](context, mapping, args[0][1]))
     rpl = stringify(args[1][0](context, mapping, args[1][1]))
     src = stringify(args[2][0](context, mapping, args[2][1]))
+    src = stringify(runtemplate(context, mapping,
+                                compiletemplate(src, context)))
     yield re.sub(pat, rpl, src)
 
 def if_(context, mapping, args):
@@ -274,6 +291,16 @@ def label(context, mapping, args):
     t = stringify(args[1][0](context, mapping, args[1][1]))
     yield runtemplate(context, mapping, compiletemplate(t, context))
 
+def rstdoc(context, mapping, args):
+    if len(args) != 2:
+        # i18n: "rstdoc" is a keyword
+        raise error.ParseError(_("rstdoc expects two arguments"))
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    style = stringify(args[1][0](context, mapping, args[1][1]))
+
+    return minirst.format(text, style=style, keep=['verbose'])
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -285,11 +312,13 @@ methods = {
     }
 
 funcs = {
+    "get": get,
     "if": if_,
     "ifeq": ifeq,
     "join": join,
-    "sub": sub,
     "label": label,
+    "rstdoc": rstdoc,
+    "sub": sub,
 }
 
 # template engine

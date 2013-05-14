@@ -447,14 +447,6 @@ Logs and changes
       </div>
     </td>
   </tr>
-  <tr>
-   <th class="author">change baseline</th>
-   <td class="author"></td>
-  </tr>
-  <tr>
-   <th class="author">current baseline</th>
-   <td class="author"><a href="/rev/000000000000">000000000000</a></td>
-  </tr>
   </table>
   
   <div class="overflow">
@@ -1186,13 +1178,13 @@ Static files
     background-color: #666;
     padding: 2pt;
     color: white;
-    font-family: sans;
+    font-family: sans-serif;
     font-weight: bold;
   }
   .navigate a {
     background-color: #ccc;
     padding: 2pt;
-    font-family: sans;
+    font-family: sans-serif;
     color: black;
   }
   
@@ -1370,4 +1362,173 @@ Test paging
 
   $ cat errors.log
 
+bookmarks view doesn't choke on bookmarks on secret changesets (issue3774)
+
+  $ hg phase -fs 4
+  $ hg bookmark -r4 secret
+  $ cat > hgweb.cgi <<HGWEB
+  > from mercurial import demandimport; demandimport.enable()
+  > from mercurial.hgweb import hgweb
+  > from mercurial.hgweb import wsgicgi
+  > app = hgweb('.', 'test')
+  > wsgicgi.launch(app)
+  > HGWEB
+  $ . "$TESTDIR/cgienv"
+  $ PATH_INFO=/bookmarks; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi | grep -v ETag:
+  Status: 200 Script output follows\r (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+
+listbookmarks hides secret bookmarks
+
+  $ PATH_INFO=/; export PATH_INFO
+  $ QUERY_STRING='cmd=listkeys&namespace=bookmarks'
+  $ python hgweb.cgi
+  Status: 200 Script output follows\r (esc)
+  Content-Type: application/mercurial-0.1\r (esc)
+  Content-Length: 0\r (esc)
+  \r (esc)
+
+search works with filtering
+
+  $ PATH_INFO=/log; export PATH_INFO
+  $ QUERY_STRING='rev=babar'
+  $ python hgweb.cgi > search
+  $ grep Status search
+  Status: 200 Script output follows\r (esc)
+
+summary works with filtering (issue3810)
+
+  $ PATH_INFO=/summary; export PATH_INFO
+  $ QUERY_STRING='style=monoblue'; export QUERY_STRING
+  $ python hgweb.cgi > summary.out
+  $ grep "^Status" summary.out
+  Status: 200 Script output follows\r (esc)
+
+proper status for filtered revision
+
+
+(missing rev)
+
+  $ PATH_INFO=/rev/5; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi #> search
+  Status: 404 Not Found\r (esc)
+  ETag: *\r (glob) (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  
+  error: unknown revision '5'
+
+
+
+(filtered rev)
+
+  $ PATH_INFO=/rev/4; export PATH_INFO
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi #> search
+  Status: 404 Not Found\r (esc)
+  ETag: *\r (glob) (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  
+  error: unknown revision '4'
+
+filtered '0' changeset
+
+(create new root)
+  $ hg up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo 'babar' > jungle
+  $ hg add jungle
+  $ hg ci -m 'Babar is in the jungle!'
+  created new head
+  $ hg graft 0::
+  grafting revision 0
+  grafting revision 1
+  grafting revision 2
+  grafting revision 3
+  grafting revision 4
+  grafting revision 5
+(turning the initial root secret (filtered))
+  $ hg phase --force --secret 0
+  $ PATH_INFO=/graph/; export PATH_INFO
+  $ QUERY_STRING=''
+  $ python hgweb.cgi | grep Status
+  Status: 200 Script output follows\r (esc)
+(check rendered revision)
+  $ QUERY_STRING='style=raw'
+  $ python hgweb.cgi | grep -v ETag
+  Status: 200 Script output follows\r (esc)
+  Content-Type: text/plain; charset=ascii\r (esc)
+  \r (esc)
+  
+  # HG graph
+  # Node ID 1d9b947fef1fbb382a95c11a8f5a67e9a10b5026
+  # Rows shown 7
+  
+  changeset:   1d9b947fef1f
+  user:        test
+  date:        1970-01-01
+  summary:     5
+  branch:      default
+  tag:         tip
+  
+  node:        (0, 0) (color 1)
+  edge:        (0, 0) -> (0, 1) (color 1)
+  
+  changeset:   0cfd435fd222
+  user:        test
+  date:        1970-01-01
+  summary:     4
+  
+  node:        (0, 1) (color 1)
+  edge:        (0, 1) -> (0, 2) (color 1)
+  
+  changeset:   6768b9939e82
+  user:        test
+  date:        1970-01-01
+  summary:     3
+  
+  node:        (0, 2) (color 1)
+  edge:        (0, 2) -> (0, 3) (color 1)
+  
+  changeset:   05b0497fd125
+  user:        test
+  date:        1970-01-01
+  summary:     2
+  
+  node:        (0, 3) (color 1)
+  edge:        (0, 3) -> (0, 4) (color 1)
+  
+  changeset:   9c102df67cfb
+  user:        test
+  date:        1970-01-01
+  summary:     1
+  
+  node:        (0, 4) (color 1)
+  edge:        (0, 4) -> (0, 5) (color 1)
+  
+  changeset:   3ebcd7db11bf
+  user:        test
+  date:        1970-01-01
+  summary:     0
+  
+  node:        (0, 5) (color 1)
+  edge:        (0, 5) -> (0, 6) (color 1)
+  
+  changeset:   c5e9bd96ae01
+  user:        test
+  date:        1970-01-01
+  summary:     Babar is in the jungle!
+  
+  node:        (0, 6) (color 1)
+  
+  
+
+
+
   $ cd ..
+

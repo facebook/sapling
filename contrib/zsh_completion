@@ -163,21 +163,10 @@ _hg_revrange() {
 }
 
 _hg_labels() {
-  _hg_tags "$@"
-  _hg_bookmarks "$@"
-  _hg_branches "$@"
+  labels=("${(f)$(_hg_cmd debuglabelcomplete)}")
+  (( $#labels )) && _describe -t labels 'labels' labels
 }
 
-_hg_tags() {
-  typeset -a tags
-  local tag rev
-
-  _hg_cmd tags | while read tag
-  do
-    tags+=(${tag/ #[0-9]#:*})
-  done
-  (( $#tags )) && _describe -t tags 'tags' tags
-}
 _hg_bookmarks() {
   typeset -a bookmark bookmarks
 
@@ -508,7 +497,7 @@ _hg_cmd_backout() {
     '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
     '(--rev -r)'{-r+,--rev}'[revision]:revision:_hg_labels' \
     '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
-    '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt'
+    '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files'
 }
 
 _hg_cmd_bisect() {
@@ -576,7 +565,7 @@ _hg_cmd_commit() {
   _arguments -s -w : $_hg_global_opts $_hg_pat_opts $_hg_subrepos_opts \
   '(--addremove -A)'{-A,--addremove}'[mark new/missing files as added/removed before committing]' \
   '(--message -m)'{-m+,--message}'[use <text> as commit message]:text:' \
-  '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files -g \*.txt' \
+  '(--logfile -l)'{-l+,--logfile}'[read commit message from <file>]:log file:_files' \
   '(--date -d)'{-d+,--date}'[record datecode as commit date]:date code:' \
   '(--user -u)'{-u+,--user}'[record user as commiter]:user:' \
   '--amend[amend the parent of the working dir]' \
@@ -940,7 +929,7 @@ _hg_cmd_update() {
 _hg_cmd_view() {
   _arguments -s -w : $_hg_global_opts \
   '(--limit -l)'{-l+,--limit}'[limit number of changes displayed]:' \
-  ':revision range:_hg_tags'
+  ':revision range:_hg_labels'
 }
 
 # MQ
