@@ -856,3 +856,16 @@ def cleanupnode(ui, repo, name, nodes):
             repair.strip(ui, repo, c)
     finally:
         lockmod.release(lock)
+
+def summaryhook(ui, repo):
+    if not os.path.exists(repo.join('histedit-state')):
+        return
+    (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
+    if rules:
+        # i18n: column positioning for "hg summary"
+        ui.write(_('hist:   %s (histedit --continue)\n') %
+                 (ui.label(_('%d remaining'), 'histedit.remaining') %
+                  len(rules)))
+
+def extsetup(ui):
+    cmdutil.summaryhooks.add('histedit', summaryhook)

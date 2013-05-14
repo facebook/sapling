@@ -159,6 +159,7 @@ check histedit_source
   branch: default
   commit: 1 added (new branch head)
   update: 1 new changesets (update)
+  hist:   1 remaining (histedit --continue)
 
   $ HGEDITOR='true' hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

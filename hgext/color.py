@@ -63,6 +63,8 @@ Default effects may be overridden from your configuration file::
   rebase.rebased = blue
   rebase.remaining = red bold
 
+  histedit.remaining = red bold
+
 The available effects in terminfo mode are 'blink', 'bold', 'dim',
 'inverse', 'invisible', 'italic', 'standout', and 'underline'; in
 ECMA-48 mode, the options are 'bold', 'inverse', 'italic', and
@@ -251,6 +253,7 @@ _styles = {'grep.match': 'red bold',
            'diff.trailingwhitespace': 'bold red_background',
            'diffstat.deleted': 'red',
            'diffstat.inserted': 'green',
+           'histedit.remaining': 'red bold',
            'ui.prompt': 'yellow',
            'log.changeset': 'yellow',
            'rebase.rebased': 'blue',
