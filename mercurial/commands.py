@@ -5489,6 +5489,8 @@ def summary(ui, repo, **opts):
         ui.write(_('update: %d new changesets, %d branch heads (merge)\n') %
                  (new, len(bheads)))
 
+    cmdutil.summaryhooks(ui, repo)
+
     if opts.get('remote'):
         t = []
         source, branches = hg.parseurl(ui.expandpath('default'))

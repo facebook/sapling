@@ -1946,3 +1946,19 @@ def sizetoint(s):
         return int(t)
     except ValueError:
         raise error.ParseError(_("couldn't parse size: %s") % s)
+
+class hooks(object):
+    '''A collection of hook functions that can be used to extend a
+    function's behaviour. Hooks are called in lexicographic order,
+    based on the names of their sources.'''
+
+    def __init__(self):
+        self._hooks = []
+
+    def add(self, source, hook):
+        self._hooks.append((source, hook))
+
+    def __call__(self, *args):
+        self._hooks.sort(key=lambda x: x[0])
+        for source, hook in self._hooks:
+            hook(*args)

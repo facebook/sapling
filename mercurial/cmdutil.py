@@ -2082,3 +2082,6 @@ def command(table):
         return decorator
 
     return cmd
+
+# a list of (ui, repo) functions called by commands.summary
+summaryhooks = util.hooks()
