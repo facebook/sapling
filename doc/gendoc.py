@@ -7,7 +7,7 @@ from mercurial import demandimport; demandimport.enable()
 from mercurial import encoding
 from mercurial import minirst
 from mercurial.commands import table, globalopts
-from mercurial.i18n import _
+from mercurial.i18n import gettext, _
 from mercurial.help import helptable
 from mercurial import extensions
 from mercurial import util
@@ -51,7 +51,7 @@ def get_cmd(cmd, cmdtable):
 
     d['cmd'] = cmds[0]
     d['aliases'] = cmd.split("|")[1:]
-    d['desc'] = get_desc(attr[0].__doc__)
+    d['desc'] = get_desc(gettext(attr[0].__doc__))
     d['opts'] = list(get_opts(attr[1]))
 
     s = 'hg ' + cmds[0]
@@ -102,7 +102,7 @@ def show_doc(ui):
     for extensionname in sorted(allextensionnames()):
         mod = extensions.load(None, extensionname, None)
         ui.write(minirst.subsection(extensionname))
-        ui.write("%s\n\n" % mod.__doc__)
+        ui.write("%s\n\n" % gettext(mod.__doc__))
         cmdtable = getattr(mod, 'cmdtable', None)
         if cmdtable:
             ui.write(minirst.subsubsection(_('Commands')))
