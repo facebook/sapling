@@ -175,11 +175,33 @@ def getfiles(repo, proto):
             node = request[:40]
             path = request[40:]
             try:
-                temprevlog = revlog.revlog(opener, "data/" + path + ".i")
+                filectx = repo.filectx(path, fileid=bin(node))
 
-                text = temprevlog.revision(bin(node))
-                p1, p2 = temprevlog.parents(bin(node))
-                text = lz4.compressHC(p1 + p2 + text)
+                text = filectx.data()
+
+                ancestors = [filectx]
+                ancestors.extend([f for f in filectx.ancestors()])
+
+                ancestortext = ""
+                for ancestorctx in ancestors:
+                    parents = ancestorctx.parents()
+                    p1 = nullid
+                    p2 = nullid
+                    if len(parents) > 0:
+                        p1 = parents[0].filenode()
+                    if len(parents) > 1:
+                        p2 = parents[1].filenode()
+
+                    copyname = ""
+                    rename = ancestorctx.renamed()
+                    if rename:
+                        copyname = rename[0]
+                    ancestortext += "%s%s%s%s\0" % (
+                        ancestorctx.filenode(), p1, p2, copyname)
+
+                text = lz4.compressHC("%d\0%s%s" %
+                    (len(text), text, ancestortext))
+
             except Exception, ex:
                 text = ""
 
@@ -199,17 +221,23 @@ def addshallowcapability():
     wrapfunction(sshpeer.sshpeer, '_callstream', callstream)
 
 def ancestors(orig, self, followfirst=False):
-    visit = {}
-    c = self
-    cut = followfirst and 1 or None
-    queue = []
-    while True:
-        for parent in c.parents()[:cut]:
-            queue.append(parent)
-        if not queue:
-            break
+    filelog = self.filelog()
+    mapping = filelog.ancestors(self.filenode())
+
+    currentpath = self.path()
+    queue = [self.filenode()]
+    while queue:
         c = queue.pop(0)
-        yield c
+        p1, p2, copyfrom = mapping[c]
+        yield self.repo.filectx(copyfrom or currentpath, fileid=p1)
+        queue.append(p1)
+
+        if not followfirst:
+            yield self.repo.filectx(currentpath, fileid=p2)
+            queue.append(p2)
+
+        if copyfrom:
+            currentpath = copyfrom
 
 def tracefile(orig, fctx, actx):
     '''return file context that is the ancestor of fctx present in actx'''

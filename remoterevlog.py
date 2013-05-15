@@ -48,10 +48,16 @@ class remoterevlog(object):
         if node == nullid:
             return nullid, nullid
         raw = self._read(hex(node))
-        return raw[:20], raw[20:40]
+        index = raw.index('\0')
+        size = int(raw[:index])
+        offset = index + 1 + size + 20
+        return raw[offset:(offset + 20)], raw[(offset + 20):(offset + 40)]
 
     def rawsize(self, node):
-        return len(self.revision(node))
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+        return size
     size = rawsize
 
     def cmp(self, node, text):
@@ -77,7 +83,11 @@ class remoterevlog(object):
             raise LookupError(node, self.filename, _('invalid revision input'))
 
         raw = self._read(hex(node))
-        return raw[40:]
+
+        index = raw.index('\0')
+        size = int(raw[:index])
+        data = raw[(index + 1):(index + 1 + size)]
+        return data
 
     def _read(self, id):
         cachepath = os.path.join(fileserverclient.client.cachepath, id)
@@ -103,13 +113,33 @@ class remoterevlog(object):
         return None
 
     def _remoteread(self, id):
-        fileserverclient.prefetch(self.opener.vfs.base, [(self.filename, id)])
+        fileserverclient.client.prefetch(self.opener.vfs.base, [(self.filename, id)])
 
         cachepath = os.path.join(fileserverclient.client.cachepath, id)
         if os.path.exists(cachepath):
             return _readfile(cachepath)
 
         return None
+
+    def ancestors(self, id):
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+        start = index + 1 + size
+
+        mapping = {}
+        while start < len(raw):
+            divider = raw.index('\0', start + 60)
+
+            node = raw[start:(start + 20)]
+            p1 = raw[(start + 20):(start + 40)]
+            p2 = raw[(start + 40):(start + 60)]
+            copyfrom = raw[(start + 60):divider]
+
+            mapping[node] = (p1, p2, copyfrom)
+            start = divider + 1
+
+        return mapping
 
     def strip(self, minlink, transaction):
         pass
