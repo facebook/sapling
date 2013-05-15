@@ -74,20 +74,9 @@ def show_doc(ui):
     ui.write(minirst.section(_("Commands")))
     commandprinter(ui, table, minirst.subsection)
 
-    # print topics
-    for names, sec, doc in helptable:
-        if names[0] == "config":
-            # The config help topic is included in the hgrc.5 man
-            # page.
-            continue
-        for name in names:
-            ui.write(".. _%s:\n" % name)
-        ui.write("\n")
-        ui.write(minirst.section(sec))
-        if util.safehasattr(doc, '__call__'):
-            doc = doc()
-        ui.write(doc)
-        ui.write("\n")
+    # print help topics
+    # The config help topic is included in the hgrc.5 man page.
+    helpprinter(ui, helptable, minirst.section, exclude=['config'])
 
     ui.write(minirst.section(_("Extensions")))
     ui.write(_("This section contains help for extensions that are "
@@ -107,6 +96,22 @@ def show_doc(ui):
         if cmdtable:
             ui.write(minirst.subsubsection(_('Commands')))
             commandprinter(ui, cmdtable, minirst.subsubsubsection)
+
+def helpprinter(ui, helptable, sectionfunc, include=[], exclude=[]):
+    for names, sec, doc in helptable:
+        if exclude and names[0] in exclude:
+            continue
+        if include and names[0] not in include:
+            continue
+        for name in names:
+            ui.write(".. _%s:\n" % name)
+        ui.write("\n")
+        if sectionfunc:
+            ui.write(sectionfunc(sec))
+        if util.safehasattr(doc, '__call__'):
+            doc = doc()
+        ui.write(doc)
+        ui.write("\n")
 
 def commandprinter(ui, cmdtable, sectionfunc):
     h = {}
