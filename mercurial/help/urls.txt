@@ -7,8 +7,8 @@ Valid URLs are of the form::
   ssh://[user@]host[:port]/[path][#revision]
 
 Paths in the local filesystem can either point to Mercurial
-repositories or to bundle files (as created by :hg:`bundle` or :hg:`
-incoming --bundle`). See also :hg:`help paths`.
+repositories or to bundle files (as created by :hg:`bundle` or
+:hg:`incoming --bundle`). See also :hg:`help paths`.
 
 An optional identifier after # indicates a particular branch, tag, or
 changeset to use from the remote repository. See also :hg:`help

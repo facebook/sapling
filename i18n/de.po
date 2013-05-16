@@ -14078,13 +14078,14 @@ msgstr ""
 
 #, python-format
 msgid "was merge of '%s' successful (yn)?"
-msgstr ""
+msgstr "ist die Zusammenführung von '%s' gelungen (jn)?"
 
 #, python-format
 msgid ""
 " output file %s appears unchanged\n"
 "was merge successful (yn)?"
-msgstr ""
+msgstr "Ausgabedatei %s scheint unverändert\n"
+"ist die Zusammenführung gelungen (jn)?"
 
 msgid "unterminated string"
 msgstr "nicht abgeschlossene Zeichenkette"
