@@ -5,10 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import remotefilelog
+import shallowrepo
 
-uisetup = remotefilelog.uisetup
-reposetup = remotefilelog.reposetup
-extsetup = remotefilelog.extsetup
+uisetup = shallowrepo.uisetup
+reposetup = shallowrepo.reposetup
+extsetup = shallowrepo.extsetup
 
 testedwith = 'internal'

@@ -14,11 +14,16 @@ fetchcost = 0
 fetches = 0
 fetched = 0
 fetchedbytes = 0
-actualbytes = 0
+contentbytes = 0
+metadatabytes = 0
 
 _downloading = _('downloading')
 
 client = None
+
+def getcachekey(file, id):
+    pathhash = util.sha1(file).hexdigest()
+    return os.path.join(pathhash, id)
 
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
@@ -47,7 +52,8 @@ class fileserverclient(object):
         count = len(fileids)
         request = "%d\1" % count
         for file, id in fileids:
-            request += "%s%s\1" % (id, file)
+            pathhash = util.sha1(file).hexdigest()
+            request += "%s%s%s\1" % (id, pathhash, file)
 
         self.socket.sendall(request)
 
@@ -56,7 +62,8 @@ class fileserverclient(object):
         self.ui.progress(_downloading, 0, total=count)
 
         global fetchedbytes
-        global actualbytes
+        global metadatabytes
+        global contentbytes
 
         while count > 0:
             count -= 1
@@ -67,7 +74,8 @@ class fileserverclient(object):
                                    "connection closed early"))
 
             id = raw[:40]
-            size = int(raw[40:])
+            pathhash = raw[40:80]
+            size = int(raw[80:])
 
             fetchedbytes += len(raw) + size + 1
 
@@ -78,9 +86,17 @@ class fileserverclient(object):
             data = self.read(size)
             data = lz4.decompress(data)
 
-            actualbytes += len(data)
+            index = data.index('\0')
+            contentsize = int(data[:index])
 
-            idcachepath = os.path.join(self.cachepath, id)
+            contentbytes += contentsize
+            metadatabytes += len(data) - contentsize
+
+            filecachepath = os.path.join(self.cachepath, pathhash)
+            if not os.path.exists(filecachepath):
+                os.makedirs(filecachepath)
+
+            idcachepath = os.path.join(filecachepath, id)
 
             f = open(idcachepath, "w")
             try:
@@ -100,12 +116,13 @@ class fileserverclient(object):
 
     def close(self):
         if fetches:
-            print ("%s fetched over %d fetches - %0.2f MB (%0.2f MB decomp) " +
+            print ("%s fetched over %d fetches - %0.2f MB (%0.2f MB content / %0.2f MB metadata) " +
                   "over %0.2fs = %0.2f MB/s") % (
                     fetched,
                     fetches,
                     float(fetchedbytes) / 1024 / 1024,
-                    float(actualbytes) / 1024 / 1024,
+                    float(contentbytes) / 1024 / 1024,
+                    float(metadatabytes) / 1024 / 1024,
                     fetchcost,
                     float(fetchedbytes) / 1024 / 1024 / max(0.001, fetchcost))
 
@@ -125,7 +142,10 @@ class fileserverclient(object):
     def readuntil(self, delimiter="\1"):
         index = self.buffer.find(delimiter)
         while index == -1:
-            self.buffer += self.socket.recv(4096)
+            new = self.socket.recv(4096)
+            if not new:
+                raise util.Abort(_("Connection closed early"))
+            self.buffer += new
             index = self.buffer.find(delimiter)
 
         result = self.buffer[:index]
@@ -141,8 +161,9 @@ class fileserverclient(object):
             if file == '.hgtags':
                 continue
 
-            idcachepath = os.path.join(self.cachepath, id)
-            idlocalpath = os.path.join(storepath, 'localdata', id)
+            key = getcachekey(file, id)
+            idcachepath = os.path.join(self.cachepath, key)
+            idlocalpath = os.path.join(storepath, 'localdata', key)
             if os.path.exists(idcachepath) or os.path.exists(idlocalpath):
                 continue
 

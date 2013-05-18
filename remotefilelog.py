@@ -1,394 +1,333 @@
-# remotefilelog.py - extension for storing file contents remotely
+# remoterevlog.py - revlog implementation where the content is stored remotely
 #
 # Copyright 2013 Facebook, Inc.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient, remoterevlog
+import fileserverclient
+import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial.i18n import _
-from mercurial.extensions import wrapfunction
-from mercurial import ancestor, mdiff, parsers, error, util, dagutil, time
-from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
-from mercurial import copies, traceback, store, context, changegroup, localrepo
-from mercurial import commands, sshpeer, scmutil, dispatch, merge
-import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
+from mercurial import revlog, mdiff, bundle, filelog
 
-shallowremote = False
-localrepo.localrepository.supported.add('shallowrepo')
+def _readfile(path):
+    f = open(path, "r")
+    try:
+        return f.read()
+    finally:
+        f.close()
 
-def uisetup(ui):
-    entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
-    entry[1].append(('', 'shallow', None,
-                     _("create a shallow clone which uses remote file history")))
+def _writefile(path, content):
+    dirname = os.path.dirname(path)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
 
-def extsetup(ui):
-    # the remote client communicates it's shallow capability via hello
-    orig, args = wireproto.commands["hello"]
-    def helloshallow(*args, **kwargs):
-        global shallowremote
-        shallowremote = True
-        return orig(*args, **kwargs)
-    wireproto.commands["hello_shallow"] = (helloshallow, args)
+    f = open(path, "w")
+    try:
+        f.write(content)
+    finally:
+        f.close()
 
-def cloneshallow(orig, ui, repo, *args, **opts):
-    if opts.get('shallow'):
-        addshallowcapability()
-        def stream_in_shallow(orig, self, remote, requirements):
-            # set up the client hooks so the post-clone update works
-            setupclient(self.ui, self)
-
-            requirements.add('shallowrepo')
-
-            return orig(self, remote, requirements)
-        wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
-
-    orig(ui, repo, *args, **opts)
-
-def reposetup(ui, repo):
-    if not repo.local():
-        return
-
-    isserverenabled = ui.configbool('remotefilelog', 'server')
-    isshallowclient = "shallowrepo" in repo.requirements
-
-    if isserverenabled and isshallowclient:
-        raise Exception("Cannot be both a server and shallow client.")
-
-    if isshallowclient:
-        setupclient(ui, repo)
-
-    if isserverenabled:
-        # support file content requests
-        wireproto.commands['getfiles'] = (getfiles, '')
-
-    if isserverenabled or isshallowclient:
-        # only put filelogs in changegroups when necessary
-        def shouldaddfilegroups(source):
-            if source == "push":
-                return True
-            if source == "serve":
-                if isshallowclient:
-                    # commits in a shallow repo may not exist in the master server
-                    # so we need to return all the data on a pull
-                    ui.warn("pulling from a shallow repo\n")
-                    return True
-                return not shallowremote
-
-            return not isshallowclient
-
-        def addfilegroups(orig, self):
-            if shouldaddfilegroups(self.source):
-                return orig(self)
-            return []
-        wrapfunction(changegroup.changegroupgen, 'addfilegroups', addfilegroups)
-
-        # don't allow streaming clones from a shallow repo
-        def stream(repo, proto):
-            if isshallowclient:
-                # don't allow cloning from a shallow repo since the cloned
-                # repo would be unable to access local commits
-                raise util.Abort(_("Cannot clone from a shallow repo."))
-
-            return wireproto.stream(repo, proto)
-        wireproto.commands['stream_out'] = (stream, '')
-
-        # don't clone filelogs to shallow clients
-        def _walkstreamfiles(orig, repo):
-            if shallowremote:
-                return repo.store.topfiles()
-            return orig(repo)
-        wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
-
-def setupclient(ui, repo):
-    addshallowcapability();
-
-    fileserverclient.client = fileserverclient.fileserverclient(ui)
-
-    # replace filelog base class
-    filelog.filelog.__bases__ = (remoterevlog.remoterevlog, )
-
-    # prefetch files before update hook
-    def applyupdates(orig, repo, actions, wctx, mctx, actx, overwrite):
-        manifest = mctx.manifest()
-        files = []
-        for f, m, args, msg in [a for a in actions if a[1] == 'g']:
-            files.append((f, hex(manifest[f])))
-        # batch fetch the needed files from the server
-        fileserverclient.client.prefetch(repo.sopener.vfs.base, files)
-        return orig(repo, actions, wctx, mctx, actx, overwrite)
-    wrapfunction(merge, 'applyupdates', applyupdates)
-
-    # close connection
-    def runcommand(orig, *args, **kwargs):
-        try:
-            return orig(*args, **kwargs)
-        finally:
-            fileserverclient.client.close()
-    wrapfunction(dispatch, 'runcommand', runcommand)
-
-    # disappointing hacks below
-
-    # filelog & filectx
-    def filelogsize(orig, self, node):
-        if self.renamed(node):
-            return len(self.read(node))
-        return super(filelog.filelog, self).size(node)
-    wrapfunction(filelog.filelog, 'size', filelogsize)
-
-    def filectxsize(orig, self):
-        return self._filelog.size(self._filenode)
-    wrapfunction(context.filectx, 'size', filectxsize)
-
-    wrapfunction(context.filectx, 'ancestors', ancestors)
-
-    # prevent strip from considering filelogs
-    def _collectbrokencsets(orig, repo, files, striprev):
-        return orig(repo, [], striprev)
-    wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
-
-    # tracing copies without rev numbers
-    wrapfunction(copies, '_tracefile', tracefile)
-
-    wrapfunction(copies, 'checkcopies', checkcopies)
-
-    # changegroup creation
-    changegroup.changegroupgen = partialchangegroupgen
-    changegroup.subsetchangegroupgen.__bases__ = (partialchangegroupgen, )
-    changegroup.bundle10.nodechunk = nodechunk
-
-    # adding changegroup files to the repo
-    wrapfunction(localrepo.localrepository, 'addchangegroupfiles', addchangegroupfiles)
-
-def getfiles(repo, proto):
-    """A server api for requesting particular versions of particular files.
+def _createrevlogtext(text, copyfrom=None, copyrev=None):
+    """returns a string that matches the revlog contents in a
+    traditional revlog
     """
-    def streamer():
-        fin = proto.fin
-        opener = repo.sopener
-        while True:
-            request = fin.readline()[:-1]
-            if not request:
-                break
+    meta = {}
+    if copyfrom or text.startswith('\1\n'):
+        if copyfrom:
+            meta['copy'] = copyfrom
+            meta['copyrev'] = copyrev
+        text = "\1\n%s\1\n%s" % (filelog._packmeta(meta), text)
 
-            node = request[:40]
-            path = request[40:]
-            try:
-                filectx = repo.filectx(path, fileid=bin(node))
+    return text
 
-                text = filectx.data()
+class remotefilelog(object):
+    def __init__(self, opener, path):
+        self.opener = opener
+        self.filename = path
+        self.localpath = os.path.join(opener.vfs.base, 'localdata')
 
-                ancestors = [filectx]
-                ancestors.extend([f for f in filectx.ancestors()])
+        if not os.path.exists(self.localpath):
+            os.makedirs(self.localpath)
 
-                ancestortext = ""
-                for ancestorctx in ancestors:
-                    parents = ancestorctx.parents()
-                    p1 = nullid
-                    p2 = nullid
-                    if len(parents) > 0:
-                        p1 = parents[0].filenode()
-                    if len(parents) > 1:
-                        p2 = parents[1].filenode()
+    def read(self, node):
+        """returns the file contents at this node"""
 
-                    copyname = ""
-                    rename = ancestorctx.renamed()
-                    if rename:
-                        copyname = rename[0]
-                    ancestortext += "%s%s%s%s\0" % (
-                        ancestorctx.filenode(), p1, p2, copyname)
+        # the file blobs are formated as such:
+        # blob => size of content + \0 + content + list(ancestors)
+        # ancestor => node + p1 + p2 + linknode + copypath + \0
 
-                text = lz4.compressHC("%d\0%s%s" %
-                    (len(text), text, ancestortext))
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
 
-            except Exception, ex:
-                text = ""
+        return raw[(index + 1):(index + 1 + size)]
 
-            yield '%d\n%s' % (len(text), text)
+    def add(self, text, meta, transaction, linknode, p1=None, p2=None):
+        hashtext = text
 
-            # it would be better to only flush after processing a whole batch
-            # but currently we don't know if there are more requests coming
-            proto.fout.flush()
+        # hash with the metadata, like in vanilla filelogs
+        hashtext = _createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+        node = revlog.hash(hashtext, p1, p2)
 
-    return wireproto.streamres(streamer())
+        def _createfileblob():
+            data = "%s\0%s" % (len(text), text)
 
-def addshallowcapability():
-    def callstream(orig, self, cmd, **args):
-        if cmd == 'hello':
-            cmd += '_shallow'
-        return orig(self, cmd, **args)
-    wrapfunction(sshpeer.sshpeer, '_callstream', callstream)
+            realp1 = p1
+            copyfrom = ""
+            if 'copy' in meta:
+                copyfrom = meta['copy']
+                realp1 = bin(meta['copyrev'])
 
-def ancestors(orig, self, followfirst=False):
-    filelog = self.filelog()
-    mapping = filelog.ancestors(self.filenode())
+            data += "%s%s%s%s%s\0" % (node, realp1, p2, linknode, copyfrom)
 
-    currentpath = self.path()
-    queue = [self.filenode()]
-    while queue:
-        c = queue.pop(0)
-        p1, p2, copyfrom = mapping[c]
-        yield self.repo.filectx(copyfrom or currentpath, fileid=p1)
-        queue.append(p1)
+            pancestors = {}
+            queue = []
+            if realp1 != nullid:
+                p1flog = self
+                if copyfrom:
+                    p1flog = remotefilelog(self.opener, copyfrom)
 
-        if not followfirst:
-            yield self.repo.filectx(currentpath, fileid=p2)
-            queue.append(p2)
+                pancestors.update(p1flog.ancestormap(realp1))
+                queue.append(realp1)
+            if p2 != nullid:
+                pancestors.update(self.ancestormap(p2))
+                queue.append(p2)
+
+            visited = set()
+            ancestortext = ""
+
+            # add the ancestors in topological order
+            while queue:
+                c = queue.pop(0)
+                visited.add(c)
+                pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
+
+                ancestortext += "%s%s%s%s%s\0" % (
+                    c, pa1, pa2, ancestorlinknode, pacopyfrom)
+
+                if pa1 != nullid and pa1 not in visited:
+                    queue.append(pa1)
+                if pa2 != nullid and pa2 not in visited:
+                    queue.append(pa2)
+
+            data += ancestortext
+
+            return data
+
+        key = fileserverclient.getcachekey(self.filename, hex(node))
+        path = os.path.join(self.localpath, key)
+        _writefile(path, _createfileblob())
+
+        return node
+
+    def renamed(self, node):
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+
+        offset = index + 1 + size
+        p1 = raw[(offset + 20):(offset + 40)]
+        copyoffset = offset + 80
+        copyfromend = raw.index('\0', copyoffset)
+        copyfrom = raw[copyoffset:copyfromend]
 
         if copyfrom:
-            currentpath = copyfrom
-
-def tracefile(orig, fctx, actx):
-    '''return file context that is the ancestor of fctx present in actx'''
-    am = actx.manifest()
-    for f in fctx.ancestors():
-        if am.get(f.path(), None) == f.filenode():
-            return f
-
-def checkcopies(orig, ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
-    '''check possible copies of f from m1 to m2'''
-
-    ma = ca.manifest()
-
-    def related(f1, f2):
-        # Walk back to common ancestor to see if the two files originate
-        # from the same file.
-
-        if f1 == f2:
-            return f1 # a match
-
-        g1, g2 = f1.ancestors(), f2.ancestors()
-
-        seen1 = set()
-        seen2 = set()
-        seen1.add(f1.filenode())
-        seen2.add(f2.filenode())
-        while g1 != None or g2 != None:
-            if g1 != None:
-                try:
-                    f1 = g1.next()
-                    if f1.filenode() in seen2:
-                        return f1
-                    seen1.add(f1.filenode())
-                except StopIteration:
-                    g1 = None
-                    if not seen1:
-                        return False
-
-            if g2 != None:
-                try:
-                    f2 = g2.next()
-                    if f2.filenode() in seen1:
-                        return f2
-                    seen2.add(f2.filenode())
-                except StopIteration:
-                    g2 = None
-                    if not seen2:
-                        return False
+            return (copyfrom, p1)
 
         return False
 
-    of = None
-    seen = set([f])
-    latestmaof = ma.get(f)
-    for oc in ctx(f, m1[f]).ancestors():
-        of = oc.path()
-        if of in seen:
-            # check limit late - grab last rename before
-            # break if we reach common ancestor
-            if latestmaof == oc.filenode():
-                break
-            continue
-        seen.add(of)
+    def size(self, node):
+        """return the size of a given revision"""
 
-        fullcopy[f] = of # remember for dir rename detection
-        if of not in m2:
-            continue # no match, keep looking
-        latestmaof = ma.get(of)
-        if m2[of] == latestmaof:
-            break # no merge needed, quit early
-        c2 = ctx(of, m2[of])
-        cr = related(oc, c2)
-        if cr and (of == f or of == c2.path()): # non-divergent
-            copy[f] = of
-            of = None
-            break
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+        return size
 
-    if of in ma:
-        diverge.setdefault(of, []).append(f)
+    def cmp(self, node, text):
+        """compare text with a given file revision
 
-def nodechunk(self, revlog, node, prev):
-    prefix = ''
-    if prev == nullrev:
-        delta = revlog.revision(node)
-        prefix = mdiff.trivialdiffheader(len(delta))
-    else:
-        delta = revlog.revdiff(prev, node)
-    linknode = self._lookup(revlog, node)
-    p1, p2 = revlog.parents(node)
-    meta = self.builddeltaheader(node, p1, p2, prev, linknode)
-    meta += prefix
-    l = len(meta) + len(delta)
-    yield changegroup.chunkheader(l)
-    yield meta
-    yield delta
+        returns True if text is different than what is stored.
+        """
 
-class partialchangegroupgen(changegroup.changegroupgen):
-    def __init__(self, repo, csets, source, reorder):
-        super(partialchangegroupgen, self).__init__(repo, csets, source, reorder)
-        self.changedfilenodes = {}
-        self.filecommitmap = {}
+        if node == nullid:
+            return True
 
-    def lookupmanifest(self, node):
-        self.count[0] += 1
-        self.progress(changegroup._bundling, self.count[0],
-                 unit=changegroup._manifests, total=self.count[1])
+        nodetext = self.read(node)
+        return nodetext != text
 
-        cl = self.cl
-        mf = self.mf
-        changedfilenodes = self.changedfilenodes
-        filecommitmap = self.filecommitmap
+    def __len__(self):
+        # hack
+        if self.filename == '.hgtags':
+            return 0
 
-        clnode = cl.node(mf.linkrev(mf.rev(node)))
-        clfiles = set(cl.read(clnode)[3])
-        for f, n in mf.readfast(node).iteritems():
-            if f in clfiles:
-                filenodes = changedfilenodes.setdefault(f, set())
-                filenodes.add(n)
-                if not (f, n) in filecommitmap:
-                    filecommitmap[(f, n)] = clnode
+        raise Exception("len not supported")
 
-        return clnode
+    def parents(self, node):
+        if node == nullid:
+            return nullid, nullid
 
-    def outgoingfilemap(self, filerevlog, fname):
-        # map of outgoing file nodes to changelog nodes
-        fnodes = self.changedfilenodes.get(fname, set())
-        filecommitmap = self.filecommitmap
+        ancestormap = self.ancestormap(node)
+        p1, p2, linknode, copyfrom = ancestormap[node]
+        if not copyfrom:
+            p1 = nullid
+
+        return p1, p2
+
+    def linknode(self, node):
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+        offset = index + 1 + size + 60
+        return raw[offset:(offset + 20)]
+
+    def revdiff(self, node1, node2):
+        return mdiff.textdiff(self.revision(node1),
+                              self.revision(node2))
+
+    def lookup(self, node):
+        if len(node) == 40:
+            node = bin(node)
+        if len(node) != 20:
+            raise LookupError(node, self.filename, _('invalid lookup input'))
+
+        return node
+
+    def revision(self, node):
+        """returns the revlog contents at this node.
+        this includes the meta data traditionally included in file revlogs.
+        this is generally only used for bundling and communicating with vanilla
+        hg clients.
+        """
+        if node == nullid:
+            return ""
+        if len(node) != 20:
+            raise LookupError(node, self.filename, _('invalid revision input'))
+
+        raw = self._read(hex(node))
+
+        index = raw.index('\0')
+        size = int(raw[:index])
+        data = raw[(index + 1):(index + 1 + size)]
+
+        mapping = self.ancestormap(node)
+        copyrev = None
+        copyfrom = mapping[node][2]
+        if copyfrom:
+            copyrev = mapping[node][1]
+
+        return _createrevlogtext(data, copyfrom, copyrev)
+
+    def _read(self, id):
+        """reads the raw file blob from disk, cache, or server"""
+        key = fileserverclient.getcachekey(self.filename, id)
+        cachepath = os.path.join(fileserverclient.client.cachepath, key)
+        if os.path.exists(cachepath):
+            return _readfile(cachepath)
+
+        localpath = os.path.join(self.localpath, key)
+        if os.path.exists(localpath):
+            return _readfile(localpath)
+
+        fileserverclient.client.prefetch(self.opener.vfs.base, [(self.filename, id)])
+        if os.path.exists(cachepath):
+            return _readfile(cachepath)
+
+        raise LookupError(id, self.filename, _('no node'))
+
+    def ancestormap(self, node):
+        raw = self._read(hex(node))
+        index = raw.index('\0')
+        size = int(raw[:index])
+        start = index + 1 + size
 
         mapping = {}
-        for fnode in fnodes:
-            clnode = filecommitmap.get((fname, fnode), None)
-            if clnode:
-                mapping[fnode] = clnode
+        while start < len(raw):
+            divider = raw.index('\0', start + 80)
+
+            node = raw[start:(start + 20)]
+            p1 = raw[(start + 20):(start + 40)]
+            p2 = raw[(start + 40):(start + 60)]
+            linknode = raw[(start + 60):(start + 80)]
+            copyfrom = raw[(start + 80):divider]
+
+            mapping[node] = (p1, p2, linknode, copyfrom)
+            start = divider + 1
+
         return mapping
 
-def addchangegroupfiles(orig, self, source, revmap, trp, pr, needfiles):
-    revisions = 0
-    files = 0
-    while True:
-        chunkdata = source.filelogheader()
-        if not chunkdata:
-            break
-        f = chunkdata["filename"]
-        self.ui.debug("adding %s revisions\n" % f)
-        pr()
-        files += 1
-        fl = self.file(f)
-        if not fl.addgroup(source, revmap, trp):
-            raise util.Abort(_("received file revlog group is empty"))
-        files += 1
+    def strip(self, minlink, transaction):
+        pass
 
-    self.ui.progress(_('files'), None)
+    def addgroup(self, bundle, linkmapper, transaction):
+        chain = None
+        while True:
+            chunkdata = bundle.deltachunk(chain)
+            if not chunkdata:
+                break
+            node = chunkdata['node']
+            p1 = chunkdata['p1']
+            p2 = chunkdata['p2']
+            cs = chunkdata['cs']
+            deltabase = chunkdata['deltabase']
+            delta = chunkdata['delta']
 
-    return revisions, files
+            base = self.revision(deltabase)
+            text = mdiff.patch(base, delta)
+            if isinstance(text, buffer):
+                text = str(text)
+
+            link = linkmapper(cs)
+            chain = self.addrevision(text, transaction, link, p1, p2)
+
+        return True
+
+    def group(self, nodelist, bundler, reorder=None):
+        if len(nodelist) == 0:
+            yield bundler.close()
+            return
+
+        nodelist = self._sortnodes(nodelist)
+
+        # add the parent of the first rev
+        p = self.parents(nodelist[0])[0]
+        nodelist.insert(0, p)
+
+        # build deltas
+        for i in xrange(len(nodelist) - 1):
+            prev, curr = nodelist[i], nodelist[i + 1]
+            for c in bundler.nodechunk(self, curr, prev):
+                yield c
+
+        yield bundler.close()
+
+    def _sortnodes(self, nodelist):
+        """returns the topologically sorted nodes
+        """
+        if len(nodelist) == 1:
+            return list(nodelist)
+
+        nodes = set(nodelist)
+        parents = {}
+        allparents = set()
+        for n in nodes:
+            parents[n] = self.parents(n)
+            allparents.update(parents[n])
+
+        allparents.intersection_update(nodes)
+
+        result = list()
+        while nodes:
+            root = None
+            for n in nodes:
+                p1, p2 = parents[n]
+                if not p1 in allparents and not p2 in allparents:
+                    root = n
+                    break
+
+            allparents.discard(root)
+            result.append(root)
+            nodes.remove(root)
+
+        return result
