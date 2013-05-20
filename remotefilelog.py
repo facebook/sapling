@@ -1,4 +1,4 @@
-# remoterevlog.py - revlog implementation where the content is stored remotely
+# remotefilelog.py - revlog implementation where the content is stored remotely
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -8,7 +8,8 @@
 import fileserverclient
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import revlog, mdiff, bundle, filelog
+from mercurial import revlog, mdiff, filelog, ancestor, error
+from mercurial.i18n import _
 
 def _readfile(path):
     f = open(path, "r")
@@ -41,17 +42,29 @@ def _createrevlogtext(text, copyfrom=None, copyrev=None):
 
     return text
 
+def _parsemeta(text):
+    meta, keys, size = filelog._parsemeta(text)
+    if text.startswith('\1\n'):
+        s = text.index('\1\n', 2)
+        text = text[s + 2:]
+    return meta or {}, text
+
 class remotefilelog(object):
     def __init__(self, opener, path):
         self.opener = opener
         self.filename = path
-        self.localpath = os.path.join(opener.vfs.base, 'localdata')
+        self.localpath = os.path.join(opener.vfs.base, 'data')
 
         if not os.path.exists(self.localpath):
             os.makedirs(self.localpath)
 
+        self.version = 1
+
     def read(self, node):
         """returns the file contents at this node"""
+
+        if node == nullid:
+            return ""
 
         # the file blobs are formated as such:
         # blob => size of content + \0 + content + list(ancestors)
@@ -164,13 +177,16 @@ class remotefilelog(object):
 
         raise Exception("len not supported")
 
+    def empty(self):
+        return False
+
     def parents(self, node):
         if node == nullid:
             return nullid, nullid
 
         ancestormap = self.ancestormap(node)
         p1, p2, linknode, copyfrom = ancestormap[node]
-        if not copyfrom:
+        if copyfrom:
             p1 = nullid
 
         return p1, p2
@@ -190,7 +206,7 @@ class remotefilelog(object):
         if len(node) == 40:
             node = bin(node)
         if len(node) != 20:
-            raise LookupError(node, self.filename, _('invalid lookup input'))
+            raise error.LookupError(node, self.filename, _('invalid lookup input'))
 
         return node
 
@@ -203,7 +219,7 @@ class remotefilelog(object):
         if node == nullid:
             return ""
         if len(node) != 20:
-            raise LookupError(node, self.filename, _('invalid revision input'))
+            raise error.LookupError(node, self.filename, _('invalid revision input'))
 
         raw = self._read(hex(node))
 
@@ -212,10 +228,10 @@ class remotefilelog(object):
         data = raw[(index + 1):(index + 1 + size)]
 
         mapping = self.ancestormap(node)
+        p1, p2, linknode, copyfrom = mapping[node]
         copyrev = None
-        copyfrom = mapping[node][2]
         if copyfrom:
-            copyrev = mapping[node][1]
+            copyrev = hex(p1)
 
         return _createrevlogtext(data, copyfrom, copyrev)
 
@@ -234,7 +250,7 @@ class remotefilelog(object):
         if os.path.exists(cachepath):
             return _readfile(cachepath)
 
-        raise LookupError(id, self.filename, _('no node'))
+        raise error.LookupError(id, self.filename, _('no node'))
 
     def ancestormap(self, node):
         raw = self._read(hex(node))
@@ -257,77 +273,28 @@ class remotefilelog(object):
 
         return mapping
 
+    def ancestor(self, a, b):
+        if a == nullid or b == nullid:
+            return nullid
+
+        amap = self.ancestormap(a)
+        bmap = self.ancestormap(b)
+
+        def parents(x):
+            p = amap.get(x)
+            if not p:
+                p = bmap.get(x)
+            return p or []
+
+        result = ancestor.genericancestor(a, b, parents)
+        return result or nullid
+
     def strip(self, minlink, transaction):
         pass
 
-    def addgroup(self, bundle, linkmapper, transaction):
-        chain = None
-        while True:
-            chunkdata = bundle.deltachunk(chain)
-            if not chunkdata:
-                break
-            node = chunkdata['node']
-            p1 = chunkdata['p1']
-            p2 = chunkdata['p2']
-            cs = chunkdata['cs']
-            deltabase = chunkdata['deltabase']
-            delta = chunkdata['delta']
+    # misc unused things
+    def files(self):
+        return []
 
-            base = self.revision(deltabase)
-            text = mdiff.patch(base, delta)
-            if isinstance(text, buffer):
-                text = str(text)
-
-            link = linkmapper(cs)
-            chain = self.addrevision(text, transaction, link, p1, p2)
-
-        return True
-
-    def group(self, nodelist, bundler, reorder=None):
-        if len(nodelist) == 0:
-            yield bundler.close()
-            return
-
-        nodelist = self._sortnodes(nodelist)
-
-        # add the parent of the first rev
-        p = self.parents(nodelist[0])[0]
-        nodelist.insert(0, p)
-
-        # build deltas
-        for i in xrange(len(nodelist) - 1):
-            prev, curr = nodelist[i], nodelist[i + 1]
-            for c in bundler.nodechunk(self, curr, prev):
-                yield c
-
-        yield bundler.close()
-
-    def _sortnodes(self, nodelist):
-        """returns the topologically sorted nodes
-        """
-        if len(nodelist) == 1:
-            return list(nodelist)
-
-        nodes = set(nodelist)
-        parents = {}
-        allparents = set()
-        for n in nodes:
-            parents[n] = self.parents(n)
-            allparents.update(parents[n])
-
-        allparents.intersection_update(nodes)
-
-        result = list()
-        while nodes:
-            root = None
-            for n in nodes:
-                p1, p2 = parents[n]
-                if not p1 in allparents and not p2 in allparents:
-                    root = n
-                    break
-
-            allparents.discard(root)
-            result.append(root)
-            nodes.remove(root)
-
-        return result
+    def checksize(self):
+        return 0, 0

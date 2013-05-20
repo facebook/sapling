@@ -163,7 +163,7 @@ class fileserverclient(object):
 
             key = getcachekey(file, id)
             idcachepath = os.path.join(self.cachepath, key)
-            idlocalpath = os.path.join(storepath, 'localdata', key)
+            idlocalpath = os.path.join(storepath, 'data', key)
             if os.path.exists(idcachepath) or os.path.exists(idlocalpath):
                 continue
 
