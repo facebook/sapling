@@ -22,7 +22,7 @@
   adding d/b
 
   $ hg mv d d-renamed
-  moving d/b to d-renamed/b
+  moving d/b to d-renamed/b (glob)
   $ hg ci -m 'rename B'
 
   $ hg up -q -C 1

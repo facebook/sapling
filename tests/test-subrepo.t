@@ -391,7 +391,7 @@ its working directory does not make its store dirty
   $ hg -R s update '.^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg push
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
@@ -400,7 +400,7 @@ its working directory does not make its store dirty
   [1]
   $ echo foo >> s/a
   $ hg push
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
@@ -415,7 +415,7 @@ committing into a subrepo makes its store (but not its parent's store) dirty
   $ echo foo >> s/ss/a
   $ hg -R s/ss commit -m 'test dirty store detection'
   $ hg push
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   pushing subrepo s/ss to $TESTTMP/t/s/ss (glob)
   searching for changes
   adding changesets
@@ -431,7 +431,7 @@ committing into a subrepo makes its store (but not its parent's store) dirty
 a subrepo store may be clean versus one repo but not versus another
 
   $ hg push
-  pushing to $TESTTMP/t
+  pushing to $TESTTMP/t (glob)
   no changes made to subrepo s/ss since last push to $TESTTMP/t/s/ss (glob)
   no changes made to subrepo s since last push to $TESTTMP/t/s
   no changes made to subrepo t since last push to $TESTTMP/t/t
@@ -798,7 +798,7 @@ Try the same, but with pull -u
 Try to push from the other side
 
   $ hg -R issue1852a push `pwd`/issue1852c
-  pushing to $TESTTMP/issue1852c
+  pushing to $TESTTMP/issue1852c (glob)
   pushing subrepo sub/repo to $TESTTMP/issue1852c/sub/repo (glob)
   searching for changes
   no changes found
