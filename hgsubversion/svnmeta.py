@@ -111,7 +111,7 @@ class SVNMeta(object):
     @property
     def layoutobj(self):
         if not self._layoutobj:
-            self._layoutobj = layouts.layout_from_name(self.layout)
+            self._layoutobj = layouts.layout_from_name(self.layout, self.ui)
         return self._layoutobj
 
     @property

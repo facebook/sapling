@@ -31,7 +31,7 @@ NAME_TO_CLASS = {
 }
 
 
-def layout_from_name(name):
+def layout_from_name(name, ui):
     """Returns a layout module given the layout name
 
     You should use one of the layout.detect.* functions to get the
@@ -41,4 +41,4 @@ def layout_from_name(name):
 
     if name not in NAME_TO_CLASS:
         raise hgutil.Abort('Unknown hgsubversion layout: %s' %name)
-    return NAME_TO_CLASS[name]()
+    return NAME_TO_CLASS[name](ui)
