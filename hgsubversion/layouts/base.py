@@ -41,3 +41,11 @@ class BaseLayout(object):
 
         """
         self.__unimplemented('remotepath')
+
+    def taglocations(self, meta_data_dir):
+        """Return a list of locations within svn to search for tags
+
+        Should be returned in reverse-sorted order.
+
+        """
+        self.__unimplemented('tagpaths')

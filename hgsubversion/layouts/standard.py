@@ -1,10 +1,16 @@
-
+import os.path
+import pickle
 
 import base
-
+import hgsubversion.util as util
 
 class StandardLayout(base.BaseLayout):
     """The standard trunk, branches, tags layout"""
+
+    def __init__(self, ui):
+        base.BaseLayout.__init__(self, ui)
+
+        self._tag_locations = None
 
     def localname(self, path):
         if path == 'trunk':
@@ -29,3 +35,24 @@ class StandardLayout(base.BaseLayout):
                 branchpath = 'branches/%s' % branch
 
         return '%s/%s' % (subdir or '', branchpath)
+
+    def taglocations(self, meta_data_dir):
+        if self._tag_locations is None:
+
+            tag_locations_file = os.path.join(meta_data_dir, 'tag_locations')
+
+            if os.path.exists(tag_locations_file):
+                f = open(tag_locations_file)
+                self._tag_locations = pickle.load(f)
+                f.close()
+            else:
+                self._tag_locations = self.ui.configlist('hgsubversion',
+                                                        'tagpaths',
+                                                        ['tags'])
+            util.pickle_atomic(self._tag_locations, tag_locations_file)
+
+            # ensure nested paths are handled properly
+            self._tag_locations.sort()
+            self._tag_locations.reverse()
+
+        return self._tag_locations

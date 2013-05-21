@@ -13,3 +13,6 @@ class SingleLayout(base.BaseLayout):
 
     def remotepath(self, branch, subdir='/'):
         return subdir or '/'
+
+    def taglocations(self, meta_data_dir):
+        return []

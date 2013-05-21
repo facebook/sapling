@@ -34,7 +34,6 @@ class SVNMeta(object):
 
         author_host = self.ui.config('hgsubversion', 'defaulthost', uuid)
         authors = util.configpath(self.ui, 'authormap')
-        tag_locations = self.ui.configlist('hgsubversion', 'tagpaths', ['tags'])
         self.usebranchnames = self.ui.configbool('hgsubversion',
                                                  'usebranchnames', True)
         branchmap = util.configpath(self.ui, 'branchmap')
@@ -48,19 +47,9 @@ class SVNMeta(object):
             f.close()
         self.prevbranches = dict(self.branches)
         self.tags = maps.Tags(repo)
-        if os.path.exists(self.tag_locations_file):
-            f = open(self.tag_locations_file)
-            self.tag_locations = pickle.load(f)
-            f.close()
-        else:
-            self.tag_locations = tag_locations
         self._layout = layouts.detect.layout_from_file(self.meta_data_dir,
                                                        ui=self.repo.ui)
         self._layoutobj = None
-        util.pickle_atomic(self.tag_locations, self.tag_locations_file)
-        # ensure nested paths are handled properly
-        self.tag_locations.sort()
-        self.tag_locations.reverse()
 
         self.authors = maps.AuthorMap(self.ui, self.authors_file,
                                  defaulthost=author_host)
@@ -168,10 +157,6 @@ class SVNMeta(object):
         return os.path.join(self.meta_data_dir, 'branch_info')
 
     @property
-    def tag_locations_file(self):
-        return os.path.join(self.meta_data_dir, 'tag_locations')
-
-    @property
     def authors_file(self):
         return os.path.join(self.meta_data_dir, 'authors')
 
@@ -268,7 +253,7 @@ class SVNMeta(object):
         """
         if self.layout != 'single':
             path = self.normalize(path)
-            for tagspath in self.tag_locations:
+            for tagspath in self.layoutobj.taglocations(self.meta_data_dir):
                 if path.startswith(tagspath + '/'):
                     tag = path[len(tagspath) + 1:]
                     if tag:
