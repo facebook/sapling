@@ -376,8 +376,6 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
             continue
         f, m, args, msg = action
 
-        choices = (_('&Largefile'), _('&Normal file'))
-
         splitstandin = lfutil.splitstandin(f)
         if (m == "g" and splitstandin is not None and
             splitstandin in p1 and f in p2):
@@ -386,8 +384,9 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
             lfile = splitstandin
             standin = f
             msg = _('%s has been turned into a largefile\n'
-                    'use (l)argefile or keep as (n)ormal file?') % lfile
-            if repo.ui.promptchoice(msg, choices, 0) == 0:
+                    'use (l)argefile or keep as (n)ormal file?'
+                    '$$ &Largefile $$ &Normal file') % lfile
+            if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))
                 processed.append((standin, "g", (p2.flags(standin),), msg))
             else:
@@ -398,8 +397,9 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
             standin = lfutil.standin(f)
             lfile = f
             msg = _('%s has been turned into a normal file\n'
-                    'keep as (l)argefile or use (n)ormal file?') % lfile
-            if repo.ui.promptchoice(msg, choices, 0) == 0:
+                    'keep as (l)argefile or use (n)ormal file?'
+                    '$$ &Largefile $$ &Normal file') % lfile
+            if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))
             else:
                 processed.append((standin, "r", None, msg))
@@ -444,9 +444,9 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
             return 0
 
         if repo.ui.promptchoice(_('largefile %s has a merge conflict\n'
-                             'keep (l)ocal or take (o)ther?') %
-                             lfutil.splitstandin(orig),
-                             (_('&Local'), _('&Other')), 0) == 0:
+                                  'keep (l)ocal or take (o)ther?'
+                                  '$$ &Local $$ &Other') %
+                                lfutil.splitstandin(orig), 0) == 0:
             return 0
         else:
             repo.wwrite(fcdest.path(), fcother.data(), fcother.flags())

@@ -482,8 +482,8 @@ def patchbomb(ui, repo, *revs, **opts):
             if ds:
                 ui.write(ds)
         ui.write('\n')
-        if ui.promptchoice(_('are you sure you want to send (yn)?'),
-                           (_('&Yes'), _('&No'))):
+        if ui.promptchoice(_('are you sure you want to send (yn)?'
+                             '$$ &Yes $$ &No')):
             raise util.Abort(_('patchbomb canceled'))
 
     ui.write('\n')

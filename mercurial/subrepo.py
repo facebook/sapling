@@ -191,9 +191,8 @@ def submerge(repo, wctx, mctx, actx, overwrite):
             elif ld[0] != r[0]: # sources differ
                 if repo.ui.promptchoice(
                     _(' subrepository sources for %s differ\n'
-                      'use (l)ocal source (%s) or (r)emote source (%s)?')
-                      % (s, l[0], r[0]),
-                      (_('&Local'), _('&Remote')), 0):
+                      'use (l)ocal source (%s) or (r)emote source (%s)?'
+                      '$$ &Local $$ &Remote') % (s, l[0], r[0]), 0):
                     debug(s, "prompt changed, get", r)
                     wctx.sub(s).get(r, overwrite)
                     sm[s] = r
@@ -215,8 +214,8 @@ def submerge(repo, wctx, mctx, actx, overwrite):
         else:
             if repo.ui.promptchoice(
                 _(' local changed subrepository %s which remote removed\n'
-                  'use (c)hanged version or (d)elete?') % s,
-                (_('&Changed'), _('&Delete')), 0):
+                  'use (c)hanged version or (d)elete?'
+                  '$$ &Changed $$ &Delete') % s, 0):
                 debug(s, "prompt remove")
                 wctx.sub(s).remove()
 
@@ -230,8 +229,8 @@ def submerge(repo, wctx, mctx, actx, overwrite):
         elif r != sa[s]:
             if repo.ui.promptchoice(
                 _(' remote changed subrepository %s which local removed\n'
-                  'use (c)hanged version or (d)elete?') % s,
-                (_('&Changed'), _('&Delete')), 0) == 0:
+                  'use (c)hanged version or (d)elete?'
+                  '$$ &Changed $$ &Delete') % s, 0) == 0:
                 debug(s, "prompt recreate", r)
                 wctx.sub(s).get(r)
                 sm[s] = r
@@ -242,14 +241,16 @@ def submerge(repo, wctx, mctx, actx, overwrite):
 def _updateprompt(ui, sub, dirty, local, remote):
     if dirty:
         msg = (_(' subrepository sources for %s differ\n'
-                 'use (l)ocal source (%s) or (r)emote source (%s)?\n')
+                 'use (l)ocal source (%s) or (r)emote source (%s)?\n'
+                 '$$ &Local $$ &Remote')
                % (subrelpath(sub), local, remote))
     else:
         msg = (_(' subrepository sources for %s differ (in checked out '
                  'version)\n'
-                 'use (l)ocal source (%s) or (r)emote source (%s)?\n')
+                 'use (l)ocal source (%s) or (r)emote source (%s)?\n'
+                 '$$ &Local $$ &Remote')
                % (subrelpath(sub), local, remote))
-    return ui.promptchoice(msg, (_('&Local'), _('&Remote')), 0)
+    return ui.promptchoice(msg, 0)
 
 def reporelpath(repo):
     """return path to this (sub)repo as seen from outermost repo"""

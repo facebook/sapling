@@ -144,8 +144,8 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     fd = fcd.path()
 
     if ui.promptchoice(_(" no tool found to merge %s\n"
-                         "keep (l)ocal or take (o)ther?") % fd,
-                       (_("&Local"), _("&Other")), 0):
+                         "keep (l)ocal or take (o)ther?"
+                         "$$ &Local $$ &Other") % fd, 0):
         return _iother(repo, mynode, orig, fcd, fco, fca, toolconf)
     else:
         return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
@@ -348,16 +348,16 @@ def filemerge(repo, mynode, orig, fcd, fco, fca):
     checked = False
     if 'prompt' in _toollist(ui, tool, "check"):
         checked = True
-        if ui.promptchoice(_("was merge of '%s' successful (yn)?") % fd,
-                           (_("&Yes"), _("&No")), 1):
+        if ui.promptchoice(_("was merge of '%s' successful (yn)?"
+                             "$$ &Yes $$ &No") % fd, 1):
             r = 1
 
     if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
                                   'changed' in _toollist(ui, tool, "check")):
         if filecmp.cmp(a, back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
-                                 "was merge successful (yn)?") % fd,
-                               (_("&Yes"), _("&No")), 1):
+                                 "was merge successful (yn)?"
+                                 "$$ &Yes $$ &No") % fd, 1):
                 r = 1
 
     if _toolbool(ui, tool, "fixeol"):

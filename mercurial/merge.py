@@ -365,8 +365,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 actions.append((f, "r", None, "remote delete"))
             elif repo.ui.promptchoice(
                 _("local changed %s which remote deleted\n"
-                  "use (c)hanged version or (d)elete?") % f,
-                (_("&Changed"), _("&Delete")), 0):
+                  "use (c)hanged version or (d)elete?"
+                  "$$ &Changed $$ &Delete") % f, 0):
                 actions.append((f, "r", None, "prompt delete"))
             else:
                 actions.append((f, "a", None, "prompt keep"))
@@ -375,8 +375,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 actions.append((f, "g", (m2.flags(f),), "remote recreating"))
             elif repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
-                  "use (c)hanged version or leave (d)eleted?") % f,
-                (_("&Changed"), _("&Deleted")), 0) == 0:
+                  "use (c)hanged version or leave (d)eleted?"
+                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
                 actions.append((f, "g", (m2.flags(f),), "prompt recreating"))
         else: assert False, m
     return actions

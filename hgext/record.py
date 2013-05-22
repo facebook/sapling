@@ -283,17 +283,17 @@ def filterpatch(ui, headers):
         if skipfile is not None:
             return skipfile, skipfile, skipall, newpatches
         while True:
-            resps = _('[Ynesfdaq?]')
-            choices = (_('&Yes, record this change'),
-                    _('&No, skip this change'),
-                    _('&Edit the change manually'),
-                    _('&Skip remaining changes to this file'),
-                    _('Record remaining changes to this &file'),
-                    _('&Done, skip remaining changes and files'),
-                    _('Record &all changes to all remaining files'),
-                    _('&Quit, recording no changes'),
-                    _('&?'))
-            r = ui.promptchoice("%s %s" % (query, resps), choices)
+            resps = _('[Ynesfdaq?]'
+                      '$$ &Yes, record this change'
+                      '$$ &No, skip this change'
+                      '$$ &Edit the change manually'
+                      '$$ &Skip remaining changes to this file'
+                      '$$ Record remaining changes to this &file'
+                      '$$ &Done, skip remaining changes and files'
+                      '$$ Record &all changes to all remaining files'
+                      '$$ &Quit, recording no changes'
+                      '$$ &?')
+            r = ui.promptchoice("%s %s" % (query, resps))
             ui.write("\n")
             if r == 8: # ?
                 doc = gettext(record.__doc__)
