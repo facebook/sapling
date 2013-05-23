@@ -1310,6 +1310,8 @@ def commit(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if nothing changed.
     """
     if opts.get('subrepos'):
+        if opts.get('amend'):
+            raise util.Abort(_('cannot amend with --subrepos'))
         # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True)
 
@@ -1322,7 +1324,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts.get('amend'):
         if ui.configbool('ui', 'commitsubrepos'):
-            raise util.Abort(_('cannot amend recursively'))
+            raise util.Abort(_('cannot amend with ui.commitsubrepos enabled'))
 
         old = repo['.']
         if old.phase() == phases.public:
