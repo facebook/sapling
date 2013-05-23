@@ -126,7 +126,8 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    ui.setrepo(repo)
+    if util.safehasattr(ui, 'setrepo'):
+        ui.setrepo(repo)
 
 @command('^blackbox',
     [('l', 'limit', 10, _('the number of events to show')),
