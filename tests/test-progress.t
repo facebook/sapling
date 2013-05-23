@@ -167,7 +167,6 @@ test delay time estimates
 
   $ hg -y loop 8
   \r (no-eol) (esc)
-  loop [====>                                     ] 1/8 1m18s\r (no-eol) (esc)
   loop [=========>                                ] 2/8 1m07s\r (no-eol) (esc)
   loop [===============>                            ] 3/8 56s\r (no-eol) (esc)
   loop [=====================>                      ] 4/8 45s\r (no-eol) (esc)
@@ -204,7 +203,6 @@ test delay time estimates
 Time estimates should not fail when there's no end point:
   $ hg -y loop -- -4
   \r (no-eol) (esc)
-  loop [ <=>                                              ] 1\r (no-eol) (esc)
-  loop [  <=>                                             ] 2\r (no-eol) (esc)
-  loop [   <=>                                            ] 3\r (no-eol) (esc)
+  loop [ <=>                                              ] 2\r (no-eol) (esc)
+  loop [  <=>                                             ] 3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
