@@ -26,7 +26,7 @@ command, exit codes, and duration
   $ hg add a
   $ hg blackbox
   1970/01/01 00:00:00 bob> add a
-  1970/01/01 00:00:00 bob> add exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob> add a exited 0 after * seconds (glob)
 
 incoming change tracking
 
@@ -58,7 +58,7 @@ clone, commit, pull
   $ hg blackbox -l 3
   1970/01/01 00:00:00 bob> pull
   1970/01/01 00:00:00 bob> 1 incoming changes - new heads: d02f48003e62
-  1970/01/01 00:00:00 bob> pull exited None after * seconds (glob)
+  1970/01/01 00:00:00 bob> pull exited 0 after * seconds (glob)
 
 we must not cause a failure if we cannot write to the log
 
@@ -118,7 +118,7 @@ backup bundles get logged
   $ hg blackbox -l 3
   1970/01/01 00:00:00 bob> strip tip
   1970/01/01 00:00:00 bob> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
-  1970/01/01 00:00:00 bob> strip exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob> strip tip exited 0 after * seconds (glob)
 
 extension and python hooks - use the eol extension for a pythonhook
 
@@ -133,7 +133,7 @@ extension and python hooks - use the eol extension for a pythonhook
   1970/01/01 00:00:00 bob> update
   1970/01/01 00:00:00 bob> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
   1970/01/01 00:00:00 bob> exthook-update: echo hooked finished in * seconds (glob)
-  1970/01/01 00:00:00 bob> update exited False after * seconds (glob)
+  1970/01/01 00:00:00 bob> update exited 0 after * seconds (glob)
 
 log rotation
 

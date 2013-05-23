@@ -62,7 +62,16 @@ def dispatch(req):
             ferr.write(_("hg: parse error: %s\n") % inst.args[0])
         return -1
 
-    return _runcatch(req)
+    msg = ' '.join(' ' in a and repr(a) or a for a in req.args)
+    starttime = time.time()
+    ret = None
+    try:
+        ret = _runcatch(req)
+        return ret
+    finally:
+        duration = time.time() - starttime
+        req.ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
+                   msg, ret or 0, duration)
 
 def _runcatch(req):
     def catchterm(*args):
@@ -764,16 +773,10 @@ def _dispatch(req):
     msg = ' '.join(' ' in a and repr(a) or a for a in fullargs)
     ui.log("command", '%s\n', msg)
     d = lambda: util.checksignature(func)(ui, *args, **cmdoptions)
-    starttime = time.time()
-    ret = None
     try:
-        ret = runcommand(lui, repo, cmd, fullargs, ui, options, d,
-                         cmdpats, cmdoptions)
-        return ret
+        return runcommand(lui, repo, cmd, fullargs, ui, options, d,
+                          cmdpats, cmdoptions)
     finally:
-        duration = time.time() - starttime
-        ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
-               cmd, ret, duration)
         if repo and repo != req.repo:
             repo.close()
 
