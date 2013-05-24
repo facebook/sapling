@@ -437,12 +437,13 @@ class SubversionRepo(object):
         try:
             delta.path_driver(editor, edit_baton, base_revision, paths, driver_cb,
                               self.pool)
-            editor.close_edit(edit_baton, self.pool)
         except:
             # If anything went wrong on the preceding lines, we should
             # abort the in-progress transaction.
             editor.abort_edit(edit_baton, self.pool)
             raise
+
+        editor.close_edit(edit_baton, self.pool)
 
     def get_replay(self, revision, editor, oldest_rev_i_have=0):
         # this method has a tendency to chew through RAM if you don't re-init
