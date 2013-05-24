@@ -905,13 +905,6 @@ def runone(options, test):
                     ignore("doesn't match keyword")
                     return None
 
-    vlog("# Test", test)
-
-    createhgrc(HGRCPATH, options)
-
-    if os.path.exists(err):
-        os.remove(err)       # Remove any previous output files
-
     for ext, func, out in testtypes:
         if lctest.startswith("test-") and lctest.endswith(ext):
             runner = func
@@ -919,6 +912,13 @@ def runone(options, test):
             break
     else:
         return skip("unknown test type")
+
+    vlog("# Test", test)
+
+    createhgrc(HGRCPATH, options)
+
+    if os.path.exists(err):
+        os.remove(err)       # Remove any previous output files
 
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
