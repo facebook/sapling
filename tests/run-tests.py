@@ -908,15 +908,9 @@ def runone(options, test):
     err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
-    try:
-        tf = open(testpath)
-        firstline = tf.readline().rstrip()
-        tf.close()
-    except IOError:
-        firstline = ''
     lctest = test.lower()
 
-    if lctest.endswith('.py') or firstline == '#!/usr/bin/env python':
+    if lctest.endswith('.py'):
         runner = pytest
     elif lctest.endswith('.t'):
         runner = tsttest
