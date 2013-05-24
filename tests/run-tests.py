@@ -825,26 +825,16 @@ def run(cmd, wd, options, replacements):
     return ret, output.splitlines(True)
 
 def runone(options, test):
-    '''tristate output:
-    None -> skipped
-    True -> passed
-    False -> failed'''
+    '''returns a result element: (code, test, msg)'''
 
-    global results, resultslock, iolock
-
-    def result(l, e):
-        resultslock.acquire()
-        results[l].append(e)
-        resultslock.release()
+    global iolock
 
     def skip(msg):
-        if not options.verbose:
-            result('s', (test, msg))
-        else:
+        if options.verbose:
             iolock.acquire()
             print "\nSkipping %s: %s" % (testpath, msg)
             iolock.release()
-        return None
+        return 's', test, msg
 
     def fail(msg, ret):
         if not options.nodiff:
@@ -862,15 +852,14 @@ def runone(options, test):
                     rename(testpath + ".err", testpath)
                 else:
                     rename(testpath + ".err", testpath + ".out")
-                result('p', test)
-                return
-        result('f', (test, msg))
+                return 'p', test, ''
+        return 'f', test, msg
 
     def success():
-        result('p', test)
+        return 'p', test, ''
 
     def ignore(msg):
-        result('i', (test, msg))
+        return 'i', test, msg
 
     def describe(ret):
         if ret < 0:
@@ -882,13 +871,11 @@ def runone(options, test):
     lctest = test.lower()
 
     if not os.path.exists(testpath):
-            skip("doesn't exist")
-            return None
+            return skip("doesn't exist")
 
     if not (options.whitelisted and test in options.whitelisted):
         if options.blacklist and test in options.blacklist:
-            skip("blacklisted")
-            return None
+            return skip("blacklisted")
 
         if options.retest and not os.path.exists(test + ".err"):
             ignore("not retesting")
@@ -982,13 +969,13 @@ def runone(options, test):
         if not missing:
             missing = ['irrelevant']
         if failed:
-            fail("hghave failed checking for %s" % failed[-1], ret)
+            result = fail("hghave failed checking for %s" % failed[-1], ret)
             skipped = False
         else:
-            skip(missing[-1])
+            result = skip(missing[-1])
     elif ret == 'timeout':
         mark = 't'
-        fail("timed out", ret)
+        result = fail("timed out", ret)
     elif out != refout:
         mark = '!'
         if not options.nodiff:
@@ -999,15 +986,14 @@ def runone(options, test):
                 showdiff(refout, out, ref, err)
             iolock.release()
         if ret:
-            fail("output changed and " + describe(ret), ret)
+            result = fail("output changed and " + describe(ret), ret)
         else:
-            fail("output changed", ret)
-        ret = 1
+            result = fail("output changed", ret)
     elif ret:
         mark = '!'
-        fail(describe(ret), ret)
+        result = fail(describe(ret), ret)
     else:
-        success()
+        result = success()
 
     if not options.verbose:
         iolock.acquire()
@@ -1017,9 +1003,7 @@ def runone(options, test):
 
     if not options.keep_tmpdir:
         shutil.rmtree(testtmp, True)
-    if skipped:
-        return None
-    return ret == 0
+    return result
 
 _hgpath = None
 
@@ -1169,9 +1153,15 @@ times = []
 iolock = threading.Lock()
 
 def runqueue(options, tests):
+    global results, resultslock
+
     for test in tests:
-        ret = runone(options, test)
-        if options.first and ret is not None and not ret:
+        code, test, msg = runone(options, test)
+        resultslock.acquire()
+        results[code].append((test, msg))
+        resultslock.release()
+
+        if options.first and code not in '.si':
             break
 
 def runtests(options, tests):
