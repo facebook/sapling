@@ -881,7 +881,7 @@ def runone(options, test):
     err = os.path.join(TESTDIR, test + ".err")
     lctest = test.lower()
 
-    if not os.path.exists(test):
+    if not os.path.exists(testpath):
             skip("doesn't exist")
             return None
 
