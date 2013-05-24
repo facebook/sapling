@@ -832,8 +832,6 @@ def runone(options, test):
 
     global results, resultslock, iolock
 
-    testpath = os.path.join(TESTDIR, test)
-
     def result(l, e):
         resultslock.acquire()
         results[l].append(e)
@@ -879,6 +877,10 @@ def runone(options, test):
             return 'killed by signal %d' % -ret
         return 'returned error code %d' % ret
 
+    testpath = os.path.join(TESTDIR, test)
+    err = os.path.join(TESTDIR, test + ".err")
+    lctest = test.lower()
+
     if not os.path.exists(test):
             skip("doesn't exist")
             return None
@@ -907,10 +909,8 @@ def runone(options, test):
 
     createhgrc(HGRCPATH, options)
 
-    err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
-    lctest = test.lower()
 
     for ext, func, out in testtypes:
         if lctest.startswith("test-") and lctest.endswith(ext):
