@@ -849,15 +849,9 @@ def runone(options, test):
     def ignore(msg):
         result('i', (test, msg))
 
-    if (os.path.basename(test).startswith("test-") and '~' not in test and
-        ('.' not in test or test.endswith('.py') or
-         test.endswith('.bat') or test.endswith('.t'))):
-        if not os.path.exists(test):
+    if not os.path.exists(test):
             skip("doesn't exist")
             return None
-    else:
-        vlog('# Test file', test, 'not supported, ignoring')
-        return None # not a supported test, don't record
 
     if not (options.whitelisted and test in options.whitelisted):
         if options.blacklist and test in options.blacklist:
@@ -910,7 +904,7 @@ def runone(options, test):
     lctest = test.lower()
 
     for ext, func, out in testtypes:
-        if lctest.endswith(ext):
+        if lctest.startswith("test-") and lctest.endswith(ext):
             runner = func
             ref = os.path.join(TESTDIR, test + out)
             break
