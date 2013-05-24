@@ -904,17 +904,16 @@ def runone(options, test):
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
-    ref = os.path.join(TESTDIR, test+".out")
     err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
     lctest = test.lower()
 
-    if lctest.endswith('.py'):
-        runner = pytest
-    elif lctest.endswith('.t'):
-        runner = tsttest
-        ref = testpath
+    for ext, func, out in testtypes:
+        if lctest.endswith(ext):
+            runner = func
+            ref = os.path.join(TESTDIR, test + out)
+            break
     else:
         return skip("unknown test type")
 
@@ -1233,6 +1232,9 @@ def runtests(options, tests):
 
     if failed:
         sys.exit(1)
+
+testtypes = [('.py', pytest, '.out'),
+             ('.t', tsttest, '')]
 
 def main():
     (options, args) = parseargs()
