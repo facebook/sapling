@@ -327,6 +327,31 @@ def findprogram(program):
             return name
     return None
 
+def createhgrc(path, options):
+    # create a fresh hgrc
+    hgrc = open(path, 'w+')
+    hgrc.write('[ui]\n')
+    hgrc.write('slash = True\n')
+    hgrc.write('interactive = False\n')
+    hgrc.write('[defaults]\n')
+    hgrc.write('backout = -d "0 0"\n')
+    hgrc.write('commit = -d "0 0"\n')
+    hgrc.write('tag = -d "0 0"\n')
+    if options.inotify:
+        hgrc.write('[extensions]\n')
+        hgrc.write('inotify=\n')
+        hgrc.write('[inotify]\n')
+        hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
+        hgrc.write('appendpid=True\n')
+    if options.extra_config_opt:
+        for opt in options.extra_config_opt:
+            section, key = opt.split('.', 1)
+            assert '=' in key, ('extra config opt %s must '
+                                'have an = for assignment' % opt)
+            hgrc.write('[%s]\n%s\n' % (section, key))
+    hgrc.close()
+
+
 def checktools():
     # Before we go any further, check for pre-requisite tools
     # stuff from coreutils (cat, rm, etc) are not tested
@@ -875,28 +900,7 @@ def runone(options, test):
 
     vlog("# Test", test)
 
-    # create a fresh hgrc
-    hgrc = open(HGRCPATH, 'w+')
-    hgrc.write('[ui]\n')
-    hgrc.write('slash = True\n')
-    hgrc.write('interactive = False\n')
-    hgrc.write('[defaults]\n')
-    hgrc.write('backout = -d "0 0"\n')
-    hgrc.write('commit = -d "0 0"\n')
-    hgrc.write('tag = -d "0 0"\n')
-    if options.inotify:
-        hgrc.write('[extensions]\n')
-        hgrc.write('inotify=\n')
-        hgrc.write('[inotify]\n')
-        hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
-        hgrc.write('appendpid=True\n')
-    if options.extra_config_opt:
-        for opt in options.extra_config_opt:
-            section, key = opt.split('.', 1)
-            assert '=' in key, ('extra config opt %s must '
-                                'have an = for assignment' % opt)
-            hgrc.write('[%s]\n%s\n' % (section, key))
-    hgrc.close()
+    createhgrc(HGRCPATH, options)
 
     err = os.path.join(TESTDIR, test+".err")
     if os.path.exists(err):
