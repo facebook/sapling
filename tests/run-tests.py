@@ -240,23 +240,12 @@ def parseargs():
         parser.error("sorry, coverage options do not work when --local "
                      "is specified")
 
-    global vlog
+    global verbose
     if options.verbose:
         if options.jobs > 1 or options.child is not None:
-            pid = "[%d]" % os.getpid()
+            verbose = "[%d]" % os.getpid()
         else:
-            pid = None
-        def vlog(*msg):
-            iolock.acquire()
-            if pid:
-                print pid,
-            for m in msg:
-                print m,
-            print
-            sys.stdout.flush()
-            iolock.release()
-    else:
-        vlog = lambda *msg: None
+            verbose = ''
 
     if options.tmpdir:
         options.tmpdir = os.path.expanduser(options.tmpdir)
@@ -318,6 +307,18 @@ def showdiff(expected, output, ref, err):
     print
     for line in difflib.unified_diff(expected, output, ref, err):
         sys.stdout.write(line)
+
+verbose = False
+def vlog(*msg):
+    if verbose is not False:
+        iolock.acquire()
+        if verbose:
+            print verbose,
+        for m in msg:
+            print m,
+        print
+        sys.stdout.flush()
+        iolock.release()
 
 def findprogram(program):
     """Search PATH for a executable program"""
