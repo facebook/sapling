@@ -918,6 +918,7 @@ def runone(options, test):
     # Make a tmp subdirectory to work in
     testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
         os.path.join(HGTMP, os.path.basename(test))
+    os.mkdir(testtmp)
 
     replacements = [
         (r':%s\b' % options.port, ':$HGPORT'),
@@ -934,7 +935,6 @@ def runone(options, test):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
-    os.mkdir(testtmp)
     if options.time:
         starttime = time.time()
     ret, out = runner(testpath, testtmp, options, replacements)
