@@ -874,6 +874,11 @@ def runone(options, test):
     def ignore(msg):
         result('i', (test, msg))
 
+    def describe(ret):
+        if ret < 0:
+            return 'killed by signal %d' % -ret
+        return 'returned error code %d' % ret
+
     if not os.path.exists(test):
             skip("doesn't exist")
             return None
@@ -966,11 +971,6 @@ def runone(options, test):
         for line in out:
             f.write(line)
         f.close()
-
-    def describe(ret):
-        if ret < 0:
-            return 'killed by signal %d' % -ret
-        return 'returned error code %d' % ret
 
     if skipped:
         mark = 's'
