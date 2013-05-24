@@ -852,11 +852,11 @@ def runone(options, test):
                     rename(testpath + ".err", testpath)
                 else:
                     rename(testpath + ".err", testpath + ".out")
-                return 'p', test, ''
-        return 'f', test, msg
+                return '.', test, ''
+        return '!', test, msg
 
     def success():
-        return 'p', test, ''
+        return '.', test, ''
 
     def ignore(msg):
         return 'i', test, msg
@@ -937,8 +937,6 @@ def runone(options, test):
 
     killdaemons()
 
-    mark = '.'
-
     skipped = (ret == SKIPPED_STATUS)
 
     # If we're not in --debug mode and reference output file exists,
@@ -960,7 +958,6 @@ def runone(options, test):
         f.close()
 
     if skipped:
-        mark = 's'
         if out is None:                 # debug mode: nothing to parse
             missing = ['unknown']
             failed = None
@@ -974,10 +971,8 @@ def runone(options, test):
         else:
             result = skip(missing[-1])
     elif ret == 'timeout':
-        mark = 't'
         result = fail("timed out", ret)
     elif out != refout:
-        mark = '!'
         if not options.nodiff:
             iolock.acquire()
             if options.view:
@@ -990,14 +985,13 @@ def runone(options, test):
         else:
             result = fail("output changed", ret)
     elif ret:
-        mark = '!'
         result = fail(describe(ret), ret)
     else:
         result = success()
 
     if not options.verbose:
         iolock.acquire()
-        sys.stdout.write(mark)
+        sys.stdout.write(result[0])
         sys.stdout.flush()
         iolock.release()
 
@@ -1116,11 +1110,11 @@ def runchildren(options, tests):
         except (pickle.UnpicklingError, EOFError):
             sys.exit(255)
         else:
-            passed += len(childresults['p'])
+            passed += len(childresults['.'])
             skipped += len(childresults['s'])
-            failed += len(childresults['f'])
+            failed += len(childresults['!'])
             skips.extend(childresults['s'])
-            fails.extend(childresults['f'])
+            fails.extend(childresults['!'])
         if options.time:
             childtimes = pickle.load(fp)
             times.extend(childtimes)
@@ -1147,7 +1141,7 @@ def runchildren(options, tests):
         outputcoverage(options)
     sys.exit(failures != 0)
 
-results = dict(p=[], f=[], s=[], i=[])
+results = {'.':[], '!':[], 's':[], 'i':[]}
 resultslock = threading.Lock()
 times = []
 iolock = threading.Lock()
@@ -1188,8 +1182,8 @@ def runtests(options, tests):
 
         runqueue(options, tests)
 
-        failed = len(results['f'])
-        tested = len(results['p']) + failed
+        failed = len(results['!'])
+        tested = len(results['.']) + failed
         skipped = len(results['s'])
         ignored = len(results['i'])
 
@@ -1203,7 +1197,7 @@ def runtests(options, tests):
             print
             for s in results['s']:
                 print "Skipped %s: %s" % s
-            for s in results['f']:
+            for s in results['!']:
                 print "Failed %s: %s" % s
             _checkhglib("Tested")
             print "# Ran %d tests, %d skipped, %d failed." % (
