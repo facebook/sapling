@@ -320,6 +320,16 @@ def vlog(*msg):
         sys.stdout.flush()
         iolock.release()
 
+def log(*msg):
+    iolock.acquire()
+    if verbose:
+        print verbose,
+    for m in msg:
+        print m,
+    print
+    sys.stdout.flush()
+    iolock.release()
+
 def findprogram(program):
     """Search PATH for a executable program"""
     for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
@@ -572,9 +582,7 @@ def globmatch(el, l):
     if el + '\n' == l:
         if os.name == 'nt':
             # matching on "/" is not needed for this line
-            iolock.acquire()
-            print "\nInfo, unnecessary glob: %s (glob)" % el
-            iolock.release()
+            log("\nInfo, unnecessary glob: %s (glob)" % el)
         return True
     i, n = 0, len(el)
     res = ''
@@ -832,16 +840,12 @@ def runone(options, test):
 
     def skip(msg):
         if options.verbose:
-            iolock.acquire()
-            print "\nSkipping %s: %s" % (testpath, msg)
-            iolock.release()
+            log("\nSkipping %s: %s" % (testpath, msg))
         return 's', test, msg
 
     def fail(msg, ret):
         if not options.nodiff:
-            iolock.acquire()
-            print "\nERROR: %s %s" % (testpath, msg)
-            iolock.release()
+            log("\nERROR: %s %s" % (testpath, msg))
         if (not ret and options.interactive
             and os.path.exists(testpath + ".err")):
             iolock.acquire()
