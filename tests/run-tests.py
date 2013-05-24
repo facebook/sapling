@@ -1244,7 +1244,9 @@ def main():
         checktools()
 
         if len(args) == 0:
-            args = sorted(os.listdir("."))
+            args = sorted(t for t in os.listdir(".")
+                          if t.startswith("test-")
+                          and (t.endswith(".py") or t.endswith(".t")))
 
     tests = args
 
