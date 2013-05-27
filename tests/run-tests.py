@@ -836,8 +836,6 @@ def run(cmd, wd, options, replacements):
 def runone(options, test):
     '''returns a result element: (code, test, msg)'''
 
-    global iolock
-
     def skip(msg):
         if options.verbose:
             log("\nSkipping %s: %s" % (testpath, msg))
@@ -1152,8 +1150,6 @@ times = []
 iolock = threading.Lock()
 
 def runqueue(options, tests):
-    global results, resultslock
-
     for test in tests:
         code, test, msg = runone(options, test)
         resultslock.acquire()
