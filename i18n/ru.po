@@ -174,7 +174,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2013-05-23 13:11+0400\n"
+"POT-Creation-Date: 2013-05-28 14:04+0400\n"
 "PO-Revision-Date: 2011-05-12 23:48+0400\n"
 "Last-Translator: Alexander Sauta <demosito@gmail.com>\n"
 "Language-Team: Russian\n"
@@ -11555,8 +11555,11 @@ msgstr ""
 "    Возвращает 0 при успехе, 1 если изменения не зафиксированы.\n"
 "    "
 
-msgid "cannot amend recursively"
-msgstr "невозможно исправлять рекурсивно"
+msgid "cannot amend with --subrepos"
+msgstr "нельзя вносить исправления с --subrepos"
+
+msgid "cannot amend with ui.commitsubrepos enabled"
+msgstr "нельзя вносить исправления с включенным ui.commitsubrepos"
 
 msgid "cannot amend public changesets"
 msgstr "нельзя исправлять публичные ревизии"
@@ -18377,7 +18380,7 @@ msgid ""
 "``password``\n"
 "    Optional. Password for authenticating with the SMTP server. If not\n"
 "    specified, interactive sessions will prompt the user for a\n"
-"    password; unon-interactive sessions will fail. Default: none."
+"    password; non-interactive sessions will fail. Default: none."
 msgstr ""
 "``password``\n"
 "    Необязательный. Пароль для аутентификации на SMTP-сервере. Если\n"
@@ -22394,11 +22397,11 @@ msgstr "- fill(текст[, ширина])"
 msgid "- get(dict, key)"
 msgstr "- get(словарь, ключ)"
 
-msgid "- if(выражение, then[, else])"
-msgstr "- if(выражение, then[, else])"
+msgid "- if(expr, then[, else])"
+msgstr "- if(выражение, то[, иначе])"
 
-msgid "- ifeq(выражение, выражение, then[, else])"
-msgstr "- ifeq(выражение, выражение, then[, else])"
+msgid "- ifeq(expr, expr, then[, else])"
+msgstr "- ifeq(выражение, выражение, то[, иначе])"
 
 msgid "- join(list, sep)"
 msgstr "- join(список, разделитель)"
@@ -25447,15 +25450,15 @@ msgstr "проверьте правильность установки врем�
 msgid "negative timestamp: %d"
 msgstr "отрицательная метка времени: %d"
 
-# should that be translated?
+# should that be translated? Probably not.
 msgid "now"
 msgstr ""
 
-# should that be translated?
+# should that be translated? Probably not.
 msgid "today"
 msgstr ""
 
-# should that be translated?
+# should that be translated? Probably not.
 msgid "yesterday"
 msgstr ""
 
@@ -25774,6 +25777,12 @@ msgstr "ошибка при проталкивании:"
 
 msgid "number of cpus must be an integer"
 msgstr "количество процессоров должно быть целым"
+
+#~ msgid "cannot amend recursively"
+#~ msgstr "невозможно исправлять рекурсивно"
+
+#~ msgid "- ifeq(выражение, выражение, then[, else])"
+#~ msgstr "- ifeq(выражение, выражение, then[, else])"
 
 # does this require a translation?
 #~ msgid "    .. note::"
