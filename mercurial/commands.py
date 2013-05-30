@@ -1315,6 +1315,10 @@ def commit(ui, repo, *pats, **opts):
         # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True)
 
+    if repo.vfs.exists('graftstate'):
+        raise util.Abort(_('cannot commit an interrupted graft operation'),
+                         hint=_('use "hg graft -c" to continue graft'))
+
     extra = {}
     if opts.get('close_branch'):
         extra['close'] = 1
