@@ -649,25 +649,21 @@ class filectx(object):
             return child
 
         getlog = util.lrucachefunc(lambda x: self._repo.file(x))
-        def getctx(path, fileid):
-            log = path == self._path and self._filelog or getlog(path)
-            return filectx(self._repo, path, fileid=fileid, filelog=log)
-        getctx = util.lrucachefunc(getctx)
 
         def parents(f):
-            # we want to reuse filectx objects as much as possible
-            p = f._path
-            if f._filerev is None: # working dir
-                pl = [(n.path(), n.filerev()) for n in f.parents()]
-            else:
-                pl = [(p, n) for n in f._filelog.parentrevs(f._filerev)]
+            pl = f.parents()
 
-            if follow:
-                r = f.renamed()
-                if r:
-                    pl[0] = (r[0], getlog(r[0]).rev(r[1]))
+            # Don't return renamed parents if we aren't following.
+            if not follow:
+                pl = [p for p in pl if p.path() == f.path()]
 
-            return [getctx(p, n) for p, n in pl if n != nullrev]
+            # renamed filectx won't have a filelog yet, so set it
+            # from the cache to save time
+            for p in pl:
+                if not '_filelog' in p.__dict__:
+                    p._filelog = getlog(p.path())
+
+            return pl
 
         # use linkrev to find the first changeset where self appeared
         if self.rev() != self.linkrev():

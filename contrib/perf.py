@@ -45,6 +45,11 @@ def perfwalk(ui, repo, *pats):
         except Exception:
             timer(lambda: len(list(cmdutil.walk(repo, pats, {}))))
 
+@command('perfannotate')
+def perfannotate(ui, repo, f):
+    fc = repo['.'][f]
+    timer(lambda: len(fc.annotate(True)))
+
 @command('perfstatus',
          [('u', 'unknown', False,
            'ask status to look for unknown files')])
