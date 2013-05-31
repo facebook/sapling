@@ -1338,7 +1338,7 @@ def _makegraphlogrevset(repo, pats, opts, revs):
                 raise util.Abort(_('cannot follow file not in parent '
                                    'revision: "%s"') % f)
             filelog = repo.file(f)
-            if not len(filelog):
+            if not filelog:
                 # A zero count may be a directory or deleted file, so
                 # try to find matching entries on the slow path.
                 if follow:

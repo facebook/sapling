@@ -359,7 +359,7 @@ class bundle10(object):
         msgfiles = _('files')
         for i, fname in enumerate(sorted(changedfiles)):
             filerevlog = repo.file(fname)
-            if not len(filerevlog):
+            if not filerevlog:
                 raise util.Abort(_("empty or missing revlog for %s") % fname)
 
             if fastpathlinkrev:
