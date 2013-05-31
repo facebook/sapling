@@ -503,14 +503,8 @@ class filectx(object):
         return self._changectx.flags(self._path)
     def filelog(self):
         return self._filelog
-
     def rev(self):
-        if '_changectx' in self.__dict__:
-            return self._changectx.rev()
-        if '_changeid' in self.__dict__:
-            return self._changectx.rev()
-        return self._filelog.linkrev(self._filerev)
-
+        return self._changeid
     def linkrev(self):
         return self._filelog.linkrev(self._filerev)
     def node(self):
