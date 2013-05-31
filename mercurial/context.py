@@ -667,7 +667,7 @@ class filectx(object):
 
         # use linkrev to find the first changeset where self appeared
         if self.rev() != self.linkrev():
-            base = self.filectx(self.filerev())
+            base = self.filectx(self.filenode())
         else:
             base = self
 
@@ -736,7 +736,7 @@ class filectx(object):
         # prime the ancestor cache for the working directory
         acache = {}
         for c in (self, fc2):
-            if c._filerev is None:
+            if c.filenode() is None:
                 pl = [(n.path(), n.filenode()) for n in c.parents()]
                 acache[(c._path, None)] = pl
 
