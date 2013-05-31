@@ -1005,6 +1005,107 @@ def increasingwindows(start, end, windowsize=8, sizelimit=512):
             if windowsize < sizelimit:
                 windowsize *= 2
 
+class FileWalkError(Exception):
+    pass
+
+def walkfilerevs(repo, match, follow, revs, fncache):
+    '''Walks the file history for the matched files.
+
+    Returns the changeset revs that are involved in the file history.
+
+    Throws FileWalkError if the file history can't be walked using
+    filelogs alone.
+    '''
+    wanted = set()
+    copies = []
+    minrev, maxrev = min(revs), max(revs)
+    def filerevgen(filelog, last):
+        """
+        Only files, no patterns.  Check the history of each file.
+
+        Examines filelog entries within minrev, maxrev linkrev range
+        Returns an iterator yielding (linkrev, parentlinkrevs, copied)
+        tuples in backwards order
+        """
+        cl_count = len(repo)
+        revs = []
+        for j in xrange(0, last + 1):
+            linkrev = filelog.linkrev(j)
+            if linkrev < minrev:
+                continue
+            # only yield rev for which we have the changelog, it can
+            # happen while doing "hg log" during a pull or commit
+            if linkrev >= cl_count:
+                break
+
+            parentlinkrevs = []
+            for p in filelog.parentrevs(j):
+                if p != nullrev:
+                    parentlinkrevs.append(filelog.linkrev(p))
+            n = filelog.node(j)
+            revs.append((linkrev, parentlinkrevs,
+                         follow and filelog.renamed(n)))
+
+        return reversed(revs)
+    def iterfiles():
+        pctx = repo['.']
+        for filename in match.files():
+            if follow:
+                if filename not in pctx:
+                    raise util.Abort(_('cannot follow file not in parent '
+                                       'revision: "%s"') % filename)
+                yield filename, pctx[filename].filenode()
+            else:
+                yield filename, None
+        for filename_node in copies:
+            yield filename_node
+
+    for file_, node in iterfiles():
+        filelog = repo.file(file_)
+        if not len(filelog):
+            if node is None:
+                # A zero count may be a directory or deleted file, so
+                # try to find matching entries on the slow path.
+                if follow:
+                    raise util.Abort(
+                        _('cannot follow nonexistent file: "%s"') % file_)
+                raise FileWalkError("Cannot walk via filelog")
+            else:
+                continue
+
+        if node is None:
+            last = len(filelog) - 1
+        else:
+            last = filelog.rev(node)
+
+
+        # keep track of all ancestors of the file
+        ancestors = set([filelog.linkrev(last)])
+
+        # iterate from latest to oldest revision
+        for rev, flparentlinkrevs, copied in filerevgen(filelog, last):
+            if not follow:
+                if rev > maxrev:
+                    continue
+            else:
+                # Note that last might not be the first interesting
+                # rev to us:
+                # if the file has been changed after maxrev, we'll
+                # have linkrev(last) > maxrev, and we still need
+                # to explore the file graph
+                if rev not in ancestors:
+                    continue
+                # XXX insert 1327 fix here
+                if flparentlinkrevs:
+                    ancestors.update(flparentlinkrevs)
+
+            fncache.setdefault(rev, []).append(file_)
+            wanted.add(rev)
+            if copied:
+                copies.append(copied)
+
+    return wanted
+
 def walkchangerevs(repo, match, opts, prepare):
     '''Iterate over files and the revs in which they changed.
 
@@ -1044,101 +1145,18 @@ def walkchangerevs(repo, match, opts, prepare):
     if not slowpath and not match.files():
         # No files, no patterns.  Display all revs.
         wanted = set(revs)
-    copies = []
 
     if not slowpath and match.files():
         # We only have to read through the filelog to find wanted revisions
 
-        minrev, maxrev = min(revs), max(revs)
-        def filerevgen(filelog, last):
-            """
-            Only files, no patterns.  Check the history of each file.
+        try:
+            wanted = walkfilerevs(repo, match, follow, revs, fncache)
+        except FileWalkError:
+            slowpath = True
 
-            Examines filelog entries within minrev, maxrev linkrev range
-            Returns an iterator yielding (linkrev, parentlinkrevs, copied)
-            tuples in backwards order
-            """
-            cl_count = len(repo)
-            revs = []
-            for j in xrange(0, last + 1):
-                linkrev = filelog.linkrev(j)
-                if linkrev < minrev:
-                    continue
-                # only yield rev for which we have the changelog, it can
-                # happen while doing "hg log" during a pull or commit
-                if linkrev >= cl_count:
-                    break
-
-                parentlinkrevs = []
-                for p in filelog.parentrevs(j):
-                    if p != nullrev:
-                        parentlinkrevs.append(filelog.linkrev(p))
-                n = filelog.node(j)
-                revs.append((linkrev, parentlinkrevs,
-                             follow and filelog.renamed(n)))
-
-            return reversed(revs)
-        def iterfiles():
-            pctx = repo['.']
-            for filename in match.files():
-                if follow:
-                    if filename not in pctx:
-                        raise util.Abort(_('cannot follow file not in parent '
-                                           'revision: "%s"') % filename)
-                    yield filename, pctx[filename].filenode()
-                else:
-                    yield filename, None
-            for filename_node in copies:
-                yield filename_node
-        for file_, node in iterfiles():
-            filelog = repo.file(file_)
-            if not len(filelog):
-                if node is None:
-                    # A zero count may be a directory or deleted file, so
-                    # try to find matching entries on the slow path.
-                    if follow:
-                        raise util.Abort(
-                            _('cannot follow nonexistent file: "%s"') % file_)
-                    slowpath = True
-                    break
-                else:
-                    continue
-
-            if node is None:
-                last = len(filelog) - 1
-            else:
-                last = filelog.rev(node)
-
-
-            # keep track of all ancestors of the file
-            ancestors = set([filelog.linkrev(last)])
-
-            # iterate from latest to oldest revision
-            for rev, flparentlinkrevs, copied in filerevgen(filelog, last):
-                if not follow:
-                    if rev > maxrev:
-                        continue
-                else:
-                    # Note that last might not be the first interesting
-                    # rev to us:
-                    # if the file has been changed after maxrev, we'll
-                    # have linkrev(last) > maxrev, and we still need
-                    # to explore the file graph
-                    if rev not in ancestors:
-                        continue
-                    # XXX insert 1327 fix here
-                    if flparentlinkrevs:
-                        ancestors.update(flparentlinkrevs)
-
-                fncache.setdefault(rev, []).append(file_)
-                wanted.add(rev)
-                if copied:
-                    copies.append(copied)
-
-        # We decided to fall back to the slowpath because at least one
-        # of the paths was not a file. Check to see if at least one of them
-        # existed in history, otherwise simply return
-        if slowpath:
+            # We decided to fall back to the slowpath because at least one
+            # of the paths was not a file. Check to see if at least one of them
+            # existed in history, otherwise simply return
             for path in match.files():
                 if path == '.' or path in repo.store:
                     break
