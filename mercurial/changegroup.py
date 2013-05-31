@@ -296,6 +296,11 @@ class bundle10(object):
 
         yield self.close()
 
+    # filter any nodes that claim to be part of the known set
+    def prune(self, revlog, missing, commonrevs, source):
+        rr, rl = revlog.rev, revlog.linkrev
+        return [n for n in missing if rl(rr(n)) not in commonrevs]
+
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
@@ -310,11 +315,6 @@ class bundle10(object):
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
         changedfiles = set()
-
-        # filter any nodes that claim to be part of the known set
-        def prune(revlog, missing):
-            rr, rl = revlog.rev, revlog.linkrev
-            return [n for n in missing if rl(rr(n)) not in commonrevs]
 
         # Callback for the changelog, used to collect changed files and manifest
         # nodes.
@@ -347,7 +347,7 @@ class bundle10(object):
 
         for f in changedfiles:
             fnodes[f] = {}
-        mfnodes = prune(mf, mfs)
+        mfnodes = self.prune(mf, mfs, commonrevs, source)
         for chunk in self.group(mfnodes, mf, lookupmf, units=_('manifests'),
                                 reorder=reorder):
             yield chunk
@@ -377,7 +377,7 @@ class bundle10(object):
             def lookupfilelog(x):
                 return linkrevnodes[x]
 
-            filenodes = prune(filerevlog, linkrevnodes)
+            filenodes = self.prune(filerevlog, linkrevnodes, commonrevs, source)
             if filenodes:
                 progress(msgbundling, i + 1, item=fname, unit=msgfiles,
                          total=total)
