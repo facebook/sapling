@@ -11317,8 +11317,11 @@ msgstr ""
 "    Devolve 0 para indicar sucesso, 1 se nada mudou.\n"
 "    "
 
-msgid "cannot amend recursively"
-msgstr "não é possível emendar recursivamente"
+msgid "cannot amend with --subrepos"
+msgstr "amend não suporta --subrepos"
+
+msgid "cannot amend with ui.commitsubrepos enabled"
+msgstr "não é possível usar amend com ui.commitsubrepos habilitada"
 
 msgid "cannot amend public changesets"
 msgstr "não é possível emendar revisões públicas"
