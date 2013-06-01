@@ -174,6 +174,13 @@ Graft out of order, skipping a merge and a duplicate
   (use hg resolve and hg graft --continue)
   [255]
 
+Commit while interrupted should fail:
+
+  $ hg ci -m 'commit interrupted graft'
+  abort: cannot commit an interrupted graft operation
+  (use "hg graft -c" to continue graft)
+  [255]
+
 Continue without resolve should fail:
 
   $ hg graft -c
