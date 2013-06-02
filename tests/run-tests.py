@@ -383,8 +383,8 @@ def terminate(proc):
     except OSError:
         pass
 
-def killdaemons():
-    return killmod.killdaemons(DAEMON_PIDS, tryhard=False, remove=True,
+def killdaemons(pidfile):
+    return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
 def cleanup(options):
@@ -806,7 +806,7 @@ def run(cmd, wd, options, replacements, env):
         ret = proc.wait()
         if ret == 0:
             ret = signal.SIGTERM << 8
-        killdaemons()
+        killdaemons(env['DAEMON_PIDS'])
         return ret
 
     output = ''
@@ -827,7 +827,7 @@ def run(cmd, wd, options, replacements, env):
         ret = 'timeout'
 
     if ret:
-        killdaemons()
+        killdaemons(env['DAEMON_PIDS'])
 
     for s, r in replacements:
         output = re.sub(s, r, output)
@@ -940,7 +940,7 @@ def runone(options, test):
         times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
 
-    killdaemons()
+    killdaemons(env['DAEMON_PIDS'])
 
     skipped = (ret == SKIPPED_STATUS)
 
