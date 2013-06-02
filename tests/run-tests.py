@@ -362,15 +362,15 @@ def createhgrc(path, options):
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
-def createenv(options, testtmp):
+def createenv(options, testtmp, threadtmp):
     env = os.environ.copy()
     env['TESTTMP'] = testtmp
     env['HOME'] = testtmp
     env["HGPORT"] = str(options.port)
     env["HGPORT1"] = str(options.port + 1)
     env["HGPORT2"] = str(options.port + 2)
-    env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
-    env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+    env["HGRCPATH"] = os.path.join(threadtmp, '.hgrc')
+    env["DAEMON_PIDS"] = os.path.join(threadtmp, 'daemon.pids')
     env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
     env["HGMERGE"] = "internal:merge"
     env["HGUSER"]   = "test"
@@ -870,7 +870,7 @@ def run(cmd, wd, options, replacements, env):
         output = re.sub(s, r, output)
     return ret, output.splitlines(True)
 
-def runone(options, test):
+def runone(options, test, count):
     '''returns a result element: (code, test, msg)'''
 
     def skip(msg):
@@ -946,7 +946,9 @@ def runone(options, test):
         os.remove(err)       # Remove any previous output files
 
     # Make a tmp subdirectory to work in
-    testtmp = os.path.join(HGTMP, os.path.basename(test))
+    threadtmp = os.path.join(HGTMP, "child%d" % count)
+    testtmp = os.path.join(threadtmp, os.path.basename(test))
+    os.mkdir(threadtmp)
     os.mkdir(testtmp)
 
     replacements = [
@@ -964,7 +966,7 @@ def runone(options, test):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
-    env = createenv(options, testtmp)
+    env = createenv(options, testtmp, threadtmp)
     createhgrc(env['HGRCPATH'], options)
 
     if options.time:
@@ -1036,7 +1038,7 @@ def runone(options, test):
         iolock.release()
 
     if not options.keep_tmpdir:
-        shutil.rmtree(testtmp, True)
+        shutil.rmtree(threadtmp, True)
     return result
 
 _hgpath = None
@@ -1189,7 +1191,7 @@ abort = False
 
 def runqueue(options, tests):
     for test in tests:
-        code, test, msg = runone(options, test)
+        code, test, msg = runone(options, test, 0)
         resultslock.acquire()
         results[code].append((test, msg))
         resultslock.release()
