@@ -911,8 +911,7 @@ def runone(options, test):
         os.remove(err)       # Remove any previous output files
 
     # Make a tmp subdirectory to work in
-    testtmp = os.environ["TESTTMP"] = os.environ["HOME"] = \
-        os.path.join(HGTMP, os.path.basename(test))
+    testtmp = os.path.join(HGTMP, os.path.basename(test))
     os.mkdir(testtmp)
 
     replacements = [
@@ -931,6 +930,8 @@ def runone(options, test):
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
     env = os.environ.copy()
+    env['TESTTMP'] = testtmp
+    env['HOME'] = testtmp
 
     if options.time:
         starttime = time.time()
