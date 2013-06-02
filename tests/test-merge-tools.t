@@ -281,7 +281,7 @@ and true.executable set to cat with path works:
 
 environment variables in true.executable are handled:
 
-  $ echo 'echo "custom merge tool"' > "$HGTMP/merge.sh"
+  $ echo 'echo "custom merge tool"' > .hg/merge.sh
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -289,7 +289,7 @@ environment variables in true.executable are handled:
   true.executable=cat
   # hg update -C 1
   $ hg --config merge-tools.true.executable='sh' \
-  >    --config merge-tools.true.args="$HGTMP/merge.sh" \
+  >    --config merge-tools.true.args=.hg/merge.sh \
   >    merge -r 2
   merging f
   custom merge tool
