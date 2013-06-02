@@ -1190,15 +1190,38 @@ times = []
 iolock = threading.Lock()
 abort = False
 
-def runqueue(options, tests):
-    for test in tests:
-        code, test, msg = runone(options, test, 0)
-        resultslock.acquire()
-        results[code].append((test, msg))
-        resultslock.release()
+def scheduletests(options, tests):
+    jobs = options.jobs
+    done = queue.Queue()
+    running = 0
+    count = 0
+    global abort
 
-        if options.first and code not in '.si':
-            break
+    def job(test, count):
+        try:
+            done.put(runone(options, test, count))
+        except KeyboardInterrupt:
+            pass
+
+    try:
+        while tests or running:
+            if not done.empty() or running == jobs or not tests:
+                try:
+                    code, test, msg = done.get(True, 1)
+                    results[code].append((test, msg))
+                    if options.first and code not in '.si':
+                        break
+                except queue.Empty:
+                    continue
+                running -= 1
+            if tests and not running == jobs:
+                test = tests.pop(0)
+                t = threading.Thread(None, job, args=(test, count))
+                t.start()
+                running += 1
+                count += 1
+    except KeyboardInterrupt:
+        abort = True
 
 def runtests(options, tests):
     try:
@@ -1218,7 +1241,7 @@ def runtests(options, tests):
                 print "running all tests"
                 tests = orig
 
-        runqueue(options, tests)
+        scheduletests(options, tests)
 
         failed = len(results['!'])
         tested = len(results['.']) + failed
@@ -1349,10 +1372,7 @@ def main():
     vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
 
     try:
-        if len(tests) > 1 and options.jobs > 1:
-            runchildren(options, tests)
-        else:
-            runtests(options, tests)
+        runtests(options, tests)
     finally:
         time.sleep(.1)
         cleanup(options)
