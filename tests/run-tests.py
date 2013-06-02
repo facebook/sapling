@@ -371,6 +371,11 @@ def createenv(options, testtmp):
     env["HGPORT2"] = str(options.port + 2)
     env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
     env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+    env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
+    env["HGMERGE"] = "internal:merge"
+    env["HGUSER"]   = "test"
+    env["HGENCODING"] = "ascii"
+    env["HGENCODINGMODE"] = "strict"
 
     # Reset some environment variables to well-known values so that
     # the tests produce repeatable output.
@@ -1293,12 +1298,6 @@ def main():
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
-
-    os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
-    os.environ["HGMERGE"] = "internal:merge"
-    os.environ["HGUSER"]   = "test"
-    os.environ["HGENCODING"] = "ascii"
-    os.environ["HGENCODINGMODE"] = "strict"
 
     if options.with_hg:
         INST = None
