@@ -1061,7 +1061,6 @@ def _checkhglib(verb):
                          % (verb, actualhg, expecthg))
 
 results = {'.':[], '!':[], 's':[], 'i':[]}
-resultslock = threading.Lock()
 times = []
 iolock = threading.Lock()
 abort = False
