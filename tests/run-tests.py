@@ -372,6 +372,29 @@ def createenv(options, testtmp):
     env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
     env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
 
+    # Reset some environment variables to well-known values so that
+    # the tests produce repeatable output.
+    env['LANG'] = env['LC_ALL'] = env['LANGUAGE'] = 'C'
+    env['TZ'] = 'GMT'
+    env["EMAIL"] = "Foo Bar <foo.bar@example.com>"
+    env['COLUMNS'] = '80'
+    env['TERM'] = 'xterm'
+
+    env['CDPATH'] = ''
+    env['GREP_OPTIONS'] = ''
+    env['http_proxy'] = ''
+    env['no_proxy'] = ''
+    env['NO_PROXY'] = ''
+
+    # unset env related to hooks
+    for k in env.keys():
+        if k.startswith('HG_'):
+            del env[k]
+    if 'HG' in env:
+        del env['HG']
+    if 'HGPROF' in env:
+        del env['HGPROF']
+
     return env
 
 def checktools():
@@ -1243,37 +1266,11 @@ def main():
     if options.random:
         random.shuffle(tests)
 
-    # Reset some environment variables to well-known values so that
-    # the tests produce repeatable output.
-    os.environ['LANG'] = os.environ['LC_ALL'] = os.environ['LANGUAGE'] = 'C'
-    os.environ['TZ'] = 'GMT'
-    os.environ["EMAIL"] = "Foo Bar <foo.bar@example.com>"
-    os.environ['CDPATH'] = ''
-    os.environ['COLUMNS'] = '80'
-    os.environ['GREP_OPTIONS'] = ''
-    os.environ['http_proxy'] = ''
-    os.environ['no_proxy'] = ''
-    os.environ['NO_PROXY'] = ''
-    os.environ['TERM'] = 'xterm'
     if 'PYTHONHASHSEED' not in os.environ:
         # use a random python hash seed all the time
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
         print 'python hash seed:', os.environ['PYTHONHASHSEED']
-
-    # unset env related to hooks
-    for k in os.environ.keys():
-        if k.startswith('HG_'):
-            # can't remove on solaris
-            os.environ[k] = ''
-            del os.environ[k]
-    if 'HG' in os.environ:
-        # can't remove on solaris
-        os.environ['HG'] = ''
-        del os.environ['HG']
-    if 'HGPROF' in os.environ:
-        os.environ['HGPROF'] = ''
-        del os.environ['HGPROF']
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
