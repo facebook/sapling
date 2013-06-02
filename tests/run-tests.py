@@ -380,20 +380,15 @@ def createenv(options, testtmp):
     env['COLUMNS'] = '80'
     env['TERM'] = 'xterm'
 
-    env['CDPATH'] = ''
-    env['GREP_OPTIONS'] = ''
-    env['http_proxy'] = ''
-    env['no_proxy'] = ''
-    env['NO_PROXY'] = ''
+    for k in ('HG HGPROF CDPATH GREP_OPTIONS http_proxy no_proxy ' +
+              'NO_PROXY').split():
+        if k in env:
+            del env[k]
 
     # unset env related to hooks
     for k in env.keys():
         if k.startswith('HG_'):
             del env[k]
-    if 'HG' in env:
-        del env['HG']
-    if 'HGPROF' in env:
-        del env['HGPROF']
 
     return env
 
