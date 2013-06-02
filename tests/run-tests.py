@@ -247,9 +247,6 @@ def parseargs():
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
-    if options.interactive and options.jobs > 1:
-        print '(--interactive overrides --jobs)'
-        options.jobs = 1
     if options.interactive and options.debug:
         parser.error("-i/--interactive and -d/--debug are incompatible")
     if options.debug:
