@@ -905,8 +905,6 @@ def runone(options, test):
 
     vlog("# Test", test)
 
-    createhgrc(HGRCPATH, options)
-
     if os.path.exists(err):
         os.remove(err)       # Remove any previous output files
 
@@ -935,7 +933,10 @@ def runone(options, test):
     env["HGPORT"] = str(options.port)
     env["HGPORT1"] = str(options.port + 1)
     env["HGPORT2"] = str(options.port + 2)
+    env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
     env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+
+    createhgrc(env['HGRCPATH'], options)
 
     if options.time:
         starttime = time.time()
@@ -1167,9 +1168,6 @@ def runqueue(options, tests):
             break
 
 def runtests(options, tests):
-    global HGRCPATH
-    HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
-
     try:
         if INST:
             installhg(options)
@@ -1300,7 +1298,6 @@ def main():
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
-    HGRCPATH = None
 
     os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
     os.environ["HGMERGE"] = "internal:merge"
