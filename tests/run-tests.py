@@ -932,6 +932,9 @@ def runone(options, test):
     env = os.environ.copy()
     env['TESTTMP'] = testtmp
     env['HOME'] = testtmp
+    env["HGPORT"] = str(options.port)
+    env["HGPORT1"] = str(options.port + 1)
+    env["HGPORT2"] = str(options.port + 2)
 
     if options.time:
         starttime = time.time()
@@ -1305,9 +1308,6 @@ def main():
     os.environ["HGUSER"]   = "test"
     os.environ["HGENCODING"] = "ascii"
     os.environ["HGENCODINGMODE"] = "strict"
-    os.environ["HGPORT"] = str(options.port)
-    os.environ["HGPORT1"] = str(options.port + 1)
-    os.environ["HGPORT2"] = str(options.port + 2)
 
     if options.with_hg:
         INST = None
