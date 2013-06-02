@@ -863,6 +863,9 @@ def run(cmd, wd, options, replacements, env):
     if ret:
         killdaemons(env['DAEMON_PIDS'])
 
+    if abort:
+        raise KeyboardInterrupt()
+
     for s, r in replacements:
         output = re.sub(s, r, output)
     return ret, output.splitlines(True)
@@ -1182,6 +1185,7 @@ results = {'.':[], '!':[], 's':[], 'i':[]}
 resultslock = threading.Lock()
 times = []
 iolock = threading.Lock()
+abort = False
 
 def runqueue(options, tests):
     for test in tests:
