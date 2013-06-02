@@ -362,6 +362,17 @@ def createhgrc(path, options):
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
+def createenv(options, testtmp):
+    env = os.environ.copy()
+    env['TESTTMP'] = testtmp
+    env['HOME'] = testtmp
+    env["HGPORT"] = str(options.port)
+    env["HGPORT1"] = str(options.port + 1)
+    env["HGPORT2"] = str(options.port + 2)
+    env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
+    env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+
+    return env
 
 def checktools():
     # Before we go any further, check for pre-requisite tools
@@ -927,15 +938,7 @@ def runone(options, test):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
-    env = os.environ.copy()
-    env['TESTTMP'] = testtmp
-    env['HOME'] = testtmp
-    env["HGPORT"] = str(options.port)
-    env["HGPORT1"] = str(options.port + 1)
-    env["HGPORT2"] = str(options.port + 2)
-    env["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
-    env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
-
+    env = createenv(options, testtmp)
     createhgrc(env['HGRCPATH'], options)
 
     if options.time:
