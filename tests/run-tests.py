@@ -159,6 +159,8 @@ def parseargs():
         help="run tests matching keywords")
     parser.add_option("-l", "--local", action="store_true",
         help="shortcut for --with-hg=<testdir>/../hg")
+    parser.add_option("--loop", action="store_true",
+        help="loop tests repeatedly")
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
     parser.add_option("-p", "--port", type="int",
@@ -1088,6 +1090,8 @@ def scheduletests(options, tests):
                 running -= 1
             if tests and not running == jobs:
                 test = tests.pop(0)
+                if options.loop:
+                    tests.append(test)
                 t = threading.Thread(None, job, args=(test, count))
                 t.start()
                 running += 1
