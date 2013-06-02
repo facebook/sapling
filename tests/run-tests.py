@@ -362,13 +362,13 @@ def createhgrc(path, options):
             hgrc.write('[%s]\n%s\n' % (section, key))
     hgrc.close()
 
-def createenv(options, testtmp, threadtmp):
+def createenv(options, testtmp, threadtmp, port):
     env = os.environ.copy()
     env['TESTTMP'] = testtmp
     env['HOME'] = testtmp
-    env["HGPORT"] = str(options.port)
-    env["HGPORT1"] = str(options.port + 1)
-    env["HGPORT2"] = str(options.port + 2)
+    env["HGPORT"] = str(port)
+    env["HGPORT1"] = str(port + 1)
+    env["HGPORT2"] = str(port + 2)
     env["HGRCPATH"] = os.path.join(threadtmp, '.hgrc')
     env["DAEMON_PIDS"] = os.path.join(threadtmp, 'daemon.pids')
     env["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
@@ -951,10 +951,11 @@ def runone(options, test, count):
     os.mkdir(threadtmp)
     os.mkdir(testtmp)
 
+    port = options.port + count * 3
     replacements = [
-        (r':%s\b' % options.port, ':$HGPORT'),
-        (r':%s\b' % (options.port + 1), ':$HGPORT1'),
-        (r':%s\b' % (options.port + 2), ':$HGPORT2'),
+        (r':%s\b' % port, ':$HGPORT'),
+        (r':%s\b' % (port + 1), ':$HGPORT1'),
+        (r':%s\b' % (port + 2), ':$HGPORT2'),
         ]
     if os.name == 'nt':
         replacements.append(
@@ -966,7 +967,7 @@ def runone(options, test, count):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
-    env = createenv(options, testtmp, threadtmp)
+    env = createenv(options, testtmp, threadtmp, port)
     createhgrc(env['HGRCPATH'], options)
 
     if options.time:
