@@ -1287,14 +1287,17 @@ def main():
         checktools()
 
         if len(args) == 0:
-            args = sorted(t for t in os.listdir(".")
-                          if t.startswith("test-")
-                          and (t.endswith(".py") or t.endswith(".t")))
+            args = [t for t in os.listdir(".")
+                    if t.startswith("test-")
+                    and (t.endswith(".py") or t.endswith(".t"))]
 
     tests = args
 
     if options.random:
         random.shuffle(tests)
+    else:
+        # run largest tests first, as they tend to take the longest
+        tests.sort(key=lambda x: -os.stat(x).st_size)
 
     if 'PYTHONHASHSEED' not in os.environ:
         # use a random python hash seed all the time
