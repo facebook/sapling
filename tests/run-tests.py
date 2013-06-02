@@ -137,8 +137,6 @@ def parseargs():
         help="always run tests listed in the specified whitelist file")
     parser.add_option("-C", "--annotate", action="store_true",
         help="output files annotated with coverage")
-    parser.add_option("--child", type="int",
-        help="run as child process, summary to given fd")
     parser.add_option("-c", "--cover", action="store_true",
         help="print a test coverage report")
     parser.add_option("-d", "--debug", action="store_true",
@@ -242,10 +240,7 @@ def parseargs():
 
     global verbose
     if options.verbose:
-        if options.jobs > 1 or options.child is not None:
-            verbose = "[%d]" % os.getpid()
-        else:
-            verbose = ''
+        verbose = ''
 
     if options.tmpdir:
         options.tmpdir = os.path.expanduser(options.tmpdir)
@@ -272,8 +267,7 @@ def parseargs():
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, 'blacklist')
     if options.whitelist:
-        options.whitelisted = parselistfiles(options.whitelist, 'whitelist',
-                                             warn=options.child is None)
+        options.whitelisted = parselistfiles(options.whitelist, 'whitelist')
     else:
         options.whitelisted = {}
 
@@ -567,9 +561,6 @@ def outputcoverage(options):
         cmd = 'coverage %s' % ' '.join(args)
         vlog('# Running: %s' % cmd)
         os.system(cmd)
-
-    if options.child:
-        return
 
     covrun('-c')
     omit = ','.join(os.path.join(x, '*') for x in [BINDIR, TESTDIR])
@@ -1133,30 +1124,22 @@ def runtests(options, tests):
         skipped = len(results['s'])
         ignored = len(results['i'])
 
-        if options.child:
-            fp = os.fdopen(options.child, 'wb')
-            pickle.dump(results, fp, pickle.HIGHEST_PROTOCOL)
-            if options.time:
-                pickle.dump(times, fp, pickle.HIGHEST_PROTOCOL)
-            fp.close()
-        else:
-            print
-            for s in results['s']:
-                print "Skipped %s: %s" % s
-            for s in results['!']:
-                print "Failed %s: %s" % s
-            _checkhglib("Tested")
-            print "# Ran %d tests, %d skipped, %d failed." % (
-                tested, skipped + ignored, failed)
-            if options.time:
-                outputtimes(options)
+        print
+        for s in results['s']:
+            print "Skipped %s: %s" % s
+        for s in results['!']:
+            print "Failed %s: %s" % s
+        _checkhglib("Tested")
+        print "# Ran %d tests, %d skipped, %d failed." % (
+            tested, skipped + ignored, failed)
+        if options.time:
+            outputtimes(options)
 
         if options.anycoverage:
             outputcoverage(options)
     except KeyboardInterrupt:
         failed = True
-        if not options.child:
-            print "\ninterrupted!"
+        print "\ninterrupted!"
 
     if failed:
         sys.exit(1)
@@ -1166,15 +1149,14 @@ testtypes = [('.py', pytest, '.out'),
 
 def main():
     (options, args) = parseargs()
-    if not options.child:
-        os.umask(022)
+    os.umask(022)
 
-        checktools()
+    checktools()
 
-        if len(args) == 0:
-            args = [t for t in os.listdir(".")
-                    if t.startswith("test-")
-                    and (t.endswith(".py") or t.endswith(".t"))]
+    if len(args) == 0:
+        args = [t for t in os.listdir(".")
+                if t.startswith("test-")
+                and (t.endswith(".py") or t.endswith(".t"))]
 
     tests = args
 
@@ -1193,8 +1175,7 @@ def main():
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
     if options.tmpdir:
-        if not options.child:
-            options.keep_tmpdir = True
+        options.keep_tmpdir = True
         tmpdir = options.tmpdir
         if os.path.exists(tmpdir):
             # Meaning of tmpdir has changed since 1.3: we used to create
@@ -1235,22 +1216,21 @@ def main():
     os.environ["BINDIR"] = BINDIR
     os.environ["PYTHON"] = PYTHON
 
-    if not options.child:
-        path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
-        os.environ["PATH"] = os.pathsep.join(path)
+    path = [BINDIR] + os.environ["PATH"].split(os.pathsep)
+    os.environ["PATH"] = os.pathsep.join(path)
 
-        # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
-        # can run .../tests/run-tests.py test-foo where test-foo
-        # adds an extension to HGRC
-        pypath = [PYTHONDIR, TESTDIR]
-        # We have to augment PYTHONPATH, rather than simply replacing
-        # it, in case external libraries are only available via current
-        # PYTHONPATH.  (In particular, the Subversion bindings on OS X
-        # are in /opt/subversion.)
-        oldpypath = os.environ.get(IMPL_PATH)
-        if oldpypath:
-            pypath.append(oldpypath)
-        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+    # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
+    # can run .../tests/run-tests.py test-foo where test-foo
+    # adds an extension to HGRC
+    pypath = [PYTHONDIR, TESTDIR]
+    # We have to augment PYTHONPATH, rather than simply replacing
+    # it, in case external libraries are only available via current
+    # PYTHONPATH.  (In particular, the Subversion bindings on OS X
+    # are in /opt/subversion.)
+    oldpypath = os.environ.get(IMPL_PATH)
+    if oldpypath:
+        pypath.append(oldpypath)
+    os.environ[IMPL_PATH] = os.pathsep.join(pypath)
 
     COVERAGE_FILE = os.path.join(TESTDIR, ".coverage")
 
