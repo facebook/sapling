@@ -1162,8 +1162,16 @@ def main():
     if options.random:
         random.shuffle(tests)
     else:
-        # run largest tests first, as they tend to take the longest
-        tests.sort(key=lambda x: -os.stat(x).st_size)
+        # keywords for slow tests
+        slow = 'svn gendoc check-code-hg'.split()
+        def sortkey(f):
+            # run largest tests first, as they tend to take the longest
+            val = -os.stat(f).st_size
+            for kw in slow:
+                if kw in f:
+                    val *= 10
+            return val
+        tests.sort(key=sortkey)
 
     if 'PYTHONHASHSEED' not in os.environ:
         # use a random python hash seed all the time
