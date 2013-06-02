@@ -62,9 +62,9 @@ import Queue as queue
 processlock = threading.Lock()
 
 closefds = os.name == 'posix'
-def Popen4(cmd, wd, timeout):
+def Popen4(cmd, wd, timeout, env=None):
     processlock.acquire()
-    p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=wd,
+    p = subprocess.Popen(cmd, shell=True, bufsize=-1, cwd=wd, env=env,
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
@@ -549,13 +549,13 @@ def outputcoverage(options):
             os.mkdir(adir)
         covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
 
-def pytest(test, wd, options, replacements):
+def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
     if os.name == 'nt':
         replacements.append((r'\r\n', '\n'))
-    return run(cmd, wd, options, replacements)
+    return run(cmd, wd, options, replacements, env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 escapesub = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -615,7 +615,7 @@ def linematch(el, l):
             return True
     return False
 
-def tsttest(test, wd, options, replacements):
+def tsttest(test, wd, options, replacements, env):
     # We generate a shell script which outputs unique markers to line
     # up script results with our source. These markers include input
     # line number and the last return code
@@ -741,7 +741,7 @@ def tsttest(test, wd, options, replacements):
 
         cmd = '%s "%s"' % (options.shell, name)
         vlog("# Running", cmd)
-        exitcode, output = run(cmd, wd, options, replacements)
+        exitcode, output = run(cmd, wd, options, replacements, env)
         # do not merge output if skipped, return hghave message instead
         # similarly, with --debug, output is None
         if exitcode == SKIPPED_STATUS or output is None:
@@ -791,16 +791,16 @@ def tsttest(test, wd, options, replacements):
     return exitcode, postout
 
 wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, options, replacements):
+def run(cmd, wd, options, replacements, env):
     """Run command in a sub-process, capturing the output (stdout and stderr).
     Return a tuple (exitcode, output).  output is None in debug mode."""
     # TODO: Use subprocess.Popen if we're running on Python 2.4
     if options.debug:
-        proc = subprocess.Popen(cmd, shell=True, cwd=wd)
+        proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
         ret = proc.wait()
         return (ret, None)
 
-    proc = Popen4(cmd, wd, options.timeout)
+    proc = Popen4(cmd, wd, options.timeout, env)
     def cleanup():
         terminate(proc)
         ret = proc.wait()
@@ -930,9 +930,11 @@ def runone(options, test):
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
+    env = os.environ.copy()
+
     if options.time:
         starttime = time.time()
-    ret, out = runner(testpath, testtmp, options, replacements)
+    ret, out = runner(testpath, testtmp, options, replacements, env)
     if options.time:
         endtime = time.time()
         times.append((test, endtime - starttime))
