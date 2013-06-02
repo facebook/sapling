@@ -352,7 +352,7 @@ def createhgrc(path, options):
         hgrc.write('[extensions]\n')
         hgrc.write('inotify=\n')
         hgrc.write('[inotify]\n')
-        hgrc.write('pidfile=%s\n' % DAEMON_PIDS)
+        hgrc.write('pidfile=daemon.pids')
         hgrc.write('appendpid=True\n')
     if options.extra_config_opt:
         for opt in options.extra_config_opt:
@@ -935,6 +935,7 @@ def runone(options, test):
     env["HGPORT"] = str(options.port)
     env["HGPORT1"] = str(options.port + 1)
     env["HGPORT2"] = str(options.port + 2)
+    env["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
 
     if options.time:
         starttime = time.time()
@@ -1166,8 +1167,7 @@ def runqueue(options, tests):
             break
 
 def runtests(options, tests):
-    global DAEMON_PIDS, HGRCPATH
-    DAEMON_PIDS = os.environ["DAEMON_PIDS"] = os.path.join(HGTMP, 'daemon.pids')
+    global HGRCPATH
     HGRCPATH = os.environ["HGRCPATH"] = os.path.join(HGTMP, '.hgrc')
 
     try:
@@ -1300,7 +1300,6 @@ def main():
             d = os.getenv('TMP')
         tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
     HGTMP = os.environ['HGTMP'] = os.path.realpath(tmpdir)
-    DAEMON_PIDS = None
     HGRCPATH = None
 
     os.environ["HGEDITOR"] = sys.executable + ' -c "import sys; sys.exit(0)"'
