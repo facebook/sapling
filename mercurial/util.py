@@ -997,10 +997,11 @@ def filechunkiter(f, size=65536, limit=None):
             limit -= len(s)
         yield s
 
-def makedate():
-    '''Return the current time as a (unixtime, offset) tuple based off
-    the local timezone.'''
-    timestamp = time.time()
+def makedate(timestamp=None):
+    '''Return a unix timestamp (or the current time) as a (unixtime,
+    offset) tuple based off the local timezone.'''
+    if timestamp is None:
+        timestamp = time.time()
     if timestamp < 0:
         hint = _("check your clock")
         raise Abort(_("negative timestamp: %d") % timestamp, hint=hint)
