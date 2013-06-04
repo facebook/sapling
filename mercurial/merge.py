@@ -61,6 +61,8 @@ class mergestate(object):
         l.sort()
         for f in l:
             yield f
+    def files(self):
+        return self._state.keys()
     def mark(self, dfile, state):
         self._state[dfile][0] = state
         self._dirty = True
