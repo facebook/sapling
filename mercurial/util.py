@@ -998,14 +998,16 @@ def filechunkiter(f, size=65536, limit=None):
         yield s
 
 def makedate():
-    ct = time.time()
-    if ct < 0:
+    '''Return the current time as a (unixtime, offset) tuple based off
+    the local timezone.'''
+    timestamp = time.time()
+    if timestamp < 0:
         hint = _("check your clock")
-        raise Abort(_("negative timestamp: %d") % ct, hint=hint)
-    delta = (datetime.datetime.utcfromtimestamp(ct) -
-             datetime.datetime.fromtimestamp(ct))
+        raise Abort(_("negative timestamp: %d") % timestamp, hint=hint)
+    delta = (datetime.datetime.utcfromtimestamp(timestamp) -
+             datetime.datetime.fromtimestamp(timestamp))
     tz = delta.days * 86400 + delta.seconds
-    return ct, tz
+    return timestamp, tz
 
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
