@@ -140,6 +140,7 @@ repo, you can add a ``--force`` option.
 
 try:
     import cPickle as pickle
+    pickle.dump # import now
 except ImportError:
     import pickle
 import os
