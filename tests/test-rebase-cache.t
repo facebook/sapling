@@ -396,27 +396,6 @@ Make sure rebase does not break for phase/filter related reason
   > [ui]
   > logtemplate={rev} {desc} {phase}\n
   > EOF
-  $ cat $HGRCPATH
-  [ui]
-  slash = True
-  interactive = False
-  [defaults]
-  backout = -d "0 0"
-  commit = -d "0 0"
-  tag = -d "0 0"
-  [extensions]
-  graphlog=
-  rebase=
-  mq=
-  
-  [phases]
-  publish=False
-  
-  [alias]
-  tglog  = log -G --template "{rev}: '{desc}' {branches}\n"
-  theads = heads --template "{rev}: '{desc}' {branches}\n"
-  [ui]
-  logtemplate={rev} {desc} {phase}\n
 
 
   $ hg init c4
