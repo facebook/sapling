@@ -333,7 +333,7 @@ def findprogram(program):
 
 def createhgrc(path, options):
     # create a fresh hgrc
-    hgrc = open(path, 'w+')
+    hgrc = open(path, 'w')
     hgrc.write('[ui]\n')
     hgrc.write('slash = True\n')
     hgrc.write('interactive = False\n')
