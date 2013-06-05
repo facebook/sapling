@@ -416,9 +416,6 @@ class SVNMeta(object):
         values are the place the branch came from. The deletions are
         sets of the deleted branches.
         """
-        if self.layout == 'single':
-            return {'branches': ({None: (None, 0, -1), }, set()),
-                    }
         paths = revision.paths
         added_branches = {}
         # Reset the tags delta before detecting the new one, and take
