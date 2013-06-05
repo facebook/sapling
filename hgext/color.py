@@ -159,10 +159,9 @@ def _terminfosetup(ui, mode):
               "ECMA-48 color\n"))
         _terminfo_params = {}
 
-def _modesetup(ui, opts):
+def _modesetup(ui, coloropt):
     global _terminfo_params
 
-    coloropt = opts['color']
     auto = coloropt == 'auto'
     always = not auto and util.parsebool(coloropt)
     if not always and not auto:
@@ -405,7 +404,7 @@ def uisetup(ui):
         colorui.__bases__ = (ui.__class__,)
         ui.__class__ = colorui
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
-        mode = _modesetup(ui_, opts)
+        mode = _modesetup(ui_, opts['color'])
         colorui._colormode = mode
         if mode:
             extstyles()
