@@ -403,8 +403,6 @@ class SVNMeta(object):
             raise KeyError('%s has no conversion record' % ctx)
         branchpath, revnum = extra['convert_revision'][40:].rsplit('@', 1)
         branch = self.localname(self.normalize(branchpath))
-        if self.layout == 'single':
-            branchpath = ''
         if branchpath and branchpath[0] == '/':
             branchpath = branchpath[1:]
         return int(revnum), branch, branchpath
