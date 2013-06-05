@@ -400,7 +400,7 @@ def templatelabel(context, mapping, args):
 def uisetup(ui):
     if ui.plain():
         return
-    if not issubclass(ui.__class__, colorui):
+    if not isinstance(ui, colorui):
         colorui.__bases__ = (ui.__class__,)
         ui.__class__ = colorui
     def colorcmd(orig, ui_, opts, cmd, cmdfunc):
