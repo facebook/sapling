@@ -962,7 +962,11 @@ def runone(options, test, count):
 
     if options.time:
         starttime = time.time()
-    ret, out = runner(testpath, testtmp, options, replacements, env)
+    try:
+        ret, out = runner(testpath, testtmp, options, replacements, env)
+    except KeyboardInterrupt:
+        log('INTERRUPTED:', test)
+        raise
     if options.time:
         endtime = time.time()
         times.append((test, endtime - starttime))
