@@ -64,3 +64,36 @@ class StandardLayout(base.BaseLayout):
                     if tag:
                         return tag
         return None
+
+    def split_remote_name(self, path, known_branches):
+
+        # this odd evolution is how we deal with people doing things like
+        # creating brances (note the typo), committing to a branch under it,
+        # and then moving it to branches
+
+        # we need to find the ../foo branch names, if they exist, before
+        # trying to create a normally-named branch
+
+        components = path.split('/')
+        candidate = ''
+        while self.localname(candidate) not in known_branches and components:
+            if not candidate:
+                candidate = components.pop(0)
+            else:
+                candidate += '/'
+                candidate += components.pop(0)
+        if self.localname(candidate) in known_branches:
+            return candidate, '/'.join(components)
+
+        if path == 'trunk' or path.startswith('trunk/'):
+            branch_path = 'trunk'
+            local_path = '/'.join(path.split('/')[1:])
+        elif path.startswith('branches/'):
+            components = path.split('/')
+            branch_path = '/'.join(components[:2])
+            local_path = '/'.join(components[2:])
+        else:
+            components = path.split('/')
+            branch_path = '/'.join(components[:-1])
+            local_path = components[-1]
+        return branch_path, local_path

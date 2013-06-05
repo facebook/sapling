@@ -63,3 +63,18 @@ class BaseLayout(object):
 
         """
         self.__unimplemented('get_path_tag')
+
+    def split_remote_name(self, path, known_branches):
+        """Split the path into a branch component and a local component.
+
+        path should be relative to our repo url
+
+        returns (branch_path, local_path)
+
+        branch_path should be suitable to pass into localname,
+        i.e. branch_path should NOT have a leading or trailing /
+
+        local_path should be relative to the root of the Mercurial working dir
+
+        """
+        self.unimplemented('split_branch_and_local_path')

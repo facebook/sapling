@@ -274,8 +274,6 @@ class SVNMeta(object):
         relative to our subdirectory.
         """
         path = self.normalize(path)
-        if self.layout == 'single':
-            return (path, None, '')
         tag = self.get_path_tag(path)
         if tag:
             # consider the new tags when dispatching entries
@@ -294,31 +292,17 @@ class SVNMeta(object):
                 svrpath = path[:-(len(brpath)+1)]
             ln = self.localname(svrpath)
             return brpath, ln, svrpath
-        test = ''
-        path_comps = path.split('/')
-        while self.localname(test) not in self.branches and len(path_comps):
-            if not test:
-                test = path_comps.pop(0)
-            else:
-                test += '/%s' % path_comps.pop(0)
-        if self.localname(test) in self.branches:
-            return path[len(test)+1:], self.localname(test), test
-        if existing:
+
+        branch_path, local_path = self.layoutobj.split_remote_name(path,
+                                                                   self.branches)
+        branch_name = self.layoutobj.localname(branch_path)
+
+        if branch_name in self.branches:
+            return local_path, branch_name, branch_path
+        elif existing or (branch_name and branch_name.startswith('../')):
             return None, None, None
-        if path == 'trunk' or path.startswith('trunk/'):
-            path = '/'.join(path.split('/')[1:])
-            test = 'trunk'
-        elif path.startswith('branches/'):
-            elts = path.split('/')
-            test = '/'.join(elts[:2])
-            path = '/'.join(elts[2:])
         else:
-            path = test.split('/')[-1]
-            test = '/'.join(test.split('/')[:-1])
-        ln = self.localname(test)
-        if ln and ln.startswith('../'):
-            return None, None, None
-        return path, ln, test
+            return local_path, branch_name, branch_path
 
     def _determine_parent_branch(self, p, src_path, src_rev, revnum):
         if src_path is not None:

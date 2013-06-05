@@ -19,3 +19,6 @@ class SingleLayout(base.BaseLayout):
 
     def get_path_tag(self, path, taglocations):
         return None
+
+    def split_remote_name(self, path, known_branches):
+        return '', path
