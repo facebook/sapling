@@ -722,9 +722,9 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
                     r.revnum, branch, exact=True)]
                 if util.isancestor(pctx, fromctx):
                     continue
-        closed = checkbranch(meta, r, branch)
-        if closed is not None:
-            deleted_branches[branch] = closed
+            closed = checkbranch(meta, r, branch)
+            if closed is not None:
+                deleted_branches[branch] = closed
 
     date = meta.fixdate(r.date)
     check_deleted_branches = set(tbdelta['branches'][1])

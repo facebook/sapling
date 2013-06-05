@@ -6,7 +6,7 @@ class SingleLayout(base.BaseLayout):
     """A layout with only the default branch"""
 
     def localname(self, path):
-        return 'default'
+        return None
 
     def remotename(self, branch):
         return ''
