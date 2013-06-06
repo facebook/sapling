@@ -1125,8 +1125,9 @@ def runtests(options, tests):
         ignored = len(results['i'])
 
         print
-        for s in results['s']:
-            print "Skipped %s: %s" % s
+        if not options.noskips:
+            for s in results['s']:
+                print "Skipped %s: %s" % s
         for s in results['!']:
             print "Failed %s: %s" % s
         _checkhglib("Tested")
