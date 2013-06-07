@@ -62,7 +62,11 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             return orig(self, remote, requirements)
         wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
 
-    orig(ui, repo, *args, **opts)
+    try:
+        orig(ui, repo, *args, **opts)
+    finally:
+        if opts.get('shallow'):
+            fileserverclient.client.close()
 
 def reposetup(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
@@ -77,9 +81,9 @@ def reposetup(ui, repo):
     if isshallowclient:
         setupclient(ui, repo)
 
-    if isserverenabled:
-        # support file content requests
-        wireproto.commands['getfiles'] = (getfiles, '')
+    
+    # support file content requests
+    wireproto.commands['getfiles'] = (getfiles, '')
 
     if isserverenabled or isshallowclient:
         # don't clone filelogs to shallow clients
@@ -237,7 +241,8 @@ def getfiles(repo, proto):
                 continue
 
             path = request[40:]
-            try:
+            cachepath = os.path.join('/data/users/durham/cache', path, hex(node))
+            if not os.path.exists(cachepath):
                 filectx = repo.filectx(path, fileid=node)
 
                 text = filectx.data()
@@ -265,9 +270,21 @@ def getfiles(repo, proto):
 
                 text = lz4.compressHC("%d\0%s%s" %
                     (len(text), text, ancestortext))
-            except Exception, ex:
-                raise ex
-                text = ""
+
+                dirname = os.path.dirname(cachepath)
+                if not os.path.exists(dirname):
+                    os.makedirs(dirname)
+                f = open(cachepath, "w")
+                try:
+                    f.write(text)
+                finally:
+                    f.close()
+
+            f = open(cachepath, "r")
+            try:
+                text = f.read()
+            finally:
+                f.close()
 
             yield '%d\n%s' % (len(text), text)
 
