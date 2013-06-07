@@ -123,6 +123,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     tags = maps.Tags(repo)
 
     layout = None
+    layoutobj = None
 
     skipped = set()
     closed = set()
@@ -213,6 +214,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             existing_layout = layouts.detect.layout_from_file(svnmetadir)
             if layout != existing_layout:
                 layouts.persist.layout_to_file(svnmetadir, layout)
+            layoutobj = layouts.layout_from_name(layout, ui)
         elif layout == 'single':
             assert (subdir or '/') == revpath, ('Possible layout detection'
                                                 ' defect in replay')
@@ -237,29 +239,25 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
         # find commitpath, write to revmap
         commitpath = revpath[len(subdir)+1:]
-        if layout == 'standard':
-            if commitpath.startswith('branches/'):
-                commitpath = commitpath[len('branches/'):]
-            elif commitpath == 'trunk':
-                commitpath = ''
-            else:
-                if commitpath.startswith('tags/') and ctx.extra().get('close'):
-                    continue
-                commitpath = '../' + commitpath
-        else:
-            commitpath = ''
-        revmap.write('%s %s %s\n' % (revision, ctx.hex(), commitpath))
+
+        tag_locations = layoutobj.taglocations(svnmetadir)
+        found_tag = False
+        for location in tag_locations:
+            if commitpath.startswith(location + '/'):
+                found_tag = True
+                break
+        if found_tag and ctx.extra().get('close'):
+            continue
+
+        branch = layoutobj.localname(commitpath)
+        revmap.write('%s %s %s\n' % (revision, ctx.hex(), branch or ''))
 
         revision = int(revision)
         if revision > last_rev:
             last_rev = revision
 
         # deal with branches
-        if not commitpath:
-            branch = None
-        elif not commitpath.startswith('../'):
-            branch = commitpath
-        elif ctx.parents()[0].node() != node.nullid:
+        if branch and branch.startswith('../'):
             parent = ctx
             while parent.node() != node.nullid:
                 parentextra = parent.extra()
@@ -269,17 +267,16 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
                 parentpath = parentinfo[40:].split('@')[0][len(subdir) + 1:]
 
-                if parentpath.startswith('tags/') and parentextra.get('close'):
+                found_tag = False
+                for location in tag_locations:
+                    if parentpath.startswith(location + '/'):
+                        found_tag = True
+                        break
+                if found_tag and parentextra.get('close'):
                     continue
-                elif parentpath.startswith('branches/'):
-                    branch = parentpath[len('branches/'):]
-                elif parentpath == 'trunk':
-                    branch = None
-                else:
-                    branch = '../' + parentpath
+
+                branch = layoutobj.localname(parentpath)
                 break
-        else:
-            branch = commitpath
 
         if rev in closed:
             # a direct child of this changeset closes the branch; drop it
