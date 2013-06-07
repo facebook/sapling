@@ -960,20 +960,16 @@ def runone(options, test, count):
     env = createenv(options, testtmp, threadtmp, port)
     createhgrc(env['HGRCPATH'], options)
 
-    if options.time:
-        starttime = time.time()
+    starttime = time.time()
     try:
         ret, out = runner(testpath, testtmp, options, replacements, env)
     except KeyboardInterrupt:
-        msg = ''
-        if options.time:
-            endtime = time.time()
-            msg = '(after %d seconds)' % (endtime - starttime)
+        endtime = time.time()
+        msg = '(after %d seconds)' % (endtime - starttime)
         log('INTERRUPTED:', test, msg)
         raise
-    if options.time:
-        endtime = time.time()
-        times.append((test, endtime - starttime))
+    endtime = time.time()
+    times.append((test, endtime - starttime))
     vlog("# Ret was:", ret)
 
     killdaemons(env['DAEMON_PIDS'])
