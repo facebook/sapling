@@ -52,7 +52,7 @@ repository to disable publishing in its configuration file::
   [phases]
   publish = False
 
-See :hg:`help config` for more information on config files.
+See :hg:`help config` for more information on configuration files.
 
 .. note::
   Servers running older versions of Mercurial are treated as

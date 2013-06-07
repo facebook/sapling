@@ -743,3 +743,27 @@ Amend a merge changeset (with manifest-level conflicts):
   -aa
   -aa
   
+Issue 3445: amending with --close-branch a commit that created a new head should fail
+This shouldn't be possible:
+
+  $ hg up -q default
+  $ hg branch closewithamend
+  marked working directory as branch closewithamend
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg ci -Am..
+  adding cc.orig
+  adding obs.py
+  adding obs.pyc
+  $ hg ci --amend --close-branch -m 'closing'
+  abort: can only close branch heads
+  [255]
+
+This silliness fails:
+
+  $ hg branch silliness
+  marked working directory as branch silliness
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo b >> b
+  $ hg ci --close-branch -m'open and close'
+  abort: can only close branch heads
+  [255]

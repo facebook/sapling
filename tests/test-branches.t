@@ -267,14 +267,16 @@ verify update will accept invalid legacy branch names
   $ hg up -C b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg commit -d '9 0' --close-branch -m 'close this part branch too'
-
   $ hg commit -d '9 0' --close-branch -m 're-closing this branch'
+  abort: can only close branch heads
+  [255]
+
   $ hg log -r tip --debug
-  changeset:   13:c2601d54b1427e99506bee25a566ef3a5963af0b
+  changeset:   12:e3d49c0575d8fc2cb1cd6859c747c14f5f6d499f
   branch:      b
   tag:         tip
   phase:       draft
-  parent:      12:e3d49c0575d8fc2cb1cd6859c747c14f5f6d499f
+  parent:      8:eebb944467c9fb9651ed232aeaf31b3c0a7fc6c1
   parent:      -1:0000000000000000000000000000000000000000
   manifest:    8:6f9ed32d2b310e391a4f107d5f0f071df785bfee
   user:        test
@@ -282,13 +284,9 @@ verify update will accept invalid legacy branch names
   extra:       branch=b
   extra:       close=1
   description:
-  re-closing this branch
+  close this part branch too
   
   
-  $ hg rollback
-  repository tip rolled back to revision 12 (undo commit)
-  working directory now based on revision 12
-
 --- b branch should be inactive
 
   $ hg branches
