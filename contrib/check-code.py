@@ -330,7 +330,7 @@ def _preparepats():
                 p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
 
                 #print po, '=>', p
-                pats[i] = (p,) + pseq[1:]
+                pats[i] = (re.compile(p, re.MULTILINE),) + pseq[1:]
 _preparepats()
 
 class norepeatlogger(object):
@@ -421,7 +421,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
             pos = 0
             n = 0
-            for m in re.finditer(p, post, re.MULTILINE):
+            for m in p.finditer(post):
                 if prelines is None:
                     prelines = pre.splitlines()
                     postlines = post.splitlines(True)
