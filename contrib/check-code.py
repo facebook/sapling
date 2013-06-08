@@ -10,6 +10,20 @@
 import re, glob, os, sys
 import keyword
 import optparse
+try:
+    import re2
+except ImportError:
+    re2 = None
+
+def compilere(pat, multiline=False):
+    if multiline:
+        pat = '(?m)' + pat
+    if re2:
+        try:
+            return re2.compile(pat)
+        except re2.error:
+            pass
+    return re.compile(pat)
 
 def repquote(m):
     t = re.sub(r"\w", "x", m.group('text'))
