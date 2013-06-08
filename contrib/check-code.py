@@ -331,6 +331,9 @@ def _preparepats():
 
                 #print po, '=>', p
                 pats[i] = (re.compile(p, re.MULTILINE),) + pseq[1:]
+        filters = c[2]
+        for i, flt in enumerate(filters):
+            filters[i] = re.compile(flt[0]), flt[1]
 _preparepats()
 
 class norepeatlogger(object):
