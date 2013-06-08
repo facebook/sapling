@@ -317,6 +317,22 @@ checks = [
     ('txt', r'.*\.txt$', txtfilters, txtpats),
 ]
 
+def _preparepats():
+    for c in checks:
+        failandwarn = c[-1]
+        for pats in failandwarn:
+            for i, pseq in enumerate(pats):
+                # fix-up regexes for multi-line searches
+                po = p = pseq[0]
+                # \s doesn't match \n
+                p = re.sub(r'(?<!\\)\\s', r'[ \\t]', p)
+                # [^...] doesn't match newline
+                p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
+
+                #print po, '=>', p
+                pats[i] = (p,) + pseq[1:]
+_preparepats()
+
 class norepeatlogger(object):
     def __init__(self):
         self._lastseen = None
@@ -402,15 +418,6 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             else:
                 p, msg = pat
                 ignore = None
-
-            # fix-up regexes for multi-line searches
-            po = p
-            # \s doesn't match \n
-            p = re.sub(r'(?<!\\)\\s', r'[ \\t]', p)
-            # [^...] doesn't match newline
-            p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
-
-            #print po, '=>', p
 
             pos = 0
             n = 0
