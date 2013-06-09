@@ -904,8 +904,7 @@ def runone(options, test, count):
             return skip("blacklisted")
 
         if options.retest and not os.path.exists(test + ".err"):
-            ignore("not retesting")
-            return None
+            return ignore("not retesting")
 
         if options.keywords:
             fp = open(test)
@@ -915,8 +914,7 @@ def runone(options, test, count):
                 if k in t:
                     break
                 else:
-                    ignore("doesn't match keyword")
-                    return None
+                    return ignore("doesn't match keyword")
 
     for ext, func, out in testtypes:
         if lctest.startswith("test-") and lctest.endswith(ext):
