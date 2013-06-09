@@ -1089,7 +1089,7 @@ def scheduletests(options, tests):
                 test = tests.pop(0)
                 if options.loop:
                     tests.append(test)
-                t = threading.Thread(None, job, args=(test, count))
+                t = threading.Thread(target=job, args=(test, count))
                 t.start()
                 running += 1
                 count += 1
