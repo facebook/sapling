@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import fileserverclient
-import collections, os
+import collections, os, shutil
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import revlog, mdiff, filelog, ancestor, error
 from mercurial.i18n import _
@@ -50,9 +50,10 @@ def _parsemeta(text):
     return meta or {}, text
 
 class remotefilelog(object):
-    def __init__(self, opener, path):
+    def __init__(self, opener, path, repo):
         self.opener = opener
         self.filename = path
+        self.repo = repo
         self.localpath = os.path.join(opener.vfs.base, 'data')
 
         if not os.path.exists(self.localpath):
@@ -99,7 +100,7 @@ class remotefilelog(object):
             if realp1 != nullid:
                 p1flog = self
                 if copyfrom:
-                    p1flog = remotefilelog(self.opener, copyfrom)
+                    p1flog = remotefilelog(self.opener, copyfrom, self.repo)
 
                 pancestors.update(p1flog.ancestormap(realp1))
                 queue.append(realp1)
@@ -130,6 +131,15 @@ class remotefilelog(object):
 
         key = fileserverclient.getcachekey(self.filename, hex(node))
         path = os.path.join(self.localpath, key)
+
+        # if this node already exists, save the old version in case
+        # we ever delete this new commit in the future
+        if os.path.exists(path):
+            filename = os.path.basename(path)
+            directory = os.path.dirname(path)
+            files = [f for f in os.listdir(directory) if f.startswith(filename)]
+            shutil.copyfile(path, path + str(len(files)))
+
         _writefile(path, _createfileblob())
 
         return node
@@ -169,6 +179,12 @@ class remotefilelog(object):
 
         nodetext = self.read(node)
         return nodetext != text
+
+    def __nonzero__(self):
+        if self.filename == '.hgtags':
+            return False
+
+        return True
 
     def __len__(self):
         # hack
@@ -253,6 +269,40 @@ class remotefilelog(object):
         raise error.LookupError(id, self.filename, _('no node'))
 
     def ancestormap(self, node):
+        files = None
+        while True:
+            mapping = self._ancestormap(node)
+
+            p1, p2, linknode, copyfrom = mapping[node]
+            if linknode in self.repo:
+                break
+            else:
+                if files == None:
+                    # find a valid linknode by looking through the past versions
+                    key = fileserverclient.getcachekey(self.filename, hex(node))
+                    file = os.path.join(self.localpath, key)
+                    filename = os.path.basename(file)
+                    directory = os.path.dirname(file)
+                    files = [f for f in os.listdir(directory) if f.startswith(filename)]
+                    files = sorted(files, key=lambda x: int(x[40:] or '0'))
+
+                    # store the current version in history, since we'll be
+                    # replacing it
+                    shutil.copyfile(file, file + str(len(files)))
+
+                if len(files) == 1:
+                    # Nothing to fallback to, just delete the local commit.
+                    # The next loop will try the server, and throw an exception
+                    # if the node still can't be found.
+                    os.delete(file)
+                else:
+                    # Try the next version in the history
+                    latest = files.pop()
+                    shutil.copyfile(os.path.join(directory, latest), file)
+
+        return mapping
+
+    def _ancestormap(self, node):
         raw = self._read(hex(node))
         index = raw.index('\0')
         size = int(raw[:index])
@@ -262,13 +312,13 @@ class remotefilelog(object):
         while start < len(raw):
             divider = raw.index('\0', start + 80)
 
-            node = raw[start:(start + 20)]
+            currentnode = raw[start:(start + 20)]
             p1 = raw[(start + 20):(start + 40)]
             p2 = raw[(start + 40):(start + 60)]
             linknode = raw[(start + 60):(start + 80)]
             copyfrom = raw[(start + 80):divider]
 
-            mapping[node] = (p1, p2, linknode, copyfrom)
+            mapping[currentnode] = (p1, p2, linknode, copyfrom)
             start = divider + 1
 
         return mapping
@@ -284,7 +334,9 @@ class remotefilelog(object):
             p = amap.get(x)
             if not p:
                 p = bmap.get(x)
-            return p or []
+            if p:
+                return [p[0], p[1]]
+            return []
 
         result = ancestor.genericancestor(a, b, parents)
         return result or nullid

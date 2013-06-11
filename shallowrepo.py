@@ -11,12 +11,12 @@ from mercurial import localrepo, context, mdiff
 import remotefilelog
 import remotefilectx
 
-def wraprepo(repo):    
+def wraprepo(repo):
     class shallowrepository(repo.__class__):
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
-            return remotefilelog.remotefilelog(self.sopener, f)
+            return remotefilelog.remotefilelog(self.sopener, f, self)
 
         def filectx(self, path, changeid=None, fileid=None):
             """changeid can be a changeset revision, node, or tag.
