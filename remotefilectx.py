@@ -15,6 +15,8 @@ propertycache = util.propertycache
 class remotefilectx(context.filectx):
     def __init__(self, repo, path, changeid=None, fileid=None,
                  filelog=None, changectx=None, ancestormap=None):
+        if fileid == nullrev:
+            fileid = nullid
         if fileid and len(fileid) == 40:
             fileid = bin(fileid)
         super(remotefilectx, self).__init__(repo, path, changeid,

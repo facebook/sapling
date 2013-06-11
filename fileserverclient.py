@@ -159,6 +159,7 @@ class fileserverclient(object):
             self.pipei.close()
             self.pipeo.close()
             self.pipee.close()
+            self.subprocess.wait()
             del self.subprocess
             self.pipeo = None
             self.pipei = None

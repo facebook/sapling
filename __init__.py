@@ -32,19 +32,8 @@ def uisetup(ui):
     extensions.wrapcommand(commands.table, 'debugindex', debugindex)
     extensions.wrapcommand(commands.table, 'debugindexdot', debugindexdot)
 
-def extsetup(ui):
-    # the remote client communicates it's shallow capability via hello
-    orig, args = wireproto.commands["hello"]
-    def helloshallow(*args, **kwargs):
-        global shallowremote
-        shallowremote = True
-        shallowbundle.shallowremote = True
-        return orig(*args, **kwargs)
-    wireproto.commands["hello_shallow"] = (helloshallow, args)
-
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
-        addshallowcapability()
         def stream_in_shallow(orig, self, remote, requirements):
             # set up the client hooks so the post-clone update works
             setupclient(self.ui, self.unfiltered())
@@ -65,7 +54,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
     try:
         orig(ui, repo, *args, **opts)
     finally:
-        if opts.get('shallow'):
+        if opts.get('shallow') and fileserverclient.client:
             fileserverclient.client.close()
 
 def reposetup(ui, repo):
@@ -81,59 +70,105 @@ def reposetup(ui, repo):
     if isshallowclient:
         setupclient(ui, repo)
 
-    
-    # support file content requests
-    wireproto.commands['getfiles'] = (getfiles, '')
+    if isserverenabled:
+        setupserver(ui, repo)
 
-    if isserverenabled or isshallowclient:
-        # don't clone filelogs to shallow clients
-        def _walkstreamfiles(orig, repo):
-            if shallowremote:
-                # if we are shallow ourselves, stream our local commits
-                if isshallowclient:
-                    striplen = len(repo.store.path) + 1
-                    readdir = repo.store.rawvfs.readdir
-                    visit = [os.path.join(repo.store.path, 'data')]
-                    while visit:
-                        p = visit.pop()
-                        for f, kind, st in readdir(p, stat=True):
-                            fp = p + '/' + f
-                            if kind == stat.S_IFREG:
-                                n = util.pconvert(fp[striplen:])
-                                yield (store.decodedir(n), n, st.st_size)
-                            if kind == stat.S_IFDIR:
-                                visit.append(fp)
+def setupserver(ui, repo):
+    onetimesetup(ui)
 
-                for x in repo.store.topfiles():
-                    yield x
-            elif isshallowclient:
-                # don't allow cloning from a shallow repo to a full repo
-                # since it would require fetching every version of every
-                # file in order to create the revlogs.
-                raise util.Abort(_("Cannot clone from a shallow repo "
-                                 + "to a full repo."))
-            else:
-                for x in orig(repo):
-                    yield x
+    def prune(orig, self, rlog, missing, commonrevs, source):
+        if shallowremote and isinstance(rlog, filelog.filelog):
+            return []
+        return orig(self, rlog, missing, commonrevs, source)
+    wrapfunction(changegroup.bundle10, 'prune', prune)
 
-        wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
-
-clientsetup = False
 def setupclient(ui, repo):
     if (not isinstance(repo, localrepo.localrepository) or
         isinstance(repo, bundlerepo.bundlerepository)):
         return
 
+    onetimesetup(ui)
+    onetimeclientsetup(ui)
+
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
 
-    # one time setup below
-    global clientsetup
-    if clientsetup:
+onetime = False
+def onetimesetup(ui):
+    global onetime
+    if onetime:
         return
-    clientsetup = True
+    onetime = True
 
-    addshallowcapability();
+    # support file content requests
+    wireproto.commands['getfiles'] = (getfiles, '')
+
+    # don't clone filelogs to shallow clients
+    def _walkstreamfiles(orig, repo):
+        if shallowremote:
+            # if we are shallow ourselves, stream our local commits
+            if "shallowrepo" in repo.requirements:
+                striplen = len(repo.store.path) + 1
+                readdir = repo.store.rawvfs.readdir
+                visit = [os.path.join(repo.store.path, 'data')]
+                while visit:
+                    p = visit.pop()
+                    for f, kind, st in readdir(p, stat=True):
+                        fp = p + '/' + f
+                        if kind == stat.S_IFREG:
+                            n = util.pconvert(fp[striplen:])
+                            yield (store.decodedir(n), n, st.st_size)
+                        if kind == stat.S_IFDIR:
+                            visit.append(fp)
+
+            for x in repo.store.topfiles():
+                yield x
+        elif "shallowrepo" in repo.requirements:
+            # don't allow cloning from a shallow repo to a full repo
+            # since it would require fetching every version of every
+            # file in order to create the revlogs.
+            raise util.Abort(_("Cannot clone from a shallow repo "
+                             + "to a full repo."))
+        else:
+            for x in orig(repo):
+                yield x
+
+    wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
+
+    # add shallow commands
+    shallowcommands = ["stream_out", "changegroup", "changegroupsubset",
+        "getbundle"]
+    for cmd in shallowcommands:
+        func, args = wireproto.commands[cmd]
+        def wrap(func):
+            def wrapper(*args, **kwargs):
+                global shallowremote
+                try:
+                    shallowremote = True
+                    shallowbundle.shallowremote = True
+                    return func(*args, **kwargs)
+                finally:
+                    shallowremote = False
+                    shallowbundle.shallowremote = False
+            return wrapper
+
+        wireproto.commands[cmd + "_shallow"] = (wrap(func), args)
+
+    def _callstream(orig, self, cmd, **args):
+        # TODO: it would be better to only call _shallow versions
+        # if the client repo is shallow, but we don't have access
+        # to that here.
+        if cmd in shallowcommands:
+            return orig(self, cmd + "_shallow", **args)
+        return orig(self, cmd, **args)
+    wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
+
+clientonetime = False
+def onetimeclientsetup(ui):
+    global clientonetime
+    if clientonetime:
+        return
+    clientonetime = True
 
     fileserverclient.client = fileserverclient.fileserverclient(ui)
 
@@ -169,7 +204,8 @@ def setupclient(ui, repo):
 
     # disappointing hacks below
     templatekw.getrenamedfn = getrenamedfn
-
+    wrapfunction(revset, 'filelog', filelogrevset)
+    revset.symbols['filelog'] = revset.filelog
     wrapfunction(cmdutil, 'walkfilerevs', walkfilerevs)
 
     # prevent strip from considering filelogs
@@ -181,7 +217,7 @@ def setupclient(ui, repo):
 
     # hold on to filelogs until we know the commit hash
     pendingfilecommits = []
-    def add(orig, self, text, meta, transaction, link, p1, p2):
+    def filelogadd(orig, self, text, meta, transaction, link, p1, p2):
         if isinstance(link, int):
             pendingfilecommits.append((self, text, meta, transaction, link, p1, p2))
 
@@ -190,7 +226,7 @@ def setupclient(ui, repo):
             return node
         else:
             return orig(self, text, meta, transaction, link, p1, p2)
-    wrapfunction(remotefilelog.remotefilelog, 'add', add)
+    wrapfunction(remotefilelog.remotefilelog, 'add', filelogadd)
 
     def changelogadd(orig, self, *args):
         node = orig(self, *args)
@@ -220,9 +256,6 @@ def setupclient(ui, repo):
                 path, workingctx=self, filelog=filelog)
         return orig(self, path, filelog=filelog)
     wrapfunction(context.workingctx, 'filectx', workingfilectx)
-
-    wrapfunction(revset, 'filelog', filelogrevset)
-    revset.symbols['filelog'] = revset.filelog
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
@@ -293,13 +326,6 @@ def getfiles(repo, proto):
             proto.fout.flush()
 
     return wireproto.streamres(streamer())
-
-def addshallowcapability():
-    def callstream(orig, self, cmd, **args):
-        if cmd == 'hello':
-            cmd += '_shallow'
-        return orig(self, cmd, **args)
-    wrapfunction(sshpeer.sshpeer, '_callstream', callstream)
 
 def getrenamedfn(repo, endrev=None):
     rcache = {}
