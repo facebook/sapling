@@ -1165,7 +1165,12 @@ def main():
         slow = 'svn gendoc check-code-hg'.split()
         def sortkey(f):
             # run largest tests first, as they tend to take the longest
-            val = -os.stat(f).st_size
+            try:
+                val = -os.stat(f).st_size
+            except OSError, e:
+                if e.errno != errno.ENOENT:
+                    raise
+                return -1e9 # file does not exist, tell early
             for kw in slow:
                 if kw in f:
                     val *= 10
