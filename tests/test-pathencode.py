@@ -5,7 +5,6 @@
 # that have proven likely to expose bugs and divergent behaviour in
 # different encoding implementations.
 
-from mercurial import parsers
 from mercurial import store
 import binascii, itertools, math, os, random, sys, time
 import collections

@@ -36,7 +36,7 @@ A few obvious properties that are not currently handled realistically:
 '''
 
 import bisect, collections, json, os, random, time, sys
-from mercurial import cmdutil, context, patch, scmutil, url, util, hg
+from mercurial import cmdutil, context, patch, scmutil, util, hg
 from mercurial.i18n import _
 from mercurial.node import nullrev, nullid
 
