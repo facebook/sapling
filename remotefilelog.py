@@ -181,14 +181,12 @@ class remotefilelog(object):
         return nodetext != text
 
     def __nonzero__(self):
-        if self.filename == '.hgtags':
-            return False
-
         return True
 
     def __len__(self):
-        # hack
         if self.filename == '.hgtags':
+            # Set this to 1 if your repo uses tags.
+            # Otherwise set it 0 since tags are a perf hit.
             return 0
 
         raise Exception("len not supported")
