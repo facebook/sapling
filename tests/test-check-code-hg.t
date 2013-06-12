@@ -23,6 +23,10 @@ Check Python files without py extension
   >   contrib/hgweb.wsgi \
   >   contrib/simplemerge \
   >   contrib/undumprevlog \
+  >   i18n/hggettext \
+  >   i18n/posplit \
+  >   tests/hghave \
+  >   tests/dummyssh \
   >   "$TESTTMP"/
   $ for f in "$TESTTMP"/*; do cp "$f" "$f.py"; done
   $ "$check_code" --warnings --nolineno --per-file=0 "$TESTTMP"/*.py \
