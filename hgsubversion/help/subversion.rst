@@ -32,7 +32,9 @@ all its tags and branches. In such cases you should clone from one level above
 trunk, as in the example above. This is known as `standard layout`, and works
 with repositories that use the conventional ``trunk``, ``tags`` and ``branches``
 directories. By default, hgsubversion will use this layout whenever it finds any
-of these directories at the specified directory on the server.
+of these directories at the specified directory on the server.  Standard layout
+also supports alternate names for the ``branches`` directory and multiple tags
+locations.
 
 If you instead want to clone just a single directory or branch, clone the
 specific directory path. In the example above, to get *only* trunk, you would
@@ -299,6 +301,12 @@ settings:
 
     Path to a file for changing branch names during the conversion from
     Subversion to Mercurial.
+
+  ``hgsubversion.branchdir``
+
+    Specifies the subdirectory to look for branches under.  The
+    default is ``branches``.  This option has no effect for
+    single-directory clones.
 
   ``hgsubversion.filemap``
 

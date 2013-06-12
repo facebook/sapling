@@ -84,6 +84,8 @@ wrapcmds = { # cmd: generic, target, fixdoc, ppopts, opts
     'clone': (False, 'sources', True, True, [
         ('T', 'tagpaths', '',
          'list of paths to search for tags in Subversion repositories'),
+        ('', 'branchdir', '',
+         'path to search for branches in subversion repositories'),
         ('A', 'authors', '',
          'file mapping Subversion usernames to Mercurial authors'),
         ('', 'filemap', '',

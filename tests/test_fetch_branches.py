@@ -128,3 +128,45 @@ class TestFetchBranches(test_util.TestBase):
         for f in ctx:
             self.assertTrue(not ctx[f].renamed())
 
+    def test_misspelled_branches_tags(self):
+        config = {
+            'hgsubversion.branchdir': 'branchez',
+            'hgsubversion.tagpaths': 'tagz',
+            }
+        '''Tests using the tags dir for branches and the branches dir for tags'''
+        repo = self._load_fixture_and_fetch('misspelled_branches_tags.svndump',
+                                            layout='standard',
+                                            config=config)
+
+        heads = set([repo[n].branch() for n in repo.heads()])
+        expected_heads = set(['default', 'branch'])
+
+        self.assertEqual(heads, expected_heads)
+
+        tags = set(repo.tags())
+        expected_tags = set(['tip', 'tag_from_trunk', 'tag_from_branch'])
+        self.assertEqual(tags, expected_tags)
+
+    def test_subdir_branches_tags(self):
+        '''Tests using the tags dir for branches and the branches dir for tags'''
+        config = {
+            'hgsubversion.branchdir': 'bran/ches',
+            'hgsubversion.tagpaths': 'ta/gs',
+            }
+        repo = self._load_fixture_and_fetch('subdir_branches_tags.svndump',
+                                            layout='standard',
+                                            config=config)
+
+        heads = set([repo[n].branch() for n in repo.heads()])
+        expected_heads = set(['default', 'branch'])
+
+        self.assertEqual(heads, expected_heads)
+
+        tags = set(repo.tags())
+        expected_tags = set(['tip', 'tag_from_trunk', 'tag_from_branch'])
+        self.assertEqual(tags, expected_tags)
+
+def suite():
+    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
+          ]
+    return unittest.TestSuite(all_tests)

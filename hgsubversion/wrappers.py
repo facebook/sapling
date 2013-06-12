@@ -533,6 +533,7 @@ def rebase(orig, ui, repo, **opts):
 optionmap = {
     'tagpaths': ('hgsubversion', 'tagpaths'),
     'authors': ('hgsubversion', 'authormap'),
+    'branchdir': ('hgsubversion', 'branchdir'),
     'filemap': ('hgsubversion', 'filemap'),
     'branchmap': ('hgsubversion', 'branchmap'),
     'tagmap': ('hgsubversion', 'tagmap'),
