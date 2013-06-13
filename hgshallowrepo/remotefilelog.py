@@ -292,7 +292,7 @@ class remotefilelog(object):
                     # Nothing to fallback to, just delete the local commit.
                     # The next loop will try the server, and throw an exception
                     # if the node still can't be found.
-                    os.delete(file)
+                    os.remove(file)
                 else:
                     # Try the next version in the history
                     latest = files.pop()
@@ -329,12 +329,15 @@ class remotefilelog(object):
         bmap = self.ancestormap(b)
 
         def parents(x):
-            p = amap.get(x)
+            p = amap.get(x) or bmap.get(x)
             if not p:
-                p = bmap.get(x)
-            if p:
-                return [p[0], p[1]]
-            return []
+                return []
+
+            # remotefilelog.ancestor shouldn't follow renames.
+            # Use remotefilectx.ancestor for that
+            if p[3]:
+                return [nullid, p[1]]
+            return [p[0], p[1]]
 
         result = ancestor.genericancestor(a, b, parents)
         return result or nullid

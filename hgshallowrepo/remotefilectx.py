@@ -8,7 +8,7 @@
 import fileserverclient
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev, short
-from mercurial import revlog, mdiff, filelog, context, util, error
+from mercurial import revlog, mdiff, filelog, context, util, error, ancestor
 
 propertycache = util.propertycache
 
@@ -110,23 +110,67 @@ class remotefilectx(context.filectx):
     def ancestors(self, followfirst=False):
         repo = self._repo
         ancestormap = self.ancestormap()
+        clrev = repo.changelog.rev
 
+        ancestors = []
         queue = [(self.path(), self.filenode())]
         while queue:
             path, node = queue.pop(0)
             p1, p2, linknode, copyfrom = ancestormap[node]
+            ancestors.append((path, node, clrev(linknode)))
+
             if p1 != nullid:
-                p1path = copyfrom or path
-                flog = repo.file(p1path)
-                yield remotefilectx(repo, p1path, fileid=p1, filelog=flog,
-                                    ancestormap=ancestormap)
-                queue.append((p1path, p1))
+                queue.append((copyfrom or path, p1))    
 
             if p2 != nullid and not followfirst:
-                flog = repo.file(path)
-                yield remotefilectx(repo, path, fileid=p2, filelog=flog,
-                                    ancestormap=ancestormap)
                 queue.append((path, p2))
+
+        # Remove self
+        ancestors.pop(0)
+
+        # Sort by linkrev
+        # The copy tracing algorithm depends on these coming out in order
+        ancestors = sorted(ancestors, reverse=True, key=lambda x:x[2])
+
+        for path, node, _ in ancestors:
+            flog = repo.file(path)
+            yield remotefilectx(repo, path, fileid=node, filelog=flog,
+                                ancestormap=ancestormap)
+
+    def ancestor(self, fc2, actx):
+        # the easy case: no (relevant) renames
+        if fc2.path() == self.path() and self.path() in actx:
+            return actx[self.path()]
+
+        # the next easiest cases: unambiguous predecessor (name trumps
+        # history)
+        if self.path() in actx and fc2.path() not in actx:
+            return actx[self.path()]
+        if fc2.path() in actx and self.path() not in actx:
+            return actx[fc2.path()]
+
+        # do a full traversal
+        amap = self.ancestormap()
+        bmap = fc2.ancestormap()
+
+        def parents(x):
+            f, n = x
+            p = amap.get(n) or bmap.get(n)
+            if not p:
+                return []
+
+            return [(p[3] or f, p[0]), (f, p[1])]
+
+        a = (self.path(), self.filenode())
+        b = (fc2.path(), fc2.filenode())
+        result = ancestor.genericancestor(a, b, parents)
+        if result:
+            f, n = result
+            r = remotefilectx(self._repo, f, fileid=n,
+                                 ancestormap=amap)
+            return r
+
+        return None
 
     def annotate(self, follow=False, linenumber=None, diffopts=None):
         # use linkrev to find the first changeset where self appeared

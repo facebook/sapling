@@ -5,9 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import hex
+from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
-from mercurial import localrepo, context, mdiff
+from mercurial import localrepo, context, mdiff, util
 import remotefilelog
 import remotefilectx
 
@@ -26,7 +26,8 @@ def wraprepo(repo):
         def addchangegroupfiles(self, source, revmap, trp, pr, needfiles):
             files = 0
             visited = set()
-            revisiondatas = []
+            revisiondatas = {}
+            queue = []
 
             # read all the file chunks but don't add them
             while True:
@@ -44,7 +45,8 @@ def wraprepo(repo):
 
                     chain = revisiondata['node']
 
-                    revisiondatas.append((f, revisiondata))
+                    revisiondatas[(f, chain)] = revisiondata
+                    queue.append((f, chain))
 
                     if f not in visited:
                         files += 1
@@ -53,20 +55,42 @@ def wraprepo(repo):
                 if chain == None:
                     raise util.Abort(_("received file revlog group is empty"))
 
-            # sort the revisions by linkrev
-            revisiondatas = sorted(revisiondatas, key=lambda x: revmap(x[1]['cs']))
+            processed = set()
+            def available(f, node, depf, depnode):
+                if depnode != nullid and (depf, depnode) not in processed:
+                    if not (depf, depnode) in revisiondatas:
+                        # It's not in the changegroup, assume it's already
+                        # in the repo
+                        return True
+                    # re-add self to queue
+                    queue.insert(0, (f, node))
+                    # add dependency in front
+                    queue.insert(0, (depf, depnode))
+                    return False
+                return True
 
-            # add the file chunks in sorted order, since some may
-            # require their parents to exist first
-            for f, revisiondata in revisiondatas:
+            skipcount = 0
+
+            while queue:
+                f, node = queue.pop(0)
+                if (f, node) in processed:
+                    continue
+
+                skipcount += 1
+                if skipcount > len(queue) + 1:
+                    raise util.Abort(_("circular node dependency"))
+
                 fl = self.file(f)
 
-                node = revisiondata['node']
+                revisiondata = revisiondatas[(f, node)]
                 p1 = revisiondata['p1']
                 p2 = revisiondata['p2']
                 linknode = revisiondata['cs']
                 deltabase = revisiondata['deltabase']
                 delta = revisiondata['delta']
+
+                if not available(f, node, f, deltabase):
+                    continue
 
                 base = fl.revision(deltabase)
                 text = mdiff.patch(base, delta)
@@ -74,7 +98,21 @@ def wraprepo(repo):
                     text = str(text)
 
                 meta, text = remotefilelog._parsemeta(text)
+                if 'copy' in meta:
+                    copyfrom = meta['copy']
+                    copynode = bin(meta['copyrev'])
+                    copyfl = self.file(copyfrom)
+                    if not available(f, node, copyfrom, copynode):
+                        continue
+
+                for p in [p1, p2]:
+                    if p != nullid:
+                        if not available(f, node, f, p):
+                            continue
+
                 fl.add(text, meta, trp, linknode, p1, p2)
+                processed.add((f, node))
+                skipcount = 0
 
             self.ui.progress(_('files'), None)
 

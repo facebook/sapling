@@ -22,15 +22,23 @@ import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 import stat
 
 shallowremote = False
-localrepo.localrepository.supported.add('shallowrepo')
 
 def uisetup(ui):
+    localrepo.localrepository.requirements.append('shallowrepo')
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
     entry[1].append(('', 'shallow', None,
                      _("create a shallow clone which uses remote file history")))
 
     extensions.wrapcommand(commands.table, 'debugindex', debugindex)
     extensions.wrapcommand(commands.table, 'debugindexdot', debugindexdot)
+
+    # Prevent 'hg manifest --all'
+    def _manifest(orig, ui, repo, *args, **opts):
+        if "shallowrepo" in repo.requirements and opts.get('all'):
+            raise util.Abort(_("--all is not supported in a shallow repo"))
+
+        return orig(ui, repo, *args, **opts)
+    extensions.wrapcommand(commands.table, "manifest", _manifest)
 
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
@@ -355,87 +363,30 @@ def walkfilerevs(orig, repo, match, follow, revs, fncache):
     if not "shallowrepo" in repo.requirements:
         return orig(repo, match, follow, revs, fncache)
 
-    copies = []
+    if not follow:
+        raise cmdutil.FileWalkError("Cannot walk via filelog")
+
     wanted = set()
     minrev, maxrev = min(revs), max(revs)
-    def filerevgen(filectx):
-        """
-        Only files, no patterns.  Check the history of each file.
 
-        Examines filelog entries within minrev, maxrev linkrev range
-        Returns an iterator yielding (linkrev, parentlinkrevs, copied)
-        tuples in backwards order
-        """
-        cl_count = len(repo)
-        revs = []
-        ancestors = [f for f in filectx.ancestors()]
-        ancestors.insert(0, filectx)
-        for ancestor in ancestors:
+    pctx = repo['.']
+    for filename in match.files():
+        if filename not in pctx:
+            raise util.Abort(_('cannot follow file not in parent '
+                               'revision: "%s"') % filename)
+        fctx = pctx[filename]
+
+        linkrev = fctx.linkrev()
+        if linkrev >= minrev and linkrev <= maxrev:
+            fncache.setdefault(linkrev, []).append(filename)
+            wanted.add(linkrev)
+
+        for ancestor in fctx.ancestors():
             linkrev = ancestor.linkrev()
-            if linkrev < minrev:
-                continue
-            # only yield rev for which we have the changelog, it can
-            # happen while doing "hg log" during a pull or commit
-            if linkrev >= cl_count:
-                break
+            if linkrev >= minrev and linkrev <= maxrev:
+                fncache.setdefault(linkrev, []).append(ancestor.path())
+                wanted.add(linkrev)
 
-            parentlinkrevs = []
-            for pctx in ancestor.parents():
-                parentlinkrevs.append(pctx.linkrev())
-
-            renamed = ancestor.renamed()
-            if not follow and renamed:
-                parentlinkrevs = []
-            revs.append((linkrev, parentlinkrevs,
-                         follow and renamed))
-
-            if not follow and renamed:
-                break
-
-        return revs
-    def iterfiles():
-        pctx = repo['.']
-        for filename in match.files():
-            if follow:
-                if filename not in pctx:
-                    raise util.Abort(_('cannot follow file not in parent '
-                                       'revision: "%s"') % filename)
-                yield filename, pctx[filename].filenode()
-            else:
-                yield filename, None
-        for filename_node in copies:
-            yield filename_node
-
-    for file_, node in iterfiles():
-        # keep track of all ancestors of the file
-        if node:
-            filectx = repo.filectx(file_, fileid=node)
-        else:
-            raise cmdutil.FileWalkError("Cannot walk via filelog")
-
-        ancestors = set([filectx.linkrev()])
-
-        # iterate from latest to oldest revision
-        for rev, flparentlinkrevs, copied in filerevgen(filectx):
-            if not follow:
-                if rev > maxrev:
-                    continue
-            else:
-                # Note that last might not be the first interesting
-                # rev to us:
-                # if the file has been changed after maxrev, we'll
-                # have linkrev(last) > maxrev, and we still need
-                # to explore the file graph
-                if rev not in ancestors:
-                    continue
-                # XXX insert 1327 fix here
-                if flparentlinkrevs:
-                    ancestors.update(flparentlinkrevs)
-
-            fncache.setdefault(rev, []).append(file_)
-            wanted.add(rev)
-            if copied:
-                copies.append(copied)
     return wanted
 
 def filelogrevset(orig, repo, subset, x):
