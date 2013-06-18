@@ -991,6 +991,9 @@ class revlog(object):
         p1, p2 - the parent nodeids of the revision
         cachedelta - an optional precomputed delta
         """
+        if link == nullrev:
+            raise RevlogError(_("attempted to add linkrev -1 to %s")
+                              % self.indexfile)
         node = hash(text, p1, p2)
         if node in self.nodemap:
             return node
