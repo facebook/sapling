@@ -471,9 +471,14 @@ class SubversionRepo(object):
                 sf = f[l:]
                 if links[f] or execs[f]:
                     continue
-                props = self.list_props(sf, revision)
-                links[f] = props.get('svn:special') == '*'
-                execs[f] = props.get('svn:executable') == '*'
+                # The list_props API creates a new connection and then
+                # calls get_file for the remote file case.  It also
+                # creates a new connection to the subversion server
+                # every time it's called.  As a result, it's actually
+                # *cheaper* to call get_file than list_props here
+                data, mode = self.get_file(sf, revision)
+                links[f] = mode == 'l'
+                execs[f] = mode == 'x'
 
     def get_revision(self, revision, editor):
         ''' feed the contents of the given revision to the given editor '''
