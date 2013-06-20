@@ -16,8 +16,8 @@ configuration files for Mercurial
    :class: htmlonly
 
 
-Synopsis
-========
+Description
+===========
 
 .. include:: ../mercurial/help/config.txt
 
