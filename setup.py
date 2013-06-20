@@ -1,7 +1,7 @@
 from distutils.core import setup, Extension
 
 setup(
-    name='fbhgextensions',
+    name='fbhgext',
     version='0.1.0',
     author='Durham Goode',
     maintainer='Durham Goode',
