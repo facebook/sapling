@@ -15,6 +15,7 @@ import errno, os, re
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
+enabled = False
 
 def uisetup(ui):
     # Hide output for fake nodes
@@ -32,7 +33,7 @@ def uisetup(ui):
         if type == 'F':
             char = "."
         # Color the current commits. @ is too subtle
-        if char == "@":
+        if enabled and char == "@":
             newtext = []
             for line in text:
                 line = "\033[35m" + line + "\033[0m"
@@ -43,12 +44,13 @@ def uisetup(ui):
 
     def drawedges(orig, edges, nodeline, interline):
         orig(edges, nodeline, interline)
-        for (start, end) in edges:
-            if start == end:
-                # terrible hack, but this makes the line below
-                # the commit marker (.) also be a .
-                if '.' in nodeline:
-                    interline[2 * start] = "."
+        if enabled:
+            for (start, end) in edges:
+                if start == end:
+                    # terrible hack, but this makes the line below
+                    # the commit marker (.) also be a .
+                    if '.' in nodeline:
+                        interline[2 * start] = "."
     wrapfunction(graphmod, '_drawedges', drawedges)
 
 # copied from graphmod or cmdutil or somewhere...
@@ -258,8 +260,13 @@ def mylog(ui, repo, *pats, **opts):
     revs = sorted(list(revs), reverse=True)
 
     # Print it!
-    revdag = getdag(repo, revs, master)
-    displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    showparents = [ctx.node() for ctx in repo[None].parents()]
-    cmdutil.displaygraph(ui, revdag, displayer, showparents,
-                 graphmod.asciiedges, None, None)
+    global enabled
+    try:
+        enabled = True
+        revdag = getdag(repo, revs, master)
+        displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
+        showparents = [ctx.node() for ctx in repo[None].parents()]
+        cmdutil.displaygraph(ui, revdag, displayer, showparents,
+                     graphmod.asciiedges, None, None)
+    finally:
+        enabled = False
