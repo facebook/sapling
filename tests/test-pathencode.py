@@ -125,7 +125,7 @@ def makepart(rng, k):
     p = pickfrom(rng, firsttable)(rng)
     l = len(p)
     ps = [p]
-    while l <= k:
+    while l < k:
         p = pickfrom(rng, resttable)(rng)
         l += len(p)
         ps.append(p)
