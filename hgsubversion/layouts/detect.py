@@ -10,7 +10,7 @@ import os.path
 
 from mercurial import util as hgutil
 
-import hgsubversion.svnwrap
+from hgsubversion import svnwrap
 
 def layout_from_subversion(svn, revision=None, ui=None):
     """ Guess what layout to use based on directories under the svn root.
