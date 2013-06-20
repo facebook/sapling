@@ -1,0 +1,4 @@
+syntax: regexp
+\.pyc$
+\.so$
+^build/
