@@ -11,5 +11,5 @@ setup(
     long_description="",
     keywords='fb hg mercurial',
     license='',
-    packages=['hgext']
+    py_modules=['fbamend', 'smartlog']
 )
