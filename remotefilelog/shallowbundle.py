@@ -1,4 +1,4 @@
-# shallowbundle.py - revlog implementation where the content is stored remotely
+# shallowbundle.py - bundle10 implementation for use with shallow repositories
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -14,7 +14,7 @@ from mercurial.i18n import _
 shallowremote = False
 
 def shouldaddfilegroups(repo, source):
-    isshallowclient = "shallowrepo" in repo.requirements
+    isshallowclient = "remotefilelog" in repo.requirements
     if source == "push":
         return True
     if source == "serve":
@@ -65,7 +65,7 @@ def sortnodes(nodes, parentfunc):
 
 class shallowbundle(changegroup.bundle10):
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
-        if "shallowrepo" in self._repo.requirements:
+        if "remotefilelog" in self._repo.requirements:
             fastpathlinkrev = False
 
         return super(shallowbundle, self).generate(commonrevs, clnodes,

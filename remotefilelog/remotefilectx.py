@@ -1,4 +1,4 @@
-# remoterevlog.py - revlog implementation where the content is stored remotely
+# remotefilectx.py - filectx and workingfilectx implementations for remotefilelog
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -120,7 +120,7 @@ class remotefilectx(context.filectx):
             ancestors.append((path, node, clrev(linknode)))
 
             if p1 != nullid:
-                queue.append((copyfrom or path, p1))    
+                queue.append((copyfrom or path, p1))
 
             if p2 != nullid and not followfirst:
                 queue.append((path, p2))
@@ -203,7 +203,7 @@ class remotefilectx(context.filectx):
 class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def __init__(self, repo, path, filelog=None, workingctx=None):
         self._ancestormap = None
-        return super(remoteworkingfilectx, self).__init__(repo, path, 
+        return super(remoteworkingfilectx, self).__init__(repo, path,
             filelog, workingctx)
 
     def parents(self):

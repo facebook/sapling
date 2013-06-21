@@ -1,4 +1,4 @@
-# remotefilelog.py - revlog implementation where the content is stored remotely
+# remotefilelog.py - filelog implementation where filelog history is stored remotely
 #
 # Copyright 2013 Facebook, Inc.
 #

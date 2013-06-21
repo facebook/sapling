@@ -2,12 +2,10 @@ PYTHON=python
 
 .PHONY: tests
 
-PREFIX=/usr/local
-
 help:
 	@echo 'Commonly used make targets:'
 	@echo '  local          - build for inplace use'
-	@echo '  install        - install program and man pages to PREFIX ($(PREFIX))'
+	@echo '  install        - install program'
 	@echo '  clean          - remove files created by other targets'
 	@echo '                   (except installed files or dist source tarball)'
 
@@ -17,7 +15,7 @@ local:
 	  build_ext -i
 
 install:
-	$(PYTHON) setup.py $(PURE) install --prefix="$(PREFIX)" --force
+	$(PYTHON) setup.py $(PURE) install --force
 
 clean:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command

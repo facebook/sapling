@@ -22,9 +22,9 @@ import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 import stat
 
 shallowremote = False
+localrepo.localrepository.supported.add('remotefilelog')
 
 def uisetup(ui):
-    localrepo.localrepository.requirements.append('shallowrepo')
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
     entry[1].append(('', 'shallow', None,
                      _("create a shallow clone which uses remote file history")))
@@ -34,7 +34,7 @@ def uisetup(ui):
 
     # Prevent 'hg manifest --all'
     def _manifest(orig, ui, repo, *args, **opts):
-        if "shallowrepo" in repo.requirements and opts.get('all'):
+        if "remotefilelog" in repo.requirements and opts.get('all'):
             raise util.Abort(_("--all is not supported in a shallow repo"))
 
         return orig(ui, repo, *args, **opts)
@@ -52,7 +52,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
                 self.__class__.__bases__ = (self.__class__.__bases__[0],
                                             self.unfiltered().__class__)
 
-            requirements.add('shallowrepo')
+            requirements.add('remotefilelog')
 
             # if the repo was filtered, we need to refilter since
             # the class has changed
@@ -70,7 +70,7 @@ def reposetup(ui, repo):
         return
 
     isserverenabled = ui.configbool('remotefilelog', 'server')
-    isshallowclient = "shallowrepo" in repo.requirements
+    isshallowclient = "remotefilelog" in repo.requirements
 
     if isserverenabled and isshallowclient:
         raise Exception("Cannot be both a server and shallow client.")
@@ -115,7 +115,7 @@ def onetimesetup(ui):
     def _walkstreamfiles(orig, repo):
         if shallowremote:
             # if we are shallow ourselves, stream our local commits
-            if "shallowrepo" in repo.requirements:
+            if "remotefilelog" in repo.requirements:
                 striplen = len(repo.store.path) + 1
                 readdir = repo.store.rawvfs.readdir
                 visit = [os.path.join(repo.store.path, 'data')]
@@ -131,7 +131,7 @@ def onetimesetup(ui):
 
             for x in repo.store.topfiles():
                 yield x
-        elif "shallowrepo" in repo.requirements:
+        elif "remotefilelog" in repo.requirements:
             # don't allow cloning from a shallow repo to a full repo
             # since it would require fetching every version of every
             # file in order to create the revlogs.
@@ -184,7 +184,7 @@ def onetimeclientsetup(ui):
 
     def storewrapper(orig, requirements, path, vfstype):
         s = orig(requirements, path, vfstype)
-        if 'shallowrepo' in requirements:
+        if 'remotefilelog' in requirements:
             s = shallowstore.wrapstore(s)
 
         return s
@@ -192,7 +192,7 @@ def onetimeclientsetup(ui):
 
     # prefetch files before update hook
     def applyupdates(orig, repo, actions, wctx, mctx, actx, overwrite):
-        if 'shallowrepo' in repo.requirements:
+        if 'remotefilelog' in repo.requirements:
             manifest = mctx.manifest()
             files = []
             for f, m, args, msg in [a for a in actions if a[1] == 'g']:
@@ -218,7 +218,7 @@ def onetimeclientsetup(ui):
 
     # prevent strip from considering filelogs
     def _collectbrokencsets(orig, repo, files, striprev):
-        if 'shallowrepo' in repo.requirements:
+        if 'remotefilelog' in repo.requirements:
             files = []
         return orig(repo, files, striprev)
     wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
@@ -252,14 +252,14 @@ def onetimeclientsetup(ui):
     def filectx(orig, self, path, fileid=None, filelog=None):
         if fileid is None:
             fileid = self.filenode(path)
-        if 'shallowrepo' in self._repo.requirements:
+        if 'remotefilelog' in self._repo.requirements:
             return remotefilectx.remotefilectx(self._repo, path,
                 fileid=fileid, changectx=self, filelog=filelog)
         return orig(self, path, fileid=fileid, filelog=filelog)
     wrapfunction(context.changectx, 'filectx', filectx)
 
     def workingfilectx(orig, self, path, filelog=None):
-        if 'shallowrepo' in self._repo.requirements:
+        if 'remotefilelog' in self._repo.requirements:
             return remotefilectx.remoteworkingfilectx(self._repo,
                 path, workingctx=self, filelog=filelog)
         return orig(self, path, filelog=filelog)
@@ -360,7 +360,7 @@ def getrenamedfn(repo, endrev=None):
     return getrenamed
 
 def walkfilerevs(orig, repo, match, follow, revs, fncache):
-    if not "shallowrepo" in repo.requirements:
+    if not "remotefilelog" in repo.requirements:
         return orig(repo, match, follow, revs, fncache)
 
     if not follow:
@@ -398,7 +398,7 @@ def filelogrevset(orig, repo, subset, x):
     a slower, more accurate result, use ``file()``.
     """
 
-    if not "shallowrepo" in repo.requirements:
+    if not "remotefilelog" in repo.requirements:
         return orig(repo, subset, x)
 
     # i18n: "filelog" is a keyword

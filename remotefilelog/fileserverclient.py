@@ -1,4 +1,4 @@
-# fileserverclient.py - client for communicating with the file server
+# fileserverclient.py - client for communicating with the cache process
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -18,7 +18,6 @@ contentbytes = 0
 metadatabytes = 0
 
 _downloading = _('downloading')
-_memcache = 'scmmemcache';
 
 client = None
 
@@ -32,6 +31,8 @@ class fileserverclient(object):
     def __init__(self, ui):
         self.ui = ui
         self.cachepath = ui.config("remotefilelog", "cachepath")
+        self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
+        self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.pipeo = self.pipei = self.pipee = None
 
@@ -139,10 +140,10 @@ class fileserverclient(object):
         return missing
 
     def connect(self):
-        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(_memcache)
+        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(self.cacheprocess)
 
     def close(self):
-        if fetches:
+        if fetches and self.debugoutput:
             print ("%s fetched over %d fetches - %0.2f MB (%0.2f MB content / %0.2f MB metadata) " +
                   "over %0.2fs = %0.2f MB/s") % (
                     fetched,

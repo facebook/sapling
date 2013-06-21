@@ -1,4 +1,4 @@
-# shallowrepo.py
+# shallowrepo.py - shallow repository that uses remote filelogs
 #
 # Copyright 2013 Facebook, Inc.
 #
