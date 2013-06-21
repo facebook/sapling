@@ -23,6 +23,7 @@ import stat
 
 shallowremote = False
 localrepo.localrepository.supported.add('remotefilelog')
+shallowcommands = ["stream_out", "changegroup", "changegroupsubset", "getbundle"]
 
 def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
@@ -144,8 +145,6 @@ def onetimesetup(ui):
     wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
 
     # add shallow commands
-    shallowcommands = ["stream_out", "changegroup", "changegroupsubset",
-        "getbundle"]
     for cmd in shallowcommands:
         func, args = wireproto.commands[cmd]
         def wrap(func):
@@ -161,15 +160,6 @@ def onetimesetup(ui):
             return wrapper
 
         wireproto.commands[cmd + "_shallow"] = (wrap(func), args)
-
-    def _callstream(orig, self, cmd, **args):
-        # TODO: it would be better to only call _shallow versions
-        # if the client repo is shallow, but we don't have access
-        # to that here.
-        if cmd in shallowcommands:
-            return orig(self, cmd + "_shallow", **args)
-        return orig(self, cmd, **args)
-    wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
 
 clientonetime = False
 def onetimeclientsetup(ui):
@@ -265,12 +255,23 @@ def onetimeclientsetup(ui):
         return orig(self, path, filelog=filelog)
     wrapfunction(context.workingctx, 'filectx', workingfilectx)
 
+    def _callstream(orig, self, cmd, **args):
+        if cmd in shallowcommands:
+            return orig(self, cmd + "_shallow", **args)
+        return orig(self, cmd, **args)
+    wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
+
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
     def streamer():
         fin = proto.fin
         opener = repo.sopener
+
+        cachepath = repo.ui.config("remotefilelog", "servercachepath")
+        if not cachepath:
+            cachepath = os.path.join(repo.path, "remotefilelogcache")
         while True:
             request = fin.readline()[:-1]
             if not request:
@@ -282,8 +283,9 @@ def getfiles(repo, proto):
                 continue
 
             path = request[40:]
-            cachepath = os.path.join('/data/users/durham/cache', path, hex(node))
-            if not os.path.exists(cachepath):
+
+            filecachepath = os.path.join(cachepath, path, hex(node))
+            if not os.path.exists(filecachepath):
                 filectx = repo.filectx(path, fileid=node)
 
                 text = filectx.data()
@@ -312,16 +314,16 @@ def getfiles(repo, proto):
                 text = lz4.compressHC("%d\0%s%s" %
                     (len(text), text, ancestortext))
 
-                dirname = os.path.dirname(cachepath)
+                dirname = os.path.dirname(filecachepath)
                 if not os.path.exists(dirname):
                     os.makedirs(dirname)
-                f = open(cachepath, "w")
+                f = open(filecachepath, "w")
                 try:
                     f.write(text)
                 finally:
                     f.close()
 
-            f = open(cachepath, "r")
+            f = open(filecachepath, "r")
             try:
                 text = f.read()
             finally:

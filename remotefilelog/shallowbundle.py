@@ -21,7 +21,7 @@ def shouldaddfilegroups(repo, source):
         if isshallowclient:
             # commits in a shallow repo may not exist in the master server
             # so we need to return all the data on a pull
-            ui.warn("pulling from a shallow repo\n")
+            repo.ui.warn("pulling from a shallow repo\n")
             return True
 
         return not shallowremote
