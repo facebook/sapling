@@ -585,7 +585,8 @@ static PyObject *hashmangle(const char *src, Py_ssize_t len, const char sha[20])
 			   in a space or dot, which are unportable. */
 			if (d == '.' || d == ' ')
 				dest[destlen - 1] = '_';
-			if (destlen > maxshortdirslen)
+			/* The + 3 is to account for "dh/" in the beginning */
+			if (destlen > maxshortdirslen + 3)
 				break;
 			charcopy(dest, &destlen, destsize, src[i]);
 			p = -1;
