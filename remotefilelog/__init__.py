@@ -150,13 +150,9 @@ def onetimesetup(ui):
         def wrap(func):
             def wrapper(*args, **kwargs):
                 global shallowremote
-                try:
-                    shallowremote = True
-                    shallowbundle.shallowremote = True
-                    return func(*args, **kwargs)
-                finally:
-                    shallowremote = False
-                    shallowbundle.shallowremote = False
+                shallowremote = True
+                shallowbundle.shallowremote = True
+                return func(*args, **kwargs)
             return wrapper
 
         wireproto.commands[cmd + "_shallow"] = (wrap(func), args)
