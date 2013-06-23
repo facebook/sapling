@@ -5986,7 +5986,7 @@ msgid ""
 "    given using a format string. The formatting rules are as follows::"
 msgstr ""
 "    可以输出到文件，这时会使用指定的格式化字符串构造文件名称。格式化规则\n"
-"    如下:"
+"    如下::"
 
 #, fuzzy
 msgid ""
@@ -6895,7 +6895,7 @@ msgid ""
 msgstr ""
 "    下表给出了删除不同状态(列)文件的行为和可选的组合(行)。文件状态\n"
 "    ('hg status' 报告的状态)是增加(A)，干净(C)，已修改(M)，丢失(!)。\n"
-"    动作是警告(W)，移除(R，从分支)，以及删除(D，从磁盘)。"
+"    动作是警告(W)，移除(R，从分支)，以及删除(D，从磁盘)。::"
 
 #, fuzzy
 msgid ""
@@ -8971,7 +8971,7 @@ msgid ""
 "    Three styles are packaged with Mercurial: default (the style used\n"
 "    when no explicit preference is passed), compact and changelog.\n"
 "    Usage::"
-msgstr "    水银中内置了 3 种样式: default (默认), compact 和 changelog。用法:"
+msgstr "    水银中内置了 3 种样式: default (默认), compact 和 changelog。用法::"
 
 #, fuzzy
 msgid "        $ hg log -r1 --style changelog"
@@ -8981,7 +8981,7 @@ msgstr "        $ hg log -r1 --style changelog"
 msgid ""
 "    A template is a piece of text, with markup to invoke variable\n"
 "    expansion::"
-msgstr "    模版是文本片断，其中的标记用于变量扩展:"
+msgstr "    模版是文本片断，其中的标记用于变量扩展::"
 
 #, fuzzy
 msgid ""
