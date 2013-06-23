@@ -135,7 +135,12 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     # changesets that close a branch, and store their first parent
     for rev in xrange(startrev, len(repo)):
         util.progress(ui, 'prepare', rev - startrev, total=numrevs)
-        ctx = repo[rev]
+        try:
+            ctx = repo[rev]
+        except error.RepoError:
+            # this revision is hidden
+            continue
+
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
             continue
@@ -163,7 +168,12 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     for rev in xrange(startrev, len(repo)):
         util.progress(ui, 'rebuild', rev-startrev, total=numrevs)
-        ctx = repo[rev]
+        try:
+            ctx = repo[rev]
+        except error.RepoError:
+            # this revision is hidden
+            continue
+
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
             continue
