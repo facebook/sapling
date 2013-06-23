@@ -2736,7 +2736,7 @@ msgid "darcs version 2.1 or newer needed (found %r)"
 msgstr "требуется версия darcs 2.1 или выше (найдена %r)"
 
 msgid "Python ElementTree module is not available"
-msgstr "Модуль Python ElemntTree не доступен"
+msgstr "Модуль Python ElementTree не доступен"
 
 #, python-format
 msgid "%s repository format is unsupported, please upgrade"
