@@ -1,4 +1,4 @@
-import os, sys
+import os
 from hgext import color
 from mercurial import dispatch, ui
 

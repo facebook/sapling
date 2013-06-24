@@ -56,7 +56,6 @@ import random
 import re
 import threading
 import killdaemons as killmod
-import cPickle as pickle
 import Queue as queue
 
 processlock = threading.Lock()

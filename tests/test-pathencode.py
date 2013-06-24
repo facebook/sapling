@@ -5,7 +5,6 @@
 # that have proven likely to expose bugs and divergent behaviour in
 # different encoding implementations.
 
-from mercurial import parsers
 from mercurial import store
 import binascii, itertools, math, os, random, sys, time
 import collections
@@ -125,7 +124,8 @@ def makepart(rng, k):
     p = pickfrom(rng, firsttable)(rng)
     l = len(p)
     ps = [p]
-    while l <= k:
+    maxl = rng.randint(1, k)
+    while l < maxl:
         p = pickfrom(rng, resttable)(rng)
         l += len(p)
         ps.append(p)

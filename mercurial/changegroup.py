@@ -364,10 +364,11 @@ class bundle10(object):
 
             if fastpathlinkrev:
                 ln, llr = filerevlog.node, filerevlog.linkrev
+                needed = set(cl.rev(x) for x in clnodes)
                 def genfilenodes():
                     for r in filerevlog:
                         linkrev = llr(r)
-                        if linkrev not in commonrevs:
+                        if linkrev in needed:
                             yield filerevlog.node(r), cl.node(linkrev)
                 fnodes[fname] = dict(genfilenodes())
 

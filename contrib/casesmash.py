@@ -1,4 +1,4 @@
-import sys, os, __builtin__
+import os, __builtin__
 from mercurial import util
 
 def lowerwrap(scope, funcname):
