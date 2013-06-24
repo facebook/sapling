@@ -11488,9 +11488,9 @@ msgstr "brug 'hg push --new-branch' for at lave nye grene i fjerndepotet"
 msgid "push creates new remote head %s on branch '%s'!"
 msgstr "skub laver nye fjern-hoveder på grenen '%s'!"
 
-#, fuzzy, python-format
+#, python-format
 msgid "push creates new remote head %s!"
-msgstr "skub laver nye fjern-hoveder!"
+msgstr "skub laver nyt fjern-hovede %s!"
 
 msgid "you should pull and merge or use push -f to force"
 msgstr "du bør hive og sammenføje eller bruge -f for at gennemtvinge"
