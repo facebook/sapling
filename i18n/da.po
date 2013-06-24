@@ -12034,7 +12034,7 @@ msgstr ""
 
 #, fuzzy
 msgid "syntax for Mercurial ignore files"
-msgstr "%s: ej et Mercurial bundt"
+msgstr ""
 
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
