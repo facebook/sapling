@@ -21397,7 +21397,7 @@ msgstr "Stil nicht gefunden: %s"
 
 #, fuzzy, python-format
 msgid "%s: missing value"
-msgstr "fehlendes Argument"
+msgstr "%s: fehlendes Werte"
 
 #, python-format
 msgid "\"%s\" not in template map"
