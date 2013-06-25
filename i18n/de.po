@@ -3984,9 +3984,9 @@ msgstr "Importierte Lesezeichen %s\n"
 msgid "must specify a rule for each changeset once"
 msgstr "Mindestens ein Änderungssatz mit -r oder -o wird benötigt"
 
-#, fuzzy, python-format
+#, python-format
 msgid "malformed line \"%s\""
-msgstr "fehlerhafte mq Statuszeile: %s\n"
+msgstr "fehlerhafte Zeile: \"%s\""
 
 msgid "may not use changesets other than the ones listed"
 msgstr ""
