@@ -4244,7 +4244,7 @@ msgstr ""
 "Applicerade patchar är både patchfiler och ändringar."
 
 msgid "Common tasks (use :hg:`help command` for more details)::"
-msgstr "Vanliga kommandon (använd :hg:`help command` för mer detaljer):"
+msgstr "Vanliga kommandon (använd :hg:`help command` för mer detaljer)::"
 
 msgid ""
 "  create new patch                          qnew\n"
