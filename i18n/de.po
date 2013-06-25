@@ -3974,7 +3974,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "histedit:  %s to %s\n"
-msgstr "Status: %r %s -> %s\n"
+msgstr ""
 
 #, fuzzy, python-format
 msgid "histedit:     moving bookmarks %s\n"
@@ -6871,7 +6871,7 @@ msgstr ""
 
 #, fuzzy
 msgid "  Default: serve."
-msgstr " (Voreinstellung: %s)"
+msgstr ""
 
 #, fuzzy
 msgid ""
@@ -12361,7 +12361,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "phase changed for %i changesets\n"
-msgstr "Suche nach Änderungen\n"
+msgstr ""
 
 msgid "no phases changed\n"
 msgstr ""
@@ -19105,7 +19105,7 @@ msgstr "Zielverzeichnis: %s\n"
 
 #, fuzzy
 msgid "empty destination path is not valid"
-msgstr "Ziel %s ist kein Verzeichnis"
+msgstr ""
 
 #, python-format
 msgid "destination '%s' already exists"
@@ -19427,7 +19427,7 @@ msgstr "Teilweiser Pull kann nicht ausgeführt werden, da das andere Projektarch
 
 #, fuzzy
 msgid "destination does not support push"
-msgstr "Ziel %s ist nicht leer"
+msgstr ""
 
 #, fuzzy, python-format
 msgid "push includes an obsolete changeset: %s!"
@@ -19876,7 +19876,7 @@ msgstr "Bereinigen fehlgeschlagen, partielles Bündel in '%s' gespeichert\n"
 
 #, fuzzy, python-format
 msgid "revlog decompress error: %s"
-msgstr "hg: Parserfehler: %s\n"
+msgstr ""
 
 #, python-format
 msgid "unknown compression type %r"
