@@ -73,13 +73,14 @@ class fileserverclient(object):
         missed = []
         count = 0
         while True:
-            missingid = self.pipeo.read(81)
+            missingid = self.pipeo.readline()[:-1]
             if not missingid:
                 raise util.Abort(_("error downloading file contents: " +
                                    "connection closed early"))
-            if missingid == "0000000000000000000000000000000000000000/0000000000000000000000000000000000000000":
+            if missingid == "0":
                 break
             if missingid.startswith("_hits_"):
+                # receive progress reports
                 parts = missingid.split("_")
                 count += int(parts[2])
                 self.ui.progress(_downloading, count, total=total)
@@ -98,8 +99,6 @@ class fileserverclient(object):
             remote.pipeo.write(sshrequest)
             remote.pipeo.flush()
 
-            # receive progress reports
-            #self.ui.progress(_downloading, total - count, total=total)
 
         count = total - len(missed)
         self.ui.progress(_downloading, count, total=total)
@@ -140,7 +139,8 @@ class fileserverclient(object):
         return missing
 
     def connect(self):
-        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(self.cacheprocess)
+        cmd = "%s %s" % (self.cacheprocess, self.cachepath)
+        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(cmd)
 
     def close(self):
         if fetches and self.debugoutput:
