@@ -352,7 +352,7 @@ msgid ""
 msgstr ""
 "    Pour activer l'extension \"truc\" fournie avec Mercurial ou\n"
 "    présente dans le chemin de recherche de Python, déclarez-la\n"
-"    dans votre fichier de configuration hgrc comme suit :"
+"    dans votre fichier de configuration hgrc comme suit ::"
 
 #, fuzzy
 msgid ""
@@ -364,7 +364,7 @@ msgstr ""
 
 #, fuzzy
 msgid "You may also specify the full path to an extension::"
-msgstr "    Vous pouvez aussi indiquer l'endroit où elle se trouve :"
+msgstr "    Vous pouvez aussi indiquer l'endroit où elle se trouve ::"
 
 #, fuzzy
 msgid ""
@@ -380,7 +380,7 @@ msgid ""
 "scope, prepend its path with !::"
 msgstr ""
 "    Pour forcer la désactivation d'une extension activée par un\n"
-"    autre hgrc, précédez son chemin d'un point d'exclamation :"
+"    autre hgrc, précédez son chemin d'un point d'exclamation ::"
 
 #, fuzzy
 msgid ""
@@ -3058,7 +3058,7 @@ msgstr ""
 
 #, fuzzy
 msgid "Common tasks (use \"hg help command\" for more details)::"
-msgstr "Tâches usuelles (utiliser \"hg help commande\" pour plus de détails):"
+msgstr "Tâches usuelles (utiliser \"hg help commande\" pour plus de détails)::"
 
 #, fuzzy
 msgid ""
@@ -4432,7 +4432,7 @@ msgstr ""
 
 #, fuzzy
 msgid "For example, if you can refer to a revision as \"foo\", then::"
-msgstr "Par exemple, si \"foo\" désigne une révision, alors :"
+msgstr "Par exemple, si \"foo\" désigne une révision, alors ::"
 
 #, fuzzy
 msgid ""
