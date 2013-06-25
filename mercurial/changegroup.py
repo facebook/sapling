@@ -354,14 +354,8 @@ class bundle10(object):
         progress(msgbundling, None)
 
         mfs.clear()
-        total = len(changedfiles)
-        # for progress output
-        msgfiles = _('files')
-        for i, fname in enumerate(sorted(changedfiles)):
-            filerevlog = repo.file(fname)
-            if not filerevlog:
-                raise util.Abort(_("empty or missing revlog for %s") % fname)
 
+        def linknodes(filerevlog, fname):
             if fastpathlinkrev:
                 ln, llr = filerevlog.node, filerevlog.linkrev
                 needed = set(cl.rev(x) for x in clnodes)
@@ -371,8 +365,33 @@ class bundle10(object):
                         if linkrev in needed:
                             yield filerevlog.node(r), cl.node(linkrev)
                 fnodes[fname] = dict(genfilenodes())
+            return fnodes.get(fname, {})
 
-            linkrevnodes = fnodes.pop(fname, {})
+        for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
+                                        source):
+            yield chunk
+
+        yield self.close()
+        progress(msgbundling, None)
+
+        if clnodes:
+            repo.hook('outgoing', node=hex(clnodes[0]), source=source)
+
+    def generatefiles(self, changedfiles, linknodes, commonrevs, source):
+        repo = self._repo
+        progress = self._progress
+        reorder = self._reorder
+        msgbundling = _('bundling')
+
+        total = len(changedfiles)
+        # for progress output
+        msgfiles = _('files')
+        for i, fname in enumerate(sorted(changedfiles)):
+            filerevlog = repo.file(fname)
+            if not filerevlog:
+                raise util.Abort(_("empty or missing revlog for %s") % fname)
+
+            linkrevnodes = linknodes(filerevlog, fname)
             # Lookup for filenodes, we collected the linkrev nodes above in the
             # fastpath case and with lookupmf in the slowpath case.
             def lookupfilelog(x):
@@ -386,11 +405,6 @@ class bundle10(object):
                 for chunk in self.group(filenodes, filerevlog, lookupfilelog,
                                         reorder=reorder):
                     yield chunk
-        yield self.close()
-        progress(msgbundling, None)
-
-        if clnodes:
-            repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     def revchunk(self, revlog, rev, prev, linknode):
         node = revlog.node(rev)
