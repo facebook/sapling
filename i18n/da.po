@@ -16297,7 +16297,6 @@ msgstr ""
 msgid "working directory now based on revisions %d and %d\n"
 msgstr ""
 "arbejdsbiblioteket er nu baseret på revisionerne %d og %d\n"
-"\n"
 
 #, python-format
 msgid "working directory now based on revision %d\n"
