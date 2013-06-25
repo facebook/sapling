@@ -1536,3 +1536,31 @@ Test the sub function of templating for expansion:
 
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
   xx
+
+Test the strip function with chars specified:
+
+  $ hg log -R latesttag --template '{desc}\n'
+  at3
+  t5
+  t3
+  t2
+  t1
+  merge
+  h2e
+  h2d
+  h1c
+  b
+  a
+
+  $ hg log -R latesttag --template '{strip(desc, "te")}\n'
+  at3
+  5
+  3
+  2
+  1
+  merg
+  h2
+  h2d
+  h1c
+  b
+  a

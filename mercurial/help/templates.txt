@@ -62,6 +62,8 @@ In addition to filters, there are some basic built-in functions:
 
 - rstdoc(text, style)
 
+- strip(text, chars)
+
 Also, for any expression that returns a list, there is a list operator:
 
 - expr % "{template}"

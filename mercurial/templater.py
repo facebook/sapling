@@ -333,6 +333,16 @@ def date(context, mapping, args):
         return util.datestr(date, fmt)
     return util.datestr(date)
 
+def strip(context, mapping, args):
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("strip expects one or two arguments"))
+
+    text = args[0][0](context, mapping, args[0][1])
+    if len(args) == 2:
+        chars = args[1][0](context, mapping, args[1][1])
+        return text.strip(chars)
+    return text.strip()
+
 methods = {
     "string": lambda e, c: (runstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
@@ -353,6 +363,7 @@ funcs = {
     "sub": sub,
     "fill": fill,
     "date": date,
+    "strip": strip,
 }
 
 # template engine
