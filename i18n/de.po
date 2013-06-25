@@ -13600,12 +13600,7 @@ msgstr "Es können nicht gleichzeitig -c/--check und -C/--clean angegeben werden
 
 msgid "verify the integrity of the repository"
 msgstr ""
-"Prüft die Integrität des Projektarchivs\n"
-"\n"
-"    Führt eine umfassende Prüfung des aktuellen Projektarchivs durch, rechnet\n"
-"    alle Prüfsummen in Historie, Manifest und überwachten Dateien nach.\n"
-"    Auch die Integrität von Referenzen und Indizes wird geprüft.\n"
-"    "
+"Prüft die Integrität des Projektarchivs"
 
 msgid "    Verify the integrity of the current repository."
 msgstr "    Prüft die Integrität des aktuellen Projektarchivs"
