@@ -13933,7 +13933,7 @@ msgstr ""
 
 #, python-format
 msgid "malformed --config option: %r (use --config section.name=value)"
-msgstr "fehlerhafte --config Option: %s (nutze --config Abschnitt.Name=Wert)"
+msgstr "fehlerhafte --config Option: %r (nutze --config Abschnitt.Name=Wert)"
 
 #, python-format
 msgid "error getting current working directory: %s"
