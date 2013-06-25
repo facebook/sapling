@@ -16649,7 +16649,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "cannot create %s: destination already exists\n"
-msgstr "kan ikke oprette %s: destinationen findes allerede"
+msgstr "kan ikke oprette %s: destinationen findes allerede\n"
 
 #, python-format
 msgid "file %s already exists\n"
