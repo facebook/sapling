@@ -16615,9 +16615,9 @@ msgstr "Tip:"
 msgid "Warning!"
 msgstr "Advarsel!"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unexpected token: %s"
-msgstr "uventet svar:"
+msgstr "uventet token: %s"
 
 #, fuzzy, python-format
 msgid "not a prefix: %s"
