@@ -107,7 +107,7 @@ msgstr "COMMANDES"
 
 #, fuzzy
 msgid "    options:"
-msgstr "options :\n"
+msgstr "    options :"
 
 #, python-format
 msgid "    aliases: %s"
