@@ -97,14 +97,20 @@ class shallowbundle(changegroup.bundle10):
 
         yield self.close()
 
+    def generatefiles(self, changedfiles, linknodes, commonrevs, source):
+        if ("remotefilelog" in self._repo.requirements and
+            not shouldaddfilegroups(self._repo, source)):
+            return iter([])
+
+        return super(shallowbundle, self).generatefiles(changedfiles,
+                     linknodes, commonrevs, source)
+
     def prune(self, rlog, missing, commonrevs, source):
         if isinstance(rlog, revlog.revlog):
             return super(shallowbundle, self).prune(rlog, missing,
                 commonrevs, source)
 
         repo = self._repo
-        if not shouldaddfilegroups(repo, source):
-            return []
         results = []
         for fnode in missing:
             fctx = repo.filectx(rlog.filename, fileid=fnode)

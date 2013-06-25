@@ -85,11 +85,13 @@ def reposetup(ui, repo):
 def setupserver(ui, repo):
     onetimesetup(ui)
 
-    def prune(orig, self, rlog, missing, commonrevs, source):
-        if shallowremote and isinstance(rlog, filelog.filelog):
-            return []
-        return orig(self, rlog, missing, commonrevs, source)
-    wrapfunction(changegroup.bundle10, 'prune', prune)
+    # don't send files to shallow clients
+    def generatefiles(orig, self, changedfiles, linknodes, commonrevs, source):
+        if shallowremote:
+            return iter([])
+        return orig(self, changedfiles, linknodes, commonrevs, source)
+
+    wrapfunction(changegroup.bundle10, 'generatefiles', generatefiles)
 
 def setupclient(ui, repo):
     if (not isinstance(repo, localrepo.localrepository) or
@@ -464,7 +466,8 @@ def buildtemprevlog(repo, file):
 
 def debugindex(orig, ui, repo, file_ = None, **opts):
     """dump the contents of an index file"""
-    if opts.get('changelog') or opts.get('manifest'):
+    if (opts.get('changelog') or opts.get('manifest') or
+        not "remotefilelog" in repo.requirements):
         return orig(ui, repo, file_, **opts)
 
     r = buildtemprevlog(repo, file_)
@@ -510,6 +513,9 @@ def debugindex(orig, ui, repo, file_ = None, **opts):
 
 def debugindexdot(orig, ui, repo, file_):
     """dump an index DAG as a graphviz dot file"""
+    if not "remotefilelog" in repo.requirements:
+        return orig(ui, repo, file_)
+
     r = buildtemprevlog(repo, os.path.basename(file_)[:-2])
 
     ui.write(("digraph G {\n"))
