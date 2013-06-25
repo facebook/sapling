@@ -13683,7 +13683,7 @@ msgstr ""
 
 #, fuzzy
 msgid "The full set of options is:"
-msgstr "Den første gode revision er:\n"
+msgstr ""
 
 msgid ""
 "``accesslog``\n"
