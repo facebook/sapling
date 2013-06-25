@@ -16631,9 +16631,9 @@ msgstr "ikke en funktion: %s"
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "cannot patch %s: file is not tracked"
-msgstr "fjerner ikke %s: filen følges ikke\n"
+msgstr "lapper ikke %s: filen følges ikke"
 
 #, python-format
 msgid "unable to find '%s' for patching\n"
