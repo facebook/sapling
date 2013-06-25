@@ -17679,6 +17679,7 @@ msgid ""
 "Description\n"
 "==========="
 msgstr "Beschreibung:\n"
+"==========="
 
 msgid ""
 "The working directory of a Mercurial repository will often contain\n"
