@@ -21771,7 +21771,7 @@ msgid "look up remote changes"
 msgstr "entfernte Änderungen abrufen"
 
 msgid "push failed:"
-msgstr "Übertragen fehlgeschlagen: %s"
+msgstr "Übertragen fehlgeschlagen:"
 
 #~ msgid ""
 #~ "Branch-based Access Control\n"
