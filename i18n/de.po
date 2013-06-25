@@ -21023,7 +21023,7 @@ msgid ""
 "cannot push revision %s\n"
 msgstr ""
 "kein Zweig in Unterarchiv %s aktuell\n"
-"Revision %s kann nicht übertragen werden"
+"Revision %s kann nicht übertragen werden\n"
 
 #, python-format
 msgid "%s, line %s: %s\n"
