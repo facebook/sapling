@@ -395,7 +395,6 @@ msgstr ""
 "      bar = !/vers/machin.py\n"
 "      # idem, mais aucun chemin n'avait été donné pour chose \n"
 "      chose = !\n"
-"    "
 
 msgid ""
 "When Mercurial accepts more than one revision, they may be specified\n"
