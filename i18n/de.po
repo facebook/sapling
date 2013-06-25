@@ -9126,7 +9126,7 @@ msgid "enable additional output"
 msgstr "Ausgabe weiterer Informationen"
 
 msgid "set/override config option (use 'section.name=value')"
-msgstr "Setze/Überschreibe Konfigurationsoption: %s (nutze --config Abschnitt.Name=Wert)"
+msgstr "Setze/Überschreibe Konfigurationsoption (nutze --config Abschnitt.Name=Wert)"
 
 msgid "CONFIG"
 msgstr ""
