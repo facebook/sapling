@@ -251,14 +251,9 @@ class SVNMeta(object):
         Note that it's only a tag if it was copied from the path '' in a branch
         (or tag) we have, for our purposes.
         """
-        if self.layout != 'single':
-            path = self.normalize(path)
-            for tagspath in self.layoutobj.taglocations(self.meta_data_dir):
-                if path.startswith(tagspath + '/'):
-                    tag = path[len(tagspath) + 1:]
-                    if tag:
-                        return tag
-        return None
+        path = self.normalize(path)
+        taglocations = self.layoutobj.taglocations(self.meta_data_dir)
+        return self.layoutobj.get_path_tag(path, taglocations)
 
     def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and

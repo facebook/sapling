@@ -56,3 +56,11 @@ class StandardLayout(base.BaseLayout):
             self._tag_locations.reverse()
 
         return self._tag_locations
+
+    def get_path_tag(self, path, taglocations):
+        for tagspath in taglocations:
+            if path.startswith(tagspath + '/'):
+                    tag = path[len(tagspath) + 1:]
+                    if tag:
+                        return tag
+        return None

@@ -49,3 +49,17 @@ class BaseLayout(object):
 
         """
         self.__unimplemented('tagpaths')
+
+    def get_path_tag(self, path, taglocations):
+        """Get the tag name for the given svn path, if it is a possible tag.
+
+        This function should return None if the path cannot be a tag.
+        Returning a non-empty sring does not imply that the path is a
+        tag, only that it is a candidate to be a tag.  Returning an
+        empty string is an error.
+
+        Path should be relative to the repo url.
+        taglocations should be as returned by self.taglocations()
+
+        """
+        self.__unimplemented('get_path_tag')

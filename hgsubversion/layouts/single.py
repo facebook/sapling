@@ -16,3 +16,6 @@ class SingleLayout(base.BaseLayout):
 
     def taglocations(self, meta_data_dir):
         return []
+
+    def get_path_tag(self, path, taglocations):
+        return None
