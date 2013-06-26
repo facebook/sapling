@@ -646,7 +646,7 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
             # if there's a copyfrom_path and there were files inside that copyfrom,
             # we need to detect those branches. It's a little thorny and slow, but
             # seems to be the best option.
-            elif paths[p].copyfrom_path and not p.startswith('tags/'):
+            elif paths[p].copyfrom_path and not meta.get_path_tag(p):
                 paths_need_discovery.extend(['%s/%s' % (p, x[0])
                                              for x in listdir(p, revnum)
                                              if x[1] == 'f'])
@@ -654,24 +654,14 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
         if not actually_files:
             continue
 
-        filepaths = [p.split('/') for p in actually_files]
-        filepaths = [(len(p), p) for p in filepaths]
-        filepaths.sort()
-        filepaths = [p[1] for p in filepaths]
-        while filepaths:
-            path = filepaths.pop(0)
-            parentdir = '/'.join(path[:-1])
-            filepaths = [p for p in filepaths if not '/'.join(p).startswith(parentdir)]
-            branchpath = meta.normalize(parentdir)
-            if branchpath.startswith('tags/'):
+        for path in actually_files:
+            if meta.get_path_tag(path):
                 continue
-            branchname = meta.localname(branchpath)
-            if branchpath.startswith('trunk/'):
-                branches[meta.localname('trunk')] = 'trunk'
+            fpath, branch, bpath = meta.split_branch_path(path, existing=False)
+            if bpath is None:
                 continue
-            if branchname and branchname.startswith('../'):
-                continue
-            branches[branchname] = branchpath
+            branches[branch] = bpath
+
     return branches
 
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
