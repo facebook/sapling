@@ -95,6 +95,9 @@ def setupserver(ui, repo):
 
     wrapfunction(changegroup.bundle10, 'generatefiles', generatefiles)
 
+    # add incoming hook to continuously generate file blobs
+    ui.setconfig("hooks", "changegroup.remotefilelog", incominghook)
+
 def setupclient(ui, repo):
     if (not isinstance(repo, localrepo.localrepository) or
         isinstance(repo, bundlerepo.bundlerepository)):
@@ -261,6 +264,31 @@ def onetimeclientsetup(ui):
         return orig(self, cmd, **args)
     wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
 
+def createfileblob(filectx):
+    text = filectx.data()
+
+    ancestors = [filectx]
+    ancestors.extend([f for f in filectx.ancestors()])
+
+    ancestortext = ""
+    for ancestorctx in ancestors:
+        parents = ancestorctx.parents()
+        p1 = nullid
+        p2 = nullid
+        if len(parents) > 0:
+            p1 = parents[0].filenode()
+        if len(parents) > 1:
+            p2 = parents[1].filenode()
+
+        copyname = ""
+        rename = ancestorctx.renamed()
+        if rename:
+            copyname = rename[0]
+        ancestortext += "%s%s%s%s%s\0" % (
+            ancestorctx.filenode(), p1, p2, ancestorctx.node(),
+            copyname)
+
+    return "%d\0%s%s" % (len(text), text, ancestortext)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
@@ -272,47 +300,82 @@ def getfiles(repo, proto):
         cachepath = repo.ui.config("remotefilelog", "servercachepath")
         if not cachepath:
             cachepath = os.path.join(repo.path, "remotefilelogcache")
-        while True:
-            request = fin.readline()[:-1]
-            if not request:
-                break
 
-            node = bin(request[:40])
-            if node == nullid:
-                yield '0\n'
-                continue
+        # everything should be user & group read/writable
+        oldumask = os.umask(0o002)
+        try:
+            while True:
+                request = fin.readline()[:-1]
+                if not request:
+                    break
 
-            path = request[40:]
+                node = bin(request[:40])
+                if node == nullid:
+                    yield '0\n'
+                    continue
 
-            filecachepath = os.path.join(cachepath, path, hex(node))
-            if not os.path.exists(filecachepath):
-                filectx = repo.filectx(path, fileid=node)
+                path = request[40:]
 
-                text = filectx.data()
+                filecachepath = os.path.join(cachepath, path, hex(node))
+                if not os.path.exists(filecachepath):
+                    filectx = repo.filectx(path, fileid=node)
 
-                ancestors = [filectx]
-                ancestors.extend([f for f in filectx.ancestors()])
+                    text = createfileblob(filectx)
+                    text = lz4.compressHC(text)
 
-                ancestortext = ""
-                for ancestorctx in ancestors:
-                    parents = ancestorctx.parents()
-                    p1 = nullid
-                    p2 = nullid
-                    if len(parents) > 0:
-                        p1 = parents[0].filenode()
-                    if len(parents) > 1:
-                        p2 = parents[1].filenode()
+                    dirname = os.path.dirname(filecachepath)
+                    if not os.path.exists(dirname):
+                        os.makedirs(dirname)
+                    f = open(filecachepath, "w")
+                    try:
+                        f.write(text)
+                    finally:
+                        f.close()
 
-                    copyname = ""
-                    rename = ancestorctx.renamed()
-                    if rename:
-                        copyname = rename[0]
-                    ancestortext += "%s%s%s%s%s\0" % (
-                        ancestorctx.filenode(), p1, p2, ancestorctx.node(),
-                        copyname)
+                f = open(filecachepath, "r")
+                try:
+                    text = f.read()
+                finally:
+                    f.close()
 
-                text = lz4.compressHC("%d\0%s%s" %
-                    (len(text), text, ancestortext))
+                yield '%d\n%s' % (len(text), text)
+
+                # it would be better to only flush after processing a whole batch
+                # but currently we don't know if there are more requests coming
+                proto.fout.flush()
+        finally:
+            os.umask(oldumask)
+
+    return wireproto.streamres(streamer())
+
+def incominghook(ui, repo, node, source, url, **kwargs):
+    cachepath = repo.ui.config("remotefilelog", "servercachepath")
+    if not cachepath:
+        cachepath = os.path.join(repo.path, "remotefilelogcache")
+
+    heads = repo.revs("heads(%s::)" % node)
+
+    # everything should be user & group read/writable
+    oldumask = os.umask(0o002)
+    try:
+        count = 0
+        for head in heads:
+            mf = repo[head].manifest()
+            for filename, filenode in mf.iteritems():
+                filecachepath = os.path.join(cachepath, filename, hex(filenode))
+                if os.path.exists(filecachepath):
+                    continue
+
+                # This can be a bit slow. Don't block the commit returning
+                # for large commits.
+                if count > 500:
+                    break
+                count += 1
+
+                filectx = repo.filectx(filename, fileid=filenode)
+
+                text = createfileblob(filectx)
+                text = lz4.compressHC(text)
 
                 dirname = os.path.dirname(filecachepath)
                 if not os.path.exists(dirname):
@@ -322,20 +385,8 @@ def getfiles(repo, proto):
                     f.write(text)
                 finally:
                     f.close()
-
-            f = open(filecachepath, "r")
-            try:
-                text = f.read()
-            finally:
-                f.close()
-
-            yield '%d\n%s' % (len(text), text)
-
-            # it would be better to only flush after processing a whole batch
-            # but currently we don't know if there are more requests coming
-            proto.fout.flush()
-
-    return wireproto.streamres(streamer())
+    finally:
+        os.umask(oldumask)
 
 def getrenamedfn(repo, endrev=None):
     rcache = {}
