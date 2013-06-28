@@ -181,6 +181,32 @@ Commit while interrupted should fail:
   (use "hg graft -c" to continue graft)
   [255]
 
+Abort the graft and try committing:
+
+  $ hg up -C .
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c >> e
+  $ hg ci -mtest
+
+  $ hg strip . --config extensions.mq=
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/a/.hg/strip-backup/*-backup.hg (glob)
+
+Graft again:
+
+  $ hg graft 1 5 4 3 'merge()' 2
+  skipping ungraftable merge revision 6
+  skipping already grafted revision 2
+  skipping already grafted revision 1
+  skipping already grafted revision 5
+  grafting revision 4
+  merging e
+  warning: conflicts during merge.
+  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  abort: unresolved conflicts, can't continue
+  (use hg resolve and hg graft --continue)
+  [255]
+
 Continue without resolve should fail:
 
   $ hg graft -c
