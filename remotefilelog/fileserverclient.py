@@ -39,7 +39,7 @@ class fileserverclient(object):
         if not os.path.exists(self.cachepath):
             os.makedirs(self.cachepath)
 
-    def request(self, fileids):
+    def request(self, repo, fileids):
         """Takes a list of filename/node pairs and fetches them from the
         server. Files are stored in the self.cachepath.
         A list of nodes that the server couldn't find is returned.
@@ -136,6 +136,12 @@ class fileserverclient(object):
 
         self.ui.progress(_downloading, None)
 
+        # mark ourselves as a user of this cache
+        repospath = os.path.join(self.cachepath, "repos")
+        reposfile = open(repospath, 'a')
+        reposfile.write(os.path.dirname(repo.path) + "\n")
+        reposfile.close()
+
         return missing
 
     def connect(self):
@@ -166,9 +172,10 @@ class fileserverclient(object):
             self.pipei = None
             self.pipee = None
 
-    def prefetch(self, storepath, fileids):
+    def prefetch(self, repo, fileids):
         """downloads the given file versions to the cache
         """
+        storepath = repo.sopener.vfs.base
         missingids = []
         for file, id in fileids:
             # hack
@@ -188,7 +195,7 @@ class fileserverclient(object):
             fetches += 1
             fetched += len(missingids)
             start = time.time()
-            missingids = self.request(missingids)
+            missingids = self.request(repo, missingids)
             if missingids:
                 raise util.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start

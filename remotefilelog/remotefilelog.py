@@ -260,7 +260,7 @@ class remotefilelog(object):
         if os.path.exists(localpath):
             return _readfile(localpath)
 
-        fileserverclient.client.prefetch(self.opener.vfs.base, [(self.filename, id)])
+        fileserverclient.client.prefetch(self.repo, [(self.filename, id)])
         if os.path.exists(cachepath):
             return _readfile(cachepath)
 

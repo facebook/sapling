@@ -16,16 +16,19 @@ from mercurial import ancestor, mdiff, parsers, error, util, dagutil, time
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, traceback, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
-from mercurial import templatekw, repoview, bundlerepo, revset
+from mercurial import templatekw, repoview, bundlerepo, revset, hg
 from mercurial import match as matchmod
 import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 import stat
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+testedwith = 'internal'
 
 shallowremote = False
 remotefilelogreq = "remotefilelog"
 localrepo.localrepository.supported.add(remotefilelogreq)
 shallowcommands = ["stream_out", "changegroup", "changegroupsubset", "getbundle"]
-
 
 def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
@@ -191,7 +194,7 @@ def onetimeclientsetup(ui):
             for f, m, args, msg in [a for a in actions if a[1] == 'g']:
                 files.append((f, hex(manifest[f])))
             # batch fetch the needed files from the server
-            fileserverclient.client.prefetch(repo.sopener.vfs.base, files)
+            fileserverclient.client.prefetch(repo, files)
         return orig(repo, actions, wctx, mctx, actx, overwrite)
     wrapfunction(merge, 'applyupdates', applyupdates)
 
@@ -579,3 +582,107 @@ def debugindexdot(orig, ui, repo, file_):
         if pp[1] != nullid:
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
+
+commands.norepo += " gc"
+
+@command('^gc', [], _('hg gc [CACHEPATH]'))
+def gc(ui, *args, **opts):
+    '''garbage collect the filelog cache
+    '''
+    if len(args) > 0:
+        cachepath = args[0]
+    else:
+        repo = hg.peer(ui, {}, ui.environ['PWD'])
+        cachepath = ui.config("remotefilelog", "cachepath")
+        if not cachepath:
+            return
+
+    # get list of repos that use this cache
+    repospath = os.path.join(cachepath, 'repos')
+    if not os.path.exists(repospath):
+        ui.warn("no known cache at %s\n" % cachepath)
+        return
+
+    reposfile = open(repospath, 'r')
+    repos = set([r[:-1] for r in reposfile.readlines()])
+    reposfile.close()
+
+    # build list of useful files
+    validrepos = []
+    keepfiles = set()
+
+    _analyzing = _("analyzing repositories")
+    _removing = _("removing unnecessary files")
+    _truncating = _("enforcing cache limit")
+
+    count = 0
+    for path in repos:
+        ui.progress(_analyzing, count, unit="repos", total=len(repos))
+        count += 1
+        path = ui.expandpath(path)
+        try:
+            peer = hg.peer(ui, {}, path)
+        except error.RepoError:
+            continue
+
+        validrepos.append(path)
+
+        keep = peer._repo.revs("(parents(draft()) + heads(all())) & public()")
+        for r in keep:
+            m = peer._repo[r].manifest()
+            for filename, filenode in m.iteritems():
+                key = fileserverclient.getcachekey(filename, hex(filenode))
+                keepfiles.add(key)
+
+    ui.progress(_analyzing, None)
+
+    # write list of valid repos back
+    reposfile = open(repospath, 'w')
+    reposfile.writelines([("%s\n" % r) for r in validrepos])
+    reposfile.close()
+
+    # prune cache
+    import Queue
+    queue = Queue.PriorityQueue()
+    originalsize = 0
+    size = 0
+    count = 0
+    removed = 0
+
+    ui.progress(_removing, count, unit="files")
+    for root, dirs, files in os.walk(cachepath):
+        for file in files:
+            if file == 'repos':
+                continue
+
+            ui.progress(_removing, count, unit="files")
+            path = os.path.join(root, file)
+            key = os.path.basename(root) + "/" + file
+            count += 1
+            stat = os.stat(path)
+            originalsize += stat.st_size
+            if key not in keepfiles:
+                os.remove(path)
+                removed += 1
+            else:
+                queue.put((stat.st_atime, path, stat))
+                size += stat.st_size
+    ui.progress(_removing, None)
+
+    # remove oldest files until under limit
+    limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
+    if size > limit:
+        excess = size - limit
+        removedexcess = 0
+        while queue and size > limit and size > 0:
+            ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
+            atime, oldpath, stat = queue.get()
+            os.remove(oldpath)
+            size -= stat.st_size
+            removed += 1
+            removedexcess += stat.st_size
+    ui.progress(_truncating, None)
+
+    ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
+              (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
+              float(size) / 1024.0 / 1024.0 / 1024.0))

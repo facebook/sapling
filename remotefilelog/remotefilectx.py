@@ -184,8 +184,7 @@ class remotefilectx(context.filectx):
         for ancestor in ancestors:
             fetch.append((ancestor.path(), hex(ancestor.filenode())))
 
-        storepath = self._repo.sopener.vfs.base
-        fileserverclient.client.prefetch(storepath, fetch)
+        fileserverclient.client.prefetch(self._repo, fetch)
 
         return super(remotefilectx, self).annotate(follow, linenumber, diffopts)
 
