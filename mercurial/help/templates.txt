@@ -58,11 +58,11 @@ In addition to filters, there are some basic built-in functions:
 
 - label(label, expr)
 
-- sub(pat, repl, expr)
-
 - rstdoc(text, style)
 
-- strip(text, chars)
+- strip(text[, chars])
+
+- sub(pat, repl, expr)
 
 Also, for any expression that returns a list, there is a list operator:
 
