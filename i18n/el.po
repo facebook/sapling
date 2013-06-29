@@ -1152,7 +1152,7 @@ msgstr ""
 "χρήστη που έχει στο Bugzilla.  Δείτε επίσης την περιγραφή της επιλογής\n"
 "[bugzilla].usermap.  Η μορφή που έχει κάθε γραμμή στο usermap είναι::\n"
 "\n"
-"\\\"committer\\\"=\\\"Bugzilla user\\\""
+"  \\\"committer\\\"=\\\"Bugzilla user\\\""
 
 #, fuzzy
 msgid "Finally, the [web] section supports one entry:"
