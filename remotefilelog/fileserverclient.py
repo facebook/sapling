@@ -103,44 +103,48 @@ class fileserverclient(object):
         count = total - len(missed)
         self.ui.progress(_downloading, count, total=total)
 
-        # receive cache misses from master
-        if missed:
-            # process remote
-            pipei = remote.pipei
-            for id in missed:
-                size = int(pipei.readline()[:-1])
-                data = pipei.read(size)
+        oldumask = os.umask(0o002)
+        try:
+            # receive cache misses from master
+            if missed:
+                # process remote
+                pipei = remote.pipei
+                for id in missed:
+                    size = int(pipei.readline()[:-1])
+                    data = pipei.read(size)
 
-                count += 1
-                self.ui.progress(_downloading, count, total=total)
+                    count += 1
+                    self.ui.progress(_downloading, count, total=total)
 
-                idcachepath = os.path.join(self.cachepath, id)
-                dirpath = os.path.dirname(idcachepath)
-                if not os.path.exists(dirpath):
-                    os.makedirs(dirpath)
-                f = open(idcachepath, "w")
-                try:
-                    f.write(lz4.decompress(data))
-                finally:
-                    f.close()
+                    idcachepath = os.path.join(self.cachepath, id)
+                    dirpath = os.path.dirname(idcachepath)
+                    if not os.path.exists(dirpath):
+                        os.makedirs(dirpath)
+                    f = open(idcachepath, "w")
+                    try:
+                        f.write(lz4.decompress(data))
+                    finally:
+                        f.close()
 
-            remote.cleanup()
-            remote = None
+                remote.cleanup()
+                remote = None
 
-            # send to memcache
-            count = len(missed)
-            request = "set\n%d\n%s\n" % (count, "\n".join(missed))
+                # send to memcache
+                count = len(missed)
+                request = "set\n%d\n%s\n" % (count, "\n".join(missed))
 
-            self.pipei.write(request)
-            self.pipei.flush()
+                self.pipei.write(request)
+                self.pipei.flush()
 
-        self.ui.progress(_downloading, None)
+            self.ui.progress(_downloading, None)
 
-        # mark ourselves as a user of this cache
-        repospath = os.path.join(self.cachepath, "repos")
-        reposfile = open(repospath, 'a')
-        reposfile.write(os.path.dirname(repo.path) + "\n")
-        reposfile.close()
+            # mark ourselves as a user of this cache
+            repospath = os.path.join(self.cachepath, "repos")
+            reposfile = open(repospath, 'a')
+            reposfile.write(os.path.dirname(repo.path) + "\n")
+            reposfile.close()
+        finally:
+            os.umask(oldumask)
 
         return missing
 

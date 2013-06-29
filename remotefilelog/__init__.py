@@ -637,9 +637,13 @@ def gc(ui, *args, **opts):
     ui.progress(_analyzing, None)
 
     # write list of valid repos back
-    reposfile = open(repospath, 'w')
-    reposfile.writelines([("%s\n" % r) for r in validrepos])
-    reposfile.close()
+    oldumask = os.umask(0o002)
+    try:
+        reposfile = open(repospath, 'w')
+        reposfile.writelines([("%s\n" % r) for r in validrepos])
+        reposfile.close()
+    finally:
+        os.umask(oldumask)
 
     # prune cache
     import Queue
