@@ -258,6 +258,7 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 					// We want both: date + (age)
 					node.textContent += ' ('+agevalue+')';
 				} else {
+					node.title = node.textContent;
 					node.textContent = agevalue;
 				}
 			}
