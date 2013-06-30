@@ -14041,11 +14041,11 @@ msgstr "push fallito:"
 
 #, fuzzy
 #~ msgid "bundling changes"
-#~ msgstr "sto aggiungendo i changeset\n"
+#~ msgstr "sto aggiungendo i changeset"
 
 #, fuzzy
 #~ msgid "bundling manifests"
-#~ msgstr "sto aggiungendo i manifesti\n"
+#~ msgstr "sto aggiungendo i manifesti"
 
 #~ msgid "unsynced changes"
 #~ msgstr "modifiche non sincronizzate"

@@ -11488,9 +11488,9 @@ msgstr "brug 'hg push --new-branch' for at lave nye grene i fjerndepotet"
 msgid "push creates new remote head %s on branch '%s'!"
 msgstr "skub laver nye fjern-hoveder på grenen '%s'!"
 
-#, fuzzy, python-format
+#, python-format
 msgid "push creates new remote head %s!"
-msgstr "skub laver nye fjern-hoveder!"
+msgstr "skub laver nyt fjern-hovede %s!"
 
 msgid "you should pull and merge or use push -f to force"
 msgstr "du bør hive og sammenføje eller bruge -f for at gennemtvinge"
@@ -12034,7 +12034,7 @@ msgstr ""
 
 #, fuzzy
 msgid "syntax for Mercurial ignore files"
-msgstr "%s: ej et Mercurial bundt"
+msgstr ""
 
 msgid ""
 "The Mercurial system uses a set of configuration files to control\n"
@@ -13683,7 +13683,7 @@ msgstr ""
 
 #, fuzzy
 msgid "The full set of options is:"
-msgstr "Den første gode revision er:\n"
+msgstr ""
 
 msgid ""
 "``accesslog``\n"
@@ -14953,7 +14953,8 @@ msgstr ""
 msgid ""
 "Description\n"
 "-----------"
-msgstr "beskrivelse:\n"
+msgstr "Beskrivelse:\n"
+"-----------"
 
 msgid ""
 "The working directory of a Mercurial repository will often contain\n"
@@ -16296,7 +16297,6 @@ msgstr ""
 msgid "working directory now based on revisions %d and %d\n"
 msgstr ""
 "arbejdsbiblioteket er nu baseret på revisionerne %d og %d\n"
-"\n"
 
 #, python-format
 msgid "working directory now based on revision %d\n"
@@ -16614,9 +16614,9 @@ msgstr "Tip:"
 msgid "Warning!"
 msgstr "Advarsel!"
 
-#, fuzzy, python-format
+#, python-format
 msgid "unexpected token: %s"
-msgstr "uventet svar:"
+msgstr "uventet token: %s"
 
 #, fuzzy, python-format
 msgid "not a prefix: %s"
@@ -16630,9 +16630,9 @@ msgstr "ikke en funktion: %s"
 msgid "%d out of %d hunks FAILED -- saving rejects to file %s\n"
 msgstr ""
 
-#, fuzzy, python-format
+#, python-format
 msgid "cannot patch %s: file is not tracked"
-msgstr "fjerner ikke %s: filen følges ikke\n"
+msgstr "lapper ikke %s: filen følges ikke"
 
 #, python-format
 msgid "unable to find '%s' for patching\n"
@@ -16648,7 +16648,7 @@ msgstr ""
 
 #, fuzzy, python-format
 msgid "cannot create %s: destination already exists\n"
-msgstr "kan ikke oprette %s: destinationen findes allerede"
+msgstr "kan ikke oprette %s: destinationen findes allerede\n"
 
 #, python-format
 msgid "file %s already exists\n"
