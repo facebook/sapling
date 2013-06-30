@@ -4356,8 +4356,10 @@ def parents(ui, repo, file_=None, **opts):
                 pass
         if not filenodes:
             raise util.Abort(_("'%s' not found in manifest!") % file_)
-        fl = repo.file(file_)
-        p = [repo.lookup(fl.linkrev(fl.rev(fn))) for fn in filenodes]
+        p = []
+        for fn in filenodes:
+            fctx = repo.filectx(file_, fileid=fn)
+            p.append(fctx.node())
     else:
         p = [cp.node() for cp in ctx.parents()]
 
