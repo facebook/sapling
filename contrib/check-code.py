@@ -410,9 +410,9 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         fp = open(f)
         pre = post = fp.read()
         fp.close()
-        if "no-" + "check-code" in pre:
+        if "no-" "check-code" in pre:
             if debug:
-                print "Skipping %s for %s it has no- and check-code" % (
+                print "Skipping %s for %s it has no-" " check-code" % (
                        name, f)
             break
         for p, r in filters:
@@ -451,9 +451,9 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                     n += 1
                 l = prelines[n]
 
-                if "check-code" + "-ignore" in l:
+                if "check-code" "-ignore" in l:
                     if debug:
-                        print "Skipping %s for %s:%s (check-code -ignore)" % (
+                        print "Skipping %s for %s:%s (check-code" "-ignore)" % (
                             name, f, n)
                     continue
                 elif ignore and re.search(ignore, l, re.MULTILINE):
