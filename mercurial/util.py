@@ -673,8 +673,8 @@ def compilere(pat, flags=0):
     global _re2
     if _re2 is None:
         try:
-            re2.compile
-            _re2 = True
+            # check if match works, see issue3964
+            _re2 = bool(re2.match(r'\[([^\[]+)\]', '[ui]'))
         except ImportError:
             _re2 = False
     if _re2 and (flags & ~(re.IGNORECASE | re.MULTILINE)) == 0:
