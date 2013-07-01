@@ -42,7 +42,7 @@ for line in sys.stdin:
     f = open(os.path.join(os.path.dirname(os.path.dirname(__file__)), fn))
     data = f.read()
     f.close()
-    if 'no-check-code' in data:
+    if 'no-' 'check-code' in data:
         continue
     lines.append((msgtype, line))
 

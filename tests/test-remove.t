@@ -1,6 +1,6 @@
   $ remove() {
   >     hg rm $@
-  >     echo "exit code: $?" # no-check-code
+  >     echo "exit code: $?"
   >     hg st
   >     # do not use ls -R, which recurses in .hg subdirs on Mac OS X 10.5
   >     find . -name .hg -prune -o -type f -print | sort
