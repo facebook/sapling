@@ -32,6 +32,8 @@ class fileserverclient(object):
         self.ui = ui
         self.cachepath = ui.config("remotefilelog", "cachepath")
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
+        self.fallbackrepo = ui.config("remotefilelog", "fallbackrepo",
+                                      ui.config("paths", "default"))
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.pipeo = self.pipei = self.pipee = None
@@ -90,7 +92,7 @@ class fileserverclient(object):
 
             # fetch from the master
             if not remote:
-                remote = sshpeer.sshpeer(self.ui, self.ui.config("paths", "default"))
+                remote = sshpeer.sshpeer(self.ui, self.fallbackrepo)
                 remote._callstream("getfiles")
 
             id = missingid[-40:]

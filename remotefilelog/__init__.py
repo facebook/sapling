@@ -337,6 +337,9 @@ def createfileblob(filectx):
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
+    if remotefilelogreq in repo.requirements:
+        raise util.Abort(_('cannot fetch remote files from shallow repo'))
+
     def streamer():
         fin = proto.fin
         opener = repo.sopener
