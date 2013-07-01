@@ -186,7 +186,7 @@ def onetimeclientsetup(ui):
         return s
     wrapfunction(store, 'store', storewrapper)
 
-    # prefetch files before update hook
+    # prefetch files before update
     def applyupdates(orig, repo, actions, wctx, mctx, actx, overwrite):
         if remotefilelogreq in repo.requirements:
             manifest = mctx.manifest()
@@ -197,6 +197,47 @@ def onetimeclientsetup(ui):
             fileserverclient.client.prefetch(repo, files)
         return orig(repo, actions, wctx, mctx, actx, overwrite)
     wrapfunction(merge, 'applyupdates', applyupdates)
+
+    # prefetch files before mergecopies check
+    def mergecopies(orig, repo, c1, c2, ca):
+        if remotefilelogreq in repo.requirements:
+            m1 = c1.manifest()
+            m2 = c2.manifest()
+            ma = ca.manifest()
+
+            def _nonoverlap(d1, d2, d3):
+                "Return list of elements in d1 not in d2 or d3"
+                return sorted([d for d in d1 if d not in d3 and d not in d2])
+            u1 = _nonoverlap(m1, m2, ma)
+            u2 = _nonoverlap(m2, m1, ma)
+
+            files = []
+            for f in u1:
+                files.append((f, hex(m1[f])))
+            for f in u2:
+                files.append((f, hex(m2[f])))
+
+            # batch fetch the needed files from the server
+            fileserverclient.client.prefetch(repo, files)
+        return orig(repo, c1, c2, ca)
+    wrapfunction(copies, 'mergecopies', mergecopies)
+
+    # prefetch files before pathcopies check
+    def forwardcopies(orig, a, b):
+        repo = a._repo
+        if remotefilelogreq in repo.requirements:
+            mb = b.manifest()
+            missing = set(mb.iterkeys())
+            missing.difference_update(a.manifest().iterkeys())
+
+            files = []
+            for f in missing:
+                files.append((f, hex(mb[f])))
+
+            # batch fetch the needed files from the server
+            fileserverclient.client.prefetch(repo, files)
+        return orig(a, b)
+    wrapfunction(copies, '_forwardcopies', forwardcopies)
 
     # close connection
     def runcommand(orig, *args, **kwargs):
