@@ -7,7 +7,7 @@ def lowerwrap(scope, funcname):
         d, base = os.path.split(fname)
         try:
             files = os.listdir(d or '.')
-        except OSError, inst:
+        except OSError:
             files = []
         if base in files:
             return f(fname, *args, **kwargs)

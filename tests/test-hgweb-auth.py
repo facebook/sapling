@@ -41,7 +41,7 @@ def test(auth, urls=None):
             if authinfo is not None:
                 pm.add_password(*authinfo)
             print '    ', pm.find_user_password('test', u)
-        except Abort, e:
+        except Abort:
             print 'abort'
 
     if not urls:

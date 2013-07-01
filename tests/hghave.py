@@ -105,7 +105,7 @@ def has_inotify():
     sock = socket.socket(socket.AF_UNIX)
     try:
         sock.bind(name)
-    except socket.error, err:
+    except socket.error:
         return False
     sock.close()
     os.unlink(name)

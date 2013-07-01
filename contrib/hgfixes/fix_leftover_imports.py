@@ -48,7 +48,6 @@ def build_pattern(mapping=MAPPING):
     mod_list = ' | '.join(["'%s' '.' ('%s')" %
         (key, "' | '".join(packages[key])) for key in packages])
     mod_list = '(' + mod_list + ' )'
-    bare_names = alternates(mapping.keys())
 
     yield """name_import=import_name< 'import' module_name=dotted_name< %s > >
           """ % mod_list

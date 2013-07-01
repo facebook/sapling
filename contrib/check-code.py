@@ -337,13 +337,12 @@ def _preparepats():
         for pats in failandwarn:
             for i, pseq in enumerate(pats):
                 # fix-up regexes for multi-line searches
-                po = p = pseq[0]
+                p = pseq[0]
                 # \s doesn't match \n
                 p = re.sub(r'(?<!\\)\\s', r'[ \\t]', p)
                 # [^...] doesn't match newline
                 p = re.sub(r'(?<!\\)\[\^', r'[^\\n', p)
 
-                #print po, '=>', p
                 pats[i] = (re.compile(p, re.MULTILINE),) + pseq[1:]
         filters = c[2]
         for i, flt in enumerate(filters):

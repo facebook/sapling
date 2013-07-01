@@ -981,7 +981,6 @@ class Translator(nodes.NodeVisitor):
         #    Level is too low to display:
         #    raise nodes.SkipNode
         attr = {}
-        backref_text = ''
         if node.hasattr('id'):
             attr['name'] = node['id']
         if node.hasattr('line'):

@@ -3,7 +3,7 @@
 from mercurial import demandimport
 demandimport.enable()
 
-import os, sys
+import sys
 from mercurial.i18n import _
 from mercurial import simplemerge, fancyopts, util, ui
 

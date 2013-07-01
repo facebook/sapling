@@ -175,7 +175,7 @@ def perfpathcopies(ui, repo, rev1, rev2):
 def perfmanifest(ui, repo):
     def d():
         t = repo.manifest.tip()
-        m = repo.manifest.read(t)
+        repo.manifest.read(t)
         repo.manifest.mapcache = None
         repo.manifest._cache = None
     timer(d)
@@ -184,7 +184,7 @@ def perfmanifest(ui, repo):
 def perfchangeset(ui, repo, rev):
     n = repo[rev].node()
     def d():
-        c = repo.changelog.read(n)
+        repo.changelog.read(n)
         #repo.changelog._cache = None
     timer(d)
 
