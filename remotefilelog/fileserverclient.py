@@ -13,9 +13,7 @@ import os, socket, lz4, time
 fetchcost = 0
 fetches = 0
 fetched = 0
-fetchedbytes = 0
-contentbytes = 0
-metadatabytes = 0
+fetchmisses = 0
 
 _downloading = _('downloading')
 
@@ -67,10 +65,6 @@ class fileserverclient(object):
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
-        global fetchedbytes
-        global metadatabytes
-        global contentbytes
-
         remote = None
         missed = []
         count = 0
@@ -109,6 +103,8 @@ class fileserverclient(object):
         try:
             # receive cache misses from master
             if missed:
+                global fetchmisses
+                fetchmisses += len(missed)
                 # process remote
                 pipei = remote.pipei
                 for id in missed:
@@ -156,15 +152,13 @@ class fileserverclient(object):
 
     def close(self):
         if fetches and self.debugoutput:
-            print ("%s fetched over %d fetches - %0.2f MB (%0.2f MB content / %0.2f MB metadata) " +
-                  "over %0.2fs = %0.2f MB/s") % (
+            print ("%s files fetched over %d fetches - (%d misses, %0.2f%% hit ratio) " +
+                  "over %0.2fs") % (
                     fetched,
                     fetches,
-                    float(fetchedbytes) / 1024 / 1024,
-                    float(contentbytes) / 1024 / 1024,
-                    float(metadatabytes) / 1024 / 1024,
-                    fetchcost,
-                    float(fetchedbytes) / 1024 / 1024 / max(0.001, fetchcost))
+                    fetchmisses,
+                    float(fetched - fetchmisses) / float(fetched) * 100.0,
+                    fetchcost)
 
         # if the process is still open, close the pipes
         if self.pipeo and self.subprocess.poll() == None:
