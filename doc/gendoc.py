@@ -63,7 +63,7 @@ def get_cmd(cmd, cmdtable):
 
     return d
 
-def show_doc(ui):
+def showdoc(ui):
     # print options
     ui.write(minirst.section(_("Options")))
     for optstr, desc in get_opts(globalopts):
@@ -157,4 +157,4 @@ def allextensionnames():
     return extensions.enabled().keys() + extensions.disabled().keys()
 
 if __name__ == "__main__":
-    show_doc(sys.stdout)
+    showdoc(sys.stdout)
