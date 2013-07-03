@@ -9,8 +9,7 @@ INSTALL=install -c -m 644
 PYTHON=python
 RSTARGS=
 
-export LANGUAGE=C
-export LC_ALL=C
+export HGENCODING=UTF-8
 
 all: man html
 
