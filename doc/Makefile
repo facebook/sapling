@@ -1,4 +1,4 @@
-SOURCES=$(wildcard *.[0-9].txt)
+SOURCES=$(notdir $(wildcard ../mercurial/help/*.[0-9].txt))
 MAN=$(SOURCES:%.txt=%)
 HTML=$(SOURCES:%.txt=%.html)
 GENDOC=gendoc.py ../mercurial/commands.py ../mercurial/help.py \
@@ -18,22 +18,15 @@ man: $(MAN)
 
 html: $(HTML)
 
-hg.1.txt: hg.1.gendoc.txt
-	touch hg.1.txt
-
-hg.1.gendoc.txt: $(GENDOC)
-	${PYTHON} gendoc.py hg.1.gendoc > $@.tmp
+common.txt $(SOURCES) $(SOURCES:%.txt=%.gendoc.txt): $(GENDOC)
+	${PYTHON} gendoc.py $(basename $@) > $@.tmp
 	mv $@.tmp $@
 
-hgrc.5: ../mercurial/help/config.txt
-
-hgrc.5.html: ../mercurial/help/config.txt
-
-%: %.txt common.txt
+%: %.txt %.gendoc.txt common.txt
 	$(PYTHON) runrst hgmanpage $(RSTARGS) --halt warning \
 	  --strip-elements-with-class htmlonly $*.txt $*
 
-%.html: %.txt common.txt
+%.html: %.txt %.gendoc.txt common.txt
 	$(PYTHON) runrst html $(RSTARGS) --halt warning \
 	  --link-stylesheet --stylesheet-path style.css $*.txt $*.html
 
@@ -52,4 +45,4 @@ install: man
 	done
 
 clean:
-	$(RM) $(MAN) $(HTML) hg.1.gendoc.txt MANIFEST
+	$(RM) $(MAN) $(HTML) common.txt $(SOURCES) $(SOURCES:%.txt=%.gendoc.txt) MANIFEST

@@ -11,7 +11,7 @@ syntax for Mercurial ignore files
 :Manual section: 5
 :Manual group:   Mercurial Manual
 
-.. include:: ../mercurial/help/hgignore.txt
+.. include:: hgignore.5.gendoc.txt
 
 Author
 ======

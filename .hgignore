@@ -25,7 +25,9 @@ tests/htmlcov
 build
 contrib/hgsh/hgsh
 dist
+doc/common.txt
 doc/*.[0-9]
+doc/*.[0-9].txt
 doc/*.[0-9].gendoc.txt
 doc/*.[0-9].{x,ht}ml
 MANIFEST

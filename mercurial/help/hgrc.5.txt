@@ -19,7 +19,7 @@ configuration files for Mercurial
 Description
 ===========
 
-.. include:: ../mercurial/help/config.txt
+.. include:: hgrc.5.gendoc.txt
 
 Author
 ======
