@@ -1,3 +1,8 @@
+"""usage: %s DOC ...
+
+where DOC is the name of a document
+"""
+
 import os, sys, textwrap
 # import from the live mercurial repo
 sys.path.insert(0, "..")
@@ -168,4 +173,11 @@ def allextensionnames():
     return extensions.enabled().keys() + extensions.disabled().keys()
 
 if __name__ == "__main__":
-    showdoc(sys.stdout)
+    doc = 'hg.1.gendoc'
+    if len(sys.argv) > 1:
+        doc = sys.argv[1]
+
+    if doc == 'hg.1.gendoc':
+        showdoc(sys.stdout)
+    else:
+        showtopic(sys.stdout, sys.argv[1])

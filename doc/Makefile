@@ -22,7 +22,7 @@ hg.1.txt: hg.1.gendoc.txt
 	touch hg.1.txt
 
 hg.1.gendoc.txt: $(GENDOC)
-	${PYTHON} gendoc.py > $@.tmp
+	${PYTHON} gendoc.py hg.1.gendoc > $@.tmp
 	mv $@.tmp $@
 
 hgrc.5: ../mercurial/help/config.txt
