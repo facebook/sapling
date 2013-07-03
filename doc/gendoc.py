@@ -7,7 +7,7 @@ from mercurial import demandimport; demandimport.enable()
 from mercurial import minirst
 from mercurial.commands import table, globalopts
 from mercurial.i18n import gettext, _
-from mercurial.help import helptable
+from mercurial.help import helptable, loaddoc
 from mercurial import extensions
 from mercurial import util
 
@@ -95,6 +95,17 @@ def showdoc(ui):
         if cmdtable:
             ui.write(minirst.subsubsection(_('Commands')))
             commandprinter(ui, cmdtable, minirst.subsubsubsection)
+
+def showtopic(ui, topic):
+    extrahelptable = [
+        (["common"], '', loaddoc('common')),
+        (["hg.1"], '', loaddoc('hg.1')),
+        (["hgignore.5"], '', loaddoc('hgignore.5')),
+        (["hgrc.5"], '', loaddoc('hgrc.5')),
+        (["hgignore.5.gendoc"], '', loaddoc('hgignore')),
+        (["hgrc.5.gendoc"], '', loaddoc('config')),
+    ]
+    helpprinter(ui, helptable + extrahelptable, None, include=[topic])
 
 def helpprinter(ui, helptable, sectionfunc, include=[], exclude=[]):
     for names, sec, doc in helptable:
