@@ -240,6 +240,10 @@ h3 {
 .sourcelines > span:nth-child(4n+1) { background-color: #f0f0f0; }
 .sourcelines > span:nth-child(4n+3) { background-color: white; }
 
+.sourcelines > span:target {
+  background-color: #ffff99;
+}
+
 .sourcelines > a {
     display: inline-block;
     position: absolute;
