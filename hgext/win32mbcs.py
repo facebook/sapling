@@ -140,7 +140,8 @@ funcs = '''os.path.join os.path.split os.path.splitext
  os.path.normpath os.makedirs
  mercurial.util.endswithsep mercurial.util.splitpath mercurial.util.checkcase
  mercurial.util.fspath mercurial.util.pconvert mercurial.util.normpath
- mercurial.util.checkwinfilename mercurial.util.checkosfilename'''
+ mercurial.util.checkwinfilename mercurial.util.checkosfilename
+ mercurial.util.split'''
 
 # These functions are required to be called with local encoded string
 # because they expects argument is local encoded string and cause
