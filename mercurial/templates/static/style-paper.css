@@ -218,6 +218,7 @@ h3 {
   display: inline-block;
   width: 100%;
   padding: 1px 0px;
+  white-space: pre-wrap;
   counter-increment: lineno;
 }
 
