@@ -72,7 +72,7 @@ filediff = filediff.tmpl
 filecomparison = filecomparison.tmpl
 filelog = filelog.tmpl
 fileline = '
-  <div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
+  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 filelogentry = filelogentry.tmpl
 
 annotateline = '

@@ -668,9 +668,8 @@ File-related
   
   <div class="overflow">
   <div class="sourcefirst"> line source</div>
-  
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> foo
-  </div>
+  <pre class="sourcelines">
+  <span id="l1">foo</span><a href="#l1"></a></pre>
   <div class="sourcelast"></div>
   </div>
   </div>

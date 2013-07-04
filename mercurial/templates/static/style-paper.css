@@ -209,6 +209,44 @@ h3 {
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
 
+.sourcelines {
+  font-size: 90%;
+  position: relative;
+}
+
+.sourcelines > span {
+  display: inline-block;
+  width: 100%;
+  padding: 1px 0px;
+  counter-increment: lineno;
+}
+
+.sourcelines > span:before {
+  -moz-user-select: -moz-none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  display: inline-block;
+  width: 4em;
+  margin-right: 1em;
+  font-size: smaller;
+  color: #999;
+  text-align: right;
+  content: counter(lineno);
+}
+
+.sourcelines > span:nth-child(4n+1) { background-color: #f0f0f0; }
+.sourcelines > span:nth-child(4n+3) { background-color: white; }
+
+.sourcelines > a {
+    display: inline-block;
+    position: absolute;
+    left: 0px;
+    width: 4em;
+    height: 1em;
+}
+
 .fileline { font-family: monospace; }
 .fileline img { border: 0; }
 

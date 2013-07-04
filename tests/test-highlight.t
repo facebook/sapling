@@ -137,39 +137,39 @@ hgweb filerevision, html
   
   <div class="overflow">
   <div class="sourcefirst"> line source</div>
-  
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> <span class="c">#!/usr/bin/env python</span></div>
-  <div class="parity1 source"><a href="#l2" id="l2">     2</a> </div>
-  <div class="parity0 source"><a href="#l3" id="l3">     3</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></div>
-  <div class="parity1 source"><a href="#l4" id="l4">     4</a> </div>
-  <div class="parity0 source"><a href="#l5" id="l5">     5</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></div>
-  <div class="parity1 source"><a href="#l6" id="l6">     6</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></div>
-  <div class="parity0 source"><a href="#l7" id="l7">     7</a> <span class="sd">&quot;&quot;&quot;</span></div>
-  <div class="parity1 source"><a href="#l8" id="l8">     8</a> </div>
-  <div class="parity0 source"><a href="#l9" id="l9">     9</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></div>
-  <div class="parity1 source"><a href="#l10" id="l10">    10</a> </div>
-  <div class="parity0 source"><a href="#l11" id="l11">    11</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></div>
-  <div class="parity1 source"><a href="#l12" id="l12">    12</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></div>
-  <div class="parity0 source"><a href="#l13" id="l13">    13</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></div>
-  <div class="parity1 source"><a href="#l14" id="l14">    14</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></div>
-  <div class="parity0 source"><a href="#l15" id="l15">    15</a>         <span class="c"># It is important to yield *here* in order to stop the</span></div>
-  <div class="parity1 source"><a href="#l16" id="l16">    16</a>         <span class="c"># infinite recursion.</span></div>
-  <div class="parity0 source"><a href="#l17" id="l17">    17</a>         <span class="kn">yield</span> <span class="n">p</span></div>
-  <div class="parity1 source"><a href="#l18" id="l18">    18</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></div>
-  <div class="parity0 source"><a href="#l19" id="l19">    19</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></div>
-  <div class="parity1 source"><a href="#l20" id="l20">    20</a>             <span class="kn">yield</span> <span class="n">n</span></div>
-  <div class="parity0 source"><a href="#l21" id="l21">    21</a> </div>
-  <div class="parity1 source"><a href="#l22" id="l22">    22</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></div>
-  <div class="parity0 source"><a href="#l23" id="l23">    23</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></div>
-  <div class="parity1 source"><a href="#l24" id="l24">    24</a> </div>
-  <div class="parity0 source"><a href="#l25" id="l25">    25</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></div>
-  <div class="parity1 source"><a href="#l26" id="l26">    26</a>     <span class="kn">import</span> <span class="nn">sys</span></div>
-  <div class="parity0 source"><a href="#l27" id="l27">    27</a>     <span class="kn">try</span><span class="p">:</span></div>
-  <div class="parity1 source"><a href="#l28" id="l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></div>
-  <div class="parity0 source"><a href="#l29" id="l29">    29</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></div>
-  <div class="parity1 source"><a href="#l30" id="l30">    30</a>         <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></div>
-  <div class="parity0 source"><a href="#l31" id="l31">    31</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></div>
-  <div class="parity1 source"><a href="#l32" id="l32">    32</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></div>
+  <pre class="sourcelines">
+  <span id="l1"><span class="c">#!/usr/bin/env python</span></span><a href="#l1"></a>
+  <span id="l2"></span><a href="#l2"></a>
+  <span id="l3"><span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></span><a href="#l3"></a>
+  <span id="l4"></span><a href="#l4"></a>
+  <span id="l5"><span class="sd">primes = 2 : sieve [3, 5..]</span></span><a href="#l5"></a>
+  <span id="l6"><span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></span><a href="#l6"></a>
+  <span id="l7"><span class="sd">&quot;&quot;&quot;</span></span><a href="#l7"></a>
+  <span id="l8"></span><a href="#l8"></a>
+  <span id="l9"><span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></span><a href="#l9"></a>
+  <span id="l10"></span><a href="#l10"></a>
+  <span id="l11"><span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></span><a href="#l11"></a>
+  <span id="l12">    <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></span><a href="#l12"></a>
+  <span id="l13">    <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></span><a href="#l13"></a>
+  <span id="l14">        <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></span><a href="#l14"></a>
+  <span id="l15">        <span class="c"># It is important to yield *here* in order to stop the</span></span><a href="#l15"></a>
+  <span id="l16">        <span class="c"># infinite recursion.</span></span><a href="#l16"></a>
+  <span id="l17">        <span class="kn">yield</span> <span class="n">p</span></span><a href="#l17"></a>
+  <span id="l18">        <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></span><a href="#l18"></a>
+  <span id="l19">        <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></span><a href="#l19"></a>
+  <span id="l20">            <span class="kn">yield</span> <span class="n">n</span></span><a href="#l20"></a>
+  <span id="l21"></span><a href="#l21"></a>
+  <span id="l22">    <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></span><a href="#l22"></a>
+  <span id="l23">    <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></span><a href="#l23"></a>
+  <span id="l24"></span><a href="#l24"></a>
+  <span id="l25"><span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></span><a href="#l25"></a>
+  <span id="l26">    <span class="kn">import</span> <span class="nn">sys</span></span><a href="#l26"></a>
+  <span id="l27">    <span class="kn">try</span><span class="p">:</span></span><a href="#l27"></a>
+  <span id="l28">        <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></span><a href="#l28"></a>
+  <span id="l29">    <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></span><a href="#l29"></a>
+  <span id="l30">        <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></span><a href="#l30"></a>
+  <span id="l31">    <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></span><a href="#l31"></a>
+  <span id="l32">    <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></span><a href="#l32"></a></pre>
   <div class="sourcelast"></div>
   </div>
   </div>
@@ -593,17 +593,14 @@ errors encountered
   $ hgserveget euc-jp eucjp.txt
   % HGENCODING=euc-jp hg serve
   % hgweb filerevision, html
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xb5\xfe</div> (esc)
   % errors encountered
   $ hgserveget utf-8 eucjp.txt
   % HGENCODING=utf-8 hg serve
   % hgweb filerevision, html
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> \xef\xbf\xbd\xef\xbf\xbd</div> (esc)
   % errors encountered
   $ hgserveget us-ascii eucjp.txt
   % HGENCODING=us-ascii hg serve
   % hgweb filerevision, html
-  <div class="parity0 source"><a href="#l1" id="l1">     1</a> ??</div>
   % errors encountered
 
   $ cd ..
