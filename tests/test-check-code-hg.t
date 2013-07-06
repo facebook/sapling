@@ -27,5 +27,5 @@ Prepare check for Python files without py extension
 New errors are not allowed. Warnings are strongly discouraged.
 
   $ { hg manifest 2>/dev/null; ls "$TESTTMP"/*.py; } \
-  >   | xargs "$check_code" --warnings --nolineno --per-file=0 \
+  >   | xargs "$check_code" --warnings --per-file=0 \
   >   || false
