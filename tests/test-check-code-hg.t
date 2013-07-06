@@ -22,7 +22,7 @@ Prepare check for Python files without py extension
   >   tests/hghave \
   >   tests/dummyssh \
   >   "$TESTTMP"/
-  $ for f in "$TESTTMP"/*; do cp "$f" "$f.py"; done
+  $ for f in "$TESTTMP"/*; do mv "$f" "$f.py"; done
 
 New errors are not allowed. Warnings are strongly discouraged.
 
