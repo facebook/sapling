@@ -6,13 +6,7 @@
   >     exit 80
   > fi
 
-New errors are not allowed. Warnings are strongly discouraged.
-
-  $ hg manifest 2>/dev/null \
-  >   | xargs "$check_code" --warnings --nolineno --per-file=0 \
-  >   || false
-
-Check Python files without py extension
+Prepare check for Python files without py extension
 
   $ cp \
   >   hg \
@@ -29,5 +23,9 @@ Check Python files without py extension
   >   tests/dummyssh \
   >   "$TESTTMP"/
   $ for f in "$TESTTMP"/*; do cp "$f" "$f.py"; done
-  $ "$check_code" --warnings --nolineno --per-file=0 "$TESTTMP"/*.py \
+
+New errors are not allowed. Warnings are strongly discouraged.
+
+  $ { hg manifest 2>/dev/null; ls "$TESTTMP"/*.py; } \
+  >   | xargs "$check_code" --warnings --nolineno --per-file=0 \
   >   || false
