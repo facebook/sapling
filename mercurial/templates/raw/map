@@ -1,5 +1,9 @@
 default = 'shortlog'
 shortlog = "'raw' is not a browsable style"
+changelog = changelog.tmpl
+changelogentry = logentry.tmpl
+search = search.tmpl
+searchentry = logentry.tmpl
 mimetype = 'text/plain; charset={encoding}'
 header = ''
 footer = ''
