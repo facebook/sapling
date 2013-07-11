@@ -1285,6 +1285,7 @@ def clone(ui, source, dest=None, **opts):
     ('', 'close-branch', None,
      _('mark a branch as closed, hiding it from the branch list')),
     ('', 'amend', None, _('amend the parent of the working dir')),
+    ('s', 'secret', None, _('use the secret phase for committing')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'))
 def commit(ui, repo, *pats, **opts):
@@ -1329,6 +1330,9 @@ def commit(ui, repo, *pats, **opts):
         # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True)
 
+    # Save this for restoring it later
+    oldcommitphase = ui.config('phases', 'new-commit')
+
     if repo.vfs.exists('graftstate'):
         raise util.Abort(_('cannot commit an interrupted graft operation'),
                          hint=_('use "hg graft -c" to continue graft'))
@@ -1370,12 +1374,18 @@ def commit(ui, repo, *pats, **opts):
             if not message:
                 message = old.description()
                 editor = cmdutil.commitforceeditor
-            return repo.commit(message,
-                               opts.get('user') or old.user(),
-                               opts.get('date') or old.date(),
-                               match,
-                               editor=editor,
-                               extra=extra)
+            try:
+                if opts.get('secret'):
+                    ui.setconfig('phases', 'new-commit', 'secret')
+
+                return repo.commit(message,
+                                   opts.get('user') or old.user(),
+                                   opts.get('date') or old.date(),
+                                   match,
+                                   editor=editor,
+                                   extra=extra)
+            finally:
+                ui.setconfig('phases', 'new-commit', oldcommitphase)
 
         current = repo._bookmarkcurrent
         marks = old.bookmarks()
@@ -1398,8 +1408,15 @@ def commit(ui, repo, *pats, **opts):
             e = cmdutil.commitforceeditor
 
         def commitfunc(ui, repo, message, match, opts):
-            return repo.commit(message, opts.get('user'), opts.get('date'),
-                               match, editor=e, extra=extra)
+            try:
+                if opts.get('secret'):
+                    ui.setconfig('phases', 'new-commit', 'secret')
+
+                return repo.commit(message, opts.get('user'), opts.get('date'),
+                                   match, editor=e, extra=extra)
+            finally:
+                ui.setconfig('phases', 'new-commit', oldcommitphase)
+
 
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
