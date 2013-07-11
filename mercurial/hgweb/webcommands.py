@@ -196,7 +196,7 @@ def changelog(web, req, tmpl, shortlog=False):
             hi = 'tip'
         try:
             ctx = web.repo[hi]
-        except error.RepoError:
+        except (error.RepoError, error.LookupError):
             return _search(web, req, tmpl) # XXX redirect to 404 page?
 
     def changelist(latestonly, **map):
