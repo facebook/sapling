@@ -185,11 +185,13 @@ def _search(web, req, tmpl):
 
 def changelog(web, req, tmpl, shortlog=False):
 
+    query = ''
     if 'node' in req.form:
         ctx = webutil.changectx(web.repo, req)
     else:
         if 'rev' in req.form:
-            hi = req.form['rev'][0]
+            query = req.form['rev'][0]
+            hi = query
         else:
             hi = 'tip'
         try:
@@ -256,7 +258,7 @@ def changelog(web, req, tmpl, shortlog=False):
                 entries=lambda **x: changelist(latestonly=False, **x),
                 latestentry=lambda **x: changelist(latestonly=True, **x),
                 archives=web.archivelist("tip"), revcount=revcount,
-                morevars=morevars, lessvars=lessvars)
+                morevars=morevars, lessvars=lessvars, query=query)
 
 def shortlog(web, req, tmpl):
     return changelog(web, req, tmpl, shortlog = True)

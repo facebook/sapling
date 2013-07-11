@@ -44,7 +44,7 @@
 
 <form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}
-<p><input name="rev" id="search1" type="text" size="30" /></p>
+<p><input name="rev" id="search1" type="text" size="30" value="{query|escape}" /></p>
 <div id="hint">find changesets by author, revision,
 files, or words in the commit message</div>
 </form>
