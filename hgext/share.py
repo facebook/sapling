@@ -24,8 +24,7 @@ def share(ui, source, dest=None, noupdate=False):
        with rollback, the other clone will suddenly stop working: all
        operations will fail with "abort: working directory has unknown
        parent". The only known workaround is to use debugsetparents on
-       the broken clone to reset it to a changeset that still exists
-       (e.g. tip).
+       the broken clone to reset it to a changeset that still exists.
     """
 
     return hg.share(ui, source, dest, not noupdate)
