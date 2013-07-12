@@ -1135,8 +1135,7 @@ def cat(ui, repo, file1, *pats, **opts):
     """output the current or given revision of files
 
     Print the specified files as they were at the given revision. If
-    no revision is given, the parent of the working directory is used,
-    or tip if no revision is checked out.
+    no revision is given, the parent of the working directory is used.
 
     Output may be to a file, in which case the name of the file is
     given using a format string. The formatting rules are the same as
