@@ -265,12 +265,9 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 	}
 })(document, RegExp, Math, isNaN, Date, false, true)
 
-function showDiffstat() {
-	document.getElementById('diffstatdetails').style.display = 'inline';
-	document.getElementById('diffstatexpand').style.display = 'none';
-}
-
-function hideDiffstat() {
-	document.getElementById('diffstatdetails').style.display = 'none';
-	document.getElementById('diffstatexpand').style.display = 'inline';
+function toggleDiffstat() {
+    var curdetails = document.getElementById('diffstatdetails').style.display;
+    var curexpand = curdetails == 'none' ? 'inline' : 'none';
+    document.getElementById('diffstatdetails').style.display = curexpand;
+    document.getElementById('diffstatexpand').style.display = curdetails;
 }

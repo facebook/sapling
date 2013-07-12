@@ -115,9 +115,9 @@ revision
     <td class="diffstat">
        2 files changed, 2 insertions(+), 0 deletions(-)
   
-      <a id="diffstatexpand" href="javascript:showDiffstat()"/>[<tt>+</tt>]</a>
+      <a id="diffstatexpand" href="javascript:toggleDiffstat()"/>[<tt>+</tt>]</a>
       <div id="diffstatdetails" style="display:none;">
-        <a href="javascript:hideDiffstat()"/>[<tt>-</tt>]</a>
+        <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
         <table>  <tr class="parity0">
       <td class="diffstat-file"><a href="#l1.1">a</a></td>
@@ -376,9 +376,9 @@ revision
     <td class="diffstat">
        2 files changed, 2 insertions(+), 0 deletions(-)
   
-      <a id="diffstatexpand" href="javascript:showDiffstat()"/>[<tt>+</tt>]</a>
+      <a id="diffstatexpand" href="javascript:toggleDiffstat()"/>[<tt>+</tt>]</a>
       <div id="diffstatdetails" style="display:none;">
-        <a href="javascript:hideDiffstat()"/>[<tt>-</tt>]</a>
+        <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
         <table>  <tr class="parity0">
       <td class="diffstat-file"><a href="#l1.1">a</a></td>
