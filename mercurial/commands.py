@@ -5566,7 +5566,7 @@ def tag(ui, repo, name1, *names, **opts):
     an existing tag is normally disallowed; use -f/--force to override.
 
     If no revision is given, the parent of the working directory is
-    used, or tip if no revision is checked out.
+    used.
 
     To facilitate version control, distribution, and merging of tags,
     they are stored as a file named ".hgtags" which is managed similarly
