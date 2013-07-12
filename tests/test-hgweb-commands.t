@@ -450,6 +450,7 @@ Logs and changes
   </table>
   
   <div class="overflow">
+  <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line diff</div>
   <div class="stripes2 diffblocks">
   <div class="bottomline inc-lineno"><pre class="sourcelines wrap">
