@@ -140,38 +140,6 @@ Logs and changes
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
-    <title>branch commit with null character: </title>
-    <id>http://*:$HGPORT/#changeset-cad8025a2e87f88c06259790adfa15acb4080123</id> (glob)
-    <link href="http://*:$HGPORT/rev/cad8025a2e87"/> (glob)
-    <author>
-     <name>test</name>
-     <email>&#116;&#101;&#115;&#116;</email>
-    </author>
-    <updated>1970-01-01T00:00:00+00:00</updated>
-    <published>1970-01-01T00:00:00+00:00</published>
-    <content type="xhtml">
-     <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">branch commit with null character: </pre>
-     </div>
-    </content>
-   </entry>
-   <entry>
-    <title>branch</title>
-    <id>http://*:$HGPORT/#changeset-1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe</id> (glob)
-    <link href="http://*:$HGPORT/rev/1d22e65f027e"/> (glob)
-    <author>
-     <name>test</name>
-     <email>&#116;&#101;&#115;&#116;</email>
-    </author>
-    <updated>1970-01-01T00:00:00+00:00</updated>
-    <published>1970-01-01T00:00:00+00:00</published>
-    <content type="xhtml">
-     <div xmlns="http://www.w3.org/1999/xhtml">
-      <pre xml:space="preserve">branch</pre>
-     </div>
-    </content>
-   </entry>
-   <entry>
     <title>Added tag 1.0 for changeset 2ef0ac749a14</title>
     <id>http://*:$HGPORT/#changeset-a4f92ed23982be056b9852de5dfe873eaac7f0de</id> (glob)
     <link href="http://*:$HGPORT/rev/a4f92ed23982"/> (glob)

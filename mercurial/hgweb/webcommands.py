@@ -247,8 +247,7 @@ def changelog(web, req, tmpl, shortlog=False):
     count = len(web.repo)
     pos = ctx.rev()
     start = max(0, pos - revcount + 1)
-    end = min(count, start + revcount)
-    pos = end - 1
+    end = pos + 1
     parity = paritygen(web.stripecount, offset=start - end)
 
     changenav = webutil.revnav(web.repo).gen(pos, revcount, count)
