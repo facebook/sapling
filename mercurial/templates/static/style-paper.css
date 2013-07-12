@@ -214,11 +214,18 @@ h3 {
   position: relative;
 }
 
+.wrap > span {
+    white-space: pre-wrap;
+}
+
+.linewraptoggle {
+    float: right;
+}
+
 .sourcelines > span {
   display: inline-block;
   width: 100%;
   padding: 1px 0px;
-  white-space: pre-wrap;
   counter-increment: lineno;
 }
 

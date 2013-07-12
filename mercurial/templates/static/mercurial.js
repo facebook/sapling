@@ -271,3 +271,29 @@ function toggleDiffstat() {
     document.getElementById('diffstatdetails').style.display = curexpand;
     document.getElementById('diffstatexpand').style.display = curdetails;
 }
+
+function toggleLinewrap() {
+    function getLinewrap() {
+        var nodes = document.getElementsByClassName('sourcelines');
+        // if there are no such nodes, error is thrown here
+        return nodes[0].classList.contains('wrap');
+    }
+
+    function setLinewrap(enable) {
+        var nodes = document.getElementsByClassName('sourcelines');
+        for (var i = 0; i < nodes.length; i++) {
+            if (enable) {
+                nodes[i].classList.add('wrap');
+            } else {
+                nodes[i].classList.remove('wrap');
+            }
+        }
+
+        var links = document.getElementsByClassName('linewraplink');
+        for (var i = 0; i < links.length; i++) {
+            links[i].innerHTML = enable ? 'on' : 'off';
+        }
+    }
+
+    setLinewrap(!getLinewrap());
+}

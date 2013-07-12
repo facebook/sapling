@@ -667,8 +667,9 @@ File-related
   </table>
   
   <div class="overflow">
+  <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines">
+  <pre class="sourcelines wrap">
   <span id="l1">foo</span><a href="#l1"></a></pre>
   <div class="sourcelast"></div>
   </div>
