@@ -55,12 +55,13 @@ class gpg(object):
             if not l.startswith("[GNUPG:]"):
                 continue
             l = l[9:]
-            if l.startswith("ERRSIG"):
-                err = _("error while verifying signature")
-                break
-            elif l.startswith("VALIDSIG"):
+            if l.startswith("VALIDSIG"):
                 # fingerprint of the primary key
                 fingerprint = l.split()[10]
+            elif l.startswith("ERRSIG"):
+                key = l.split(" ", 3)[:2]
+                key.append("")
+                fingerprint = None
             elif (l.startswith("GOODSIG") or
                   l.startswith("EXPSIG") or
                   l.startswith("EXPKEYSIG") or
