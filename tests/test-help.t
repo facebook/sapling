@@ -97,7 +97,6 @@ Short help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   tip           show the tip revision
    unbundle      apply one or more changegroup files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
@@ -175,7 +174,6 @@ Short help:
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   tip           show the tip revision
    unbundle      apply one or more changegroup files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
@@ -662,7 +660,6 @@ Test that default list of commands omits extension commands
    summary       summarize working directory state
    tag           add one or more tags for the current or given revision
    tags          list repository tags
-   tip           show the tip revision
    unbundle      apply one or more changegroup files
    update        update working directory (or switch revisions)
    verify        verify the integrity of the repository
@@ -1423,13 +1420,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   list repository tags
-  </td></tr>
-  <tr><td>
-  <a href="/help/tip">
-  tip
-  </a>
-  </td><td>
-  show the tip revision
   </td></tr>
   <tr><td>
   <a href="/help/unbundle">

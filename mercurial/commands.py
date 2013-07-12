@@ -5692,7 +5692,7 @@ def tags(ui, repo, **opts):
     ] + templateopts,
     _('[-p] [-g]'))
 def tip(ui, repo, **opts):
-    """show the tip revision
+    """show the tip revision (DEPRECATED)
 
     The tip revision (usually just called the tip) is the changeset
     most recently added to the repository (and therefore the most
@@ -5702,6 +5702,8 @@ def tip(ui, repo, **opts):
     you have just pulled changes from another repository, the tip of
     that repository becomes the current tip. The "tip" tag is special
     and cannot be renamed or assigned to a different changeset.
+
+    This command is deprecated, please use :hg:`heads` instead.
 
     Returns 0 on success.
     """
