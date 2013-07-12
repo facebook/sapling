@@ -450,17 +450,18 @@ Logs and changes
   </table>
   
   <div class="overflow">
-  <div class="sourcefirst">   line diff</div>
-  
-  <div class="source bottomline parity0"><pre><a href="#l1.1" id="l1.1">     1.1</a> <span class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l1.2" id="l1.2">     1.2</a> <span class="plusline">+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l1.3" id="l1.3">     1.3</a> <span class="atline">@@ -0,0 +1,1 @@
-  </span><a href="#l1.4" id="l1.4">     1.4</a> <span class="plusline">+foo
-  </span></pre></div><div class="source bottomline parity1"><pre><a href="#l2.1" id="l2.1">     2.1</a> <span class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l2.2" id="l2.2">     2.2</a> <span class="plusline">+++ b/foo	Thu Jan 01 00:00:00 1970 +0000
-  </span><a href="#l2.3" id="l2.3">     2.3</a> <span class="atline">@@ -0,0 +1,1 @@
-  </span><a href="#l2.4" id="l2.4">     2.4</a> <span class="plusline">+foo
-  </span></pre></div>
+  <div class="sourcefirst"> line diff</div>
+  <div class="stripes2 diffblocks">
+  <div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="l1.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.1"></a>
+  <span id="l1.2" class="plusline">+++ b/da/foo	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l1.2"></a>
+  <span id="l1.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#l1.3"></a>
+  <span id="l1.4" class="plusline">+foo</span><a href="#l1.4"></a></pre></div><div class="bottomline inc-lineno"><pre class="sourcelines wrap">
+  <span id="l2.1" class="minusline">--- /dev/null	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l2.1"></a>
+  <span id="l2.2" class="plusline">+++ b/foo	Thu Jan 01 00:00:00 1970 +0000</span><a href="#l2.2"></a>
+  <span id="l2.3" class="atline">@@ -0,0 +1,1 @@</span><a href="#l2.3"></a>
+  <span id="l2.4" class="plusline">+foo</span><a href="#l2.4"></a></pre></div>
+  </div>
   </div>
   
   </div>

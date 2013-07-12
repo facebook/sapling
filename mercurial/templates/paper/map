@@ -84,11 +84,15 @@ annotateline = '
     <td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td>
   </tr>'
 
-diffblock = '<div class="source bottomline parity{parity}"><pre>{lines}</pre></div>'
-difflineplus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="plusline">{line|escape}</span>'
-difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="minusline">{line|escape}</span>'
-difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
-diffline = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
+diffblock = '<div class="bottomline inc-lineno"><pre class="sourcelines wrap">{lines}</pre></div>'
+difflineplus = '
+  <span id="{lineid}" class="plusline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+difflineminus = '
+  <span id="{lineid}" class="minusline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+difflineat = '
+  <span id="{lineid}" class="atline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+diffline = '
+  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 
 comparisonblock ='
   <tbody class="block">

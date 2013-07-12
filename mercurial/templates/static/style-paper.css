@@ -216,6 +216,7 @@ h3 {
 .sourcelines {
   font-size: 90%;
   position: relative;
+  counter-reset: lineno;
 }
 
 .wrap > span {
@@ -225,6 +226,9 @@ h3 {
 .linewraptoggle {
     float: right;
 }
+
+.diffblocks { counter-reset: lineno; }
+.diffblocks > div { counter-increment: lineno; }
 
 .sourcelines > span {
   display: inline-block;
@@ -245,7 +249,7 @@ h3 {
   font-size: smaller;
   color: #999;
   text-align: right;
-  content: counter(lineno);
+  content: counters(lineno, ".");
 }
 
 .sourcelines > span:target {
