@@ -156,7 +156,8 @@ class svnremoterepo(peerrepository):
     @propertycache
     def svn(self):
         try:
-            return svnwrap.SubversionRepo(*self.svnauth, password_stores=self.password_stores)
+            auth = self.svnauth
+            return svnwrap.SubversionRepo(auth[0], auth[1], auth[2], password_stores=self.password_stores)
         except svnwrap.SubversionConnectionException, e:
             self.ui.traceback()
             raise hgutil.Abort(e)
