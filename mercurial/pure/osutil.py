@@ -59,6 +59,7 @@ if os.name != 'nt':
     posixfile = open
 else:
     import ctypes, msvcrt
+    from errno import ESRCH, ENOENT
 
     _kernel32 = ctypes.windll.kernel32
 
@@ -98,7 +99,14 @@ else:
 
     def _raiseioerror(name):
         err = ctypes.WinError()
-        raise IOError(err.errno, '%s: %s' % (name, err.strerror))
+        # For python 2.4, treat ESRCH as ENOENT like WindowsError does
+        # in python 2.5 or later.
+        # py24:           WindowsError(3, '').errno => 3
+        # py25 or later:  WindowsError(3, '').errno => 2
+        errno = err.errno
+        if errno == ESRCH:
+            errno = ENOENT
+        raise IOError(errno, '%s: %s' % (name, err.strerror))
 
     class posixfile(object):
         '''a file object aiming for POSIX-like semantics
