@@ -2929,7 +2929,7 @@ def graft(ui, repo, *revs, **opts):
 
       - show the source of a grafted changeset::
 
-          hg log --debug -r tip
+          hg log --debug -r .
 
     Returns 0 on successful completion.
     '''
