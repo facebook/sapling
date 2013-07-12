@@ -138,7 +138,7 @@ hgweb filerevision, html
   <div class="overflow">
   <div class="sourcefirst linewraptoggle">line wrap: <a class="linewraplink" href="javascript:toggleLinewrap()">on</a></div>
   <div class="sourcefirst"> line source</div>
-  <pre class="sourcelines wrap">
+  <pre class="sourcelines stripes4 wrap">
   <span id="l1"><span class="c">#!/usr/bin/env python</span></span><a href="#l1"></a>
   <span id="l2"></span><a href="#l2"></a>
   <span id="l3"><span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></span><a href="#l3"></a>
