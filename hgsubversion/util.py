@@ -3,13 +3,13 @@ import errno
 import re
 import os
 import urllib
-from collections import deque
 
 from mercurial import cmdutil
 from mercurial import error
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
+from mercurial.util import deque
 
 try:
     from mercurial import revset
