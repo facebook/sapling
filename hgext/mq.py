@@ -2146,11 +2146,12 @@ def qimport(ui, repo, *filename, **opts):
     overwritten.
 
     An existing changeset may be placed under mq control with -r/--rev
-    (e.g. qimport --rev tip -n patch will place tip under mq control).
-    With -g/--git, patches imported with --rev will use the git diff
-    format. See the diffs help topic for information on why this is
-    important for preserving rename/copy information and permission
-    changes. Use :hg:`qfinish` to remove changesets from mq control.
+    (e.g. qimport --rev . -n patch will place the current revision
+    under mq control). With -g/--git, patches imported with --rev will
+    use the git diff format. See the diffs help topic for information
+    on why this is important for preserving rename/copy information
+    and permission changes. Use :hg:`qfinish` to remove changesets
+    from mq control.
 
     To import a patch from standard input, pass - as the patch file.
     When importing from standard input, a patch name must be specified
