@@ -72,9 +72,9 @@ def rebase(ui, repo, **opts):
     rebasing published changes. See :hg:`help phases` for details.
 
     If you don't specify a destination changeset (``-d/--dest``),
-    rebase uses the tipmost head of the current named branch as the
-    destination. (The destination changeset is not modified by
-    rebasing, but new changesets are added as its descendants.)
+    rebase uses the current branch tip as the destination. (The
+    destination changeset is not modified by rebasing, but new
+    changesets are added as its descendants.)
 
     You can specify which changesets to rebase in two ways: as a
     "source" changeset or as a "base" changeset. Both are shorthand
@@ -101,7 +101,7 @@ def rebase(ui, repo, **opts):
 
     One result of the rules for selecting the destination changeset
     and source branch is that, unlike ``merge``, rebase will do
-    nothing if you are at the latest (tipmost) head of a named branch
+    nothing if you are at the branch tip of a named branch
     with two heads. You need to explicitly specify source and/or
     destination (or ``update`` to the other head, if it's the head of
     the intended source branch).
