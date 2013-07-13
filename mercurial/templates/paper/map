@@ -218,7 +218,7 @@ filelogchild = '
   </tr>'
 
 indexentry = '
-  <tr class="parity{parity}">
+  <tr>
     <td><a href="{url|urlescape}{sessionvars%urlparameter}">{name|escape}</a></td>
     <td>{description}</td>
     <td>{contact|obfuscate}</td>
