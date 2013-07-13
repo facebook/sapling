@@ -605,7 +605,7 @@ def globmatch(el, l):
     # The only supported special characters are * and ? plus / which also
     # matches \ on windows. Escaping of these caracters is supported.
     if el + '\n' == l:
-        if os.name == 'nt':
+        if os.altsep:
             # matching on "/" is not needed for this line
             log("\nInfo, unnecessary glob: %s (glob)" % el)
         return True
@@ -621,7 +621,7 @@ def globmatch(el, l):
             res += '.*'
         elif c == '?':
             res += '.'
-        elif c == '/' and os.name == 'nt':
+        elif c == '/' and os.altsep:
             res += '[/\\\\]'
         else:
             res += re.escape(c)
