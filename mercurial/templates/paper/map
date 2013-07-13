@@ -99,9 +99,9 @@ comparisonblock ='
   {lines}
   </tbody>'
 comparisonline = '
-  <tr>
-    <td class="source {type}"><a href="#{lineid}" id="{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
-    <td class="source {type}"><a href="#{lineid}" id="{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
+  <tr id="{lineid}">
+    <td class="source {type}"><a href="#{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
+    <td class="source {type}"><a href="#{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
   </tr>'
 
 changelogparent = '

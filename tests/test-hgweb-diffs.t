@@ -660,9 +660,9 @@ comparison new file
     
   <tbody class="block">
   
-  <tr>
-  <td class="source insert"><a href="#r1" id="r1">      </a> </td>
-  <td class="source insert"><a href="#r1" id="r1">     1</a> a</td>
+  <tr id="r1">
+  <td class="source insert"><a href="#r1">      </a> </td>
+  <td class="source insert"><a href="#r1">     1</a> a</td>
   </tr>
   </tbody>
   </table>
@@ -782,13 +782,13 @@ comparison existing file
     
   <tbody class="block">
   
-  <tr>
-  <td class="source equal"><a href="#l1r1" id="l1r1">     1</a> a</td>
-  <td class="source equal"><a href="#l1r1" id="l1r1">     1</a> a</td>
+  <tr id="l1r1">
+  <td class="source equal"><a href="#l1r1">     1</a> a</td>
+  <td class="source equal"><a href="#l1r1">     1</a> a</td>
   </tr>
-  <tr>
-  <td class="source insert"><a href="#r2" id="r2">      </a> </td>
-  <td class="source insert"><a href="#r2" id="r2">     2</a> a</td>
+  <tr id="r2">
+  <td class="source insert"><a href="#r2">      </a> </td>
+  <td class="source insert"><a href="#r2">     2</a> a</td>
   </tr>
   </tbody>
   </table>
@@ -906,13 +906,13 @@ comparison removed file
     
   <tbody class="block">
   
-  <tr>
-  <td class="source delete"><a href="#l1" id="l1">     1</a> a</td>
-  <td class="source delete"><a href="#l1" id="l1">      </a> </td>
+  <tr id="l1">
+  <td class="source delete"><a href="#l1">     1</a> a</td>
+  <td class="source delete"><a href="#l1">      </a> </td>
   </tr>
-  <tr>
-  <td class="source delete"><a href="#l2" id="l2">     2</a> a</td>
-  <td class="source delete"><a href="#l2" id="l2">      </a> </td>
+  <tr id="l2">
+  <td class="source delete"><a href="#l2">     2</a> a</td>
+  <td class="source delete"><a href="#l2">      </a> </td>
   </tr>
   </tbody>
   </table>

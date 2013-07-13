@@ -252,7 +252,7 @@ h3 {
   content: counters(lineno, ".");
 }
 
-.sourcelines > span:target {
+.sourcelines > span:target, tr:target td {
   background-color: #bfdfff;
 }
 
