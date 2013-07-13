@@ -262,7 +262,7 @@ Some tests for hgweb in an empty repository
   <noscript><p>The revision graph only works with JavaScript-enabled browsers.</p></noscript>
   
   <div id="wrapper">
-  <ul id="nodebgs"></ul>
+  <ul id="nodebgs" class="stripes2"></ul>
   <canvas id="graph" width="480" height="12"></canvas>
   <ul id="graphnodes"></ul>
   </div>
@@ -281,7 +281,7 @@ Some tests for hgweb in an empty repository
   	this.ctx.arc(x, y, radius, 0, Math.PI * 2, true);
   	this.ctx.fill();
   	
-  	var bg = '<li class="bg parity' + parity + '"></li>';
+  	var bg = '<li class="bg"></li>';
   	var left = (this.bg_height - this.box_size) + (this.columns + 1) * this.box_size;
   	var nstyle = 'padding-left: ' + left + 'px;';
   
