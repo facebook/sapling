@@ -86,13 +86,14 @@ manifest with descending
     <th class="size">size</th>
     <th class="permissions">permissions</th>
   </tr>
-  <tr class="fileline parity0">
+  <tbody class="stripes2">
+  <tr class="fileline">
     <td class="name"><a href="/file/9087c84a0f5d/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
-  <tr class="fileline parity1">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/9087c84a0f5d/a1">
   <img src="/static/coal-folder.png" alt="dir."/> a1/
@@ -104,7 +105,7 @@ manifest with descending
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
   </tr>
-  <tr class="fileline parity0">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/9087c84a0f5d/b1">
   <img src="/static/coal-folder.png" alt="dir."/> b1/
@@ -116,7 +117,7 @@ manifest with descending
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
   </tr>
-  <tr class="fileline parity1">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/9087c84a0f5d/d1">
   <img src="/static/coal-folder.png" alt="dir."/> d1/
@@ -129,6 +130,7 @@ manifest with descending
   <td class="permissions">drwxr-xr-x</td>
   </tr>
   
+  </tbody>
   </table>
   </div>
   </div>

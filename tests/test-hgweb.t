@@ -259,13 +259,14 @@ try bad style
     <th class="size">size</th>
     <th class="permissions">permissions</th>
   </tr>
-  <tr class="fileline parity0">
+  <tbody class="stripes2">
+  <tr class="fileline">
     <td class="name"><a href="/file/2ef0ac749a14/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
-  <tr class="fileline parity1">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/2ef0ac749a14/da">
   <img src="/static/coal-folder.png" alt="dir."/> da/
@@ -278,7 +279,7 @@ try bad style
   <td class="permissions">drwxr-xr-x</td>
   </tr>
   
-  <tr class="fileline parity0">
+  <tr class="fileline">
   <td class="filename">
   <a href="/file/2ef0ac749a14/foo">
   <img src="/static/coal-file.png" alt="file"/> foo
@@ -287,6 +288,7 @@ try bad style
   <td class="size">4</td>
   <td class="permissions">-rw-r--r--</td>
   </tr>
+  </tbody>
   </table>
   </div>
   </div>

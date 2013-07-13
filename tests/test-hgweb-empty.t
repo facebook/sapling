@@ -391,13 +391,15 @@ Some tests for hgweb in an empty repository
     <th class="size">size</th>
     <th class="permissions">permissions</th>
   </tr>
-  <tr class="fileline parity0">
+  <tbody class="stripes2">
+  <tr class="fileline">
     <td class="name"><a href="/file/000000000000/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
   
+  </tbody>
   </table>
   </div>
   </div>

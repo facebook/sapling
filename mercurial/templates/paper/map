@@ -42,7 +42,7 @@ navgraph = '{before%navgraphentry}{after%navgraphentry}'
 filenav = '{before%filenaventry}{after%filenaventry}'
 
 direntry = '
-  <tr class="fileline parity{parity}">
+  <tr class="fileline">
     <td class="name">
       <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-folder.png" alt="dir."/> {basename|escape}/
@@ -56,7 +56,7 @@ direntry = '
   </tr>'
 
 fileentry = '
-  <tr class="fileline parity{parity}">
+  <tr class="fileline">
     <td class="filename">
       <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-file.png" alt="file"/> {basename|escape}
