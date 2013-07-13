@@ -167,7 +167,7 @@ tagentry = '
   </tr>'
 bookmarks = bookmarks.tmpl
 bookmarkentry = '
-  <tr class="tagEntry parity{parity}">
+  <tr class="tagEntry">
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {bookmark|escape}
