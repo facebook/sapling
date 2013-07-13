@@ -185,17 +185,19 @@ tip - two revisions
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
-   <tr class="parity0">
+  <tbody class="stripes2">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
-   <tr class="parity1">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
   
+  </tbody>
   </table>
   
   <div class="navigate">
@@ -292,17 +294,19 @@ second version - two revisions
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
-   <tr class="parity0">
+  <tbody class="stripes2">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/01de2d66a28d">second a</a></td>
    </tr>
-   <tr class="parity1">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
   
+  </tbody>
   </table>
   
   <div class="navigate">
@@ -399,12 +403,14 @@ first deleted - one revision
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
-   <tr class="parity0">
+  <tbody class="stripes2">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
   
+  </tbody>
   </table>
   
   <div class="navigate">
@@ -501,12 +507,14 @@ first version - one revision
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
-   <tr class="parity0">
+  <tbody class="stripes2">
+   <tr>
     <td class="age">Thu, 01 Jan 1970 00:00:00 +0000</td>
     <td class="author">test</td>
     <td class="description"><a href="/rev/5ed941583260">first a</a></td>
    </tr>
   
+  </tbody>
   </table>
   
   <div class="navigate">
