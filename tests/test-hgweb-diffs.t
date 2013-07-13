@@ -119,7 +119,7 @@ revision
       <div id="diffstatdetails" style="display:none;">
         <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
-        <table>  <tr class="parity0">
+        <table class="stripes2">  <tr>
       <td class="diffstat-file"><a href="#l1.1">a</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">
@@ -127,7 +127,7 @@ revision
         <span class="diffstat-remove" style="width:0.0%;">&nbsp;</span>
       </td>
     </tr>
-    <tr class="parity1">
+    <tr>
       <td class="diffstat-file"><a href="#l2.1">b</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">
@@ -384,7 +384,7 @@ revision
       <div id="diffstatdetails" style="display:none;">
         <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
-        <table>  <tr class="parity0">
+        <table class="stripes2">  <tr>
       <td class="diffstat-file"><a href="#l1.1">a</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">
@@ -392,7 +392,7 @@ revision
         <span class="diffstat-remove" style="width:0.0%;">&nbsp;</span>
       </td>
     </tr>
-    <tr class="parity1">
+    <tr>
       <td class="diffstat-file"><a href="#l2.1">b</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">

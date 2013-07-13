@@ -429,7 +429,7 @@ Logs and changes
       <div id="diffstatdetails" style="display:none;">
         <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
-        <table>  <tr class="parity0">
+        <table class="stripes2">  <tr>
       <td class="diffstat-file"><a href="#l1.1">da/foo</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">
@@ -437,7 +437,7 @@ Logs and changes
         <span class="diffstat-remove" style="width:0.0%;">&nbsp;</span>
       </td>
     </tr>
-    <tr class="parity1">
+    <tr>
       <td class="diffstat-file"><a href="#l2.1">foo</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">

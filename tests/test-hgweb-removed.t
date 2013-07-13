@@ -100,7 +100,7 @@ revision
       <div id="diffstatdetails" style="display:none;">
         <a href="javascript:toggleDiffstat()"/>[<tt>-</tt>]</a>
         <p>
-        <table>  <tr class="parity0">
+        <table class="stripes2">  <tr>
       <td class="diffstat-file"><a href="#l1.1">a</a></td>
       <td class="diffstat-total" align="right">1</td>
       <td class="diffstat-graph">
