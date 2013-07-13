@@ -88,6 +88,17 @@ def _runcatch(req):
 
     try:
         try:
+
+            # read --config before doing anything else
+            # (e.g. to change trust settings for reading .hg/hgrc)
+            cfgs = _parseconfig(req.ui, _earlygetopt(['--config'], req.args))
+
+            if req.repo:
+                # copy configs that were passed on the cmdline (--config) to
+                # the repo ui
+                for cfg in cfgs:
+                    req.repo.ui.setconfig(*cfg)
+
             # enter the debugger before command execution
             if '--debugger' in req.args:
                 ui.warn(_("entering debugger - "
@@ -619,10 +630,6 @@ def _dispatch(req):
     args = req.args
     ui = req.ui
 
-    # read --config before doing anything else
-    # (e.g. to change trust settings for reading .hg/hgrc)
-    cfgs = _parseconfig(ui, _earlygetopt(['--config'], args))
-
     # check for cwd
     cwd = _earlygetopt(['--cwd'], args)
     if cwd:
@@ -698,10 +705,6 @@ def _dispatch(req):
 
     if req.repo:
         uis.add(req.repo.ui)
-
-        # copy configs that were passed on the cmdline (--config) to the repo ui
-        for cfg in cfgs:
-            req.repo.ui.setconfig(*cfg)
 
     if options['verbose'] or options['debug'] or options['quiet']:
         for opt in ('verbose', 'debug', 'quiet'):
