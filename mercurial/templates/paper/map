@@ -179,7 +179,7 @@ bookmarkentry = '
   </tr>'
 branches = branches.tmpl
 branchentry = '
-  <tr class="tagEntry parity{parity}">
+  <tr class="tagEntry">
     <td>
       <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
         {branch|escape}
