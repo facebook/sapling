@@ -79,7 +79,9 @@ Some tests for hgweb in an empty repository
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
+  <tbody class="stripes2">
   
+  </tbody>
   </table>
   
   <div class="navigate">
@@ -172,7 +174,9 @@ Some tests for hgweb in an empty repository
     <th class="author">author</th>
     <th class="description">description</th>
    </tr>
+  <tbody class="stripes2">
   
+  </tbody>
   </table>
   
   <div class="navigate">
