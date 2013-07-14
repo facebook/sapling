@@ -65,6 +65,7 @@ from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
 from mercurial import repair, extensions, error, phases
 from mercurial import patch as patchmod
+from mercurial import localrepo
 import os, re, errno, shutil
 
 commands.norepo += " qclone"
@@ -3410,7 +3411,7 @@ def mqphasedefaults(repo, roots):
 
 def reposetup(ui, repo):
     class mqrepo(repo.__class__):
-        @util.propertycache
+        @localrepo.unfilteredpropertycache
         def mq(self):
             return queue(self.ui, self.baseui, self.path)
 
