@@ -110,8 +110,7 @@ def file(web, req, tmpl):
 
 def _search(web, req, tmpl):
 
-    def changelist(**map):
-        count = 0
+    def keywordsearch():
         lower = encoding.lower
         qw = lower(query).split()
 
@@ -137,6 +136,12 @@ def _search(web, req, tmpl):
             if miss:
                 continue
 
+            yield ctx
+
+    def changelist(**map):
+        count = 0
+
+        for ctx in keywordsearch():
             count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
