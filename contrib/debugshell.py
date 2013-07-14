@@ -14,6 +14,14 @@ def pdb(ui, repo, msg, **opts):
 
     code.interact(msg, local=objects)
 
+def ipdb(ui, repo, msg, **opts):
+    import IPython
+
+    cl = repo.changelog
+    mf = repo.manifest
+
+    IPython.embed()
+
 def debugshell(ui, repo, **opts):
     bannermsg = "loaded repo : %s\n" \
                 "using source: %s" % (repo.root,
