@@ -1,6 +1,7 @@
 # debugshell extension
 """a python shell with repo, changelog & manifest objects"""
 
+import sys
 import mercurial
 import code
 
@@ -27,7 +28,24 @@ def debugshell(ui, repo, **opts):
                 "using source: %s" % (repo.root,
                                       mercurial.__path__[0])
 
-    pdb(ui, repo, bannermsg, **opts)
+    pdbmap = {
+        'pdb'  : 'code',
+        'ipdb' : 'IPython'
+    }
+
+    debugger = ui.config("ui", "debugger")
+    if not debugger:
+        debugger = 'pdb'
+
+    # if IPython doesn't exist, fallback to code.interact
+    try:
+        __import__(pdbmap[debugger])
+    except ImportError:
+        ui.warn("%s debugger specified but %s module was not found\n"
+                % (debugger, pdbmap[debugger]))
+        debugger = 'pdb'
+
+    getattr(sys.modules[__name__], debugger)(ui, repo, bannermsg, **opts)
 
 cmdtable = {
     "debugshell|dbsh": (debugshell, [])
