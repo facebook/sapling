@@ -76,12 +76,12 @@ fileline = '
 filelogentry = filelogentry.tmpl
 
 annotateline = '
-  <tr>
+  <tr id="{lineid}">
     <td class="annotate">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
-    <td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td>
+    <td class="source"><a href="#{lineid}">{linenumber}</a> {line|escape}</td>
   </tr>'
 
 diffblock = '<div class="bottomline inc-lineno"><pre class="sourcelines wrap">{lines}</pre></div>'

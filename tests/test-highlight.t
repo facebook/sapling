@@ -275,229 +275,229 @@ hgweb fileannotate, html
   </tr>
   <tbody class="stripes2">
     
-  <tr>
+  <tr id="l1">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l1"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l1" id="l1">     1</a> <span class="c">#!/usr/bin/env python</span></td>
+  <td class="source"><a href="#l1">     1</a> <span class="c">#!/usr/bin/env python</span></td>
   </tr>
-  <tr>
+  <tr id="l2">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l2"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l2" id="l2">     2</a> </td>
+  <td class="source"><a href="#l2">     2</a> </td>
   </tr>
-  <tr>
+  <tr id="l3">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l3"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l3" id="l3">     3</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></td>
+  <td class="source"><a href="#l3">     3</a> <span class="sd">&quot;&quot;&quot;Fun with generators. Corresponding Haskell implementation:</span></td>
   </tr>
-  <tr>
+  <tr id="l4">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l4"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l4" id="l4">     4</a> </td>
+  <td class="source"><a href="#l4">     4</a> </td>
   </tr>
-  <tr>
+  <tr id="l5">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l5"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l5" id="l5">     5</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></td>
+  <td class="source"><a href="#l5">     5</a> <span class="sd">primes = 2 : sieve [3, 5..]</span></td>
   </tr>
-  <tr>
+  <tr id="l6">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l6"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l6" id="l6">     6</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></td>
+  <td class="source"><a href="#l6">     6</a> <span class="sd">    where sieve (p:ns) = p : sieve [n | n &lt;- ns, mod n p /= 0]</span></td>
   </tr>
-  <tr>
+  <tr id="l7">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l7"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l7" id="l7">     7</a> <span class="sd">&quot;&quot;&quot;</span></td>
+  <td class="source"><a href="#l7">     7</a> <span class="sd">&quot;&quot;&quot;</span></td>
   </tr>
-  <tr>
+  <tr id="l8">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l8"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l8" id="l8">     8</a> </td>
+  <td class="source"><a href="#l8">     8</a> </td>
   </tr>
-  <tr>
+  <tr id="l9">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l9"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l9" id="l9">     9</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></td>
+  <td class="source"><a href="#l9">     9</a> <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">dropwhile</span><span class="p">,</span> <span class="n">ifilter</span><span class="p">,</span> <span class="n">islice</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">chain</span></td>
   </tr>
-  <tr>
+  <tr id="l10">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l10"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l10" id="l10">    10</a> </td>
+  <td class="source"><a href="#l10">    10</a> </td>
   </tr>
-  <tr>
+  <tr id="l11">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l11"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l11" id="l11">    11</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></td>
+  <td class="source"><a href="#l11">    11</a> <span class="kn">def</span> <span class="nf">primes</span><span class="p">():</span></td>
   </tr>
-  <tr>
+  <tr id="l12">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l12"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l12" id="l12">    12</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></td>
+  <td class="source"><a href="#l12">    12</a>     <span class="sd">&quot;&quot;&quot;Generate all primes.&quot;&quot;&quot;</span></td>
   </tr>
-  <tr>
+  <tr id="l13">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l13"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l13" id="l13">    13</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
+  <td class="source"><a href="#l13">    13</a>     <span class="kn">def</span> <span class="nf">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
   </tr>
-  <tr>
+  <tr id="l14">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l14"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l14" id="l14">    14</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></td>
+  <td class="source"><a href="#l14">    14</a>         <span class="n">p</span> <span class="o">=</span> <span class="n">ns</span><span class="o">.</span><span class="n">next</span><span class="p">()</span></td>
   </tr>
-  <tr>
+  <tr id="l15">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l15"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l15" id="l15">    15</a>         <span class="c"># It is important to yield *here* in order to stop the</span></td>
+  <td class="source"><a href="#l15">    15</a>         <span class="c"># It is important to yield *here* in order to stop the</span></td>
   </tr>
-  <tr>
+  <tr id="l16">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l16"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l16" id="l16">    16</a>         <span class="c"># infinite recursion.</span></td>
+  <td class="source"><a href="#l16">    16</a>         <span class="c"># infinite recursion.</span></td>
   </tr>
-  <tr>
+  <tr id="l17">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l17"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l17" id="l17">    17</a>         <span class="kn">yield</span> <span class="n">p</span></td>
+  <td class="source"><a href="#l17">    17</a>         <span class="kn">yield</span> <span class="n">p</span></td>
   </tr>
-  <tr>
+  <tr id="l18">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l18"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l18" id="l18">    18</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mf">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
+  <td class="source"><a href="#l18">    18</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mf">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
   </tr>
-  <tr>
+  <tr id="l19">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l19"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l19" id="l19">    19</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
+  <td class="source"><a href="#l19">    19</a>         <span class="kn">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">sieve</span><span class="p">(</span><span class="n">ns</span><span class="p">):</span></td>
   </tr>
-  <tr>
+  <tr id="l20">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l20"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l20" id="l20">    20</a>             <span class="kn">yield</span> <span class="n">n</span></td>
+  <td class="source"><a href="#l20">    20</a>             <span class="kn">yield</span> <span class="n">n</span></td>
   </tr>
-  <tr>
+  <tr id="l21">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l21"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l21" id="l21">    21</a> </td>
+  <td class="source"><a href="#l21">    21</a> </td>
   </tr>
-  <tr>
+  <tr id="l22">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l22"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l22" id="l22">    22</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mf">2</span> <span class="o">==</span> <span class="mf">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
+  <td class="source"><a href="#l22">    22</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mf">2</span> <span class="o">==</span> <span class="mf">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
   </tr>
-  <tr>
+  <tr id="l23">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l23"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l23" id="l23">    23</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mf">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mf">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
+  <td class="source"><a href="#l23">    23</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mf">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mf">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
   </tr>
-  <tr>
+  <tr id="l24">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l24"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l24" id="l24">    24</a> </td>
+  <td class="source"><a href="#l24">    24</a> </td>
   </tr>
-  <tr>
+  <tr id="l25">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l25"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l25" id="l25">    25</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></td>
+  <td class="source"><a href="#l25">    25</a> <span class="kn">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span></td>
   </tr>
-  <tr>
+  <tr id="l26">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l26"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l26" id="l26">    26</a>     <span class="kn">import</span> <span class="nn">sys</span></td>
+  <td class="source"><a href="#l26">    26</a>     <span class="kn">import</span> <span class="nn">sys</span></td>
   </tr>
-  <tr>
+  <tr id="l27">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l27"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l27" id="l27">    27</a>     <span class="kn">try</span><span class="p">:</span></td>
+  <td class="source"><a href="#l27">    27</a>     <span class="kn">try</span><span class="p">:</span></td>
   </tr>
-  <tr>
+  <tr id="l28">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l28"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l28" id="l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td>
+  <td class="source"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td>
   </tr>
-  <tr>
+  <tr id="l29">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l29"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l29" id="l29">    29</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></td>
+  <td class="source"><a href="#l29">    29</a>     <span class="kn">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">IndexError</span><span class="p">):</span></td>
   </tr>
-  <tr>
+  <tr id="l30">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l30"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l30" id="l30">    30</a>         <span class="n">n</span> <span class="o">=</span> <span class="mf">10</span></td>
+  <td class="source"><a href="#l30">    30</a>         <span class="n">n</span> <span class="o">=</span> <span class="mf">10</span></td>
   </tr>
-  <tr>
+  <tr id="l31">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l31"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l31" id="l31">    31</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></td>
+  <td class="source"><a href="#l31">    31</a>     <span class="n">p</span> <span class="o">=</span> <span class="n">primes</span><span class="p">()</span></td>
   </tr>
-  <tr>
+  <tr id="l32">
   <td class="annotate">
   <a href="/annotate/853dcd4de2a6/primes.py#l32"
   title="853dcd4de2a6: a">test@0</a>
   </td>
-  <td class="source"><a href="#l32" id="l32">    32</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></td>
+  <td class="source"><a href="#l32">    32</a>     <span class="kn">print</span> <span class="s">&quot;The first </span><span class="si">%d</span><span class="s"> primes: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">islice</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">)))</span></td>
   </tr>
   </tbody>
   </table>
