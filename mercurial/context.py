@@ -16,9 +16,20 @@ import repoview
 
 propertycache = util.propertycache
 
-class changectx(object):
+class basectx(object):
+    """A basectx object represents the common logic for its children:
+    changectx: read-only context that is already present in the repo,
+    workingctx: a context that represents the working directory and can
+                be committed,
+    memctx: a context that represents changes in-memory and can also
+            be committed."""
+    def __new__(cls, repo, changeid='', *args, **kwargs):
+        return super(basectx, cls).__new__(cls)
+
+class changectx(basectx):
     """A changecontext object makes access to data related to a particular
-    changeset convenient."""
+    changeset convenient. It represents a read-only context already presnt in
+    the repo."""
     def __init__(self, repo, changeid=''):
         """changeid is a revision number, node, or tag"""
         if changeid == '':
