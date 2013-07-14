@@ -122,6 +122,10 @@ def getkeys(ui, repo, mygpg, sigdata, context):
     validkeys = []
     # warn for expired key and/or sigs
     for key in keys:
+        if key[0] == "ERRSIG":
+            ui.write(_("%s Unknown key ID \"%s\"\n")
+                     % (prefix, shortkey(ui, key[1][:15])))
+            continue
         if key[0] == "BADSIG":
             ui.write(_("%s Bad signature from \"%s\"\n") % (prefix, key[2]))
             continue
