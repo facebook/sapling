@@ -276,6 +276,13 @@ def sign(ui, repo, *revs, **opts):
     except ValueError, inst:
         raise util.Abort(str(inst))
 
+def shortkey(ui, key):
+    if len(key) != 16:
+        ui.debug("key ID \"%s\" format error\n" % key)
+        return key
+
+    return key[-8:]
+
 def node2txt(repo, node, ver):
     """map a manifest into some text"""
     if ver == "0":
