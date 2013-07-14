@@ -110,20 +110,6 @@ def file(web, req, tmpl):
 
 def _search(web, req, tmpl):
 
-    query = req.form['rev'][0]
-    revcount = web.maxchanges
-    if 'revcount' in req.form:
-        revcount = int(req.form.get('revcount', [revcount])[0])
-        revcount = max(revcount, 1)
-        tmpl.defaults['sessionvars']['revcount'] = revcount
-
-    lessvars = copy.copy(tmpl.defaults['sessionvars'])
-    lessvars['revcount'] = max(revcount / 2, 1)
-    lessvars['rev'] = query
-    morevars = copy.copy(tmpl.defaults['sessionvars'])
-    morevars['revcount'] = revcount * 2
-    morevars['rev'] = query
-
     def changelist(**map):
         count = 0
         lower = encoding.lower
@@ -175,6 +161,20 @@ def _search(web, req, tmpl):
 
             if count >= revcount:
                 break
+
+    query = req.form['rev'][0]
+    revcount = web.maxchanges
+    if 'revcount' in req.form:
+        revcount = int(req.form.get('revcount', [revcount])[0])
+        revcount = max(revcount, 1)
+        tmpl.defaults['sessionvars']['revcount'] = revcount
+
+    lessvars = copy.copy(tmpl.defaults['sessionvars'])
+    lessvars['revcount'] = max(revcount / 2, 1)
+    lessvars['rev'] = query
+    morevars = copy.copy(tmpl.defaults['sessionvars'])
+    morevars['revcount'] = revcount * 2
+    morevars['rev'] = query
 
     tip = web.repo['tip']
     parity = paritygen(web.stripecount)
