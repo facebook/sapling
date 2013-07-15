@@ -172,6 +172,16 @@
    naked except clause
   [1]
 
+  $ cat > warning.t <<EOF
+  >   $ function warnonly {
+  >   > }
+  > EOF
+  $ "$check_code" warning.t
+  $ "$check_code" --warn warning.t
+  warning.t:1:
+   >   $ function warnonly {
+   warning: don't use 'function', use old style
+  [1]
   $ cat > raise-format.py <<EOF
   > raise SomeException, message
   > # this next line is okay

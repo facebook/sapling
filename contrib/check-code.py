@@ -137,7 +137,7 @@ utestpats = [
   # warnings
   [
     (r'^  [^*?/\n]* \(glob\)$',
-     "warning: glob match with no glob character (?*/)"),
+     "glob match with no glob character (?*/)"),
   ]
 ]
 
@@ -417,6 +417,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             break
         for p, r in filters:
             post = re.sub(p, r, post)
+        nerrs = len(pats[0]) # nerr elements are errors
         if warnings:
             pats = pats[0] + pats[1]
         else:
@@ -428,7 +429,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
         prelines = None
         errors = []
-        for pat in pats:
+        for i, pat in enumerate(pats):
             if len(pat) == 3:
                 p, msg, ignore = pat
             else:
@@ -467,6 +468,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                         bl, bu, br = blamecache[n]
                         if bl == l:
                             bd = '%s@%s' % (bu, br)
+                if i >= nerrs:
+                    msg = "warning: " + msg
                 errors.append((f, lineno and n + 1, l, msg, bd))
                 result = False
 
