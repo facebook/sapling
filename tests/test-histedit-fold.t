@@ -266,3 +266,37 @@ dropped revision.
   +6
   $ cd ..
 
+
+Folding with initial rename (issue3729)
+---------------------------------------
+
+  $ hg init fold-rename
+  $ cd fold-rename
+  $ echo a > a.txt
+  $ hg add a.txt
+  $ hg commit -m a
+  $ hg rename a.txt b.txt
+  $ hg commit -m rename
+  $ echo b >> b.txt
+  $ hg commit -m b
+
+  $ hg logt --follow b.txt
+  2:e0371e0426bc b
+  1:1c4f440a8085 rename
+  0:6c795aa153cb a
+
+  $ hg histedit 1c4f440a8085 --commands - 2>&1 << EOF | fixbundle
+  > pick 1c4f440a8085 rename
+  > fold e0371e0426bc b
+  > EOF
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting b.txt
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg logt --follow b.txt
+  1:cf858d235c76 rename
+  0:6c795aa153cb a
+
+  $ cd ..
