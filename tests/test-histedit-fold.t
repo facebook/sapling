@@ -186,7 +186,7 @@ dropped revision.
   $ hg commit -m '+5'
   $ echo 6 >> file
   $ hg commit -m '+6'
-  $ hg logt -G --template '{rev}:{node|short} {desc|firstline}\n'
+  $ hg logt -G
   @  3:251d831eeec5 +6
   |
   o  2:888f9082bf99 +5
