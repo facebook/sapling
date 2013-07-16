@@ -247,7 +247,7 @@ def collapse(repo, first, last, commitopts):
         files.update(ctx.files())
 
     # Recompute copies (avoid recording a -> b -> a)
-    copied = copies.pathcopies(first, last)
+    copied = copies.pathcopies(base, last)
 
     # prune files which were reverted by the updates
     def samefile(f):
