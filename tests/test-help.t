@@ -89,7 +89,6 @@ Short help:
    rename        rename files; equivalent of copy + remove
    resolve       redo merges or set/view the merge status of files
    revert        restore files to their checkout state
-   rollback      roll back the last transaction (dangerous)
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
    showconfig    show combined config settings from all hgrc files
@@ -166,7 +165,6 @@ Short help:
    rename        rename files; equivalent of copy + remove
    resolve       redo merges or set/view the merge status of files
    revert        restore files to their checkout state
-   rollback      roll back the last transaction (dangerous)
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
    showconfig    show combined config settings from all hgrc files
@@ -652,7 +650,6 @@ Test that default list of commands omits extension commands
    rename        rename files; equivalent of copy + remove
    resolve       redo merges or set/view the merge status of files
    revert        restore files to their checkout state
-   rollback      roll back the last transaction (dangerous)
    root          print the root (top) of the current working directory
    serve         start stand-alone webserver
    showconfig    show combined config settings from all hgrc files
@@ -1385,13 +1382,6 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   restore files to their checkout state
-  </td></tr>
-  <tr><td>
-  <a href="/help/rollback">
-  rollback
-  </a>
-  </td><td>
-  roll back the last transaction (dangerous)
   </td></tr>
   <tr><td>
   <a href="/help/root">

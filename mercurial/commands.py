@@ -3541,7 +3541,8 @@ def identify(ui, repo, source=None, rev=None,
        'meaning as the corresponding patch option'), _('NUM')),
     ('b', 'base', '', _('base path (DEPRECATED)'), _('PATH')),
     ('e', 'edit', False, _('invoke editor on commit messages')),
-    ('f', 'force', None, _('skip check for outstanding uncommitted changes')),
+    ('f', 'force', None,
+     _('skip check for outstanding uncommitted changes (DEPRECATED)')),
     ('', 'no-commit', None,
      _("don't commit, just update the working directory")),
     ('', 'bypass', None,
@@ -3558,8 +3559,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     Import a list of patches and commit them individually (unless
     --no-commit is specified).
 
-    If there are outstanding changes in the working directory, import
-    will abort unless given the -f/--force flag.
+    Because import first applies changes to the working directory,
+    import will abort if there are outstanding changes.
 
     You can import a patch straight from a mail message. Even patches
     as attachments work (to use the body part, it must have type
@@ -5013,7 +5014,7 @@ def revert(ui, repo, *pats, **opts):
 @command('rollback', dryrunopts +
          [('f', 'force', False, _('ignore safety measures'))])
 def rollback(ui, repo, **opts):
-    """roll back the last transaction (dangerous)
+    """roll back the last transaction (DANGEROUS) (DEPRECATED)
 
     This command should be used with care. There is only one level of
     rollback, and there is no way to undo a rollback. It will also
