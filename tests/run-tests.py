@@ -838,7 +838,11 @@ def run(cmd, wd, options, replacements, env):
         cleanup()
         raise
 
-    ret = proc.wait()
+    try:
+        ret = proc.wait()
+    except OSError:
+        # Py2.4 seems to have a race here
+        pass
     if wifexited(ret):
         ret = os.WEXITSTATUS(ret)
 
