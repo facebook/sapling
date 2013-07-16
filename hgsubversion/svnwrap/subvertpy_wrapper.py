@@ -52,6 +52,7 @@ def version():
     return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
 
 # exported values
+ERR_FS_ALREADY_EXISTS = subvertpy.ERR_FS_ALREADY_EXISTS
 ERR_FS_CONFLICT = subvertpy.ERR_FS_CONFLICT
 ERR_FS_NOT_FOUND = subvertpy.ERR_FS_NOT_FOUND
 ERR_FS_TXN_OUT_OF_DATE = subvertpy.ERR_FS_TXN_OUT_OF_DATE
@@ -59,11 +60,11 @@ ERR_INCOMPLETE_DATA = subvertpy.ERR_INCOMPLETE_DATA
 ERR_RA_DAV_PATH_NOT_FOUND = subvertpy.ERR_RA_DAV_PATH_NOT_FOUND
 ERR_RA_DAV_REQUEST_FAILED = subvertpy.ERR_RA_DAV_REQUEST_FAILED
 ERR_REPOS_HOOK_FAILURE = subvertpy.ERR_REPOS_HOOK_FAILURE
-SSL_UNKNOWNCA = subvertpy.SSL_UNKNOWNCA
 SSL_CNMISMATCH = subvertpy.SSL_CNMISMATCH
-SSL_NOTYETVALID = subvertpy.SSL_NOTYETVALID
 SSL_EXPIRED = subvertpy.SSL_EXPIRED
+SSL_NOTYETVALID = subvertpy.SSL_NOTYETVALID
 SSL_OTHER = subvertpy.SSL_OTHER
+SSL_UNKNOWNCA = subvertpy.SSL_UNKNOWNCA
 SubversionException = subvertpy.SubversionException
 apply_txdelta = delta.apply_txdelta_handler
 # superclass for editor.HgEditor

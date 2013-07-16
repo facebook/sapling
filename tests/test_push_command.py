@@ -50,6 +50,54 @@ class PushTests(test_util.TestBase):
         tip = self.repo['tip']
         self.assertEqual(tip.node(), old_tip)
 
+    def test_push_add_of_added_upstream_gives_sane_error(self):
+        repo = self.repo
+        def file_callback(repo, memctx, path):
+            if path == 'adding_file':
+                return context.memfilectx(path=path,
+                                          data='foo',
+                                          islink=False,
+                                          isexec=False,
+                                          copied=False)
+            raise IOError()
+        p1 = repo['default'].node()
+        ctx = context.memctx(repo,
+                             (p1, node.nullid),
+                             'automated test',
+                             ['adding_file'],
+                             file_callback,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': 'default', })
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        old_tip = repo['tip'].node()
+        self.pushrevisions()
+        tip = self.repo['tip']
+        self.assertNotEqual(tip.node(), old_tip)
+
+        # This node adds the same file as the first one we added, and
+        # will be refused by the server for adding a file that already
+        # exists. We should respond with an error suggesting the user
+        # rebase.
+        ctx = context.memctx(repo,
+                             (p1, node.nullid),
+                             'automated test',
+                             ['adding_file'],
+                             file_callback,
+                             'an_author',
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': 'default', })
+        new_hash = repo.commitctx(ctx)
+        hg.update(repo, repo['tip'].node())
+        old_tip = repo['tip'].node()
+        try:
+          self.pushrevisions()
+        except hgutil.Abort, e:
+          assert "pull again and rebase" in str(e)
+        tip = self.repo['tip']
+        self.assertEqual(tip.node(), old_tip)
+
     def test_cant_push_with_changes(self):
         repo = self.repo
         def file_callback(repo, memctx, path):
