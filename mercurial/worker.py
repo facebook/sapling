@@ -109,7 +109,7 @@ def _posixworker(ui, func, staticargs, args):
     def waitforworkers():
         for _ in pids:
             st = _exitstatus(os.wait()[1])
-            if st and not problem:
+            if st and not problem[0]:
                 problem[0] = st
                 killworkers()
     t = threading.Thread(target=waitforworkers)
