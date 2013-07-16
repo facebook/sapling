@@ -56,19 +56,19 @@ class sshpeer(wireproto.wirepeer):
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
-        self.validate_repo(ui, sshcmd, args, remotecmd)
+        self._validaterepo(sshcmd, args, remotecmd)
 
     def url(self):
         return self._url
 
-    def validate_repo(self, ui, sshcmd, args, remotecmd):
+    def _validaterepo(self, sshcmd, args, remotecmd):
         # cleanup up previous run
         self.cleanup()
 
         cmd = '%s %s %s' % (sshcmd, args,
             util.shellquote("%s -R %s serve --stdio" %
                 (_serverquote(remotecmd), _serverquote(self.path))))
-        ui.note(_('running %s\n') % cmd)
+        self.ui.note(_('running %s\n') % cmd)
         cmd = util.quotecommand(cmd)
 
         # while self.subprocess isn't used, having it allows the subprocess to
@@ -86,7 +86,7 @@ class sshpeer(wireproto.wirepeer):
             if lines[-1] == "1\n" and l == "\n":
                 break
             if l:
-                ui.debug("remote: ", l)
+                self.ui.debug("remote: ", l)
             lines.append(l)
             max_noise -= 1
         else:
