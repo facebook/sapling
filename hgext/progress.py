@@ -45,7 +45,8 @@ def spacejoin(*args):
     return ' '.join(s for s in args if s)
 
 def shouldprint(ui):
-    return ui._isatty(sys.stderr) or ui.configbool('progress', 'assume-tty')
+    return not ui.plain() and (ui._isatty(sys.stderr) or
+                               ui.configbool('progress', 'assume-tty'))
 
 def fmtremaining(seconds):
     if seconds < 60:
