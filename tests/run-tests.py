@@ -59,15 +59,12 @@ import killdaemons as killmod
 import Queue as queue
 
 processlock = threading.Lock()
-waitlock = threading.Lock()
 
-def waitlocked(fn):
-    def run():
-        waitlock.acquire()
-        ret = fn()
-        waitlock.release()
-        return ret
-    return run
+# subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
+# http://bugs.python.org/issue1731717 for details. We shouldn't be producing
+# zombies but it's pretty harmless even if we do.
+if sys.version_info[1] < 5:
+    subprocess._cleanup = lambda: None
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
@@ -76,9 +73,6 @@ def Popen4(cmd, wd, timeout, env=None):
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
-    if sys.version_info[1] < 5:
-        p.wait = waitlocked(p.wait)
-        p.poll = waitlocked(p.poll)
     processlock.release()
 
     p.fromchild = p.stdout
