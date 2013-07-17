@@ -5016,6 +5016,9 @@ def revert(ui, repo, *pats, **opts):
 def rollback(ui, repo, **opts):
     """roll back the last transaction (DANGEROUS) (DEPRECATED)
 
+    Please use :hg:`commit --amend` instead of rollback to correct
+    mistakes in the last commit.
+
     This command should be used with care. There is only one level of
     rollback, and there is no way to undo a rollback. It will also
     restore the dirstate at the time of the last transaction, losing
