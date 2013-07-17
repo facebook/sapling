@@ -121,6 +121,7 @@ def churn(ui, repo, *pats, **opts):
 
     Such a file may be specified with the --aliases option, otherwise
     a .hgchurn file will be looked for in the working directory root.
+    Aliases will be split from the rightmost "=".
     '''
     def pad(s, l):
         return (s + " " * l)[:l]
@@ -132,7 +133,7 @@ def churn(ui, repo, *pats, **opts):
     if aliases:
         for l in open(aliases, "r"):
             try:
-                alias, actual = l.split('=' in l and '=' or None, 1)
+                alias, actual = l.rsplit('=' in l and '=' or None, 1)
                 amap[alias.strip()] = actual.strip()
             except ValueError:
                 l = l.strip()
