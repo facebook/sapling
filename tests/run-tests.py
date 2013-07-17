@@ -59,6 +59,15 @@ import killdaemons as killmod
 import Queue as queue
 
 processlock = threading.Lock()
+waitlock = threading.Lock()
+
+def waitlocked(fn):
+    def run():
+        waitlock.acquire()
+        ret = fn()
+        waitlock.release()
+        return ret
+    return run
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
@@ -67,6 +76,8 @@ def Popen4(cmd, wd, timeout, env=None):
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
+    p.wait = waitlocked(p.wait)
+    p.poll = waitlocked(p.poll)
     processlock.release()
 
     p.fromchild = p.stdout
@@ -838,11 +849,7 @@ def run(cmd, wd, options, replacements, env):
         cleanup()
         raise
 
-    try:
-        ret = proc.wait()
-    except OSError:
-        # Py2.4 seems to have a race here
-        pass
+    ret = proc.wait()
     if wifexited(ret):
         ret = os.WEXITSTATUS(ret)
 
