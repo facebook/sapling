@@ -4158,7 +4158,8 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     fm.end()
 
 @command('^merge',
-    [('f', 'force', None, _('force a merge with outstanding changes')),
+    [('f', 'force', None,
+      _('force a merge including outstanding changes (DEPRECATED)')),
     ('r', 'rev', '', _('revision to merge'), _('REV')),
     ('P', 'preview', None,
      _('review revisions to merge (no merge is performed)'))
