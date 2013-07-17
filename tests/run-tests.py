@@ -76,8 +76,9 @@ def Popen4(cmd, wd, timeout, env=None):
                          close_fds=closefds,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
-    p.wait = waitlocked(p.wait)
-    p.poll = waitlocked(p.poll)
+    if sys.version_info[1] < 5:
+        p.wait = waitlocked(p.wait)
+        p.poll = waitlocked(p.poll)
     processlock.release()
 
     p.fromchild = p.stdout
