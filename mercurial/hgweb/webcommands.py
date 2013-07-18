@@ -213,11 +213,7 @@ def changelog(web, req, tmpl, shortlog=False):
     if 'node' in req.form:
         ctx = webutil.changectx(web.repo, req)
     elif 'rev' in req.form:
-        query = req.form['rev'][0]
-        try:
-            ctx = web.repo[query]
-        except (error.RepoError, error.LookupError):
-            return _search(web, req, tmpl) # XXX redirect to 404 page?
+        return _search(web, req, tmpl)
     else:
         ctx = web.repo['tip']
 

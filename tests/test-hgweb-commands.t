@@ -537,6 +537,8 @@ Logs and changes
   </body>
   </html>
   
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=stable&style=raw' | grep 'revision:'
+  revision:    2
 
 File-related
 
