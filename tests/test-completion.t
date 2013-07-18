@@ -199,7 +199,7 @@ Show all commands + options
   add: include, exclude, subrepos, dry-run
   annotate: rev, follow, no-follow, text, user, file, date, number, changeset, line-number, ignore-all-space, ignore-space-change, ignore-blank-lines, include, exclude
   clone: noupdate, updaterev, rev, branch, pull, uncompressed, ssh, remotecmd, insecure
-  commit: addremove, close-branch, amend, include, exclude, message, logfile, date, user, subrepos
+  commit: addremove, close-branch, amend, secret, include, exclude, message, logfile, date, user, subrepos
   diff: rev, change, text, git, nodates, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, unified, stat, include, exclude, subrepos
   export: output, switch-parent, rev, text, git, nodates
   forget: include, exclude
