@@ -193,16 +193,14 @@ def changelog(web, req, tmpl, shortlog=False):
     query = ''
     if 'node' in req.form:
         ctx = webutil.changectx(web.repo, req)
-    else:
-        if 'rev' in req.form:
-            query = req.form['rev'][0]
-            hi = query
-        else:
-            hi = 'tip'
+    elif 'rev' in req.form:
+        query = req.form['rev'][0]
         try:
-            ctx = web.repo[hi]
+            ctx = web.repo[query]
         except (error.RepoError, error.LookupError):
             return _search(web, req, tmpl) # XXX redirect to 404 page?
+    else:
+        ctx = web.repo['tip']
 
     def changelist(latestonly, **map):
         revs = []
