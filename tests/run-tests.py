@@ -88,6 +88,7 @@ def Popen4(cmd, wd, timeout, env=None):
             p.timeout = True
             if p.returncode is None:
                 terminate(p)
+                p.wait()
         threading.Thread(target=t).start()
 
     return p
