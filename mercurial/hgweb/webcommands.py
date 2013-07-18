@@ -110,6 +110,9 @@ def file(web, req, tmpl):
 
 def _search(web, req, tmpl):
 
+    def revsearch(ctx):
+        yield ctx
+
     def keywordsearch(query):
         lower = encoding.lower
         qw = lower(query).split()
@@ -139,11 +142,17 @@ def _search(web, req, tmpl):
             yield ctx
 
     searchfuncs = {
+        'rev': revsearch,
         'keyword': keywordsearch,
     }
 
     def getsearchmode(query):
-        return 'keyword', query
+        try:
+            ctx = web.repo[query]
+        except (error.RepoError, error.LookupError):
+            return 'keyword', query
+        else:
+            return 'rev', ctx
 
     def changelist(**map):
         count = 0
