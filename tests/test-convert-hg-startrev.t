@@ -120,16 +120,26 @@ Convert from merge parent
 
 Check copy preservation
 
+  $ hg st -C --change 2 e
+  M e
+  $ hg st -C --change 1 e
+  A e
+    a
+  $ hg st -C --change 0 a
+  A a
+
+(It seems like a bug in log that the following doesn't show rev 1.)
+
   $ hg log --follow --copies e
-  changeset:   2:60633ee11cfa
+  changeset:   2:82bbac3d2cf4
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4: merge 2 and 3
   
-  changeset:   1:d56e8baefff8
+  changeset:   0:23c3be426dce
   user:        test
-  date:        Thu Jan 01 00:00:02 1970 +0000
-  summary:     2: copy e from a, change b
+  date:        Thu Jan 01 00:00:01 1970 +0000
+  summary:     1: add c, move f to d
   
 Check copy removal on missing parent
 
