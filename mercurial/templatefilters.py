@@ -325,8 +325,8 @@ def stripdir(text):
         return dir
 
 def tabindent(text):
-    """:tabindent: Any text. Returns the text, with every line except the
-    first starting with a tab character.
+    """:tabindent: Any text. Returns the text, with every non-empty line
+    except the first starting with a tab character.
     """
     return indent(text, '\t')
 
