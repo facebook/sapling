@@ -483,6 +483,8 @@ class svn_source(converter_source):
         try:
             for entry in stream:
                 origpaths, revnum, author, date, message = entry
+                if not origpaths:
+                    origpaths = []
                 copies = [(e.copyfrom_path, e.copyfrom_rev, p) for p, e
                           in origpaths.iteritems() if e.copyfrom_path]
                 # Apply moves/copies from more specific to general
