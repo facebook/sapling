@@ -21,7 +21,7 @@
 import os, time, cStringIO
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
-from mercurial import hg, util, context, bookmarks, error
+from mercurial import hg, util, context, bookmarks, error, scmutil
 
 from common import NoRepo, commit, converter_source, converter_sink
 
@@ -252,23 +252,37 @@ class mercurial_source(converter_source):
         self.convertfp = None
         # Restrict converted revisions to startrev descendants
         startnode = ui.config('convert', 'hg.startrev')
-        if startnode is not None:
-            try:
-                startnode = self.repo.lookup(startnode)
-            except error.RepoError:
-                raise util.Abort(_('%s is not a valid start revision')
-                                 % startnode)
-            startrev = self.repo.changelog.rev(startnode)
-            children = {startnode: 1}
-            for r in self.repo.changelog.descendants([startrev]):
-                children[self.repo.changelog.node(r)] = 1
-            self.keep = children.__contains__
+        hgrevs = ui.config('convert', 'hg.revs')
+        if hgrevs is None:
+            if startnode is not None:
+                try:
+                    startnode = self.repo.lookup(startnode)
+                except error.RepoError:
+                    raise util.Abort(_('%s is not a valid start revision')
+                                     % startnode)
+                startrev = self.repo.changelog.rev(startnode)
+                children = {startnode: 1}
+                for r in self.repo.changelog.descendants([startrev]):
+                    children[self.repo.changelog.node(r)] = 1
+                self.keep = children.__contains__
+            else:
+                self.keep = util.always
+            if rev:
+                self._heads = [self.repo[rev].node()]
+            else:
+                self._heads = self.repo.heads()
         else:
-            self.keep = util.always
-        if rev:
-            self._heads = [self.repo[rev].node()]
-        else:
-            self._heads = self.repo.heads()
+            if rev or startnode is not None:
+                raise util.Abort(_('hg.revs cannot be combined with '
+                                   'hg.startrev or --rev'))
+            nodes = set()
+            parents = set()
+            for r in scmutil.revrange(self.repo, [hgrevs]):
+                ctx = self.repo[r]
+                nodes.add(ctx.node())
+                parents.update(p.node() for p in ctx.parents())
+            self.keep = nodes.__contains__
+            self._heads = nodes - parents
 
     def changectx(self, rev):
         if self.lastrev != rev:

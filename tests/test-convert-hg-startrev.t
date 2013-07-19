@@ -183,3 +183,23 @@ Convert from merge
   b
   $ hg -q verify
   $ cd ..
+
+Convert from revset in convert.hg.revs
+
+  $ hg convert --config convert.hg.revs='3:4+0' source revsetrepo
+  initializing destination revsetrepo repository
+  scanning source...
+  sorting...
+  converting...
+  2 0: add a b f
+  1 3: change a
+  0 4: merge 2 and 3
+
+  $ glog revsetrepo
+  o  2 "4: merge 2 and 3" files: b c d e f
+  |
+  o  1 "3: change a" files: a
+  |
+  o  0 "0: add a b f" files: a b f
+  
+  $ cd ..
