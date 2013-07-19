@@ -262,7 +262,7 @@
   
    -s --source-type TYPE source repository type
    -d --dest-type TYPE   destination repository type
-   -r --rev REV          import up to target revision REV
+   -r --rev REV          import up to source revision REV
    -A --authormap FILE   remap usernames using this file
       --filemap FILE     remap file names using contents of file
       --splicemap FILE   splice synthesized history into place

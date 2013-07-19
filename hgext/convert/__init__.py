@@ -311,7 +311,7 @@ cmdtable = {
           ('d', 'dest-type', '',
            _('destination repository type'), _('TYPE')),
           ('r', 'rev', '',
-           _('import up to target revision REV'), _('REV')),
+           _('import up to source revision REV'), _('REV')),
           ('A', 'authormap', '',
            _('remap usernames using this file'), _('FILE')),
           ('', 'filemap', '',
