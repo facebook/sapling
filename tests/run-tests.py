@@ -578,6 +578,8 @@ def pytest(test, wd, options, replacements, env):
     py3kswitch = options.py3k_warnings and ' -3' or ''
     cmd = '%s%s "%s"' % (PYTHON, py3kswitch, test)
     vlog("# Running", cmd)
+    if os.name == 'nt':
+        replacements.append((r'\r\n', '\n'))
     return run(cmd, wd, options, replacements, env)
 
 needescape = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
@@ -592,6 +594,8 @@ def stringescape(s):
 def rematch(el, l):
     try:
         # use \Z to ensure that the regex matches to the end of the string
+        if os.name == 'nt':
+            return re.match(el + r'\r?\n\Z', l)
         return re.match(el + r'\n\Z', l)
     except re.error:
         # el is an invalid regex
@@ -629,6 +633,8 @@ def linematch(el, l):
     if el:
         if el.endswith(" (esc)\n"):
             el = el[:-7].decode('string-escape') + '\n'
+        if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+            return True
         if (el.endswith(" (re)\n") and rematch(el[:-6], l) or
             el.endswith(" (glob)\n") and globmatch(el[:-8], l)):
             return True
@@ -947,7 +953,6 @@ def runone(options, test, count):
                      c.isdigit() and c or
                      '\\' + c
                      for c in testtmp), '$TESTTMP'))
-        replacements.append((r'\r\n', '\n'))
     else:
         replacements.append((re.escape(testtmp), '$TESTTMP'))
 
