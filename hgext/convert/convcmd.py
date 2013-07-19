@@ -516,10 +516,7 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         destc.setfilemapmode(True)
 
     if not revmapfile:
-        try:
-            revmapfile = destc.revmapfile()
-        except Exception:
-            revmapfile = os.path.join(destc, "map")
+        revmapfile = destc.revmapfile()
 
     c = converter(ui, srcc, destc, revmapfile, opts)
     c.convert(sortmode)
