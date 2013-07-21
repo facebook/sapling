@@ -303,7 +303,7 @@ Testing -h/--help:
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
-   heads         show current repository heads or show branch heads
+   heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working copy or specified revision
    import        import an ordered set of patches
@@ -385,7 +385,7 @@ Testing -h/--help:
    forget        forget the specified files on the next commit
    graft         copy changes from other branches onto the current branch
    grep          search for a pattern in specified files and revisions
-   heads         show current repository heads or show branch heads
+   heads         show branch heads
    help          show help for a given topic or a help overview
    identify      identify the working copy or specified revision
    import        import an ordered set of patches

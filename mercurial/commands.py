@@ -3320,19 +3320,17 @@ def grep(ui, repo, pattern, *pats, **opts):
     ] + templateopts,
     _('[-ct] [-r STARTREV] [REV]...'))
 def heads(ui, repo, *branchrevs, **opts):
-    """show current repository heads or show branch heads
+    """show branch heads
 
-    With no arguments, show all repository branch heads.
+    With no arguments, show all open branch heads in the repository.
+    Branch heads are changesets that have no child changesets on the
+    same branch. They are where development generally takes place and
+    are the usual targets for update and merge operations.
 
-    Repository "heads" are changesets with no child changesets. They are
-    where development generally takes place and are the usual targets
-    for update and merge operations. Branch heads are changesets that have
-    no child changeset on the same branch.
-
-    If one or more REVs are given, only branch heads on the branches
-    associated with the specified changesets are shown. This means
-    that you can use :hg:`heads foo` to see the heads on a branch
-    named ``foo``.
+    If one or more REVs are given, only open branch heads on the
+    branches associated with the specified changesets are shown. This
+    means that you can use :hg:`heads .` to see the heads on the
+    currently checked-out branch.
 
     If -c/--closed is specified, also show branch heads marked closed
     (see :hg:`commit --close-branch`).
@@ -3341,7 +3339,7 @@ def heads(ui, repo, *branchrevs, **opts):
     STARTREV will be displayed.
 
     If -t/--topo is specified, named branch mechanics will be ignored and only
-    changesets without children will be shown.
+    topological heads (changesets with no children) will be shown.
 
     Returns 0 if matching heads are found, 1 if not.
     """
