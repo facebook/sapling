@@ -8,9 +8,12 @@
 from mercurial import extensions, util, cmdutil, graphmod, templatekw, scmutil
 from mercurial import bookmarks, commands
 from mercurial.extensions import wrapfunction
+from hgext import pager
 from mercurial.node import hex, nullrev
 from mercurial.i18n import _
 import errno, os, re
+
+pager.attended.append('smartlog')
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -218,6 +221,7 @@ def mylog(ui, repo, *pats, **opts):
     rev = repo.changelog.rev
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
+    parentrevs = repo.changelog.parentrevs
 
     # Find all bookmarks and recent heads
     books = bookmarks.bmstore(repo)
@@ -239,23 +243,32 @@ def mylog(ui, repo, *pats, **opts):
 
     # Find ancestors of heads that are not in master
     # Don't use revsets, they are too slow
-    revs.update(heads)
     for head in heads:
         anc = rev(ancestor(node(head), node(master)))
         queue = [head]
         while queue:
             current = queue.pop(0)
-            revs.add(current)
-            if current != anc:
-                parents = repo.changelog.parentrevs(current)
-                for p in parents:
-                    if p != nullrev and p != anc:
-                        queue.append(p)
+            if not current in revs:
+                revs.add(current)
+                if current != anc:
+                    parents = parentrevs(current)
+                    for p in parents:
+                        if p > anc:
+                            queue.append(p)
 
     # add context: master, current commit, and the common ancestor
     revs.add(master)
     revs.update(repo.revs('.'))
-    revs.update(repo.revs('ancestor(%s)' % (','.join([str(r) for r in revs]))))
+
+    # get common ancestor
+    anc = None
+    for r in revs:
+        if anc is None:
+            anc = r
+        else:
+            anc = rev(ancestor(node(anc), node(r)))
+    if anc:
+        revs.add(anc)
 
     revs = sorted(list(revs), reverse=True)
 
