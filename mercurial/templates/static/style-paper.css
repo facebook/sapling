@@ -250,6 +250,7 @@ h3 {
   color: #999;
   text-align: right;
   content: counters(lineno, ".");
+  float: left;
 }
 
 .sourcelines > span:target, tr:target td {
