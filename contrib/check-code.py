@@ -407,7 +407,11 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                 print "Skipping %s for %s it doesn't match %s" % (
                        name, match, f)
             continue
-        fp = open(f)
+        try:
+            fp = open(f)
+        except IOError, e:
+            print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
+            continue
         pre = post = fp.read()
         fp.close()
         if "no-" "check-code" in pre:

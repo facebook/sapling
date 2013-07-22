@@ -187,8 +187,10 @@
   > # this next line is okay
   > raise SomeException(arg1, arg2)
   > EOF
-  $ "$check_code" raise-format.py
+  $ "$check_code" not-existing.py raise-format.py
+  Skipping*not-existing.py* (glob)
   raise-format.py:1:
    > raise SomeException, message
    don't use old-style two-argument raise, use Exception(message)
   [1]
+
