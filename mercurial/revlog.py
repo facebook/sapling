@@ -751,10 +751,14 @@ class revlog(object):
 
     def _partialmatch(self, id):
         try:
-            return self.index.partialmatch(id)
+            n = self.index.partialmatch(id)
+            if n and self.hasnode(n):
+                return n
+            return None
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
-            raise LookupError(id, self.indexfile, _("ambiguous identifier"))
+            # fall through to slow path that filters hidden revisions
+            pass
         except (AttributeError, ValueError):
             # we are pure python, or key was too short to search radix tree
             pass
@@ -768,7 +772,8 @@ class revlog(object):
                 l = len(id) // 2  # grab an even number of digits
                 prefix = bin(id[:l * 2])
                 nl = [e[7] for e in self.index if e[7].startswith(prefix)]
-                nl = [n for n in nl if hex(n).startswith(id)]
+                nl = [n for n in nl if hex(n).startswith(id) and
+                      self.hasnode(n)]
                 if len(nl) > 0:
                     if len(nl) == 1:
                         self._pcache[id] = nl[0]
