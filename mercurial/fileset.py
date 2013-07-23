@@ -27,7 +27,7 @@ elements = {
 
 keywords = set(['and', 'or', 'not'])
 
-globchars = ".*{}[]?/\\"
+globchars = ".*{}[]?/\\_"
 
 def tokenize(program):
     pos, l = 0, len(program)

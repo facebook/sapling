@@ -42,6 +42,7 @@ Test operators and basic patterns
   b2
   $ fileset 'a* - a1'
   a2
+  $ fileset 'a_b'
 
 Test files status
 
