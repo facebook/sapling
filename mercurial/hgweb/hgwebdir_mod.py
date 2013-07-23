@@ -408,12 +408,6 @@ class hgwebdir(object):
 
     def templater(self, req):
 
-        def header(**map):
-            yield tmpl('header', encoding=encoding.encoding, **map)
-
-        def footer(**map):
-            yield tmpl("footer", **map)
-
         def motd(**map):
             if self.motd is not None:
                 yield self.motd
@@ -448,8 +442,7 @@ class hgwebdir(object):
             staticurl += '/'
 
         tmpl = templater.templater(mapfile,
-                                   defaults={"header": header,
-                                             "footer": footer,
+                                   defaults={"encoding": encoding.encoding,
                                              "motd": motd,
                                              "url": url,
                                              "logourl": logourl,

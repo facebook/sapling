@@ -331,12 +331,6 @@ class hgweb(object):
 
         # some functions for the templater
 
-        def header(**map):
-            yield tmpl('header', encoding=encoding.encoding, **map)
-
-        def footer(**map):
-            yield tmpl("footer", **map)
-
         def motd(**map):
             yield self.config("web", "motd", "")
 
@@ -373,8 +367,7 @@ class hgweb(object):
                                              "staticurl": staticurl,
                                              "urlbase": urlbase,
                                              "repo": self.reponame,
-                                             "header": header,
-                                             "footer": footer,
+                                             "encoding": encoding.encoding,
                                              "motd": motd,
                                              "sessionvars": sessionvars,
                                              "pathdef": makebreadcrumb(req.url),
