@@ -875,16 +875,20 @@ def graph(web, req, tmpl):
 
     count = len(web.repo)
     pos = rev
-    start = max(0, pos - revcount + 1)
-    end = pos + 1
 
     uprev = min(max(0, count - 1), rev + revcount)
     downrev = max(0, rev - revcount)
     changenav = webutil.revnav(web.repo).gen(pos, revcount, count)
 
     tree = []
-    if start < end:
-        revs = list(web.repo.changelog.revs(end - 1, start))
+    if pos != -1:
+        allrevs = web.repo.changelog.revs(pos, 0)
+        revs = []
+        for i in allrevs:
+            revs.append(i)
+            if len(revs) >= revcount:
+                break
+
         dag = graphmod.dagwalker(web.repo, revs)
         tree = list(graphmod.colored(dag, web.repo))
 
