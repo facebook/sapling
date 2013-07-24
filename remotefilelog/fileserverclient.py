@@ -30,8 +30,6 @@ class fileserverclient(object):
         self.ui = ui
         self.cachepath = ui.config("remotefilelog", "cachepath")
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
-        self.fallbackrepo = ui.config("remotefilelog", "fallbackrepo",
-                                      ui.config("paths", "default"))
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.pipeo = self.pipei = self.pipee = None
@@ -65,6 +63,9 @@ class fileserverclient(object):
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
+        fallbackrepo = repo.ui.config("remotefilelog", "fallbackrepo",
+                                      repo.ui.config("paths", "default"))
+
         remote = None
         missed = []
         count = 0
@@ -86,7 +87,7 @@ class fileserverclient(object):
 
             # fetch from the master
             if not remote:
-                remote = sshpeer.sshpeer(self.ui, self.fallbackrepo)
+                remote = sshpeer.sshpeer(self.ui, fallbackrepo)
                 remote._callstream("getfiles")
 
             id = missingid[-40:]
@@ -152,13 +153,13 @@ class fileserverclient(object):
 
     def close(self):
         if fetches and self.debugoutput:
-            print ("%s files fetched over %d fetches - (%d misses, %0.2f%% hit ratio) " +
-                  "over %0.2fs") % (
+            self.ui.warn(("%s files fetched over %d fetches - " +
+                "(%d misses, %0.2f%% hit ratio) over %0.2fs") % (
                     fetched,
                     fetches,
                     fetchmisses,
                     float(fetched - fetchmisses) / float(fetched) * 100.0,
-                    fetchcost)
+                    fetchcost))
 
         # if the process is still open, close the pipes
         if self.pipeo and self.subprocess.poll() == None:
