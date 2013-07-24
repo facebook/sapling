@@ -879,8 +879,7 @@ def graph(web, req, tmpl):
     count = len(web.repo)
     pos = rev
     start = max(0, pos - revcount + 1)
-    end = min(count, start + revcount)
-    pos = end - 1
+    end = pos + 1
 
     uprev = min(max(0, count - 1), rev + revcount)
     downrev = max(0, rev - revcount)

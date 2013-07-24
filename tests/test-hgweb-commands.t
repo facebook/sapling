@@ -1324,14 +1324,11 @@ Test paging
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
   >   'graph/e06180cbfb0?style=raw&revcount=3' | grep changeset
-  changeset:   ab4f1438558b
   changeset:   e06180cbfb0c
   changeset:   b4e73ffab476
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT \
   >   'graph/b4e73ffab47?style=raw&revcount=3' | grep changeset
-  changeset:   ab4f1438558b
-  changeset:   e06180cbfb0c
   changeset:   b4e73ffab476
 
   $ cat errors.log
