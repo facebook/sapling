@@ -81,8 +81,7 @@ should give a 404 - static file that does not exist
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30"></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   
   <div class="description">
@@ -171,8 +170,7 @@ should give a 404 - file does not exist
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30"></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   
   <div class="description">
@@ -249,8 +247,7 @@ try bad style
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   
   <table class="bigtable">

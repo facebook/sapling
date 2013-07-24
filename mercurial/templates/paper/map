@@ -243,3 +243,5 @@ error = error.tmpl
 urlparameter = '{separator}{name}={value|urlescape}'
 hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
 breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
+
+searchhint = 'find changesets by author, revision, files, or words in the commit message'

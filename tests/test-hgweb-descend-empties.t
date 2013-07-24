@@ -76,8 +76,7 @@ manifest with descending
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   
   <table class="bigtable">

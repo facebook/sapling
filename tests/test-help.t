@@ -930,8 +930,7 @@ Dish up an empty repo; serve it cold.
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   <table class="bigtable">
   <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
@@ -1490,8 +1489,7 @@ Dish up an empty repo; serve it cold.
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   <div id="doc">
   <p>
@@ -1656,8 +1654,7 @@ Dish up an empty repo; serve it cold.
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   <div id="doc">
   <p>
@@ -1852,8 +1849,7 @@ Dish up an empty repo; serve it cold.
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision,
-  files, or words in the commit message</div>
+  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
   </form>
   <div id="doc">
   <h1>Specifying Single Revisions</h1>
