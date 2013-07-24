@@ -106,7 +106,7 @@ else:
                     else:
                         raise x
 
-    _PROTOCOL_SSLv23 = 2
+    _PROTOCOL_SSLv3 = 1
 
     CERT_NONE = 0
     CERT_OPTIONAL = 1
@@ -118,7 +118,7 @@ else:
     # pylint: disable=W0613,R0913
     def wrap_socket(sock, keyfile=None, certfile=None,
                 server_side=False, cert_reqs=CERT_NONE,
-                ssl_version=_PROTOCOL_SSLv23, ca_certs=None,
+                ssl_version=_PROTOCOL_SSLv3, ca_certs=None,
                 do_handshake_on_connect=True,
                 suppress_ragged_eofs=True):
         """Backport of ssl.wrap_socket from Python 2.6."""

@@ -622,6 +622,8 @@ class HTTPConnection(object):
                         # TODO: find a way to block on ssl flushing its buffer
                         # similar to selecting on a raw socket.
                         continue
+                    if e[0] == errno.EWOULDBLOCK or e[0] == errno.EAGAIN:
+                        continue
                     elif (e[0] not in (errno.ECONNRESET, errno.EPIPE)
                           and not first):
                         raise
