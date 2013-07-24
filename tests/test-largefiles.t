@@ -738,6 +738,8 @@ Clone a largefiles repo.
   large6
   $ cat sub2/large7
   large7
+  $ hg log -qf sub2/large7
+  7:daea875e9014
   $ cd ..
   $ hg clone a -r 3 c
   adding changesets

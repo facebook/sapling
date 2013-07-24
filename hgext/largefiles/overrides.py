@@ -250,8 +250,10 @@ def overridelog(orig, ui, repo, *pats, **opts):
         """
         match = oldmatch(ctx, pats, opts, globbed, default)
         m = copy.copy(match)
-        standins = [lfutil.standin(f) for f in m._files]
-        m._files.extend(standins)
+        for i in range(0, len(m._files)):
+            standin = lfutil.standin(m._files[i])
+            if standin in repo[ctx.node()]:
+                m._files[i] = standin
         m._fmap = set(m._files)
         m._always = False
         origmatchfn = m.matchfn
