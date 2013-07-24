@@ -679,6 +679,8 @@ def between(repo, old, new, keep):
         if (not obsolete._enabled and
             repo.revs('(%ld::) - (%ld)', ctxs, ctxs)):
             raise util.Abort(_('cannot edit history that would orphan nodes'))
+        if repo.revs('(%ld) and merge()', ctxs):
+            raise util.Abort(_('cannot edit history that contains merges'))
         root = ctxs[0] # list is already sorted by repo.set
         if not root.phase():
             raise util.Abort(_('cannot edit immutable changeset: %s') % root)

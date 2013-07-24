@@ -441,4 +441,19 @@ Note that there is a few reordering in this series for more extensive test
   |
   o  0:cb9a9f314b8b (public) a
   
+  $ hg co 18
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo wat >> wat
+  $ hg add wat
+  $ hg ci -m 'add wat'
+  created new head
+  $ hg merge 19
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'merge'
+  $ echo not wat > wat
+  $ hg ci -m 'modify wat'
+  $ hg histedit 17
+  abort: cannot edit history that contains merges
+  [255]
   $ cd ..
