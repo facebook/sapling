@@ -87,8 +87,17 @@ class fileserverclient(object):
 
             # fetch from the master
             if not remote:
-                remote = sshpeer.sshpeer(self.ui, fallbackrepo)
-                remote._callstream("getfiles")
+                verbose = self.ui.verbose
+                try:
+                    # When verbose is true, sshpeer prints 'running ssh...'
+                    # to stdout, which can interfere with some command
+                    # outputs
+                    self.ui.verbose = False
+
+                    remote = sshpeer.sshpeer(self.ui, fallbackrepo)
+                    remote._callstream("getfiles")
+                finally:
+                    self.ui.verbose = verbose
 
             id = missingid[-40:]
             file = idmap[missingid]
