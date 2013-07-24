@@ -200,38 +200,37 @@ def changelog(web, req, tmpl, shortlog=False):
             return _search(web, req, tmpl) # XXX redirect to 404 page?
 
     def changelist(latestonly, **map):
-        l = [] # build a list in forward order for efficiency
         revs = []
-        if start < end:
-            revs = web.repo.changelog.revs(start, end - 1)
+        if pos != -1:
+            revs = web.repo.changelog.revs(pos, 0)
         if latestonly:
-            for r in revs:
-                pass
-            revs = (r,)
+            revs = (next(revs),)
+        curcount = 0
         for i in revs:
             ctx = web.repo[i]
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
             files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
-            l.append({"parity": parity.next(),
-                      "author": ctx.user(),
-                      "parent": webutil.parents(ctx, i - 1),
-                      "child": webutil.children(ctx, i + 1),
-                      "changelogtag": showtags,
-                      "desc": ctx.description(),
-                      "extra": ctx.extra(),
-                      "date": ctx.date(),
-                      "files": files,
-                      "rev": i,
-                      "node": hex(n),
-                      "tags": webutil.nodetagsdict(web.repo, n),
-                      "bookmarks": webutil.nodebookmarksdict(web.repo, n),
-                      "inbranch": webutil.nodeinbranch(web.repo, ctx),
-                      "branches": webutil.nodebranchdict(web.repo, ctx)
-                     })
-        for e in reversed(l):
-            yield e
+            curcount += 1
+            if curcount > revcount:
+                break
+            yield {"parity": parity.next(),
+                   "author": ctx.user(),
+                   "parent": webutil.parents(ctx, i - 1),
+                   "child": webutil.children(ctx, i + 1),
+                   "changelogtag": showtags,
+                   "desc": ctx.description(),
+                   "extra": ctx.extra(),
+                   "date": ctx.date(),
+                   "files": files,
+                   "rev": i,
+                   "node": hex(n),
+                   "tags": webutil.nodetagsdict(web.repo, n),
+                   "bookmarks": webutil.nodebookmarksdict(web.repo, n),
+                   "inbranch": webutil.nodeinbranch(web.repo, ctx),
+                   "branches": webutil.nodebranchdict(web.repo, ctx)
+            }
 
     revcount = shortlog and web.maxshortchanges or web.maxchanges
     if 'revcount' in req.form:
@@ -246,9 +245,7 @@ def changelog(web, req, tmpl, shortlog=False):
 
     count = len(web.repo)
     pos = ctx.rev()
-    start = max(0, pos - revcount + 1)
-    end = pos + 1
-    parity = paritygen(web.stripecount, offset=start - end)
+    parity = paritygen(web.stripecount)
 
     changenav = webutil.revnav(web.repo).gen(pos, revcount, count)
 
