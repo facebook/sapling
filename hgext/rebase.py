@@ -174,6 +174,7 @@ def rebase(ui, repo, **opts):
                 raise util.Abort(_('cannot specify both a '
                                    'revision and a source'))
 
+            cmdutil.checkunfinished(repo)
             cmdutil.bailifchanged(repo)
 
             if not destf:
@@ -798,3 +799,6 @@ def uisetup(ui):
     entry[1].append(('t', 'tool', '',
                      _("specify merge tool for rebase")))
     cmdutil.summaryhooks.add('rebase', summaryhook)
+    cmdutil.unfinishedstates.append(
+        ['rebasestate', False, _('rebase in progress'),
+         _("use 'hg rebase --continue' or 'hg rebase --abort'")])
