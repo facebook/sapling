@@ -163,7 +163,7 @@ class fileserverclient(object):
     def close(self):
         if fetches and self.debugoutput:
             self.ui.warn(("%s files fetched over %d fetches - " +
-                "(%d misses, %0.2f%% hit ratio) over %0.2fs") % (
+                "(%d misses, %0.2f%% hit ratio) over %0.2fs\n") % (
                     fetched,
                     fetches,
                     fetchmisses,
