@@ -189,7 +189,10 @@ class fileserverclient(object):
         missingids = []
         for file, id in fileids:
             # hack
-            if file == '.hgtags':
+            # - we don't use .hgtags
+            # - workingctx produces ids with length 42,
+            #   which we skip since they aren't in any cache
+            if file == '.hgtags' or len(id) == 42:
                 continue
 
             key = getcachekey(file, id)
