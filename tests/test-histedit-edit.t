@@ -69,16 +69,12 @@ Go at a random point and try to continue
   $ hg id -n
   3+
   $ hg up 0
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  $ HGEDITOR='echo foobaz > ' hg histedit --continue
-  abort: 055a42cdd887 is not an ancestor of working directory
-  (update to 055a42cdd887 or descendant and run "hg histedit --continue" again)
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]
-  $ hg up 3
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-commit, then edit the revision
-  $ hg ci -m 'wat'
+commit, then edit the revision (temporarily disable histedit to allow commit)
+  $ hg ci -m 'wat' --config 'extensions.histedit=!'
   created new head
   $ echo a > e
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle

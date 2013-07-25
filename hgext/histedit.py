@@ -512,6 +512,7 @@ def histedit(ui, repo, *freeargs, **opts):
         os.unlink(os.path.join(repo.path, 'histedit-state'))
         return
     else:
+        cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
         topmost, empty = repo.dirstate.parents()
@@ -872,3 +873,6 @@ def summaryhook(ui, repo):
 
 def extsetup(ui):
     cmdutil.summaryhooks.add('histedit', summaryhook)
+    cmdutil.unfinishedstates.append(
+        ['histedit-state', False, _('histedit in progress'),
+         _("use 'hg histedit --continue' or 'hg histedit --abort'")])

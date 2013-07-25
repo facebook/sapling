@@ -214,7 +214,7 @@ dropped revision.
   > 5
   > EOF
   $ hg resolve --mark file
-  $ hg commit -m '+5.2'
+  $ hg commit -m '+5.2' --config 'extensions.histedit=!'
   created new head
   $ echo 6 >> file
   $ HGEDITOR=cat hg histedit --continue
