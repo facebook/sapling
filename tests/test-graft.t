@@ -177,8 +177,8 @@ Graft out of order, skipping a merge and a duplicate
 Commit while interrupted should fail:
 
   $ hg ci -m 'commit interrupted graft'
-  abort: cannot commit an interrupted graft operation
-  (use "hg graft -c" to continue graft)
+  abort: graft in progress
+  (use 'hg graft --continue' or 'hg update' to abort)
   [255]
 
 Abort the graft and try committing:

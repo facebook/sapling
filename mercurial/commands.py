@@ -428,6 +428,7 @@ def backout(ui, repo, node=None, rev=None, **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
+    cmdutil.checkunfinished(repo)
     cmdutil.bailifchanged(repo)
     node = scmutil.revsingle(repo, rev).node()
 
@@ -650,6 +651,8 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             reset = True
     elif extra or good + bad + skip + reset + extend + bool(command) > 1:
         raise util.Abort(_('incompatible arguments'))
+
+    cmdutil.checkunfinished(repo)
 
     if reset:
         p = repo.join("bisect.state")
@@ -1333,9 +1336,7 @@ def commit(ui, repo, *pats, **opts):
     # Save this for restoring it later
     oldcommitphase = ui.config('phases', 'new-commit')
 
-    if repo.vfs.exists('graftstate'):
-        raise util.Abort(_('cannot commit an interrupted graft operation'),
-                         hint=_('use "hg graft -c" to continue graft'))
+    cmdutil.checkunfinished(repo)
 
     branch = repo[None].branch()
     bheads = repo.branchheads(branch)
@@ -2977,6 +2978,7 @@ def graft(ui, repo, *revs, **opts):
                 raise
             raise util.Abort(_("no graft state found, can't continue"))
     else:
+        cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         if not revs:
             raise util.Abort(_('no revisions specified'))
@@ -3656,6 +3658,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     if sim and not update:
         raise util.Abort(_('cannot use --similarity with --bypass'))
 
+    if update:
+        cmdutil.checkunfinished(repo)
     if (opts.get('exact') or not opts.get('force')) and update:
         cmdutil.bailifchanged(repo)
 
