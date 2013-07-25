@@ -605,6 +605,7 @@ def transplant(ui, repo, *revs, **opts):
     if opts.get('edit'):
         tp.editor = cmdutil.commitforceeditor
 
+    cmdutil.checkunfinished(repo)
     p1, p2 = repo.dirstate.parents()
     if len(repo) > 0 and p1 == revlog.nullid:
         raise util.Abort(_('no revision checked out'))
@@ -683,6 +684,9 @@ def kwtransplanted(repo, ctx, **args):
 def extsetup(ui):
     revset.symbols['transplanted'] = revsettransplanted
     templatekw.keywords['transplanted'] = kwtransplanted
+    cmdutil.unfinishedstates.append(
+        ['series', True, _('transplant in progress'),
+         _("use 'hg transplant --continue' or 'hg update' to abort")])
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [revsettransplanted, kwtransplanted]
