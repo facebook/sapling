@@ -1362,10 +1362,10 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 				if (nsp == sp)
 					continue;
 				seen[p] = nsp;
-				interesting[nsp] += 1;
 				interesting[sp] -= 1;
-				if (interesting[sp] == 0)
+				if (interesting[sp] == 0 && interesting[nsp] > 0)
 					ninteresting -= 1;
+				interesting[nsp] += 1;
 			}
 		}
 		interesting[sv] -= 1;
