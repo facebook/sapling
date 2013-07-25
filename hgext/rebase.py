@@ -258,10 +258,10 @@ def rebase(ui, repo, **opts):
             if state[rev] == -1:
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, repo[rev])),
                             _('changesets'), total)
-                storestatus(repo, originalwd, target, state, collapsef, keepf,
-                            keepbranchesf, external, activebookmark)
                 p1, p2 = defineparents(repo, rev, target, state,
                                                         targetancestors)
+                storestatus(repo, originalwd, target, state, collapsef, keepf,
+                            keepbranchesf, external, activebookmark)
                 if len(repo.parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
