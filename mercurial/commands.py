@@ -3325,7 +3325,7 @@ def heads(ui, repo, *branchrevs, **opts):
     """show branch heads
 
     With no arguments, show all open branch heads in the repository.
-    Branch heads are changesets that have no child changesets on the
+    Branch heads are changesets that have no descendants on the
     same branch. They are where development generally takes place and
     are the usual targets for update and merge operations.
 
