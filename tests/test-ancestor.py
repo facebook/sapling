@@ -1,4 +1,4 @@
-from mercurial import ancestor
+from mercurial import ancestor, commands, hg, ui, util
 
 # graph is a dict of child->parent adjacency lists for this graph:
 # o  13
@@ -101,6 +101,36 @@ def test_lazyancestors():
     s = genlazyancestors([11, 13], stoprev=6, inclusive=True)
     printlazyancestors(s, [11, 13, 7, 9, 8, 3, 6, 4, 1, -1, 0])
 
+
+# The C gca algorithm requires a real repo. These are textual descriptions of
+# dags that have been known to be problematic.
+dagtests = [
+    '+2*2*2/*3/2',
+    '+3*3/*2*2/*4*4/*4/2*4/2*2',
+]
+def test_gca():
+    u = ui.ui()
+    for i, dag in enumerate(dagtests):
+        repo = hg.repository(u, 'gca%d' % i, create=1)
+        cl = repo.changelog
+        if not util.safehasattr(cl.index, 'ancestors'):
+            # C version not available
+            return
+
+        commands.debugbuilddag(u, repo, dag)
+        # Compare the results of the Python and C versions. This does not
+        # include choosing a winner when more than one gca exists -- we make
+        # sure both return exactly the same set of gcas.
+        for a in cl:
+            for b in cl:
+                cgcas = sorted(cl.index.ancestors(a, b))
+                pygcas = sorted(ancestor.ancestors(cl.parentrevs, a, b))
+                if cgcas != pygcas:
+                    print "test_gca: for dag %s, gcas for %d, %d:" % (dag, a, b)
+                    print "  C returned:      %s" % cgcas
+                    print "  Python returned: %s" % pygcas
+
 if __name__ == '__main__':
     test_missingancestors()
     test_lazyancestors()
+    test_gca()

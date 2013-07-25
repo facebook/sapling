@@ -1388,8 +1388,7 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 	if (dict == NULL)
 		goto bail;
 
-	j = ninteresting;
-	for (i = 0; i < revcount && j > 0; i++) {
+	for (i = 0; i < revcount; i++) {
 		PyObject *key;
 
 		if ((final & (1 << i)) == 0)
@@ -1403,7 +1402,6 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 			Py_DECREF(Py_None);
 			goto bail;
 		}
-		j -= 1;
 	}
 
 	keys = PyDict_Keys(dict);
