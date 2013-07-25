@@ -519,6 +519,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
         will be left in place, so the user can continue working.
         """
 
+        cmdutil.checkunfinished(repo, commit=True)
         merge = len(repo[None].parents()) > 1
         if merge:
             raise util.Abort(_('cannot partially commit a merge '
