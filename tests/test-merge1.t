@@ -28,7 +28,7 @@ Test interrupted updates by exploiting our non-handling of directory collisions
 
   $ mkdir b
   $ hg up
-  abort: Is a directory: '$TESTTMP/t/b'
+  abort: *: '$TESTTMP/t/b' (glob)
   [255]
   $ hg ci
   abort: last update was interrupted
