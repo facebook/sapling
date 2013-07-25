@@ -22,6 +22,13 @@
   > if any():
   >     x = all()
   >     y = format(x)
+  >     # next(generator) is new in 2.6
+  >     z = next(x)
+  >     # but generator.next() is okay
+  >     x.next()
+  >     # and we can make our own next
+  >     def next(stuff):
+  >         pass
   > 
   > # Do not complain about our own definition
   > def any(x):
@@ -94,13 +101,16 @@
   ./non-py24.py:4:
    >     y = format(x)
    any/all/format not available in Python 2.4
-  ./non-py24.py:11:
+  ./non-py24.py:6:
+   >     z = next(x)
+   no next(foo) in Python 2.4 and 2.5, use foo.next() instead
+  ./non-py24.py:18:
    >     try:
    no try/except/finally in Python 2.4
-  ./non-py24.py:28:
+  ./non-py24.py:35:
    >     try:
    no yield inside try/finally in Python 2.4
-  ./non-py24.py:33:
+  ./non-py24.py:40:
    >     try:
    no yield inside try/finally in Python 2.4
   ./classstyle.py:4:
