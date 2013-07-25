@@ -1311,6 +1311,9 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 		goto bail;
 	}
 
+	if (PyList_Sort(revs) == -1)
+		goto bail;
+
 	for (i = 0; i < revcount; i++) {
 		int n = (int)PyInt_AsLong(PyList_GET_ITEM(revs, i));
 		long b = 1l << i;
