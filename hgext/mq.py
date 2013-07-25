@@ -1877,7 +1877,7 @@ class queue(object):
         index of the first patch past the last applied one.
         """
         end = 0
-        def next(start):
+        def nextpatch(start):
             if all_patches or start >= len(self.series):
                 return start
             for i in xrange(start, len(self.series)):
@@ -1892,8 +1892,8 @@ class queue(object):
                 end = self.series.index(p)
             except ValueError:
                 return 0
-            return next(end + 1)
-        return next(end)
+            return nextpatch(end + 1)
+        return nextpatch(end)
 
     def appliedname(self, index):
         pname = self.applied[index].name
