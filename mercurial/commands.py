@@ -5482,7 +5482,9 @@ def summary(ui, repo, **opts):
     t = ', '.join(t)
     cleanworkdir = False
 
-    if len(parents) > 1:
+    if repo.vfs.exists('updatestate'):
+        t += _(' (interrupted update)')
+    elif len(parents) > 1:
         t += _(' (merge)')
     elif branch != parents[0].branch():
         t += _(' (new branch)')

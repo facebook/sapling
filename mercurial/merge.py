@@ -747,12 +747,17 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
         if not partial:
             repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
+            # note that we're in the middle of an update
+            repo.vfs.write('updatestate', p2.hex())
 
         stats = applyupdates(repo, actions, wc, p2, pa, overwrite)
 
         if not partial:
             repo.setparents(fp1, fp2)
             recordupdates(repo, actions, branchmerge)
+            # update completed, clear state
+            util.unlink(repo.join('updatestate'))
+
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())
     finally:

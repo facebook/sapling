@@ -23,6 +23,37 @@
 
   $ hg update 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+Test interrupted updates by exploiting our non-handling of directory collisions
+
+  $ mkdir b
+  $ hg up
+  abort: Is a directory: '$TESTTMP/t/b'
+  [255]
+  $ hg ci
+  abort: last update was interrupted
+  (use 'hg update' to get a consistent checkout)
+  [255]
+  $ hg sum
+  parent: 0:538afb845929 
+   commit #0
+  branch: default
+  commit: (interrupted update)
+  update: 1 new changesets (update)
+  $ rmdir b
+  $ hg up
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg sum
+  parent: 1:b8bb4a988f25 tip
+   commit #1
+  branch: default
+  commit: (clean)
+  update: (current)
+
+Prepare a basic merge
+
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo This is file c1 > c
   $ hg add c
   $ hg commit -m "commit #2"

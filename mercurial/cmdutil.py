@@ -2110,7 +2110,9 @@ summaryhooks = util.hooks()
 # (state file, clearable, error, hint)
 unfinishedstates = [
     ('graftstate', True, _('graft in progress'),
-     _("use 'hg graft --continue' or 'hg update' to abort"))
+     _("use 'hg graft --continue' or 'hg update' to abort")),
+    ('updatestate', True, _('last update was interrupted'),
+     _("use 'hg update' to get a consistent checkout"))
     ]
 
 def checkunfinished(repo):
