@@ -204,7 +204,7 @@ def changelog(web, req, tmpl, shortlog=False):
         if pos != -1:
             revs = web.repo.changelog.revs(pos, 0)
         if latestonly:
-            revs = (next(revs),)
+            revs = (revs.next(),)
         curcount = 0
         for i in revs:
             ctx = web.repo[i]
