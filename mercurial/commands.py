@@ -1336,7 +1336,7 @@ def commit(ui, repo, *pats, **opts):
     # Save this for restoring it later
     oldcommitphase = ui.config('phases', 'new-commit')
 
-    cmdutil.checkunfinished(repo)
+    cmdutil.checkunfinished(repo, commit=True)
 
     branch = repo[None].branch()
     bheads = repo.branchheads(branch)

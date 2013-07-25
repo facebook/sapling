@@ -73,8 +73,8 @@ Go at a random point and try to continue
   (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]
 
-commit, then edit the revision (temporarily disable histedit to allow commit)
-  $ hg ci -m 'wat' --config 'extensions.histedit=!'
+commit, then edit the revision
+  $ hg ci -m 'wat'
   created new head
   $ echo a > e
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle

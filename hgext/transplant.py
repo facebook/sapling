@@ -685,7 +685,7 @@ def extsetup(ui):
     revset.symbols['transplanted'] = revsettransplanted
     templatekw.keywords['transplanted'] = kwtransplanted
     cmdutil.unfinishedstates.append(
-        ['series', True, _('transplant in progress'),
+        ['series', True, False, _('transplant in progress'),
          _("use 'hg transplant --continue' or 'hg update' to abort")])
 
 # tell hggettext to extract docstrings from these functions:

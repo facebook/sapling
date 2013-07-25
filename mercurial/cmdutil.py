@@ -2107,20 +2107,22 @@ summaryhooks = util.hooks()
 # A list of state files kept by multistep operations like graft.
 # Since graft cannot be aborted, it is considered 'clearable' by update.
 # note: bisect is intentionally excluded
-# (state file, clearable, error, hint)
+# (state file, clearable, allowcommit, error, hint)
 unfinishedstates = [
-    ('graftstate', True, _('graft in progress'),
+    ('graftstate', True, False, _('graft in progress'),
      _("use 'hg graft --continue' or 'hg update' to abort")),
-    ('updatestate', True, _('last update was interrupted'),
+    ('updatestate', True, False, _('last update was interrupted'),
      _("use 'hg update' to get a consistent checkout"))
     ]
 
-def checkunfinished(repo):
+def checkunfinished(repo, commit=False):
     '''Look for an unfinished multistep operation, like graft, and abort
     if found. It's probably good to check this right before
     bailifchanged().
     '''
-    for f, clearable, msg, hint in unfinishedstates:
+    for f, clearable, allowcommit, msg, hint in unfinishedstates:
+        if commit and allowcommit:
+            continue
         if repo.vfs.exists(f):
             raise util.Abort(msg, hint=hint)
 
@@ -2128,9 +2130,9 @@ def clearunfinished(repo):
     '''Check for unfinished operations (as above), and clear the ones
     that are clearable.
     '''
-    for f, clearable, msg, hint in unfinishedstates:
+    for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if not clearable and repo.vfs.exists(f):
             raise util.Abort(msg, hint=hint)
-    for f, clearable, msg, hint in unfinishedstates:
+    for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if clearable and repo.vfs.exists(f):
             util.unlink(repo.join(f))
