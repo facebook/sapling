@@ -5820,6 +5820,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if rev is None or rev == '':
         rev = node
 
+    cmdutil.clearunfinished(repo)
+
     # with no argument, we also move the current bookmark, if any
     movemarkfrom = None
     if rev is None:
