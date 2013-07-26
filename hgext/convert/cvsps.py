@@ -496,6 +496,7 @@ class changeset(object):
         .branchpoints- the branches that start at the current entry or empty
     '''
     def __init__(self, **entries):
+        self.id = None
         self.synthetic = False
         self.__dict__.update(entries)
 
@@ -604,7 +605,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     # Sort changesets by date
 
-    def cscmp(l, r):
+    odd = set()
+    def cscmp(l, r, odd=odd):
         d = sum(l.date) - sum(r.date)
         if d:
             return d
@@ -626,7 +628,8 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
         for e in r.entries:
             if le.get(e.rcs, None) == e.parent:
-                assert not d
+                if d:
+                    odd.add((l, r))
                 d = -1
                 break
 
@@ -768,6 +771,12 @@ def createchangeset(ui, log, fuzz=60, mergefrom=None, mergeto=None):
 
     for i, c in enumerate(changesets):
         c.id = i + 1
+
+    if odd:
+        for l, r in odd:
+            if l.id is not None and r.id is not None:
+                ui.warn(_('changeset %d is both before and after %d\n')
+                        % (l.id, r.id))
 
     ui.status(_('%d changeset entries\n') % len(changesets))
 
