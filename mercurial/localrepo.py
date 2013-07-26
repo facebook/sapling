@@ -1951,6 +1951,9 @@ class localrepository(object):
 
         self.ui.debug("checking for updated bookmarks\n")
         rb = remote.listkeys('bookmarks')
+        revnums = map(unfi.changelog.rev, revs or [])
+        ancestors = [
+            a for a in unfi.changelog.ancestors(revnums, inclusive=True)]
         for k in rb.keys():
             if k in unfi._bookmarks:
                 nr, nl = rb[k], hex(self._bookmarks[k])
@@ -1958,6 +1961,8 @@ class localrepository(object):
                     cr = unfi[nr]
                     cl = unfi[nl]
                     if bookmarks.validdest(unfi, cr, cl):
+                        if ancestors and cl.rev() not in ancestors:
+                            continue
                         r = remote.pushkey('bookmarks', k, nr, nl)
                         if r:
                             self.ui.status(_("updating bookmark %s\n") % k)

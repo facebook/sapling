@@ -422,7 +422,6 @@ of this test.
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark @ failed!
   exporting bookmark add-foo
 
   $ cd ..
