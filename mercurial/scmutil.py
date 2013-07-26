@@ -556,7 +556,7 @@ def rcpath():
     return _rcpath
 
 def revsingle(repo, revspec, default='.'):
-    if not revspec:
+    if not revspec and revspec != 0:
         return repo[default]
 
     l = revrange(repo, [revspec])
