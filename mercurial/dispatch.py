@@ -88,6 +88,13 @@ def _runcatch(req):
 
     try:
         try:
+            debugger = 'pdb'
+            debugtrace = {
+                'pdb' : pdb.set_trace
+            }
+            debugmortem = {
+                'pdb' : pdb.post_mortem
+            }
 
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
@@ -99,11 +106,29 @@ def _runcatch(req):
                 for cfg in cfgs:
                     req.repo.ui.setconfig(*cfg)
 
+            debugger = ui.config("ui", "debugger")
+            if not debugger:
+                debugger = 'pdb'
+
+            try:
+                debugmod = __import__(debugger)
+            except ImportError:
+                debugmod = pdb
+
+            debugtrace[debugger] = debugmod.set_trace
+            debugmortem[debugger] = debugmod.post_mortem
+
             # enter the debugger before command execution
             if '--debugger' in req.args:
                 ui.warn(_("entering debugger - "
                         "type c to continue starting hg or h for help\n"))
-                pdb.set_trace()
+
+                if (debugger != 'pdb' and
+                    debugtrace[debugger] == debugtrace['pdb']):
+                    ui.warn(_("%s debugger specified "
+                              "but its module was not found\n") % debugger)
+
+                debugtrace[debugger]()
             try:
                 return _dispatch(req)
             finally:
@@ -112,7 +137,7 @@ def _runcatch(req):
             # enter the debugger when we hit an exception
             if '--debugger' in req.args:
                 traceback.print_exc()
-                pdb.post_mortem(sys.exc_info()[2])
+                debugmortem[debugger](sys.exc_info()[2])
             ui.traceback()
             raise
 
