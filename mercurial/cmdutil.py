@@ -1976,7 +1976,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             #   make backup if not in target manifest
             (modified, revert, remove, True, True),
             (added, revert, remove, True, False),
-            (removed, undelete, None, False, False),
+            (removed, undelete, None, True, False),
             (deleted, revert, remove, False, False),
             )
 
@@ -1986,7 +1986,8 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             def handle(xlist, dobackup):
                 xlist[0].append(abs)
                 if (dobackup and not opts.get('no_backup') and
-                    os.path.lexists(target)):
+                    os.path.lexists(target) and
+                    repo[None][abs].cmp(ctx[abs])):
                     bakname = "%s.orig" % rel
                     ui.note(_('saving current version of %s as %s\n') %
                             (rel, bakname))

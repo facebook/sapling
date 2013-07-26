@@ -73,6 +73,15 @@ Revert all - should succeed:
 
   $ hg st
 
+Issue3423:
+
+  $ hg forget a
+  $ echo zed > a
+  $ hg revert a
+  $ hg st
+  ? a.orig
+  $ rm a.orig
+
 addremove:
 
   $ rm -r a b
