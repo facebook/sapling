@@ -371,7 +371,7 @@ def pushmarker(repo, key, old, new):
         lock.release()
 
 def syncpush(repo, remote):
-    """utility function to push bookmark to a remote
+    """utility function to push obsolete markers to a remote
 
     Exist mostly to allow overridding for experimentation purpose"""
     if (_enabled and repo.obsstore and
@@ -387,7 +387,7 @@ def syncpush(repo, remote):
             repo.ui.warn(msg)
 
 def syncpull(repo, remote, gettransaction):
-    """utility function to pull bookmark to a remote
+    """utility function to pull obsolete markers from a remote
 
     The `gettransaction` is function that return the pull transaction, creating
     one if necessary. We return the transaction to inform the calling code that
