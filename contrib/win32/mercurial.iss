@@ -62,7 +62,6 @@ Source: contrib\tcsh_completion; DestDir: {app}/Contrib
 Source: contrib\tcsh_completion_build.sh; DestDir: {app}/Contrib
 Source: contrib\hgk; DestDir: {app}/Contrib; DestName: hgk.tcl
 Source: contrib\xml.rnc; DestDir: {app}/Contrib
-Source: contrib\shrink-revlog.py; DestDir: {app}/Contrib
 Source: contrib\mercurial.el; DestDir: {app}/Contrib
 Source: contrib\mq.el; DestDir: {app}/Contrib
 Source: contrib\hgweb.fcgi; DestDir: {app}/Contrib
@@ -98,7 +97,6 @@ Filename: {app}\Mercurial.ini; Section: web; Key: cacerts; String: {app}\cacert.
 
 [UninstallDelete]
 Type: files; Name: {app}\Mercurial.url
-Type: files; Name: {app}\Contrib\shrink-revlog.pyc
 
 [Icons]
 Name: {group}\Uninstall Mercurial; Filename: {uninstallexe}
