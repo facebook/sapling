@@ -1987,7 +1987,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 xlist[0].append(abs)
                 if (dobackup and not opts.get('no_backup') and
                     os.path.lexists(target) and
-                    repo[None][abs].cmp(ctx[abs])):
+                    abs in ctx and repo[None][abs].cmp(ctx[abs])):
                     bakname = "%s.orig" % rel
                     ui.note(_('saving current version of %s as %s\n') %
                             (rel, bakname))
