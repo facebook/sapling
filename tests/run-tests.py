@@ -921,8 +921,10 @@ def runone(options, test, count):
                 else:
                     return ignore("doesn't match keyword")
 
+    if not lctest.startswith("test-"):
+        return skip("not a test file")
     for ext, func, out in testtypes:
-        if lctest.startswith("test-") and lctest.endswith(ext):
+        if lctest.endswith(ext):
             runner = func
             ref = os.path.join(TESTDIR, test + out)
             break
