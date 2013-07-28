@@ -154,10 +154,16 @@ def checklink(path):
     # file already exists
     name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
     try:
-        os.symlink(".", name)
+        fd = tempfile.NamedTemporaryFile(dir=path, prefix='hg-checklink-')
+        os.symlink(os.path.basename(fd.name), name)
         os.unlink(name)
         return True
-    except (OSError, AttributeError):
+    except AttributeError:
+        return False
+    except OSError, inst:
+        # sshfs might report failure while successfully creating the link
+        if inst[0] == errno.EIO and os.path.exists(name):
+            os.unlink(name)
         return False
 
 def checkosfilename(path):
