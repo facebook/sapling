@@ -345,7 +345,6 @@ plain diff in email, [PATCH] subject, message body with subject
   email patch
   
   next line
-  ---
   $ rm -r b
 
 

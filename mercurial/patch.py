@@ -176,7 +176,6 @@ def extract(ui, fileobj):
             # Not an email, restore parsed headers if any
             subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'
 
-        gitsendmail = 'git-send-email' in msg.get('X-Mailer', '')
         # should try to parse msg['Date']
         date = None
         nodeid = None
@@ -233,7 +232,7 @@ def extract(ui, fileobj):
                             parents.append(line[9:].lstrip())
                         elif not line.startswith("# "):
                             hgpatchheader = False
-                    elif line == '---' and gitsendmail:
+                    elif line == '---':
                         ignoretext = True
                     if not hgpatchheader and not ignoretext:
                         cfp.write(line)
