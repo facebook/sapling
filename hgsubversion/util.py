@@ -9,7 +9,11 @@ from mercurial import error
 from mercurial import hg
 from mercurial import node
 from mercurial import util as hgutil
-from mercurial.util import deque
+
+try:
+    from collections import deque
+except:
+    from mercurial.util import deque
 
 try:
     from mercurial import revset
