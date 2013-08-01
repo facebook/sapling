@@ -609,9 +609,9 @@ def abort(repo, originalwd, target, state):
     dstates = [s for s in state.values() if s != nullrev]
     immutable = [d for d in dstates if not repo[d].mutable()]
     if immutable:
-        raise util.Abort(_("can't abort rebase due to immutable changesets %s")
-                         % ', '.join(str(repo[r]) for r in immutable),
-                         hint=_('see hg help phases for details'))
+        repo.ui.warn(_("warning: can't clean up immutable changesets %s\n")
+                     % ', '.join(str(repo[r]) for r in immutable),
+                     hint=_('see hg help phases for details'))
 
     descendants = set()
     if dstates:
@@ -622,12 +622,12 @@ def abort(repo, originalwd, target, state):
         return -1
     else:
         # Update away from the rebase if necessary
-        if inrebase(repo, originalwd, state):
+        if not immutable and inrebase(repo, originalwd, state):
             merge.update(repo, repo[originalwd].rev(), False, True, False)
 
         # Strip from the first rebased revision
         rebased = filter(lambda x: x > -1 and x != target, state.values())
-        if rebased:
+        if rebased and not immutable:
             strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
             # no backup of rebased cset versions needed
             repair.strip(repo.ui, repo, strippoints)
