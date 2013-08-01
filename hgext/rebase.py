@@ -608,32 +608,36 @@ def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
     dstates = [s for s in state.values() if s != nullrev]
     immutable = [d for d in dstates if not repo[d].mutable()]
+    cleanup = True
     if immutable:
         repo.ui.warn(_("warning: can't clean up immutable changesets %s\n")
                      % ', '.join(str(repo[r]) for r in immutable),
                      hint=_('see hg help phases for details'))
+        cleanup = False
 
     descendants = set()
     if dstates:
         descendants = set(repo.changelog.descendants(dstates))
     if descendants - set(dstates):
         repo.ui.warn(_("warning: new changesets detected on target branch, "
-                       "can't abort\n"))
-        return -1
-    else:
+                       "can't strip\n"))
+        cleanup = False
+
+    if cleanup:
         # Update away from the rebase if necessary
-        if not immutable and inrebase(repo, originalwd, state):
+        if inrebase(repo, originalwd, state):
             merge.update(repo, repo[originalwd].rev(), False, True, False)
 
         # Strip from the first rebased revision
         rebased = filter(lambda x: x > -1 and x != target, state.values())
-        if rebased and not immutable:
+        if rebased:
             strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
             # no backup of rebased cset versions needed
             repair.strip(repo.ui, repo, strippoints)
-        clearstatus(repo)
-        repo.ui.warn(_('rebase aborted\n'))
-        return 0
+
+    clearstatus(repo)
+    repo.ui.warn(_('rebase aborted\n'))
+    return 0
 
 def buildstate(repo, dest, rebaseset, collapse):
     '''Define which revisions are going to be rebased and where

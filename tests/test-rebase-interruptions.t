@@ -180,8 +180,8 @@ Force a commit on B' during the interruption:
 Abort the rebasing:
 
   $ hg rebase --abort
-  warning: new changesets detected on target branch, can't abort
-  [255]
+  warning: new changesets detected on target branch, can't strip
+  rebase aborted
 
   $ hg tglog
   @  6: 'Extra'
