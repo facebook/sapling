@@ -592,6 +592,18 @@ def restorestatus(repo):
             raise
         raise util.Abort(_('no rebase in progress'))
 
+def inrebase(repo, originalwd, state):
+    '''check whether the workdir is in an interrupted rebase'''
+    parents = [p.rev() for p in repo.parents()]
+    if originalwd in parents:
+        return True
+
+    for newrev in state.itervalues():
+        if newrev in parents:
+            return True
+
+    return False
+
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
     dstates = [s for s in state.values() if s != nullrev]
@@ -609,8 +621,11 @@ def abort(repo, originalwd, target, state):
                        "can't abort\n"))
         return -1
     else:
+        # Update away from the rebase if necessary
+        if inrebase(repo, originalwd, state):
+            merge.update(repo, repo[originalwd].rev(), False, True, False)
+
         # Strip from the first rebased revision
-        merge.update(repo, repo[originalwd].rev(), False, True, False)
         rebased = filter(lambda x: x > -1 and x != target, state.values())
         if rebased:
             strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
