@@ -2578,6 +2578,10 @@ msgstr ""
 "%s\n"
 
 #, python-format
+msgid "changeset %d is both before and after %d\n"
+msgstr "a revisão %d está ao mesmo tempo antes e depois de %d\n"
+
+#, python-format
 msgid "%d changeset entries\n"
 msgstr "%d entradas de revisão\n"
 
@@ -4262,7 +4266,7 @@ msgid "Read history edits from the specified file."
 msgstr "Lê alterações de histórico a partir do arquivo especificado."
 
 msgid "continue an edit already in progress"
-msgstr "continua uma edição em progresso"
+msgstr "continua uma edição em andamento"
 
 msgid "don't strip old nodes after edit is complete"
 msgstr "não remove nós antigos após o término da edição"
@@ -4327,6 +4331,9 @@ msgstr ""
 msgid "cannot edit history that would orphan nodes"
 msgstr "não é possível editar histórico de forma a produzir nós órfãos"
 
+msgid "cannot edit history that contains merges"
+msgstr "não é possível editar histórico que contenha mesclagens"
+
 #, python-format
 msgid "cannot edit immutable changeset: %s"
 msgstr "não é possível editar uma revisão imutável: %s"
@@ -4369,6 +4376,12 @@ msgstr "hist:         %s (histedit --continue)\n"
 #, python-format
 msgid "%d remaining"
 msgstr "%d por fazer"
+
+msgid "histedit in progress"
+msgstr "edição de histórico em andamento"
+
+msgid "use 'hg histedit --continue' or 'hg histedit --abort'"
+msgstr "use 'hg histedit --continue' ou 'hg histedit --abort'"
 
 msgid "accelerate status report using Linux's inotify service"
 msgstr "acelera informações de status usando o serviço inotify do Linux"
@@ -8514,7 +8527,7 @@ msgid "cannot use revision %d as base, result would have 3 parents"
 msgstr "não se pode usar a revisão %d como base, o resultado teria 3 pais"
 
 msgid "no rebase in progress"
-msgstr "nenhum rebaseamento em progresso"
+msgstr "nenhum rebaseamento em andamento"
 
 #, python-format
 msgid "can't abort rebase due to immutable changesets %s"
@@ -8563,6 +8576,12 @@ msgstr "rebaseia o diretório de trabalho para a cabeça do ramo"
 
 msgid "specify merge tool for rebase"
 msgstr "especifica o utilitário de mesclagem para o rebaseamento"
+
+msgid "rebase in progress"
+msgstr "rebaseamento em andamento"
+
+msgid "use 'hg rebase --continue' or 'hg rebase --abort'"
+msgstr "use 'hg rebase --continue' ou 'hg rebase --abort'"
 
 msgid "commands to interactively select changes for commit/qrefresh"
 msgstr ""
@@ -9258,6 +9277,12 @@ msgstr ""
 ":transplanted: String. O identificador de nó da revisão\n"
 "    transplantada, se existir."
 
+msgid "transplant in progress"
+msgstr "transplante em andamento"
+
+msgid "use 'hg transplant --continue' or 'hg update' to abort"
+msgstr "use 'hg transplant --continue' ou 'hg update' para abortar"
+
 msgid "allow the use of MBCS paths with problematic encodings"
 msgstr "permite o uso de caminhos MBCS com codificação problemática."
 
@@ -9914,6 +9939,18 @@ msgstr "arquivo não gerenciado: %s\n"
 #, python-format
 msgid "no changes needed to %s\n"
 msgstr "nenhuma mudança necessária para %s\n"
+
+msgid "graft in progress"
+msgstr "enxerto em andamento"
+
+msgid "use 'hg graft --continue' or 'hg update' to abort"
+msgstr "use 'hg graft --continue' ou 'hg update' para abortar"
+
+msgid "last update was interrupted"
+msgstr "o último update foi interrompido"
+
+msgid "use 'hg update' to get a consistent checkout"
+msgstr "use 'hg update' para obter uma cópia de trabalho consistente"
 
 msgid "repository root directory or name of overlay bundle file"
 msgstr ""
@@ -11338,12 +11375,6 @@ msgstr ""
 msgid "cannot amend with --subrepos"
 msgstr "amend não suporta --subrepos"
 
-msgid "cannot commit an interrupted graft operation"
-msgstr "não é possível realizar um commit de um enxerto interrompido"
-
-msgid "use \"hg graft -c\" to continue graft"
-msgstr "use \"hg graft -c\" para continuar o enxerto"
-
 msgid "can only close branch heads"
 msgstr "só se pode fechar cabeças de ramo"
 
@@ -12520,14 +12551,14 @@ msgstr "exibe cabeças de ramo"
 
 msgid ""
 "    With no arguments, show all open branch heads in the repository.\n"
-"    Branch heads are changesets that have no child changesets on the\n"
+"    Branch heads are changesets that have no descendants on the\n"
 "    same branch. They are where development generally takes place and\n"
 "    are the usual targets for update and merge operations."
 msgstr ""
 "    Sem argumentos, exibe todas as cabeças de ramo abertas\n"
 "    do repositório.\n"
-"    \"Cabeças\" de ramo são revisões que não possuem revisões\n"
-"    filhas no mesmo ramo.\n"
+"    \"Cabeças\" de ramo são revisões que não possuem descendentes\n"
+"    no mesmo ramo.\n"
 "    Elas são onde o desenvolvimento geralmente acontece\n"
 "    e são os alvos usuais para operações update e\n"
 "    merge. "
@@ -14467,6 +14498,9 @@ msgstr "%d não resolvidos"
 #, python-format
 msgid "%d subrepos"
 msgstr "%d sub-repositórios"
+
+msgid " (interrupted update)"
+msgstr " (update interrompido)"
 
 msgid " (merge)"
 msgstr " (mesclagem)"
