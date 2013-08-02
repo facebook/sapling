@@ -171,7 +171,7 @@ def testui(stupid=False, layout='auto', startrev=0):
 
 def dispatch(cmd):
     cmd = getattr(dispatchmod, 'request', lambda x: x)(cmd)
-    dispatchmod.dispatch(cmd)
+    return dispatchmod.dispatch(cmd)
 
 def rmtree(path):
     # Read-only files cannot be removed under Windows
@@ -370,7 +370,8 @@ class TestBase(unittest.TestCase):
         for k,v in reversed(sorted(config.iteritems())):
             cmd[:0] = ['--config', '%s=%s' % (k, v)]
 
-        dispatch(cmd)
+        r = dispatch(cmd)
+        assert not r, 'fetch of %s failed' % projectpath
 
         return hg.repository(testui(), self.wc_path)
 
