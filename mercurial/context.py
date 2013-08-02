@@ -42,6 +42,8 @@ class basectx(object):
         return self._rev
     def node(self):
         return self._node
+    def hex(self):
+        return hex(self._node)
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
@@ -212,8 +214,6 @@ class changectx(basectx):
     def manifestnode(self):
         return self._changeset[0]
 
-    def hex(self):
-        return hex(self._node)
     def user(self):
         return self._changeset[1]
     def date(self):
