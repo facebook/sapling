@@ -38,6 +38,9 @@ class basectx(object):
     def __str__(self):
         return short(self.node())
 
+    def __int__(self):
+        return self.rev()
+
     def rev(self):
         return self._rev
     def node(self):
@@ -149,9 +152,6 @@ class changectx(basectx):
             pass
         raise error.RepoLookupError(
             _("unknown revision '%s'") % changeid)
-
-    def __int__(self):
-        return self.rev()
 
     def __repr__(self):
         return "<changectx %s>" % str(self)
