@@ -282,8 +282,11 @@ class TestBase(unittest.TestCase):
         setattr(ui.ui, self.patch[0].func_name, self.patch[1])
 
     def setup_svn_config(self, config):
-        with open(self.config_dir + '/config', 'w') as c:
+        c = open(self.config_dir + '/config', 'w')
+        try:
             c.write(config)
+        finally:
+            c.close()
 
     def _makerepopath(self):
         self.repocount += 1
