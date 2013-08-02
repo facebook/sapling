@@ -169,13 +169,34 @@ check state of working copy
   o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
-abort editing session
+abort editing session, after first forcibly updating away
+  $ hg up 0
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
+  $ mv .hg/histedit-state .hg/histedit-state-ignore
+  $ hg up 0
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ mv .hg/histedit-state-ignore .hg/histedit-state
+  $ hg sum
+  parent: 0:cb9a9f314b8b 
+   a
+  branch: default
+  commit: 1 modified, 1 unknown (new branch head)
+  update: 6 new changesets (update)
+  hist:   2 remaining (histedit --continue)
+
   $ hg histedit --abort 2>&1 | fixbundle
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [1]
+
+modified files should survive the abort when we've moved away already
+  $ hg st
+  M e
+  ? edit.sh
 
   $ graphlog "log after abort"
   % log after abort
-  @  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
   |
   o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
   |
@@ -185,7 +206,7 @@ abort editing session
   |
   o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  @  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
   $ cd ..
