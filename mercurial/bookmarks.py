@@ -170,6 +170,19 @@ def deletedivergent(repo, deletefrom, bm):
                 deleted = True
     return deleted
 
+def calculateupdate(ui, repo, checkout):
+    '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
+    check out and where to move the active bookmark from, if needed.'''
+    movemarkfrom = None
+    if checkout is None:
+        curmark = repo._bookmarkcurrent
+        if iscurrent(repo):
+            movemarkfrom = repo['.'].node()
+        elif curmark:
+            ui.status(_("updating to active bookmark %s\n") % curmark)
+            checkout = curmark
+    return (checkout, movemarkfrom)
+
 def update(repo, parents, node):
     deletefrom = parents
     marks = repo._bookmarks

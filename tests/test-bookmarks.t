@@ -507,19 +507,37 @@ update to current bookmark if it's not the parent
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
 
+pull --update works the same as pull && update
+
+  $ hg bookmark -r3 Y
+  moving bookmark 'Y' forward from db815d6d32e6
+  $ hg -R cloned-bookmarks-update update Y
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R cloned-bookmarks-update pull --update .
+  pulling from .
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  updating bookmark Y
+  updating bookmark Z
+  updating to active bookmark Y
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
 test wrongly formated bookmark
 
   $ echo '' >> .hg/bookmarks
   $ hg bookmarks
      X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
+     Y                         3:125c9a1d6df6
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
   $ echo "Ican'thasformatedlines" >> .hg/bookmarks
   $ hg bookmarks
   malformed line in .hg/bookmarks: "Ican'thasformatedlines"
      X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
+     Y                         3:125c9a1d6df6
    * Z                         3:125c9a1d6df6
      x  y                      2:db815d6d32e6
 
