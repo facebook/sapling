@@ -269,7 +269,6 @@ diff removed file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
@@ -538,7 +537,6 @@ diff removed file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
@@ -638,7 +636,6 @@ comparison new file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
@@ -760,7 +757,6 @@ comparison existing file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
@@ -884,7 +880,6 @@ comparison removed file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">

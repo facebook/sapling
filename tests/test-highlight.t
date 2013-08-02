@@ -132,7 +132,6 @@ hgweb filerevision, html
    <th class="author">children</th>
    <td class="author"></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
@@ -264,7 +263,6 @@ hgweb fileannotate, html
    <th class="author">children</th>
    <td class="author"></td>
   </tr>
-  
   </table>
   
   <div class="overflow">

@@ -637,7 +637,6 @@ File-related
    <th class="author">children</th>
    <td class="author"><a href="/file/1d22e65f027e/foo">1d22e65f027e</a> </td>
   </tr>
-  
   </table>
   
   <div class="overflow">

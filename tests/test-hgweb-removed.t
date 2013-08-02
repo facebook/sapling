@@ -213,7 +213,6 @@ diff removed file
    <th>children</th>
    <td></td>
   </tr>
-  
   </table>
   
   <div class="overflow">
