@@ -40,6 +40,8 @@ class basectx(object):
 
     def rev(self):
         return self._rev
+    def node(self):
+        return self._node
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
@@ -210,8 +212,6 @@ class changectx(basectx):
     def manifestnode(self):
         return self._changeset[0]
 
-    def node(self):
-        return self._node
     def hex(self):
         return hex(self._node)
     def user(self):
