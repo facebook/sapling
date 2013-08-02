@@ -43,7 +43,7 @@ class basectx(object):
     def node(self):
         return self._node
     def hex(self):
-        return hex(self._node)
+        return hex(self.node())
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
