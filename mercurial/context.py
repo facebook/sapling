@@ -35,6 +35,9 @@ class basectx(object):
 
         return o
 
+    def __str__(self):
+        return short(self.node())
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -139,9 +142,6 @@ class changectx(basectx):
             pass
         raise error.RepoLookupError(
             _("unknown revision '%s'") % changeid)
-
-    def __str__(self):
-        return short(self.node())
 
     def __int__(self):
         return self.rev()
