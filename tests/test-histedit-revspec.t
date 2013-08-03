@@ -65,5 +65,5 @@ Run on a revision not ancestors of the current working directory.
   $ hg up 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg histedit -r 4
-  nothing to edit
-  [1]
+  abort: 08d98a8350f3 is not an ancestor of working directory
+  [255]

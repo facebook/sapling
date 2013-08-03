@@ -498,8 +498,8 @@ def histedit(ui, repo, *parent, **opts):
         keep = opts.get('keep', False)
         revs = between(repo, parent, topmost, keep)
         if not revs:
-            ui.warn(_('nothing to edit\n'))
-            return 1
+            raise util.Abort(_('%s is not an ancestor of working directory') %
+                             node.short(parent))
 
         ctxs = [repo[r] for r in revs]
         rules = opts.get('commands', '')
