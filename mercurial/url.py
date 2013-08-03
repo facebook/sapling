@@ -108,8 +108,13 @@ class proxyhandler(urllib2.ProxyHandler):
 
     def proxy_open(self, req, proxy, type_):
         host = req.get_host().split(':')[0]
-        if host in self.no_list:
-            return None
+        for e in self.no_list:
+            if host == e:
+                return None
+            if e.startswith('*.') and host.endswith(e[2:]):
+                return None
+            if e.startswith('.') and host.endswith(e[1:]):
+                return None
 
         # work around a bug in Python < 2.4.2
         # (it leaves a "\n" at the end of Proxy-authorization headers)
