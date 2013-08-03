@@ -38,6 +38,9 @@ class basectx(object):
     def __str__(self):
         return short(self.node())
 
+    def rev(self):
+        return self._rev
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -207,8 +210,6 @@ class changectx(basectx):
     def manifestnode(self):
         return self._changeset[0]
 
-    def rev(self):
-        return self._rev
     def node(self):
         return self._node
     def hex(self):
