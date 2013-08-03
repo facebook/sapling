@@ -73,7 +73,7 @@ Go at a random point and try to continue
   $ hg up 0
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ HGEDITOR='echo foobaz > ' hg histedit --continue
-  abort: working directory parent is not a descendant of 055a42cdd887
+  abort: 055a42cdd887 is not an ancestor of working directory
   (update to 055a42cdd887 or descendant and run "hg histedit --continue" again)
   [255]
   $ hg up 3
