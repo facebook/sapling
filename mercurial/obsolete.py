@@ -496,6 +496,9 @@ def successorssets(repo, initialnode, cache=None):
     for its live spawn. Code that makes multiple calls to `successorssets`
     *must* use this cache mechanism or suffer terrible performances."""
 
+    if isinstance(initialnode, int):
+        initialnode = repo.unfiltered().changelog.node(initialnode)
+
     succmarkers = repo.obsstore.successors
 
     # Stack of nodes we search successors sets for
