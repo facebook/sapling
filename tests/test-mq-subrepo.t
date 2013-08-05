@@ -213,6 +213,7 @@ handle subrepos safely on qrefresh
 
 
 handle subrepos safely on qpush/qpop
+(and we cannot qpop / qpush with a modified subrepo)
 
   $ mkrepo repo-2499-qpush
   $ mksubrepo sub
@@ -220,31 +221,57 @@ handle subrepos safely on qpush/qpop
   $ hg -R sub ci -m0sub
   $ echo sub = sub > .hgsub
   $ hg add .hgsub
-  $ hg qnew -m0 0.diff
+  $ hg commit -m0
+  $ hg debugsub
+  path sub
+   source   sub
+   revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
+  $ echo foo > ./sub/a
+  $ hg -R sub commit -m foo
+  $ hg commit -m1
+  $ hg qimport -r "0:tip"
+
+qpop
+  $ hg -R sub update 0000
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg qpop
+  abort: local changed subrepos found, refresh first
+  [255]
+  $ hg revert sub
+  reverting subrepo sub
+  adding sub/a
+  $ hg qpop
+  popping 1.diff
+  now at: 0.diff
+  $ hg status -AS
+  M sub/a
+  C .hgsub
+  C .hgsubstate
   $ hg debugsub
   path sub
    source   sub
    revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
 
-qpop
-  $ hg qpop
-  popping 0.diff
-  patch queue now empty
-  $ hg status -AS
-  $ hg debugsub
-
 qpush
+  $ hg -R sub update 0000
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg qpush
-  applying 0.diff
-  now at: 0.diff
+  abort: local changed subrepos found, refresh first
+  [255]
+  $ hg revert sub
+  reverting subrepo sub
+  adding sub/a
+  $ hg qpush
+  applying 1.diff
+  now at: 1.diff
   $ hg status -AS
+  M .hgsubstate
   C .hgsub
-  C .hgsubstate
   C sub/a
   $ hg debugsub
   path sub
    source   sub
-   revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
+   revision aa037b301eba54f350c75951b5486727fb98cbb5
 
   $ cd ..
 

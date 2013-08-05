@@ -975,11 +975,20 @@ class queue(object):
         else:
             raise util.Abort(_("local changes found"))
 
+    def localchangedsubreposfound(self, refresh=True):
+        if refresh:
+            raise util.Abort(_("local changed subrepos found, refresh first"))
+        else:
+            raise util.Abort(_("local changed subrepos found"))
+
     def checklocalchanges(self, repo, force=False, refresh=True):
         cmdutil.checkunfinished(repo)
         m, a, r, d = repo.status()[:4]
-        if (m or a or r or d) and not force:
-            self.localchangesfound(refresh)
+        if not force:
+            if (m or a or r or d):
+                self.localchangesfound(refresh)
+            if self.checksubstate(repo):
+                self.localchangedsubreposfound(refresh)
         return m, a, r, d
 
     _reserved = ('series', 'status', 'guards', '.', '..')
