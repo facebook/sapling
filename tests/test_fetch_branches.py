@@ -2,9 +2,9 @@ import test_util
 
 import unittest
 
+from mercurial import error
 from mercurial import hg
 from mercurial import node
-from mercurial import util as hgutil
 
 class TestFetchBranches(test_util.TestBase):
     def _load_fixture_and_fetch_with_anchor(self, fixture_name, anchor):
@@ -108,7 +108,7 @@ class TestFetchBranches(test_util.TestBase):
         self.test_branch_tip_update_to_default(True)
 
     def test_branch_pull_anchor(self):
-        self.assertRaises(hgutil.Abort,
+        self.assertRaises(error.RepoLookupError,
                           self._load_fixture_and_fetch_with_anchor,
                           'unorderedbranch.svndump', 'NaN')
         repo = self._load_fixture_and_fetch_with_anchor(

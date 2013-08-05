@@ -148,16 +148,6 @@ def pickle_atomic(data, file_path):
     else:
         f.close()
 
-# TODO remove when we drop 1.3 support
-def progress(ui, *args, **kwargs):
-    if getattr(ui, 'progress', False):
-        return ui.progress(*args, **kwargs)
-
-# TODO remove when we drop 1.5 support
-remoteui = getattr(cmdutil, 'remoteui', getattr(hg, 'remoteui', False))
-if not remoteui:
-    raise ImportError('Failed to import remoteui')
-
 def parseurl(url, heads=[]):
     parsed = hg.parseurl(url, heads)
     if len(parsed) == 3:
@@ -373,35 +363,6 @@ def getfilestoresize(ui):
         size = -1
     return size
 
-# Copy-paste from mercurial.util to avoid having to deal with backward
-# compatibility, plus the cache size is configurable.
-def lrucachefunc(func, size):
-    '''cache most recent results of function calls'''
-    cache = {}
-    order = deque()
-    if func.func_code.co_argcount == 1:
-        def f(arg):
-            if arg not in cache:
-                if len(cache) > size:
-                    del cache[order.popleft()]
-                cache[arg] = func(arg)
-            else:
-                order.remove(arg)
-            order.append(arg)
-            return cache[arg]
-    else:
-        def f(*args):
-            if args not in cache:
-                if len(cache) > size:
-                    del cache[order.popleft()]
-                cache[args] = func(*args)
-            else:
-                order.remove(args)
-            order.append(args)
-            return cache[args]
-
-    return f
-
 def parse_revnum(svnrepo, r):
     try:
         return int(r or 0)
@@ -409,5 +370,4 @@ def parse_revnum(svnrepo, r):
         if isinstance(r, str) and r.lower() in ('head', 'tip'):
             return svnrepo.last_changed_rev
         else:
-            # TODO: use error.RepoLookupError when we drop 1.3?
-            raise hgutil.Abort("unknown Subversion revision %r" % r)
+            raise error.RepoLookupError("unknown Subversion revision %r" % r)

@@ -135,7 +135,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     # of the repository instead. During this traversal, we find all converted
     # changesets that close a branch, and store their first parent
     for rev in xrange(startrev, len(repo)):
-        util.progress(ui, 'prepare', rev - startrev, total=numrevs)
+        ui.progress('prepare', rev - startrev, total=numrevs)
         try:
             ctx = repo[rev]
         except error.RepoError:
@@ -165,10 +165,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 closed.add(parentctx.rev())
 
     lastpulled.write(str(youngest) + '\n')
-    util.progress(ui, 'prepare', None, total=numrevs)
+    ui.progress('prepare', None, total=numrevs)
 
     for rev in xrange(startrev, len(repo)):
-        util.progress(ui, 'rebuild', rev-startrev, total=numrevs)
+        ui.progress('rebuild', rev-startrev, total=numrevs)
         try:
             ctx = repo[rev]
         except error.RepoError:
@@ -300,7 +300,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                   int(parentrev),
                                   revision)
 
-    util.progress(ui, 'rebuild', None, total=numrevs)
+    ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
     branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')

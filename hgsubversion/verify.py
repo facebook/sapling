@@ -59,7 +59,7 @@ def verify(ui, repo, args=None, **opts):
 
         svndata = svn.list_files(branchpath, srev)
         for i, (fn, type) in enumerate(svndata):
-            util.progress(ui, 'verify', i, total=len(hgfiles))
+            ui.progress('verify', i, total=len(hgfiles))
 
             if type != 'f':
                 continue
@@ -90,7 +90,7 @@ def verify(ui, repo, args=None, **opts):
                 ui.write('missing file: %s\n' % f)
             result = 1
 
-        util.progress(ui, 'verify', None, total=len(hgfiles))
+        ui.progress('verify', None, total=len(hgfiles))
 
     else:
         class VerifyEditor(svnwrap.Editor):
@@ -132,7 +132,7 @@ def verify(ui, repo, args=None, **opts):
                     self.props = None
 
                 self.seen += 1
-                util.progress(self.ui, 'verify', self.seen, total=self.total)
+                self.ui.progress('verify', self.seen, total=self.total)
 
             def open_file(self, path, base_revnum):
                 raise NotImplementedError()
@@ -191,7 +191,7 @@ def verify(ui, repo, args=None, **opts):
                 raise NotImplementedError()
 
             def check(self):
-                util.progress(self.ui, 'verify', None, total=self.total)
+                self.ui.progress('verify', None, total=self.total)
 
                 for f in self.unexpected:
                     self.ui.warn('unexpected file: %s\n' % f)

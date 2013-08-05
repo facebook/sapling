@@ -1,11 +1,7 @@
 from hgext import rebase as hgrebase
 
 from mercurial import cmdutil
-try:
-    from mercurial import discovery
-    discovery.nullid  # force demandimport to import the module
-except ImportError:
-    discovery = None
+from mercurial import discovery
 from mercurial import patch
 from mercurial import hg
 from mercurial import util as hgutil
@@ -13,6 +9,8 @@ from mercurial import node
 from mercurial import i18n
 from mercurial import extensions
 from mercurial import repair
+from mercurial import revset
+from mercurial import scmutil
 
 import layouts
 import os
@@ -22,12 +20,6 @@ import stupid as stupidmod
 import svnwrap
 import svnrepo
 import util
-
-try:
-    from mercurial import scmutil
-    revpair = scmutil.revpair
-except ImportError:
-    revpair = cmdutil.revpair
 
 pullfuns = {
     True: replay.convert_rev,
@@ -128,11 +120,10 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     parent = repo.parents()[0].node()
     hashes = meta.revmap.hashes()
     common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
-    if discovery is not None:
-        outobj = getattr(discovery, 'outgoing', None)
-        if outobj is not None:
-            # Mercurial 2.1 and later
-            return outobj(repo.changelog, common, heads)
+    outobj = getattr(discovery, 'outgoing', None)
+    if outobj is not None:
+        # Mercurial 2.1 and later
+        return outobj(repo.changelog, common, heads)
     # Mercurial 2.0 and earlier
     return common, heads
 
@@ -163,7 +154,7 @@ def diff(orig, ui, repo, *args, **opts):
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
         opts['rev'] = ['%s:.' % node.hex(parent.node()), ]
-    node1, node2 = revpair(repo, opts['rev'])
+    node1, node2 = scmutil.revpair(repo, opts['rev'])
     baserev, _junk = hashes.get(node1, (-1, 'junk'))
     newrev, _junk = hashes.get(node2, (-1, 'junk'))
     it = patch.diff(repo, node1, node2,
@@ -181,11 +172,7 @@ def push(repo, dest, force, revs):
     """push revisions starting at a specified head back to Subversion.
     """
     assert not revs, 'designated revisions for push remains unimplemented.'
-    if hasattr(cmdutil, 'bail_if_changed'):
-        cmdutil.bail_if_changed(repo)
-    else:
-        # Since 1.9 (d68ddccf276b)
-        cmdutil.bailifchanged(repo)
+    cmdutil.bailifchanged(repo)
     checkpush = getattr(repo, 'checkpush', None)
     if checkpush:
         checkpush(force, revs)
@@ -328,7 +315,8 @@ def push(repo, dest, force, revs):
                 parent = repo[None].p1()
                 if parent.node() in temporary_commits:
                     hg.update(repo, parent.p1().node())
-                repair.strip(ui, repo, temporary_commits, backup=None)
+                for n in temporary_commits:
+                    repair.strip(ui, repo, n, backup=None)
         finally:
             util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
@@ -429,7 +417,7 @@ def pull(repo, source, heads=[], force=False):
                             w = hgutil.termwidth()
                         bits = (r.revnum, r.author, msg)
                         ui.status(('[r%d] %s: %s' % bits)[:w] + '\n')
-                        util.progress(ui, 'pull', r.revnum - start, total=total)
+                        ui.progress('pull', r.revnum - start, total=total)
 
                         meta.save_tbdelta(tbdelta)
                         close = pullfuns[have_replay](ui, meta, svn, r, tbdelta,
@@ -464,7 +452,7 @@ def pull(repo, source, heads=[], force=False):
             ui.traceback()
     finally:
         if total is not None:
-            util.progress(ui, 'pull', None, total=total)
+            ui.progress('pull', None, total=total)
         util.swap_out_encoding(old_encoding)
 
     if lastpulled is not None:
