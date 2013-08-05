@@ -8,6 +8,7 @@ from mercurial import cmdutil
 from mercurial import error
 from mercurial import hg
 from mercurial import node
+from mercurial import repair
 from mercurial import util as hgutil
 
 try:
@@ -83,6 +84,14 @@ def islocalrepo(url):
             return True
         path = path.rsplit('/', 1)[0]
     return False
+
+def strip(ui, repo, changesets, *args , **opts):
+    try:
+        repair.strip(ui, repo, changesets, *args, **opts)
+    except TypeError:
+        # only 2.1.2 and later allow strip to take a list of nodes
+        for changeset in changesets:
+            repair.strip(ui, repo, changeset, *args, **opts)
 
 
 def version(ui):

@@ -17,6 +17,8 @@ from mercurial import node
 from mercurial import revlog
 from mercurial import util as hgutil
 
+from hgsubversion import util
+
 import time
 
 
@@ -594,10 +596,12 @@ class PushTests(test_util.TestBase):
         # verify that the first commit is pushed, and the second is not
         commit2 = self.repo['tip']
         self.assertEqual(commit2.files(), ['delta', ])
-        self.assertTrue(commit2.mutable())
+        self.assertEqual(util.getsvnrev(commit2), None)
         commit1 = commit2.parents()[0]
         self.assertEqual(commit1.files(), ['gamma', ])
-        self.assertFalse(commit1.mutable())
+        prefix = 'svn:' + self.repo.svnmeta().uuid
+        self.assertEqual(util.getsvnrev(commit1),
+                         prefix + '/branches/the_branch@5')
 
     def test_push_two_that_modify_same_file(self):
         '''
@@ -623,10 +627,14 @@ class PushTests(test_util.TestBase):
         # verify that both commits are pushed
         commit1 = self.repo['tip']
         self.assertEqual(commit1.files(), ['delta', 'gamma'])
-        self.assertFalse(commit1.mutable())
+
+        prefix = 'svn:' + self.repo.svnmeta().uuid
+        self.assertEqual(util.getsvnrev(commit1),
+                         prefix + '/branches/the_branch@6')
         commit2 = commit1.parents()[0]
         self.assertEqual(commit2.files(), ['gamma'])
-        self.assertFalse(commit2.mutable())
+        self.assertEqual(util.getsvnrev(commit2),
+                         prefix + '/branches/the_branch@5')
 
     def test_push_in_subdir(self, commit=True):
         repo = self.repo

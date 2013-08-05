@@ -303,7 +303,7 @@ def push(repo, dest, force, revs):
             util.swap_out_encoding()
 
         # strip the original changesets since the push was successful
-        repair.strip(ui, repo, outgoing, "all")
+        util.strip(ui, repo, outgoing, "all")
     finally:
         try:
             # It's always safe to delete the temporary commits.
@@ -315,8 +315,7 @@ def push(repo, dest, force, revs):
                 parent = repo[None].p1()
                 if parent.node() in temporary_commits:
                     hg.update(repo, parent.p1().node())
-                for n in temporary_commits:
-                    repair.strip(ui, repo, n, backup=None)
+                util.strip(ui, repo, temporary_commits, backup=None)
         finally:
             util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push
