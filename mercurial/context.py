@@ -59,6 +59,10 @@ class basectx(object):
     def __getitem__(self, key):
         return self.filectx(key)
 
+    def __iter__(self):
+        for f in sorted(self._manifest):
+            yield f
+
     @propertycache
     def substate(self):
         return subrepo.state(self, self._repo.ui)
@@ -202,10 +206,6 @@ class changectx(basectx):
         if p[1] == nullrev:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def __iter__(self):
-        for f in sorted(self._manifest):
-            yield f
 
     def changeset(self):
         return self._changeset
