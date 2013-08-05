@@ -77,6 +77,8 @@ class basectx(object):
         return self._manifest
     def phasestr(self):
         return phases.phasenames[self.phase()]
+    def mutable(self):
+        return self.phase() > phases.public
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
@@ -236,8 +238,6 @@ class changectx(basectx):
         return self._repo.nodebookmarks(self._node)
     def phase(self):
         return self._repo._phasecache.phase(self._repo, self._rev)
-    def mutable(self):
-        return self.phase() > phases.public
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, 'visible')
 
