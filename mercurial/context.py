@@ -113,6 +113,12 @@ class basectx(object):
     def filenode(self, path):
         return self._fileinfo(path)[0]
 
+    def flags(self, path):
+        try:
+            return self._fileinfo(path)[1]
+        except error.LookupError:
+            return ''
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -333,12 +339,6 @@ class changectx(basectx):
         if self.divergent():
             troubles.append('divergent')
         return troubles
-
-    def flags(self, path):
-        try:
-            return self._fileinfo(path)[1]
-        except error.LookupError:
-            return ''
 
     def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
