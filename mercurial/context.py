@@ -84,6 +84,9 @@ class basectx(object):
         """return contexts for each parent changeset"""
         return self._parents
 
+    def p1(self):
+        return self._parents[0]
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -244,9 +247,6 @@ class changectx(basectx):
         return self._repo._phasecache.phase(self._repo, self._rev)
     def hidden(self):
         return self._rev in repoview.filterrevs(self._repo, 'visible')
-
-    def p1(self):
-        return self._parents[0]
 
     def p2(self):
         if len(self._parents) == 2:
