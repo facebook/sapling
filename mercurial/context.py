@@ -138,6 +138,10 @@ class basectx(object):
         return patch.diff(self._repo, ctx2.node(), self.node(),
                           match=match, opts=diffopts)
 
+    @propertycache
+    def _dirs(self):
+        return scmutil.dirs(self._manifest)
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -398,10 +402,6 @@ class changectx(basectx):
                 continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
-
-    @propertycache
-    def _dirs(self):
-        return scmutil.dirs(self._manifest)
 
     def dirs(self):
         return self._dirs
