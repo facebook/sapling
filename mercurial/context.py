@@ -44,6 +44,12 @@ class basectx(object):
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
 
+    def __eq__(self, other):
+        try:
+            return type(self) == type(other) and self._rev == other._rev
+        except AttributeError:
+            return False
+
     def rev(self):
         return self._rev
     def node(self):
@@ -161,12 +167,6 @@ class changectx(basectx):
             return hash(self._rev)
         except AttributeError:
             return id(self)
-
-    def __eq__(self, other):
-        try:
-            return self._rev == other._rev
-        except AttributeError:
-            return False
 
     def __ne__(self, other):
         return not (self == other)
