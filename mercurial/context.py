@@ -92,6 +92,24 @@ class basectx(object):
             return self._parents[1]
         return changectx(self._repo, -1)
 
+    def _fileinfo(self, path):
+        if '_manifest' in self.__dict__:
+            try:
+                return self._manifest[path], self._manifest.flags(path)
+            except KeyError:
+                raise error.ManifestLookupError(self._node, path,
+                                                _('not found in manifest'))
+        if '_manifestdelta' in self.__dict__ or path in self.files():
+            if path in self._manifestdelta:
+                return (self._manifestdelta[path],
+                        self._manifestdelta.flags(path))
+        node, flag = self._repo.manifest.find(self._changeset[0], path)
+        if not node:
+            raise error.ManifestLookupError(self._node, path,
+                                            _('not found in manifest'))
+
+        return node, flag
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -312,24 +330,6 @@ class changectx(basectx):
         if self.divergent():
             troubles.append('divergent')
         return troubles
-
-    def _fileinfo(self, path):
-        if '_manifest' in self.__dict__:
-            try:
-                return self._manifest[path], self._manifest.flags(path)
-            except KeyError:
-                raise error.ManifestLookupError(self._node, path,
-                                                _('not found in manifest'))
-        if '_manifestdelta' in self.__dict__ or path in self.files():
-            if path in self._manifestdelta:
-                return (self._manifestdelta[path],
-                        self._manifestdelta.flags(path))
-        node, flag = self._repo.manifest.find(self._changeset[0], path)
-        if not node:
-            raise error.ManifestLookupError(self._node, path,
-                                            _('not found in manifest'))
-
-        return node, flag
 
     def filenode(self, path):
         return self._fileinfo(path)[0]
