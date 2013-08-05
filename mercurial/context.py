@@ -142,6 +142,9 @@ class basectx(object):
     def _dirs(self):
         return scmutil.dirs(self._manifest)
 
+    def dirs(self):
+        return self._dirs
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -402,9 +405,6 @@ class changectx(basectx):
                 continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
-
-    def dirs(self):
-        return self._dirs
 
     def dirty(self):
         return False
