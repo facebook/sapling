@@ -328,6 +328,7 @@ ancestor can accept 0 or more arguments
   7
   $ log 'keyword(issue)'
   6
+  $ log 'keyword("test a")'
   $ log 'limit(head(), 1)'
   0
   $ log 'matching(6)'
