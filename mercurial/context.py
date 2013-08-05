@@ -53,6 +53,9 @@ class basectx(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def __contains__(self, key):
+        return key in self._manifest
+
     @propertycache
     def substate(self):
         return subrepo.state(self, self._repo.ui)
@@ -196,9 +199,6 @@ class changectx(basectx):
         if p[1] == nullrev:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def __contains__(self, key):
-        return key in self._manifest
 
     def __getitem__(self, key):
         return self.filectx(key)
