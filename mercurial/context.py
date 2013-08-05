@@ -50,6 +50,9 @@ class basectx(object):
         except AttributeError:
             return False
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def rev(self):
         return self._rev
     def node(self):
@@ -167,9 +170,6 @@ class changectx(basectx):
             return hash(self._rev)
         except AttributeError:
             return id(self)
-
-    def __ne__(self, other):
-        return not (self == other)
 
     def __nonzero__(self):
         return self._rev != nullrev
