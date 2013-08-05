@@ -110,6 +110,9 @@ class basectx(object):
 
         return node, flag
 
+    def filenode(self, path):
+        return self._fileinfo(path)[0]
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -330,9 +333,6 @@ class changectx(basectx):
         if self.divergent():
             troubles.append('divergent')
         return troubles
-
-    def filenode(self, path):
-        return self._fileinfo(path)[0]
 
     def flags(self, path):
         try:
