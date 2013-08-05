@@ -810,7 +810,7 @@ class filectx(object):
             self._copycache[sc2] = copies.pathcopies(c2)
         return self._copycache[sc2]
 
-class workingctx(changectx):
+class workingctx(basectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
     date - any valid date string or (unixtime, offset), or None.
