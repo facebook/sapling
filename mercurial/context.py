@@ -119,6 +119,9 @@ class basectx(object):
         except error.LookupError:
             return ''
 
+    def sub(self, path):
+        return subrepo.subrepo(self, path)
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -379,9 +382,6 @@ class changectx(basectx):
                 continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
-
-    def sub(self, path):
-        return subrepo.subrepo(self, path)
 
     def match(self, pats=[], include=None, exclude=None, default='glob'):
         r = self._repo
