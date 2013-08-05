@@ -145,6 +145,9 @@ class basectx(object):
     def dirs(self):
         return self._dirs
 
+    def dirty(self):
+        return False
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already presnt in
@@ -405,9 +408,6 @@ class changectx(basectx):
                 continue
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
-
-    def dirty(self):
-        return False
 
 class filectx(object):
     """A filecontext object makes access to data related to a particular
