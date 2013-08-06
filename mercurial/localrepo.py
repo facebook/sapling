@@ -1457,14 +1457,8 @@ class localrepository(object):
                     del mf[fn]
             return mf
 
-        if isinstance(node1, context.changectx):
-            ctx1 = node1
-        else:
-            ctx1 = self[node1]
-        if isinstance(node2, context.changectx):
-            ctx2 = node2
-        else:
-            ctx2 = self[node2]
+        ctx1 = self[node1]
+        ctx2 = self[node2]
 
         working = ctx2.rev() is None
         parentworking = working and ctx1 == self['.']
