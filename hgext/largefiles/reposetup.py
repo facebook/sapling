@@ -10,8 +10,7 @@
 import copy
 import os
 
-from mercurial import context, error, manifest, match as match_, util, \
-    discovery
+from mercurial import error, manifest, match as match_, util, discovery
 from mercurial import node as node_
 from mercurial.i18n import _
 from mercurial import localrepo
@@ -92,14 +91,8 @@ def reposetup(ui, repo):
             else:
                 # some calls in this function rely on the old version of status
                 self.lfstatus = False
-                if isinstance(node1, context.changectx):
-                    ctx1 = node1
-                else:
-                    ctx1 = self[node1]
-                if isinstance(node2, context.changectx):
-                    ctx2 = node2
-                else:
-                    ctx2 = self[node2]
+                ctx1 = self[node1]
+                ctx2 = self[node2]
                 working = ctx2.rev() is None
                 parentworking = working and ctx1 == self['.']
 
