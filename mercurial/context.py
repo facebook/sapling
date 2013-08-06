@@ -41,6 +41,12 @@ class changectx(basectx):
     the repo."""
     def __init__(self, repo, changeid=''):
         """changeid is a revision number, node, or tag"""
+
+        # since basectx.__new__ already took care of copying the object, we
+        # don't need to do anything in __init__, so we just exit here
+        if isinstance(changeid, basectx):
+            return
+
         if changeid == '':
             changeid = '.'
         self._repo = repo
