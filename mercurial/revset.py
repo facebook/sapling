@@ -1941,5 +1941,16 @@ def depth(tree):
     else:
         return 0
 
+def funcsused(tree):
+    if not isinstance(tree, tuple) or tree[0] in ('string', 'symbol'):
+        return set()
+    else:
+        funcs = set()
+        for s in tree[1:]:
+            funcs |= funcsused(s)
+        if tree[0] == 'func':
+            funcs.add(tree[1][1])
+        return funcs
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
