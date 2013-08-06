@@ -132,7 +132,7 @@ class basectx(object):
         """Returns a diff generator for the given contexts and matcher"""
         if ctx2 is None:
             ctx2 = self.p1()
-        if ctx2 is not None and not isinstance(ctx2, changectx):
+        if ctx2 is not None:
             ctx2 = self._repo[ctx2]
         diffopts = patch.diffopts(self._repo.ui, opts)
         return patch.diff(self._repo, ctx2.node(), self.node(),
