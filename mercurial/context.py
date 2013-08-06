@@ -24,7 +24,16 @@ class basectx(object):
     memctx: a context that represents changes in-memory and can also
             be committed."""
     def __new__(cls, repo, changeid='', *args, **kwargs):
-        return super(basectx, cls).__new__(cls)
+        if isinstance(changeid, basectx):
+            return changeid
+
+        o = super(basectx, cls).__new__(cls)
+
+        o._repo = repo
+        o._rev = nullrev
+        o._node = nullid
+
+        return o
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
