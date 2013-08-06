@@ -77,4 +77,4 @@ class BaseLayout(object):
         local_path should be relative to the root of the Mercurial working dir
 
         """
-        self.unimplemented('split_branch_and_local_path')
+        self.__unimplemented('split_remote_name')
