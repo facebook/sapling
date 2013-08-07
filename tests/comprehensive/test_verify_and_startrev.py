@@ -104,9 +104,7 @@ for case in fixtures:
         attrs[name] = buildmethod(case, name, True, 'standard')
     name = bname + '_single'
     attrs[name] = buildmethod(case, name, False, 'single')
-    # Disabled because the "stupid and real are the same" tests
-    # verify this plus even more.
-    # name = bname + '_single_stupid'
-    # attrs[name] = buildmethod(case, name, True, 'single')
+    name = bname + '_single_stupid'
+    attrs[name] = buildmethod(case, name, True, 'single')
 
 VerifyTests = type('VerifyTests', (test_util.TestBase,), attrs)

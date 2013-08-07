@@ -606,12 +606,18 @@ def checkbranch(meta, r, branch):
             return None
     return branchtip
 
-def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir):
+def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir,
+                      firstrun):
     '''Given a list of paths, return mapping of all branches touched
     to their branch path.
     '''
     branches = {}
-    paths_need_discovery = []
+    if firstrun:
+        paths_need_discovery = [p for (p, t) in listdir('', revnum)
+                                if t == 'f']
+    else:
+        paths_need_discovery = []
+
     for p in paths:
         relpath, branch, branchpath = meta.split_branch_path(p)
         if relpath is not None:
@@ -671,7 +677,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         raise hgutil.Abort('filemaps currently unsupported with stupid replay.')
 
     branches = branches_in_paths(meta, tbdelta, r.paths, r.revnum,
-                                 svn.checkpath, svn.list_files)
+                                 svn.checkpath, svn.list_files, firstrun)
     brpaths = branches.values()
     bad_branch_paths = {}
     for br, bp in branches.iteritems():
@@ -735,7 +741,8 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         # it, or we can force the existing fetch_branchrev() path. Do
         # the latter for now.
         incremental = (meta.revmap.oldest > 0 and
-                       parentctx.rev() != node.nullrev)
+                       parentctx.rev() != node.nullrev and
+                       not firstrun)
 
         if incremental:
             try:
