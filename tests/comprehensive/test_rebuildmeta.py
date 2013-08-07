@@ -30,13 +30,12 @@ expect_youngest_skew = [('file_mixed_with_branches.svndump', False, False),
 
 
 
-def _do_case(self, name, stupid, single):
+def _do_case(self, name, single):
     subdir = test_util.subdir.get(name, '')
     layout = 'auto'
     if single:
         layout = 'single'
-    repo, repo_path = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
-                                          layout=layout)
+    repo, repo_path = self.load_and_fetch(name, subdir=subdir, layout=layout)
     assert test_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
@@ -60,7 +59,7 @@ def _do_case(self, name, stupid, single):
         # remove the wrapper
         context.changectx.children = origchildren
 
-    self._run_assertions(name, stupid, single, src, dest, u)
+    self._run_assertions(name, single, src, dest, u)
 
     wc3_path = self.wc_path + '_partial'
     src, dest = test_util.hgclone(u,
@@ -94,10 +93,10 @@ def _do_case(self, name, stupid, single):
         # remove the wrapper
         context.changectx.children = origchildren
 
-    self._run_assertions(name, stupid, single, srcrepo, dest, u)
+    self._run_assertions(name, single, srcrepo, dest, u)
 
 
-def _run_assertions(self, name, stupid, single, src, dest, u):
+def _run_assertions(self, name, single, src, dest, u):
 
     self.assertTrue(os.path.isdir(os.path.join(src.path, 'svn')),
                     'no .hg/svn directory in the source!')
@@ -112,7 +111,7 @@ def _run_assertions(self, name, stupid, single, src, dest, u):
         self.assertTrue(os.path.isfile(dtf), '%r is missing!' % tf)
         old, new = open(stf).read(), open(dtf).read()
         if tf == 'lastpulled' and (name,
-                                   stupid, single) in expect_youngest_skew:
+                                   self.stupid, single) in expect_youngest_skew:
             self.assertNotEqual(old, new,
                                 'rebuildmeta unexpected match on youngest rev!')
             continue
@@ -137,15 +136,11 @@ def _run_assertions(self, name, stupid, single, src, dest, u):
             self.assertEqual(srcinfo[2], destinfo[2])
 
 
-def buildmethod(case, name, stupid, single):
-    m = lambda self: self._do_case(case, stupid, single)
+def buildmethod(case, name, single):
+    m = lambda self: self._do_case(case, single)
     m.__name__ = name
-    m.__doc__ = ('Test rebuildmeta on %s with %s replay. (%s)' %
-                 (case,
-                  (stupid and 'stupid') or 'real',
-                  (single and 'single') or 'standard',
-                  )
-                 )
+    m.__doc__ = ('Test rebuildmeta on %s (%s)' %
+                 (case, (single and 'single') or 'standard'))
     return m
 
 
@@ -156,16 +151,15 @@ skip = set([
 
 attrs = {'_do_case': _do_case,
          '_run_assertions': _run_assertions,
+         'stupid_mode_tests': True,
          }
 for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')]:
     # this fixture results in an empty repository, don't use it
     if case in skip:
         continue
     bname = 'test_' + case[:-len('.svndump')]
-    attrs[bname] = buildmethod(case, bname, False, False)
-    name = bname + '_stupid'
-    attrs[name] = buildmethod(case, name, True, False)
+    attrs[bname] = buildmethod(case, bname, False)
     name = bname + '_single'
-    attrs[name] = buildmethod(case, name, False, True)
+    attrs[name] = buildmethod(case, name, True)
 
 RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase,), attrs)
