@@ -402,9 +402,3 @@ HEAD subdir1/deps/project1
         self.commitchanges(changes)
         self.pushrevisions(stupid)
         self.assertchanges(changes, self.repo['tip'])
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExternals),
-           unittest.TestLoader().loadTestsFromTestCase(TestPushExternals),
-          ]
-    return unittest.TestSuite(all_tests)

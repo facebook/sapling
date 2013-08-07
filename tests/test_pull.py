@@ -79,7 +79,3 @@ class TestPull(test_util.TestBase):
         tip = repo['tip'].rev()
         self.assertEqual(tip, 1)
         self.assertEquals(verify.verify(repo.ui, repo, rev=tip), 0)
-
-def suite():
-    import unittest, sys
-    return unittest.findTestCases(sys.modules[__name__])

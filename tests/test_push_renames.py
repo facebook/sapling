@@ -113,9 +113,3 @@ class TestPushRenames(test_util.TestBase):
             'This failure means rename of an entire tree is broken.'
             ' There is a print on the preceding line commented out '
             'that should help you.')
-
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestPushRenames),
-          ]
-    return unittest.TestSuite(all_tests)

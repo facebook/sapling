@@ -100,8 +100,3 @@ class ParseAutoPropsTests(test_util.TestBase):
             'svn:eol-style': 'native',
             'svn:executable': 'true'},
             props)
-
-
-def suite():
-    return unittest.findTestCases(sys.modules[__name__])
-

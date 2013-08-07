@@ -57,10 +57,3 @@ class TestMergeSpecial(test_util.TestBase):
         ctx = repo['tip']
         self.assertEqual(ctx['fnord'].flags(), 'l')
         self.assertEqual(ctx['exe'].flags(), 'x')
-
-def suite():
-    all_tests = [
-        unittest.TestLoader().loadTestsFromTestCase(TestFetchSymlinks),
-        unittest.TestLoader().loadTestsFromTestCase(TestMergeSpecial),
-        ]
-    return unittest.TestSuite(all_tests)

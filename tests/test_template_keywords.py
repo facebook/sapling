@@ -80,7 +80,3 @@ class TestLogKeywords(test_util.TestBase):
         self.assertRaises(error.ParseError,
                           commands.log, self.ui(), repo,
                           template='{rev}:{svnrev} ', **defaults)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestLogKeywords), ]
-    return unittest.TestSuite(all_tests)

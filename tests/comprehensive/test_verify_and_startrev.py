@@ -110,7 +110,3 @@ for case in fixtures:
     # attrs[name] = buildmethod(case, name, True, 'single')
 
 VerifyTests = type('VerifyTests', (test_util.TestBase,), attrs)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(VerifyTests)]
-    return unittest.TestSuite(all_tests)

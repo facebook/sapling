@@ -29,6 +29,3 @@ class TestSvnPreCommitHooks(test_util.TestBase):
                    ]
         self.commitchanges(changes)
         self.assertRaises(util.Abort, self.pushrevisions)
-
-def suite():
-    return unittest.findTestCases(sys.modules[__name__])

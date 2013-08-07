@@ -285,9 +285,3 @@ o  changeset: 0:02996a5980ba
 
     def test_fetch_movetotrunk_stupid(self):
         self.test_fetch_movetotrunk(stupid=True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
-           unittest.TestLoader().loadTestsFromTestCase(TestStupidPull),
-          ]
-    return unittest.TestSuite(all_tests)

@@ -161,8 +161,3 @@ class TestFetchBranches(test_util.TestBase):
 
     def test_replace_branch_with_branch_stupid(self, stupid=False):
         self.test_replace_branch_with_branch(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
-          ]
-    return unittest.TestSuite(all_tests)

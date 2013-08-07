@@ -274,7 +274,3 @@ class TestSingleDir(test_util.TestBase):
     @test_util.requiresoption('branch')
     def test_push_single_dir_renamed_branch_stupid(self):
         self.test_push_single_dir_renamed_branch(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestSingleDir)]
-    return unittest.TestSuite(all_tests)

@@ -679,16 +679,3 @@ class PushTests(test_util.TestBase):
         self.assertEqual(tip['adding_file'].data(), 'fooFirstFile')
         self.assertEqual(tip['newdir/new_file'].data(), 'fooNewFile')
         self.assertEqual(tip.branch(), 'default')
-
-
-def suite():
-    test_classes = [PushTests, ]
-    all_tests = []
-    # This is the quickest hack I could come up with to load all the tests from
-    # both classes. Would love a patch that simplifies this without adding
-    # dependencies.
-    for tc in test_classes:
-        for attr in dir(tc):
-            if attr.startswith('test_'):
-                all_tests.append(tc(attr))
-    return unittest.TestSuite(all_tests)

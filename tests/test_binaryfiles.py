@@ -9,8 +9,3 @@ class TestFetchBinaryFiles(test_util.TestBase):
 
     def test_binaryfiles_stupid(self):
         self.test_binaryfiles(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBinaryFiles),
-          ]
-    return unittest.TestSuite(all_tests)

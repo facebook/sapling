@@ -57,8 +57,3 @@ class TestRootAsSubdirOfRepo(TestBasicRepoLayout):
         self.repo = svnwrap.SubversionRepo(test_util.fileurl(
             self.repo_path + '/dummyproj'
         ))
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestBasicRepoLayout),
-           unittest.TestLoader().loadTestsFromTestCase(TestRootAsSubdirOfRepo)]
-    return unittest.TestSuite(all_tests)

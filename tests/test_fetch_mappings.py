@@ -368,6 +368,3 @@ class MapTests(test_util.TestBase):
 
     def test_empty_log_message_stupid(self):
         self.test_empty_log_message(True)
-
-def suite():
-    return unittest.TestLoader().loadTestsFromTestCase(MapTests)

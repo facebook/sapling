@@ -29,8 +29,3 @@ class TestFetchTruncatedHistory(test_util.TestBase):
 
     def test_truncated_history_stupid(self):
         self.test_truncated_history(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchTruncatedHistory),
-          ]
-    return unittest.TestSuite(all_tests)

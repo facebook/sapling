@@ -72,7 +72,3 @@ class TestSubversionUrls(test_util.TestBase):
         repo1 = svnrepo.svnremoterepo(ui, repo_url + subdir)
         repo2 = svnrepo.svnremoterepo(ui, repo_url + quoted_subdir)
         self.assertEqual(repo1.svnurl, repo2.svnurl)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestSubversionUrls)]
-    return unittest.TestSuite(all_tests)

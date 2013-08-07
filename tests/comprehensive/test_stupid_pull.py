@@ -56,9 +56,3 @@ for case in (f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     attrs[name] = buildmethod(case, name, 'single')
 
 StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
-
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(StupidPullTests),
-          ]
-    return unittest.TestSuite(all_tests)

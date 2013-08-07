@@ -80,9 +80,3 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     attrs[name] = test_rebuildmeta.buildmethod(case, name, False, True)
 
 UpdateMetaTests = type('UpdateMetaTests', (test_util.TestBase,), attrs)
-
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(UpdateMetaTests),
-          ]
-    return unittest.TestSuite(all_tests)

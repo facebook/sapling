@@ -1,5 +1,7 @@
 import unittest
 
+import test_util
+
 from hgsubversion import stupid
 
 
@@ -141,6 +143,3 @@ Added: svn:executable
         changed = stupid.parsediff(data)
         self.assertEqual(['empty1', 'empty2', 'binary1', 'text1', 'binary2', 'text2'],
                          [f.name for f in changed])
-
-def suite():
-    return unittest.TestLoader().loadTestsFromTestCase(RegexTests)

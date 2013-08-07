@@ -43,6 +43,3 @@ class TestHooks(test_util.TestBase):
         commands.pull(newrepo.ui, newrepo)
         hgsubversion.svncommands.updatemeta = oldupdatemeta
         self.assertTrue(self.called)
-
-def suite():
-    return unittest.findTestCases(sys.modules[__name__])

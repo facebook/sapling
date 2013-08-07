@@ -100,7 +100,3 @@ def _monkey_unpatch(to_patch, start=None):
 
 def _patchbackend_raise(*p, **kw):
     raise mercurial.patch.PatchError("patch failed")
-
-def suite():
-    import unittest, sys
-    return unittest.findTestCases(sys.modules[__name__])

@@ -33,8 +33,3 @@ class TestPushEol(test_util.TestBase):
 
     def test_push_dirs_stupid(self):
         self._test_push_dirs(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestPushEol),
-          ]
-    return unittest.TestSuite(all_tests)

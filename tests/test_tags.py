@@ -275,7 +275,3 @@ Fix tag pt 2.
 
     def test_tagging_into_tag_stupid(self):
         self.test_tagging_into_tag(True)
-
-
-def suite():
-    return unittest.TestLoader().loadTestsFromTestCase(TestTags)

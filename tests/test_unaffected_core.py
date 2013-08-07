@@ -86,7 +86,3 @@ class TestMercurialCore(test_util.TestBase):
         repo2 = hg.repository(ui, self.wc_path + '2')
 
         self.assertEqual(repo[branch].hex(), repo2['.'].hex())
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestMercurialCore)]
-    return unittest.TestSuite(all_tests)

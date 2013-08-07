@@ -341,8 +341,3 @@ missing file: binary3
         # rebuildmeta --unsafe-skip-uuid-check with unrelated repo
         svncommands.rebuildmeta(self.ui(), repo=self.repo, args=[otherurl],
                                 unsafe_skip_uuid_check=True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(UtilityTests),
-          ]
-    return unittest.TestSuite(all_tests)

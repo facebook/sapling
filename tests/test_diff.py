@@ -35,9 +35,3 @@ class DiffTests(test_util.TestBase):
         u.pushbuffer()
         wrappers.diff(lambda x, y, z: None, u, self.repo, svn=True)
         self.assertEqual(u.popbuffer(), expected_diff_output)
-
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(DiffTests),
-          ]
-    return unittest.TestSuite(all_tests)

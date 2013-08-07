@@ -28,8 +28,3 @@ class TestFetchExec(test_util.TestBase):
 
     def test_empty_prop_val_executable_stupid(self):
         self.test_empty_prop_val_executable(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchExec),
-          ]
-    return unittest.TestSuite(all_tests)

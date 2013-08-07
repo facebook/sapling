@@ -76,8 +76,3 @@ class TestFetchRenames(test_util.TestBase):
 
     def test_case_stupid(self):
         self._test_case(True)
-
-def suite():
-    all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchRenames),
-          ]
-    return unittest.TestSuite(all_tests)
