@@ -1,8 +1,15 @@
-import test_util
-
 import os
 import pickle
 import unittest
+import sys
+
+# wrapped in a try/except because of weirdness in how
+# run.py works as compared to nose.
+try:
+    import test_util
+except ImportError:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    import test_util
 
 from mercurial import context
 from mercurial import extensions

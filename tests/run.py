@@ -27,20 +27,20 @@ def tests():
     import test_push_dirs
     import test_push_eol
     import test_push_autoprops
-    import test_rebuildmeta
     import test_single_dir_clone
     import test_svnwrap
     import test_tags
     import test_template_keywords
     import test_utility_commands
     import test_unaffected_core
-    import test_updatemeta
     import test_urls
 
     sys.path.append(os.path.dirname(__file__))
     sys.path.append(os.path.join(os.path.dirname(__file__), 'comprehensive'))
 
+    import test_rebuildmeta
     import test_stupid_pull
+    import test_updatemeta
     import test_verify_and_startrev
 
     return locals()
