@@ -101,21 +101,24 @@ if __name__ == '__main__':
 
     args = [i.split('.py')[0].replace('-', '_') for i in args]
 
+    loader = unittest.TestLoader()
+    suite = unittest.TestSuite()
+
     if not args:
         check = lambda x: options.comprehensive or not comprehensive(x)
-        mods = [m for (n, m) in sorted(all_tests.iteritems()) if check(m)]
-        suite = [m.suite() for m in mods]
+        suite.addTests(loader.loadTestsFromModule(m)
+                       for (n, m) in sorted(all_tests.iteritems())
+                       if check(m))
     else:
-        suite = []
         for arg in args:
             if arg == 'test_util':
                 continue
             elif arg not in all_tests:
                 print >> sys.stderr, 'test module %s not available' % arg
             else:
-                suite.append(all_tests[arg].suite())
+                suite.addTest(loader.loadTestsFromModule(all_tests[arg]))
 
     runner = unittest.TextTestRunner(**testargs)
-    result = runner.run(unittest.TestSuite(suite))
+    result = runner.run(suite)
     if not result.wasSuccessful():
         sys.exit(1)
