@@ -414,8 +414,8 @@ class TestBase(unittest.TestCase):
 
         _verify_our_modules()
 
-    def ui(self, stupid=False, layout='auto'):
-        return testui(self.stupid or stupid, layout)
+    def ui(self, layout='auto'):
+        return testui(self.stupid, layout)
 
     def load_svndump(self, fixture_name):
         '''Loads an svnadmin dump into a fresh repo. Return the svn repo
@@ -448,7 +448,7 @@ class TestBase(unittest.TestCase):
             tarball.extract(entry, path)
         return path
 
-    def fetch(self, repo_path, subdir=None, stupid=False, layout='auto',
+    def fetch(self, repo_path, subdir=None, layout='auto',
             startrev=0, externals=None, noupdate=True, dest=None, rev=None,
             config=None):
         if layout == 'single':
@@ -467,7 +467,7 @@ class TestBase(unittest.TestCase):
             fileurl(projectpath),
             self.wc_path,
             ]
-        if self.stupid or stupid:
+        if self.stupid:
             cmd.append('--stupid')
         if noupdate:
             cmd.append('--noupdate')
@@ -525,10 +525,9 @@ class TestBase(unittest.TestCase):
     def repo(self):
         return hg.repository(testui(), self.wc_path)
 
-    def pushrevisions(self, stupid=False, expected_extra_back=0):
+    def pushrevisions(self, expected_extra_back=0):
         before = repolen(self.repo)
-        self.repo.ui.setconfig('hgsubversion', 'stupid',
-                               str(self.stupid or stupid))
+        self.repo.ui.setconfig('hgsubversion', 'stupid', str(self.stupid))
         res = commands.push(self.repo.ui, self.repo)
         after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
