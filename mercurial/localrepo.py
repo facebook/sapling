@@ -39,6 +39,8 @@ class unfilteredpropertycache(propertycache):
     """propertycache that apply to unfiltered repo only"""
 
     def __get__(self, repo, type=None):
+        if hasunfilteredcache(repo, self.name):
+            return getattr(repo.unfiltered(), self.name)
         return super(unfilteredpropertycache, self).__get__(repo.unfiltered())
 
 class filteredpropertycache(propertycache):
