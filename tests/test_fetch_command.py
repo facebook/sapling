@@ -191,12 +191,15 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertMultiLineEqual(open(fixturepaths[0]).read(),
                                   open(fixturepaths[1]).read())
 
-    def test_invalid_message(self):
-        repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz')
+    def test_invalid_message(self, stupid=False):
+        repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz', stupid=stupid)
         # changelog returns descriptions in local encoding
         desc = encoding.fromlocal(repo[0].description())
         self.assertEqual(desc.decode('utf8'),
                          u'bl\xe5b\xe6rgr\xf8d')
+
+    def test_invalid_message_stupid(self):
+        self.test_invalid_message(True)
 
 
 class TestStupidPull(test_util.TestBase):

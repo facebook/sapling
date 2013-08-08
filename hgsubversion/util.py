@@ -220,8 +220,19 @@ def outgoing_common_and_heads(repo, reverse_map, sourcerev):
         return ([sourcecx.node()], [sourcerev])
     return ([sourcerev], [sourcerev]) # nothing outgoing
 
-def default_commit_msg(ui):
-    return ui.config('hgsubversion', 'defaultmessage', '')
+def getmessage(ui, rev):
+    msg = rev.message
+
+    if msg:
+        try:
+            msg.decode('utf-8')
+            return msg
+
+        except UnicodeDecodeError:
+            # ancient svn failed to enforce utf8 encoding
+            return msg.decode('iso-8859-1').encode('utf-8')
+    else:
+        return ui.config('hgsubversion', 'defaultmessage', '')
 
 def describe_commit(ui, h, b):
     ui.note(' committed to "%s" as %s\n' % ((b or 'default'), node.short(h)))
