@@ -28,6 +28,11 @@ from mercurial import util
 from mercurial import extensions
 
 try:
+    from mercurial import obsolete
+except ImportError:
+    obsolete = None
+
+try:
     SkipTest = unittest.SkipTest
 except AttributeError:
     try:
@@ -251,7 +256,54 @@ def svnpropget(repo_path, path, prop, rev='HEAD'):
         raise Exception('svn ls failed on %s: %r' % (path, stderr))
     return stdout.strip()
 
+
+def _obsolete_wrap(cls, name):
+    origfunc = getattr(cls, name)
+
+    if not name.startswith('test_') or not origfunc:
+        return
+
+    if not obsolete:
+        wrapper = _makeskip(name, 'obsolete not available')
+    else:
+        def wrapper(self, *args, **opts):
+            self.assertFalse(obsolete._enabled, 'obsolete was already active')
+
+            obsolete._enabled = True
+
+            try:
+                    origfunc(self, *args, **opts)
+                    self.assertTrue(obsolete._enabled, 'obsolete remains active')
+            finally:
+                obsolete._enabled = False
+
+    if not wrapper:
+        return
+
+    wrapper.__name__ = name + ' obsolete'
+    wrapper.__module__ = origfunc.__module__
+
+    if origfunc.__doc__:
+        firstline = origfunc.__doc__.strip().splitlines()[0]
+        wrapper.__doc__ = firstline + ' (obsolete)'
+
+    assert getattr(cls, wrapper.__name__, None) is None
+
+    setattr(cls, wrapper.__name__, wrapper)
+
+class TestMeta(type):
+    def __init__(cls, *args, **opts):
+        if cls.obsolete_mode_tests:
+            for origname in dir(cls):
+                _obsolete_wrap(cls, origname)
+
+        return super(TestMeta, cls).__init__(*args, **opts)
+
 class TestBase(unittest.TestCase):
+    __metaclass__ = TestMeta
+
+    obsolete_mode_tests = False
+
     def setUp(self):
         _verify_our_modules()
 
