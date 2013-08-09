@@ -100,7 +100,7 @@ class TestBasicRepoLayout(test_util.TestBase):
             'test_files_copied_from_outside_btt.svndump', stupid=stupid)
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
-        self.assertEqual(len(repo.changelog), 2)
+        self.assertEqual(test_util.repolen(repo.changelog), 2)
 
     def test_files_copied_from_outside_btt_stupid(self):
         self.test_files_copied_from_outside_btt(stupid=True)
@@ -173,7 +173,7 @@ class TestBasicRepoLayout(test_util.TestBase):
 
         self.assertEqual(repo['tip'].extra()['convert_revision'],
                          repo2['tip'].extra()['convert_revision'])
-        self.assertEqual(len(repo), len(repo2))
+        self.assertEqual(test_util.repolen(repo), test_util.repolen(repo2))
 
         for r in repo:
             self.assertEqual(repo[r].hex(), repo2[r].hex())

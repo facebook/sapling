@@ -41,7 +41,7 @@ def _do_case(self, name, stupid, layout):
     subdir = test_util.subdir.get(name, '')
     repo, svnpath = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
                                         layout=layout)
-    assert len(self.repo) > 0
+    assert test_util.repolen(self.repo) > 0
     for i in repo:
         ctx = repo[i]
         self.assertEqual(verify.verify(repo.ui, repo, rev=ctx.node(),
@@ -55,9 +55,9 @@ def _do_case(self, name, stupid, layout):
         shallowrepo = self.fetch(svnpath, subdir=subdir, stupid=stupid,
                                  layout='single', startrev='HEAD')
 
-        self.assertEqual(len(shallowrepo), 1,
+        self.assertEqual(test_util.repolen(shallowrepo), 1,
                          "shallow clone should have just one revision, not %d"
-                         % len(shallowrepo))
+                         % test_util.repolen(shallowrepo))
 
         fulltip = repo['tip']
         shallowtip = shallowrepo['tip']

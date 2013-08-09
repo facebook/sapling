@@ -578,7 +578,7 @@ class PushTests(test_util.TestBase):
         on top of the pushed commit.
         '''
 
-        oldlen = len(self.repo)
+        oldlen = test_util.repolen(self.repo)
         oldtiphash = self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
@@ -591,7 +591,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         hg.update(repo, newhash1)
         commands.push(repo.ui, repo)
-        self.assertEqual(len(self.repo), oldlen + 2)
+        self.assertEqual(test_util.repolen(self.repo), oldlen + 2)
 
         # verify that the first commit is pushed, and the second is not
         commit2 = self.repo['tip']
@@ -609,7 +609,7 @@ class PushTests(test_util.TestBase):
         This test verifies that code path works.
         '''
 
-        oldlen = len(self.repo)
+        oldlen = test_util.repolen(self.repo)
         oldtiphash = self.repo['default'].node()
 
         changes = [('gamma', 'gamma', 'sometext')]
@@ -622,7 +622,7 @@ class PushTests(test_util.TestBase):
         repo = self.repo
         hg.update(repo, newhash)
         commands.push(repo.ui, repo)
-        self.assertEqual(len(self.repo), oldlen + 2)
+        self.assertEqual(test_util.repolen(self.repo), oldlen + 2)
 
         # verify that both commits are pushed
         commit1 = self.repo['tip']

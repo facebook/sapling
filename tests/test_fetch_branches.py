@@ -140,7 +140,7 @@ class TestFetchBranches(test_util.TestBase):
     def test_replace_branch_with_branch(self, stupid=False):
         repo = self._load_fixture_and_fetch('replace_branch_with_branch.svndump',
                                             stupid=stupid)
-        self.assertEqual(7, len(repo))
+        self.assertEqual(7, test_util.repolen(repo))
         # tip is former topological branch1 being closed
         ctx = repo['tip']
         self.assertEqual('1', ctx.extra().get('close', '0'))

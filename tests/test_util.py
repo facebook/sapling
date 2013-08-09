@@ -111,6 +111,16 @@ def getlocalpeer(repo):
         localrepo = repo
     return localrepo
 
+def repolen(repo):
+    """Naively calculate the amount of available revisions in a repository.
+
+    this is usually equal to len(repo) -- except in the face of
+    obsolete revisions.
+    """
+    # kind of nasty way of calculating the length, but fortunately,
+    # our test repositories tend to be rather small
+    return len([r for r in repo])
+
 def _makeskip(name, message):
     if SkipTest:
         def skip(*args, **kwargs):
@@ -417,10 +427,10 @@ class TestBase(unittest.TestCase):
         return hg.repository(testui(), self.wc_path)
 
     def pushrevisions(self, stupid=False, expected_extra_back=0):
-        before = len(self.repo)
+        before = repolen(self.repo)
         self.repo.ui.setconfig('hgsubversion', 'stupid', str(stupid))
         res = commands.push(self.repo.ui, self.repo)
-        after = len(self.repo)
+        after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
         return res
 

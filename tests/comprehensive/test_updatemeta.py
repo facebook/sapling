@@ -29,7 +29,7 @@ def _do_case(self, name, stupid, single):
         layout = 'single'
     repo, repo_path = self.load_and_fetch(name, subdir=subdir, stupid=stupid,
                                           layout=layout)
-    assert len(self.repo) > 0
+    assert test_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
     u = ui.ui()
     src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)

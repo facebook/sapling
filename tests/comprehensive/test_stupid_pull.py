@@ -21,7 +21,8 @@ def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
     repo, repo_path = self.load_and_fetch(name, subdir=subdir, stupid=False,
                                           layout=layout)
-    assert len(self.repo) > 0, 'Repo had no changes, maybe you need to add a subdir entry in test_util?'
+    assert test_util.repolen(self.repo) > 0, \
+        'Repo had no changes, maybe you need to add a subdir entry in test_util?'
     wc2_path = self.wc_path + '_stupid'
     u = ui.ui()
     checkout_path = repo_path

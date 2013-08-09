@@ -43,7 +43,7 @@ class TestMercurialCore(test_util.TestBase):
         f.flush()
         commands.commit(ui, repo, message="C3")
 
-        self.assertEqual(len(repo), 3)
+        self.assertEqual(test_util.repolen(repo), 3)
 
         updaterev = 1
         _dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
@@ -77,7 +77,7 @@ class TestMercurialCore(test_util.TestBase):
         commands.branch(ui, repo, label="B2")
         commands.commit(ui, repo, message="C3")
 
-        self.assertEqual(len(repo), 3)
+        self.assertEqual(test_util.repolen(repo), 3)
 
         branch = 'B1'
         _dispatch(ui, ['clone', self.wc_path, self.wc_path + '2',
