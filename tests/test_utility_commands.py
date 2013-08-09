@@ -31,6 +31,8 @@ def repourl(repo_path):
     return util.normalize_url(test_util.fileurl(repo_path))
 
 class UtilityTests(test_util.TestBase):
+    stupid_mode_tests = True
+
     def test_info_output(self):
         repo, repo_path = self.load_and_fetch('two_heads.svndump')
         hg.update(self.repo, 'the_branch')
@@ -266,16 +268,16 @@ class UtilityTests(test_util.TestBase):
                                 authors=author_path)
         self.assertMultiLineEqual(open(author_path).read(), 'Augie=\nevil=\n')
 
-    def test_svnverify(self, stupid=False):
+    def test_svnverify(self):
         repo, repo_path = self.load_and_fetch('binaryfiles.svndump',
-                                              noupdate=False, stupid=stupid)
-        ret = verify.verify(self.ui(), repo, [], rev=1, stupid=stupid)
+                                              noupdate=False)
+        ret = verify.verify(self.ui(), repo, [], rev=1)
         self.assertEqual(0, ret)
         repo_path = self.load_svndump('binaryfiles-broken.svndump')
         u = self.ui()
         u.pushbuffer()
         ret = verify.verify(u, repo, [test_util.fileurl(repo_path)],
-                            rev=1, stupid=stupid)
+                            rev=1)
         output = u.popbuffer()
         self.assertEqual(1, ret)
         output = re.sub(r'file://\S+', 'file://', output)
@@ -286,20 +288,16 @@ unexpected file: binary1
 missing file: binary3
 """, output)
 
-    def test_svnverify_stupid(self):
-        self.test_svnverify(True)
-
-    def test_corruption(self, stupid=False):
+    def test_corruption(self):
         SUCCESS = 0
         FAILURE = 1
 
         repo, repo_path = self.load_and_fetch('correct.svndump', layout='single',
-                                              subdir='', stupid=stupid)
+                                              subdir='')
 
         ui = self.ui()
 
-        self.assertEqual(SUCCESS, verify.verify(ui, self.repo, rev='tip',
-                                                stupid=stupid))
+        self.assertEqual(SUCCESS, verify.verify(ui, self.repo, rev='tip'))
 
         corrupt_source = test_util.fileurl(self.load_svndump('corrupt.svndump'))
 
@@ -324,9 +322,6 @@ missing file: binary3
         ])
 
         self.assertEqual((FAILURE, expected), (code, actual))
-
-    def test_corruption_stupid(self):
-        self.test_corruption(True)
 
     def test_svnrebuildmeta(self):
         otherpath = self.load_svndump('binaryfiles-broken.svndump')
