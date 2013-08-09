@@ -12,26 +12,20 @@ from hgsubversion import svncommands
 from hgsubversion import svnrepo
 
 class TestTags(test_util.TestBase):
-    def test_tags(self, stupid=False):
-        repo = self._load_fixture_and_fetch('basic_tag_tests.svndump',
-                                            stupid=stupid)
+    stupid_mode_tests = True
+
+    def test_tags(self):
+        repo = self._load_fixture_and_fetch('basic_tag_tests.svndump')
         self.assertEqual(sorted(repo.tags()), ['copied_tag', 'tag_r3', 'tip'])
         self.assertEqual(repo['tag_r3'], repo['copied_tag'])
         self.assertEqual(repo['tag_r3'].rev(), 1)
 
-    def test_tags_stupid(self):
-        self.test_tags(stupid=True)
-
-    def test_remove_tag(self, stupid=False):
-        repo = self._load_fixture_and_fetch('remove_tag_test.svndump',
-                                            stupid=stupid)
+    def test_remove_tag(self):
+        repo = self._load_fixture_and_fetch('remove_tag_test.svndump')
         self.assertEqual(repo['tag_r3'].rev(), 1)
         self.assert_('copied_tag' not in repo.tags())
 
-    def test_remove_tag_stupid(self):
-        self.test_remove_tag(stupid=True)
-
-    def test_rename_tag(self, stupid=False):
+    def test_rename_tag(self):
         expected = """\
 node: hg=default@2:svn=trunk@4
 tagging r3
@@ -49,24 +43,16 @@ rename a tag
   copied_tag: hg=default@-1:svn=unk@unk
   other_tag_r3: hg=default@1:svn=trunk@3
 """
-        self._test_tags('rename_tag_test.svndump', expected, stupid)
+        self._test_tags('rename_tag_test.svndump', expected)
 
-    def test_rename_tag_stupid(self):
-        self.test_rename_tag(stupid=True)
-
-    def test_branch_from_tag(self, stupid=False):
-        repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=stupid)
+    def test_branch_from_tag(self):
+        repo = self._load_fixture_and_fetch('branch_from_tag.svndump')
         self.assert_('branch_from_tag' in repo.branchtags())
         self.assertEqual(repo[1], repo['tag_r3'])
         self.assertEqual(repo['branch_from_tag'].parents()[0], repo['copied_tag'])
 
-    def test_branch_from_tag_stupid(self):
-        self.test_branch_from_tag(stupid=True)
-
-    def test_tag_by_renaming_branch(self, stupid=False):
-        repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump',
-                                            stupid=stupid)
+    def test_tag_by_renaming_branch(self):
+        repo = self._load_fixture_and_fetch('tag_by_rename_branch.svndump')
         branches = set(repo[h] for h in repo.heads())
         self.assert_('dummy' not in branches)
         self.assertEqual(repo['dummy'], repo['tip'].parents()[0],
@@ -75,9 +61,6 @@ rename a tag
         extra = repo['tip'].extra().copy()
         extra.pop('convert_revision', None)
         self.assertEqual(extra, {'branch': 'dummy', 'close': '1'})
-
-    def test_tag_by_renaming_branch_stupid(self):
-        self.test_tag_by_renaming_branch(stupid=True)
 
     def test_deletion_of_tag_on_trunk_after_branching(self):
         repo = self._load_fixture_and_fetch('tag_deletion_tag_branch.svndump')
@@ -101,12 +84,8 @@ rename a tag
              'versions/branch_version': 'I\x89\x1c>z#\xfc._K#@:\xd6\x1f\x96\xd6\x83\x1b|',
              })
 
-    def test_most_recent_is_edited_stupid(self):
-        self.test_most_recent_is_edited(True)
-
-    def test_most_recent_is_edited(self, stupid=False):
-        repo, repo_path = self.load_and_fetch('most-recent-is-edit-tag.svndump',
-                                              stupid=stupid)
+    def test_most_recent_is_edited(self):
+        repo, repo_path = self.load_and_fetch('most-recent-is-edit-tag.svndump')
         self.repo.ui.status(
             "Note: this test failing may be because of a rebuildmeta failure.\n"
             "You should check that before assuming issues with this test.\n")
@@ -116,19 +95,15 @@ rename a tag
         svncommands.rebuildmeta(repo.ui,
                                dest,
                                args=[test_util.fileurl(repo_path), ])
-        commands.pull(self.repo.ui, self.repo, stupid=stupid)
+        commands.pull(self.repo.ui, self.repo)
         dtags, srctags = dest.tags(), self.repo.tags()
         dtags.pop('tip')
         srctags.pop('tip')
         self.assertEqual(dtags, srctags)
         self.assertEqual(dest.heads(), self.repo.heads())
 
-    def test_edited_tag_stupid(self):
-        self.test_edited_tag(True)
-
-    def test_edited_tag(self, stupid=False):
-       repo = self._load_fixture_and_fetch('commit-to-tag.svndump',
-                                           stupid=stupid)
+    def test_edited_tag(self):
+       repo = self._load_fixture_and_fetch('commit-to-tag.svndump')
        headcount = 6
        self.assertEqual(len(repo.heads()), headcount)
        heads = repo.heads()
@@ -221,8 +196,8 @@ rename a tag
             w('  %s: %s\n' % (name, formatnode(repo[node])))
         w('\n')
 
-    def _test_tags(self, testpath, expected, stupid=False):
-        repo = self._load_fixture_and_fetch(testpath, stupid=stupid)
+    def _test_tags(self, testpath, expected):
+        repo = self._load_fixture_and_fetch(testpath)
         fp = cStringIO.StringIO()
         for r in repo:
             self._debug_print_tags(repo, repo[r], fp=fp)
@@ -235,7 +210,7 @@ rename a tag
         diff = difflib.unified_diff(expected, output, 'expected', 'output')
         self.assert_(False, '\n' + '\n'.join(diff))
 
-    def test_tagging_into_tag(self, stupid=False):
+    def test_tagging_into_tag(self):
         expected = """\
 node: hg=test@2:svn=branches/test@4
 First tag.
@@ -271,7 +246,4 @@ Fix tag pt 2.
   test-0.1-real: hg=default@-1:svn=unk@unk
   test-0.1: hg=test@1:svn=branches/test@3
 """
-        self._test_tags('renametagdir.svndump', expected, stupid=stupid)
-
-    def test_tagging_into_tag_stupid(self):
-        self.test_tagging_into_tag(True)
+        self._test_tags('renametagdir.svndump', expected)
