@@ -3,8 +3,10 @@ import test_util
 import unittest
 
 class TestFetchSymlinks(test_util.TestBase):
-    def test_symlinks(self, stupid=False):
-        repo = self._load_fixture_and_fetch('symlinks.svndump', stupid=stupid)
+    stupid_mode_tests = True
+
+    def test_symlinks(self):
+        repo = self._load_fixture_and_fetch('symlinks.svndump')
         # Check symlinks throughout history
         links = {
             0: {
@@ -47,10 +49,9 @@ class TestFetchSymlinks(test_util.TestBase):
             for f in links[rev]:
                 self.assertTrue(f in ctx)
 
-    def test_symlinks_stupid(self):
-        self.test_symlinks(True)
-
 class TestMergeSpecial(test_util.TestBase):
+    stupid_mode_tests = True
+
     def test_special(self):
         repo = self._load_fixture_and_fetch('addspecial.svndump',
                                             subdir='trunk')
