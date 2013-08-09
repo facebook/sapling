@@ -417,7 +417,10 @@ class SubversionRepo(object):
             if path in deleteddirs:
                 bat = editor.delete_entry(path, base_revision, parent, pool)
                 batons.append(bat)
-                return bat
+
+                if path not in addeddirs:
+                    return bat
+
             if path not in file_data:
                 if path in addeddirs:
                     frompath, fromrev = copies.get(path, (None, -1))
