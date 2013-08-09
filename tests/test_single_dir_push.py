@@ -11,12 +11,12 @@ from mercurial import node
 from mercurial import ui
 
 class TestSingleDirPush(test_util.TestBase):
+    stupid_mode_tests = True
     obsolete_mode_tests = True
 
     def test_push_single_dir(self):
         # Tests simple pushing from default branch to a single dir repo
         repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
-                                              stupid=False,
                                               layout='single',
                                               subdir='')
         def file_callback(repo, memctx, path):
@@ -57,7 +57,6 @@ class TestSingleDirPush(test_util.TestBase):
 
     def test_push_single_dir_at_subdir(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
                                             layout='single',
                                             subdir='trunk')
         def filectxfn(repo, memctx, path):
@@ -90,7 +89,6 @@ class TestSingleDirPush(test_util.TestBase):
         # (used to cause an "unknown revision")
         # This can happen if someone committed to svn since our last pull (race).
         repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
-                                              stupid=False,
                                               layout='single',
                                               subdir='trunk')
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
@@ -121,7 +119,6 @@ class TestSingleDirPush(test_util.TestBase):
         # adds a file called foo, then tries to push the foo branch and default
         # branch in that order.
         repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
-                                              stupid=False,
                                               layout='single',
                                               subdir='')
         def file_callback(data):
@@ -163,12 +160,12 @@ class TestSingleDirPush(test_util.TestBase):
         self.assertEquals(len(self.repo.branchheads('default')), 1)
 
     @test_util.requiresoption('branch')
-    def test_push_single_dir_renamed_branch(self, stupid=False):
+    def test_push_single_dir_renamed_branch(self):
         # Tests pulling and pushing with a renamed branch
         # Based on test_push_single_dir
         repo_path = self.load_svndump('branch_from_tag.svndump')
         cmd = ['clone', '--layout=single', '--branch=flaf']
-        if stupid:
+        if self.stupid:
             cmd.append('--stupid')
         cmd += [test_util.fileurl(repo_path), self.wc_path]
         test_util.dispatch(cmd)
@@ -196,7 +193,3 @@ class TestSingleDirPush(test_util.TestBase):
 
         self.assertEquals(set(['flaf']),
                           set(self.repo[i].branch() for i in self.repo))
-
-    @test_util.requiresoption('branch')
-    def test_push_single_dir_renamed_branch_stupid(self):
-        self.test_push_single_dir_renamed_branch(True)
