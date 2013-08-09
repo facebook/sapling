@@ -277,6 +277,8 @@ d3/ext3 = [hgsubversion] d3:^/trunk/common/ext ext3
         self.test_mergeexternals(True)
 
 class TestPushExternals(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def test_push_externals(self, stupid=False):
         repo = self._load_fixture_and_fetch('pushexternals.svndump')
         # Add a new reference on an existing and non-existing directory

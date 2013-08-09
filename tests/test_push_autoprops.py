@@ -8,6 +8,8 @@ import test_util
 from hgsubversion import svnwrap
 
 class PushAutoPropsTests(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def setUp(self):
         test_util.TestBase.setUp(self)
         repo, self.repo_path = self.load_and_fetch('emptyrepo.svndump')

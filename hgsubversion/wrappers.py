@@ -21,6 +21,11 @@ import svnwrap
 import svnrepo
 import util
 
+try:
+    from mercurial import obsolete
+except ImportError:
+    obsolete = None
+
 pullfuns = {
     True: replay.convert_rev,
     False: stupidmod.convert_rev,
@@ -179,6 +184,8 @@ def push(repo, dest, force, revs):
     ui = repo.ui
     old_encoding = util.swap_out_encoding()
 
+    hasobsolete = obsolete and obsolete._enabled
+
     temporary_commits = []
     try:
         # TODO: implement --rev/#rev support
@@ -248,7 +255,8 @@ def push(repo, dest, force, revs):
             tip_hash = hashes[tip_ctx.node()][0]
             try:
                 ui.status('committing %s\n' % current_ctx)
-                pushmod.commit(ui, repo, current_ctx, meta, tip_hash, svn)
+                pushedrev = pushmod.commit(ui, repo, current_ctx, meta,
+                                           tip_hash, svn)
             except pushmod.NoFilesException:
                 ui.warn("Could not push revision %s because it had no changes "
                         "in svn.\n" % current_ctx)
@@ -264,6 +272,13 @@ def push(repo, dest, force, revs):
             # 6. Move our tip to the latest pulled tip
             for c in tip_ctx.descendants():
                 if c.node() in hashes and c.branch() == svnbranch:
+                    if meta.get_source_rev(ctx=c)[0] == pushedrev.revnum:
+                        # This is corresponds to the changeset we just pushed
+                        if hasobsolete:
+                            ui.note('marking %s as obsoleted by %s\n' %
+                                    (original_ctx.hex(), c.hex()))
+                            obsolete.createmarkers(repo, [(original_ctx, [c])])
+
                     tip_ctx = c
 
                     # Remember what files have been modified since the
@@ -290,7 +305,8 @@ def push(repo, dest, force, revs):
                         hgrebase.rebase(ui, repo,
                                         dest=node.hex(tip_ctx.node()),
                                         rev=[needs_rebase_set],
-                                        extrafn=extrafn, keep=True)
+                                        extrafn=extrafn,
+                                        keep=not hasobsolete)
                     finally:
                         os.chdir(saved_path)
                         util.swap_out_encoding()
@@ -302,8 +318,10 @@ def push(repo, dest, force, revs):
         finally:
             util.swap_out_encoding()
 
-        # strip the original changesets since the push was successful
-        util.strip(ui, repo, outgoing, "all")
+        if not hasobsolete:
+            # strip the original changesets since the push was
+            # successful and changeset obsolescence is unavailable
+            util.strip(ui, repo, outgoing, "all")
     finally:
         try:
             # It's always safe to delete the temporary commits.
@@ -315,7 +333,12 @@ def push(repo, dest, force, revs):
                 parent = repo[None].p1()
                 if parent.node() in temporary_commits:
                     hg.update(repo, parent.p1().node())
-                util.strip(ui, repo, temporary_commits, backup=None)
+                if hasobsolete:
+                    relations = ((repo[n], ()) for n in temporary_commits)
+                    obsolete.createmarkers(repo, relations)
+                else:
+                    util.strip(ui, repo, temporary_commits, backup=None)
+
         finally:
             util.swap_out_encoding(old_encoding)
     return 1 # so we get a sane exit status, see hg's commands.push

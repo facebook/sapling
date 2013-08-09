@@ -3,6 +3,8 @@ import test_util
 import unittest
 
 class TestPushDirectories(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def test_push_dirs(self):
         repo_path = self.load_and_fetch('emptyrepo.svndump')[1]
 

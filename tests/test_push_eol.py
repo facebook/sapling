@@ -3,6 +3,8 @@ import test_util
 import unittest
 
 class TestPushEol(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def setUp(self):
         test_util.TestBase.setUp(self)
         self._load_fixture_and_fetch('emptyrepo.svndump')

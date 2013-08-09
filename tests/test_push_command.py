@@ -23,6 +23,8 @@ import time
 
 
 class PushTests(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def setUp(self):
         test_util.TestBase.setUp(self)
         self.repo_path = self.load_and_fetch('simple_branch.svndump')[1]

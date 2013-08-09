@@ -11,6 +11,8 @@ from mercurial import node
 from mercurial import ui
 
 class TestSingleDirPush(test_util.TestBase):
+    obsolete_mode_tests = True
+
     def test_push_single_dir(self):
         # Tests simple pushing from default branch to a single dir repo
         repo, repo_path = self.load_and_fetch('branch_from_tag.svndump',
