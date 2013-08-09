@@ -244,6 +244,10 @@ class SVNMeta(object):
             path = path[1:]
         return path
 
+    @property
+    def taglocations(self):
+        return self.layoutobj.taglocations(self.meta_data_dir)
+
     def get_path_tag(self, path):
         """If path could represent the path to a tag, returns the
         potential (non-empty) tag name. Otherwise, returns None
@@ -252,8 +256,7 @@ class SVNMeta(object):
         (or tag) we have, for our purposes.
         """
         path = self.normalize(path)
-        taglocations = self.layoutobj.taglocations(self.meta_data_dir)
-        return self.layoutobj.get_path_tag(path, taglocations)
+        return self.layoutobj.get_path_tag(path, self.taglocations)
 
     def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
