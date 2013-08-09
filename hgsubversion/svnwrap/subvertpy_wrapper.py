@@ -465,7 +465,11 @@ class SubversionRepo(object):
                 else:
                     # visiting a directory
                     if path in addeddirs:
-                        direditor = editor.add_directory(path)
+                        frompath, fromrev = copies.get(path, (None, -1))
+                        if frompath:
+                            frompath = self.path2url(frompath)
+                        direditor = editor.add_directory(path, frompath, fromrev)
+
                     elif path in deleteddirs:
                         direditor = editor.delete_entry(path, base_revision)
                         continue

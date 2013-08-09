@@ -420,7 +420,10 @@ class SubversionRepo(object):
                 return bat
             if path not in file_data:
                 if path in addeddirs:
-                    bat = editor.add_directory(path, parent, None, -1, pool)
+                    frompath, fromrev = copies.get(path, (None, -1))
+                    if frompath:
+                        frompath = self.path2url(frompath)
+                    bat = editor.add_directory(path, parent, frompath, fromrev, pool)
                 else:
                     bat = editor.open_directory(path, parent, base_revision, pool)
                 batons.append(bat)
