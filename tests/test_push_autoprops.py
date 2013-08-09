@@ -22,7 +22,7 @@ class PushAutoPropsTests(test_util.TestBase):
             "*.py = test:prop=success\n")
         changes = [('test.py', 'test.py', 'echo hallo')]
         self.commitchanges(changes)
-        self.pushrevisions(True)
+        self.pushrevisions()
         prop_val = test_util.svnpropget(
             self.repo_path, "trunk/test.py", 'test:prop')
         self.assertEqual('success', prop_val)
