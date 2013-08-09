@@ -226,7 +226,7 @@ def push(repo, dest, force, revs):
                     def extrafn(ctx, extra):
                         extra['branch'] = ctx.branch()
 
-                    ui.status('rebasing %s onto %s \n' % (current_ctx, tip_ctx))
+                    ui.note('rebasing %s onto %s \n' % (current_ctx, tip_ctx))
                     hgrebase.rebase(ui, repo,
                                     dest=node.hex(tip_ctx.node()),
                                     rev=[node.hex(current_ctx.node())],
@@ -482,10 +482,10 @@ def rebase(orig, ui, repo, **opts):
     hashes = meta.revmap.hashes()
     o_r = util.outgoing_revisions(repo, hashes, sourcerev=sourcerev)
     if not o_r:
-        ui.status('Nothing to rebase!\n')
+        ui.note('nothing to rebase\n')
         return 0
     if len(repo[sourcerev].children()):
-        ui.status('Refusing to rebase non-head commit like a coward\n')
+        ui.status('refusing to rebase non-head commit like a coward\n')
         return 0
     parent_rev = repo[o_r[-1]].parents()[0]
     target_rev = parent_rev
@@ -500,7 +500,7 @@ def rebase(orig, ui, repo, **opts):
                 exhausted_choices = False
                 break
     if parent_rev == target_rev:
-        ui.status('Already up to date!\n')
+        ui.status('already up to date!\n')
         return 0
     return orig(ui, repo, dest=node.hex(target_rev.node()),
                 base=node.hex(sourcerev),
