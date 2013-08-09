@@ -16,6 +16,8 @@ except (ImportError, AttributeError), e:
 from hgsubversion import svnexternals
 
 class TestFetchExternals(test_util.TestBase):
+    stupid_mode_tests = True
+
     def test_externalsfile(self):
         f = svnexternals.externalsfile()
         f['t1'] = 'dir1 -r10 svn://foobar'
@@ -74,8 +76,8 @@ class TestFetchExternals(test_util.TestBase):
         for line, expected in samples:
             self.assertEqual(expected, svnexternals.parsedefinition(line))
 
-    def test_externals(self, stupid=False):
-        repo = self._load_fixture_and_fetch('externals.svndump', stupid=stupid)
+    def test_externals(self):
+        repo = self._load_fixture_and_fetch('externals.svndump')
 
         ref0 = """[.]
  ^/externals/project1 deps/project1
@@ -125,9 +127,6 @@ class TestFetchExternals(test_util.TestBase):
 """
         self.assertEqual(ref6, repo[6]['.hgsvnexternals'].data())
 
-    def test_externals_stupid(self):
-        self.test_externals(True)
-
     def test_updateexternals(self):
         def checkdeps(deps, nodeps, repo, rev=None):
             svnexternals.updateexternals(ui, [rev], repo)
@@ -141,7 +140,7 @@ class TestFetchExternals(test_util.TestBase):
                                 'unexpected: %s@%r' % (d, rev))
 
         ui = self.ui()
-        repo = self._load_fixture_and_fetch('externals.svndump', stupid=0)
+        repo = self._load_fixture_and_fetch('externals.svndump')
         commands.update(ui, repo)
         checkdeps(['deps/project1'], [], repo, 0)
         checkdeps(['deps/project1', 'deps/project2'], [], repo, 1)
@@ -152,12 +151,11 @@ class TestFetchExternals(test_util.TestBase):
                   ['subdir2/deps/project1'], repo, 3)
         checkdeps(['subdir/deps/project1'], ['deps/project2'], repo, 4)
 
-    def test_hgsub(self, stupid=False):
+    def test_hgsub(self):
         if subrepo is None:
             return
         repo = self._load_fixture_and_fetch('externals.svndump',
-                                            externals='subrepos',
-                                            stupid=stupid)
+                                            externals='subrepos')
         self.assertEqual("""\
 deps/project1 = [hgsubversion] :^/externals/project1 deps/project1
 """, repo[0]['.hgsub'].data())
@@ -217,9 +215,6 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
 2 deps/project2
 """, repo[6]['.hgsubstate'].data())
 
-    def test_hgsub_stupid(self):
-        self.test_hgsub(True)
-
     def test_ignore(self):
         repo = self._load_fixture_and_fetch('externals.svndump',
                                             externals='ignore')
@@ -246,7 +241,7 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
 
         ui = self.ui()
         repo = self._load_fixture_and_fetch('externals.svndump',
-                                            stupid=0, externals='subrepos')
+                                            externals='subrepos')
         checkdeps(ui, repo, 0, ['deps/project1'], [])
         checkdeps(ui, repo, 1, ['deps/project1', 'deps/project2'], [])
         checkdeps(ui, repo, 2, ['subdir/deps/project1', 'subdir2/deps/project1',
@@ -260,12 +255,11 @@ deps/project2 = [hgsubversion] :-r{REV} ^/externals/project2@2 deps/project2
         repo.wwrite('subdir/deps/project1/a', 'foobar', '')
         commands.update(ui, repo, node='4', clean=True)
 
-    def test_mergeexternals(self, stupid=False):
+    def test_mergeexternals(self):
         if subrepo is None:
             return
         repo = self._load_fixture_and_fetch('mergeexternals.svndump',
-                                            externals='subrepos',
-                                            stupid=stupid)
+                                            externals='subrepos')
         # Check merged directories externals are fine
         self.assertEqual("""\
 d1/ext = [hgsubversion] d1:^/trunk/common/ext ext
@@ -273,13 +267,11 @@ d2/ext = [hgsubversion] d2:^/trunk/common/ext ext
 d3/ext3 = [hgsubversion] d3:^/trunk/common/ext ext3
 """, repo['tip']['.hgsub'].data())
 
-    def test_mergeexternals_stupid(self):
-        self.test_mergeexternals(True)
-
 class TestPushExternals(test_util.TestBase):
+    stupid_mode_tests = True
     obsolete_mode_tests = True
 
-    def test_push_externals(self, stupid=False):
+    def test_push_externals(self):
         repo = self._load_fixture_and_fetch('pushexternals.svndump')
         # Add a new reference on an existing and non-existing directory
         changes = [
@@ -295,7 +287,7 @@ class TestPushExternals(test_util.TestBase):
             ('subdir2/a', 'subdir2/a', 'a'),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
 
         # Remove all references from one directory, add a new one
@@ -310,7 +302,7 @@ class TestPushExternals(test_util.TestBase):
             ('subdir1/a', None, None),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
         # Check subdir2/a is still there even if the externals were removed
         self.assertTrue('subdir2/a' in self.repo['tip'])
@@ -321,13 +313,10 @@ class TestPushExternals(test_util.TestBase):
             ('.hgsvnexternals', None, None),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
 
-    def test_push_externals_stupid(self):
-        self.test_push_externals(True)
-
-    def test_push_hgsub(self, stupid=False):
+    def test_push_hgsub(self):
         if subrepo is None:
             return
 
@@ -352,7 +341,7 @@ HEAD subdir2/deps/project2
         self.svnco(repo_path, 'externals/project1', '2', 'subdir1/deps/project1')
         self.svnco(repo_path, 'externals/project2', '2', 'subdir2/deps/project2')
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
 
         # Check .hgsub and .hgsubstate were not pushed
@@ -376,7 +365,7 @@ HEAD subdir1/deps/project2
         self.svnco(repo_path, 'externals/project1', '2', 'subdir1/deps/project1')
         self.svnco(repo_path, 'externals/project2', '2', 'subdir1/deps/project2')
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
         # Check subdir2/a is still there even if the externals were removed
         self.assertTrue('subdir2/a' in self.repo['tip'])
@@ -393,7 +382,7 @@ HEAD subdir1/deps/project1
 """),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
 
         # Test externals removal
@@ -402,5 +391,5 @@ HEAD subdir1/deps/project1
             ('.hgsubstate', None, None),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
