@@ -267,8 +267,9 @@ o  changeset: 0:ab86791fc857
    tags:
    summary:   init
    files:     a dir/b
+
 """
-        self.assertEqual(refgraph.strip(), graph.strip())
+        self.assertMultiLineEqual(refgraph, graph)
 
     def test_fetch_revert_stupid(self):
         self.test_fetch_revert(stupid=True)
@@ -283,8 +284,9 @@ o  changeset: 0:02996a5980ba
    tags:      tip
    summary:   move to trunk
    files:     a dir/b
+
 """
-        self.assertEqual(refgraph.strip(), graph.strip())
+        self.assertMultiLineEqual(refgraph, graph)
 
     def test_fetch_movetotrunk_stupid(self):
         self.test_fetch_movetotrunk(stupid=True)
