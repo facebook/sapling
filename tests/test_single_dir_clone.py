@@ -11,9 +11,10 @@ from mercurial import node
 from mercurial import ui
 
 class TestSingleDirClone(test_util.TestBase):
+    stupid_mode_tests = True
+
     def test_clone_single_dir_simple(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
                                             layout='single',
                                             subdir='')
         self.assertEqual(repo.branchtags().keys(), ['default'])
@@ -29,7 +30,6 @@ class TestSingleDirClone(test_util.TestBase):
 
     def test_auto_detect_single(self):
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
                                             layout='auto')
         self.assertEqual(repo.branchtags().keys(), ['default',
                                                     'branch_from_tag'])
@@ -38,16 +38,14 @@ class TestSingleDirClone(test_util.TestBase):
         shutil.rmtree(self.wc_path)
         # try again with subdir to get single dir clone
         repo = self._load_fixture_and_fetch('branch_from_tag.svndump',
-                                            stupid=False,
                                             layout='auto',
                                             subdir='trunk')
         self.assertEqual(repo.branchtags().keys(), ['default', ])
         self.assertEqual(repo['default'].manifest().keys(), oldmanifest)
 
-    def test_clone_subdir_is_file_prefix(self, stupid=False):
+    def test_clone_subdir_is_file_prefix(self):
         FIXTURE = 'subdir_is_file_prefix.svndump'
         repo = self._load_fixture_and_fetch(FIXTURE,
-                                            stupid=stupid,
                                             layout='single',
                                             subdir=test_util.subdir[FIXTURE])
         self.assertEqual(repo.branchtags().keys(), ['default'])
@@ -55,7 +53,6 @@ class TestSingleDirClone(test_util.TestBase):
 
     def test_externals_single(self):
         repo = self._load_fixture_and_fetch('externals.svndump',
-                                            stupid=False,
                                             layout='single')
         for rev in repo:
             assert '.hgsvnexternals' not in repo[rev].manifest()
@@ -74,7 +71,6 @@ class TestSingleDirClone(test_util.TestBase):
         # This is the test which demonstrates the brokenness of externals
         return # TODO enable test when externals in single are fixed
         repo = self._load_fixture_and_fetch('externals.svndump',
-                                            stupid=False,
                                             layout='single',
                                             subdir='')
         for rev in repo:
