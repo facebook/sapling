@@ -5,11 +5,11 @@ import unittest
 
 class TestPushRenames(test_util.TestBase):
     obsolete_mode_tests = True
+    stupid_mode_tests = True
 
     def setUp(self):
         test_util.TestBase.setUp(self)
-        self.repo_path = self.load_and_fetch('pushrenames.svndump',
-                                             stupid=True)[1]
+        self.repo_path = self.load_and_fetch('pushrenames.svndump')[1]
 
     def _debug_print_copies(self, ctx):
         w = sys.stderr.write
