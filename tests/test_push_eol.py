@@ -4,12 +4,13 @@ import unittest
 
 class TestPushEol(test_util.TestBase):
     obsolete_mode_tests = True
+    stupid_mode_tests = True
 
     def setUp(self):
         test_util.TestBase.setUp(self)
         self._load_fixture_and_fetch('emptyrepo.svndump')
 
-    def _test_push_dirs(self, stupid):
+    def test_push_dirs(self):
         changes = [
             # Root files with LF, CRLF and mixed EOL
             ('lf', 'lf', 'a\nb\n\nc'),
@@ -17,7 +18,7 @@ class TestPushEol(test_util.TestBase):
             ('mixed', 'mixed', 'a\r\nb\n\r\nc\nd'),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
 
         changes = [
@@ -27,11 +28,5 @@ class TestPushEol(test_util.TestBase):
             ('mixed', 'mixed', 'a\r\nb\n\r\nc\nd\r\na\r\nb\n\r\nc\nd'),
             ]
         self.commitchanges(changes)
-        self.pushrevisions(stupid)
+        self.pushrevisions()
         self.assertchanges(changes, self.repo['tip'])
-
-    def test_push_dirs(self):
-        self._test_push_dirs(False)
-
-    def test_push_dirs_stupid(self):
-        self._test_push_dirs(True)
