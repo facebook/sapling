@@ -51,7 +51,7 @@ class Revision(tuple):
 
     Derives from tuple in an attempt to minimise the memory footprint.
     """
-    def __new__(self, revnum, author, message, date, paths, strip_path=''):
+    def __new__(self, revnum, author, message, date, paths=None, strip_path=''):
         _paths = {}
         if paths:
             for p in paths:
