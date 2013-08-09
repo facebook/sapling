@@ -6,12 +6,14 @@ from mercurial import commands
 from mercurial import hg
 
 class TestFetchTruncatedHistory(test_util.TestBase):
-    def test_truncated_history(self, stupid=False):
+    stupid_mode_tests = True
+
+    def test_truncated_history(self):
         # Test repository does not follow the usual layout
         repo_path = self.load_svndump('truncatedhistory.svndump')
         svn_url = test_util.fileurl(repo_path + '/project2')
-        commands.clone(self.ui(stupid), svn_url, self.wc_path, noupdate=True)
-        repo = hg.repository(self.ui(stupid), self.wc_path)
+        commands.clone(self.ui(), svn_url, self.wc_path, noupdate=True)
+        repo = hg.repository(self.ui(), self.wc_path)
 
         # We are converting /project2/trunk coming from:
         #
@@ -26,6 +28,3 @@ class TestFetchTruncatedHistory(test_util.TestBase):
         files.sort()
         self.assertEqual(files, ['a', 'b'])
         self.assertEqual(repo['tip']['a'].data(), 'a\n')
-
-    def test_truncated_history_stupid(self):
-        self.test_truncated_history(True)
