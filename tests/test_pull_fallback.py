@@ -31,8 +31,9 @@ class TestPullFallback(test_util.TestBase):
             'stupid.fetch_branchrev': 1,
         }
 
-        repo, repo_path = self._loadupdate(
-            'single_rev.svndump', stupid=True)
+        self.stupid = True
+        repo, repo_path = self._loadupdate('single_rev.svndump')
+        self.stupid = False
 
         # Passing stupid=True doesn't seem to be working - force it
         repo.ui.setconfig('hgsubversion', 'stupid', "true")
