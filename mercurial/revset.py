@@ -1935,5 +1935,11 @@ def prettyformat(tree):
     output = '\n'.join(('  '*l + s) for l, s in lines)
     return output
 
+def depth(tree):
+    if isinstance(tree, tuple):
+        return max(map(depth, tree)) + 1
+    else:
+        return 0
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
