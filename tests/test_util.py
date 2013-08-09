@@ -160,6 +160,18 @@ def requiresoption(option):
         raise TypeError('requiresoption takes a string argument')
     return decorator
 
+def requiresreplay(method):
+    '''Skip a test in stupid mode.'''
+    def test(self, *args, **kwargs):
+        if self.stupid:
+            if SkipTest:
+                raise SkipTest(message)
+        else:
+            return method(self, *args, **kwargs)
+
+    test.__name__ = method.__name__
+    return test
+
 def filtermanifest(manifest):
     return [f for f in manifest if f not in util.ignoredfiles]
 
@@ -291,11 +303,43 @@ def _obsolete_wrap(cls, name):
 
     setattr(cls, wrapper.__name__, wrapper)
 
+
+def _stupid_wrap(cls, name):
+    origfunc = getattr(cls, name)
+
+    if not name.startswith('test_') or not origfunc:
+        return
+
+    def wrapper(self, *args, **opts):
+        self.assertFalse(self.stupid, 'stupid mode was already active')
+
+        self.stupid = True
+
+        try:
+            origfunc(self, *args, **opts)
+        finally:
+            self.stupid = False
+
+    wrapper.__name__ = name + ' stupid'
+    wrapper.__module__ = origfunc.__module__
+
+    if origfunc.__doc__:
+        firstline = origfunc.__doc__.strip().splitlines()[0]
+        wrapper.__doc__ = firstline + ' (stupid)'
+
+    assert getattr(cls, wrapper.__name__, None) is None
+
+    setattr(cls, wrapper.__name__, wrapper)
+
 class TestMeta(type):
     def __init__(cls, *args, **opts):
         if cls.obsolete_mode_tests:
             for origname in dir(cls):
                 _obsolete_wrap(cls, origname)
+
+        if cls.stupid_mode_tests:
+            for origname in dir(cls):
+                _stupid_wrap(cls, origname)
 
         return super(TestMeta, cls).__init__(*args, **opts)
 
@@ -303,6 +347,9 @@ class TestBase(unittest.TestCase):
     __metaclass__ = TestMeta
 
     obsolete_mode_tests = False
+    stupid_mode_tests = False
+
+    stupid = False
 
     def setUp(self):
         _verify_our_modules()
@@ -368,7 +415,7 @@ class TestBase(unittest.TestCase):
         _verify_our_modules()
 
     def ui(self, stupid=False, layout='auto'):
-        return testui(stupid, layout)
+        return testui(self.stupid or stupid, layout)
 
     def load_svndump(self, fixture_name):
         '''Loads an svnadmin dump into a fresh repo. Return the svn repo
@@ -420,7 +467,7 @@ class TestBase(unittest.TestCase):
             fileurl(projectpath),
             self.wc_path,
             ]
-        if stupid:
+        if self.stupid or stupid:
             cmd.append('--stupid')
         if noupdate:
             cmd.append('--noupdate')
@@ -480,7 +527,8 @@ class TestBase(unittest.TestCase):
 
     def pushrevisions(self, stupid=False, expected_extra_back=0):
         before = repolen(self.repo)
-        self.repo.ui.setconfig('hgsubversion', 'stupid', str(stupid))
+        self.repo.ui.setconfig('hgsubversion', 'stupid',
+                               str(self.stupid or stupid))
         res = commands.push(self.repo.ui, self.repo)
         after = repolen(self.repo)
         self.assertEqual(expected_extra_back, after - before)
