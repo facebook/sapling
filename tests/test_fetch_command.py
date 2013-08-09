@@ -11,6 +11,7 @@ from mercurial import ui
 from mercurial import encoding
 
 class TestBasicRepoLayout(test_util.TestBase):
+    stupid_mode_tests = True
 
     def test_no_dates(self):
         repo = self._load_fixture_and_fetch('test_no_dates.svndump')
@@ -62,17 +63,9 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertEqual(repo['tip'], repo['default'])
         self.assertEqual(len(repo.heads()), 2)
 
-    def test_many_special_cases_replay(self):
+    def test_many_special_cases(self):
         repo = self._load_fixture_and_fetch('many_special_cases.svndump')
-        self._many_special_cases_checks(repo)
 
-
-    def test_many_special_cases_diff(self):
-        repo = self._load_fixture_and_fetch('many_special_cases.svndump',
-                                            stupid=True)
-        self._many_special_cases_checks(repo)
-
-    def _many_special_cases_checks(self, repo):
         self.assertEquals(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         # two possible hashes for bw compat to hg < 1.5, since hg 1.5
@@ -95,15 +88,12 @@ class TestBasicRepoLayout(test_util.TestBase):
         assert 'README' not in repo
         assert '../branches' not in repo
 
-    def test_files_copied_from_outside_btt(self, stupid=False):
+    def test_files_copied_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
-            'test_files_copied_from_outside_btt.svndump', stupid=stupid)
+            'test_files_copied_from_outside_btt.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
         self.assertEqual(test_util.repolen(repo.changelog), 2)
-
-    def test_files_copied_from_outside_btt_stupid(self):
-        self.test_files_copied_from_outside_btt(stupid=True)
 
     def test_file_renamed_in_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
@@ -130,32 +120,21 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
-    def test_propedit_with_nothing_else(self, stupid=False):
-        repo = self._load_fixture_and_fetch('branch_prop_edit.svndump',
-                                            stupid=stupid)
+    def test_propedit_with_nothing_else(self):
+        repo = self._load_fixture_and_fetch('branch_prop_edit.svndump')
         self.assertEqual(repo['tip'].description(), 'Commit bogus propchange.')
         self.assertEqual(repo['tip'].branch(), 'dev_branch')
 
-    def test_propedit_with_nothing_else_stupid(self):
-        self.test_propedit_with_nothing_else(stupid=True)
-
-    def test_entry_deletion(self, stupid=False):
-        repo = self._load_fixture_and_fetch('delentries.svndump',
-                                            stupid=stupid)
+    def test_entry_deletion(self):
+        repo = self._load_fixture_and_fetch('delentries.svndump')
         files = list(sorted(repo['tip'].manifest()))
         self.assertEqual(['aa', 'd1/c', 'd1/d2prefix'], files)
 
-    def test_entry_deletion_stupid(self):
-        self.test_entry_deletion(stupid=True)
-
-    def test_fetch_when_trunk_has_no_files(self, stupid=False):
-        repo = self._load_fixture_and_fetch('file_not_in_trunk_root.svndump', stupid=stupid)
+    def test_fetch_when_trunk_has_no_files(self):
+        repo = self._load_fixture_and_fetch('file_not_in_trunk_root.svndump')
         self.assertEqual(repo['tip'].branch(), 'default')
 
-    def test_fetch_when_trunk_has_no_files_stupid(self):
-        self.test_fetch_when_trunk_has_no_files(stupid=True)
-
-    def test_path_quoting(self, stupid=False):
+    def test_path_quoting(self):
         repo_path = self.load_svndump('non_ascii_path_1.svndump')
         subdir = '/b\xC3\xB8b'
         quoted_subdir = urllib.quote(subdir)
@@ -164,7 +143,7 @@ class TestBasicRepoLayout(test_util.TestBase):
         wc_path = self.wc_path
         wc2_path = wc_path + '-2'
 
-        ui = self.ui(stupid=stupid)
+        ui = self.ui()
 
         commands.clone(ui, repo_url + subdir, wc_path)
         commands.clone(ui, repo_url + quoted_subdir, wc2_path)
@@ -178,10 +157,6 @@ class TestBasicRepoLayout(test_util.TestBase):
         for r in repo:
             self.assertEqual(repo[r].hex(), repo2[r].hex())
 
-    def test_path_quoting_stupid(self):
-        repo = self.test_path_quoting(True)
-
-
     def test_identical_fixtures(self):
         '''ensure that the non_ascii_path_N fixtures are identical'''
         fixturepaths = [
@@ -191,20 +166,19 @@ class TestBasicRepoLayout(test_util.TestBase):
         self.assertMultiLineEqual(open(fixturepaths[0]).read(),
                                   open(fixturepaths[1]).read())
 
-    def test_invalid_message(self, stupid=False):
-        repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz', stupid=stupid)
+    def test_invalid_message(self):
+        repo = self._load_fixture_and_fetch('invalid_utf8.tar.gz')
         # changelog returns descriptions in local encoding
         desc = encoding.fromlocal(repo[0].description())
         self.assertEqual(desc.decode('utf8'),
                          u'bl\xe5b\xe6rgr\xf8d')
 
-    def test_invalid_message_stupid(self):
-        self.test_invalid_message(True)
-
 
 class TestStupidPull(test_util.TestBase):
+    stupid_mode_tests = True
+
     def test_stupid(self):
-        repo = self._load_fixture_and_fetch('two_heads.svndump', stupid=True)
+        repo = self._load_fixture_and_fetch('two_heads.svndump')
         self.assertEqual(node.hex(repo[0].node()),
                          '434ed487136c1b47c1e8f952edb4dc5a8e6328df')
         self.assertEqual(node.hex(repo['tip'].node()),
@@ -223,8 +197,7 @@ class TestStupidPull(test_util.TestBase):
 
     def test_oldest_not_trunk_and_tag_vendor_branch(self):
         repo = self._load_fixture_and_fetch(
-            'tagged_vendor_and_oldest_not_trunk.svndump',
-            stupid=True)
+            'tagged_vendor_and_oldest_not_trunk.svndump')
         self.assertEqual(node.hex(repo['oldest'].node()),
                          '926671740dec045077ab20f110c1595f935334fa')
         self.assertEqual(repo['tip'].parents()[0].parents()[0],
@@ -232,16 +205,13 @@ class TestStupidPull(test_util.TestBase):
         self.assertEqual(node.hex(repo['tip'].node()),
                          '1a6c3f30911d57abb67c257ec0df3e7bc44786f7')
 
-    def test_empty_repo(self, stupid=False):
+    def test_empty_repo(self):
         # This used to crash HgEditor because it could be closed without
         # having been initialized again.
-        self._load_fixture_and_fetch('emptyrepo2.svndump', stupid=stupid)
+        self._load_fixture_and_fetch('emptyrepo2.svndump')
 
-    def test_empty_repo_stupid(self):
-        self.test_empty_repo(stupid=True)
-
-    def test_fetch_revert(self, stupid=False):
-        repo = self._load_fixture_and_fetch('revert.svndump', stupid=stupid)
+    def test_fetch_revert(self):
+        repo = self._load_fixture_and_fetch('revert.svndump')
         graph = self.getgraph(repo)
         refgraph = """\
 o  changeset: 3:937dcd1206d4
@@ -271,12 +241,9 @@ o  changeset: 0:ab86791fc857
 """
         self.assertMultiLineEqual(refgraph, graph)
 
-    def test_fetch_revert_stupid(self):
-        self.test_fetch_revert(stupid=True)
-
-    def test_fetch_movetotrunk(self, stupid=False):
+    def test_fetch_movetotrunk(self):
         repo = self._load_fixture_and_fetch('movetotrunk.svndump',
-                stupid=stupid, subdir='sub1/sub2')
+                subdir='sub1/sub2')
         graph = self.getgraph(repo)
         refgraph = """\
 o  changeset: 0:02996a5980ba
@@ -288,5 +255,3 @@ o  changeset: 0:02996a5980ba
 """
         self.assertMultiLineEqual(refgraph, graph)
 
-    def test_fetch_movetotrunk_stupid(self):
-        self.test_fetch_movetotrunk(stupid=True)
