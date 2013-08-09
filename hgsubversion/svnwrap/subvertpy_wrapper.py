@@ -380,10 +380,14 @@ class SubversionRepo(object):
     def commit(self, paths, message, file_data, base_revision, addeddirs,
                deleteddirs, props, copies):
         """Commits the appropriate targets from revision in editor's store.
+
+        Return the committed revision as a common.Revision instance.
         """
-        def commitcb(*args):
-            commit_info.append(args)
-        commit_info = []
+        def commitcb(rev, date, author):
+            r = common.Revision(rev, author, message, date)
+            committedrev.append(r)
+
+        committedrev = []
         revprops = { properties.PROP_REVISION_LOG: message }
         # revprops.update(props)
         commiteditor = self.remote.get_commit_editor(revprops, commitcb)
@@ -463,6 +467,8 @@ class SubversionRepo(object):
             commiteditor.abort()
             raise
         commiteditor.close()
+
+        return committedrev.pop()
 
     def get_replay(self, revision, editor, oldestrev=0):
 

@@ -368,11 +368,20 @@ class SubversionRepo(object):
     def commit(self, paths, message, file_data, base_revision, addeddirs,
                deleteddirs, properties, copies):
         """Commits the appropriate targets from revision in editor's store.
+
+        Return the committed revision as a common.Revision instance.
         """
         self.init_ra_and_client()
-        commit_info = []
-        def commit_cb(_commit_info, pool):
-            commit_info.append(_commit_info)
+
+        def commit_cb(commit_info, pool):
+            # disregard commit_info.post_commit_err for now
+            r = common.Revision(commit_info.revision, commit_info.author,
+                                message, commit_info.date)
+
+            committedrev.append(r)
+
+        committedrev = []
+
         editor, edit_baton = ra.get_commit_editor2(self.ra,
                                                    message,
                                                    commit_cb,
@@ -445,6 +454,8 @@ class SubversionRepo(object):
             raise
 
         editor.close_edit(edit_baton, self.pool)
+
+        return committedrev.pop()
 
     def get_replay(self, revision, editor, oldest_rev_i_have=0):
         # this method has a tendency to chew through RAM if you don't re-init

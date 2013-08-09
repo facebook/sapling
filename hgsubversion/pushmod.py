@@ -196,9 +196,9 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
     if not new_target_files:
         raise NoFilesException()
     try:
-        svn.commit(new_target_files, rev_ctx.description(), file_data,
-                   base_revision, set(addeddirs), set(deleteddirs),
-                   props, newcopies)
+        return svn.commit(new_target_files, rev_ctx.description(), file_data,
+                          base_revision, set(addeddirs), set(deleteddirs),
+                          props, newcopies)
     except svnwrap.SubversionException, e:
         if len(e.args) > 0 and e.args[1] in (svnwrap.ERR_FS_TXN_OUT_OF_DATE,
                                              svnwrap.ERR_FS_CONFLICT,
@@ -211,5 +211,3 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
             raise hgutil.Abort(e.args[0])
         else:
             raise
-
-    return True
