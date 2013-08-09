@@ -16,6 +16,8 @@ from hgsubversion import util
 from hgsubversion import verify
 
 class MapTests(test_util.TestBase):
+    stupid_mode_tests = True
+
     @property
     def authors(self):
         return os.path.join(self.tmpdir, 'authormap')
@@ -32,13 +34,13 @@ class MapTests(test_util.TestBase):
     def tagmap(self):
         return os.path.join(self.tmpdir, 'tagmap')
 
-    def test_author_map(self, stupid=False):
+    def test_author_map(self):
         repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
         authormap = open(self.authors, 'w')
         authormap.write('Augie=Augie Fackler <durin42@gmail.com> # stuffy\n')
         authormap.write("Augie Fackler <durin42@gmail.com>\n")
         authormap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
@@ -47,15 +49,12 @@ class MapTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].user(),
                         'evil@5b65bade-98f3-4993-a01f-b7a6710da339')
 
-    def test_author_map_stupid(self):
-        self.test_author_map(True)
-
-    def test_author_map_closing_author(self, stupid=False):
+    def test_author_map_closing_author(self):
         repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
         authormap = open(self.authors, 'w')
         authormap.write("evil=Testy <test@test>")
         authormap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
@@ -64,12 +63,8 @@ class MapTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].user(),
                         'Testy <test@test>')
 
-    def test_author_map_closing_author_stupid(self):
-        self.test_author_map_closing_author(True)
-
-    def test_author_map_no_author(self, stupid=False):
-        repo, repo_path = self.load_and_fetch('no-author.svndump',
-                                              stupid=stupid)
+    def test_author_map_no_author(self):
+        repo, repo_path = self.load_and_fetch('no-author.svndump')
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['(no author)@%s' % self.repo.svnmeta().uuid]
         self.assertEqual(sorted(users), expected_users)
@@ -78,16 +73,13 @@ class MapTests(test_util.TestBase):
         authormap = open(self.authors, 'w')
         authormap.write("(no author)=Testy <test@example.com>")
         authormap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'authormap', self.authors)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, authors=self.authors)
         users = set(self.repo[r].user() for r in self.repo)
         expected_users = ['Testy <test@example.com>']
         self.assertEqual(sorted(users), expected_users)
-
-    def test_author_map_no_author_stupid(self):
-        self.test_author_map_no_author(True)
 
     def test_author_map_no_overwrite(self):
         cwd = os.path.dirname(__file__)
@@ -101,13 +93,13 @@ class MapTests(test_util.TestBase):
         all_tests = set(test)
         self.assertEqual(fromself.symmetric_difference(all_tests), set())
 
-    def _loadwithfilemap(self, svndump, filemapcontent, stupid=False,
+    def _loadwithfilemap(self, svndump, filemapcontent,
             failonmissing=True):
         repo_path = self.load_svndump(svndump)
         filemap = open(self.filemap, 'w')
         filemap.write(filemapcontent)
         filemap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'filemap', self.filemap)
         ui.setconfig('hgsubversion', 'failoninvalidreplayfile', 'true')
         ui.setconfig('hgsubversion', 'failonmissing', failonmissing)
@@ -115,26 +107,21 @@ class MapTests(test_util.TestBase):
                        self.wc_path, filemap=self.filemap)
         return self.repo
 
-    def test_file_map(self, stupid=False):
+    @test_util.requiresreplay
+    def test_file_map(self):
         repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
-            "include alpha\n", stupid)
+            "include alpha\n")
         self.assertEqual(node.hex(repo[0].node()), '88e2c7492d83e4bf30fbb2dcbf6aa24d60ac688d')
         self.assertEqual(node.hex(repo['default'].node()), 'e524296152246b3837fe9503c83b727075835155')
 
-    def test_file_map_stupid(self):
-        # TODO: re-enable test if we ever reinstate this feature
-        self.assertRaises(hgutil.Abort, self.test_file_map, True)
-
-    def test_file_map_exclude(self, stupid=False):
+    @test_util.requiresreplay
+    def test_file_map_exclude(self):
         repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
-            "exclude alpha\n", stupid)
+            "exclude alpha\n")
         self.assertEqual(node.hex(repo[0].node()), '2c48f3525926ab6c8b8424bcf5eb34b149b61841')
         self.assertEqual(node.hex(repo['default'].node()), 'b37a3c0297b71f989064d9b545b5a478bbed7cc1')
 
-    def test_file_map_exclude_stupid(self):
-        # TODO: re-enable test if we ever reinstate this feature
-        self.assertRaises(hgutil.Abort, self.test_file_map_exclude, True)
-
+    @test_util.requiresreplay
     def test_file_map_rule_order(self):
         repo = self._loadwithfilemap('replace_trunk_with_branch.svndump',
             "exclude alpha\ninclude .\nexclude gamma\n")
@@ -146,6 +133,7 @@ class MapTests(test_util.TestBase):
         self.assertEqual(self.repo['default'].manifest().keys(),
                          ['alpha', 'beta'])
 
+    @test_util.requiresreplay
     def test_file_map_copy(self):
         # Exercise excluding files copied from a non-excluded directory.
         # There will be missing files as we are copying from an excluded
@@ -154,6 +142,7 @@ class MapTests(test_util.TestBase):
                 failonmissing=False)
         self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
 
+    @test_util.requiresreplay
     def test_file_map_exclude_copy_source_and_dest(self):
         # dir3 is excluded and copied from dir2 which is also excluded.
         # dir3 files should not be marked as missing and fetched.
@@ -161,6 +150,7 @@ class MapTests(test_util.TestBase):
                 "exclude dir2\nexclude dir3\n")
         self.assertEqual(['dir/a'], list(repo[2]))
 
+    @test_util.requiresreplay
     def test_file_map_include_file_exclude_dir(self):
         # dir3 is excluded but we want dir3/a, which is also copied from
         # an exluded dir2. dir3/a should be fetched.
@@ -169,17 +159,18 @@ class MapTests(test_util.TestBase):
                 failonmissing=False)
         self.assertEqual(['dir/a', 'dir3/a'], list(repo[2]))
 
+    @test_util.requiresreplay
     def test_file_map_delete_dest(self):
         repo = self._loadwithfilemap('copies.svndump', 'exclude dir3\n')
         self.assertEqual(['dir/a', 'dir2/a'], list(repo[3]))
 
-    def test_branchmap(self, stupid=False):
+    def test_branchmap(self):
         repo_path = self.load_svndump('branchmap.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("badname = good-name # stuffy\n")
         branchmap.write("feature = default\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
@@ -188,50 +179,40 @@ class MapTests(test_util.TestBase):
         self.assert_('good-name' in branches)
         self.assertEquals(self.repo[2].branch(), 'default')
 
-    def test_branchmap_stupid(self):
-        self.test_branchmap(True)
-
-    def test_branchmap_tagging(self, stupid=False):
+    def test_branchmap_tagging(self):
         '''test tagging a renamed branch, which used to raise an exception'''
         repo_path = self.load_svndump('commit-to-tag.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("magic = art\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['art', 'closeme'])
 
-    def test_branchmap_tagging_stupid(self):
-        self.test_branchmap_tagging(True)
-
-    def test_branchmap_empty_commit(self, stupid=False):
+    def test_branchmap_empty_commit(self):
         '''test mapping an empty commit on a renamed branch'''
         repo_path = self.load_svndump('propset-branch.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("the-branch = bob\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         branches = set(self.repo[i].branch() for i in self.repo)
         self.assertEquals(sorted(branches), ['bob', 'default'])
 
-    def test_branchmap_empty_commit_stupid(self):
-        '''test mapping an empty commit on a renamed branch (stupid)'''
-        self.test_branchmap_empty_commit(True)
-
-    def test_branchmap_combine(self, stupid=False):
+    def test_branchmap_combine(self):
         '''test combining two branches, but retaining heads'''
         repo_path = self.load_svndump('branchmap.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("badname = default\n")
         branchmap.write("feature = default\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
@@ -245,25 +226,21 @@ class MapTests(test_util.TestBase):
         self.assertEquals(sorted(branches.keys()),
                           [None, 'badname', 'feature'])
 
-    def test_branchmap_combine_stupid(self):
-        '''test combining two branches, but retaining heads (stupid)'''
-        self.test_branchmap_combine(True)
-
-    def test_branchmap_rebuildmeta(self, stupid=False):
+    def test_branchmap_rebuildmeta(self):
         '''test rebuildmeta on a branchmapped clone'''
         repo_path = self.load_svndump('branchmap.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("badname = dit\n")
         branchmap.write("feature = dah\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
         originfo = self.repo.svnmeta().branches
 
         # clone & rebuild
-        ui = self.ui(stupid)
+        ui = self.ui()
         src, dest = test_util.hgclone(ui, self.wc_path, self.wc_path + '_clone',
                                       update=False)
         src = test_util.getlocalpeer(src)
@@ -276,18 +253,14 @@ class MapTests(test_util.TestBase):
         self.assertEquals(sorted(src.svnmeta().branches),
                           sorted(dest.svnmeta().branches))
 
-    def test_branchmap_rebuildmeta_stupid(self):
-        '''test rebuildmeta on a branchmapped clone (stupid)'''
-        self.test_branchmap_rebuildmeta(True)
-
-    def test_branchmap_verify(self, stupid=False):
+    def test_branchmap_verify(self):
         '''test verify on a branchmapped clone'''
         repo_path = self.load_svndump('branchmap.svndump')
         branchmap = open(self.branchmap, 'w')
         branchmap.write("badname = dit\n")
         branchmap.write("feature = dah\n")
         branchmap.close()
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'branchmap', self.branchmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, branchmap=self.branchmap)
@@ -295,10 +268,6 @@ class MapTests(test_util.TestBase):
 
         for r in repo:
             self.assertEquals(verify.verify(ui, repo, rev=r), 0)
-
-    def test_branchmap_verify_stupid(self):
-        '''test verify on a branchmapped clone (stupid)'''
-        self.test_branchmap_verify(True)
 
     def test_branchmap_no_replacement(self):
         '''
@@ -315,14 +284,14 @@ class MapTests(test_util.TestBase):
         self.assertRaises(hgutil.Abort,
                           maps.BranchMap, self.ui(), self.branchmap)
 
-    def test_tagmap(self, stupid=False):
+    def test_tagmap(self):
         repo_path = self.load_svndump('basic_tag_tests.svndump')
         tagmap = open(self.tagmap, 'w')
         tagmap.write("tag_r3 = 3.x # stuffy\n")
         tagmap.write("copied_tag = \n")
         tagmap.close()
 
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, tagmap=self.tagmap)
@@ -331,10 +300,7 @@ class MapTests(test_util.TestBase):
         assert '3.x' in tags
         assert 'copied_tag' not in tags
 
-    def test_tagmap_stupid(self):
-        self.test_tagmap(True)
-
-    def test_tagren_changed(self, stupid=False):
+    def test_tagren_changed(self):
         repo_path = self.load_svndump('commit-to-tag.svndump')
         tagmap = open(self.tagmap, 'w')
         tagmap.write("edit-at-create = edit-past\n")
@@ -342,29 +308,23 @@ class MapTests(test_util.TestBase):
         tagmap.write("will-edit = edit-future\n")
         tagmap.close()
 
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'tagmap', self.tagmap)
         commands.clone(ui, test_util.fileurl(repo_path),
                        self.wc_path, tagmap=self.tagmap)
         tags = self.repo.tags()
 
-    def test_tagren_changed_stupid(self):
-        self.test_tagren_changed(True)
-
-    def test_empty_log_message(self, stupid=False):
-        repo, repo_path = self.load_and_fetch('empty-log-message.svndump',
-                                              stupid=stupid)
+    def test_empty_log_message(self):
+        repo, repo_path = self.load_and_fetch('empty-log-message.svndump')
 
         self.assertEqual(repo['tip'].description(), '')
 
         test_util.rmtree(self.wc_path)
 
-        ui = self.ui(stupid)
+        ui = self.ui()
         ui.setconfig('hgsubversion', 'defaultmessage', 'blyf')
         commands.clone(ui, test_util.fileurl(repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')
 
 
-    def test_empty_log_message_stupid(self):
-        self.test_empty_log_message(True)
