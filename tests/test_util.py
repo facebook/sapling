@@ -208,15 +208,25 @@ def getlocalpeer(repo):
         localrepo = repo
     return localrepo
 
-def repolen(repo):
+def repolen(repo, svnonly=False):
     """Naively calculate the amount of available revisions in a repository.
 
     this is usually equal to len(repo) -- except in the face of
     obsolete revisions.
+
+    if svnonly is true, only count revisions converted from Subversion.
     """
     # kind of nasty way of calculating the length, but fortunately,
     # our test repositories tend to be rather small
-    return len([r for r in repo])
+    revs = set(repo)
+
+    if obsolete:
+        revs -= obsolete.getrevs(repo, 'obsolete')
+
+    if svnonly:
+        revs = set(r for r in revs if util.getsvnrev(repo[r]))
+
+    return len(revs)
 
 def _makeskip(name, message):
     if SkipTest:

@@ -93,7 +93,7 @@ class TestBasicRepoLayout(test_util.TestBase):
             'test_files_copied_from_outside_btt.svndump')
         self.assertEqual(node.hex(repo['tip'].node()),
                          '3c78170e30ddd35f2c32faa0d8646ab75bba4f73')
-        self.assertEqual(test_util.repolen(repo.changelog), 2)
+        self.assertEqual(test_util.repolen(repo), 2)
 
     def test_file_renamed_in_from_outside_btt(self):
         repo = self._load_fixture_and_fetch(
