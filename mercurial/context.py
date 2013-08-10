@@ -409,7 +409,17 @@ class changectx(basectx):
             if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
                 yield fn
 
-class filectx(object):
+class basefilectx(object):
+    """A filecontext object represents the common logic for its children:
+    filectx: read-only access to a filerevision that is already present
+             in the repo,
+    workingfilectx: a filecontext that represents files from the working
+                    directory,
+    memfilectx: a filecontext that represents files in-memory."""
+    def __new__(cls, repo, path, *args, **kwargs):
+        return super(basefilectx, cls).__new__(cls)
+
+class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
     def __init__(self, repo, path, changeid=None, fileid=None,
