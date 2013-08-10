@@ -200,6 +200,8 @@ def commit(ui, repo, rev_ctx, meta, base_revision, svn):
                           base_revision, set(addeddirs), set(deleteddirs),
                           props, newcopies)
     except svnwrap.SubversionException, e:
+        ui.traceback()
+
         if len(e.args) > 0 and e.args[1] in (svnwrap.ERR_FS_TXN_OUT_OF_DATE,
                                              svnwrap.ERR_FS_CONFLICT,
                                              svnwrap.ERR_FS_ALREADY_EXISTS):
