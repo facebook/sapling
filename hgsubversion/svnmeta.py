@@ -461,6 +461,13 @@ class SVNMeta(object):
         path = self.normalize(path)
         return self.layoutobj.get_path_tag(path, self.layoutobj.taglocations)
 
+    def get_tag_path(self, name):
+        """Return a path corresponding to the given tag name"""
+        try:
+            return self.layoutobj.taglocations[0] + '/' + name
+        except IndexError:
+            return None
+
     def split_branch_path(self, path, existing=True):
         """Figure out which branch inside our repo this path represents, and
         also figure out which path inside that branch it is.
