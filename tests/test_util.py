@@ -165,7 +165,7 @@ def requiresreplay(method):
     def test(self, *args, **kwargs):
         if self.stupid:
             if SkipTest:
-                raise SkipTest(message)
+                raise SkipTest("test requires replay mode")
         else:
             return method(self, *args, **kwargs)
 
