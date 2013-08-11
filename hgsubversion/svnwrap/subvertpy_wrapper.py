@@ -92,10 +92,18 @@ _svntypes = {
 class PathAdapter(object):
     __slots__ = ('action', 'copyfrom_path', 'copyfrom_rev')
 
-    def __init__(self, path):
-        self.action, self.copyfrom_path, self.copyfrom_rev = path
+    def __init__(self, action, copyfrom_path, copyfrom_rev):
+        self.action = action
+        self.copyfrom_path = copyfrom_path
+        self.copyfrom_rev = copyfrom_rev
+
         if self.copyfrom_path:
             self.copyfrom_path = intern(self.copyfrom_path)
+
+    def __repr__(self):
+        return '%s(%r, %r, %r)' % (type(self).__name__, self.action,
+                                     self.copyfrom_path, self.copyfrom_rev)
+
 
 class BaseEditor(object):
     __slots__ = ('editor', 'baton')
@@ -338,7 +346,7 @@ class SubversionRepo(object):
                              props.get(properties.PROP_REVISION_AUTHOR),
                              props.get(properties.PROP_REVISION_LOG),
                              props.get(properties.PROP_REVISION_DATE),
-                             dict([(k, PathAdapter(v))
+                             dict([(k, PathAdapter(*v))
                                    for k, v in paths.iteritems()]),
                              strip_path=self.subdir)
                 revisions.append(r)
