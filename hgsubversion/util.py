@@ -398,3 +398,12 @@ def parse_revnum(svnrepo, r):
             return svnrepo.last_changed_rev
         else:
             raise error.RepoLookupError("unknown Subversion revision %r" % r)
+
+def get_contexts(repo, fromrev=0):
+    """Generator yielding contexts from the repository."""
+
+    for rev in xrange(fromrev, len(repo)):
+        try:
+            yield repo[rev]
+        except error.RepoLookupError:
+            pass

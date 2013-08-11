@@ -106,13 +106,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     # it would make us use O(revisions^2) time, so we perform an extra traversal
     # of the repository instead. During this traversal, we find all converted
     # changesets that close a branch, and store their first parent
-    for rev in xrange(startrev, len(repo)):
-        ui.progress('prepare', rev - startrev, total=numrevs)
-        try:
-            ctx = repo[rev]
-        except error.RepoError:
-            # this revision is hidden
-            continue
+    for ctx in util.get_contexts(repo, startrev):
+        ui.progress('prepare', ctx.rev() - startrev, total=numrevs)
 
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
@@ -139,13 +134,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     ui.progress('prepare', None, total=numrevs)
 
     revmapbuf = []
-    for rev in xrange(startrev, len(repo)):
-        ui.progress('rebuild', rev-startrev, total=numrevs)
-        try:
-            ctx = repo[rev]
-        except error.RepoError:
-            # this revision is hidden
-            continue
+    for ctx in util.get_contexts(repo, startrev):
+        ui.progress('rebuild', ctx.rev() - startrev, total=numrevs)
 
         convinfo = util.getsvnrev(ctx, None)
         if not convinfo:
@@ -253,7 +243,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 branch = meta.layoutobj.localname(parentpath)
                 break
 
-        if rev in closed:
+        if ctx.rev() in closed:
             # a direct child of this changeset closes the branch; drop it
             branchinfo.pop(branch, None)
         elif ctx.extra().get('close'):
