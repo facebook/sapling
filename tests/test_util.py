@@ -647,7 +647,7 @@ class TestBase(unittest.TestCase):
         extensions.loadall(_ui)
         graphlog = extensions.find('graphlog')
         templ = """\
-changeset: {rev}:{node|short}
+changeset: {rev}:{node|short} (r{svnrev})
 branch:    {branches}
 tags:      {tags}
 summary:   {desc|firstline}

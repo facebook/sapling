@@ -214,25 +214,25 @@ class TestStupidPull(test_util.TestBase):
         repo = self._load_fixture_and_fetch('revert.svndump')
         graph = self.getgraph(repo)
         refgraph = """\
-o  changeset: 3:937dcd1206d4
+o  changeset: 3:937dcd1206d4 (r4)
 |  branch:
 |  tags:      tip
 |  summary:   revert2
 |  files:     a dir/b
 |
-o  changeset: 2:9317a748b7c3
+o  changeset: 2:9317a748b7c3 (r3)
 |  branch:
 |  tags:
 |  summary:   revert
 |  files:     a dir/b
 |
-o  changeset: 1:243259a4138a
+o  changeset: 1:243259a4138a (r2)
 |  branch:
 |  tags:
 |  summary:   changefiles
 |  files:     a dir/b
 |
-o  changeset: 0:ab86791fc857
+o  changeset: 0:ab86791fc857 (r1)
    branch:
    tags:
    summary:   init
@@ -246,7 +246,7 @@ o  changeset: 0:ab86791fc857
                 subdir='sub1/sub2')
         graph = self.getgraph(repo)
         refgraph = """\
-o  changeset: 0:02996a5980ba
+o  changeset: 0:02996a5980ba (r3)
    branch:
    tags:      tip
    summary:   move to trunk
