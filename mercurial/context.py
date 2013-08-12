@@ -423,6 +423,15 @@ class basefilectx(object):
     def _filelog(self):
         return self._repo.file(self._path)
 
+    @propertycache
+    def _changeid(self):
+        if '_changeid' in self.__dict__:
+            return self._changeid
+        elif '_changectx' in self.__dict__:
+            return self._changectx.rev()
+        else:
+            return self._filelog.linkrev(self._filerev)
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -471,15 +480,6 @@ class filectx(basefilectx):
             # complicated to solve. Proper handling of the issue here should be
             # considered when solving linkrev issue are on the table.
             return changectx(self._repo.unfiltered(), self._changeid)
-
-    @propertycache
-    def _changeid(self):
-        if '_changeid' in self.__dict__:
-            return self._changeid
-        elif '_changectx' in self.__dict__:
-            return self._changectx.rev()
-        else:
-            return self._filelog.linkrev(self._filerev)
 
     @propertycache
     def _filenode(self):
