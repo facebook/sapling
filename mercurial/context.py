@@ -467,6 +467,13 @@ class basefilectx(object):
         except AttributeError:
             return id(self)
 
+    def __eq__(self, other):
+        try:
+            return (type(self) == type(other) and self._path == other._path
+                    and self._filenode == other._filenode)
+        except AttributeError:
+            return False
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -515,13 +522,6 @@ class filectx(basefilectx):
             # complicated to solve. Proper handling of the issue here should be
             # considered when solving linkrev issue are on the table.
             return changectx(self._repo.unfiltered(), self._changeid)
-
-    def __eq__(self, other):
-        try:
-            return (self._path == other._path
-                    and self._filenode == other._filenode)
-        except AttributeError:
-            return False
 
     def __ne__(self, other):
         return not (self == other)
