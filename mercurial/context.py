@@ -514,6 +514,9 @@ class basefilectx(object):
     def changectx(self):
         return self._changectx
 
+    def path(self):
+        return self._path
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -571,8 +574,6 @@ class filectx(basefilectx):
 
     def data(self):
         return self._filelog.read(self._filenode)
-    def path(self):
-        return self._path
     def size(self):
         return self._filelog.size(self._filerev)
 
