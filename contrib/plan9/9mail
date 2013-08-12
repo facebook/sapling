@@ -1,0 +1,26 @@
+#!/bin/rc
+# 9mail - Mercurial email wrapper for upas/marshal
+
+fn usage {
+	echo >[1=2] usage: mercurial/9mail -f from to [cc]
+	exit usage
+}
+
+from=()
+cc=()
+to=()
+
+switch($1){
+case -f
+	from=$2
+case *
+	usage
+}
+
+to=($3)
+if(~ $#* 4)
+	cc=(-C $4)
+
+upasname=$from
+upas/marshal $cc $to
+
