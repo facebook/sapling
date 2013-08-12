@@ -461,6 +461,12 @@ class basefilectx(object):
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
 
+    def __hash__(self):
+        try:
+            return hash((self._path, self._filenode))
+        except AttributeError:
+            return id(self)
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -509,12 +515,6 @@ class filectx(basefilectx):
             # complicated to solve. Proper handling of the issue here should be
             # considered when solving linkrev issue are on the table.
             return changectx(self._repo.unfiltered(), self._changeid)
-
-    def __hash__(self):
-        try:
-            return hash((self._path, self._filenode))
-        except AttributeError:
-            return id(self)
 
     def __eq__(self, other):
         try:
