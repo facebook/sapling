@@ -710,6 +710,18 @@ class basefilectx(object):
 
         return None
 
+    def ancestors(self, followfirst=False):
+        visit = {}
+        c = self
+        cut = followfirst and 1 or None
+        while True:
+            for parent in c.parents()[:cut]:
+                visit[(parent.rev(), parent.node())] = parent
+            if not visit:
+                break
+            c = visit.pop(max(visit))
+            yield c
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -800,18 +812,6 @@ class filectx(basefilectx):
         c = self._filelog.children(self._filenode)
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
-
-    def ancestors(self, followfirst=False):
-        visit = {}
-        c = self
-        cut = followfirst and 1 or None
-        while True:
-            for parent in c.parents()[:cut]:
-                visit[(parent.rev(), parent.node())] = parent
-            if not visit:
-                break
-            c = visit.pop(max(visit))
-            yield c
 
     def copies(self, c2):
         if not util.safehasattr(self, "_copycache"):
