@@ -517,6 +517,12 @@ class basefilectx(object):
     def path(self):
         return self._path
 
+    def isbinary(self):
+        try:
+            return util.binary(self.data())
+        except IOError:
+            return False
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -576,12 +582,6 @@ class filectx(basefilectx):
         return self._filelog.read(self._filenode)
     def size(self):
         return self._filelog.size(self._filerev)
-
-    def isbinary(self):
-        try:
-            return util.binary(self.data())
-        except IOError:
-            return False
 
     def cmp(self, fctx):
         """compare with other file context
