@@ -503,6 +503,8 @@ class basefilectx(object):
         return self._changectx.description()
     def branch(self):
         return self._changectx.branch()
+    def extra(self):
+        return self._changectx.extra()
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
@@ -559,8 +561,6 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def extra(self):
-        return self._changectx.extra()
     def phase(self):
         return self._changectx.phase()
     def phasestr(self):
