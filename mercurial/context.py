@@ -477,6 +477,9 @@ class basefilectx(object):
     def __ne__(self, other):
         return not (self == other)
 
+    def filerev(self):
+        return self._filerev
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -532,8 +535,6 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def filerev(self):
-        return self._filerev
     def filenode(self):
         return self._filenode
     def flags(self):
