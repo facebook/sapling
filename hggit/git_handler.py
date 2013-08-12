@@ -4,7 +4,7 @@ import stat, posixpath, StringIO
 from dulwich.errors import HangupException, GitProtocolError, UpdateRefsError
 from dulwich.objects import Blob, Commit, Tag, Tree, parse_timezone, S_IFGITLINK
 from dulwich.pack import create_delta, apply_delta
-from dulwich.repo import Repo
+from dulwich.repo import Repo, check_ref_format
 from dulwich import client
 from dulwich import config as dul_config
 
@@ -1039,12 +1039,18 @@ class GitHandler(object):
                 tag = tag.replace(' ', '_')
                 target = self.map_git_get(hex(sha))
                 if target is not None:
-                    self.git.refs['refs/tags/' + tag] = target
-                    self.tags[tag] = hex(sha)
+                    tag_refname = 'refs/tags/' + tag
+                    if(check_ref_format(tag_refname)):
+                      self.git.refs[tag_refname] = target
+                      self.tags[tag] = hex(sha)
+                    else:
+                      self.repo.ui.warn(
+                        'Skipping export of tag %s because it '
+                        'has invalid name as a git refname.\n' % tag)
                 else:
                     self.repo.ui.warn(
                         'Skipping export of tag %s because it '
-                        'has no matching git revision.' % tag)
+                        'has no matching git revision.\n' % tag)
 
     def _filter_for_bookmarks(self, bms):
         if not self.branch_bookmark_suffix:
