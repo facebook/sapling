@@ -538,6 +538,18 @@ class basefilectx(object):
 
         return True
 
+    def parents(self):
+        p = self._path
+        fl = self._filelog
+        pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
+
+        r = self._filelog.renamed(self._filenode)
+        if r:
+            pl[0] = (r[0], r[1], None)
+
+        return [filectx(self._repo, p, fileid=n, filelog=l)
+                for p, n, l in pl if n != nullid]
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -622,18 +634,6 @@ class filectx(basefilectx):
             except error.LookupError:
                 pass
         return renamed
-
-    def parents(self):
-        p = self._path
-        fl = self._filelog
-        pl = [(p, n, fl) for n in self._filelog.parents(self._filenode)]
-
-        r = self._filelog.renamed(self._filenode)
-        if r:
-            pl[0] = (r[0], r[1], None)
-
-        return [filectx(self._repo, p, fileid=n, filelog=l)
-                for p, n, l in pl if n != nullid]
 
     def p1(self):
         return self.parents()[0]
