@@ -481,6 +481,8 @@ class basefilectx(object):
         return self._filerev
     def filenode(self):
         return self._filenode
+    def flags(self):
+        return self._changectx.flags(self._path)
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
@@ -537,8 +539,6 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def flags(self):
-        return self._changectx.flags(self._path)
     def filelog(self):
         return self._filelog
     def rev(self):
