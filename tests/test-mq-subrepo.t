@@ -230,6 +230,8 @@ handle subrepos safely on qpush/qpop
   $ hg -R sub commit -m foo
   $ hg commit -m1
   $ hg qimport -r "0:tip"
+  $ hg -R sub id --id
+  aa037b301eba
 
 qpop
   $ hg -R sub update 0000
@@ -244,13 +246,11 @@ qpop
   popping 1.diff
   now at: 0.diff
   $ hg status -AS
-  M sub/a
   C .hgsub
   C .hgsubstate
-  $ hg debugsub
-  path sub
-   source   sub
-   revision b2fdb12cd82b021c3b7053d67802e77b6eeaee31
+  C sub/a
+  $ hg -R sub id --id
+  b2fdb12cd82b
 
 qpush
   $ hg -R sub update 0000
@@ -263,15 +263,14 @@ qpush
   adding sub/a
   $ hg qpush
   applying 1.diff
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   now at: 1.diff
   $ hg status -AS
-  M .hgsubstate
   C .hgsub
+  C .hgsubstate
   C sub/a
-  $ hg debugsub
-  path sub
-   source   sub
-   revision aa037b301eba54f350c75951b5486727fb98cbb5
+  $ hg -R sub id --id
+  aa037b301eba
 
   $ cd ..
 

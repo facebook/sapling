@@ -66,6 +66,7 @@ from mercurial import commands, cmdutil, hg, scmutil, util, revset
 from mercurial import repair, extensions, error, phases
 from mercurial import patch as patchmod
 from mercurial import localrepo
+from mercurial import subrepo
 import os, re, errno, shutil
 
 commands.norepo += " qclone"
@@ -800,6 +801,14 @@ class queue(object):
                 p1, p2 = repo.dirstate.parents()
                 repo.setparents(p1, merge)
 
+            if all_files and '.hgsubstate' in all_files:
+                wctx = repo['.']
+                mctx = actx = repo[None]
+                overwrite = False
+                mergedsubstate = subrepo.submerge(repo, wctx, mctx, actx,
+                    overwrite)
+                files += mergedsubstate.keys()
+
             match = scmutil.matchfiles(repo, files or [])
             oldtip = repo['tip']
             n = newcommit(repo, None, message, ph.user, ph.date, match=match,
@@ -1459,6 +1468,8 @@ class queue(object):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
             self.strip(repo, [rev], update=False, backup='strip')
+            for s, state in repo['.'].substate.items():
+                repo['.'].sub(s).get(state)
             if self.applied:
                 self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
