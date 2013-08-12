@@ -1186,7 +1186,7 @@ class workingctx(basectx):
     def dirs(self):
         return self._repo.dirstate.dirs()
 
-class workingfilectx(filectx):
+class workingfilectx(basefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
     def __init__(self, repo, path, filelog=None, workingctx=None):
