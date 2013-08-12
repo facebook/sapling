@@ -495,6 +495,8 @@ class basefilectx(object):
         return self._changectx.hex()
     def user(self):
         return self._changectx.user()
+    def date(self):
+        return self._changectx.date()
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
@@ -551,8 +553,6 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def date(self):
-        return self._changectx.date()
     def files(self):
         return self._changectx.files()
     def description(self):
