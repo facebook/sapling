@@ -509,6 +509,8 @@ class basefilectx(object):
         return self._changectx.phase()
     def phasestr(self):
         return self._changectx.phasestr()
+    def manifest(self):
+        return self._changectx.manifest()
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
@@ -565,8 +567,6 @@ class filectx(basefilectx):
         return filectx(self._repo, self._path, fileid=fileid,
                        filelog=self._filelog)
 
-    def manifest(self):
-        return self._changectx.manifest()
     def changectx(self):
         return self._changectx
 
