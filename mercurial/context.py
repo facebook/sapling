@@ -550,6 +550,9 @@ class basefilectx(object):
         return [filectx(self._repo, p, fileid=n, filelog=l)
                 for p, n, l in pl if n != nullid]
 
+    def p1(self):
+        return self.parents()[0]
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -634,9 +637,6 @@ class filectx(basefilectx):
             except error.LookupError:
                 pass
         return renamed
-
-    def p1(self):
-        return self.parents()[0]
 
     def p2(self):
         p = self.parents()
