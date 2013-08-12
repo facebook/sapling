@@ -439,6 +439,10 @@ class basefilectx(object):
         else:
             return self._changectx.filenode(self._path)
 
+    @propertycache
+    def _filerev(self):
+        return self._filelog.rev(self._filenode)
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -487,10 +491,6 @@ class filectx(basefilectx):
             # complicated to solve. Proper handling of the issue here should be
             # considered when solving linkrev issue are on the table.
             return changectx(self._repo.unfiltered(), self._changeid)
-
-    @propertycache
-    def _filerev(self):
-        return self._filelog.rev(self._filenode)
 
     @propertycache
     def _repopath(self):
