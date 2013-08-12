@@ -523,6 +523,21 @@ class basefilectx(object):
         except IOError:
             return False
 
+    def cmp(self, fctx):
+        """compare with other file context
+
+        returns True if different than fctx.
+        """
+        if (fctx._filerev is None
+            and (self._repo._encodefilterpats
+                 # if file data starts with '\1\n', empty metadata block is
+                 # prepended, which adds 4 bytes to filelog.size().
+                 or self.size() - 4 == fctx.size())
+            or self.size() == fctx.size()):
+            return self._filelog.cmp(self._filenode, fctx.data())
+
+        return True
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -582,21 +597,6 @@ class filectx(basefilectx):
         return self._filelog.read(self._filenode)
     def size(self):
         return self._filelog.size(self._filerev)
-
-    def cmp(self, fctx):
-        """compare with other file context
-
-        returns True if different than fctx.
-        """
-        if (fctx._filerev is None
-            and (self._repo._encodefilterpats
-                 # if file data starts with '\1\n', empty metadata block is
-                 # prepended, which adds 4 bytes to filelog.size().
-                 or self.size() - 4 == fctx.size())
-            or self.size() == fctx.size()):
-            return self._filelog.cmp(self._filenode, fctx.data())
-
-        return True
 
     def renamed(self):
         """check if file was actually renamed in this changeset revision
