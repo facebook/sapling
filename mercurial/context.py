@@ -722,6 +722,14 @@ class basefilectx(object):
             c = visit.pop(max(visit))
             yield c
 
+    def copies(self, c2):
+        if not util.safehasattr(self, "_copycache"):
+            self._copycache = {}
+        sc2 = str(c2)
+        if sc2 not in self._copycache:
+            self._copycache[sc2] = copies.pathcopies(c2)
+        return self._copycache[sc2]
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -812,14 +820,6 @@ class filectx(basefilectx):
         c = self._filelog.children(self._filenode)
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
-
-    def copies(self, c2):
-        if not util.safehasattr(self, "_copycache"):
-            self._copycache = {}
-        sc2 = str(c2)
-        if sc2 not in self._copycache:
-            self._copycache[sc2] = copies.pathcopies(c2)
-        return self._copycache[sc2]
 
 class workingctx(basectx):
     """A workingctx object makes access to data related to
