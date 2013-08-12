@@ -553,6 +553,12 @@ class basefilectx(object):
     def p1(self):
         return self.parents()[0]
 
+    def p2(self):
+        p = self.parents()
+        if len(p) == 2:
+            return p[1]
+        return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
+
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
        filerevision convenient."""
@@ -637,12 +643,6 @@ class filectx(basefilectx):
             except error.LookupError:
                 pass
         return renamed
-
-    def p2(self):
-        p = self.parents()
-        if len(p) == 2:
-            return p[1]
-        return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
 
     def children(self):
         # hard for renames
