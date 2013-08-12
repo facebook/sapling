@@ -101,7 +101,7 @@ def find_user_password(self, realm, authuri):
         user, passwd = auth.get('username'), auth.get('password')
     if not user or not passwd:
         if not prefix:
-            prefix = '*'
+            prefix = realm.split(' ')[0].lower()
         params = 'service=%s prefix=%s' % (_service, prefix)
         if user:
             params = '%s user=%s' % (params, user)
