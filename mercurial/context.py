@@ -559,97 +559,6 @@ class basefilectx(object):
             return p[1]
         return filectx(self._repo, self._path, fileid=-1, filelog=self._filelog)
 
-class filectx(basefilectx):
-    """A filecontext object makes access to data related to a particular
-       filerevision convenient."""
-    def __init__(self, repo, path, changeid=None, fileid=None,
-                 filelog=None, changectx=None):
-        """changeid can be a changeset revision, node, or tag.
-           fileid can be a file revision or node."""
-        self._repo = repo
-        self._path = path
-
-        assert (changeid is not None
-                or fileid is not None
-                or changectx is not None), \
-                ("bad args: changeid=%r, fileid=%r, changectx=%r"
-                 % (changeid, fileid, changectx))
-
-        if filelog is not None:
-            self._filelog = filelog
-
-        if changeid is not None:
-            self._changeid = changeid
-        if changectx is not None:
-            self._changectx = changectx
-        if fileid is not None:
-            self._fileid = fileid
-
-    @propertycache
-    def _changectx(self):
-        try:
-            return changectx(self._repo, self._changeid)
-        except error.RepoLookupError:
-            # Linkrev may point to any revision in the repository.  When the
-            # repository is filtered this may lead to `filectx` trying to build
-            # `changectx` for filtered revision. In such case we fallback to
-            # creating `changectx` on the unfiltered version of the reposition.
-            # This fallback should not be an issue because `changectx` from
-            # `filectx` are not used in complex operations that care about
-            # filtering.
-            #
-            # This fallback is a cheap and dirty fix that prevent several
-            # crashes. It does not ensure the behavior is correct. However the
-            # behavior was not correct before filtering either and "incorrect
-            # behavior" is seen as better as "crash"
-            #
-            # Linkrevs have several serious troubles with filtering that are
-            # complicated to solve. Proper handling of the issue here should be
-            # considered when solving linkrev issue are on the table.
-            return changectx(self._repo.unfiltered(), self._changeid)
-
-    def filectx(self, fileid):
-        '''opens an arbitrary revision of the file without
-        opening a new filelog'''
-        return filectx(self._repo, self._path, fileid=fileid,
-                       filelog=self._filelog)
-
-    def data(self):
-        return self._filelog.read(self._filenode)
-    def size(self):
-        return self._filelog.size(self._filerev)
-
-    def renamed(self):
-        """check if file was actually renamed in this changeset revision
-
-        If rename logged in file revision, we report copy for changeset only
-        if file revisions linkrev points back to the changeset in question
-        or both changeset parents contain different file revisions.
-        """
-
-        renamed = self._filelog.renamed(self._filenode)
-        if not renamed:
-            return renamed
-
-        if self.rev() == self.linkrev():
-            return renamed
-
-        name = self.path()
-        fnode = self._filenode
-        for p in self._changectx.parents():
-            try:
-                if fnode == p.filenode(name):
-                    return None
-            except error.LookupError:
-                pass
-        return renamed
-
-    def children(self):
-        # hard for renames
-        c = self._filelog.children(self._filenode)
-        return [filectx(self._repo, self._path, fileid=x,
-                        filelog=self._filelog) for x in c]
-
     def annotate(self, follow=False, linenumber=None, diffopts=None):
         '''returns a list of tuples of (ctx, line) for each line
         in the file, where ctx is the filectx of the node where
@@ -751,6 +660,97 @@ class filectx(basefilectx):
                 pcache[f] = []
 
         return zip(hist[base][0], hist[base][1].splitlines(True))
+
+class filectx(basefilectx):
+    """A filecontext object makes access to data related to a particular
+       filerevision convenient."""
+    def __init__(self, repo, path, changeid=None, fileid=None,
+                 filelog=None, changectx=None):
+        """changeid can be a changeset revision, node, or tag.
+           fileid can be a file revision or node."""
+        self._repo = repo
+        self._path = path
+
+        assert (changeid is not None
+                or fileid is not None
+                or changectx is not None), \
+                ("bad args: changeid=%r, fileid=%r, changectx=%r"
+                 % (changeid, fileid, changectx))
+
+        if filelog is not None:
+            self._filelog = filelog
+
+        if changeid is not None:
+            self._changeid = changeid
+        if changectx is not None:
+            self._changectx = changectx
+        if fileid is not None:
+            self._fileid = fileid
+
+    @propertycache
+    def _changectx(self):
+        try:
+            return changectx(self._repo, self._changeid)
+        except error.RepoLookupError:
+            # Linkrev may point to any revision in the repository.  When the
+            # repository is filtered this may lead to `filectx` trying to build
+            # `changectx` for filtered revision. In such case we fallback to
+            # creating `changectx` on the unfiltered version of the reposition.
+            # This fallback should not be an issue because `changectx` from
+            # `filectx` are not used in complex operations that care about
+            # filtering.
+            #
+            # This fallback is a cheap and dirty fix that prevent several
+            # crashes. It does not ensure the behavior is correct. However the
+            # behavior was not correct before filtering either and "incorrect
+            # behavior" is seen as better as "crash"
+            #
+            # Linkrevs have several serious troubles with filtering that are
+            # complicated to solve. Proper handling of the issue here should be
+            # considered when solving linkrev issue are on the table.
+            return changectx(self._repo.unfiltered(), self._changeid)
+
+    def filectx(self, fileid):
+        '''opens an arbitrary revision of the file without
+        opening a new filelog'''
+        return filectx(self._repo, self._path, fileid=fileid,
+                       filelog=self._filelog)
+
+    def data(self):
+        return self._filelog.read(self._filenode)
+    def size(self):
+        return self._filelog.size(self._filerev)
+
+    def renamed(self):
+        """check if file was actually renamed in this changeset revision
+
+        If rename logged in file revision, we report copy for changeset only
+        if file revisions linkrev points back to the changeset in question
+        or both changeset parents contain different file revisions.
+        """
+
+        renamed = self._filelog.renamed(self._filenode)
+        if not renamed:
+            return renamed
+
+        if self.rev() == self.linkrev():
+            return renamed
+
+        name = self.path()
+        fnode = self._filenode
+        for p in self._changectx.parents():
+            try:
+                if fnode == p.filenode(name):
+                    return None
+            except error.LookupError:
+                pass
+        return renamed
+
+    def children(self):
+        # hard for renames
+        c = self._filelog.children(self._filenode)
+        return [filectx(self._repo, self._path, fileid=x,
+                        filelog=self._filelog) for x in c]
 
     def ancestor(self, fc2, actx):
         """
