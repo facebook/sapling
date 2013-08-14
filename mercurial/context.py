@@ -901,19 +901,6 @@ class commitablectx(basectx):
     def _flagfunc(self):
         return self._repo.dirstate.flagfunc(self._buildflagfunc)
 
-class workingctx(commitablectx):
-    """A workingctx object makes access to data related to
-    the current working directory convenient.
-    date - any valid date string or (unixtime, offset), or None.
-    user - username string, or None.
-    extra - a dictionary of extra values, or None.
-    changes - a list of file lists as returned by localrepo.status()
-               or None to use the repository status.
-    """
-    def __init__(self, repo, text="", user=None, date=None, extra=None,
-                 changes=None):
-        super(workingctx, self).__init__(repo, text, user, date, extra, changes)
-
     @propertycache
     def _manifest(self):
         """generate a manifest corresponding to the working directory"""
@@ -945,6 +932,19 @@ class workingctx(commitablectx):
                 del man[f]
 
         return man
+
+class workingctx(commitablectx):
+    """A workingctx object makes access to data related to
+    the current working directory convenient.
+    date - any valid date string or (unixtime, offset), or None.
+    user - username string, or None.
+    extra - a dictionary of extra values, or None.
+    changes - a list of file lists as returned by localrepo.status()
+               or None to use the repository status.
+    """
+    def __init__(self, repo, text="", user=None, date=None, extra=None,
+                 changes=None):
+        super(workingctx, self).__init__(repo, text, user, date, extra, changes)
 
     def __iter__(self):
         d = self._repo.dirstate
