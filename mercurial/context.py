@@ -967,6 +967,8 @@ class commitablectx(basectx):
         return self._date
     def description(self):
         return self._text
+    def files(self):
+        return sorted(self._status[0] + self._status[1] + self._status[2])
 
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
@@ -993,9 +995,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def files(self):
-        return sorted(self._status[0] + self._status[1] + self._status[2])
 
     def modified(self):
         return self._status[0]
