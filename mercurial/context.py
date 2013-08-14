@@ -897,6 +897,10 @@ class commitablectx(basectx):
 
         return func
 
+    @propertycache
+    def _flagfunc(self):
+        return self._repo.dirstate.flagfunc(self._buildflagfunc)
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -909,10 +913,6 @@ class workingctx(commitablectx):
     def __init__(self, repo, text="", user=None, date=None, extra=None,
                  changes=None):
         super(workingctx, self).__init__(repo, text, user, date, extra, changes)
-
-    @propertycache
-    def _flagfunc(self):
-        return self._repo.dirstate.flagfunc(self._buildflagfunc)
 
     @propertycache
     def _manifest(self):
