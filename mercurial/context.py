@@ -826,19 +826,6 @@ class commitablectx(basectx):
     wants the ability to commit, e.g. workingctx or memctx."""
     def __init__(self, repo, text="", user=None, date=None, extra=None,
                  changes=None):
-        pass
-
-class workingctx(commitablectx):
-    """A workingctx object makes access to data related to
-    the current working directory convenient.
-    date - any valid date string or (unixtime, offset), or None.
-    user - username string, or None.
-    extra - a dictionary of extra values, or None.
-    changes - a list of file lists as returned by localrepo.status()
-               or None to use the repository status.
-    """
-    def __init__(self, repo, text="", user=None, date=None, extra=None,
-                 changes=None):
         self._repo = repo
         self._rev = None
         self._node = None
@@ -868,6 +855,19 @@ class workingctx(commitablectx):
             self._extra['branch'] = branch
         if self._extra['branch'] == '':
             self._extra['branch'] = 'default'
+
+class workingctx(commitablectx):
+    """A workingctx object makes access to data related to
+    the current working directory convenient.
+    date - any valid date string or (unixtime, offset), or None.
+    user - username string, or None.
+    extra - a dictionary of extra values, or None.
+    changes - a list of file lists as returned by localrepo.status()
+               or None to use the repository status.
+    """
+    def __init__(self, repo, text="", user=None, date=None, extra=None,
+                 changes=None):
+        super(workingctx, self).__init__(repo, text, user, date, extra, changes)
 
     def __str__(self):
         return str(self._parents[0]) + "+"
