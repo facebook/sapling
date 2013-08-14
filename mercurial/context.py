@@ -980,8 +980,6 @@ class workingctx(basectx):
         self._status = stat[:4]
         return stat
 
-    def manifest(self):
-        return self._manifest
     def user(self):
         return self._user or self._repo.ui.username()
     def date(self):
