@@ -994,6 +994,12 @@ class commitablectx(basectx):
     def extra(self):
         return self._extra
 
+    def tags(self):
+        t = []
+        for p in self.parents():
+            t.extend(p.tags())
+        return t
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1019,12 +1025,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def tags(self):
-        t = []
-        for p in self.parents():
-            t.extend(p.tags())
-        return t
 
     def bookmarks(self):
         b = []
