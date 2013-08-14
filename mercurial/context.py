@@ -1006,6 +1006,12 @@ class commitablectx(basectx):
             b.extend(p.bookmarks())
         return b
 
+    def phase(self):
+        phase = phases.draft # default phase to draft
+        for p in self.parents():
+            phase = max(phase, p.phase())
+        return phase
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1031,12 +1037,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def phase(self):
-        phase = phases.draft # default phase to draft
-        for p in self.parents():
-            phase = max(phase, p.phase())
-        return phase
 
     def hidden(self):
         return False
