@@ -1038,6 +1038,11 @@ class commitablectx(basectx):
         return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
                                                True, False))
 
+    def ancestors(self):
+        for a in self._repo.changelog.ancestors(
+            [p.rev() for p in self._parents]):
+            yield changectx(self._repo, a)
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1132,11 +1137,6 @@ class workingctx(commitablectx):
             return rejected
         finally:
             wlock.release()
-
-    def ancestors(self):
-        for a in self._repo.changelog.ancestors(
-            [p.rev() for p in self._parents]):
-            yield changectx(self._repo, a)
 
     def undelete(self, list):
         pctxs = self.parents()
