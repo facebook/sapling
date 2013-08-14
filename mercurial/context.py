@@ -1012,6 +1012,9 @@ class commitablectx(basectx):
             phase = max(phase, p.phase())
         return phase
 
+    def hidden(self):
+        return False
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1037,9 +1040,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def hidden(self):
-        return False
 
     def children(self):
         return []
