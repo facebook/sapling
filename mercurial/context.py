@@ -989,6 +989,8 @@ class commitablectx(basectx):
         return self._clean
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
+    def closesbranch(self):
+        return 'close' in self._extra
 
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
@@ -1016,8 +1018,6 @@ class workingctx(commitablectx):
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
 
-    def closesbranch(self):
-        return 'close' in self._extra
     def extra(self):
         return self._extra
 
