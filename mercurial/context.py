@@ -821,7 +821,14 @@ class filectx(basefilectx):
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
 
-class workingctx(basectx):
+class commitablectx(basectx):
+    """A commitablectx object provides common functionality for a context that
+    wants the ability to commit, e.g. workingctx or memctx."""
+    def __init__(self, repo, text="", user=None, date=None, extra=None,
+                 changes=None):
+        pass
+
+class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
     date - any valid date string or (unixtime, offset), or None.
