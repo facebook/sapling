@@ -1015,6 +1015,9 @@ class commitablectx(basectx):
     def hidden(self):
         return False
 
+    def children(self):
+        return []
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1040,9 +1043,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def children(self):
-        return []
 
     def flags(self, path):
         if '_manifest' in self.__dict__:
