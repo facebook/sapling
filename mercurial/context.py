@@ -1030,6 +1030,10 @@ class commitablectx(basectx):
         except OSError:
             return ''
 
+    def ancestor(self, c2):
+        """return the ancestor context of self and c2"""
+        return self._parents[0].ancestor(c2) # punt on two parents for now
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1060,10 +1064,6 @@ class workingctx(commitablectx):
         """get a file context from the working directory"""
         return workingfilectx(self._repo, path, workingctx=self,
                               filelog=filelog)
-
-    def ancestor(self, c2):
-        """return the ancestor context of self and c2"""
-        return self._parents[0].ancestor(c2) # punt on two parents for now
 
     def walk(self, match):
         return sorted(self._repo.dirstate.walk(match, sorted(self.substate),
