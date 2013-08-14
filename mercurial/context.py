@@ -937,6 +937,22 @@ class commitablectx(basectx):
     def _status(self):
         return self._repo.status()[:4]
 
+    def status(self, ignored=False, clean=False, unknown=False):
+        """Explicit status query
+        Unless this method is used to query the working copy status, the
+        _status property will implicitly read the status using its default
+        arguments."""
+        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
+        self._unknown = self._ignored = self._clean = None
+        if unknown:
+            self._unknown = stat[4]
+        if ignored:
+            self._ignored = stat[5]
+        if clean:
+            self._clean = stat[6]
+        self._status = stat[:4]
+        return stat
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -970,22 +986,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def status(self, ignored=False, clean=False, unknown=False):
-        """Explicit status query
-        Unless this method is used to query the working copy status, the
-        _status property will implicitly read the status using its default
-        arguments."""
-        stat = self._repo.status(ignored=ignored, clean=clean, unknown=unknown)
-        self._unknown = self._ignored = self._clean = None
-        if unknown:
-            self._unknown = stat[4]
-        if ignored:
-            self._ignored = stat[5]
-        if clean:
-            self._clean = stat[6]
-        self._status = stat[:4]
-        return stat
 
     def user(self):
         return self._user or self._repo.ui.username()
