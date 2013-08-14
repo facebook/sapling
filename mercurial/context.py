@@ -970,6 +970,9 @@ class commitablectx(basectx):
     def files(self):
         return sorted(self._status[0] + self._status[1] + self._status[2])
 
+    def modified(self):
+        return self._status[0]
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -996,8 +999,6 @@ class workingctx(commitablectx):
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
 
-    def modified(self):
-        return self._status[0]
     def added(self):
         return self._status[1]
     def removed(self):
