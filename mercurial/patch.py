@@ -1622,7 +1622,7 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     revs = None
     hexfunc = repo.ui.debugflag and hex or short
-    revs = [hexfunc(node) for node in [node1, node2] if node]
+    revs = [hexfunc(node) for node in [ctx1.node(), ctx2.node()] if node]
 
     copy = {}
     if opts.git or opts.upgrade:
