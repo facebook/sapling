@@ -984,6 +984,9 @@ class commitablectx(basectx):
     def ignored(self):
         assert self._ignored is not None  # must call status first
         return self._ignored
+    def clean(self):
+        assert self._clean is not None  # must call status first
+        return self._clean
 
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
@@ -1011,9 +1014,6 @@ class workingctx(commitablectx):
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
 
-    def clean(self):
-        assert self._clean is not None  # must call status first
-        return self._clean
     def branch(self):
         return encoding.tolocal(self._extra['branch'])
     def closesbranch(self):
