@@ -963,6 +963,8 @@ class commitablectx(basectx):
 
     def user(self):
         return self._user or self._repo.ui.username()
+    def date(self):
+        return self._date
 
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
@@ -990,8 +992,6 @@ class workingctx(commitablectx):
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
 
-    def date(self):
-        return self._date
     def description(self):
         return self._text
     def files(self):
