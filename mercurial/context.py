@@ -859,6 +859,9 @@ class commitablectx(basectx):
     def __str__(self):
         return str(self._parents[0]) + "+"
 
+    def __nonzero__(self):
+        return True
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -871,9 +874,6 @@ class workingctx(commitablectx):
     def __init__(self, repo, text="", user=None, date=None, extra=None,
                  changes=None):
         super(workingctx, self).__init__(repo, text, user, date, extra, changes)
-
-    def __nonzero__(self):
-        return True
 
     def __contains__(self, key):
         return self._repo.dirstate[key] not in "?r"
