@@ -1043,6 +1043,22 @@ class commitablectx(basectx):
             [p.rev() for p in self._parents]):
             yield changectx(self._repo, a)
 
+    def markcommitted(self, node):
+        """Perform post-commit cleanup necessary after committing this ctx
+
+        Specifically, this updates backing stores this working context
+        wraps to reflect the fact that the changes reflected by this
+        workingctx have been committed.  For example, it marks
+        modified and added files as normal in the dirstate.
+
+        """
+
+        for f in self.modified() + self.added():
+            self._repo.dirstate.normal(f)
+        for f in self.removed():
+            self._repo.dirstate.drop(f)
+        self._repo.dirstate.setparents(node)
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1168,22 +1184,6 @@ class workingctx(commitablectx):
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()
-
-    def markcommitted(self, node):
-        """Perform post-commit cleanup necessary after committing this ctx
-
-        Specifically, this updates backing stores this working context
-        wraps to reflect the fact that the changes reflected by this
-        workingctx have been committed.  For example, it marks
-        modified and added files as normal in the dirstate.
-
-        """
-
-        for f in self.modified() + self.added():
-            self._repo.dirstate.normal(f)
-        for f in self.removed():
-            self._repo.dirstate.drop(f)
-        self._repo.dirstate.setparents(node)
 
     def dirs(self):
         return self._repo.dirstate.dirs()
