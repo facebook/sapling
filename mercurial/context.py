@@ -1059,6 +1059,9 @@ class commitablectx(basectx):
             self._repo.dirstate.drop(f)
         self._repo.dirstate.setparents(node)
 
+    def dirs(self):
+        return self._repo.dirstate.dirs()
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1184,9 +1187,6 @@ class workingctx(commitablectx):
                 self._repo.dirstate.copy(source, dest)
             finally:
                 wlock.release()
-
-    def dirs(self):
-        return self._repo.dirstate.dirs()
 
 class workingfilectx(basefilectx):
     """A workingfilectx object makes access to data related to a particular
