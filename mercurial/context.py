@@ -862,6 +862,9 @@ class commitablectx(basectx):
     def __nonzero__(self):
         return True
 
+    def __contains__(self, key):
+        return self._repo.dirstate[key] not in "?r"
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -874,9 +877,6 @@ class workingctx(commitablectx):
     def __init__(self, repo, text="", user=None, date=None, extra=None,
                  changes=None):
         super(workingctx, self).__init__(repo, text, user, date, extra, changes)
-
-    def __contains__(self, key):
-        return self._repo.dirstate[key] not in "?r"
 
     def _buildflagfunc(self):
         # Create a fallback function for getting file flags when the
