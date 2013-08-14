@@ -972,6 +972,8 @@ class commitablectx(basectx):
 
     def modified(self):
         return self._status[0]
+    def added(self):
+        return self._status[1]
 
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
@@ -999,8 +1001,6 @@ class workingctx(commitablectx):
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
 
-    def added(self):
-        return self._status[1]
     def removed(self):
         return self._status[2]
     def deleted(self):
