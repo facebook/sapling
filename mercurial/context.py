@@ -1202,9 +1202,6 @@ class workingfilectx(basefilectx):
     def __nonzero__(self):
         return True
 
-    def __repr__(self):
-        return "<workingfilectx %s>" % str(self)
-
     def data(self):
         return self._repo.wread(self._path)
     def renamed(self):
