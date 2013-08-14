@@ -1018,6 +1018,18 @@ class commitablectx(basectx):
     def children(self):
         return []
 
+    def flags(self, path):
+        if '_manifest' in self.__dict__:
+            try:
+                return self._manifest.flags(path)
+            except KeyError:
+                return ''
+
+        try:
+            return self._flagfunc(path)
+        except OSError:
+            return ''
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -1043,18 +1055,6 @@ class workingctx(commitablectx):
         if p[1] == nullid:
             p = p[:-1]
         return [changectx(self._repo, x) for x in p]
-
-    def flags(self, path):
-        if '_manifest' in self.__dict__:
-            try:
-                return self._manifest.flags(path)
-            except KeyError:
-                return ''
-
-        try:
-            return self._flagfunc(path)
-        except OSError:
-            return ''
 
     def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
