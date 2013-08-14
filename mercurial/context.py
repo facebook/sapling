@@ -933,6 +933,10 @@ class commitablectx(basectx):
 
         return man
 
+    @propertycache
+    def _status(self):
+        return self._repo.status()[:4]
+
 class workingctx(commitablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
@@ -951,10 +955,6 @@ class workingctx(commitablectx):
         for f in d:
             if d[f] != 'r':
                 yield f
-
-    @propertycache
-    def _status(self):
-        return self._repo.status()[:4]
 
     @propertycache
     def _user(self):
