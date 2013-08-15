@@ -941,6 +941,10 @@ class commitablectx(basectx):
     def _user(self):
         return self._repo.ui.username()
 
+    @propertycache
+    def _date(self):
+        return util.makedate()
+
     def status(self, ignored=False, clean=False, unknown=False):
         """Explicit status query
         Unless this method is used to query the working copy status, the
@@ -978,10 +982,6 @@ class workingctx(commitablectx):
         for f in d:
             if d[f] != 'r':
                 yield f
-
-    @propertycache
-    def _date(self):
-        return util.makedate()
 
     @propertycache
     def _parents(self):
