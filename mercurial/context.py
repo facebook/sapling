@@ -1578,9 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def __getitem__(self, key):
-        return self.filectx(key)
-
     def p1(self):
         return self._parents[0]
     def p2(self):
