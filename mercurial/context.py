@@ -1531,7 +1531,7 @@ class workingfilectx(committablefilectx):
         # invert comparison to reuse the same code path
         return fctx.cmp(self)
 
-class memctx(object):
+class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
     Revision information is supplied at initialization time while
