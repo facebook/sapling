@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def added(self):
-        return self._status[1]
     def removed(self):
         return self._status[2]
     def deleted(self):
