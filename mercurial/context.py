@@ -456,7 +456,7 @@ class basefilectx(object):
             return False
 
     def __str__(self):
-        return "%s@%s" % (self.path(), short(self.node()))
+        return "%s@%s" % (self.path(), self._changectx)
 
     def __repr__(self):
         return "<%s %s>" % (type(self).__name__, str(self))
