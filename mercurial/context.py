@@ -1185,8 +1185,6 @@ class workingfilectx(basefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
     def __init__(self, repo, path, filelog=None, workingctx=None):
-        """changeid can be a changeset revision, node, or tag.
-           fileid can be a file revision or node."""
         self._repo = repo
         self._path = path
         self._changeid = None
