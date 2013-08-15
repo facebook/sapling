@@ -35,7 +35,11 @@ class fileserverclient(object):
         self.pipeo = self.pipei = self.pipee = None
 
         if not os.path.exists(self.cachepath):
-            os.makedirs(self.cachepath)
+            oldumask = os.umask(0o002)
+            try:
+                os.makedirs(self.cachepath)
+            finally:
+                os.umask(oldumask)
 
     def request(self, repo, fileids):
         """Takes a list of filename/node pairs and fetches them from the
