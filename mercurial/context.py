@@ -1560,12 +1560,9 @@ class memctx(committablectx):
     """
     def __init__(self, repo, parents, text, files, filectxfn, user=None,
                  date=None, extra=None, editor=False):
-        self._repo = repo
+        super(memctx, self).__init__(repo, text, user, date, extra)
         self._rev = None
         self._node = None
-        self._text = text
-        self._date = date and util.parsedate(date) or util.makedate()
-        self._user = user
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
