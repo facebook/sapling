@@ -2057,7 +2057,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     try:
                         fctx = ctx[path]
                         flags = fctx.flags()
-                        mctx = context.memfilectx(fctx.path(), fctx.data(),
+                        mctx = context.memfilectx(repo,
+                                                  fctx.path(), fctx.data(),
                                                   islink='l' in flags,
                                                   isexec='x' in flags,
                                                   copied=copied.get(path))

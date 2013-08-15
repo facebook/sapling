@@ -334,7 +334,7 @@ def synthesize(ui, repo, descpath, **opts):
                 for __ in xrange(add):
                     lines.insert(random.randint(0, len(lines)), makeline())
                 path = fctx.path()
-                changes[path] = context.memfilectx(path,
+                changes[path] = context.memfilectx(repo, path,
                                                    '\n'.join(lines) + '\n')
             for __ in xrange(pick(filesremoved)):
                 path = random.choice(mfk)
@@ -354,7 +354,7 @@ def synthesize(ui, repo, descpath, **opts):
             path = '/'.join(filter(None, path))
             data = '\n'.join(makeline()
                              for __ in xrange(pick(linesinfilesadded))) + '\n'
-            changes[path] = context.memfilectx(path, data)
+            changes[path] = context.memfilectx(repo, path, data)
         def filectxfn(repo, memctx, path):
             data = changes[path]
             if data is None:

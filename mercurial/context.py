@@ -335,8 +335,8 @@ def makememctx(repo, parents, text, user, date, branch, files, store,
                editor=None):
     def getfilectx(repo, memctx, path):
         data, (islink, isexec), copied = store.getfile(path)
-        return memfilectx(path, data, islink=islink, isexec=isexec,
-                                  copied=copied)
+        return memfilectx(repo, path, data, islink=islink, isexec=isexec,
+                                  copied=copied, memctx=memctx)
     extra = {}
     if branch:
         extra['branch'] = encoding.fromlocal(branch)
@@ -1589,9 +1589,10 @@ class memctx(committablectx):
 class memfilectx(committablefilectx):
     """memfilectx represents an in-memory file to commit.
 
-    See memctx for more details.
+    See memctx and commitablefilectx for more details.
     """
-    def __init__(self, path, data, islink=False, isexec=False, copied=None):
+    def __init__(self, repo, path, data, islink=False,
+                 isexec=False, copied=None, memctx=None):
         """
         path is the normalized file path relative to repository root.
         data is the file content as a string.
@@ -1599,7 +1600,7 @@ class memfilectx(committablefilectx):
         isexec is True if the file is executable.
         copied is the source file path if current file was copied in the
         revision being committed, or None."""
-        self._path = path
+        super(memfilectx, self).__init__(repo, path, None, memctx)
         self._data = data
         self._flags = (islink and 'l' or '') + (isexec and 'x' or '')
         self._copied = None

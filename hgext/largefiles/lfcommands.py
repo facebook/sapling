@@ -172,10 +172,10 @@ def _addchangeset(ui, rsrc, rdst, ctx, revmap):
             finally:
                 if fd:
                     fd.close()
-            return context.memfilectx(f, data, 'l' in fctx.flags(),
+            return context.memfilectx(repo, f, data, 'l' in fctx.flags(),
                                       'x' in fctx.flags(), renamed)
         else:
-            return _getnormalcontext(repo.ui, ctx, f, revmap)
+            return _getnormalcontext(repo, ctx, f, revmap)
 
     dstfiles = []
     for file in files:
@@ -255,10 +255,11 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                 # doesn't change after rename or copy
                 renamed = lfutil.standin(renamed[0])
 
-            return context.memfilectx(f, lfiletohash[srcfname] + '\n', 'l' in
-                fctx.flags(), 'x' in fctx.flags(), renamed)
+            return context.memfilectx(repo, f, lfiletohash[srcfname] + '\n',
+                                      'l' in fctx.flags(), 'x' in fctx.flags(),
+                                      renamed)
         else:
-            return _getnormalcontext(repo.ui, ctx, f, revmap)
+            return _getnormalcontext(repo, ctx, f, revmap)
 
     # Commit
     _commitcontext(rdst, parents, ctx, dstfiles, getfilectx, revmap)
@@ -293,7 +294,7 @@ def _convertparents(ctx, revmap):
     return parents
 
 # Get memfilectx for a normal file
-def _getnormalcontext(ui, ctx, f, revmap):
+def _getnormalcontext(repo, ctx, f, revmap):
     try:
         fctx = ctx.filectx(f)
     except error.LookupError:
@@ -304,8 +305,8 @@ def _getnormalcontext(ui, ctx, f, revmap):
 
     data = fctx.data()
     if f == '.hgtags':
-        data = _converttags (ui, revmap, data)
-    return context.memfilectx(f, data, 'l' in fctx.flags(),
+        data = _converttags (repo.ui, revmap, data)
+    return context.memfilectx(repo, f, data, 'l' in fctx.flags(),
                               'x' in fctx.flags(), renamed)
 
 # Remap tag data using a revision map

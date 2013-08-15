@@ -1681,17 +1681,17 @@ def debugbuilddag(ui, repo, text=None,
                     ml[id * linesperrev] += " r%i" % id
                     mergedtext = "\n".join(ml)
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(fn, mergedtext)
+                    fctxs[fn] = context.memfilectx(repo, fn, mergedtext)
 
                 if overwritten_file:
                     fn = "of"
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(fn, "r%i\n" % id)
+                    fctxs[fn] = context.memfilectx(repo, fn, "r%i\n" % id)
 
                 if new_file:
                     fn = "nf%i" % id
                     files.append(fn)
-                    fctxs[fn] = context.memfilectx(fn, "r%i\n" % id)
+                    fctxs[fn] = context.memfilectx(repo, fn, "r%i\n" % id)
                     if len(ps) > 1:
                         if not p2:
                             p2 = repo[ps[1]]
