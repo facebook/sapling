@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def user(self):
-        return self._user or self._repo.ui.username()
     def date(self):
         return self._date
     def description(self):
