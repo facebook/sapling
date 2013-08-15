@@ -636,7 +636,11 @@ def gc(ui, *args, **opts):
     if len(args) > 0:
         cachepath = args[0]
     else:
-        repo = hg.peer(ui, {}, ui.environ['PWD'])
+        try:
+            repo = hg.peer(ui, {}, ui.environ['PWD'])
+            ui = repo.ui
+        except error.RepoError:
+            repo = None
         cachepath = ui.config("remotefilelog", "cachepath")
         if not cachepath:
             return
@@ -697,6 +701,9 @@ def gc(ui, *args, **opts):
     count = 0
     removed = 0
 
+    # keep files newer than a day even if they aren't needed
+    limit = time.time() - (60 * 60 * 24)
+
     ui.progress(_removing, count, unit="files")
     for root, dirs, files in os.walk(cachepath):
         for file in files:
@@ -709,12 +716,14 @@ def gc(ui, *args, **opts):
             count += 1
             stat = os.stat(path)
             originalsize += stat.st_size
-            if key not in keepfiles:
-                os.remove(path)
-                removed += 1
-            else:
+
+
+            if key in keepfiles or stat.st_atime > limit:
                 queue.put((stat.st_atime, path, stat))
                 size += stat.st_size
+            else:
+                os.remove(path)
+                removed += 1
     ui.progress(_removing, None)
 
     # remove oldest files until under limit
