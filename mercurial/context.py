@@ -1578,10 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def parents(self):
-        """return contexts for each parent changeset"""
-        return self._parents
-
     def filectx(self, path, filelog=None):
         """get a file context from the working directory"""
         return self._filectxfn(self._repo, self, path)
