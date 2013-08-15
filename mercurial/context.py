@@ -1192,12 +1192,6 @@ class commitablefilectx(basefilectx):
     """A commitablefilectx provides common functionality for a file context that
     wants the ability to commit, e.g. workingfilectx or memfilectx."""
     def __init__(self, repo, path, filelog=None, ctx=None):
-        pass
-
-class workingfilectx(commitablefilectx):
-    """A workingfilectx object makes access to data related to a particular
-       file in the working directory convenient."""
-    def __init__(self, repo, path, filelog=None, workingctx=None):
         self._repo = repo
         self._path = path
         self._changeid = None
@@ -1205,8 +1199,14 @@ class workingfilectx(commitablefilectx):
 
         if filelog is not None:
             self._filelog = filelog
-        if workingctx:
-            self._changectx = workingctx
+        if ctx:
+            self._changectx = ctx
+
+class workingfilectx(commitablefilectx):
+    """A workingfilectx object makes access to data related to a particular
+       file in the working directory convenient."""
+    def __init__(self, repo, path, filelog=None, workingctx=None):
+        super(workingfilectx, self).__init__(repo, path, filelog, workingctx)
 
     @propertycache
     def _changectx(self):
