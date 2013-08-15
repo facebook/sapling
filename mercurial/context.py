@@ -1202,6 +1202,9 @@ class commitablefilectx(basefilectx):
         if ctx:
             self._changectx = ctx
 
+    def __nonzero__(self):
+        return True
+
 class workingfilectx(commitablefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
@@ -1211,9 +1214,6 @@ class workingfilectx(commitablefilectx):
     @propertycache
     def _changectx(self):
         return workingctx(self._repo)
-
-    def __nonzero__(self):
-        return True
 
     def data(self):
         return self._repo.wread(self._path)
