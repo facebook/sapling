@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def date(self):
-        return self._date
     def description(self):
         return self._text
     def files(self):
