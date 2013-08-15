@@ -1188,7 +1188,13 @@ class workingctx(commitablectx):
             finally:
                 wlock.release()
 
-class workingfilectx(basefilectx):
+class commitablefilectx(basefilectx):
+    """A commitablefilectx provides common functionality for a file context that
+    wants the ability to commit, e.g. workingfilectx or memfilectx."""
+    def __init__(self, repo, path, filelog=None, ctx=None):
+        pass
+
+class workingfilectx(commitablefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
     def __init__(self, repo, path, filelog=None, workingctx=None):
