@@ -1607,8 +1607,6 @@ class memfilectx(committablefilectx):
         if copied:
             self._copied = (copied, nullid)
 
-    def path(self):
-        return self._path
     def data(self):
         return self._data
     def flags(self):
