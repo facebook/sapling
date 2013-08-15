@@ -366,6 +366,7 @@ class TestBase(unittest.TestCase):
         self.oldwd = os.getcwd()
         self.tmpdir = tempfile.mkdtemp(
             'svnwrap_test', dir=os.environ.get('HGSUBVERSION_TEST_TEMP', None))
+        os.chdir(self.tmpdir)
         self.hgrc = os.path.join(self.tmpdir, '.hgrc')
         os.environ['HGRCPATH'] = self.hgrc
         scmutil._rcpath = None
