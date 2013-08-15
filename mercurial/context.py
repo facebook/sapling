@@ -1226,6 +1226,9 @@ class commitablefilectx(basefilectx):
         return [filectx(self._repo, p, fileid=n, filelog=l)
                 for p, n, l in pl if n != nullid]
 
+    def children(self):
+        return []
+
 class workingfilectx(commitablefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
@@ -1243,9 +1246,6 @@ class workingfilectx(commitablefilectx):
         if not rp:
             return None
         return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
-
-    def children(self):
-        return []
 
     def size(self):
         return os.lstat(self._repo.wjoin(self._path)).st_size
