@@ -1578,9 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def __str__(self):
-        return str(self._parents[0]) + "+"
-
     def __int__(self):
         return self._rev
 
