@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def extra(self):
-        return self._extra
     def flags(self, f):
         return self[f].flags()
 
