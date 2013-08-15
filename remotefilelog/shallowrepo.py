@@ -15,6 +15,10 @@ requirement = "remotefilelog"
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
+        @util.propertycache
+        def name(self):
+            return self.ui.config('remotefilelog', 'reponame', '')
+
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]

@@ -257,7 +257,7 @@ class remotefilelog(object):
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
-        cachekey = fileserverclient.getcachekey(self.filename, id)
+        cachekey = fileserverclient.getcachekey(self.repo.name, self.filename, id)
         cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
         try:
             return _readfile(cachepath)
@@ -295,9 +295,9 @@ class remotefilelog(object):
 
         hexnode = hex(node)
 
-
+        reponame = self.repo.name
         for i in range(0,2):
-            cachekey = fileserverclient.getcachekey(self.filename, hexnode)
+            cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
             cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
             mapping = self._ancestormap(node, cachepath, relativeto)
             if mapping:

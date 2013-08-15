@@ -28,9 +28,9 @@ def makedirs(root, path, owner):
             os.chmod(path, 0o2775)
         path = os.path.dirname(path)
 
-def getcachekey(file, id):
+def getcachekey(reponame, file, id):
     pathhash = util.sha1(file).hexdigest()
-    return os.path.join(pathhash[:2], pathhash[2:], id)
+    return os.path.join(reponame, pathhash[:2], pathhash[2:], id)
 
 def getlocalkey(file, id):
     pathhash = util.sha1(file).hexdigest()
@@ -73,8 +73,9 @@ class fileserverclient(object):
         count = len(fileids)
         request = "get\n%d\n" % count
         idmap = {}
+        reponame = repo.name
         for file, id in fileids:
-            fullid = getcachekey(file, id)
+            fullid = getcachekey(reponame, file, id)
             request += fullid + "\n"
             idmap[fullid] = file
 
@@ -86,7 +87,7 @@ class fileserverclient(object):
         self.ui.progress(_downloading, 0, total=count)
 
         fallbackrepo = repo.ui.config("remotefilelog", "fallbackrepo",
-                                      repo.ui.config("paths", "default"))
+                         repo.ui.config("paths", "default"))
 
         remote = None
         missed = []
@@ -255,6 +256,7 @@ class fileserverclient(object):
         """downloads the given file versions to the cache
         """
         storepath = repo.sopener.vfs.base
+        reponame = repo.name
         missingids = []
         for file, id in fileids:
             # hack
@@ -264,7 +266,7 @@ class fileserverclient(object):
             if file == '.hgtags' or len(id) == 42 or not repo.shallowmatch(file):
                 continue
 
-            cachekey = getcachekey(file, id)
+            cachekey = getcachekey(reponame, file, id)
             localkey = getlocalkey(file, id)
             idcachepath = os.path.join(self.cachepath, cachekey)
             idlocalpath = os.path.join(storepath, 'data', localkey)

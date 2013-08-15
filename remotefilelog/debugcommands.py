@@ -150,7 +150,7 @@ def verifyremotefilelog(ui, *args, **opts):
             for p1, p2, linknode, copyfrom in mapping.itervalues():
                 if linknode == nullid:
                     actualpath = os.path.relpath(root, path)
-                    key = fileserverclient.getcachekey(actualpath, file)
+                    key = fileserverclient.getcachekey(repo.name, actualpath, file)
                     ui.status("%s %s\n" % (key, os.path.relpath(filepath, path)))
 
 def parsefileblob(path, decompress):

@@ -22,6 +22,7 @@
   > [remotefilelog]
   > cachepath=$PWD/hgcache
   > debug=True
+  > reponame = master
   > excludepattern=.hgtags
   > [extensions]
   > remotefilelog=$TESTDIR/../remotefilelog

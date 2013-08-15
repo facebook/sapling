@@ -465,11 +465,13 @@ def gcclient(ui, cachepath):
 
         validrepos.append(path)
 
+        reponame = peer._repo.name
         keep = peer._repo.revs("(parents(draft()) + heads(all())) & public()")
         for r in keep:
             m = peer._repo[r].manifest()
             for filename, filenode in m.iteritems():
-                key = fileserverclient.getcachekey(filename, hex(filenode))
+                key = fileserverclient.getcachekey(reponame, filename,
+                    hex(filenode))
                 keepfiles.add(key)
 
     ui.progress(_analyzing, None)

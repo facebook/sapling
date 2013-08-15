@@ -23,6 +23,7 @@
   > cachepath=$PWD/hgcache
   > debug=True
   > includepattern=foo
+  > reponame = master
   > [extensions]
   > remotefilelog=$TESTDIR/../remotefilelog
   > EOF

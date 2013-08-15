@@ -17,31 +17,24 @@ EOF
 export HGRCPATH=$PWD/.hgrc
 
 function hgcloneshallow() {
+  local name
+  local dest
   orig=$1
   shift
   dest=$1
   shift
-  hg clone --shallow $orig $dest $@
+  hg clone --shallow --config remotefilelog.reponame=master $orig $dest $@
   cat >> $dest/.hg/hgrc <<EOF
 [remotefilelog]
-cachepath=$PWD/hgcache
-debug=True
-[extensions]
-remotefilelog=$TESTDIR/../remotefilelog
+reponame=master
 EOF
 }
 
 function hginit() {
+  local name
   name=$1
   shift
   hg init $name $@
-  cat >> $name/.hg/hgrc <<EOF
-[remotefilelog]
-cachepath=$PWD/hgcache
-debug=True
-[extensions]
-remotefilelog=$TESTDIR/../remotefilelog
-EOF
 }
 
 function clearcache() {
