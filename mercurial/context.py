@@ -1586,7 +1586,7 @@ class memctx(committablectx):
         """commit context to the repo"""
         return self._repo.commitctx(self)
 
-class memfilectx(object):
+class memfilectx(committablefilectx):
     """memfilectx represents an in-memory file to commit.
 
     See memctx for more details.
