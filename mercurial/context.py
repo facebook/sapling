@@ -1578,8 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def branch(self):
-        return encoding.tolocal(self._extra['branch'])
     def extra(self):
         return self._extra
     def flags(self, f):
