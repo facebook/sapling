@@ -1205,24 +1205,6 @@ class commitablefilectx(basefilectx):
     def __nonzero__(self):
         return True
 
-class workingfilectx(commitablefilectx):
-    """A workingfilectx object makes access to data related to a particular
-       file in the working directory convenient."""
-    def __init__(self, repo, path, filelog=None, workingctx=None):
-        super(workingfilectx, self).__init__(repo, path, filelog, workingctx)
-
-    @propertycache
-    def _changectx(self):
-        return workingctx(self._repo)
-
-    def data(self):
-        return self._repo.wread(self._path)
-    def renamed(self):
-        rp = self._repo.dirstate.copied(self._path)
-        if not rp:
-            return None
-        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
-
     def parents(self):
         '''return parent filectxs, following copies if necessary'''
         def filenode(ctx, path):
@@ -1243,6 +1225,24 @@ class workingfilectx(commitablefilectx):
 
         return [filectx(self._repo, p, fileid=n, filelog=l)
                 for p, n, l in pl if n != nullid]
+
+class workingfilectx(commitablefilectx):
+    """A workingfilectx object makes access to data related to a particular
+       file in the working directory convenient."""
+    def __init__(self, repo, path, filelog=None, workingctx=None):
+        super(workingfilectx, self).__init__(repo, path, filelog, workingctx)
+
+    @propertycache
+    def _changectx(self):
+        return workingctx(self._repo)
+
+    def data(self):
+        return self._repo.wread(self._path)
+    def renamed(self):
+        rp = self._repo.dirstate.copied(self._path)
+        if not rp:
+            return None
+        return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def children(self):
         return []
