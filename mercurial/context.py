@@ -1578,9 +1578,6 @@ class memctx(committablectx):
             self._text = editor(self._repo, self, [])
             self._repo.savecommitmessage(self._text)
 
-    def flags(self, f):
-        return self[f].flags()
-
     def parents(self):
         """return contexts for each parent changeset"""
         return self._parents
