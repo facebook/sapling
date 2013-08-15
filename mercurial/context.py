@@ -1204,9 +1204,6 @@ class workingfilectx(basefilectx):
     def __nonzero__(self):
         return True
 
-    def __str__(self):
-        return "%s@%s" % (self.path(), self._changectx)
-
     def __repr__(self):
         return "<workingfilectx %s>" % str(self)
 
