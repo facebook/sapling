@@ -4,4 +4,4 @@
 extdiff =
 
 [extdiff]
-9diff = 9diff -cm $parent $child $root
+9diff = /bin/mercurial/9diff -cm $parent $child $root

@@ -1,0 +1,4 @@
+# The 9mail to support patchbomb and other email wrappers
+[email]
+method = /bin/mercurial/9mail
+
