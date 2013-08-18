@@ -100,11 +100,11 @@ def pack_dirstate(dmap, copymap, pl, now):
             # systems with a granularity of 1 sec). This commonly happens
             # for at least a couple of files on 'update'.
             # The user could change the file without changing its size
-            # within the same second. Invalidate the file's stat data in
+            # within the same second. Invalidate the file's mtime in
             # dirstate, forcing future 'status' calls to compare the
-            # contents of the file. This prevents mistakenly treating such
-            # files as clean.
-            e = (e[0], 0, -1, -1)   # mark entry as 'unset'
+            # contents of the file if the size is the same. This prevents
+            # mistakenly treating such files as clean.
+            e = (e[0], e[1], e[2], -1)
             dmap[f] = e
 
         if f in copymap:

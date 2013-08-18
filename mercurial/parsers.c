@@ -330,7 +330,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 			 * this. */
 			if (PyDict_SetItem(map, k, dirstate_unset) == -1)
 				goto bail;
-			mode = 0, size = -1, mtime = -1;
+			mtime = -1;
 		}
 		putbe32(mode, p);
 		putbe32(size, p + 4);
