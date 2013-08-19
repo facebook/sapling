@@ -14,7 +14,7 @@ and O(changes) merge between branches.
 # import stuff from node for others to import from revlog
 from node import bin, hex, nullid, nullrev
 from i18n import _
-import ancestor, mdiff, parsers, error, util
+import ancestor, mdiff, parsers, error, util, templatefilters
 import struct, zlib, errno
 
 _pack = struct.pack
@@ -943,10 +943,16 @@ class revlog(object):
 
     def _checkhash(self, text, node, rev):
         p1, p2 = self.parents(node)
-        if node != hash(text, p1, p2):
-            raise RevlogError(_("integrity check failed on %s:%d")
-                              % (self.indexfile, rev))
+        self.checkhash(text, p1, p2, node, rev)
         return text
+
+    def checkhash(self, text, p1, p2, node, rev=None):
+        if node != hash(text, p1, p2):
+            revornode = rev
+            if revornode is None:
+                revornode = templatefilters.short(hex(node))
+            raise RevlogError(_("integrity check failed on %s:%s")
+                % (self.indexfile, revornode))
 
     def checkinlinesize(self, tr, fp=None):
         if not self._inline or (self.start(-2) + self.length(-2)) < _maxinline:
@@ -1063,9 +1069,7 @@ class revlog(object):
             ifh.flush()
             basetext = self.revision(self.node(cachedelta[0]))
             btext[0] = mdiff.patch(basetext, cachedelta[1])
-            chk = hash(btext[0], p1, p2)
-            if chk != node:
-                raise RevlogError(_("consistency error in delta"))
+            self.checkhash(btext[0], p1, p2, node)
             return btext[0]
 
         def builddelta(rev):
