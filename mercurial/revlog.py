@@ -993,7 +993,8 @@ class revlog(object):
         tr.replace(self.indexfile, trindex * self._io.size)
         self._chunkclear()
 
-    def addrevision(self, text, transaction, link, p1, p2, cachedelta=None):
+    def addrevision(self, text, transaction, link, p1, p2, cachedelta=None,
+                    node=None):
         """add a revision to the log
 
         text - the revision data to add
@@ -1001,11 +1002,14 @@ class revlog(object):
         link - the linkrev data to add
         p1, p2 - the parent nodeids of the revision
         cachedelta - an optional precomputed delta
+        node - nodeid of revision; typically node is not specified, and it is
+            computed by default as hash(text, p1, p2), however subclasses might
+            use different hashing method (and override checkhash() in such case)
         """
         if link == nullrev:
             raise RevlogError(_("attempted to add linkrev -1 to %s")
                               % self.indexfile)
-        node = hash(text, p1, p2)
+        node = node or hash(text, p1, p2)
         if node in self.nodemap:
             return node
 
