@@ -7,7 +7,7 @@
 
 from mercurial.i18n import _
 from mercurial import util, sshpeer
-import os, socket, lz4, time
+import os, socket, lz4, time, grp
 
 # Statistics for debugging
 fetchcost = 0
@@ -18,6 +18,15 @@ fetchmisses = 0
 _downloading = _('downloading')
 
 client = None
+
+def makedirs(root, path, owner):
+    os.makedirs(path)
+
+    while path != root:
+        stat = os.stat(path)
+        if stat.st_uid == owner:
+            os.chmod(path, 0o2775)
+        path = os.path.dirname(path)
 
 def getcachekey(file, id):
     pathhash = util.sha1(file).hexdigest()
@@ -38,6 +47,13 @@ class fileserverclient(object):
             oldumask = os.umask(0o002)
             try:
                 os.makedirs(self.cachepath)
+
+                groupname = ui.config("remotefilelog", "cachegroup")
+                if groupname:
+                    gid = grp.getgrnam(groupname).gr_gid
+                    if gid:
+                        os.chown(self.cachepath, os.getuid(), gid)
+                        os.chmod(self.cachepath, 0o2775)
             finally:
                 os.umask(oldumask)
 
@@ -113,6 +129,7 @@ class fileserverclient(object):
         count = total - len(missed)
         self.ui.progress(_downloading, count, total=total)
 
+        uid = os.getuid()
         oldumask = os.umask(0o002)
         try:
             # receive cache misses from master
@@ -131,12 +148,17 @@ class fileserverclient(object):
                     idcachepath = os.path.join(self.cachepath, id)
                     dirpath = os.path.dirname(idcachepath)
                     if not os.path.exists(dirpath):
-                        os.makedirs(dirpath)
+                        makedirs(self.cachepath, dirpath, uid)
                     f = open(idcachepath, "w")
                     try:
                         f.write(lz4.decompress(data))
                     finally:
                         f.close()
+
+
+                    stat = os.stat(idcachepath)
+                    if stat.st_uid == uid:
+                        os.chmod(idcachepath, 0o0664)
 
                 remote.cleanup()
                 remote = None
@@ -155,6 +177,9 @@ class fileserverclient(object):
             reposfile = open(repospath, 'a')
             reposfile.write(os.path.dirname(repo.path) + "\n")
             reposfile.close()
+            stat = os.stat(repospath)
+            if stat.st_uid == uid:
+                os.chmod(repospath, 0o0664)
         finally:
             os.umask(oldumask)
 
