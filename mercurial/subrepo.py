@@ -237,6 +237,7 @@ def submerge(repo, wctx, mctx, actx, overwrite):
 
     # record merged .hgsubstate
     writestate(repo, sm)
+    return sm
 
 def _updateprompt(ui, sub, dirty, local, remote):
     if dirty:
