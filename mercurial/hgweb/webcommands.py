@@ -110,7 +110,7 @@ def file(web, req, tmpl):
 
 def _search(web, req, tmpl):
 
-    def keywordsearch():
+    def keywordsearch(query):
         lower = encoding.lower
         qw = lower(query).split()
 
@@ -142,13 +142,13 @@ def _search(web, req, tmpl):
         'keyword': keywordsearch,
     }
 
-    def getsearchmode():
-        return 'keyword'
+    def getsearchmode(query):
+        return 'keyword', query
 
     def changelist(**map):
         count = 0
 
-        for ctx in searchfunc():
+        for ctx in searchfunc(funcarg):
             count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
@@ -188,7 +188,7 @@ def _search(web, req, tmpl):
     morevars['revcount'] = revcount * 2
     morevars['rev'] = query
 
-    mode = getsearchmode()
+    mode, funcarg = getsearchmode(query)
     searchfunc = searchfuncs[mode]
 
     tip = web.repo['tip']
