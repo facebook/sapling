@@ -138,10 +138,17 @@ def _search(web, req, tmpl):
 
             yield ctx
 
+    searchfuncs = {
+        'keyword': keywordsearch,
+    }
+
+    def getsearchmode():
+        return 'keyword'
+
     def changelist(**map):
         count = 0
 
-        for ctx in keywordsearch():
+        for ctx in searchfunc():
             count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
@@ -180,6 +187,9 @@ def _search(web, req, tmpl):
     morevars = copy.copy(tmpl.defaults['sessionvars'])
     morevars['revcount'] = revcount * 2
     morevars['rev'] = query
+
+    mode = getsearchmode()
+    searchfunc = searchfuncs[mode]
 
     tip = web.repo['tip']
     parity = paritygen(web.stripecount)
