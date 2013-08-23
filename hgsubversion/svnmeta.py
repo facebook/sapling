@@ -186,7 +186,7 @@ class SVNMeta(object):
         '''Save the Subversion metadata. This should really be called after
         every revision is created.
         '''
-        util.pickle_atomic(self.branches, self.branch_info_file)
+        util.dump(self.branches, self.branch_info_file)
 
     def localname(self, path):
         """Compute the local name for a branch located at path.

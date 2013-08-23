@@ -142,7 +142,7 @@ def save_string(file_path, string):
     f.write(str(string))
     f.close()
 
-def pickle_atomic(data, file_path):
+def dump(data, file_path):
     """pickle some data to a path atomically.
 
     This is present because I kept corrupting my revmap by managing to hit ^C

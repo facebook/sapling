@@ -76,7 +76,7 @@ class StandardLayout(base.BaseLayout):
                 self._tag_locations = self.ui.configlist('hgsubversion',
                                                         'tagpaths',
                                                         ['tags'])
-            util.pickle_atomic(self._tag_locations, tag_locations_file)
+            util.dump(self._tag_locations, tag_locations_file)
 
             # ensure nested paths are handled properly
             self._tag_locations.sort()
