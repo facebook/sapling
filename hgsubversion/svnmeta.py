@@ -1,4 +1,3 @@
-import cPickle as pickle
 import posixpath
 import os
 import tempfile
@@ -40,11 +39,7 @@ class SVNMeta(object):
         tagmap = util.configpath(self.ui, 'tagmap')
         filemap = util.configpath(self.ui, 'filemap')
 
-        self.branches = {}
-        if os.path.exists(self.branch_info_file):
-            f = open(self.branch_info_file)
-            self.branches = pickle.load(f)
-            f.close()
+        self.branches = util.load(self.branch_info_file) or {}
         self.prevbranches = dict(self.branches)
         self.tags = maps.Tags(repo)
         self._layout = layouts.detect.layout_from_file(self.meta_data_dir,
