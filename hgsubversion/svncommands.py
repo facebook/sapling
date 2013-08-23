@@ -1,6 +1,5 @@
 import os
 import posixpath
-import cPickle as pickle
 import sys
 import traceback
 import urlparse
@@ -98,8 +97,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                 if sofar and len(sofar[-1].split(' ', 2)) > 1:
                     lasthash = sofar[-1].split(' ', 2)[1]
                     startrev = repo[lasthash].rev() + 1
-                    branchinfo = pickle.load(open(os.path.join(svnmetadir,
-                                                           'branch_info')))
+                    branchinfo = util.load(os.path.join(svnmetadir,
+                                                        'branch_info'))
                     foundpartialinfo = True
             if not foundpartialinfo:
                 ui.status('missing some metadata -- doing a full rebuild\n')
