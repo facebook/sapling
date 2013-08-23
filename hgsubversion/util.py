@@ -150,12 +150,7 @@ def pickle_atomic(data, file_path):
     """
     f = hgutil.atomictempfile(file_path, 'w+b', 0644)
     pickle.dump(data, f)
-    # Older versions of hg have .rename() instead of .close on
-    # atomictempfile.
-    if getattr(hgutil.atomictempfile, 'rename', False):
-        f.rename()
-    else:
-        f.close()
+    f.close()
 
 def parseurl(url, heads=[]):
     checkout = None
