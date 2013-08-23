@@ -152,6 +152,16 @@ def dump(data, file_path):
     pickle.dump(data, f)
     f.close()
 
+def load(file_path):
+    """pickle load some data from a path.
+    """
+    data = None
+    if os.path.exists(file_path):
+        f = open(file_path)
+        data = pickle.load(f)
+        f.close()
+    return data
+
 def parseurl(url, heads=[]):
     checkout = None
     svn_url, (_junk, heads) = hg.parseurl(url, heads)
