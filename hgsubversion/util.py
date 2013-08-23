@@ -158,19 +158,10 @@ def pickle_atomic(data, file_path):
         f.close()
 
 def parseurl(url, heads=[]):
-    parsed = hg.parseurl(url, heads)
-    if len(parsed) == 3:
-        # old hg, remove when we can be 1.5-only
-        svn_url, heads, checkout = parsed
-    else:
-        svn_url, heads = parsed
-        if isinstance(heads, tuple) and len(heads) == 2:
-            # hg 1.6 or later
-            _junk, heads = heads
-        if heads:
-            checkout = heads[0]
-        else:
-            checkout = None
+    checkout = None
+    svn_url, (_junk, heads) = hg.parseurl(url, heads)
+    if heads:
+        checkout = heads[0]
     return svn_url, heads, checkout
 
 
