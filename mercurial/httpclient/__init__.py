@@ -495,6 +495,10 @@ class HTTPConnection(object):
             else:
                 raise BadRequestData('body has no __len__() nor read()')
 
+        # If we're reusing the underlying socket, there are some
+        # conditions where we'll want to retry, so make a note of the
+        # state of self.sock
+        fresh_socket = self.sock is None
         self._connect()
         outgoing_headers = self._buildheaders(
             method, path, hdrs, self.http_version)
@@ -640,6 +644,26 @@ class HTTPConnection(object):
         # the whole request
         if response is None:
             response = self.response_class(self.sock, self.timeout, method)
+            if not fresh_socket:
+                if not response._select():
+                    # This means the response failed to get any response
+                    # data at all, and in all probability the socket was
+                    # closed before the server even saw our request. Try
+                    # the request again on a fresh socket.
+                    logging.debug('response._select() failed during request().'
+                                  ' Assuming request needs to be retried.')
+                    self.sock = None
+                    # Call this method explicitly to re-try the
+                    # request. We don't use self.request() because
+                    # some tools (notably Mercurial) expect to be able
+                    # to subclass and redefine request(), and they
+                    # don't have the same argspec as we do.
+                    #
+                    # TODO restructure sending of requests to avoid
+                    # this recursion
+                    return HTTPConnection.request(
+                        self, method, path, body=body, headers=headers,
+                        expect_continue=expect_continue)
         data_left = bool(outgoing_headers or body)
         if data_left:
             logger.info('stopped sending request early, '
