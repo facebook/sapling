@@ -1255,8 +1255,10 @@ commit message with Japanese Kanji 'Noh', which ends with '\x5c'
 
 Graph json escape of multibyte character
 
-  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/' \
-  >     | grep -a '^var data ='
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/' > out
+  >>> for line in open("out"):
+  ...     if line.startswith("var data ="):
+  ...         print line,
   var data = [["061dd13ba3c3", [0, 1], [[0, 0, 1, -1, ""]], "\\u80fd", "test", "1970-01-01", ["unstable", true], ["tip"], ["something"]], ["cad8025a2e87", [0, 1], [[0, 0, 1, 3, "FF0000"]], "branch commit with null character: \x00", "test", "1970-01-01", ["unstable", false], [], []], ["1d22e65f027e", [0, 1], [[0, 0, 1, 3, ""]], "branch", "test", "1970-01-01", ["stable", true], [], []], ["a4f92ed23982", [0, 1], [[0, 0, 1, 3, ""]], "Added tag 1.0 for changeset 2ef0ac749a14", "test", "1970-01-01", ["default", true], [], []], ["2ef0ac749a14", [0, 1], [], "base", "test", "1970-01-01", ["default", false], ["1.0"], ["anotherthing"]]]; (esc)
 
 capabilities
