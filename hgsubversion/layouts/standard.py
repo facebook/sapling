@@ -1,5 +1,4 @@
 import os.path
-import pickle
 
 import base
 
@@ -67,12 +66,9 @@ class StandardLayout(base.BaseLayout):
         if self._tag_locations is None:
 
             tag_locations_file = os.path.join(meta_data_dir, 'tag_locations')
+            self._tag_locations = util.load(tag_locations_file)
 
-            if os.path.exists(tag_locations_file):
-                f = open(tag_locations_file)
-                self._tag_locations = pickle.load(f)
-                f.close()
-            else:
+            if not self._tag_locations:
                 self._tag_locations = self.ui.configlist('hgsubversion',
                                                         'tagpaths',
                                                         ['tags'])
