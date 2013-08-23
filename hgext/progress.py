@@ -239,6 +239,13 @@ class progbar(object):
             # this one are also closed
             if topic in self.topics:
                 self.topics = self.topics[:self.topics.index(topic)]
+                # reset the last topic to the one we just unwound to,
+                # so that higher-level topics will be stickier than
+                # lower-level topics
+                if self.topics:
+                    self.lasttopic = self.topics[-1]
+                else:
+                    self.lasttopic = None
         else:
             if topic not in self.topics:
                 self.starttimes[topic] = now

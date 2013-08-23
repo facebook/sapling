@@ -1,6 +1,14 @@
 
   $ cat > loop.py <<EOF
   > from mercurial import commands
+  > import time
+  > class incrementingtime(object):
+  >     def __init__(self):
+  >         self._time = 0.0
+  >     def __call__(self):
+  >         self._time += 0.25
+  >         return self._time
+  > time.time = incrementingtime()
   > 
   > def loop(ui, loops, **opts):
   >     loops = int(loops)
@@ -19,9 +27,14 @@
   >         if opts.get('parallel'):
   >             ui.progress('other', i, 'other.%d' % i, 'othernum', total)
   >         if nested:
-  >             for j in range(2):
-  >                 ui.progress('nested', j, 'nested.%d' % j, 'nestnum', 2)
-  >             ui.progress('nested', None, 'nested.done', 'nestnum', 2)
+  >             nested_steps = 2
+  >             if i and i % 4 == 0:
+  >                 nested_steps = 5
+  >             for j in range(nested_steps):
+  >                 ui.progress(
+  >                   'nested', j, 'nested.%d' % j, 'nestnum', nested_steps)
+  >             ui.progress(
+  >               'nested', None, 'nested.done', 'nestnum', nested_steps)
   >     ui.progress('loop', None, 'loop.done', 'loopnum', total)
   > 
   > commands.norepo += " loop"
@@ -67,6 +80,24 @@ test nested short-lived topics (which shouldn't display with nestdelay):
   loop [                                                ] 0/3\r (no-eol) (esc)
   loop [===============>                                ] 1/3\r (no-eol) (esc)
   loop [===============================>                ] 2/3\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+
+Test nested long-lived topic which has the same name as a short-lived
+peer. We shouldn't get stuck showing the short-lived inner steps, and
+should go back to skipping the inner steps when the slow nested step
+finishes.
+
+  $ hg -y loop 7 --nested
+  \r (no-eol) (esc)
+  loop [                                                ] 0/7\r (no-eol) (esc)
+  loop [=====>                                          ] 1/7\r (no-eol) (esc)
+  loop [============>                                   ] 2/7\r (no-eol) (esc)
+  loop [===================>                            ] 3/7\r (no-eol) (esc)
+  loop [==========================>                     ] 4/7\r (no-eol) (esc)
+  nested [==========================>                   ] 3/5\r (no-eol) (esc)
+  nested [===================================>          ] 4/5\r (no-eol) (esc)
+  loop [=================================>              ] 5/7\r (no-eol) (esc)
+  loop [========================================>       ] 6/7\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
 
 
