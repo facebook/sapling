@@ -304,9 +304,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
-    branchinfofile = open(os.path.join(svnmetadir, 'branch_info'), 'w')
-    pickle.dump(branchinfo, branchinfofile)
-    branchinfofile.close()
+    util.dump(branchinfo, os.path.join(svnmetadir, 'branch_info'))
 
 
 def help_(ui, args=None, **opts):
