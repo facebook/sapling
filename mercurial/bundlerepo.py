@@ -120,7 +120,7 @@ class bundlerevlog(revlog.revlog):
             chain.append(iterrev)
             iterrev = self.index[iterrev][3]
         if text is None:
-            text = revlog.revlog.revision(self, iterrev)
+            text = self.baserevision(iterrev)
 
         while chain:
             delta = self._chunk(chain.pop())
@@ -129,6 +129,12 @@ class bundlerevlog(revlog.revlog):
         self._checkhash(text, node, rev)
         self._cache = (node, rev, text)
         return text
+
+    def baserevision(self, nodeorrev):
+        # Revlog subclasses may override 'revision' method to modify format of
+        # content retrieved from revlog. To use bundlerevlog with such class one
+        # needs to override 'baserevision' and make more specific call here.
+        return revlog.revlog.revision(self, nodeorrev)
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         raise NotImplementedError
@@ -146,11 +152,20 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
 
+    def baserevision(self, nodeorrev):
+        # Although changelog doesn't override 'revision' method, some extensions
+        # may replace this class with another that does. Same story with
+        # manifest and filelog classes.
+        return changelog.changelog.revision(self, nodeorrev)
+
 class bundlemanifest(bundlerevlog, manifest.manifest):
     def __init__(self, opener, bundle, linkmapper):
         manifest.manifest.__init__(self, opener)
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
+
+    def baserevision(self, nodeorrev):
+        return manifest.manifest.revision(self, nodeorrev)
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundle, linkmapper, repo):
@@ -158,6 +173,9 @@ class bundlefilelog(bundlerevlog, filelog.filelog):
         bundlerevlog.__init__(self, opener, self.indexfile, bundle,
                               linkmapper)
         self._repo = repo
+
+    def baserevision(self, nodeorrev):
+        return filelog.filelog.revision(self, nodeorrev)
 
     def _file(self, f):
         self._repo.file(f)
