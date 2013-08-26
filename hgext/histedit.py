@@ -419,10 +419,6 @@ def findoutgoing(ui, repo, remote=None, force=False, opts={}):
     if revs:
         revs = [repo.lookup(rev) for rev in revs]
 
-    # hexlify nodes from outgoing, because we're going to parse
-    # parent[0] using revsingle below, and if the binary hash
-    # contains special revset characters like ":" the revset
-    # parser can choke.
     outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
     if not outgoing.missing:
         raise util.Abort(_('no outgoing ancestors'))
