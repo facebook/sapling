@@ -67,6 +67,7 @@ testpats = [
     (r'echo -n', "don't use 'echo -n', use printf"),
     (r'(^| )wc[^|]*$\n(?!.*\(re\))', "filter wc output"),
     (r'head -c', "don't use 'head -c', use 'dd'"),
+    (r'tail -n', "don't use the '-n' option to tail, just use '-<num>'"),
     (r'sha1sum', "don't use sha1sum, use $TESTDIR/md5sum.py"),
     (r'ls.*-\w*R', "don't use 'ls -R', use 'find'"),
     (r'printf.*[^\\]\\([1-9]|0\d)', "don't use 'printf \NNN', use Python"),
