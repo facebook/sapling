@@ -39,7 +39,13 @@ _skipstandard = set([
 
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
-    repo, svnpath = self.load_and_fetch(name, subdir=subdir, layout=layout)
+    config = {}
+    for branch, path in test_util.custom.get(name, {}).iteritems():
+        config['hgsubversionbranch.%s' % branch] = path
+    repo, svnpath = self.load_and_fetch(name,
+                                        subdir=subdir,
+                                        layout=layout,
+                                        config=config)
     assert test_util.repolen(self.repo) > 0
     for i in repo:
         ctx = repo[i]
@@ -98,7 +104,8 @@ for case in fixtures:
     bname = 'test_' + case[:-len('.svndump')]
     if case not in _skipstandard:
         attrs[bname] = buildmethod(case, bname, 'standard')
-    name = bname + '_single'
-    attrs[name] = buildmethod(case, name, 'single')
+    attrs[bname + '_single'] = buildmethod(case, bname + '_single', 'single')
+    if case in test_util.custom:
+        attrs[bname + '_custom'] = buildmethod(case, bname + '_custom', 'custom')
 
 VerifyTests = type('VerifyTests', (test_util.TestBase,), attrs)

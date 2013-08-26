@@ -30,15 +30,18 @@ expect_youngest_skew = [('file_mixed_with_branches.svndump', False, False),
 
 
 
-def _do_case(self, name, single):
+def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
-    layout = 'auto'
-    if single:
-        layout = 'single'
+    single = layout == 'single'
+    u = ui.ui()
+    config = {}
+    if layout == 'custom':
+        for branch, path in test_util.custom.get(name, {}).iteritems():
+            config['hgsubversionbranch.%s' % branch] = path
+            u.setconfig('hgsubversionbranch', branch, path)
     repo, repo_path = self.load_and_fetch(name, subdir=subdir, layout=layout)
     assert test_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
-    u = ui.ui()
     src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
     src = test_util.getlocalpeer(src)
     dest = test_util.getlocalpeer(dest)
@@ -136,11 +139,11 @@ def _run_assertions(self, name, single, src, dest, u):
             self.assertEqual(srcinfo[2], destinfo[2])
 
 
-def buildmethod(case, name, single):
-    m = lambda self: self._do_case(case, single)
+def buildmethod(case, name, layout):
+    m = lambda self: self._do_case(case, layout)
     m.__name__ = name
     m.__doc__ = ('Test rebuildmeta on %s (%s)' %
-                 (case, (single and 'single') or 'standard'))
+                 (case, layout))
     return m
 
 
@@ -158,8 +161,11 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     if case in skip:
         continue
     bname = 'test_' + case[:-len('.svndump')]
-    attrs[bname] = buildmethod(case, bname, False)
-    name = bname + '_single'
-    attrs[name] = buildmethod(case, name, True)
+    attrs[bname] = buildmethod(case, bname, 'auto')
+    attrs[bname + '_single'] = buildmethod(case, bname + '_single', 'single')
+    if case in test_util.custom:
+            attrs[bname + '_custom'] = buildmethod(case,
+                                                   bname + '_custom',
+                                                   'single')
 
 RebuildMetaTests = type('RebuildMetaTests', (test_util.TestBase,), attrs)

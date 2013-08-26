@@ -11,6 +11,7 @@ NB: this has a long way to go before it does everything it claims to
 
 from mercurial import util as hgutil
 
+import custom
 import detect
 import persist
 import single
@@ -26,6 +27,7 @@ __all__ = [
 # The intention is for extension authors who wish to build their own
 # layout to add it to this dict.
 NAME_TO_CLASS = {
+    "custom": custom.CustomLayout,
     "single": single.SingleLayout,
     "standard": standard.StandardLayout,
 }

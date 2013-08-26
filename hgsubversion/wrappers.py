@@ -544,7 +544,13 @@ optionmap = {
     'startrev': ('hgsubversion', 'startrev'),
 }
 
-dontretain = { 'hgsubversion': set(['authormap', 'filemap', 'layout', ]) }
+extrasections = set(['hgsubversionbranch'])
+
+
+dontretain = {
+    'hgsubversion': set(['authormap', 'filemap', 'layout', ]),
+    'hgsubversionbranch': set(),
+    }
 
 def clone(orig, ui, source, dest=None, **opts):
     """
@@ -602,7 +608,9 @@ def clone(orig, ui, source, dest=None, **opts):
             fd = dstrepo.opener("hgrc", "a", text=True)
         else:
             fd = dst.opener("hgrc", "a", text=True)
-        for section in set(s for s, v in optionmap.itervalues()):
+        preservesections = set(s for s, v in optionmap.itervalues())
+        preservesections |= extrasections
+        for section in preservesections:
             config = dict(ui.configitems(section))
             for name in dontretain[section]:
                 config.pop(name, None)

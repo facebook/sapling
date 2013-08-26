@@ -23,15 +23,24 @@ from hgsubversion import svnmeta
 
 
 
-def _do_case(self, name, single):
+def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
-    layout = 'auto'
-    if single:
-        layout = 'single'
-    repo, repo_path = self.load_and_fetch(name, subdir=subdir, layout=layout)
+    single = layout == 'single'
+    u = ui.ui()
+    config = {}
+    if layout == 'custom':
+        config['hgsubversion.layout'] = 'custom'
+        u.setconfig('hgsubversion', 'layout', 'custom')
+        for branch, path in test_util.custom.get(name, {}).iteritems():
+            config['hgsubversionbranch.%s' % branch] = path
+            u.setconfig('hgsubversionbranch', branch, path)
+
+    repo, repo_path = self.load_and_fetch(name,
+                                          subdir=subdir,
+                                          layout=layout,
+                                          config=config)
     assert test_util.repolen(self.repo) > 0
     wc2_path = self.wc_path + '_clone'
-    u = ui.ui()
     src, dest = test_util.hgclone(u, self.wc_path, wc2_path, update=False)
     src = test_util.getlocalpeer(src)
     dest = test_util.getlocalpeer(dest)
@@ -74,8 +83,14 @@ for case in [f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     if case in skip:
         continue
     bname = 'test_' + case[:-len('.svndump')]
-    attrs[bname] = test_rebuildmeta.buildmethod(case, bname, False)
-    name = bname + '_single'
-    attrs[name] = test_rebuildmeta.buildmethod(case, name, True)
+    attrs[bname] = test_rebuildmeta.buildmethod(case, bname, 'auto')
+    attrs[bname + '_single'] = test_rebuildmeta.buildmethod(case,
+                                                            bname + '_single',
+                                                            'single')
+    if case in test_util.custom:
+        attrs[bname + '_custom'] = test_rebuildmeta.buildmethod(case,
+                                                                bname + '_custom',
+                                                                'custom')
+
 
 UpdateMetaTests = type('UpdateMetaTests', (test_util.TestBase,), attrs)

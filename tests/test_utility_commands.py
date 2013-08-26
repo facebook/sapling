@@ -33,8 +33,15 @@ def repourl(repo_path):
 class UtilityTests(test_util.TestBase):
     stupid_mode_tests = True
 
-    def test_info_output(self):
-        repo, repo_path = self.load_and_fetch('two_heads.svndump')
+    def test_info_output(self, custom=False):
+        if custom:
+            config = {
+                'hgsubversionbranch.default': 'trunk',
+                'hgsubversionbranch.the_branch': 'branches/the_branch',
+                }
+        else:
+            config = {}
+        repo, repo_path = self.load_and_fetch('two_heads.svndump', config=config)
         hg.update(self.repo, 'the_branch')
         u = self.ui()
         u.pushbuffer()
@@ -87,8 +94,21 @@ class UtilityTests(test_util.TestBase):
                      })
         self.assertMultiLineEqual(actual, expected)
 
-    def test_info_single(self):
-        repo, repo_path = self.load_and_fetch('two_heads.svndump', subdir='trunk')
+    def test_info_output_custom(self):
+        self.test_info_output(custom=True)
+
+    def test_info_single(self, custom=False):
+        if custom:
+            subdir=None
+            config = {
+                'hgsubversionbranch.default': 'trunk/'
+                }
+        else:
+            subdir='trunk'
+            config = {}
+        repo, repo_path = self.load_and_fetch('two_heads.svndump',
+                                              subdir=subdir,
+                                              config=config)
         hg.update(self.repo, 'tip')
         u = self.ui()
         u.pushbuffer()
@@ -101,6 +121,9 @@ class UtilityTests(test_util.TestBase):
                      'rev': 6,
                      })
         self.assertMultiLineEqual(expected, actual)
+
+    def test_info_custom_single(self):
+        self.test_info_single(custom=True)
 
     def test_missing_metadata(self):
         self._load_fixture_and_fetch('two_heads.svndump')
@@ -232,9 +255,18 @@ class UtilityTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].parents()[0].parents()[0], self.repo[0])
         self.assertNotEqual(beforerebasehash, self.repo['tip'].node())
 
-    def test_genignore(self):
+    def test_genignore(self, layout='auto'):
         """ Test generation of .hgignore file. """
-        repo = self._load_fixture_and_fetch('ignores.svndump', noupdate=False)
+        if layout == 'custom':
+            config = {
+                'hgsubversionbranch.default': 'trunk',
+                }
+        else:
+            config = {}
+        repo = self._load_fixture_and_fetch('ignores.svndump',
+                                            layout=layout,
+                                            noupdate=False,
+                                            config=config)
         u = self.ui()
         u.pushbuffer()
         svncommands.genignore(u, repo, self.wc_path)
@@ -242,13 +274,10 @@ class UtilityTests(test_util.TestBase):
                          '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
 
     def test_genignore_single(self):
-        self._load_fixture_and_fetch('ignores.svndump', subdir='trunk')
-        hg.update(self.repo, 'tip')
-        u = self.ui()
-        u.pushbuffer()
-        svncommands.genignore(u, self.repo, self.wc_path)
-        self.assertMultiLineEqual(open(os.path.join(self.wc_path, '.hgignore')).read(),
-                               '.hgignore\nsyntax:glob\nblah\notherblah\nbaz/magic\n')
+        self.test_genignore(layout='single')
+
+    def test_genignore_custom(self):
+        self.test_genignore(layout='custom')
 
     def test_list_authors(self):
         repo_path = self.load_svndump('replace_trunk_with_branch.svndump')

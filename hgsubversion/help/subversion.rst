@@ -45,6 +45,10 @@ hgsubversion.layout option (see below for detailed help) ::
 
  $ hg clone --layout single svn+http://python-nose.googlecode.com/svn nose-hg
 
+Finally, if you want to clone two or more directores as separate
+branches, use the custom layout.  See the documentation below for the
+``hgsubversionbranch.*`` configuration for detailed help.
+
 Pulling new revisions into an already-converted repository is the same
 as from any other Mercurial source. Within the first example above,
 the following three commands are all equivalent::
@@ -357,7 +361,9 @@ The following options only have an effect on the initial clone of a repository:
     repository is converted into a single branch. The default,
     ``auto``, causes hgsubversion to assume a standard layout if any
     of trunk, branches, or tags exist within the specified directory
-    on the server.
+    on the server.  ``custom`` causes hgsubversion to read the
+    ``hgsubversionbranch`` config section to determine the repository
+    layout.
 
   ``hgsubversion.startrev``
 
@@ -388,6 +394,27 @@ The following options only have an effect on the initial clone of a repository:
     become out of step with the contents of the Subversion repo).  If
     you use this option, be sure to carefully check the result of a
     pull afterwards.
+
+    ``hgsubversionbranch.*``
+
+    Use this config section with the custom layout to specify a cusomt
+    mapping of subversion path to Mercurial branch.  This is useful if
+    your layout is substantially different from the standard
+    trunk/branches/tags layout and/or you are only interested in a few
+    branches.
+
+    Example config that pulls in trunk as the default branch,
+    personal/alice as the alice branch, and releases/2.0/2.7 as
+    release-2.7::
+
+        [hgsubversionbranch]
+            default = trunk
+            alice = personal/alice
+            release-2.7 = releases/2.0/2.7
+
+    Note that it is an error to specify more than one branch for a
+    given path, or to sepecify nested paths (e.g. releases/2.0 and
+    releases/2.0/2.7)
 
 Please note that some of these options may be specified as command line options
 as well, and when done so, will override the configuration. If an authormap,

@@ -106,6 +106,87 @@ subdir = {'truncatedhistory.svndump': '/project2',
           'non_ascii_path_2.svndump': '/b%C3%B8b',
           'subdir_is_file_prefix.svndump': '/flaf',
           }
+# map defining the layouts of the fixtures we can use with custom layout
+# these are really popular layouts, so I gave them names
+trunk_only = {
+    'default': 'trunk',
+    }
+trunk_dev_branch = {
+    'default': 'trunk',
+    'dev_branch': 'branches/dev_branch',
+    }
+custom = {
+    'addspecial.svndump': {
+        'default': 'trunk',
+        'foo': 'branches/foo',
+        },
+    'binaryfiles.svndump': trunk_only,
+    'branch_create_with_dir_delete.svndump': trunk_dev_branch,
+    'branch_delete_parent_dir.svndump': trunk_dev_branch,
+    'branchmap.svndump': {
+        'default': 'trunk',
+        'badname': 'branches/badname',
+        'feature': 'branches/feature',
+        },
+    'branch_prop_edit.svndump': trunk_dev_branch,
+    'branch_rename_to_trunk.svndump': {
+        'default': 'trunk',
+        'dev_branch': 'branches/dev_branch',
+        'old_trunk': 'branches/old_trunk',
+        },
+    'copies.svndump': trunk_only,
+    'copybeforeclose.svndump': {
+        'default': 'trunk',
+        'test': 'branches/test'
+        },
+    'delentries.svndump': trunk_only,
+    'delete_restore_trunk.svndump': trunk_only,
+    'empty_dir_in_trunk_not_repo_root.svndump': trunk_only,
+    'executebit.svndump': trunk_only,
+    'filecase.svndump': trunk_only,
+    'file_not_in_trunk_root.svndump': trunk_only,
+    'project_name_with_space.svndump': trunk_dev_branch,
+    'pushrenames.svndump': trunk_only,
+    'rename_branch_parent_dir.svndump': trunk_dev_branch,
+    'renamedproject.svndump': {
+        'default': 'trunk',
+        'branch': 'branches/branch',
+        },
+    'renames.svndump': {
+        'default': 'trunk',
+        'branch1': 'branches/branch1',
+        },
+    'replace_branch_with_branch.svndump': {
+        'default': 'trunk',
+        'branch1': 'branches/branch1',
+        'branch2': 'branches/branch2',
+        },
+    'replace_trunk_with_branch.svndump': {
+        'default': 'trunk',
+        'test': 'branches/test',
+        },
+    'revert.svndump': trunk_only,
+    'siblingbranchfix.svndump': {
+        'default': 'trunk',
+        'wrongbranch': 'branches/wrongbranch',
+        },
+    'simple_branch.svndump': {
+        'default': 'trunk',
+        'the_branch': 'branches/the_branch',
+        },
+    'spaces-in-path.svndump': trunk_dev_branch,
+    'symlinks.svndump': trunk_only,
+    'truncatedhistory.svndump': trunk_only,
+    'unorderedbranch.svndump': {
+        'default': 'trunk',
+        'branch': 'branches/branch',
+        },
+    'unrelatedbranch.svndump': {
+        'default': 'trunk',
+        'branch1': 'branches/branch1',
+        'branch2': 'branches/branch2',
+        },
+}
 
 FIXTURES = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                         'fixtures')

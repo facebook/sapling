@@ -19,11 +19,18 @@ from hgsubversion import wrappers
 
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
-    repo, repo_path = self.load_and_fetch(name, subdir=subdir, layout=layout)
+    config = {}
+    u = ui.ui()
+    for branch, path in test_util.custom.get(name, {}).iteritems():
+        config['hgsubversionbranch.%s' % branch] = path
+        u.setconfig('hgsubversionbranch', branch, path)
+    repo, repo_path = self.load_and_fetch(name,
+                                          subdir=subdir,
+                                          layout=layout,
+                                          config=config)
     assert test_util.repolen(self.repo) > 0, \
         'Repo had no changes, maybe you need to add a subdir entry in test_util?'
     wc2_path = self.wc_path + '_stupid'
-    u = ui.ui()
     checkout_path = repo_path
     if subdir:
         checkout_path += '/' + subdir
@@ -52,7 +59,8 @@ for case in (f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')
     # here, but since it isn't a regression we suppress the test case.
     if case != 'branchtagcollision.svndump':
         attrs[name] = buildmethod(case, name, 'auto')
-    name += '_single'
-    attrs[name] = buildmethod(case, name, 'single')
+    attrs[name + '_single'] = buildmethod(case, name + '_single', 'single')
+    if case in test_util.custom:
+        attrs[name + '_custom'] = buildmethod(case, name + '_custom', 'custom')
 
 StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
