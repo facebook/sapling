@@ -70,7 +70,7 @@ class unionrevlog(revlog.revlog):
                 self.revlog2.rev(self.node(rev1)),
                 self.revlog2.rev(self.node(rev2)))
         elif rev1 <= self.repotiprev and rev2 <= self.repotiprev:
-            return revlog.revlog.revdiff(self, rev1, rev2)
+            return self.baserevdiff(rev1, rev2)
 
         return mdiff.textdiff(self.revision(self.node(rev1)),
                               self.revision(self.node(rev2)))
@@ -93,9 +93,19 @@ class unionrevlog(revlog.revlog):
             text = self.revlog2.revision(node)
             self._cache = (node, rev, text)
         else:
-            text = revlog.revlog.revision(self, rev)
+            text = self.baserevision(rev)
             # already cached
         return text
+
+    def baserevision(self, nodeorrev):
+        # Revlog subclasses may override 'revision' method to modify format of
+        # content retrieved from revlog. To use unionrevlog with such class one
+        # needs to override 'baserevision' and make more specific call here.
+        return revlog.revlog.revision(self, nodeorrev)
+
+    def baserevdiff(self, rev1, rev2):
+        # Exists for the same purpose as baserevision.
+        return revlog.revlog.revdiff(self, rev1, rev2)
 
     def addrevision(self, text, transaction, link, p1=None, p2=None, d=None):
         raise NotImplementedError
@@ -114,12 +124,27 @@ class unionchangelog(unionrevlog, changelog.changelog):
         unionrevlog.__init__(self, opener, self.indexfile, changelog2,
                              linkmapper)
 
+    def baserevision(self, nodeorrev):
+        # Although changelog doesn't override 'revision' method, some extensions
+        # may replace this class with another that does. Same story with
+        # manifest and filelog classes.
+        return changelog.changelog.revision(self, nodeorrev)
+
+    def baserevdiff(self, rev1, rev2):
+        return changelog.changelog.revdiff(self, rev1, rev2)
+
 class unionmanifest(unionrevlog, manifest.manifest):
     def __init__(self, opener, opener2, linkmapper):
         manifest.manifest.__init__(self, opener)
         manifest2 = manifest.manifest(opener2)
         unionrevlog.__init__(self, opener, self.indexfile, manifest2,
                              linkmapper)
+
+    def baserevision(self, nodeorrev):
+        return manifest.manifest.revision(self, nodeorrev)
+
+    def baserevdiff(self, rev1, rev2):
+        return manifest.manifest.revdiff(self, rev1, rev2)
 
 class unionfilelog(unionrevlog, filelog.filelog):
     def __init__(self, opener, path, opener2, linkmapper, repo):
@@ -128,6 +153,12 @@ class unionfilelog(unionrevlog, filelog.filelog):
         unionrevlog.__init__(self, opener, self.indexfile, filelog2,
                              linkmapper)
         self._repo = repo
+
+    def baserevision(self, nodeorrev):
+        return filelog.filelog.revision(self, nodeorrev)
+
+    def baserevdiff(self, rev1, rev2):
+        return filelog.filelog.revdiff(self, rev1, rev2)
 
     def _file(self, f):
         self._repo.file(f)
