@@ -27,8 +27,10 @@ class StandardLayout(base.BaseLayout):
         return 'branches/%s' % branch
 
     def remotepath(self, branch, subdir='/'):
+        if subdir == '/':
+            subdir = ''
         branchpath = 'trunk'
-        if branch:
+        if branch and branch != 'default':
             if branch.startswith('../'):
                 branchpath = branch[3:]
             else:
