@@ -221,6 +221,8 @@ Dump cache:
   3 6fa450212aeb2a21ed616a54aea39a4a27894cd7 7d3b718c964ef37b89e550ebdafd5789e76ce1b0
   2 7a94127795a33c10a370c93f731fd9fea0b79af6 0c04f2a8af31de17fab7422878ee5a2dadbc943d
   
+  bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
+  bbd179dfa0a71671c253b3ae0aa1513b60d199fa bar
   78391a272241d70354aa14c874552cad6b51bb42 bar
 
 Test tag removal:
@@ -396,7 +398,18 @@ Test for issue3911
   localtag                           1:a0b6fe111088
   globaltag                          0:bbd179dfa0a7
 
+  $ hg tags -v
+  tip                                2:5c70a037bb37
+  localtag                           1:a0b6fe111088
+  globaltag                          0:bbd179dfa0a7
+
   $ hg tag -r 1 localtag2
+  $ hg tags -v
+  tip                                3:bbfb8cd42be2
+  localtag2                          1:a0b6fe111088
+  localtag                           1:a0b6fe111088
+  globaltag                          0:bbd179dfa0a7
+
   $ hg tags -v
   tip                                3:bbfb8cd42be2
   localtag2                          1:a0b6fe111088
