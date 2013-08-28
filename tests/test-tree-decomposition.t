@@ -16,7 +16,7 @@ Load commonly used test logic
 
   $ rm -r d1
   $ echo c > d1
-  $ git add d1
+  $ git add --all d1
   $ fn_git_commit -m 'replace a dir with a file'
 
 
