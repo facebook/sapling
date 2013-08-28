@@ -38,9 +38,9 @@ Ensure gitlinks are transformed to .hgsubstate on hg pull from git
   $ hg bookmarks -f -r default master
 1. Ensure gitlinks are transformed to .hgsubstate on hg <- git pull
 .hgsub shall list two [git] subrepos
-  $ cat .hgsub
-  xyz/subrepo2 = [git]../gitsubrepo
+  $ cat .hgsub | sort
   subrepo1 = [git]../gitsubrepo
+  xyz/subrepo2 = [git]../gitsubrepo
 .hgsubstate shall list two idenitcal revisions
   $ cat .hgsubstate
   56f0304c5250308f14cfbafdc27bd12d40154d17 subrepo1
@@ -108,10 +108,10 @@ bring working copy to HEAD state (it's not bare repo)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 pull shall bring .hgsub entry which was added to the git repo
-  $ cat hgrepo/.hgsub
+  $ cat hgrepo/.hgsub | sort
   hgsub = $TESTTMP/hgsub
-  xyz/subrepo2 = [git]../gitsubrepo
   subrepo1 = [git]../gitsubrepo
+  xyz/subrepo2 = [git]../gitsubrepo
 .hgsubstate shall list revision of the subrepo added through git repo
   $ cat hgrepo/.hgsubstate
   481ec30d580f333ae3a77f94c973ce37b69d5bda hgsub
