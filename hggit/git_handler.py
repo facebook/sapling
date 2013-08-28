@@ -1115,6 +1115,7 @@ class GitHandler(object):
             heads = dict([(ref[11:],refs[ref]) for ref in refs
                           if ref.startswith('refs/heads/')])
 
+            suffix = self.branch_bookmark_suffix or ''
             for head, sha in heads.iteritems():
                 # refs contains all the refs in the server, not just
                 # the ones we are pulling
@@ -1123,28 +1124,13 @@ class GitHandler(object):
                 hgsha = bin(self.map_hg_get(sha))
                 if not head in bms:
                     # new branch
-                    bms[head] = hgsha
+                    bms[head + suffix] = hgsha
                 else:
                     bm = self.repo[bms[head]]
                     if bm.ancestor(self.repo[hgsha]) == bm:
                         # fast forward
-                        bms[head] = hgsha
+                        bms[head + suffix] = hgsha
 
-            # if there's a branch bookmark suffix,
-            # then add it on to all bookmark names
-            # that would otherwise conflict with a branch
-            # name
-            if self.branch_bookmark_suffix:
-                real_branch_names = self.repo.branchmap()
-                bms = dict(
-                    (
-                        bm_name + self.branch_bookmark_suffix
-                            if bm_name in real_branch_names
-                        else bm_name,
-                        bms[bm_name]
-                    )
-                    for bm_name in bms
-                )
             if heads:
                 if oldbm:
                     bookmarks.write(self.repo, bms)
@@ -1365,7 +1351,7 @@ class GitHandler(object):
             res = git_match.groupdict()
             transport = client.SSHGitClient if 'ssh' in res['scheme'] else client.TCPGitClient
             host, port, sepr, path = res['host'], res['port'], res['sepr'], res['path']
-            if sepr == '/':
+            if sepr == '/' and not path.startswith('~'):
                 path = '/' + path
             # strip trailing slash for heroku-style URLs
             # ssh+git://git@heroku.com:project.git/
