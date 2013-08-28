@@ -42,7 +42,7 @@ Load commonly used test logic
   pushing to $TESTTMP/gitrepo
   searching for changes
   adding objects
-  added 1 commits with 1 trees and 1 blobs
+  added 1 commits with 1 trees and 2 blobs
   updating reference refs/heads/master
 
   $ cd ..

@@ -25,7 +25,7 @@ Load commonly used test logic
   Skipping export of tag bet*a because it has invalid name as a git refname.
   searching for changes
   adding objects
-  added 2 commits with 2 trees and 2 blobs
+  added 2 commits with 2 trees and 3 blobs
   adding reference refs/tags/alph#a
   updating reference refs/heads/master
 

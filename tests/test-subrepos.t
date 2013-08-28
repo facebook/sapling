@@ -39,8 +39,8 @@ Ensure gitlinks are transformed to .hgsubstate on hg pull from git
 1. Ensure gitlinks are transformed to .hgsubstate on hg <- git pull
 .hgsub shall list two [git] subrepos
   $ cat .hgsub
-  subrepo1 = [git]../gitsubrepo
   xyz/subrepo2 = [git]../gitsubrepo
+  subrepo1 = [git]../gitsubrepo
 .hgsubstate shall list two idenitcal revisions
   $ cat .hgsubstate
   56f0304c5250308f14cfbafdc27bd12d40154d17 subrepo1
@@ -73,7 +73,7 @@ hg status shall NOT report .hgsub and .hgsubstate as untracked - either ignored 
   pushing to $TESTTMP/gitrepo1
   searching for changes
   adding objects
-  added 1 commits with 2 trees and 1 blobs
+  added 1 commits with 2 trees and 2 blobs
   updating reference refs/heads/master
   $ cd ..
   $ cd gitrepo1
@@ -103,14 +103,15 @@ bring working copy to HEAD state (it's not bare repo)
   importing git objects into hg
   (run 'hg update' to get a working copy)
   $ hg checkout -C
+  updating to active bookmark master
   cloning subrepo hgsub from $TESTTMP/hgsub
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 pull shall bring .hgsub entry which was added to the git repo
   $ cat hgrepo/.hgsub
   hgsub = $TESTTMP/hgsub
-  subrepo1 = [git]../gitsubrepo
   xyz/subrepo2 = [git]../gitsubrepo
+  subrepo1 = [git]../gitsubrepo
 .hgsubstate shall list revision of the subrepo added through git repo
   $ cat hgrepo/.hgsubstate
   481ec30d580f333ae3a77f94c973ce37b69d5bda hgsub
