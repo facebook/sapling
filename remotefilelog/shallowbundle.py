@@ -8,25 +8,30 @@
 import fileserverclient
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import changegroup, revlog
+from mercurial import changegroup, revlog, phases
 from mercurial.i18n import _
 
 shallowremote = False
 
+NoFiles = 0
+LocalFiles = 1
+AllFiles = 2
+
 def shouldaddfilegroups(repo, source):
-    isshallowclient = "remotefilelog" in repo.requirements
+    if not "remotefilelog" in repo.requirements:
+        return AllFiles
+
     if source == "push":
-        return True
+        return AllFiles
     if source == "serve":
-        if isshallowclient:
-            # commits in a shallow repo may not exist in the master server
-            # so we need to return all the data on a pull
+        if shallowremote:
+            return LocalFiles
+        else:
+            # Serving to a full repo requires us to serve everything
             repo.ui.warn("pulling from a shallow repo\n")
-            return True
+            return AllFiles
 
-        return not shallowremote
-
-    return not isshallowclient
+    return NoFiles
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find
@@ -98,9 +103,44 @@ class shallowbundle(changegroup.bundle10):
         yield self.close()
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
-        if ("remotefilelog" in self._repo.requirements and
-            not shouldaddfilegroups(self._repo, source)):
-            return iter([])
+        if "remotefilelog" in self._repo.requirements:
+            repo = self._repo
+            filestosend = shouldaddfilegroups(repo, source)
+            if filestosend == NoFiles:
+                return iter([])
+            else:
+                phase = repo._phasecache.phase
+                files = []
+                # Prefetch the revisions being bundled
+                for i, fname in enumerate(sorted(changedfiles)):
+                    filerevlog = repo.file(fname)
+                    linkrevnodes = linknodes(filerevlog, fname)
+                    # Normally we'd prune the linkrevnodes first,
+                    # but that would perform the server fetches one by one.
+                    for fnode, cnode in list(linkrevnodes.iteritems()):
+                        # Adjust linknodes so public file revisions aren't sent
+                        if filestosend == LocalFiles:
+                            rev = repo.changelog.rev(cnode)
+                            if phase(repo, rev) == phases.public:
+                                del linkrevnodes[fnode]
+                            else:
+                                files.append((fname, hex(fnode)))
+                        else:
+                            files.append((fname, hex(fnode)))
+
+                fileserverclient.client.prefetch(repo, files)
+
+                # Prefetch the revisions that are going to be diffed against
+                prevfiles = []
+                for fname, fnode in files:
+                    fnode = bin(fnode)
+                    filerevlog = repo.file(fname)
+                    ancestormap = filerevlog.ancestormap(fnode)
+                    p1, p2, linknode, copyfrom = ancestormap[fnode]
+                    if p1 != nullid:
+                        prevfiles.append((copyfrom or fname, hex(p1)))
+
+                fileserverclient.client.prefetch(repo, prevfiles)
 
         return super(shallowbundle, self).generatefiles(changedfiles,
                      linknodes, commonrevs, source)

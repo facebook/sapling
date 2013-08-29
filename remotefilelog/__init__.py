@@ -167,6 +167,15 @@ def onetimesetup(ui):
 
         wireproto.commands[cmd + "_shallow"] = (wrap(func), args)
 
+    # expose remotefilelog capabilities
+    def capabilities(orig, repo, proto):
+        caps = orig(repo, proto)
+        if (remotefilelogreq in repo.requirements or
+            ui.configbool('remotefilelog', 'server')):
+            caps += " " + remotefilelogreq
+        return caps
+    wrapfunction(wireproto, 'capabilities', capabilities)
+
 clientonetime = False
 def onetimeclientsetup(ui):
     global clientonetime
@@ -304,7 +313,8 @@ def onetimeclientsetup(ui):
 
     def _callstream(orig, self, cmd, **args):
         if cmd in shallowcommands:
-            return orig(self, cmd + "_shallow", **args)
+            if remotefilelogreq in self._caps:
+                return orig(self, cmd + "_shallow", **args)
         return orig(self, cmd, **args)
     wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
 
