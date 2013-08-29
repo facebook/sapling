@@ -347,6 +347,7 @@ class queue(object):
         except error.ConfigError:
             self.gitmode = ui.config('mq', 'git', 'auto').lower()
         self.plainmode = ui.configbool('mq', 'plain', False)
+        self.checkapplied = True
 
     @util.propertycache
     def applied(self):
@@ -3264,7 +3265,7 @@ def reposetup(ui, repo):
             return queue(self.ui, self.baseui, self.path)
 
         def abortifwdirpatched(self, errmsg, force=False):
-            if self.mq.applied and not force:
+            if self.mq.applied and self.mq.checkapplied and not force:
                 parents = self.dirstate.parents()
                 patches = [s.node for s in self.mq.applied]
                 if parents[0] in patches or parents[1] in patches:
@@ -3280,7 +3281,7 @@ def reposetup(ui, repo):
                                               editor, extra)
 
         def checkpush(self, force, revs):
-            if self.mq.applied and not force:
+            if self.mq.applied and self.mq.checkapplied and not force:
                 outapplied = [e.node for e in self.mq.applied]
                 if revs:
                     # Assume applied patches have no non-patch descendants and

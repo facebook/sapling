@@ -156,7 +156,11 @@ def createcmd(ui, repo, pats, opts):
         # check modified, added, removed, deleted only
         for flist in repo.status(match=match)[:4]:
             shelvedfiles.extend(flist)
-        return repo.commit(message, user, opts.get('date'), match)
+        saved, repo.mq.checkapplied = repo.mq.checkapplied, False
+        try:
+            return repo.commit(message, user, opts.get('date'), match)
+        finally:
+            repo.mq.checkapplied = saved
 
     if parent.node() != nullid:
         desc = parent.description().split('\n', 1)[0]

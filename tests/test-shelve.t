@@ -1,7 +1,9 @@
   $ echo "[extensions]" >> $HGRCPATH
+  $ echo "mq=" >> $HGRCPATH
   $ echo "shelve=" >> $HGRCPATH
   $ echo "[defaults]" >> $HGRCPATH
   $ echo "diff = --nodates --git" >> $HGRCPATH
+  $ echo "qnew = --date '0 0'" >> $HGRCPATH
 
   $ hg init repo
   $ cd repo
@@ -33,11 +35,12 @@ shelving in an empty repo should be possible
   nothing changed
   [1]
 
-create another commit
+create an mq patch - shelving should work fine with a patch applied
 
   $ echo n > n
   $ hg add n
   $ hg commit n -m second
+  $ hg qnew second.patch
 
 shelve a change that we will delete later
 
@@ -79,11 +82,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      (*)    second (glob)
-  default         (*)    second (glob)
+  default-01      (*)    [mq]: second.patch (glob)
+  default         (*)    [mq]: second.patch (glob)
 
   $ hg shelve -l -p default
-  default         (*)    second (glob)
+  default         (*)    [mq]: second.patch (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -95,6 +98,7 @@ ensure that our shelved changes exist
 delete our older shelved change
 
   $ hg shelve -d default
+  $ hg qfinish -a -q
 
 local edits should prevent a shelved change from applying
 
@@ -203,11 +207,11 @@ force a conflicted merge to occur
 ensure that we have a merge with unresolved conflicts
 
   $ hg heads -q
-  3:6ea6529cfc65
-  2:ceefc37abe1e
+  4:cebf2b8de087
+  3:2e69b451d1ea
   $ hg parents -q
-  2:ceefc37abe1e
-  3:6ea6529cfc65
+  3:2e69b451d1ea
+  4:cebf2b8de087
   $ hg status
   M a/a
   M b.rename/b
@@ -268,9 +272,9 @@ abort the unshelve and be happy
   $ hg unshelve -a
   unshelve of 'default' aborted
   $ hg heads -q
-  2:ceefc37abe1e
+  3:2e69b451d1ea
   $ hg parents
-  changeset:   2:ceefc37abe1e
+  changeset:   3:2e69b451d1ea
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -314,14 +318,14 @@ attempt to continue
 ensure the repo is as we hope
 
   $ hg parents
-  changeset:   2:ceefc37abe1e
+  changeset:   3:2e69b451d1ea
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     second
   
   $ hg heads -q
-  2:ceefc37abe1e
+  3:2e69b451d1ea
 
   $ hg status -C
   M a/a
@@ -386,7 +390,7 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   merging a/a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents -q
-  4:be7e79683c99
+  5:01ba9745dc5a
   $ hg shelve -l
   $ hg status
   M a/a
