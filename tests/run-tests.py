@@ -341,6 +341,7 @@ def createhgrc(path, options):
     hgrc.write('[defaults]\n')
     hgrc.write('backout = -d "0 0"\n')
     hgrc.write('commit = -d "0 0"\n')
+    hgrc.write('shelve = --date "0 0"\n')
     hgrc.write('tag = -d "0 0"\n')
     if options.inotify:
         hgrc.write('[extensions]\n')

@@ -63,6 +63,10 @@ Default effects may be overridden from your configuration file::
   rebase.rebased = blue
   rebase.remaining = red bold
 
+  shelve.age = cyan
+  shelve.newest = green bold
+  shelve.name = blue bold
+
   histedit.remaining = red bold
 
 The available effects in terminfo mode are 'blink', 'bold', 'dim',
@@ -259,6 +263,9 @@ _styles = {'grep.match': 'red bold',
            'rebase.remaining': 'red bold',
            'resolve.resolved': 'green bold',
            'resolve.unresolved': 'red bold',
+           'shelve.age': 'cyan',
+           'shelve.newest': 'green bold',
+           'shelve.name': 'blue bold',
            'status.added': 'green bold',
            'status.clean': 'none',
            'status.copied': 'none',
