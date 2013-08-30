@@ -16,7 +16,7 @@ from mercurial import ancestor, mdiff, parsers, error, util, dagutil, time
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, traceback, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
-from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch
+from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch, verify
 from mercurial import match as matchmod
 import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 import stat
@@ -338,6 +338,24 @@ def onetimeclientsetup(ui):
         return orig(repo, revs, ctx1, ctx2, modified, added, removed,
             copy, getfilectx, opts, losedatafn, prefix)
     wrapfunction(patch, 'trydiff', trydiff)
+
+    # Prevent verify from processing files
+    def _verify(orig, repo):
+        # terrible, terrible hack:
+        # To prevent verify from checking files, we throw an exception when
+        # it tries to access a filelog. We then catch the exception and
+        # exit gracefully.
+        class FakeException(Exception):
+            pass
+        def emptylen(*args, **kwargs):
+            raise FakeException()
+        remotefilelog.remotefilelog.__len__ = emptylen
+        try:
+            return orig(repo)
+        except FakeException:
+            ui.progress(_('checking'), None)
+            pass
+    wrapfunction(verify, '_verify', _verify)
 
 def createfileblob(filectx):
     text = filectx.data()
