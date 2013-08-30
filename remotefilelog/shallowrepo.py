@@ -8,8 +8,10 @@
 from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
 from mercurial import localrepo, context, mdiff, util
+from mercurial.extensions import wrapfunction
 import remotefilelog
 import remotefilectx
+import fileserverclient
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
@@ -117,5 +119,25 @@ def wraprepo(repo):
             self.ui.progress(_('files'), None)
 
             return len(revisiondatas), files
+
+    # Wrap dirstate.status here so we can prefetch all file nodes in
+    # the lookup set before localrepo.status uses them.
+    def status(orig, match, subrepos, ignored, clean, unknown):
+        lookup, modified, added, removed, deleted, unknown, ignored, \
+            clean = orig(match, subrepos, ignored, clean, unknown)
+
+        if lookup:
+            files = []
+            workingctx = repo['.']
+            for fname in lookup:
+                fnode = workingctx.filenode(fname)
+                files.append((fname, hex(fnode)))
+
+            fileserverclient.client.prefetch(repo, files)
+
+        return (lookup, modified, added, removed, deleted, unknown, \
+                ignored, clean)
+
+    wrapfunction(repo.dirstate, 'status', status)
 
     repo.__class__ = shallowrepository
