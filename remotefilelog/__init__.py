@@ -16,7 +16,7 @@ from mercurial import ancestor, mdiff, parsers, error, util, dagutil, time
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, traceback, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
-from mercurial import templatekw, repoview, bundlerepo, revset, hg
+from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch
 from mercurial import match as matchmod
 import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
 import stat
@@ -311,12 +311,33 @@ def onetimeclientsetup(ui):
         return orig(self, path, filelog=filelog)
     wrapfunction(context.workingctx, 'filectx', workingfilectx)
 
+    # Issue shallow commands to shallow servers
     def _callstream(orig, self, cmd, **args):
         if cmd in shallowcommands:
             if remotefilelogreq in self._caps:
                 return orig(self, cmd + "_shallow", **args)
         return orig(self, cmd, **args)
     wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
+
+    # prefetch required revisions before a diff
+    def trydiff(orig, repo, revs, ctx1, ctx2, modified, added, removed,
+                copy, getfilectx, opts, losedatafn, prefix):
+        if remotefilelogreq in repo.requirements:
+            prefetch = []
+            mf1 = ctx1.manifest()
+            for fname in modified + added + removed:
+                if fname in mf1:
+                    fnode = getfilectx(fname, ctx1).filenode()
+                    prefetch.append((fname, hex(fnode)))
+                if fname not in removed:
+                    fnode = getfilectx(fname, ctx2).filenode()
+                    prefetch.append((fname, hex(fnode)))
+
+            fileserverclient.client.prefetch(repo, prefetch)
+
+        return orig(repo, revs, ctx1, ctx2, modified, added, removed,
+            copy, getfilectx, opts, losedatafn, prefix)
+    wrapfunction(patch, 'trydiff', trydiff)
 
 def createfileblob(filectx):
     text = filectx.data()
