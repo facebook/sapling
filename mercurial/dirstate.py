@@ -801,11 +801,8 @@ class dirstate(object):
         mexact = match.exact
         dirignore = self._dirignore
         checkexec = self._checkexec
-        checklink = self._checklink
         copymap = self._copymap
         lastnormaltime = self._lastnormaltime
-
-        lnkkind = stat.S_IFLNK
 
         # We need to do full walks when either
         # - we're listing all clean files, or
@@ -827,20 +824,14 @@ class dirstate(object):
             if not st and state in "nma":
                 dadd(fn)
             elif state == 'n':
-                # The "mode & lnkkind != lnkkind or self._checklink"
-                # lines are an expansion of "islink => checklink"
-                # where islink means "is this a link?" and checklink
-                # means "can we check links?".
                 mtime = int(st.st_mtime)
                 if (size >= 0 and
                     ((size != st.st_size and size != st.st_size & _rangemask)
                      or ((mode ^ st.st_mode) & 0100 and checkexec))
-                    and (mode & lnkkind != lnkkind or checklink)
                     or size == -2 # other parent
                     or fn in copymap):
                     madd(fn)
-                elif ((time != mtime and time != mtime & _rangemask)
-                      and (mode & lnkkind != lnkkind or checklink)):
+                elif time != mtime and time != mtime & _rangemask:
                     ladd(fn)
                 elif mtime == lastnormaltime:
                     # fn may have been changed in the same timeslot without
