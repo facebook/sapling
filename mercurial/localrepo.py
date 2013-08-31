@@ -1557,7 +1557,7 @@ class localrepository(object):
             for f in modified:
                 if ctx2.flags(f) == 'l':
                     d = ctx2[f].data()
-                    if len(d) >= 1024 or '\n' in d or util.binary(d):
+                    if d == '' or len(d) >= 1024 or '\n' in d or util.binary(d):
                         self.ui.debug('ignoring suspect symlink placeholder'
                                       ' "%s"\n' % f)
                         continue

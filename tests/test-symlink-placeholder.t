@@ -41,6 +41,13 @@ Make a clone using placeholders:
   a (no-eol)
   $ hg --config extensions.n=$TESTTMP/nolink.py st --debug
 
+Empty placeholder:
+
+  $ rm b
+  $ touch b
+  $ hg --config extensions.n=$TESTTMP/nolink.py st --debug
+  ignoring suspect symlink placeholder "b"
+
 Write binary data to the placeholder:
 
   >>> open('b', 'w').write('this is a binary\0')
