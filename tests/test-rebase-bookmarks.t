@@ -159,4 +159,18 @@ rebase --continue with bookmarks present (issue3802)
   o  0: 'A' bookmarks:
   
 
-  $ cd ..
+ensure that bookmarks given the names of revset functions can be used
+as --rev arguments (issue3950)
+
+  $ hg update -q 3
+  $ echo bimble > bimble
+  $ hg add bimble
+  $ hg commit -q -m 'bisect'
+  $ echo e >> bimble
+  $ hg ci -m bisect2
+  $ echo e >> bimble
+  $ hg ci -m bisect3
+  $ hg book bisect
+  $ hg update -q Y
+  $ hg rebase -r '"bisect"^^::"bisect"^' -r bisect -d Z
+  saved backup bundle to $TESTTMP/a3/.hg/strip-backup/345c90f326a4-backup.hg (glob)

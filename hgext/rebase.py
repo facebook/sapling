@@ -186,7 +186,7 @@ def rebase(ui, repo, **opts):
                 dest = scmutil.revsingle(repo, destf)
 
             if revf:
-                rebaseset = repo.revs('%lr', revf)
+                rebaseset = scmutil.revrange(repo, revf)
             elif srcf:
                 src = scmutil.revrange(repo, [srcf])
                 rebaseset = repo.revs('(%ld)::', src)
