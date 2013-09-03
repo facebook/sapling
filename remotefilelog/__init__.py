@@ -328,10 +328,13 @@ def onetimeclientsetup(ui):
             for fname in modified + added + removed:
                 if fname in mf1:
                     fnode = getfilectx(fname, ctx1).filenode()
-                    prefetch.append((fname, hex(fnode)))
+                    # fnode can be None if it's a edited working ctx file
+                    if fnode:
+                        prefetch.append((fname, hex(fnode)))
                 if fname not in removed:
                     fnode = getfilectx(fname, ctx2).filenode()
-                    prefetch.append((fname, hex(fnode)))
+                    if fnode:
+                        prefetch.append((fname, hex(fnode)))
 
             fileserverclient.client.prefetch(repo, prefetch)
 
