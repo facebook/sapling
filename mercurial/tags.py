@@ -290,6 +290,8 @@ def _writetagcache(ui, repo, heads, tagfnode, cachetags):
     # the cache.
     cachefile.write('\n')
     for (name, (node, hist)) in cachetags.iteritems():
+        for n in hist:
+            cachefile.write("%s %s\n" % (hex(n), name))
         cachefile.write("%s %s\n" % (hex(node), name))
 
     try:
