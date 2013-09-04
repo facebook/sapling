@@ -647,16 +647,13 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir,
                                          for x in listdir(p, revnum)
                                          if x[1] == 'f'])
 
-        if not actually_files:
+    for path in actually_files:
+        if meta.get_path_tag(path):
             continue
-
-        for path in actually_files:
-            if meta.get_path_tag(path):
-                continue
-            fpath, branch, bpath = meta.split_branch_path(path, existing=False)
-            if bpath is None:
-                continue
-            branches[branch] = bpath
+        fpath, branch, bpath = meta.split_branch_path(path, existing=False)
+        if bpath is None:
+            continue
+        branches[branch] = bpath
 
     return branches
 
