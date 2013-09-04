@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer
+from mercurial import util, sshpeer, hg
 import os, socket, lz4, time, grp
 
 # Statistics for debugging
@@ -114,7 +114,7 @@ class fileserverclient(object):
                     # outputs
                     self.ui.verbose = False
 
-                    remote = sshpeer.sshpeer(self.ui, fallbackrepo)
+                    remote = hg.peer(self.ui, {}, fallbackrepo)
                     remote._callstream("getfiles")
                 finally:
                     self.ui.verbose = verbose
@@ -186,8 +186,42 @@ class fileserverclient(object):
         return missing
 
     def connect(self):
-        cmd = "%s %s" % (self.cacheprocess, self.cachepath)
-        self.pipei, self.pipeo, self.pipee, self.subprocess = util.popen4(cmd)
+        if self.cacheprocess:
+            cmd = "%s %s" % (self.cacheprocess, self.cachepath)
+            self.pipei, self.pipeo, self.pipee, self.subprocess = \
+                util.popen4(cmd)
+        else:
+            # If no cache process is specified, we fake one that always
+            # returns cache misses.  This enables tests to run easily
+            # and may eventually allow us to be a drop in replacement
+            # for the largefiles extension.
+            class simplepipe(object):
+                def __init__(self):
+                    self.data = ""
+                    self.missingids = []
+                def flush(self):
+                    lines = self.data.split("\n")
+                    if lines[0] == "get":
+                        for line in lines[2:-1]:
+                            self.missingids.append(line)
+                        self.missingids.append('0')
+                    self.data = ""
+                def close(self):
+                    pass
+                def readline(self):
+                    return self.missingids.pop(0) + "\n"
+                def write(self, data):
+                    self.data += data
+            self.pipei = simplepipe()
+            self.pipeo = self.pipei
+            self.pipee = simplepipe()
+
+            class simpleprocess(object):
+                def poll(self):
+                    return None
+                def wait(self):
+                    return
+            self.subprocess = simpleprocess()
 
     def close(self):
         if fetches and self.debugoutput:
