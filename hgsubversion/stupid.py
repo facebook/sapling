@@ -637,17 +637,15 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir,
     actually_files = []
     while paths_need_discovery:
         p = paths_need_discovery.pop(0)
-        path_could_be_file = True
-        if path_could_be_file:
-            if checkpath(p, revnum) == 'f':
-                actually_files.append(p)
-            # if there's a copyfrom_path and there were files inside that copyfrom,
-            # we need to detect those branches. It's a little thorny and slow, but
-            # seems to be the best option.
-            elif paths[p].copyfrom_path and not meta.get_path_tag(p):
-                paths_need_discovery.extend(['%s/%s' % (p, x[0])
-                                             for x in listdir(p, revnum)
-                                             if x[1] == 'f'])
+        if checkpath(p, revnum) == 'f':
+            actually_files.append(p)
+        # if there's a copyfrom_path and there were files inside that copyfrom,
+        # we need to detect those branches. It's a little thorny and slow, but
+        # seems to be the best option.
+        elif paths[p].copyfrom_path and not meta.get_path_tag(p):
+            paths_need_discovery.extend(['%s/%s' % (p, x[0])
+                                         for x in listdir(p, revnum)
+                                         if x[1] == 'f'])
 
         if not actually_files:
             continue
