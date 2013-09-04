@@ -210,7 +210,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                             'right location in the repo.')
 
         if layout is None:
-            layout = layouts.detect.layout_from_commit(subdir, revpath)
+            layout = layouts.detect.layout_from_commit(subdir, revpath,
+                                                       ctx.branch(), ui)
             existing_layout = layouts.detect.layout_from_file(svnmetadir)
             if layout != existing_layout:
                 layouts.persist.layout_to_file(svnmetadir, layout)

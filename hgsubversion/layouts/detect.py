@@ -12,6 +12,8 @@ from mercurial import util as hgutil
 
 from hgsubversion import svnwrap
 
+import __init__ as layouts
+
 def layout_from_subversion(svn, revision=None, ui=None):
     """ Guess what layout to use based on directories under the svn root.
 
@@ -49,7 +51,7 @@ def layout_from_config(ui, allow_auto=False):
     layout = ui.config('hgsubversion', 'layout', default='auto')
     if layout == 'auto' and not allow_auto:
         raise hgutil.Abort('layout not yet determined')
-    elif layout not in ('auto', 'single', 'standard'):
+    elif layout not in layouts.NAME_TO_CLASS and layout != 'auto':
         raise hgutil.Abort("unknown layout '%s'" % layout)
     return layout
 
@@ -71,17 +73,36 @@ def layout_from_file(meta_data_dir, ui=None):
             ui.setconfig('hgsubversion', 'layout', layout)
     return layout
 
-def layout_from_commit(subdir, revpath):
+def layout_from_commit(subdir, revpath, branch, ui):
     """ Guess what the layout is based existing commit info
 
     Specifically, this compares the subdir for the repository and the
-    revpath as extracted from the convinfo in the commit.
+    revpath as extracted from the convinfo in the commit.  If they
+    match, the layout is assumed to be single.  Otherwise, it tries
+    the available layouts and selects the first one that would
+    translate the given branch to the given revpath.
 
     """
 
-    if (subdir or '/') == revpath:
-        layout = 'single'
-    else:
-        layout = 'standard'
+    subdir = subdir or '/'
+    if subdir == revpath:
+        return 'single'
 
-    return layout
+    candidates = set()
+    for layout in layouts.NAME_TO_CLASS:
+        layoutobj = layouts.layout_from_name(layout, ui)
+        try:
+            remotepath = layoutobj.remotepath(branch, subdir)
+        except KeyError:
+            continue
+        if  remotepath == revpath:
+            candidates.add(layout)
+
+    if len(candidates) == 1:
+        return candidates.pop()
+    elif candidates:
+        config_layout = layout_from_config(ui, allow_auto=True)
+        if config_layout in candidates:
+            return config_layout
+
+    return 'standard'

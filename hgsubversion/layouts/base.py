@@ -30,6 +30,9 @@ class BaseLayout(object):
 
         This should return a path relative to the repo url
 
+        Implementations may indicate that no mapping is possible for
+        the given branch by raising a KeyError.
+
         """
         self.__unimplemented('remotename')
 
@@ -38,6 +41,9 @@ class BaseLayout(object):
 
         This should return an absolute path, assuming our repo root is at subdir
         A false subdir shall be taken to mean /.
+
+        Implementations may indicate that no mapping is possible for
+        the given branch by raising a KeyError.
 
         """
         self.__unimplemented('remotepath')
