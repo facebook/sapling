@@ -634,18 +634,10 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir,
     if not paths_need_discovery:
         return branches
 
-    paths_need_discovery = [(len(p), p) for p in paths_need_discovery]
-    paths_need_discovery.sort()
-    paths_need_discovery = [p[1] for p in paths_need_discovery]
     actually_files = []
     while paths_need_discovery:
         p = paths_need_discovery.pop(0)
         path_could_be_file = True
-        ind = 0
-        while ind < len(paths_need_discovery) and not paths_need_discovery:
-            if op.startswith(p):
-                path_could_be_file = False
-            ind += 1
         if path_could_be_file:
             if checkpath(p, revnum) == 'f':
                 actually_files.append(p)
