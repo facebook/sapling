@@ -109,6 +109,8 @@ def file(web, req, tmpl):
             raise inst
 
 def _search(web, req, tmpl):
+    MODE_REVISION = 'rev'
+    MODE_KEYWORD = 'keyword'
 
     def revsearch(ctx):
         yield ctx
@@ -142,17 +144,17 @@ def _search(web, req, tmpl):
             yield ctx
 
     searchfuncs = {
-        'rev': revsearch,
-        'keyword': keywordsearch,
+        MODE_REVISION: revsearch,
+        MODE_KEYWORD: keywordsearch,
     }
 
     def getsearchmode(query):
         try:
             ctx = web.repo[query]
         except (error.RepoError, error.LookupError):
-            return 'keyword', query
+            return MODE_KEYWORD, query
         else:
-            return 'rev', ctx
+            return MODE_REVISION, ctx
 
     def changelist(**map):
         count = 0
