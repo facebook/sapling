@@ -755,7 +755,8 @@ def _interestingfiles(repo, matcher):
 
     ctx = repo[None]
     dirstate = repo.dirstate
-    walkresults = dirstate.walk(matcher, sorted(ctx.substate), True, False)
+    walkresults = dirstate.walk(matcher, sorted(ctx.substate), True, False,
+                                full=False)
     for abs, st in walkresults.iteritems():
         dstate = dirstate[abs]
         if dstate == '?' and audit_path.check(abs):
