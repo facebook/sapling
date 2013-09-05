@@ -1,5 +1,6 @@
 import os
 import pickle
+import sys
 import unittest
 
 # wrapped in a try/except because of weirdness in how
