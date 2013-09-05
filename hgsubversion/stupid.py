@@ -158,27 +158,8 @@ def filteriterhunks(meta):
         applycurrent = False
         # Passing False instead of textmode because we should never
         # be ignoring EOL type.
-        if iterhunks.func_code.co_argcount == 1:
-            # Since 1.9 (28762bb767dc)
-            fp = args[0]
-            gen = iterhunks(fp)
-        else:
-            ui, fp = args[:2]
-            if len(args) > 2:
-                sourcefile = args[2]
-            else:
-                sourcefile = kwargs.get('sourcefile', None)
-            if len(args) > 3:
-                textmode = args[3]
-            else:
-                textmode = kwargs.get('textmode', False)
-            if not iterhunks.func_defaults:
-                # Since 1.7 (cfedc529e4a1)
-                gen = iterhunks(ui, fp)
-            elif len(iterhunks.func_defaults) == 1:
-                gen = iterhunks(ui, fp, sourcefile)
-            else:
-                gen = iterhunks(ui, fp, sourcefile, textmode)
+        fp = args[0]
+        gen = iterhunks(fp)
         for data in gen:
             if data[0] == 'file':
                 if data[1][1] in meta.filemap:
