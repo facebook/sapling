@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import extensions, util, cmdutil, graphmod, templatekw, scmutil
-from mercurial import bookmarks, commands
+from mercurial import bookmarks, commands, error
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import hex, nullrev
@@ -211,9 +211,23 @@ def getdag(repo, revs, master):
 
 @command('^smartlog|slog', [
     ('', 'template', '', _('display with template'), _('TEMPLATE')),
-    ('', 'master', None, _('master bookmark'), ''),
+    ('', 'master', '', _('master bookmark'), ''),
     ] + commands.logopts, _('hg smartlog|slog'))
 def mylog(ui, repo, *pats, **opts):
+    '''Displays the graph of commits that are relevant to you.
+Also highlights your current commit in purple.
+
+Includes:
+
+- Your bookmarks
+- The @ or master bookmark (or tip if no bookmarks present).
+- Your local commit heads that don't have bookmarks.
+
+Excludes:
+
+- All commits under @/master/tip that aren't related to your commits.
+- Your local commit heads that are older than 2 weeks.
+    '''
     master = opts.get('master')
     revs = set()
     heads = set()
@@ -239,7 +253,10 @@ def mylog(ui, repo, *pats, **opts):
         else:
             master = 'tip'
 
-    master = repo.revs(master)[0]
+    try:
+        master = repo.revs(master)[0]
+    except error.RepoLookupError:
+        master = repo.revs('tip')[0]
 
     # Find ancestors of heads that are not in master
     # Don't use revsets, they are too slow
@@ -259,6 +276,9 @@ def mylog(ui, repo, *pats, **opts):
     # add context: master, current commit, and the common ancestor
     revs.add(master)
     revs.update(repo.revs('.'))
+
+    if -1 in revs:
+        revs.remove(-1)
 
     # get common ancestor
     anc = None
