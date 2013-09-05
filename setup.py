@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 setup(
     name='remotefilelog',
-    version='0.1',
+    version='0.2',
     author='Durham Goode',
     maintainer='Durham Goode',
     maintainer_email='durham@fb.com',

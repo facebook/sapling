@@ -128,10 +128,12 @@ def wraprepo(repo):
 
         if lookup:
             files = []
-            workingctx = repo['.']
+            parents = repo.parents()
             for fname in lookup:
-                fnode = workingctx.filenode(fname)
-                files.append((fname, hex(fnode)))
+                for ctx in parents:
+                    if fname in ctx:
+                        fnode = ctx.filenode(fname)
+                        files.append((fname, hex(fnode)))
 
             fileserverclient.client.prefetch(repo, files)
 
