@@ -602,14 +602,11 @@ def clone(orig, ui, source, dest=None, **opts):
 
     dstrepo = data.get('dstrepo')
     srcrepo = data.get('srcrepo')
+    dst = dstrepo.local()
 
     if dstrepo.local() and srcrepo.capable('subversion'):
         dst = dstrepo.local()
-        if isinstance(dst, bool):
-            # Apparently <= hg@1.9
-            fd = dstrepo.opener("hgrc", "a", text=True)
-        else:
-            fd = dst.opener("hgrc", "a", text=True)
+        fd = dst.opener("hgrc", "a", text=True)
         preservesections = set(s for s, v in optionmap.itervalues())
         preservesections |= extrasections
         for section in preservesections:
