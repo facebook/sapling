@@ -563,11 +563,7 @@ def clone(orig, ui, source, dest=None, **opts):
 
     data = {}
     def hgclonewrapper(orig, ui, *args, **opts):
-        if getattr(hg, 'peer', None):
-            # Since 1.9 (d976542986d2)
-            origsource = args[1]
-        else:
-            origsource = args[0]
+        origsource = args[1]
 
         if isinstance(origsource, str):
             source, branch, checkout = util.parseurl(ui.expandpath(origsource),
