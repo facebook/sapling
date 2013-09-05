@@ -236,7 +236,9 @@ merge tests
    .hgsubstate: versions differ -> m
   updating: .hgsubstate 1/1 files (100.00%)
   subrepo merge e45c8b14af55+ f94576341bcf 1831e14459c4
-    subrepo t: both sides changed, merge with t:7af322bc1198a32402fe903e0b7ebcfc5c9bf8f4:hg
+    subrepo t: both sides changed 
+   subrepository t diverged (local revision: 20a0db6fbf6c, remote revision: 7af322bc1198)
+  (M)erge, keep (l)ocal or keep (r)emote? m
   merging subrepo t
     searching for copies back to rev 2
   resolving manifests
@@ -252,6 +254,7 @@ merge tests
   merging t incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+    subrepo t: merge with t:7af322bc1198a32402fe903e0b7ebcfc5c9bf8f4:hg
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -620,6 +623,8 @@ shouldn't need merging
   $ hg up 5
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge 4    # try to merge default into br again
+   subrepository s diverged (local revision: f8f13b33206e, remote revision: a3f9062a4f88)
+  (M)erge, keep (l)ocal or keep (r)emote? m
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ cd ..
@@ -922,9 +927,13 @@ Sticky subrepositorys, file changes
   $ hg -R t id
   e95bcfa18a35+
   $ hg update tip
+   subrepository s diverged (local revision: fc627a69481f, remote revision: 12a213df6fa9)
+  (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
   use (l)ocal source (fc627a69481f) or (r)emote source (12a213df6fa9)?
    l
+   subrepository t diverged (local revision: e95bcfa18a35, remote revision: 52c0adc0515a)
+  (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ
   use (l)ocal source (e95bcfa18a35) or (r)emote source (52c0adc0515a)?
    l
@@ -953,6 +962,10 @@ Sticky subrepository, revision updates
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
   $ hg update 10
+   subrepository s diverged (local revision: 12a213df6fa9, remote revision: fc627a69481f)
+  (M)erge, keep (l)ocal or keep (r)emote? m
+   subrepository t diverged (local revision: 52c0adc0515a, remote revision: 20a0db6fbf6c)
+  (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ (in checked out version)
   use (l)ocal source (7af322bc1198) or (r)emote source (20a0db6fbf6c)?
    l
@@ -976,9 +989,13 @@ Sticky subrepository, file changes and revision updates
   $ hg -R t id
   7af322bc1198+
   $ hg update tip
+   subrepository s diverged (local revision: 12a213df6fa9, remote revision: 12a213df6fa9)
+  (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for s differ
   use (l)ocal source (02dcf1d70411) or (r)emote source (12a213df6fa9)?
    l
+   subrepository t diverged (local revision: 52c0adc0515a, remote revision: 52c0adc0515a)
+  (M)erge, keep (l)ocal or keep (r)emote? m
    subrepository sources for t differ
   use (l)ocal source (7af322bc1198) or (r)emote source (52c0adc0515a)?
    l
@@ -1006,6 +1023,8 @@ Test subrepo already at intended revision:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
   $ hg update 11
+   subrepository s diverged (local revision: 12a213df6fa9, remote revision: fc627a69481f)
+  (M)erge, keep (l)ocal or keep (r)emote? m
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg id -n

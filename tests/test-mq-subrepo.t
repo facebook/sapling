@@ -263,6 +263,8 @@ qpush
   adding sub/a
   $ hg qpush
   applying 1.diff
+   subrepository sub diverged (local revision: b2fdb12cd82b, remote revision: aa037b301eba)
+  (M)erge, keep (l)ocal or keep (r)emote? m
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   now at: 1.diff
   $ hg status -AS

@@ -202,9 +202,24 @@ def submerge(repo, wctx, mctx, actx, overwrite):
                 wctx.sub(s).get(r, overwrite)
                 sm[s] = r
             else:
-                debug(s, "both sides changed, merge with", r)
-                wctx.sub(s).merge(r)
-                sm[s] = l
+                debug(s, "both sides changed")
+                option = repo.ui.promptchoice(
+                    _(' subrepository %s diverged (local revision: %s, '
+                      'remote revision: %s)\n'
+                      '(M)erge, keep (l)ocal or keep (r)emote?'
+                      '$$ &Merge $$ &Local $$ &Remote')
+                    % (s, l[1][:12], r[1][:12]), 0)
+                if option == 0:
+                    wctx.sub(s).merge(r)
+                    sm[s] = l
+                    debug(s, "merge with", r)
+                elif option == 1:
+                    sm[s] = l
+                    debug(s, "keep local subrepo revision", l)
+                else:
+                    wctx.sub(s).get(r, overwrite)
+                    sm[s] = r
+                    debug(s, "get remote subrepo revision", r)
         elif ld == a: # remote removed, local unchanged
             debug(s, "remote removed, remove")
             wctx.sub(s).remove()
