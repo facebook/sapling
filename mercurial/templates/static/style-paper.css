@@ -403,3 +403,6 @@ ul#graphnodes li .info {
   from { background-color: #A0CEFF; } to {  }
 }
 
+.scroll-loading-error {
+    background-color: #FFCCCC !important;
+}
