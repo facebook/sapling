@@ -98,9 +98,7 @@ For example::
   $ hg log -r 'fromsvn()'
   $ hg log -r 'svnrev(500)'
 
-Revsets are available when using Mercurial 1.6 or later and are
-accepted by several Mercurial commands for specifying revisions. See
-``hg help revsets`` for details.
+See ``hg help revsets`` for details.
 
 Support for externals
 ---------------------
