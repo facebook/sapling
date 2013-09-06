@@ -171,10 +171,11 @@ def perfpathcopies(ui, repo, rev1, rev2):
         copies.pathcopies(ctx1, ctx2)
     timer(d)
 
-@command('perfmanifest')
-def perfmanifest(ui, repo):
+@command('perfmanifest', [], 'REV')
+def perfmanifest(ui, repo, rev):
+    ctx = scmutil.revsingle(repo, rev, rev)
+    t = ctx.manifestnode()
     def d():
-        t = repo.manifest.tip()
         repo.manifest._mancache.clear()
         repo.manifest._cache = None
         repo.manifest.read(t)
