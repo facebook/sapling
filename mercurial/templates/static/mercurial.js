@@ -328,3 +328,9 @@ function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
     onstart();
     return xfr;
 }
+
+function docFromHTML(html) {
+    var doc = document.implementation.createHTMLDocument('');
+    doc.documentElement.innerHTML = html;
+    return doc;
+}
