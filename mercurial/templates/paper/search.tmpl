@@ -25,6 +25,10 @@
 
 <p>
 Assuming {modedesc}.
+{if(showforcekw, '<a href="{url|urlescape}log?rev={query|urlescape}&forcekw=1">
+Use {showforcekw}</a> instead.')}
+{if(showunforcekw, '<a href="{url|urlescape}log?rev={query|urlescape}">
+Use {showunforcekw}</a> instead.')}
 </p>
 
 <form class="search" action="{url|urlescape}log">

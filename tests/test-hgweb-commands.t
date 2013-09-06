@@ -509,6 +509,8 @@ Logs and changes
   
   <p>
   Assuming literal keyword search.
+  
+  
   </p>
   
   <form class="search" action="/log">

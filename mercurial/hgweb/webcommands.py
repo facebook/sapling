@@ -240,6 +240,19 @@ def _search(web, req, tmpl):
     morevars['rev'] = query
 
     mode, funcarg = getsearchmode(query)
+
+    if 'forcekw' in req.form:
+        showforcekw = ''
+        showunforcekw = searchfuncs[mode][1]
+        mode = MODE_KEYWORD
+        funcarg = query
+    else:
+        if mode != MODE_KEYWORD:
+            showforcekw = searchfuncs[MODE_KEYWORD][1]
+        else:
+            showforcekw = ''
+        showunforcekw = ''
+
     searchfunc = searchfuncs[mode]
 
     tip = web.repo['tip']
@@ -248,7 +261,8 @@ def _search(web, req, tmpl):
     return tmpl('search', query=query, node=tip.hex(),
                 entries=changelist, archives=web.archivelist("tip"),
                 morevars=morevars, lessvars=lessvars,
-                modedesc=searchfunc[1])
+                modedesc=searchfunc[1],
+                showforcekw=showforcekw, showunforcekw=showunforcekw)
 
 def changelog(web, req, tmpl, shortlog=False):
 
