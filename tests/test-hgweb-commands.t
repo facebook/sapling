@@ -540,6 +540,151 @@ Logs and changes
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=stable&style=raw' | grep 'revision:'
   revision:    2
 
+Search with revset syntax
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=tip^&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "tip^"
+  
+  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  revision:    2
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     branch
+  branch:      stable
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(all(),2)^&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "last(all(),2)^"
+  
+  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  revision:    2
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     branch
+  branch:      stable
+  
+  changeset:   a4f92ed23982be056b9852de5dfe873eaac7f0de
+  revision:    1
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     Added tag 1.0 for changeset 2ef0ac749a14
+  branch:      default
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(all(,2)^&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "last(all(,2)^"
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(al(),2)^&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "last(al(),2)^"
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=bookmark(anotherthing)&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "bookmark(anotherthing)"
+  
+  changeset:   2ef0ac749a14e4f57a5a822464a0902c6f7f448f
+  revision:    0
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     base
+  tag:         1.0
+  bookmark:    anotherthing
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=bookmark(abc)&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "bookmark(abc)"
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=deadbeef:&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "deadbeef:"
+  
+  
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=user("test")&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "user("test")"
+  
+  changeset:   cad8025a2e87f88c06259790adfa15acb4080123
+  revision:    3
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     branch commit with null character: \x00 (esc)
+  branch:      unstable
+  tag:         tip
+  bookmark:    something
+  
+  changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
+  revision:    2
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     branch
+  branch:      stable
+  
+  changeset:   a4f92ed23982be056b9852de5dfe873eaac7f0de
+  revision:    1
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     Added tag 1.0 for changeset 2ef0ac749a14
+  branch:      default
+  
+  changeset:   2ef0ac749a14e4f57a5a822464a0902c6f7f448f
+  revision:    0
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     base
+  tag:         1.0
+  bookmark:    anotherthing
+  
+  
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=user("re:test")&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "user("re:test")"
+  
+  
+
 File-related
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/1/foo/?style=raw'

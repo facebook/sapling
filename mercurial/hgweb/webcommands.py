@@ -16,6 +16,8 @@ from mercurial import graphmod, patch
 from mercurial import help as helpmod
 from mercurial import scmutil
 from mercurial.i18n import _
+from mercurial.error import ParseError, RepoLookupError, Abort
+from mercurial import revset
 
 # __all__ is populated with the allowed commands. Be sure to add to it if
 # you're adding a new command, or the new command won't work.
@@ -111,6 +113,7 @@ def file(web, req, tmpl):
 def _search(web, req, tmpl):
     MODE_REVISION = 'rev'
     MODE_KEYWORD = 'keyword'
+    MODE_REVSET = 'revset'
 
     def revsearch(ctx):
         yield ctx
@@ -143,18 +146,55 @@ def _search(web, req, tmpl):
 
             yield ctx
 
+    def revsetsearch(revs):
+        for r in revs:
+            yield web.repo[r]
+
     searchfuncs = {
         MODE_REVISION: revsearch,
         MODE_KEYWORD: keywordsearch,
+        MODE_REVSET: revsetsearch,
     }
 
     def getsearchmode(query):
         try:
             ctx = web.repo[query]
         except (error.RepoError, error.LookupError):
-            return MODE_KEYWORD, query
+            # query is not an exact revision pointer, need to
+            # decide if it's a revset expession or keywords
+            pass
         else:
             return MODE_REVISION, ctx
+
+        revdef = 'reverse(%s)' % query
+        try:
+            tree, pos = revset.parse(revdef)
+        except ParseError:
+            # can't parse to a revset tree
+            return MODE_KEYWORD, query
+
+        if revset.depth(tree) <= 2:
+            # no revset syntax used
+            return MODE_KEYWORD, query
+
+        if util.any((token, (value or '')[:3]) == ('string', 're:')
+                    for token, value, pos in revset.tokenize(revdef)):
+            return MODE_KEYWORD, query
+
+        funcsused = revset.funcsused(tree)
+        if not funcsused.issubset(revset.safesymbols):
+            return MODE_KEYWORD, query
+
+        mfunc = revset.match(web.repo.ui, revdef)
+        try:
+            revs = mfunc(web.repo, list(web.repo))
+            return MODE_REVSET, revs
+            # ParseError: wrongly placed tokens, wrongs arguments, etc
+            # RepoLookupError: no such revision, e.g. in 'revision:'
+            # Abort: bookmark/tag not exists
+            # LookupError: ambiguous identifier, e.g. in '(bc)' on a large repo
+        except (ParseError, RepoLookupError, Abort, LookupError):
+            return MODE_KEYWORD, query
 
     def changelist(**map):
         count = 0
