@@ -242,6 +242,10 @@ class lrucachedict(object):
     def __contains__(self, key):
         return key in self._cache
 
+    def clear(self):
+        self._cache.clear()
+        self._order = deque()
+
 def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}

@@ -24,3 +24,8 @@ d['d']: vd
 'e' in d: False
 'f' in d: True
 d['f']: vf
+'b' in d: False
+'c' in d: False
+'d' in d: False
+'e' in d: False
+'f' in d: False

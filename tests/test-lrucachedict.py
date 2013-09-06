@@ -31,5 +31,8 @@ def test_lrucachedict():
     d['f'] = 'vf'
     printifpresent(d, ['b', 'c', 'd', 'e', 'f'])
 
+    d.clear()
+    printifpresent(d, ['b', 'c', 'd', 'e', 'f'])
+
 if __name__ == '__main__':
     test_lrucachedict()
