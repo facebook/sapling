@@ -253,21 +253,18 @@ function process_dates(){
 		}
 	}
 
-	var nodes = document.getElementsByTagName('*');
-	var ageclass = new RegExp('\\bage\\b');
+	var nodes = document.querySelectorAll('.age');
 	var dateclass = new RegExp('\\bdate\\b');
 	for (var i=0; i<nodes.length; ++i){
 		var node = nodes[i];
 		var classes = node.className;
-		if (ageclass.test(classes)){
-			var agevalue = age(node.textContent);
-			if (dateclass.test(classes)){
-				// We want both: date + (age)
-				node.textContent += ' ('+agevalue+')';
-			} else {
-				node.title = node.textContent;
-				node.textContent = agevalue;
-			}
+		var agevalue = age(node.textContent);
+		if (dateclass.test(classes)){
+			// We want both: date + (age)
+			node.textContent += ' ('+agevalue+')';
+		} else {
+			node.title = node.textContent;
+			node.textContent = agevalue;
 		}
 	}
 }
