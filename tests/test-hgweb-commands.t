@@ -565,6 +565,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "tip^"
+  # Mode revset expression search
   
   changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
   revision:    2
@@ -581,6 +582,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "last(all(),2)^"
+  # Mode revset expression search
   
   changeset:   1d22e65f027e5a0609357e7d8e7508cd2ba5d2fe
   revision:    2
@@ -604,6 +606,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "last(all(,2)^"
+  # Mode literal keyword search
   
   
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=last(al(),2)^&style=raw'
@@ -613,6 +616,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "last(al(),2)^"
+  # Mode literal keyword search
   
   
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=bookmark(anotherthing)&style=raw'
@@ -622,6 +626,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "bookmark(anotherthing)"
+  # Mode revset expression search
   
   changeset:   2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   revision:    0
@@ -639,6 +644,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "bookmark(abc)"
+  # Mode literal keyword search
   
   
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?rev=deadbeef:&style=raw'
@@ -648,6 +654,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "deadbeef:"
+  # Mode literal keyword search
   
   
 
@@ -658,6 +665,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "user("test")"
+  # Mode revset expression search
   
   changeset:   cad8025a2e87f88c06259790adfa15acb4080123
   revision:    3
@@ -698,6 +706,7 @@ Search with revset syntax
   # HG changesets search
   # Node ID cad8025a2e87f88c06259790adfa15acb4080123
   # Query "user("re:test")"
+  # Mode literal keyword search
   
   
 
