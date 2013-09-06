@@ -366,6 +366,7 @@ function ajaxScrollInit(urlFormat,
 
         if (scrollHeight - (scrollTop + clientHeight) < 50) {
             updateInitiated = true;
+            removeByClassName('scroll-loading-error');
 
             if (!nextHash) {
                 var message = {
@@ -400,6 +401,11 @@ function ajaxScrollInit(urlFormat,
                     process_dates();
                 },
                 function onerror(errorText) {
+                    var message = {
+                        class: 'scroll-loading-error',
+                        text: 'Error: ' + errorText
+                    };
+                    appendFormatHTML(container, messageFormat, message);
                 },
                 function oncomplete() {
                     removeByClassName('scroll-loading');
