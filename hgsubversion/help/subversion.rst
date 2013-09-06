@@ -45,8 +45,8 @@ issue ``hg clone http://python-nose.googlecode.com/svn/trunk nose-trunk``. This
 works with any directory with a Subversion repository, and is known as a single
 directory clone. Normally, converted changesets will be marked as belonging to
 the ``default`` branch, but this can be changed by using the ``-b/--branch``
-option when using Mercurial 1.5 or later. To force single directory clone, use
-hgsubversion.layout option (see below for detailed help) ::
+option. To force single directory clone, use hgsubversion.layout option (see
+below for detailed help) ::
 
  $ hg clone --layout single svn+http://python-nose.googlecode.com/svn nose-hg
 
@@ -84,8 +84,6 @@ Subversion revisions, hgsubversion provides three template keywords:
 An example::
 
   $ hg log --template='{rev}:{node|short} {author|user}\nsvn: {svnrev}\n'
-
-The template keywords are available when using Mercurial 1.5 or later.
 
 For finding changesets from Subversion, hgsubversion extends revsets
 to provide two new selectors:
