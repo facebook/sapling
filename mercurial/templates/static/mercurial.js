@@ -176,7 +176,7 @@ function Graph() {
 }
 
 
-function process_dates(){
+function process_dates(parentSelector){
 
 	// derived from code from mercurial/templatefilter.py
 
@@ -253,7 +253,7 @@ function process_dates(){
 		}
 	}
 
-	var nodes = document.querySelectorAll('.age');
+	var nodes = document.querySelectorAll((parentSelector || '') + ' .age');
 	var dateclass = new RegExp('\\bdate\\b');
 	for (var i=0; i<nodes.length; ++i){
 		var node = nodes[i];
