@@ -30,6 +30,10 @@ def makedirs(root, path, owner):
 
 def getcachekey(file, id):
     pathhash = util.sha1(file).hexdigest()
+    return os.path.join(pathhash[:2], pathhash[2:], id)
+
+def getlocalkey(file, id):
+    pathhash = util.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
 
 class fileserverclient(object):
@@ -71,8 +75,7 @@ class fileserverclient(object):
         request = "get\n%d\n" % count
         idmap = {}
         for file, id in fileids:
-            pathhash = util.sha1(file).hexdigest()
-            fullid = "%s/%s" % (pathhash, id)
+            fullid = getcachekey(file, id)
             request += fullid + "\n"
             idmap[fullid] = file
 
@@ -258,9 +261,10 @@ class fileserverclient(object):
             if file == '.hgtags' or len(id) == 42:
                 continue
 
-            key = getcachekey(file, id)
-            idcachepath = os.path.join(self.cachepath, key)
-            idlocalpath = os.path.join(storepath, 'data', key)
+            cachekey = getcachekey(file, id)
+            localkey = getlocalkey(file, id)
+            idcachepath = os.path.join(self.cachepath, cachekey)
+            idlocalpath = os.path.join(storepath, 'data', localkey)
             if os.path.exists(idcachepath) or os.path.exists(idlocalpath):
                 continue
 

@@ -129,7 +129,7 @@ class remotefilelog(object):
 
             return data
 
-        key = fileserverclient.getcachekey(self.filename, hex(node))
+        key = fileserverclient.getlocalkey(self.filename, hex(node))
         path = os.path.join(self.localpath, key)
 
         # if this node already exists, save the old version in case
@@ -251,12 +251,13 @@ class remotefilelog(object):
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
-        key = fileserverclient.getcachekey(self.filename, id)
-        cachepath = os.path.join(fileserverclient.client.cachepath, key)
+        cachekey = fileserverclient.getcachekey(self.filename, id)
+        cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
         if os.path.exists(cachepath):
             return _readfile(cachepath)
 
-        localpath = os.path.join(self.localpath, key)
+        localkey = fileserverclient.getlocalkey(self.filename, id)
+        localpath = os.path.join(self.localpath, localkey)
         if os.path.exists(localpath):
             return _readfile(localpath)
 
@@ -277,8 +278,8 @@ class remotefilelog(object):
             else:
                 if files == None:
                     # find a valid linknode by looking through the past versions
-                    key = fileserverclient.getcachekey(self.filename, hex(node))
-                    file = os.path.join(self.localpath, key)
+                    localkey = fileserverclient.getlocalkey(self.filename, hex(node))
+                    file = os.path.join(self.localpath, localkey)
                     filename = os.path.basename(file)
                     directory = os.path.dirname(file)
                     files = [f for f in os.listdir(directory) if f.startswith(filename)]

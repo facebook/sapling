@@ -764,11 +764,10 @@ def gc(ui, *args, **opts):
 
             ui.progress(_removing, count, unit="files")
             path = os.path.join(root, file)
-            key = os.path.basename(root) + "/" + file
+            key = os.path.relpath(path, cachepath)
             count += 1
             stat = os.stat(path)
             originalsize += stat.st_size
-
 
             if key in keepfiles or stat.st_atime > limit:
                 queue.put((stat.st_atime, path, stat))
