@@ -380,6 +380,11 @@ function ajaxScrollInit(urlFormat,
                 format(urlFormat, {hash: nextHash}),
                 'GET',
                 function onstart() {
+                    var message = {
+                        class: 'scroll-loading',
+                        text: 'Loading...'
+                    };
+                    appendFormatHTML(container, messageFormat, message);
                 },
                 function onsuccess(htmlText) {
                     var m = htmlText.match(nextHashRegex);
@@ -397,6 +402,7 @@ function ajaxScrollInit(urlFormat,
                 function onerror(errorText) {
                 },
                 function oncomplete() {
+                    removeByClassName('scroll-loading');
                     updateInitiated = false;
                     scrollHandler();
                 }
