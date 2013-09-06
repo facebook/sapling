@@ -507,6 +507,10 @@ Logs and changes
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>searching for 'base'</h3>
   
+  <p>
+  Assuming literal keyword search.
+  </p>
+  
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" value="base"></p>
