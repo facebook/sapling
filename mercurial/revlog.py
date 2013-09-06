@@ -853,6 +853,28 @@ class revlog(object):
     def _chunk(self, rev):
         return decompress(self._chunkraw(rev, rev))
 
+    def _chunks(self, revs):
+        '''faster version of [self._chunk(rev) for rev in revs]
+
+        Assumes that revs is in ascending order.'''
+        start = self.start
+        length = self.length
+        inline = self._inline
+        iosize = self._io.size
+        getchunk = self._getchunk
+
+        l = []
+        ladd = l.append
+
+        for rev in revs:
+            chunkstart = start(rev)
+            if inline:
+                chunkstart += (rev + 1) * iosize
+            chunklength = length(rev)
+            ladd(decompress(getchunk(chunkstart, chunklength)))
+
+        return l
+
     def _chunkbase(self, rev):
         return self._chunk(rev)
 
@@ -933,7 +955,7 @@ class revlog(object):
         if text is None:
             text = str(self._chunkbase(base))
 
-        bins = [self._chunk(r) for r in chain]
+        bins = self._chunks(chain)
         text = mdiff.patches(text, bins)
 
         text = self._checkhash(text, node, rev)
