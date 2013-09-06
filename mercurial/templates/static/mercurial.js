@@ -341,3 +341,7 @@ function docFromHTML(html) {
     doc.documentElement.innerHTML = html;
     return doc;
 }
+
+function appendFormatHTML(element, formatStr, replacements) {
+    element.insertAdjacentHTML('beforeend', format(formatStr, replacements));
+}
