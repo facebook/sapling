@@ -298,3 +298,9 @@ function toggleLinewrap() {
 
     setLinewrap(!getLinewrap());
 }
+
+function format(str, replacements) {
+    return str.replace(/%(\w+)%/g, function(match, p1) {
+        return String(replacements[p1]);
+    });
+}
