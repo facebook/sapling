@@ -36,6 +36,14 @@ function Graph() {
 	this.columns = 0;
 	this.revlink = '';
 
+	this.reset = function() {
+		this.bg = [0, 4];
+		this.cell = [2, 0];
+		this.columns = 0;
+		document.getElementById('nodebgs').innerHTML = '';
+		document.getElementById('graphnodes').innerHTML = '';
+	}
+
 	this.scale = function(height) {
 		this.bg_height = height;
 		this.box_size = Math.floor(this.bg_height / 1.2);
