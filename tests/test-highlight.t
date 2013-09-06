@@ -109,7 +109,8 @@ hgweb filerevision, html
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   
   <div class="description">a</div>
@@ -239,7 +240,8 @@ hgweb fileannotate, html
   <form class="search" action="/log">
   
   <p><input name="rev" id="search1" type="text" size="30" /></p>
-  <div id="hint">find changesets by author, revision, files, or words in the commit message</div>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
   </form>
   
   <div class="description">a</div>
