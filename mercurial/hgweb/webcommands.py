@@ -271,7 +271,7 @@ def changelog(web, req, tmpl, shortlog=False):
             files = webutil.listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
             curcount += 1
-            if curcount > revcount:
+            if curcount > revcount + 1:
                 break
             yield {"parity": parity.next(),
                    "author": ctx.user(),
@@ -309,11 +309,16 @@ def changelog(web, req, tmpl, shortlog=False):
 
     entries = list(changelist())
     latestentry = entries[:1]
+    if len(entries) > revcount:
+        nextentry = entries[-1:]
+        entries = entries[:-1]
+    else:
+        nextentry = []
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
                 node=ctx.hex(), rev=pos, changesets=count,
                 entries=entries,
-                latestentry=latestentry,
+                latestentry=latestentry, nextentry=nextentry,
                 archives=web.archivelist("tip"), revcount=revcount,
                 morevars=morevars, lessvars=lessvars, query=query)
 
