@@ -142,7 +142,7 @@ related Subversion repository.
 Alternatively, one can use the ``hgsubversion.externals`` in hgrc to
 specify ``subrepos`` as the externals mode. In this mode, ``.hgsub``
 and ``.hgsubstate`` files will be used instead of
-``.hgsvnexternals``. This feature requires Mercurial 1.7.1 or later.
+``.hgsvnexternals``.
 
 
 Using Subrepositories
@@ -178,8 +178,6 @@ where REWRITTEN_EXTERNAL_DEFINITION is like the original definition
 with the revision identifier replaced with {REV}.
 
 This mode has the following limitations:
-
-* Require Mercurial >= 1.7.1 to work correctly on all platforms.
 
 * "hgsubversion" subrepositories require hgsubversion extension to be
   available. To operate transparently on ``svn:externals`` we have to
@@ -361,10 +359,10 @@ settings:
     when necessary.
 
   ``hgsubversion.externals``
-    Set to ``subrepos`` to switch to subrepos-based externals support
-    (requires Mercurial 1.7.1 or later.) Default is ``svnexternals``,
-    which uses a custom hgsubversion-specific format and works on
-    older versions of Mercurial. Use ``ignore`` to avoid converting externals.
+    Set to ``subrepos`` to switch to subrepos-based externals support. Default
+    is ``svnexternals``, which uses a custom hgsubversion-specific format and
+    works on older versions of Mercurial. Use ``ignore`` to avoid converting
+    externals.
 
 The following options only have an effect on the initial clone of a repository:
 
