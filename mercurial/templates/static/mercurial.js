@@ -176,7 +176,7 @@ function Graph() {
 }
 
 
-process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
+function process_dates(){
 
 	// derived from code from mercurial/templatefilter.py
 
@@ -227,9 +227,9 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 
 		var delta = Math.floor((now.getTime() - once.getTime()) / 1000);
 
-		var future = _false;
+		var future = false;
 		if (delta < 0){
-			future = _true;
+			future = true;
 			delta = -delta;
 			if (delta > (30 * scales.year)){
 				return "in the distant future";
@@ -253,26 +253,24 @@ process_dates = (function(document, RegExp, Math, isNaN, Date, _false, _true){
 		}
 	}
 
-	return function(){
-		var nodes = document.getElementsByTagName('*');
-		var ageclass = new RegExp('\\bage\\b');
-		var dateclass = new RegExp('\\bdate\\b');
-		for (var i=0; i<nodes.length; ++i){
-			var node = nodes[i];
-			var classes = node.className;
-			if (ageclass.test(classes)){
-				var agevalue = age(node.textContent);
-				if (dateclass.test(classes)){
-					// We want both: date + (age)
-					node.textContent += ' ('+agevalue+')';
-				} else {
-					node.title = node.textContent;
-					node.textContent = agevalue;
-				}
+	var nodes = document.getElementsByTagName('*');
+	var ageclass = new RegExp('\\bage\\b');
+	var dateclass = new RegExp('\\bdate\\b');
+	for (var i=0; i<nodes.length; ++i){
+		var node = nodes[i];
+		var classes = node.className;
+		if (ageclass.test(classes)){
+			var agevalue = age(node.textContent);
+			if (dateclass.test(classes)){
+				// We want both: date + (age)
+				node.textContent += ' ('+agevalue+')';
+			} else {
+				node.title = node.textContent;
+				node.textContent = agevalue;
 			}
 		}
 	}
-})(document, RegExp, Math, isNaN, Date, false, true)
+}
 
 function toggleDiffstat() {
     var curdetails = document.getElementById('diffstatdetails').style.display;
