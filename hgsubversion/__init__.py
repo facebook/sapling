@@ -157,11 +157,7 @@ def extsetup(ui):
          lambda: open(os.path.join(helpdir, 'subversion.rst')).read()),
     )
 
-    # in 1.6 and earler the help table is a tuple
-    if getattr(help.helptable, 'extend', None):
-        help.helptable.extend(entries)
-    else:
-        help.helptable = help.helptable + entries
+    help.helptable.extend(entries)
 
     templatekw.keywords.update(util.templatekeywords)
 
