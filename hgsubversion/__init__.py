@@ -124,9 +124,8 @@ except AttributeError:
 except ImportError:
     pass
 
-def extsetup():
+def extsetup(ui):
     """insert command wrappers for a bunch of commands"""
-    # add the ui argument to this function once we drop support for 1.3
 
     docvals = {'extension': 'hgsubversion'}
     for cmd, (generic, target, fixdoc, ppopts, opts) in wrapcmds.iteritems():
