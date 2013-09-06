@@ -367,6 +367,7 @@ function ajaxScrollInit(urlFormat,
         if (scrollHeight - (scrollTop + clientHeight) < 50) {
             updateInitiated = true;
             removeByClassName('scroll-loading-error');
+            container.lastElementChild.classList.add('scroll-separator');
 
             if (!nextHash) {
                 var message = {
