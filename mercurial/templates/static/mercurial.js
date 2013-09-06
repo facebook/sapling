@@ -368,6 +368,11 @@ function ajaxScrollInit(urlFormat,
             updateInitiated = true;
 
             if (!nextHash) {
+                var message = {
+                    class: 'scroll-loading-info',
+                    text: 'No more entries'
+                };
+                appendFormatHTML(container, messageFormat, message);
                 return;
             }
 
