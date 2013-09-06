@@ -304,3 +304,27 @@ function format(str, replacements) {
         return String(replacements[p1]);
     });
 }
+
+function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
+    xfr = new XMLHttpRequest();
+    xfr.onreadystatechange = function() {
+        if (xfr.readyState === 4) {
+            try {
+                if (xfr.status === 200) {
+                    onsuccess(xfr.responseText);
+                } else {
+                    throw 'server error';
+                }
+            } catch (e) {
+                onerror(e);
+            } finally {
+                oncomplete();
+            }
+        }
+    };
+
+    xfr.open(method, url);
+    xfr.send();
+    onstart();
+    return xfr;
+}
