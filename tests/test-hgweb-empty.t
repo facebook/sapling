@@ -90,6 +90,18 @@ Some tests for hgweb in an empty repository
   | rev -1: 
   </div>
   
+  <script type="text/javascript">
+      ajaxScrollInit(
+              '/shortlog/%hash%',
+              '', <!-- NEXTHASH
+              /'(\w+)', <!-- NEXTHASH/,
+              '.bigtable > tbody:nth-of-type(2)',
+              '<tr class="%class%">\
+              <td colspan="3" style="text-align: center;">%text%</td>\
+              </tr>'
+      );
+  </script>
+  
   </div>
   </div>
   
@@ -184,6 +196,18 @@ Some tests for hgweb in an empty repository
   <a href="/shortlog/-1?revcount=20">more</a>
   | rev -1: 
   </div>
+  
+  <script type="text/javascript">
+      ajaxScrollInit(
+              '/shortlog/%hash%',
+              '', <!-- NEXTHASH
+              /'(\w+)', <!-- NEXTHASH/,
+              '.bigtable > tbody:nth-of-type(2)',
+              '<tr class="%class%">\
+              <td colspan="3" style="text-align: center;">%text%</td>\
+              </tr>'
+      );
+  </script>
   
   </div>
   </div>
