@@ -407,12 +407,14 @@ function ajaxScrollInit(urlFormat,
                     } else {
                         var doc = docFromHTML(htmlText);
                         var nodes = doc.querySelector(containerSelector).children;
+                        var curClass = 'c' + Date.now();
                         while (nodes.length) {
                             var node = nodes[0];
                             node = document.adoptNode(node);
+                            node.classList.add(curClass);
                             container.appendChild(node);
                         }
-                        process_dates();
+                        process_dates('.' + curClass);
                     }
                 },
                 function onerror(errorText) {
