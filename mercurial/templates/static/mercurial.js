@@ -329,6 +329,13 @@ function makeRequest(url, method, onstart, onsuccess, onerror, oncomplete) {
     return xfr;
 }
 
+function removeByClassName(className) {
+    var nodes = document.getElementsByClassName(className);
+    while (nodes.length) {
+        nodes[0].parentNode.removeChild(nodes[0]);
+    }
+}
+
 function docFromHTML(html) {
     var doc = document.implementation.createHTMLDocument('');
     doc.documentElement.innerHTML = html;
