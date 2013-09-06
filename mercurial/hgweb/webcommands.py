@@ -151,9 +151,9 @@ def _search(web, req, tmpl):
             yield web.repo[r]
 
     searchfuncs = {
-        MODE_REVISION: revsearch,
-        MODE_KEYWORD: keywordsearch,
-        MODE_REVSET: revsetsearch,
+        MODE_REVISION: (revsearch, _('exact revision search')),
+        MODE_KEYWORD: (keywordsearch, _('literal keyword search')),
+        MODE_REVSET: (revsetsearch, _('revset expression search')),
     }
 
     def getsearchmode(query):
@@ -199,7 +199,7 @@ def _search(web, req, tmpl):
     def changelist(**map):
         count = 0
 
-        for ctx in searchfunc(funcarg):
+        for ctx in searchfunc[0](funcarg):
             count += 1
             n = ctx.node()
             showtags = webutil.showtag(web.repo, tmpl, 'changelogtag', n)
@@ -247,7 +247,8 @@ def _search(web, req, tmpl):
 
     return tmpl('search', query=query, node=tip.hex(),
                 entries=changelist, archives=web.archivelist("tip"),
-                morevars=morevars, lessvars=lessvars)
+                morevars=morevars, lessvars=lessvars,
+                modedesc=searchfunc[1])
 
 def changelog(web, req, tmpl, shortlog=False):
 
