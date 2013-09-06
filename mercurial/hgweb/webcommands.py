@@ -259,7 +259,7 @@ def changelog(web, req, tmpl, shortlog=False):
     else:
         ctx = web.repo['tip']
 
-    def changelist(latestonly, **map):
+    def changelist(latestonly):
         revs = []
         if pos != -1:
             revs = web.repo.changelog.revs(pos, 0)
@@ -311,8 +311,8 @@ def changelog(web, req, tmpl, shortlog=False):
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
                 node=ctx.hex(), rev=pos, changesets=count,
-                entries=lambda **x: changelist(latestonly=False, **x),
-                latestentry=lambda **x: changelist(latestonly=True, **x),
+                entries=lambda **x: changelist(latestonly=False),
+                latestentry=lambda **x: changelist(latestonly=True),
                 archives=web.archivelist("tip"), revcount=revcount,
                 morevars=morevars, lessvars=lessvars, query=query)
 
