@@ -910,8 +910,8 @@ def keyword(repo, subset, x):
     l = []
     for r in subset:
         c = repo[r]
-        t = " ".join(c.files() + [c.user(), c.description()])
-        if kw in encoding.lower(t):
+        if util.any(kw in encoding.lower(t)
+                    for t in c.files() + [c.user(), c.description()]):
             l.append(r)
     return l
 
