@@ -33,12 +33,7 @@ demandimport.ignore.extend([
     'svn.ra',
     ])
 
-try:
-    from mercurial import templatekw
-    # force demandimport to load templatekw
-    templatekw.keywords
-except ImportError:
-    templatekw = None
+from mercurial import templatekw
 
 try:
     from mercurial import revset
@@ -168,8 +163,7 @@ def extsetup(ui):
     else:
         help.helptable = help.helptable + entries
 
-    if templatekw:
-        templatekw.keywords.update(util.templatekeywords)
+    templatekw.keywords.update(util.templatekeywords)
 
     if revset:
         revset.symbols.update(util.revsets)
