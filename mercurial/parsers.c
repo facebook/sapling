@@ -77,7 +77,7 @@ static PyObject *unhexlify(const char *str, int len)
 static PyObject *parse_manifest(PyObject *self, PyObject *args)
 {
 	PyObject *mfdict, *fdict;
-	char *str, *cur, *start, *zero;
+	char *str, *start, *end;
 	int len;
 
 	if (!PyArg_ParseTuple(args, "O!O!s#:parse_manifest",
@@ -86,21 +86,25 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 			      &str, &len))
 		goto quit;
 
-	for (start = cur = str, zero = NULL; cur < str + len; cur++) {
+	start = str;
+	end = str + len;
+	while (start < end) {
 		PyObject *file = NULL, *node = NULL;
 		PyObject *flags = NULL;
+		char *zero = NULL, *newline = NULL;
 		ptrdiff_t nlen;
 
-		if (!*cur) {
-			zero = cur;
-			continue;
-		}
-		else if (*cur != '\n')
-			continue;
-
+		zero = memchr(start, '\0', end - start);
 		if (!zero) {
 			PyErr_SetString(PyExc_ValueError,
 					"manifest entry has no separator");
+			goto quit;
+		}
+
+		newline = memchr(zero + 1, '\n', end - (zero + 1));
+		if (!newline) {
+			PyErr_SetString(PyExc_ValueError,
+					"manifest contains trailing garbage");
 			goto quit;
 		}
 
@@ -109,7 +113,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 		if (!file)
 			goto bail;
 
-		nlen = cur - zero - 1;
+		nlen = newline - zero - 1;
 
 		node = unhexlify(zero + 1, nlen > 40 ? 40 : (int)nlen);
 		if (!node)
@@ -128,8 +132,7 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 		if (PyDict_SetItem(mfdict, file, node) == -1)
 			goto bail;
 
-		start = cur + 1;
-		zero = NULL;
+		start = newline + 1;
 
 		Py_XDECREF(flags);
 		Py_XDECREF(node);
@@ -139,12 +142,6 @@ static PyObject *parse_manifest(PyObject *self, PyObject *args)
 		Py_XDECREF(flags);
 		Py_XDECREF(node);
 		Py_XDECREF(file);
-		goto quit;
-	}
-
-	if (len > 0 && *(cur - 1) != '\n') {
-		PyErr_SetString(PyExc_ValueError,
-				"manifest contains trailing garbage");
 		goto quit;
 	}
 
