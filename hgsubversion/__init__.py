@@ -35,14 +35,7 @@ demandimport.ignore.extend([
 
 from mercurial import templatekw
 from mercurial import revset
-
-try:
-    from mercurial import subrepo
-    # require svnsubrepo and hg >= 1.7.1
-    subrepo.svnsubrepo
-    hgutil.checknlink
-except (ImportError, AttributeError), e:
-    subrepo = None
+from mercurial import subrepo
 
 import svncommands
 import util
@@ -157,8 +150,7 @@ def extsetup(ui):
 
     revset.symbols.update(util.revsets)
 
-    if subrepo:
-        subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
+    subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
 
 def reposetup(ui, repo):
     if repo.local():
