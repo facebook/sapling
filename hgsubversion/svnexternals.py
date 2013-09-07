@@ -3,14 +3,7 @@ import cStringIO
 import os, re, shutil, stat, subprocess
 from mercurial import util as hgutil
 from mercurial.i18n import _
-
-try:
-    from mercurial import subrepo
-    # require svnsubrepo and hg >= 1.7.1
-    subrepo.svnsubrepo
-    hgutil.checknlink
-except (ImportError, AttributeError), e:
-    subrepo = None
+from mercurial import subrepo
 
 passpegrev = True # see svnsubrepo below
 try:
@@ -398,58 +391,56 @@ def parse(ui, ctx):
         raise hgutil.Abort(_('unknown externals modes: %s') % mode)
     return external
 
-if subrepo:
-    class svnsubrepo(subrepo.svnsubrepo):
-        def __init__(self, ctx, path, state):
-            state = (state[0].split(':', 1)[1], state[1])
-            super(svnsubrepo, self).__init__(ctx, path, state)
+class svnsubrepo(subrepo.svnsubrepo):
+    def __init__(self, ctx, path, state):
+        state = (state[0].split(':', 1)[1], state[1])
+        super(svnsubrepo, self).__init__(ctx, path, state)
 
-        def get(self, state, *args, **kwargs):
-            # Resolve source first
-            line = state[0].split(':', 1)[1]
-            source, pegrev = parsedefinition(line)[2:4]
-            try:
-                # Getting the root SVN repository URL is expensive.
-                # Assume the externals is absolute.
-                source = resolvesource(self._ui, None, source)
-            except RelativeSourceError:
-                svnurl = self._ctx._repo.ui.expandpath('default')
-                svnroot = getsvninfo(util.normalize_url(svnurl))[1]
-                source = resolvesource(self._ui, svnroot, source)
-            # hg < 1.9 svnsubrepo calls "svn checkout" with --rev
-            # only, so peg revisions are correctly used. 1.9 and
-            # higher, append the rev as a peg revision to the source
-            # URL, so we cannot add our own. We assume that "-r10
-            # url@2" will be similar to "url@10" most of the time.
-            if pegrev is not None and passpegrev:
-                source = source + '@' + pegrev
-            state = (source, state[1])
-            # hg-1.7.4-c19b9282d3a7 introduced the overwrite argument
-            return super(svnsubrepo, self).get(state, *args, **kwargs)
+    def get(self, state, *args, **kwargs):
+        # Resolve source first
+        line = state[0].split(':', 1)[1]
+        source, pegrev = parsedefinition(line)[2:4]
+        try:
+            # Getting the root SVN repository URL is expensive.
+            # Assume the externals is absolute.
+            source = resolvesource(self._ui, None, source)
+        except RelativeSourceError:
+            svnurl = self._ctx._repo.ui.expandpath('default')
+            svnroot = getsvninfo(util.normalize_url(svnurl))[1]
+            source = resolvesource(self._ui, svnroot, source)
+        # hg < 1.9 svnsubrepo calls "svn checkout" with --rev
+        # only, so peg revisions are correctly used. 1.9 and
+        # higher, append the rev as a peg revision to the source
+        # URL, so we cannot add our own. We assume that "-r10
+        # url@2" will be similar to "url@10" most of the time.
+        if pegrev is not None and passpegrev:
+            source = source + '@' + pegrev
+        state = (source, state[1])
+        return super(svnsubrepo, self).get(state, *args, **kwargs)
 
-        def dirty(self, ignoreupdate=False):
-            # You cannot compare anything with HEAD. Just accept it
-            # can be anything.
-            if hasattr(self, '_wcrevs'):
-                wcrevs = self._wcrevs()
-            else:
-                wcrev = self._wcrev()
-                wcrevs = (wcrev, wcrev)
-            if (('HEAD' in wcrevs or self._state[1] == 'HEAD' or
-                self._state[1] in wcrevs or ignoreupdate)
-                and not self._wcchanged()[0]):
-                return False
-            return True
+    def dirty(self, ignoreupdate=False):
+        # You cannot compare anything with HEAD. Just accept it
+        # can be anything.
+        if hasattr(self, '_wcrevs'):
+            wcrevs = self._wcrevs()
+        else:
+            wcrev = self._wcrev()
+            wcrevs = (wcrev, wcrev)
+        if (('HEAD' in wcrevs or self._state[1] == 'HEAD' or
+            self._state[1] in wcrevs or ignoreupdate)
+            and not self._wcchanged()[0]):
+            return False
+        return True
 
-        def commit(self, text, user, date):
-            rev = super(svnsubrepo, self).commit(text, user, date)
-            # Keep unversioned externals unversioned
-            if self._state[1] == 'HEAD':
-                rev = 'HEAD'
-            return rev
+    def commit(self, text, user, date):
+        rev = super(svnsubrepo, self).commit(text, user, date)
+        # Keep unversioned externals unversioned
+        if self._state[1] == 'HEAD':
+            rev = 'HEAD'
+        return rev
 
-        def basestate(self):
-            # basestate() was introduced by bcb973abcc0b in 2.2
-            if self._state[1] == 'HEAD':
-                return 'HEAD'
-            return super(svnsubrepo, self).basestate()
+    def basestate(self):
+        # basestate() was introduced by bcb973abcc0b in 2.2
+        if self._state[1] == 'HEAD':
+            return 'HEAD'
+        return super(svnsubrepo, self).basestate()
