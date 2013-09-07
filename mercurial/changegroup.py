@@ -354,11 +354,11 @@ class bundle10(object):
         progress(msgbundling, None)
 
         mfs.clear()
+        needed = set(cl.rev(x) for x in clnodes)
 
         def linknodes(filerevlog, fname):
             if fastpathlinkrev:
                 ln, llr = filerevlog.node, filerevlog.linkrev
-                needed = set(cl.rev(x) for x in clnodes)
                 def genfilenodes():
                     for r in filerevlog:
                         linkrev = llr(r)
