@@ -5,17 +5,12 @@ from mercurial import util as hgutil
 from mercurial.i18n import _
 from mercurial import subrepo
 
-passpegrev = True # see svnsubrepo below
 try:
-    canonpath = hgutil.canonpath
+    from mercurial import scmutil
+    canonpath = scmutil.canonpath
 except (ImportError, AttributeError):
-    passpegrev = False
-    try:
-        from mercurial import scmutil
-        canonpath = scmutil.canonpath
-    except (ImportError, AttributeError):
-        from mercurial import pathutil
-        canonpath = pathutil.canonpath
+    from mercurial import pathutil
+    canonpath = pathutil.canonpath
 
 import util
 
@@ -408,13 +403,10 @@ class svnsubrepo(subrepo.svnsubrepo):
             svnurl = self._ctx._repo.ui.expandpath('default')
             svnroot = getsvninfo(util.normalize_url(svnurl))[1]
             source = resolvesource(self._ui, svnroot, source)
-        # hg < 1.9 svnsubrepo calls "svn checkout" with --rev
-        # only, so peg revisions are correctly used. 1.9 and
-        # higher, append the rev as a peg revision to the source
-        # URL, so we cannot add our own. We assume that "-r10
-        # url@2" will be similar to "url@10" most of the time.
-        if pegrev is not None and passpegrev:
-            source = source + '@' + pegrev
+        # hg 1.9 and higher, append the rev as a peg revision to
+        # the source URL, so we cannot add our own. We assume
+        # that "-r10 url@2" will be similar to "url@10" most of
+        # the time.
         state = (source, state[1])
         return super(svnsubrepo, self).get(state, *args, **kwargs)
 
