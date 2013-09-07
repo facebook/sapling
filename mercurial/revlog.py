@@ -883,9 +883,6 @@ class revlog(object):
 
         return l
 
-    def _chunkbase(self, rev):
-        return self._chunk(rev)
-
     def _chunkclear(self):
         self._chunkcache = (0, '')
 
