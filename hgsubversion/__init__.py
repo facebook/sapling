@@ -34,13 +34,7 @@ demandimport.ignore.extend([
     ])
 
 from mercurial import templatekw
-
-try:
-    from mercurial import revset
-    # force demandimport to load revset
-    revset.methods
-except ImportError:
-    revset = None
+from mercurial import revset
 
 try:
     from mercurial import subrepo
@@ -161,8 +155,7 @@ def extsetup(ui):
 
     templatekw.keywords.update(util.templatekeywords)
 
-    if revset:
-        revset.symbols.update(util.revsets)
+    revset.symbols.update(util.revsets)
 
     if subrepo:
         subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
@@ -173,7 +166,7 @@ def reposetup(ui, repo):
         for tunnel in ui.configlist('hgsubversion', 'tunnels'):
             hg.schemes['svn+' + tunnel] = svnrepo
 
-    if revset and ui.configbool('hgsubversion', 'nativerevs'):
+    if ui.configbool('hgsubversion', 'nativerevs'):
         extensions.wrapfunction(revset, 'stringset', util.revset_stringset)
 
 _old_local = hg.schemes['file']
