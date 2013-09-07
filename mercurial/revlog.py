@@ -845,9 +845,11 @@ class revlog(object):
 
     def _chunkraw(self, startrev, endrev):
         start = self.start(startrev)
-        length = self.end(endrev) - start
+        end = self.end(endrev)
         if self._inline:
             start += (startrev + 1) * self._io.size
+            end += (endrev + 1) * self._io.size
+        length = end - start
         return self._getchunk(start, length)
 
     def _chunk(self, rev):
