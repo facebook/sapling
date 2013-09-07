@@ -863,17 +863,20 @@ class revlog(object):
         length = self.length
         inline = self._inline
         iosize = self._io.size
-        getchunk = self._getchunk
+        buffer = util.buffer
 
         l = []
         ladd = l.append
+
+        # XXX assume for now that chunkcache is preloaded
+        offset, data = self._chunkcache
 
         for rev in revs:
             chunkstart = start(rev)
             if inline:
                 chunkstart += (rev + 1) * iosize
             chunklength = length(rev)
-            ladd(decompress(getchunk(chunkstart, chunklength)))
+            ladd(decompress(buffer(data, chunkstart - offset, chunklength)))
 
         return l
 
