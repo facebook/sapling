@@ -859,6 +859,8 @@ class revlog(object):
         '''faster version of [self._chunk(rev) for rev in revs]
 
         Assumes that revs is in ascending order.'''
+        if not revs:
+            return []
         start = self.start
         length = self.length
         inline = self._inline
@@ -868,7 +870,8 @@ class revlog(object):
         l = []
         ladd = l.append
 
-        # XXX assume for now that chunkcache is preloaded
+        # preload the cache
+        self._chunkraw(revs[0], revs[-1])
         offset, data = self._chunkcache
 
         for rev in revs:
@@ -946,21 +949,22 @@ class revlog(object):
             else:
                 iterrev -= 1
             e = index[iterrev]
-        chain.reverse()
-        base = iterrev
 
         if iterrev == cachedrev:
             # cache hit
             text = self._cache[2]
+        else:
+            chain.append(iterrev)
+        chain.reverse()
 
         # drop cache to save memory
         self._cache = None
 
-        self._chunkraw(base, rev)
-        if text is None:
-            text = str(self._chunkbase(base))
-
         bins = self._chunks(chain)
+        if text is None:
+            text = str(bins[0])
+            bins = bins[1:]
+
         text = mdiff.patches(text, bins)
 
         text = self._checkhash(text, node, rev)
