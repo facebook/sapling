@@ -1324,6 +1324,8 @@ def clone(ui, source, dest=None, **opts):
      _('mark a branch as closed, hiding it from the branch list')),
     ('', 'amend', None, _('amend the parent of the working dir')),
     ('s', 'secret', None, _('use the secret phase for committing')),
+    ('e', 'edit', None,
+     _('further edit commit message already specified')),
     ] + walkopts + commitopts + commitopts2 + subrepoopts,
     _('[OPTION]... [FILE]...'))
 def commit(ui, repo, *pats, **opts):
@@ -1362,6 +1364,8 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
+    forceeditor = opts.get('force_editor') or opts.get('edit')
+
     if opts.get('subrepos'):
         if opts.get('amend'):
             raise util.Abort(_('cannot amend with --subrepos'))
@@ -1400,7 +1404,7 @@ def commit(ui, repo, *pats, **opts):
             raise util.Abort(_('cannot amend changeset with children'))
 
         e = cmdutil.commiteditor
-        if opts.get('force_editor'):
+        if forceeditor:
             e = cmdutil.commitforceeditor
 
         # commitfunc is used only for temporary amend commit by cmdutil.amend
@@ -1435,7 +1439,7 @@ def commit(ui, repo, *pats, **opts):
             newmarks.write()
     else:
         e = cmdutil.commiteditor
-        if opts.get('force_editor'):
+        if forceeditor:
             e = cmdutil.commitforceeditor
 
         def commitfunc(ui, repo, message, match, opts):

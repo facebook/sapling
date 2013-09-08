@@ -120,7 +120,18 @@ partial subdir commit test
   $ hg add
   adding bar/bar (glob)
   adding foo/foo (glob)
-  $ hg ci -m commit-subdir-1 foo
+  $ HGEDITOR=cat hg ci -e -m commit-subdir-1 foo
+  commit-subdir-1
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added foo/foo
+
+
   $ hg ci -m commit-subdir-2 bar
 
 subdir log 1
@@ -174,11 +185,23 @@ full log
 dot and subdir commit test
 
   $ hg init test3
+  $ echo commit-foo-subdir > commit-log-test
   $ cd test3
   $ mkdir foo
   $ echo foo content > foo/plain-file
   $ hg add foo/plain-file
-  $ hg ci -m commit-foo-subdir foo
+  $ HGEDITOR=cat hg ci --edit -l ../commit-log-test foo
+  commit-foo-subdir
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added foo/plain-file
+
+
   $ echo modified foo content > foo/plain-file
   $ hg ci -m commit-foo-dot .
 
