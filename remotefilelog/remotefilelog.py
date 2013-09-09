@@ -56,9 +56,6 @@ class remotefilelog(object):
         self.repo = repo
         self.localpath = os.path.join(opener.vfs.base, 'data')
 
-        if not os.path.exists(self.localpath):
-            os.makedirs(self.localpath)
-
         self.version = 1
 
     def read(self, node):
@@ -253,17 +250,23 @@ class remotefilelog(object):
         """reads the raw file blob from disk, cache, or server"""
         cachekey = fileserverclient.getcachekey(self.filename, id)
         cachepath = os.path.join(fileserverclient.client.cachepath, cachekey)
-        if os.path.exists(cachepath):
+        try:
             return _readfile(cachepath)
+        except IOError:
+            pass
 
         localkey = fileserverclient.getlocalkey(self.filename, id)
         localpath = os.path.join(self.localpath, localkey)
-        if os.path.exists(localpath):
+        try:
             return _readfile(localpath)
+        except IOError:
+            pass
 
         fileserverclient.client.prefetch(self.repo, [(self.filename, id)])
-        if os.path.exists(cachepath):
+        try:
             return _readfile(cachepath)
+        except IOError:
+            pass
 
         raise error.LookupError(id, self.filename, _('no node'))
 

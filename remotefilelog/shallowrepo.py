@@ -9,9 +9,7 @@ from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
 from mercurial import localrepo, context, mdiff, util
 from mercurial.extensions import wrapfunction
-import remotefilelog
-import remotefilectx
-import fileserverclient
+import remotefilelog, remotefilectx, fileserverclient, os
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
@@ -143,3 +141,7 @@ def wraprepo(repo):
     wrapfunction(repo.dirstate, 'status', status)
 
     repo.__class__ = shallowrepository
+
+    localpath = os.path.join(repo.sopener.vfs.base, 'data')
+    if not os.path.exists(localpath):
+        os.makedirs(localpath)
