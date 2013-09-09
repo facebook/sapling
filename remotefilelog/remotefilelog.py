@@ -14,7 +14,14 @@ from mercurial.i18n import _
 def _readfile(path):
     f = open(path, "r")
     try:
-        return f.read()
+        result = f.read()
+
+        # we should never have empty files
+        if not result:
+            os.remove(path)
+            raise IOError("empty file: %s" % path)
+
+        return result
     finally:
         f.close()
 
