@@ -40,12 +40,25 @@
 
   $ cd ..
 
-# pull from shallow to shallow
+# pull from shallow to shallow (local)
 
   $ cd shallow
   $ echo z > z
   $ hg commit -qAm z
   $ cd ../shallow2
+  $ hg pull ../shallow
+  pulling from ../shallow
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+
+# pull from shallow to shallow (ssh)
+
+  $ hg strip -r 1
+  saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-backup.hg
   $ hg pull ssh://localhost//$TESTTMP/shallow
   pulling from ssh://localhost//$TESTTMP/shallow
   searching for changes

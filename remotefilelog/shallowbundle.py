@@ -23,7 +23,7 @@ def shouldaddfilegroups(repo, source):
 
     if source == "push":
         return AllFiles
-    if source == "serve":
+    if source == "serve" or source == "pull":
         if shallowremote:
             return LocalFiles
         else:

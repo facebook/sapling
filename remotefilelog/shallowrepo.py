@@ -9,7 +9,7 @@ from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
 from mercurial import localrepo, context, mdiff, util
 from mercurial.extensions import wrapfunction
-import remotefilelog, remotefilectx, fileserverclient, os
+import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
 
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
@@ -22,6 +22,13 @@ def wraprepo(repo):
             """changeid can be a changeset revision, node, or tag.
                fileid can be a file revision or node."""
             return remotefilectx.remotefilectx(self, path, changeid, fileid)
+
+        def pull(self, *args, **kwargs):
+            try:
+                shallowbundle.shallowremote = True
+                return super(shallowrepository, self).pull(*args, **kwargs)
+            finally:
+                shallowbundle.shallowremote = False
 
         def addchangegroupfiles(self, source, revmap, trp, pr, needfiles):
             files = 0
