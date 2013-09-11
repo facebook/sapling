@@ -23,9 +23,6 @@ class remotefilectx(context.filectx):
             fileid, filelog, changectx)
         self._ancestormap = ancestormap
 
-    def __str__(self):
-        return "%s@%s" % (self.path(), short(self.node()))
-
     def size(self):
         return self._filelog.size(self._filenode)
 
