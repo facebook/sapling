@@ -37,6 +37,7 @@ def uisetup(ui):
 
     extensions.wrapcommand(commands.table, 'debugindex', debugindex)
     extensions.wrapcommand(commands.table, 'debugindexdot', debugindexdot)
+    extensions.wrapcommand(commands.table, 'log', log)
 
     # Prevent 'hg manifest --all'
     def _manifest(orig, ui, repo, *args, **opts):
@@ -794,3 +795,19 @@ def gc(ui, *args, **opts):
     ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
               (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
               float(size) / 1024.0 / 1024.0 / 1024.0))
+
+def log(orig, ui, repo, *pats, **opts):
+    if pats and not opts.get("follow"):
+        isfile = True
+        for pat in pats:
+            if not os.path.isfile(repo.wjoin(pat)):
+                isfile = False
+                break
+        if isfile:
+            ui.warn(_("warning: file log can be slow on large repos - " +
+                      "use -f to speed it up\n"))
+        elif len(repo) > 100000:
+            ui.warn(_("warning: directory/pattern log can be slow on " +
+                      "large repos\n"))
+
+    return orig(ui, repo, *pats, **opts)
