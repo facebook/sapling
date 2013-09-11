@@ -1172,12 +1172,34 @@ def walkchangerevs(repo, match, opts, prepare):
                                'filenames'))
 
         # The slow path checks files modified in every changeset.
-        for i in sorted(revs):
-            ctx = change(i)
-            matches = filter(match, ctx.files())
-            if matches:
-                fncache[i] = matches
-                wanted.add(i)
+        # This is really slow on large repos, so compute the set lazily.
+        class lazywantedset(object):
+            def __init__(self):
+                self.set = set()
+                self.revs = set(revs)
+
+            # No need to worry about locality here because it will be accessed
+            # in the same order as the increasing window below.
+            def __contains__(self, value):
+                if value in self.set:
+                    return True
+                elif not value in self.revs:
+                    return False
+                else:
+                    self.revs.discard(value)
+                    ctx = change(value)
+                    matches = filter(match, ctx.files())
+                    if matches:
+                        fncache[value] = matches
+                        self.set.add(value)
+                        return True
+                    return False
+
+            def discard(self, value):
+                self.revs.discard(value)
+                self.set.discard(value)
+
+        wanted = lazywantedset()
 
     class followfilter(object):
         def __init__(self, onlyfirst=False):
