@@ -312,7 +312,17 @@ class SVNMeta(object):
             src_file, src_branch = self.split_branch_path(src_path)[:2]
             src_tag = self.get_path_tag(src_path)
             if src_tag or src_file == '':
-                ln = self.localname(p)
+                brpath, fpath = self.layoutobj.split_remote_name(p,
+                                                                 self.branches)
+                # we'll sometimes get a different path out of
+                # split_remate_name than the one we passed in, but
+                # only for the root of a branch, since the svn copies
+                # of those will sometimes be of parent directories of
+                # our root
+                if fpath == '':
+                    ln = self.localname(brpath)
+                else:
+                    ln = self.localname(p)
                 if src_tag in self.tags:
                     changeid = self.tags[src_tag]
                     src_rev, src_branch = self.get_source_rev(changeid)[:2]

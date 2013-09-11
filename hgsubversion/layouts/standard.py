@@ -18,29 +18,41 @@ class StandardLayout(base.BaseLayout):
         if self._branch_dir[-1] != '/':
             self._branch_dir += '/'
 
+        self._infix = ui.config('hgsubversion', 'infix', '').strip('/')
+        if self._infix:
+            self._infix = '/' + self._infix
+
+        self._trunk = 'trunk%s' % self._infix
+
     def localname(self, path):
-        if path == 'trunk':
+        if path == self._trunk:
             return None
-        elif path.startswith(self._branch_dir):
-            return path[len(self._branch_dir):]
+        elif path.startswith(self._branch_dir) and path.endswith(self._infix):
+            path = path[len(self._branch_dir):]
+            if self._infix:
+                path = path[:-len(self._infix)]
+            return path
         return  '../%s' % path
 
     def remotename(self, branch):
         if branch == 'default' or branch is None:
-            return 'trunk'
+            path = self._trunk
         elif branch.startswith('../'):
-            return branch[3:]
-        return '%s%s' % (self._branch_dir, branch)
+            path =  branch[3:]
+        else:
+            path = ''.join((self._branch_dir, branch, self._infix))
+
+        return path
 
     def remotepath(self, branch, subdir='/'):
         if subdir == '/':
             subdir = ''
-        branchpath = 'trunk'
+        branchpath = self._trunk
         if branch and branch != 'default':
             if branch.startswith('../'):
                 branchpath = branch[3:]
             else:
-                branchpath = '%s%s' % (self._branch_dir, branch)
+                branchpath = ''.join((self._branch_dir, branch, self._infix))
 
         return '%s/%s' % (subdir or '', branchpath)
 
@@ -94,16 +106,22 @@ class StandardLayout(base.BaseLayout):
             return candidate, '/'.join(components)
 
         if path == 'trunk' or path.startswith('trunk/'):
-            return 'trunk', path[len('trunk/'):]
+            return self._trunk, path[len(self._trunk) + 1:]
 
         if path.startswith(self._branch_dir):
             path = path[len(self._branch_dir):]
             components = path.split('/', 1)
-            branch_path = '%s%s' % (self._branch_dir, components[0])
+            branch_path = ''.join((self._branch_dir, components[0]))
             if len(components) == 1:
                 local_path = ''
             else:
                 local_path = components[1]
+
+            if local_path == '':
+                branch_path += self._infix
+            elif local_path.startswith(self._infix[1:] + '/'):
+                branch_path += self._infix
+                local_path = local_path[len(self._infix):]
             return branch_path, local_path
 
         components = path.split('/')

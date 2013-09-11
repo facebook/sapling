@@ -534,6 +534,7 @@ optionmap = {
     'tagpaths': ('hgsubversion', 'tagpaths'),
     'authors': ('hgsubversion', 'authormap'),
     'branchdir': ('hgsubversion', 'branchdir'),
+    'infix': ('hgsubversion', 'infix'),
     'filemap': ('hgsubversion', 'filemap'),
     'branchmap': ('hgsubversion', 'branchmap'),
     'tagmap': ('hgsubversion', 'tagmap'),

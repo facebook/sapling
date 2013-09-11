@@ -82,5 +82,11 @@ class BaseLayout(object):
 
         local_path should be relative to the root of the Mercurial working dir
 
+        Note that it is permissible to return a longer branch_path
+        than is passed in iff the path that is passed in is a parent
+        directory of exactly one branch.  This is intended to handle
+        the case where we are importing a particular subdirectory of
+        asubversion branch structure.
+
         """
         self.__unimplemented('split_remote_name')

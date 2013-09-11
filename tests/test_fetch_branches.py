@@ -166,6 +166,30 @@ class TestFetchBranches(test_util.TestBase):
         expected_tags = set(['tip', 'tag_from_trunk', 'tag_from_branch'])
         self.assertEqual(tags, expected_tags)
 
+    def test_subproject_fetch(self):
+        config = {
+            'hgsubversion.infix': 'project',
+            }
+        repo = self._load_fixture_and_fetch('subprojects.svndump',
+                                            layout='standard',
+                                            config=config)
+
+        heads = set([repo[n].branch() for n in repo.heads()])
+        expected_heads = set(['default', 'branch'])
+        self.assertEqual(heads, expected_heads)
+
+        tags = set(repo.tags())
+        expected_tags = set(['tip', 'tag_from_trunk', 'tag_from_branch'])
+        self.assertEqual(tags, expected_tags)
+
+        for head in repo.heads():
+            ctx = repo[head]
+            self.assertFalse('project/file' in ctx, 'failed to strip infix')
+            self.assertTrue('file' in ctx, 'failed to track a simple file')
+            self.assertFalse('other/phile' in ctx, 'pulled in other project')
+            self.assertFalse('phile' in ctx, 'merged other project in repo')
+
+
 def suite():
     all_tests = [unittest.TestLoader().loadTestsFromTestCase(TestFetchBranches),
           ]

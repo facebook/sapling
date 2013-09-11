@@ -34,7 +34,10 @@ with repositories that use the conventional ``trunk``, ``tags`` and ``branches``
 directories. By default, hgsubversion will use this layout whenever it finds any
 of these directories at the specified directory on the server.  Standard layout
 also supports alternate names for the ``branches`` directory and multiple tags
-locations.
+locations.  Finally, Standard Layout supports selecting a subdirectory relative
+to ``trunk``, and each branch and tag dir.  This is useful if you have a single
+``trunk``, ``branches``, and ``tags`` with several projects inside, and you wish
+to import only a single project.
 
 If you instead want to clone just a single directory or branch, clone the
 specific directory path. In the example above, to get *only* trunk, you would
@@ -307,6 +310,13 @@ settings:
     Specifies the subdirectory to look for branches under.  The
     default is ``branches``.  This option has no effect for
     single-directory clones.
+
+  ``hgsubversion.infix``
+
+    Specifies a path to strip between relative to the trunk/branch/tag
+    root as the mercurial root.  This can be used to import a single
+    sub-project when you have several sub-projects under a single
+    trunk/branches/tags layout in subversion.
 
   ``hgsubversion.filemap``
 
