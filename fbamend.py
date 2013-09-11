@@ -162,7 +162,7 @@ def fixupamend(ui, repo):
         'dest' : active
     }
 
-    if opts['rev'][0]:
+    if opts['rev'] and opts['rev'][0]:
         rebase.rebase(ui, repo, **opts)
 
     repair.strip(ui, repo, old.node(), topic='preamend-backup')
