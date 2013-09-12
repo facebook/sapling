@@ -71,10 +71,6 @@ def generate_repo_class(ui, repo):
         """
         original = getattr(repo, fn.__name__, None)
 
-        # remove when dropping support for hg < 1.6.
-        if original is None and fn.__name__ == 'findoutgoing':
-            return
-
         def wrapper(self, *args, **opts):
             capable = getattr(args[0], 'capable', lambda x: False)
             if capable('subversion'):
