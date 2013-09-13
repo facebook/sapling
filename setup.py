@@ -423,14 +423,21 @@ packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
 
 pymodules = []
 
+common_depends = ['mercurial/util.h']
+
 extmodules = [
-    Extension('mercurial.base85', ['mercurial/base85.c']),
-    Extension('mercurial.bdiff', ['mercurial/bdiff.c']),
-    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c']),
-    Extension('mercurial.mpatch', ['mercurial/mpatch.c']),
+    Extension('mercurial.base85', ['mercurial/base85.c'],
+              depends=common_depends),
+    Extension('mercurial.bdiff', ['mercurial/bdiff.c'],
+              depends=common_depends),
+    Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'],
+              depends=common_depends),
+    Extension('mercurial.mpatch', ['mercurial/mpatch.c'],
+              depends=common_depends),
     Extension('mercurial.parsers', ['mercurial/dirs.c',
                                     'mercurial/parsers.c',
-                                    'mercurial/pathencode.c']),
+                                    'mercurial/pathencode.c'],
+              depends=common_depends),
     ]
 
 osutil_ldflags = []
@@ -443,7 +450,8 @@ if sys.platform == 'win32' and sys.version_info < (2, 5, 0, 'final'):
     pymodules.append('mercurial.pure.osutil')
 else:
     extmodules.append(Extension('mercurial.osutil', ['mercurial/osutil.c'],
-                                extra_link_args=osutil_ldflags))
+                                extra_link_args=osutil_ldflags,
+                                depends=common_depends))
 
 # the -mno-cygwin option has been deprecated for years
 Mingw32CCompiler = cygwinccompiler.Mingw32CCompiler
@@ -467,7 +475,8 @@ if sys.platform.startswith('linux') and os.uname()[2] > '2.6':
     if hasfunction(cc, 'inotify_add_watch'):
         inotify = Extension('hgext.inotify.linux._inotify',
                             ['hgext/inotify/linux/_inotify.c'],
-                            ['mercurial'])
+                            ['mercurial'],
+                            depends=common_depends)
         inotify.optional = True
         extmodules.append(inotify)
         packages.extend(['hgext.inotify', 'hgext.inotify.linux'])
