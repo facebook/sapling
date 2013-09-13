@@ -11,7 +11,7 @@ def generate_ssh_vendor(ui):
     """
 
     class _Vendor(SSHVendor):
-        def connect_ssh(self, host, command, username=None, port=None):
+        def run_command(self, host, command, username=None, port=None):
             from dulwich.client import SubprocessWrapper
             from mercurial import util
             import subprocess
