@@ -469,7 +469,8 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
         return str(val)
     origcmd = cmd
     cmd = quotecommand(cmd)
-    if sys.platform == 'plan9':
+    if sys.platform == 'plan9' and (sys.version_info[0] == 2
+                                    and sys.version_info[1] < 7):
         # subprocess kludge to work around issues in half-baked Python
         # ports, notably bichued/python:
         if not cwd is None:
