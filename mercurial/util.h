@@ -151,6 +151,17 @@ typedef unsigned __int64 uint64_t;
 #define inline __inline
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1300)
+static inline uint32_t getbe32(const char *c)
+{
+	return _byteswap_ulong(*(uint32_t *)c);
+}
+#elif GCC_VERSION >= 403
+static inline uint32_t getbe32(const char *c)
+{
+	return __builtin_bswap32(*(uint32_t *)c);
+}
+#else
 static inline uint32_t getbe32(const char *c)
 {
 	const unsigned char *d = (const unsigned char *)c;
@@ -160,7 +171,21 @@ static inline uint32_t getbe32(const char *c)
 		(d[2] << 8) |
 		(d[3]));
 }
+#endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1300)
+static inline void putbe32(uint32_t x, char *c)
+{
+	x = _byteswap_ulong(x);
+	*(uint32_t *)c = x;
+}
+#elif GCC_VERSION >= 403
+static inline void putbe32(uint32_t x, char *c)
+{
+	x = __builtin_bswap32(x);
+	*(uint32_t *)c = x;
+}
+#else
 static inline void putbe32(uint32_t x, char *c)
 {
 	c[0] = (x >> 24) & 0xff;
@@ -168,5 +193,6 @@ static inline void putbe32(uint32_t x, char *c)
 	c[2] = (x >> 8) & 0xff;
 	c[3] = (x) & 0xff;
 }
+#endif
 
 #endif /* _HG_UTIL_H_ */
