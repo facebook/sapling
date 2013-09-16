@@ -671,9 +671,10 @@ class localrepository(object):
 
     def branchtip(self, branch):
         '''return the tip node for a given branch'''
-        if branch not in self.branchmap():
+        try:
+            return self.branchmap().branchtip(branch)
+        except KeyError:
             raise error.RepoLookupError(_("unknown branch '%s'") % branch)
-        return self._branchtip(self.branchmap()[branch])
 
     def branchtags(self):
         '''return a dict where branch names map to the tipmost head of
