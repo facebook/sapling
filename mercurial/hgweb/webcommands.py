@@ -596,8 +596,9 @@ def summary(web, req, tmpl):
     def branches(**map):
         parity = paritygen(web.stripecount)
 
-        b = web.repo.branchtags()
-        l = [(-web.repo.changelog.rev(n), n, t) for t, n in b.iteritems()]
+        b = web.repo.branchmap()
+        l = [(-web.repo.changelog.rev(tip), tip, tag)
+             for tag, heads, tip, closed in b.iterbranches()]
         for r, n, t in sorted(l):
             yield {'parity': parity.next(),
                    'branch': t,
