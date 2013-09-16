@@ -166,6 +166,19 @@ class branchcache(dict):
         except IndexError:
             return False
 
+    def _branchtip(self, heads):
+        tip = heads[-1]
+        closed = True
+        for h in reversed(heads):
+            if h not in self._closednodes:
+                tip = h
+                closed = False
+                break
+        return tip, closed
+
+    def branchtip(self, branch):
+        return self._branchtip(self[branch])[0]
+
     def copy(self):
         """return an deep copy of the branchcache object"""
         return branchcache(self, self.tipnode, self.tiprev, self.filteredhash,
