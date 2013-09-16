@@ -1628,13 +1628,11 @@ class localrepository(object):
         if branch not in branches:
             return []
         # the cache returns heads ordered lowest to highest
-        bheads = list(reversed(branches[branch]))
+        bheads = list(reversed(branches.branchheads(branch, closed=closed)))
         if start is not None:
             # filter out the heads that cannot be reached from startrev
             fbheads = set(self.changelog.nodesbetween([start], bheads)[2])
             bheads = [h for h in bheads if h in fbheads]
-        if not closed:
-            bheads = [h for h in bheads if not self[h].closesbranch()]
         return bheads
 
     def branches(self, nodes):
