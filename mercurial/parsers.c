@@ -540,11 +540,12 @@ static PyObject *index_get(indexObject *self, Py_ssize_t pos)
 			      uncomp_len, base_rev, link_rev,
 			      parent_1, parent_2, c_node_id, 20);
 
-	if (entry)
+	if (entry) {
 		PyObject_GC_UnTrack(entry);
+		Py_INCREF(entry);
+	}
 
 	self->cache[pos] = entry;
-	Py_INCREF(entry);
 
 	return entry;
 }
