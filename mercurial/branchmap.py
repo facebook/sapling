@@ -11,7 +11,7 @@ import util
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
-    filename = "cache/branchheads"
+    filename = "cache/branch2"
     if repo.filtername:
         filename = '%s-%s' % (filename, repo.filtername)
     return filename
@@ -39,11 +39,16 @@ def read(repo):
         for l in lines:
             if not l:
                 continue
-            node, label = l.split(" ", 1)
+            node, state, label = l.split(" ", 2)
+            if state not in 'oc':
+                raise ValueError('invalid branch state')
             label = encoding.tolocal(label.strip())
             if not node in repo:
                 raise ValueError('node %s does not exist' % node)
-            partial.setdefault(label, []).append(bin(node))
+            node = bin(node)
+            partial.setdefault(label, []).append(node)
+            if state == 'c':
+                partial._closednodes.add(node)
     except KeyboardInterrupt:
         raise
     except Exception, inst:
@@ -102,21 +107,32 @@ class branchcache(dict):
     The cache is serialized on disk in the following format:
 
     <tip hex node> <tip rev number> [optional filtered repo hex hash]
-    <branch head hex node> <branch name>
-    <branch head hex node> <branch name>
+    <branch head hex node> <open/closed state> <branch name>
+    <branch head hex node> <open/closed state> <branch name>
     ...
 
     The first line is used to check if the cache is still valid. If the
     branch cache is for a filtered repo view, an optional third hash is
     included that hashes the hashes of all filtered revisions.
+
+    The open/closed state is represented by a single letter 'o' or 'c'.
+    This field can be used to avoid changelog reads when determining if a
+    branch head closes a branch or not.
     """
 
     def __init__(self, entries=(), tipnode=nullid, tiprev=nullrev,
-                 filteredhash=None):
+                 filteredhash=None, closednodes=None):
         super(branchcache, self).__init__(entries)
         self.tipnode = tipnode
         self.tiprev = tiprev
         self.filteredhash = filteredhash
+        # closednodes is a set of nodes that close their branch. If the branch
+        # cache has been updated, it may contain nodes that are no longer
+        # heads.
+        if closednodes is None:
+            self._closednodes = set()
+        else:
+            self._closednodes = closednodes
 
     def _hashfiltered(self, repo):
         """build hash of revision filtered in the current cache
@@ -152,7 +168,8 @@ class branchcache(dict):
 
     def copy(self):
         """return an deep copy of the branchcache object"""
-        return branchcache(self, self.tipnode, self.tiprev, self.filteredhash)
+        return branchcache(self, self.tipnode, self.tiprev, self.filteredhash,
+                           self._closednodes)
 
     def write(self, repo):
         try:
@@ -163,7 +180,12 @@ class branchcache(dict):
             f.write(" ".join(cachekey) + '\n')
             for label, nodes in sorted(self.iteritems()):
                 for node in nodes:
-                    f.write("%s %s\n" % (hex(node), encoding.fromlocal(label)))
+                    if node in self._closednodes:
+                        state = 'c'
+                    else:
+                        state = 'o'
+                    f.write("%s %s %s\n" % (hex(node), state,
+                                            encoding.fromlocal(label)))
             f.close()
         except (IOError, OSError, util.Abort):
             # Abort may be raise by read only opener
@@ -177,9 +199,13 @@ class branchcache(dict):
         cl = repo.changelog
         # collect new branch entries
         newbranches = {}
-        getbranch = cl.branch
+        getbranchinfo = cl.branchinfo
         for r in revgen:
-            newbranches.setdefault(getbranch(r), []).append(cl.node(r))
+            branch, closesbranch = getbranchinfo(r)
+            node = cl.node(r)
+            newbranches.setdefault(branch, []).append(node)
+            if closesbranch:
+                self._closednodes.add(node)
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)

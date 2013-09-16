@@ -196,7 +196,7 @@ r4 has hardlinks in the working dir (not just inside .hg):
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
   2 r4/.hg/branch
-  2 r4/.hg/cache/branchheads-served
+  2 r4/.hg/cache/branch2-served
   2 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt
@@ -226,7 +226,7 @@ Update back to revision 11 in r4 should break hardlink of file f1:
   $ nlinksdir r4
   2 r4/.hg/00changelog.i
   1 r4/.hg/branch
-  2 r4/.hg/cache/branchheads-served
+  2 r4/.hg/cache/branch2-served
   1 r4/.hg/dirstate
   2 r4/.hg/hgrc
   2 r4/.hg/last-message.txt

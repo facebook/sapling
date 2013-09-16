@@ -70,7 +70,7 @@ Non store repo:
   .hg/00changelog.i
   .hg/00manifest.i
   .hg/cache
-  .hg/cache/branchheads-served
+  .hg/cache/branch2-served
   .hg/data
   .hg/data/tst.d.hg
   .hg/data/tst.d.hg/foo.i
@@ -98,7 +98,7 @@ Non fncache repo:
   .hg
   .hg/00changelog.i
   .hg/cache
-  .hg/cache/branchheads-served
+  .hg/cache/branch2-served
   .hg/dirstate
   .hg/last-message.txt
   .hg/requires

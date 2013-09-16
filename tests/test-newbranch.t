@@ -1,13 +1,13 @@
-  $ branchcache=.hg/cache/branchheads
+  $ branchcache=.hg/cache/branch2
 
   $ listbranchcaches() {
-  >    for f in .hg/cache/branchheads*;
+  >    for f in .hg/cache/branch2*;
   >       do echo === $f ===;
   >       cat $f;
   >     done;
   > }
   $ purgebranchcaches() {
-  >     rm .hg/cache/branchheads*
+  >     rm .hg/cache/branch2*
   > }
 
   $ hg init t
@@ -158,13 +158,13 @@ Test for invalid branch cache:
   4:adf1a74a7f7b
 
   $ listbranchcaches
-  === .hg/cache/branchheads ===
+  === .hg/cache/branch2 ===
   corrupted
-  === .hg/cache/branchheads-served ===
+  === .hg/cache/branch2-served ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
-  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
-  1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
-  adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 foo
+  c21617b13b220988e7a2e26290fbe4325ffa7139 o bar
+  1c28f494dae69a2f8fc815059d257eccf3fcfe75 o default
+  adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 o foo
 
 Push should update the branch cache:
 
@@ -175,20 +175,20 @@ Pushing just rev 0:
   $ hg push -qr 0 ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-base ===
+  === .hg/cache/branch2-base ===
   db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 0
-  db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 default
+  db01e8ea3388fd3c7c94e1436ea2bd6a53d581c5 o default
 
 Pushing everything:
 
   $ hg push -qf ../target
 
   $ (cd ../target/; listbranchcaches)
-  === .hg/cache/branchheads-base ===
+  === .hg/cache/branch2-base ===
   adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 4
-  c21617b13b220988e7a2e26290fbe4325ffa7139 bar
-  1c28f494dae69a2f8fc815059d257eccf3fcfe75 default
-  adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 foo
+  c21617b13b220988e7a2e26290fbe4325ffa7139 o bar
+  1c28f494dae69a2f8fc815059d257eccf3fcfe75 o default
+  adf1a74a7f7b4cd193d12992f5d0d6a004ed21d6 o foo
 
 Update with no arguments: tipmost revision of the current branch:
 

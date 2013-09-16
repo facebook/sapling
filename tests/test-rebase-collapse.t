@@ -274,18 +274,18 @@ We keep it the test this way in case new complexity is injected.
   7:c65502d4178782309ce0574c5ae6ee9485a9bafa default
   6:c772a8b2dc17629cec88a19d09c926c4814b12c7 default
 
-  $ cat $TESTTMP/b2/.hg/cache/branchheads-served
+  $ cat $TESTTMP/b2/.hg/cache/branch2-served
   c65502d4178782309ce0574c5ae6ee9485a9bafa 7
-  c772a8b2dc17629cec88a19d09c926c4814b12c7 default
-  c65502d4178782309ce0574c5ae6ee9485a9bafa default
+  c772a8b2dc17629cec88a19d09c926c4814b12c7 o default
+  c65502d4178782309ce0574c5ae6ee9485a9bafa o default
 
   $ hg strip 4
   saved backup bundle to $TESTTMP/b2/.hg/strip-backup/8a5212ebc852-backup.hg (glob)
 
-  $ cat $TESTTMP/b2/.hg/cache/branchheads-served
+  $ cat $TESTTMP/b2/.hg/cache/branch2-served
   c65502d4178782309ce0574c5ae6ee9485a9bafa 4
-  2870ad076e541e714f3c2bc32826b5c6a6e5b040 default
-  c65502d4178782309ce0574c5ae6ee9485a9bafa default
+  2870ad076e541e714f3c2bc32826b5c6a6e5b040 o default
+  c65502d4178782309ce0574c5ae6ee9485a9bafa o default
 
   $ hg heads --template="{rev}:{node} {branch}\n"
   4:c65502d4178782309ce0574c5ae6ee9485a9bafa default
