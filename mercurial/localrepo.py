@@ -659,30 +659,12 @@ class localrepository(object):
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
 
-
-    def _branchtip(self, heads):
-        '''return the tipmost branch head in heads'''
-        tip = heads[-1]
-        for h in reversed(heads):
-            if not self[h].closesbranch():
-                tip = h
-                break
-        return tip
-
     def branchtip(self, branch):
         '''return the tip node for a given branch'''
         try:
             return self.branchmap().branchtip(branch)
         except KeyError:
             raise error.RepoLookupError(_("unknown branch '%s'") % branch)
-
-    def branchtags(self):
-        '''return a dict where branch names map to the tipmost head of
-        the branch, open heads come before closed'''
-        bt = {}
-        for bn, heads in self.branchmap().iteritems():
-            bt[bn] = self._branchtip(heads)
-        return bt
 
     def lookup(self, key):
         return self[key].node()
