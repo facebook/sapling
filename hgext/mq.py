@@ -283,15 +283,11 @@ def newcommit(repo, phase, *args, **kwargs):
             phase = phases.secret
     if phase is not None:
         backup = repo.ui.backupconfig('phases', 'new-commit')
-    # Marking the repository as committing an mq patch can be used
-    # to optimize operations like branchtags().
-    repo._committingpatch = True
     try:
         if phase is not None:
             repo.ui.setconfig('phases', 'new-commit', phase)
         return repo.commit(*args, **kwargs)
     finally:
-        repo._committingpatch = False
         if phase is not None:
             repo.ui.restoreconfig(backup)
 
