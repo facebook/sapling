@@ -158,8 +158,8 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 {
 	PyObject *dmap, *cmap, *parents = NULL, *ret = NULL;
 	PyObject *fname = NULL, *cname = NULL, *entry = NULL;
-	char *str, *cur, *end, *cpos;
-	int state, mode, size, mtime;
+	char state, *str, *cur, *end, *cpos;
+	int mode, size, mtime;
 	unsigned int flen;
 	int len;
 
