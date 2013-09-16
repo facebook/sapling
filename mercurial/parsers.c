@@ -1212,14 +1212,19 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 	long sp;
 	bitmask *seen;
 
+	if (gca == NULL)
+		return PyErr_NoMemory();
+
 	for (i = 0; i < revcount; i++) {
 		if (revs[i] > maxrev)
 			maxrev = revs[i];
 	}
 
 	seen = calloc(sizeof(*seen), maxrev + 1);
-	if (seen == NULL)
+	if (seen == NULL) {
+		Py_DECREF(gca);
 		return PyErr_NoMemory();
+	}
 
 	for (i = 0; i < revcount; i++)
 		seen[revs[i]] = 1ull << i;
