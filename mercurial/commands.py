@@ -2143,11 +2143,8 @@ def debuglabelcomplete(ui, repo, *args):
     labels = set()
     labels.update(t[0] for t in repo.tagslist())
     labels.update(repo._bookmarks.keys())
-    for heads in repo.branchmap().itervalues():
-        for h in heads:
-            ctx = repo[h]
-            if not ctx.closesbranch():
-                labels.add(ctx.branch())
+    labels.update(tag for (tag, heads, tip, closed)
+                  in repo.branchmap().iterbranches() if not closed)
     completions = set()
     if not args:
         args = ['']
