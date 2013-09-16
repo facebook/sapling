@@ -1015,17 +1015,9 @@ def branches(ui, repo, active=False, closed=False):
 
     allheads = set(repo.heads())
     branches = []
-    for tag, heads in repo.branchmap().iteritems():
-        for h in reversed(heads):
-            ctx = repo[h]
-            isopen = not ctx.closesbranch()
-            if isopen:
-                tip = ctx
-                break
-        else:
-            tip = repo[heads[-1]]
-        isactive = isopen and bool(set(heads) & allheads)
-        branches.append((tag, tip, isactive, isopen))
+    for tag, heads, tip, isclosed in repo.branchmap().iterbranches():
+        isactive = not isclosed and bool(set(heads) & allheads)
+        branches.append((tag, repo[tip], isactive, not isclosed))
     branches.sort(key=lambda i: (i[2], i[1].rev(), i[0], i[3]),
                   reverse=True)
 
