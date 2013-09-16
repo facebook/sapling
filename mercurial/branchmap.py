@@ -185,6 +185,10 @@ class branchcache(dict):
             heads = [h for h in heads if h not in self._closednodes]
         return heads
 
+    def iterbranches(self):
+        for bn, heads in self.iteritems():
+            yield (bn, heads) + self._branchtip(heads)
+
     def copy(self):
         """return an deep copy of the branchcache object"""
         return branchcache(self, self.tipnode, self.tiprev, self.filteredhash,
