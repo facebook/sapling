@@ -994,7 +994,7 @@ class GitHandler(object):
                         if not ref.endswith('^{}')
                         and ( ref.startswith('refs/heads/') or ref.startswith('refs/tags/') ) ]
             want = [x for x in want if x not in self.git]
-            
+
             return want
         try:
             progress = GitProgress(self.ui)
