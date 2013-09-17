@@ -8,7 +8,6 @@ from dulwich.pack import create_delta, apply_delta
 from dulwich.repo import Repo
 from dulwich import client
 from dulwich import config as dul_config
-from StringIO import StringIO
 
 try:
     from mercurial import bookmarks
@@ -998,7 +997,7 @@ class GitHandler(object):
             return want
         try:
             progress = GitProgress(self.ui)
-            f = StringIO()
+            f = StringIO.StringIO()
             ret = client.fetch_pack(path, determine_wants, graphwalker, f.write, progress.progress)
             if(f.pos != 0):
                 f.seek(0)
