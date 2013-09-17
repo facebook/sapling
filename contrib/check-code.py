@@ -326,7 +326,7 @@ inrevlogpats = [
 checks = [
     ('python', r'.*\.(py|cgi)$', pyfilters, pypats),
     ('test script', r'(.*/)?test-[^.~]*$', testfilters, testpats),
-    ('c', r'.*\.c$', cfilters, cpats),
+    ('c', r'.*\.[ch]$', cfilters, cpats),
     ('unified test', r'.*\.t$', utestfilters, utestpats),
     ('layering violation repo in revlog', r'mercurial/revlog\.py', pyfilters,
      inrevlogpats),
