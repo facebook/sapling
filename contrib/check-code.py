@@ -288,7 +288,7 @@ cpats = [
     (r'return\(', "return is not a function"),
     (r' ;', "no space before ;"),
     (r'\w+\* \w+', "use int *foo, not int* foo"),
-    (r'\([^\)]+\) \w+', "use (int)foo, not (int) foo"),
+    (r'\W\([^\)]+\) \w+', "use (int)foo, not (int) foo"),
     (r'\w+ (\+\+|--)', "use foo++, not foo ++"),
     (r'\w,\w', "missing whitespace after ,"),
     (r'^[^#]\w[+/*]\w', "missing whitespace in expression"),
