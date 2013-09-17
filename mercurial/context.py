@@ -821,8 +821,8 @@ class filectx(basefilectx):
         return [filectx(self._repo, self._path, fileid=x,
                         filelog=self._filelog) for x in c]
 
-class commitablectx(basectx):
-    """A commitablectx object provides common functionality for a context that
+class committablectx(basectx):
+    """A committablectx object provides common functionality for a context that
     wants the ability to commit, e.g. workingctx or memctx."""
     def __init__(self, repo, text="", user=None, date=None, extra=None,
                  changes=None):
@@ -1062,7 +1062,7 @@ class commitablectx(basectx):
     def dirs(self):
         return self._repo.dirstate.dirs()
 
-class workingctx(commitablectx):
+class workingctx(committablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
     date - any valid date string or (unixtime, offset), or None.
@@ -1188,9 +1188,9 @@ class workingctx(commitablectx):
             finally:
                 wlock.release()
 
-class commitablefilectx(basefilectx):
-    """A commitablefilectx provides common functionality for a file context that
-    wants the ability to commit, e.g. workingfilectx or memfilectx."""
+class committablefilectx(basefilectx):
+    """A committablefilectx provides common functionality for a file context
+    that wants the ability to commit, e.g. workingfilectx or memfilectx."""
     def __init__(self, repo, path, filelog=None, ctx=None):
         self._repo = repo
         self._path = path
@@ -1229,7 +1229,7 @@ class commitablefilectx(basefilectx):
     def children(self):
         return []
 
-class workingfilectx(commitablefilectx):
+class workingfilectx(committablefilectx):
     """A workingfilectx object makes access to data related to a particular
        file in the working directory convenient."""
     def __init__(self, repo, path, filelog=None, workingctx=None):
