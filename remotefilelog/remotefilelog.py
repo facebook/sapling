@@ -279,11 +279,25 @@ class remotefilelog(object):
 
     def ancestormap(self, node):
         files = None
+
+        # check that all linknodes are valid
+        def validmap(mapping, node):
+            queue = [node]
+            while queue:
+                node = queue.pop(0)
+                p1, p2, linknode, copyfrom = mapping[node]
+                if not linknode in self.repo:
+                    return False
+                if p1 != nullid:
+                    queue.append(p1)
+                if p2 != nullid:
+                    queue.append(p2)
+
+            return True
+
         while True:
             mapping = self._ancestormap(node)
-
-            p1, p2, linknode, copyfrom = mapping[node]
-            if linknode in self.repo:
+            if validmap(mapping, node):
                 break
             else:
                 if files == None:
