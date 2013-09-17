@@ -15,15 +15,15 @@ def addbreaks(text):
     """
     return text.replace('\n', '<br/>\n')
 
-agescales = [("year", 3600 * 24 * 365),
-             ("month", 3600 * 24 * 30),
-             ("week", 3600 * 24 * 7),
-             ("day", 3600 * 24),
-             ("hour", 3600),
-             ("minute", 60),
-             ("second", 1)]
+agescales = [("year", 3600 * 24 * 365, 'Y'),
+             ("month", 3600 * 24 * 30, 'M'),
+             ("week", 3600 * 24 * 7, 'W'),
+             ("day", 3600 * 24, 'd'),
+             ("hour", 3600, 'h'),
+             ("minute", 60, 'm'),
+             ("second", 1, 's')]
 
-def age(date):
+def age(date, abbrev=False):
     """:age: Date. Returns a human-readable date/time difference between the
     given date/time and the current date/time.
     """
@@ -32,7 +32,9 @@ def age(date):
         if c == 1:
             return t
         return t + "s"
-    def fmt(t, c):
+    def fmt(t, c, a):
+        if abbrev:
+            return "%d%s" % (c, a)
         return "%d %s" % (c, plural(t, c))
 
     now = time.time()
@@ -48,12 +50,12 @@ def age(date):
         if delta > agescales[0][1] * 2:
             return util.shortdate(date)
 
-    for t, s in agescales:
+    for t, s, a in agescales:
         n = delta // s
         if n >= 2 or s == 1:
             if future:
-                return '%s from now' % fmt(t, n)
-            return '%s ago' % fmt(t, n)
+                return '%s from now' % fmt(t, n, a)
+            return '%s ago' % fmt(t, n, a)
 
 def basename(path):
     """:basename: Any text. Treats the text as a path, and returns the last
