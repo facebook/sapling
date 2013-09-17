@@ -368,6 +368,8 @@ def onetimeclientsetup(ui):
             pass
     wrapfunction(verify, '_verify', _verify)
 
+    wrapfunction(cmdutil, 'revert', revert)
+
 def createfileblob(filectx):
     text = filectx.data()
 
@@ -910,3 +912,16 @@ def parsefileblob(path, decompress):
         start = divider + 1
 
     return size, firstnode, mapping
+
+def revert(orig, ui, repo, ctx, parents, *pats, **opts):
+    # prefetch prior to reverting
+    if remotefilelogreq in repo.requirements:
+        files = []
+        m = scmutil.match(ctx, pats, opts)
+        mf = ctx.manifest()
+        for abspath in ctx.walk(m):
+            path = m.rel(abspath)
+            files.append((path, hex(mf[path])))
+        fileserverclient.client.prefetch(repo, files)
+
+    return orig(ui, repo, ctx, parents, *pats, **opts)

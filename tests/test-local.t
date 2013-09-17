@@ -111,3 +111,9 @@
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
   $ cat a
   a
+
+# revert
+
+  $ clearcache
+  $ hg revert -r .~2 y z
+  3 files fetched over 2 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
