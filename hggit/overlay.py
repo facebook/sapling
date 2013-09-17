@@ -59,6 +59,10 @@ class overlaymanifest(object):
 
         addtree(self.tree, '')
 
+    def iteritems(self):
+        self.load()
+        return self._map.iteritems()
+
     def __iter__(self):
         self.load()
         return self._map.__iter__()

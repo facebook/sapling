@@ -42,6 +42,8 @@ clear the cache to be sure it is regenerated correctly
   $ hg push ../gitrepo2
   pushing to ../gitrepo2
   searching for changes
+  adding objects
+  added 4 commits with 4 trees and 3 blobs
 
   $ cd ..
 git log in repo pushed from hg

@@ -24,12 +24,18 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 2 blobs
+  updating reference refs/heads/master
 
   $ echo gamma >> beta
   $ fn_hg_commit -u "test <test@example.com> (comment)" -m 'modify beta'
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 2 blobs
+  updating reference refs/heads/master
 
   $ echo gamma > gamma
   $ hg add gamma
@@ -37,6 +43,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 3 blobs
+  updating reference refs/heads/master
 
   $ echo delta > delta
   $ hg add delta
@@ -44,6 +53,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 4 blobs
+  updating reference refs/heads/master
 
   $ echo epsilon > epsilon
   $ hg add epsilon
@@ -51,6 +63,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 5 blobs
+  updating reference refs/heads/master
 
   $ echo zeta > zeta
   $ hg add zeta
@@ -58,6 +73,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 6 blobs
+  updating reference refs/heads/master
 
   $ echo eta > eta
   $ hg add eta
@@ -65,6 +83,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 7 blobs
+  updating reference refs/heads/master
 
   $ echo theta > theta
   $ hg add theta
@@ -72,6 +93,9 @@ Load commonly used test logic
   $ hg push
   pushing to $TESTTMP/gitrepo
   searching for changes
+  adding objects
+  added 1 commits with 1 trees and 8 blobs
+  updating reference refs/heads/master
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   8:d3c51ce68cfd
