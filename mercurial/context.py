@@ -80,6 +80,53 @@ class basectx(object):
     def mutable(self):
         return self.phase() > phases.public
 
+    def obsolete(self):
+        """True if the changeset is obsolete"""
+        return self.rev() in obsmod.getrevs(self._repo, 'obsolete')
+
+    def extinct(self):
+        """True if the changeset is extinct"""
+        return self.rev() in obsmod.getrevs(self._repo, 'extinct')
+
+    def unstable(self):
+        """True if the changeset is not obsolete but it's ancestor are"""
+        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
+
+    def bumped(self):
+        """True if the changeset try to be a successor of a public changeset
+
+        Only non-public and non-obsolete changesets may be bumped.
+        """
+        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
+
+    def divergent(self):
+        """Is a successors of a changeset with multiple possible successors set
+
+        Only non-public and non-obsolete changesets may be divergent.
+        """
+        return self.rev() in obsmod.getrevs(self._repo, 'divergent')
+
+    def troubled(self):
+        """True if the changeset is either unstable, bumped or divergent"""
+        return self.unstable() or self.bumped() or self.divergent()
+
+    def troubles(self):
+        """return the list of troubles affecting this changesets.
+
+        Troubles are returned as strings. possible values are:
+        - unstable,
+        - bumped,
+        - divergent.
+        """
+        troubles = []
+        if self.unstable():
+            troubles.append('unstable')
+        if self.bumped():
+            troubles.append('bumped')
+        if self.divergent():
+            troubles.append('divergent')
+        return troubles
+
     def parents(self):
         """return contexts for each parent changeset"""
         return self._parents
@@ -321,53 +368,6 @@ class changectx(basectx):
     def descendants(self):
         for d in self._repo.changelog.descendants([self._rev]):
             yield changectx(self._repo, d)
-
-    def obsolete(self):
-        """True if the changeset is obsolete"""
-        return self.rev() in obsmod.getrevs(self._repo, 'obsolete')
-
-    def extinct(self):
-        """True if the changeset is extinct"""
-        return self.rev() in obsmod.getrevs(self._repo, 'extinct')
-
-    def unstable(self):
-        """True if the changeset is not obsolete but it's ancestor are"""
-        return self.rev() in obsmod.getrevs(self._repo, 'unstable')
-
-    def bumped(self):
-        """True if the changeset try to be a successor of a public changeset
-
-        Only non-public and non-obsolete changesets may be bumped.
-        """
-        return self.rev() in obsmod.getrevs(self._repo, 'bumped')
-
-    def divergent(self):
-        """Is a successors of a changeset with multiple possible successors set
-
-        Only non-public and non-obsolete changesets may be divergent.
-        """
-        return self.rev() in obsmod.getrevs(self._repo, 'divergent')
-
-    def troubled(self):
-        """True if the changeset is either unstable, bumped or divergent"""
-        return self.unstable() or self.bumped() or self.divergent()
-
-    def troubles(self):
-        """return the list of troubles affecting this changesets.
-
-        Troubles are returned as strings. possible values are:
-        - unstable,
-        - bumped,
-        - divergent.
-        """
-        troubles = []
-        if self.unstable():
-            troubles.append('unstable')
-        if self.bumped():
-            troubles.append('bumped')
-        if self.divergent():
-            troubles.append('divergent')
-        return troubles
 
     def filectx(self, path, fileid=None, filelog=None):
         """get a file context from this changeset"""
