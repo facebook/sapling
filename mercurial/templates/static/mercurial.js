@@ -345,3 +345,61 @@ function docFromHTML(html) {
 function appendFormatHTML(element, formatStr, replacements) {
     element.insertAdjacentHTML('beforeend', format(formatStr, replacements));
 }
+
+function ajaxScrollInit(urlFormat,
+                        nextHash,
+                        nextHashRegex,
+                        containerSelector,
+                        messageFormat) {
+    updateInitiated = false;
+    container = document.querySelector(containerSelector);
+
+    function scrollHandler() {
+        if (updateInitiated) {
+            return;
+        }
+
+        var scrollHeight = document.documentElement.scrollHeight;
+        var clientHeight = document.documentElement.clientHeight;
+        var scrollTop = document.body.scrollTop
+            || document.documentElement.scrollTop;
+
+        if (scrollHeight - (scrollTop + clientHeight) < 50) {
+            updateInitiated = true;
+
+            if (!nextHash) {
+                return;
+            }
+
+            makeRequest(
+                format(urlFormat, {hash: nextHash}),
+                'GET',
+                function onstart() {
+                },
+                function onsuccess(htmlText) {
+                    var m = htmlText.match(nextHashRegex);
+                    nextHash = m ? m[1] : null;
+
+                    var doc = docFromHTML(htmlText);
+                    var nodes = doc.querySelector(containerSelector).children;
+                    while (nodes.length) {
+                        var node = nodes[0];
+                        node = document.adoptNode(node);
+                        container.appendChild(node);
+                    }
+                    process_dates();
+                },
+                function onerror(errorText) {
+                },
+                function oncomplete() {
+                    updateInitiated = false;
+                    scrollHandler();
+                }
+            );
+        }
+    }
+
+    window.addEventListener('scroll', scrollHandler);
+    window.addEventListener('resize', scrollHandler);
+    scrollHandler();
+}
