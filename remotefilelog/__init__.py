@@ -381,8 +381,9 @@ def createfileblob(filectx):
         rename = ancestorctx.renamed()
         if rename:
             copyname = rename[0]
+        linknode = ancestorctx.node()
         ancestortext += "%s%s%s%s%s\0" % (
-            ancestorctx.filenode(), p1, p2, ancestorctx.node(),
+            ancestorctx.filenode(), p1, p2, linknode,
             copyname)
 
     return "%d\0%s%s" % (len(text), text, ancestortext)
@@ -811,3 +812,91 @@ def log(orig, ui, repo, *pats, **opts):
                       "large repos\n"))
 
     return orig(ui, repo, *pats, **opts)
+
+commands.norepo += " debugremotefilelog"
+
+@command('^debugremotefilelog', [
+    ('d', 'decompress', None, _('decompress the filelog first')),
+    ], _('hg debugremotefilelog <path>'))
+def debugremotefilelog(ui, *args, **opts):
+    path = args[0]
+
+    decompress = opts.get('decompress')
+
+    size, firstnode, mapping = parsefileblob(path, decompress)
+
+    ui.status("size: %s bytes\n" % (size))
+    ui.status("path: %s \n" % (path))
+    ui.status("key: %s \n" % (short(firstnode)))
+    ui.status("\n")
+    ui.status("%12s => %12s %13s %13s %12s\n" %
+              ("node", "p1", "p2", "linknode", "copyfrom"))
+
+    queue = [firstnode]
+    while queue:
+        node = queue.pop(0)
+        p1, p2, linknode, copyfrom = mapping[node]
+        ui.status("%s => %s  %s  %s  %s\n" %
+            (short(node), short(p1), short(p2), short(linknode), copyfrom))
+        if p1 != nullid:
+            queue.append(p1)
+        if p2 != nullid:
+            queue.append(p2)
+
+commands.norepo += " verifyremotefilelog"
+
+@command('^verifyremotefilelog', [
+    ('d', 'decompress', None, _('decompress the filelogs first')),
+    ], _('hg verifyremotefilelogs <directory>'))
+def verifyremotefilelog(ui, *args, **opts):
+    path = args[0]
+
+    decompress = opts.get('decompress')
+
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file == "repos":
+                continue
+            filepath = os.path.join(root, file)
+            size, firstnode, mapping = parsefileblob(filepath, decompress)
+            for p1, p2, linknode, copyfrom in mapping.itervalues():
+                if linknode == nullid:
+                    actualpath = os.path.relpath(root, path)
+                    key = fileserverclient.getcachekey(actualpath, file)
+                    ui.status("%s %s\n" % (key, os.path.relpath(filepath, path)))
+
+def parsefileblob(path, decompress):
+    raw = None
+    f = open(path, "r")
+    try:
+        raw = f.read()
+    finally:
+        f.close()
+
+    if decompress:
+        raw = lz4.decompress(raw)
+
+    index = raw.index('\0')
+    size = int(raw[:index])
+    data = raw[(index + 1):(index + 1 + size)]
+    start = index + 1 + size
+
+    firstnode = None
+
+    mapping = {}
+    while start < len(raw):
+        divider = raw.index('\0', start + 80)
+
+        currentnode = raw[start:(start + 20)]
+        if not firstnode:
+            firstnode = currentnode
+
+        p1 = raw[(start + 20):(start + 40)]
+        p2 = raw[(start + 40):(start + 60)]
+        linknode = raw[(start + 60):(start + 80)]
+        copyfrom = raw[(start + 80):divider]
+
+        mapping[currentnode] = (p1, p2, linknode, copyfrom)
+        start = divider + 1
+
+    return size, firstnode, mapping
