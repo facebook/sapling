@@ -17,8 +17,7 @@ try:
     def ssl_wrap_socket(sock, keyfile, certfile,
                 cert_reqs=ssl.CERT_NONE, ca_certs=None):
         sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
-                cert_reqs=cert_reqs, ca_certs=ca_certs,
-                ssl_version=ssl.PROTOCOL_SSLv3)
+                cert_reqs=cert_reqs, ca_certs=ca_certs)
         # check if wrap_socket failed silently because socket had been closed
         # - see http://bugs.python.org/issue13721
         if not sslsocket.cipher():
