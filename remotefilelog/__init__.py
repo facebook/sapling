@@ -420,6 +420,9 @@ def getfiles(repo, proto):
                 filecachepath = os.path.join(cachepath, path, hex(node))
                 if not os.path.exists(filecachepath):
                     filectx = repo.filectx(path, fileid=node)
+                    if filectx.node() == nullid:
+                        repo.changelog = changelog.changelog(repo.sopener)
+                        filectx = repo.filectx(path, fileid=node)
 
                     text = createfileblob(filectx)
                     text = lz4.compressHC(text)
