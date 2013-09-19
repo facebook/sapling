@@ -1048,7 +1048,7 @@ def _gethgpath():
     if _hgpath is not None:
         return _hgpath
 
-    cmd = '%s -c "import mercurial; print mercurial.__path__[0]"'
+    cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
     pipe = os.popen(cmd % PYTHON)
     try:
         _hgpath = pipe.read().strip()
