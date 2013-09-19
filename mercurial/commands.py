@@ -12,7 +12,8 @@ import os, re, difflib, time, tempfile, errno
 import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
-import sshserver, hgweb, hgweb.server, commandserver
+import sshserver, hgweb, commandserver
+from hgweb import server as hgweb_server
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod
@@ -5183,7 +5184,7 @@ def serve(ui, repo, **opts):
     class service(object):
         def init(self):
             util.setsignalhandler()
-            self.httpd = hgweb.server.create_server(ui, app)
+            self.httpd = hgweb_server.create_server(ui, app)
 
             if opts['port'] and not ui.verbose:
                 return
