@@ -460,6 +460,9 @@ def installhg(options):
     if options.compiler:
         compiler = '--compiler ' + options.compiler
     pure = options.pure and "--pure" or ""
+    py3 = ''
+    if sys.version_info[0] == 3:
+        py3 = '--c2to3'
 
     # Run installer in hg root
     script = os.path.realpath(sys.argv[0])
@@ -472,11 +475,11 @@ def installhg(options):
         # least on Windows for now, deal with .pydistutils.cfg bugs
         # when they happen.
         nohome = ''
-    cmd = ('%(exe)s setup.py %(pure)s clean --all'
+    cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
            ' build %(compiler)s --build-base="%(base)s"'
            ' install --force --prefix="%(prefix)s" --install-lib="%(libdir)s"'
            ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-           % dict(exe=sys.executable, pure=pure, compiler=compiler,
+           % dict(exe=sys.executable, py3=py3, pure=pure, compiler=compiler,
                   base=os.path.join(HGTMP, "build"),
                   prefix=INST, libdir=PYTHONDIR, bindir=BINDIR,
                   nohome=nohome, logfile=installerrs))
