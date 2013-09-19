@@ -14,10 +14,13 @@ try:
     # avoid using deprecated/broken FakeSocket in python 2.6
     import ssl
     CERT_REQUIRED = ssl.CERT_REQUIRED
-    def ssl_wrap_socket(sock, keyfile, certfile,
+    PROTOCOL_SSLv23 = ssl.PROTOCOL_SSLv23
+    PROTOCOL_TLSv1 = ssl.PROTOCOL_TLSv1
+    def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
                 cert_reqs=ssl.CERT_NONE, ca_certs=None):
         sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
-                cert_reqs=cert_reqs, ca_certs=ca_certs)
+                                    cert_reqs=cert_reqs, ca_certs=ca_certs,
+                                    ssl_version=ssl_version)
         # check if wrap_socket failed silently because socket had been closed
         # - see http://bugs.python.org/issue13721
         if not sslsocket.cipher():
@@ -26,9 +29,12 @@ try:
 except ImportError:
     CERT_REQUIRED = 2
 
+    PROTOCOL_SSLv23 = 2
+    PROTOCOL_TLSv1 = 3
+
     import socket, httplib
 
-    def ssl_wrap_socket(sock, key_file, cert_file,
+    def ssl_wrap_socket(sock, key_file, cert_file, ssl_version=PROTOCOL_TLSv1,
                         cert_reqs=CERT_REQUIRED, ca_certs=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
@@ -84,15 +90,22 @@ def _verifycert(cert, hostname):
 
 def sslkwargs(ui, host):
     cacerts = ui.config('web', 'cacerts')
+    forcetls = ui.configbool('ui', 'tls', default=True)
+    if forcetls:
+        ssl_version = PROTOCOL_TLSv1
+    else:
+        ssl_version = PROTOCOL_SSLv23
     hostfingerprint = ui.config('hostfingerprints', host)
+    kws = {'ssl_version': ssl_version,
+           }
     if cacerts and not hostfingerprint:
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise util.Abort(_('could not find web.cacerts: %s') % cacerts)
-        return {'ca_certs': cacerts,
-                'cert_reqs': CERT_REQUIRED,
-                }
-    return {}
+        kws.update({'ca_certs': cacerts,
+                    'cert_reqs': CERT_REQUIRED,
+                    })
+    return kws
 
 class validator(object):
     def __init__(self, ui, host):
