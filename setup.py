@@ -13,11 +13,18 @@ if sys.version_info[0] >= 3:
         '''A helper function to emulate 2.6+ bytes literals using string
         literals.'''
         return s.encode('latin1')
+    printf = eval('print')
+    libdir_escape = 'unicode_escape'
 else:
+    libdir_escape = 'string_escape'
     def b(s):
         '''A helper function to emulate 2.6+ bytes literals using string
         literals.'''
         return s
+    def printf(*args, **kwargs):
+        f = kwargs.get('file', sys.stdout)
+        end = kwargs.get('end', '\n')
+        f.write(b' '.join(args) + end)
 
 # Solaris Python packaging brain damage
 try:
@@ -151,8 +158,8 @@ def runhg(cmd, env):
               and not e.startswith(b('warning: Not importing')) \
               and not e.startswith(b('obsolete feature not enabled'))]
     if err:
-        print >> sys.stderr, "stderr from '%s':" % (' '.join(cmd))
-        print >> sys.stderr, '\n'.join(['  ' + e for e in err])
+        printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
+        printf(b('\n').join([b('  ') + e for e in err]), file=sys.stderr)
         return ''
     return out
 
@@ -402,7 +409,7 @@ class hginstallscripts(install_scripts):
             if b('\0') in data:
                 continue
 
-            data = data.replace('@LIBDIR@', libdir.encode('string_escape'))
+            data = data.replace(b('@LIBDIR@'), libdir.encode(libdir_escape))
             fp = open(outfile, 'wb')
             fp.write(data)
             fp.close()
