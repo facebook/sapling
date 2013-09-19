@@ -156,7 +156,7 @@ static inline uint32_t getbe32(const char *c)
 {
 	return _byteswap_ulong(*(uint32_t *)c);
 }
-#elif GCC_VERSION >= 403
+#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
 static inline uint32_t getbe32(const char *c)
 {
 	return __builtin_bswap32(*(uint32_t *)c);
@@ -179,7 +179,7 @@ static inline void putbe32(uint32_t x, char *c)
 	x = _byteswap_ulong(x);
 	*(uint32_t *)c = x;
 }
-#elif GCC_VERSION >= 403
+#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
 static inline void putbe32(uint32_t x, char *c)
 {
 	x = __builtin_bswap32(x);
