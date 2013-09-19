@@ -27,7 +27,7 @@
   M x
   M y
   ? a
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ hg add a
   $ hg status
   M x
@@ -59,7 +59,7 @@
   $ echo xxx > x
   $ echo yyy > y
   $ hg commit -m a
-  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
 # rebase
 

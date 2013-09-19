@@ -109,7 +109,6 @@ class shallowbundle(changegroup.bundle10):
             if filestosend == NoFiles:
                 return iter([])
             else:
-                phase = repo._phasecache.phase
                 files = []
                 # Prefetch the revisions being bundled
                 for i, fname in enumerate(sorted(changedfiles)):
@@ -118,10 +117,11 @@ class shallowbundle(changegroup.bundle10):
                     # Normally we'd prune the linkrevnodes first,
                     # but that would perform the server fetches one by one.
                     for fnode, cnode in list(linkrevnodes.iteritems()):
-                        # Adjust linknodes so public file revisions aren't sent
+                        # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            rev = repo.changelog.rev(cnode)
-                            if phase(repo, rev) == phases.public:
+                            localkey = fileserverclient.getlocalkey(fname, hex(fnode))
+                            localpath = repo.sjoin(os.path.join("data", localkey))
+                            if not os.path.exists(localpath):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))

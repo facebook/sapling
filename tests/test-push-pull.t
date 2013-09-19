@@ -52,7 +52,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
 
 # pull from shallow to shallow (ssh)
@@ -65,7 +65,7 @@
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
 
   $ hg up
@@ -116,3 +116,22 @@
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat a
   a
+
+# push public commits
+
+  $ cd ../shallow
+  $ echo p > p
+  $ hg commit -qAm p
+  $ hg phase -f -p -r .
+  $ echo d > d
+  $ hg commit -qAm d
+
+  $ cd ../shallow2
+  $ hg pull ../shallow
+  pulling from ../shallow
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
