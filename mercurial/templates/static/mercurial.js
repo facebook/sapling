@@ -358,7 +358,8 @@ function ajaxScrollInit(urlFormat,
                         nextPageVar,
                         nextPageVarGet,
                         containerSelector,
-                        messageFormat) {
+                        messageFormat,
+                        mode) {
     updateInitiated = false;
     container = document.querySelector(containerSelector);
 
@@ -399,14 +400,25 @@ function ajaxScrollInit(urlFormat,
                 function onsuccess(htmlText) {
                     nextPageVar = nextPageVarGet(htmlText, nextPageVar);
 
-                    var doc = docFromHTML(htmlText);
-                    var nodes = doc.querySelector(containerSelector).children;
-                    while (nodes.length) {
-                        var node = nodes[0];
-                        node = document.adoptNode(node);
-                        container.appendChild(node);
+                    if (mode == 'graph') {
+                        var addHeight = htmlText.match(/^<canvas id="graph".*height="(\d+)"><\/canvas>$/m)[1];
+                        addHeight = parseInt(addHeight);
+                        graph.canvas.height = addHeight;
+
+                        var dataStr = htmlText.match(/^\s*var data = (.*);$/m)[1];
+                        var data = JSON.parse(dataStr)
+                        graph.reset();
+                        graph.render(data);
+                    } else {
+                        var doc = docFromHTML(htmlText);
+                        var nodes = doc.querySelector(containerSelector).children;
+                        while (nodes.length) {
+                            var node = nodes[0];
+                            node = document.adoptNode(node);
+                            container.appendChild(node);
+                        }
+                        process_dates();
                     }
-                    process_dates();
                 },
                 function onerror(errorText) {
                     var message = {
