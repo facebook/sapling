@@ -87,7 +87,8 @@ def perfheads(ui, repo):
 
 @command('perftags')
 def perftags(ui, repo):
-    import mercurial.changelog, mercurial.manifest
+    import mercurial.changelog
+    import mercurial.manifest
     def t():
         repo.changelog = mercurial.changelog.changelog(repo.sopener)
         repo.manifest = mercurial.manifest.manifest(repo.sopener)
