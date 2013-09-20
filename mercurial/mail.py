@@ -8,7 +8,7 @@
 from i18n import _
 import util, encoding, sslutil
 import os, smtplib, socket, quopri, time, sys
-import email.Header, email.MIMEText, email.Utils
+import email
 
 _oldheaderinit = email.Header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
