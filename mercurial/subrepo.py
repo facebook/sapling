@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, re, xml.dom.minidom, shutil, posixpath, sys
+import errno, os, re, shutil, posixpath, sys
+import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
 import config, scmutil, util, node, error, cmdutil, bookmarks, match as matchmod
