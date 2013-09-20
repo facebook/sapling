@@ -34,7 +34,7 @@ except ImportError:
 
     import socket, httplib
 
-    def ssl_wrap_socket(sock, key_file, cert_file, ssl_version=PROTOCOL_TLSv1,
+    def ssl_wrap_socket(sock, keyfile, certfile, ssl_version=PROTOCOL_TLSv1,
                         cert_reqs=CERT_REQUIRED, ca_certs=None):
         if not util.safehasattr(socket, 'ssl'):
             raise util.Abort(_('Python SSL support not found'))
@@ -42,7 +42,7 @@ except ImportError:
             raise util.Abort(_(
                 'certificate checking requires Python 2.6'))
 
-        ssl = socket.ssl(sock, key_file, cert_file)
+        ssl = socket.ssl(sock, keyfile, certfile)
         return httplib.FakeSocket(sock, ssl)
 
 def _verifycert(cert, hostname):
