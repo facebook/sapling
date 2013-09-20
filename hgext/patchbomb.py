@@ -46,8 +46,7 @@ hgrc(5) for details.
 '''
 
 import os, errno, socket, tempfile, cStringIO
-import email.MIMEMultipart, email.MIMEBase
-import email.Utils, email.Encoders, email.Generator
+import email
 from mercurial import cmdutil, commands, hg, mail, patch, util
 from mercurial import scmutil
 from mercurial.i18n import _
