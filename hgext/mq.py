@@ -63,7 +63,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, error, phases
+from mercurial import repair, extensions, error, phases, bookmarks
 from mercurial import patch as patchmod
 from mercurial import localrepo
 from mercurial import subrepo
@@ -3077,6 +3077,8 @@ def strip(ui, repo, *revs, **opts):
             wlock.release()
 
     if opts.get('bookmark'):
+        if mark == repo._bookmarkcurrent:
+            bookmarks.setcurrent(repo, None)
         del marks[mark]
         marks.write()
         ui.write(_("bookmark '%s' deleted\n") % mark)
