@@ -769,7 +769,6 @@ def pullrebase(orig, ui, repo, *args, **opts):
                      'the update flag\n')
 
         movemarkfrom = repo['.'].node()
-        cmdutil.bailifchanged(repo)
         revsprepull = len(repo)
         origpostincoming = commands.postincoming
         def _dummy(*args, **kwargs):
