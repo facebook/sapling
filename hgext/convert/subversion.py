@@ -2,7 +2,8 @@
 #
 # Copyright(C) 2007 Daniel Holth et al
 
-import os, re, sys, tempfile, urllib, urllib2, xml.dom.minidom
+import os, re, sys, tempfile, urllib, urllib2
+import xml.dom.minidom
 import cPickle as pickle
 
 from mercurial import strutil, scmutil, util, encoding
