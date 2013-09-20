@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cStringIO, email.Parser, os, errno, re, posixpath
+import cStringIO, email, os, errno, re, posixpath
 import tempfile, zlib, shutil
 
 from i18n import _
