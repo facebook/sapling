@@ -132,6 +132,9 @@ class basectx(object):
     def substate(self):
         return subrepo.state(self, self._repo.ui)
 
+    def subrev(self, subpath):
+        return self.substate[subpath][1]
+
     def rev(self):
         return self._rev
     def node(self):
