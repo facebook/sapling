@@ -1556,10 +1556,7 @@ class localrepository(object):
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
-                if working:
-                    rev2 = None
-                else:
-                    rev2 = ctx2.substate[subpath][1]
+                rev2 = ctx2.subrev(subpath)
                 try:
                     submatch = matchmod.narrowmatcher(subpath, match)
                     s = sub.status(rev2, match=submatch, ignored=listignored,
