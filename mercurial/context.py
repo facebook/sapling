@@ -999,6 +999,9 @@ class committablectx(basectx):
     def _date(self):
         return util.makedate()
 
+    def subrev(self, subpath):
+        return None
+
     def user(self):
         return self._user or self._repo.ui.username()
     def date(self):
