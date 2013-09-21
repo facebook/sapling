@@ -13,10 +13,18 @@ _extensions = {}
 _order = []
 _ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg']
 
-def extensions():
+def extensions(ui=None):
+    if ui:
+        def enabled(name):
+            for format in ['%s', 'hgext.%s']:
+                conf = ui.config('extensions', format % name)
+                if conf is not None and not conf.startswith('!'):
+                    return True
+    else:
+        enabled = lambda name: True
     for name in _order:
         module = _extensions[name]
-        if module:
+        if module and enabled(name):
             yield name, module
 
 def find(name):

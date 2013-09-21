@@ -417,6 +417,7 @@ Show extensions:
 
 Disabled extension commands:
 
+  $ ORGHGRCPATH=$HGRCPATH
   $ HGRCPATH=
   $ export HGRCPATH
   $ hg help email
@@ -573,3 +574,134 @@ Declare the version as supporting this hg version, show regular bts link:
   ** Python * (glob)
   ** Mercurial Distributed SCM (*) (glob)
   ** Extensions loaded: throw
+
+Restore HGRCPATH
+
+  $ HGRCPATH=$ORGHGRCPATH
+  $ export HGRCPATH
+
+Commands handling multiple repositories at a time should invoke only
+"reposetup()" of extensions enabling in the target repository.
+
+  $ mkdir reposetup-test
+  $ cd reposetup-test
+
+  $ cat > $TESTTMP/reposetuptest.py <<EOF
+  > from mercurial import extensions
+  > def reposetup(ui, repo):
+  >     ui.write('reposetup() for %s\n' % (repo.root))
+  > EOF
+  $ hg init src
+  $ echo a > src/a
+  $ hg -R src commit -Am '#0 at src/a'
+  adding a
+  $ echo '[extensions]' >> src/.hg/hgrc
+  $ echo '# enable extension locally' >> src/.hg/hgrc
+  $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> src/.hg/hgrc
+  $ hg -R src status
+  reposetup() for $TESTTMP/reposetup-test/src
+
+  $ hg clone -U src clone-dst1
+  reposetup() for $TESTTMP/reposetup-test/src
+  $ hg init push-dst1
+  $ hg -q -R src push push-dst1
+  reposetup() for $TESTTMP/reposetup-test/src
+  $ hg init pull-src1
+  $ hg -q -R pull-src1 pull src
+  reposetup() for $TESTTMP/reposetup-test/src
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo '# disable extension globally and explicitly' >> $HGRCPATH
+  $ echo 'reposetuptest = !' >> $HGRCPATH
+  $ hg clone -U src clone-dst2
+  reposetup() for $TESTTMP/reposetup-test/src
+  $ hg init push-dst2
+  $ hg -q -R src push push-dst2
+  reposetup() for $TESTTMP/reposetup-test/src
+  $ hg init pull-src2
+  $ hg -q -R pull-src2 pull src
+  reposetup() for $TESTTMP/reposetup-test/src
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo '# enable extension globally' >> $HGRCPATH
+  $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> $HGRCPATH
+  $ hg clone -U src clone-dst3
+  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/clone-dst3
+  $ hg init push-dst3
+  reposetup() for $TESTTMP/reposetup-test/push-dst3
+  $ hg -q -R src push push-dst3
+  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/push-dst3
+  $ hg init pull-src3
+  reposetup() for $TESTTMP/reposetup-test/pull-src3
+  $ hg -q -R pull-src3 pull src
+  reposetup() for $TESTTMP/reposetup-test/pull-src3
+  reposetup() for $TESTTMP/reposetup-test/src
+
+  $ echo '[extensions]' >> src/.hg/hgrc
+  $ echo '# disable extension locally' >> src/.hg/hgrc
+  $ echo 'reposetuptest = !' >> src/.hg/hgrc
+  $ hg clone -U src clone-dst4
+  reposetup() for $TESTTMP/reposetup-test/clone-dst4
+  $ hg init push-dst4
+  reposetup() for $TESTTMP/reposetup-test/push-dst4
+  $ hg -q -R src push push-dst4
+  reposetup() for $TESTTMP/reposetup-test/push-dst4
+  $ hg init pull-src4
+  reposetup() for $TESTTMP/reposetup-test/pull-src4
+  $ hg -q -R pull-src4 pull src
+  reposetup() for $TESTTMP/reposetup-test/pull-src4
+
+disabling in command line overlays with all configuration
+  $ hg --config extensions.reposetuptest=! clone -U src clone-dst5
+  $ hg --config extensions.reposetuptest=! init push-dst5
+  $ hg --config extensions.reposetuptest=! -q -R src push push-dst5
+  $ hg --config extensions.reposetuptest=! init pull-src5
+  $ hg --config extensions.reposetuptest=! -q -R pull-src5 pull src
+
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo '# disable extension globally and explicitly' >> $HGRCPATH
+  $ echo 'reposetuptest = !' >> $HGRCPATH
+  $ hg init parent
+  $ hg init parent/sub1
+  $ echo 1 > parent/sub1/1
+  $ hg -R parent/sub1 commit -Am '#0 at parent/sub1'
+  adding 1
+  $ hg init parent/sub2
+  $ hg init parent/sub2/sub21
+  $ echo 21 > parent/sub2/sub21/21
+  $ hg -R parent/sub2/sub21 commit -Am '#0 at parent/sub2/sub21'
+  adding 21
+  $ cat > parent/sub2/.hgsub <<EOF
+  > sub21 = sub21
+  > EOF
+  $ hg -R parent/sub2 commit -Am '#0 at parent/sub2'
+  adding .hgsub
+  $ hg init parent/sub3
+  $ echo 3 > parent/sub3/3
+  $ hg -R parent/sub3 commit -Am '#0 at parent/sub3'
+  adding 3
+  $ cat > parent/.hgsub <<EOF
+  > sub1 = sub1
+  > sub2 = sub2
+  > sub3 = sub3
+  > EOF
+  $ hg -R parent commit -Am '#0 at parent'
+  adding .hgsub
+  $ echo '[extensions]' >> parent/.hg/hgrc
+  $ echo '# enable extension locally' >> parent/.hg/hgrc
+  $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> parent/.hg/hgrc
+  $ cp parent/.hg/hgrc parent/sub2/.hg/hgrc
+  $ hg -R parent status -S -A
+  reposetup() for $TESTTMP/reposetup-test/parent
+  reposetup() for $TESTTMP/reposetup-test/parent/sub2
+  C .hgsub
+  C .hgsubstate
+  C sub1/1
+  C sub2/.hgsub
+  C sub2/.hgsubstate
+  C sub2/sub21/21
+  C sub3/3
+
+  $ cd ..

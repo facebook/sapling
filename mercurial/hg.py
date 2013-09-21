@@ -101,7 +101,7 @@ def _peerorrepo(ui, path, create=False):
     """return a repository object for the specified path"""
     obj = _peerlookup(path).instance(ui, path, create)
     ui = getattr(obj, "ui", ui)
-    for name, module in extensions.extensions():
+    for name, module in extensions.extensions(ui):
         hook = getattr(module, 'reposetup', None)
         if hook:
             hook(ui, obj)
