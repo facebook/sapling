@@ -2191,3 +2191,64 @@ check messages when there are files to upload:
   
 
   $ cd ..
+
+Check whether "largefiles" feature is supported only in repositories
+enabling largefiles extension.
+
+  $ mkdir individualenabling
+  $ cd individualenabling
+
+  $ hg init enabledlocally
+  $ echo large > enabledlocally/large
+  $ hg -R enabledlocally add --large enabledlocally/large
+  $ hg -R enabledlocally commit -m '#0'
+  Invoking status precommit hook
+  A large
+
+  $ hg init notenabledlocally
+  $ echo large > notenabledlocally/large
+  $ hg -R notenabledlocally add --large notenabledlocally/large
+  $ hg -R notenabledlocally commit -m '#0'
+  Invoking status precommit hook
+  A large
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > # disable globally
+  > largefiles=!
+  > EOF
+  $ cat >> enabledlocally/.hg/hgrc <<EOF
+  > [extensions]
+  > # enable locally
+  > largefiles=
+  > EOF
+  $ hg -R enabledlocally root
+  $TESTTMP/individualenabling/enabledlocally
+  $ hg -R notenabledlocally root
+  abort: unknown repository format: requires features 'largefiles' (upgrade Mercurial)!
+  [255]
+
+  $ hg init push-dst
+  $ hg -R enabledlocally push push-dst
+  pushing to push-dst
+  abort: required features are not supported in the destination: largefiles
+  [255]
+
+  $ hg init pull-src
+  $ hg -R pull-src pull enabledlocally
+  pulling from enabledlocally
+  abort: required features are not supported in the destination: largefiles
+  [255]
+
+  $ hg clone enabledlocally clone-dst
+  abort: unknown repository format: requires features 'largefiles' (upgrade Mercurial)!
+  [255]
+  $ test -d clone-dst
+  [1]
+  $ hg clone --pull enabledlocally clone-pull-dst
+  abort: required features are not supported in the destination: largefiles
+  [255]
+  $ test -d clone-pull-dst
+  [1]
+
+  $ cd ..

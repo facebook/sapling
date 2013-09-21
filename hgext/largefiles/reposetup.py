@@ -407,6 +407,14 @@ def reposetup(ui, repo):
                 wlock.release()
 
         def push(self, remote, force=False, revs=None, newbranch=False):
+            if remote.local():
+                missing = set(self.requirements) - remote.local().supported
+                if missing:
+                    msg = _("required features are not"
+                            " supported in the destination:"
+                            " %s") % (', '.join(sorted(missing)))
+                    raise util.Abort(msg)
+
             outgoing = discovery.findcommonoutgoing(repo, remote.peer(),
                                                     force=force)
             if outgoing.missing:
