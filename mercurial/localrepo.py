@@ -146,11 +146,13 @@ class locallegacypeer(localpeer):
 class localrepository(object):
 
     supportedformats = set(('revlogv1', 'generaldelta'))
-    supported = supportedformats | set(('store', 'fncache', 'shared',
-                                        'dotencode'))
+    _basesupported = supportedformats | set(('store', 'fncache', 'shared',
+                                             'dotencode'))
     openerreqs = set(('revlogv1', 'generaldelta'))
     requirements = ['revlogv1']
     filtername = None
+
+    featuresetupfuncs = set()
 
     def _baserequirements(self, create):
         return self.requirements[:]
@@ -175,6 +177,13 @@ class localrepository(object):
             extensions.loadall(self.ui)
         except IOError:
             pass
+
+        if self.featuresetupfuncs:
+            self.supported = set(self._basesupported) # use private copy
+            for setupfunc in self.featuresetupfuncs:
+                setupfunc(self.ui, self.supported)
+        else:
+            self.supported = self._basesupported
 
         if not self.vfs.isdir():
             if create:
@@ -1649,6 +1658,14 @@ class localrepository(object):
         return r
 
     def pull(self, remote, heads=None, force=False):
+        if remote.local():
+            missing = set(remote.requirements) - self.supported
+            if missing:
+                msg = _("required features are not"
+                        " supported in the destination:"
+                        " %s") % (', '.join(sorted(missing)))
+                raise util.Abort(msg)
+
         # don't open transaction for nothing or you break future useful
         # rollback call
         tr = None
@@ -1749,6 +1766,14 @@ class localrepository(object):
             we have outgoing changesets but refused to push
           - other values as described by addchangegroup()
         '''
+        if remote.local():
+            missing = set(self.requirements) - remote.local().supported
+            if missing:
+                msg = _("required features are not"
+                        " supported in the destination:"
+                        " %s") % (', '.join(sorted(missing)))
+                raise util.Abort(msg)
+
         # there are two ways to push to remote repo:
         #
         # addchangegroup assumes local user can lock remote

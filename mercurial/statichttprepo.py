@@ -89,6 +89,8 @@ class statichttppeer(localrepo.localpeer):
         return False
 
 class statichttprepository(localrepo.localrepository):
+    supported = localrepo.localrepository._basesupported
+
     def __init__(self, ui, path):
         self._url = path
         self.ui = ui

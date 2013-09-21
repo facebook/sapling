@@ -153,7 +153,7 @@ def uisetup(ui):
     httppeer.httppeer._callstream = proto.httprepocallstream
 
     # don't die on seeing a repo with the largefiles requirement
-    localrepo.localrepository.supported |= set(['largefiles'])
+    localrepo.localrepository._basesupported |= set(['largefiles'])
 
     # override some extensions' stuff as well
     for name, module in extensions.extensions():
