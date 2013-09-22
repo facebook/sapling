@@ -307,9 +307,12 @@ Logs and changes
   
   <script type="text/javascript">
       ajaxScrollInit(
-              '/shortlog/%hash%',
+              '/shortlog/%next%',
               '', <!-- NEXTHASH
-              /'(\w+)', <!-- NEXTHASH/,
+              function (htmlText, previousVal) {
+                  var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
+                  return m ? m[1] : null;
+              },
               '.bigtable > tbody:nth-of-type(2)',
               '<tr class="%class%">\
               <td colspan="3" style="text-align: center;">%text%</td>\

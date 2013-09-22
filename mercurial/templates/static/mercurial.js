@@ -355,8 +355,8 @@ function appendFormatHTML(element, formatStr, replacements) {
 }
 
 function ajaxScrollInit(urlFormat,
-                        nextHash,
-                        nextHashRegex,
+                        nextPageVar,
+                        nextPageVarGet,
                         containerSelector,
                         messageFormat) {
     updateInitiated = false;
@@ -377,7 +377,7 @@ function ajaxScrollInit(urlFormat,
             removeByClassName('scroll-loading-error');
             container.lastElementChild.classList.add('scroll-separator');
 
-            if (!nextHash) {
+            if (!nextPageVar) {
                 var message = {
                     class: 'scroll-loading-info',
                     text: 'No more entries'
@@ -387,7 +387,7 @@ function ajaxScrollInit(urlFormat,
             }
 
             makeRequest(
-                format(urlFormat, {hash: nextHash}),
+                format(urlFormat, {next: nextPageVar}),
                 'GET',
                 function onstart() {
                     var message = {
@@ -397,8 +397,7 @@ function ajaxScrollInit(urlFormat,
                     appendFormatHTML(container, messageFormat, message);
                 },
                 function onsuccess(htmlText) {
-                    var m = htmlText.match(nextHashRegex);
-                    nextHash = m ? m[1] : null;
+                    nextPageVar = nextPageVarGet(htmlText, nextPageVar);
 
                     var doc = docFromHTML(htmlText);
                     var nodes = doc.querySelector(containerSelector).children;
