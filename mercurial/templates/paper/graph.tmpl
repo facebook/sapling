@@ -123,6 +123,17 @@ graph.render(data);
 | rev {rev}: {changenav%navgraph}
 </div>
 
+<script type="text/javascript">
+    ajaxScrollInit(
+            '{url|urlescape}graph/{rev}?revcount=%next%',
+            {revcount}+60,
+            function (htmlText, previousVal) \{ return previousVal + 60; },
+            '#wrapper',
+            '<div class="%class%" style="text-align: center;">%text%</div>',
+            'graph'
+    );
+</script>
+
 </div>
 </div>
 

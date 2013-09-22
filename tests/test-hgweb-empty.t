@@ -359,6 +359,17 @@ Some tests for hgweb in an empty repository
   | rev -1: 
   </div>
   
+  <script type="text/javascript">
+      ajaxScrollInit(
+              '/graph/-1?revcount=%next%',
+              60+60,
+              function (htmlText, previousVal) { return previousVal + 60; },
+              '#wrapper',
+              '<div class="%class%" style="text-align: center;">%text%</div>',
+              'graph'
+      );
+  </script>
+  
   </div>
   </div>
   
