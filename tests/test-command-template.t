@@ -500,6 +500,28 @@ Include works:
   1
   0
 
+Missing non-standard names give no error (backward compatibility):
+
+  $ echo "changeset = '{c}'" > t
+  $ hg log --style ./t
+
+Defining non-standard name works:
+
+  $ cat <<EOF > t
+  > changeset = '{c}'
+  > c = q
+  > EOF
+  $ hg log --style ./t
+  8
+  7
+  6
+  5
+  4
+  3
+  2
+  1
+  0
+
 ui.style works:
 
   $ echo '[ui]' > .hg/hgrc

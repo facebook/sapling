@@ -139,7 +139,12 @@ def runstring(context, mapping, data):
 def runsymbol(context, mapping, key):
     v = mapping.get(key)
     if v is None:
-        v = context._defaults.get(key, '')
+        v = context._defaults.get(key)
+    if v is None:
+        try:
+            v = context.process(key, mapping)
+        except TemplateNotFound:
+            v = ''
     if util.safehasattr(v, '__call__'):
         return v(**mapping)
     if isinstance(v, types.GeneratorType):
@@ -449,6 +454,9 @@ def stylelist():
             stylelist.append(split[1])
     return ", ".join(sorted(stylelist))
 
+class TemplateNotFound(util.Abort):
+    pass
+
 class templater(object):
 
     def __init__(self, mapfile, filters={}, defaults={}, cache={},
@@ -500,7 +508,8 @@ class templater(object):
             try:
                 self.cache[t] = util.readfile(self.map[t][1])
             except KeyError, inst:
-                raise util.Abort(_('"%s" not in template map') % inst.args[0])
+                raise TemplateNotFound(_('"%s" not in template map') %
+                                       inst.args[0])
             except IOError, inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t][1], inst.args[1]))
