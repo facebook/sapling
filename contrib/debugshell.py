@@ -20,6 +20,7 @@ def ipdb(ui, repo, msg, **opts):
 
     cl = repo.changelog
     mf = repo.manifest
+    cl, mf # use variables to appease pyflakes
 
     IPython.embed()
 
