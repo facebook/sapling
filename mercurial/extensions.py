@@ -349,12 +349,13 @@ def disabledcmd(ui, cmd, strict=False):
 
     raise error.UnknownCommand(cmd)
 
-def enabled():
+def enabled(shortname=True):
     '''return a dict of {name: desc} of extensions'''
     exts = {}
     for ename, ext in extensions():
         doc = (gettext(ext.__doc__) or _('(no help text available)'))
-        ename = ename.split('.')[-1]
+        if shortname:
+            ename = ename.split('.')[-1]
         exts[ename] = doc.splitlines()[0].strip()
 
     return exts

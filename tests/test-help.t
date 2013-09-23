@@ -773,6 +773,12 @@ Test help hooks
 
 Test keyword search help
 
+  $ cat > prefixedname.py <<EOF
+  > '''matched against word "clone"
+  > '''
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "dot.dot.prefixedname = `pwd`/prefixedname.py" >> $HGRCPATH
   $ hg help -k clone
   Topics:
   
@@ -792,7 +798,8 @@ Test keyword search help
   
   Extensions:
   
-   relink recreates hardlinks between repository clones
+   prefixedname matched against word "clone"
+   relink       recreates hardlinks between repository clones
   
   Extension Commands:
   
