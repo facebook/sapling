@@ -18,6 +18,6 @@ inserted due to big distance from its paren revision (zero).
   $ cd ..
   $ regsize=`du -s -b repo/.hg/store/00manifest.i | cut -f 1`
   $ gdsize=`du -s -b gdrepo/.hg/store/00manifest.i | cut -f 1`
-  $ if ((regsize < gdsize)); then
+  $ if [ $regsize -gt $gdsize ]; then
   >   echo 'generaldelta increased size of a revlog!'
   > fi
