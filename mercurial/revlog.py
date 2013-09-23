@@ -200,7 +200,7 @@ class revlog(object):
         self.datafile = indexfile[:-2] + ".d"
         self.opener = opener
         self._cache = None
-        self._basecache = (0, 0)
+        self._basecache = None
         self._chunkcache = (0, '')
         self.index = []
         self._pcache = {}
@@ -1131,6 +1131,8 @@ class revlog(object):
         offset = self.end(prev)
         flags = 0
         d = None
+        if self._basecache is None:
+            self._basecache = (prev, self.chainbase(prev))
         basecache = self._basecache
         p1r, p2r = self.rev(p1), self.rev(p2)
 

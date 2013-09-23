@@ -103,10 +103,11 @@ def topicmatch(kw):
             cmdname = cmd.split('|')[0].lstrip('^')
             results['commands'].append((cmdname, summary))
     for name, docs in itertools.chain(
-        extensions.enabled().iteritems(),
+        extensions.enabled(False).iteritems(),
         extensions.disabled().iteritems()):
         # extensions.load ignores the UI argument
         mod = extensions.load(None, name, '')
+        name = name.split('.')[-1]
         if lowercontains(name) or lowercontains(docs):
             # extension docs are already translated
             results['extensions'].append((name, docs.splitlines()[0]))
