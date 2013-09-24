@@ -4527,6 +4527,8 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
             ret = hg.update(repo, checkout)
         except util.Abort, inst:
             ui.warn(_("not updating: %s\n") % str(inst))
+            if inst.hint:
+                ui.warn(_("(%s)\n") % inst.hint)
             return 0
         if not ret and not checkout:
             if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
