@@ -71,7 +71,7 @@ Can't graft with dirty wd:
   $ hg up -q 0
   $ echo foo > a
   $ hg graft 1
-  abort: outstanding uncommitted changes
+  abort: uncommitted changes
   [255]
   $ hg revert a
 

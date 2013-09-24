@@ -84,7 +84,7 @@ def bailifchanged(repo):
         raise util.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
-        raise util.Abort(_("outstanding uncommitted changes"))
+        raise util.Abort(_('uncommitted changes'))
     ctx = repo[None]
     for s in sorted(ctx.substate):
         if ctx.sub(s).dirty():
