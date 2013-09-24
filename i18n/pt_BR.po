@@ -4283,14 +4283,28 @@ msgstr "força outgoing mesmo para repositórios não relacionados"
 msgid "first revision to be edited"
 msgstr "primeira revisão a ser editada"
 
-msgid "[PARENT]"
-msgstr "[PAI]"
+msgid "ANCESTOR | --outgoing [URL]"
+msgstr "ANCESTRAL | --outgoing [URL]"
+
+msgid "interactively edit changeset history"
+msgstr "edição interativa de histórico de revisões"
 
 msgid ""
-"interactively edit changeset history\n"
+"    This command edits changesets between ANCESTOR and the parent of\n"
+"    the working directory."
+msgstr ""
+"    Este comando edita revisões entre ANCESTRAL e o pai do diretório\n"
+"    de trabalho."
+
+msgid ""
+"    With --outgoing, this edits changesets not found in the\n"
+"    destination repository. If URL of the destination is omitted, the\n"
+"    'default-push' (or 'default') path will be used.\n"
 "    "
 msgstr ""
-"edição interativa de histórico de revisões\n"
+"    Com --outgoing, edita revisões não encontradas no repositório de\n"
+"    destino. Se a URL do destino for omitida, o caminho definido em\n"
+"    'default-push' (ou 'default') será usado.\n"
 "    "
 
 msgid "source has mq patches applied"
@@ -4315,8 +4329,8 @@ msgstr "nenhuma revisão é permitida com --outgoing"
 msgid "only one repo argument allowed with --outgoing"
 msgstr "apenas um repositório pode ser usado com --outgoing"
 
-msgid "histedit requires exactly one parent revision"
-msgstr "histedit requer exatamente uma revisão pai"
+msgid "histedit requires exactly one ancestor revision"
+msgstr "histedit requer exatamente uma revisão ancestral"
 
 #, python-format
 msgid "%s is not an ancestor of working directory"
@@ -8530,14 +8544,13 @@ msgid "no rebase in progress"
 msgstr "nenhum rebaseamento em andamento"
 
 #, python-format
-msgid "can't abort rebase due to immutable changesets %s"
-msgstr ""
-"as seguintes revisões imutáveis impedem que o rebaseamento seja abortado: %s"
+msgid "warning: can't clean up immutable changesets %s\n"
+msgstr "aviso: não é possível limpar as revisões imutáveis %s\n"
 
-msgid "warning: new changesets detected on target branch, can't abort\n"
+msgid "warning: new changesets detected on target branch, can't strip\n"
 msgstr ""
-"aviso: novas revisões detectadas no ramo de destino, não é possível "
-"abortar\n"
+"aviso: novas revisões detectadas no ramo de destino, não é possível fazer "
+"strip\n"
 
 msgid "rebase aborted\n"
 msgstr "rebaseamento abortado\n"
@@ -9565,6 +9578,10 @@ msgstr "linha malformada em .hg/bookmarks: %r\n"
 #, python-format
 msgid "branch %s not found"
 msgstr "ramo %s não encontrado"
+
+#, python-format
+msgid "updating to active bookmark %s\n"
+msgstr "atualizando para o marcador ativo %s\n"
 
 #, python-format
 msgid "divergent bookmark %s stored as %s\n"
@@ -14843,10 +14860,6 @@ msgid ""
 msgstr ""
 "    Se você quiser reverter apenas um arquivo para seu conteúdo em\n"
 "    uma revisão anterior, use :hg:`revert [-r REV] NOME`."
-
-#, python-format
-msgid "updating to active bookmark %s\n"
-msgstr "atualizando para o marcador ativo %s\n"
 
 msgid "cannot specify both -c/--check and -C/--clean"
 msgstr "não se pode especificar ao mesmo tempo -c/--check e -C/--clean"
