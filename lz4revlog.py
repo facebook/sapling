@@ -107,5 +107,12 @@ if usable:
 
     extensions.wrapfunction(revlog, 'decompress', decompress)
     cls = localrepo.localrepository
-    for reqs in 'supportedformats supported openerreqs'.split():
+    for reqs in 'supportedformats openerreqs'.split():
         getattr(cls, reqs).add('lz4revlog')
+    if util.safehasattr(cls, '_basesupported'):
+        # hg >= 2.8. Since we're good at falling back to the usual revlog, we
+        # aren't going to bother with enabling ourselves per-repository.
+        cls._basesupported.add('lz4revlog')
+    else:
+        # hg <= 2.7
+        cls.supported.add('lz4revlog')
