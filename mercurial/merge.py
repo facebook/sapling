@@ -664,7 +664,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
     x = can't happen
     * = don't-care
-    1 = abort: crosses branches (use 'hg merge' or 'hg update -c')
+    1 = abort: not a linear update (merge or update --check to force update)
     2 = abort: crosses branches (use 'hg merge' to merge or
                  use 'hg update -C' to discard changes)
     3 = abort: uncommitted local changes
@@ -731,9 +731,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                                 " --clean to discard changes)")
                         raise util.Abort(msg)
                     else:  # node is none
-                        msg = _("crosses branches (merge branches or update"
-                                " --check to force update)")
-                        raise util.Abort(msg)
+                        msg = _("not a linear update")
+                        hint = _("merge or update --check to force update")
+                        raise util.Abort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
                     pa = p1

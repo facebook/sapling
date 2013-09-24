@@ -94,7 +94,8 @@ Cases are run as shown in that table, row by row.
   parent=5
 
   $ norevtest 'none clean same'   clean 2
-  abort: crosses branches (merge branches or update --check to force update)
+  abort: not a linear update
+  (merge or update --check to force update)
   parent=2
 
 
