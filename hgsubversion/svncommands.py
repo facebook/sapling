@@ -214,9 +214,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                                        ctx.branch(), ui)
             existing_layout = layouts.detect.layout_from_file(svnmetadir)
             if layout != existing_layout:
-                if existing_layout == 'custom' and layout == 'standard':
-                    import pdb
-                    pdb.set_trace()
                 layouts.persist.layout_to_file(svnmetadir, layout)
             layoutobj = layouts.layout_from_name(layout, ui)
         elif layout == 'single':
