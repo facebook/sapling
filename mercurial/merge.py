@@ -666,8 +666,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     x = can't happen
     * = don't-care
     1 = abort: not a linear update (merge or update --check to force update)
-    2 = abort: crosses branches (use 'hg merge' to merge or
-                 use 'hg update -C' to discard changes)
+    2 = abort: uncommitted changes (commit and merge, or update --clean to
+                 discard changes)
     3 = abort: uncommitted changes (commit or update --clean to discard changes)
     4 = abort: uncommitted local changes
     5 = incompatible options (checked in commands.py)
@@ -728,13 +728,14 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                     # note: the <node> variable contains a random identifier
                     if repo[node].node() in foreground:
                         pa = p1  # allow updating to successors
-                    elif dirty and onode is None:
-                        msg = _("crosses branches (merge branches or use"
-                                " --clean to discard changes)")
-                        raise util.Abort(msg)
                     elif dirty:
                         msg = _("uncommitted changes")
-                        hint = _("commit or update --clean to discard changes")
+                        if onode is None:
+                            hint = _("commit and merge, or update --clean to"
+                                     " discard changes")
+                        else:
+                            hint = _("commit or update --clean to discard"
+                                     " changes")
                         raise util.Abort(msg, hint=hint)
                     else:  # node is none
                         msg = _("not a linear update")

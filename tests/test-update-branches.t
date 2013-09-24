@@ -140,6 +140,12 @@ Cases are run as shown in that table, row by row.
   parent=3
   M foo
 
+  $ norevtest 'none dirty cross'  dirty 2
+  abort: uncommitted changes
+  (commit and merge, or update --clean to discard changes)
+  parent=2
+  M foo
+
   $ revtest 'none dirtysub cross'  dirtysub 3 4
   abort: uncommitted changes
   (commit or update --clean to discard changes)
