@@ -477,7 +477,8 @@ same subrepo should work if the subrepo is clean.
 This is surprising, but is also correct based on the current code:
   $ echo "updating should (maybe) fail" > obstruct/other
   $ hg co tip
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   [255]
 
 Point to a Subversion branch which has since been deleted and recreated

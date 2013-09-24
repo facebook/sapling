@@ -33,7 +33,8 @@ or delete".
 Should abort:
 
   $ hg update -y 1
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   [255]
   $ mv c a
 

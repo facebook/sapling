@@ -123,22 +123,26 @@ Cases are run as shown in that table, row by row.
   M sub/suba
 
   $ revtest 'none dirty same'   dirty 2 3
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   parent=2
   M foo
 
   $ revtest 'none dirtysub same'   dirtysub 2 3
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   parent=2
   M sub/suba
 
   $ revtest 'none dirty cross'  dirty 3 4
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   parent=3
   M foo
 
   $ revtest 'none dirtysub cross'  dirtysub 3 4
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   parent=3
   M sub/suba
 
@@ -223,5 +227,6 @@ Test that 5 is not detected as a valid destination from 2
   $ hg up --quiet 0
   $ hg up --quiet 2
   $ hg up 5
-  abort: crosses branches (merge branches or use --clean to discard changes)
+  abort: uncommitted changes
+  (commit or update --clean to discard changes)
   [255]
