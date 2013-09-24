@@ -171,7 +171,7 @@ create a second head
   (commit and merge, or update --clean to discard changes)
   [255]
   $ hg --debug merge
-  abort: outstanding uncommitted changes
+  abort: uncommitted changes
   (use 'hg status' to list changes)
   [255]
   $ hg --debug merge -f

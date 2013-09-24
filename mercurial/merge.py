@@ -711,7 +711,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                                      hint=_("use 'hg update' "
                                             "or check 'hg heads'"))
             if not force and (wc.files() or wc.deleted()):
-                raise util.Abort(_("outstanding uncommitted changes"),
+                raise util.Abort(_("uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
             for s in sorted(wc.substate):
                 if wc.sub(s).dirty():
