@@ -21,5 +21,5 @@
 Should fail, since there are added files to subrepo:
 
   $ hg merge
-  abort: outstanding uncommitted changes in subrepository 'subrepo'
+  abort: uncommitted changes in subrepository 'subrepo'
   [255]
