@@ -1104,7 +1104,7 @@ Rollback on largefiles.
 
 "update --check" refuses to update with uncommitted changes.
   $ hg update --check 8
-  abort: uncommitted local changes
+  abort: uncommitted changes
   [255]
 
 "update --clean" leaves correct largefiles in working copy, even when there is

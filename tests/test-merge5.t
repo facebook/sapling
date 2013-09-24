@@ -19,7 +19,7 @@
   [255]
   $ rm b
   $ hg update -c
-  abort: uncommitted local changes
+  abort: uncommitted changes
   [255]
   $ hg revert b
   $ hg update -c

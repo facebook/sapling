@@ -157,12 +157,12 @@ Cases are run as shown in that table, row by row.
   parent=2
 
   $ revtest '-c dirty linear'   dirty 1 2 -c
-  abort: uncommitted local changes
+  abort: uncommitted changes
   parent=1
   M foo
 
   $ revtest '-c dirtysub linear'   dirtysub 1 2 -c
-  abort: uncommitted local changes
+  abort: uncommitted changes
   parent=1
   M sub/suba
 

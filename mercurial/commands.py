@@ -5850,7 +5850,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False):
     if check:
         c = repo[None]
         if c.dirty(merge=False, branch=False, missing=True):
-            raise util.Abort(_("uncommitted local changes"))
+            raise util.Abort(_("uncommitted changes"))
         if rev is None:
             rev = repo[repo[None].branch()].rev()
         mergemod._checkunknown(repo, repo[None], repo[rev])

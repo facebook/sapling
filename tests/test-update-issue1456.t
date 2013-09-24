@@ -18,7 +18,7 @@ Test that local removed/deleted, remote removed works with flags
 
   $ echo dirty > foo
   $ hg up -c
-  abort: uncommitted local changes
+  abort: uncommitted changes
   [255]
   $ hg up -q
   $ cat foo

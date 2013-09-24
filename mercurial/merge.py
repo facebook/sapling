@@ -669,7 +669,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     2 = abort: uncommitted changes (commit and merge, or update --clean to
                  discard changes)
     3 = abort: uncommitted changes (commit or update --clean to discard changes)
-    4 = abort: uncommitted local changes
+    4 = abort: uncommitted changes (checked in commands.py)
     5 = incompatible options (checked in commands.py)
 
     Return the same tuple as applyupdates().
