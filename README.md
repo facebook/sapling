@@ -32,6 +32,24 @@ Mercurial decides what features to use at clone time, so to use lz4revlog you
 will need to make fresh clones. As long as the extension is enabled, any fresh
 clones you make will use lz4 compression.
 
+Testing
+=======
+
+lz4revlog includes some basic tests, which can be run by cloning the Mercurial
+repository to a separate directory and building it:
+
+    :::sh
+    hg clone http://selenic.com/hg
+    cd hg
+    make local
+
+and then running the tests with:
+
+    :::sh
+    cd path/to/this/directory/tests
+    python path/to/hg/tests/run-tests.py
+
+
 Contributing
 ============
 
