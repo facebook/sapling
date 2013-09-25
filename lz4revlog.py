@@ -76,6 +76,8 @@ def decompress(orig, bin):
     if not bin:
         return bin
     t = bin[0]
+    if t == '\0':
+        return bin
     if t == '4':
         return _decompress(bin[1:])
     return orig(bin)
@@ -101,6 +103,8 @@ if usable:
                 l = len(text)
                 c = _compress(text)
                 if len(text) <= len(c):
+                    if text[0] == '\0':
+                        return ('', text)
                     return ('u', text)
                 return ('', '4' + c)
             return super(lz4revlog, self).compress(text)
