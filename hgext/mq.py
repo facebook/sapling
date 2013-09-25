@@ -945,23 +945,6 @@ class queue(object):
             return top, patch
         return None, None
 
-    def checksubstate(self, repo, baserev=None):
-        '''return list of subrepos at a different revision than substate.
-        Abort if any subrepos have uncommitted changes.'''
-        inclsubs = []
-        wctx = repo[None]
-        if baserev:
-            bctx = repo[baserev]
-        else:
-            bctx = wctx.parents()[0]
-        for s in sorted(wctx.substate):
-            if wctx.sub(s).dirty(True):
-                raise util.Abort(
-                    _("uncommitted changes in subrepository %s") % s)
-            elif s not in bctx.substate or bctx.sub(s).dirty():
-                inclsubs.append(s)
-        return inclsubs
-
     def putsubstate2changes(self, substatestate, changes):
         for files in changes[:3]:
             if '.hgsubstate' in files:
@@ -987,7 +970,7 @@ class queue(object):
             if (m or a or r or d):
                 _("local changes found") # i18n tool detection
                 raise util.Abort(_("local changes found" + excsuffix))
-            if self.checksubstate(repo):
+            if checksubstate(repo):
                 _("local changed subrepos found") # i18n tool detection
                 raise util.Abort(_("local changed subrepos found" + excsuffix))
         return m, a, r, d
@@ -1031,7 +1014,7 @@ class queue(object):
         diffopts = self.diffopts({'git': opts.get('git')})
         if opts.get('checkname', True):
             self.checkpatchname(patchfn)
-        inclsubs = self.checksubstate(repo)
+        inclsubs = checksubstate(repo)
         if inclsubs:
             inclsubs.append('.hgsubstate')
             substatestate = repo.dirstate['.hgsubstate']
@@ -1505,7 +1488,7 @@ class queue(object):
             cparents = repo.changelog.parents(top)
             patchparent = self.qparents(repo, top)
 
-            inclsubs = self.checksubstate(repo, hex(patchparent))
+            inclsubs = checksubstate(repo, hex(patchparent))
             if inclsubs:
                 inclsubs.append('.hgsubstate')
                 substatestate = repo.dirstate['.hgsubstate']
@@ -2930,6 +2913,24 @@ def save(ui, repo, **opts):
         q.applieddirty = True
         q.savedirty()
     return 0
+
+def checksubstate(repo, baserev=None):
+    '''return list of subrepos at a different revision than substate.
+    Abort if any subrepos have uncommitted changes.'''
+    inclsubs = []
+    wctx = repo[None]
+    if baserev:
+        bctx = repo[baserev]
+    else:
+        bctx = wctx.parents()[0]
+    for s in sorted(wctx.substate):
+        if wctx.sub(s).dirty(True):
+            raise util.Abort(
+                _("uncommitted changes in subrepository %s") % s)
+        elif s not in bctx.substate or bctx.sub(s).dirty():
+            inclsubs.append(s)
+    return inclsubs
+
 
 @command("strip",
          [
