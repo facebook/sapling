@@ -603,7 +603,7 @@ class queue(object):
 
         # apply failed, strip away that rev and merge.
         hg.clean(repo, head)
-        self.strip(repo, [n], update=False, backup='strip')
+        strip(self.ui, repo, [n], update=False, backup='strip')
 
         ctx = repo[rev]
         ret = hg.merge(repo, rev)
@@ -1103,24 +1103,6 @@ class queue(object):
         finally:
             release(wlock)
 
-    def strip(self, repo, revs, update=True, backup="all", force=None):
-        wlock = lock = None
-        try:
-            wlock = repo.wlock()
-            lock = repo.lock()
-
-            if update:
-                checklocalchanges(repo, force=force)
-                urev, p2 = repo.changelog.parents(revs[0])
-                if p2 != nullid and p2 in [x.node for x in self.applied]:
-                    urev = p2
-                hg.clean(repo, urev)
-                repo.dirstate.write()
-
-            repair.strip(self.ui, repo, revs, backup)
-        finally:
-            release(lock, wlock)
-
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
         for i, a in enumerate(self.applied):
@@ -1443,7 +1425,7 @@ class queue(object):
             for patch in reversed(self.applied[start:end]):
                 self.ui.status(_("popping %s\n") % patch.name)
             del self.applied[start:end]
-            self.strip(repo, [rev], update=False, backup='strip')
+            strip(self.ui, repo, [rev], update=False, backup='strip')
             for s, state in repo['.'].substate.items():
                 repo['.'].sub(s).get(state)
             if self.applied:
@@ -1646,8 +1628,7 @@ class queue(object):
                 repo.setparents(*cparents)
                 self.applied.pop()
                 self.applieddirty = True
-                self.strip(repo, [top], update=False,
-                           backup='strip')
+                strip(self.ui, repo, [top], update=False, backup='strip')
             except: # re-raises
                 repo.dirstate.invalidate()
                 raise
@@ -1819,7 +1800,7 @@ class queue(object):
                     update = True
                 else:
                     update = False
-                self.strip(repo, [rev], update=update, backup='strip')
+                strip(self.ui, repo, [rev], update=update, backup='strip')
         if qpp:
             self.ui.warn(_("saved queue repository parents: %s %s\n") %
                          (short(qpp[0]), short(qpp[1])))
@@ -2300,7 +2281,7 @@ def clone(ui, source, dest=None, **opts):
         if qbase:
             ui.note(_('stripping applied patches from destination '
                       'repository\n'))
-            repo.mq.strip(repo, [qbase], update=False, backup=None)
+            strip(ui, repo, [qbase], update=False, backup=None)
         if not opts.get('noupdate'):
             ui.note(_('updating destination repository\n'))
             hg.update(repo, repo.changelog.tip())
@@ -2944,6 +2925,24 @@ def checklocalchanges(repo, force=False, excsuffix=''):
             raise util.Abort(_("local changed subrepos found" + excsuffix))
     return m, a, r, d
 
+def strip(ui, repo, revs, update=True, backup="all", force=None):
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+
+        if update:
+            checklocalchanges(repo, force=force)
+            urev, p2 = repo.changelog.parents(revs[0])
+            if p2 != nullid and p2 in [x.node for x in repo.mq.applied]:
+                urev = p2
+            hg.clean(repo, urev)
+            repo.dirstate.write()
+
+        repair.strip(ui, repo, revs, backup)
+    finally:
+        release(lock, wlock)
+
 
 @command("strip",
          [
@@ -2962,7 +2961,7 @@ def checklocalchanges(repo, force=False, excsuffix=''):
           ('B', 'bookmark', '', _("remove revs only reachable from given"
                                   " bookmark"))],
           _('hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...'))
-def strip(ui, repo, *revs, **opts):
+def stripcmd(ui, repo, *revs, **opts):
     """strip changesets and all their descendants from the repository
 
     The strip command removes the specified changesets and all their
@@ -3095,8 +3094,7 @@ def strip(ui, repo, *revs, **opts):
         marks.write()
         ui.write(_("bookmark '%s' deleted\n") % mark)
 
-    repo.mq.strip(repo, revs, backup=backup, update=update,
-                  force=opts.get('force'))
+    strip(ui, repo, revs, backup=backup, update=update, force=opts.get('force'))
 
     return 0
 
