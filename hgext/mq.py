@@ -3042,8 +3042,8 @@ def stripcmd(ui, repo, *revs, **opts):
 
     rootnodes = set(cl.node(r) for r in roots)
 
-    q = repo.mq
-    if q.applied:
+    q = getattr(repo, 'mq', None)
+    if q is not None and q.applied:
         # refresh queue state if we're about to strip
         # applied patches
         if cl.rev(repo.lookup('qtip')) in strippedrevs:
@@ -3064,7 +3064,8 @@ def stripcmd(ui, repo, *revs, **opts):
         wlock = repo.wlock()
         try:
             urev, p2 = repo.changelog.parents(revs[0])
-            if p2 != nullid and p2 in [x.node for x in repo.mq.applied]:
+            if (util.safehasattr(repo, 'mq') and p2 != nullid
+                and p2 in [x.node for x in repo.mq.applied]):
                 urev = p2
             uctx = repo[urev]
 
