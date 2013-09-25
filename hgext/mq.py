@@ -628,6 +628,14 @@ class queue(object):
         return (0, n)
 
     def qparents(self, repo, rev=None):
+        """return the mq handled parent or p1
+
+        In some case where mq get himself in being the parent of a merge the
+        paappropriate parent may be p2.
+        (eg: an in progress merge started with mq disabled)
+
+        If no parent are managed by mq, p1 is returned.
+        """
         if rev is None:
             (p1, p2) = repo.dirstate.parents()
             if p2 == nullid:
