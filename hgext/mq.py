@@ -974,26 +974,22 @@ class queue(object):
         else: # modified
             changes[0].append('.hgsubstate')
 
-    def localchangesfound(self, refresh=True):
-        if refresh:
-            raise util.Abort(_("local changes found, refresh first"))
-        else:
-            raise util.Abort(_("local changes found"))
-
-    def localchangedsubreposfound(self, refresh=True):
-        if refresh:
-            raise util.Abort(_("local changed subrepos found, refresh first"))
-        else:
-            raise util.Abort(_("local changed subrepos found"))
-
     def checklocalchanges(self, repo, force=False, refresh=True):
+        excsuffix = ''
+        if refresh:
+            excsuffix = ', refresh first'
+            # plain versions for i18n tool to detect them
+            _("local changes found, refresh first")
+            _("local changed subrepos found, refresh first")
         cmdutil.checkunfinished(repo)
         m, a, r, d = repo.status()[:4]
         if not force:
             if (m or a or r or d):
-                self.localchangesfound(refresh)
+                _("local changes found") # i18n tool detection
+                raise util.Abort(_("local changes found" + excsuffix))
             if self.checksubstate(repo):
-                self.localchangedsubreposfound(refresh)
+                _("local changed subrepos found") # i18n tool detection
+                raise util.Abort(_("local changed subrepos found" + excsuffix))
         return m, a, r, d
 
     _reserved = ('series', 'status', 'guards', '.', '..')
@@ -1449,7 +1445,7 @@ class queue(object):
 
                 tobackup = set(a + m + r) & tobackup
                 if keepchanges and tobackup:
-                    self.localchangesfound()
+                    raise util.Abort(_("local changes found, refresh first"))
                 self.backup(repo, tobackup)
 
                 for f in a:
