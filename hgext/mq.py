@@ -1102,7 +1102,7 @@ class queue(object):
             lock = repo.lock()
 
             if update:
-                self.checklocalchanges(repo, force=force, refresh=False)
+                checklocalchanges(repo, force=force)
                 urev = self.qparents(repo, revs[0])
                 hg.clean(repo, urev)
                 repo.dirstate.write()
