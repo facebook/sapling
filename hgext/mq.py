@@ -1111,7 +1111,9 @@ class queue(object):
 
             if update:
                 checklocalchanges(repo, force=force)
-                urev = self.qparents(repo, revs[0])
+                urev, p2 = repo.changelog.parents(revs[0])
+                if p2 != nullid and p2 in [x.node for x in self.applied]:
+                    urev = p2
                 hg.clean(repo, urev)
                 repo.dirstate.write()
 
