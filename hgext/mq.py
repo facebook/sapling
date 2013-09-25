@@ -3062,7 +3062,9 @@ def strip(ui, repo, *revs, **opts):
     if update and opts.get('keep'):
         wlock = repo.wlock()
         try:
-            urev = repo.mq.qparents(repo, revs[0])
+            urev, p2 = repo.changelog.parents(revs[0])
+            if p2 != nullid and p2 in [x.node for x in repo.mq.applied]:
+                urev = p2
             uctx = repo[urev]
 
             # only reset the dirstate for files that would actually change
