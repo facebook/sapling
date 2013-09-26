@@ -2,7 +2,7 @@ from distutils.core import setup, Extension
 
 setup(
     name='lz4revlog',
-    version='1.0.1',
+    version='1.0.2',
     author='Siddharth Agarwal',
     maintainer='Siddharth Agarwal',
     maintainer_email='sid0@fb.com',
