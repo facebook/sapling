@@ -17,8 +17,8 @@ from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
 from mercurial import copies, traceback, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
 from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch, verify
-from mercurial import match as matchmod
-import struct, zlib, errno, collections, time, os, pdb, socket, subprocess, lz4
+from mercurial import match
+import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
 
 cmdtable = {}
@@ -35,7 +35,7 @@ else:
     # hg <= 2.7
     repoclass.supported.add(remotefilelogreq)
 
-shallowcommands = ["stream_out", "changegroup", "changegroupsubset", "getbundle"]
+shallowcommands = ["changegroup", "changegroupsubset", "getbundle"]
 
 def uisetup(ui):
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
@@ -68,8 +68,20 @@ def cloneshallow(orig, ui, repo, *args, **opts):
 
             requirements.add(remotefilelogreq)
 
-            # if the repo was filtered, we need to refilter since
-            # the class has changed
+            # Replace remote.stream_out with a version that sends file
+            # patterns.
+            def stream_out_shallow(orig):
+                if remotefilelogreq in remote._capabilities():
+                    opts = {}
+                    if self.includepattern:
+                        opts['includepattern'] = '\0'.join(self.includepattern)
+                    if self.excludepattern:
+                        opts['excludepattern'] = '\0'.join(self.excludepattern)
+                    return remote._callstream('stream_out_shallow', **opts)
+                else:
+                    return orig()
+            wrapfunction(remote, 'stream_out', stream_out_shallow)
+
             return orig(self, remote, requirements)
         wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
 
@@ -101,7 +113,21 @@ def setupserver(ui, repo):
     # don't send files to shallow clients
     def generatefiles(orig, self, changedfiles, linknodes, commonrevs, source):
         if shallowremote:
-            return iter([])
+            # only send files that don't match the specified patterns
+            includepattern = None
+            excludepattern = None
+            for cap in (self._bundlecaps or []):
+                if cap.startswith("includepattern="):
+                    includepattern = cap[len("includepattern="):].split('\0')
+                elif cap.startswith("excludepattern="):
+                    excludepattern = cap[len("excludepattern="):].split('\0')
+
+            m = match.always(repo.root, '')
+            if includepattern or excludepattern:
+                m = match.match(repo.root, '', None,
+                    includepattern, excludepattern)
+
+            changedfiles = list([f for f in changedfiles if not m(f)])
         return orig(self, changedfiles, linknodes, commonrevs, source)
 
     wrapfunction(changegroup.bundle10, 'generatefiles', generatefiles)
@@ -130,6 +156,36 @@ def onetimesetup(ui):
     # support file content requests
     wireproto.commands['getfiles'] = (getfiles, '')
 
+    class streamstate(object):
+        match = None
+    state = streamstate()
+
+    def stream_out_shallow(repo, proto, other):
+        global shallowremote
+        shallowremote = True
+        shallowbundle.shallowremote = True
+
+        includepattern = None
+        excludepattern = None
+        raw = other.get('includepattern')
+        if raw:
+            includepattern = raw.split('\0')
+        raw = other.get('excludepattern')
+        if raw:
+            excludepattern = raw.split('\0')
+
+        oldmatch = state.match
+        try:
+            state.match = match.always(repo.root, '')
+            if includepattern or excludepattern:
+                state.match = match.match(repo.root, '', None,
+                    includepattern, excludepattern)
+            return wireproto.stream(repo, proto)
+        finally:
+            state.match = oldmatch
+
+    wireproto.commands['stream_out_shallow'] = (stream_out_shallow, '*')
+
     # don't clone filelogs to shallow clients
     def _walkstreamfiles(orig, repo):
         if shallowremote:
@@ -143,10 +199,18 @@ def onetimesetup(ui):
                     for f, kind, st in readdir(p, stat=True):
                         fp = p + '/' + f
                         if kind == stat.S_IFREG:
-                            n = util.pconvert(fp[striplen:])
-                            yield (store.decodedir(n), n, st.st_size)
+                            if not fp.endswith('.i') and not fp.endswith('.d'):
+                                n = util.pconvert(fp[striplen:])
+                                yield (store.decodedir(n), n, st.st_size)
                         if kind == stat.S_IFDIR:
                             visit.append(fp)
+
+            # Return .d and .i files that do not match the shallow pattern
+            match = state.match or match.always(repo.root, '')
+            for (u, e, s) in repo.store.datafiles():
+                f = u[5:-2]  # trim data/...  and .i/.d
+                if not state.match(f):
+                    yield (u, e, s)
 
             for x in repo.store.topfiles():
                 yield x
@@ -273,7 +337,7 @@ def onetimeclientsetup(ui):
     # prevent strip from considering filelogs
     def _collectbrokencsets(orig, repo, files, striprev):
         if remotefilelogreq in repo.requirements:
-            files = []
+            files = list([f for f in files if not repo.shallowmatch(f)])
         return orig(repo, files, striprev)
     wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
 
@@ -306,14 +370,16 @@ def onetimeclientsetup(ui):
     def filectx(orig, self, path, fileid=None, filelog=None):
         if fileid is None:
             fileid = self.filenode(path)
-        if remotefilelogreq in self._repo.requirements:
+        if (remotefilelogreq in self._repo.requirements and 
+            self._repo.shallowmatch(path)):
             return remotefilectx.remotefilectx(self._repo, path,
                 fileid=fileid, changectx=self, filelog=filelog)
         return orig(self, path, fileid=fileid, filelog=filelog)
     wrapfunction(context.changectx, 'filectx', filectx)
 
     def workingfilectx(orig, self, path, filelog=None):
-        if remotefilelogreq in self._repo.requirements:
+        if (remotefilelogreq in self._repo.requirements and
+            self._repo.shallowmatch(path)):
             return remotefilectx.remoteworkingfilectx(self._repo,
                 path, workingctx=self, filelog=filelog)
         return orig(self, path, filelog=filelog)
@@ -322,7 +388,7 @@ def onetimeclientsetup(ui):
     # Issue shallow commands to shallow servers
     def _callstream(orig, self, cmd, **args):
         if cmd in shallowcommands:
-            if remotefilelogreq in self._caps:
+            if remotefilelogreq in self._capabilities():
                 return orig(self, cmd + "_shallow", **args)
         return orig(self, cmd, **args)
     wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
@@ -569,11 +635,11 @@ def filelogrevset(orig, repo, subset, x):
 
     # i18n: "filelog" is a keyword
     pat = revset.getstring(x, _("filelog requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath',
+    m = match.match(repo.root, repo.getcwd(), [pat], default='relpath',
                        ctx=repo[None])
     s = set()
 
-    if not matchmod.patkind(pat):
+    if not match.patkind(pat):
         # slow
         for r in subset:
             ctx = repo[r]
@@ -633,7 +699,8 @@ def buildtemprevlog(repo, file):
 def debugindex(orig, ui, repo, file_ = None, **opts):
     """dump the contents of an index file"""
     if (opts.get('changelog') or opts.get('manifest') or
-        not remotefilelogreq in repo.requirements):
+        not remotefilelogreq in repo.requirements or
+        not repo.shallowmatch(file_)):
         return orig(ui, repo, file_, **opts)
 
     r = buildtemprevlog(repo, file_)

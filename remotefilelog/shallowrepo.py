@@ -7,7 +7,7 @@
 
 from mercurial.node import hex, nullid, bin
 from mercurial.i18n import _
-from mercurial import localrepo, context, mdiff, util
+from mercurial import localrepo, context, mdiff, util, match
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
 
@@ -16,19 +16,73 @@ def wraprepo(repo):
         def file(self, f):
             if f[0] == '/':
                 f = f[1:]
-            return remotefilelog.remotefilelog(self.sopener, f, self)
+
+            if self.shallowmatch(f):
+                return remotefilelog.remotefilelog(self.sopener, f, self)
+            else:
+                return super(shallowrepository, self).file(f)
 
         def filectx(self, path, changeid=None, fileid=None):
             """changeid can be a changeset revision, node, or tag.
                fileid can be a file revision or node."""
-            return remotefilectx.remotefilectx(self, path, changeid, fileid)
+            if self.shallowmatch(path):
+                return remotefilectx.remotefilectx(self, path, changeid, fileid)
+            else:
+                return super(shallowrepository, self).filectx(path, changeid, fileid)
 
-        def pull(self, *args, **kwargs):
+        def pull(self, remote, *args, **kwargs):
             try:
                 shallowbundle.shallowremote = True
-                return super(shallowrepository, self).pull(*args, **kwargs)
+
+                # Hook into the callstream to insert bundle capabilities
+                # during a pull.
+                def remotecallstream(orig, command, **opts):
+                    if command == 'getbundle' and 'remotefilelog' in remote._capabilities():
+                        bundlecaps = opts.get('bundlecaps')
+                        if bundlecaps:
+                            bundlecaps = [bundlecaps]
+                        else:
+                            bundlecaps = []
+                        if self.includepattern:
+                            bundlecaps.append("includepattern=" + '\0'.join(self.includepattern))
+                        if self.excludepattern:
+                            bundlecaps.append("excludepattern=" + '\0'.join(self.excludepattern))
+                        opts['bundlecaps'] = ','.join(bundlecaps)
+                    return orig(command, **opts)
+
+                if hasattr(remote, '_callstream'):
+                    wrapfunction(remote, '_callstream', remotecallstream)
+
+                return super(shallowrepository, self).pull(remote, *args, **kwargs)
             finally:
                 shallowbundle.shallowremote = False
+
+        def getbundle(self, source, heads=None, common=None, bundlecaps=None):
+            original = self.shallowmatch
+            try:
+                # if serving, use the clients patterns
+                if source == 'serve':
+                    includepattern = None
+                    excludepattern = None
+                    for cap in (bundlecaps or []):
+                        if cap.startswith("includepattern="):
+                            raw = cap[len("includepattern="):]
+                            if raw:
+                                includepattern = raw.split('\0')
+                        elif cap.startswith("excludepattern="):
+                            raw = cap[len("excludepattern="):]
+                            if raw:
+                                excludepattern = raw.split('\0')
+                    if includepattern or excludepattern:
+                        self.shallowmatch = match.match(self.root, '', None,
+                            includepattern, excludepattern)
+                    else:
+                        self.shallowmatch = match.always(self.root, '')
+
+                return super(shallowrepository, self).getbundle(source, heads,
+                    common, bundlecaps)
+            finally:
+                self.shallowmatch = original
 
         def addchangegroupfiles(self, source, revmap, trp, pr, needfiles):
             files = 0
@@ -44,6 +98,12 @@ def wraprepo(repo):
                 f = chunkdata["filename"]
                 self.ui.debug("adding %s revisions\n" % f)
                 pr()
+
+                if not self.shallowmatch(f):
+                    fl = self.file(f)
+                    fl.addgroup(source, revmap, trp)
+                    continue
+
                 chain = None
                 while True:
                     revisiondata = source.deltachunk(chain)
@@ -78,6 +138,8 @@ def wraprepo(repo):
 
             skipcount = 0
 
+            # Apply the revisions in topological order such that a revision
+            # is only written once it's deltabase has been written.
             while queue:
                 f, node = queue.pop(0)
                 if (f, node) in processed:
@@ -148,6 +210,14 @@ def wraprepo(repo):
     wrapfunction(repo.dirstate, 'status', status)
 
     repo.__class__ = shallowrepository
+
+    repo.shallowmatch = match.always(repo.root, '')
+
+    repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
+    repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
+    if repo.includepattern or repo.excludepattern:
+        repo.shallowmatch = match.match(repo.root, '', None,
+            repo.includepattern, repo.excludepattern)
 
     localpath = os.path.join(repo.sopener.vfs.base, 'data')
     if not os.path.exists(localpath):

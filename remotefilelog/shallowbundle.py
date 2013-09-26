@@ -107,7 +107,7 @@ class shallowbundle(changegroup.bundle10):
             repo = self._repo
             filestosend = shouldaddfilegroups(repo, source)
             if filestosend == NoFiles:
-                return iter([])
+                changedfiles = list([f for f in changedfiles if not repo.shallowmatch(f)])
             else:
                 files = []
                 # Prefetch the revisions being bundled
@@ -121,7 +121,7 @@ class shallowbundle(changegroup.bundle10):
                         if filestosend == LocalFiles:
                             localkey = fileserverclient.getlocalkey(fname, hex(fnode))
                             localpath = repo.sjoin(os.path.join("data", localkey))
-                            if not os.path.exists(localpath):
+                            if not os.path.exists(localpath) and repo.shallowmatch(fname):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))
@@ -133,12 +133,13 @@ class shallowbundle(changegroup.bundle10):
                 # Prefetch the revisions that are going to be diffed against
                 prevfiles = []
                 for fname, fnode in files:
-                    fnode = bin(fnode)
-                    filerevlog = repo.file(fname)
-                    ancestormap = filerevlog.ancestormap(fnode)
-                    p1, p2, linknode, copyfrom = ancestormap[fnode]
-                    if p1 != nullid:
-                        prevfiles.append((copyfrom or fname, hex(p1)))
+                    if repo.shallowmatch(fname):
+                        fnode = bin(fnode)
+                        filerevlog = repo.file(fname)
+                        ancestormap = filerevlog.ancestormap(fnode)
+                        p1, p2, linknode, copyfrom = ancestormap[fnode]
+                        if p1 != nullid:
+                            prevfiles.append((copyfrom or fname, hex(p1)))
 
                 fileserverclient.client.prefetch(repo, prevfiles)
 
