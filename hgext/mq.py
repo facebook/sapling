@@ -88,6 +88,8 @@ except KeyError:
             pass
     stripext = extensions.load(dummyui(), 'strip', '')
 
+checksubstate = stripext.checksubstate
+
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
@@ -2906,23 +2908,6 @@ def save(ui, repo, **opts):
         q.applieddirty = True
         q.savedirty()
     return 0
-
-def checksubstate(repo, baserev=None):
-    '''return list of subrepos at a different revision than substate.
-    Abort if any subrepos have uncommitted changes.'''
-    inclsubs = []
-    wctx = repo[None]
-    if baserev:
-        bctx = repo[baserev]
-    else:
-        bctx = wctx.parents()[0]
-    for s in sorted(wctx.substate):
-        if wctx.sub(s).dirty(True):
-            raise util.Abort(
-                _("uncommitted changes in subrepository %s") % s)
-        elif s not in bctx.substate or bctx.sub(s).dirty():
-            inclsubs.append(s)
-    return inclsubs
 
 def checklocalchanges(repo, force=False, excsuffix=''):
     cmdutil.checkunfinished(repo)
