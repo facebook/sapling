@@ -67,6 +67,9 @@ help
   changes will be tolerated and preserved. If incompatible options such as
   -f/--force or --exact are passed, this setting is ignored.
   
+  This extension used to provide a strip command. This command now lives in the
+  strip extension.
+  
   list of commands:
   
    qapplied      print the patches already applied
@@ -91,7 +94,6 @@ help
    qseries       print the entire series file
    qtop          print the name of the current patch
    qunapplied    print the patches not yet applied
-   strip         strip changesets and all their descendants from the repository
   
   use "hg -v help mq" to show builtin aliases and global options
 
