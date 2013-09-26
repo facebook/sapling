@@ -63,7 +63,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import repair, extensions, error, phases, bookmarks
+from mercurial import extensions, error, phases, bookmarks
 from mercurial import patch as patchmod
 from mercurial import localrepo
 from mercurial import subrepo
@@ -88,6 +88,7 @@ except KeyError:
             pass
     stripext = extensions.load(dummyui(), 'strip', '')
 
+strip = stripext.strip
 checksubstate = stripext.checksubstate
 checklocalchanges = stripext.checklocalchanges
 
@@ -2910,25 +2911,6 @@ def save(ui, repo, **opts):
         q.applieddirty = True
         q.savedirty()
     return 0
-
-def strip(ui, repo, revs, update=True, backup="all", force=None):
-    wlock = lock = None
-    try:
-        wlock = repo.wlock()
-        lock = repo.lock()
-
-        if update:
-            checklocalchanges(repo, force=force)
-            urev, p2 = repo.changelog.parents(revs[0])
-            if p2 != nullid and p2 in [x.node for x in repo.mq.applied]:
-                urev = p2
-            hg.clean(repo, urev)
-            repo.dirstate.write()
-
-        repair.strip(ui, repo, revs, backup)
-    finally:
-        release(lock, wlock)
-
 
 @command("strip",
          [
