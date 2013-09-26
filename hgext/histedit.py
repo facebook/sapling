@@ -501,7 +501,6 @@ def histedit(ui, repo, *freeargs, **opts):
 
     if goal == 'continue':
         (parentctxnode, rules, keep, topmost, replacements) = readstate(repo)
-        currentparent, wantnull = repo.dirstate.parents()
         parentctx = repo[parentctxnode]
         parentctx, repl = bootstrapcontinue(ui, repo, parentctx, rules, opts)
         replacements.extend(repl)
