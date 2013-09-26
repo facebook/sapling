@@ -70,6 +70,7 @@ a new repo should use lz4 by default
   $ hg init lz
   $ cd lz
   $ echo a>a
+  $ touch b
   $ hg ci -q -A -m lz0
   $ for i in 0 1 2 3 4 5 6 7 8 9; do
   >   echo qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqquuuuuuuuuuuuuuuuuuuu$i >> a
@@ -77,7 +78,7 @@ a new repo should use lz4 by default
   $ hg ci -q -m lz1
   $ hg verify -q
   $ hg tip
-  changeset:   1:186d32280905
+  changeset:   1:18e28922b6ed
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -108,10 +109,10 @@ uncompressed clone from lz4 to lz4 should be fine
   $ cd ..
   $ hg clone --uncompressed http://localhost:$HGPORT/ happy
   streaming all changes
-  3 files to transfer, 665 bytes of data
-  transferred 665 bytes in * seconds (*/sec) (glob)
+  4 files to transfer, 785 bytes of data
+  transferred 785 bytes in 0.0 seconds (1.36 MB/sec)
   updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 uncompressed clone from lz4 to non-lz4 should fall back to pull
 
@@ -120,4 +121,4 @@ uncompressed clone from lz4 to non-lz4 should fall back to pull
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 1 files
+  added 2 changesets with 3 changes to 2 files

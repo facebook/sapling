@@ -100,6 +100,8 @@ if usable:
 
         def compress(self, text):
             if self._lz4:
+                if not text:
+                    return ('', text)
                 l = len(text)
                 c = _compress(text)
                 if len(text) <= len(c):
