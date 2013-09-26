@@ -22,3 +22,15 @@ def checksubstate(repo, baserev=None):
             inclsubs.append(s)
     return inclsubs
 
+def checklocalchanges(repo, force=False, excsuffix=''):
+    cmdutil.checkunfinished(repo)
+    m, a, r, d = repo.status()[:4]
+    if not force:
+        if (m or a or r or d):
+            _("local changes found") # i18n tool detection
+            raise util.Abort(_("local changes found" + excsuffix))
+        if checksubstate(repo):
+            _("local changed subrepos found") # i18n tool detection
+            raise util.Abort(_("local changed subrepos found" + excsuffix))
+    return m, a, r, d
+
