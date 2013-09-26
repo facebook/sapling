@@ -406,13 +406,16 @@ Issue811: Problem loading extensions twice (by site and by user)
   > EOF
   $ echo "debugissue811 = $debugpath" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
+  $ echo "strip=" >> $HGRCPATH
   $ echo "hgext.mq=" >> $HGRCPATH
   $ echo "hgext/mq=" >> $HGRCPATH
 
 Show extensions:
+(note that mq force load strip, also checking it's not loaded twice)
 
   $ hg debugextensions
   debugissue811
+  strip
   mq
 
 Disabled extension commands:

@@ -77,6 +77,17 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+# force load strip extension formely included in mq and import some utility
+try:
+    stripext = extensions.find('strip')
+except KeyError:
+    # note: load is lazy so we could avoid the try-except,
+    # but I (marmoute) prefer this explicite code.
+    class dummyui(object):
+        def debug(self, msg):
+            pass
+    stripext = extensions.load(dummyui(), 'strip', '')
+
 # Patch names looks like unix-file names.
 # They must be joinable with queue directory and result in the patch path.
 normname = util.normpath
