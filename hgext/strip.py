@@ -1,6 +1,6 @@
-"""This extension contains the strip commands.
+"""strip changesets and their descendents from history
 
-This extensions allows to strip changesets and all their descendants from the
+This extension allows to strip changesets and all their descendants from the
 repository. See the command help for details.
 """
 from mercurial.i18n import _
