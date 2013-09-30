@@ -646,8 +646,7 @@ def bootstrapcontinue(ui, repo, parentctx, rules, opts):
             # `parentctxnode` should match but no result. This means that
             # currentnode is not a descendant from parentctxnode.
             msg = _('%s is not an ancestor of working directory')
-            hint = _('update to %s or descendant and run "hg histedit '
-                     '--continue" again') % parentctx
+            hint = _('use "histedit --abort" to clear broken state')
             raise util.Abort(msg % parentctx, hint=hint)
         newchildren.pop(0)  # remove parentctxnode
     # Commit dirty working directory if necessary

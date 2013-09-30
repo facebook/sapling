@@ -70,6 +70,35 @@ Run on a revision not ancestors of the current working directory.
   [255]
   $ hg up --quiet
 
+Run on a revision not descendants of the initial parent
+--------------------------------------------------------------------
+
+Test the message shown for inconsistent histedit state, which may be
+created (and forgotten) by Mercurial earlier than 2.7. This emulates
+Mercurial earlier than 2.7 by renaming ".hg/histedit-state"
+temporarily.
+
+  $ HGEDITOR=cat hg histedit -r 4 --commands - << EOF
+  > edit 08d98a8350f3 4 five
+  > EOF
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting alpha
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+  [1]
+
+  $ mv .hg/histedit-state .hg/histedit-state.back
+  $ hg update --quiet --clean 2
+  $ mv .hg/histedit-state.back .hg/histedit-state
+
+  $ hg histedit --continue
+  abort: c8e68270e35a is not an ancestor of working directory
+  (use "histedit --abort" to clear broken state)
+  [255]
+
+  $ hg histedit --abort
+  $ hg update --quiet --clean
+
 Test that missing revisions are detected
 ---------------------------------------
 
