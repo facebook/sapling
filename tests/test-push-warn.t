@@ -354,6 +354,29 @@ Using --new-branch to push new named branch:
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Pushing muliple headed new branch:
+
+  $ echo 14 > foo
+  $ hg -q branch f
+  $ hg -q ci -m 14
+  $ echo 15 > foo
+  $ hg -q ci -m 15
+  $ hg -q up 14
+  $ echo 16 > foo
+  $ hg -q ci -m 16
+  $ hg push --branch f --new-branch ../f
+  pushing to ../f
+  searching for changes
+  abort: push creates multiple headed new branch 'f'
+  (merge or see "hg help push" for detail about pushing new heads)
+  [255]
+  $ hg push --branch f --new-branch --force ../f
+  pushing to ../f
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files (+1 heads)
 
 Checking prepush logic does not allow silently pushing
 multiple new heads:

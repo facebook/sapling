@@ -269,13 +269,12 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
     allfuturecommon = set(c.node() for c in repo.set('%ld', outgoing.common))
     allfuturecommon.update(allmissing)
     for branch, heads in sorted(headssum.iteritems()):
-        if heads[0] is None:
-            # Maybe we should abort if we push more that one head
-            # for new branches ?
-            continue
         candidate_newhs = set(heads[1])
         # add unsynced data
-        oldhs = set(heads[0])
+        if heads[0] is None:
+            oldhs = set()
+        else:
+            oldhs = set(heads[0])
         oldhs.update(heads[2])
         candidate_newhs.update(heads[2])
         dhs = None
@@ -310,7 +309,16 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             newhs = candidate_newhs
         if [h for h in heads[2] if h not in discardedheads]:
             unsynced = True
-        if len(newhs) > len(oldhs):
+        if heads[0] is None:
+            if 1 < len(newhs):
+                dhs = list(newhs)
+                if error is None:
+                    error = (_("push creates multiple headed new branch '%s'")
+                             % (branch))
+                    hint = _("merge or"
+                             " see \"hg help push\" for detail about"
+                             " pushing new heads")
+        elif len(newhs) > len(oldhs):
             # strip updates to existing remote heads from the new heads list
             dhs = sorted(newhs - bookmarkedheads - oldhs)
         if dhs:
