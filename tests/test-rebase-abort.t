@@ -75,6 +75,29 @@ Abort:
   |
   o  0:draft 'C1'
   
+Test safety for inconsistent rebase state, which may be created (and
+forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
+earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
+
+  $ hg rebase -s 3 -d 2
+  merging common
+  warning: conflicts during merge.
+  merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+
+  $ mv .hg/rebasestate .hg/rebasestate.back
+  $ hg update --quiet --clean 2
+  $ hg --config extensions.mq= strip --quiet "destination()"
+  $ mv .hg/rebasestate.back .hg/rebasestate
+
+  $ hg rebase --continue
+  abort: cannot continue inconsistent rebase
+  (use "hg rebase --abort" to clear borken state)
+  [255]
+  $ hg rebase --abort
+  rebase aborted (no revision is removed, only broken state is cleared)
+
   $ cd ..
 
 

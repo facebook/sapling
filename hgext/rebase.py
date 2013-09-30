@@ -159,8 +159,19 @@ def rebase(ui, repo, **opts):
             if opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
 
-            (originalwd, target, state, skipped, collapsef, keepf,
-                keepbranchesf, external, activebookmark) = restorestatus(repo)
+            try:
+                (originalwd, target, state, skipped, collapsef, keepf,
+                 keepbranchesf, external, activebookmark) = restorestatus(repo)
+            except error.RepoLookupError:
+                if abortf:
+                    clearstatus(repo)
+                    repo.ui.warn(_('rebase aborted (no revision is removed,'
+                                   ' only broken state is cleared)\n'))
+                    return 0
+                else:
+                    msg = _('cannot continue inconsistent rebase')
+                    hint = _('use "hg rebase --abort" to clear borken state')
+                    raise util.Abort(msg, hint=hint)
             if abortf:
                 return abort(repo, originalwd, target, state)
         else:
