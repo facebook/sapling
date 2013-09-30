@@ -203,15 +203,13 @@ class branchcache(dict):
         # branch that ceased to exist may not be in newbranches because
         # newbranches is the set of candidate heads, which when you strip the
         # last commit in a branch will be the parent branch.
-        droppednodes = []
         for branch in self.keys():
             nodes = [head for head in self[branch]
                      if cl.hasnode(head)]
             if not nodes:
-                droppednodes.extend(nodes)
                 del self[branch]
 
-        if ((not self.validfor(repo)) or (self.tipnode in droppednodes)):
+        if not self.validfor(repo):
             # cache key are not valid anymore
             self.tipnode = nullid
             self.tiprev = nullrev
