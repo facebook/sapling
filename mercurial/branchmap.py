@@ -198,17 +198,6 @@ class branchcache(dict):
                 self.tipnode = cl.node(tiprev)
                 self.tiprev = tiprev
 
-        # There may be branches that cease to exist when the last commit in the
-        # branch was stripped.  This code filters them out.  Note that the
-        # branch that ceased to exist may not be in newbranches because
-        # newbranches is the set of candidate heads, which when you strip the
-        # last commit in a branch will be the parent branch.
-        for branch in self.keys():
-            nodes = [head for head in self[branch]
-                     if cl.hasnode(head)]
-            if not nodes:
-                del self[branch]
-
         if not self.validfor(repo):
             # cache key are not valid anymore
             self.tipnode = nullid
