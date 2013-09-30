@@ -422,7 +422,12 @@ def findoutgoing(ui, repo, remote=None, force=False, opts={}):
     outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
     if not outgoing.missing:
         raise util.Abort(_('no outgoing ancestors'))
-    return outgoing.missing[0]
+    roots = list(repo.revs("roots(%ln)", outgoing.missing))
+    if 1 < len(roots):
+        msg = _('there are ambiguous outgoing revisions')
+        hint = _('see "hg help histedit" for more detail')
+        raise util.Abort(msg, hint=hint)
+    return repo.lookup(roots[0])
 
 actiontable = {'p': pick,
                'pick': pick,

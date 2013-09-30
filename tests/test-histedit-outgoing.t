@@ -102,4 +102,38 @@ test sensitivity to branch in URL:
   #  m, mess = edit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+test to check number of roots in outgoing revisions
+
+  $ hg -q outgoing -G --template '{node|short}({branch})' '../r'
+  @  f26599ee3441(foo)
+  
+  o  652413bf663e(default)
+  |
+  o  e860deea161a(default)
+  |
+  o  055a42cdd887(default)
+  
+  $ HGEDITOR=cat hg -q histedit --outgoing '../r'
+  abort: there are ambiguous outgoing revisions
+  (see "hg help histedit" for more detail)
+  [255]
+
+  $ hg -q update -C 2
+  $ echo aa >> a
+  $ hg -q commit -m 'another head on default'
+  $ hg -q outgoing -G --template '{node|short}({branch})' '../r#default'
+  @  3879dc049647(default)
+  
+  o  652413bf663e(default)
+  |
+  o  e860deea161a(default)
+  |
+  o  055a42cdd887(default)
+  
+  $ HGEDITOR=cat hg -q histedit --outgoing '../r#default'
+  abort: there are ambiguous outgoing revisions
+  (see "hg help histedit" for more detail)
+  [255]
+
   $ cd ..
