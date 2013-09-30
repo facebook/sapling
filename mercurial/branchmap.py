@@ -210,8 +210,8 @@ class branchcache(dict):
             if not nodes:
                 droppednodes.extend(nodes)
                 del self[branch]
-        if ((not self.validfor(repo)) or (self.tipnode in droppednodes)):
 
+        if ((not self.validfor(repo)) or (self.tipnode in droppednodes)):
             # cache key are not valid anymore
             self.tipnode = nullid
             self.tiprev = nullrev
