@@ -95,6 +95,8 @@ earlier than 2.7 by renaming ".hg/rebasestate" temporarily.
   abort: cannot continue inconsistent rebase
   (use "hg rebase --abort" to clear borken state)
   [255]
+  $ hg summary | grep '^rebase: '
+  rebase: (use "hg rebase --abort" to clear broken state)
   $ hg rebase --abort
   rebase aborted (no revision is removed, only broken state is cleared)
 
