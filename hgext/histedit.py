@@ -462,6 +462,15 @@ def histedit(ui, repo, *freeargs, **opts):
     With --outgoing, this edits changesets not found in the
     destination repository. If URL of the destination is omitted, the
     'default-push' (or 'default') path will be used.
+
+    For safety, this command is aborted, also if there are ambiguous
+    outgoing revisions which may confuse users: for example, there are
+    multiple branches containing outgoing revisions.
+
+    Use "min(outgoing() and ::.)" or similar revset specification
+    instead of --outgoing to specify edit target revision exactly in
+    such ambiguous situation. See :hg:`help revsets` for detail about
+    selecting revisions.
     """
     # TODO only abort if we try and histedit mq patches, not just
     # blanket if mq patches are applied somewhere
