@@ -27,7 +27,14 @@ testedwith = 'internal'
 
 shallowremote = False
 remotefilelogreq = "remotefilelog"
-localrepo.localrepository.supported.add(remotefilelogreq)
+
+repoclass = localrepo.localrepository
+if util.safehasattr(repoclass, '_basesupported'):
+    repoclass._basesupported.add(remotefilelogreq)
+else:
+    # hg <= 2.7
+    repoclass.supported.add(remotefilelogreq)
+
 shallowcommands = ["stream_out", "changegroup", "changegroupsubset", "getbundle"]
 
 def uisetup(ui):
