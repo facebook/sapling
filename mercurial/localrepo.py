@@ -813,7 +813,7 @@ class localrepository(object):
     def wwritedata(self, filename, data):
         return self._filter(self._decodefilterpats, filename, data)
 
-    def transaction(self, desc):
+    def transaction(self, desc, report=None):
         tr = self._transref and self._transref() or None
         if tr and tr.running():
             return tr.nest()
@@ -825,8 +825,8 @@ class localrepository(object):
 
         self._writejournal(desc)
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
-
-        tr = transaction.transaction(self.ui.warn, self.sopener,
+        rp = report and report or self.ui.warn
+        tr = transaction.transaction(rp, self.sopener,
                                      self.sjoin("journal"),
                                      aftertrans(renames),
                                      self.store.createmode)
