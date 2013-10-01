@@ -29,6 +29,11 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+def _savegraft(ctx, extra):
+    s = ctx.extra().get('source', None)
+    if s is not None:
+        extra['source'] = s
+
 def _savebranch(ctx, extra):
     extra['branch'] = ctx.branch()
 
@@ -151,7 +156,7 @@ def rebase(ui, repo, **opts):
         collapsef = opts.get('collapse', False)
         collapsemsg = cmdutil.logmessage(ui, opts)
         e = opts.get('extrafn') # internal, used by e.g. hgsubversion
-        extrafns = []
+        extrafns = [_savegraft]
         if e:
             extrafns = [e]
         keepf = opts.get('keep', False)

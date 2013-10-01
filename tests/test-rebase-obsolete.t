@@ -178,9 +178,9 @@ More complex case were part of the rebase set were already rebased
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {'date': '*', 'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 {'date': '*', 'user': 'test'} (glob)
   32af7686d403cf45b5d95f2d70cebea587ac806a 0 {'date': '*', 'user': 'test'} (glob)
-  08483444fef91d6224f6655ee586a65d263ad34c cbc07f26687521cecfc9a141bf5ecfc0fd2b8531 0 {'date': '* *', 'user': 'test'} (glob)
+  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 {'date': '* *', 'user': 'test'} (glob)
   $ hg log -G
-  @  11:cbc07f266875 D
+  @  11:4596109a6a43 D
   |
   | o  10:5ae4c968c6ac C
   | |
@@ -203,17 +203,17 @@ More complex case were part of the rebase set were already rebased
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 {'date': '* *', 'user': 'test'} (glob)
   5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 5ae4c968c6aca831df823664e706c9d4aa34473d 0 {'date': '* *', 'user': 'test'} (glob)
   32af7686d403cf45b5d95f2d70cebea587ac806a 0 {'date': '* *', 'user': 'test'} (glob)
-  08483444fef91d6224f6655ee586a65d263ad34c cbc07f26687521cecfc9a141bf5ecfc0fd2b8531 0 {'date': '* *', 'user': 'test'} (glob)
-  8877864f1edb05d0e07dc4ba77b67a80a7b86672 b1861c79d66ec3aa1b607ac3c9fb819e38b12238 0 {'date': '* *', 'user': 'test'} (glob)
+  08483444fef91d6224f6655ee586a65d263ad34c 4596109a6a4328c398bde3a4a3b6737cfade3003 0 {'date': '* *', 'user': 'test'} (glob)
+  8877864f1edb05d0e07dc4ba77b67a80a7b86672 462a34d07e599b87ea08676a449373fe4e2e1347 0 {'date': '* *', 'user': 'test'} (glob)
   08483444fef91d6224f6655ee586a65d263ad34c 0 {'date': '* *', 'user': 'test'} (glob)
-  5ae4c968c6aca831df823664e706c9d4aa34473d dd4be135457a404ce5541de427ae1d98a28f4acd 0 {'date': '* *', 'user': 'test'} (glob)
+  5ae4c968c6aca831df823664e706c9d4aa34473d 98f6af4ee9539e14da4465128f894c274900b6e5 0 {'date': '* *', 'user': 'test'} (glob)
   $ hg log --rev 'divergent()'
   $ hg log -G
-  @  13:dd4be135457a C
+  @  13:98f6af4ee953 C
   |
-  o  12:b1861c79d66e B
+  o  12:462a34d07e59 B
   |
-  o  11:cbc07f266875 D
+  o  11:4596109a6a43 D
   |
   o  7:02de42196ebe H
   |
@@ -225,7 +225,22 @@ More complex case were part of the rebase set were already rebased
   |/
   o  0:cd010b8cd998 A
   
-
+  $ hg log --style default --debug -r 4596109a6a4328c398bde3a4a3b6737cfade3003
+  changeset:   11:4596109a6a4328c398bde3a4a3b6737cfade3003
+  phase:       draft
+  parent:      7:02de42196ebee42ef284b6780a87cdc96e8eaab6
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    11:a91006e3a02f1edf631f7018e6e5684cf27dd905
+  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  date:        Sat Apr 30 15:24:48 2011 +0200
+  files+:      D
+  extra:       branch=default
+  extra:       rebase_source=08483444fef91d6224f6655ee586a65d263ad34c
+  extra:       source=32af7686d403cf45b5d95f2d70cebea587ac806a
+  description:
+  D
+  
+  
   $ cd ..
 
 collapse rebase
