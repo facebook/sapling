@@ -16,7 +16,6 @@
 shelving in an empty repo should be possible
 
   $ hg shelve
-  (empty repository)
   shelved as default
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
 
@@ -44,7 +43,6 @@ shelve a change that we will delete later
 
   $ echo a >> a/a
   $ hg shelve
-  shelved from default (bb4fec6d): second
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -74,7 +72,6 @@ prevent some foot-shooting
 the common case - no options or filenames
 
   $ hg shelve
-  shelved from default (bb4fec6d): second
   shelved as default-01
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg status -C
@@ -82,11 +79,11 @@ the common case - no options or filenames
 ensure that our shelved changes exist
 
   $ hg shelve -l
-  default-01      [*]    shelved from default (bb4fec6d): second (glob)
-  default         [*]    shelved from default (bb4fec6d): second (glob)
+  default-01      (*)    second (glob)
+  default         (*)    second (glob)
 
   $ hg shelve -l -p default
-  default         [*]    shelved from default (bb4fec6d): second (glob)
+  default         (*)    second (glob)
   
   diff --git a/a/a b/a/a
   --- a/a/a
@@ -158,7 +155,7 @@ expect "a" to no longer be present, but status otherwise unchanged
     c
   R b/b
   $ hg shelve -l --stat
-  wibble          [*]    wat (glob)
+  wibble          (*)    wat (glob)
    a/a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
 
@@ -206,11 +203,11 @@ force a conflicted merge to occur
 ensure that we have a merge with unresolved conflicts
 
   $ hg heads -q
-  3:7ec047b69dc0
+  3:6ea6529cfc65
   2:ceefc37abe1e
   $ hg parents -q
   2:ceefc37abe1e
-  3:7ec047b69dc0
+  3:6ea6529cfc65
   $ hg status
   M a/a
   M b.rename/b
@@ -402,11 +399,10 @@ if we resolve a conflict while unshelving, the unshelve should succeed
 test keep and cleanup
 
   $ hg shelve
-  shelved from default (be7e7968): create conflict
   shelved as default
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --list
-  default         [*]    shelved from default (be7e7968): create conflict (glob)
+  default         (*)    create conflict (glob)
   $ hg unshelve --keep
   unshelving change 'default'
   adding changesets
@@ -415,6 +411,6 @@ test keep and cleanup
   added 1 changesets with 1 changes to 7 files
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg shelve --list
-  default         [*]    shelved from default (be7e7968): create conflict (glob)
+  default         (*)    create conflict (glob)
   $ hg shelve --cleanup
   $ hg shelve --list

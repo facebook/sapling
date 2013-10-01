@@ -160,7 +160,6 @@ def createcmd(ui, repo, pats, opts):
 
     if parent.node() != nullid:
         desc = parent.description().split('\n', 1)[0]
-        desc = _('shelved from %s (%s): %s') % (label, str(parent)[:8], desc)
     else:
         desc = '(empty repository)'
 
@@ -223,7 +222,6 @@ def createcmd(ui, repo, pats, opts):
 
         if ui.formatted():
             desc = util.ellipsis(desc, ui.termwidth())
-        ui.status(desc + '\n')
         ui.status(_('shelved as %s\n') % name)
         hg.update(repo, parent.node())
     finally:
@@ -292,10 +290,10 @@ def listcmd(ui, repo, pats, opts):
             continue
         ui.write(' ' * (16 - len(sname)))
         used = 16
-        age = '[%s]' % templatefilters.age(util.makedate(mtime))
+        age = '(%s)' % templatefilters.age(util.makedate(mtime), abbrev=True)
         ui.write(age, label='shelve.age')
-        ui.write(' ' * (18 - len(age)))
-        used += 18
+        ui.write(' ' * (12 - len(age)))
+        used += 12
         fp = open(name + '.patch', 'rb')
         try:
             while True:
