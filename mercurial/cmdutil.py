@@ -468,6 +468,13 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     runargs=None, appendpid=False):
     '''Run a command as a service.'''
 
+    def writepid(pid):
+        if opts['pid_file']:
+            mode = appendpid and 'a' or 'w'
+            fp = open(opts['pid_file'], mode)
+            fp.write(str(pid) + '\n')
+            fp.close()
+
     if opts['daemon'] and not opts['daemon_pipefds']:
         # Signal child process startup with file removal
         lockfd, lockpath = tempfile.mkstemp(prefix='hg-service-')
@@ -504,11 +511,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if initfn:
         initfn()
 
-    if opts['pid_file']:
-        mode = appendpid and 'a' or 'w'
-        fp = open(opts['pid_file'], mode)
-        fp.write(str(os.getpid()) + '\n')
-        fp.close()
+    writepid(os.getpid())
 
     if opts['daemon_pipefds']:
         lockpath = opts['daemon_pipefds']
