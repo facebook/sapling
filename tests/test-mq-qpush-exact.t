@@ -243,6 +243,7 @@ qpush --exact --force with changes to a patched file
   +cp1
   $ hg qpop -aqf
   patch queue now empty
+  $ hg forget fp1
   $ rm fp1
   $ rm fp1.rej
 

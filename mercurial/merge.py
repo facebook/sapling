@@ -719,6 +719,12 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                                        "subrepository '%s'") % s)
 
         elif not overwrite:
+            if p1 == p2: # no-op update
+                # call the hooks and exit early
+                repo.hook('preupdate', throw=True, parent1=xp2, parent2='')
+                repo.hook('update', parent1=xp2, parent2='', error=0)
+                return 0, 0, 0, 0
+
             if pa not in (p1, p2):  # nolinear
                 dirty = wc.dirty(missing=True)
                 if dirty or onode is None:
