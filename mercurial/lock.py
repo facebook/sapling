@@ -100,7 +100,7 @@ class lock(object):
         """
         try:
             locker = util.readlock(self.f)
-        except OSError, why:
+        except (OSError, IOError), why:
             if why.errno == errno.ENOENT:
                 return None
             raise
