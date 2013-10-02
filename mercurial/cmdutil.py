@@ -497,6 +497,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
             pid = util.rundetached(runargs, condfn)
             if pid < 0:
                 raise util.Abort(_('child process failed to start'))
+            writepid(pid)
         finally:
             try:
                 os.unlink(lockpath)
@@ -511,7 +512,8 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if initfn:
         initfn()
 
-    writepid(os.getpid())
+    if not opts['daemon']:
+        writepid(os.getpid())
 
     if opts['daemon_pipefds']:
         lockpath = opts['daemon_pipefds']
