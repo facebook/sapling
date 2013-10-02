@@ -88,6 +88,32 @@ final file versions in this repo:
   copied renamed from foo:2ed2a3912a0b24502043eae84ee4b279c18b90dd
 
   $ cd ..
+
+
+Test interaction with startrev and verify that changing it is handled properly:
+
+  $ > empty
+  $ hg convert --filemap empty source movingstart --config convert.hg.startrev=3 -r4
+  initializing destination movingstart repository
+  scanning source...
+  sorting...
+  converting...
+  1 3: change bar quux
+  0 4: first merge; change bar baz
+  $ hg convert --filemap empty source movingstart
+  scanning source...
+  sorting...
+  converting...
+  3 5: change bar baz quux
+  2 6: change foo baz
+  1 7: second merge; change bar
+  warning: af455ce4166b3c9c88e6309c2b9332171dcea595 parent 61e22ca76c3b3e93df20338c4e02ce286898e825 is missing
+  warning: cf908b3eeedc301c9272ebae931da966d5b326c7 parent 59e1ab45c888289513b7354484dac8a88217beab is missing
+  0 8: change foo
+
+
+splitrepo tests
+
   $ splitrepo()
   > {
   >     msg="$1"
