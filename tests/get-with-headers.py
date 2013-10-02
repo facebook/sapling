@@ -43,8 +43,9 @@ def request(host, path, show):
             print "%s: %s" % (h, response.getheader(h))
     if not headeronly:
         print
-        data = response.read()
-        sys.stdout.write(data)
+        if response.status != 500:
+            data = response.read()
+            sys.stdout.write(data)
 
         if twice and response.getheader('ETag', None):
             tag = response.getheader('ETag')
