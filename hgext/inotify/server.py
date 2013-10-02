@@ -451,7 +451,9 @@ def start(ui, dirstate, root, opts):
         runargs = util.hgcmd() + sys.argv[1:]
 
     pidfile = ui.config('inotify', 'pidfile')
-    if opts['daemon'] and pidfile is not None and 'pid-file' not in runargs:
+    opts.setdefault('pid_file', '')
+    if opts['daemon'] and pidfile is not None and not opts['pid_file']:
+        opts['pid_file'] = pidfile
         runargs.append("--pid-file=%s" % pidfile)
 
     service = service()
