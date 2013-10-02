@@ -695,22 +695,41 @@ def debugindexdot(orig, ui, repo, file_):
 
 commands.norepo += " gc"
 
-@command('^gc', [], _('hg gc [CACHEPATH]'))
+@command('^gc', [], _('hg gc [REPO...]'))
 def gc(ui, *args, **opts):
-    '''garbage collect the filelog cache
+    '''garbage collect the client and server filelog caches
     '''
-    if len(args) > 0:
-        cachepath = args[0]
-    else:
-        try:
-            repo = hg.peer(ui, {}, ui.environ['PWD'])
-            ui = repo.ui
-        except error.RepoError:
-            repo = None
-        cachepath = ui.config("remotefilelog", "cachepath")
-        if not cachepath:
-            return
+    cachepaths = set()
 
+    # get the system client cache
+    systemcache = ui.config("remotefilelog", "cachepath")
+    if systemcache:
+        cachepaths.add(systemcache)
+
+    # get repo client and server cache
+    repopaths = [ui.environ['PWD']]
+    repopaths.extend(args)
+    repos = []
+    for repopath in repopaths:
+        try:
+            repo = hg.peer(ui, {}, repopath)
+            repos.append(repo)
+
+            repocache = repo.ui.config("remotefilelog", "cachepath")
+            if repocache:
+                cachepaths.add(repocache)
+        except error.RepoError:
+            pass
+
+    # gc client cache
+    for cachepath in cachepaths:
+        gcclient(ui, cachepath)
+
+    # gc server cache
+    for repo in repos:
+        gcserver(ui, repo._repo)
+
+def gcclient(ui, cachepath):
     # get list of repos that use this cache
     repospath = os.path.join(cachepath, 'repos')
     if not os.path.exists(repospath):
@@ -808,6 +827,41 @@ def gc(ui, *args, **opts):
     ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
               (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
               float(size) / 1024.0 / 1024.0 / 1024.0))
+
+def gcserver(ui, repo):
+    if not repo.ui.configbool("remotefilelog", "server"):
+        return
+
+    neededfiles = set()
+    heads = repo.revs("heads(all())")
+
+    cachepath = repo.join("remotefilelogcache")
+    for head in heads:
+        mf = repo[head].manifest()
+        for filename, filenode in mf.iteritems():
+            filecachepath = os.path.join(cachepath, filename, hex(filenode))
+            neededfiles.add(filecachepath)
+
+    # delete unneeded older files
+    days = repo.ui.configint("remotefilelog", "serverexpiration", 30)
+    expiration = time.time() - (days * 24 * 60 * 60)
+
+    _removing = _("removing old server cache")
+    count = 0
+    ui.progress(_removing, count, unit="files")
+    for root, dirs, files in os.walk(cachepath):
+        for file in files:
+            filepath = os.path.join(root, file)
+            count += 1
+            ui.progress(_removing, count, unit="files")
+            if filepath in neededfiles:
+                continue
+
+            stat = os.stat(filepath)
+            if stat.st_mtime < expiration:
+                os.remove(filepath)
+
+    ui.progress(_removing, None)
 
 def log(orig, ui, repo, *pats, **opts):
     if pats and not opts.get("follow"):
