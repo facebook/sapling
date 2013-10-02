@@ -283,7 +283,8 @@ class propertycache(object):
         return result
 
     def cachevalue(self, obj, value):
-        setattr(obj, self.name, value)
+        # __dict__ assigment required to bypass __setattr__ (eg: repoview)
+        obj.__dict__[self.name] = value
 
 def pipefilter(s, cmd):
     '''filter string S through command CMD, returning its output'''

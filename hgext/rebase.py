@@ -159,8 +159,19 @@ def rebase(ui, repo, **opts):
             if opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
 
-            (originalwd, target, state, skipped, collapsef, keepf,
-                keepbranchesf, external, activebookmark) = restorestatus(repo)
+            try:
+                (originalwd, target, state, skipped, collapsef, keepf,
+                 keepbranchesf, external, activebookmark) = restorestatus(repo)
+            except error.RepoLookupError:
+                if abortf:
+                    clearstatus(repo)
+                    repo.ui.warn(_('rebase aborted (no revision is removed,'
+                                   ' only broken state is cleared)\n'))
+                    return 0
+                else:
+                    msg = _('cannot continue inconsistent rebase')
+                    hint = _('use "hg rebase --abort" to clear borken state')
+                    raise util.Abort(msg, hint=hint)
             if abortf:
                 return abort(repo, originalwd, target, state)
         else:
@@ -801,7 +812,13 @@ def pullrebase(orig, ui, repo, *args, **opts):
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('rebasestate')):
         return
-    state = restorestatus(repo)[2]
+    try:
+        state = restorestatus(repo)[2]
+    except error.RepoLookupError:
+        # i18n: column positioning for "hg summary"
+        msg = _('rebase: (use "hg rebase --abort" to clear broken state)\n')
+        ui.write(msg)
+        return
     numrebased = len([i for i in state.itervalues() if i != -1])
     # i18n: column positioning for "hg summary"
     ui.write(_('rebase: %s, %s (rebase --continue)\n') %

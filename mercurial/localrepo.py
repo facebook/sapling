@@ -39,9 +39,10 @@ class unfilteredpropertycache(propertycache):
     """propertycache that apply to unfiltered repo only"""
 
     def __get__(self, repo, type=None):
-        if hasunfilteredcache(repo, self.name):
-            return getattr(repo.unfiltered(), self.name)
-        return super(unfilteredpropertycache, self).__get__(repo.unfiltered())
+        unfi = repo.unfiltered()
+        if unfi is repo:
+            return super(unfilteredpropertycache, self).__get__(unfi)
+        return getattr(unfi, self.name)
 
 class filteredpropertycache(propertycache):
     """propertycache that must take filtering in account"""

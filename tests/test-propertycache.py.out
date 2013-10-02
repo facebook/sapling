@@ -1,0 +1,84 @@
+
+=== property cache ===
+
+calllog: []
+cached value (unfiltered): NOCACHE
+
+= first access on unfiltered, should do a call
+access: 0
+calllog: [0]
+cached value (unfiltered): 0
+
+= second access on unfiltered, should not do call
+access 0
+calllog: [0]
+cached value (unfiltered): 0
+
+= first access on "visible" view, should do a call
+cached value ("visible" view): NOCACHE
+access: 7
+calllog: [0, 7]
+cached value (unfiltered): 0
+cached value ("visible" view): 7
+
+= second access on "visible view", should not do call
+access: 7
+calllog: [0, 7]
+cached value (unfiltered): 0
+cached value ("visible" view): 7
+
+= no effect on other view
+cached value ("immutable" view): NOCACHE
+access: 9
+calllog: [0, 7, 9]
+cached value (unfiltered): 0
+cached value ("visible" view): 7
+cached value ("immutable" view): 9
+
+
+=== unfiltered property cache ===
+
+unficalllog: []
+cached value (unfiltered):       NOCACHE
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
+
+= first access on unfiltered, should do a call
+access (unfiltered): 100
+unficalllog: [100]
+cached value (unfiltered):       100
+
+= second access on unfiltered, should not do call
+access (unfiltered): 100
+unficalllog: [100]
+cached value (unfiltered):       100
+
+= access on view should use the unfiltered cache
+access (unfiltered):       100
+access ("visible" view):   100
+access ("immutable" view): 100
+unficalllog: [100]
+cached value (unfiltered):       100
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
+
+= even if we clear the unfiltered cache
+cached value (unfiltered):       NOCACHE
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
+unficalllog: [100]
+access ("visible" view):   100
+unficalllog: [100, 100]
+cached value (unfiltered):       100
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
+access ("immutable" view): 100
+unficalllog: [100, 100]
+cached value (unfiltered):       100
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
+access (unfiltered):       100
+unficalllog: [100, 100]
+cached value (unfiltered):       100
+cached value ("visible" view):   NOCACHE
+cached value ("immutable" view): NOCACHE
