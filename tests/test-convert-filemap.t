@@ -410,6 +410,32 @@ exercise incremental conversion at the same time
   o  0 "addb" files: b
   
 
+Test rebuilding of map with unknown revisions in shamap - it used to crash
+
+  $ cd branchpruning
+  $ hg up -r 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge 4
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'merging something'
+  $ cd ..
+  $ echo "53792d18237d2b64971fa571936869156655338d 6d955580116e82c4b029bd30f321323bae71a7f0" >> branchpruning-hg2/.hg/shamap
+  $ hg convert --filemap branchpruning/filemap branchpruning branchpruning-hg2 --debug
+  run hg source pre-conversion action
+  run hg sink pre-conversion action
+  scanning source...
+  scanning: 1 revisions
+  sorting...
+  converting...
+  0 merging something
+  source: 2503605b178fe50e8fbbb0e77b97939540aa8c87
+  converting: 0/1 revisions (0.00%)
+  unknown revmap source: 53792d18237d2b64971fa571936869156655338d
+  run hg sink post-conversion action
+  run hg source post-conversion action
+
+
 filemap rename undoing revision rename
 
   $ hg init renameundo
