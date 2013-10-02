@@ -919,8 +919,7 @@ def revert(orig, ui, repo, ctx, parents, *pats, **opts):
         files = []
         m = scmutil.match(ctx, pats, opts)
         mf = ctx.manifest()
-        for abspath in ctx.walk(m):
-            path = m.rel(abspath)
+        for path in ctx.walk(m):
             files.append((path, hex(mf[path])))
         fileserverclient.client.prefetch(repo, files)
 
