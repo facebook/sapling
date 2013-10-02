@@ -454,7 +454,6 @@ def start(ui, dirstate, root, opts):
     opts.setdefault('pid_file', '')
     if opts['daemon'] and pidfile is not None and not opts['pid_file']:
         opts['pid_file'] = pidfile
-        runargs.append("--pid-file=%s" % pidfile)
 
     service = service()
     logfile = ui.config('inotify', 'log')
