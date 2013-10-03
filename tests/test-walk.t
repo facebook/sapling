@@ -3,11 +3,11 @@
   $ mkdir -p beans
   $ for b in kidney navy turtle borlotti black pinto; do
   >     echo $b > beans/$b
-  $ done
+  > done
   $ mkdir -p mammals/Procyonidae
   $ for m in cacomistle coatimundi raccoon; do
   >     echo $m > mammals/Procyonidae/$m
-  $ done
+  > done
   $ echo skunk > mammals/skunk
   $ echo fennel > fennel
   $ echo fenugreek > fenugreek
