@@ -409,3 +409,6 @@ class filemap_source(converter_source):
 
     def getbookmarks(self):
         return self.base.getbookmarks()
+
+    def converted(self, rev, sinkrev):
+        self.base.converted(rev, sinkrev)
