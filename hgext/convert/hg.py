@@ -260,11 +260,15 @@ class mercurial_source(converter_source):
                                  % startnode)
             startrev = self.repo.changelog.rev(startnode)
             children = {startnode: 1}
-            for rev in self.repo.changelog.descendants([startrev]):
-                children[self.repo.changelog.node(rev)] = 1
+            for r in self.repo.changelog.descendants([startrev]):
+                children[self.repo.changelog.node(r)] = 1
             self.keep = children.__contains__
         else:
             self.keep = util.always
+        if rev:
+            self._heads = [self.repo[rev].node()]
+        else:
+            self._heads = self.repo.heads()
 
     def changectx(self, rev):
         if self.lastrev != rev:
@@ -276,11 +280,7 @@ class mercurial_source(converter_source):
         return [p for p in ctx.parents() if p and self.keep(p.node())]
 
     def getheads(self):
-        if self.rev:
-            heads = [self.repo[self.rev].node()]
-        else:
-            heads = self.repo.heads()
-        return [hex(h) for h in heads if self.keep(h)]
+        return [hex(h) for h in self._heads if self.keep(h)]
 
     def getfile(self, name, rev):
         try:
