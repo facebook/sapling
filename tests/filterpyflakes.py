@@ -46,6 +46,6 @@ for line in sys.stdin:
         continue
     lines.append((msgtype, line))
 
-for msgtype, line in sorted(lines, key = makekey):
+for msgtype, line in sorted(lines, key=makekey):
     sys.stdout.write(line)
 print

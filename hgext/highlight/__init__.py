@@ -50,7 +50,7 @@ def annotate_highlight(orig, web, req, tmpl):
 
 def generate_css(web, req, tmpl):
     pg_style = web.config('web', 'pygments_style', 'colorful')
-    fmter = highlight.HtmlFormatter(style = pg_style)
+    fmter = highlight.HtmlFormatter(style=pg_style)
     req.respond(common.HTTP_OK, 'text/css')
     return ['/* pygments_style = %s */\n\n' % pg_style,
             fmter.get_style_defs('')]

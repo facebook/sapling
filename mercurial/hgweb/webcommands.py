@@ -338,7 +338,7 @@ def changelog(web, req, tmpl, shortlog=False):
                 morevars=morevars, lessvars=lessvars, query=query)
 
 def shortlog(web, req, tmpl):
-    return changelog(web, req, tmpl, shortlog = True)
+    return changelog(web, req, tmpl, shortlog=True)
 
 def changeset(web, req, tmpl):
     ctx = webutil.changectx(web.repo, req)

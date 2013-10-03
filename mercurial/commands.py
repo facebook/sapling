@@ -1808,7 +1808,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
     [('c', 'changelog', False, _('open changelog')),
      ('m', 'manifest', False, _('open manifest'))],
     _('-c|-m|FILE REV'))
-def debugdata(ui, repo, file_, rev = None, **opts):
+def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
     if opts.get('changelog') or opts.get('manifest'):
         file_, rev = None, file_
@@ -1919,7 +1919,7 @@ def debugfileset(ui, repo, expr, **opts):
         ui.write("%s\n" % f)
 
 @command('debugfsinfo', [], _('[PATH]'))
-def debugfsinfo(ui, path = "."):
+def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""
     util.writefile('.debugfsinfo', '')
     ui.write(('exec: %s\n') % (util.checkexec(path) and 'yes' or 'no'))
@@ -1974,7 +1974,7 @@ def debugignore(ui, repo, *values, **opts):
      ('m', 'manifest', False, _('open manifest')),
      ('f', 'format', 0, _('revlog format'), _('FORMAT'))],
     _('[-f FORMAT] -c|-m|FILE'))
-def debugindex(ui, repo, file_ = None, **opts):
+def debugindex(ui, repo, file_=None, **opts):
     """dump the contents of an index file"""
     r = cmdutil.openrevlog(repo, 'debugindex', file_, opts)
     format = opts.get('format', 0)
@@ -2355,7 +2355,7 @@ def debugrename(ui, repo, file1, *pats, **opts):
      ('m', 'manifest', False, _('open manifest')),
      ('d', 'dump', False, _('dump index data'))],
      _('-c|-m|FILE'))
-def debugrevlog(ui, repo, file_ = None, **opts):
+def debugrevlog(ui, repo, file_=None, **opts):
     """show data and statistics about a revlog"""
     r = cmdutil.openrevlog(repo, 'debugrevlog', file_, opts)
 

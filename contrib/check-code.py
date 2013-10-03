@@ -226,6 +226,8 @@ pypats = [
      "missing whitespace around operator"),
     (r'[^^+=*/!<>&| %-](\s=|=\s)[^= ]',
      "wrong whitespace around ="),
+    (r'\([^()]*( =[^=]|[^<>!=]= )',
+     "no whitespace around = for named parameters"),
     (r'raise Exception', "don't raise generic exceptions"),
     (r'raise [^,(]+, (\([^\)]+\)|[^,\(\)]+)$',
      "don't use old-style two-argument raise, use Exception(message)"),

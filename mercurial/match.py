@@ -140,7 +140,7 @@ class match(object):
 
 class exact(match):
     def __init__(self, root, cwd, files):
-        match.__init__(self, root, cwd, files, exact = True)
+        match.__init__(self, root, cwd, files, exact=True)
 
 class always(match):
     def __init__(self, root, cwd):

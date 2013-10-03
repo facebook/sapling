@@ -145,7 +145,7 @@ f = open(filename, 'w')
 f.write('[foobar]\n')
 f.write('baz = quux\n')
 f.close()
-u.readconfig(filename, sections = ['foobar'])
+u.readconfig(filename, sections=['foobar'])
 print u.config('foobar', 'baz')
 
 print

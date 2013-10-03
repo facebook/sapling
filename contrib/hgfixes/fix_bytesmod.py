@@ -58,6 +58,6 @@ class FixBytesmod(fixer_base.BaseFix):
         else:
             args = [formatstr, Comma().clone(), data]
 
-        call = Call(Name('bytesformatter', prefix = ' '), args)
+        call = Call(Name('bytesformatter', prefix=' '), args)
         return call
 

@@ -101,7 +101,7 @@ def escape(text):
 para_re = None
 space_re = None
 
-def fill(text, width, initindent = '', hangindent = ''):
+def fill(text, width, initindent='', hangindent=''):
     '''fill many paragraphs with optional indentation.'''
     global para_re, space_re
     if para_re is None:

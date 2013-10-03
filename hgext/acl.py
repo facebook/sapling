@@ -284,8 +284,8 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
     cfg = ui.config('acl', 'config')
     if cfg:
-        ui.readconfig(cfg, sections = ['acl.groups', 'acl.allow.branches',
-        'acl.deny.branches', 'acl.allow', 'acl.deny'])
+        ui.readconfig(cfg, sections=['acl.groups', 'acl.allow.branches',
+            'acl.deny.branches', 'acl.allow', 'acl.deny'])
 
     allowbranches = buildmatch(ui, None, user, 'acl.allow.branches')
     denybranches = buildmatch(ui, None, user, 'acl.deny.branches')
