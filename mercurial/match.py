@@ -59,7 +59,7 @@ class match(object):
 
         self._root = root
         self._cwd = cwd
-        self._files = []
+        self._files = [] # exact files and roots of patterns
         self._anypats = bool(include or exclude)
         self._ctx = ctx
         self._always = False
@@ -337,6 +337,15 @@ def _normalize(names, default, root, cwd, auditor):
     return pats
 
 def _roots(patterns):
+    '''return roots and exact explicitly listed files from patterns
+
+    >>> _roots([('glob', 'g/*'), ('glob', 'g'), ('glob', 'g*')])
+    ['g', 'g', '.']
+    >>> _roots([('relpath', 'r'), ('path', 'p/p'), ('path', '')])
+    ['r', 'p/p', '.']
+    >>> _roots([('relglob', 'rg*'), ('re', 're/'), ('relre', 'rr')])
+    ['.', '.', '.']
+    '''
     r = []
     for kind, name in patterns:
         if kind == 'glob': # find the non-glob prefix
