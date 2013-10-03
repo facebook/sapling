@@ -762,21 +762,19 @@ def tsttest(test, wd, options, replacements, env):
     addsalt(n + 1, False)
 
     # Write out the script and execute it
-    fd, name = tempfile.mkstemp(suffix='hg-tst')
-    try:
-        for l in script:
-            os.write(fd, l)
-        os.close(fd)
+    name = wd + '.sh'
+    f = open(name, 'w')
+    for l in script:
+        f.write(l)
+    f.close()
 
-        cmd = '%s "%s"' % (options.shell, name)
-        vlog("# Running", cmd)
-        exitcode, output = run(cmd, wd, options, replacements, env)
-        # do not merge output if skipped, return hghave message instead
-        # similarly, with --debug, output is None
-        if exitcode == SKIPPED_STATUS or output is None:
-            return exitcode, output
-    finally:
-        os.remove(name)
+    cmd = '%s "%s"' % (options.shell, name)
+    vlog("# Running", cmd)
+    exitcode, output = run(cmd, wd, options, replacements, env)
+    # do not merge output if skipped, return hghave message instead
+    # similarly, with --debug, output is None
+    if exitcode == SKIPPED_STATUS or output is None:
+        return exitcode, output
 
     # Merge the script output back into a unified test
 
