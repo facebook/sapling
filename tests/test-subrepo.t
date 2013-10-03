@@ -317,7 +317,7 @@ push -f
   pushing subrepo s to $TESTTMP/t/s
   searching for changes
   abort: push creates new remote head 12a213df6fa9! (in subrepo s)
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg push -f
   pushing to $TESTTMP/t (glob)
@@ -716,7 +716,7 @@ Issue1977: multirepo push should fail if subrepo push fails
   $ hg -R repo2 ci -m3
   $ hg -q -R repo2 push
   abort: push creates new remote head cc505f09a8b2! (in subrepo s)
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg -R repo update
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

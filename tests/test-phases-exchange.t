@@ -844,7 +844,7 @@ appear on the remote side.
   pushing to ../mu
   searching for changes
   abort: push creates new remote head 435b5d83910c!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg push -fr 435b5d83910c ../mu # because the push will create new visible head
   pushing to ../mu

@@ -275,7 +275,7 @@ diverging a remote bookmark fails
   pushing to http://localhost:$HGPORT2/
   searching for changes
   abort: push creates new remote head c922c0139ca0!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d
@@ -291,7 +291,7 @@ Unrelated marker does not alter the decision
   pushing to http://localhost:$HGPORT2/
   searching for changes
   abort: push creates new remote head c922c0139ca0!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg -R ../a book
      @                         1:0d2164f0ce0d

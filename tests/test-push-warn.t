@@ -26,7 +26,7 @@
   pushing to ../a
   searching for changes
   abort: push creates new remote head 1e108cc5548c!
-  (you should pull and merge or use push -f to force)
+  (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg push --debug ../a
@@ -41,7 +41,7 @@
   new remote heads on branch 'default'
   new remote head 1e108cc5548c
   abort: push creates new remote head 1e108cc5548c!
-  (you should pull and merge or use push -f to force)
+  (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg pull ../a
@@ -57,7 +57,7 @@
   pushing to ../a
   searching for changes
   abort: push creates new remote head 1e108cc5548c!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg merge
@@ -110,7 +110,7 @@
   pushing to ../c
   searching for changes
   abort: push creates new remote head 6346d66eb9f5!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg push -r 2 ../c
@@ -123,7 +123,7 @@
   pushing to ../c
   searching for changes
   abort: push creates new remote head a5dda829a167!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg push -v -r 3 -r 4 ../c
@@ -133,7 +133,7 @@
   new remote head a5dda829a167
   new remote head ee8fbc7a0295
   abort: push creates new remote head a5dda829a167!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg push -v -f -r 3 -r 4 ../c
@@ -263,7 +263,7 @@ Fail on multiple head push:
   pushing to ../f
   searching for changes
   abort: push creates new remote head 0b715ef6ff8f on branch 'a'!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
 Push replacement head on existing branches:
@@ -409,7 +409,7 @@ multiple new heads:
   pushing to h
   searching for changes
   abort: push creates new remote head 97bd0c84d346!
-  (you should pull and merge or use push -f to force)
+  (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
 
 
@@ -481,7 +481,7 @@ Prepush -r should not allow you to sneak in new heads:
   pushing to ../l
   searching for changes
   abort: push creates new remote head 451211cc22b0 on branch 'a'!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ cd ..
@@ -736,14 +736,14 @@ outgoing:
   pushing to inner
   searching for changes
   abort: push creates new remote head 7d0f4fb6cf04 on branch 'A'!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg push inner -r4 -r5
   pushing to inner
   searching for changes
   abort: push creates new remote head 7d0f4fb6cf04 on branch 'A'!
-  (did you forget to merge? use push -f to force)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
 
   $ hg in inner

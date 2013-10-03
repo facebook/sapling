@@ -330,11 +330,13 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                     error = _("push creates new remote head %s!"
                               ) % short(dhs[0])
                 if heads[2]: # unsynced
-                    hint = _("you should pull and merge or "
-                             "use push -f to force")
+                    hint = _("pull and merge or"
+                             " see \"hg help push\" for details about"
+                             " pushing new heads")
                 else:
-                    hint = _("did you forget to merge? "
-                             "use push -f to force")
+                    hint = _("merge or"
+                             " see \"hg help push\" for details about"
+                             " pushing new heads")
             if branch is not None:
                 repo.ui.note(_("new remote heads on branch '%s'\n") % branch)
             for h in dhs:
