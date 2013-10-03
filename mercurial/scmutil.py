@@ -564,23 +564,27 @@ def revrange(repo, revs):
     return l
 
 def expandpats(pats):
+    '''Expand bare globs when running on windows.
+    On posix we assume it already has already been done by sh.'''
     if not util.expandglobs:
         return list(pats)
     ret = []
-    for p in pats:
-        kind, name = matchmod._patsplit(p, None)
+    for kindpat in pats:
+        kind, pat = matchmod._patsplit(kindpat, None)
         if kind is None:
             try:
-                globbed = glob.glob(name)
+                globbed = glob.glob(pat)
             except re.error:
-                globbed = [name]
+                globbed = [pat]
             if globbed:
                 ret.extend(globbed)
                 continue
-        ret.append(p)
+        ret.append(kindpat)
     return ret
 
 def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+    '''Return a matcher and the patterns that were used.
+    The matcher will warn about bad matches.'''
     if pats == ("",):
         pats = []
     if not globbed and default == 'relpath':
@@ -594,12 +598,15 @@ def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath'):
     return m, pats
 
 def match(ctx, pats=[], opts={}, globbed=False, default='relpath'):
+    '''Return a matcher that will warn about bad matches.'''
     return matchandpats(ctx, pats, opts, globbed, default)[0]
 
 def matchall(repo):
+    '''Return a matcher that will efficiently match everything.'''
     return matchmod.always(repo.root, repo.getcwd())
 
 def matchfiles(repo, files):
+    '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files)
 
 def addremove(repo, pats=[], opts={}, dry_run=None, similarity=None):
