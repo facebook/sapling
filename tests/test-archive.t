@@ -209,8 +209,7 @@ rename them afterwards.
   test-2c0277f05ed4/foo
 
   $ hg archive -r 0 -t tar rev-%r.tar
-  $ if [ -f rev-0.tar ]; then
-  $ fi
+  $ [ -f rev-0.tar ]
 
 test .hg_archival.txt
 
