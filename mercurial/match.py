@@ -132,9 +132,6 @@ class match(object):
     # by recursive traversal is visited.
     traversedir = None
 
-    def missing(self, f):
-        pass
-
     def rel(self, f):
         '''Convert repo path back to path that is relative to cwd of matcher.'''
         return util.pathto(self._root, self._cwd, f)
