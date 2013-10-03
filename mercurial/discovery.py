@@ -316,7 +316,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                     error = (_("push creates multiple headed new branch '%s'")
                              % (branch))
                     hint = _("merge or"
-                             " see \"hg help push\" for detail about"
+                             " see \"hg help push\" for details about"
                              " pushing new heads")
         elif len(newhs) > len(oldhs):
             # strip updates to existing remote heads from the new heads list

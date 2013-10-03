@@ -368,7 +368,7 @@ Pushing muliple headed new branch:
   pushing to ../f
   searching for changes
   abort: push creates multiple headed new branch 'f'
-  (merge or see "hg help push" for detail about pushing new heads)
+  (merge or see "hg help push" for details about pushing new heads)
   [255]
   $ hg push --branch f --new-branch --force ../f
   pushing to ../f
