@@ -117,7 +117,7 @@ Graft out of order, skipping a merge and a duplicate
 
   $ hg graft 1 5 4 3 'merge()' 2 -n
   skipping ungraftable merge revision 6
-  skipping already grafted revision 2
+  skipping revision 2 (already grafted to 7)
   grafting revision 1
   grafting revision 5
   grafting revision 4
@@ -126,7 +126,7 @@ Graft out of order, skipping a merge and a duplicate
   $ hg graft 1 5 4 3 'merge()' 2 --debug
   skipping ungraftable merge revision 6
   scanning for duplicate grafts
-  skipping already grafted revision 2
+  skipping revision 2 (already grafted to 7)
   grafting revision 1
     searching for copies back to rev 1
     unmatched files in local:
@@ -196,9 +196,9 @@ Graft again:
 
   $ hg graft 1 5 4 3 'merge()' 2
   skipping ungraftable merge revision 6
-  skipping already grafted revision 2
-  skipping already grafted revision 1
-  skipping already grafted revision 5
+  skipping revision 2 (already grafted to 7)
+  skipping revision 1 (already grafted to 8)
+  skipping revision 5 (already grafted to 9)
   grafting revision 4
   merging e
   warning: conflicts during merge.
@@ -314,18 +314,18 @@ Disallow grafting an already grafted cset onto its original branch
 Disallow grafting already grafted csets with the same origin onto each other
   $ hg up -q 13
   $ hg graft 2
-  skipping already grafted revision 2
+  skipping revision 2 (already grafted to 13)
   [255]
   $ hg graft 7
-  skipping already grafted revision 7 (same origin 2)
+  skipping already grafted revision 7 (13 also has origin 2)
   [255]
 
   $ hg up -q 7
   $ hg graft 2
-  skipping already grafted revision 2
+  skipping revision 2 (already grafted to 7)
   [255]
   $ hg graft tip
-  skipping already grafted revision 13 (same origin 2)
+  skipping already grafted revision 13 (7 also has origin 2)
   [255]
 
 Graft with --log

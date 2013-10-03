@@ -3021,11 +3021,12 @@ def graft(ui, repo, *revs, **opts):
         if n in ids:
             r = repo[n].rev()
             if r in revs:
-                ui.warn(_('skipping already grafted revision %s\n') % r)
+                ui.warn(_('skipping revision %s (already grafted to %s)\n')
+                        % (r, rev))
                 revs.remove(r)
             elif ids[n] in revs:
                 ui.warn(_('skipping already grafted revision %s '
-                            '(same origin %d)\n') % (ids[n], r))
+                            '(%s also has origin %d)\n') % (ids[n], rev, r))
                 revs.remove(ids[n])
         elif ctx.hex() in ids:
             r = ids[ctx.hex()]
