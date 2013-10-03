@@ -433,8 +433,7 @@ class changectx(basectx):
             if fn in self._dirs:
                 # specified pattern is a directory
                 continue
-            if match.bad(fn, _('no such file in rev %s') % self) and match(fn):
-                yield fn
+            match.bad(fn, _('no such file in rev %s') % self)
 
 class basefilectx(object):
     """A filecontext object represents the common logic for its children:
