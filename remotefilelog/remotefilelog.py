@@ -278,7 +278,18 @@ class remotefilelog(object):
         raise error.LookupError(id, self.filename, _('no node'))
 
     def ancestormap(self, node):
-        files = None
+        # This whole function is a bit complex, and here's why:
+        #
+        # The key for filelog blobs contains the hash for the file path and for
+        # the file version.  But these hashes do not include information about
+        # the linknodes included in the blob. So it's possible to have multiple
+        # blobs with the same key but different linknodes (for example, if you
+        # rebase you will have the exact same file version, but with a different
+        # linknode). So when reading the ancestormap (which contains linknodes)
+        # we need to make sure all the linknodes are valid in this repo, so we
+        # read through all versions that have ever existed, and pick one that
+        # contains valid linknodes. If we can't find one locally, we then try
+        # the server.
 
         # check that all linknodes are valid
         def validmap(mapping, node):
@@ -295,24 +306,24 @@ class remotefilelog(object):
 
             return True
 
-        while True:
-            mapping = self._ancestormap(node)
-            if validmap(mapping, node):
-                break
-            else:
-                if files == None:
-                    # find a valid linknode by looking through the past versions
-                    localkey = fileserverclient.getlocalkey(self.filename, hex(node))
-                    file = os.path.join(self.localpath, localkey)
-                    filename = os.path.basename(file)
-                    directory = os.path.dirname(file)
-                    files = [f for f in os.listdir(directory) if f.startswith(filename)]
-                    files = sorted(files, key=lambda x: int(x[40:] or '0'))
+        # Switch to the next version of this blob.
+        # This function is a generator to store state across calls
+        def fileiterator():
+            files = []
 
-                    # store the current version in history, since we'll be
-                    # replacing it
-                    shutil.copyfile(file, file + str(len(files)))
+            # find a valid linknode by looking through the past versions
+            localkey = fileserverclient.getlocalkey(self.filename, hex(node))
+            file = os.path.join(self.localpath, localkey)
+            filename = os.path.basename(file)
+            directory = os.path.dirname(file)
+            tmpfiles = [f for f in os.listdir(directory) if f.startswith(filename)]
+            files.extend(sorted(tmpfiles, key=lambda x: int(x[40:] or '0')))
 
+            # store the current version in history, since we'll be
+            # replacing it
+            shutil.copyfile(file, file + str(len(files)))
+
+            while files:
                 if len(files) == 1:
                     # Nothing to fallback to, just delete the local commit.
                     # The next loop will try the server, and throw an exception
@@ -322,6 +333,33 @@ class remotefilelog(object):
                     # Try the next version in the history
                     latest = files.pop()
                     shutil.copyfile(os.path.join(directory, latest), file)
+                    yield True
+
+        iterator = None
+        while True:
+            try:
+                mapping = self._ancestormap(node)
+                if validmap(mapping, node):
+                    break
+                else:
+                    if not iterator:
+                        iterator = fileiterator()
+                    iterator.next()
+            except error.ResponseError:
+                # If we try a server fetch first and fail, check if an old local
+                # version exists and try those. I've seen a bug where the local
+                # file version doesn't exist but an older version exists and
+                # works. Not sure what the cause is, but this should work around
+                # it.
+                if not iterator:
+                    iterator = fileiterator()
+                    localkey = fileserverclient.getlocalkey(self.filename, hex(node))
+                    file = os.path.join(self.localpath, localkey)
+                    if os.path.exists(file + "1"):
+                        shutil.copyfile(file + "1", file)
+                        continue
+
+                raise
 
         return mapping
 

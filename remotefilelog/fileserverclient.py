@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer, hg
+from mercurial import util, sshpeer, hg, error
 import os, socket, lz4, time, grp
 
 # Statistics for debugging
@@ -95,8 +95,8 @@ class fileserverclient(object):
         while True:
             missingid = self.pipeo.readline()[:-1]
             if not missingid:
-                raise util.Abort(_("error downloading file contents: " +
-                                   "connection closed early"))
+                raise error.ResponseError(_("error downloading cached file:" +
+                    " connection closed early\n"))
             if missingid == "0":
                 break
             if missingid.startswith("_hits_"):
@@ -142,7 +142,11 @@ class fileserverclient(object):
                 # process remote
                 pipei = remote.pipei
                 for id in missed:
-                    size = int(pipei.readline()[:-1])
+                    line = pipei.readline()[:-1]
+                    if not line:
+                        raise error.ResponseError(_("error downloading file " +
+                            "contents: connection closed early\n"))
+                    size = int(line)
                     data = pipei.read(size)
 
                     count += 1
