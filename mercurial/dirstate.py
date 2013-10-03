@@ -595,7 +595,7 @@ class dirstate(object):
                 kind = getkind(st.st_mode)
                 if kind == dirkind:
                     if nf in dmap:
-                        #file deleted on disk but still in dirstate
+                        # file replaced by dir on disk but still in dirstate
                         results[nf] = None
                     if matchedir:
                         matchedir(nf)
@@ -606,10 +606,10 @@ class dirstate(object):
                     badfn(ff, badtype(kind))
                     if nf in dmap:
                         results[nf] = None
-            except OSError, inst:
-                if nf in dmap: # does it exactly match a file?
+            except OSError, inst: # nf not found on disk - it is dirstate only
+                if nf in dmap: # does it exactly match a missing file?
                     results[nf] = None
-                else: # does it match a directory?
+                else: # does it match a missing directory?
                     prefix = nf + "/"
                     for fn in dmap:
                         if fn.startswith(prefix):
@@ -641,13 +641,14 @@ class dirstate(object):
             self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
             return False
 
-        ignore = self._ignore
-        dirignore = self._dirignore
         if ignored:
             ignore = util.never
             dirignore = util.never
-        elif not unknown:
-            # if unknown and ignored are False, skip step 2
+        elif unknown:
+            ignore = self._ignore
+            dirignore = self._dirignore
+        else:
+            # if not unknown and not ignored, drop dir recursion and step 2
             ignore = util.always
             dirignore = util.always
 
@@ -723,8 +724,11 @@ class dirstate(object):
             del results[s]
         del results['.hg']
 
-        # step 3: report unseen items in the dmap hash
+        # step 3: visit remaining files from dmap
         if not skipstep3 and not exact:
+            # If a dmap file is not in results yet, it was either
+            # a) not matching matchfn b) ignored, c) missing, or d) under a
+            # symlink directory.
             if not results and matchalways:
                 visit = dmap.keys()
             else:
@@ -732,9 +736,10 @@ class dirstate(object):
             visit.sort()
 
             if unknown:
-                # unknown == True means we walked the full directory tree above.
-                # So if a file is not seen it was either a) not matching matchfn
-                # b) ignored, c) missing, or d) under a symlink directory.
+                # unknown == True means we walked all dirs under the roots
+                # that wasn't ignored, and everything that matched was stat'ed
+                # and is already in results.
+                # The rest must thus be ignored or under a symlink.
                 audit_path = pathutil.pathauditor(self._root)
 
                 for nf in iter(visit):
@@ -743,15 +748,17 @@ class dirstate(object):
                     if audit_path.check(nf):
                         try:
                             results[nf] = lstat(join(nf))
+                            # file was just ignored, no links, and exists
                         except OSError:
                             # file doesn't exist
                             results[nf] = None
                     else:
                         # It's either missing or under a symlink directory
+                        # which we in this case report as missing
                         results[nf] = None
             else:
                 # We may not have walked the full directory tree above,
-                # so stat everything we missed.
+                # so stat and check everything we missed.
                 nf = iter(visit).next
                 for st in util.statfiles([join(i) for i in visit]):
                     results[nf()] = st
