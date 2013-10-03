@@ -4651,8 +4651,10 @@ def push(ui, repo, dest=None, **opts):
     branch that is not present at the destination. This allows you to
     only create a new branch without forcing other changes.
 
-    Use -f/--force to override the default behavior and push all
-    changesets on all branches.
+    .. note::
+      Extra care should be used with the -f/--force option,
+      which will push all new heads on all branches, an action which will
+      almost always cause confusion for collaborators.
 
     If -r/--rev is used, the specified revision and all its ancestors
     will be pushed to the remote repository.
