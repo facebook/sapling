@@ -637,10 +637,6 @@ class dirstate(object):
         # implementation doesn't use it at all. This satisfies the contract
         # because we only guarantee a "maybe".
 
-        def fwarn(f, msg):
-            self._ui.warn('%s: %s\n' % (self.pathto(f), msg))
-            return False
-
         if ignored:
             ignore = util.never
             dirignore = util.never
@@ -695,7 +691,7 @@ class dirstate(object):
                 entries = listdir(join(nd), stat=True, skip=skip)
             except OSError, inst:
                 if inst.errno in (errno.EACCES, errno.ENOENT):
-                    fwarn(nd, inst.strerror)
+                    match.bad(self.pathto(nd), inst.strerror)
                     continue
                 raise
             for f, kind, st in entries:
