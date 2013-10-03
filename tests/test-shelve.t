@@ -418,3 +418,23 @@ test keep and cleanup
   default         (*)    create conflict (glob)
   $ hg shelve --cleanup
   $ hg shelve --list
+
+test bookmarks
+
+  $ hg bookmark test
+  $ hg bookmark
+   * test                      5:01ba9745dc5a
+  $ hg shelve
+  shelved as test
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg bookmark
+   * test                      5:01ba9745dc5a
+  $ hg unshelve
+  unshelving change 'test'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 7 files
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bookmark
+   * test                      5:01ba9745dc5a

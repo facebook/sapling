@@ -172,11 +172,12 @@ def createcmd(ui, repo, pats, opts):
 
     name = opts['name']
 
-    wlock = lock = tr = None
+    wlock = lock = tr = bms = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
 
+        bms = repo._bookmarks.copy()
         # use an uncommited transaction to generate the bundle to avoid
         # pull races. ensure we don't print the abort message to stderr.
         tr = repo.transaction('commit', report=lambda x: None)
@@ -224,11 +225,16 @@ def createcmd(ui, repo, pats, opts):
                        fp=shelvedfile(repo, name, 'patch').opener('wb'),
                        opts=mdiff.diffopts(git=True))
 
+
         if ui.formatted():
             desc = util.ellipsis(desc, ui.termwidth())
         ui.status(_('shelved as %s\n') % name)
         hg.update(repo, parent.node())
     finally:
+        if bms:
+            # restore old bookmarks
+            repo._bookmarks.update(bms)
+            repo._bookmarks.write()
         if tr:
             tr.abort()
         lockmod.release(lock, wlock)
