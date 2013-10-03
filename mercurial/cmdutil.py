@@ -933,7 +933,7 @@ def show_changeset(ui, repo, opts, buffered=False):
     regular display via changeset_printer() is done.
     """
     # options
-    patch = False
+    patch = None
     if opts.get('patch') or opts.get('stat'):
         patch = scmutil.matchall(repo)
 
