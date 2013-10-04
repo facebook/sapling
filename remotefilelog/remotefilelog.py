@@ -106,10 +106,10 @@ class remotefilelog(object):
                 if copyfrom:
                     p1flog = remotefilelog(self.opener, copyfrom, self.repo)
 
-                pancestors.update(p1flog.ancestormap(realp1))
+                pancestors.update(p1flog.ancestormap(realp1, relativeto=linknode))
                 queue.append(realp1)
             if p2 != nullid:
-                pancestors.update(self.ancestormap(p2))
+                pancestors.update(self.ancestormap(p2, relativeto=linknode))
                 queue.append(p2)
 
             visited = set()
@@ -277,7 +277,7 @@ class remotefilelog(object):
 
         raise error.LookupError(id, self.filename, _('no node'))
 
-    def ancestormap(self, node):
+    def ancestormap(self, node, relativeto=None):
         # This whole function is a bit complex, and here's why:
         #
         # The key for filelog blobs contains the hash for the file path and for
@@ -294,6 +294,22 @@ class remotefilelog(object):
         # check that all linknodes are valid
         def validmap(mapping, node):
             queue = [node]
+
+            # When writing new file revisions, we need a ancestormap
+            # that contains only linknodes that are ancestors of the new commit.
+            # Otherwise it's possible that a linknode in the ancestormap might
+            # be stripped, resulting in a permanently broken map.
+            if relativeto:
+                p1, p2, linknode, copyfrom = mapping[node]
+                cl = self.repo.changelog
+                common = cl.ancestor(linknode, relativeto)
+                if common != linknode:
+                    # Invalid key, unless it's from the server
+                    localkey = fileserverclient.getlocalkey(self.filename, hex(node))
+                    file = os.path.join(self.localpath, localkey)
+                    return not os.path.exists(file)
+
+            # Also check that the linknodes actually exist.
             while queue:
                 node = queue.pop(0)
                 p1, p2, linknode, copyfrom = mapping[node]
@@ -328,38 +344,22 @@ class remotefilelog(object):
                     # Nothing to fallback to, just delete the local commit.
                     # The next loop will try the server, and throw an exception
                     # if the node still can't be found.
+                    files.pop()
                     os.remove(file)
+                    yield True
                 else:
                     # Try the next version in the history
                     latest = files.pop()
                     shutil.copyfile(os.path.join(directory, latest), file)
                     yield True
 
-        iterator = None
+        iterator = fileiterator()
         while True:
-            try:
-                mapping = self._ancestormap(node)
-                if validmap(mapping, node):
-                    break
-                else:
-                    if not iterator:
-                        iterator = fileiterator()
-                    iterator.next()
-            except error.ResponseError:
-                # If we try a server fetch first and fail, check if an old local
-                # version exists and try those. I've seen a bug where the local
-                # file version doesn't exist but an older version exists and
-                # works. Not sure what the cause is, but this should work around
-                # it.
-                if not iterator:
-                    iterator = fileiterator()
-                    localkey = fileserverclient.getlocalkey(self.filename, hex(node))
-                    file = os.path.join(self.localpath, localkey)
-                    if os.path.exists(file + "1"):
-                        shutil.copyfile(file + "1", file)
-                        continue
-
-                raise
+            mapping = self._ancestormap(node)
+            if validmap(mapping, node):
+                break
+            else:
+                iterator.next()
 
         return mapping
 
