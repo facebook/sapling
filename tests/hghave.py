@@ -282,6 +282,9 @@ def has_absimport():
     from mercurial import util
     return util.safehasattr(__future__, "absolute_import")
 
+def has_py3k():
+    return 3 == sys.version_info[0]
+
 checks = {
     "true": (lambda: True, "yak shaving"),
     "false": (lambda: False, "nail clipper"),
@@ -324,4 +327,5 @@ checks = {
     "msys": (has_msys, "Windows with MSYS"),
     "aix": (has_aix, "AIX"),
     "absimport": (has_absimport, "absolute_import in __future__"),
+    "py3k": (has_py3k, "running with Python 3.x"),
 }
