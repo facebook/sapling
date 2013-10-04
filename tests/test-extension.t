@@ -129,6 +129,45 @@ Check hgweb's load order:
   $ echo 'foo = !' >> $HGRCPATH
   $ echo 'bar = !' >> $HGRCPATH
 
+Check "from __future__ import absolute_import" support for external libraries
+
+  $ mkdir $TESTTMP/libroot
+  $ echo "s = 'libroot/ambig.py'" > $TESTTMP/libroot/ambig.py
+  $ mkdir $TESTTMP/libroot/mod
+  $ touch $TESTTMP/libroot/mod/__init__.py
+  $ echo "s = 'libroot/mod/ambig.py'" > $TESTTMP/libroot/mod/ambig.py
+
+#if absimport
+  $ cat > $TESTTMP/libroot/mod/ambigabs.py <<EOF
+  > from __future__ import absolute_import
+  > import ambig # should load "libroot/ambig.py"
+  > s = ambig.s
+  > EOF
+  $ cat > loadabs.py <<EOF
+  > import mod.ambigabs as ambigabs
+  > def extsetup():
+  >     print 'ambigabs.s=%s' % ambigabs.s
+  > EOF
+  $ (PYTHONPATH=$PYTHONPATH:$TESTTMP/libroot; hg --config extensions.loadabs=loadabs.py root)
+  ambigabs.s=libroot/ambig.py
+  $TESTTMP/a
+#endif
+
+#if no-py3k
+  $ cat > $TESTTMP/libroot/mod/ambigrel.py <<EOF
+  > import ambig # should load "libroot/mod/ambig.py"
+  > s = ambig.s
+  > EOF
+  $ cat > loadrel.py <<EOF
+  > import mod.ambigrel as ambigrel
+  > def extsetup():
+  >     print 'ambigrel.s=%s' % ambigrel.s
+  > EOF
+  $ (PYTHONPATH=$PYTHONPATH:$TESTTMP/libroot; hg --config extensions.loadrel=loadrel.py root)
+  ambigrel.s=libroot/mod/ambig.py
+  $TESTTMP/a
+#endif
+
   $ cd ..
 
 hide outer repo

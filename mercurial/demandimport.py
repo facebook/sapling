@@ -40,22 +40,23 @@ else:
 
 class _demandmod(object):
     """module demand-loader and proxy"""
-    def __init__(self, name, globals, locals):
+    def __init__(self, name, globals, locals, level=-1):
         if '.' in name:
             head, rest = name.split('.', 1)
             after = [rest]
         else:
             head = name
             after = []
-        object.__setattr__(self, "_data", (head, globals, locals, after))
+        object.__setattr__(self, "_data",
+                           (head, globals, locals, after, level))
         object.__setattr__(self, "_module", None)
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
     def _load(self):
         if not self._module:
-            head, globals, locals, after = self._data
-            mod = _origimport(head, globals, locals)
+            head, globals, locals, after, level = self._data
+            mod = _import(head, globals, locals, None, level)
             # load submodules
             def subload(mod, p):
                 h, t = p, None
@@ -105,7 +106,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=-1):
                 if isinstance(locals[base], _demandmod):
                     locals[base]._extend(rest)
                 return locals[base]
-        return _demandmod(name, globals, locals)
+        return _demandmod(name, globals, locals, level)
     else:
         if level != -1:
             # from . import b,c,d or from .a import b,c,d
