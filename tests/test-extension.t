@@ -168,6 +168,97 @@ Check "from __future__ import absolute_import" support for external libraries
   $TESTTMP/a
 #endif
 
+Check absolute/relative import of extension specific modules
+
+  $ mkdir $TESTTMP/extroot
+  $ cat > $TESTTMP/extroot/bar.py <<EOF
+  > s = 'this is extroot.bar'
+  > EOF
+  $ mkdir $TESTTMP/extroot/sub1
+  $ cat > $TESTTMP/extroot/sub1/__init__.py <<EOF
+  > s = 'this is extroot.sub1.__init__'
+  > EOF
+  $ cat > $TESTTMP/extroot/sub1/baz.py <<EOF
+  > s = 'this is extroot.sub1.baz'
+  > EOF
+  $ cat > $TESTTMP/extroot/__init__.py <<EOF
+  > s = 'this is extroot.__init__'
+  > import foo
+  > def extsetup(ui):
+  >     ui.write('(extroot) ', foo.func(), '\n')
+  > EOF
+
+  $ cat > $TESTTMP/extroot/foo.py <<EOF
+  > # test absolute import
+  > buf = []
+  > def func():
+  >     # "not locals" case
+  >     import extroot.bar
+  >     buf.append('import extroot.bar in func(): %s' % extroot.bar.s)
+  > 
+  >     return '\n(extroot) '.join(buf)
+  > 
+  > # "fromlist == ('*',)" case
+  > from extroot.bar import *
+  > buf.append('from extroot.bar import *: %s' % s)
+  > 
+  > # "not fromlist" and "if '.' in name" case
+  > import extroot.sub1.baz
+  > buf.append('import extroot.sub1.baz: %s' % extroot.sub1.baz.s)
+  > 
+  > # "not fromlist" and NOT "if '.' in name" case
+  > import extroot
+  > buf.append('import extroot: %s' % extroot.s)
+  > 
+  > # NOT "not fromlist" and NOT "level != -1" case
+  > from extroot.bar import s
+  > buf.append('from extroot.bar import s: %s' % s)
+  > EOF
+  $ hg --config extensions.extroot=$TESTTMP/extroot root
+  (extroot) from extroot.bar import *: this is extroot.bar
+  (extroot) import extroot.sub1.baz: this is extroot.sub1.baz
+  (extroot) import extroot: this is extroot.__init__
+  (extroot) from extroot.bar import s: this is extroot.bar
+  (extroot) import extroot.bar in func(): this is extroot.bar
+  $TESTTMP/a
+
+#if no-py3k
+  $ rm -f $TESTTMP/extroot/foo.*
+  $ cat > $TESTTMP/extroot/foo.py <<EOF
+  > # test relative import
+  > buf = []
+  > def func():
+  >     # "not locals" case
+  >     import bar
+  >     buf.append('import bar in func(): %s' % bar.s)
+  > 
+  >     return '\n(extroot) '.join(buf)
+  > 
+  > # "fromlist == ('*',)" case
+  > from bar import *
+  > buf.append('from bar import *: %s' % s)
+  > 
+  > # "not fromlist" and "if '.' in name" case
+  > import sub1.baz
+  > buf.append('import sub1.baz: %s' % sub1.baz.s)
+  > 
+  > # "not fromlist" and NOT "if '.' in name" case
+  > import sub1
+  > buf.append('import sub1: %s' % sub1.s)
+  > 
+  > # NOT "not fromlist" and NOT "level != -1" case
+  > from bar import s
+  > buf.append('from bar import s: %s' % s)
+  > EOF
+  $ hg --config extensions.extroot=$TESTTMP/extroot root
+  (extroot) from bar import *: this is extroot.bar
+  (extroot) import sub1.baz: this is extroot.sub1.baz
+  (extroot) import sub1: this is extroot.sub1.__init__
+  (extroot) from bar import s: this is extroot.bar
+  (extroot) import bar in func(): this is extroot.bar
+  $TESTTMP/a
+#endif
+
   $ cd ..
 
 hide outer repo
