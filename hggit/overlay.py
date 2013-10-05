@@ -4,8 +4,11 @@
 #
 # incomplete, implemented on demand
 
+from mercurial import ancestor
+from mercurial import manifest
 from mercurial import context
 from mercurial.node import bin, hex, nullid
+from mercurial import localrepo
 
 class overlaymanifest(object):
     def __init__(self, repo, sha):
@@ -25,6 +28,9 @@ class overlaymanifest(object):
     def keys(self):
         self.load()
         return self._map.keys()
+
+    def iterkeys(self):
+        return iter(self.keys())
 
     def flags(self, path):
         self.load()
@@ -84,6 +90,9 @@ class overlayfilectx(object):
     def ancestors(self):
         return [self, self]
 
+    def filenode(self):
+        return nullid
+
     def rev(self):
         return -1
 
@@ -100,13 +109,17 @@ class overlayfilectx(object):
 class overlaychangectx(context.changectx):
     def __init__(self, repo, sha):
         self.repo = repo
+        if not isinstance(sha, basestring):
+          sha = sha.hex()
         self.commit = repo.handler.git.get_object(sha)
+        self._overlay = getattr(repo, 'gitoverlay', repo)
+        self._rev = self._overlay.rev(bin(self.commit.id))
 
     def node(self):
         return bin(self.commit.id)
 
     def rev(self):
-        return self.repo.rev(bin(self.commit.id))
+        return self._rev
 
     def date(self):
         return self.commit.author_time, self.commit.author_timezone
@@ -142,11 +155,11 @@ class overlaychangectx(context.changectx):
         return []
 
     def manifest(self):
-        return overlaymanifest(self.repo, self.commit.tree)
+        return overlaymanifest(self._overlay, self.commit.tree)
 
     def filectx(self, path, filelog=None):
         mf = self.manifest()
-        return overlayfilectx(self.repo, path, mf[path])
+        return overlayfilectx(self._overlay, path, mf[path])
 
     def flags(self, path):
         mf = self.manifest()
@@ -189,6 +202,16 @@ class overlayrevlog(object):
 
         return [p1, p2]
 
+    def ancestor(self, a, b):
+        anode = self.repo.nodemap.get(a)
+        bnode = self.repo.nodemap.get(b)
+        if anode is None and bnode is None:
+          return self.base.ancestor(a, b)
+        ancs = ancestor.ancestors(self.parentrevs, a, b)
+        if ancs:
+          return min(map(self.node, ancs))
+        return nullid
+
     def parentrevs(self, rev):
         return [self.rev(p) for p in self.parents(self.node(rev))]
 
@@ -212,18 +235,32 @@ class overlayrevlog(object):
     def __len__(self):
         return len(self.repo.handler.repo) + len(self.repo.revmap)
 
+class overlaymanifestlog(overlayrevlog):
+    def read(self, sha):
+        if sha == nullid:
+            return manifest.manifestdict()
+        return overlaymanifest(self.repo, sha)
+
+class overlaychangelog(overlayrevlog):
+    def read(self, sha):
+        if isinstance(sha, int):
+            sha = self.node(sha)
+        if sha == nullid:
+            return (nullid, "", (0, 0), [], "", {})
+        return overlaychangectx(self.repo, sha)
+
 
 class overlayrepo(object):
     def __init__(self, handler, commits, refs):
         self.handler = handler
 
-        self.changelog = overlayrevlog(self, handler.repo.changelog)
-        self.manifest = overlayrevlog(self, handler.repo.manifest)
+        self.changelog = overlaychangelog(self, handler.repo.changelog)
+        self.manifest = overlaymanifestlog(self, handler.repo.manifest)
 
         # for incoming -p
         self.root = handler.repo.root
         self.getcwd = handler.repo.getcwd
-        self.status = handler.repo.status
+        # self.status = handler.repo.status
         self.ui = handler.repo.ui
 
         self.revmap = None
@@ -237,6 +274,28 @@ class overlayrepo(object):
         if n not in self.revmap:
             return self.handler.repo[n]
         return overlaychangectx(self, n)
+
+    def _handlerhack(self, method, *args, **kwargs):
+        nothing = object()
+        r = self.handler.repo
+        oldhandler = getattr(r, 'handler', nothing)
+        oldoverlay = getattr(r, 'gitoverlay', nothing)
+        r.handler = self.handler
+        r.gitoverlay = self
+        try:
+          return getattr(r, method)(*args, **kwargs)
+        finally:
+          if oldhandler is nothing:
+            del r.handler
+          else:
+            r.handler = oldhandler
+          if oldoverlay is nothing:
+            del r.gitoverlay
+          else:
+            r.gitoverlay = oldoverlay
+
+    def status(self, *args, **kwargs):
+      return self._handlerhack('status', *args, **kwargs)
 
     def node(self, n):
         """Returns an Hg or Git hash for the specified Git hash"""
