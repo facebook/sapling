@@ -2229,6 +2229,12 @@ class localrepository(object):
                     # In other case we can safely update cache on disk.
                     branchmap.updatecache(self.filtered('served'))
                 def runhooks():
+                    # These hooks run when the lock releases, not when the
+                    # transaction closes. So it's possible for the changelog
+                    # to have changed since we last saw it.
+                    if clstart >= len(self):
+                        return
+
                     # forcefully update the on-disk branch cache
                     self.ui.debug("updating the branch cache\n")
                     self.hook("changegroup", node=hex(cl.node(clstart)),
