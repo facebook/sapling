@@ -913,7 +913,7 @@ def graph(web, req, tmpl):
             desc = templatefilters.firstline(ctx.description())
             desc = cgi.escape(templatefilters.nonempty(desc))
             user = cgi.escape(templatefilters.person(ctx.user()))
-            branch = ctx.branch()
+            branch = cgi.escape(ctx.branch())
             try:
                 branchnode = web.repo.branchtip(branch)
             except error.RepoLookupError:
