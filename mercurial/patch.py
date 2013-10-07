@@ -14,7 +14,7 @@ import email.Generator
 import email.Parser
 
 from i18n import _
-from node import hex, nullid, short
+from node import hex, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
 import context
 
@@ -1662,7 +1662,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
 
     def gitindex(text):
         if not text:
-            return hex(nullid)
+            text = ""
         l = len(text)
         s = util.sha1('blob %d\0' % l)
         s.update(text)
