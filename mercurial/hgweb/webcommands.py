@@ -994,7 +994,7 @@ def graph(web, req, tmpl):
             desc = templatefilters.firstline(ctx.description())
             desc = cgi.escape(templatefilters.nonempty(desc))
             user = cgi.escape(templatefilters.person(ctx.user()))
-            branch = ctx.branch()
+            branch = cgi.escape(ctx.branch())
             try:
                 branchnode = web.repo.branchtip(branch)
             except error.RepoLookupError:
@@ -1003,7 +1003,8 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 data.append((node, vtx, edges, desc, user, age, branch,
-                             ctx.tags(), ctx.bookmarks()))
+                             [cgi.escape(x) for x in ctx.tags()],
+                             [cgi.escape(x) for x in ctx.bookmarks()]))
             else:
                 edgedata = [dict(col=edge[0], nextcol=edge[1],
                                  color=(edge[2] - 1) % 6 + 1,

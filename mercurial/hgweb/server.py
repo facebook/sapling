@@ -60,7 +60,10 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self._log_any(self.server.accesslog, format, *args)
 
     def log_request(self, code='-', size='-'):
-        xheaders = [h for h in self.headers.items() if h[0].startswith('x-')]
+        xheaders = []
+        if util.safehasattr(self, 'headers'):
+            xheaders = [h for h in self.headers.items()
+                        if h[0].startswith('x-')]
         self.log_message('"%s" %s %s%s',
                          self.requestline, str(code), str(size),
                          ''.join([' %s:%s' % h for h in sorted(xheaders)]))
