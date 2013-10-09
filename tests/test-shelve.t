@@ -438,3 +438,18 @@ test bookmarks
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark
    * test                      5:01ba9745dc5a
+
+shelve should still work even if mq is disabled
+
+  $ hg --config extensions.mq=! shelve
+  shelved as test
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg --config extensions.mq=! shelve --list
+  test            (1s ago)    create conflict
+  $ hg --config extensions.mq=! unshelve
+  unshelving change 'test'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 7 files
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
