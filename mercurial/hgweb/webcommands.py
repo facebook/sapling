@@ -922,7 +922,8 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 data.append((node, vtx, edges, desc, user, age, branch,
-                             ctx.tags(), ctx.bookmarks()))
+                             [cgi.escape(x) for x in ctx.tags()],
+                             [cgi.escape(x) for x in ctx.bookmarks()]))
             else:
                 edgedata = [dict(col=edge[0], nextcol=edge[1],
                                  color=(edge[2] - 1) % 6 + 1,
