@@ -664,7 +664,7 @@ class ui(object):
         if not self.interactive():
             return default
         try:
-            self.write(self.label(prompt or _('password: '), 'ui.prompt'))
+            self.write_err(self.label(prompt or _('password: '), 'ui.prompt'))
             return getpass.getpass('')
         except EOFError:
             raise util.Abort(_('response expected'))
