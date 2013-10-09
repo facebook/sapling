@@ -301,6 +301,9 @@ class remotefilelog(object):
             # be stripped, resulting in a permanently broken map.
             if relativeto:
                 p1, p2, linknode, copyfrom = mapping[node]
+                if not linknode in self.repo:
+                    return False
+
                 cl = self.repo.changelog
                 common = cl.ancestor(linknode, relativeto)
                 if common != linknode:
