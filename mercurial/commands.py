@@ -5183,46 +5183,50 @@ def serve(ui, repo, **opts):
         o = repo
 
     app = hgweb.hgweb(o, baseui=baseui)
-
-    class service(object):
-        def init(self):
-            util.setsignalhandler()
-            self.httpd = hgweb_server.create_server(ui, app)
-
-            if opts['port'] and not ui.verbose:
-                return
-
-            if self.httpd.prefix:
-                prefix = self.httpd.prefix.strip('/') + '/'
-            else:
-                prefix = ''
-
-            port = ':%d' % self.httpd.port
-            if port == ':80':
-                port = ''
-
-            bindaddr = self.httpd.addr
-            if bindaddr == '0.0.0.0':
-                bindaddr = '*'
-            elif ':' in bindaddr: # IPv6
-                bindaddr = '[%s]' % bindaddr
-
-            fqaddr = self.httpd.fqaddr
-            if ':' in fqaddr:
-                fqaddr = '[%s]' % fqaddr
-            if opts['port']:
-                write = ui.status
-            else:
-                write = ui.write
-            write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
-                  (fqaddr, port, prefix, bindaddr, self.httpd.port))
-
-        def run(self):
-            self.httpd.serve_forever()
-
-    service = service()
-
+    service = httpservice(ui, app, opts)
     cmdutil.service(opts, initfn=service.init, runfn=service.run)
+
+class httpservice(object):
+    def __init__(self, ui, app, opts):
+        self.ui = ui
+        self.app = app
+        self.opts = opts
+
+    def init(self):
+        util.setsignalhandler()
+        self.httpd = hgweb_server.create_server(self.ui, self.app)
+
+        if self.opts['port'] and not self.ui.verbose:
+            return
+
+        if self.httpd.prefix:
+            prefix = self.httpd.prefix.strip('/') + '/'
+        else:
+            prefix = ''
+
+        port = ':%d' % self.httpd.port
+        if port == ':80':
+            port = ''
+
+        bindaddr = self.httpd.addr
+        if bindaddr == '0.0.0.0':
+            bindaddr = '*'
+        elif ':' in bindaddr: # IPv6
+            bindaddr = '[%s]' % bindaddr
+
+        fqaddr = self.httpd.fqaddr
+        if ':' in fqaddr:
+            fqaddr = '[%s]' % fqaddr
+        if self.opts['port']:
+            write = self.ui.status
+        else:
+            write = self.ui.write
+        write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
+              (fqaddr, port, prefix, bindaddr, self.httpd.port))
+
+    def run(self):
+        self.httpd.serve_forever()
+
 
 @command('showconfig|debugconfig',
     [('u', 'untrusted', None, _('show untrusted configuration options'))],
