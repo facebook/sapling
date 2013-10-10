@@ -5,6 +5,7 @@
 
 import os
 import urllib2
+import re
 
 from mercurial import error, httppeer, util, wireproto
 from mercurial.wireproto import batchable, future
@@ -166,9 +167,11 @@ def sshrepocallstream(self, cmd, **args):
         args['cmds'] = args['cmds'].replace('heads ', 'lheads ')
     return ssholdcallstream(self, cmd, **args)
 
+headsre = re.compile(r'(^|;)heads\b')
+
 def httprepocallstream(self, cmd, **args):
     if cmd == 'heads' and self.capable('largefiles'):
         cmd = 'lheads'
     if cmd == 'batch' and self.capable('largefiles'):
-        args['cmds'] = args['cmds'].replace('heads ', 'lheads ')
+        args['cmds'] = headsre.sub('lheads', args['cmds'])
     return httpoldcallstream(self, cmd, **args)
