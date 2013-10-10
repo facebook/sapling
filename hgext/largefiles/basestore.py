@@ -59,8 +59,6 @@ class basestore(object):
         missing = []
         ui = self.ui
 
-        util.makedirs(lfutil.storepath(self.repo, ''))
-
         at = 0
         available = self.exists(set(hash for (_filename, hash) in files))
         for filename, hash in files:
@@ -75,31 +73,43 @@ class basestore(object):
                 missing.append(filename)
                 continue
 
-            storefilename = lfutil.storepath(self.repo, hash)
-            tmpfile = util.atomictempfile(storefilename + '.tmp',
-                                          createmode=self.repo.store.createmode)
-
-            try:
-                hhash = self._getfile(tmpfile, filename, hash)
-            except StoreError, err:
-                ui.warn(err.longmessage())
-                hhash = ""
-            tmpfile.close()
-
-            if hhash != hash:
-                if hhash != "":
-                    ui.warn(_('%s: data corruption (expected %s, got %s)\n')
-                            % (filename, hash, hhash))
-                util.unlink(storefilename + '.tmp')
+            if self._gethash(filename, hash):
+                success.append((filename, hash))
+            else:
                 missing.append(filename)
-                continue
-
-            util.rename(storefilename + '.tmp', storefilename)
-            lfutil.linktousercache(self.repo, hash)
-            success.append((filename, hhash))
 
         ui.progress(_('getting largefiles'), None)
         return (success, missing)
+
+    def _gethash(self, filename, hash):
+        """Get file with the provided hash and store it in the local repo's
+        store and in the usercache.
+        filename is for informational messages only.
+        """
+        util.makedirs(lfutil.storepath(self.repo, ''))
+        storefilename = lfutil.storepath(self.repo, hash)
+
+        tmpname = storefilename + '.tmp'
+        tmpfile = util.atomictempfile(tmpname,
+                                      createmode=self.repo.store.createmode)
+
+        try:
+            gothash = self._getfile(tmpfile, filename, hash)
+        except StoreError, err:
+            self.ui.warn(err.longmessage())
+            gothash = ""
+        tmpfile.close()
+
+        if gothash != hash:
+            if gothash != "":
+                self.ui.warn(_('%s: data corruption (expected %s, got %s)\n')
+                             % (filename, hash, gothash))
+            util.unlink(tmpname)
+            return False
+
+        util.rename(tmpname, storefilename)
+        lfutil.linktousercache(self.repo, hash)
+        return True
 
     def verify(self, revs, contents=False):
         '''Verify the existence (and, optionally, contents) of every big
