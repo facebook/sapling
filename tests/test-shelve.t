@@ -328,7 +328,6 @@ ensure the repo is as we hope
   3:2e69b451d1ea
 
   $ hg status -C
-  M a/a
   M b.rename/b
     b/b
   M c.copy
@@ -340,8 +339,6 @@ ensure the repo is as we hope
 there should be no shelves left
 
   $ hg shelve -l
-
-  $ hg commit -m whee a/a
 
 #if execbit
 
@@ -390,10 +387,9 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   merging a/a
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents -q
-  5:01ba9745dc5a
+  4:33f7f61e6c5e
   $ hg shelve -l
   $ hg status
-  M a/a
   A foo/foo
   $ cat a/a
   a
@@ -423,12 +419,12 @@ test bookmarks
 
   $ hg bookmark test
   $ hg bookmark
-   * test                      5:01ba9745dc5a
+   * test                      4:33f7f61e6c5e
   $ hg shelve
   shelved as test
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bookmark
-   * test                      5:01ba9745dc5a
+   * test                      4:33f7f61e6c5e
   $ hg unshelve
   unshelving change 'test'
   adding changesets
@@ -437,7 +433,7 @@ test bookmarks
   added 1 changesets with 1 changes to 7 files
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark
-   * test                      5:01ba9745dc5a
+   * test                      4:33f7f61e6c5e
 
 shelve should still work even if mq is disabled
 
@@ -453,3 +449,36 @@ shelve should still work even if mq is disabled
   adding file changes
   added 1 changesets with 1 changes to 7 files
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+shelve should leave dirstate clean (issue 4055)
+
+  $ cd ..
+  $ hg init shelverebase
+  $ cd shelverebase
+  $ printf 'x\ny\n' > x
+  $ echo z > z
+  $ hg commit -Aqm xy
+  $ echo z >> x
+  $ hg commit -Aqm z
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf 'a\nx\ny\nz\n' > x
+  $ hg commit -Aqm xyz
+  $ echo c >> z
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg rebase -d 1 --config extensions.rebase=
+  merging x
+  saved backup bundle to $TESTTMP/shelverebase/.hg/strip-backup/323bfa07f744-backup.hg (glob)
+  $ hg unshelve
+  unshelving change 'default'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status
+  M z
+
+  $ cd ..

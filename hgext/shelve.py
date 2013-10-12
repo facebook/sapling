@@ -380,11 +380,7 @@ def unshelvecleanup(ui, repo, name, opts):
 def finishmerge(ui, repo, ms, stripnodes, name, opts):
     # Reset the working dir so it's no longer in a merge state.
     dirstate = repo.dirstate
-    for f in ms:
-        if dirstate[f] == 'm':
-            dirstate.normallookup(f)
-    dirstate._pl = (dirstate._pl[0], nullid)
-    dirstate._dirty = dirstate._dirtypl = True
+    dirstate.setparents(dirstate._pl[0])
     shelvedstate.clear(repo)
 
 def unshelvecontinue(ui, repo, state, opts):
