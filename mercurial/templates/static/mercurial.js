@@ -393,8 +393,6 @@ function ajaxScrollInit(urlFormat,
                     appendFormatHTML(container, messageFormat, message);
                 },
                 function onsuccess(htmlText) {
-                    nextPageVar = nextPageVarGet(htmlText, nextPageVar);
-
                     if (mode == 'graph') {
                         var addHeight = htmlText.match(/^<canvas id="graph".*height="(\d+)"><\/canvas>$/m)[1];
                         addHeight = parseInt(addHeight);
@@ -402,6 +400,9 @@ function ajaxScrollInit(urlFormat,
 
                         var dataStr = htmlText.match(/^\s*var data = (.*);$/m)[1];
                         var data = JSON.parse(dataStr)
+                        if (data.length < nextPageVar) {
+                            nextPageVar = undefined;
+                        }
                         graph.reset();
                         graph.render(data);
                     } else {
@@ -416,6 +417,8 @@ function ajaxScrollInit(urlFormat,
                         }
                         process_dates('.' + curClass);
                     }
+
+                    nextPageVar = nextPageVarGet(htmlText, nextPageVar);
                 },
                 function onerror(errorText) {
                     var message = {
