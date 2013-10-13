@@ -48,7 +48,7 @@ normal behavior.
 '''
 
 import atexit, sys, os, signal, subprocess, errno, shlex
-from mercurial import commands, dispatch, util, extensions
+from mercurial import commands, dispatch, util, extensions, cmdutil
 from mercurial.i18n import _
 
 testedwith = 'internal'
@@ -121,14 +121,20 @@ def uisetup(ui):
             attend = ui.configlist('pager', 'attend', attended)
             auto = options['pager'] == 'auto'
             always = util.parsebool(options['pager'])
-            if (always or auto and
-                (cmd in attend or
-                 (cmd not in ui.configlist('pager', 'ignore') and not attend))):
-                ui.setconfig('ui', 'formatted', ui.formatted())
-                ui.setconfig('ui', 'interactive', False)
-                if util.safehasattr(signal, "SIGPIPE"):
-                    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-                _runpager(ui, p)
+
+            cmds, _ = cmdutil.findcmd(cmd, commands.table)
+
+            ignore = ui.configlist('pager', 'ignore')
+            for cmd in cmds:
+                if (always or auto and
+                    (cmd in attend or
+                     (cmd not in ignore and not attend))):
+                    ui.setconfig('ui', 'formatted', ui.formatted())
+                    ui.setconfig('ui', 'interactive', False)
+                    if util.safehasattr(signal, "SIGPIPE"):
+                        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+                    _runpager(ui, p)
+                    break
         return orig(ui, options, cmd, cmdfunc)
 
     extensions.wrapfunction(dispatch, '_runcommand', pagecmd)
