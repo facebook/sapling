@@ -283,7 +283,7 @@ collapse rebase
   |/
   o  0:cd010b8cd998 A
   
-  $ hg id --debug
+  $ hg id --debug -r tip
   4dc2197e807bae9817f09905b50ab288be2dbbcf tip
   $ hg debugobsolete
   42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 4dc2197e807bae9817f09905b50ab288be2dbbcf 0 {'date': '*', 'user': 'test'} (glob)

@@ -68,7 +68,7 @@ Rebasing D onto H detaching from C:
   |/
   o  0:draft 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   D
   F
@@ -119,7 +119,7 @@ Rebasing C onto H detaching from B:
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   C
   D
@@ -171,7 +171,7 @@ Rebasing B onto H using detach (same as not using it):
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   B
   C
@@ -224,7 +224,7 @@ Rebasing C onto H detaching from B and collapsing:
   |/
   o  0:draft 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   C
   D
@@ -350,7 +350,7 @@ Verify that target is not selected as external rev (issue3085)
   o  0: 'A'
   
 
-  $ hg parents
+  $ hg log --rev tip
   changeset:   8:9472f4b1d736
   tag:         tip
   user:        test

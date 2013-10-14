@@ -71,7 +71,7 @@ Rebasing B onto H and collapsing changesets with different phases:
   |/
   o  0:draft 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   B
   C
@@ -107,7 +107,7 @@ Rebasing E onto H:
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   E
   F
@@ -142,7 +142,7 @@ Rebasing G onto H with custom message:
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   E
   F
@@ -249,7 +249,7 @@ Rebase and collapse - E onto H:
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   C
   D
@@ -399,7 +399,7 @@ Rebase and collapse - E onto I:
   |/
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   C
   D
@@ -407,6 +407,7 @@ Rebase and collapse - E onto I:
   G
   I
 
+  $ hg up tip -q
   $ cat E
   F
 
@@ -481,7 +482,7 @@ Rebase and collapse - B onto F:
   |
   o  0: 'A'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   A
   B
   C
@@ -611,12 +612,13 @@ Rebase, collapse and copies
   merging f and c to c
   saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
   $ hg st
-  $ hg st --copies --change .
+  $ hg st --copies --change tip
   A d
     a
   A g
     b
   R b
+  $ hg up tip -q
   $ cat c
   c
   c
@@ -648,7 +650,7 @@ Test collapsing in place
 
   $ hg rebase --collapse -b . -d 0
   saved backup bundle to $TESTTMP/copies/.hg/strip-backup/*-backup.hg (glob)
-  $ hg st --change . --copies
+  $ hg st --change tip --copies
   M a
   M c
   A d
@@ -656,6 +658,7 @@ Test collapsing in place
   A g
     b
   R b
+  $ hg up tip -q
   $ cat a
   a
   a
@@ -741,7 +744,7 @@ Test collapsing changes that add then remove a file
   |
   o  0: 'base'
   
-  $ hg manifest
+  $ hg manifest --rev tip
   b
   base
 
