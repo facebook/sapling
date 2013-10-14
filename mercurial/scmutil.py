@@ -271,6 +271,9 @@ class abstractvfs(object):
     def stat(self, path=None):
         return os.stat(self.join(path))
 
+    def unlink(self, path=None):
+        return util.unlink(self.join(path))
+
 class vfs(abstractvfs):
     '''Operate files relative to a base directory
 

@@ -126,7 +126,7 @@ def unsetcurrent(repo):
     wlock = repo.wlock()
     try:
         try:
-            util.unlink(repo.join('bookmarks.current'))
+            repo.vfs.unlink('bookmarks.current')
             repo._bookmarkcurrent = None
         except OSError, inst:
             if inst.errno != errno.ENOENT:
