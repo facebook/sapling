@@ -344,12 +344,12 @@ class basicstore(object):
         '''Checks if the store contains path'''
         path = "/".join(("data", path))
         # file?
-        if os.path.exists(self.join(path + ".i")):
+        if self.vfs.exists(path + ".i"):
             return True
         # dir?
         if not path.endswith("/"):
             path = path + "/"
-        return os.path.exists(self.join(path))
+        return self.vfs.exists(path)
 
 class encodedstore(basicstore):
     def __init__(self, path, vfstype):
