@@ -224,10 +224,10 @@ class changelog(revlog.revlog):
         self.opener = self._realopener
         # move redirected index data back into place
         if self._divert:
-            nfile = self.opener(self.indexfile + ".a")
-            n = nfile.name
+            tmpname = self.indexfile + ".a"
+            nfile = self.opener.open(tmpname)
             nfile.close()
-            util.rename(n, n[:-2])
+            self.opener.rename(tmpname, self.indexfile)
         elif self._delaybuf:
             fp = self.opener(self.indexfile, 'a')
             fp.write("".join(self._delaybuf))
