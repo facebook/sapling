@@ -217,6 +217,10 @@ class abstractvfs(object):
                 raise
         return ""
 
+    def open(self, path, mode="r", text=False, atomictemp=False):
+        self.open = self.__call__
+        return self.__call__(path, mode, text, atomictemp)
+
     def read(self, path):
         fp = self(path, 'rb')
         try:
