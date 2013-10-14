@@ -245,6 +245,9 @@ class abstractvfs(object):
     def exists(self, path=None):
         return os.path.exists(self.join(path))
 
+    def fstat(self, fp):
+        return util.fstat(fp)
+
     def isdir(self, path=None):
         return os.path.isdir(self.join(path))
 
