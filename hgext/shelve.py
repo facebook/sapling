@@ -111,9 +111,9 @@ class shelvedstate(object):
         fp.write('%s\n' % ' '.join([hex(n) for n in stripnodes]))
         fp.close()
 
-    @staticmethod
-    def clear(repo):
-        util.unlinkpath(repo.join('shelvedstate'), ignoremissing=True)
+    @classmethod
+    def clear(cls, repo):
+        util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
 
 def createcmd(ui, repo, pats, opts):
     def publicancestors(ctx):
