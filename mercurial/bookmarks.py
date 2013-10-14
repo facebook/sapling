@@ -8,7 +8,7 @@
 from mercurial.i18n import _
 from mercurial.node import hex
 from mercurial import encoding, error, util, obsolete
-import errno, os
+import errno
 
 class bmstore(dict):
     """Storage for bookmarks.
@@ -70,7 +70,7 @@ class bmstore(dict):
 
             # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
             try:
-                os.utime(repo.sjoin('00changelog.i'), None)
+                repo.svfs.utime('00changelog.i', None)
             except OSError:
                 pass
 
