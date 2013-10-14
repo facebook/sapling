@@ -21,13 +21,8 @@ shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
 
-try:
-    import cPickle as pickle
-    pickle.dump # import now
-except ImportError:
-    import pickle
 from mercurial.i18n import _
-from mercurial.node import nullid
+from mercurial.node import nullid, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases
 from mercurial import error, hg, mdiff, merge, patch, repair, util
 from mercurial import templatefilters
@@ -88,11 +83,17 @@ class shelvedstate(object):
     @classmethod
     def load(cls, repo):
         fp = repo.opener(cls._filename)
-        (version, name, parents, stripnodes) = pickle.load(fp)
+        try:
+            version = int(fp.readline().strip())
 
-        if version != cls._version:
-            raise util.Abort(_('this version of shelve is incompatible '
-                               'with the version used in this repo'))
+            if version != cls._version:
+                raise util.Abort(_('this version of shelve is incompatible '
+                                   'with the version used in this repo'))
+            name = fp.readline().strip()
+            parents = [bin(h) for h in fp.readline().split()]
+            stripnodes = [bin(h) for h in fp.readline().split()]
+        finally:
+            fp.close()
 
         obj = cls()
         obj.name = name
@@ -104,9 +105,10 @@ class shelvedstate(object):
     @classmethod
     def save(cls, repo, name, stripnodes):
         fp = repo.opener(cls._filename, 'wb')
-        pickle.dump((cls._version, name,
-                     repo.dirstate.parents(),
-                     stripnodes), fp)
+        fp.write('%i\n' % cls._version)
+        fp.write('%s\n' % name)
+        fp.write('%s\n' % ' '.join([hex(p) for p in repo.dirstate.parents()]))
+        fp.write('%s\n' % ' '.join([hex(n) for n in stripnodes]))
         fp.close()
 
     @staticmethod
