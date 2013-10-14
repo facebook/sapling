@@ -34,7 +34,9 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 class shelvedfile(object):
-    """Handles common functions on shelve files (.hg/.files/.patch) using
+    """Helper for the file storing a single shelve
+
+    Handles common functions on shelve files (.hg/.files/.patch) using
     the vfs layer"""
     def __init__(self, repo, name, filetype=None):
         self.repo = repo
@@ -75,7 +77,9 @@ class shelvedfile(object):
                                  self.name)
 
 class shelvedstate(object):
-    """Handles saving and restoring a shelved state. Ensures that different
+    """Handle persistences during unshelving operation.
+
+    Handles saving and restoring a shelved state. Ensures that different
     versions of a shelved state are possible and handles them appropriate"""
     _version = 1
     _filename = 'shelvedstate'
@@ -116,6 +120,8 @@ class shelvedstate(object):
         util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
 
 def createcmd(ui, repo, pats, opts):
+    """subcommand that create a new shelve"""
+
     def publicancestors(ctx):
         """Compute the heads of the public ancestors of a commit.
 
@@ -245,6 +251,8 @@ def createcmd(ui, repo, pats, opts):
         lockmod.release(lock, wlock)
 
 def cleanupcmd(ui, repo):
+    """subcommand that delete all shelves"""
+
     wlock = None
     try:
         wlock = repo.wlock()
@@ -256,6 +264,7 @@ def cleanupcmd(ui, repo):
         lockmod.release(wlock)
 
 def deletecmd(ui, repo, pats):
+    """subcommand that delete a specific shelve"""
     if not pats:
         raise util.Abort(_('no shelved changes specified!'))
     wlock = None
@@ -273,6 +282,7 @@ def deletecmd(ui, repo, pats):
         lockmod.release(wlock)
 
 def listshelves(repo):
+    """return all shelves in repo as list of  (time, filename)"""
     try:
         names = repo.vfs.readdir('shelved')
     except OSError, err:
@@ -289,6 +299,7 @@ def listshelves(repo):
     return sorted(info, reverse=True)
 
 def listcmd(ui, repo, pats, opts):
+    """subcommand that display the list of shelve"""
     pats = set(pats)
     width = 80
     if not ui.plain():
@@ -336,15 +347,18 @@ def listcmd(ui, repo, pats, opts):
             fp.close()
 
 def readshelvedfiles(repo, basename):
+    """return the list of file touched in a shelve"""
     fp = shelvedfile(repo, basename, 'files').opener()
     return fp.read().split('\0')
 
 def checkparents(repo, state):
+    """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
         raise util.Abort(_('working directory parents do not match unshelve '
                            'state'))
 
 def unshelveabort(ui, repo, state, opts):
+    """subcommand that abort an in-progress unshelve"""
     wlock = repo.wlock()
     lock = None
     try:
@@ -375,6 +389,7 @@ def unshelveabort(ui, repo, state, opts):
         lockmod.release(lock, wlock)
 
 def unshelvecleanup(ui, repo, name, opts):
+    """remove related file after an unshelve"""
     if not opts['keep']:
         for filetype in 'hg files patch'.split():
             shelvedfile(repo, name, filetype).unlink()
@@ -386,6 +401,7 @@ def finishmerge(ui, repo, ms, stripnodes, name, opts):
     shelvedstate.clear(repo)
 
 def unshelvecontinue(ui, repo, state, opts):
+    """subcommand to continue an in-progress unshelve"""
     # We're finishing off a merge. First parent is our original
     # parent, second is the temporary "fake" commit we're unshelving.
     wlock = repo.wlock()
