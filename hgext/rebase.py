@@ -382,7 +382,7 @@ def rebase(ui, repo, **opts):
             ui.note(_("%d revisions have been skipped\n") % len(skipped))
 
         if (activebookmark and
-            repo['tip'].node() == repo._bookmarks[activebookmark]):
+            repo['.'].node() == repo._bookmarks[activebookmark]):
                 bookmarks.setcurrent(repo, activebookmark)
 
     finally:

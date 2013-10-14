@@ -127,6 +127,12 @@ Keep active bookmark on the correct changeset
   |
   o  0: 'A' bookmarks:
   
+  $ hg bookmarks
+     W                         1:41acb9dca9eb
+   * X                         2:e926fccfa8ec
+     Y                         3:3d5fa227f4b5
+     Z                         3:3d5fa227f4b5
+
 rebase --continue with bookmarks present (issue3802)
 
   $ hg up 2
