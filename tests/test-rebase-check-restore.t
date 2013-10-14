@@ -80,11 +80,11 @@ Solve the conflict and go on:
   $ hg rebase --continue
 
   $ hg tglog
-  @  7:secret 'C'
+  o  7:secret 'C'
   |
   o  6:draft 'B'
   |
-  | o  5:draft 'F' notdefault
+  | @  5:draft 'F' notdefault
   | |
   o |  4:draft 'E'
   | |

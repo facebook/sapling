@@ -126,9 +126,9 @@ set.
   grafting revision 3
   $ hg rebase  -s 42ccdea3bb16 -d .
   $ hg log -G
-  @  10:5ae4c968c6ac C
+  o  10:5ae4c968c6ac C
   |
-  o  9:08483444fef9 D
+  @  9:08483444fef9 D
   |
   o  8:8877864f1edb B
   |
@@ -143,9 +143,9 @@ set.
   o  0:cd010b8cd998 A
   
   $ hg log --hidden -G
-  @  10:5ae4c968c6ac C
+  o  10:5ae4c968c6ac C
   |
-  o  9:08483444fef9 D
+  @  9:08483444fef9 D
   |
   o  8:8877864f1edb B
   |
@@ -209,11 +209,11 @@ More complex case were part of the rebase set were already rebased
   5ae4c968c6aca831df823664e706c9d4aa34473d 98f6af4ee9539e14da4465128f894c274900b6e5 0 {'date': '* *', 'user': 'test'} (glob)
   $ hg log --rev 'divergent()'
   $ hg log -G
-  @  13:98f6af4ee953 C
+  o  13:98f6af4ee953 C
   |
   o  12:462a34d07e59 B
   |
-  o  11:4596109a6a43 D
+  @  11:4596109a6a43 D
   |
   o  7:02de42196ebe H
   |
@@ -252,9 +252,9 @@ collapse rebase
   $ cd collapse
   $ hg rebase  -s 42ccdea3bb16 -d eea13746799a --collapse
   $ hg log -G
-  @  8:4dc2197e807b Collapsed revision
+  o  8:4dc2197e807b Collapsed revision
   |
-  | o  7:02de42196ebe H
+  | @  7:02de42196ebe H
   | |
   o |  6:eea13746799a G
   |\|
@@ -265,9 +265,9 @@ collapse rebase
   o  0:cd010b8cd998 A
   
   $ hg log --hidden -G
-  @  8:4dc2197e807b Collapsed revision
+  o  8:4dc2197e807b Collapsed revision
   |
-  | o  7:02de42196ebe H
+  | @  7:02de42196ebe H
   | |
   o |  6:eea13746799a G
   |\|
@@ -305,13 +305,13 @@ not be rebased.
   $ hg rebase -s 5fddd98957c8 -d eea13746799a
   $ hg rebase -s 42ccdea3bb16 -d 02de42196ebe
   $ hg log -G
-  @  10:7c6027df6a99 B
+  o  10:7c6027df6a99 B
   |
   | o  9:cf44d2f5a9f4 D
   | |
   | o  8:e273c5e7d2d2 C
   | |
-  o |  7:02de42196ebe H
+  @ |  7:02de42196ebe H
   | |
   | o  6:eea13746799a G
   |/|
@@ -322,13 +322,13 @@ not be rebased.
   o  0:cd010b8cd998 A
   
   $ hg log --hidden -G
-  @  10:7c6027df6a99 B
+  o  10:7c6027df6a99 B
   |
   | o  9:cf44d2f5a9f4 D
   | |
   | o  8:e273c5e7d2d2 C
   | |
-  o |  7:02de42196ebe H
+  @ |  7:02de42196ebe H
   | |
   | o  6:eea13746799a G
   |/|
@@ -356,7 +356,7 @@ Test that rewriting leaving instability behind is allowed
   9:cf44d2f5a9f4 D (no-eol)
   $ hg rebase -r 8
   $ hg log -G
-  @  11:0d8f238b634c C
+  o  11:0d8f238b634c C
   |
   o  10:7c6027df6a99 B
   |
@@ -364,7 +364,7 @@ Test that rewriting leaving instability behind is allowed
   | |
   | x  8:e273c5e7d2d2 C
   | |
-  o |  7:02de42196ebe H
+  @ |  7:02de42196ebe H
   | |
   | o  6:eea13746799a G
   |/|
@@ -381,11 +381,11 @@ Test multiple root handling
 
   $ hg rebase --dest 4 --rev '7+11+9'
   $ hg log -G
-  @  14:1e8370e38cca C
+  o  14:1e8370e38cca C
   |
   | o  13:102b4c1d889b D
   | |
-  o |  12:bfe264faf697 H
+  @ |  12:bfe264faf697 H
   |/
   | o  10:7c6027df6a99 B
   | |

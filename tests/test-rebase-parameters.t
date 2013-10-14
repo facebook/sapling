@@ -197,11 +197,11 @@ Specify only source (from 2 onto 8):
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
-  o  6: 'I'
+  @  6: 'I'
   |
   o  5: 'H'
   |
@@ -257,13 +257,13 @@ Specify only base (from 1 onto 8):
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
   o  6: 'B'
   |
-  o  5: 'I'
+  @  5: 'I'
   |
   o  4: 'H'
   |
@@ -287,11 +287,11 @@ Specify source and dest (from 2 onto 7):
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
-  | o  6: 'I'
+  | @  6: 'I'
   |/
   o  5: 'H'
   |
@@ -317,13 +317,13 @@ Specify base and dest (from 1 onto 7):
   saved backup bundle to $TESTTMP/a8/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
   o  6: 'B'
   |
-  | o  5: 'I'
+  | @  5: 'I'
   |/
   o  4: 'H'
   |
@@ -347,11 +347,11 @@ Specify only revs (from 2 onto 8)
   saved backup bundle to $TESTTMP/a9/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
-  o  6: 'I'
+  @  6: 'I'
   |
   o  5: 'H'
   |

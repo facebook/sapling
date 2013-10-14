@@ -121,11 +121,11 @@ Rebase part of branch2 (5-6) onto branch3 (8):
   0: 'A' 
 
   $ hg tglog
-  @  8: 'E' branch3
+  o  8: 'E' branch3
   |
   o  7: 'D' branch3
   |
-  o  6: 'F' branch3
+  @  6: 'F' branch3
   |
   o  5: 'branch3' branch3
   |

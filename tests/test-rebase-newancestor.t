@@ -44,11 +44,11 @@
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  3: 'C'
+  o  3: 'C'
   |
   o  2: 'B'
   |
-  o  1: 'AD'
+  @  1: 'AD'
   |
   o  0: 'A'
   

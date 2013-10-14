@@ -110,13 +110,13 @@ Solve the conflict and go on:
   warning: new changesets detected on source branch, not stripping
 
   $ hg tglogp
-  @  7:draft 'C'
+  o  7:draft 'C'
   |
   | o  6:secret 'Extra'
   | |
   o |  5:draft 'B'
   | |
-  o |  4:draft 'E'
+  @ |  4:draft 'E'
   | |
   o |  3:draft 'D'
   | |

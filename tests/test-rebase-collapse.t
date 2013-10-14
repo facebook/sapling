@@ -57,11 +57,11 @@ Rebasing B onto H and collapsing changesets with different phases:
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglogp
-  @  5:secret 'Collapsed revision
+  o  5:secret 'Collapsed revision
   |  * B
   |  * C
   |  * D'
-  o  4:draft 'H'
+  @  4:draft 'H'
   |
   | o  3:draft 'G'
   |/|
@@ -92,10 +92,10 @@ Rebasing E onto H:
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  6: 'Collapsed revision
+  o  6: 'Collapsed revision
   |  * E
   |  * G'
-  o  5: 'H'
+  @  5: 'H'
   |
   o  4: 'F'
   |
@@ -128,9 +128,9 @@ Rebasing G onto H with custom message:
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  6: 'custom message'
+  o  6: 'custom message'
   |
-  o  5: 'H'
+  @  5: 'H'
   |
   o  4: 'F'
   |
@@ -235,11 +235,11 @@ Rebase and collapse - E onto H:
   saved backup bundle to $TESTTMP/b1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    5: 'Collapsed revision
+  o    5: 'Collapsed revision
   |\   * E
   | |  * F
   | |  * G'
-  | o  4: 'H'
+  | @  4: 'H'
   | |
   o |    3: 'D'
   |\ \
@@ -384,12 +384,12 @@ Rebase and collapse - E onto I:
   saved backup bundle to $TESTTMP/c1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    5: 'Collapsed revision
+  o    5: 'Collapsed revision
   |\   * E
   | |  * F
   | |  * G
   | |  * H'
-  | o  4: 'I'
+  | @  4: 'I'
   | |
   o |    3: 'D'
   |\ \
@@ -473,12 +473,12 @@ Rebase and collapse - B onto F:
   saved backup bundle to $TESTTMP/d1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  2: 'Collapsed revision
+  o  2: 'Collapsed revision
   |  * B
   |  * C
   |  * D
   |  * E'
-  o  1: 'F'
+  @  1: 'F'
   |
   o  0: 'A'
   
@@ -740,9 +740,9 @@ Test collapsing changes that add then remove a file
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
   saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/*-backup.hg (glob)
   $ hg tglog
-  @  1: 'collapsed'
+  o  1: 'collapsed'
   |
-  o  0: 'base'
+  @  0: 'base'
   
   $ hg manifest --rev tip
   b

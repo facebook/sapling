@@ -359,6 +359,13 @@ def rebase(ui, repo, **opts):
             # this should probably be cleaned up
             targetnode = repo[target].node()
 
+        # restore original working directory
+        # (we do this before stripping)
+        newwd = state.get(originalwd, originalwd)
+        if newwd not in [c.rev() for c in repo[None].parents()]:
+            ui.note(_("update back to initial working directory parent\n"))
+            hg.updaterepo(repo, newwd, False)
+
         if not keepf:
             collapsedas = None
             if collapsef:

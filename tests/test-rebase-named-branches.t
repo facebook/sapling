@@ -147,7 +147,7 @@ Branch name containing a dash (issue3181)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  9: 'dev-two named branch' dev-two
+  o  9: 'dev-two named branch' dev-two
   |
   o  8: 'H'
   |
@@ -155,7 +155,7 @@ Branch name containing a dash (issue3181)
   |/|
   o |  6: 'F'
   | |
-  o |  5: 'dev-one named branch' dev-one
+  @ |  5: 'dev-one named branch' dev-one
   | |
   | o  4: 'E'
   | |
@@ -171,7 +171,7 @@ Branch name containing a dash (issue3181)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'dev-two named branch' dev-two
+  o  8: 'dev-two named branch' dev-two
   |
   o  7: 'H'
   |
@@ -187,7 +187,7 @@ Branch name containing a dash (issue3181)
   | |
   | o  1: 'B'
   |/
-  o  0: 'A'
+  @  0: 'A'
   
 
 Rebasing descendant onto ancestor across different named branches
@@ -196,7 +196,7 @@ Rebasing descendant onto ancestor across different named branches
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
@@ -212,7 +212,7 @@ Rebasing descendant onto ancestor across different named branches
   | |
   | o  1: 'E'
   |/
-  o  0: 'A'
+  @  0: 'A'
   
   $ hg rebase -s 4 -d 5
   abort: source is ancestor of destination
@@ -222,7 +222,7 @@ Rebasing descendant onto ancestor across different named branches
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
@@ -238,6 +238,6 @@ Rebasing descendant onto ancestor across different named branches
   | |
   | o  1: 'E'
   |/
-  o  0: 'A'
+  @  0: 'A'
   
   $ cd ..

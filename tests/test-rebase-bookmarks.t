@@ -119,9 +119,9 @@ Keep active bookmark on the correct changeset
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  3: 'C' bookmarks: Y Z
+  o  3: 'C' bookmarks: Y Z
   |
-  o  2: 'B' bookmarks: X
+  @  2: 'B' bookmarks: X
   |
   o  1: 'D' bookmarks: W
   |
@@ -130,7 +130,7 @@ Keep active bookmark on the correct changeset
 rebase --continue with bookmarks present (issue3802)
 
   $ hg up 2
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'C' > c
   $ hg add c
   $ hg ci -m 'other C'

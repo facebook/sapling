@@ -52,9 +52,9 @@ D onto H - simple rebase:
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'D'
+  o  7: 'D'
   |
-  o  6: 'H'
+  @  6: 'H'
   |
   | o  5: 'G'
   |/|
@@ -80,9 +80,9 @@ D onto F - intermediate point:
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'D'
+  o  7: 'D'
   |
-  | o  6: 'H'
+  | @  6: 'H'
   |/
   | o  5: 'G'
   |/|
@@ -108,9 +108,9 @@ E onto H - skip of G:
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  6: 'E'
+  o  6: 'E'
   |
-  o  5: 'H'
+  @  5: 'H'
   |
   o  4: 'F'
   |
@@ -160,9 +160,9 @@ G onto H - merged revision having a parent in ancestors of target:
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @    7: 'G'
+  o    7: 'G'
   |\
-  | o  6: 'H'
+  | @  6: 'H'
   | |
   | o  5: 'F'
   | |
@@ -256,11 +256,11 @@ C onto A - rebase onto an ancestor:
   $ hg rebase -d 0 -s 2
   saved backup bundle to $TESTTMP/a7/.hg/strip-backup/5fddd98957c8-backup.hg (glob)
   $ hg tglog
-  @  7: 'D'
+  o  7: 'D'
   |
   o  6: 'C'
   |
-  | o  5: 'H'
+  | @  5: 'H'
   | |
   | | o  4: 'G'
   | |/|
@@ -360,7 +360,7 @@ Source on have two descendant heads but ask for one
   [255]
   $ hg rebase -r '2::8' -d 1 --keep
   $ hg tglog
-  @  13: 'I'
+  o  13: 'I'
   |
   o  12: 'H'
   |
@@ -401,7 +401,7 @@ Base on have one descendant heads we ask for but common ancestor have two
   [255]
   $ hg rebase -r '3::8' -d 1 --keep
   $ hg tglog
-  @  12: 'I'
+  o  12: 'I'
   |
   o  11: 'H'
   |
@@ -440,7 +440,7 @@ rebase subset
   [255]
   $ hg rebase -r '3::7' -d 1 --keep
   $ hg tglog
-  @  11: 'H'
+  o  11: 'H'
   |
   o  10: 'G'
   |
@@ -477,7 +477,7 @@ rebase subset with multiple head
   [255]
   $ hg rebase -r '3::(7+5)' -d 1 --keep
   $ hg tglog
-  @  13: 'H'
+  o  13: 'H'
   |
   o  12: 'G'
   |
@@ -517,7 +517,7 @@ rebase on ancestor with revset
   $ hg rebase -r '6::' -d 2
   saved backup bundle to $TESTTMP/ah5/.hg/strip-backup/3d8a618087a7-backup.hg (glob)
   $ hg tglog
-  @  8: 'I'
+  o  8: 'I'
   |
   o  7: 'H'
   |
@@ -547,7 +547,7 @@ We would expect heads are I, F if it was supported
   $ hg rebase -r '(4+6)::' -d 1
   saved backup bundle to $TESTTMP/ah6/.hg/strip-backup/3d8a618087a7-backup.hg (glob)
   $ hg tglog
-  @  8: 'I'
+  o  8: 'I'
   |
   o  7: 'H'
   |

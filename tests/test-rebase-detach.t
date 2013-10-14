@@ -52,9 +52,9 @@ Rebasing D onto H detaching from C:
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  @  7:secret 'D'
+  o  7:secret 'D'
   |
-  o  6:draft 'H'
+  @  6:draft 'H'
   |
   | o  5:draft 'G'
   |/|
@@ -103,11 +103,11 @@ Rebasing C onto H detaching from B:
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'D'
+  o  7: 'D'
   |
   o  6: 'C'
   |
-  o  5: 'H'
+  @  5: 'H'
   |
   | o  4: 'G'
   |/|
@@ -155,13 +155,13 @@ Rebasing B onto H using detach (same as not using it):
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  7: 'D'
+  o  7: 'D'
   |
   o  6: 'C'
   |
   o  5: 'B'
   |
-  o  4: 'H'
+  @  4: 'H'
   |
   | o  3: 'G'
   |/|
@@ -209,10 +209,10 @@ Rebasing C onto H detaching from B and collapsing:
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  @  6:secret 'Collapsed revision
+  o  6:secret 'Collapsed revision
   |  * C
   |  * D'
-  o  5:draft 'H'
+  @  5:draft 'H'
   |
   | o  4:draft 'G'
   |/|
@@ -268,13 +268,13 @@ Rebasing across null as ancestor
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
   o  6: 'B'
   |
-  o  5: 'extra branch'
+  @  5: 'extra branch'
   
   o  4: 'H'
   |
@@ -290,13 +290,13 @@ Rebasing across null as ancestor
   $ hg rebase -d 5 -s 7
   saved backup bundle to $TESTTMP/a5/.hg/strip-backup/13547172c9c0-backup.hg (glob)
   $ hg tglog
-  @  8: 'D'
+  o  8: 'D'
   |
   o  7: 'C'
   |
   | o  6: 'B'
   |/
-  o  5: 'extra branch'
+  @  5: 'extra branch'
   
   o  4: 'H'
   |
@@ -329,11 +329,11 @@ Verify that target is not selected as external rev (issue3085)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'Collapsed revision
+  o  8: 'Collapsed revision
   |  * I
   |  * Merge
   |  * J'
-  o  7: 'H'
+  @  7: 'H'
   |
   | o  6: 'G'
   |/|
