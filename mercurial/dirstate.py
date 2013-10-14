@@ -815,7 +815,7 @@ class dirstate(object):
                 if (listignored or mexact(fn)) and dirignore(fn):
                     if listignored:
                         iadd(fn)
-                elif listunknown:
+                else:
                     uadd(fn)
                 continue
 
