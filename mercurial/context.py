@@ -1111,11 +1111,11 @@ class workingctx(committablectx):
         ui, ds = self._repo.ui, self._repo.dirstate
         try:
             rejected = []
+            lstat = self._repo.wvfs.lstat
             for f in list:
                 scmutil.checkportable(ui, join(f))
-                p = self._repo.wjoin(f)
                 try:
-                    st = os.lstat(p)
+                    st = lstat(f)
                 except OSError:
                     ui.warn(_("%s does not exist!\n") % join(f))
                     rejected.append(f)
@@ -1129,7 +1129,7 @@ class workingctx(committablectx):
                 if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
                     ui.warn(_("%s not added: only files and symlinks "
                               "supported currently\n") % join(f))
-                    rejected.append(p)
+                    rejected.append(f)
                 elif ds[f] in 'amn':
                     ui.warn(_("%s already tracked!\n") % join(f))
                 elif ds[f] == 'r':
