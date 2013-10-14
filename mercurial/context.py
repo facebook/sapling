@@ -1173,10 +1173,14 @@ class workingctx(committablectx):
             wlock.release()
 
     def copy(self, source, dest):
-        p = self._repo.wjoin(dest)
-        if not os.path.lexists(p):
+        try:
+            st = self._repo.wvfs.lstat(dest)
+        except OSError, err:
+            if err.errno != errno.ENOENT:
+                raise
             self._repo.ui.warn(_("%s does not exist!\n") % dest)
-        elif not (os.path.isfile(p) or os.path.islink(p)):
+            return
+        if not (stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)):
             self._repo.ui.warn(_("copy failed: %s is not a file or a "
                                  "symbolic link\n") % dest)
         else:
