@@ -1248,11 +1248,11 @@ class workingfilectx(committablefilectx):
         return rp, self._changectx._parents[0]._manifest.get(rp, nullid)
 
     def size(self):
-        return os.lstat(self._repo.wjoin(self._path)).st_size
+        return self._repo.wvfs.lstat(self._path).st_size
     def date(self):
         t, tz = self._changectx.date()
         try:
-            return (int(os.lstat(self._repo.wjoin(self._path)).st_mtime), tz)
+            return (int(self._repo.wvfs.lstat(self._path).st_mtime), tz)
         except OSError, err:
             if err.errno != errno.ENOENT:
                 raise
