@@ -77,10 +77,11 @@ class shelvedfile(object):
                                  self.name)
 
 class shelvedstate(object):
-    """Handle persistences during unshelving operation.
+    """Handle persistence during unshelving operations.
 
     Handles saving and restoring a shelved state. Ensures that different
-    versions of a shelved state are possible and handles them appropriate"""
+    versions of a shelved state are possible and handles them appropriately.
+    """
     _version = 1
     _filename = 'shelvedstate'
 
@@ -120,7 +121,7 @@ class shelvedstate(object):
         util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
 
 def createcmd(ui, repo, pats, opts):
-    """subcommand that create a new shelve"""
+    """subcommand that creates a new shelve"""
 
     def publicancestors(ctx):
         """Compute the heads of the public ancestors of a commit.
@@ -251,7 +252,7 @@ def createcmd(ui, repo, pats, opts):
         lockmod.release(lock, wlock)
 
 def cleanupcmd(ui, repo):
-    """subcommand that delete all shelves"""
+    """subcommand that deletes all shelves"""
 
     wlock = None
     try:
@@ -264,7 +265,7 @@ def cleanupcmd(ui, repo):
         lockmod.release(wlock)
 
 def deletecmd(ui, repo, pats):
-    """subcommand that delete a specific shelve"""
+    """subcommand that deletes a specific shelve"""
     if not pats:
         raise util.Abort(_('no shelved changes specified!'))
     wlock = None
@@ -282,7 +283,7 @@ def deletecmd(ui, repo, pats):
         lockmod.release(wlock)
 
 def listshelves(repo):
-    """return all shelves in repo as list of  (time, filename)"""
+    """return all shelves in repo as list of (time, filename)"""
     try:
         names = repo.vfs.readdir('shelved')
     except OSError, err:
@@ -299,7 +300,7 @@ def listshelves(repo):
     return sorted(info, reverse=True)
 
 def listcmd(ui, repo, pats, opts):
-    """subcommand that display the list of shelve"""
+    """subcommand that displays the list of shelves"""
     pats = set(pats)
     width = 80
     if not ui.plain():
@@ -347,7 +348,7 @@ def listcmd(ui, repo, pats, opts):
             fp.close()
 
 def readshelvedfiles(repo, basename):
-    """return the list of file touched in a shelve"""
+    """return the list of files touched in a shelve"""
     fp = shelvedfile(repo, basename, 'files').opener()
     return fp.read().split('\0')
 
@@ -389,7 +390,7 @@ def unshelveabort(ui, repo, state, opts):
         lockmod.release(lock, wlock)
 
 def unshelvecleanup(ui, repo, name, opts):
-    """remove related file after an unshelve"""
+    """remove related files after an unshelve"""
     if not opts['keep']:
         for filetype in 'hg files patch'.split():
             shelvedfile(repo, name, filetype).unlink()
