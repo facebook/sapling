@@ -3,7 +3,7 @@ remotefilelog
 
 The remotefilelog extension allows Mercurial to clone shallow copies of a repository such that all file contents are left on the server and only downloaded on demand by the client. This greatly speeds up clone and pull performance for repositories that have long histories or that are growing quickly.
 
-In addition, the extension allows using a caching layer (such as memcache) to serve the file contents, thus providing better scalability and taking load off the server.
+In addition, the extension allows using a caching layer (such as memcache) to serve the file contents, thus providing better scalability and reducing server load.
 
 Installing
 ==========
@@ -16,12 +16,10 @@ remotefilelog can be installed like any other Mercurial extension. Download the 
     [extensions]
     remotefilelog=path/to/remotefilelog/remotefilelog
 
-The extension currently has a hard dependency on lz4, so the lz4 python library must be installed on both servers and clients (https://pypi.python.org/pypi/lz4).
+The extension currently has a hard dependency on lz4, so the [lz4 python library](https://pypi.python.org/pypi/lz4) must be installed on both servers and clients.
 
 Configuring
 -----------
-
-remotefilelog allows server and client configuration, some of which are required.
 
 **Server**
 
@@ -41,9 +39,9 @@ An example server configuration:
 * `cachelimit` - the maximum size of the cachepath. By default it's 1000 GB.
 * `cachegroup` - the default unix group for the cachepath. Useful on shared systems so multiple users can read and write to the same cache.
 * `cacheprocess` - the external process that will handle the remote caching layer. If not set, all requests will go to the Mercurial server.
-* `fallbackrepo` - the Mercurial repo path to fetch file revisions from. By default it uses the paths.default repo. This setting is useful for allowing cloning from shallow clones but still falling back to the central server for file revisions.
+* `fallbackrepo` - the Mercurial repo path to fetch file revisions from. By default it uses the paths.default repo. This setting is useful for cloning from shallow clones and still talking to the central server for file revisions.
 * `includepattern` - a list of regex patterns matching files that should be kept remotely. Defaults to all files.
-* `excludepattern` - a list of regex patterns matching files that should not be kept remotely and should always been downloaded.
+* `excludepattern` - a list of regex patterns matching files that should not be kept remotely and should always be downloaded.
 
 An example client configuration:
 
@@ -56,9 +54,9 @@ An example client configuration:
 Using as a largefiles replacement
 ---------------------------------
 
-remotefilelog can theoretically be used as a replacement for the largefiles extension. You can use the `includepattern` setting to specify which directories or file types are considered large and they will be left on the server. Unlike the largefiles extension, this can be done without converting the server repo, and only the client configuration needs to specify the patterns.
+remotefilelog can theoretically be used as a replacement for the largefiles extension. You can use the `includepattern` setting to specify which directories or file types are considered large and they will be left on the server. Unlike the largefiles extension, this can be done without converting the server repository. Only the client configuration needs to specify the patterns.
 
-The include/exclude settings haven't be extensively tested, so this feature is still considered experimental.
+The include/exclude settings haven't been extensively tested, so this feature is still considered experimental.
 
 An example largefiles style client configuration:
 
@@ -77,7 +75,9 @@ Once you have configured the server, you can get a shallow clone by doing:
     :::bash
     hg clone --shallow ssh://server//path/repo
 
-After that, all normal mercurial commands should work. Occasionly the client or server remotefilelog caches may grow too big. Run `hg gc` to clean up the cache. This does not improve performance; it just frees up space.
+After that, all normal mercurial commands should work.
+
+Occasionly the client or server caches may grow too big. Run `hg gc` to clean up the cache. It will remove cached files that appear to no longer be necessary, or any files that exceed the configured maximum size. This does not improve performance; it just frees up space.
 
 Limitations
 ===========
@@ -88,9 +88,9 @@ Limitations
 
 3. remotefilelog only works with ssh based Mercurial repos. http based repos are currently not supported, though it shouldn't be too difficult for some motivated individual to implement.
 
-4. Tags are not supported in fully shallow repos. If you use tags in your repo you will have to specify `excludepattern=.hgtags` in your client configuration to make that file not shallow. The include/excludepattern settings are experimental at the moment and have yet to be deployed in a production environment.
+4. Tags are not supported in completely shallow repos. If you use tags in your repo you will have to specify `excludepattern=.hgtags` in your client configuration to ensure that file is downloaded. The include/excludepattern settings are experimental at the moment and have yet to be deployed in a production environment.
 
-5. Certain commands will be slower. `hg log <filename>` will be much slower since it has to walk the entire commit history instead of just the filelog. Use `hg log -f <filename>` instead, which remains very fast.
+5. A few commands will be slower. `hg log <filename>` will be much slower since it has to walk the entire commit history instead of just the filelog. Use `hg log -f <filename>` instead, which remains very fast.
 
 Contributing
 ============
