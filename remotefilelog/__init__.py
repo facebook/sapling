@@ -1,4 +1,4 @@
-# __init__.py
+# __init__.py - remotefilelog extension
 #
 # Copyright 2013 Facebook, Inc.
 #
