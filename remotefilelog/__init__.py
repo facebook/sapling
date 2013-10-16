@@ -12,9 +12,9 @@ import shallowbundle
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
-from mercurial import ancestor, mdiff, parsers, error, util, dagutil, time
+from mercurial import ancestor, mdiff, parsers, error, util, dagutil
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
-from mercurial import copies, traceback, store, context, changegroup, localrepo
+from mercurial import copies, store, context, changegroup, localrepo
 from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
 from mercurial import templatekw, repoview, bundlerepo, revset, hg, patch, verify
 from mercurial import match
