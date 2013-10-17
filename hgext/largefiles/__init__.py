@@ -105,7 +105,7 @@ explicitly do so with the --large flag passed to the :hg:`add`
 command.
 '''
 
-from mercurial import commands, localrepo, extensions
+from mercurial import commands, localrepo
 
 import lfcommands
 import reposetup
@@ -116,11 +116,8 @@ testedwith = 'internal'
 reposetup = reposetup.reposetup
 
 def featuresetup(ui, supported):
-    for name, module in extensions.extensions(ui):
-        if __name__ == module.__name__:
-            # don't die on seeing a repo with the largefiles requirement
-            supported |= set(['largefiles'])
-            return
+    # don't die on seeing a repo with the largefiles requirement
+    supported |= set(['largefiles'])
 
 def uisetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)

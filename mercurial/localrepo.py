@@ -153,6 +153,8 @@ class localrepository(object):
     requirements = ['revlogv1']
     filtername = None
 
+    # a list of (ui, featureset) functions.
+    # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
 
     def _baserequirements(self, create):
@@ -181,8 +183,11 @@ class localrepository(object):
 
         if self.featuresetupfuncs:
             self.supported = set(self._basesupported) # use private copy
+            extmods = set(m.__name__ for n, m
+                          in extensions.extensions(self.ui))
             for setupfunc in self.featuresetupfuncs:
-                setupfunc(self.ui, self.supported)
+                if setupfunc.__module__ in extmods:
+                    setupfunc(self.ui, self.supported)
         else:
             self.supported = self._basesupported
 
