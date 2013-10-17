@@ -342,5 +342,3 @@ class MapTests(test_util.TestBase):
         commands.clone(ui, test_util.fileurl(repo_path), self.wc_path)
 
         self.assertEqual(self.repo['tip'].description(), 'blyf')
-
-
