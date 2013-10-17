@@ -22,7 +22,7 @@ testedwith = 'internal'
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
-from mercurial import changelog, error, cmdutil, revlog, localrepo
+from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 import MySQLdb, struct, time
 from MySQLdb import cursors
 
@@ -30,23 +30,28 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-
+dbargs = {
+    
+}
 
 def uisetup(ui):
     wrapfunction(revlog.revlog, '_addrevision', addrevision)
-    #extensions.wrapcommand(commands.table, 'server', serve)
     wrapfunction(localrepo, 'instance', repoinstance)
+    wrapfunction(transaction.transaction, '_abort', transactionclose)
+    wrapfunction(transaction.transaction, 'close', transactionclose)
 
 def repoinstance(orig, *args):
     repo = orig(*args)
-    pulldb(repo)
+    if repo.ui.configbool("hgsql", "enabled"):
+        pulldb(repo)
     return repo
 
 def reposetup(ui, repo):
-    ui.setconfig("hooks", "pretxnchangegroup.remotefilelog", pretxnchangegroup)
-    ui.setconfig("hooks", "pretxncommit.remotefilelog", pretxnchangegroup)
+    if repo.ui.configbool("hgsql", "enabled"):
+        ui.setconfig("hooks", "pretxnchangegroup.remotefilelog", pretxnchangegroup)
+        ui.setconfig("hooks", "pretxncommit.remotefilelog", pretxnchangegroup)
 
-# Handle pulls
+# Sync with db
 
 def pulldb(repo):
     conn = MySQLdb.connect(**dbargs)
@@ -140,17 +145,18 @@ def addentries(repo, revisions, transaction, revlogs):
         if link > latest:
             latest = link
         count += 1
-        if path in revlogs:
-            revlog = revlogs[path]
-        else:
+        revlog = revlogs.get('path')
+        if not revlog:
             revlog = EntryRevlog(opener, path)
+            revlogs[path] = revlog
+
+        if not hasattr(revlog, 'ifh') or revlog.ifh.closed:
             dfh = None
             if not revlog._inline:
                 dfh = opener(revlog.datafile, "a")
             ifh = opener(revlog.indexfile, "a+")
             revlog.ifh = ifh
             revlog.dfh = dfh
-            revlogs[path] = revlog
 
         revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
                         data0, data1)
@@ -167,24 +173,25 @@ class EntryRevlog(revlog.revlog):
             self.index.insert(-1, e)
             self.nodemap[e[7]] = len(self) - 1
 
-        # TODO: verify entry rev number matches the current rev
-        # TODO: verify entry offset matches current d file offset
+        curr = len(self) - 1
+        offset = self.end(curr - 1)
+
         if not self._inline:
-            #transaction.add(revlog.datafile, offset)
-            #transaction.add(revlog.indexfile, curr * len(entry))
+            transaction.add(self.datafile, offset)
+            transaction.add(self.indexfile, curr * len(entry))
             if data0:
                 dfh.write(data0)
             dfh.write(data1)
             ifh.write(entry)
         else:
-            #offset += curr * revlog._io.size
-            #transaction.add(revlog.indexfile, offset, curr)
+            offset += curr * self._io.size
+            transaction.add(self.indexfile, offset, curr)
             ifh.write(entry)
             ifh.write(data0)
             ifh.write(data1)
             #self.checkinlinesize(transaction, ifh)
 
-# Handle pushed commits
+# Handle incoming commits
 
 pending = []
 
@@ -261,3 +268,7 @@ def pretxnchangegroup(ui, repo, *args, **kwargs):
         conn.close()
 
     del pending[:]
+
+def transactionclose(orig, self):
+    del pending[:]
+    return orig(self)
