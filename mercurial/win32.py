@@ -24,6 +24,7 @@ _INVALID_HANDLE_VALUE = _HANDLE(-1).value
 
 # GetLastError
 _ERROR_SUCCESS = 0
+_ERROR_SHARING_VIOLATION = 32
 _ERROR_INVALID_PARAMETER = 87
 _ERROR_INSUFFICIENT_BUFFER = 122
 
@@ -59,7 +60,9 @@ _FILE_SHARE_DELETE = 0x00000004
 
 _OPEN_EXISTING = 3
 
+_FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
 _FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
+_FILE_FLAG_DELETE_ON_CLOSE = 0x04000000
 
 # SetFileAttributes
 _FILE_ATTRIBUTE_NORMAL = 0x80
@@ -420,11 +423,18 @@ def spawndetached(args):
 def unlink(f):
     '''try to implement POSIX' unlink semantics on Windows'''
 
-    if os.path.isdir(f):
-        # use EPERM because it is POSIX prescribed value, even though
-        # unlink(2) on directories returns EISDIR on Linux
-        raise IOError(errno.EPERM,
-                      "Unlinking directory not permitted: '%s'" % f)
+    # If we can open f exclusively, no other processes must have open handles
+    # for it and we can expect its name will be deleted immediately when we
+    # close the handle unless we have another in the same process.  We also
+    # expect we shall simply fail to open f if it is a directory.
+    fh = _kernel32.CreateFileA(f, 0, 0, None, _OPEN_EXISTING,
+        _FILE_FLAG_OPEN_REPARSE_POINT | _FILE_FLAG_DELETE_ON_CLOSE, None)
+    if fh != _INVALID_HANDLE_VALUE:
+        _kernel32.CloseHandle(fh)
+        return
+    error = _kernel32.GetLastError()
+    if error != _ERROR_SHARING_VIOLATION:
+        raise ctypes.WinError(error)
 
     # POSIX allows to unlink and rename open files. Windows has serious
     # problems with doing that:
