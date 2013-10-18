@@ -7346,7 +7346,7 @@ msgid ""
 msgstr ""
 
 msgid "    :hg:`resolve` must be used to resolve unresolved files."
-msgstr "hg `resolve`必須使用在解決未解決的檔案."
+msgstr "    hg `resolve` 必須使用在解決未解決的檔案."
 
 msgid ""
 "    To undo an uncommitted merge, use :hg:`update --clean .` which\n"

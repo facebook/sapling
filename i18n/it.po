@@ -9381,7 +9381,7 @@ msgid ""
 "directory strip option for patch. This has the same meaning as the "
 "corresponding patch option"
 msgstr ""
-"opzione di rimozione della directory per patch. Questa ha lo stesso\n"
+"opzione di rimozione della directory per patch. Questa ha lo stesso "
 "significato dell'opzione corrispondente di patch"
 
 msgid "PATH"

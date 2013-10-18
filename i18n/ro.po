@@ -4862,7 +4862,7 @@ msgstr ""
 
 msgid "run even when remote repository is unrelated (with -b/--bundle)"
 msgstr ""
-"execută chiar când depozitul la distanță este neînrudit\n"
+"execută chiar când depozitul la distanță este neînrudit "
 "(cu -b/--bundle)"
 
 msgid "a base changeset to specify instead of a destination (with -b/--bundle)"
@@ -6627,7 +6627,7 @@ msgstr "adnotează revizia specificată"
 
 msgid "follow copies/renames and list the filename (DEPRECATED)"
 msgstr ""
-"urmărește copierile/redenumirile și afișează numele\n"
+"urmărește copierile/redenumirile și afișează numele "
 "fișierului (ÎNVECHIT)"
 
 msgid "don't follow copies and renames"
@@ -7255,7 +7255,7 @@ msgstr ""
 "    de modificări (etichete sau nume de ramuri) cu -r/--rev.\n"
 "    Dacă se folosește -r/--rev, depozitul clonat va conține numai un subset\n"
 "    al seturilor de modificări ale depozitului sursă. Numai colecția de\n"
-"     seturi de modificări definite de toate opțiunile -r/--rev (inclusiv "
+"    seturi de modificări definite de toate opțiunile -r/--rev (inclusiv "
 "toți\n"
 "    strămoșii) va fi adusă (pulled) in depozitul destinație.\n"
 "    Nici un set de modificări ulterior (inclusiv etichete ulterioare) nu se\n"
@@ -8341,7 +8341,7 @@ msgstr "aplică patch-ul nodurilor pentru care a fost generat"
 
 msgid "use any branch information in patch (implied by --exact)"
 msgstr ""
-"folosește orice informație despre ramură din patch\n"
+"folosește orice informație despre ramură din patch "
 "(implicat de --exact)"
 
 msgid "[OPTION]... PATCH..."
@@ -8425,7 +8425,7 @@ msgstr "fișierul în care va fi salvat bundle-ul"
 
 msgid "a remote changeset intended to be added"
 msgstr ""
-"un set de modificări la distanță care se intenționează a fi\n"
+"un set de modificări la distanță care se intenționează a fi "
 "adăugat"
 
 msgid "compare bookmarks"
@@ -8559,7 +8559,7 @@ msgstr "reviziile depozitate de utilizatorul"
 
 msgid "show only changesets within the given named branch (DEPRECATED)"
 msgstr ""
-"afișează doar seturile de modificări din interiorul ramurii denumite\n"
+"afișează doar seturile de modificări din interiorul ramurii denumite "
 "specificate (ÎNVECHIT)"
 
 msgid "show changesets within the given named branch"
@@ -8673,7 +8673,7 @@ msgstr "revizia de fuzionat"
 
 msgid "review revisions to merge (no merge is performed)"
 msgstr ""
-"treci în revistă reviziile de fuzionat (nu se execută\n"
+"treci în revistă reviziile de fuzionat (nu se execută "
 "nicio fuziune)"
 
 msgid "[-P] [-f] [[-r] REV]"
@@ -8889,7 +8889,7 @@ msgstr ""
 
 msgid "update to new branch head if changesets were pulled"
 msgstr ""
-"actualizează la noul capăt de ramură, dacă au fost preluate\n"
+"actualizează la noul capăt de ramură, dacă au fost preluate "
 "seturi de modificări"
 
 msgid "run even when remote repository is unrelated"
@@ -9889,7 +9889,7 @@ msgstr ""
 
 msgid "update to new branch head if changesets were unbundled"
 msgstr ""
-"actualizează la noul capăt de ramură, dacă au fost despachetate\n"
+"actualizează la noul capăt de ramură, dacă au fost despachetate "
 "(unbundled) seturi de modificări"
 
 msgid "[-u] FILE..."
