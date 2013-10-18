@@ -30,9 +30,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-dbargs = {
-    
-}
+
 
 def uisetup(ui):
     wrapfunction(revlog.revlog, '_addrevision', addrevision)
@@ -145,7 +143,7 @@ def addentries(repo, revisions, transaction, revlogs):
         if link > latest:
             latest = link
         count += 1
-        revlog = revlogs.get('path')
+        revlog = revlogs.get(path)
         if not revlog:
             revlog = EntryRevlog(opener, path)
             revlogs[path] = revlog
@@ -168,13 +166,19 @@ def addentries(repo, revisions, transaction, revlogs):
 
 class EntryRevlog(revlog.revlog):
     def addentry(self, transaction, ifh, dfh, entry, data0, data1):
+        curr = len(self)
+        offset = self.end(curr)
+
         e = struct.unpack(revlog.indexformatng, entry)
+        if curr == 0:
+            elist = list(e)
+            type = revlog.gettype(e[0])
+            elist[0] = revlog.offset_type(0, type)
+            e = tuple(elist)
+
         if e[7] not in self.nodemap:
             self.index.insert(-1, e)
             self.nodemap[e[7]] = len(self) - 1
-
-        curr = len(self) - 1
-        offset = self.end(curr - 1)
 
         if not self._inline:
             transaction.add(self.datafile, offset)
@@ -189,7 +193,7 @@ class EntryRevlog(revlog.revlog):
             ifh.write(entry)
             ifh.write(data0)
             ifh.write(data1)
-            #self.checkinlinesize(transaction, ifh)
+            self.checkinlinesize(transaction, ifh)
 
 # Handle incoming commits
 
