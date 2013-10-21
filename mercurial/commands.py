@@ -4652,7 +4652,7 @@ def push(ui, repo, dest=None, **opts):
     only create a new branch without forcing other changes.
 
     .. note::
-      Extra care should be used with the -f/--force option,
+      Extra care should be taken with the -f/--force option,
       which will push all new heads on all branches, an action which will
       almost always cause confusion for collaborators.
 
