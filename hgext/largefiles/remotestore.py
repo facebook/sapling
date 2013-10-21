@@ -26,7 +26,7 @@ class remotestore(basestore.basestore):
                 _('remotestore: could not put %s to remote store %s')
                 % (source, self.url))
         self.ui.debug(
-            _('remotestore: put %s to remote store %s') % (source, self.url))
+            _('remotestore: put %s to remote store %s\n') % (source, self.url))
 
     def exists(self, hashes):
         return dict((h, s == 0) for (h, s) in self._stat(hashes).iteritems())
