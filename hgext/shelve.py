@@ -358,6 +358,10 @@ def checkparents(repo, state):
         raise util.Abort(_('working directory parents do not match unshelve '
                            'state'))
 
+def pathtofiles(repo, files):
+    cwd = repo.getcwd()
+    return [repo.pathto(f, cwd) for f in files]
+
 def unshelveabort(ui, repo, state, opts):
     """subcommand that abort an in-progress unshelve"""
     wlock = repo.wlock()
@@ -372,7 +376,8 @@ def unshelveabort(ui, repo, state, opts):
             revertfiles = readshelvedfiles(repo, state.name)
             wctx = repo.parents()[0]
             cmdutil.revert(ui, repo, wctx, [wctx.node(), nullid],
-                           *revertfiles, **{'no_backup': True})
+                           *pathtofiles(repo, revertfiles),
+                           **{'no_backup': True})
             # fix up the weird dirstate states the merge left behind
             mf = wctx.manifest()
             dirstate = repo.dirstate
@@ -532,7 +537,8 @@ def unshelve(ui, repo, *shelved, **opts):
                 revertfiles = set(parents[1].files()).difference(ms)
                 cmdutil.revert(ui, repo, parents[1],
                                (parents[0].node(), nullid),
-                               *revertfiles, **{'no_backup': True})
+                               *pathtofiles(repo, revertfiles),
+                               **{'no_backup': True})
                 raise error.InterventionRequired(
                     _("unresolved conflicts (see 'hg resolve', then "
                       "'hg unshelve --continue')"))
@@ -540,7 +546,8 @@ def unshelve(ui, repo, *shelved, **opts):
         else:
             parent = tip.parents()[0]
             hg.update(repo, parent.node())
-            cmdutil.revert(ui, repo, tip, repo.dirstate.parents(), *tip.files(),
+            cmdutil.revert(ui, repo, tip, repo.dirstate.parents(),
+                           *pathtofiles(repo, tip.files()),
                            **{'no_backup': True})
 
         prevquiet = ui.quiet

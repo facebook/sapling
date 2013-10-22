@@ -165,7 +165,9 @@ expect "a" to no longer be present, but status otherwise unchanged
 
 and now "a/a" should reappear
 
+  $ cd a
   $ hg unshelve -q wibble
+  $ cd ..
   $ hg status -C
   M a/a
   A b.rename/b
