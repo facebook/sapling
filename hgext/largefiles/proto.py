@@ -96,7 +96,7 @@ def wirereposetup(ui, repo):
                         self.ui.warn(_('remote: '), l, '\n')
                     return int(d)
                 except (ValueError, urllib2.HTTPError):
-                    self.ui.warn(_('unexpected putlfile response: %s') % res)
+                    self.ui.warn(_('unexpected putlfile response: %r\n') % res)
                     return 1
             # ... but we can't use sshrepository._call because the data=
             # argument won't get sent, and _callpush does exactly what we want
