@@ -636,7 +636,7 @@ def restorestatus(repo):
         raise util.Abort(_('no rebase in progress'))
 
 def inrebase(repo, originalwd, state):
-    '''check whether the workdir is in an interrupted rebase'''
+    '''check whether the working dir is in an interrupted rebase'''
     parents = [p.rev() for p in repo.parents()]
     if originalwd in parents:
         return True

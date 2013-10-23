@@ -22,7 +22,7 @@ def ismember(ui, username, userlist):
     """Check if username is a member of userlist.
 
     If userlist has a single '*' member, all users are considered members.
-    Can be overriden by extensions to provide more complex authorization
+    Can be overridden by extensions to provide more complex authorization
     schemes.
     """
     return userlist == ['*'] or username in userlist

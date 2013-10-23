@@ -190,7 +190,7 @@ def createcmd(ui, repo, pats, opts):
         lock = repo.lock()
 
         bms = repo._bookmarks.copy()
-        # use an uncommited transaction to generate the bundle to avoid
+        # use an uncommitted transaction to generate the bundle to avoid
         # pull races. ensure we don't print the abort message to stderr.
         tr = repo.transaction('commit', report=lambda x: None)
 

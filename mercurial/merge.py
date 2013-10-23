@@ -725,7 +725,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 repo.hook('update', parent1=xp2, parent2='', error=0)
                 return 0, 0, 0, 0
 
-            if pa not in (p1, p2):  # nolinear
+            if pa not in (p1, p2):  # nonlinear
                 dirty = wc.dirty(missing=True)
                 if dirty or onode is None:
                     # Branching is a bit strange to ensure we do the minimal
