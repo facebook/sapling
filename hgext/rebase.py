@@ -406,8 +406,10 @@ def externalparent(repo, state, targetancestors):
         return nullrev
     if len(parents) == 1:
         return parents.pop()
-    raise util.Abort(_('unable to collapse, there is more '
-                       'than one external parent'))
+    raise util.Abort(_('unable to collapse on top of %s, there is more '
+                       'than one external parent: %s') %
+                     (max(targetancestors),
+                      ', '.join(str(p) for p in sorted(parents))))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     'Commit the changes and store useful information in extra'
