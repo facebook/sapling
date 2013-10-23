@@ -426,7 +426,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         fp.close()
         if "no-" "check-code" in pre:
             if debug:
-                print "Skipping %s for %s it has no-" " check-code" % (
+                print "Skipping %s for %s it has no-" "check-code" % (
                        name, f)
             break
         for p, r in filters:
