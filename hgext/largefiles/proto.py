@@ -93,7 +93,7 @@ def wirereposetup(ui, repo):
                         headers={'content-type':'application/mercurial-0.1'})
                     d, output = res.split('\n', 1)
                     for l in output.splitlines(True):
-                        self.ui.warn(_('remote: '), l, '\n')
+                        self.ui.warn(_('remote: '), l) # assume l ends with \n
                     return int(d)
                 except (ValueError, urllib2.HTTPError):
                     self.ui.warn(_('unexpected putlfile response: %r\n') % res)
