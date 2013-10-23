@@ -27,7 +27,6 @@ shelving in an empty repo should be possible
   adding manifests
   adding file changes
   added 1 changesets with 5 changes to 5 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg commit -q -m 'initial commit'
 
@@ -100,19 +99,19 @@ delete our older shelved change
   $ hg shelve -d default
   $ hg qfinish -a -q
 
-local edits should prevent a shelved change from applying
+local edits should not prevent a shelved change from applying
 
-  $ echo e>>a/a
-  $ hg unshelve
+  $ printf "z\na\n" > a/a
+  $ hg unshelve --keep
   unshelving change 'default-01'
-  the following shelved files have been modified:
-    a/a
-  you must commit, revert, or shelve your changes before you can proceed
-  abort: cannot unshelve due to local changes
-  
-  [255]
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 3 changes to 8 files (+1 heads)
+  merging a/a
 
-  $ hg revert -C a/a
+  $ hg revert --all -q
+  $ rm a/a.orig b.rename/b c.copy
 
 apply it and make sure our state is as expected
 
@@ -122,7 +121,6 @@ apply it and make sure our state is as expected
   adding manifests
   adding file changes
   added 1 changesets with 3 changes to 8 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status -C
   M a/a
   A b.rename/b
@@ -201,24 +199,21 @@ force a conflicted merge to occur
   merging a/a
   warning: conflicts during merge.
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
-  2 files updated, 0 files merged, 1 files removed, 1 files unresolved
-  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
 ensure that we have a merge with unresolved conflicts
 
-  $ hg heads -q
-  4:cebf2b8de087
-  3:2e69b451d1ea
-  $ hg parents -q
-  3:2e69b451d1ea
-  4:cebf2b8de087
+  $ hg heads -q --template '{rev}\n'
+  5
+  4
+  $ hg parents -q --template '{rev}\n'
+  4
+  5
   $ hg status
   M a/a
   M b.rename/b
   M c.copy
-  A foo/foo
   R b/b
   ? a/a.orig
   $ hg diff
@@ -248,12 +243,6 @@ ensure that we have a merge with unresolved conflicts
   +++ b/c.copy
   @@ -0,0 +1,1 @@
   +c
-  diff --git a/foo/foo b/foo/foo
-  new file mode 100644
-  --- /dev/null
-  +++ b/foo/foo
-  @@ -0,0 +1,1 @@
-  +foo
   $ hg resolve -l
   U a/a
 
@@ -268,10 +257,10 @@ abort the unshelve and be happy
   M a/a
   M b.rename/b
   M c.copy
-  A foo/foo
   R b/b
   ? a/a.orig
   $ hg unshelve -a
+  rebase aborted
   unshelve of 'default' aborted
   $ hg heads -q
   3:2e69b451d1ea
@@ -330,9 +319,9 @@ ensure the repo is as we hope
   3:2e69b451d1ea
 
   $ hg status -C
-  M b.rename/b
+  A b.rename/b
     b/b
-  M c.copy
+  A c.copy
     c
   A foo/foo
   R b/b
@@ -372,6 +361,7 @@ ensure that metadata-only changes are shelved
 set up another conflict between a commit and a shelved change
 
   $ hg revert -q -C -a
+  $ rm a/a.orig b.rename/b c.copy
   $ echo a >> a/a
   $ hg shelve -q
   $ echo x >> a/a
@@ -387,7 +377,6 @@ if we resolve a conflict while unshelving, the unshelve should succeed
   adding file changes
   added 1 changesets with 1 changes to 6 files (+1 heads)
   merging a/a
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg parents -q
   4:33f7f61e6c5e
   $ hg shelve -l
@@ -411,7 +400,6 @@ test keep and cleanup
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 7 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg shelve --list
   default         (*)    create conflict (glob)
   $ hg shelve --cleanup
@@ -433,7 +421,6 @@ test bookmarks
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 7 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark
    * test                      4:33f7f61e6c5e
 
@@ -450,7 +437,6 @@ shelve should still work even if mq is disabled
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 7 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 shelve should leave dirstate clean (issue 4055)
 
@@ -479,8 +465,52 @@ shelve should leave dirstate clean (issue 4055)
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   M z
+
+  $ cd ..
+
+shelve should only unshelve pending changes (issue 4068)
+
+  $ hg init onlypendingchanges
+  $ cd onlypendingchanges
+  $ touch a
+  $ hg ci -Aqm a
+  $ touch b
+  $ hg ci -Aqm b
+  $ hg up -q 0
+  $ touch c
+  $ hg ci -Aqm c
+
+  $ touch d
+  $ hg add d
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up -q 1
+  $ hg unshelve
+  unshelving change 'default'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 3 files
+  $ hg status
+  A d
+
+unshelve should work on an ancestor of the original commit
+
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg unshelve
+  unshelving change 'default'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 3 files
+  $ hg status
+  A d
 
   $ cd ..
