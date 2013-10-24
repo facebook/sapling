@@ -399,7 +399,7 @@ function ajaxScrollInit(urlFormat,
                         graph.canvas.height = addHeight;
 
                         var dataStr = htmlText.match(/^\s*var data = (.*);$/m)[1];
-                        var data = JSON.parse(dataStr)
+                        var data = JSON.parse(dataStr);
                         if (data.length < nextPageVar) {
                             nextPageVar = undefined;
                         }
