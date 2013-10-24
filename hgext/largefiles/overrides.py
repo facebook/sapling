@@ -381,7 +381,7 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
 
         splitstandin = lfutil.splitstandin(f)
         if (m == "g" and splitstandin is not None and
-            splitstandin in p1 and f in p2):
+            splitstandin in p1):
             # Case 1: normal file in the working copy, largefile in
             # the second parent
             lfile = splitstandin
@@ -394,7 +394,7 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
                 processed.append((standin, "g", (p2.flags(standin),), msg))
             else:
                 processed.append((standin, "r", None, msg))
-        elif m == "g" and lfutil.standin(f) in p1 and f in p2:
+        elif m == "g" and lfutil.standin(f) in p1:
             # Case 2: largefile in the working copy, normal file in
             # the second parent
             standin = lfutil.standin(f)
