@@ -109,4 +109,31 @@ Largefile in the working copy, keeping the largefile version:
   $ cat foo
   large
 
+Whatever ... commit something so we can invoke merge when updating
+
+  $ hg commit -m '3: Merge'
+
+Updating from largefile to normal - no reason to prompt
+
+  $ hg up -r 2
+  getting changed largefiles
+  0 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat foo
+  normal
+
+(the update above used to leave the working dir in a very weird state - clean it
+  $ hg up -qr null
+  $ hg up -qr 2
+)
+
+Updating from normal to largefile - no reason to prompt
+
+  $ hg up -r 3
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat foo
+  large
+
   $ cd ..
