@@ -259,7 +259,7 @@ def rebase(ui, repo, **opts):
                 if collapsef:
                     targetancestors = repo.changelog.ancestors([target],
                                                                inclusive=True)
-                    external = checkexternal(repo, state, targetancestors)
+                    external = externalparent(repo, state, targetancestors)
 
         if keepbranchesf:
             # insert _savebranch at the start of extrafns so if
@@ -388,24 +388,26 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def checkexternal(repo, state, targetancestors):
-    """Check whether one or more external revisions need to be taken in
-    consideration. In the latter case, abort.
+def externalparent(repo, state, targetancestors):
+    """Return the revision that should be used as the second parent
+    when the revisions in state is collapsed on top of targetancestors.
+    Abort if there is more than one parent.
     """
-    external = nullrev
+    parents = set()
     source = min(state)
     for rev in state:
         if rev == source:
             continue
-        # Check externals and fail if there are more than one
         for p in repo[rev].parents():
             if (p.rev() not in state
                         and p.rev() not in targetancestors):
-                if external != nullrev:
-                    raise util.Abort(_('unable to collapse, there is more '
-                            'than one external parent'))
-                external = p.rev()
-    return external
+                parents.add(p.rev())
+    if not parents:
+        return nullrev
+    if len(parents) == 1:
+        return parents.pop()
+    raise util.Abort(_('unable to collapse, there is more '
+                       'than one external parent'))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     'Commit the changes and store useful information in extra'
