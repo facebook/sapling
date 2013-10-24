@@ -370,12 +370,13 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
     overwrite = force and not branchmerge
     actions = origfn(repo, p1, p2, pa, branchmerge, force, partial,
                      acceptremote)
+
+    if overwrite:
+        return actions
+
     processed = []
 
     for action in actions:
-        if overwrite:
-            processed.append(action)
-            continue
         f, m, args, msg = action
 
         splitstandin = lfutil.splitstandin(f)
