@@ -79,6 +79,6 @@ Examples
 
  - resynchronize draft changesets relative to a remote repository::
 
-     hg phase -fd 'outgoing(URL)'
+     hg phase -fd "outgoing(URL)"
 
 See :hg:`help phase` for more information on manually manipulating phases.

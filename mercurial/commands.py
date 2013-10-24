@@ -556,7 +556,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
       - skip all revisions that do not touch directories ``foo`` or ``bar``::
 
-          hg bisect --skip '!( file("path:foo") & file("path:bar") )'
+          hg bisect --skip "!( file('path:foo') & file('path:bar') )"
 
       - forget the current bisection::
 
@@ -568,7 +568,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
           hg bisect --reset
           hg bisect --bad 34
           hg bisect --good 12
-          hg bisect --command 'make && make tests'
+          hg bisect --command "make && make tests"
 
       - see all changesets whose states are already known in the current
         bisection::
