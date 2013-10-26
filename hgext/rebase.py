@@ -128,7 +128,8 @@ def rebase(ui, repo, **opts):
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
-    Returns 0 on success, 1 if nothing to rebase.
+    Returns 0 on success, 1 if nothing to rebase or there are
+    unresolved conflicts.
     """
     originalwd = target = None
     activebookmark = None
