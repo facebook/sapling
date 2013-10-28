@@ -704,5 +704,6 @@ def shelvecmd(ui, repo, *pats, **opts):
 
 def extsetup(ui):
     cmdutil.unfinishedstates.append(
-        [shelvedstate._filename, False, True, _('unshelve already in progress'),
+        [shelvedstate._filename, False, False,
+         _('unshelve already in progress'),
          _("use 'hg unshelve --continue' or 'hg unshelve --abort'")])
