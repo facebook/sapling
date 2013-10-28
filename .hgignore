@@ -1,0 +1,5 @@
+syntax: regexp
+\.pyc$
+\.so$
+^build/
+\.err$
