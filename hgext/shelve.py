@@ -66,16 +66,7 @@ class shelvedfile(object):
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
-            if mode[0] in 'wa':
-                try:
-                    self.vfs.mkdir()
-                    return self.vfs(self.fname, mode)
-                except IOError, err:
-                    if err.errno != errno.EEXIST:
-                        raise
-            elif mode[0] == 'r':
-                raise util.Abort(_("shelved change '%s' not found") %
-                                 self.name)
+            raise util.Abort(_("shelved change '%s' not found") % self.name)
 
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
