@@ -28,8 +28,8 @@ $HOME/.cache/largefiles.
 Normal file in the working copy, keeping the normal version:
 
   $ echo "n" | hg merge --config ui.interactive=Yes
-  foo has been turned into a largefile
-  use (l)argefile or keep as (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  remote turned local normal file foo into a largefile
+  use (l)argefile or keep (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   0 largefiles updated, 0 removed
@@ -42,8 +42,8 @@ Normal file in the working copy, keeping the largefile version:
 
   $ hg update -q -C
   $ echo "l" | hg merge --config ui.interactive=Yes
-  foo has been turned into a largefile
-  use (l)argefile or keep as (n)ormal file? 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  remote turned local normal file foo into a largefile
+  use (l)argefile or keep (n)ormal file? 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -70,8 +70,8 @@ Largefile in the working copy, keeping the normal version:
 
   $ hg update -q -C -r 1
   $ echo "n" | hg merge --config ui.interactive=Yes
-  foo has been turned into a normal file
-  keep as (l)argefile or use (n)ormal file? 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  remote turned local largefile foo into a normal file
+  keep (l)argefile or use (n)ormal file? 1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   0 largefiles updated, 0 removed
@@ -98,8 +98,8 @@ Largefile in the working copy, keeping the largefile version:
 
   $ hg update -q -C -r 1
   $ echo "l" | hg merge --config ui.interactive=Yes
-  foo has been turned into a normal file
-  keep as (l)argefile or use (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  remote turned local largefile foo into a normal file
+  keep (l)argefile or use (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   1 largefiles updated, 0 removed
@@ -219,8 +219,8 @@ Ancestor: normal  Parent: normal2  Parent: large   result: ?
   $ hg merge -r large
   local changed f which remote deleted
   use (c)hanged version or (d)elete? c
-  f has been turned into a largefile
-  use (l)argefile or keep as (n)ormal file? l
+  remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? l
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
@@ -231,8 +231,8 @@ Ancestor: normal  Parent: normal2  Parent: large   result: ?
   $ hg up -Cqr normal2
   $ ( echo c; echo n ) | hg merge -r large --config ui.interactive=Yes
   local changed f which remote deleted
-  use (c)hanged version or (d)elete? f has been turned into a largefile
-  use (l)argefile or keep as (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  use (c)hanged version or (d)elete? remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? 0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   0 largefiles updated, 0 removed
@@ -255,8 +255,8 @@ swap
   $ hg merge -r normal2
   remote changed f which local deleted
   use (c)hanged version or leave (d)eleted? c
-  f has been turned into a normal file
-  keep as (l)argefile or use (n)ormal file? l
+  remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? l
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
@@ -267,8 +267,8 @@ swap
   $ hg up -Cqr large
   $ ( echo c; echo n ) | hg merge -r normal2 --config ui.interactive=Yes
   remote changed f which local deleted
-  use (c)hanged version or leave (d)eleted? f has been turned into a normal file
-  keep as (l)argefile or use (n)ormal file? 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  use (c)hanged version or leave (d)eleted? remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? 2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
   0 largefiles updated, 0 removed
@@ -312,8 +312,8 @@ Ancestor: large   Parent: large2   Parent: normal  result: ?
   $ hg merge -r normal
   local changed .hglf/f which remote deleted
   use (c)hanged version or (d)elete? c
-  f has been turned into a normal file
-  keep as (l)argefile or use (n)ormal file? l
+  remote turned local largefile f into a normal file
+  keep (l)argefile or use (n)ormal file? l
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
@@ -337,8 +337,8 @@ swap
   $ hg merge -r large2
   remote changed .hglf/f which local deleted
   use (c)hanged version or leave (d)eleted? c
-  f has been turned into a largefile
-  use (l)argefile or keep as (n)ormal file? l
+  remote turned local normal file f into a largefile
+  use (l)argefile or keep (n)ormal file? l
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles

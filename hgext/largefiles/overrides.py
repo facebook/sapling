@@ -387,8 +387,8 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
             # the second parent
             lfile = splitstandin
             standin = f
-            msg = _('%s has been turned into a largefile\n'
-                    'use (l)argefile or keep as (n)ormal file?'
+            msg = _('remote turned local normal file %s into a largefile\n'
+                    'use (l)argefile or keep (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))
@@ -401,8 +401,8 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
             # the second parent
             standin = lfutil.standin(f)
             lfile = f
-            msg = _('%s has been turned into a normal file\n'
-                    'keep as (l)argefile or use (n)ormal file?'
+            msg = _('remote turned local largefile %s into a normal file\n'
+                    'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))
