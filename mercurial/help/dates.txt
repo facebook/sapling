@@ -24,7 +24,7 @@ Many date formats are valid. Here are some examples:
 
 Lastly, there is Mercurial's internal format:
 
-- ``1165432709 0`` (Wed Dec 6 13:18:29 2006 UTC)
+- ``1165411109 0`` (Wed Dec 6 13:18:29 2006 UTC)
 
 This is the internal representation format for dates. The first number
 is the number of seconds since the epoch (1970-01-01 00:00 UTC). The
