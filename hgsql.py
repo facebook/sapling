@@ -39,6 +39,9 @@ testedwith = 'internal'
 
 disablesync = False
 
+class CorruptionException(Exception):
+    pass
+
 def uisetup(ui):
     wrapfunction(revlog.revlog, '_addrevision', addrevision)
     wrapfunction(localrepo, 'instance', repoinstance)
@@ -118,18 +121,19 @@ def pulldb(repo, cur):
         return
 
     transaction = repo.transaction("pulldb")
+
+    revlogs = {}
     try:
         # Refresh the changelog now that we have the lock
         del repo.changelog
         cl = repo.changelog
         clrev = len(cl) - 1
 
-        revlogs = {}
         count = 1
         chunksize = 5000
         while count:
             # Fetch new revs from db
-            cur.execute("SELECT * FROM revs WHERE linkrev > %s and linkrev < %s ORDER BY id ASC", (clrev, clrev + chunksize))
+            cur.execute("SELECT * FROM revs WHERE linkrev > %s AND linkrev < %s ORDER BY id ASC", (clrev, clrev + chunksize))
 
             # Add the new revs
             newentries = addentries(repo, cur, transaction, revlogs)
@@ -145,9 +149,10 @@ def pulldb(repo, cur):
                 #print "Flushing (chunksize %s)" % chunksize
                 count = 1
                 for revlog in revlogs.itervalues():
-                    revlog.ifh.flush()
-                    revlog.ifh.close()
-                    if revlog.dfh:
+                    if not revlog.ifh.closed:
+                        revlog.ifh.flush()
+                        revlog.ifh.close()
+                    if revlog.dfh and not revlog.dfh.closed:
                         revlog.dfh.flush()
                         revlog.dfh.close()
                 revlogs = {}
@@ -157,6 +162,11 @@ def pulldb(repo, cur):
 
         transaction.close()
     finally:
+        for revlog in revlogs.itervalues():
+            if not revlog.ifh.closed:
+                revlog.ifh.close()
+            if revlog.dfh and not revlog.dfh.closed:
+                revlog.dfh.close()
         transaction.release()
         lock.release()
 
@@ -177,7 +187,6 @@ def pulldb(repo, cur):
 
 def addentries(repo, revisions, transaction, revlogs):
     opener = repo.sopener
-    revlogs = {}
 
     results = False
     latest = 0
@@ -214,15 +223,30 @@ class EntryRevlog(revlog.revlog):
         offset = self.end(curr)
 
         e = struct.unpack(revlog.indexformatng, entry)
+        offsettype, datalen, textlen, base, link, p1r, p2r, node = e
         if curr == 0:
             elist = list(e)
-            type = revlog.gettype(e[0])
-            elist[0] = revlog.offset_type(0, type)
+            type = revlog.gettype(offsettype)
+            offsettype = revlog.offset_type(0, type)
+            elist[0] = offsettype
             e = tuple(elist)
 
-        if e[7] not in self.nodemap:
+        # Verify that the revlog is in a good state
+        if p1r >= curr or p2r >= curr:
+            raise CorruptionException("parent revision is not in revlog: %s" % self.indexfile)
+        if base > curr:
+            raise CorruptionException("base revision is not in revlog: %s" % self.indexfile)
+
+        expectedoffset = revlog.getoffset(offsettype)
+        actualoffset = self.end(curr - 1)
+        if expectedoffset != 0 and expectedoffset != actualoffset:
+            raise CorruptionException("revision offset doesn't match prior length " +
+                "(%s offset vs %s length): %s" %
+                (expectedoffset, actualoffset, self.indexfile))
+
+        if node not in self.nodemap:
             self.index.insert(-1, e)
-            self.nodemap[e[7]] = len(self) - 1
+            self.nodemap[node] = len(self) - 1
 
         if not self._inline:
             transaction.add(self.datafile, offset)
