@@ -28,7 +28,7 @@ from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
-from mercurial import wireproto, bookmarks, repair, commands, hg
+from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff
 import MySQLdb, struct, time
 from MySQLdb import cursors
 
@@ -45,6 +45,7 @@ def uisetup(ui):
     wrapcommand(commands.table, 'pull', pull)
 
     wrapfunction(revlog.revlog, '_addrevision', addrevision)
+    wrapfunction(revlog.revlog, 'addgroup', addgroup)
     wrapfunction(localrepo, 'instance', repoinstance)
     wrapfunction(transaction.transaction, '_abort', transactionclose)
     wrapfunction(transaction.transaction, 'close', transactionclose)
@@ -135,7 +136,7 @@ def syncdb(repo, cur):
         chunksize = 5000
         while count:
             # Fetch new revs from db
-            cur.execute("SELECT * FROM revs WHERE linkrev > %s AND linkrev < %s ORDER BY id ASC", (clrev, clrev + chunksize))
+            cur.execute("SELECT * FROM revs WHERE linkrev > %s AND linkrev < %s ORDER BY linkrev ASC", (clrev, clrev + chunksize))
 
             # Add the new revs
             newentries = addentries(repo, cur, transaction, revlogs)
@@ -380,9 +381,153 @@ def addrevision(orig, self, node, text, transaction, link, p1, p2,
 
     return result
 
+def addgroup(orig, self, bundle, linkmapper, transaction):
+    """
+    copy paste of revlog.addgroup, but we ensure that the revisions are added
+    in linkrev order.
+    """
+    # track the base of the current delta log
+    content = []
+    node = None
+
+    r = len(self)
+    end = 0
+    if r:
+        end = self.end(r - 1)
+    ifh = self.opener(self.indexfile, "a+")
+    isize = r * self._io.size
+    if self._inline:
+        transaction.add(self.indexfile, end + isize, r)
+        dfh = None
+    else:
+        transaction.add(self.indexfile, isize, r)
+        transaction.add(self.datafile, end)
+        dfh = self.opener(self.datafile, "a")
+
+    try:
+        # loop through our set of deltas
+        chunkdatas = []
+        chunkmap = {}
+
+        lastlinkrev = -1
+        reorder = False
+
+        chain = None
+        while True:
+            chunkdata = bundle.deltachunk(chain)
+            if not chunkdata:
+                break
+
+            node = chunkdata['node']
+            cs = chunkdata['cs']
+            link = linkmapper(cs)
+            if link < lastlinkrev:
+                reorder = True
+            lastlinkrev = link
+            chunkdatas.append((link, chunkdata))
+            chunkmap[node] = chunkdata
+            chain = node
+
+        if reorder:
+            chunkdatas = sorted(chunkdatas)
+
+            fulltexts = {}
+            def getfulltext(node):
+                if node in fulltexts:
+                    return fulltexts[node]
+                if node in self.nodemap:
+                    return self.revision(node)
+
+                chunkdata = chunkmap[node]
+                deltabase = chunkdata['deltabase']
+                delta = chunkdata['delta']
+
+                deltachain = []
+                currentbase = deltabase
+                while True:
+                    if currentbase in fulltexts:
+                        deltachain.append(fulltexts[currentbase])
+                        break
+                    elif currentbase in self.nodemap:
+                        deltachain.append(self.revision(currentbase))
+                        break
+                    elif currentbase == nullid:
+                        break
+                    else:
+                        deltachunk = chunkmap[currentbase]
+                        currentbase = deltachunk['deltabase']
+                        deltachain.append(deltachunk['delta'])
+
+                prevtext = deltachain.pop()
+                while deltachain:
+                    prevtext = mdiff.patch(prevtext, deltachain.pop())
+
+                fulltext = mdiff.patch(prevtext, delta)
+                fulltexts[node] = fulltext
+                return fulltext
+
+            reorders = 0
+            visited = set()
+            prevnode = self.node(len(self) - 1)
+            for link, chunkdata in chunkdatas:
+                node = chunkdata['node']
+                deltabase = chunkdata['deltabase']
+                if (not deltabase in self.nodemap and
+                    not deltabase in visited):
+                    fulltext = getfulltext(node)
+                    ptext = getfulltext(prevnode)
+                    delta = mdiff.textdiff(ptext, fulltext)
+
+                    chunkdata['delta'] = delta
+                    chunkdata['deltabase'] = prevnode
+                    reorders += 1
+
+                prevnode = node
+                visited.add(node)
+
+        for link, chunkdata in chunkdatas:
+            node = chunkdata['node']
+            p1 = chunkdata['p1']
+            p2 = chunkdata['p2']
+            cs = chunkdata['cs']
+            deltabase = chunkdata['deltabase']
+            delta = chunkdata['delta']
+
+            content.append(node)
+
+            link = linkmapper(cs)
+            if node in self.nodemap:
+                # this can happen if two branches make the same change
+                continue
+
+            for p in (p1, p2):
+                if p not in self.nodemap:
+                    raise LookupError(p, self.indexfile,
+                                      _('unknown parent'))
+
+            if deltabase not in self.nodemap:
+                raise LookupError(deltabase, self.indexfile,
+                                  _('unknown delta base'))
+
+            baserev = self.rev(deltabase)
+            self._addrevision(node, None, transaction, link,
+                                      p1, p2, (baserev, delta), ifh, dfh)
+            if not dfh and not self._inline:
+                # addrevision switched from inline to conventional
+                # reopen the index
+                ifh.close()
+                dfh = self.opener(self.datafile, "a")
+                ifh = self.opener(self.indexfile, "a")
+    finally:
+        if dfh:
+            dfh.close()
+        ifh.close()
+
+    return content
+
 def pretxnchangegroup(ui, repo, *args, **kwargs):
     if conn == None:
-        raise Exception("invalid update - only hg push and pull are allowed")
+        raise Exception("invalid repo change - only hg push and pull are allowed")
 
     # Commit to db
     try:
