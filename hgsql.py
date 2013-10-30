@@ -8,7 +8,9 @@
 #CREATE TABLE revs(
 #id INT(2) NOT NULL AUTO_INCREMENT PRIMARY KEY,
 #path VARCHAR(256) NOT NULL,
-#linkrev INT NOT NULL,
+#chunk INT(4) NOT NULL,
+#chunkcount INT(4) NOT NULL,
+#linkrev INT(4) NOT NULL,
 #entry BINARY(64) NOT NULL,
 #data0 CHAR(1) NOT NULL,
 #data1 LONGBLOB NOT NULL,
@@ -35,6 +37,8 @@ from MySQLdb import cursors
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
+
+maxrecordsize = 1024 * 1024
 
 disablesync = False
 
@@ -192,7 +196,7 @@ def addentries(repo, revisions, transaction, revlogs):
     opener = repo.sopener
 
     def writeentry(revdata):
-        _, path, link, entry, data0, data1, createdtime = revdata
+        _, path, chunk, chunkcount, link, entry, data0, data1, createdtime = revdata
         revlog = revlogs.get(path)
         if not revlog:
             revlog = EntryRevlog(opener, path)
@@ -209,17 +213,41 @@ def addentries(repo, revisions, transaction, revlogs):
         revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
                         data0, data1)
 
-    count = 0
+    # put split chunks back together
+    groupedrevdata = {}
+    for revdata in revisions:
+        name = revdata[1]
+        chunk = revdata[2]
+        linkrev = revdata[4]
+        groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
+
+    fullrevisions = []
+    for _, chunks in groupedrevdata.iteritems():
+        chunkcount = chunks[0][3]
+        if chunkcount == 1:
+            fullrevisions.append(chunks[0])
+        elif chunkcount == len(chunks):
+            fullchunk = list(chunks[0])
+            data1 = ""
+            for i in range(0, chunkcount):
+                data1 += chunks[i][7]
+            fullchunk[7] = data1
+            fullrevisions.append(tuple(fullchunk))
+        else:
+            raise Exception("missing revision chunk - expected %s got %s" %
+                (chunkcount, len(chunks)))
+
+    fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[4])
 
     # Write filelogs first, then manifests, then changelogs,
     # just like Mercurial does normally.
     changelog = []
     manifest = []
-    for revdata in revisions:
-        count += 1
-        if revdata[1] == "00changelog.i":
+    for revdata in fullrevisions:
+        name = revdata[1]
+        if name == "00changelog.i":
             changelog.append(revdata)
-        elif revdata[1] == "00manifest.i":
+        elif name == "00manifest.i":
             manifest.append(revdata)
         else:
             writeentry(revdata)
@@ -230,7 +258,7 @@ def addentries(repo, revisions, transaction, revlogs):
     for revdata in changelog:
         writeentry(revdata)
 
-    return count
+    return len(fullrevisions)
 
 class EntryRevlog(revlog.revlog):
     def addentry(self, transaction, ifh, dfh, entry, data0, data1):
@@ -533,8 +561,22 @@ def pretxnchangegroup(ui, repo, *args, **kwargs):
     try:
         for revision in pending:
             _, path, linkrev, entry, data0, data1 = revision
-            cur.execute("""INSERT INTO revs(path, linkrev, entry, data0, data1, createdtime)
-                VALUES(%s, %s, %s, %s, %s, %s)""", (path, linkrev, entry, data0, data1, time.strftime('%Y-%m-%d %H:%M:%S')))
+
+            start = 0
+            chunk = 0
+            datalen = len(data1)
+            chunkcount = datalen / maxrecordsize
+            if datalen % maxrecordsize != 0 or datalen == 0:
+                chunkcount += 1
+            while chunk == 0 or start < len(data1):
+                end = min(len(data1), start + maxrecordsize)
+                datachunk = data1[start:end]
+                cur.execute("""INSERT INTO revs(path, chunk, chunkcount, linkrev, entry, data0,
+                    data1, createdtime) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (path, chunk, chunkcount, linkrev, entry, data0, datachunk,
+                     time.strftime('%Y-%m-%d %H:%M:%S')))
+                chunk += 1
+                start = end
 
         cur.execute("""DELETE FROM headsbookmarks WHERE name IS NULL""")
 
