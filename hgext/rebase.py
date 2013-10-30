@@ -447,9 +447,44 @@ def rebasenode(repo, rev, p1, state, collapse):
         repo.ui.debug(" already in target\n")
     repo.dirstate.write()
     repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
-    base = None
-    if repo[rev].rev() != repo[min(state)].rev():
+    if repo[rev].rev() == repo[min(state)].rev():
+        # Case (1) initial changeset of a non-detaching rebase.
+        # Let the merge mechanism find the base itself.
+        base = None
+    elif not repo[rev].p2():
+        # Case (2) detaching the node with a single parent, use this parent
         base = repo[rev].p1().node()
+    else:
+        # In case of merge, we need to pick the right parent as merge base.
+        #
+        # Imagine we have:
+        # - M: currently rebase revision in this step
+        # - A: one parent of M
+        # - B: second parent of M
+        # - D: destination of this merge step (p1 var)
+        #
+        # If we are rebasing on D, D is the successors of A or B. The right
+        # merge base is the one D succeed to. We pretend it is B for the rest
+        # of this comment
+        #
+        # If we pick B as the base, the merge involves:
+        # - changes from B to M (actual changeset payload)
+        # - changes from B to D (induced by rebase) as D is a rebased
+        #   version of B)
+        # Which exactly represent the rebase operation.
+        #
+        # If we pick the A as the base, the merge involves
+        # - changes from A to M (actual changeset payload)
+        # - changes from A to D (with include changes between unrelated A and B
+        #   plus changes induced by rebase)
+        # Which does not represent anything sensible and creates a lot of
+        # conflicts.
+        for p in repo[rev].parents():
+            if state.get(p.rev()) == repo[p1].rev():
+                base = p.node()
+                break
+    if base is not None:
+        repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     return merge.update(repo, rev, True, True, False, base, collapse)
