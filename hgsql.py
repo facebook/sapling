@@ -6,11 +6,11 @@
 # GNU General Public License version 2 or any later version.
 
 #CREATE TABLE revs(
-#id INT(2) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+#id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 #path VARCHAR(256) NOT NULL,
-#chunk INT(4) NOT NULL,
-#chunkcount INT(4) NOT NULL,
-#linkrev INT(4) NOT NULL,
+#chunk INT UNSIGNED NOT NULL,
+#chunkcount INT UNSIGNED NOT NULL,
+#linkrev INT UNSIGNED NOT NULL,
 #entry BINARY(64) NOT NULL,
 #data0 CHAR(1) NOT NULL,
 #data1 LONGBLOB NOT NULL,
@@ -19,7 +19,7 @@
 #);
 
 #CREATE TABLE headsbookmarks(
-#id INT(2) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+#id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
 #node char(40) NOT NULL,
 #name VARCHAR(256) UNIQUE
 #);
@@ -30,8 +30,8 @@ from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
-from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff
-import MySQLdb, struct, time
+from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
+import MySQLdb, struct, time, Queue, threading
 from MySQLdb import cursors
 
 cmdtable = {}
@@ -63,6 +63,7 @@ def repoinstance(orig, *args):
     repo = orig(*args)
     if repo.ui.configbool("hgsql", "enabled") and not disablesync:
         conn = MySQLdb.connect(**dbargs)
+        conn.query("set session wait_timeout=300;")
         cur = conn.cursor()
         try:
             syncdb(repo, cur)
@@ -114,7 +115,8 @@ def syncdb(repo, cur):
     if not needsync(repo, cur):
         return
 
-    repo.ui.debug("syncing with mysql\n")
+    ui = repo.ui
+    ui.debug("syncing with mysql\n")
 
     lock = None
     try:
@@ -129,55 +131,30 @@ def syncdb(repo, cur):
 
     transaction = repo.transaction("syncdb")
 
-    revlogs = {}
     try:
         # Refresh the changelog now that we have the lock
-        del repo.changelog
-        cl = repo.changelog
-        clrev = len(cl) - 1
+        fetchstart = len(repo.changelog)
 
-        count = 1
-        chunksize = 5000
-        while count:
-            # Fetch new revs from db
-            cur.execute("SELECT * FROM revs WHERE linkrev > %s AND linkrev < %s ORDER BY linkrev ASC", (clrev, clrev + chunksize))
+        queue = Queue.Queue()
+        abort = threading.Event()
 
-            # Add the new revs
-            newentries = addentries(repo, cur, transaction, revlogs)
-            clrev += chunksize - 1
+        t = threading.Thread(target=fetchthread, args=(repo, cur, queue, abort, fetchstart))
+        t.setDaemon(True)
+        try:
+            t.start()
+            addentries(repo, queue, transaction)
+        finally:
+            abort.set()
 
-            if newentries > 35000 and chunksize > 1000:
-                chunksize -= 100
-            if newentries < 25000:
-                chunksize += 100
-
-            count += newentries
-            if count > 50000 or newentries == 0:
-                #print "Flushing (chunksize %s)" % chunksize
-                count = 1
-                for revlog in revlogs.itervalues():
-                    if not revlog.ifh.closed:
-                        revlog.ifh.flush()
-                        revlog.ifh.close()
-                    if revlog.dfh and not revlog.dfh.closed:
-                        revlog.dfh.flush()
-                        revlog.dfh.close()
-                revlogs = {}
-
-            if newentries == 0:
-                break
+        phases.advanceboundary(repo, phases.public, repo.heads())
 
         transaction.close()
     finally:
-        for revlog in revlogs.itervalues():
-            if not revlog.ifh.closed:
-                revlog.ifh.close()
-            if revlog.dfh and not revlog.dfh.closed:
-                revlog.dfh.close()
         transaction.release()
         lock.release()
 
-    del repo.changelog
+    repo.invalidate()
+    repo._filecache.clear()
 
     disablesync = True
     try:
@@ -192,73 +169,211 @@ def syncdb(repo, cur):
     finally:
         disablesync = False
 
-def addentries(repo, revisions, transaction, revlogs):
+def fetchthread(repo, cur, queue, abort, fetchstart):
+    ui = repo.ui
+    clrev = fetchstart
+    chunksize = 1000
+    while True:
+        if abort.isSet():
+            break
+
+        cur.execute("""SELECT * FROM revs WHERE linkrev > %s AND
+            linkrev < %s ORDER BY linkrev ASC""", (clrev - 1, clrev + chunksize))
+
+        # put split chunks back together
+        groupedrevdata = {}
+        for revdata in cur:
+            name = revdata[1]
+            chunk = revdata[2]
+            linkrev = revdata[4]
+            groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
+
+        if not groupedrevdata:
+            break
+
+        fullrevisions = []
+        for chunks in groupedrevdata.itervalues():
+            chunkcount = chunks[0][3]
+            if chunkcount == 1:
+                fullrevisions.append(chunks[0])
+            elif chunkcount == len(chunks):
+                fullchunk = list(chunks[0])
+                data1 = ""
+                for i in range(0, chunkcount):
+                    data1 += chunks[i][7]
+                fullchunk[7] = data1
+                fullrevisions.append(tuple(fullchunk))
+            else:
+                raise Exception("missing revision chunk - expected %s got %s" %
+                    (chunkcount, len(chunks)))
+
+        fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[4])
+        for revdata in fullrevisions:
+            queue.put(revdata)
+
+        clrev += chunksize
+        if (clrev - fetchstart) % 5000 == 0:
+            ui.debug("Queued %s\n" % (clrev))
+
+    queue.put(False)
+
+class bufferedopener(object):
+    def __init__(self, opener, path, mode):
+        self.opener = opener
+        self.path = path
+        self.mode = mode
+        self.buffer = []
+        self.closed = False
+        self.lock = threading.Lock()
+
+    def write(self, value):
+        self.lock.acquire()
+        self.buffer.append(value)
+        self.lock.release()
+
+    def flush(self):
+        self.lock.acquire()
+        buffer = self.buffer
+        self.buffer = []
+        self.lock.release()
+        
+        if buffer:
+            fp = self.opener(self.path, self.mode)
+            fp.write(''.join(buffer))
+            fp.close()
+
+    def close(self):
+        self.flush()
+        self.closed = True
+
+def addentries(repo, queue, transaction):
     opener = repo.sopener
 
-    def writeentry(revdata):
-        _, path, chunk, chunkcount, link, entry, data0, data1, createdtime = revdata
-        revlog = revlogs.get(path)
-        if not revlog:
-            revlog = EntryRevlog(opener, path)
-            revlogs[path] = revlog
+    flushqueue = Queue.Queue()
+    def flusher():
+        while True:
+            revlog = flushqueue.get()
+            if isinstance(revlog, int):
+                print "Flushing %s" % (revlog)
+                continue
+            if not revlog:
+                break
+            if not revlog.ifh.closed:
+                revlog.ifh.flush()
+            if revlog.dfh and not revlog.dfh.closed:
+                revlog.dfh.flush()
 
-        if not hasattr(revlog, 'ifh') or revlog.ifh.closed:
-            dfh = None
-            if not revlog._inline:
-                dfh = opener(revlog.datafile, "a")
-            ifh = opener(revlog.indexfile, "a+")
-            revlog.ifh = ifh
-            revlog.dfh = dfh
+    flushthread = threading.Thread(target=flusher)
+    #flushthread.start()
 
-        revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
-                        data0, data1)
+    revlogs = {}
+    try:
+        def writeentry(revdata):
+            _, path, chunk, chunkcount, link, entry, data0, data1, createdtime = revdata
+            revlog = revlogs.get(path)
+            if not revlog:
+                revlog = EntryRevlog(opener, path)
+                revlogs[path] = revlog
 
-    # put split chunks back together
-    groupedrevdata = {}
-    for revdata in revisions:
-        name = revdata[1]
-        chunk = revdata[2]
-        linkrev = revdata[4]
-        groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
+            if not hasattr(revlog, 'ifh') or revlog.ifh.closed:
+                dfh = None
+                if not revlog._inline:
+                    dfh = bufferedopener(opener, revlog.datafile, "a")
+                ifh = bufferedopener(opener, revlog.indexfile, "a+")
+                revlog.ifh = ifh
+                revlog.dfh = dfh
 
-    fullrevisions = []
-    for _, chunks in groupedrevdata.iteritems():
-        chunkcount = chunks[0][3]
-        if chunkcount == 1:
-            fullrevisions.append(chunks[0])
-        elif chunkcount == len(chunks):
-            fullchunk = list(chunks[0])
-            data1 = ""
-            for i in range(0, chunkcount):
-                data1 += chunks[i][7]
-            fullchunk[7] = data1
-            fullrevisions.append(tuple(fullchunk))
-        else:
-            raise Exception("missing revision chunk - expected %s got %s" %
-                (chunkcount, len(chunks)))
+            revlog.addentry(transaction, revlog.ifh, revlog.dfh, entry,
+                            data0, data1)
+            revlog.dirty = True
 
-    fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[4])
+        clrev = len(repo)
+        startclrev = clrev
+        start = time.time()
+        last = start
+        estimatedtotal = 600000
+        leftover = None
+        exit = False
+        while not exit:
+            currentlinkrev = -1
 
-    # Write filelogs first, then manifests, then changelogs,
-    # just like Mercurial does normally.
-    changelog = []
-    manifest = []
-    for revdata in fullrevisions:
-        name = revdata[1]
-        if name == "00changelog.i":
-            changelog.append(revdata)
-        elif name == "00manifest.i":
-            manifest.append(revdata)
-        else:
-            writeentry(revdata)
+            revisions = []
+            if leftover:
+                revisions.append(leftover)
+                leftover = None
 
-    for revdata in manifest:
-        writeentry(revdata)
+            while True:
+                revdata = queue.get()
+                if not revdata:
+                    exit = True
+                    break
 
-    for revdata in changelog:
-        writeentry(revdata)
+                linkrev = revdata[4]
+                if currentlinkrev == -1:
+                    currentlinkrev = linkrev
+                if linkrev == currentlinkrev:
+                    revisions.append(revdata)
+                elif linkrev < currentlinkrev:
+                    raise Exception("SQL data is not in linkrev order")
+                else:
+                    leftover = revdata
+                    currentlinkrev = linkrev
+                    break
 
-    return len(fullrevisions)
+            if not revisions:
+                continue
+
+            # Write filelogs first, then manifests, then changelogs,
+            # just like Mercurial does normally.
+            changelog = []
+            manifest = []
+            for revdata in revisions:
+                name = revdata[1]
+                if name == "00changelog.i":
+                    changelog.append(revdata)
+                elif name == "00manifest.i":
+                    manifest.append(revdata)
+                else:
+                    writeentry(revdata)
+
+            for revdata in manifest:
+                writeentry(revdata)
+
+            for revdata in changelog:
+                writeentry(revdata)
+
+            clrev += 1
+
+            if clrev % 5000 == 0:
+                duration = time.time() - start
+                perrev = (time.time() - last) / 5000
+                estimate = perrev * (estimatedtotal - clrev)
+                last = time.time()
+                print "Added %s (%s revlogs open - estimated remaining %0.0f:%02.0f - %0.0f:%02.0f)" % (clrev, len(revlogs), estimate / 60, estimate % 60, duration / 60, duration % 60)
+
+            if False and clrev % 100000 == 0:
+                flushqueue.put(clrev)
+                for revlog in revlogs.itervalues():
+                    if revlog.dirty:
+                        flushqueue.put(revlog)
+                        revlog.dirty = False
+
+        total = len(revlogs)
+        count = 0
+        for revlog in revlogs.itervalues():
+            if not revlog.ifh.closed:
+                revlog.ifh.flush()
+            if revlog.dfh and not revlog.dfh.closed:
+                revlog.dfh.flush()
+            count += 1
+            if count % 5000 == 0:
+                print "Flushed %0.0f" % (float(count) / float(total) * 100)
+    finally:        
+        pass
+            #if revlog.dirty:
+            #    flushqueue.put(revlog)
+        #flushqueue.put(False)
+        #flushthread.join()
 
 class EntryRevlog(revlog.revlog):
     def addentry(self, transaction, ifh, dfh, entry, data0, data1):
@@ -315,6 +430,7 @@ def unbundle(orig, repo, proto, heads):
     global conn
     global cur
     conn = MySQLdb.connect(**dbargs)
+    conn.query("set session wait_timeout=300;")
     conn.query("SELECT GET_LOCK('commit_lock', 60)")
     result = conn.store_result().fetch_row()[0][0]
     if result != 1:
@@ -335,6 +451,9 @@ def pull(orig, ui, repo, source="default", **opts):
     global conn
     global cur
     conn = MySQLdb.connect(**dbargs)
+    # Large pulls may take a while, so keep the connection open longer
+    conn.query("set session wait_timeout=300;")
+
     conn.query("SELECT GET_LOCK('commit_lock', 60)")
     result = conn.store_result().fetch_row()[0][0]
     if result != 1:
@@ -400,12 +519,7 @@ def addrevision(orig, self, node, text, transaction, link, p1, p2,
     result = orig(self, node, text, transaction, link, p1, p2, cachedelta,
                   iopener, dopener)
 
-    try:
-        pending.append((-1, self.indexfile, link, entry[0], data0[0] if data0 else '', data1[0]))
-    except:
-        import pdb
-        pdb.set_trace()
-        raise
+    pending.append((-1, self.indexfile, link, entry[0], data0[0] if data0 else '', data1[0]))
 
     return result
 
@@ -585,7 +699,7 @@ def pretxnchangegroup(ui, repo, *args, **kwargs):
                 (hex(head)))
 
         conn.commit()
-    except Exception:
+    except Exception, ex:
         conn.rollback()
         raise
     finally:
@@ -596,6 +710,7 @@ def bookmarkwrite(orig, self):
         return orig(self)
 
     conn = MySQLdb.connect(**dbargs)
+    conn.query("set session wait_timeout=300;")
     conn.query("SELECT GET_LOCK('bookmark_lock', 60)")
     result = conn.store_result().fetch_row()[0][0]
     if result != 1:
@@ -639,6 +754,7 @@ def sqlrecover(ui, *args, **opts):
 
     def iscorrupt():
         conn = MySQLdb.connect(**dbargs)
+        conn.query("set session wait_timeout=300;")
         cur = conn.cursor()
         try:
             syncdb(repo, cur)
