@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2013-07-23 09:37-0300\n"
+"POT-Creation-Date: 2013-10-19 11:01-0300\n"
 "PO-Revision-Date: 2011-06-28 09:55+0200\n"
 "Last-Translator: Wagner Bruna <wbruna@yahoo.com>\n"
 "Language-Team: Brazilian Portuguese\n"
@@ -794,8 +794,8 @@ msgid ""
 "  Default ``changeset {node|short} in repo {root} refers to bug\n"
 "  {bug}.\\ndetails:\\n\\t{desc|tabindent}``"
 msgstr ""
-"  O valor padrão é ``changeset {node|short} in repo {root} refers\n"
-"  to bug {bug}.\\ndetails:\\n\\t{desc|tabindent}``"
+"  O valor padrão é ``changeset {node|short} in repo {root} refers to bug\n"
+"  {bug}.\\ndetails:\\n\\t{desc|tabindent}``"
 
 msgid ""
 "bugzilla.strip\n"
@@ -1532,6 +1532,15 @@ msgstr ""
 "  rebase.rebased = blue\n"
 "  rebase.remaining = red bold"
 
+msgid ""
+"  shelve.age = cyan\n"
+"  shelve.newest = green bold\n"
+"  shelve.name = blue bold"
+msgstr ""
+"  shelve.age = cyan\n"
+"  shelve.newest = green bold\n"
+"  shelve.name = blue bold"
+
 msgid "  histedit.remaining = red bold"
 msgstr "  histedit.remaining = red bold"
 
@@ -1945,12 +1954,10 @@ msgstr ""
 "        argumento booleano, e seu valor padrão é False."
 
 msgid ""
-"    :convert.hg.startrev: convert start revision and its descendants.\n"
-"        It takes a hg revision identifier and defaults to 0."
+"    :convert.hg.revs: revset specifying the source revisions to convert."
 msgstr ""
-"    :convert.hg.startrev: converte a revisão inicial especificada e seus\n"
-"        descendentes. Recebe um identificador de revisão do Mercurial; seu\n"
-"        valor padrão é 0."
+"    :convert.hg.revs: revset especificando as revisões de origem a serem "
+"convertidas."
 
 msgid ""
 "    CVS Source\n"
@@ -2247,8 +2254,8 @@ msgstr "tipo de repositório de origem"
 msgid "destination repository type"
 msgstr "tipo de repositório de destino"
 
-msgid "import up to target revision REV"
-msgstr "importa até a revisão REV do alvo"
+msgid "import up to source revision REV"
+msgstr "importa até a revisão REV da origem"
 
 msgid "remap usernames using this file"
 msgstr "arquivo de mapeamento de nomes de usuário"
@@ -2629,6 +2636,10 @@ msgid "source repository doesn't support --filemap"
 msgstr "repositório de origem não suporta --filemap"
 
 #, python-format
+msgid "warning: %s parent %s is missing\n"
+msgstr "aviso: a revisão %s tem um pai %s faltando\n"
+
+#, python-format
 msgid "%s does not look like a Git repository"
 msgstr "%s não parece ser um repositório do Git"
 
@@ -2709,6 +2720,9 @@ msgstr ""
 #, python-format
 msgid "%s is not a valid start revision"
 msgstr "%s não é uma revisão inicial válida"
+
+msgid "hg.revs cannot be combined with hg.startrev or --rev"
+msgstr "hg.revs não pode ser combinado com hg.startrev ou --rev"
 
 #, python-format
 msgid "ignoring: %s\n"
@@ -4363,11 +4377,8 @@ msgstr "histedit requer exatamente uma revisão ancestral"
 msgid "%s is not an ancestor of working directory"
 msgstr "%s não é um ancestral do diretório de trabalho"
 
-#, python-format
-msgid "update to %s or descendant and run \"hg histedit --continue\" again"
-msgstr ""
-"atualize para %s ou um descendente e execute \"hg histedit --continue\" "
-"novamente"
+msgid "use \"histedit --abort\" to clear broken state"
+msgstr "use \"histedit --abort\" para limpar o estado quebrado"
 
 msgid "cannot edit history that would orphan nodes"
 msgstr "não é possível editar histórico de forma a produzir nós órfãos"
@@ -5444,8 +5455,8 @@ msgstr "removendo %s\n"
 msgid "--normal cannot be used with --large"
 msgstr "--normal não pode ser usado com --large"
 
-msgid "uncommitted local changes"
-msgstr "alterações locais pendentes"
+msgid "uncommitted changes"
+msgstr "alterações não consolidadas"
 
 #, python-format
 msgid ""
@@ -5581,6 +5592,10 @@ msgstr "revisão %s: %s: o conteúdo está diferente\n"
 #, python-format
 msgid "changeset %s: %s missing\n"
 msgstr "revisão %s: %s faltando\n"
+
+#, python-format
+msgid "required features are not supported in the destination: %s"
+msgstr "funcionalidades necessárias não são suportadas pelo destino: %s"
 
 #, python-format
 msgid "file \"%s\" is a largefile standin"
@@ -5740,12 +5755,19 @@ msgstr ""
 msgid ""
 "make them behave as if --keep-changes were passed, and non-conflicting\n"
 "local changes will be tolerated and preserved. If incompatible options\n"
-"such as -f/--force or --exact are passed, this setting is ignored.\n"
+"such as -f/--force or --exact are passed, this setting is ignored."
 msgstr ""
 "faz com que esses comandos se comportem como se --keep-changes\n"
 "tivesse sido passada, e mudanças locais não conflitantes serão\n"
 "toleradas e preservadas. Se forem passadas mudanças incompatíveis\n"
-"como -f/--force ou --exact, esta configuração será ignorada.\n"
+"como -f/--force ou --exact, esta configuração será ignorada."
+
+msgid ""
+"This extension used to provide a strip command. This command now lives\n"
+"in the strip extension.\n"
+msgstr ""
+"Esta extensão antigamente fornecia o comando strip. Este comando\n"
+"passou a ser fornecido pela extensão strip.\n"
 
 msgid "print first line of patch header"
 msgstr "imprime a primeira linha do cabeçalho do patch"
@@ -5848,7 +5870,7 @@ msgid "unable to read %s\n"
 msgstr "impossível ler %s\n"
 
 msgid "local changes found, refresh first"
-msgstr "mudanças locais encontradas, você deve primeiro renovar"
+msgstr "mudanças locais encontradas, você deve executar qrefresh primeiro"
 
 #, python-format
 msgid "patch %s is empty\n"
@@ -5903,12 +5925,10 @@ msgstr "nenhum patch aplicado"
 msgid "working directory revision is not qtip"
 msgstr "a revisão do diretório de trabalho não é a qtip"
 
-#, python-format
-msgid "uncommitted changes in subrepository %s"
-msgstr "mudanças não consolidadas no sub-repositório %s"
-
-msgid "local changes found"
-msgstr "mudanças locais encontradas"
+msgid "local changed subrepos found, refresh first"
+msgstr ""
+"encontrados sub-repositórios modificados localmente, você deve executar "
+"qrefresh primeiro"
 
 #, python-format
 msgid "\"%s\" cannot be used as the name of a patch"
@@ -6892,111 +6912,6 @@ msgstr "o destino %s existe, use -f para forçar"
 #, python-format
 msgid "copy %s to %s\n"
 msgstr "copia %s para %s\n"
-
-msgid ""
-"strip specified revision (optional, can specify revisions without this "
-"option)"
-msgstr ""
-"remove a revisão especificada (opcional, não é necessário especificar "
-"explicitamente esta opção para remover revisões)"
-
-msgid "force removal of changesets, discard uncommitted changes (no backup)"
-msgstr ""
-"força a remoção de revisões, descarta mudanças não consolidadas (sem backup)"
-
-msgid ""
-"bundle only changesets with local revision number greater than REV which are"
-" not descendants of REV (DEPRECATED)"
-msgstr ""
-"adiciona ao bundle apenas revisões cujo número local de revisão for maior "
-"que REV e que não forem seus descendentes (OBSOLETA)"
-
-msgid "no backups"
-msgstr "nenhuma cópia de segurança"
-
-msgid "no backups (DEPRECATED)"
-msgstr "sem cópias de segurança (OBSOLETO)"
-
-msgid "ignored  (DEPRECATED)"
-msgstr "ignorado (OBSOLETO)"
-
-msgid "do not modify working copy during strip"
-msgstr "não modifica a cópia de trabalho durante o strip"
-
-msgid "remove revs only reachable from given bookmark"
-msgstr "remove revisões alcançáveis apenas pelo marcador dado"
-
-msgid "hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV..."
-msgstr "hg strip [-k] [-f] [-n] [-B marcador] [-r] REV..."
-
-msgid "strip changesets and all their descendants from the repository"
-msgstr "remove do repositório revisões e todos os seus descendentes"
-
-msgid ""
-"    The strip command removes the specified changesets and all their\n"
-"    descendants. If the working directory has uncommitted changes, the\n"
-"    operation is aborted unless the --force flag is supplied, in which\n"
-"    case changes will be discarded."
-msgstr ""
-"    O comando strip remove as revisões pedidas e todos os seus\n"
-"    descendentes. Se o diretório de trabalho tiver mudanças\n"
-"    pendentes, essa operação será abortada, a não ser que seja\n"
-"    usada a opção --force; nesse caso, as mudanças serão\n"
-"    descartadas."
-
-msgid ""
-"    If a parent of the working directory is stripped, then the working\n"
-"    directory will automatically be updated to the most recent\n"
-"    available ancestor of the stripped parent after the operation\n"
-"    completes."
-msgstr ""
-"    Se o pai do diretório de trabalho for removido, após o término\n"
-"    da operação o diretório de trabalho será automaticamente\n"
-"    atualizado para o ancestral disponível mais recente do pai\n"
-"    removido."
-
-msgid ""
-"    Any stripped changesets are stored in ``.hg/strip-backup`` as a\n"
-"    bundle (see :hg:`help bundle` and :hg:`help unbundle`). They can\n"
-"    be restored by running :hg:`unbundle .hg/strip-backup/BUNDLE`,\n"
-"    where BUNDLE is the bundle file created by the strip. Note that\n"
-"    the local revision numbers will in general be different after the\n"
-"    restore."
-msgstr ""
-"    Qualquer revisão removida será armazenada em ``.hg/strip-backup``\n"
-"    em um arquivo bundle (veja :hg:`help bundle` e :hg:`help bundle`).\n"
-"    Elas podem ser restauradas com o comando\n"
-"    :hg:`unbundle .hg/strip-backup/BUNDLE`, onde BUNDLE é o arquivo\n"
-"    bundle criado pelo comando strip. Note que os números locais das\n"
-"    revisões serão em geral diferentes após a restauração."
-
-msgid ""
-"    Use the --no-backup option to discard the backup bundle once the\n"
-"    operation completes."
-msgstr ""
-"    Use a opção --no-backup para descartar o bundle de backup assim\n"
-"    que a operação terminar."
-
-msgid ""
-"    Strip is not a history-rewriting operation and can be used on\n"
-"    changesets in the public phase. But if the stripped changesets have\n"
-"    been pushed to a remote repository you will likely pull them again."
-msgstr ""
-"    A operação strip não reescreve o histórico, e pode ser usada em\n"
-"    revisões na fase pública. Mas se revisões removidas por strip\n"
-"    tiverem sido enviadas para um repositório remoto, um comando pull\n"
-"    subsequente poderá trazê-las de volta."
-
-#, python-format
-msgid "bookmark '%s' not found"
-msgstr "marcador '%s' não encontrado"
-
-#, python-format
-msgid "bookmark '%s' deleted\n"
-msgstr "marcador '%s' apagado\n"
-
-msgid "empty revision set"
-msgstr "conjunto vazio de revisões"
 
 msgid "disable all guards"
 msgstr "desabilita todas as guardas"
@@ -8505,6 +8420,17 @@ msgstr "abort e continue não permitem especificar revisões"
 msgid "tool option will be ignored\n"
 msgstr "a opção tool será ignorada\n"
 
+msgid "rebase aborted (no revision is removed, only broken state is cleared)\n"
+msgstr ""
+"rebase abortado (nenhuma revisão foi removida, apenas o estado quebrado foi "
+"limpo)\n"
+
+msgid "cannot continue inconsistent rebase"
+msgstr "não é possível continuar um rebaseamento inconsistente"
+
+msgid "use \"hg rebase --abort\" to clear borken state"
+msgstr "use \"hg rebase --abort\" para limpar o estado quebrado"
+
 msgid "cannot specify both a source and a base"
 msgstr "não se pode especificar ao mesmo tempo uma origem e uma base"
 
@@ -8601,6 +8527,10 @@ msgstr "atualizando marcador %s\n"
 
 msgid "--tool can only be used with --rebase"
 msgstr "--tool só pode ser usada em conjunto com --rebase"
+
+#. i18n: column positioning for "hg summary"
+msgid "rebase: (use \"hg rebase --abort\" to clear broken state)\n"
+msgstr "rebase: (use \"hg rebase --abort\" para limpar o estado quebrado)\n"
 
 #. i18n: column positioning for "hg summary"
 #, python-format
@@ -9043,6 +8973,422 @@ msgstr "não cria uma cópia de trabalho"
 
 msgid "[-U] SOURCE [DEST]"
 msgstr "[-U] ORIGEM [DEST]"
+
+msgid "save and restore changes to the working directory"
+msgstr "salva e restaura mudanças do diretório de trabalho"
+
+msgid ""
+"The \"hg shelve\" command saves changes made to the working directory\n"
+"and reverts those changes, resetting the working directory to a clean\n"
+"state."
+msgstr ""
+"O comando \"hg shelve\" salva (\"engaveta\") mudanças locais em uma\n"
+"área separada, para em seguida reverter essas mudanças, limpando o\n"
+"diretório de trabalho."
+
+msgid ""
+"Later on, the \"hg unshelve\" command restores the changes saved by \"hg\n"
+"shelve\". Changes can be restored even after updating to a different\n"
+"parent, in which case Mercurial's merge machinery will resolve any\n"
+"conflicts if necessary."
+msgstr ""
+"Posteriormente, o comando \"hg unshelve\" restaura as mudanças gravadas\n"
+"por \"hg shelve\". Mudanças podem ser restauradas mesmo sobre um pai\n"
+"diferente; nesse caso, se houver conflitos, o Mercurial usará o sistema\n"
+"de mesclagem para resolvê-los."
+
+msgid ""
+"You can have more than one shelved change outstanding at a time; each\n"
+"shelved change has a distinct name. For details, see the help for \"hg\n"
+"shelve\".\n"
+msgstr ""
+"Você pode ter mais de uma mudança \"engavetada\" ao mesmo tempo:\n"
+"cada mudança engavetada possui um nome distinto. Para mais detalhes,\n"
+"veja o texto de ajuda de \"hg shelve\".\n"
+
+#, python-format
+msgid "shelved change '%s' not found"
+msgstr "mudança engavetada '%s' não encontrada"
+
+msgid ""
+"this version of shelve is incompatible with the version used in this repo"
+msgstr ""
+"esta versão da extensão shelve é incompatível com a versão usada neste "
+"repositório"
+
+msgid "cannot shelve while merging"
+msgstr "não é possível engavetar uma mudança durante uma mesclagem"
+
+#, python-format
+msgid "a shelved change named '%s' already exists"
+msgstr "já existe uma mudança engavetada com o nome '%s'"
+
+#, python-format
+msgid "too many shelved changes named '%s'"
+msgstr "excesso de mudanças engavetadas de nome '%s'"
+
+msgid "shelved change names may not contain slashes"
+msgstr "nomes de mudanças engavetadas não podem conter '/'"
+
+msgid "shelved change names may not start with '.'"
+msgstr "nomes de mudanças engavetadas não podem começar com '.'"
+
+#, python-format
+msgid "nothing changed (%d missing files, see 'hg status')\n"
+msgstr "nada mudou (%d arquivos faltando, veja 'hg status')\n"
+
+msgid "nothing changed\n"
+msgstr "nada mudou\n"
+
+#, python-format
+msgid "shelved as %s\n"
+msgstr "engavetada como %s\n"
+
+msgid "no shelved changes specified!"
+msgstr "nenhuma mudança engavetada foi especificada!"
+
+msgid "working directory parents do not match unshelve state"
+msgstr ""
+"os pais do diretório de trabalho não combinam com o estado do unshelve"
+
+#, python-format
+msgid "unshelve of '%s' aborted\n"
+msgstr "unshelve de '%s' abortado\n"
+
+msgid "unresolved conflicts, can't continue"
+msgstr "conflitos não resolvidos, não é possível continuar"
+
+msgid "see 'hg resolve', then 'hg unshelve --continue'"
+msgstr "veja 'hg resolve', e em seguida 'hg unshelve --continue'"
+
+#, python-format
+msgid "unshelve of '%s' complete\n"
+msgstr "unshelve de '%s' completado\n"
+
+msgid "abort an incomplete unshelve operation"
+msgstr "aborta uma operação unshelve incompleta"
+
+msgid "continue an incomplete unshelve operation"
+msgstr "continua uma operação unshelve incompleta"
+
+msgid "keep shelve after unshelving"
+msgstr "mantém a mudança na gaveta após o unshelve"
+
+msgid "hg unshelve [SHELVED]"
+msgstr "hg unshelve [MUDANÇA]"
+
+msgid "restore a shelved change to the working directory"
+msgstr "restaura uma mudança \"engavetada\" para o diretório de trabalho"
+
+msgid ""
+"    This command accepts an optional name of a shelved change to\n"
+"    restore. If none is given, the most recent shelved change is used."
+msgstr ""
+"    Este comando opcionalmente aceita o nome de uma mudança engavetada a\n"
+"    ser restaurada. Se o nome não for fornecido, a mudança mais recente\n"
+"    será usada."
+
+msgid ""
+"    If a shelved change is applied successfully, the bundle that\n"
+"    contains the shelved changes is deleted afterwards."
+msgstr ""
+"    Se uma mudança engavetada for restaurada com sucesso, o arquivo\n"
+"    bundle que contém essa mudança será removido em seguida."
+
+msgid ""
+"    Since you can restore a shelved change on top of an arbitrary\n"
+"    commit, it is possible that unshelving will result in a conflict\n"
+"    between your changes and the commits you are unshelving onto. If\n"
+"    this occurs, you must resolve the conflict, then use\n"
+"    ``--continue`` to complete the unshelve operation. (The bundle\n"
+"    will not be deleted until you successfully complete the unshelve.)"
+msgstr ""
+"    Por ser possível restaurar uma mudança engavetada sobre uma\n"
+"    revisão qualquer, uma operação unshelve pode resultar em um\n"
+"    conflito entre as mudanças restauradas e as revisões de\n"
+"    destino. Se isso ocorrer, você deve resolver os conflitos,\n"
+"    e em seguida usar ``--continue`` para completar a operação\n"
+"    unshelve. (O bundle não será removido até que você complete\n"
+"    a operação unshelve com sucesso.)"
+
+msgid ""
+"    (Alternatively, you can use ``--abort`` to abandon an unshelve\n"
+"    that causes a conflict. This reverts the unshelved changes, and\n"
+"    does not delete the bundle.)\n"
+"    "
+msgstr ""
+"    (Alternativamente, vocẽ pode usar ``--abort`` para abandonar\n"
+"    uma operação unshelve que causou um conflito. Isto reverte\n"
+"    as mudanças engavetadas sem remover o bundle.)\n"
+"    "
+
+msgid "cannot combine abort/continue with naming a shelved change"
+msgstr ""
+"não é possível combinar abort/continue com um nome de mudança engavetada"
+
+msgid "no unshelve operation underway"
+msgstr "nenhuma operação unshelve em andamento"
+
+msgid "can only unshelve one change at a time"
+msgstr "só é possível realizar unshelve de uma mudança de cada vez"
+
+msgid "no shelved changes to apply!"
+msgstr "nenhuma mudança engavetada para ser aplicada!"
+
+#, python-format
+msgid "unshelving change '%s'\n"
+msgstr "executando unshelve da mudança '%s'\n"
+
+msgid "the following shelved files have been modified:\n"
+msgstr "os seguintes arquivos engavetados foram modificados:\n"
+
+msgid "you must commit, revert, or shelve your changes before you can proceed\n"
+msgstr ""
+"para prosseguir você deve consolidar, reverter ou engavetar suas mudanças\n"
+
+msgid "cannot unshelve due to local changes\n"
+msgstr "mudanças locais, não é possível retirar da shelve\n"
+
+msgid "unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')"
+msgstr ""
+"conflitos não resolvidos (veja hg 'resolve', e em seguida 'hg unshelve "
+"--continue')"
+
+msgid "mark new/missing files as added/removed before shelving"
+msgstr ""
+"marca arquivos novos/ausentes como adicionados/removidos antes da operação "
+"shelve"
+
+msgid "delete all shelved changes"
+msgstr "remove todas as mudanças engavetadas"
+
+msgid "shelve with the specified commit date"
+msgstr "grava na shelve com a data de consolidação especificada"
+
+msgid "delete the named shelved change(s)"
+msgstr "remove da shelve as mudanças pedidas"
+
+msgid "list current shelves"
+msgstr "lista mudanças na shelve"
+
+msgid "use text as shelve message"
+msgstr "usa o texto como mensagem da shelve"
+
+msgid "use the given name for the shelved commit"
+msgstr "usa o nome fornecido para a revisão da shelve"
+
+msgid "show patch"
+msgstr "mostra o patch"
+
+msgid "output diffstat-style summary of changes"
+msgstr "imprime sumário de mudanças no estilo diffstat"
+
+msgid "hg shelve"
+msgstr "hg shelve"
+
+msgid "save and set aside changes from the working directory"
+msgstr "salva e separa mudanças do diretório de trabalho"
+
+msgid ""
+"    Shelving takes files that \"hg status\" reports as not clean, saves\n"
+"    the modifications to a bundle (a shelved change), and reverts the\n"
+"    files so that their state in the working directory becomes clean."
+msgstr ""
+"    A operação shelve \"engaveta\" as modificações dos arquivos\n"
+"    informados por \"hg status\" em um arquivo bundle, para em\n"
+"    seguida reverter tais mudanças, deixando o diretório de\n"
+"    trabalho limpo."
+
+msgid ""
+"    To restore these changes to the working directory, using \"hg\n"
+"    unshelve\"; this will work even if you switch to a different\n"
+"    commit."
+msgstr ""
+"    Para restaurar essas mudanças para o diretório de trabalho,\n"
+"    use \"hg unshelve\"; isto é suportado mesmo se o pai do\n"
+"    diretório de trabalho não for mais a revisão original."
+
+msgid ""
+"    When no files are specified, \"hg shelve\" saves all not-clean\n"
+"    files. If specific files or directories are named, only changes to\n"
+"    those files are shelved."
+msgstr ""
+"    Se arquivos não forem especificados, \"hg shelve\" engaveta\n"
+"    todos os arquivos não limpos. Se arquivos ou diretórios forem\n"
+"    especificados, apenas as mudanças em tais arquivos serão\n"
+"    engavetadas."
+
+msgid ""
+"    Each shelved change has a name that makes it easier to find later.\n"
+"    The name of a shelved change defaults to being based on the active\n"
+"    bookmark, or if there is no active bookmark, the current named\n"
+"    branch.  To specify a different name, use ``--name``."
+msgstr ""
+"    Cada mudança engavetada possui um nome, que é por padrão baseado\n"
+"    no marcador ativo ou (se não houver marcador ativo) no nome do\n"
+"    ramo atual. Para especificar um nome diferente, use ``--name``."
+
+msgid ""
+"    To see a list of existing shelved changes, use the ``--list``\n"
+"    option. For each shelved change, this will print its name, age,\n"
+"    and description; use ``--patch`` or ``--stat`` for more details."
+msgstr ""
+"    Para exibir uma lista das mudanças engavetadas, use a opção\n"
+"    ``--list``. Para cada mudança engavetada, isto irá imprimir\n"
+"    seu nome, idade e descrição; use ``--patch`` ou ``--stat``\n"
+"    para mais detalhes."
+
+msgid ""
+"    To delete specific shelved changes, use ``--delete``. To delete\n"
+"    all shelved changes, use ``--cleanup``.\n"
+"    "
+msgstr ""
+"    Para remover mudanças engavetadas específicas, use ``--delete``.\n"
+"    Para remover todas as mudanças engavetadas, use ``--cleanup``.\n"
+"    "
+
+#, python-format
+msgid "options '--%s' and '--%s' may not be used together"
+msgstr "as opções '--%s' e '--%s' não podem ser usadas ao mesmo tempo"
+
+msgid "cannot specify names when using '--cleanup'"
+msgstr "não se pode especificar nomes ao usar --cleanup"
+
+#, python-format
+msgid "option '--%s' may not be used when shelving a change"
+msgstr "a opção '--%s' não pode ser usada ao engavetar uma mudança"
+
+msgid "unshelve already in progress"
+msgstr "unshelve já está em andamento"
+
+msgid "use 'hg unshelve --continue' or 'hg unshelve --abort'"
+msgstr "use 'hg unshelve --continue' ou 'hg unshelve --abort'"
+
+msgid "strip changesets and their descendents from history"
+msgstr "remove do histórico revisões e seus descendentes"
+
+msgid ""
+"This extension allows to strip changesets and all their descendants from the\n"
+"repository. See the command help for details.\n"
+msgstr ""
+"Esta extensão possibilita a remoção de revisões e todos os seus\n"
+"descendentes do histórico do repositório. Veja a ajuda do\n"
+"comando para mais detalhes.\n"
+
+#, python-format
+msgid "uncommitted changes in subrepository %s"
+msgstr "mudanças não consolidadas no sub-repositório %s"
+
+msgid "local changes found"
+msgstr "mudanças locais encontradas"
+
+msgid "local changed subrepos found"
+msgstr "encontrados sub-repositórios locais modificados"
+
+msgid ""
+"strip specified revision (optional, can specify revisions without this "
+"option)"
+msgstr ""
+"remove a revisão especificada (opcional, não é necessário especificar "
+"explicitamente esta opção para remover revisões)"
+
+msgid "force removal of changesets, discard uncommitted changes (no backup)"
+msgstr ""
+"força a remoção de revisões, descarta mudanças não consolidadas (sem backup)"
+
+msgid ""
+"bundle only changesets with local revision number greater than REV which are"
+" not descendants of REV (DEPRECATED)"
+msgstr ""
+"adiciona ao bundle apenas revisões cujo número local de revisão for maior "
+"que REV e que não forem seus descendentes (OBSOLETA)"
+
+msgid "no backups"
+msgstr "nenhuma cópia de segurança"
+
+msgid "no backups (DEPRECATED)"
+msgstr "sem cópias de segurança (OBSOLETO)"
+
+msgid "ignored  (DEPRECATED)"
+msgstr "ignorado (OBSOLETO)"
+
+msgid "do not modify working copy during strip"
+msgstr "não modifica a cópia de trabalho durante o strip"
+
+msgid "remove revs only reachable from given bookmark"
+msgstr "remove revisões alcançáveis apenas pelo marcador dado"
+
+msgid "hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV..."
+msgstr "hg strip [-k] [-f] [-n] [-B marcador] [-r] REV..."
+
+msgid "strip changesets and all their descendants from the repository"
+msgstr "remove do repositório revisões e todos os seus descendentes"
+
+msgid ""
+"    The strip command removes the specified changesets and all their\n"
+"    descendants. If the working directory has uncommitted changes, the\n"
+"    operation is aborted unless the --force flag is supplied, in which\n"
+"    case changes will be discarded."
+msgstr ""
+"    O comando strip remove as revisões pedidas e todos os seus\n"
+"    descendentes. Se o diretório de trabalho tiver mudanças\n"
+"    pendentes, essa operação será abortada, a não ser que seja\n"
+"    usada a opção --force; nesse caso, as mudanças serão\n"
+"    descartadas."
+
+msgid ""
+"    If a parent of the working directory is stripped, then the working\n"
+"    directory will automatically be updated to the most recent\n"
+"    available ancestor of the stripped parent after the operation\n"
+"    completes."
+msgstr ""
+"    Se o pai do diretório de trabalho for removido, após o término\n"
+"    da operação o diretório de trabalho será automaticamente\n"
+"    atualizado para o ancestral disponível mais recente do pai\n"
+"    removido."
+
+msgid ""
+"    Any stripped changesets are stored in ``.hg/strip-backup`` as a\n"
+"    bundle (see :hg:`help bundle` and :hg:`help unbundle`). They can\n"
+"    be restored by running :hg:`unbundle .hg/strip-backup/BUNDLE`,\n"
+"    where BUNDLE is the bundle file created by the strip. Note that\n"
+"    the local revision numbers will in general be different after the\n"
+"    restore."
+msgstr ""
+"    Qualquer revisão removida será armazenada em ``.hg/strip-backup``\n"
+"    em um arquivo bundle (veja :hg:`help bundle` e :hg:`help bundle`).\n"
+"    Elas podem ser restauradas com o comando\n"
+"    :hg:`unbundle .hg/strip-backup/BUNDLE`, onde BUNDLE é o arquivo\n"
+"    bundle criado pelo comando strip. Note que os números locais das\n"
+"    revisões serão em geral diferentes após a restauração."
+
+msgid ""
+"    Use the --no-backup option to discard the backup bundle once the\n"
+"    operation completes."
+msgstr ""
+"    Use a opção --no-backup para descartar o bundle de backup assim\n"
+"    que a operação terminar."
+
+msgid ""
+"    Strip is not a history-rewriting operation and can be used on\n"
+"    changesets in the public phase. But if the stripped changesets have\n"
+"    been pushed to a remote repository you will likely pull them again."
+msgstr ""
+"    A operação strip não reescreve o histórico, e pode ser usada em\n"
+"    revisões na fase pública. Mas se revisões removidas por strip\n"
+"    tiverem sido enviadas para um repositório remoto, um comando pull\n"
+"    subsequente poderá trazê-las de volta."
+
+#, python-format
+msgid "bookmark '%s' not found"
+msgstr "marcador '%s' não encontrado"
+
+#, python-format
+msgid "bookmark '%s' deleted\n"
+msgstr "marcador '%s' apagado\n"
+
+msgid "empty revision set"
+msgstr "conjunto vazio de revisões"
 
 msgid "command to transplant changesets from another branch"
 msgstr "comando para transplantar revisões de um outro ramo"
@@ -10103,14 +10449,8 @@ msgstr "exibe usando arquivo de mapeamento de modelo"
 msgid "display with template"
 msgstr "exibe usando modelo"
 
-msgid "show patch"
-msgstr "mostra o patch"
-
 msgid "do not show merges"
 msgstr "não mostra mesclagens"
-
-msgid "output diffstat-style summary of changes"
-msgstr "imprime sumário de mudanças no estilo diffstat"
 
 msgid "show the revision DAG"
 msgstr "mostra o grafo de revisões"
@@ -11434,13 +11774,6 @@ msgstr "não é possível emendar durante uma mesclagem"
 msgid "cannot amend changeset with children"
 msgstr "não é possível emendar revisões com filhas"
 
-msgid "nothing changed\n"
-msgstr "nada mudou\n"
-
-#, python-format
-msgid "nothing changed (%d missing files, see 'hg status')\n"
-msgstr "nada mudou (%d arquivos faltando, veja 'hg status')\n"
-
 msgid "record a copy that has already occurred"
 msgstr "grava uma cópia que já ocorreu"
 
@@ -12483,12 +12816,12 @@ msgid "skipping ancestor revision %s\n"
 msgstr "omitindo revisão ancestral %s\n"
 
 #, python-format
-msgid "skipping already grafted revision %s\n"
-msgstr "omitindo revisão %s já enxertada\n"
+msgid "skipping revision %s (already grafted to %s)\n"
+msgstr "omitindo revisão %s (já enxertada em %s)\n"
 
 #, python-format
-msgid "skipping already grafted revision %s (same origin %d)\n"
-msgstr "omitindo revisão %s já enxertada (mesma origem %d)\n"
+msgid "skipping already grafted revision %s (%s also has origin %d)\n"
+msgstr "omitindo revisão %s já enxertada (%s também tem como origem %d)\n"
 
 #, python-format
 msgid "skipping already grafted revision %s (was grafted from %d)\n"
@@ -12497,9 +12830,6 @@ msgstr "omitindo revisão %s já enxertada (foi enxertada de %d)\n"
 #, python-format
 msgid "grafting revision %s\n"
 msgstr "enxertando revisão %s\n"
-
-msgid "unresolved conflicts, can't continue"
-msgstr "conflitos não resolvidos, não é possível continuar"
 
 msgid "use hg resolve and hg graft --continue"
 msgstr "use hg resolve e hg graft --continue"
@@ -13572,6 +13902,10 @@ msgstr "nenhuma fase mudou\n"
 msgid "not updating: %s\n"
 msgstr "atualização não realizada: %s\n"
 
+#, python-format
+msgid "(%s)\n"
+msgstr "(%s)\n"
+
 msgid "(run 'hg heads' to see heads, 'hg merge' to merge)\n"
 msgstr "(execute 'hg heads' para ver cabeças, 'hg merge' para mesclar)\n"
 
@@ -13823,23 +14157,23 @@ msgstr ""
 "      (remove do diretório de trabalho):"
 
 msgid ""
-"      ======= == == == ==\n"
-"              A  C  M  !\n"
-"      ======= == == == ==\n"
-"      none    W  RD W  R\n"
-"      -f      R  RD RD R\n"
-"      -A      W  W  W  R\n"
-"      -Af     R  R  R  R\n"
-"      ======= == == == =="
+"      ========= == == == ==\n"
+"      opt/state A  C  M  !\n"
+"      ========= == == == ==\n"
+"      none      W  RD W  R\n"
+"      -f        R  RD RD R\n"
+"      -A        W  W  W  R\n"
+"      -Af       R  R  R  R\n"
+"      ========= == == == =="
 msgstr ""
-"      ======= == == == ==\n"
-"              A  C  M  !\n"
-"      ======= == == == ==\n"
-"      nenhum  W  RD W  R\n"
-"      -f      R  RD RD R\n"
-"      -A      W  W  W  R\n"
-"      -Af     R  R  R  R\n"
-"      ======= == == == =="
+"      ========= == == == ==\n"
+"      op/estado A  C  M  !\n"
+"      ========= == == == ==\n"
+"      nenhum    W  RD W  R\n"
+"      -f        R  RD RD R\n"
+"      -A        W  W  W  R\n"
+"      -Af       R  R  R  R\n"
+"      ========= == == == =="
 
 msgid ""
 "      Note that remove never deletes files in Added [A] state from the\n"
@@ -14948,6 +15282,9 @@ msgstr "comando %s desconhecido"
 msgid "cannot include %s (%s)"
 msgstr "não é possível incluir %s (%s)"
 
+msgid "not found in manifest"
+msgstr "não encontrado no manifesto"
+
 #, python-format
 msgid "unknown revision '%s'"
 msgstr "revisão desconhecida '%s'"
@@ -14955,9 +15292,6 @@ msgstr "revisão desconhecida '%s'"
 #, python-format
 msgid "working directory has unknown parent '%s'!"
 msgstr "diretório de trabalho tem pai desconhecido '%s'!"
-
-msgid "not found in manifest"
-msgstr "não encontrado no manifesto"
 
 #, python-format
 msgid "no such file in rev %s"
@@ -15064,6 +15398,15 @@ msgid "use 'hg push --new-branch' to create new remote branches"
 msgstr "use 'hg push --new-branch' para criar novos ramos remotos"
 
 #, python-format
+msgid "push creates multiple headed new branch '%s'"
+msgstr "push cria um ramo '%s' de múltiplas cabeças"
+
+msgid "merge or see \"hg help push\" for detail about pushing new heads"
+msgstr ""
+"use \"hg merge\" ou veja \"hg help push\" para detalhes sobre como enviar "
+"novas cabeças"
+
+#, python-format
 msgid "push creates new remote head %s on branch '%s'!"
 msgstr "push cria uma nova cabeça remota %s no ramo '%s'!"
 
@@ -15093,10 +15436,6 @@ msgid "abort: %s\n"
 msgstr "abortado: %s\n"
 
 #, python-format
-msgid "(%s)\n"
-msgstr "(%s)\n"
-
-#, python-format
 msgid "hg: parse error at %s: %s\n"
 msgstr "hg: erro de análise da entrada em %s: %s\n"
 
@@ -15108,6 +15447,10 @@ msgid "entering debugger - type c to continue starting hg or h for help\n"
 msgstr ""
 "entrando no depurador - digite c para continuar iniciando o hg ou h para "
 "ajuda\n"
+
+#, python-format
+msgid "%s debugger specified but its module was not found\n"
+msgstr "depurador %s especificado, mas seu módulo não foi encontrado\n"
 
 #, python-format
 msgid ""
@@ -23234,6 +23577,15 @@ msgstr "IPv6 indisponível nesse sistema"
 msgid "cannot start server at '%s:%d': %s"
 msgstr "não é possível iniciar o servidor em '%s:%d': %s"
 
+msgid "exact revision search"
+msgstr "busca exata por revisões"
+
+msgid "literal keyword search"
+msgstr "busca por palavra chave literal"
+
+msgid "revset expression search"
+msgstr "busca por expressão revset"
+
 #, python-format
 msgid "(binary file %s, hash: %s)"
 msgstr "(arquivo binário %s, hash: %s)"
@@ -23712,7 +24064,7 @@ msgid ""
 "use (c)hanged version or leave (d)eleted?$$ &Changed $$ &Deleted"
 msgstr ""
 "remota mudou %s, apagada pela local\n"
-"use (c) a versão alterada, ou (d) deixe apagada? (&C) alterada $$ (&D) deixe apagada"
+"use (c) a versão alterada, ou (d) deixe apagada?$$ (&C) alterada $$ (&D) deixe apagada"
 
 #, python-format
 msgid "update failed to remove %s: %s!\n"
@@ -23748,17 +24100,20 @@ msgid "use 'hg status' to list changes"
 msgstr "use 'hg status' para listar as mudanças"
 
 #, python-format
-msgid "outstanding uncommitted changes in subrepository '%s'"
-msgstr "mudanças não consolidadas pendentes no sub-repositório '%s'"
+msgid "uncommitted changes in subrepository '%s'"
+msgstr "mudanças não consolidadas no sub-repositório '%s'"
 
-msgid "crosses branches (merge branches or use --clean to discard changes)"
-msgstr ""
-"atravessa ramos (mescle os ramos ou use --clean para descartar mudanças)"
+msgid "commit and merge, or update --clean to discard changes"
+msgstr "execute commit e merge, ou update --clean para descartar mudanças"
 
-msgid "crosses branches (merge branches or update --check to force update)"
-msgstr ""
-"atravessa ramos (mescle os ramos ou use update --check para forçar a "
-"atualização)"
+msgid "commit or update --clean to discard changes"
+msgstr "execute commit, ou update --clean para descartar mudanças"
+
+msgid "not a linear update"
+msgstr "não é uma atualização linear"
+
+msgid "merge or update --check to force update"
+msgstr "execute merge, ou update --check para forçar a atualização"
 
 msgid "Attention:"
 msgstr "Atenção:"
@@ -24000,8 +24355,8 @@ msgid "incompatible revision flag %x"
 msgstr "marcação de revisão incompatível %x"
 
 #, python-format
-msgid "integrity check failed on %s:%d"
-msgstr "checagem de integridade falhou em %s:%d"
+msgid "integrity check failed on %s:%s"
+msgstr "checagem de integridade falhou em %s:%s"
 
 #, python-format
 msgid "%s not found in the transaction"
@@ -24010,9 +24365,6 @@ msgstr "%s não encontrado na transação"
 #, python-format
 msgid "attempted to add linkrev -1 to %s"
 msgstr "tentativa de adicionar linkrev -1 a %s"
-
-msgid "consistency error in delta"
-msgstr "erro de consistência no delta"
 
 #, python-format
 msgid "can't use %s here"
@@ -25177,6 +25529,14 @@ msgid ""
 msgstr ""
 " as origens do sub-repositório %s diferem\n"
 "usar origem (l)ocal (%s) ou (r)emota (%s)?$$ &Local $$ &Remota"
+
+#, python-format
+msgid ""
+" subrepository %s diverged (local revision: %s, remote revision: %s)\n"
+"(M)erge, keep (l)ocal or keep (r)emote?$$ &Merge $$ &Local $$ &Remote"
+msgstr ""
+" o sub-repositório %s divergiu (revisão local: %s, remota: %s)\n"
+"(M)esclar, manter (l)ocal o usar (r)emota?$$ &Mesclar $$ &Local $$ &Remota"
 
 #, python-format
 msgid ""
