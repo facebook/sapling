@@ -349,11 +349,6 @@ def listcmd(ui, repo, pats, opts):
         finally:
             fp.close()
 
-def readshelvedfiles(repo, basename):
-    """return the list of files touched in a shelve"""
-    fp = shelvedfile(repo, basename, 'files').opener()
-    return fp.read().split('\0')
-
 def checkparents(repo, state):
     """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
@@ -523,7 +518,8 @@ def unshelve(ui, repo, *shelved, **opts):
     else:
         basename = shelved[0]
 
-    shelvedfiles = readshelvedfiles(repo, basename)
+    if not shelvedfile(repo, basename, 'files').exists():
+        raise util.Abort(_("shelved change '%s' not found") % basename)
 
     wlock = lock = tr = None
     try:
