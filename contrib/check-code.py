@@ -247,7 +247,7 @@ pypats = [
     (r'[\s\(](open|file)\([^)]*\)\.read\(',
      "use util.readfile() instead"),
     (r'[\s\(](open|file)\([^)]*\)\.write\(',
-     "use util.readfile() instead"),
+     "use util.writefile() instead"),
     (r'^[\s\(]*(open(er)?|file)\([^)]*\)',
      "always assign an opened file to a variable, and close it afterwards"),
     (r'[\s\(](open|file)\([^)]*\)\.',
