@@ -329,11 +329,11 @@ Verify that target is not selected as external rev (issue3085)
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglog
-  o  8: 'Collapsed revision
+  @  8: 'Collapsed revision
   |  * I
   |  * Merge
   |  * J'
-  @  7: 'H'
+  o  7: 'H'
   |
   | o  6: 'G'
   |/|
