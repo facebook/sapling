@@ -456,6 +456,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                 if prelines is None:
                     prelines = pre.splitlines()
                     postlines = post.splitlines(True)
+                    if i >= nerrs:
+                        msg = "warning: " + msg
 
                 start = m.start()
                 while n < len(postlines):
@@ -482,8 +484,6 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                         bl, bu, br = blamecache[n]
                         if bl == l:
                             bd = '%s@%s' % (bu, br)
-                if i >= nerrs:
-                    msg = "warning: " + msg
                 errors.append((f, lineno and n + 1, l, msg, bd))
                 result = False
 
