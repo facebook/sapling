@@ -453,6 +453,8 @@ def formatblock(block, width):
     indent = ' ' * block['indent']
     if block['type'] == 'admonition':
         admonition = _admonitiontitles[block['admonitiontitle']]
+        if not block['lines']:
+            return indent + admonition + '\n'
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
 
         defindent = indent + hang * ' '
