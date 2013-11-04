@@ -633,9 +633,9 @@ def parse(text, indent=0, keep=None):
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = updateoptionlists(blocks)
+    blocks = findadmonitions(blocks)
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
-    blocks = findadmonitions(blocks)
     return blocks, pruned
 
 def formatblocks(blocks, width):
