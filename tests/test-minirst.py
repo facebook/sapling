@@ -202,6 +202,7 @@ debugformats('sections', sections)
 
 admonitions = """
 .. note::
+
    This is a note
 
    - Bullet 1
