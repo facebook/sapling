@@ -185,6 +185,8 @@ class phasecache(object):
         # be replaced without us being notified.
         if rev == nullrev:
             return public
+        if rev < nullrev:
+            raise ValueError(_('cannot lookup negative revision'))
         if self._phaserevs is None or rev >= len(self._phaserevs):
             self._phaserevs = self.getphaserevs(repo, rebuild=True)
         return self._phaserevs[rev]

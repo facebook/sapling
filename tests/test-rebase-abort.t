@@ -181,3 +181,46 @@ Rebase and abort without generating new changesets:
   
 
   $ cd ..
+
+rebase abort should not leave working copy in a merge state if tip-1 is public
+(issue4082)
+
+  $ hg init abortpublic
+  $ cd abortpublic
+  $ echo a > a && hg ci -Aqm a
+  $ hg book master
+  $ hg book foo
+  $ echo b > b && hg ci -Aqm b
+  $ hg up -q master
+  $ echo c > c && hg ci -Aqm c
+  $ hg phase -p -r .
+  $ hg up -q foo
+  $ echo C > c && hg ci -Aqm C
+  $ hg log -G --template "{rev} {desc} {bookmarks}"
+  @  3 C foo
+  |
+  | o  2 c master
+  | |
+  o |  1 b
+  |/
+  o  0 a
+  
+
+  $ hg rebase -d master -r foo
+  merging c
+  warning: conflicts during merge.
+  merging c incomplete! (edit conflicts, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+  $ hg log -G --template "{rev} {desc} {bookmarks}"
+  @  3 C foo
+  |
+  | o  2 c master
+  | |
+  o |  1 b
+  |/
+  o  0 a
+  
+  $ cd ..
