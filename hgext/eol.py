@@ -49,6 +49,7 @@ Example versioned ``.hgeol`` file::
   native = LF
 
 .. note::
+
    The rules will first apply when files are touched in the working
    copy, e.g. by updating to null and back to tip to touch all files.
 

@@ -2622,6 +2622,7 @@ def guard(ui, repo, *args, **opts):
     With arguments, set guards for the named patch.
 
     .. note::
+
        Specifying negative guards now requires '--'.
 
     To set guards on another patch::
