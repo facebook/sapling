@@ -1852,7 +1852,8 @@ class localrepository(object):
                     # TODO: get bundlecaps from remote
                     bundlecaps = None
                     # create a changegroup from local
-                    if revs is None and not outgoing.excluded:
+                    if revs is None and not (outgoing.excluded
+                                             or self.changelog.filteredrevs):
                         # push everything,
                         # use the fast path, no race possible on push
                         bundler = changegroup.bundle10(self, bundlecaps)
