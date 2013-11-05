@@ -112,7 +112,7 @@ def parselistfiles(files, listtype, warn=True):
     for filename in files:
         try:
             path = os.path.expanduser(os.path.expandvars(filename))
-            f = open(path, "r")
+            f = open(path, "rb")
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
@@ -402,7 +402,7 @@ class Test(unittest.TestCase):
         if debug:
             self._refout = None # to match "out is None"
         elif os.path.exists(self.refpath):
-            f = open(self.refpath, 'r')
+            f = open(self.refpath, 'rb')
             self._refout = f.read().splitlines(True)
             f.close()
         else:
@@ -644,7 +644,7 @@ class Test(unittest.TestCase):
 
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
-        hgrc = open(path, 'w')
+        hgrc = open(path, 'wb')
         hgrc.write('[ui]\n')
         hgrc.write('slash = True\n')
         hgrc.write('interactive = False\n')
@@ -701,7 +701,7 @@ class TTest(Test):
         return os.path.join(self._testdir, self.name)
 
     def _run(self, replacements, env):
-        f = open(self.path)
+        f = open(self.path, 'rb')
         lines = f.readlines()
         f.close()
 
@@ -709,7 +709,7 @@ class TTest(Test):
 
         # Write out the generated script.
         fname = '%s.sh' % self._testtmp
-        f = open(fname, 'w')
+        f = open(fname, 'wb')
         for l in script:
             f.write(l)
         f.close()
@@ -1237,7 +1237,7 @@ class TestSuite(unittest.TestSuite):
                     continue
 
                 if self._keywords:
-                    f = open(test.path)
+                    f = open(test.path, 'rb')
                     t = f.read().lower() + test.name.lower()
                     f.close()
                     ignored = False
@@ -1697,7 +1697,7 @@ class TestRunner(object):
             if not self.options.verbose:
                 os.remove(installerrs)
         else:
-            f = open(installerrs)
+            f = open(installerrs, 'rb')
             for line in f:
                 print line,
             f.close()
@@ -1708,11 +1708,11 @@ class TestRunner(object):
 
         if self.options.py3k_warnings and not self.options.anycoverage:
             vlog("# Updating hg command to enable Py3k Warnings switch")
-            f = open(os.path.join(self._bindir, 'hg'), 'r')
+            f = open(os.path.join(self._bindir, 'hg'), 'rb')
             lines = [line.rstrip() for line in f]
             lines[0] += ' -3'
             f.close()
-            f = open(os.path.join(self._bindir, 'hg'), 'w')
+            f = open(os.path.join(self._bindir, 'hg'), 'wb')
             for line in lines:
                 f.write(line + '\n')
             f.close()
