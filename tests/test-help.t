@@ -1691,7 +1691,7 @@ Dish up an empty repo; serve it cold.
   (from branch) and Delete (from disk):
   </p>
   <table>
-  <tr><td></td>
+  <tr><td>opt/state</td>
   <td>A</td>
   <td>C</td>
   <td>M</td>

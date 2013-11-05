@@ -24,9 +24,10 @@ class remotestore(basestore.basestore):
         if self.sendfile(source, hash):
             raise util.Abort(
                 _('remotestore: could not put %s to remote store %s')
-                % (source, self.url))
+                % (source, util.hidepassword(self.url)))
         self.ui.debug(
-            _('remotestore: put %s to remote store %s') % (source, self.url))
+            _('remotestore: put %s to remote store %s\n')
+            % (source, util.hidepassword(self.url)))
 
     def exists(self, hashes):
         return dict((h, s == 0) for (h, s) in self._stat(hashes).iteritems())
@@ -57,7 +58,8 @@ class remotestore(basestore.basestore):
             # This usually indicates a connection problem, so don't
             # keep trying with the other files... they will probably
             # all fail too.
-            raise util.Abort('%s: %s' % (self.url, e.reason))
+            raise util.Abort('%s: %s' %
+                             (util.hidepassword(self.url), e.reason))
         except IOError, e:
             raise basestore.StoreError(filename, hash, self.url, str(e))
 

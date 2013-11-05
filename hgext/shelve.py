@@ -27,6 +27,7 @@ from mercurial import changegroup, cmdutil, scmutil, phases
 from mercurial import error, hg, mdiff, merge, patch, repair, util
 from mercurial import templatefilters
 from mercurial import lock as lockmod
+from hgext import rebase
 import errno
 
 cmdtable = {}
@@ -65,16 +66,7 @@ class shelvedfile(object):
         except IOError, err:
             if err.errno != errno.ENOENT:
                 raise
-            if mode[0] in 'wa':
-                try:
-                    self.vfs.mkdir()
-                    return self.vfs(self.fname, mode)
-                except IOError, err:
-                    if err.errno != errno.EEXIST:
-                        raise
-            elif mode[0] == 'r':
-                raise util.Abort(_("shelved change '%s' not found") %
-                                 self.name)
+            raise util.Abort(_("shelved change '%s' not found") % self.name)
 
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
@@ -95,25 +87,35 @@ class shelvedstate(object):
                 raise util.Abort(_('this version of shelve is incompatible '
                                    'with the version used in this repo'))
             name = fp.readline().strip()
+            wctx = fp.readline().strip()
+            pendingctx = fp.readline().strip()
             parents = [bin(h) for h in fp.readline().split()]
             stripnodes = [bin(h) for h in fp.readline().split()]
+            unknownfiles = fp.readline()[:-1].split('\0')
         finally:
             fp.close()
 
         obj = cls()
         obj.name = name
+        obj.wctx = repo[bin(wctx)]
+        obj.pendingctx = repo[bin(pendingctx)]
         obj.parents = parents
         obj.stripnodes = stripnodes
+        obj.unknownfiles = unknownfiles
 
         return obj
 
     @classmethod
-    def save(cls, repo, name, stripnodes):
+    def save(cls, repo, name, originalwctx, pendingctx, stripnodes,
+             unknownfiles):
         fp = repo.opener(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
+        fp.write('%s\n' % hex(originalwctx.node()))
+        fp.write('%s\n' % hex(pendingctx.node()))
         fp.write('%s\n' % ' '.join([hex(p) for p in repo.dirstate.parents()]))
         fp.write('%s\n' % ' '.join([hex(n) for n in stripnodes]))
+        fp.write('%s\n' % '\0'.join(unknownfiles))
         fp.close()
 
     @classmethod
@@ -190,7 +192,7 @@ def createcmd(ui, repo, pats, opts):
         lock = repo.lock()
 
         bms = repo._bookmarks.copy()
-        # use an uncommited transaction to generate the bundle to avoid
+        # use an uncommitted transaction to generate the bundle to avoid
         # pull races. ensure we don't print the abort message to stderr.
         tr = repo.transaction('commit', report=lambda x: None)
 
@@ -347,16 +349,15 @@ def listcmd(ui, repo, pats, opts):
         finally:
             fp.close()
 
-def readshelvedfiles(repo, basename):
-    """return the list of files touched in a shelve"""
-    fp = shelvedfile(repo, basename, 'files').opener()
-    return fp.read().split('\0')
-
 def checkparents(repo, state):
     """check parent while resuming an unshelve"""
     if state.parents != repo.dirstate.parents():
         raise util.Abort(_('working directory parents do not match unshelve '
                            'state'))
+
+def pathtofiles(repo, files):
+    cwd = repo.getcwd()
+    return [repo.pathto(f, cwd) for f in files]
 
 def unshelveabort(ui, repo, state, opts):
     """subcommand that abort an in-progress unshelve"""
@@ -364,42 +365,54 @@ def unshelveabort(ui, repo, state, opts):
     lock = None
     try:
         checkparents(repo, state)
+
+        util.rename(repo.join('unshelverebasestate'),
+                    repo.join('rebasestate'))
+        try:
+            rebase.rebase(ui, repo, **{
+                'abort' : True
+            })
+        except Exception:
+            util.rename(repo.join('rebasestate'),
+                        repo.join('unshelverebasestate'))
+            raise
+
         lock = repo.lock()
-        merge.mergestate(repo).reset()
-        if opts['keep']:
-            repo.setparents(repo.dirstate.parents()[0])
-        else:
-            revertfiles = readshelvedfiles(repo, state.name)
-            wctx = repo.parents()[0]
-            cmdutil.revert(ui, repo, wctx, [wctx.node(), nullid],
-                           *revertfiles, **{'no_backup': True})
-            # fix up the weird dirstate states the merge left behind
-            mf = wctx.manifest()
-            dirstate = repo.dirstate
-            for f in revertfiles:
-                if f in mf:
-                    dirstate.normallookup(f)
-                else:
-                    dirstate.drop(f)
-            dirstate._pl = (wctx.node(), nullid)
-            dirstate._dirty = True
+
+        mergefiles(ui, repo, state.wctx, state.pendingctx, state.unknownfiles)
+
         repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
         shelvedstate.clear(repo)
         ui.warn(_("unshelve of '%s' aborted\n") % state.name)
     finally:
         lockmod.release(lock, wlock)
 
+def mergefiles(ui, repo, wctx, shelvectx, unknownfiles):
+    """updates to wctx and merges the changes from shelvectx into the
+    dirstate. drops any files in unknownfiles from the dirstate."""
+    oldquiet = ui.quiet
+    try:
+        ui.quiet = True
+        hg.update(repo, wctx.node())
+        files = []
+        files.extend(shelvectx.files())
+        files.extend(shelvectx.parents()[0].files())
+        cmdutil.revert(ui, repo, shelvectx, repo.dirstate.parents(),
+                       *pathtofiles(repo, files),
+                       **{'no_backup': True})
+    finally:
+        ui.quiet = oldquiet
+
+    # Send untracked files back to being untracked
+    dirstate = repo.dirstate
+    for f in unknownfiles:
+        dirstate.drop(f)
+
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
     if not opts['keep']:
         for filetype in 'hg files patch'.split():
             shelvedfile(repo, name, filetype).unlink()
-
-def finishmerge(ui, repo, ms, stripnodes, name, opts):
-    # Reset the working dir so it's no longer in a merge state.
-    dirstate = repo.dirstate
-    dirstate.setparents(dirstate._pl[0])
-    shelvedstate.clear(repo)
 
 def unshelvecontinue(ui, repo, state, opts):
     """subcommand to continue an in-progress unshelve"""
@@ -414,9 +427,30 @@ def unshelvecontinue(ui, repo, state, opts):
             raise util.Abort(
                 _("unresolved conflicts, can't continue"),
                 hint=_("see 'hg resolve', then 'hg unshelve --continue'"))
-        finishmerge(ui, repo, ms, state.stripnodes, state.name, opts)
+
         lock = repo.lock()
+
+        util.rename(repo.join('unshelverebasestate'),
+                    repo.join('rebasestate'))
+        try:
+            rebase.rebase(ui, repo, **{
+                'continue' : True
+            })
+        except Exception:
+            util.rename(repo.join('rebasestate'),
+                        repo.join('unshelverebasestate'))
+            raise
+
+        shelvectx = repo['tip']
+        if not shelvectx in state.pendingctx.children():
+            # rebase was a no-op, so it produced no child commit
+            shelvectx = state.pendingctx
+
+        mergefiles(ui, repo, state.wctx, shelvectx, state.unknownfiles)
+
+        state.stripnodes.append(shelvectx.node())
         repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
+        shelvedstate.clear(repo)
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)
     finally:
@@ -484,71 +518,99 @@ def unshelve(ui, repo, *shelved, **opts):
     else:
         basename = shelved[0]
 
-    shelvedfiles = readshelvedfiles(repo, basename)
-
-    m, a, r, d = repo.status()[:4]
-    unsafe = set(m + a + r + d).intersection(shelvedfiles)
-    if unsafe:
-        ui.warn(_('the following shelved files have been modified:\n'))
-        for f in sorted(unsafe):
-            ui.warn('  %s\n' % f)
-        ui.warn(_('you must commit, revert, or shelve your changes before you '
-                  'can proceed\n'))
-        raise util.Abort(_('cannot unshelve due to local changes\n'))
+    if not shelvedfile(repo, basename, 'files').exists():
+        raise util.Abort(_("shelved change '%s' not found") % basename)
 
     wlock = lock = tr = None
     try:
         lock = repo.lock()
+        wlock = repo.wlock()
 
         tr = repo.transaction('unshelve', report=lambda x: None)
         oldtiprev = len(repo)
+
+        wctx = repo['.']
+        tmpwctx = wctx
+        # The goal is to have a commit structure like so:
+        # ...-> wctx -> tmpwctx -> shelvectx
+        # where tmpwctx is an optional commit with the user's pending changes
+        # and shelvectx is the unshelved changes. Then we merge it all down
+        # to the original wctx.
+
+        # Store pending changes in a commit
+        m, a, r, d, u = repo.status(unknown=True)[:5]
+        if m or a or r or d or u:
+            def commitfunc(ui, repo, message, match, opts):
+                hasmq = util.safehasattr(repo, 'mq')
+                if hasmq:
+                    saved, repo.mq.checkapplied = repo.mq.checkapplied, False
+
+                try:
+                    return repo.commit(message, 'shelve@localhost',
+                                       opts.get('date'), match)
+                finally:
+                    if hasmq:
+                        repo.mq.checkapplied = saved
+
+            tempopts = {}
+            tempopts['message'] = "pending changes temporary commit"
+            tempopts['addremove'] = True
+            oldquiet = ui.quiet
+            try:
+                ui.quiet = True
+                node = cmdutil.commit(ui, repo, commitfunc, None, tempopts)
+            finally:
+                ui.quiet = oldquiet
+            tmpwctx = repo[node]
+
         try:
             fp = shelvedfile(repo, basename, 'hg').opener()
             gen = changegroup.readbundle(fp, fp.name)
             repo.addchangegroup(gen, 'unshelve', 'bundle:' + fp.name)
             nodes = [ctx.node() for ctx in repo.set('%d:', oldtiprev)]
             phases.retractboundary(repo, phases.secret, nodes)
-            tr.close()
         finally:
             fp.close()
 
-        tip = repo['tip']
-        wctx = repo['.']
-        ancestor = tip.ancestor(wctx)
+        shelvectx = repo['tip']
 
-        wlock = repo.wlock()
+        # If the shelve is not immediately on top of the commit
+        # we'll be merging with, rebase it to be on top.
+        if tmpwctx.node() != shelvectx.parents()[0].node():
+            try:
+                rebase.rebase(ui, repo, **{
+                    'rev' : [shelvectx.rev()],
+                    'dest' : str(tmpwctx.rev()),
+                    'keep' : True,
+                })
+            except error.InterventionRequired:
+                tr.close()
 
-        if ancestor.node() != wctx.node():
-            conflicts = hg.merge(repo, tip.node(), force=True, remind=False)
-            ms = merge.mergestate(repo)
-            stripnodes = [repo.changelog.node(rev)
-                          for rev in xrange(oldtiprev, len(repo))]
-            if conflicts:
-                shelvedstate.save(repo, basename, stripnodes)
-                # Fix up the dirstate entries of files from the second
-                # parent as if we were not merging, except for those
-                # with unresolved conflicts.
-                parents = repo.parents()
-                revertfiles = set(parents[1].files()).difference(ms)
-                cmdutil.revert(ui, repo, parents[1],
-                               (parents[0].node(), nullid),
-                               *revertfiles, **{'no_backup': True})
+                stripnodes = [repo.changelog.node(rev)
+                              for rev in xrange(oldtiprev, len(repo))]
+                shelvedstate.save(repo, basename, wctx, tmpwctx, stripnodes, u)
+
+                util.rename(repo.join('rebasestate'),
+                            repo.join('unshelverebasestate'))
                 raise error.InterventionRequired(
                     _("unresolved conflicts (see 'hg resolve', then "
                       "'hg unshelve --continue')"))
-            finishmerge(ui, repo, ms, stripnodes, basename, opts)
-        else:
-            parent = tip.parents()[0]
-            hg.update(repo, parent.node())
-            cmdutil.revert(ui, repo, tip, repo.dirstate.parents(), *tip.files(),
-                           **{'no_backup': True})
 
-        prevquiet = ui.quiet
-        ui.quiet = True
-        try:
-            repo.rollback(force=True)
-        finally:
-            ui.quiet = prevquiet
+            # refresh ctx after rebase completes
+            shelvectx = repo['tip']
+
+            if not shelvectx in tmpwctx.children():
+                # rebase was a no-op, so it produced no child commit
+                shelvectx = tmpwctx
+
+        mergefiles(ui, repo, wctx, shelvectx, u)
+        shelvedstate.clear(repo)
+
+        # The transaction aborting will strip all the commits for us,
+        # but it doesn't update the inmemory structures, so addchangegroup
+        # hooks still fire and try to operate on the missing commits.
+        # Clean up manually to prevent this.
+        repo.changelog.strip(oldtiprev, tr)
 
         unshelvecleanup(ui, repo, basename, opts)
     finally:
@@ -629,5 +691,6 @@ def shelvecmd(ui, repo, *pats, **opts):
 
 def extsetup(ui):
     cmdutil.unfinishedstates.append(
-        [shelvedstate._filename, False, True, _('unshelve already in progress'),
+        [shelvedstate._filename, False, False,
+         _('unshelve already in progress'),
          _("use 'hg unshelve --continue' or 'hg unshelve --abort'")])

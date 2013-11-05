@@ -386,7 +386,7 @@ applied patches after stripping ancestor of queue
 
   $ hg qapplied
 
-Verify strip protects against stripping wc parent when there are uncommited mods
+Verify strip protects against stripping wc parent when there are uncommitted mods
 
   $ echo b > b
   $ hg add b

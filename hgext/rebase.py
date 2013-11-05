@@ -128,7 +128,8 @@ def rebase(ui, repo, **opts):
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
-    Returns 0 on success, 1 if nothing to rebase.
+    Returns 0 on success, 1 if nothing to rebase or there are
+    unresolved conflicts.
     """
     originalwd = target = None
     activebookmark = None
@@ -259,7 +260,7 @@ def rebase(ui, repo, **opts):
                 if collapsef:
                     targetancestors = repo.changelog.ancestors([target],
                                                                inclusive=True)
-                    external = checkexternal(repo, state, targetancestors)
+                    external = externalparent(repo, state, targetancestors)
 
         if keepbranchesf:
             # insert _savebranch at the start of extrafns so if
@@ -388,24 +389,28 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def checkexternal(repo, state, targetancestors):
-    """Check whether one or more external revisions need to be taken in
-    consideration. In the latter case, abort.
+def externalparent(repo, state, targetancestors):
+    """Return the revision that should be used as the second parent
+    when the revisions in state is collapsed on top of targetancestors.
+    Abort if there is more than one parent.
     """
-    external = nullrev
+    parents = set()
     source = min(state)
     for rev in state:
         if rev == source:
             continue
-        # Check externals and fail if there are more than one
         for p in repo[rev].parents():
             if (p.rev() not in state
                         and p.rev() not in targetancestors):
-                if external != nullrev:
-                    raise util.Abort(_('unable to collapse, there is more '
-                            'than one external parent'))
-                external = p.rev()
-    return external
+                parents.add(p.rev())
+    if not parents:
+        return nullrev
+    if len(parents) == 1:
+        return parents.pop()
+    raise util.Abort(_('unable to collapse on top of %s, there is more '
+                       'than one external parent: %s') %
+                     (max(targetancestors),
+                      ', '.join(str(p) for p in sorted(parents))))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
     'Commit the changes and store useful information in extra'
@@ -443,9 +448,44 @@ def rebasenode(repo, rev, p1, state, collapse):
         repo.ui.debug(" already in target\n")
     repo.dirstate.write()
     repo.ui.debug(" merge against %d:%s\n" % (repo[rev].rev(), repo[rev]))
-    base = None
-    if repo[rev].rev() != repo[min(state)].rev():
+    if repo[rev].rev() == repo[min(state)].rev():
+        # Case (1) initial changeset of a non-detaching rebase.
+        # Let the merge mechanism find the base itself.
+        base = None
+    elif not repo[rev].p2():
+        # Case (2) detaching the node with a single parent, use this parent
         base = repo[rev].p1().node()
+    else:
+        # In case of merge, we need to pick the right parent as merge base.
+        #
+        # Imagine we have:
+        # - M: currently rebase revision in this step
+        # - A: one parent of M
+        # - B: second parent of M
+        # - D: destination of this merge step (p1 var)
+        #
+        # If we are rebasing on D, D is the successors of A or B. The right
+        # merge base is the one D succeed to. We pretend it is B for the rest
+        # of this comment
+        #
+        # If we pick B as the base, the merge involves:
+        # - changes from B to M (actual changeset payload)
+        # - changes from B to D (induced by rebase) as D is a rebased
+        #   version of B)
+        # Which exactly represent the rebase operation.
+        #
+        # If we pick the A as the base, the merge involves
+        # - changes from A to M (actual changeset payload)
+        # - changes from A to D (with include changes between unrelated A and B
+        #   plus changes induced by rebase)
+        # Which does not represent anything sensible and creates a lot of
+        # conflicts.
+        for p in repo[rev].parents():
+            if state.get(p.rev()) == repo[p1].rev():
+                base = p.node()
+                break
+    if base is not None:
+        repo.ui.debug("   detach base %d:%s\n" % (repo[base].rev(), repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     return merge.update(repo, rev, True, True, False, base, collapse)
@@ -636,7 +676,7 @@ def restorestatus(repo):
         raise util.Abort(_('no rebase in progress'))
 
 def inrebase(repo, originalwd, state):
-    '''check whether the workdir is in an interrupted rebase'''
+    '''check whether the working dir is in an interrupted rebase'''
     parents = [p.rev() for p in repo.parents()]
     if originalwd in parents:
         return True

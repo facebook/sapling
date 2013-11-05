@@ -1703,7 +1703,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
             tn = getfilectx(f, ctx2).data()
         a, b = f, f
         if opts.git or losedatafn:
-            if f in added:
+            if f in added or (f in modified and to is None):
                 mode = gitmode[ctx2.flags(f)]
                 if f in copy or f in copyto:
                     if opts.git:
@@ -1739,7 +1739,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 if not opts.git and not tn:
                     # regular diffs cannot represent new empty file
                     losedatafn(f)
-            elif f in removed:
+            elif f in removed or (f in modified and tn is None):
                 if opts.git:
                     # have we already reported a copy above?
                     if ((f in copy and copy[f] in added

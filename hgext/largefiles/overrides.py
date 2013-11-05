@@ -370,36 +370,39 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
     overwrite = force and not branchmerge
     actions = origfn(repo, p1, p2, pa, branchmerge, force, partial,
                      acceptremote)
+
+    if overwrite:
+        return actions
+
+    removes = set(a[0] for a in actions if a[1] == 'r')
     processed = []
 
     for action in actions:
-        if overwrite:
-            processed.append(action)
-            continue
         f, m, args, msg = action
 
         splitstandin = lfutil.splitstandin(f)
         if (m == "g" and splitstandin is not None and
-            splitstandin in p1 and f in p2):
+            splitstandin in p1 and splitstandin not in removes):
             # Case 1: normal file in the working copy, largefile in
             # the second parent
             lfile = splitstandin
             standin = f
-            msg = _('%s has been turned into a largefile\n'
-                    'use (l)argefile or keep as (n)ormal file?'
+            msg = _('remote turned local normal file %s into a largefile\n'
+                    'use (l)argefile or keep (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))
                 processed.append((standin, "g", (p2.flags(standin),), msg))
             else:
                 processed.append((standin, "r", None, msg))
-        elif m == "g" and lfutil.standin(f) in p1 and f in p2:
+        elif (m == "g" and
+            lfutil.standin(f) in p1 and lfutil.standin(f) not in removes):
             # Case 2: largefile in the working copy, normal file in
             # the second parent
             standin = lfutil.standin(f)
             lfile = f
-            msg = _('%s has been turned into a normal file\n'
-                    'keep as (l)argefile or use (n)ormal file?'
+            msg = _('remote turned local largefile %s into a normal file\n'
+                    'keep (l)argefile or use (n)ormal file?'
                     '$$ &Largefile $$ &Normal file') % lfile
             if repo.ui.promptchoice(msg, 0) == 0:
                 processed.append((lfile, "r", None, msg))

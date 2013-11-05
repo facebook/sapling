@@ -197,7 +197,7 @@ class basectx(object):
 
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
-    changeset convenient. It represents a read-only context already presnt in
+    changeset convenient. It represents a read-only context already present in
     the repo."""
     def __init__(self, repo, changeid=''):
         """changeid is a revision number, node, or tag"""

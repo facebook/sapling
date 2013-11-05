@@ -15,9 +15,10 @@ inserted due to big distance from its paren revision (zero).
   >   hg up -q -r 0
   >   hg pull . -q -r $r -R ../gdrepo
   > done
+
   $ cd ..
-  $ regsize=`du -s -b repo/.hg/store/00manifest.i | cut -f 1`
-  $ gdsize=`du -s -b gdrepo/.hg/store/00manifest.i | cut -f 1`
-  $ if [ $regsize -lt $gdsize ]; then
-  >   echo 'generaldelta increased size of a revlog!'
-  > fi
+  >>> import os
+  >>> regsize = os.stat("repo/.hg/store/00manifest.i").st_size
+  >>> gdsize = os.stat("gdrepo/.hg/store/00manifest.i").st_size
+  >>> if regsize < gdsize:
+  ...     print 'generaldata increased size of manifest'

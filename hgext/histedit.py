@@ -471,6 +471,10 @@ def histedit(ui, repo, *freeargs, **opts):
     instead of --outgoing to specify edit target revision exactly in
     such ambiguous situation. See :hg:`help revsets` for detail about
     selecting revisions.
+
+    Returns 0 on success, 1 if user intervention is required (not only
+    for intentional "edit" command, but also for resolving unexpected
+    conflicts).
     """
     # TODO only abort if we try and histedit mq patches, not just
     # blanket if mq patches are applied somewhere

@@ -303,6 +303,8 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	struct hunk l, *h;
 	int an, bn, count, pos = 0;
 
+	l.next = NULL;
+
 	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
 		return NULL;
 
@@ -312,7 +314,6 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	if (!a || !b)
 		goto nomem;
 
-	l.next = NULL;
 	count = diff(a, an, b, bn, &l);
 	if (count < 0)
 		goto nomem;
@@ -344,6 +345,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	Py_ssize_t len = 0, la, lb;
 	PyThreadState *_save;
 
+	l.next = NULL;
+
 	if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
 		return NULL;
 
@@ -358,7 +361,6 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	if (!al || !bl)
 		goto nomem;
 
-	l.next = NULL;
 	count = diff(al, an, bl, bn, &l);
 	if (count < 0)
 		goto nomem;

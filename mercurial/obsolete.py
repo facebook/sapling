@@ -373,7 +373,7 @@ def pushmarker(repo, key, old, new):
 def syncpush(repo, remote):
     """utility function to push obsolete markers to a remote
 
-    Exist mostly to allow overridding for experimentation purpose"""
+    Exist mostly to allow overriding for experimentation purpose"""
     if (_enabled and repo.obsstore and
         'obsolete' in remote.listkeys('namespaces')):
         rslts = []
@@ -393,7 +393,7 @@ def syncpull(repo, remote, gettransaction):
     one if necessary. We return the transaction to inform the calling code that
     a new transaction have been created (when applicable).
 
-    Exists mostly to allow overridding for experimentation purpose"""
+    Exists mostly to allow overriding for experimentation purpose"""
     tr = None
     if _enabled:
         repo.ui.debug('fetching remote obsolete markers\n')
@@ -446,10 +446,10 @@ def foreground(repo, nodes):
     """return all nodes in the "foreground" of other node
 
     The foreground of a revision is anything reachable using parent -> children
-    or precursor -> sucessor relation. It is very similars to "descendant" but
+    or precursor -> successor relation. It is very similar to "descendant" but
     augmented with obsolescence information.
 
-    Beware that possible obsolescence cycle may result if complexe situation.
+    Beware that possible obsolescence cycle may result if complex situation.
     """
     repo = repo.unfiltered()
     foreground = set(repo.set('%ln::', nodes))

@@ -533,7 +533,7 @@ def transplant(ui, repo, *revs, **opts):
     --source/-s specifies another repository to use for selecting changesets,
     just as if it temporarily had been pulled.
     If --branch/-b is specified, these revisions will be used as
-    heads when deciding which changsets to transplant, just as if only
+    heads when deciding which changesets to transplant, just as if only
     these revisions had been pulled.
     If --all/-a is specified, all the revisions up to the heads specified
     with --branch will be transplanted.

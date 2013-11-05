@@ -226,7 +226,7 @@ Rebase and collapse - more than one external (fail):
   $ cd b1
 
   $ hg rebase -s 2 --collapse
-  abort: unable to collapse, there is more than one external parent
+  abort: unable to collapse on top of 7, there is more than one external parent: 1, 5
   [255]
 
 Rebase and collapse - E onto H:

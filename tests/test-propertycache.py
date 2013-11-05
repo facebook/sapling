@@ -1,6 +1,6 @@
 """test behavior of propertycache and unfiltered propertycache
 
-The repoview overlay is quite complexe. We test the behavior of
+The repoview overlay is quite complex. We test the behavior of
 property cache of both localrepo and repoview to prevent
 regression."""
 

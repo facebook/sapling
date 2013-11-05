@@ -360,3 +360,23 @@ There should be a trailing TAB if there are spaces in the file name:
   +foo
   $ hg ci -m 'add filename with spaces'
 
+Additions should be properly marked even in the middle of a merge
+
+  $ hg up -r -2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo "New File" >> inmerge
+  $ hg add inmerge
+  $ hg ci -m "file in merge"
+  created new head
+  $ hg up 23
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg diff -g
+  diff --git a/inmerge b/inmerge
+  new file mode 100644
+  --- /dev/null
+  +++ b/inmerge
+  @@ -0,0 +1,1 @@
+  +New File

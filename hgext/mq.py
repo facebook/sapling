@@ -80,12 +80,12 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-# force load strip extension formely included in mq and import some utility
+# force load strip extension formerly included in mq and import some utility
 try:
     stripext = extensions.find('strip')
 except KeyError:
     # note: load is lazy so we could avoid the try-except,
-    # but I (marmoute) prefer this explicite code.
+    # but I (marmoute) prefer this explicit code.
     class dummyui(object):
         def debug(self, msg):
             pass
@@ -651,7 +651,7 @@ class queue(object):
         """return the mq handled parent or p1
 
         In some case where mq get himself in being the parent of a merge the
-        paappropriate parent may be p2.
+        appropriate parent may be p2.
         (eg: an in progress merge started with mq disabled)
 
         If no parent are managed by mq, p1 is returned.

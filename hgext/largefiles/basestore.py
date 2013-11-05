@@ -26,10 +26,11 @@ class StoreError(Exception):
 
     def longmessage(self):
         return (_("error getting id %s from url %s for file %s: %s\n") %
-                 (self.hash, self.url, self.filename, self.detail))
+                 (self.hash, util.hidepassword(self.url), self.filename,
+                  self.detail))
 
     def __str__(self):
-        return "%s: %s" % (self.url, self.detail)
+        return "%s: %s" % (util.hidepassword(self.url), self.detail)
 
 class basestore(object):
     def __init__(self, ui, repo, url):
@@ -69,7 +70,7 @@ class basestore(object):
 
             if not available.get(hash):
                 ui.warn(_('%s: largefile %s not available from %s\n')
-                        % (filename, hash, self.url))
+                        % (filename, hash, util.hidepassword(self.url)))
                 missing.append(filename)
                 continue
 
@@ -214,4 +215,5 @@ def _openstore(repo, remote=None, put=False):
         except lfutil.storeprotonotcapable:
             pass
 
-    raise util.Abort(_('%s does not appear to be a largefile store') % path)
+    raise util.Abort(_('%s does not appear to be a largefile store') %
+                     util.hidepassword(path))

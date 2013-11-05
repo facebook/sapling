@@ -554,9 +554,9 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
           hg bisect --skip
           hg bisect --skip 23
 
-      - skip all revisions that do not touch directories ``foo`` or ``bar``
+      - skip all revisions that do not touch directories ``foo`` or ``bar``::
 
-          hg bisect --skip '!( file("path:foo") & file("path:bar") )'
+          hg bisect --skip "!( file('path:foo') & file('path:bar') )"
 
       - forget the current bisection::
 
@@ -568,7 +568,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
           hg bisect --reset
           hg bisect --bad 34
           hg bisect --good 12
-          hg bisect --command 'make && make tests'
+          hg bisect --command "make && make tests"
 
       - see all changesets whose states are already known in the current
         bisection::
@@ -4652,7 +4652,7 @@ def push(ui, repo, dest=None, **opts):
     only create a new branch without forcing other changes.
 
     .. note::
-      Extra care should be used with the -f/--force option,
+      Extra care should be taken with the -f/--force option,
       which will push all new heads on all branches, an action which will
       almost always cause confusion for collaborators.
 
@@ -4769,14 +4769,14 @@ def remove(ui, repo, *pats, **opts):
       (as reported by :hg:`status`). The actions are Warn, Remove
       (from branch) and Delete (from disk):
 
-      ======= == == == ==
-              A  C  M  !
-      ======= == == == ==
-      none    W  RD W  R
-      -f      R  RD RD R
-      -A      W  W  W  R
-      -Af     R  R  R  R
-      ======= == == == ==
+      ========= == == == ==
+      opt/state A  C  M  !
+      ========= == == == ==
+      none      W  RD W  R
+      -f        R  RD RD R
+      -A        W  W  W  R
+      -Af       R  R  R  R
+      ========= == == == ==
 
       Note that remove never deletes files in Added [A] state from the
       working directory, not even if option --force is specified.

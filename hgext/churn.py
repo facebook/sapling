@@ -103,16 +103,16 @@ def churn(ui, repo, *pats, **opts):
     Examples::
 
       # display count of changed lines for every committer
-      hg churn -t '{author|email}'
+      hg churn -t "{author|email}"
 
       # display daily activity graph
-      hg churn -f '%H' -s -c
+      hg churn -f "%H" -s -c
 
       # display activity of developers by month
-      hg churn -f '%Y-%m' -s -c
+      hg churn -f "%Y-%m" -s -c
 
       # display count of lines changed in every year
-      hg churn -f '%Y' -s
+      hg churn -f "%Y" -s
 
     It is possible to map alternate email addresses to a main address
     by providing a file using the following format::

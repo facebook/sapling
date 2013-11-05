@@ -161,7 +161,7 @@ def _search(web, req, tmpl):
             ctx = web.repo[query]
         except (error.RepoError, error.LookupError):
             # query is not an exact revision pointer, need to
-            # decide if it's a revset expession or keywords
+            # decide if it's a revset expression or keywords
             pass
         else:
             return MODE_REVISION, ctx

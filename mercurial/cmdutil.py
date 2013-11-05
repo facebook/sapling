@@ -170,7 +170,7 @@ def makefilename(repo, pat, node, desc=None,
                          inst.args[0])
 
 def makefileobj(repo, pat, node=None, desc=None, total=None,
-                seqno=None, revwidth=None, mode='wb', modemap={},
+                seqno=None, revwidth=None, mode='wb', modemap=None,
                 pathname=None):
 
     writable = mode not in ('r', 'rb')
@@ -198,9 +198,10 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
     if util.safehasattr(pat, 'read') and 'r' in mode:
         return pat
     fn = makefilename(repo, pat, node, desc, total, seqno, revwidth, pathname)
-    mode = modemap.get(fn, mode)
-    if mode == 'wb':
-        modemap[fn] = 'ab'
+    if modemap is not None:
+        mode = modemap.get(fn, mode)
+        if mode == 'wb':
+            modemap[fn] = 'ab'
     return open(fn, mode)
 
 def openrevlog(repo, cmd, file_, opts):
