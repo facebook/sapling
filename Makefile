@@ -123,7 +123,10 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES)
 	$(PYTHON) i18n/posplit i18n/hg.pot
 
 %.po: i18n/hg.pot
-	msgmerge --no-location --update $@ $^
+        # work on a temporary copy for never having a half completed target
+	cp $@ $@.tmp
+	msgmerge --no-location --update $@.tmp $^
+	mv -f $@~ $@
 
 .PHONY: help all local build doc clean install install-bin install-doc \
 	install-home install-home-bin install-home-doc dist dist-notests tests \
