@@ -750,10 +750,8 @@ This shouldn't be possible:
   $ hg branch closewithamend
   marked working directory as branch closewithamend
   (branches are permanent and global, did you want a bookmark?)
-  $ hg ci -Am..
-  adding cc.orig
-  adding obs.py
-  adding obs.pyc
+  $ hg add obs.py
+  $ hg ci -m..
   $ hg ci --amend --close-branch -m 'closing'
   abort: can only close branch heads
   [255]
