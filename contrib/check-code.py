@@ -26,8 +26,25 @@ def compilere(pat, multiline=False):
     return re.compile(pat)
 
 def repquote(m):
-    t = re.sub(r"\w", "x", m.group('text'))
-    t = re.sub(r"[^\s\nx]", "o", t)
+    fromc = '.:'
+    tochr = 'pq'
+    def encodechr(i):
+        if i > 255:
+            return 'u'
+        c = chr(i)
+        if c in ' \n':
+            return c
+        if c.isalpha():
+            return 'x'
+        if c.isdigit():
+            return 'n'
+        try:
+            return tochr[fromc.find(c)]
+        except (ValueError, IndexError):
+            return 'o'
+    t = m.group('text')
+    tt = ''.join(encodechr(i) for i in xrange(256))
+    t = t.translate(tt)
     return m.group('quote') + t + m.group('quote')
 
 def reppython(m):
@@ -263,7 +280,7 @@ pypats = [
   ],
   # warnings
   [
-    (r'(^| )oo +xxxxoo[ \n][^\n]', "add two newlines after '.. note::'"),
+    (r'(^| )pp +xxxxqq[ \n][^\n]', "add two newlines after '.. note::'"),
   ]
 ]
 
