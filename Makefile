@@ -108,7 +108,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES)
 	  mercurial/fileset.py mercurial/revset.py \
 	  mercurial/templatefilters.py mercurial/templatekw.py \
 	  mercurial/filemerge.py \
-	  $(DOCFILES) > i18n/hg.pot
+	  $(DOCFILES) > i18n/hg.pot~
         # All strings marked for translation in Mercurial contain
         # ASCII characters only. But some files contain string
         # literals like this '\037\213'. xgettext thinks it has to
@@ -120,8 +120,11 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES)
 	  --msgid-bugs-address "<mercurial-devel@selenic.com>" \
 	  --copyright-holder "Matt Mackall <mpm@selenic.com> and others" \
 	  --from-code ISO-8859-1 --join --sort-by-file --add-comments=i18n: \
-	  -d hg -p i18n -o hg.pot
-	$(PYTHON) i18n/posplit i18n/hg.pot
+	  -d hg -p i18n -o hg.pot~
+	$(PYTHON) i18n/posplit i18n/hg.pot~
+        # The target file is not created before the last step. So it never is in
+        # an intermediate state.
+	mv -f i18n/hg.pot~ i18n/hg.pot
 
 %.po: i18n/hg.pot
         # work on a temporary copy for never having a half completed target
