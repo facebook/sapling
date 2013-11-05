@@ -263,6 +263,7 @@ pypats = [
   ],
   # warnings
   [
+    (r'(^| )oo +xxxxoo[ \n][^\n]', "add two newlines after '.. note::'"),
   ]
 ]
 

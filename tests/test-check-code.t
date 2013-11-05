@@ -204,3 +204,42 @@
    don't use old-style two-argument raise, use Exception(message)
   [1]
 
+  $ cat > rst.py <<EOF
+  > """problematic rst text
+  > 
+  > .. note::
+  >     wrong
+  > """
+  > 
+  > '''
+  > 
+  > .. note::
+  > 
+  >     valid
+  > 
+  > new text
+  > 
+  >     .. note::
+  > 
+  >         also valid
+  > '''
+  > 
+  > """mixed
+  > 
+  > .. note::
+  > 
+  >   good
+  > 
+  >     .. note::
+  >         plus bad
+  > """
+  > EOF
+  $ $check_code -w rst.py
+  rst.py:3:
+   > .. note::
+   warning: add two newlines after '.. note::'
+  rst.py:26:
+   >     .. note::
+   warning: add two newlines after '.. note::'
+  [1]
+
