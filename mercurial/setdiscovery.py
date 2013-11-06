@@ -8,7 +8,8 @@
 
 from node import nullid
 from i18n import _
-import random, util, dagutil
+import random
+import util, dagutil
 
 def _updatesample(dag, nodes, sample, always, quicksamplesize=0):
     # if nodes is empty we scan the entire graph

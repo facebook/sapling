@@ -6,7 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import gettext, _
-import itertools, sys, os, error
+import itertools, sys, os
+import error
 import extensions, revset, fileset, templatekw, templatefilters, filemerge
 import encoding, util, minirst
 import cmdutil

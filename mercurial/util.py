@@ -14,9 +14,9 @@ hide platform-specific details from the core.
 """
 
 from i18n import _
-import error, osutil, encoding, collections
+import error, osutil, encoding
 import errno, re, shutil, sys, tempfile, traceback
-import os, time, datetime, calendar, textwrap, signal
+import os, time, datetime, calendar, textwrap, signal, collections
 import imp, socket, urllib
 
 if os.name == 'nt':

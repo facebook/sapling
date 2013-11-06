@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import heapq, util
+import heapq
+import util
 from node import nullrev
 
 def ancestors(pfunc, *orignodes):

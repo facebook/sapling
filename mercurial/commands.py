@@ -17,7 +17,8 @@ from hgweb import server as hgweb_server
 import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod
-import random, setdiscovery, treediscovery, dagutil, pvec, localrepo
+import random
+import setdiscovery, treediscovery, dagutil, pvec, localrepo
 import phases, obsolete
 
 table = {}

@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
+import os, re
 from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
 from mercurial.templatefilters import websub
 from mercurial.i18n import _
@@ -14,7 +14,7 @@ from common import get_stat, ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
-import webcommands, protocol, webutil, re
+import webcommands, protocol, webutil
 
 perms = {
     'changegroup': 'pull',

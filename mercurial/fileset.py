@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import parser, error, util, merge, re
+import re
+import parser, error, util, merge
 from i18n import _
 
 elements = {

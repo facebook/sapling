@@ -6,7 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import errno, os, signal, sys, threading, util
+import errno, os, signal, sys, threading
+import util
 
 def countcpus():
     '''try to count the number of CPUs on the system'''
