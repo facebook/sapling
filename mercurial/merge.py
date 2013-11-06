@@ -680,7 +680,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     try:
         wc = repo[None]
         if node is None:
-            # tip of current branch
+            # Here is where we should consider bookmarks, divergent bookmarks,
+            # foreground changesets (successors), and tip of current branch;
+            # but currently we are only checking the branch tips.
             try:
                 node = repo.branchtip(wc.branch())
             except error.RepoLookupError:
