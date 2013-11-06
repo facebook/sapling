@@ -386,7 +386,7 @@ def perfbranchmap(ui, repo, full=False):
     allfilters = []
     while possiblefilters:
         for name in possiblefilters:
-            subset = repoview.subsettable.get(name)
+            subset = branchmap.subsettable.get(name)
             if subset not in possiblefilters:
                 break
         else:

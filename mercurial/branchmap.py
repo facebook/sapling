@@ -7,7 +7,7 @@
 
 from node import bin, hex, nullid, nullrev
 import encoding
-import util, repoview
+import util
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
@@ -58,6 +58,17 @@ def read(repo):
 
 
 
+### Nearest subset relation
+# Nearest subset of filter X is a filter Y so that:
+# * Y is included in X,
+# * X - Y is as small as possible.
+# This create and ordering used for branchmap purpose.
+# the ordering may be partial
+subsettable = {None: 'visible',
+               'visible': 'served',
+               'served': 'immutable',
+               'immutable': 'base'}
+
 def updatecache(repo):
     cl = repo.changelog
     filtername = repo.filtername
@@ -67,7 +78,7 @@ def updatecache(repo):
     if partial is None or not partial.validfor(repo):
         partial = read(repo)
         if partial is None:
-            subsetname = repoview.subsettable.get(filtername)
+            subsetname = subsettable.get(filtername)
             if subsetname is None:
                 partial = branchcache()
             else:
