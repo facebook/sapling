@@ -689,7 +689,7 @@ def inrebase(repo, originalwd, state):
 
 def abort(repo, originalwd, target, state):
     'Restore the repository to its original state'
-    dstates = [s for s in state.values() if s != nullrev]
+    dstates = [s for s in state.values() if s > nullrev]
     immutable = [d for d in dstates if not repo[d].mutable()]
     cleanup = True
     if immutable:
