@@ -679,6 +679,12 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
     wlock = repo.wlock()
     try:
         wc = repo[None]
+        pl = wc.parents()
+        p1 = pl[0]
+        pa = None
+        if ancestor:
+            pa = repo[ancestor]
+
         if node is None:
             # Here is where we should consider bookmarks, divergent bookmarks,
             # foreground changesets (successors), and tip of current branch;
@@ -691,11 +697,9 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 else:
                     raise util.Abort(_("branch %s not found") % wc.branch())
         overwrite = force and not branchmerge
-        pl = wc.parents()
-        p1, p2 = pl[0], repo[node]
-        if ancestor:
-            pa = repo[ancestor]
-        else:
+
+        p2 = repo[node]
+        if pa is None:
             pa = p1.ancestor(p2)
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
