@@ -346,6 +346,9 @@ def rebase(ui, repo, **opts):
                 commitmsg = ui.edit(commitmsg, repo.ui.username())
             newrev = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
                                   extrafn=extrafn, editor=editor)
+            for oldrev in state.iterkeys():
+                if state[oldrev] > nullmerge:
+                    state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
             updatemq(repo, state, skipped, **opts)

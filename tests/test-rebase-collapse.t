@@ -57,11 +57,11 @@ Rebasing B onto H and collapsing changesets with different phases:
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
 
   $ hg tglogp
-  o  5:secret 'Collapsed revision
+  @  5:secret 'Collapsed revision
   |  * B
   |  * C
   |  * D'
-  @  4:draft 'H'
+  o  4:draft 'H'
   |
   | o  3:draft 'G'
   |/|
@@ -737,12 +737,13 @@ Test collapsing changes that add then remove a file
   $ touch b
   $ hg commit -Am b
   adding b
+  $ hg book foo
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
   saved backup bundle to $TESTTMP/collapseaddremove/.hg/strip-backup/*-backup.hg (glob)
-  $ hg tglog
-  o  1: 'collapsed'
+  $ hg log -G --template "{rev}: '{desc}' {bookmarks}"
+  @  1: 'collapsed' foo
   |
-  @  0: 'base'
+  o  0: 'base'
   
   $ hg manifest --rev tip
   b

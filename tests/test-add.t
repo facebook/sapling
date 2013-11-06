@@ -136,5 +136,23 @@ Issue683: peculiarity with hg revert of an removed then added file
   M a
   A c
   ? a.orig
+  $ hg up -C
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+forget and get should have the right order: added but missing dir should be
+forgotten before file with same name is added
+
+  $ echo file d > d
+  $ hg add d
+  $ hg ci -md
+  $ hg rm d
+  $ mkdir d
+  $ echo a > d/a
+  $ hg add d/a
+  $ rm -r d
+  $ hg up -C
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat d
+  file d
 
   $ cd ..
