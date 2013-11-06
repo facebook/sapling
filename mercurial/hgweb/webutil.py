@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, copy
-from mercurial import match, patch, scmutil, error, ui, util
+from mercurial import match, patch, error, ui, util, pathutil
 from mercurial.i18n import _
 from mercurial.node import hex, nullid
 from common import ErrorResponse
@@ -196,7 +196,7 @@ def showbookmark(repo, tmpl, t1, node=nullid, **args):
 
 def cleanpath(repo, path):
     path = path.lstrip('/')
-    return scmutil.canonpath(repo.root, '', path)
+    return pathutil.canonpath(repo.root, '', path)
 
 def changeidctx (repo, changeid):
     try:

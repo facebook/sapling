@@ -84,7 +84,7 @@ like CVS' $Log$, are not supported. A keyword template map "Log =
 
 from mercurial import commands, context, cmdutil, dispatch, filelog, extensions
 from mercurial import localrepo, match, patch, templatefilters, templater, util
-from mercurial import scmutil
+from mercurial import scmutil, pathutil
 from mercurial.hgweb import webcommands
 from mercurial.i18n import _
 import os, re, shutil, tempfile
@@ -673,7 +673,7 @@ def reposetup(ui, repo):
                 expansion. '''
                 source = repo.dirstate.copied(dest)
                 if 'l' in wctx.flags(source):
-                    source = scmutil.canonpath(repo.root, cwd,
+                    source = pathutil.canonpath(repo.root, cwd,
                                                os.path.realpath(source))
                 return kwt.match(source)
 

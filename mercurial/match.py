@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import re
-import scmutil, util, fileset
+import util, fileset, pathutil
 from i18n import _
 
 def _rematcher(pat):
@@ -317,7 +317,7 @@ def _normalize(names, default, root, cwd, auditor):
     pats = []
     for kind, name in [_patsplit(p, default) for p in names]:
         if kind in ('glob', 'relpath'):
-            name = scmutil.canonpath(root, cwd, name, auditor)
+            name = pathutil.canonpath(root, cwd, name, auditor)
         elif kind in ('relglob', 'path'):
             name = util.normpath(name)
         elif kind in ('listfile', 'listfile0'):

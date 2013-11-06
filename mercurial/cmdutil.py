@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import subrepo, context, repair, graphmod, revset, phases, obsolete
+import subrepo, context, repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import lock as lockmod
@@ -274,7 +274,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # relsrc: ossep
     # otarget: ossep
     def copyfile(abssrc, relsrc, otarget, exact):
-        abstarget = scmutil.canonpath(repo.root, cwd, otarget)
+        abstarget = pathutil.canonpath(repo.root, cwd, otarget)
         if '/' in abstarget:
             # We cannot normalize abstarget itself, this would prevent
             # case only renames, like a => A.
@@ -367,7 +367,7 @@ def copy(ui, repo, pats, opts, rename=False):
     # return: function that takes hgsep and returns ossep
     def targetpathfn(pat, dest, srcs):
         if os.path.isdir(pat):
-            abspfx = scmutil.canonpath(repo.root, cwd, pat)
+            abspfx = pathutil.canonpath(repo.root, cwd, pat)
             abspfx = util.localpath(abspfx)
             if destdirexists:
                 striplen = len(os.path.split(abspfx)[0])
@@ -393,7 +393,7 @@ def copy(ui, repo, pats, opts, rename=False):
             res = lambda p: os.path.join(dest,
                                          os.path.basename(util.localpath(p)))
         else:
-            abspfx = scmutil.canonpath(repo.root, cwd, pat)
+            abspfx = pathutil.canonpath(repo.root, cwd, pat)
             if len(abspfx) < len(srcs[0][0]):
                 # A directory. Either the target path contains the last
                 # component of the source path or it does not.
@@ -2065,7 +2065,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 fc = ctx[f]
                 repo.wwrite(f, fc.data(), fc.flags())
 
-            audit_path = scmutil.pathauditor(repo.root)
+            audit_path = pathutil.pathauditor(repo.root)
             for f in remove[0]:
                 if repo.dirstate[f] == 'a':
                     repo.dirstate.drop(f)

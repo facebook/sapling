@@ -15,7 +15,7 @@ import merge as mergemod
 import tags as tagsmod
 from lock import release
 import weakref, errno, os, time, inspect
-import branchmap
+import branchmap, pathutil
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
@@ -166,7 +166,7 @@ class localrepository(object):
         self.root = self.wvfs.base
         self.path = self.wvfs.join(".hg")
         self.origroot = path
-        self.auditor = scmutil.pathauditor(self.root, self._checknested)
+        self.auditor = pathutil.pathauditor(self.root, self._checknested)
         self.vfs = scmutil.vfs(self.path)
         self.opener = self.vfs
         self.baseui = baseui

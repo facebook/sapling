@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, commands, util, cmdutil, scmutil, match as match_, \
-    node, archival, error, merge, discovery
+    node, archival, error, merge, discovery, pathutil
 from mercurial.i18n import _
 from mercurial.node import hex
 from hgext import rebase
@@ -469,7 +469,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         return orig(ui, repo, pats, opts, rename)
 
     def makestandin(relpath):
-        path = scmutil.canonpath(repo.root, repo.getcwd(), relpath)
+        path = pathutil.canonpath(repo.root, repo.getcwd(), relpath)
         return os.path.join(repo.wjoin(lfutil.standin(path)))
 
     fullpats = scmutil.expandpats(pats)

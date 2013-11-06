@@ -9,7 +9,8 @@ import errno, os, re, shutil, posixpath, sys
 import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
-import config, scmutil, util, node, error, cmdutil, bookmarks, match as matchmod
+import config, util, node, error, cmdutil, bookmarks, match as matchmod
+import pathutil
 hg = None
 propertycache = util.propertycache
 
@@ -332,7 +333,7 @@ def subrepo(ctx, path):
     import hg as h
     hg = h
 
-    scmutil.pathauditor(ctx._repo.root)(path)
+    pathutil.pathauditor(ctx._repo.root)(path)
     state = ctx.substate[path]
     if state[2] not in types:
         raise util.Abort(_('unknown subrepo type %s') % state[2])

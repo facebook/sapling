@@ -8,7 +8,7 @@ import errno
 
 from node import nullid
 from i18n import _
-import scmutil, util, ignore, osutil, parsers, encoding
+import scmutil, util, ignore, osutil, parsers, encoding, pathutil
 import os, stat, errno, gc
 
 propertycache = util.propertycache
@@ -736,7 +736,7 @@ class dirstate(object):
                 # unknown == True means we walked the full directory tree above.
                 # So if a file is not seen it was either a) not matching matchfn
                 # b) ignored, c) missing, or d) under a symlink directory.
-                audit_path = scmutil.pathauditor(self._root)
+                audit_path = pathutil.pathauditor(self._root)
 
                 for nf in iter(visit):
                     # Report ignored items in the dmap as long as they are not
