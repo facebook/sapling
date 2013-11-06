@@ -23,8 +23,6 @@ def wraprepo(repo):
                 return super(shallowrepository, self).file(f)
 
         def filectx(self, path, changeid=None, fileid=None):
-            """changeid can be a changeset revision, node, or tag.
-               fileid can be a file revision or node."""
             if self.shallowmatch(path):
                 return remotefilectx.remotefilectx(self, path, changeid, fileid)
             else:
@@ -60,7 +58,7 @@ def wraprepo(repo):
         def getbundle(self, source, heads=None, common=None, bundlecaps=None):
             original = self.shallowmatch
             try:
-                # if serving, use the clients patterns
+                # if serving, only send files the clients has patterns for
                 if source == 'serve':
                     includepattern = None
                     excludepattern = None
@@ -89,6 +87,12 @@ def wraprepo(repo):
             visited = set()
             revisiondatas = {}
             queue = []
+
+            # Normal Mercurial processes each file one at a time, adding all
+            # the new revisions for that file at once. In remotefilelog a file
+            # revision may depend on a different file's revision (in the case
+            # of a rename/copy), so we must lay all revisions down across all
+            # files in topological order.
 
             # read all the file chunks but don't add them
             while True:
@@ -139,7 +143,7 @@ def wraprepo(repo):
             skipcount = 0
 
             # Apply the revisions in topological order such that a revision
-            # is only written once it's deltabase has been written.
+            # is only written once it's deltabase and parents have been written.
             while queue:
                 f, node = queue.pop(0)
                 if (f, node) in processed:

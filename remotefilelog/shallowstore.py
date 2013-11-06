@@ -12,7 +12,9 @@ import stat
 def wrapstore(store):
     class shallowstore(store.__class__):
         def _walk(self, relpath, recurse, allfiles=False):
-            '''yields (unencoded, encoded, size)'''
+            """modifies walk to return non .i/.d files so streaming clones
+            can send remotefilelog store/data files
+            """
             path = self.path
             if relpath:
                 path += '/' + relpath

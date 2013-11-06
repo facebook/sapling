@@ -38,6 +38,8 @@ else:
 shallowcommands = ["changegroup", "changegroupsubset", "getbundle"]
 
 def uisetup(ui):
+    """Wraps user facing Mercurial commands to swap them out with shallow versions.
+    """
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
     entry[1].append(('', 'shallow', None,
                      _("create a shallow clone which uses remote file history")))
@@ -108,9 +110,11 @@ def reposetup(ui, repo):
         setupserver(ui, repo)
 
 def setupserver(ui, repo):
+    """Sets up a normal Mercurial repo so it can serve files to shallow repos.
+    """
     onetimesetup(ui)
 
-    # don't send files to shallow clients
+    # don't send files to shallow clients during pulls
     def generatefiles(orig, self, changedfiles, linknodes, commonrevs, source):
         if shallowremote:
             # only send files that don't match the specified patterns
@@ -148,6 +152,8 @@ def setupclient(ui, repo):
 
 onetime = False
 def onetimesetup(ui):
+    """Configures the wireprotocol for both clients and servers. 
+    """
     global onetime
     if onetime:
         return
@@ -320,7 +326,7 @@ def onetimeclientsetup(ui):
         return orig(a, b)
     wrapfunction(copies, '_forwardcopies', forwardcopies)
 
-    # close connection
+    # close cache miss server connection after the command has finished
     def runcommand(orig, *args, **kwargs):
         try:
             return orig(*args, **kwargs)
@@ -334,14 +340,17 @@ def onetimeclientsetup(ui):
     revset.symbols['filelog'] = revset.filelog
     wrapfunction(cmdutil, 'walkfilerevs', walkfilerevs)
 
-    # prevent strip from considering filelogs
+    # prevent strip from stripping remotefilelogs
     def _collectbrokencsets(orig, repo, files, striprev):
         if remotefilelogreq in repo.requirements:
             files = list([f for f in files if not repo.shallowmatch(f)])
         return orig(repo, files, striprev)
     wrapfunction(repair, '_collectbrokencsets', _collectbrokencsets)
 
-    # hold on to filelogs until we know the commit hash
+    # Don't commit filelogs until we know the commit hash, since the hash
+    # is present in the filelog blob.
+    # This violates Mercurial's filelog->manifest->changelog write order,
+    # but is generally fine for client repos.
     pendingfilecommits = []
     def filelogadd(orig, self, text, meta, transaction, link, p1, p2):
         if isinstance(link, int):
@@ -528,6 +537,9 @@ def getfiles(repo, proto):
     return wireproto.streamres(streamer())
 
 def incominghook(ui, repo, node, source, url, **kwargs):
+    """Server hook that produces the shallow file blobs immediately after
+    a commit, in anticipation of them being requested soon.
+    """
     cachepath = repo.ui.config("remotefilelog", "servercachepath")
     if not cachepath:
         cachepath = os.path.join(repo.path, "remotefilelogcache")
@@ -595,6 +607,8 @@ def walkfilerevs(orig, repo, match, follow, revs, fncache):
     if not remotefilelogreq in repo.requirements:
         return orig(repo, match, follow, revs, fncache)
 
+    # remotefilelog's can't be walked in rev order, so throw.
+    # The caller will see the exception and walk the commit tree instead.
     if not follow:
         raise cmdutil.FileWalkError("Cannot walk via filelog")
 

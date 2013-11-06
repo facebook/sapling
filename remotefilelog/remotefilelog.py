@@ -189,8 +189,10 @@ class remotefilelog(object):
 
     def __len__(self):
         if self.filename == '.hgtags':
-            # Set this to 1 if your repo uses tags.
-            # Otherwise set it 0 since tags are a perf hit.
+            # The length of .hgtags is used to fast path tag checking.
+            # remotefilelog doesn't support .hgtags since the entire .hgtags
+            # history is needed.  Use the excludepattern setting to make
+            # .hgtags a normal filelog. 
             return 0
 
         raise Exception("len not supported")
