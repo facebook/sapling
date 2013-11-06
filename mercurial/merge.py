@@ -384,7 +384,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
     return actions
 
 def actionkey(a):
-    return a[1] == "r" and -1 or 0, a
+    return a[1] in "rf" and -1 or 0, a
 
 def getremove(repo, mctx, overwrite, args):
     """apply usually-non-interactive updates to the working directory
