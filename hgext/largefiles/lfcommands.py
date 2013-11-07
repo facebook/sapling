@@ -438,8 +438,9 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if filelist is not None:
             lfiles = [f for f in lfiles if f in filelist]
 
-        if printmessage and lfiles:
-            ui.status(_('getting changed largefiles\n'))
+        if lfiles:
+            if printmessage:
+                ui.status(_('getting changed largefiles\n'))
             cachelfiles(ui, repo, None, lfiles)
 
         updated, removed = 0, 0
