@@ -206,6 +206,7 @@ Test no-argument update to a successor of an obsoleted changeset
   |/
   o  0:60829823a42a 0
   
+  $ hg book bm -r 3
   $ hg status
   M foo
 
@@ -218,10 +219,16 @@ We add simple obsolescence marker between 3 and 4 (indirect successors)
   $ hg debugobsolete 6efa171f091b00a3c35edc15d48c52a498929953 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg debugobsolete aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa d047485b3896813b2a624e86201983520f003206
 
-Test that 5 is detected as a valid destination from 3
+Test that 5 is detected as a valid destination from 3 and also accepts moving
+the bookmark (issue4015)
+
   $ hg up --quiet --hidden 3
   $ hg up 5
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg book bm
+  moving bookmark 'bm' forward from 6efa171f091b
+  $ hg bookmarks
+   * bm                        5:ff252e8273df
 
 Test that 5 is detected as a valid destination from 1
   $ hg up --quiet 0          # we should be able to update to 3 directly
