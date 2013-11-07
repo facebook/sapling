@@ -1025,9 +1025,10 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     if t < 0:
         t = 0   # time.gmtime(lt) fails on Windows for lt < -43200
         tz = 0
-    if "%1" in format or "%2" in format:
+    if "%1" in format or "%2" in format or "%z" in format:
         sign = (tz > 0) and "-" or "+"
         minutes = abs(tz) // 60
+        format = format.replace("%z", "%1%2")
         format = format.replace("%1", "%c%02d" % (sign, minutes // 60))
         format = format.replace("%2", "%02d" % (minutes % 60))
     try:
