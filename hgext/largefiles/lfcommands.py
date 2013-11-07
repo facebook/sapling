@@ -438,45 +438,27 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if filelist is not None:
             lfiles = [f for f in lfiles if f in filelist]
 
-        if lfiles:
-            if printmessage:
-                ui.status(_('getting changed largefiles\n'))
-            cachelfiles(ui, repo, None, lfiles)
-
+        update = {}
         updated, removed = 0, 0
         for lfile in lfiles:
-            # updates a single largefile and copies the state of its standin from
-            # the repository's dirstate to its state in the lfdirstate.
             abslfile = repo.wjoin(lfile)
             absstandin = repo.wjoin(lfutil.standin(lfile))
             if os.path.exists(absstandin):
                 if (os.path.exists(absstandin + '.orig') and
                     os.path.exists(abslfile)):
                     shutil.copyfile(abslfile, abslfile + '.orig')
-                update1 = 0
                 expecthash = lfutil.readstandin(repo, lfile)
                 if (expecthash != '' and
                     (not os.path.exists(abslfile) or
                      expecthash != lfutil.hashfile(abslfile))):
-                    if not lfutil.copyfromcache(repo, expecthash, lfile):
-                        # use normallookup() to allocate entry in largefiles
-                        # dirstate, because lack of it misleads
-                        # lfilesrepo.status() into recognition that such cache
-                        # missing files are REMOVED.
-                        if lfile not in repo[None]: # not switched to normal
-                            util.unlinkpath(abslfile, ignoremissing=True)
-                        lfdirstate.normallookup(lfile)
-                        continue # don't try to set the mode
-                    else:
-                        # Synchronize largefile dirstate to the last modified
-                        # time of the file
-                        lfdirstate.normal(lfile)
-                    update1 = 1
-                mode = os.stat(absstandin).st_mode
-                if mode != os.stat(abslfile).st_mode:
-                    os.chmod(abslfile, mode)
-                    update1 = 1
-                updated += update1
+                    if lfile not in repo[None]: # not switched to normal file
+                        util.unlinkpath(abslfile, ignoremissing=True)
+                    # use normallookup() to allocate entry in largefiles
+                    # dirstate, because lack of it misleads
+                    # lfilesrepo.status() into recognition that such cache
+                    # missing files are REMOVED.
+                    lfdirstate.normallookup(lfile)
+                    update[lfile] = expecthash
             else:
                 # Remove lfiles for which the standin is deleted, unless the
                 # lfile is added to the repository again. This happens when a
@@ -486,6 +468,40 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
                     repo.dirstate.normalize(lfile) not in repo[None]):
                     util.unlinkpath(abslfile)
                     removed += 1
+
+        # largefile processing might be slow and be interrupted - be prepared
+        lfdirstate.write()
+
+        if lfiles:
+            if printmessage:
+                ui.status(_('getting changed largefiles\n'))
+            cachelfiles(ui, repo, None, lfiles)
+
+        for lfile in lfiles:
+            update1 = 0
+
+            expecthash = update.get(lfile)
+            if expecthash:
+                if not lfutil.copyfromcache(repo, expecthash, lfile):
+                    # failed ... but already removed and set to normallookup
+                    continue
+                # Synchronize largefile dirstate to the last modified
+                # time of the file
+                lfdirstate.normal(lfile)
+                update1 = 1
+
+            # copy the state of largefile standin from the repository's
+            # dirstate to its state in the lfdirstate.
+            abslfile = repo.wjoin(lfile)
+            absstandin = repo.wjoin(lfutil.standin(lfile))
+            if os.path.exists(absstandin):
+                mode = os.stat(absstandin).st_mode
+                if mode != os.stat(abslfile).st_mode:
+                    os.chmod(abslfile, mode)
+                    update1 = 1
+
+            updated += update1
+
             state = repo.dirstate[lfutil.standin(lfile)]
             if state == 'n':
                 # When rebasing, we need to synchronize the standin and the

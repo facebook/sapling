@@ -64,3 +64,4 @@ makes copies instead of hardlinks:
 The largefile is not created in .hg/largefiles:
 
   $ ls bob/.hg/largefiles
+  dirstate
