@@ -16,7 +16,6 @@ import email.Parser
 from i18n import _
 from node import hex, short
 import base85, mdiff, scmutil, util, diffhelpers, copies, encoding, error
-import context
 
 gitre = re.compile('diff --git a/(.*) b/(.*)')
 
@@ -1440,21 +1439,6 @@ def patchrepo(ui, repo, ctx, store, patchobj, strip, files=None,
               eolmode='strict'):
     backend = repobackend(ui, repo, ctx, store)
     return patchbackend(ui, backend, patchobj, strip, files, eolmode)
-
-def makememctx(repo, parents, text, user, date, branch, files, store,
-               editor=None):
-    def getfilectx(repo, memctx, path):
-        data, (islink, isexec), copied = store.getfile(path)
-        return context.memfilectx(path, data, islink=islink, isexec=isexec,
-                                  copied=copied)
-    extra = {}
-    if branch:
-        extra['branch'] = encoding.fromlocal(branch)
-    ctx =  context.memctx(repo, parents, text, files, getfilectx, user,
-                          date, extra)
-    if editor:
-        ctx._text = editor(repo, ctx, [])
-    return ctx
 
 def patch(ui, repo, patchname, strip=1, files=None, eolmode='strict',
           similarity=0):

@@ -3761,12 +3761,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                                         files, eolmode=None)
                     except patch.PatchError, e:
                         raise util.Abort(str(e))
-                    memctx = patch.makememctx(repo, (p1.node(), p2.node()),
-                                              message,
-                                              opts.get('user') or user,
-                                              opts.get('date') or date,
-                                              branch, files, store,
-                                              editor=cmdutil.commiteditor)
+                    memctx = context.makememctx(repo, (p1.node(), p2.node()),
+                                                message,
+                                                opts.get('user') or user,
+                                                opts.get('date') or date,
+                                                branch, files, store,
+                                                editor=cmdutil.commiteditor)
                     repo.savecommitmessage(memctx.description())
                     n = memctx.commit()
                 finally:

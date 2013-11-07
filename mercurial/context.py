@@ -195,6 +195,21 @@ class basectx(object):
     def dirty(self):
         return False
 
+def makememctx(repo, parents, text, user, date, branch, files, store,
+               editor=None):
+    def getfilectx(repo, memctx, path):
+        data, (islink, isexec), copied = store.getfile(path)
+        return memfilectx(path, data, islink=islink, isexec=isexec,
+                                  copied=copied)
+    extra = {}
+    if branch:
+        extra['branch'] = encoding.fromlocal(branch)
+    ctx =  memctx(repo, parents, text, files, getfilectx, user,
+                          date, extra)
+    if editor:
+        ctx._text = editor(repo, ctx, [])
+    return ctx
+
 class changectx(basectx):
     """A changecontext object makes access to data related to a particular
     changeset convenient. It represents a read-only context already present in
