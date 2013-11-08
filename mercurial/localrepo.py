@@ -1976,27 +1976,7 @@ class localrepository(object):
             if locallock is not None:
                 locallock.release()
 
-        self.ui.debug("checking for updated bookmarks\n")
-        rb = remote.listkeys('bookmarks')
-        revnums = map(unfi.changelog.rev, revs or [])
-        ancestors = [
-            a for a in unfi.changelog.ancestors(revnums, inclusive=True)]
-        for k in rb.keys():
-            if k in unfi._bookmarks:
-                nr, nl = rb[k], hex(self._bookmarks[k])
-                if nr in unfi:
-                    cr = unfi[nr]
-                    cl = unfi[nl]
-                    if bookmarks.validdest(unfi, cr, cl):
-                        if ancestors and cl.rev() not in ancestors:
-                            continue
-                        r = remote.pushkey('bookmarks', k, nr, nl)
-                        if r:
-                            self.ui.status(_("updating bookmark %s\n") % k)
-                        else:
-                            self.ui.warn(_('updating bookmark %s'
-                                           ' failed!\n') % k)
-
+        bookmarks.updateremote(self.ui, unfi, remote, revs)
         return ret
 
     def changegroupinfo(self, nodes, source):

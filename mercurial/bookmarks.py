@@ -364,6 +364,22 @@ def updatefromremote(ui, repo, remotemarks, path):
             writer(msg)
         localmarks.write()
 
+def updateremote(ui, repo, remote, revs):
+    ui.debug("checking for updated bookmarks\n")
+    revnums = map(repo.changelog.rev, revs or [])
+    ancestors = [a for a in repo.changelog.ancestors(revnums, inclusive=True)]
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
+     ) = compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
+                 srchex=hex)
+
+    for b, scid, dcid in advsrc:
+        if ancestors and repo[scid].rev() not in ancestors:
+            continue
+        if remote.pushkey('bookmarks', b, dcid, scid):
+            ui.status(_("updating bookmark %s\n") % b)
+        else:
+            ui.warn(_('updating bookmark %s failed!\n') % b)
+
 def pushtoremote(ui, repo, remote, targets):
     (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
      ) = compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
