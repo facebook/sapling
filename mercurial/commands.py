@@ -4512,7 +4512,7 @@ def phase(ui, repo, *revs, **opts):
         rejected = [n for n in nodes
                     if newdata[cl.rev(n)] < targetphase]
         if rejected:
-            ui.warn(_('cannot move %i changesets to a more permissive '
+            ui.warn(_('cannot move %i changesets to a higher '
                       'phase, use --force\n') % len(rejected))
             ret = 1
         if changes:
