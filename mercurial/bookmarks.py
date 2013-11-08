@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial.node import hex
+from mercurial.node import hex, bin
 from mercurial import encoding, error, util, obsolete
 import errno
 
@@ -325,48 +325,43 @@ def compare(repo, srcmarks, dstmarks,
 
     return results
 
+def _diverge(ui, b, path, localmarks):
+    if b == '@':
+        b = ''
+    # find a unique @ suffix
+    for x in range(1, 100):
+        n = '%s@%d' % (b, x)
+        if n not in localmarks:
+            break
+    # try to use an @pathalias suffix
+    # if an @pathalias already exists, we overwrite (update) it
+    for p, u in ui.configitems("paths"):
+        if path == u:
+            n = '%s@%s' % (b, p)
+    return n
+
 def updatefromremote(ui, repo, remotemarks, path):
     ui.debug("checking for updated bookmarks\n")
-    changed = False
     localmarks = repo._bookmarks
-    for k in sorted(remotemarks):
-        if k in localmarks:
-            nr, nl = remotemarks[k], localmarks[k]
-            if nr in repo:
-                cr = repo[nr]
-                cl = repo[nl]
-                if cl.rev() >= cr.rev():
-                    continue
-                if validdest(repo, cl, cr):
-                    localmarks[k] = cr.node()
-                    changed = True
-                    ui.status(_("updating bookmark %s\n") % k)
-                else:
-                    if k == '@':
-                        kd = ''
-                    else:
-                        kd = k
-                    # find a unique @ suffix
-                    for x in range(1, 100):
-                        n = '%s@%d' % (kd, x)
-                        if n not in localmarks:
-                            break
-                    # try to use an @pathalias suffix
-                    # if an @pathalias already exists, we overwrite (update) it
-                    for p, u in ui.configitems("paths"):
-                        if path == u:
-                            n = '%s@%s' % (kd, p)
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
+     ) = compare(repo, remotemarks, localmarks, dsthex=hex)
 
-                    localmarks[n] = cr.node()
-                    changed = True
-                    ui.warn(_("divergent bookmark %s stored as %s\n") % (k, n))
-        elif remotemarks[k] in repo:
-            # add remote bookmarks for changes we already have
-            localmarks[k] = repo[remotemarks[k]].node()
-            changed = True
-            ui.status(_("adding remote bookmark %s\n") % k)
-
+    changed = []
+    for b, scid, dcid in addsrc:
+        if scid in repo: # add remote bookmarks for changes we already have
+            changed.append((b, bin(scid), ui.status,
+                            _("adding remote bookmark %s\n") % (b)))
+    for b, scid, dcid in advsrc:
+        changed.append((b, bin(scid), ui.status,
+                        _("updating bookmark %s\n") % (b)))
+    for b, scid, dcid in diverge:
+        db = _diverge(ui, b, path, localmarks)
+        changed.append((db, bin(scid), ui.warn,
+                        _("divergent bookmark %s stored as %s\n") % (b, db)))
     if changed:
+        for b, node, writer, msg in sorted(changed):
+            localmarks[b] = node
+            writer(msg)
         localmarks.write()
 
 def diff(ui, dst, src):
