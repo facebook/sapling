@@ -215,4 +215,50 @@ skip patterns
   $ hg purge -p -X .svn -X '*/.svn'
   $ hg purge -p -X re:.*.svn
 
+  $ rm -R .svn directory r1
+
+only remove files
+
+  $ mkdir -p empty_dir dir
+  $ touch untracked_file dir/untracked_file
+  $ hg purge -p --files
+  dir/untracked_file
+  untracked_file
+  $ hg purge -v --files
+  removing file dir/untracked_file
+  removing file untracked_file
+  $ ls
+  dir
+  empty_dir
+  $ ls dir
+
+only remove dirs
+
+  $ mkdir -p empty_dir dir
+  $ touch untracked_file dir/untracked_file
+  $ hg purge -p --dirs
+  empty_dir
+  $ hg purge -v --dirs
+  removing directory empty_dir
+  $ ls
+  dir
+  untracked_file
+  $ ls dir
+  untracked_file
+
+remove both files and dirs
+
+  $ mkdir -p empty_dir dir
+  $ touch untracked_file dir/untracked_file
+  $ hg purge -p --files --dirs
+  dir/untracked_file
+  untracked_file
+  empty_dir
+  $ hg purge -v --files --dirs
+  removing file dir/untracked_file
+  removing file untracked_file
+  removing directory empty_dir
+  removing directory dir
+  $ ls
+
   $ cd ..

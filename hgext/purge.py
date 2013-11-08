@@ -35,6 +35,8 @@ testedwith = 'internal'
 @command('purge|clean',
     [('a', 'abort-on-err', None, _('abort if an error occurs')),
     ('',  'all', None, _('purge ignored files too')),
+    ('',  'dirs', None, _('purge empty directories')),
+    ('',  'files', None, _('purge files')),
     ('p', 'print', None, _('print filenames instead of deleting them')),
     ('0', 'print0', None, _('end filenames with NUL, for use with xargs'
                             ' (implies -p/--print)')),
@@ -46,7 +48,7 @@ def purge(ui, repo, *dirs, **opts):
     Delete files not known to Mercurial. This is useful to test local
     and uncommitted changes in an otherwise-clean source tree.
 
-    This means that purge will delete:
+    This means that purge will delete the following by default:
 
     - Unknown files: files marked with "?" by :hg:`status`
     - Empty directories: in fact Mercurial ignores directories unless
@@ -57,6 +59,10 @@ def purge(ui, repo, *dirs, **opts):
     - Modified and unmodified tracked files
     - Ignored files (unless --all is specified)
     - New files added to the repository (with :hg:`add`)
+
+    The --files and --dirs options can be used to direct purge to delete
+    only files, only directories, or both. If neither option is given,
+    both will be deleted.
 
     If directories are given on the command line, only files in these
     directories are considered.
@@ -71,6 +77,11 @@ def purge(ui, repo, *dirs, **opts):
     if opts['print0']:
         eol = '\0'
         act = False # --print0 implies --print
+    removefiles = opts['files']
+    removedirs = opts['dirs']
+    if not removefiles and not removedirs:
+        removefiles = True
+        removedirs = True
 
     def remove(remove_func, name):
         if act:
@@ -100,13 +111,15 @@ def purge(ui, repo, *dirs, **opts):
     match.explicitdir = match.traversedir = directories.append
     status = repo.status(match=match, ignored=opts['all'], unknown=True)
 
-    for f in sorted(status[4] + status[5]):
-        if act:
-            ui.note(_('removing file %s\n') % f)
-        remove(removefile, f)
-
-    for f in sorted(directories, reverse=True):
-        if match(f) and not os.listdir(repo.wjoin(f)):
+    if removefiles:
+        for f in sorted(status[4] + status[5]):
             if act:
-                ui.note(_('removing directory %s\n') % f)
-            remove(os.rmdir, f)
+                ui.note(_('removing file %s\n') % f)
+            remove(removefile, f)
+
+    if removedirs:
+        for f in sorted(directories, reverse=True):
+            if match(f) and not os.listdir(repo.wjoin(f)):
+                if act:
+                    ui.note(_('removing directory %s\n') % f)
+                remove(os.rmdir, f)
