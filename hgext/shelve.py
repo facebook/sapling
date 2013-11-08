@@ -610,7 +610,7 @@ def unshelve(ui, repo, *shelved, **opts):
         # but it doesn't update the inmemory structures, so addchangegroup
         # hooks still fire and try to operate on the missing commits.
         # Clean up manually to prevent this.
-        repo.changelog.strip(oldtiprev, tr)
+        repo.unfiltered().changelog.strip(oldtiprev, tr)
 
         unshelvecleanup(ui, repo, basename, opts)
     finally:
