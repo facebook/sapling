@@ -239,6 +239,92 @@ def pushbookmark(repo, key, old, new):
     finally:
         w.release()
 
+def compare(repo, srcmarks, dstmarks,
+            srchex=None, dsthex=None, targets=None):
+    '''Compare bookmarks between srcmarks and dstmarks
+
+    This returns tuple "(addsrc, adddst, advsrc, advdst, diverge,
+    differ, invalid)", each are list of bookmarks below:
+
+    :addsrc:  added on src side (removed on dst side, perhaps)
+    :adddst:  added on dst side (removed on src side, perhaps)
+    :advsrc:  advanced on src side
+    :advdst:  advanced on dst side
+    :diverge: diverge
+    :differ:  changed, but changeset referred on src is unknown on dst
+    :invalid: unknown on both side
+
+    Each elements of lists in result tuple is tuple "(bookmark name,
+    changeset ID on source side, changeset ID on destination
+    side)". Each changeset IDs are 40 hexadecimal digit string or
+    None.
+
+    Changeset IDs of tuples in "addsrc", "adddst", "differ" or
+     "invalid" list may be unknown for repo.
+
+    This function expects that "srcmarks" and "dstmarks" return
+    changeset ID in 40 hexadecimal digit string for specified
+    bookmark. If not so (e.g. bmstore "repo._bookmarks" returning
+    binary value), "srchex" or "dsthex" should be specified to convert
+    into such form.
+
+    If "targets" is specified, only bookmarks listed in it are
+    examined.
+    '''
+    if not srchex:
+        srchex = lambda x: x
+    if not dsthex:
+        dsthex = lambda x: x
+
+    if targets:
+        bset = set(targets)
+    else:
+        srcmarkset = set(srcmarks)
+        dstmarkset = set(dstmarks)
+        bset = srcmarkset ^ dstmarkset
+        for b in srcmarkset & dstmarkset:
+            if srchex(srcmarks[b]) != dsthex(dstmarks[b]):
+                bset.add(b)
+
+    results = ([], [], [], [], [], [], [])
+    addsrc = results[0].append
+    adddst = results[1].append
+    advsrc = results[2].append
+    advdst = results[3].append
+    diverge = results[4].append
+    differ = results[5].append
+    invalid = results[6].append
+
+    for b in sorted(bset):
+        if b not in srcmarks:
+            if b in dstmarks:
+                adddst((b, None, dsthex(dstmarks[b])))
+            else:
+                invalid((b, None, None))
+        elif b not in dstmarks:
+            addsrc((b, srchex(srcmarks[b]), None))
+        else:
+            scid = srchex(srcmarks[b])
+            dcid = dsthex(dstmarks[b])
+            if scid in repo and dcid in repo:
+                sctx = repo[scid]
+                dctx = repo[dcid]
+                if sctx.rev() < dctx.rev():
+                    if validdest(repo, sctx, dctx):
+                        advdst((b, scid, dcid))
+                    else:
+                        diverge((b, scid, dcid))
+                else:
+                    if validdest(repo, dctx, sctx):
+                        advsrc((b, scid, dcid))
+                    else:
+                        diverge((b, scid, dcid))
+            else:
+                # it is too expensive to examine in detail, in this case
+                differ((b, scid, dcid))
+
+    return results
+
 def updatefromremote(ui, repo, remotemarks, path):
     ui.debug("checking for updated bookmarks\n")
     changed = False
