@@ -228,9 +228,12 @@ def _search(web, req, tmpl):
     query = req.form['rev'][0]
     revcount = web.maxchanges
     if 'revcount' in req.form:
-        revcount = int(req.form.get('revcount', [revcount])[0])
-        revcount = max(revcount, 1)
-        tmpl.defaults['sessionvars']['revcount'] = revcount
+        try:
+            revcount = int(req.form.get('revcount', [revcount])[0])
+            revcount = max(revcount, 1)
+            tmpl.defaults['sessionvars']['revcount'] = revcount
+        except ValueError:
+            pass
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
@@ -307,9 +310,12 @@ def changelog(web, req, tmpl, shortlog=False):
 
     revcount = shortlog and web.maxshortchanges or web.maxchanges
     if 'revcount' in req.form:
-        revcount = int(req.form.get('revcount', [revcount])[0])
-        revcount = max(revcount, 1)
-        tmpl.defaults['sessionvars']['revcount'] = revcount
+        try:
+            revcount = int(req.form.get('revcount', [revcount])[0])
+            revcount = max(revcount, 1)
+            tmpl.defaults['sessionvars']['revcount'] = revcount
+        except ValueError:
+            pass
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
@@ -822,9 +828,12 @@ def filelog(web, req, tmpl):
 
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
-        revcount = int(req.form.get('revcount', [revcount])[0])
-        revcount = max(revcount, 1)
-        tmpl.defaults['sessionvars']['revcount'] = revcount
+        try:
+            revcount = int(req.form.get('revcount', [revcount])[0])
+            revcount = max(revcount, 1)
+            tmpl.defaults['sessionvars']['revcount'] = revcount
+        except ValueError:
+            pass
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
@@ -945,9 +954,12 @@ def graph(web, req, tmpl):
     bg_height = 39
     revcount = web.maxshortchanges
     if 'revcount' in req.form:
-        revcount = int(req.form.get('revcount', [revcount])[0])
-        revcount = max(revcount, 1)
-        tmpl.defaults['sessionvars']['revcount'] = revcount
+        try:
+            revcount = int(req.form.get('revcount', [revcount])[0])
+            revcount = max(revcount, 1)
+            tmpl.defaults['sessionvars']['revcount'] = revcount
+        except ValueError:
+            pass
 
     lessvars = copy.copy(tmpl.defaults['sessionvars'])
     lessvars['revcount'] = max(revcount / 2, 1)
