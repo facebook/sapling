@@ -40,11 +40,16 @@ def get_opts(opts):
             shortopt, longopt, default, desc, optlabel = opt
         else:
             shortopt, longopt, default, desc = opt
+            optlabel = _("VALUE")
         allopts = []
         if shortopt:
             allopts.append("-%s" % shortopt)
         if longopt:
             allopts.append("--%s" % longopt)
+        if isinstance(default, list):
+            allopts[-1] += " <%s[+]>" % optlabel
+        elif (default is not None) and not isinstance(default, bool):
+            allopts[-1] += " <%s>" % optlabel
         desc += default and _(" (default: %s)") % default or ""
         yield (", ".join(allopts), desc)
 
@@ -71,8 +76,14 @@ def get_cmd(cmd, cmdtable):
 def showdoc(ui):
     # print options
     ui.write(minirst.section(_("Options")))
+    multioccur = False
     for optstr, desc in get_opts(globalopts):
         ui.write("%s\n    %s\n\n" % (optstr, desc))
+        if optstr.endswith("[+]>"):
+            multioccur = True
+    if multioccur:
+        ui.write(_("\n[+] marked option can be specified multiple times\n"))
+        ui.write("\n")
 
     # print cmds
     ui.write(minirst.section(_("Commands")))
@@ -157,12 +168,18 @@ def commandprinter(ui, cmdtable, sectionfunc):
         if opt_output:
             opts_len = max([len(line[0]) for line in opt_output])
             ui.write(_("Options:\n\n"))
+            multioccur = False
             for optstr, desc in opt_output:
                 if desc:
                     s = "%-*s  %s" % (opts_len, optstr, desc)
                 else:
                     s = optstr
                 ui.write("%s\n" % s)
+                if optstr.endswith("[+]>"):
+                    multioccur = True
+            if multioccur:
+                ui.write(_("\n[+] marked option can be specified"
+                           " multiple times\n"))
             ui.write("\n")
         # aliases
         if d['aliases']:
