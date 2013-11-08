@@ -364,6 +364,36 @@ def updatefromremote(ui, repo, remotemarks, path):
             writer(msg)
         localmarks.write()
 
+def pushtoremote(ui, repo, remote, targets):
+    (addsrc, adddst, advsrc, advdst, diverge, differ, invalid
+     ) = compare(repo, repo._bookmarks, remote.listkeys('bookmarks'),
+                 srchex=hex, targets=targets)
+    if invalid:
+        b, scid, dcid = invalid[0]
+        ui.warn(_('bookmark %s does not exist on the local '
+                  'or remote repository!\n') % b)
+        return 2
+
+    def push(b, old, new):
+        r = remote.pushkey('bookmarks', b, old, new)
+        if not r:
+            ui.warn(_('updating bookmark %s failed!\n') % b)
+            return 1
+        return 0
+    failed = 0
+    for b, scid, dcid in sorted(addsrc + advsrc + advdst + diverge + differ):
+        ui.status(_("exporting bookmark %s\n") % b)
+        if dcid is None:
+            dcid = ''
+        failed += push(b, dcid, scid)
+    for b, scid, dcid in adddst:
+        # treat as "deleted locally"
+        ui.status(_("deleting remote bookmark %s\n") % b)
+        failed += push(b, dcid, '')
+
+    if failed:
+        return 1
+
 def diff(ui, dst, src):
     ui.status(_("searching for changed bookmarks\n"))
 

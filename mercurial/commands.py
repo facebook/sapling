@@ -4711,25 +4711,11 @@ def push(ui, repo, dest=None, **opts):
     result = not result
 
     if opts.get('bookmark'):
-        rb = other.listkeys('bookmarks')
-        for b in opts['bookmark']:
-            # explicit push overrides remote bookmark if any
-            if b in repo._bookmarks:
-                ui.status(_("exporting bookmark %s\n") % b)
-                new = repo[b].hex()
-            elif b in rb:
-                ui.status(_("deleting remote bookmark %s\n") % b)
-                new = '' # delete
-            else:
-                ui.warn(_('bookmark %s does not exist on the local '
-                          'or remote repository!\n') % b)
-                return 2
-            old = rb.get(b, '')
-            r = other.pushkey('bookmarks', b, old, new)
-            if not r:
-                ui.warn(_('updating bookmark %s failed!\n') % b)
-                if not result:
-                    result = 2
+        bresult = bookmarks.pushtoremote(ui, repo, other, opts['bookmark'])
+        if bresult == 2:
+            return 2
+        if not result and bresult:
+            result = 2
 
     return result
 
