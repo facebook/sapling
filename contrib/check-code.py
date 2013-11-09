@@ -467,6 +467,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             else:
                 p, msg = pat
                 ignore = None
+            if i >= nerrs:
+                msg = "warning: " + msg
 
             pos = 0
             n = 0
@@ -500,8 +502,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                         bl, bu, br = blamecache[n]
                         if bl == l:
                             bd = '%s@%s' % (bu, br)
-                if i >= nerrs:
-                    msg = "warning: " + msg
+
                 errors.append((f, lineno and n + 1, l, msg, bd))
                 result = False
 

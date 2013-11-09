@@ -185,11 +185,19 @@
   $ cat > warning.t <<EOF
   >   $ function warnonly {
   >   > }
+  >   $ diff -N aaa
+  >   $ function onwarn {}
   > EOF
   $ "$check_code" warning.t
   $ "$check_code" --warn warning.t
   warning.t:1:
    >   $ function warnonly {
+   warning: don't use 'function', use old style
+  warning.t:3:
+   >   $ diff -N aaa
+   warning: don't use 'diff -N'
+  warning.t:4:
+   >   $ function onwarn {}
    warning: don't use 'function', use old style
   [1]
   $ cat > raise-format.py <<EOF
