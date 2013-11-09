@@ -141,7 +141,8 @@ utestpats = [
     (r'^  saved backup bundle to \$TESTTMP.*\.hg$', winglobmsg),
     (r'^  changeset .* references (corrupted|missing) \$TESTTMP/.*[^)]$',
      winglobmsg),
-    (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg, '\$TESTTMP/unix-repo$'),
+    (r'^  pulling from \$TESTTMP/.*[^)]$', winglobmsg,
+     '\$TESTTMP/unix-repo$'), # in test-issue1802.t which skipped on windows
     (r'^  reverting .*/.*[^)]$', winglobmsg),
     (r'^  cloning subrepo \S+/.*[^)]$', winglobmsg),
     (r'^  pushing to \$TESTTMP/.*[^)]$', winglobmsg),
