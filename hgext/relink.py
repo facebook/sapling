@@ -48,6 +48,10 @@ def relink(ui, repo, origin=None, **opts):
         ui.status(_('there is nothing to relink\n'))
         return
 
+    if not util.samedevice(src.store.path, repo.store.path):
+        # No point in continuing
+        raise util.Abort(_('source and destination are on different devices'))
+
     locallock = repo.lock()
     try:
         remotelock = src.lock()
