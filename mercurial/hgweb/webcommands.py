@@ -840,7 +840,7 @@ def filelog(web, req, tmpl):
         l = []
 
         repo = web.repo
-        revs = repo.changelog.revs(start, end - 1)
+        revs = fctx.filelog().revs(start, end - 1)
         for i in revs:
             iterfctx = fctx.filectx(i)
 
