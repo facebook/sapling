@@ -131,6 +131,13 @@ Check hgweb's load order:
 
 Check "from __future__ import absolute_import" support for external libraries
 
+#if windows
+  $ PATHSEP=";"
+#else
+  $ PATHSEP=":"
+#endif
+  $ export PATHSEP
+
   $ mkdir $TESTTMP/libroot
   $ echo "s = 'libroot/ambig.py'" > $TESTTMP/libroot/ambig.py
   $ mkdir $TESTTMP/libroot/mod
@@ -148,7 +155,7 @@ Check "from __future__ import absolute_import" support for external libraries
   > def extsetup():
   >     print 'ambigabs.s=%s' % ambigabs.s
   > EOF
-  $ (PYTHONPATH=$PYTHONPATH:$TESTTMP/libroot; hg --config extensions.loadabs=loadabs.py root)
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
   ambigabs.s=libroot/ambig.py
   $TESTTMP/a
 #endif
@@ -163,7 +170,7 @@ Check "from __future__ import absolute_import" support for external libraries
   > def extsetup():
   >     print 'ambigrel.s=%s' % ambigrel.s
   > EOF
-  $ (PYTHONPATH=$PYTHONPATH:$TESTTMP/libroot; hg --config extensions.loadrel=loadrel.py root)
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py root)
   ambigrel.s=libroot/mod/ambig.py
   $TESTTMP/a
 #endif
