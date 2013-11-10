@@ -157,7 +157,7 @@ Check "from __future__ import absolute_import" support for external libraries
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadabs=loadabs.py root)
   ambigabs.s=libroot/ambig.py
-  $TESTTMP/a
+  $TESTTMP/a (glob)
 #endif
 
 #if no-py3k
@@ -172,7 +172,7 @@ Check "from __future__ import absolute_import" support for external libraries
   > EOF
   $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}/libroot; hg --config extensions.loadrel=loadrel.py root)
   ambigrel.s=libroot/mod/ambig.py
-  $TESTTMP/a
+  $TESTTMP/a (glob)
 #endif
 
 Check absolute/relative import of extension specific modules
@@ -227,7 +227,7 @@ Check absolute/relative import of extension specific modules
   (extroot) import extroot: this is extroot.__init__
   (extroot) from extroot.bar import s: this is extroot.bar
   (extroot) import extroot.bar in func(): this is extroot.bar
-  $TESTTMP/a
+  $TESTTMP/a (glob)
 
 #if no-py3k
   $ rm "$TESTTMP"/extroot/foo.*
@@ -263,7 +263,7 @@ Check absolute/relative import of extension specific modules
   (extroot) import sub1: this is extroot.sub1.__init__
   (extroot) from bar import s: this is extroot.bar
   (extroot) import bar in func(): this is extroot.bar
-  $TESTTMP/a
+  $TESTTMP/a (glob)
 #endif
 
   $ cd ..
@@ -739,59 +739,59 @@ Commands handling multiple repositories at a time should invoke only
   $ echo '# enable extension locally' >> src/.hg/hgrc
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> src/.hg/hgrc
   $ hg -R src status
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
 
   $ hg clone -U src clone-dst1
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
   $ hg init push-dst1
   $ hg -q -R src push push-dst1
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
   $ hg init pull-src1
   $ hg -q -R pull-src1 pull src
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
 
   $ echo '[extensions]' >> $HGRCPATH
   $ echo '# disable extension globally and explicitly' >> $HGRCPATH
   $ echo 'reposetuptest = !' >> $HGRCPATH
   $ hg clone -U src clone-dst2
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
   $ hg init push-dst2
   $ hg -q -R src push push-dst2
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
   $ hg init pull-src2
   $ hg -q -R pull-src2 pull src
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
 
   $ echo '[extensions]' >> $HGRCPATH
   $ echo '# enable extension globally' >> $HGRCPATH
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> $HGRCPATH
   $ hg clone -U src clone-dst3
-  reposetup() for $TESTTMP/reposetup-test/src
-  reposetup() for $TESTTMP/reposetup-test/clone-dst3
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
+  reposetup() for $TESTTMP/reposetup-test/clone-dst3 (glob)
   $ hg init push-dst3
-  reposetup() for $TESTTMP/reposetup-test/push-dst3
+  reposetup() for $TESTTMP/reposetup-test/push-dst3 (glob)
   $ hg -q -R src push push-dst3
-  reposetup() for $TESTTMP/reposetup-test/src
-  reposetup() for $TESTTMP/reposetup-test/push-dst3
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
+  reposetup() for $TESTTMP/reposetup-test/push-dst3 (glob)
   $ hg init pull-src3
-  reposetup() for $TESTTMP/reposetup-test/pull-src3
+  reposetup() for $TESTTMP/reposetup-test/pull-src3 (glob)
   $ hg -q -R pull-src3 pull src
-  reposetup() for $TESTTMP/reposetup-test/pull-src3
-  reposetup() for $TESTTMP/reposetup-test/src
+  reposetup() for $TESTTMP/reposetup-test/pull-src3 (glob)
+  reposetup() for $TESTTMP/reposetup-test/src (glob)
 
   $ echo '[extensions]' >> src/.hg/hgrc
   $ echo '# disable extension locally' >> src/.hg/hgrc
   $ echo 'reposetuptest = !' >> src/.hg/hgrc
   $ hg clone -U src clone-dst4
-  reposetup() for $TESTTMP/reposetup-test/clone-dst4
+  reposetup() for $TESTTMP/reposetup-test/clone-dst4 (glob)
   $ hg init push-dst4
-  reposetup() for $TESTTMP/reposetup-test/push-dst4
+  reposetup() for $TESTTMP/reposetup-test/push-dst4 (glob)
   $ hg -q -R src push push-dst4
-  reposetup() for $TESTTMP/reposetup-test/push-dst4
+  reposetup() for $TESTTMP/reposetup-test/push-dst4 (glob)
   $ hg init pull-src4
-  reposetup() for $TESTTMP/reposetup-test/pull-src4
+  reposetup() for $TESTTMP/reposetup-test/pull-src4 (glob)
   $ hg -q -R pull-src4 pull src
-  reposetup() for $TESTTMP/reposetup-test/pull-src4
+  reposetup() for $TESTTMP/reposetup-test/pull-src4 (glob)
 
 disabling in command line overlays with all configuration
   $ hg --config extensions.reposetuptest=! clone -U src clone-dst5
@@ -834,8 +834,8 @@ disabling in command line overlays with all configuration
   $ echo "reposetuptest = $TESTTMP/reposetuptest.py" >> parent/.hg/hgrc
   $ cp parent/.hg/hgrc parent/sub2/.hg/hgrc
   $ hg -R parent status -S -A
-  reposetup() for $TESTTMP/reposetup-test/parent
-  reposetup() for $TESTTMP/reposetup-test/parent/sub2
+  reposetup() for $TESTTMP/reposetup-test/parent (glob)
+  reposetup() for $TESTTMP/reposetup-test/parent/sub2 (glob)
   C .hgsub
   C .hgsubstate
   C sub1/1
