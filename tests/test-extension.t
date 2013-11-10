@@ -230,7 +230,7 @@ Check absolute/relative import of extension specific modules
   $TESTTMP/a
 
 #if no-py3k
-  $ rm -f $TESTTMP/extroot/foo.*
+  $ rm "$TESTTMP"/extroot/foo.*
   $ cat > $TESTTMP/extroot/foo.py <<EOF
   > # test relative import
   > buf = []
