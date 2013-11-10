@@ -836,15 +836,11 @@ def filelog(web, req, tmpl):
     end = min(count, start + revcount) # last rev on this page
     parity = paritygen(web.stripecount, offset=start - end)
 
-    def entries(latestonly):
+    def entries():
         l = []
 
         repo = web.repo
         revs = repo.changelog.revs(start, end - 1)
-        if latestonly:
-            for r in revs:
-                pass
-            revs = (r,)
         for i in revs:
             iterfctx = fctx.filectx(i)
 
@@ -868,11 +864,14 @@ def filelog(web, req, tmpl):
         for e in reversed(l):
             yield e
 
+    entries = list(entries())
+    latestentry = entries[:1]
+
     revnav = webutil.filerevnav(web.repo, fctx.path())
     nav = revnav.gen(end - 1, revcount, count)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
-                entries=lambda **x: entries(latestonly=False),
-                latestentry=lambda **x: entries(latestonly=True),
+                entries=entries,
+                latestentry=latestentry,
                 revcount=revcount, morevars=morevars, lessvars=lessvars)
 
 def archive(web, req, tmpl):
