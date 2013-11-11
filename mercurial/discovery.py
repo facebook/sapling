@@ -219,7 +219,8 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     unsynced = inc and set([None]) or set()
     return {None: (oldheads, newheads, unsynced)}
 
-def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
+def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
+               newbookmarks=[]):
     """Check that a push won't add any outgoing head
 
     raise Abort error and display ui message as needed.
@@ -259,6 +260,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             lctx, rctx = repo[bm], repo[rnode]
             if bookmarks.validdest(repo, rctx, lctx):
                 bookmarkedheads.add(lctx.node())
+        else:
+            if bm in newbookmarks:
+                bookmarkedheads.add(repo[bm].node())
 
     # 3. Check for new heads.
     # If there are more heads after the push than before, a suitable

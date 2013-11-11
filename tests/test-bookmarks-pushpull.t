@@ -424,4 +424,22 @@ of this test.
   remote: added 1 changesets with 1 changes to 1 files
   exporting bookmark add-foo
 
+pushing a new bookmark on a new head does not require -f if -B is specified
+
+  $ hg up -q X
+  $ hg book W
+  $ echo c5 > f2
+  $ hg ci -Am5
+  created new head
+  $ hg push -B W
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+  exporting bookmark W
+  $ hg -R ../b id -r W
+  cc978a373a53 tip W
+
   $ cd ..

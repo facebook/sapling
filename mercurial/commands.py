@@ -4677,6 +4677,7 @@ def push(ui, repo, dest=None, **opts):
     """
 
     if opts.get('bookmark'):
+        ui.setconfig('bookmarks', 'pushing', opts['bookmark'])
         for b in opts['bookmark']:
             # translate -B options to -r so changesets get pushed
             if b in repo._bookmarks:

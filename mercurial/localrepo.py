@@ -1867,9 +1867,10 @@ class localrepository(object):
                                     raise util.Abort(_(mst)
                                                      % (ctx.troubles()[0],
                                                         ctx))
+                        newbm = self.ui.configlist('bookmarks', 'pushing')
                         discovery.checkheads(unfi, remote, outgoing,
                                              remoteheads, newbranch,
-                                             bool(inc))
+                                             bool(inc), newbm)
 
                     # TODO: get bundlecaps from remote
                     bundlecaps = None
