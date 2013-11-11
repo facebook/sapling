@@ -97,9 +97,10 @@ class casecollisionauditor(object):
         self._newfiles = set()
 
     def __call__(self, f):
+        if f in self._newfiles:
+            return
         fl = encoding.lower(f)
-        if (fl in self._loweredfiles and f not in self._dirstate and
-            f not in self._newfiles):
+        if fl in self._loweredfiles and f not in self._dirstate:
             msg = _('possible case-folding collision for %s') % f
             if self._abort:
                 raise util.Abort(msg)
