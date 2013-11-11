@@ -184,7 +184,10 @@ class server(object):
         # persist between requests
         copiedui = self.ui.copy()
         self.repo.baseui = copiedui
-        self.repo.ui = self.repo.dirstate._ui = self.repoui.copy()
+        # clone ui without using ui.copy because this is protected
+        repoui = self.repoui.__class__(self.repoui)
+        repoui.copy = copiedui.copy # redo copy protection
+        self.repo.ui = self.repo.dirstate._ui = repoui
         self.repo.invalidate()
         self.repo.invalidatedirstate()
 

@@ -171,6 +171,7 @@ class localrepository(object):
         self.opener = self.vfs
         self.baseui = baseui
         self.ui = baseui.copy()
+        self.ui.copy = baseui.copy # prevent copying repo configuration
         # A list of callback to shape the phase if no data were found.
         # Callback are in the form: func(repo, roots) --> processed root.
         # This list it to be filled by extension during repo setup
