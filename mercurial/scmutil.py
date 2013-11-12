@@ -177,11 +177,17 @@ class abstractvfs(object):
     def makedirs(self, path=None, mode=None):
         return util.makedirs(self.join(path), mode)
 
+    def makelock(self, info, path):
+        return util.makelock(info, self.join(path))
+
     def mkdir(self, path=None):
         return os.mkdir(self.join(path))
 
     def readdir(self, path=None, stat=None, skip=None):
         return osutil.listdir(self.join(path), stat, skip)
+
+    def readlock(self, path):
+        return util.readlock(self.join(path))
 
     def rename(self, src, dst):
         return util.rename(self.join(src), self.join(dst))
