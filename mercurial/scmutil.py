@@ -150,6 +150,9 @@ class abstractvfs(object):
         finally:
             fp.close()
 
+    def chmod(self, path, mode):
+        return os.chmod(self.join(path), mode)
+
     def exists(self, path=None):
         return os.path.exists(self.join(path))
 
