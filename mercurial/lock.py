@@ -29,7 +29,8 @@ class lock(object):
 
     _host = None
 
-    def __init__(self, file, timeout=-1, releasefn=None, desc=None):
+    def __init__(self, vfs, file, timeout=-1, releasefn=None, desc=None):
+        self.vfs = vfs
         self.f = file
         self.held = 0
         self.timeout = timeout
@@ -75,13 +76,14 @@ class lock(object):
         lockname = '%s:%s' % (lock._host, self.pid)
         while not self.held:
             try:
-                util.makelock(lockname, self.f)
+                self.vfs.makelock(lockname, self.f)
                 self.held = 1
             except (OSError, IOError), why:
                 if why.errno == errno.EEXIST:
                     locker = self.testlock()
                     if locker is not None:
-                        raise error.LockHeld(errno.EAGAIN, self.f, self.desc,
+                        raise error.LockHeld(errno.EAGAIN,
+                                             self.vfs.join(self.f), self.desc,
                                              locker)
                 else:
                     raise error.LockUnavailable(why.errno, why.strerror,
@@ -99,7 +101,7 @@ class lock(object):
 
         """
         try:
-            locker = util.readlock(self.f)
+            locker = self.vfs.readlock(self.f)
         except (OSError, IOError), why:
             if why.errno == errno.ENOENT:
                 return None
@@ -119,8 +121,8 @@ class lock(object):
         # if locker dead, break lock.  must do this with another lock
         # held, or can race and break valid lock.
         try:
-            l = lock(self.f + '.break', timeout=0)
-            util.unlink(self.f)
+            l = lock(self.vfs, self.f + '.break', timeout=0)
+            self.vfs.unlink(self.f)
             l.release()
         except error.LockError:
             return locker
@@ -140,7 +142,7 @@ class lock(object):
             if self.releasefn:
                 self.releasefn()
             try:
-                util.unlink(self.f)
+                self.vfs.unlink(self.f)
             except OSError:
                 pass
             for callback in self.postrelease:

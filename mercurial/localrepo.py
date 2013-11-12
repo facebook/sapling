@@ -1000,16 +1000,16 @@ class localrepository(object):
                 pass
         self.invalidatecaches()
 
-    def _lock(self, lockname, wait, releasefn, acquirefn, desc):
+    def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
         try:
-            l = lockmod.lock(lockname, 0, releasefn, desc=desc)
+            l = lockmod.lock(vfs, lockname, 0, releasefn, desc=desc)
         except error.LockHeld, inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %r\n") %
                          (desc, inst.locker))
             # default to 600 seconds timeout
-            l = lockmod.lock(lockname,
+            l = lockmod.lock(vfs, lockname,
                              int(self.ui.config("ui", "timeout", "600")),
                              releasefn, desc=desc)
         if acquirefn:
@@ -1044,7 +1044,7 @@ class localrepository(object):
                     continue
                 ce.refresh()
 
-        l = self._lock(self.sjoin("lock"), wait, unlock,
+        l = self._lock(self.svfs, "lock", wait, unlock,
                        self.invalidate, _('repository %s') % self.origroot)
         self._lockref = weakref.ref(l)
         return l
@@ -1062,7 +1062,7 @@ class localrepository(object):
             self.dirstate.write()
             self._filecache['dirstate'].refresh()
 
-        l = self._lock(self.join("wlock"), wait, unlock,
+        l = self._lock(self.vfs, "wlock", wait, unlock,
                        self.invalidatedirstate, _('working directory of %s') %
                        self.origroot)
         self._wlockref = weakref.ref(l)
