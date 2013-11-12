@@ -8,7 +8,8 @@ from node import hex, nullid, short
 from i18n import _
 import peer, changegroup, subrepo, discovery, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
-import lock, transaction, store, encoding
+import lock as lockmod
+import transaction, store, encoding
 import scmutil, util, extensions, hook, error, revset
 import match as matchmod
 import merge as mergemod
@@ -1001,15 +1002,16 @@ class localrepository(object):
 
     def _lock(self, lockname, wait, releasefn, acquirefn, desc):
         try:
-            l = lock.lock(lockname, 0, releasefn, desc=desc)
+            l = lockmod.lock(lockname, 0, releasefn, desc=desc)
         except error.LockHeld, inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %r\n") %
                          (desc, inst.locker))
             # default to 600 seconds timeout
-            l = lock.lock(lockname, int(self.ui.config("ui", "timeout", "600")),
-                          releasefn, desc=desc)
+            l = lockmod.lock(lockname,
+                             int(self.ui.config("ui", "timeout", "600")),
+                             releasefn, desc=desc)
         if acquirefn:
             acquirefn()
         return l
