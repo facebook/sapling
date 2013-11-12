@@ -12,8 +12,8 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import os, errno
-import error, util
+import errno
+import error
 
 def active(func):
     def _active(self, *args, **kwds):
@@ -39,7 +39,7 @@ def _playback(journal, report, opener, entries, unlink=True):
             except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
                     raise
-    util.unlink(journal)
+    opener.unlink(journal)
 
 class transaction(object):
     def __init__(self, report, opener, journal, after=None, createmode=None):
@@ -53,9 +53,9 @@ class transaction(object):
         self.journal = journal
         self._queue = []
 
-        self.file = util.posixfile(self.journal, "w")
+        self.file = opener.open(self.journal, "w")
         if createmode is not None:
-            os.chmod(self.journal, createmode & 0666)
+            opener.chmod(self.journal, createmode & 0666)
 
     def __del__(self):
         if self.journal:
@@ -133,8 +133,8 @@ class transaction(object):
         self.entries = []
         if self.after:
             self.after()
-        if os.path.isfile(self.journal):
-            util.unlink(self.journal)
+        if self.opener.isfile(self.journal):
+            self.opener.unlink(self.journal)
         self.journal = None
 
     @active
@@ -152,7 +152,7 @@ class transaction(object):
         try:
             if not self.entries:
                 if self.journal:
-                    util.unlink(self.journal)
+                    self.opener.unlink(self.journal)
                 return
 
             self.report(_("transaction abort!\n"))
@@ -170,7 +170,7 @@ class transaction(object):
 def rollback(opener, file, report):
     entries = []
 
-    fp = util.posixfile(file)
+    fp = opener.open(file)
     lines = fp.readlines()
     fp.close()
     for l in lines:

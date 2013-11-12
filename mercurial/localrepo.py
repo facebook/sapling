@@ -833,7 +833,7 @@ class localrepository(object):
         renames = [(vfs, x, undoname(x)) for vfs, x in self._journalfiles()]
         rp = report and report or self.ui.warn
         tr = transaction.transaction(rp, self.sopener,
-                                     self.sjoin("journal"),
+                                     "journal",
                                      aftertrans(renames),
                                      self.store.createmode)
         self._transref = weakref.ref(tr)
@@ -867,7 +867,7 @@ class localrepository(object):
         try:
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
-                transaction.rollback(self.sopener, self.sjoin("journal"),
+                transaction.rollback(self.sopener, "journal",
                                      self.ui.warn)
                 self.invalidate()
                 return True
@@ -923,7 +923,7 @@ class localrepository(object):
 
         parents = self.dirstate.parents()
         self.destroying()
-        transaction.rollback(self.sopener, self.sjoin('undo'), ui.warn)
+        transaction.rollback(self.sopener, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
             self.vfs.rename('undo.bookmarks', 'bookmarks')
         if self.svfs.exists('undo.phaseroots'):
