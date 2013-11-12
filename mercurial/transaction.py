@@ -35,10 +35,7 @@ def _playback(journal, report, opener, entries, unlink=True):
                 raise
         else:
             try:
-                fp = opener(f)
-                fn = fp.name
-                fp.close()
-                util.unlink(fn)
+                opener.unlink(f)
             except (IOError, OSError), inst:
                 if inst.errno != errno.ENOENT:
                     raise
