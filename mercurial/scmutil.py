@@ -159,6 +159,9 @@ class abstractvfs(object):
     def isdir(self, path=None):
         return os.path.isdir(self.join(path))
 
+    def isfile(self, path=None):
+        return os.path.isfile(self.join(path))
+
     def islink(self, path=None):
         return os.path.islink(self.join(path))
 
