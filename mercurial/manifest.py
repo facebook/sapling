@@ -30,8 +30,9 @@ class manifestdict(dict):
 
 class manifest(revlog.revlog):
     def __init__(self, opener):
-        # we expect to deal with not more than three revs at a time in merge
-        self._mancache = util.lrucachedict(3)
+        # we expect to deal with not more than four revs at a time,
+        # during a commit --amend
+        self._mancache = util.lrucachedict(4)
         revlog.revlog.__init__(self, opener, "00manifest.i")
 
     def parse(self, lines):
