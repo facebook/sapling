@@ -401,7 +401,29 @@ class revlog(object):
         heads = [self.rev(n) for n in heads]
 
         # we want the ancestors, but inclusive
-        has = set(self.ancestors(common))
+        class lazyset(object):
+            def __init__(self, lazyvalues):
+                self.addedvalues = set()
+                self.lazyvalues = lazyvalues
+
+            def __contains__(self, value):
+                return value in self.addedvalues or value in self.lazyvalues
+
+            def __iter__(self):
+                added = self.addedvalues
+                for r in added:
+                    yield r
+                for r in self.lazyvalues:
+                    if not r in added:
+                        yield r
+
+            def add(self, value):
+                self.addedvalues.add(value)
+
+            def update(self, values):
+                self.addedvalues.update(values)
+
+        has = lazyset(self.ancestors(common))
         has.add(nullrev)
         has.update(common)
 
