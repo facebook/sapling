@@ -1232,4 +1232,69 @@ Courtesy phases synchronisation to publishing server does not block the push
   searching for changes
   no changes found
   [1]
+  $ cd ..
 
+Test phase choice for newly created commit with "phases.subrepochecks"
+configuration
+
+  $ cd t
+  $ hg update -q -r 12
+
+  $ cat >> s/ss/.hg/hgrc <<EOF
+  > [phases]
+  > new-commit = secret
+  > EOF
+  $ cat >> s/.hg/hgrc <<EOF
+  > [phases]
+  > new-commit = draft
+  > EOF
+  $ echo phasecheck1 >> s/ss/a
+  $ hg -R s commit -S --config phases.checksubrepos=abort -m phasecheck1
+  committing subrepository ss
+  transaction abort!
+  rollback completed
+  abort: can't commit in draft phase conflicting secret from subrepository ss
+  [255]
+  $ echo phasecheck2 >> s/ss/a
+  $ hg -R s commit -S --config phases.checksubrepos=ignore -m phasecheck2
+  committing subrepository ss
+  $ hg -R s/ss phase tip
+  3: secret
+  $ hg -R s phase tip
+  6: draft
+  $ echo phasecheck3 >> s/ss/a
+  $ hg -R s commit -S -m phasecheck3
+  committing subrepository ss
+  warning: changes are committed in secret phase from subrepository ss
+  $ hg -R s/ss phase tip
+  4: secret
+  $ hg -R s phase tip
+  7: secret
+
+  $ cat >> t/.hg/hgrc <<EOF
+  > [phases]
+  > new-commit = draft
+  > EOF
+  $ cat >> .hg/hgrc <<EOF
+  > [phases]
+  > new-commit = public
+  > EOF
+  $ echo phasecheck4 >>   s/ss/a
+  $ echo phasecheck4 >>   t/t
+  $ hg commit -S -m phasecheck4
+  committing subrepository s
+  committing subrepository s/ss
+  warning: changes are committed in secret phase from subrepository ss
+  committing subrepository t
+  warning: changes are committed in secret phase from subrepository s
+  created new head
+  $ hg -R s/ss phase tip
+  5: secret
+  $ hg -R s phase tip
+  8: secret
+  $ hg -R t phase tip
+  6: draft
+  $ hg phase tip
+  15: secret
+
+  $ cd ..

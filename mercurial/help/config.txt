@@ -945,6 +945,15 @@ information about working with phases.
     Phase of newly-created commits.
     Default: draft
 
+``checksubrepos``
+
+    Check phase of state in each subrepositories, allowed values are
+    "ignore", "follow" or "abort". For settings other than "ignore",
+    the phase of each subrepository commit is checked before committing
+    in the parent repository. If there is any greater phase than the parent
+    ("secret" vs "draft", for example), the commit is either aborted
+    with "abort" or the higher phase is used with "follow". Default: "follow".
+
 ``profiling``
 -------------
 

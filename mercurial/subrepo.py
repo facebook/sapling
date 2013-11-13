@@ -10,6 +10,7 @@ import xml.dom.minidom
 import stat, subprocess, tarfile
 from i18n import _
 import config, util, node, error, cmdutil, bookmarks, match as matchmod
+import phases
 import pathutil
 hg = None
 propertycache = util.propertycache
@@ -351,6 +352,37 @@ def subrepo(ctx, path):
         raise util.Abort(_('unknown subrepo type %s') % state[2])
     return types[state[2]](ctx, path, state[:2])
 
+def newcommitphase(ui, ctx):
+    commitphase = phases.newcommitphase(ui)
+    substate = getattr(ctx, "substate", None)
+    if not substate:
+        return commitphase
+    check = ui.config('phases', 'checksubrepos', 'follow')
+    if check not in ('ignore', 'follow', 'abort'):
+        raise util.Abort(_('invalid phases.checksubrepos configuration: %s')
+                         % (check))
+    if check == 'ignore':
+        return commitphase
+    maxphase = phases.public
+    maxsub = None
+    for s in sorted(substate):
+        sub = ctx.sub(s)
+        subphase = sub.phase(substate[s][1])
+        if maxphase < subphase:
+            maxphase = subphase
+            maxsub = s
+    if commitphase < maxphase:
+        if check == 'abort':
+            raise util.Abort(_("can't commit in %s phase"
+                               " conflicting %s from subrepository %s") %
+                             (phases.phasenames[commitphase],
+                              phases.phasenames[maxphase], maxsub))
+        ui.warn(_("warning: changes are committed in"
+                  " %s phase from subrepository %s\n") %
+                (phases.phasenames[maxphase], maxsub))
+        return maxphase
+    return commitphase
+
 # subrepo classes need to implement the following abstract class:
 
 class abstractsubrepo(object):
@@ -384,6 +416,11 @@ class abstractsubrepo(object):
         new state of the subrepo.
         """
         raise NotImplementedError
+
+    def phase(self, state):
+        """returns phase of specified state in the subrepository.
+        """
+        return phases.public
 
     def remove(self):
         """remove the subrepo
@@ -650,6 +687,10 @@ class hgsubrepo(abstractsubrepo):
         if not n:
             return self._repo['.'].hex() # different version checked out
         return node.hex(n)
+
+    @annotatesubrepoerror
+    def phase(self, state):
+        return self._repo[state].phase()
 
     @annotatesubrepoerror
     def remove(self):
