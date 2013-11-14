@@ -53,7 +53,8 @@ doc:
 
 clean:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
-	find . \( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
+	find contrib doc hgext i18n mercurial tests \
+		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f $(addprefix mercurial/,$(notdir $(wildcard mercurial/pure/[a-z]*.py)))
 	rm -f MANIFEST MANIFEST.in mercurial/__version__.py tests/*.err
 	rm -rf build mercurial/locale
