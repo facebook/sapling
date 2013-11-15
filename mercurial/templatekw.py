@@ -219,6 +219,8 @@ def showdiffstat(repo, ctx, templ, **args):
     return '%s: +%s/-%s' % (len(stats), adds, removes)
 
 def showextras(**args):
+    """:extras: List of dicts with key, value entries of the 'extras'
+    field of this changeset."""
     templ = args['templ']
     for key, value in sorted(args['ctx'].extra().items()):
         args = args.copy()
