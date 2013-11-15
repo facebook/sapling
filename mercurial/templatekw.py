@@ -221,11 +221,8 @@ def showdiffstat(repo, ctx, templ, **args):
 def showextras(**args):
     """:extras: List of dicts with key, value entries of the 'extras'
     field of this changeset."""
-    templ = args['templ']
-    for key, value in sorted(args['ctx'].extra().items()):
-        args = args.copy()
-        args.update(dict(key=key, value=value))
-        yield templ('extra', **args)
+    yield showlist('extra', sorted(dict(key=a, value=b)
+                   for (a, b) in args['ctx'].extra().items()), **args)
 
 def showfileadds(**args):
     """:file_adds: List of strings. Files added by this changeset."""
