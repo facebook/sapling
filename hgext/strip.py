@@ -51,7 +51,9 @@ def strip(ui, repo, revs, update=True, backup="all", force=None):
         if update:
             checklocalchanges(repo, force=force)
             urev, p2 = repo.changelog.parents(revs[0])
-            if p2 != nullid and p2 in [x.node for x in repo.mq.applied]:
+            if (util.safehasattr(repo, 'mq') and
+                p2 != nullid
+                and p2 in [x.node for x in repo.mq.applied]):
                 urev = p2
             hg.clean(repo, urev)
             repo.dirstate.write()
