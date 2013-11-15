@@ -1,0 +1,58 @@
+#!/bin/bash
+# A simple script for opening merge conflicts in the editor.
+# Use the following Mercurial settings to enable it.
+#
+# [ui]
+# merge = editmerge
+#
+# [merge-tools]
+# editmerge.args=$output
+# editmerge.check=changed
+# editmerge.premerge=keep
+
+FILE=$1
+
+getlines() {
+  grep -n "<<<<<<" $FILE | cut -f1 -d:
+}
+
+# editor preference loosely based on http://mercurial.selenic.com/wiki/editor
+# hg showconfig is at the bottom though, since it's slow to run (0.15 seconds)
+ED=$HGEDITOR
+if [ "$ED" = "" ] ; then
+  ED=$VISUAL
+fi
+if [ "$ED" = "" ] ; then
+  ED=$EDITOR
+fi
+if [ "$ED" = "" ] ; then
+  ED=$(hg showconfig ui.editor)
+fi
+if [ "$ED" = "" ] ; then
+  echo "merge failed - unable to find editor"
+  exit 1
+fi
+
+if [ "$ED" = "emacs" ] || [ "$ED" = "nano" ] || [ "$ED" = "vim" ] ; then
+  FIRSTLINE=$(getlines | head -n 1)
+  PREVIOUSLINE=""
+
+  # open the editor to the first conflict until there are no more
+  # or the user stops editing the file
+  while [ ! "$FIRSTLINE" = "" ] && [ ! "$FIRSTLINE" = "$PREVIOUSLINE" ] ; do
+    $ED +$FIRSTLINE $FILE
+    PREVIOUSLINE=$FIRSTLINE
+    FIRSTLINE=$(getlines | head -n 1)
+  done
+else
+  $ED $FILE
+fi
+
+# get the line numbers of the remaining conflicts
+CONFLICTS=$(getlines | sed ':a;N;$!ba;s/\n/, /g')
+if [ ! "$CONFLICTS" = "" ] ; then
+  echo "merge failed - resolve the conflicts (line $CONFLICTS) then use 'hg resolve --mark'"
+  exit 1
+fi
+
+exit 0
