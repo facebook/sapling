@@ -102,3 +102,7 @@ Some sample command line templates:
 - Invert the firstline filter, i.e. everything but the first line::
 
    $ hg log -r 0 --template "{sub(r'^.*\n?\n?', '', desc)}\n"
+
+- Display the contents of the 'extra' field, one per line::
+
+  $ hg log -r 0 --template "{join(extras, '\n')}\n"
