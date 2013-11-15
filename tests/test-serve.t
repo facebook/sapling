@@ -45,12 +45,14 @@ With -v and -p HGPORT2
 
 With -v and -p daytime (should fail because low port)
 
+#if no-root
   $ KILLQUIETLY=Y
   $ hgserve -p daytime
   abort: cannot start server at 'localhost:13': Permission denied
   abort: child process failed to start
   % errors
   $ KILLQUIETLY=N
+#endif
 
 With --prefix foo
 

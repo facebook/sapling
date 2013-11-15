@@ -22,7 +22,7 @@
 
 Check that zero-size journals are correctly aborted:
 
-#if unix-permissions
+#if unix-permissions no-root
   $ hg bundle -qa repo.hg
   $ chmod -w foo/.hg/store/00changelog.i
 

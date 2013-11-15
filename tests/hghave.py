@@ -233,6 +233,9 @@ def has_unix_permissions():
     finally:
         os.rmdir(d)
 
+def has_root():
+    return os.geteuid() == 0
+
 def has_pyflakes():
     return matchoutput("sh -c \"echo 'import re' 2>&1 | pyflakes\"",
                        r"<stdin>:1: 're' imported but unused",
@@ -312,6 +315,7 @@ checks = {
     "p4": (has_p4, "Perforce server and client"),
     "pyflakes": (has_pyflakes, "Pyflakes python linter"),
     "pygments": (has_pygments, "Pygments source highlighting library"),
+    "root": (has_root, "root permissions"),
     "serve": (has_serve, "platform and python can manage 'hg serve -d'"),
     "ssl": (has_ssl, "python >= 2.6 ssl module and python OpenSSL"),
     "svn": (has_svn, "subversion client and admin tools"),

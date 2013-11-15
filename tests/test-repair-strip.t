@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
+#if unix-permissions no-root
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=">> $HGRCPATH
@@ -130,3 +130,5 @@
   2 files, 2 changesets, 2 total revisions
 
   $ cd ..
+
+#endif

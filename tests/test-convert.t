@@ -310,7 +310,7 @@ conversion to existing file should fail
   abort: cannot create new bundle repository
   [255]
 
-#if unix-permissions
+#if unix-permissions no-root
 
 conversion to dir without permissions should fail
 

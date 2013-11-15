@@ -1,4 +1,4 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
+#ifdef unix-permissions no-root
 
   $ hg init t
   $ cd t
@@ -70,3 +70,5 @@ Reenable perm to allow deletion:
   $ chmod +rx dir
 
   $ cd ..
+
+#endif

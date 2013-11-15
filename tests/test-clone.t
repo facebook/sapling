@@ -543,7 +543,7 @@ No remote source
   $ rm -rf b # work around bug with http clone
 
 
-#if unix-permissions
+#if unix-permissions no-root
 
 Inaccessible source
 
@@ -596,7 +596,7 @@ destination directory not empty
   [255]
 
 
-#if unix-permissions
+#if unix-permissions no-root
 
 leave existing directory in place after clone failure
 

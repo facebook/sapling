@@ -447,7 +447,7 @@ Test xml styles:
 
 Error if style not readable:
 
-#if unix-permissions
+#if unix-permissions no-root
   $ touch q
   $ chmod 0 q
   $ hg log --style ./q
@@ -479,7 +479,7 @@ Error if style missing value:
 Error if include fails:
 
   $ echo 'changeset = q' >> t
-#if unix-permissions
+#if unix-permissions no-root
   $ hg log --style ./t
   abort: template file ./q: Permission denied
   [255]

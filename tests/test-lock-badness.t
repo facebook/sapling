@@ -1,5 +1,4 @@
-  $ "$TESTDIR/hghave" unix-permissions || exit 80
-
+#if unix-permissions no-root
   $ hg init a
   $ echo a > a/a
   $ hg -R a ci -A -m a
@@ -21,4 +20,4 @@
   [255]
 
   $ chmod 700 a/.hg/store
-
+#endif
