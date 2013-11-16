@@ -337,10 +337,12 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
                     hint = _("merge or"
                              " see \"hg help push\" for details about"
                              " pushing new heads")
-            if branch is not None:
-                repo.ui.note(_("new remote heads on branch '%s'\n") % branch)
+            if branch is None:
+                repo.ui.note(_("new remote heads:\n"))
+            else:
+                repo.ui.note(_("new remote heads on branch '%s':\n") % branch)
             for h in dhs:
-                repo.ui.note(_("new remote head %s\n") % short(h))
+                repo.ui.note((" %s\n") % short(h))
     if error:
         raise util.Abort(error, hint=hint)
 
