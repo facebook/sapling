@@ -313,8 +313,8 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False):
             if 1 < len(newhs):
                 dhs = list(newhs)
                 if error is None:
-                    error = (_("push creates multiple headed new branch '%s'")
-                             % (branch))
+                    error = (_("push creates new branch '%s' "
+                               "with multiple heads") % (branch))
                     hint = _("merge or"
                              " see \"hg help push\" for details about"
                              " pushing new heads")
