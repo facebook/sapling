@@ -106,12 +106,12 @@ def setcurrent(repo, mark):
     Set the name of the bookmark that we are on (hg update <bookmark>).
     The name is recorded in .hg/bookmarks.current
     '''
+    if mark not in repo._bookmarks:
+        raise AssertionError('bookmark %s does not exist!' % mark)
+
     current = repo._bookmarkcurrent
     if current == mark:
         return
-
-    if mark not in repo._bookmarks:
-        mark = ''
 
     wlock = repo.wlock()
     try:
