@@ -1567,3 +1567,41 @@ unrelated branch diff
   @@ -0,0 +1,1 @@
   +a
   $ cd ..
+
+
+test for case where we didn't look sufficiently far back to find rename ancestor
+
+  $ hg init diffstop
+  $ cd diffstop
+  $ echo > f
+  $ hg ci -qAmf
+  $ hg mv f g
+  $ hg ci -m'f->g'
+  $ hg up -qr0
+  $ touch x
+  $ hg ci -qAmx
+  $ echo f > f
+  $ hg ci -qmf=f
+  $ hg merge -q
+  $ hg ci -mmerge
+  $ hg log -G --template '{rev}  {desc}'
+  @    4  merge
+  |\
+  | o  3  f=f
+  | |
+  | o  2  x
+  | |
+  o |  1  f->g
+  |/
+  o  0  f
+  
+  $ hg diff --git -r 2
+  diff --git a/f b/g
+  rename from f
+  rename to g
+  --- a/f
+  +++ b/g
+  @@ -1,1 +1,1 @@
+  -
+  +f
+  $ cd ..

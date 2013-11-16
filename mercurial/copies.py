@@ -98,15 +98,14 @@ def _chain(src, dst, a, b):
 
     return t
 
-def _tracefile(fctx, actx):
-    '''return file context that is the ancestor of fctx present in actx'''
-    stop = actx.rev()
-    am = actx.manifest()
+def _tracefile(fctx, am, limit=-1):
+    '''return file context that is the ancestor of fctx present in ancestor
+    manifest am, stopping after the first ancestor lower than limit'''
 
     for f in fctx.ancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
-        if f.rev() < stop:
+        if f.rev() < limit:
             return None
 
 def _dirstatecopies(d):
@@ -129,6 +128,13 @@ def _forwardcopies(a, b):
             # short-circuit to avoid issues with merge states
             return _dirstatecopies(w)
 
+    # files might have to be traced back to the fctx parent of the last
+    # one-side-only changeset, but not further back than that
+    limit = _findlimit(a._repo, a.rev(), b.rev())
+    if limit is None:
+        limit = -1
+    am = a.manifest()
+
     # find where new files came from
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
@@ -137,7 +143,7 @@ def _forwardcopies(a, b):
     missing.difference_update(a.manifest().iterkeys())
 
     for f in missing:
-        ofctx = _tracefile(b[f], a)
+        ofctx = _tracefile(b[f], am, limit)
         if ofctx:
             cm[f] = ofctx.path()
 
