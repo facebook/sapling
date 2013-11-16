@@ -79,6 +79,10 @@ These fail:
   abort: cannot specify both a revision and a base
   [255]
 
+  $ hg rebase --rev '1 & !1'
+  abort: empty "rev" revision set - nothing to rebase
+  [255]
+
   $ hg rebase
   nothing to rebase
   [1]
