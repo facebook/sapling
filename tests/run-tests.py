@@ -103,6 +103,7 @@ if 'java' in sys.platform:
 
 requiredtools = [os.path.basename(sys.executable), "diff", "grep", "unzip",
                  "gunzip", "bunzip2", "sed"]
+createdfiles = []
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
@@ -420,6 +421,11 @@ def cleanup(options):
     if not options.keep_tmpdir:
         vlog("# Cleaning up HGTMP", HGTMP)
         shutil.rmtree(HGTMP, True)
+        for f in createdfiles:
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
 def usecorrectpython():
     # some tests run python interpreter. they must use same
@@ -439,6 +445,7 @@ def usecorrectpython():
         if findprogram(pyexename) != sys.executable:
             try:
                 os.symlink(sys.executable, mypython)
+                createdfiles.append(mypython)
             except OSError, err:
                 # child processes may race, which is harmless
                 if err.errno != errno.EEXIST:
