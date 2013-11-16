@@ -865,7 +865,7 @@ def bookmark(ui, repo, *names, **opts):
             if mark not in marks:
                 raise util.Abort(_("bookmark '%s' does not exist") % mark)
             if mark == repo._bookmarkcurrent:
-                bookmarks.setcurrent(repo, None)
+                bookmarks.unsetcurrent(repo)
             del marks[mark]
         marks.write()
 
@@ -891,7 +891,7 @@ def bookmark(ui, repo, *names, **opts):
             if newact is None:
                 newact = mark
             if inactive and mark == repo._bookmarkcurrent:
-                bookmarks.setcurrent(repo, None)
+                bookmarks.unsetcurrent(repo)
                 return
             tgt = cur
             if rev:
@@ -901,7 +901,7 @@ def bookmark(ui, repo, *names, **opts):
         if not inactive and cur == marks[newact] and not rev:
             bookmarks.setcurrent(repo, newact)
         elif cur != tgt and newact == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
+            bookmarks.unsetcurrent(repo)
         marks.write()
 
     # Same message whether trying to deactivate the current bookmark (-i
@@ -913,7 +913,7 @@ def bookmark(ui, repo, *names, **opts):
         if not repo._bookmarkcurrent:
             ui.status(_("no active bookmark\n"))
         else:
-            bookmarks.setcurrent(repo, None)
+            bookmarks.unsetcurrent(repo)
 
     else: # show bookmarks
         for bmark, n in sorted(marks.iteritems()):
