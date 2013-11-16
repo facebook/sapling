@@ -94,7 +94,22 @@ def updatecache(repo):
     repo._branchcaches[repo.filtername] = partial
 
 class branchcache(dict):
-    """A dict like object that hold branches heads cache"""
+    """A dict like object that hold branches heads cache.
+
+    This cache is used to avoid costly computations to determine all the
+    branch heads of a repo.
+
+    The cache is serialized on disk in the following format:
+
+    <tip hex node> <tip rev number> [optional filtered repo hex hash]
+    <branch head hex node> <branch name>
+    <branch head hex node> <branch name>
+    ...
+
+    The first line is used to check if the cache is still valid. If the
+    branch cache is for a filtered repo view, an optional third hash is
+    included that hashes the hashes of all filtered revisions.
+    """
 
     def __init__(self, entries=(), tipnode=nullid, tiprev=nullrev,
                  filteredhash=None):
