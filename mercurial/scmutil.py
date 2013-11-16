@@ -714,7 +714,7 @@ def readrequires(opener, supported):
     return requirements
 
 class filecacheentry(object):
-    def __init__(self, path, stat=True):
+    def __init__(self, path, stat):
         self.path = path
         self.cachestat = None
         self._cacheable = None
@@ -814,7 +814,7 @@ class filecache(object):
 
             # We stat -before- creating the object so our cache doesn't lie if
             # a writer modified between the time we read and stat
-            entry = filecacheentry(path)
+            entry = filecacheentry(path, True)
             entry.obj = self.func(obj)
 
             obj._filecache[self.name] = entry
