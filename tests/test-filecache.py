@@ -31,17 +31,20 @@ class fakerepo(object):
                 pass
 
 def basic(repo):
-    # file doesn't exist, calls function
+    print "* file doesn't exist"
+    # calls function
     repo.cached
 
     repo.invalidate()
-    # file still doesn't exist, uses cache
+    print "* file still doesn't exist"
+    # uses cache
     repo.cached
 
     # create empty file
     f = open('x', 'w')
     f.close()
     repo.invalidate()
+    print "* empty file x created"
     # should recreate the object
     repo.cached
 
@@ -49,11 +52,13 @@ def basic(repo):
     f.write('a')
     f.close()
     repo.invalidate()
+    print "* file x changed size"
     # should recreate the object
     repo.cached
 
     repo.invalidate()
-    # stats file again, nothing changed, reuses object
+    print "* nothing changed with file x"
+    # stats file again, reuses object
     repo.cached
 
     # atomic replace file, size doesn't change
@@ -64,6 +69,7 @@ def basic(repo):
     f.close()
 
     repo.invalidate()
+    print "* file x changed inode"
     repo.cached
 
 def fakeuncacheable():
@@ -106,11 +112,13 @@ def setbeforeget(repo):
     os.remove('x')
     repo.cached = 'string set externally'
     repo.invalidate()
+    print "* file x doesn't exist"
     print repo.cached
     repo.invalidate()
     f = open('x', 'w')
     f.write('a')
     f.close()
+    print "* file x created"
     print repo.cached
 
 print 'basic:'
