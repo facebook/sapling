@@ -667,12 +667,13 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
     if command:
         changesets = 1
-        try:
-            node = state['current'][0]
-        except LookupError:
-            if noupdate:
+        if noupdate:
+            try:
+                node = state['current'][0]
+            except LookupError:
                 raise util.Abort(_('current bisect revision is unknown - '
                                    'start a new bisect to fix'))
+        else:
             node, p2 = repo.dirstate.parents()
             if p2 != nullid:
                 raise util.Abort(_('current bisect revision is a merge'))

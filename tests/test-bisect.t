@@ -461,11 +461,14 @@ test bisecting command
   > EOF
   $ chmod +x script.py
   $ hg bisect -r
-  $ hg bisect --good tip
-  $ hg bisect --bad 0
-  Testing changeset 15:e7fa0811edb0 (31 changesets remaining, ~4 tests)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up -qr tip
   $ hg bisect --command "python \"$TESTTMP/script.py\" and some parameters"
+  changeset 31:58c80a7c8a40: good
+  abort: cannot bisect (no known bad revisions)
+  [255]
+  $ hg up -qr 0
+  $ hg bisect --command "python \"$TESTTMP/script.py\" and some parameters"
+  changeset 0:b99c7b9c8e11: bad
   changeset 15:e7fa0811edb0: good
   changeset 7:03750880c6b5: good
   changeset 3:b53bea5e2fcb: bad
@@ -514,6 +517,39 @@ command
 ensure that we still don't have a working dir
 
   $ hg parents
+
+
+test the same case, this time with updating
+
+  $ cat > script.sh <<'EOF'
+  > #!/bin/sh
+  > test -n "$HG_NODE" || (echo HG_NODE missing; exit 127)
+  > current="`hg log -r \"bisect(current)\" --template {node}`"
+  > test "$current" = "$HG_NODE" || (echo current is bad: $current; exit 127)
+  > rev="`hg log -r . --template {rev}`"
+  > test "$rev" -ge 6
+  > EOF
+  $ chmod +x script.sh
+  $ hg bisect -r
+  $ hg up -qr tip
+  $ hg bisect --command "sh \"$TESTTMP/script.sh\" and some params"
+  changeset 31:58c80a7c8a40: good
+  abort: cannot bisect (no known bad revisions)
+  [255]
+  $ hg up -qr 0
+  $ hg bisect --command "sh \"$TESTTMP/script.sh\" and some params"
+  changeset 0:b99c7b9c8e11: bad
+  changeset 15:e7fa0811edb0: good
+  changeset 7:03750880c6b5: good
+  changeset 3:b53bea5e2fcb: bad
+  changeset 5:7874a09ea728: bad
+  changeset 6:a3d5c6fdf0d3: good
+  The first good revision is:
+  changeset:   6:a3d5c6fdf0d3
+  user:        test
+  date:        Thu Jan 01 00:00:06 1970 +0000
+  summary:     msg 6
+  
 
 
 Check that bisect does not break on obsolete changesets
