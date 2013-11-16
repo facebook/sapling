@@ -1375,7 +1375,9 @@ correctly.
   2 largefiles cached
   $ hg merge
   largefile sub/large4 has a merge conflict
-  keep (l)ocal or take (o)ther? l
+  ancestor was 971fb41e78fea4f8e0ba5244784239371cb00591
+  keep (l)ocal d846f26643bfa8ec210be40cc93cc6b7ff1128ea or
+  take (o)ther e166e74c7303192238d60af5a9c4ce9bef0b7928? l
   3 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   getting changed largefiles
