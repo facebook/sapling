@@ -59,7 +59,7 @@ def unshare(ui, repo):
         lock and lock.release()
 
     # update store, spath, sopener and sjoin of repo
-    repo.__init__(repo.baseui, repo.root)
+    repo.unfiltered().__init__(repo.baseui, repo.root)
 
 cmdtable = {
     "share":
