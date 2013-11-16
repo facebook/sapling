@@ -209,7 +209,7 @@ def stripcmd(ui, repo, *revs, **opts):
 
     if opts.get('bookmark'):
         if mark == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
+            bookmarks.unsetcurrent(repo)
         del marks[mark]
         marks.write()
         ui.write(_("bookmark '%s' deleted\n") % mark)
