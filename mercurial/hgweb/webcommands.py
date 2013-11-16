@@ -151,9 +151,9 @@ def _search(web, req, tmpl):
             yield web.repo[r]
 
     searchfuncs = {
-        MODE_REVISION: (revsearch, _('exact revision search')),
-        MODE_KEYWORD: (keywordsearch, _('literal keyword search')),
-        MODE_REVSET: (revsetsearch, _('revset expression search')),
+        MODE_REVISION: (revsearch, 'exact revision search'),
+        MODE_KEYWORD: (keywordsearch, 'literal keyword search'),
+        MODE_REVSET: (revsetsearch, 'revset expression search'),
     }
 
     def getsearchmode(query):

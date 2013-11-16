@@ -185,11 +185,19 @@
   $ cat > warning.t <<EOF
   >   $ function warnonly {
   >   > }
+  >   $ diff -N aaa
+  >   $ function onwarn {}
   > EOF
   $ "$check_code" warning.t
   $ "$check_code" --warn warning.t
   warning.t:1:
    >   $ function warnonly {
+   warning: don't use 'function', use old style
+  warning.t:3:
+   >   $ diff -N aaa
+   warning: don't use 'diff -N'
+  warning.t:4:
+   >   $ function onwarn {}
    warning: don't use 'function', use old style
   [1]
   $ cat > raise-format.py <<EOF
@@ -202,5 +210,44 @@
   raise-format.py:1:
    > raise SomeException, message
    don't use old-style two-argument raise, use Exception(message)
+  [1]
+
+  $ cat > rst.py <<EOF
+  > """problematic rst text
+  > 
+  > .. note::
+  >     wrong
+  > """
+  > 
+  > '''
+  > 
+  > .. note::
+  > 
+  >     valid
+  > 
+  > new text
+  > 
+  >     .. note::
+  > 
+  >         also valid
+  > '''
+  > 
+  > """mixed
+  > 
+  > .. note::
+  > 
+  >   good
+  > 
+  >     .. note::
+  >         plus bad
+  > """
+  > EOF
+  $ $check_code -w rst.py
+  rst.py:3:
+   > .. note::
+   warning: add two newlines after '.. note::'
+  rst.py:26:
+   >     .. note::
+   warning: add two newlines after '.. note::'
   [1]
 

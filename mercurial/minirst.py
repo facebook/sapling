@@ -106,6 +106,12 @@ def findliteralblocks(blocks):
                 # Partially minimized form: remove space and both
                 # colons.
                 blocks[i]['lines'][-1] = blocks[i]['lines'][-1][:-3]
+            elif len(blocks[i]['lines']) == 1 and \
+                 blocks[i]['lines'][0].lstrip(' ').startswith('.. ') and \
+                 blocks[i]['lines'][0].find(' ', 3) == -1:
+                # directive on its onw line, not a literal block
+                i += 1
+                continue
             else:
                 # Fully minimized form: remove just one colon.
                 blocks[i]['lines'][-1] = blocks[i]['lines'][-1][:-1]
@@ -375,6 +381,9 @@ def addmargins(blocks):
         if (blocks[i]['type'] == blocks[i - 1]['type'] and
             blocks[i]['type'] in ('bullet', 'option', 'field')):
             i += 1
+        elif not blocks[i - 1]['lines']:
+            # no lines in previous block, do not seperate
+            i += 1
         else:
             blocks.insert(i, dict(lines=[''], indent=0, type='margin'))
             i += 2
@@ -447,6 +456,8 @@ def formatblock(block, width):
     indent = ' ' * block['indent']
     if block['type'] == 'admonition':
         admonition = _admonitiontitles[block['admonitiontitle']]
+        if not block['lines']:
+            return indent + admonition + '\n'
         hang = len(block['lines'][-1]) - len(block['lines'][-1].lstrip())
 
         defindent = indent + hang * ' '
@@ -625,9 +636,9 @@ def parse(text, indent=0, keep=None):
     blocks = splitparagraphs(blocks)
     blocks = updatefieldlists(blocks)
     blocks = updateoptionlists(blocks)
+    blocks = findadmonitions(blocks)
     blocks = addmargins(blocks)
     blocks = prunecomments(blocks)
-    blocks = findadmonitions(blocks)
     return blocks, pruned
 
 def formatblocks(blocks, width):

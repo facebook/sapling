@@ -53,6 +53,7 @@ Example::
     svn = True
 
 .. note::
+
    The more specific you are in your filename patterns the less you
    lose speed in huge repositories.
 

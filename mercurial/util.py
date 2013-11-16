@@ -563,7 +563,7 @@ _winreservednames = '''con prn aux nul
     lpt1 lpt2 lpt3 lpt4 lpt5 lpt6 lpt7 lpt8 lpt9'''.split()
 _winreservedchars = ':*?"<>|'
 def checkwinfilename(path):
-    '''Check that the base-relative path is a valid filename on Windows.
+    r'''Check that the base-relative path is a valid filename on Windows.
     Returns None if the path is ok, or a UI string describing the problem.
 
     >>> checkwinfilename("just/a/normal/path")
@@ -577,11 +577,19 @@ def checkwinfilename(path):
     >>> checkwinfilename("foo/bar/bla:.txt")
     "filename contains ':', which is reserved on Windows"
     >>> checkwinfilename("foo/bar/b\07la.txt")
-    "filename contains '\\\\x07', which is invalid on Windows"
+    "filename contains '\\x07', which is invalid on Windows"
     >>> checkwinfilename("foo/bar/bla ")
     "filename ends with ' ', which is not allowed on Windows"
     >>> checkwinfilename("../bar")
+    >>> checkwinfilename("foo\\")
+    "filename ends with '\\', which is invalid on Windows"
+    >>> checkwinfilename("foo\\/bar")
+    "directory name ends with '\\', which is invalid on Windows"
     '''
+    if path.endswith('\\'):
+        return _("filename ends with '\\', which is invalid on Windows")
+    if '\\/' in path:
+        return _("directory name ends with '\\', which is invalid on Windows")
     for n in path.replace('\\', '/').split('/'):
         if not n:
             continue

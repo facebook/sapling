@@ -26,8 +26,25 @@ def compilere(pat, multiline=False):
     return re.compile(pat)
 
 def repquote(m):
-    t = re.sub(r"\w", "x", m.group('text'))
-    t = re.sub(r"[^\s\nx]", "o", t)
+    fromc = '.:'
+    tochr = 'pq'
+    def encodechr(i):
+        if i > 255:
+            return 'u'
+        c = chr(i)
+        if c in ' \n':
+            return c
+        if c.isalpha():
+            return 'x'
+        if c.isdigit():
+            return 'n'
+        try:
+            return tochr[fromc.find(c)]
+        except (ValueError, IndexError):
+            return 'o'
+    t = m.group('text')
+    tt = ''.join(encodechr(i) for i in xrange(256))
+    t = t.translate(tt)
     return m.group('quote') + t + m.group('quote')
 
 def reppython(m):
@@ -263,6 +280,7 @@ pypats = [
   ],
   # warnings
   [
+    (r'(^| )pp +xxxxqq[ \n][^\n]', "add two newlines after '.. note::'"),
   ]
 ]
 
@@ -449,6 +467,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             else:
                 p, msg = pat
                 ignore = None
+            if i >= nerrs:
+                msg = "warning: " + msg
 
             pos = 0
             n = 0
@@ -456,8 +476,6 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                 if prelines is None:
                     prelines = pre.splitlines()
                     postlines = post.splitlines(True)
-                    if i >= nerrs:
-                        msg = "warning: " + msg
 
                 start = m.start()
                 while n < len(postlines):
@@ -484,6 +502,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                         bl, bu, br = blamecache[n]
                         if bl == l:
                             bd = '%s@%s' % (bu, br)
+
                 errors.append((f, lineno and n + 1, l, msg, bd))
                 result = False
 
