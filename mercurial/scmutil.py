@@ -786,23 +786,26 @@ class filecacheentry(object):
             entry.refresh()
 
 class filecache(object):
-    '''A property like decorator that tracks a file under .hg/ for updates.
+    '''A property like decorator that tracks files under .hg/ for updates.
 
     Records stat info when called in _filecache.
 
-    On subsequent calls, compares old stat info with new info, and recreates
-    the object when needed, updating the new stat info in _filecache.
+    On subsequent calls, compares old stat info with new info, and recreates the
+    object when any of the files changes, updating the new stat info in
+    _filecache.
 
     Mercurial either atomic renames or appends for files under .hg,
     so to ensure the cache is reliable we need the filesystem to be able
     to tell us if a file has been replaced. If it can't, we fallback to
     recreating the object on every call (essentially the same behaviour as
-    propertycache).'''
-    def __init__(self, path):
-        self.path = path
+    propertycache).
+
+    '''
+    def __init__(self, *paths):
+        self.paths = paths
 
     def join(self, obj, fname):
-        """Used to compute the runtime path of the cached file.
+        """Used to compute the runtime path of a cached file.
 
         Users should subclass filecache and provide their own version of this
         function to call the appropriate join function on 'obj' (an instance
@@ -827,11 +830,11 @@ class filecache(object):
             if entry.changed():
                 entry.obj = self.func(obj)
         else:
-            path = self.join(obj, self.path)
+            paths = [self.join(obj, path) for path in self.paths]
 
             # We stat -before- creating the object so our cache doesn't lie if
             # a writer modified between the time we read and stat
-            entry = filecachesubentry(path, True)
+            entry = filecacheentry(paths, True)
             entry.obj = self.func(obj)
 
             obj._filecache[self.name] = entry
@@ -843,7 +846,8 @@ class filecache(object):
         if self.name not in obj._filecache:
             # we add an entry for the missing value because X in __dict__
             # implies X in _filecache
-            ce = filecachesubentry(self.join(obj, self.path), False)
+            paths = [self.join(obj, path) for path in self.paths]
+            ce = filecacheentry(paths, False)
             obj._filecache[self.name] = ce
         else:
             ce = obj._filecache[self.name]

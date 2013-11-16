@@ -1,29 +1,45 @@
 basic:
 
-* file doesn't exist
+* neither file exists
 creating
-* file still doesn't exist
+* neither file still exists
 * empty file x created
 creating
 * file x changed size
 creating
-* nothing changed with file x
+* nothing changed with either file
 * file x changed inode
+creating
+* empty file y created
+creating
+* file y changed size
+creating
+* file y changed inode
+creating
+* both files changed inode
 creating
 
 fakeuncacheable:
 
-* file doesn't exist
+* neither file exists
 creating
-* file still doesn't exist
+* neither file still exists
 creating
 * empty file x created
 creating
 * file x changed size
 creating
-* nothing changed with file x
+* nothing changed with either file
 creating
 * file x changed inode
+creating
+* empty file y created
+creating
+* file y changed size
+creating
+* file y changed inode
+creating
+* both files changed inode
 creating
 repository tip rolled back to revision -1 (undo commit)
 working directory now based on revision -1
@@ -32,8 +48,13 @@ working directory now based on revision -1
 
 setbeforeget:
 
-* file x doesn't exist
+* neither file exists
 string set externally
 * file x created
+creating
+string from function
+* string set externally again
+string 2 set externally
+* file y created
 creating
 string from function
