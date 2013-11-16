@@ -240,3 +240,97 @@ Rebasing descendant onto ancestor across different named branches
   @  0: 'A'
   
   $ cd ..
+
+Rebase to other head on branch
+
+Set up a case:
+
+  $ hg init case1
+  $ cd case1
+  $ touch f
+  $ hg ci -qAm0
+  $ hg branch -q b
+  $ echo >> f
+  $ hg ci -qAm 'b1'
+  $ hg up -qr -2
+  $ hg branch -qf b
+  $ hg ci -qm 'b2'
+  $ hg up -qr -3
+  $ hg branch -q c
+  $ hg ci -m 'c1'
+
+  $ hg tglog
+  @  3: 'c1' c
+  |
+  | o  2: 'b2' b
+  |/
+  | o  1: 'b1' b
+  |/
+  o  0: '0'
+  
+  $ hg clone -q . ../case2
+
+rebase 'b2' to another lower branch head
+
+  $ hg up -qr 2
+  $ hg rebase
+  nothing to rebase - working directory parent is also destination
+  [1]
+  $ hg tglog
+  o  3: 'c1' c
+  |
+  | @  2: 'b2' b
+  |/
+  | o  1: 'b1' b
+  |/
+  o  0: '0'
+  
+
+rebase 'b1' on top of the tip of the branch ('b2') - ignoring the tip branch ('c1')
+
+  $ cd ../case2
+  $ hg up -qr 1
+  $ hg rebase
+  saved backup bundle to $TESTTMP/case2/.hg/strip-backup/40039acb7ca5-backup.hg (glob)
+  $ hg tglog
+  @  3: 'b1' b
+  |
+  | o  2: 'c1' c
+  | |
+  o |  1: 'b2' b
+  |/
+  o  0: '0'
+  
+
+rebase 'c1' to the branch head 'c2' that is closed
+
+  $ hg branch -qf c
+  $ hg ci -qm 'c2 closed' --close
+  $ hg up -qr 2
+  $ hg tglog
+  o  4: 'c2 closed' c
+  |
+  o  3: 'b1' b
+  |
+  | @  2: 'c1' c
+  | |
+  o |  1: 'b2' b
+  |/
+  o  0: '0'
+  
+  $ hg rebase
+  nothing to rebase - working directory parent is also destination
+  [1]
+  $ hg tglog
+  o  4: 'c2 closed' c
+  |
+  o  3: 'b1' b
+  |
+  | @  2: 'c1' c
+  | |
+  o |  1: 'b2' b
+  |/
+  o  0: '0'
+  
+
+  $ cd ..
