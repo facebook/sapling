@@ -2565,8 +2565,10 @@ def fold(ui, repo, *files, **opts):
         ph = patchheader(q.join(parent), q.plainmode)
         message, user = ph.message, ph.user
         for msg in messages:
-            message.append('* * *')
-            message.extend(msg)
+            if msg:
+                if message:
+                    message.append('* * *')
+                message.extend(msg)
         message = '\n'.join(message)
 
     if opts.get('edit'):
