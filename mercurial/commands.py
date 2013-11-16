@@ -701,7 +701,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                 ui.status(_('changeset %d:%s: %s\n') % (ctx, ctx, transition))
                 check_state(state, interactive=False)
                 # bisect
-                nodes, changesets, good = hbisect.bisect(repo.changelog, state)
+                nodes, changesets, bgood = hbisect.bisect(repo.changelog, state)
                 # update to next check
                 node = nodes[0]
                 if not noupdate:
@@ -710,7 +710,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         finally:
             state['current'] = [node]
             hbisect.save_state(repo, state)
-        print_result(nodes, good)
+        print_result(nodes, bgood)
         return
 
     # update state
