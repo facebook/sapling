@@ -261,9 +261,6 @@ setup
 
 Push should not complain about new heads.
 
-It should not complain about "unsynced remote changes!" either but that's not
-handled yet.
-
   $ hg push --traceback
   pushing to $TESTTMP/remote (glob)
   searching for changes
