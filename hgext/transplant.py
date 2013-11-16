@@ -154,7 +154,7 @@ class transplanter(object):
                     # transplants before them fail.
                     domerge = True
                     if not hasnode(repo, node):
-                        repo.pull(source, heads=[node])
+                        repo.pull(source.peer(), heads=[node])
 
                 skipmerge = False
                 if parents[1] != revlog.nullid:

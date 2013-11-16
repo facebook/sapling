@@ -430,6 +430,20 @@ test transplant into empty repository
   adding manifests
   adding file changes
   added 4 changesets with 4 changes to 4 files
+
+test "--merge" causing pull from source repository on local host
+
+  $ hg --config extensions.mq= -q strip 2
+  $ hg transplant -s ../t --merge tip
+  searching for changes
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  applying a53251cdf717
+  4:a53251cdf717 merged at 4831f4dc831a
+
   $ cd ..
 
 
