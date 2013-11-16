@@ -713,14 +713,14 @@ def readrequires(opener, supported):
               "Mercurial)") % "', '".join(missings))
     return requirements
 
-class filecacheentry(object):
+class filecachesubentry(object):
     def __init__(self, path, stat):
         self.path = path
         self.cachestat = None
         self._cacheable = None
 
         if stat:
-            self.cachestat = filecacheentry.stat(self.path)
+            self.cachestat = filecachesubentry.stat(self.path)
 
             if self.cachestat:
                 self._cacheable = self.cachestat.cacheable()
@@ -730,7 +730,7 @@ class filecacheentry(object):
 
     def refresh(self):
         if self.cacheable():
-            self.cachestat = filecacheentry.stat(self.path)
+            self.cachestat = filecachesubentry.stat(self.path)
 
     def cacheable(self):
         if self._cacheable is not None:
@@ -744,7 +744,7 @@ class filecacheentry(object):
         if not self.cacheable():
             return True
 
-        newstat = filecacheentry.stat(self.path)
+        newstat = filecachesubentry.stat(self.path)
 
         # we may not know if it's cacheable yet, check again now
         if newstat and self._cacheable is None:
@@ -814,7 +814,7 @@ class filecache(object):
 
             # We stat -before- creating the object so our cache doesn't lie if
             # a writer modified between the time we read and stat
-            entry = filecacheentry(path, True)
+            entry = filecachesubentry(path, True)
             entry.obj = self.func(obj)
 
             obj._filecache[self.name] = entry
@@ -826,7 +826,7 @@ class filecache(object):
         if self.name not in obj._filecache:
             # we add an entry for the missing value because X in __dict__
             # implies X in _filecache
-            ce = filecacheentry(self.join(obj, self.path), False)
+            ce = filecachesubentry(self.join(obj, self.path), False)
             obj._filecache[self.name] = ce
         else:
             ce = obj._filecache[self.name]
