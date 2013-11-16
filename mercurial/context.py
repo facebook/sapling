@@ -8,7 +8,6 @@
 from node import nullid, nullrev, short, hex, bin
 from i18n import _
 import ancestor, mdiff, error, util, scmutil, subrepo, patch, encoding, phases
-import copies
 import match as matchmod
 import os, errno, stat
 import obsolete as obsmod
@@ -736,14 +735,6 @@ class basefilectx(object):
                 break
             c = visit.pop(max(visit))
             yield c
-
-    def copies(self, c2):
-        if not util.safehasattr(self, "_copycache"):
-            self._copycache = {}
-        sc2 = str(c2)
-        if sc2 not in self._copycache:
-            self._copycache[sc2] = copies.pathcopies(c2)
-        return self._copycache[sc2]
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
