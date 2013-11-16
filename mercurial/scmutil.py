@@ -768,6 +768,23 @@ class filecachesubentry(object):
             if e.errno != errno.ENOENT:
                 raise
 
+class filecacheentry(object):
+    def __init__(self, paths, stat=True):
+        self._entries = []
+        for path in paths:
+            self._entries.append(filecachesubentry(path, stat))
+
+    def changed(self):
+        '''true if any entry has changed'''
+        for entry in self._entries:
+            if entry.changed():
+                return True
+        return False
+
+    def refresh(self):
+        for entry in self._entries:
+            entry.refresh()
+
 class filecache(object):
     '''A property like decorator that tracks a file under .hg/ for updates.
 
