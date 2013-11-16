@@ -34,9 +34,9 @@ def findcommonincoming(repo, remote, heads=None, force=False):
 
     if heads:
         allknown = True
-        nm = repo.changelog.nodemap
+        knownnode = repo.changelog.hasnode # no nodemap until it is filtered
         for h in heads:
-            if nm.get(h) is None:
+            if not knownnode(h):
                 allknown = False
                 break
         if allknown:
@@ -172,8 +172,9 @@ def _headssummary(repo, remote, outgoing):
         remotebranches.add(branch)
         known = []
         unsynced = []
+        knownnode = cl.hasnode # do not use nodemap until it is filtered
         for h in heads:
-            if h in cl.nodemap:
+            if knownnode(h):
                 known.append(h)
             else:
                 unsynced.append(h)
@@ -204,11 +205,11 @@ def _headssummary(repo, remote, outgoing):
 def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
     """Compute branchmapsummary for repo without branchmap support"""
 
-    cl = repo.changelog
     # 1-4b. old servers: Check for new topological heads.
     # Construct {old,new}map with branch = None (topological branch).
     # (code based on update)
-    oldheads = set(h for h in remoteheads if h in cl.nodemap)
+    knownnode = repo.changelog.hasnode # no nodemap until it is filtered
+    oldheads = set(h for h in remoteheads if knownnode(h))
     # all nodes in outgoing.missing are children of either:
     # - an element of oldheads
     # - another element of outgoing.missing

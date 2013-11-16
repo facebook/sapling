@@ -19,7 +19,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
     "heads" is either the supplied heads, or else the remote's heads.
     """
 
-    m = repo.changelog.nodemap
+    knownnode = repo.changelog.hasnode
     search = []
     fetch = set()
     seen = set()
@@ -41,7 +41,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
 
     unknown = []
     for h in heads:
-        if h not in m:
+        if not knownnode(h):
             unknown.append(h)
         else:
             base.add(h)
@@ -71,23 +71,23 @@ def findcommonincoming(repo, remote, heads=None, force=False):
             elif n in seenbranch:
                 repo.ui.debug("branch already found\n")
                 continue
-            elif n[1] and n[1] in m: # do we know the base?
+            elif n[1] and knownnode(n[1]): # do we know the base?
                 repo.ui.debug("found incomplete branch %s:%s\n"
                               % (short(n[0]), short(n[1])))
                 search.append(n[0:2]) # schedule branch range for scanning
                 seenbranch.add(n)
             else:
                 if n[1] not in seen and n[1] not in fetch:
-                    if n[2] in m and n[3] in m:
+                    if knownnode(n[2]) and knownnode(n[3]):
                         repo.ui.debug("found new changeset %s\n" %
                                       short(n[1]))
                         fetch.add(n[1]) # earliest unknown
                     for p in n[2:4]:
-                        if p in m:
+                        if knownnode(p):
                             base.add(p) # latest known
 
                 for p in n[2:4]:
-                    if p not in req and p not in m:
+                    if p not in req and not knownnode(p):
                         r.append(p)
                         req.add(p)
             seen.add(n[0])
@@ -114,7 +114,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
             f = 1
             for i in l:
                 repo.ui.debug("narrowing %d:%d %s\n" % (f, len(l), short(i)))
-                if i in m:
+                if knownnode(i):
                     if f <= 2:
                         repo.ui.debug("found new branch changeset %s\n" %
                                           short(p))
@@ -130,7 +130,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
 
     # sanity check our fetch list
     for f in fetch:
-        if f in m:
+        if knownnode(f):
             raise error.RepoError(_("already have changeset ")
                                   + short(f[:4]))
 
