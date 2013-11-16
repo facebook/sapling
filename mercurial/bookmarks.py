@@ -58,7 +58,7 @@ class bmstore(dict):
         '''
         repo = self._repo
         if repo._bookmarkcurrent not in self:
-            setcurrent(repo, None)
+            unsetcurrent(repo)
 
         wlock = repo.wlock()
         try:
