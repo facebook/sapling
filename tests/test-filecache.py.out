@@ -20,6 +20,6 @@ working directory now based on revision -1
 
 setbeforeget:
 
-0
+string set externally
 creating
-None
+string from function

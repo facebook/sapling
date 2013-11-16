@@ -21,6 +21,7 @@ class fakerepo(object):
     @filecache('x')
     def cached(self):
         print 'creating'
+        return 'string from function'
 
     def invalidate(self):
         for k in self._filecache:
@@ -103,7 +104,7 @@ def test_filecache_synced():
 
 def setbeforeget(repo):
     os.remove('x')
-    repo.cached = 0
+    repo.cached = 'string set externally'
     repo.invalidate()
     print repo.cached
     repo.invalidate()
