@@ -1013,7 +1013,7 @@ def branches(ui, repo, active=False, closed=False):
 
     hexfunc = ui.debugflag and hex or short
 
-    activebranches = set([repo[n].branch() for n in repo.heads()])
+    allheads = set(repo.heads())
     branches = []
     for tag, heads in repo.branchmap().iteritems():
         for h in reversed(heads):
@@ -1024,12 +1024,12 @@ def branches(ui, repo, active=False, closed=False):
                 break
         else:
             tip = repo[heads[-1]]
-        isactive = tag in activebranches and isopen
-        branches.append((tip, isactive, isopen))
-    branches.sort(key=lambda i: (i[1], i[0].rev(), i[0].branch(), i[2]),
+        isactive = isopen and bool(set(heads) & allheads)
+        branches.append((tag, tip, isactive, isopen))
+    branches.sort(key=lambda i: (i[2], i[1].rev(), i[0], i[3]),
                   reverse=True)
 
-    for ctx, isactive, isopen in branches:
+    for tag, ctx, isactive, isopen in branches:
         if (not active) or isactive:
             if isactive:
                 label = 'branches.active'
@@ -1042,16 +1042,16 @@ def branches(ui, repo, active=False, closed=False):
             else:
                 label = 'branches.inactive'
                 notice = _(' (inactive)')
-            if ctx.branch() == repo.dirstate.branch():
+            if tag == repo.dirstate.branch():
                 label = 'branches.current'
-            rev = str(ctx.rev()).rjust(31 - encoding.colwidth(ctx.branch()))
+            rev = str(ctx.rev()).rjust(31 - encoding.colwidth(tag))
             rev = ui.label('%s:%s' % (rev, hexfunc(ctx.node())),
                            'log.changeset changeset.%s' % ctx.phasestr())
-            tag = ui.label(ctx.branch(), label)
+            labeledtag = ui.label(tag, label)
             if ui.quiet:
-                ui.write("%s\n" % tag)
+                ui.write("%s\n" % labeledtag)
             else:
-                ui.write("%s %s%s\n" % (tag, rev, notice))
+                ui.write("%s %s%s\n" % (labeledtag, rev, notice))
 
 @command('bundle',
     [('f', 'force', None, _('run even when the destination is unrelated')),
