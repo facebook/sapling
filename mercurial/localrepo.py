@@ -1670,7 +1670,6 @@ class localrepository(object):
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
-                added = []
                 result = 0
             else:
                 tr = self.transaction(trname)
@@ -1696,16 +1695,13 @@ class localrepository(object):
                 # be taken in account for phase synchronization. They may
                 # becomes public and becomes visible again.
                 cl = self.unfiltered().changelog
-                clstart = len(cl)
                 result = self.addchangegroup(cg, 'pull', remote.url())
-                clend = len(cl)
-                added = [cl.node(r) for r in xrange(clstart, clend)]
 
             # compute target subset
             if heads is None:
                 # We pulled every thing possible
                 # sync on everything common
-                subset = common + added
+                subset = common + rheads
             else:
                 # We pulled a specific subset
                 # sync on this subset
