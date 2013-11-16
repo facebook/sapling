@@ -426,15 +426,6 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
         if not fcother.cmp(fcdest): # files identical?
             return None
 
-        if orig != fcother.path():
-            repo.ui.status(_('merging %s and %s to %s\n')
-                           % (lfutil.splitstandin(orig),
-                              lfutil.splitstandin(fcother.path()),
-                              lfutil.splitstandin(fcdest.path())))
-        else:
-            repo.ui.status(_('merging %s\n')
-                           % lfutil.splitstandin(fcdest.path()))
-
         if repo.ui.promptchoice(_('largefile %s has a merge conflict\n'
                                   'keep (l)ocal or take (o)ther?'
                                   '$$ &Local $$ &Other') %

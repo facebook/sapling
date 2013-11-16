@@ -1374,7 +1374,6 @@ correctly.
   (run 'hg heads' to see heads, 'hg merge' to merge)
   2 largefiles cached
   $ hg merge
-  merging sub/large4
   largefile sub/large4 has a merge conflict
   keep (l)ocal or take (o)ther? l
   3 files updated, 1 files merged, 0 files removed, 0 files unresolved
