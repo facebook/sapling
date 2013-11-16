@@ -415,8 +415,7 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
     return processed
 
 # Override filemerge to prompt the user about how they wish to merge
-# largefiles. This will handle identical edits, and copy/rename +
-# edit without prompting the user.
+# largefiles. This will handle identical edits without prompting the user.
 def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
     # Use better variable names here. Because this is a wrapper we cannot
     # change the variable names in the function declaration.
@@ -427,10 +426,6 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
         if not fcother.cmp(fcdest): # files identical?
             return None
 
-        # backwards, use working dir parent as ancestor
-        if fcancestor == fcother:
-            fcancestor = fcdest.parents()[0]
-
         if orig != fcother.path():
             repo.ui.status(_('merging %s and %s to %s\n')
                            % (lfutil.splitstandin(orig),
@@ -439,14 +434,6 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
         else:
             repo.ui.status(_('merging %s\n')
                            % lfutil.splitstandin(fcdest.path()))
-
-        if fcancestor.path() != fcother.path() and fcother.data() == \
-                fcancestor.data():
-            return 0
-        if fcancestor.path() != fcdest.path() and fcdest.data() == \
-                fcancestor.data():
-            repo.wwrite(fcdest.path(), fcother.data(), fcother.flags())
-            return 0
 
         if repo.ui.promptchoice(_('largefile %s has a merge conflict\n'
                                   'keep (l)ocal or take (o)ther?'
