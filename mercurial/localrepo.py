@@ -1665,8 +1665,8 @@ class localrepository(object):
         trname = 'pull\n' + util.hidepassword(remote.url())
         lock = self.lock()
         try:
-            tmp = discovery.findcommonincoming(self, remote, heads=heads,
-                                               force=force)
+            tmp = discovery.findcommonincoming(self.unfiltered(), remote,
+                                               heads=heads, force=force)
             common, fetch, rheads = tmp
             if not fetch:
                 self.ui.status(_("no changes found\n"))
