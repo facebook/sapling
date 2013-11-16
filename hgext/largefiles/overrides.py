@@ -417,26 +417,21 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits without prompting the user.
 def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca):
-    # Use better variable names here. Because this is a wrapper we cannot
-    # change the variable names in the function declaration.
-    fcdest, fcother, fcancestor = fcd, fco, fca
     if not lfutil.isstandin(orig):
-        return origfn(repo, mynode, orig, fcdest, fcother, fcancestor)
-    else:
-        if not fcother.cmp(fcdest): # files identical?
-            return None
+        return origfn(repo, mynode, orig, fcd, fco, fca)
 
-        if repo.ui.promptchoice(
-            _('largefile %s has a merge conflict\nancestor was %s\n'
-              'keep (l)ocal %s or\ntake (o)ther %s?'
-              '$$ &Local $$ &Other') %
-              (lfutil.splitstandin(orig),
-               fca.data().strip(), fcd.data().strip(), fco.data().strip()),
-            0) == 0:
-            return 0
-        else:
-            repo.wwrite(fcdest.path(), fcother.data(), fcother.flags())
-            return 0
+    if not fco.cmp(fcd): # files identical?
+        return None
+
+    if repo.ui.promptchoice(
+        _('largefile %s has a merge conflict\nancestor was %s\n'
+          'keep (l)ocal %s or\ntake (o)ther %s?'
+          '$$ &Local $$ &Other') %
+          (lfutil.splitstandin(orig),
+           fca.data().strip(), fcd.data().strip(), fco.data().strip()),
+        0) == 1:
+        repo.wwrite(fcd.path(), fco.data(), fco.flags())
+    return 0
 
 # Copy first changes the matchers to match standins instead of
 # largefiles.  Then it overrides util.copyfile in that function it
