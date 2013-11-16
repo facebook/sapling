@@ -367,6 +367,22 @@ ancestor can accept 0 or more arguments
   4
   $ log 'id(5)'
   2
+  $ log 'only(9)'
+  8
+  9
+  $ log 'only(8)'
+  8
+  $ log 'only(9, 5)'
+  2
+  4
+  8
+  9
+  $ log 'only(7 + 9, 5 + 2)'
+  4
+  6
+  7
+  8
+  9
   $ log 'outgoing()'
   8
   9

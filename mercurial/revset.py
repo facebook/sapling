@@ -9,6 +9,7 @@ import re
 import parser, util, error, discovery, hbisect, phases
 import node
 import match as matchmod
+import ancestor as ancestormod
 from i18n import _
 import encoding
 import obsolete as obsmod
@@ -350,6 +351,26 @@ def author(repo, subset, x):
     n = encoding.lower(getstring(x, _("author requires a string")))
     kind, pattern, matcher = _substringmatcher(n)
     return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())))
+
+def only(repo, subset, x):
+    """``only(set, [set])``
+    Changesets that are ancestors of the first set that are not ancestors
+    of any other head in the repo. If a second set is specified, the result
+    is ancestors of the first set that are not ancestors of the second set
+    (i.e. ::<set1> - ::<set2>).
+    """
+    cl = repo.changelog
+    args = getargs(x, 1, 2, _('only takes one or two arguments'))
+    include = getset(repo, spanset(repo), args[0]).set()
+    if len(args) == 1:
+        descendants = set(_revdescendants(repo, include, False))
+        exclude = [rev for rev in cl.headrevs()
+            if not rev in descendants and not rev in include]
+    else:
+        exclude = getset(repo, spanset(repo), args[1])
+
+    results = set(ancestormod.missingancestors(include, exclude, cl.parentrevs))
+    return lazyset(subset, lambda x: x in results)
 
 def bisect(repo, subset, x):
     """``bisect(string)``
@@ -1606,6 +1627,7 @@ symbols = {
     "ancestors": ancestors,
     "_firstancestors": _firstancestors,
     "author": author,
+    "only": only,
     "bisect": bisect,
     "bisected": bisected,
     "bookmark": bookmark,
