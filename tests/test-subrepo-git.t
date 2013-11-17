@@ -71,7 +71,7 @@ make $GITROOT pushable, by replacing it with a clone with nothing checked out
 clone root
 
   $ cd t
-  $ hg clone . ../tc
+  $ hg clone . ../tc 2> /dev/null
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -94,7 +94,7 @@ update to previous substate
 clone root, make local change
 
   $ cd ../t
-  $ hg clone . ../ta
+  $ hg clone . ../ta 2> /dev/null
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -113,7 +113,7 @@ clone root, make local change
 clone root separately, make different local change
 
   $ cd ../t
-  $ hg clone . ../tb
+  $ hg clone . ../tb 2> /dev/null
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -199,7 +199,7 @@ make upstream git changes
 make and push changes to hg without updating the subrepo
 
   $ cd ../t
-  $ hg clone . ../td
+  $ hg clone . ../td 2>&1 | egrep -v '^Cloning into|^done\.'
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   checking out detached HEAD in subrepo s
@@ -317,7 +317,7 @@ create nested repo
   $ hg add b
   $ hg commit -m b
 
-  $ hg clone ../t inner
+  $ hg clone ../t inner 2> /dev/null
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -345,7 +345,7 @@ relative source expansion
 
   $ cd ..
   $ mkdir d
-  $ hg clone t d/t
+  $ hg clone t d/t 2> /dev/null
   updating to branch default
   cloning subrepo s from $TESTTMP/gitroot
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -364,7 +364,7 @@ Don't crash if the subrepo is missing
   $ hg commit --subrepos -qm missing
   abort: subrepo s is missing (in subrepo s)
   [255]
-  $ hg update -C
+  $ hg update -C 2> /dev/null
   cloning subrepo s from $TESTTMP/gitroot
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum | grep commit
