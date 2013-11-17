@@ -97,6 +97,7 @@ log after edit
 Check histedit_source
 
   $ hg log --debug --rev f518305ce889
+  invalid branchheads cache (visible): tip differs
   changeset:   4:f518305ce889c07cb5bd05522176d75590ef3324
   tag:         tip
   phase:       draft
