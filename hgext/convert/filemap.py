@@ -10,12 +10,20 @@ from mercurial.i18n import _
 from mercurial import util, error
 from common import SKIPREV, converter_source
 
-def rpairs(name):
-    e = len(name)
-    while e != -1:
-        yield name[:e], name[e + 1:]
-        e = name.rfind('/', 0, e)
-    yield '.', name
+def rpairs(path):
+    '''Yield tuples with path split at '/', starting with the full path.
+    No leading, trailing or double '/', please.
+    >>> for x in rpairs('foo/bar/baz'): print x
+    ('foo/bar/baz', '')
+    ('foo/bar', 'baz')
+    ('foo', 'bar/baz')
+    ('.', 'foo/bar/baz')
+    '''
+    i = len(path)
+    while i != -1:
+        yield path[:i], path[i + 1:]
+        i = path.rfind('/', 0, i)
+    yield '.', path
 
 def normalize(path):
     ''' We use posixpath.normpath to support cross-platform path format.
