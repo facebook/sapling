@@ -1134,6 +1134,8 @@ def runtests(options, tests):
         _checkhglib("Tested")
         print "# Ran %d tests, %d skipped, %d failed." % (
             tested, skipped + ignored, failed)
+        if results['!']:
+            print 'python hash seed:', os.environ['PYTHONHASHSEED']
         if options.time:
             outputtimes(options)
 
@@ -1185,7 +1187,6 @@ def main():
         # use a random python hash seed all the time
         # we do the randomness ourself to know what seed is used
         os.environ['PYTHONHASHSEED'] = str(random.getrandbits(32))
-        print 'python hash seed:', os.environ['PYTHONHASHSEED']
 
     global TESTDIR, HGTMP, INST, BINDIR, PYTHONDIR, COVERAGE_FILE
     TESTDIR = os.environ["TESTDIR"] = os.getcwd()
