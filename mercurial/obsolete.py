@@ -267,7 +267,8 @@ class obsstore(object):
         Return the number of new marker."""
         if not _enabled:
             raise util.Abort('obsolete feature is not enabled on this repo')
-        new = [m for m in markers if m not in self._all]
+        known = set(self._all)
+        new = [m for m in markers if m not in known]
         if new:
             f = self.sopener('obsstore', 'ab')
             try:
