@@ -83,6 +83,10 @@ These fail:
   abort: empty "rev" revision set - nothing to rebase
   [255]
 
+  $ hg rebase --source '1 & !1'
+  abort: empty "source" revision set - nothing to rebase
+  [255]
+
   $ hg rebase
   nothing to rebase
   [1]

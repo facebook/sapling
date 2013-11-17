@@ -226,7 +226,11 @@ def rebase(ui, repo, **opts):
                                        'nothing to rebase'))
             elif srcf:
                 src = scmutil.revrange(repo, [srcf])
+                if not src:
+                    raise util.Abort(_('empty "source" revision set - '
+                                       'nothing to rebase'))
                 rebaseset = repo.revs('(%ld)::', src)
+                assert rebaseset
             else:
                 base = scmutil.revrange(repo, [basef or '.'])
                 rebaseset = repo.revs(
