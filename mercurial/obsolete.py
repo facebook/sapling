@@ -268,7 +268,11 @@ class obsstore(object):
         if not _enabled:
             raise util.Abort('obsolete feature is not enabled on this repo')
         known = set(self._all)
-        new = [m for m in markers if m not in known]
+        new = []
+        for m in markers:
+            if m not in known:
+                known.add(m)
+                new.append(m)
         if new:
             f = self.sopener('obsstore', 'ab')
             try:
