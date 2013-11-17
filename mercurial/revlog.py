@@ -842,13 +842,17 @@ class revlog(object):
         else:
             df = self.opener(self.datafile)
 
-        readahead = max(65536, length)
-        df.seek(offset)
-        d = df.read(readahead)
+        # Cache data both forward and backward around the requested
+        # data, in a fixed size window. This helps speed up operations
+        # involving reading the revlog backwards.
+        realoffset = offset & ~65535
+        reallength = ((offset + length + 65536) & ~65535) - realoffset
+        df.seek(realoffset)
+        d = df.read(reallength)
         df.close()
-        self._addchunk(offset, d)
-        if readahead > length:
-            return util.buffer(d, 0, length)
+        self._addchunk(realoffset, d)
+        if offset != realoffset or reallength != length:
+            return util.buffer(d, offset - realoffset, length)
         return d
 
     def _getchunk(self, offset, length):
