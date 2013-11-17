@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
         delta = 0
         for msgid, msgstr in zip(msgids, msgstrs):
-            if msgid:
+            if msgid and msgid != '::':
                 newentry = mkentry(entry, delta, msgid, msgstr)
                 mdirective = findd.match(msgid)
                 if mdirective:
