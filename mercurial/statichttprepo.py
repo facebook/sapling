@@ -55,7 +55,7 @@ class httprangereader(object):
         self.pos += len(data)
         return data
     def __iter__(self):
-        return iter(self.read().splitlines(1))
+        return iter(self.read().splitlines(True))
     def close(self):
         pass
 
