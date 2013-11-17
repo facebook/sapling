@@ -97,7 +97,8 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         p, b = meta.split_branch_path(f)[:2]
         if b not in branch_batches:
             branch_batches[b] = []
-        branch_batches[b].append((p, f))
+        if p:
+            branch_batches[b].append((p, f))
 
     closebranches = {}
     for branch in tbdelta['branches'][1]:
@@ -193,13 +194,14 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
             continue
 
         parent_ctx = meta.repo.changectx(ha)
+        files = []
         def del_all_files(*args):
             raise IOError(errno.ENOENT, 'deleting all files')
 
-        # True here meant nuke all files, shouldn't happen with branch closing
-        if current.emptybranches[branch]: # pragma: no cover
-            raise hgutil.Abort('Empty commit to an open branch attempted. '
-                               'Please report this issue.')
+        # True here means nuke all files.  This happens when you
+        # replace a branch root with an empty directory
+        if current.emptybranches[branch]:
+            files = meta.repo[ha].files()
 
         extra = meta.genextra(rev.revnum, branch)
         meta.mapbranch(extra)
@@ -207,7 +209,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         current_ctx = context.memctx(meta.repo,
                                      (ha, node.nullid),
                                      util.getmessage(ui, rev),
-                                     [],
+                                     files,
                                      del_all_files,
                                      meta.authors[rev.author],
                                      date,

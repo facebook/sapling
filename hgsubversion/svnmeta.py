@@ -490,8 +490,8 @@ class SVNMeta(object):
             #    action of 'D'. We mark the branch as deleted.
             # 5. It's the parent directory of one or more
             #    already-known branches, so we mark them as deleted.
-            # 6. It's a branch being replaced by another branch - the
-            #    action will be 'R'.
+            # 6. It's a branch being replaced by another branch or a new
+            #    directory - the action will be 'R'.
             fi, br = self.split_branch_path(p)[:2]
             if fi is not None:
                 if fi == '':
@@ -501,15 +501,16 @@ class SVNMeta(object):
                         # Check the replacing source is not an ancestor
                         # branch of the branch being replaced, this
                         # would just be a revert.
-                        cfi, cbr = self.split_branch_path(
-                            paths[p].copyfrom_path, paths[p].copyfrom_rev)[:2]
-                        if cfi == '':
-                            cctx = self.repo[self.get_parent_revision(
-                                paths[p].copyfrom_rev + 1, cbr)]
-                            ctx = self.repo[self.get_parent_revision(
-                                revision.revnum, br)]
-                            if cctx and util.isancestor(ctx, cctx):
-                                continue
+                        if paths[p].copyfrom_path:
+                            cfi, cbr = self.split_branch_path(
+                                paths[p].copyfrom_path, paths[p].copyfrom_rev)[:2]
+                            if cfi == '':
+                                cctx = self.repo[self.get_parent_revision(
+                                    paths[p].copyfrom_rev + 1, cbr)]
+                                ctx = self.repo[self.get_parent_revision(
+                                    revision.revnum, br)]
+                                if cctx and util.isancestor(ctx, cctx):
+                                    continue
                         parent = self._determine_parent_branch(
                             p, paths[p].copyfrom_path, paths[p].copyfrom_rev,
                             revision.revnum)

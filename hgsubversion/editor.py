@@ -401,6 +401,10 @@ class HgEditor(svnwrap.Editor):
         br_path, branch = self.meta.split_branch_path(path)[:2]
         if br_path is not None:
             if not copyfrom_path and not br_path:
+                # This handles the case where a branch root is
+                # replaced without copy info.  It will show up as a
+                # deletion and then an add.
+                self.meta.closebranches.discard(branch)
                 self.current.emptybranches[branch] = True
             else:
                 self.current.emptybranches[branch] = False
