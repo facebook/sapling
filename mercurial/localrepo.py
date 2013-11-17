@@ -281,6 +281,9 @@ class localrepository(object):
         self.requirements = requirements
         self.sopener.options = dict((r, 1) for r in requirements
                                            if r in self.openerreqs)
+        chunkcachesize = self.ui.configint('format', 'chunkcachesize')
+        if chunkcachesize is not None:
+            self.sopener.options['chunkcachesize'] = chunkcachesize
 
     def _writerequirements(self):
         reqfile = self.opener("requires", "w")

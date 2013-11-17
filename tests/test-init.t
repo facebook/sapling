@@ -26,6 +26,31 @@ creating 'local'
   $ hg ci --cwd local -A -m "init"
   adding foo
 
+test custom revlog chunk cache sizes
+
+  $ hg --config format.chunkcachesize=0 log -R local -pv
+  abort: revlog chunk cache size 0 is not greater than 0!
+  [255]
+  $ hg --config format.chunkcachesize=1023 log -R local -pv
+  abort: revlog chunk cache size 1023 is not a power of 2!
+  [255]
+  $ hg --config format.chunkcachesize=1024 log -R local -pv
+  changeset:   0:08b9e9f63b32
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       foo
+  description:
+  init
+  
+  
+  diff -r 000000000000 -r 08b9e9f63b32 foo
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +this
+  
+
 creating repo with format.usestore=false
 
   $ hg --config format.usestore=false init old

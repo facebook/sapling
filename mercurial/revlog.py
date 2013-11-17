@@ -202,6 +202,7 @@ class revlog(object):
         self._cache = None
         self._basecache = None
         self._chunkcache = (0, '')
+        self._chunkcachesize = 65536
         self.index = []
         self._pcache = {}
         self._nodecache = {nullid: nullrev}
@@ -215,6 +216,15 @@ class revlog(object):
                     v |= REVLOGGENERALDELTA
             else:
                 v = 0
+            if 'chunkcachesize' in opts:
+                self._chunkcachesize = opts['chunkcachesize']
+
+        if self._chunkcachesize <= 0:
+            raise RevlogError(_('revlog chunk cache size %r is not greater '
+                                'than 0') % self._chunkcachesize)
+        elif self._chunkcachesize & (self._chunkcachesize - 1):
+            raise RevlogError(_('revlog chunk cache size %r is not a power '
+                                'of 2') % self._chunkcachesize)
 
         i = ''
         self._initempty = True
@@ -845,8 +855,10 @@ class revlog(object):
         # Cache data both forward and backward around the requested
         # data, in a fixed size window. This helps speed up operations
         # involving reading the revlog backwards.
-        realoffset = offset & ~65535
-        reallength = ((offset + length + 65536) & ~65535) - realoffset
+        cachesize = self._chunkcachesize
+        realoffset = offset & ~(cachesize - 1)
+        reallength = (((offset + length + cachesize) & ~(cachesize - 1))
+                      - realoffset)
         df.seek(realoffset)
         d = df.read(reallength)
         df.close()
