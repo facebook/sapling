@@ -58,6 +58,13 @@ See :hg:`help config` for more information on configuration files.
   Servers running older versions of Mercurial are treated as
   publishing.
 
+.. note::
+   Changesets in secret phase are not exchanged with the server. This
+   applies to their content: file names, file contents, and changeset
+   metadata. For technical reasons, the identifier (e.g. d825e4025e39)
+   of the secret changeset may be communicated to the server.
+
+
 Examples
 ========
 
