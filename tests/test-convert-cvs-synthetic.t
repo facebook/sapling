@@ -1,6 +1,6 @@
 This feature requires use of builtin cvsps!
 
-  $ "$TESTDIR/hghave" cvs || exit 80
+  $ "$TESTDIR/hghave" cvs112 || exit 80
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
 
