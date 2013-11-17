@@ -2223,7 +2223,7 @@ enabling largefiles extension.
   > largefiles=
   > EOF
   $ hg -R enabledlocally root
-  $TESTTMP/individualenabling/enabledlocally
+  $TESTTMP/individualenabling/enabledlocally (glob)
   $ hg -R notenabledlocally root
   abort: unknown repository format: requires features 'largefiles' (upgrade Mercurial)!
   [255]
