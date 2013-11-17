@@ -235,7 +235,7 @@ These will abort gracefully (using --base):
 G onto G - rebase onto same changeset:
 
   $ hg rebase -b 6 -d 6
-  nothing to rebase
+  nothing to rebase - eea13746799a is both "base" and destination
   [1]
 
 G onto F - rebase onto an ancestor:
@@ -247,7 +247,7 @@ G onto F - rebase onto an ancestor:
 F onto G - rebase onto a descendant:
 
   $ hg rebase -b 5 -d 6
-  nothing to rebase
+  nothing to rebase - "base" 24b6387c8c8c is already an ancestor of destination eea13746799a
   [1]
 
 C onto A - rebase onto an ancestor:

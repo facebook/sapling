@@ -87,14 +87,26 @@ These fail:
   abort: empty "source" revision set - nothing to rebase
   [255]
 
+  $ hg rebase --base '1 & !1'
+  abort: empty "base" revision set - can't compute rebase set
+  [255]
+
   $ hg rebase
-  nothing to rebase
+  nothing to rebase - working directory parent is also destination
+  [1]
+
+  $ hg rebase -b.
+  nothing to rebase - e7ec4e813ba6 is both "base" and destination
   [1]
 
   $ hg up -q 7
 
   $ hg rebase --traceback
-  nothing to rebase
+  nothing to rebase - working directory parent is already an ancestor of destination e7ec4e813ba6
+  [1]
+
+  $ hg rebase -b.
+  nothing to rebase - "base" 02de42196ebe is already an ancestor of destination e7ec4e813ba6
   [1]
 
   $ hg rebase --dest '1 & !1'
@@ -136,7 +148,6 @@ Try to rollback after a rebase (fail):
   [1]
 
   $ cd ..
-
 
 Rebase with base == '.' => same as no arguments (from 3 onto 8):
 

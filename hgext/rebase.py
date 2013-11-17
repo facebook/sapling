@@ -233,9 +233,35 @@ def rebase(ui, repo, **opts):
                 assert rebaseset
             else:
                 base = scmutil.revrange(repo, [basef or '.'])
+                if not base:
+                    raise util.Abort(_('empty "base" revision set - '
+                                       "can't compute rebase set"))
                 rebaseset = repo.revs(
                     '(children(ancestor(%ld, %d)) and ::(%ld))::',
                     base, dest, base)
+                if not rebaseset:
+                    if base == [dest.rev()]:
+                        if basef:
+                            ui.status(_('nothing to rebase - %s is both "base"'
+                                        ' and destination\n') % dest)
+                        else:
+                            ui.status(_('nothing to rebase - working directory '
+                                        'parent is also destination\n'))
+                    elif not repo.revs('%ld - ::%d', base, dest):
+                        if basef:
+                            ui.status(_('nothing to rebase - "base" %s is '
+                                        'already an ancestor of destination '
+                                        '%s\n') %
+                                      ('+'.join(str(repo[r]) for r in base),
+                                       dest))
+                        else:
+                            ui.status(_('nothing to rebase - working '
+                                        'directory parent is already an '
+                                        'ancestor of destination %s\n') % dest)
+                    else: # can it happen?
+                        ui.status(_('nothing to rebase from %s to %s\n') %
+                                  ('+'.join(str(repo[r]) for r in base), dest))
+                    return 1
             if rebaseset:
                 root = min(rebaseset)
             else:
