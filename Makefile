@@ -102,7 +102,7 @@ check-code:
 
 update-pot: i18n/hg.pot
 
-i18n/hg.pot: $(PYFILES) $(DOCFILES)
+i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 	$(PYTHON) i18n/hggettext mercurial/commands.py \
 	  hgext/*.py hgext/*/__init__.py \
 	  mercurial/fileset.py mercurial/revset.py \
