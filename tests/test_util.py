@@ -138,6 +138,10 @@ custom = {
         'old_trunk': 'branches/old_trunk',
         },
     'copies.svndump': trunk_only,
+    'copyafterclose.svndump': {
+        'default': 'trunk',
+        'test': 'branches/test'
+        },
     'copybeforeclose.svndump': {
         'default': 'trunk',
         'test': 'branches/test'

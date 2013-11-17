@@ -50,9 +50,7 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual(['a', 'c', 'z'], sorted(r.manifest()))
 
     def test_renamed_branch_to_trunk(self):
-        config = {'hgsubversion.failonmissing': 'true'}
-        repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump',
-                                            config=config)
+        repo = self._load_fixture_and_fetch('branch_rename_to_trunk.svndump')
         self.assertEqual(repo['default'].parents()[0].branch(), 'dev_branch')
         self.assert_('iota' in repo['default'])
         self.assertEqual(repo['old_trunk'].parents()[0].branch(), 'default')
@@ -72,6 +70,15 @@ class TestFetchBranches(test_util.TestBase):
         self.assertEqual(repo['tip'].branch(), 'test')
         self.assertEqual(repo['test'].extra().get('close'), '1')
         self.assertEqual(repo['test']['b'].data(), 'a\n')
+
+    def test_copyafterclose(self):
+        repo = self._load_fixture_and_fetch('copyafterclose.svndump')
+        self.assertEqual(repo['tip'].branch(), 'test')
+        self.assert_('file' in repo['test'])
+        self.assertEqual(repo['test']['file'].data(), 'trunk2\n')
+        self.assert_('dir/file' in repo['test'])
+        self.assertEqual(repo['test']['dir/file'].data(), 'trunk2\n')
+
 
     def test_branch_create_with_dir_delete_works(self):
         repo = self._load_fixture_and_fetch('branch_create_with_dir_delete.svndump')
