@@ -89,6 +89,9 @@ These fail:
   nothing to rebase
   [1]
 
+  $ hg rebase --dest '1 & !1'
+  abort: empty revision set
+  [255]
 
 These work:
 
