@@ -196,6 +196,14 @@ class marker(object):
         self._data = data
         self._decodedmeta = None
 
+    def __hash__(self):
+        return hash(self._data)
+
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+        return self._data == other._data
+
     def precnode(self):
         """Precursor changeset node identifier"""
         return self._data[0]
