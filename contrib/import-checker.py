@@ -153,6 +153,15 @@ def check_one_mod(mod, imports, path=None, ignore=None):
             continue
         check_one_mod(i, imports, path=path, ignore=ignore)
 
+def rotatecycle(cycle):
+    """arrange a cycle so that the lexicographically first module listed first
+
+    >>> rotatecycle(['foo', 'bar', 'foo'])
+    ['bar', 'foo', 'bar']
+    """
+    lowest = min(cycle)
+    idx = cycle.index(lowest)
+    return cycle[idx:] + cycle[1:idx] + [lowest]
 
 def find_cycles(imports):
     """Find cycles in an already-loaded import graph.
@@ -162,8 +171,8 @@ def find_cycles(imports):
     ...            'top.baz': ['foo'],
     ...            'top.qux': ['foo']}
     >>> print '\\n'.join(sorted(find_cycles(imports)))
-    top.bar -> top.baz -> top.foo -> top.bar
-    top.foo -> top.qux -> top.foo
+    top.bar -> top.baz -> top.foo -> top.bar -> top.bar
+    top.foo -> top.qux -> top.foo -> top.foo
     """
     cycles = {}
     for mod in sorted(imports.iterkeys()):
