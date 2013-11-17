@@ -91,10 +91,11 @@ def get_log_child(fp, url, paths, start, end, limit=0,
                   discover_changed_paths=True, strict_node_history=False):
     protocol = -1
     def receiver(orig_paths, revnum, author, date, message, pool):
+        paths = {}
         if orig_paths is not None:
             for k, v in orig_paths.iteritems():
-                orig_paths[k] = changedpath(v)
-        pickle.dump((orig_paths, revnum, author, date, message),
+                paths[k] = changedpath(v)
+        pickle.dump((paths, revnum, author, date, message),
                     fp, protocol)
 
     try:
