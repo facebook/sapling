@@ -1594,3 +1594,15 @@ Test string escaping:
   <>\n<[>
   <>\n<]>
   <>\n<
+
+Test recursive evaluation:
+
+  $ hg init r
+  $ cd r
+  $ echo a > a
+  $ hg ci -Am '{rev}'
+  adding a
+  $ hg log -r 0 --template '{if(rev, desc)}\n'
+  {rev}
+  $ hg log -r 0 --template '{if(rev, "{author} {rev}")}\n'
+  test 0
