@@ -438,90 +438,92 @@ def updatelfiles(ui, repo, filelist=None, printmessage=True):
         if filelist is not None:
             lfiles = [f for f in lfiles if f in filelist]
 
-        printed = False
-        if printmessage and lfiles:
-            ui.status(_('getting changed largefiles\n'))
-            printed = True
+        update = {}
+        updated, removed = 0, 0
+        for lfile in lfiles:
+            abslfile = repo.wjoin(lfile)
+            absstandin = repo.wjoin(lfutil.standin(lfile))
+            if os.path.exists(absstandin):
+                if (os.path.exists(absstandin + '.orig') and
+                    os.path.exists(abslfile)):
+                    shutil.copyfile(abslfile, abslfile + '.orig')
+                expecthash = lfutil.readstandin(repo, lfile)
+                if (expecthash != '' and
+                    (not os.path.exists(abslfile) or
+                     expecthash != lfutil.hashfile(abslfile))):
+                    if lfile not in repo[None]: # not switched to normal file
+                        util.unlinkpath(abslfile, ignoremissing=True)
+                    # use normallookup() to allocate entry in largefiles
+                    # dirstate, because lack of it misleads
+                    # lfilesrepo.status() into recognition that such cache
+                    # missing files are REMOVED.
+                    lfdirstate.normallookup(lfile)
+                    update[lfile] = expecthash
+            else:
+                # Remove lfiles for which the standin is deleted, unless the
+                # lfile is added to the repository again. This happens when a
+                # largefile is converted back to a normal file: the standin
+                # disappears, but a new (normal) file appears as the lfile.
+                if (os.path.exists(abslfile) and
+                    repo.dirstate.normalize(lfile) not in repo[None]):
+                    util.unlinkpath(abslfile)
+                    removed += 1
+
+        # largefile processing might be slow and be interrupted - be prepared
+        lfdirstate.write()
+
+        if lfiles:
+            if printmessage:
+                ui.status(_('getting changed largefiles\n'))
             cachelfiles(ui, repo, None, lfiles)
 
-        updated, removed = 0, 0
-        for f in lfiles:
-            i = _updatelfile(repo, lfdirstate, f)
-            if i:
-                if i > 0:
-                    updated += i
+        for lfile in lfiles:
+            update1 = 0
+
+            expecthash = update.get(lfile)
+            if expecthash:
+                if not lfutil.copyfromcache(repo, expecthash, lfile):
+                    # failed ... but already removed and set to normallookup
+                    continue
+                # Synchronize largefile dirstate to the last modified
+                # time of the file
+                lfdirstate.normal(lfile)
+                update1 = 1
+
+            # copy the state of largefile standin from the repository's
+            # dirstate to its state in the lfdirstate.
+            abslfile = repo.wjoin(lfile)
+            absstandin = repo.wjoin(lfutil.standin(lfile))
+            if os.path.exists(absstandin):
+                mode = os.stat(absstandin).st_mode
+                if mode != os.stat(abslfile).st_mode:
+                    os.chmod(abslfile, mode)
+                    update1 = 1
+
+            updated += update1
+
+            state = repo.dirstate[lfutil.standin(lfile)]
+            if state == 'n':
+                # When rebasing, we need to synchronize the standin and the
+                # largefile, because otherwise the largefile will get reverted.
+                # But for commit's sake, we have to mark the file as unclean.
+                if getattr(repo, "_isrebasing", False):
+                    lfdirstate.normallookup(lfile)
                 else:
-                    removed -= i
-            if printmessage and (removed or updated) and not printed:
-                ui.status(_('getting changed largefiles\n'))
-                printed = True
+                    lfdirstate.normal(lfile)
+            elif state == 'r':
+                lfdirstate.remove(lfile)
+            elif state == 'a':
+                lfdirstate.add(lfile)
+            elif state == '?':
+                lfdirstate.drop(lfile)
 
         lfdirstate.write()
-        if printed and printmessage:
+        if printmessage and lfiles:
             ui.status(_('%d largefiles updated, %d removed\n') % (updated,
                 removed))
     finally:
         wlock.release()
-
-def _updatelfile(repo, lfdirstate, lfile):
-    '''updates a single largefile and copies the state of its standin from
-    the repository's dirstate to its state in the lfdirstate.
-
-    returns 1 if the file was modified, -1 if the file was removed, 0 if the
-    file was unchanged, and None if the needed largefile was missing from the
-    cache.'''
-    ret = 0
-    abslfile = repo.wjoin(lfile)
-    absstandin = repo.wjoin(lfutil.standin(lfile))
-    if os.path.exists(absstandin):
-        if os.path.exists(absstandin + '.orig') and os.path.exists(abslfile):
-            shutil.copyfile(abslfile, abslfile + '.orig')
-        expecthash = lfutil.readstandin(repo, lfile)
-        if (expecthash != '' and
-            (not os.path.exists(abslfile) or
-             expecthash != lfutil.hashfile(abslfile))):
-            if not lfutil.copyfromcache(repo, expecthash, lfile):
-                # use normallookup() to allocate entry in largefiles dirstate,
-                # because lack of it misleads lfilesrepo.status() into
-                # recognition that such cache missing files are REMOVED.
-                if lfile not in repo[None]: # not switched to normal file
-                    util.unlinkpath(abslfile, ignoremissing=True)
-                lfdirstate.normallookup(lfile)
-                return None # don't try to set the mode
-            else:
-                # Synchronize largefile dirstate to the last modified time of
-                # the file
-                lfdirstate.normal(lfile)
-            ret = 1
-        mode = os.stat(absstandin).st_mode
-        if mode != os.stat(abslfile).st_mode:
-            os.chmod(abslfile, mode)
-            ret = 1
-    else:
-        # Remove lfiles for which the standin is deleted, unless the
-        # lfile is added to the repository again. This happens when a
-        # largefile is converted back to a normal file: the standin
-        # disappears, but a new (normal) file appears as the lfile.
-        if (os.path.exists(abslfile) and
-            repo.dirstate.normalize(lfile) not in repo[None]):
-            util.unlinkpath(abslfile)
-            ret = -1
-    state = repo.dirstate[lfutil.standin(lfile)]
-    if state == 'n':
-        # When rebasing, we need to synchronize the standin and the largefile,
-        # because otherwise the largefile will get reverted.  But for commit's
-        # sake, we have to mark the file as unclean.
-        if getattr(repo, "_isrebasing", False):
-            lfdirstate.normallookup(lfile)
-        else:
-            lfdirstate.normal(lfile)
-    elif state == 'r':
-        lfdirstate.remove(lfile)
-    elif state == 'a':
-        lfdirstate.add(lfile)
-    elif state == '?':
-        lfdirstate.drop(lfile)
-    return ret
 
 def lfpull(ui, repo, source="default", **opts):
     """pull largefiles for the specified revisions from the specified source

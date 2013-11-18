@@ -520,4 +520,23 @@ unshelve should work on an ancestor of the original commit
   $ hg status
   A d
 
+test bug 4073 we need to enable obsolete markers for it
+
+  $ cat > ../obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg debugobsolete `hg --debug id -i -r 1`
+  $ hg unshelve
+  unshelving change 'default'
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 2 files (+1 heads)
+
   $ cd ..
