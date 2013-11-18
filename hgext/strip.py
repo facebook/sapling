@@ -119,101 +119,107 @@ def stripcmd(ui, repo, *revs, **opts):
     revs = list(revs) + opts.get('rev')
     revs = set(scmutil.revrange(repo, revs))
 
-    if opts.get('bookmark'):
-        mark = opts.get('bookmark')
-        marks = repo._bookmarks
-        if mark not in marks:
-            raise util.Abort(_("bookmark '%s' not found") % mark)
+    wlock = repo.wlock()
+    try:
+        if opts.get('bookmark'):
+            mark = opts.get('bookmark')
+            marks = repo._bookmarks
+            if mark not in marks:
+                raise util.Abort(_("bookmark '%s' not found") % mark)
 
-        # If the requested bookmark is not the only one pointing to a
-        # a revision we have to only delete the bookmark and not strip
-        # anything. revsets cannot detect that case.
-        uniquebm = True
-        for m, n in marks.iteritems():
-            if m != mark and n == repo[mark].node():
-                uniquebm = False
-                break
-        if uniquebm:
-            rsrevs = repo.revs("ancestors(bookmark(%s)) - "
-                               "ancestors(head() and not bookmark(%s)) - "
-                               "ancestors(bookmark() and not bookmark(%s))",
-                               mark, mark, mark)
-            revs.update(set(rsrevs))
+            # If the requested bookmark is not the only one pointing to a
+            # a revision we have to only delete the bookmark and not strip
+            # anything. revsets cannot detect that case.
+            uniquebm = True
+            for m, n in marks.iteritems():
+                if m != mark and n == repo[mark].node():
+                    uniquebm = False
+                    break
+            if uniquebm:
+                rsrevs = repo.revs("ancestors(bookmark(%s)) - "
+                                   "ancestors(head() and not bookmark(%s)) - "
+                                   "ancestors(bookmark() and not bookmark(%s))",
+                                   mark, mark, mark)
+                revs.update(set(rsrevs))
+            if not revs:
+                del marks[mark]
+                marks.write()
+                ui.write(_("bookmark '%s' deleted\n") % mark)
+
         if not revs:
+            raise util.Abort(_('empty revision set'))
+
+        descendants = set(cl.descendants(revs))
+        strippedrevs = revs.union(descendants)
+        roots = revs.difference(descendants)
+
+        update = False
+        # if one of the wdir parent is stripped we'll need
+        # to update away to an earlier revision
+        for p in repo.dirstate.parents():
+            if p != nullid and cl.rev(p) in strippedrevs:
+                update = True
+                break
+
+        rootnodes = set(cl.node(r) for r in roots)
+
+        q = getattr(repo, 'mq', None)
+        if q is not None and q.applied:
+            # refresh queue state if we're about to strip
+            # applied patches
+            if cl.rev(repo.lookup('qtip')) in strippedrevs:
+                q.applieddirty = True
+                start = 0
+                end = len(q.applied)
+                for i, statusentry in enumerate(q.applied):
+                    if statusentry.node in rootnodes:
+                        # if one of the stripped roots is an applied
+                        # patch, only part of the queue is stripped
+                        start = i
+                        break
+                del q.applied[start:end]
+                q.savedirty()
+
+        revs = sorted(rootnodes)
+        if update and opts.get('keep'):
+            wlock = repo.wlock()
+            try:
+                urev, p2 = repo.changelog.parents(revs[0])
+                if (util.safehasattr(repo, 'mq') and p2 != nullid
+                    and p2 in [x.node for x in repo.mq.applied]):
+                    urev = p2
+                uctx = repo[urev]
+
+                # only reset the dirstate for files that would actually change
+                # between the working context and uctx
+                descendantrevs = repo.revs("%s::." % uctx.rev())
+                changedfiles = []
+                for rev in descendantrevs:
+                    # blindly reset the files, regardless of what actually
+                    # changed
+                    changedfiles.extend(repo[rev].files())
+
+                # reset files that only changed in the dirstate too
+                dirstate = repo.dirstate
+                dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+                changedfiles.extend(dirchanges)
+
+                repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
+                repo.dirstate.write()
+                update = False
+            finally:
+                wlock.release()
+
+        if opts.get('bookmark'):
+            if mark == repo._bookmarkcurrent:
+                bookmarks.setcurrent(repo, None)
             del marks[mark]
             marks.write()
             ui.write(_("bookmark '%s' deleted\n") % mark)
 
-    if not revs:
-        raise util.Abort(_('empty revision set'))
-
-    descendants = set(cl.descendants(revs))
-    strippedrevs = revs.union(descendants)
-    roots = revs.difference(descendants)
-
-    update = False
-    # if one of the wdir parent is stripped we'll need
-    # to update away to an earlier revision
-    for p in repo.dirstate.parents():
-        if p != nullid and cl.rev(p) in strippedrevs:
-            update = True
-            break
-
-    rootnodes = set(cl.node(r) for r in roots)
-
-    q = getattr(repo, 'mq', None)
-    if q is not None and q.applied:
-        # refresh queue state if we're about to strip
-        # applied patches
-        if cl.rev(repo.lookup('qtip')) in strippedrevs:
-            q.applieddirty = True
-            start = 0
-            end = len(q.applied)
-            for i, statusentry in enumerate(q.applied):
-                if statusentry.node in rootnodes:
-                    # if one of the stripped roots is an applied
-                    # patch, only part of the queue is stripped
-                    start = i
-                    break
-            del q.applied[start:end]
-            q.savedirty()
-
-    revs = sorted(rootnodes)
-    if update and opts.get('keep'):
-        wlock = repo.wlock()
-        try:
-            urev, p2 = repo.changelog.parents(revs[0])
-            if (util.safehasattr(repo, 'mq') and p2 != nullid
-                and p2 in [x.node for x in repo.mq.applied]):
-                urev = p2
-            uctx = repo[urev]
-
-            # only reset the dirstate for files that would actually change
-            # between the working context and uctx
-            descendantrevs = repo.revs("%s::." % uctx.rev())
-            changedfiles = []
-            for rev in descendantrevs:
-                # blindly reset the files, regardless of what actually changed
-                changedfiles.extend(repo[rev].files())
-
-            # reset files that only changed in the dirstate too
-            dirstate = repo.dirstate
-            dirchanges = [f for f in dirstate if dirstate[f] != 'n']
-            changedfiles.extend(dirchanges)
-
-            repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
-            repo.dirstate.write()
-            update = False
-        finally:
-            wlock.release()
-
-    if opts.get('bookmark'):
-        if mark == repo._bookmarkcurrent:
-            bookmarks.setcurrent(repo, None)
-        del marks[mark]
-        marks.write()
-        ui.write(_("bookmark '%s' deleted\n") % mark)
-
-    strip(ui, repo, revs, backup=backup, update=update, force=opts.get('force'))
+        strip(ui, repo, revs, backup=backup, update=update,
+              force=opts.get('force'))
+    finally:
+        wlock.release()
 
     return 0
