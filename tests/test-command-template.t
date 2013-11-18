@@ -1586,3 +1586,11 @@ Test the strip function with chars specified:
   h1c
   b
   a
+
+Test string escaping:
+
+  $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<

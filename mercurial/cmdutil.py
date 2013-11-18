@@ -940,9 +940,7 @@ def show_changeset(ui, repo, opts, buffered=False):
 
     tmpl = opts.get('template')
     style = None
-    if tmpl:
-        tmpl = templater.parsestring(tmpl, quoted=False)
-    else:
+    if not tmpl:
         style = opts.get('style')
 
     # ui settings

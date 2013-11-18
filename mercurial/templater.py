@@ -52,7 +52,7 @@ def tokenizer(data):
                     if not decode:
                         yield ('string', program[s:pos].replace('\\', r'\\'), s)
                         break
-                    yield ('string', program[s:pos].decode('string-escape'), s)
+                    yield ('string', program[s:pos], s)
                     break
                 pos += 1
             else:
@@ -80,19 +80,19 @@ def compiletemplate(tmpl, context):
     parsed = []
     pos, stop = 0, len(tmpl)
     p = parser.parser(tokenizer, elements)
-
     while pos < stop:
         n = tmpl.find('{', pos)
         if n < 0:
-            parsed.append(("string", tmpl[pos:]))
+            parsed.append(("string", tmpl[pos:].decode("string-escape")))
             break
         if n > 0 and tmpl[n - 1] == '\\':
             # escaped
-            parsed.append(("string", tmpl[pos:n - 1] + "{"))
+            parsed.append(("string",
+                           (tmpl[pos:n - 1] + "{").decode("string-escape")))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append(("string", tmpl[pos:n]))
+            parsed.append(("string", tmpl[pos:n].decode("string-escape")))
 
         pd = [tmpl, n + 1, stop]
         parseres, pos = p.parse(pd)
