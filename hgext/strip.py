@@ -182,33 +182,28 @@ def stripcmd(ui, repo, *revs, **opts):
 
         revs = sorted(rootnodes)
         if update and opts.get('keep'):
-            wlock = repo.wlock()
-            try:
-                urev, p2 = repo.changelog.parents(revs[0])
-                if (util.safehasattr(repo, 'mq') and p2 != nullid
-                    and p2 in [x.node for x in repo.mq.applied]):
-                    urev = p2
-                uctx = repo[urev]
+            urev, p2 = repo.changelog.parents(revs[0])
+            if (util.safehasattr(repo, 'mq') and p2 != nullid
+                and p2 in [x.node for x in repo.mq.applied]):
+                urev = p2
+            uctx = repo[urev]
 
-                # only reset the dirstate for files that would actually change
-                # between the working context and uctx
-                descendantrevs = repo.revs("%s::." % uctx.rev())
-                changedfiles = []
-                for rev in descendantrevs:
-                    # blindly reset the files, regardless of what actually
-                    # changed
-                    changedfiles.extend(repo[rev].files())
+            # only reset the dirstate for files that would actually change
+            # between the working context and uctx
+            descendantrevs = repo.revs("%s::." % uctx.rev())
+            changedfiles = []
+            for rev in descendantrevs:
+                # blindly reset the files, regardless of what actually changed
+                changedfiles.extend(repo[rev].files())
 
-                # reset files that only changed in the dirstate too
-                dirstate = repo.dirstate
-                dirchanges = [f for f in dirstate if dirstate[f] != 'n']
-                changedfiles.extend(dirchanges)
+            # reset files that only changed in the dirstate too
+            dirstate = repo.dirstate
+            dirchanges = [f for f in dirstate if dirstate[f] != 'n']
+            changedfiles.extend(dirchanges)
 
-                repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
-                repo.dirstate.write()
-                update = False
-            finally:
-                wlock.release()
+            repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
+            repo.dirstate.write()
+            update = False
 
         if opts.get('bookmark'):
             if mark == repo._bookmarkcurrent:
