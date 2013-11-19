@@ -52,7 +52,7 @@ def tokenizer(data):
                     if not decode:
                         yield ('string', program[s:pos].replace('\\', r'\\'), s)
                         break
-                    yield ('string', program[s:pos].decode('string-escape'), s)
+                    yield ('string', program[s:pos], s)
                     break
                 pos += 1
             else:
@@ -80,19 +80,19 @@ def compiletemplate(tmpl, context):
     parsed = []
     pos, stop = 0, len(tmpl)
     p = parser.parser(tokenizer, elements)
-
     while pos < stop:
         n = tmpl.find('{', pos)
         if n < 0:
-            parsed.append(("string", tmpl[pos:]))
+            parsed.append(("string", tmpl[pos:].decode("string-escape")))
             break
         if n > 0 and tmpl[n - 1] == '\\':
             # escaped
-            parsed.append(("string", tmpl[pos:n - 1] + "{"))
+            parsed.append(("string",
+                           (tmpl[pos:n - 1] + "{").decode("string-escape")))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append(("string", tmpl[pos:n]))
+            parsed.append(("string", tmpl[pos:n].decode("string-escape")))
 
         pd = [tmpl, n + 1, stop]
         parseres, pos = p.parse(pd)
@@ -258,6 +258,13 @@ def get(context, mapping, args):
     key = args[1][0](context, mapping, args[1][1])
     yield dictarg.get(key)
 
+def _evalifliteral(arg, context, mapping):
+    t = stringify(arg[0](context, mapping, arg[1]))
+    if arg[0] == runstring:
+        yield runtemplate(context, mapping, compiletemplate(t, context))
+    else:
+        yield t
+
 def if_(context, mapping, args):
     if not (2 <= len(args) <= 3):
         # i18n: "if" is a keyword
@@ -265,11 +272,9 @@ def if_(context, mapping, args):
 
     test = stringify(args[0][0](context, mapping, args[0][1]))
     if test:
-        t = stringify(args[1][0](context, mapping, args[1][1]))
-        yield runtemplate(context, mapping, compiletemplate(t, context))
+        yield _evalifliteral(args[1], context, mapping)
     elif len(args) == 3:
-        t = stringify(args[2][0](context, mapping, args[2][1]))
-        yield runtemplate(context, mapping, compiletemplate(t, context))
+        yield _evalifliteral(args[2], context, mapping)
 
 def ifeq(context, mapping, args):
     if not (3 <= len(args) <= 4):
@@ -279,11 +284,9 @@ def ifeq(context, mapping, args):
     test = stringify(args[0][0](context, mapping, args[0][1]))
     match = stringify(args[1][0](context, mapping, args[1][1]))
     if test == match:
-        t = stringify(args[2][0](context, mapping, args[2][1]))
-        yield runtemplate(context, mapping, compiletemplate(t, context))
+        yield _evalifliteral(args[2], context, mapping)
     elif len(args) == 4:
-        t = stringify(args[3][0](context, mapping, args[3][1]))
-        yield runtemplate(context, mapping, compiletemplate(t, context))
+        yield _evalifliteral(args[3], context, mapping)
 
 def join(context, mapping, args):
     if not (1 <= len(args) <= 2):
@@ -313,8 +316,7 @@ def label(context, mapping, args):
         raise error.ParseError(_("label expects two arguments"))
 
     # ignore args[0] (the label string) since this is supposed to be a a no-op
-    t = stringify(args[1][0](context, mapping, args[1][1]))
-    yield runtemplate(context, mapping, compiletemplate(t, context))
+    yield _evalifliteral(args[1], context, mapping)
 
 def rstdoc(context, mapping, args):
     if len(args) != 2:

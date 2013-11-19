@@ -1601,3 +1601,23 @@ Test date format:
   date: 70 01 01 02 +0000
   date: 70 01 01 01 +0000
   date: 70 01 01 00 +0000
+
+Test string escaping:
+  
+  $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
+  >
+  <>\n<[>
+  <>\n<]>
+  <>\n<
+
+Test recursive evaluation:
+
+  $ hg init r
+  $ cd r
+  $ echo a > a
+  $ hg ci -Am '{rev}'
+  adding a
+  $ hg log -r 0 --template '{if(rev, desc)}\n'
+  {rev}
+  $ hg log -r 0 --template '{if(rev, "{author} {rev}")}\n'
+  test 0

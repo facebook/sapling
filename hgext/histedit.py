@@ -159,6 +159,7 @@ from mercurial import scmutil
 from mercurial import util
 from mercurial import obsolete
 from mercurial import merge as mergemod
+from mercurial.lock import release
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -476,6 +477,15 @@ def histedit(ui, repo, *freeargs, **opts):
     for intentional "edit" command, but also for resolving unexpected
     conflicts).
     """
+    lock = wlock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        _histedit(ui, repo, *freeargs, **opts)
+    finally:
+        release(lock, wlock)
+
+def _histedit(ui, repo, *freeargs, **opts):
     # TODO only abort if we try and histedit mq patches, not just
     # blanket if mq patches are applied somewhere
     mq = getattr(repo, 'mq', None)

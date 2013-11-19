@@ -386,9 +386,7 @@ def templatelabel(context, mapping, args):
         # i18n: "label" is a keyword
         raise error.ParseError(_("label expects two arguments"))
 
-    thing = templater.stringify(args[1][0](context, mapping, args[1][1]))
-    thing = templater.runtemplate(context, mapping,
-                                  templater.compiletemplate(thing, context))
+    thing = templater._evalifliteral(args[1], context, mapping)
 
     # apparently, repo could be a string that is the favicon?
     repo = mapping.get('repo', '')
