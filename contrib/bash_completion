@@ -76,7 +76,7 @@ _hg_repos()
 {
     local i
     for i in $(compgen -d -- "$cur"); do
-	test ! -d "$i"/.hg || COMPREPLY=(${COMPREPLY[@]:-} "$i")
+        test ! -d "$i"/.hg || COMPREPLY=(${COMPREPLY[@]:-} "$i")
     done
 }
 
@@ -117,12 +117,12 @@ _hg_count_non_option()
     local filters="$1"
 
     for ((i=1; $i<=$COMP_CWORD; i++)); do
-	if [[ "${COMP_WORDS[i]}" != -* ]]; then
-	    if [[ ${COMP_WORDS[i-1]} == @($filters|$global_args) ]]; then
-		continue
-	    fi
-	    count=$(($count + 1))
-	fi
+        if [[ "${COMP_WORDS[i]}" != -* ]]; then
+            if [[ ${COMP_WORDS[i-1]} == @($filters|$global_args) ]]; then
+                continue
+            fi
+            count=$(($count + 1))
+        fi
     done
 
     echo $(($count - 1))
@@ -144,55 +144,55 @@ _hg()
     # (first non-option argument that doesn't follow a global option that
     #  receives an argument)
     for ((i=1; $i<=$COMP_CWORD; i++)); do
-	if [[ ${COMP_WORDS[i]} != -* ]]; then
-	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
-		cmd="${COMP_WORDS[i]}"
-		cmd_index=$i
-		break
-	    fi
-	fi
+        if [[ ${COMP_WORDS[i]} != -* ]]; then
+            if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+                cmd="${COMP_WORDS[i]}"
+                cmd_index=$i
+                break
+            fi
+        fi
     done
 
     if [[ "$cur" == -* ]]; then
-	if [ "$(type -t "_hg_opt_$cmd")" = function ] && "_hg_opt_$cmd"; then
-	    return
-	fi
+        if [ "$(type -t "_hg_opt_$cmd")" = function ] && "_hg_opt_$cmd"; then
+            return
+        fi
 
-	opts=$(_hg_cmd debugcomplete --options "$cmd")
+        opts=$(_hg_cmd debugcomplete --options "$cmd")
 
-	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
-	return
+        COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
+        return
     fi
 
     # global options
     case "$prev" in
-	-R|--repository)
-	    _hg_paths
-	    _hg_repos
-	    return
-	;;
-	--cwd)
-	    # Stick with default bash completion
-	    return
-	;;
+        -R|--repository)
+            _hg_paths
+            _hg_repos
+            return
+        ;;
+        --cwd)
+            # Stick with default bash completion
+            return
+        ;;
     esac
 
     if [ -z "$cmd" ] || [ $COMP_CWORD -eq $i ]; then
-	_hg_commands
-	return
+        _hg_commands
+        return
     fi
 
     # try to generate completion candidates for whatever command the user typed
     local help
     if _hg_command_specific; then
-	return
+        return
     fi
 
     # canonicalize the command name and try again
     help=$(_hg_cmd help "$cmd")
     if [ $? -ne 0 ]; then
-	# Probably either the command doesn't exist or it's ambiguous
-	return
+        # Probably either the command doesn't exist or it's ambiguous
+        return
     fi
     cmd=${help#hg }
     cmd=${cmd%%[$' \n']*}
@@ -203,79 +203,79 @@ _hg()
 _hg_command_specific()
 {
     if [ "$(type -t "_hg_cmd_$cmd")" = function ]; then
-	"_hg_cmd_$cmd"
-	return 0
+        "_hg_cmd_$cmd"
+        return 0
     fi
 
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" == --rev ]; then
-	if [ $canonical = 1 ]; then
-	    _hg_labels
-	    return 0
-	elif [[ status != "$cmd"* ]]; then
+        if [ $canonical = 1 ]; then
             _hg_labels
-	    return 0
-	else
-	    return 1
-	fi
+            return 0
+        elif [[ status != "$cmd"* ]]; then
+            _hg_labels
+            return 0
+        else
+            return 1
+        fi
     fi
 
     case "$cmd" in
-	help)
-	    _hg_commands
-	;;
-	export)
-	    if _hg_ext_mq_patchlist qapplied && [ "${COMPREPLY[*]}" ]; then
-		return 0
-	    fi
-	    _hg_labels
-	;;
-	manifest|update|up|checkout|co)
-	    _hg_labels
-	;;
-	pull|push|outgoing|incoming)
-	    _hg_paths
-	    _hg_repos
-	;;
-	paths)
-	    _hg_paths
-	;;
-	add)
-	    _hg_status "u"
-	;;
-	merge)
-	    _hg_labels
-	;;
-	commit|ci|record)
-	    _hg_status "mar"
-	;;
-	remove|rm)
-	    _hg_debugpathcomplete -n
-	;;
-	forget)
-	    _hg_debugpathcomplete -fa
-	;;
-	diff)
-	    _hg_status "mar"
-	;;
-	revert)
-	    _hg_debugpathcomplete
-	;;
-	clone)
-	    local count=$(_hg_count_non_option)
-	    if [ $count = 1 ]; then
-		_hg_paths
-	    fi
-	    _hg_repos
-	;;
-	debugindex|debugindexdot)
-	    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -f -X "!*.i" -- "$cur"))
-	;;
-	debugdata)
-	    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -f -X "!*.d" -- "$cur"))
-	;;
-	*)
-	    return 1
-	;;
+        help)
+            _hg_commands
+        ;;
+        export)
+            if _hg_ext_mq_patchlist qapplied && [ "${COMPREPLY[*]}" ]; then
+                return 0
+            fi
+            _hg_labels
+        ;;
+        manifest|update|up|checkout|co)
+            _hg_labels
+        ;;
+        pull|push|outgoing|incoming)
+            _hg_paths
+            _hg_repos
+        ;;
+        paths)
+            _hg_paths
+        ;;
+        add)
+            _hg_status "u"
+        ;;
+        merge)
+            _hg_labels
+        ;;
+        commit|ci|record)
+            _hg_status "mar"
+        ;;
+        remove|rm)
+            _hg_debugpathcomplete -n
+        ;;
+        forget)
+            _hg_debugpathcomplete -fa
+        ;;
+        diff)
+            _hg_status "mar"
+        ;;
+        revert)
+            _hg_debugpathcomplete
+        ;;
+        clone)
+            local count=$(_hg_count_non_option)
+            if [ $count = 1 ]; then
+                _hg_paths
+            fi
+            _hg_repos
+        ;;
+        debugindex|debugindexdot)
+            COMPREPLY=(${COMPREPLY[@]:-} $(compgen -f -X "!*.i" -- "$cur"))
+        ;;
+        debugdata)
+            COMPREPLY=(${COMPREPLY[@]:-} $(compgen -f -X "!*.d" -- "$cur"))
+        ;;
+        *)
+            return 1
+        ;;
     esac
 
     return 0
@@ -302,8 +302,8 @@ _hg_ext_mq_patchlist()
     local patches
     patches=$(_hg_cmd $1)
     if [ $? -eq 0 ] && [ "$patches" ]; then
-	COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
-	return 0
+        COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$patches' -- "$cur"))
+        return 0
     fi
     return 1
 }
@@ -313,19 +313,19 @@ _hg_ext_mq_queues()
     local root=$(_hg_cmd root)
     local n
     for n in $(cd "$root"/.hg && compgen -d -- "$cur"); do
-	# I think we're usually not interested in the regular "patches" queue
-	# so just filter it.
-	if [ "$n" != patches ] && [ -e "$root/.hg/$n/series" ]; then
-	    COMPREPLY=(${COMPREPLY[@]:-} "$n")
-	fi
+        # I think we're usually not interested in the regular "patches" queue
+        # so just filter it.
+        if [ "$n" != patches ] && [ -e "$root/.hg/$n/series" ]; then
+            COMPREPLY=(${COMPREPLY[@]:-} "$n")
+        fi
     done
 }
 
 _hg_cmd_qpop()
 {
     if [[ "$prev" = @(-n|--name) ]]; then
-	_hg_ext_mq_queues
-	return
+        _hg_ext_mq_queues
+        return
     fi
     _hg_ext_mq_patchlist qapplied
 }
@@ -333,8 +333,8 @@ _hg_cmd_qpop()
 _hg_cmd_qpush()
 {
     if [[ "$prev" = @(-n|--name) ]]; then
-	_hg_ext_mq_queues
-	return
+        _hg_ext_mq_queues
+        return
     fi
     _hg_ext_mq_patchlist qunapplied
 }
@@ -342,8 +342,8 @@ _hg_cmd_qpush()
 _hg_cmd_qgoto()
 {
     if [[ "$prev" = @(-n|--name) ]]; then
-	_hg_ext_mq_queues
-	return
+        _hg_ext_mq_queues
+        return
     fi
     _hg_ext_mq_patchlist qseries
 }
@@ -352,7 +352,7 @@ _hg_cmd_qdelete()
 {
     local qcmd=qunapplied
     if [[ "$prev" = @(-r|--rev) ]]; then
-	qcmd=qapplied
+        qcmd=qapplied
     fi
     _hg_ext_mq_patchlist $qcmd
 }
@@ -360,7 +360,7 @@ _hg_cmd_qdelete()
 _hg_cmd_qfinish()
 {
     if [[ "$prev" = @(-a|--applied) ]]; then
-	return
+        return
     fi
     _hg_ext_mq_patchlist qapplied
 }
@@ -368,8 +368,8 @@ _hg_cmd_qfinish()
 _hg_cmd_qsave()
 {
     if [[ "$prev" = @(-n|--name) ]]; then
-	_hg_ext_mq_queues
-	return
+        _hg_ext_mq_queues
+        return
     fi
 }
 
@@ -412,7 +412,7 @@ _hg_cmd_qclone()
 {
     local count=$(_hg_count_non_option)
     if [ $count = 1 ]; then
-	_hg_paths
+        _hg_paths
     fi
     _hg_repos
 }
@@ -433,15 +433,15 @@ _hg_cmd_qguard()
     local prefix=''
 
     if [[ "$cur" == +* ]]; then
-	prefix=+
+        prefix=+
     elif [[ "$cur" == -* ]]; then
-	prefix=-
+        prefix=-
     fi
     local ncur=${cur#[-+]}
 
     if ! [ "$prefix" ]; then
-	_hg_ext_mq_patchlist qseries
-	return
+        _hg_ext_mq_patchlist qseries
+        return
     fi
 
     local guards=$(_hg_ext_mq_guards)
@@ -452,15 +452,15 @@ _hg_opt_qguard()
 {
     local i
     for ((i=cmd_index+1; i<=COMP_CWORD; i++)); do
-	if [[ ${COMP_WORDS[i]} != -* ]]; then
-	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
-		_hg_cmd_qguard
-		return 0
-	    fi
-	elif [ "${COMP_WORDS[i]}" = -- ]; then
-	    _hg_cmd_qguard
-	    return 0
-	fi
+        if [[ ${COMP_WORDS[i]} != -* ]]; then
+            if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+                _hg_cmd_qguard
+                return 0
+            fi
+        elif [ "${COMP_WORDS[i]}" = -- ]; then
+            _hg_cmd_qguard
+            return 0
+        fi
     done
     return 1
 }
@@ -484,24 +484,24 @@ _hg_cmd_bisect()
 
     # find the sub-command
     for ((i=cmd_index+1; i<=COMP_CWORD; i++)); do
-	if [[ ${COMP_WORDS[i]} != -* ]]; then
-	    if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
-		subcmd="${COMP_WORDS[i]}"
-		break
-	    fi
-	fi
+        if [[ ${COMP_WORDS[i]} != -* ]]; then
+            if [[ ${COMP_WORDS[i-1]} != @($global_args) ]]; then
+                subcmd="${COMP_WORDS[i]}"
+                break
+            fi
+        fi
     done
 
     if [ -z "$subcmd" ] || [ $COMP_CWORD -eq $i ] || [ "$subcmd" = help ]; then
-	COMPREPLY=(${COMPREPLY[@]:-}
-		   $(compgen -W 'bad good help init next reset' -- "$cur"))
-	return
+        COMPREPLY=(${COMPREPLY[@]:-}
+                   $(compgen -W 'bad good help init next reset' -- "$cur"))
+        return
     fi
 
     case "$subcmd" in
-	good|bad)
-	    _hg_labels
-	    ;;
+        good|bad)
+            _hg_labels
+            ;;
     esac
 
     return
@@ -512,28 +512,28 @@ _hg_cmd_bisect()
 _hg_cmd_email()
 {
     case "$prev" in
-	-c|--cc|-t|--to|-f|--from|--bcc)
-	    # we need an e-mail address. let the user provide a function
-	    # to get them
-	    if [ "$(type -t _hg_emails)" = function ]; then
-		local arg=to
-		if [[ "$prev" == @(-f|--from) ]]; then
-		    arg=from
-		fi
-		local addresses=$(_hg_emails $arg)
-		COMPREPLY=(${COMPREPLY[@]:-}
-			   $(compgen -W '$addresses' -- "$cur"))
-	    fi
-	    return
-	    ;;
-	-m|--mbox)
-	    # fallback to standard filename completion
-	    return
-	    ;;
-	-s|--subject)
-	    # free form string
-	    return
-	    ;;
+        -c|--cc|-t|--to|-f|--from|--bcc)
+            # we need an e-mail address. let the user provide a function
+            # to get them
+            if [ "$(type -t _hg_emails)" = function ]; then
+                local arg=to
+                if [[ "$prev" == @(-f|--from) ]]; then
+                    arg=from
+                fi
+                local addresses=$(_hg_emails $arg)
+                COMPREPLY=(${COMPREPLY[@]:-}
+                           $(compgen -W '$addresses' -- "$cur"))
+            fi
+            return
+            ;;
+        -m|--mbox)
+            # fallback to standard filename completion
+            return
+            ;;
+        -s|--subject)
+            # free form string
+            return
+            ;;
     esac
 
     _hg_labels
@@ -552,15 +552,15 @@ _hg_cmd_sign()
 _hg_cmd_transplant()
 {
     case "$prev" in
-	-s|--source)
-	    _hg_paths
-	    _hg_repos
-	    return
-	    ;;
-	--filter)
-	    # standard filename completion
-	    return
-	    ;;
+        -s|--source)
+            _hg_paths
+            _hg_repos
+            return
+            ;;
+        --filter)
+            # standard filename completion
+            return
+            ;;
     esac
 
     # all other transplant options values and command parameters are revisions
