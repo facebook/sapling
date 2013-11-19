@@ -927,8 +927,13 @@ static int nt_insert(indexObject *self, const char *node, int rev)
 static int nt_init(indexObject *self)
 {
 	if (self->nt == NULL) {
+		if (self->raw_length > INT_MAX) {
+			PyErr_SetString(PyExc_ValueError, "overflow in nt_init");
+			return -1;
+		}
 		self->ntcapacity = self->raw_length < 4
-			? 4 : self->raw_length / 2;
+			? 4 : (int)self->raw_length / 2;
+
 		self->nt = calloc(self->ntcapacity, sizeof(nodetree));
 		if (self->nt == NULL) {
 			PyErr_NoMemory();
