@@ -808,7 +808,6 @@ def bookmark(ui, repo, *names, **opts):
     inactive = opts.get('inactive')
 
     hexfn = ui.debugflag and hex or short
-    cur   = repo.changectx('.').node()
 
     def checkformat(mark):
         mark = mark.strip()
@@ -864,6 +863,7 @@ def bookmark(ui, repo, *names, **opts):
     if delete or rename or names or inactive:
         wlock = repo.wlock()
         try:
+            cur = repo.changectx('.').node()
             marks = repo._bookmarks
             if delete:
                 for mark in names:
