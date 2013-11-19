@@ -807,8 +807,6 @@ def bookmark(ui, repo, *names, **opts):
     rename = opts.get('rename')
     inactive = opts.get('inactive')
 
-    hexfn = ui.debugflag and hex or short
-
     def checkformat(mark):
         mark = mark.strip()
         if not mark:
@@ -920,6 +918,7 @@ def bookmark(ui, repo, *names, **opts):
         finally:
             wlock.release()
     else: # show bookmarks
+        hexfn = ui.debugflag and hex or short
         marks = repo._bookmarks
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
