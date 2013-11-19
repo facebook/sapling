@@ -906,31 +906,31 @@ def bookmark(ui, repo, *names, **opts):
             bookmarks.unsetcurrent(repo)
         marks.write()
 
-    # Same message whether trying to deactivate the current bookmark (-i
-    # with no NAME) or listing bookmarks
-    elif len(marks) == 0:
-        ui.status(_("no bookmarks set\n"))
-
     elif inactive:
-        if not repo._bookmarkcurrent:
+        if len(marks) == 0:
+            ui.status(_("no bookmarks set\n"))
+        elif not repo._bookmarkcurrent:
             ui.status(_("no active bookmark\n"))
         else:
             bookmarks.unsetcurrent(repo)
 
     else: # show bookmarks
-        for bmark, n in sorted(marks.iteritems()):
-            current = repo._bookmarkcurrent
-            if bmark == current:
-                prefix, label = '*', 'bookmarks.current'
-            else:
-                prefix, label = ' ', ''
+        if len(marks) == 0:
+            ui.status(_("no bookmarks set\n"))
+        else:
+            for bmark, n in sorted(marks.iteritems()):
+                current = repo._bookmarkcurrent
+                if bmark == current:
+                    prefix, label = '*', 'bookmarks.current'
+                else:
+                    prefix, label = ' ', ''
 
-            if ui.quiet:
-                ui.write("%s\n" % bmark, label=label)
-            else:
-                ui.write(" %s %-25s %d:%s\n" % (
-                    prefix, bmark, repo.changelog.rev(n), hexfn(n)),
-                    label=label)
+                if ui.quiet:
+                    ui.write("%s\n" % bmark, label=label)
+                else:
+                    ui.write(" %s %-25s %d:%s\n" % (
+                        prefix, bmark, repo.changelog.rev(n), hexfn(n)),
+                        label=label)
 
 @command('branch',
     [('f', 'force', None,
