@@ -808,7 +808,6 @@ def bookmark(ui, repo, *names, **opts):
     inactive = opts.get('inactive')
 
     hexfn = ui.debugflag and hex or short
-    marks = repo._bookmarks
     cur   = repo.changectx('.').node()
 
     def checkformat(mark):
@@ -862,59 +861,66 @@ def bookmark(ui, repo, *names, **opts):
     if not names and (delete or rev):
         raise util.Abort(_("bookmark name required"))
 
-    if delete:
-        for mark in names:
-            if mark not in marks:
-                raise util.Abort(_("bookmark '%s' does not exist") % mark)
-            if mark == repo._bookmarkcurrent:
-                bookmarks.unsetcurrent(repo)
-            del marks[mark]
-        marks.write()
+    if delete or rename or names or inactive:
+        wlock = repo.wlock()
+        try:
+            marks = repo._bookmarks
+            if delete:
+                for mark in names:
+                    if mark not in marks:
+                        raise util.Abort(_("bookmark '%s' does not exist") %
+                                         mark)
+                    if mark == repo._bookmarkcurrent:
+                        bookmarks.unsetcurrent(repo)
+                    del marks[mark]
+                marks.write()
 
-    elif rename:
-        if not names:
-            raise util.Abort(_("new bookmark name required"))
-        elif len(names) > 1:
-            raise util.Abort(_("only one new bookmark name allowed"))
-        mark = checkformat(names[0])
-        if rename not in marks:
-            raise util.Abort(_("bookmark '%s' does not exist") % rename)
-        checkconflict(repo, mark, force)
-        marks[mark] = marks[rename]
-        if repo._bookmarkcurrent == rename and not inactive:
-            bookmarks.setcurrent(repo, mark)
-        del marks[rename]
-        marks.write()
+            elif rename:
+                if not names:
+                    raise util.Abort(_("new bookmark name required"))
+                elif len(names) > 1:
+                    raise util.Abort(_("only one new bookmark name allowed"))
+                mark = checkformat(names[0])
+                if rename not in marks:
+                    raise util.Abort(_("bookmark '%s' does not exist") % rename)
+                checkconflict(repo, mark, force)
+                marks[mark] = marks[rename]
+                if repo._bookmarkcurrent == rename and not inactive:
+                    bookmarks.setcurrent(repo, mark)
+                del marks[rename]
+                marks.write()
 
-    elif names:
-        newact = None
-        for mark in names:
-            mark = checkformat(mark)
-            if newact is None:
-                newact = mark
-            if inactive and mark == repo._bookmarkcurrent:
-                bookmarks.unsetcurrent(repo)
-                return
-            tgt = cur
-            if rev:
-                tgt = scmutil.revsingle(repo, rev).node()
-            checkconflict(repo, mark, force, tgt)
-            marks[mark] = tgt
-        if not inactive and cur == marks[newact] and not rev:
-            bookmarks.setcurrent(repo, newact)
-        elif cur != tgt and newact == repo._bookmarkcurrent:
-            bookmarks.unsetcurrent(repo)
-        marks.write()
+            elif names:
+                newact = None
+                for mark in names:
+                    mark = checkformat(mark)
+                    if newact is None:
+                        newact = mark
+                    if inactive and mark == repo._bookmarkcurrent:
+                        bookmarks.unsetcurrent(repo)
+                        return
+                    tgt = cur
+                    if rev:
+                        tgt = scmutil.revsingle(repo, rev).node()
+                    checkconflict(repo, mark, force, tgt)
+                    marks[mark] = tgt
+                if not inactive and cur == marks[newact] and not rev:
+                    bookmarks.setcurrent(repo, newact)
+                elif cur != tgt and newact == repo._bookmarkcurrent:
+                    bookmarks.unsetcurrent(repo)
+                marks.write()
 
-    elif inactive:
-        if len(marks) == 0:
-            ui.status(_("no bookmarks set\n"))
-        elif not repo._bookmarkcurrent:
-            ui.status(_("no active bookmark\n"))
-        else:
-            bookmarks.unsetcurrent(repo)
-
+            elif inactive:
+                if len(marks) == 0:
+                    ui.status(_("no bookmarks set\n"))
+                elif not repo._bookmarkcurrent:
+                    ui.status(_("no active bookmark\n"))
+                else:
+                    bookmarks.unsetcurrent(repo)
+        finally:
+            wlock.release()
     else: # show bookmarks
+        marks = repo._bookmarks
         if len(marks) == 0:
             ui.status(_("no bookmarks set\n"))
         else:
