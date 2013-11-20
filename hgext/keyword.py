@@ -439,7 +439,11 @@ def demo(ui, repo, *args, **opts):
     repo[None].add([fn])
     ui.note(_('\nkeywords written to %s:\n') % fn)
     ui.note(keywords)
-    repo.dirstate.setbranch('demobranch')
+    wlock = repo.wlock()
+    try:
+        repo.dirstate.setbranch('demobranch')
+    finally:
+        wlock.release()
     for name, cmd in ui.configitems('hooks'):
         if name.split('.', 1)[0].find('commit') > -1:
             repo.ui.setconfig('hooks', name, '')
