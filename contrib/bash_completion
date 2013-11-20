@@ -219,6 +219,9 @@ _hg_command_specific()
         fi
     fi
 
+    local aliascmd=$(_hg_cmd showconfig alias.$cmd | awk '{print $1}')
+    [ -n "$aliascmd" ] && cmd=$aliascmd
+
     case "$cmd" in
         help)
             _hg_commands
