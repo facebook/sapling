@@ -130,11 +130,18 @@ _hg_count_non_option()
 
 _hg()
 {
-    local cur prev cmd cmd_index opts i
+    local cur prev cmd cmd_index opts i aliashg
     # global options that receive an argument
     local global_args='--cwd|-R|--repository'
     local hg="$1"
     local canonical=0
+
+    aliashg=$(alias $hg 2>/dev/null)
+    if [[ -n "$aliashg" ]]; then
+      aliashg=${aliashg#"alias $hg='"}
+      aliashg=${aliashg%"'"}
+      hg=$aliashg
+    fi
 
     COMPREPLY=()
     cur="$2"
