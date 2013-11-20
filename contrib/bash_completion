@@ -84,7 +84,6 @@ _hg_debugpathcomplete()
 {
     local files="$(_hg_cmd debugpathcomplete $1 "$cur")"
     local IFS=$'\n'
-    compopt -o filenames 2>/dev/null
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
@@ -92,7 +91,6 @@ _hg_status()
 {
     local files="$(_hg_cmd status -n$1 "glob:$cur**")"
     local IFS=$'\n'
-    compopt -o filenames 2>/dev/null
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
@@ -126,6 +124,19 @@ _hg_count_non_option()
     done
 
     echo $(($count - 1))
+}
+
+_hg_fix_wordlist()
+{
+    local LASTCHAR=' '
+    if [ ${#COMPREPLY[@]} = 1 ]; then
+        [ -d "$COMPREPLY" ] && LASTCHAR=/
+        COMPREPLY=$(printf %q%s "$COMPREPLY" "$LASTCHAR")
+    else
+        for ((i=0; i < ${#COMPREPLY[@]}; i++)); do
+            [ -d "${COMPREPLY[$i]}" ] && COMPREPLY[$i]=${COMPREPLY[$i]}/
+        done
+    fi
 }
 
 _hg()
@@ -162,12 +173,14 @@ _hg()
 
     if [[ "$cur" == -* ]]; then
         if [ "$(type -t "_hg_opt_$cmd")" = function ] && "_hg_opt_$cmd"; then
+            _hg_fix_wordlist
             return
         fi
 
         opts=$(_hg_cmd debugcomplete --options "$cmd")
 
         COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
+        _hg_fix_wordlist
         return
     fi
 
@@ -176,22 +189,26 @@ _hg()
         -R|--repository)
             _hg_paths
             _hg_repos
+            _hg_fix_wordlist
             return
         ;;
         --cwd)
             # Stick with default bash completion
+            _hg_fix_wordlist
             return
         ;;
     esac
 
     if [ -z "$cmd" ] || [ $COMP_CWORD -eq $i ]; then
         _hg_commands
+        _hg_fix_wordlist
         return
     fi
 
     # try to generate completion candidates for whatever command the user typed
     local help
     if _hg_command_specific; then
+        _hg_fix_wordlist
         return
     fi
 
@@ -205,6 +222,7 @@ _hg()
     cmd=${cmd%%[$' \n']*}
     canonical=1
     _hg_command_specific
+    _hg_fix_wordlist
 }
 
 _hg_command_specific()
@@ -291,8 +309,8 @@ _hg_command_specific()
     return 0
 }
 
-complete -o bashdefault -o default -F _hg hg \
-    || complete -o default -F _hg hg
+complete -o bashdefault -o default -o nospace -F _hg hg \
+    || complete -o default -o nospace -F _hg hg
 
 
 # Completion for commands provided by extensions
