@@ -1633,6 +1633,8 @@ class url(object):
     <url path: '\\\\blah\\blah\\blah'>
     >>> url(r'\\blah\blah\blah#baz')
     <url path: '\\\\blah\\blah\\blah', fragment: 'baz'>
+    >>> url(r'file:///C:\users\me')
+    <url scheme: 'file', path: 'C:\\users\\me'>
 
     Authentication credentials:
 
@@ -1650,7 +1652,7 @@ class url(object):
     """
 
     _safechars = "!~*'()+"
-    _safepchars = "/!~*'()+:"
+    _safepchars = "/!~*'()+:\\"
     _matchscheme = re.compile(r'^[a-zA-Z0-9+.\-]+:').match
 
     def __init__(self, path, parsequery=True, parsefragment=True):
@@ -1787,6 +1789,8 @@ class url(object):
         'file:///c:/tmp/foo/bar'
         >>> print url(r'bundle:foo\bar')
         bundle:foo\bar
+        >>> print url(r'file:///D:\data\hg')
+        file:///D:\data\hg
         """
         if self._localpath:
             s = self.path
