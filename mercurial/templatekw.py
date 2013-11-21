@@ -390,6 +390,7 @@ dockeywords = {
     'parents': _showparents,
 }
 dockeywords.update(keywords)
+del dockeywords['branches']
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = dockeywords.values()
