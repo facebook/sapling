@@ -1603,7 +1603,7 @@ Test date format:
   date: 70 01 01 00 +0000
 
 Test string escaping:
-  
+
   $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'
   >
   <>\n<[>
