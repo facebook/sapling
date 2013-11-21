@@ -188,6 +188,7 @@ def showbranches(**args):
     branch = args['ctx'].branch()
     if branch != 'default':
         return showlist('branch', [branch], plural='branches', **args)
+    return showlist('branch', [], plural='branches', **args)
 
 def showbookmarks(**args):
     """:bookmarks: List of strings. Any bookmarks associated with the

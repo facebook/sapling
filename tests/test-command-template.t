@@ -1621,3 +1621,8 @@ Test recursive evaluation:
   {rev}
   $ hg log -r 0 --template '{if(rev, "{author} {rev}")}\n'
   test 0
+
+Test branches inside if statement:
+
+  $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'
+  no
