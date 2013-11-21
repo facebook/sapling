@@ -318,10 +318,8 @@ complete -o bashdefault -o default -o nospace -F _hg hg \
 # bookmarks
 _hg_cmd_bookmarks()
 {
-    if [[ "$prev" = @(-d|--delete|-m|--rename) ]]; then
-        _hg_bookmarks
-        return
-    fi
+    _hg_bookmarks
+    return
 }
 
 # mq
