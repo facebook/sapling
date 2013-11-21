@@ -597,7 +597,7 @@ _hg_cmd_transplant()
 # shelve
 _hg_shelves()
 {
-    local shelves="$(_hg_cmd unshelve -l .)"
+    local shelves="$(_hg_cmd shelve -ql)"
     local IFS=$'\n'
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$shelves' -- "$cur"))
 }
