@@ -14,9 +14,9 @@ of exactly one full-length identifier.
 
 Any other string is treated as a bookmark, tag, or branch name. A
 bookmark is a movable pointer to a revision. A tag is a permanent name
-associated with a revision. A branch name denotes the tipmost revision
-of that branch. Bookmark, tag, and branch names must not contain the ":"
-character.
+associated with a revision. A branch name denotes the tipmost open branch head
+of that branch - or if they are all closed, the tipmost closed head of the
+branch. Bookmark, tag, and branch names must not contain the ":" character.
 
 The reserved name "tip" always identifies the most recent revision.
 

@@ -723,7 +723,8 @@ Test a help topic
   
       Any other string is treated as a bookmark, tag, or branch name. A bookmark
       is a movable pointer to a revision. A tag is a permanent name associated
-      with a revision. A branch name denotes the tipmost revision of that
+      with a revision. A branch name denotes the tipmost open branch head of
+      that branch - or if they are all closed, the tipmost closed head of the
       branch. Bookmark, tag, and branch names must not contain the ":"
       character.
   
@@ -1878,9 +1879,9 @@ Dish up an empty repo; serve it cold.
   <p>
   Any other string is treated as a bookmark, tag, or branch name. A
   bookmark is a movable pointer to a revision. A tag is a permanent name
-  associated with a revision. A branch name denotes the tipmost revision
-  of that branch. Bookmark, tag, and branch names must not contain the &quot;:&quot;
-  character.
+  associated with a revision. A branch name denotes the tipmost open branch head
+  of that branch - or if they are all closed, the tipmost closed head of the
+  branch. Bookmark, tag, and branch names must not contain the &quot;:&quot; character.
   </p>
   <p>
   The reserved name &quot;tip&quot; always identifies the most recent revision.

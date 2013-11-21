@@ -167,6 +167,8 @@ class branchcache(dict):
             return False
 
     def _branchtip(self, heads):
+        '''Return tuple with last open head in heads and false,
+        otherwise return last closed head and true.'''
         tip = heads[-1]
         closed = True
         for h in reversed(heads):
@@ -177,6 +179,9 @@ class branchcache(dict):
         return tip, closed
 
     def branchtip(self, branch):
+        '''Return the tipmost open head on branch head, otherwise return the
+        tipmost closed head on branch.
+        Raise KeyError for unknown branch.'''
         return self._branchtip(self[branch])[0]
 
     def branchheads(self, branch, closed=False):

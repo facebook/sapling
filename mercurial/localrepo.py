@@ -655,7 +655,8 @@ class localrepository(object):
         return sorted(marks)
 
     def branchmap(self):
-        '''returns a dictionary {branch: [branchheads]}'''
+        '''returns a dictionary {branch: [branchheads]} with branchheads
+        ordered by increasing revision number'''
         branchmap.updatecache(self)
         return self._branchcaches[self.filtername]
 
