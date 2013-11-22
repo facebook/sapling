@@ -280,7 +280,7 @@ skip
   $ hg bisect -r
   $ hg bisect -g tip
   $ hg bisect -b tip
-  abort: starting revisions are not directly related
+  abort: inconsistent state, 31:58c80a7c8a40 is good and bad
   [255]
 
   $ hg bisect -r

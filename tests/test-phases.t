@@ -482,7 +482,7 @@ test partial failure
 
   $ hg phase --public 7
   $ hg phase --draft '5 or 7'
-  cannot move 1 changesets to a more permissive phase, use --force
+  cannot move 1 changesets to a higher phase, use --force
   phase changed for 1 changesets
   [1]
   $ hg log -G --template "{rev} {phase} {desc}\n"
@@ -506,7 +506,7 @@ test partial failure
 test complete failure
 
   $ hg phase --draft 7
-  cannot move 1 changesets to a more permissive phase, use --force
+  cannot move 1 changesets to a higher phase, use --force
   no phases changed
   [1]
 

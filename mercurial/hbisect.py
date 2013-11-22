@@ -63,7 +63,8 @@ def bisect(changelog, state):
         badrev, ancestors = buildancestors(state['good'], state['bad'])
     bad = changelog.node(badrev)
     if not ancestors: # now we're confused
-        if len(state['bad']) == 1 and len(state['good']) == 1:
+        if (len(state['bad']) == 1 and len(state['good']) == 1 and
+            state['bad'] != state['good']):
             raise util.Abort(_("starting revisions are not directly related"))
         raise util.Abort(_("inconsistent state, %s:%s is good and bad")
                          % (badrev, short(bad)))
