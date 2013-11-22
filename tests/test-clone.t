@@ -13,7 +13,7 @@
 
 # shallow clone from full
 
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow --noupdate
+  $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
   2 files to transfer, 227 bytes of data
   transferred 227 bytes in 0.0 seconds (* KB/sec) (glob)
@@ -36,7 +36,7 @@
 
 # shallow clone from shallow
 
-  $ hgcloneshallow ssh://localhost/$PWD/shallow shallow2  --noupdate
+  $ hgcloneshallow ssh://user@dummy/shallow shallow2  --noupdate
   streaming all changes
   2 files to transfer, 227 bytes of data
   transferred 227 bytes in 0.0 seconds (* KB/sec) (glob)
@@ -58,7 +58,7 @@
 
 # full clone from shallow
 
-  $ hg clone --noupdate ssh://localhost/$PWD/shallow full
+  $ hg clone --noupdate ssh://user@dummy/shallow full
   abort: unexpected response from remote server: empty string
   remote: abort: Cannot clone from a shallow repo to a full repo.
   [255]

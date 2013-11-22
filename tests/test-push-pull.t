@@ -11,9 +11,9 @@
 
   $ cd ..
 
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow -q
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow2 -q
+  $ hgcloneshallow ssh://user@dummy/master shallow2 -q
 
 # pull to shallow from full
 
@@ -23,7 +23,7 @@
 
   $ cd ../shallow
   $ hg pull
-  pulling from ssh://localhost/$TESTTMP/master
+  pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests
@@ -59,8 +59,8 @@
 
   $ hg strip -r 1
   saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-backup.hg
-  $ hg pull ssh://localhost//$TESTTMP/shallow
-  pulling from ssh://localhost//$TESTTMP/shallow
+  $ hg pull ssh://user@dummy/$TESTTMP/shallow
+  pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes
   adding changesets
   adding manifests
@@ -80,8 +80,8 @@
   $ cd shallow
   $ echo a > a
   $ hg commit -qAm a
-  $ hg push ssh://localhost//$TESTTMP/shallow2
-  pushing to ssh://localhost//$TESTTMP/shallow2
+  $ hg push ssh://user@dummy/$TESTTMP/shallow2
+  pushing to ssh://user@dummy/$TESTTMP/shallow2
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -100,7 +100,7 @@
 
   $ cd shallow
   $ hg push
-  pushing to ssh://localhost/$TESTTMP/master
+  pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets
   remote: adding manifests

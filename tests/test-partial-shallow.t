@@ -14,7 +14,7 @@
 
 # partial shallow clone
 
-  $ hg clone --shallow ssh://localhost/$PWD/master shallow --noupdate --config remotefilelog.includepattern=foo
+  $ hg clone --shallow ssh://user@dummy/master shallow --noupdate --config remotefilelog.includepattern=foo
   streaming all changes
   3 files to transfer, 336 bytes of data
   transferred 336 bytes in * seconds (* KB/sec) (glob)
@@ -49,7 +49,7 @@
   $ hg commit -qm two
   $ cd ../shallow
   $ hg pull
-  pulling from ssh://localhost/$TESTTMP/master
+  pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests

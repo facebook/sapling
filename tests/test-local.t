@@ -13,7 +13,7 @@
 
   $ cd ..
 
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow -q
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow
 
@@ -70,7 +70,7 @@
 
   $ cd ../shallow
   $ hg pull
-  pulling from ssh://localhost/$TESTTMP/master
+  pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests

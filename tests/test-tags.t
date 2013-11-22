@@ -14,10 +14,10 @@
 
 # clone with tags
 
-  $ hg clone --shallow ssh://localhost/$PWD/master shallow --noupdate --config remotefilelog.excludepattern=.hgtags
+  $ hg clone --shallow ssh://user@dummy/master shallow --noupdate --config remotefilelog.excludepattern=.hgtags
   streaming all changes
   3 files to transfer, 678 bytes of data
-  transferred 678 bytes in * seconds (* MB/sec) (glob)
+  transferred 678 bytes in * seconds (*/sec) (glob)
   $ cat >> shallow/.hg/hgrc <<EOF
   > [remotefilelog]
   > cachepath=$PWD/hgcache
@@ -43,7 +43,7 @@
   $ hg tag tag2
   $ cd ../shallow
   $ hg pull
-  pulling from ssh://localhost/$TESTTMP/master
+  pulling from ssh://user@dummy/master
   searching for changes
   adding changesets
   adding manifests

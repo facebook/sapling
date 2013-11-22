@@ -13,7 +13,7 @@
   $ hg commit -qAm x
   $ cd ..
 
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow -q
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
 
@@ -66,7 +66,7 @@
   $ hg commit -qAm x
   $ cd ..
 
-  $ hgcloneshallow ssh://localhost/$PWD/master shallow -q
+  $ hgcloneshallow ssh://user@dummy/master shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
 # Rebase stack onto landed commit

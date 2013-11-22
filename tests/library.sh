@@ -8,6 +8,11 @@ debug=True
 remotefilelog=$TESTDIR/../remotefilelog
 rebase=
 mq=
+[ui]
+ssh=python "$TESTDIR/dummyssh"
+remotecmd=$TESTDIR/../../hg/hg
+[server]
+preferuncompressed=True
 EOF
 export HGRCPATH=$PWD/.hgrc
 
