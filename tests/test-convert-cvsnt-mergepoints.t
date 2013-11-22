@@ -22,7 +22,6 @@ output of 'cvs ci' varies unpredictably, so discard most of it
   > }
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
-  $ echo "graphlog = " >> $HGRCPATH
 
 create cvs repository
 

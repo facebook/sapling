@@ -4,7 +4,6 @@
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
 
 create baz archive
   $ baz make-archive baz@mercurial--convert hg-test-convert-baz
@@ -129,7 +128,7 @@ converting baz repo to Mercurial
 
   $ glog()
   > {
-  >     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
   > }
 
 show graph log

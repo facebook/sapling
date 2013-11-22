@@ -8,7 +8,6 @@ and http://mercurial.selenic.com/bts/issue1447
   > }
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
-  $ echo "graphlog = " >> $HGRCPATH
   $ echo "[convert]" >> $HGRCPATH
   $ echo "cvsps.cache=0" >> $HGRCPATH
 
@@ -79,7 +78,7 @@ Convert
 
 Check the result
 
-  $ hg -R src-hg glog --template '{rev} ({branches}) {desc} files: {files}\n'
+  $ hg -R src-hg log -G --template '{rev} ({branches}) {desc} files: {files}\n'
   o  5 () update tags files: .hgtags
   |
   | o  4 (BRANCH) mod a again files: a

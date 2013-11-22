@@ -25,7 +25,7 @@ Create a repo with some stuff in it:
   $ hg phase --public 3
   $ hg phase --force --secret 6
 
-  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}.{phase}: {desc}\n'
+  $ hg log -G --template '{author}@{rev}.{phase}: {desc}\n'
   @    test@6.secret: 6
   |\
   | o  test@5.draft: 5
@@ -249,7 +249,7 @@ Compare with original:
 
 View graph:
 
-  $ hg --config extensions.graphlog= log -G --template '{author}@{rev}.{phase}: {desc}\n'
+  $ hg log -G --template '{author}@{rev}.{phase}: {desc}\n'
   @  test@11.draft: 3
   |
   o  test@10.draft: 4

@@ -549,7 +549,7 @@ test missing revisions
 
 test stripping a non-checked-out but bookmarked revision
 
-  $ hg --config extensions.graphlog= log --graph
+  $ hg log --graph
   o  changeset:   4:9ba5f110a0b3
   |  branch:      test
   |  tag:         tip
@@ -587,7 +587,7 @@ test stripping a non-checked-out but bookmarked revision
   saved backup bundle to * (glob)
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
-  $ hg --config extensions.graphlog= log --graph
+  $ hg log --graph
   @  changeset:   3:9ba5f110a0b3
   |  branch:      test
   |  bookmark:    four

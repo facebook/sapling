@@ -1,7 +1,6 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > graphlog =
   > convert =
   > [convert]
   > hg.saverev = yes
@@ -9,7 +8,7 @@
 
   $ glog()
   > {
-  >     hg -R "$1" glog --template '{rev} "{desc}" files: {files}\n'
+  >     hg -R "$1" log -G --template '{rev} "{desc}" files: {files}\n'
   > }
 
   $ hg init source

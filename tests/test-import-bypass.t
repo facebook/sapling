@@ -1,9 +1,8 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "purge=" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
 
   $ shortlog() {
-  >     hg glog --template '{rev}:{node|short} {author} {date|hgdate} - {branch} - {desc|firstline}\n'
+  >     hg log -G --template '{rev}:{node|short} {author} {date|hgdate} - {branch} - {desc|firstline}\n'
   > }
 
 Test --bypass with other options

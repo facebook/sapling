@@ -1,6 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
-
   $ addcommit () {
   >     echo $1 > $1
   >     hg add $1

@@ -1,9 +1,5 @@
   $ "$TESTDIR/hghave" killdaemons || exit 80
 
-  $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > graphlog=
-  > EOF
   $ hgph() { hg log -G --template "{rev} {phase} {desc} - {node|short}\n" $*; }
 
   $ mkcommit() {
@@ -399,7 +395,7 @@ Push back to alpha
 
 initial setup
 
-  $ hg glog # of alpha
+  $ hg log -G # of alpha
   o  changeset:   6:145e75495359
   |  tag:         tip
   |  user:        test

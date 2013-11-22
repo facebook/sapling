@@ -1,8 +1,5 @@
   $ HGFOO=BAR; export HGFOO
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > graphlog=
-  > 
   > [alias]
   > # should clobber ci but not commit (issue2993)
   > ci = version
@@ -34,7 +31,7 @@
   > count = !hg log -r "\$@" --template=. | wc -c | sed -e 's/ //g'
   > mcount = !hg log \$@ --template=. | wc -c | sed -e 's/ //g'
   > rt = root
-  > tglog = glog --template "{rev}:{node|short}: '{desc}' {branches}\n"
+  > tglog = log -G --template "{rev}:{node|short}: '{desc}' {branches}\n"
   > idalias = id
   > idaliaslong = id
   > idaliasshell = !echo test

@@ -10,9 +10,8 @@ Check that obsolete properly strip heads
   > [ui]
   > logtemplate='{node|short} ({phase}) {desc|firstline}\n'
   > [extensions]
-  > graphlog=
+  > obs=${TESTTMP}/obs.py
   > EOF
-  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
   $ mkcommit() {
   >    echo "$1" > "$1"
   >    hg add "$1"
@@ -52,7 +51,7 @@ setup
   $ mkcommit new
   created new head
   $ hg debugobsolete --flags 1 `getid old` `getid new`
-  $ hg glog --hidden
+  $ hg log -G --hidden
   @  71e3228bffe1 (draft) add new
   |
   | x  c70b08862e08 (draft) add old
@@ -84,7 +83,7 @@ setup
   pulling from $TESTTMP/remote (glob)
   searching for changes
   no changes found
-  $ hg glog --hidden
+  $ hg log -G --hidden
   @  71e3228bffe1 (draft) add new
   |
   | o  c70b08862e08 (public) add old
@@ -112,7 +111,7 @@ TODO: Not implemented yet.
 #   $ cp -r ../backup1 ../remote
 #   $ hg -R ../remote phase --public c70b08862e08
 #   $ hg phase --draft --force c70b08862e08
-#   $ hg glog --hidden
+#   $ hg log -G --hidden
 #   @  71e3228bffe1 (draft) add new
 #   |
 #   | x  c70b08862e08 (draft) add old
@@ -141,7 +140,7 @@ setup
   $ hg up -q '.^'
   $ mkcommit other
   created new head
-  $ hg glog --hidden
+  $ hg log -G --hidden
   @  d7d41ccbd4de (draft) add other
   |
   | o  71e3228bffe1 (draft) add new
@@ -193,7 +192,7 @@ setup. (The obsolete marker is known locally only
   $ mkcommit desc2
   created new head
   $ hg debugobsolete `getid old` `getid new`
-  $ hg glog --hidden
+  $ hg log -G --hidden
   @  5fe37041cc2b (draft) add desc2
   |
   | o  a3ef1d111c5f (draft) add desc1
@@ -204,7 +203,7 @@ setup. (The obsolete marker is known locally only
   |/
   o  b4952fcf48cf (public) add base
   
-  $ hg glog --hidden -R ../remote
+  $ hg log -G --hidden -R ../remote
   o  71e3228bffe1 (draft) add new
   |
   | o  c70b08862e08 (draft) add old
@@ -248,12 +247,12 @@ setup
   $ hg  id --debug -r tip
   71e3228bffe1886550777233d6c97bb5a6b2a650 tip
   $ hg debugobsolete c70b08862e0838ea6d7c59c85da2f1ed6c8d67da 71e3228bffe1886550777233d6c97bb5a6b2a650
-  $ hg glog --hidden
+  $ hg log -G --hidden
   @  71e3228bffe1 (draft) add new
   |
   o  b4952fcf48cf (public) add base
   
-  $ hg glog --hidden -R ../remote
+  $ hg log -G --hidden -R ../remote
   o  c70b08862e08 (draft) add old
   |
   @  b4952fcf48cf (public) add base

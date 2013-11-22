@@ -1,6 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "strip=" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
 
   $ restore() {
   >     hg unbundle -q .hg/strip-backup/*
@@ -226,7 +225,7 @@ after strip of merge parent
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg glog
+  $ hg log -G
   @  changeset:   4:264128213d29
   |  tag:         tip
   |  parent:      1:ef3a871183d7
@@ -259,7 +258,7 @@ after strip of merge parent
 
   $ hg strip "roots(2)" 3
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
-  $ hg glog
+  $ hg log -G
   @  changeset:   2:264128213d29
   |  tag:         tip
   |  user:        test
@@ -277,7 +276,7 @@ after strip of merge parent
      summary:     a
   
   $ restore
-  $ hg glog
+  $ hg log -G
   o  changeset:   4:443431ffac4f
   |  tag:         tip
   |  user:        test
@@ -311,7 +310,7 @@ after strip of merge parent
   $ hg strip 2 4
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
-  $ hg glog
+  $ hg log -G
   o  changeset:   2:65bd5f99a4a3
   |  tag:         tip
   |  user:        test

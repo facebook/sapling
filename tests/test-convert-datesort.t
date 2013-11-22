@@ -2,7 +2,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert=
-  > graphlog=
   > EOF
   $ hg init t
   $ cd t
@@ -83,7 +82,7 @@ convert with datesort
 
 graph converted repo
 
-  $ hg -R t-datesort glog --template '{rev} "{desc}"\n'
+  $ hg -R t-datesort log -G --template '{rev} "{desc}"\n'
   o    12 "c1"
   |\
   | o  11 "b2x"
@@ -134,7 +133,7 @@ convert with datesort (default mode)
 
 graph converted repo
 
-  $ hg -R t-sourcesort glog --template '{rev} "{desc}"\n'
+  $ hg -R t-sourcesort log -G --template '{rev} "{desc}"\n'
   o    12 "c1"
   |\
   | o  11 "b2x"
@@ -185,7 +184,7 @@ convert with closesort
 
 graph converted repo
 
-  $ hg -R t-closesort glog --template '{rev} "{desc}"\n'
+  $ hg -R t-closesort log -G --template '{rev} "{desc}"\n'
   o    12 "c1"
   |\
   | o  11 "c0"

@@ -14,7 +14,6 @@ Initialization
   > [alias]
   > logt = log --template '{rev}:{node|short} {desc|firstline}\n'
   > [extensions]
-  > graphlog=
   > histedit=
   > EOF
 

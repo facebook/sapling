@@ -34,8 +34,7 @@
 
 Initial repo state:
 
-  $ hg --config 'extensions.graphlog=' \
-  >    glog --template '{rev}:{node|short} {parents} {branches}\n'
+  $ hg log -G --template '{rev}:{node|short} {parents} {branches}\n'
   @  5:ff252e8273df  b1
   |
   o  4:d047485b3896 0:60829823a42a  b1

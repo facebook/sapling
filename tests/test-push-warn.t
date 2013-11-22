@@ -1,6 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
-
   $ hg init a
   $ cd a
   $ echo foo > t1
@@ -532,7 +529,7 @@ A, not B
 
 glog of local:
 
-  $ hg glog --template "{rev}: {branches} {desc}\n"
+  $ hg log -G --template "{rev}: {branches} {desc}\n"
   @  2: A a2
   |
   | o  1: B b
@@ -541,7 +538,7 @@ glog of local:
   
 glog of remote:
 
-  $ hg glog -R inner --template "{rev}: {branches} {desc}\n"
+  $ hg log -G -R inner --template "{rev}: {branches} {desc}\n"
   @  2: B b1
   |
   o  1: B b
@@ -615,7 +612,7 @@ it replaces a former topological and branch head, so this should not warn
 
 glog of local:
 
-  $ hg glog --template "{rev}: {branches} {desc}\n"
+  $ hg log -G --template "{rev}: {branches} {desc}\n"
   @  3: A a2
   |
   o  2: A a1
@@ -626,7 +623,7 @@ glog of local:
   
 glog of remote:
 
-  $ hg glog -R inner --template "{rev}: {branches} {desc}\n"
+  $ hg log -G -R inner --template "{rev}: {branches} {desc}\n"
   @  3: B b1
   |
   | o  2: A a1
@@ -700,7 +697,7 @@ but child is on different branch:
 
 glog of local:
 
-  $ hg glog --template "{rev}: {branches} {desc}\n"
+  $ hg log -G --template "{rev}: {branches} {desc}\n"
   @  5: A b3
   |
   | o  4: B a3
@@ -715,7 +712,7 @@ glog of local:
   
 glog of remote:
 
-  $ hg glog -R inner --template "{rev}: {branches} {desc}\n"
+  $ hg log -G -R inner --template "{rev}: {branches} {desc}\n"
   @  3: B b1
   |
   o  2: B b0

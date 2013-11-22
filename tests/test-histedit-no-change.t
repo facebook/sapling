@@ -5,7 +5,6 @@ editing a changeset without any actual change would corrupt the repository
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > graphlog=
   > histedit=
   > EOF
 
@@ -64,7 +63,7 @@ editing a changeset without any actual change would corrupt the repository
   > {
   >     comment="${1:-log}"
   >     echo % "${comment}"
-  >     hg glog --template '{rev} {node} \"{desc|firstline}\"\n'
+  >     hg log -G --template '{rev} {node} \"{desc|firstline}\"\n'
   > }
 
 

@@ -1,6 +1,4 @@
   $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > graphlog=
   > [phases]
   > # public changeset are not obsolete
   > publish=false
@@ -120,7 +118,7 @@ Refuse pathological nullid successors
 
 Check that graphlog detect that a changeset is obsolete:
 
-  $ hg glog
+  $ hg log -G
   @  changeset:   5:5601fb93a350
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
@@ -217,7 +215,7 @@ check that various commands work well with filtering
 Check that public changeset are not accounted as obsolete:
 
   $ hg --hidden phase --public 2
-  $ hg --config 'extensions.graphlog=' glog
+  $ hg log -G
   @  changeset:   5:5601fb93a350
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
@@ -514,7 +512,7 @@ detect outgoing obsolete and unstable
 ---------------------------------------
 
 
-  $ hg glog
+  $ hg log -G
   o  changeset:   3:6f9641995072
   |  tag:         tip
   |  parent:      1:7c3bad9141dc
@@ -548,7 +546,7 @@ detect outgoing obsolete and unstable
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add original_d
   
-  $ hg glog -r '::unstable()'
+  $ hg log -G -r '::unstable()'
   @  changeset:   5:cda648ca50f5
   |  tag:         tip
   |  user:        test
@@ -653,7 +651,7 @@ no warning displayed
 
 Do not warn about new head when the new head is a successors of a remote one
 
-  $ hg glog
+  $ hg log -G
   @  changeset:   5:cda648ca50f5
   |  tag:         tip
   |  user:        test

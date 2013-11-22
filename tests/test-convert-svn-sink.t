@@ -17,7 +17,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
 
   $ hg init a

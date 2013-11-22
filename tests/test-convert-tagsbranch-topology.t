@@ -6,7 +6,6 @@
   $ echo "autocrlf = false" >> $HOME/.gitconfig
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'hgext.graphlog =' >> $HGRCPATH
   $ echo '[convert]' >> $HGRCPATH
   $ echo 'hg.usebranchnames = True' >> $HGRCPATH
   $ echo 'hg.tagsbranch = tags-update' >> $HGRCPATH
@@ -26,7 +25,7 @@
   > }
   $ glog()
   > {
-  >     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
   > }
   $ convertrepo()
   > {

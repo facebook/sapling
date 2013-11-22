@@ -1,6 +1,5 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > graphlog=
   > rebase=
   > 
   > [alias]

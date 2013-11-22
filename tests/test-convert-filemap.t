@@ -1,11 +1,10 @@
 
   $ HGMERGE=true; export HGMERGE
   $ echo '[extensions]' >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
   $ echo 'convert =' >> $HGRCPATH
   $ glog()
   > {
-  >     hg glog --template '{rev} "{desc}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev} "{desc}" files: {files}\n' "$@"
   > }
   $ hg init source
   $ cd source
@@ -473,7 +472,7 @@ test merge parents/empty merges pruning
 
   $ glog()
   > {
-  >     hg glog --template '{rev}:{node|short}@{branch} "{desc}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev}:{node|short}@{branch} "{desc}" files: {files}\n' "$@"
   > }
 
 test anonymous branch pruning

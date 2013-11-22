@@ -1,10 +1,9 @@
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
   $ glog()
   > {
-  >     hg glog --template '{rev}:{node|short} "{desc|firstline}"\
+  >     hg log -G --template '{rev}:{node|short} "{desc|firstline}"\
   >  files: {files}\n' "$@"
   > }
   $ hg init repo1

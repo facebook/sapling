@@ -10,7 +10,6 @@
   > }
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
-  $ echo "graphlog = " >> $HGRCPATH
   $ cat > cvshooks.py <<EOF
   > def cvslog(ui,repo,hooktype,log):
   >     print "%s hook: %d entries"%(hooktype,len(log))
@@ -307,7 +306,7 @@ convert again
   2 funny
   1 fuzzy
   0 fuzzy
-  $ hg -R src-hg glog --template '{rev} ({branches}) {desc} date: {date|date} files: {files}\n'
+  $ hg -R src-hg log -G --template '{rev} ({branches}) {desc} date: {date|date} files: {files}\n'
   o  8 (branch) fuzzy date: * -1000 files: b/c (glob)
   |
   o  7 (branch) fuzzy date: * -1000 files: a (glob)

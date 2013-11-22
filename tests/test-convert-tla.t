@@ -3,7 +3,6 @@
   $ tla my-id "mercurial <mercurial@selenic.com>"
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
 
 create tla archive
 
@@ -109,7 +108,7 @@ converting tla repo to Mercurial
   $ tla register-archive -d tla@mercurial--convert
   $ glog()
   > {
-  >     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
   > }
 
 show graph log

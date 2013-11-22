@@ -4,7 +4,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
 
   $ svnadmin create svn-repo
@@ -39,7 +38,7 @@ Convert trunk and branches
   0 rename d4old into d4new
 
   $ cd A-hg
-  $ hg glog --template '{rev} {desc|firstline} files: {files}\n'
+  $ hg log -G --template '{rev} {desc|firstline} files: {files}\n'
   o  13 rename d4old into d4new files: d4new/g d4old/g
   |
   o  12 add d4old files: d4old/g

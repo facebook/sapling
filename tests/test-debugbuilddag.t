@@ -1,5 +1,3 @@
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
 
 plain
 
@@ -60,7 +58,7 @@ tip
   $ hg id
   000000000000
 glog
-  $ hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
+  $ hg log -G --template '{rev}: {desc} [{branches}] @ {date}\n'
   o  11: r11 [] @ 11.00
   |
   o  10: r10 [] @ 10.00
@@ -106,7 +104,7 @@ tip
   $ hg id
   000000000000
 glog
-  $ hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
+  $ hg log -G --template '{rev}: {desc} [{branches}] @ {date}\n'
   o  11: r11 [] @ 11.00
   |
   o  10: r10 [] @ 10.00
@@ -132,7 +130,7 @@ glog
   o  0: r0 [start] @ 0.00
   
 glog of
-  $ hg glog --template '{rev}: {desc} [{branches}]\n' of
+  $ hg log -G --template '{rev}: {desc} [{branches}]\n' of
   o  11: r11 []
   |
   o  10: r10 []
@@ -182,7 +180,7 @@ tip
   $ hg id
   000000000000
 glog
-  $ hg glog --template '{rev}: {desc} [{branches}] @ {date}\n'
+  $ hg log -G --template '{rev}: {desc} [{branches}] @ {date}\n'
   o  11: r11 [] @ 11.00
   |
   o  10: r10 [] @ 10.00
@@ -208,7 +206,7 @@ glog
   o  0: r0 [] @ 0.00
   
 glog mf
-  $ hg glog --template '{rev}: {desc} [{branches}]\n' mf
+  $ hg log -G --template '{rev}: {desc} [{branches}]\n' mf
   o  11: r11 []
   |
   o  10: r10 []

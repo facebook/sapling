@@ -2127,7 +2127,7 @@ test outgoing:
   $ hg ci -md -d '4 0'
   $ echo d >> d
   $ hg ci -mdd -d '5 0'
-  $ hg --config extensions.graphlog= glog --template "{rev}:{node|short} {desc|firstline}\n"
+  $ hg log -G --template "{rev}:{node|short} {desc|firstline}\n"
   @  10:3b6f1ec9dde9 dd
   |
   o  9:2f9fa9b998c5 d

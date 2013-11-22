@@ -1,6 +1,5 @@
   $ echo '[extensions]' >> $HGRCPATH
   $ echo 'hgext.mq =' >> $HGRCPATH
-  $ echo 'hgext.graphlog =' >> $HGRCPATH
 
   $ hg init repo
   $ cd repo

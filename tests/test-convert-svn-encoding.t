@@ -4,7 +4,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
 
   $ svnadmin create svn-repo

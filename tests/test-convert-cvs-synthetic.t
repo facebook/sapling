@@ -3,7 +3,6 @@ This feature requires use of builtin cvsps!
   $ "$TESTDIR/hghave" cvs || exit 80
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
-  $ echo "graphlog = " >> $HGRCPATH
 
 create cvs repository with one project
 
@@ -153,9 +152,9 @@ convert to hg (#1)
   1 MERGE from HEAD: add file6
   0 MERGE from v1_2: add file5
 
-hg glog output (#1)
+hg log -G output (#1)
 
-  $ hg -R proj.hg glog --template "{rev} {desc}\n"
+  $ hg -R proj.hg log -G --template "{rev} {desc}\n"
   o  8 MERGE from v1_2: add file5
   |
   | o  7 MERGE from HEAD: add file6
@@ -200,9 +199,9 @@ convert to hg (#2: with merge detection)
   1 MERGE from HEAD: add file6
   0 MERGE from v1_2: add file5
 
-hg glog output (#2)
+hg log -G output (#2)
 
-  $ hg -R proj.hg2 glog --template "{rev} {desc}\n"
+  $ hg -R proj.hg2 log -G --template "{rev} {desc}\n"
   o  8 MERGE from v1_2: add file5
   |
   | o  7 MERGE from HEAD: add file6

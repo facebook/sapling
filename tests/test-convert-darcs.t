@@ -2,7 +2,6 @@
   $ "$TESTDIR/hghave" darcs || exit 80
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
   $ DARCS_EMAIL='test@example.org'; export DARCS_EMAIL
 
 initialize darcs repo

@@ -1,7 +1,4 @@
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > graphlog=
-  > 
   > [alias]
   > tlog = log --template "{rev}:{node|short}: '{desc}' {branches}\n"
   > tglog = tlog -G

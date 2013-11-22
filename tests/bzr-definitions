@@ -5,11 +5,10 @@
 TERM=dumb; export TERM
 echo '[extensions]' >> $HGRCPATH
 echo 'convert = ' >> $HGRCPATH
-echo 'hgext.graphlog = ' >> $HGRCPATH
 
 glog()
 {
-    hg glog --template '{rev}@{branch} "{desc|firstline}" files: {files}\n' "$@"
+    hg log -G --template '{rev}@{branch} "{desc|firstline}" files: {files}\n' "$@"
 }
 
 manifest()

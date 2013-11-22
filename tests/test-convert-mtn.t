@@ -16,7 +16,6 @@ on Windows.
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert=" >> $HGRCPATH
-  $ echo 'graphlog =' >> $HGRCPATH
 
 Windows version of monotone home
 
@@ -257,7 +256,7 @@ convert incrementally
   0 largefile
   $ glog()
   > {
-  >     hg glog --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+  >     hg log -G --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
   > }
   $ cd repo.mtn-hg
   $ hg up -C

@@ -4,7 +4,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
 
   $ svnadmin create svn-repo
@@ -58,7 +57,7 @@ Convert again
   0 branch trunk@1 into old3
 
   $ cd A-hg
-  $ hg glog --template 'branch={branches} {rev} {desc|firstline} files: {files}\n'
+  $ hg log -G --template 'branch={branches} {rev} {desc|firstline} files: {files}\n'
   o  branch=newbranch 11 branch trunk@1 into old3 files:
   |
   | o  branch= 10 last change to a files: a

@@ -4,7 +4,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
 
   $ svnadmin create svn-repo
@@ -25,7 +24,7 @@ Convert
   updating tags
 
   $ cd A-hg
-  $ hg glog --template '{rev} {desc|firstline} tags: {tags}\n'
+  $ hg log -G --template '{rev} {desc|firstline} tags: {tags}\n'
   o  6 update tags tags: tip
   |
   o  5 changea tags: trunk.goodtag

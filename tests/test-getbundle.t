@@ -2,17 +2,12 @@
 
 = Test the getbundle() protocol function =
 
-Enable graphlog extension:
-
-  $ echo "[extensions]" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
-
 Create a test repository:
 
   $ hg init repo
   $ cd repo
   $ hg debugbuilddag -n -m '+2 :fork +5 :p1 *fork +6 :p2 /p1 :m1 +3' > /dev/null
-  $ hg glog --template '{node}\n'
+  $ hg log -G --template '{node}\n'
   o  10c14a2cc935e1d8c31f9e98587dcf27fb08a6da
   |
   o  4801a72e5d88cb515b0c7e40fae34180f3f837f2

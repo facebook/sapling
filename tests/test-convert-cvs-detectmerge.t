@@ -24,7 +24,6 @@ XXX copied from test-convert-cvs-synthetic
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "convert = " >> $HGRCPATH
-  $ echo "graphlog = " >> $HGRCPATH
   $ echo "[convert]" >> $HGRCPATH
   $ echo "cvsps.cache=0" >> $HGRCPATH
   $ echo "cvsps.mergefrom=\[MERGE from (\S+)\]" >> $HGRCPATH
@@ -210,7 +209,7 @@ complete log
 
 graphical log
 
-  $ hg -R proj.hg glog --template="$template"
+  $ hg -R proj.hg log -G --template="$template"
   o  9: '' fix file1 [MERGE from v1-1]
   |
   | o  8: 'v1_1' fix file1

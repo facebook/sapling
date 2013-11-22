@@ -378,10 +378,6 @@ Test phase command
 
 initial picture
 
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > hgext.graphlog=
-  > EOF
   $ hg log -G --template "{rev} {phase} {desc}\n"
   @    7 secret merge B' and E
   |\

@@ -4,7 +4,6 @@ create test repo
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > transplant =
-  > graphlog =
   > EOF
   $ hg init repo
   $ cd repo
@@ -39,7 +38,7 @@ commit bug fixes on bug fix branch
   $ echo fix2 > bugfix
   $ echo fix2 >> file1
   $ hg ci -Am"fix 2"
-  $ hg glog --template="$template"
+  $ hg log -G --template="$template"
   @  3  fix 2  [fixes]
   |
   o  2  fix 1  [fixes]
@@ -59,7 +58,7 @@ transplant bug fixes onto release branch
   [0-9a-f]{12} transplanted to [0-9a-f]{12} (re)
   applying [0-9a-f]{12} (re)
   [0-9a-f]{12} transplanted to [0-9a-f]{12} (re)
-  $ hg glog --template="$template"
+  $ hg log -G --template="$template"
   @  5  fix 2  [release]
   |
   o  4  fix 1  [release]

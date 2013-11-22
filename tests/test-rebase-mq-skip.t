@@ -3,7 +3,6 @@ already has one local mq patch
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > graphlog=
   > rebase=
   > mq=
   > 

@@ -1,6 +1,5 @@
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
 
 make a test repository that looks like this:
 

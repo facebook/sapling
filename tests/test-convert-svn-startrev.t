@@ -4,7 +4,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
-  > graphlog =
   > EOF
   $ convert()
   > {
@@ -15,7 +14,7 @@
   >         --config convert.svn.branches="  " \
   >         --config convert.svn.tags= \
   >         --datesort svn-repo $repopath
-  >     hg -R $repopath glog \
+  >     hg -R $repopath log -G \
   >         --template '{rev} {desc|firstline} files: {files}\n'
   >     echo
   > }

@@ -102,7 +102,6 @@ o  (0) root
   > EOF
 
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "graphlog=" >> $HGRCPATH
   $ echo "printrevset=`pwd`/printrevset.py" >> $HGRCPATH
 
   $ hg init repo
@@ -110,7 +109,7 @@ o  (0) root
 
 Empty repo:
 
-  $ hg glog
+  $ hg log -G
 
 
 Building DAG:
@@ -152,7 +151,7 @@ Building DAG:
   $ commit 34 "head" 32
 
 
-  $ hg glog -q
+  $ hg log -G -q
   @  34:fea3ac5810e0
   |
   | o  33:68608f5145f9
@@ -224,7 +223,7 @@ Building DAG:
   o  0:e6eb3150255d
   
 
-  $ hg glog
+  $ hg log -G
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
   |  parent:      32:d06dffa21a31
@@ -461,7 +460,7 @@ Building DAG:
   
 
 File glog:
-  $ hg glog a
+  $ hg log -G a
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
   |  parent:      32:d06dffa21a31
@@ -699,7 +698,7 @@ File glog:
 
 File glog per revset:
 
-  $ hg glog -r 'file("a")'
+  $ hg log -G -r 'file("a")'
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
   |  parent:      32:d06dffa21a31
@@ -1131,14 +1130,14 @@ File glog per revset (only merges):
 
 
 Empty revision range - display nothing:
-  $ hg glog -r 1..0
+  $ hg log -G -r 1..0
 
   $ cd ..
 
 #if no-outer-repo
 
 From outer space:
-  $ hg glog -l1 repo
+  $ hg log -G -l1 repo
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
   |  parent:      32:d06dffa21a31
@@ -1146,7 +1145,7 @@ From outer space:
   |  date:        Thu Jan 01 00:00:34 1970 +0000
   |  summary:     (34) head
   |
-  $ hg glog -l1 repo/a
+  $ hg log -G -l1 repo/a
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
   |  parent:      32:d06dffa21a31
@@ -1154,7 +1153,7 @@ From outer space:
   |  date:        Thu Jan 01 00:00:34 1970 +0000
   |  summary:     (34) head
   |
-  $ hg glog -l1 repo/missing
+  $ hg log -G -l1 repo/missing
 
 #endif
 
@@ -1169,7 +1168,7 @@ File log with revs != cset revs:
   $ hg commit -mtwo
   $ echo more >two
   $ hg commit -mmore
-  $ hg glog two
+  $ hg log -G two
   @  changeset:   2:12c28321755b
   |  tag:         tip
   |  user:        test
@@ -1183,14 +1182,14 @@ File log with revs != cset revs:
   |
 
 Issue1896: File log with explicit style
-  $ hg glog --style=default one
+  $ hg log -G --style=default one
   o  changeset:   0:3d578b4a1f53
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     one
   
 Issue2395: glog --style header and footer
-  $ hg glog --style=xml one
+  $ hg log -G --style=xml one
   <?xml version="1.0"?>
   <log>
   o  <logentry revision="0" node="3d578b4a1f537d5fcf7301bfa9c0b97adfaa6fb1">
@@ -1276,7 +1275,7 @@ File + limit with revs != cset revs:
   $ cd repo
   $ touch b
   $ hg ci -Aqm0
-  $ hg glog -l2 a
+  $ hg log -G -l2 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
   |  user:        test
@@ -1291,7 +1290,7 @@ File + limit with revs != cset revs:
   | |
 
 File + limit + -ra:b, (b - a) < limit:
-  $ hg glog -l3000 -r32:tip a
+  $ hg log -G -l3000 -r32:tip a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
   |  user:        test
@@ -1314,7 +1313,7 @@ File + limit + -ra:b, (b - a) < limit:
 
 Point out a common and an uncommon unshown parent
 
-  $ hg glog -r 'rev(8) or rev(9)'
+  $ hg log -G -r 'rev(8) or rev(9)'
   o    changeset:   9:7010c0af0a35
   |\   parent:      7:b632bb1b1224
   | |  parent:      8:7a0b11f71937
@@ -1332,7 +1331,7 @@ Point out a common and an uncommon unshown parent
 
 File + limit + -ra:b, b < tip:
 
-  $ hg glog -l1 -r32:34 a
+  $ hg log -G -l1 -r32:34 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
   |  user:        test
@@ -1342,7 +1341,7 @@ File + limit + -ra:b, b < tip:
 
 file(File) + limit + -ra:b, b < tip:
 
-  $ hg glog -l1 -r32:34 -r 'file("a")'
+  $ hg log -G -l1 -r32:34 -r 'file("a")'
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
   |  user:        test
@@ -1352,7 +1351,7 @@ file(File) + limit + -ra:b, b < tip:
 
 limit(file(File) and a::b), b < tip:
 
-  $ hg glog -r 'limit(file("a") and 32::34, 1)'
+  $ hg log -G -r 'limit(file("a") and 32::34, 1)'
   o    changeset:   32:d06dffa21a31
   |\   parent:      27:886ed638191b
   | |  parent:      31:621d83e11f67
@@ -1363,11 +1362,11 @@ limit(file(File) and a::b), b < tip:
 
 File + limit + -ra:b, b < tip:
 
-  $ hg glog -r 'limit(file("a") and 34::32, 1)'
+  $ hg log -G -r 'limit(file("a") and 34::32, 1)'
 
 File + limit + -ra:b, b < tip, (b - a) < limit:
 
-  $ hg glog -l10 -r33:34 a
+  $ hg log -G -l10 -r33:34 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
   |  user:        test
@@ -1387,7 +1386,7 @@ Do not crash or produce strange graphs if history is buggy
   marked working directory as branch branch
   (branches are permanent and global, did you want a bookmark?)
   $ commit 36 "buggy merge: identical parents" 35 35
-  $ hg glog -l5
+  $ hg log -G -l5
   @  changeset:   36:08a19a744424
   |  branch:      branch
   |  tag:         tip
@@ -1561,7 +1560,7 @@ have 2 filelog topological heads in a linear changeset graph.
   $ hg ci -m "mv a b; add d"
   $ hg mv dir/b e
   $ hg ci -m "mv dir/b e"
-  $ hg glog --template '({rev}) {desc|firstline}\n'
+  $ hg log -G --template '({rev}) {desc|firstline}\n'
   @  (4) mv dir/b e
   |
   o  (3) mv a b; add d
@@ -2058,7 +2057,7 @@ Test --hidden
   $ testlog --hidden
   []
   []
-  $ hg glog --template '{rev} {desc}\n'
+  $ hg log -G --template '{rev} {desc}\n'
   o  7 Added tag foo-bar for changeset fc281d8ff18d
   |
   o    6 merge 5 and 4
@@ -2078,7 +2077,7 @@ Test --hidden
 
 A template without trailing newline should do something sane
 
-  $ hg glog -r ::2 --template '{rev} {desc}'
+  $ hg log -G -r ::2 --template '{rev} {desc}'
   o  2 mv b dir/b
   |
   o  1 copy a b
@@ -2088,7 +2087,7 @@ A template without trailing newline should do something sane
 
 Extra newlines must be preserved
 
-  $ hg glog -r ::2 --template '\n{rev} {desc}\n\n'
+  $ hg log -G -r ::2 --template '\n{rev} {desc}\n\n'
   o
   |  2 mv b dir/b
   |
@@ -2101,7 +2100,7 @@ Extra newlines must be preserved
 
 The almost-empty template should do something sane too ...
 
-  $ hg glog -r ::2 --template '\n'
+  $ hg log -G -r ::2 --template '\n'
   o
   |
   o
@@ -2111,12 +2110,12 @@ The almost-empty template should do something sane too ...
 
 issue3772
 
-  $ hg glog -r :null
+  $ hg log -G -r :null
   o  changeset:   -1:000000000000
      user:
      date:        Thu Jan 01 00:00:00 1970 +0000
   
-  $ hg glog -r null:null
+  $ hg log -G -r null:null
   o  changeset:   -1:000000000000
      user:
      date:        Thu Jan 01 00:00:00 1970 +0000

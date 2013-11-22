@@ -5,8 +5,6 @@ Tests discovery against servers without getbundle support:
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > logtemplate="{rev} {node|short}: {desc} {branches}\n"
-  > [extensions]
-  > graphlog=
   > EOF
   $ cp $HGRCPATH $HGRCPATH-withcap
 
@@ -66,7 +64,7 @@ Base repo:
   $ hg init main
   $ cd main
   $ hg debugbuilddag -mo '+2:tbase @name1 +3:thead1 <tbase @name2 +4:thead2 @both /thead1 +2:tmaintip'
-  $ hg glog
+  $ hg log -G
   o  11 a19bfa7e7328: r11 both
   |
   o  10 8b6bad1512e1: r10 both

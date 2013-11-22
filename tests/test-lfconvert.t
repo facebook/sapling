@@ -4,7 +4,6 @@
   > [extensions]
   > largefiles =
   > share =
-  > graphlog =
   > strip =
   > convert =
   > [largefiles]
@@ -134,7 +133,7 @@ add some changesets to rename/remove/merge
   $ hg cat -r . sub/maybelarge.dat > stuff/maybelarge.dat
   $ hg resolve -m stuff/maybelarge.dat
   $ hg commit -m"merge"
-  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  $ hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
   @    5:4884f215abda  merge
   |\
   | o  4:7285f817b77e  remove large, normal3
@@ -154,7 +153,7 @@ lfconvert with rename, merge, and remove
   $ hg lfconvert --size 0.2 bigfile-repo largefiles-repo
   initializing destination largefiles-repo
   $ cd largefiles-repo
-  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  $ hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
   o    5:8e05f5f2b77e  merge
   |\
   | o  4:a5a02de7a8e4  remove large, normal3
@@ -248,7 +247,7 @@ round-trip: converting back to a normal (non-largefiles) repo with
 # "hg remove" + "hg merge" + "hg commit".
 #  $ hg -R ../bigfile-repo debugdata -c 5
 #  $ hg debugdata -c 5
-  $ hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  $ hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
   o  6:1635824e6f59  add anotherlarge (should be a largefile)
   |
   o    5:7215f8deeaaf  merge
@@ -292,7 +291,7 @@ from the working dir on a convert.
   1 merge
   0 add anotherlarge (should be a largefile)
 
-  $ hg -R largefiles-repo-hg glog --template "{rev}:{node|short}  {desc|firstline}\n"
+  $ hg -R largefiles-repo-hg log -G --template "{rev}:{node|short}  {desc|firstline}\n"
   o  6:17126745edfd  add anotherlarge (should be a largefile)
   |
   o    5:9cc5aa7204f0  merge
