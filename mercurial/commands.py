@@ -585,7 +585,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
           hg log -r "bisect(range)"
 
-      - with the graphlog extension, you can even get a nice graph::
+      - you can even get a nice graph::
 
           hg log --graph -r "bisect(range)"
 
