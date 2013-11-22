@@ -5,7 +5,7 @@
   > largefiles =
   > share =
   > graphlog =
-  > mq =
+  > strip =
   > convert =
   > [largefiles]
   > minsize = 0.5
