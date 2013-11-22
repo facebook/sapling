@@ -16,9 +16,13 @@ passpegrev = True # see svnsubrepo below
 try:
     canonpath = hgutil.canonpath
 except (ImportError, AttributeError):
-    from mercurial import scmutil
-    canonpath = scmutil.canonpath
     passpegrev = False
+    try:
+        from mercurial import scmutil
+        canonpath = scmutil.canonpath
+    except (ImportError, AttributeError):
+        from mercurial import pathutil
+        canonpath = pathutil.canonpath
 
 import util
 
