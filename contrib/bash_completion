@@ -604,7 +604,11 @@ _hg_shelves()
 
 _hg_cmd_shelve()
 {
-    _hg_status "mard"
+    if [[ "$prev" = @(-d|--delete) ]]; then
+        _hg_shelves
+    else
+        _hg_status "mard"
+    fi
 }
 
 _hg_cmd_unshelve()
