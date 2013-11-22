@@ -512,11 +512,7 @@ def _incoming(displaychlist, subreporecurse, ui, repo, source,
             return subreporecurse()
 
         displayer = cmdutil.show_changeset(ui, other, opts, buffered)
-
-        # XXX once graphlog extension makes it into core,
-        # should be replaced by a if graph/else
         displaychlist(other, chlist, displayer)
-
         displayer.close()
     finally:
         cleanupfn()
