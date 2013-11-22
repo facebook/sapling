@@ -43,11 +43,6 @@
 
 # hgext.gpg =
 
-### graphlog - ASCII graph log
-### hg help glog
-
-# hgext.graphlog =
-
 ### hgk - GUI repository browser
 ### hg help view
 
