@@ -67,7 +67,6 @@ class fileserverclient(object):
         A list of nodes that the server couldn't find is returned.
         If the connection fails, an exception is raised.
         """
-
         if not self.pipeo:
             self.connect()
 
@@ -252,7 +251,7 @@ class fileserverclient(object):
             self.pipei = None
             self.pipee = None
 
-    def prefetch(self, repo, fileids):
+    def prefetch(self, repo, fileids, force=False):
         """downloads the given file versions to the cache
         """
         storepath = repo.sopener.vfs.base
@@ -269,7 +268,9 @@ class fileserverclient(object):
             localkey = getlocalkey(file, id)
             idcachepath = os.path.join(self.cachepath, cachekey)
             idlocalpath = os.path.join(storepath, 'data', localkey)
-            if os.path.exists(idcachepath) or os.path.exists(idlocalpath):
+            if os.path.exists(idcachepath):
+                continue
+            if not force and os.path.exists(idlocalpath):
                 continue
 
             missingids.append((file, id))

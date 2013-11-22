@@ -89,3 +89,18 @@
   4ae8e31c85ef
   0632994590a8
   b292c1e3311f
+
+  $ cd ..
+
+# system cache has invalid linknode, but .hg/store/data has valid
+
+  $ cd shallow
+  $ hg strip -r 1 -q
+  $ rm -rf .hg/store/data/*
+  $ echo x >> x
+  $ hg commit -Aqm xx_local
+  $ hg log -f x --template '{rev}:{node|short}\n'
+  1:21847713771d
+  0:b292c1e3311f
+
+  $ cd ..
