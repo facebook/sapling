@@ -818,7 +818,7 @@ def bookmark(ui, repo, *names, **opts):
         scmutil.checknewlabel(repo, mark, 'bookmark')
         return mark
 
-    def checkconflict(repo, mark, force=False, target=None):
+    def checkconflict(repo, mark, cur, force=False, target=None):
         if mark in marks and not force:
             if target:
                 if marks[mark] == target and target == cur:
@@ -883,7 +883,7 @@ def bookmark(ui, repo, *names, **opts):
                 mark = checkformat(names[0])
                 if rename not in marks:
                     raise util.Abort(_("bookmark '%s' does not exist") % rename)
-                checkconflict(repo, mark, force)
+                checkconflict(repo, mark, cur, force)
                 marks[mark] = marks[rename]
                 if repo._bookmarkcurrent == rename and not inactive:
                     bookmarks.setcurrent(repo, mark)
@@ -902,7 +902,7 @@ def bookmark(ui, repo, *names, **opts):
                     tgt = cur
                     if rev:
                         tgt = scmutil.revsingle(repo, rev).node()
-                    checkconflict(repo, mark, force, tgt)
+                    checkconflict(repo, mark, cur, force, tgt)
                     marks[mark] = tgt
                 if not inactive and cur == marks[newact] and not rev:
                     bookmarks.setcurrent(repo, newact)
