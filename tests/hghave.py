@@ -234,7 +234,7 @@ def has_unix_permissions():
         os.rmdir(d)
 
 def has_root():
-    return os.geteuid() == 0
+    return getattr(os, 'geteuid', None) and os.geteuid() == 0
 
 def has_pyflakes():
     return matchoutput("sh -c \"echo 'import re' 2>&1 | pyflakes\"",
