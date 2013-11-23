@@ -5,7 +5,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''command to view revision graphs from a shell
+'''command to view revision graphs from a shell (DEPRECATED)
+
+The functionality of this extension has been include in core Mercurial
+since version 2.3.
 
 This extension adds a --graph option to the incoming, outgoing and log
 commands. When this options is given, an ASCII representation of the
