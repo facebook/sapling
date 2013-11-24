@@ -701,7 +701,9 @@ class hgsubrepo(abstractsubrepo):
 
     def _get(self, state):
         source, revision, kind = state
-        if revision not in self._repo:
+        if revision in self._repo.unfiltered():
+            return
+        else:
             self._repo._subsource = source
             srcurl = _abssource(self._repo)
             other = hg.peer(self._repo, {}, srcurl)
