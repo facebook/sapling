@@ -68,4 +68,35 @@ delete .hgsubstate and update
   $ ls subrepo
   a
 
+Enable obsolete
+
+  $ cat > ${TESTTMP}/obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > logtemplate= {rev}:{node|short} {desc|firstline}
+  > [phases]
+  > publish=False
+  > [extensions]'
+  > obs=${TESTTMP}/obs.py
+  > EOF
+
+check that we can update parent repo with missing (amended) subrepo revision
+
+  $ hg up --repository subrepo -r tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg ci -m "updated subrepo to tip"
+  created new head
+  $ cd subrepo
+  $ hg update -r tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo foo > a
+  $ hg commit --amend -m "addb (amended)"
+  $ cd ..
+  $ hg update --clean .
+  revision 102a90ea7b4a in subrepo subrepo is hidden
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
   $ cd ..

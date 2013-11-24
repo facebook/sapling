@@ -702,7 +702,7 @@ class hgsubrepo(abstractsubrepo):
     def _get(self, state):
         source, revision, kind = state
         if revision in self._repo.unfiltered():
-            return
+            return True
         self._repo._subsource = source
         srcurl = _abssource(self._repo)
         other = hg.peer(self._repo, {}, srcurl)
@@ -728,13 +728,23 @@ class hgsubrepo(abstractsubrepo):
             if cleansub:
                 # keep the repo clean after pull
                 self._cachestorehash(srcurl)
+        return False
 
     @annotatesubrepoerror
     def get(self, state, overwrite=False):
-        self._get(state)
+        inrepo = self._get(state)
         source, revision, kind = state
-        self._repo.ui.debug("getting subrepo %s\n" % self._path)
-        hg.updaterepo(self._repo, revision, overwrite)
+        repo = self._repo
+        repo.ui.debug("getting subrepo %s\n" % self._path)
+        if inrepo:
+            urepo = repo.unfiltered()
+            ctx = urepo[revision]
+            if ctx.hidden():
+                urepo.ui.warn(
+                    _('revision %s in subrepo %s is hidden\n') \
+                    % (revision[0:12], self._path))
+                repo = urepo
+        hg.updaterepo(repo, revision, overwrite)
 
     @annotatesubrepoerror
     def merge(self, state):
