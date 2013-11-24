@@ -1993,8 +1993,10 @@ class localrepository(object):
             bases = [nullid]
         # TODO: remove call to nodesbetween.
         csets, bases, heads = cl.nodesbetween(bases, heads)
-        bases = [p for n in bases for p in cl.parents(n) if p != nullid]
-        outgoing = discovery.outgoing(cl, bases, heads)
+        discbases = []
+        for n in bases:
+            discbases.extend([p for p in cl.parents(n) if p != nullid])
+        outgoing = discovery.outgoing(cl, discbases, heads)
         bundler = changegroup.bundle10(self)
         return self._changegroupsubset(outgoing, bundler, source)
 
