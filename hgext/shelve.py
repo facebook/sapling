@@ -558,7 +558,7 @@ def unshelve(ui, repo, *shelved, **opts):
             oldquiet = ui.quiet
             try:
                 ui.quiet = True
-                node = cmdutil.commit(ui, repo, commitfunc, None, tempopts)
+                node = cmdutil.commit(ui, repo, commitfunc, [], tempopts)
             finally:
                 ui.quiet = oldquiet
             tmpwctx = repo[node]
