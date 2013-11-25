@@ -8,6 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 import urllib, urllib2, httplib, os, socket, cStringIO
+import base64
 from i18n import _
 import keepalive, util, sslutil
 import httpconnection as httpconnectionmod
@@ -418,8 +419,21 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
 
 class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
     def __init__(self, *args, **kwargs):
+        self.auth = None
         urllib2.HTTPBasicAuthHandler.__init__(self, *args, **kwargs)
         self.retried_req = None
+
+    def http_request(self, request):
+        if self.auth:
+            request.add_unredirected_header(self.auth_header, self.auth)
+
+        return request
+
+    def https_request(self, request):
+        if self.auth:
+            request.add_unredirected_header(self.auth_header, self.auth)
+
+        return request
 
     def reset_retry_count(self):
         # Python 2.6.5 will call this on 401 or 407 errors and thus loop
@@ -434,6 +448,19 @@ class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
             self.retried = 0
         return urllib2.HTTPBasicAuthHandler.http_error_auth_reqed(
                         self, auth_header, host, req, headers)
+
+    def retry_http_basic_auth(self, host, req, realm):
+        user, pw = self.passwd.find_user_password(realm, host)
+        if pw is not None:
+            raw = "%s:%s" % (user, pw)
+            auth = 'Basic %s' % base64.b64encode(raw).strip()
+            if req.headers.get(self.auth_header, None) == auth:
+                return None
+            self.auth = auth
+            req.add_unredirected_header(self.auth_header, auth)
+            return self.parent.open(req, timeout=req.timeout)
+        else:
+            return None
 
 handlerfuncs = []
 
