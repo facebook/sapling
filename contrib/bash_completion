@@ -94,6 +94,13 @@ _hg_status()
     COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$files' -- "$cur"))
 }
 
+_hg_branches()
+{
+    local branches="$(_hg_cmd branches -q)"
+    local IFS=$'\n'
+    COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$branches' -- "$cur"))
+}
+
 _hg_bookmarks()
 {
     local bookmarks="$(_hg_cmd bookmarks -q)"
