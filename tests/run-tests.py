@@ -304,8 +304,14 @@ def parsehghaveoutput(lines):
 
 def showdiff(expected, output, ref, err):
     print
+    servefail = False
     for line in difflib.unified_diff(expected, output, ref, err):
         sys.stdout.write(line)
+        if not servefail and line.startswith(
+                             '+  abort: child process failed to start'):
+            servefail = True
+    return {'servefail': servefail}
+
 
 verbose = False
 def vlog(*msg):
@@ -1028,17 +1034,21 @@ def runone(options, test, count):
     elif ret == 'timeout':
         result = fail("timed out", ret)
     elif out != refout:
+        info = {}
         if not options.nodiff:
             iolock.acquire()
             if options.view:
                 os.system("%s %s %s" % (options.view, ref, err))
             else:
-                showdiff(refout, out, ref, err)
+                info = showdiff(refout, out, ref, err)
             iolock.release()
+        msg = ""
+        if info.get('servefail'): msg += "serve failed and "
         if ret:
-            result = fail("output changed and " + describe(ret), ret)
+            msg += "output changed and " + describe(ret)
         else:
-            result = fail("output changed", ret)
+            msg += "output changed"
+        result = fail(msg, ret)
     elif ret:
         result = fail(describe(ret), ret)
     else:
