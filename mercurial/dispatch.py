@@ -106,8 +106,9 @@ def _runcatch(req):
                 for cfg in cfgs:
                     req.repo.ui.setconfig(*cfg)
 
+            # if we are in HGPLAIN mode, then disable custom debugging
             debugger = ui.config("ui", "debugger")
-            if not debugger:
+            if not debugger or ui.plain():
                 debugger = 'pdb'
 
             try:
