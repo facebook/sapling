@@ -29,31 +29,37 @@ def wraprepo(repo):
                 return super(shallowrepository, self).filectx(path, changeid, fileid)
 
         def pull(self, remote, *args, **kwargs):
-            try:
-                shallowbundle.shallowremote = True
+            # Hook into the callstream/getbundle to insert bundle capabilities
+            # during a pull.
+            def remotecallstream(orig, command, **opts):
+                if command == 'getbundle' and 'remotefilelog' in remote._capabilities():
+                    bundlecaps = opts.get('bundlecaps')
+                    if bundlecaps:
+                        bundlecaps = [bundlecaps]
+                    else:
+                        bundlecaps = []
+                    bundlecaps.append('remotefilelog')
+                    if self.includepattern:
+                        bundlecaps.append("includepattern=" + '\0'.join(self.includepattern))
+                    if self.excludepattern:
+                        bundlecaps.append("excludepattern=" + '\0'.join(self.excludepattern))
+                    opts['bundlecaps'] = ','.join(bundlecaps)
+                return orig(command, **opts)
 
-                # Hook into the callstream to insert bundle capabilities
-                # during a pull.
-                def remotecallstream(orig, command, **opts):
-                    if command == 'getbundle' and 'remotefilelog' in remote._capabilities():
-                        bundlecaps = opts.get('bundlecaps')
-                        if bundlecaps:
-                            bundlecaps = [bundlecaps]
-                        else:
-                            bundlecaps = []
-                        if self.includepattern:
-                            bundlecaps.append("includepattern=" + '\0'.join(self.includepattern))
-                        if self.excludepattern:
-                            bundlecaps.append("excludepattern=" + '\0'.join(self.excludepattern))
-                        opts['bundlecaps'] = ','.join(bundlecaps)
-                    return orig(command, **opts)
+            def localgetbundle(orig, source, heads=None, common=None, bundlecaps=None):
+                self = orig.__self__
+                if not bundlecaps:
+                    bundlecaps = []
+                bundlecaps.append('remotefilelog')
+                return self._repo.getbundle(source, heads=heads, common=common,
+                    bundlecaps=bundlecaps)
 
-                if hasattr(remote, '_callstream'):
-                    wrapfunction(remote, '_callstream', remotecallstream)
+            if hasattr(remote, '_callstream'):
+                wrapfunction(remote, '_callstream', remotecallstream)
+            else:
+                wrapfunction(remote, 'getbundle', localgetbundle)
 
-                return super(shallowrepository, self).pull(remote, *args, **kwargs)
-            finally:
-                shallowbundle.shallowremote = False
+            return super(shallowrepository, self).pull(remote, *args, **kwargs)
 
         def getbundle(self, source, heads=None, common=None, bundlecaps=None):
             original = self.shallowmatch

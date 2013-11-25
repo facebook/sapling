@@ -11,27 +11,9 @@ from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import changegroup, revlog, phases
 from mercurial.i18n import _
 
-shallowremote = False
-
 NoFiles = 0
 LocalFiles = 1
 AllFiles = 2
-
-def shouldaddfilegroups(repo, source):
-    if not "remotefilelog" in repo.requirements:
-        return AllFiles
-
-    if source == "push":
-        return AllFiles
-    if source == "serve" or source == "pull":
-        if shallowremote:
-            return LocalFiles
-        else:
-            # Serving to a full repo requires us to serve everything
-            repo.ui.warn("pulling from a shallow repo\n")
-            return AllFiles
-
-    return NoFiles
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find
@@ -105,7 +87,7 @@ class shallowbundle(changegroup.bundle10):
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
         if "remotefilelog" in self._repo.requirements:
             repo = self._repo
-            filestosend = shouldaddfilegroups(repo, source)
+            filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
                 changedfiles = list([f for f in changedfiles if not repo.shallowmatch(f)])
             else:
@@ -145,6 +127,25 @@ class shallowbundle(changegroup.bundle10):
 
         return super(shallowbundle, self).generatefiles(changedfiles,
                      linknodes, commonrevs, source)
+
+    def shouldaddfilegroups(self, source):
+        repo = self._repo
+        if not "remotefilelog" in repo.requirements:
+            return AllFiles
+
+        if source == "push":
+            return AllFiles
+
+        caps = self._bundlecaps or []
+        if source == "serve" or source == "pull":
+            if 'remotefilelog' in caps:
+                return LocalFiles
+            else:
+                # Serving to a full repo requires us to serve everything
+                repo.ui.warn("pulling from a shallow repo\n")
+                return AllFiles
+
+        return NoFiles
 
     def prune(self, rlog, missing, commonrevs, source):
         if isinstance(rlog, revlog.revlog):

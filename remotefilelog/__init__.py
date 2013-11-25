@@ -25,7 +25,6 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-shallowremote = False
 remotefilelogreq = "remotefilelog"
 
 repoclass = localrepo.localrepository
@@ -34,8 +33,6 @@ if util.safehasattr(repoclass, '_basesupported'):
 else:
     # hg <= 2.7
     repoclass.supported.add(remotefilelogreq)
-
-shallowcommands = ["changegroup", "changegroupsubset", "getbundle"]
 
 def uisetup(ui):
     """Wraps user facing Mercurial commands to swap them out with shallow versions.
@@ -116,7 +113,8 @@ def setupserver(ui, repo):
 
     # don't send files to shallow clients during pulls
     def generatefiles(orig, self, changedfiles, linknodes, commonrevs, source):
-        if shallowremote:
+        caps = self._bundlecaps or []
+        if remotefilelogreq in caps:
             # only send files that don't match the specified patterns
             includepattern = None
             excludepattern = None
@@ -164,13 +162,10 @@ def onetimesetup(ui):
 
     class streamstate(object):
         match = None
+        shallowremote = False
     state = streamstate()
 
     def stream_out_shallow(repo, proto, other):
-        global shallowremote
-        shallowremote = True
-        shallowbundle.shallowremote = True
-
         includepattern = None
         excludepattern = None
         raw = other.get('includepattern')
@@ -180,21 +175,24 @@ def onetimesetup(ui):
         if raw:
             excludepattern = raw.split('\0')
 
+        oldshallow = state.shallowremote
         oldmatch = state.match
         try:
+            state.shallowremote = True
             state.match = match.always(repo.root, '')
             if includepattern or excludepattern:
                 state.match = match.match(repo.root, '', None,
                     includepattern, excludepattern)
             return wireproto.stream(repo, proto)
         finally:
+            state.shallowremote = oldshallow
             state.match = oldmatch
 
     wireproto.commands['stream_out_shallow'] = (stream_out_shallow, '*')
 
     # don't clone filelogs to shallow clients
     def _walkstreamfiles(orig, repo):
-        if shallowremote:
+        if state.shallowremote:
             # if we are shallow ourselves, stream our local commits
             if remotefilelogreq in repo.requirements:
                 striplen = len(repo.store.path) + 1
@@ -232,18 +230,17 @@ def onetimesetup(ui):
 
     wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
 
-    # add shallow commands
-    for cmd in shallowcommands:
-        func, args = wireproto.commands[cmd]
-        def wrap(func):
-            def wrapper(*args, **kwargs):
-                global shallowremote
-                shallowremote = True
-                shallowbundle.shallowremote = True
-                return func(*args, **kwargs)
-            return wrapper
+    # We no longer use getbundle_shallow commands, but we must still
+    # support it for migration purposes
+    def getbundleshallow(repo, proto, others):
+        bundlecaps = others.get('bundlecaps', '')
+        bundlecaps = set(bundlecaps.split(','))
+        bundlecaps.add('remotefilelog')
+        others['bundlecaps'] = ','.join(bundlecaps)
 
-        wireproto.commands[cmd + "_shallow"] = (wrap(func), args)
+        return wireproto.commands["getbundle"][0](repo, proto, others)
+
+    wireproto.commands["getbundle_shallow"] = (getbundleshallow, '*')
 
     # expose remotefilelog capabilities
     def capabilities(orig, repo, proto):
@@ -393,14 +390,6 @@ def onetimeclientsetup(ui):
                 path, workingctx=self, filelog=filelog)
         return orig(self, path, filelog=filelog)
     wrapfunction(context.workingctx, 'filectx', workingfilectx)
-
-    # Issue shallow commands to shallow servers
-    def _callstream(orig, self, cmd, **args):
-        if cmd in shallowcommands:
-            if remotefilelogreq in self._capabilities():
-                return orig(self, cmd + "_shallow", **args)
-        return orig(self, cmd, **args)
-    wrapfunction(sshpeer.sshpeer, '_callstream', _callstream)
 
     # prefetch required revisions before a diff
     def trydiff(orig, repo, revs, ctx1, ctx2, modified, added, removed,
