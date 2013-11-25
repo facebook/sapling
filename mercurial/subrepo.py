@@ -312,6 +312,18 @@ def _abssource(repo, push=False, abort=True):
     if abort:
         raise util.Abort(_("default path for subrepository not found"))
 
+def _sanitize(ui, path):
+    def v(arg, dirname, names):
+        if os.path.basename(dirname).lower() != '.hg':
+            return
+        for f in names:
+            if f.lower() == 'hgrc':
+                ui.warn(
+                    _("warning: removing potentially hostile .hg/hgrc in '%s'"
+                      % path))
+                os.unlink(os.path.join(dirname, f))
+    os.walk(path, v, None)
+
 def itersubrepos(ctx1, ctx2):
     """find subrepos in ctx1 or ctx2"""
     # Create a (subpath, ctx) mapping where we prefer subpaths from
@@ -988,6 +1000,7 @@ class svnsubrepo(abstractsubrepo):
         # update to a directory which has since been deleted and recreated.
         args.append('%s@%s' % (state[0], state[1]))
         status, err = self._svncommand(args, failok=True)
+        _sanitize(self._ui, self._path)
         if not re.search('Checked out revision [0-9]+.', status):
             if ('is already a working copy for a different URL' in err
                 and (self._wcchanged()[:2] == (False, False))):
@@ -1248,6 +1261,7 @@ class gitsubrepo(abstractsubrepo):
                 self._gitcommand(['reset', 'HEAD'])
                 cmd.append('-f')
             self._gitcommand(cmd + args)
+            _sanitize(self._ui, self._path)
 
         def rawcheckout():
             # no branch to checkout, check it out with no branch
@@ -1331,6 +1345,7 @@ class gitsubrepo(abstractsubrepo):
                 self.get(state) # fast forward merge
             elif base != self._state[1]:
                 self._gitcommand(['merge', '--no-commit', revision])
+            _sanitize(self._ui, self._path)
 
         if self.dirty():
             if self._gitstate() != revision:
