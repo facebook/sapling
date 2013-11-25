@@ -305,7 +305,7 @@ Test debugpathcomplete
 
   $ hg debugpathcomplete f
   fee
-  fie/
+  fie
   fo
   $ hg debugpathcomplete -f f
   fee
@@ -316,12 +316,6 @@ Test debugpathcomplete
   $ hg rm Fum
   $ hg debugpathcomplete -r F
   Fum
-
-If one directory and no files match, give an ambiguous answer
-
-  $ hg debugpathcomplete fi
-  fie/
-  fie/.
 
 Test debuglabelcomplete
 

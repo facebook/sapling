@@ -2245,7 +2245,7 @@ def debugpathcomplete(ui, repo, *specs, **opts):
                     continue
                 s = f.find(os.sep, speclen)
                 if s >= 0:
-                    adddir(f[:s + 1])
+                    adddir(f[:s])
                 else:
                     addfile(f)
         return files, dirs
@@ -2266,10 +2266,6 @@ def debugpathcomplete(ui, repo, *specs, **opts):
         f, d = complete(spec, acceptable or 'nmar')
         files.update(f)
         dirs.update(d)
-    if not files and len(dirs) == 1:
-        # force the shell to consider a completion that matches one
-        # directory and zero files to be ambiguous
-        dirs.add(iter(dirs).next() + '.')
     files.update(dirs)
     ui.write('\n'.join(repo.pathto(p, cwd) for p in sorted(files)))
     ui.write('\n')
