@@ -408,6 +408,10 @@ _hg_cmd_rebase() {
 
 _hg_cmd_strip()
 {
+    if [[ "$prev" = @(-B|--bookmark) ]]; then
+        _hg_bookmarks
+        return
+    fi
     _hg_labels
 }
 
