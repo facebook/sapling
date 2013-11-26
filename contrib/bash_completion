@@ -255,6 +255,13 @@ _hg_command_specific()
                 fi
                 return 1
             ;;
+            -b|--branch)
+                if [[ $canonical = 1 || status != "$cmd"* ]]; then
+                    _hg_branches
+                    return 0
+                fi
+                return 1
+            ;;
         esac
     fi
 
