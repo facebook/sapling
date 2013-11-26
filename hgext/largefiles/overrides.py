@@ -380,7 +380,7 @@ def overridemanifestmerge(origfn, repo, p1, p2, pa, branchmerge, force,
     for action in actions:
         f, m, args, msg = action
 
-        splitstandin = lfutil.splitstandin(f)
+        splitstandin = f and lfutil.splitstandin(f)
         if (m == "g" and splitstandin is not None and
             splitstandin in p1 and splitstandin not in removes):
             # Case 1: normal file in the working copy, largefile in
