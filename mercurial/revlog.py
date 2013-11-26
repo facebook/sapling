@@ -1206,6 +1206,15 @@ class revlog(object):
         self.nodemap[node] = curr
 
         entry = self._io.packentry(e, self.node, self.version, curr)
+        self._writeentry(transaction, ifh, dfh, entry, data, link, offset)
+
+        if type(text) == str: # only accept immutable objects
+            self._cache = (node, curr, text)
+        self._basecache = (curr, chainbase)
+        return node
+
+    def _writeentry(self, transaction, ifh, dfh, entry, data, link, offset):
+        curr = len(self) - 1
         if not self._inline:
             transaction.add(self.datafile, offset)
             transaction.add(self.indexfile, curr * len(entry))
@@ -1221,11 +1230,6 @@ class revlog(object):
             ifh.write(data[0])
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
-
-        if type(text) == str: # only accept immutable objects
-            self._cache = (node, curr, text)
-        self._basecache = (curr, chainbase)
-        return node
 
     def addgroup(self, bundle, linkmapper, transaction):
         """
