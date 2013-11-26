@@ -11,6 +11,8 @@ from mercurial import localrepo, context, mdiff, util, match
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
 
+requirement = "remotefilelog"
+
 def wraprepo(repo):
     class shallowrepository(repo.__class__):
         def file(self, f):
