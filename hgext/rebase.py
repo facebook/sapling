@@ -289,6 +289,9 @@ def rebase(ui, repo, **opts):
                                                            inclusive=True)
                 external = externalparent(repo, state, targetancestors)
 
+            if dest.closesbranch() and not keepbranchesf:
+                ui.status(_('reopening closed branch head %s\n') % dest)
+
         if keepbranchesf:
             # insert _savebranch at the start of extrafns so if
             # there's a user-provided extrafn it can clobber branch if

@@ -239,6 +239,17 @@ Rebasing descendant onto ancestor across different named branches
   |/
   @  0: 'A'
   
+
+Reopen branch by rebase
+
+  $ hg up -qr3
+  $ hg branch -q b
+  $ hg ci -m 'create b'
+  $ hg ci -m 'close b' --close
+  $ hg rebase -b 8 -d b
+  reopening closed branch head ea9de14a36c6
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/*-backup.hg (glob)
+
   $ cd ..
 
 Rebase to other head on branch
