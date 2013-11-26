@@ -240,15 +240,11 @@ _hg_command_specific()
     fi
 
     if [ "$cmd" != status ] && [ "$prev" = -r ] || [ "$prev" == --rev ]; then
-        if [ $canonical = 1 ]; then
+        if [[ $canonical = 1 || status != "$cmd"* ]]; then
             _hg_labels
             return 0
-        elif [[ status != "$cmd"* ]]; then
-            _hg_labels
-            return 0
-        else
-            return 1
         fi
+        return 1
     fi
 
     local aliascmd=$(_hg_cmd showconfig alias.$cmd | awk '{print $1}')
