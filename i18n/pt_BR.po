@@ -13873,10 +13873,8 @@ msgid "only one phase can be specified"
 msgstr "apenas uma fase pode ser especificada"
 
 #, python-format
-msgid "cannot move %i changesets to a more permissive phase, use --force\n"
-msgstr ""
-"não é possível mover %i revisões para uma fase mais permissiva sem usar "
-"--force\n"
+msgid "cannot move %i changesets to a higher phase, use --force\n"
+msgstr "não é possível mover %i revisões para uma fase mais alta, use --force\n"
 
 #, python-format
 msgid "phase changed for %i changesets\n"
@@ -25553,6 +25551,10 @@ msgstr ""
 
 msgid "default path for subrepository not found"
 msgstr "o caminho padrão para o sub-repositório não foi encontrado"
+
+#, python-format
+msgid "warning: removing potentially hostile .hg/hgrc in '%s'"
+msgstr "aviso: removendo .hg/hgrc potencialmente hostil em '%s'"
 
 #, python-format
 msgid "unknown subrepo type %s"
