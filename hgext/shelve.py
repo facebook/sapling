@@ -91,7 +91,6 @@ class shelvedstate(object):
             pendingctx = fp.readline().strip()
             parents = [bin(h) for h in fp.readline().split()]
             stripnodes = [bin(h) for h in fp.readline().split()]
-            unknownfiles = fp.readline()[:-1].split('\0')
         finally:
             fp.close()
 
@@ -101,13 +100,11 @@ class shelvedstate(object):
         obj.pendingctx = repo[bin(pendingctx)]
         obj.parents = parents
         obj.stripnodes = stripnodes
-        obj.unknownfiles = unknownfiles
 
         return obj
 
     @classmethod
-    def save(cls, repo, name, originalwctx, pendingctx, stripnodes,
-             unknownfiles):
+    def save(cls, repo, name, originalwctx, pendingctx, stripnodes):
         fp = repo.opener(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
@@ -115,7 +112,6 @@ class shelvedstate(object):
         fp.write('%s\n' % hex(pendingctx.node()))
         fp.write('%s\n' % ' '.join([hex(p) for p in repo.dirstate.parents()]))
         fp.write('%s\n' % ' '.join([hex(n) for n in stripnodes]))
-        fp.write('%s\n' % '\0'.join(unknownfiles))
         fp.close()
 
     @classmethod
@@ -379,7 +375,7 @@ def unshelveabort(ui, repo, state, opts):
 
         lock = repo.lock()
 
-        mergefiles(ui, repo, state.wctx, state.pendingctx, state.unknownfiles)
+        mergefiles(ui, repo, state.wctx, state.pendingctx)
 
         repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
         shelvedstate.clear(repo)
@@ -387,9 +383,9 @@ def unshelveabort(ui, repo, state, opts):
     finally:
         lockmod.release(lock, wlock)
 
-def mergefiles(ui, repo, wctx, shelvectx, unknownfiles):
+def mergefiles(ui, repo, wctx, shelvectx):
     """updates to wctx and merges the changes from shelvectx into the
-    dirstate. drops any files in unknownfiles from the dirstate."""
+    dirstate."""
     oldquiet = ui.quiet
     try:
         ui.quiet = True
@@ -397,16 +393,17 @@ def mergefiles(ui, repo, wctx, shelvectx, unknownfiles):
         files = []
         files.extend(shelvectx.files())
         files.extend(shelvectx.parents()[0].files())
+
+        # revert will overwrite unknown files, so move them out of the way
+        m, a, r, d, u = repo.status(unknown=True)[:5]
+        for file in u:
+            if file in files:
+                util.rename(file, file + ".orig")
         cmdutil.revert(ui, repo, shelvectx, repo.dirstate.parents(),
                        *pathtofiles(repo, files),
                        **{'no_backup': True})
     finally:
         ui.quiet = oldquiet
-
-    # Send untracked files back to being untracked
-    dirstate = repo.dirstate
-    for f in unknownfiles:
-        dirstate.drop(f)
 
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
@@ -446,7 +443,7 @@ def unshelvecontinue(ui, repo, state, opts):
             # rebase was a no-op, so it produced no child commit
             shelvectx = state.pendingctx
 
-        mergefiles(ui, repo, state.wctx, shelvectx, state.unknownfiles)
+        mergefiles(ui, repo, state.wctx, shelvectx)
 
         state.stripnodes.append(shelvectx.node())
         repair.strip(ui, repo, state.stripnodes, backup='none', topic='shelve')
@@ -538,8 +535,8 @@ def unshelve(ui, repo, *shelved, **opts):
         # to the original wctx.
 
         # Store pending changes in a commit
-        m, a, r, d, u = repo.status(unknown=True)[:5]
-        if m or a or r or d or u:
+        m, a, r, d = repo.status()[:4]
+        if m or a or r or d:
             def commitfunc(ui, repo, message, match, opts):
                 hasmq = util.safehasattr(repo, 'mq')
                 if hasmq:
@@ -554,7 +551,6 @@ def unshelve(ui, repo, *shelved, **opts):
 
             tempopts = {}
             tempopts['message'] = "pending changes temporary commit"
-            tempopts['addremove'] = True
             oldquiet = ui.quiet
             try:
                 ui.quiet = True
@@ -588,7 +584,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
                 stripnodes = [repo.changelog.node(rev)
                               for rev in xrange(oldtiprev, len(repo))]
-                shelvedstate.save(repo, basename, wctx, tmpwctx, stripnodes, u)
+                shelvedstate.save(repo, basename, wctx, tmpwctx, stripnodes)
 
                 util.rename(repo.join('rebasestate'),
                             repo.join('unshelverebasestate'))
@@ -603,7 +599,7 @@ def unshelve(ui, repo, *shelved, **opts):
                 # rebase was a no-op, so it produced no child commit
                 shelvectx = tmpwctx
 
-        mergefiles(ui, repo, wctx, shelvectx, u)
+        mergefiles(ui, repo, wctx, shelvectx)
         shelvedstate.clear(repo)
 
         # The transaction aborting will strip all the commits for us,
