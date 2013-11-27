@@ -721,8 +721,9 @@ class patchfile(object):
             if self.remove:
                 self.backend.unlink(self.fname)
             else:
-                self.lines[:] = h.new()
-                self.offset += len(h.new())
+                l = h.new(self.lines)
+                self.lines[:] = l
+                self.offset += len(l)
                 self.dirty = True
             return 0
 
@@ -1016,9 +1017,10 @@ class hunk(object):
         return old, oldstart, new, newstart
 
 class binhunk(object):
-    'A binary patch file. Only understands literals so far.'
+    'A binary patch file.'
     def __init__(self, lr, fname):
         self.text = None
+        self.delta = False
         self.hunk = ['GIT binary patch\n']
         self._fname = fname
         self._read(lr)
@@ -1026,7 +1028,9 @@ class binhunk(object):
     def complete(self):
         return self.text is not None
 
-    def new(self):
+    def new(self, lines):
+        if self.delta:
+            return [applybindelta(self.text, ''.join(lines))]
         return [self.text]
 
     def _read(self, lr):
@@ -1035,14 +1039,19 @@ class binhunk(object):
             hunk.append(l)
             return l.rstrip('\r\n')
 
+        size = 0
         while True:
             line = getline(lr, self.hunk)
             if not line:
                 raise PatchError(_('could not extract "%s" binary data')
                                  % self._fname)
             if line.startswith('literal '):
+                size = int(line[8:].rstrip())
                 break
-        size = int(line[8:].rstrip())
+            if line.startswith('delta '):
+                size = int(line[6:].rstrip())
+                self.delta = True
+                break
         dec = []
         line = getline(lr, self.hunk)
         while len(line) > 1:
@@ -1264,6 +1273,62 @@ def iterhunks(fp):
     while gitpatches:
         gp = gitpatches.pop()
         yield 'file', ('a/' + gp.path, 'b/' + gp.path, None, gp.copy())
+
+def applybindelta(binchunk, data):
+    """Apply a binary delta hunk
+    The algorithm used is the algorithm from git's patch-delta.c
+    """
+    def deltahead(binchunk):
+        i = 0
+        for c in binchunk:
+            i += 1
+            if not (ord(c) & 0x80):
+                return i
+        return i
+    out = ""
+    s = deltahead(binchunk)
+    binchunk = binchunk[s:]
+    s = deltahead(binchunk)
+    binchunk = binchunk[s:]
+    i = 0
+    while i < len(binchunk):
+        cmd = ord(binchunk[i])
+        i += 1
+        if (cmd & 0x80):
+            offset = 0
+            size = 0
+            if (cmd & 0x01):
+                offset = ord(binchunk[i])
+                i += 1
+            if (cmd & 0x02):
+                offset |= ord(binchunk[i]) << 8
+                i += 1
+            if (cmd & 0x04):
+                offset |= ord(binchunk[i]) << 16
+                i += 1
+            if (cmd & 0x08):
+                offset |= ord(binchunk[i]) << 24
+                i += 1
+            if (cmd & 0x10):
+                size = ord(binchunk[i])
+                i += 1
+            if (cmd & 0x20):
+                size |= ord(binchunk[i]) << 8
+                i += 1
+            if (cmd & 0x40):
+                size |= ord(binchunk[i]) << 16
+                i += 1
+            if size == 0:
+                size = 0x10000
+            offset_end = offset + size
+            out += data[offset:offset_end]
+        elif cmd != 0:
+            offset_end = i + cmd
+            out += binchunk[i:offset_end]
+            i += cmd
+        else:
+            raise PatchError(_('unexpected delta opcode 0'))
+    return out
 
 def applydiff(ui, fp, backend, store, strip=1, eolmode='strict'):
     """Reads a patch from fp and tries to apply it.
