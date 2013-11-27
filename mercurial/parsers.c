@@ -1713,6 +1713,15 @@ static int index_init(indexObject *self, PyObject *args)
 	PyObject *data_obj, *inlined_obj;
 	Py_ssize_t size;
 
+	/* Initialize before argument-checking to avoid index_dealloc() crash. */
+	self->raw_length = 0;
+	self->added = NULL;
+	self->cache = NULL;
+	self->data = NULL;
+	self->headrevs = NULL;
+	self->nt = NULL;
+	self->offsets = NULL;
+
 	if (!PyArg_ParseTuple(args, "OO", &data_obj, &inlined_obj))
 		return -1;
 	if (!PyString_Check(data_obj)) {
@@ -1723,12 +1732,7 @@ static int index_init(indexObject *self, PyObject *args)
 
 	self->inlined = inlined_obj && PyObject_IsTrue(inlined_obj);
 	self->data = data_obj;
-	self->cache = NULL;
 
-	self->added = NULL;
-	self->headrevs = NULL;
-	self->offsets = NULL;
-	self->nt = NULL;
 	self->ntlength = self->ntcapacity = 0;
 	self->ntdepth = self->ntsplits = 0;
 	self->ntlookups = self->ntmisses = 0;
@@ -1764,7 +1768,7 @@ static PyObject *index_nodemap(indexObject *self)
 static void index_dealloc(indexObject *self)
 {
 	_index_clearcaches(self);
-	Py_DECREF(self->data);
+	Py_XDECREF(self->data);
 	Py_XDECREF(self->added);
 	PyObject_Del(self);
 }
