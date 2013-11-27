@@ -98,6 +98,14 @@ def parse_index2(data, inline):
     return list(index), chunkcache
 
 def runtest() :
+    # Check that parse_index2() raises TypeError on bad arguments.
+    try:
+        parse_index2(0, True)
+    except TypeError:
+        pass
+    else:
+        print "Expected to get TypeError."
+
     py_res_1 = py_parseindex(data_inlined, True)
     c_res_1 = parse_index2(data_inlined, True)
 
