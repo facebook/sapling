@@ -24,10 +24,12 @@ import os
 from mercurial import bundlerepo
 from mercurial import commands
 from mercurial import demandimport
+from mercurial import dirstate
 from mercurial import discovery
 from mercurial import extensions
 from mercurial import help
 from mercurial import hg
+from mercurial import ignore
 from mercurial import localrepo
 from mercurial import revset
 from mercurial import templatekw
@@ -39,7 +41,7 @@ demandimport.ignore.extend([
     'collections',
     ])
 
-import gitrepo, hgrepo
+import gitrepo, hgrepo, gitdirstate
 from git_handler import GitHandler
 
 testedwith = '1.9.3 2.0.2 2.1.2 2.2.3 2.3.1'
@@ -128,6 +130,9 @@ def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     git = GitHandler(repo, ui)
     git.clear()
+    
+extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
+dirstate.dirstate = gitdirstate.gitdirstate
 
 def git_cleanup(ui, repo):
     new_map = []
