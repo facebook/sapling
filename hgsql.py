@@ -24,8 +24,6 @@
 #name VARCHAR(256) UNIQUE
 #);
 
-# SET OPTION SQL_BIG_SELECTS = 1;
-
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
@@ -78,8 +76,12 @@ def unbundle(orig, repo, proto, heads):
         repo.syncdb()
         return orig(repo, proto, heads)
     finally:
-        repo.sqlunlock(commitlock)
-        repo.sqlclose()
+        try:
+            repo.sqlunlock(commitlock)
+            repo.sqlclose()
+        except _mysql_exceptions.ProgrammingError, ex:
+            # ignore sql exceptions, so real exceptions propagate up
+            pass
 
 def pull(orig, ui, repo, source="default", **opts):
     repo.sqlconnect()
@@ -88,8 +90,12 @@ def pull(orig, ui, repo, source="default", **opts):
         repo.syncdb()
         return orig(ui, repo, source, **opts)
     finally:
-        repo.sqlunlock(commitlock)
-        repo.sqlclose()
+        try:
+            repo.sqlunlock(commitlock)
+            repo.sqlclose()
+        except _mysql_exceptions.ProgrammingError, ex:
+            # ignore sql exceptions, so real exceptions propagate up
+            pass
 
 def wraprepo(repo):
     class sqllocalrepo(repo.__class__):
