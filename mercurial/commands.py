@@ -538,7 +538,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
       Some examples:
 
-      - start a bisection with known bad revision 12, and good revision 34::
+      - start a bisection with known bad revision 34, and good revision 12::
 
           hg bisect --bad 34
           hg bisect --good 12
