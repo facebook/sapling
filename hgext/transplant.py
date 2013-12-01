@@ -451,15 +451,6 @@ def hasnode(repo, node):
 
 def browserevs(ui, repo, nodes, opts):
     '''interactively transplant changesets'''
-    def browsehelp(ui):
-        ui.write(_('y: transplant this changeset\n'
-                   'n: skip this changeset\n'
-                   'm: merge at this changeset\n'
-                   'p: show patch\n'
-                   'c: commit selected changesets\n'
-                   'q: cancel transplant\n'
-                   '?: show this help\n'))
-
     displayer = cmdutil.show_changeset(ui, repo, opts)
     transplants = []
     merges = []
@@ -477,7 +468,8 @@ def browserevs(ui, repo, nodes, opts):
         while not action:
             action = 'ynmpcq?'[ui.promptchoice(prompt)]
             if action == '?':
-                browsehelp(ui)
+                for c, t in ui.extractchoices(prompt)[1]:
+                    ui.write('%s: %s\n' % (c, t))
                 action = None
             elif action == 'p':
                 parent = repo.changelog.parents(node)[0]

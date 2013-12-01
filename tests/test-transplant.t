@@ -493,13 +493,13 @@ test interactive transplant
   > EOF
   1:d11e3596cc1a
   apply changeset? [ynmpcq?]: unrecognized response
-  apply changeset? [ynmpcq?]: y: transplant this changeset
-  n: skip this changeset
+  apply changeset? [ynmpcq?]: y: yes, transplant this changeset
+  n: no, skip this changeset
   m: merge at this changeset
   p: show patch
   c: commit selected changesets
-  q: cancel transplant
-  ?: show this help
+  q: quit and cancel transplant
+  ?: ? (show this help)
   apply changeset? [ynmpcq?]: 4:a53251cdf717
   apply changeset? [ynmpcq?]:  (no-eol)
   $ hg heads --template "{node|short}\n"
