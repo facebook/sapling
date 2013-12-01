@@ -173,9 +173,9 @@ DAG
     system (DVCS) can be described as a directed acyclic graph (DAG),
     consisting of nodes and edges, where nodes correspond to
     changesets and edges imply a parent -> child relation. This graph
-    can be visualized by graphical tools such as :hg:`glog`
-    (graphlog). In Mercurial, the DAG is limited by the requirement
-    for children to have at most two parents.
+    can be visualized by graphical tools such as :hg:`log --graph`. In
+    Mercurial, the DAG is limited by the requirement for children to
+    have at most two parents.
 
 Default branch
     See 'Branch, default'.
@@ -218,7 +218,7 @@ Draft
     extensions. See :hg:`help phases`.
 
 Graph
-    See DAG and :hg:`help graphlog`.
+    See DAG and :hg:`log --graph`.
 
 Head
     The term 'head' may be used to refer to both a branch head or a

@@ -43,20 +43,15 @@
 
 # hgext.gpg =
 
-### graphlog - ASCII graph log
-### hg help glog
-
-# hgext.graphlog =
-
 ### hgk - GUI repository browser
 ### hg help view
 
 # hgext.hgk =
 
-### mq - Mercurial patch queues
-### hg help mq
+### strip - Remove changesets and their descendents from history
+### hg help strip
 
-# hgext.mq =
+# hgext.strip =
 
 ### notify - Template driven e-mail notifications
 ### hg help notify

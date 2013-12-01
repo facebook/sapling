@@ -38,3 +38,10 @@ Test keyword search in translated help text:
   
    pager Verwendet einen externen Pager zum Bl\xc3\xa4ttern in der Ausgabe von Befehlen (esc)
 
+Check Mercurial specific translation problems in each *.po files, and
+tool itself by doctest
+
+  $ cd "$TESTDIR"/../i18n
+  $ python check-translation.py *.po
+  $ python check-translation.py --doctest
+  $ cd $TESTTMP

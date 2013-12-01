@@ -2192,6 +2192,39 @@ check messages when there are files to upload:
 
   $ cd ..
 
+merge action 'd' for 'local renamed directory to d2/g' which has no filename
+
+  $ hg init merge-action
+  $ cd merge-action
+  $ touch l
+  $ hg add --large l
+  $ mkdir d1
+  $ touch d1/f
+  $ hg ci -Aqm0
+  Invoking status precommit hook
+  A d1/f
+  A l
+  $ echo > d1/f
+  $ touch d1/g
+  $ hg ci -Aqm1
+  Invoking status precommit hook
+  M d1/f
+  A d1/g
+  $ hg up -qr0
+  $ hg mv d1 d2
+  moving d1/f to d2/f (glob)
+  $ hg ci -qm2
+  Invoking status precommit hook
+  A d2/f
+  R d1/f
+  $ hg merge
+  merging d2/f and d1/f to d2/f
+  1 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  getting changed largefiles
+  0 largefiles updated, 0 removed
+  $ cd ..
+
 Check whether "largefiles" feature is supported only in repositories
 enabling largefiles extension.
 
