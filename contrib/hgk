@@ -457,12 +457,10 @@ proc readrefs {} {
         }
     }
 
-    foreach {tag rev} $tags {
+    foreach {- tag rev id} [regexp -inline -all -line {^(.+\S)\s+(\d+):(\S+)} $tags] {
         # we use foreach as Tcl8.4 doesn't support lassign
-        foreach {- id} [split $rev :] {
-            lappend tagids($tag) $id
-            lappend idtags($id) $tag
-        }
+        lappend tagids($tag) $id
+        lappend idtags($id) $tag
     }
 
     set status [catch {exec $env(HG) --config ui.report_untrusted=false heads} heads]
