@@ -492,7 +492,7 @@ test interactive transplant
   > q
   > EOF
   1:d11e3596cc1a
-  apply changeset? [ynmpcq?]: no such option
+  apply changeset? [ynmpcq?]: unrecognized response
   apply changeset? [ynmpcq?]: y: transplant this changeset
   n: skip this changeset
   m: merge at this changeset

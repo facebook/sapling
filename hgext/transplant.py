@@ -463,11 +463,19 @@ def browserevs(ui, repo, nodes, opts):
     displayer = cmdutil.show_changeset(ui, repo, opts)
     transplants = []
     merges = []
+    prompt = _('apply changeset? [ynmpcq?]:'
+               '$$ &yes, transplant this changeset'
+               '$$ &no, skip this changeset'
+               '$$ &merge at this changeset'
+               '$$ show &patch'
+               '$$ &commit selected changesets'
+               '$$ &quit and cancel transplant'
+               '$$ &? (show this help)')
     for node in nodes:
         displayer.show(repo[node])
         action = None
         while not action:
-            action = ui.prompt(_('apply changeset? [ynmpcq?]:'))
+            action = 'ynmpcq?'[ui.promptchoice(prompt)]
             if action == '?':
                 browsehelp(ui)
                 action = None
@@ -475,9 +483,6 @@ def browserevs(ui, repo, nodes, opts):
                 parent = repo.changelog.parents(node)[0]
                 for chunk in patch.diff(repo, parent, node):
                     ui.write(chunk)
-                action = None
-            elif action not in ('y', 'n', 'm', 'c', 'q'):
-                ui.write(_('no such option\n'))
                 action = None
         if action == 'y':
             transplants.append(node)
