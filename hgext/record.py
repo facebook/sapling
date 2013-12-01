@@ -7,7 +7,7 @@
 
 '''commands to interactively select changes for commit/qrefresh'''
 
-from mercurial.i18n import gettext, _
+from mercurial.i18n import _
 from mercurial import cmdutil, commands, extensions, hg, patch
 from mercurial import util
 import copy, cStringIO, errno, os, re, shutil, tempfile
@@ -286,21 +286,18 @@ def filterpatch(ui, headers):
             resps = _('[Ynesfdaq?]'
                       '$$ &Yes, record this change'
                       '$$ &No, skip this change'
-                      '$$ &Edit the change manually'
+                      '$$ &Edit this change manually'
                       '$$ &Skip remaining changes to this file'
                       '$$ Record remaining changes to this &file'
                       '$$ &Done, skip remaining changes and files'
                       '$$ Record &all changes to all remaining files'
                       '$$ &Quit, recording no changes'
-                      '$$ &?')
+                      '$$ &? (display help)')
             r = ui.promptchoice("%s %s" % (query, resps))
             ui.write("\n")
             if r == 8: # ?
-                doc = gettext(record.__doc__)
-                c = doc.find('::') + 2
-                for l in doc[c:].splitlines():
-                    if l.startswith('      '):
-                        ui.write(l.strip(), '\n')
+                for c, t in ui.extractchoices(resps)[1]:
+                    ui.write('%s - %s\n' % (c, t.lower()))
                 continue
             elif r == 0: # yes
                 ret = True

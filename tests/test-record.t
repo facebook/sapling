@@ -673,15 +673,15 @@ Help, quit
   diff --git a/subdir/f1 b/subdir/f1
   1 hunks, 1 lines changed
   examine changes to 'subdir/f1'? [Ynesfdaq?] 
-  y - record this change
-  n - skip this change
+  y - yes, record this change
+  n - no, skip this change
   e - edit this change manually
   s - skip remaining changes to this file
   f - record remaining changes to this file
   d - done, skip remaining changes and files
   a - record all changes to all remaining files
   q - quit, recording no changes
-  ? - display help
+  ? - ? (display help)
   examine changes to 'subdir/f1'? [Ynesfdaq?] 
   abort: user quit
   [255]
