@@ -640,6 +640,20 @@ class ui(object):
         except EOFError:
             raise util.Abort(_('response expected'))
 
+    @staticmethod
+    def extractchoices(prompt):
+        """Extract prompt message and list of choices from specified prompt.
+
+        This returns tuple "(message, choices)", and "choices" is the
+        list of tuple "(response character, text without &)".
+        """
+        parts = prompt.split('$$')
+        msg = parts[0].rstrip(' ')
+        choices = [p.strip(' ') for p in parts[1:]]
+        return (msg,
+                [(s[s.index('&') + 1].lower(), s.replace('&', '', 1))
+                 for s in choices])
+
     def promptchoice(self, prompt, default=0):
         """Prompt user with a message, read response, and ensure it matches
         one of the provided choices. The prompt is formatted as follows:
@@ -651,10 +665,8 @@ class ui(object):
         returned.
         """
 
-        parts = prompt.split('$$')
-        msg = parts[0].rstrip(' ')
-        choices = [p.strip(' ') for p in parts[1:]]
-        resps = [s[s.index('&') + 1].lower() for s in choices]
+        msg, choices = self.extractchoices(prompt)
+        resps = [r for r, t in choices]
         while True:
             r = self.prompt(msg, resps[default])
             if r.lower() in resps:
