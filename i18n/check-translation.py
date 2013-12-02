@@ -122,6 +122,7 @@ be separated by whitespaces::
     (options, args) = optparser.parse_args()
 
     if options.doctest:
+        import os
         if 'TERM' in os.environ:
             del os.environ['TERM']
         import doctest
