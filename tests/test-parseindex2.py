@@ -1,10 +1,8 @@
+"""This unit test tests parsers.parse_index2()."""
+
 from mercurial import parsers
 from mercurial.node import nullid, nullrev
 import struct
-
-# This unit test compares the return value of the original Python
-# implementation of parseindex and the new C implementation for
-# an index file with and without inlined data
 
 # original python implementation
 def gettype(q):
@@ -105,6 +103,9 @@ def runtest() :
         pass
     else:
         print "Expected to get TypeError."
+
+   # Check parsers.parse_index2() on an index file against the original
+   # Python implementation of parseindex, both with and without inlined data.
 
     py_res_1 = py_parseindex(data_inlined, True)
     c_res_1 = parse_index2(data_inlined, True)
