@@ -1017,7 +1017,11 @@ class GitHandler(object):
                 f.seek(0)
                 po =  self.git.object_store.add_thin_pack(f.read, None)
             progress.flush()
-            return ret
+
+            # For empty repos dulwich gives us None, but since later
+            # we want to iterate over this, we really want an empty
+            # iterable
+            return ret if ret else {}
         except (HangupException, GitProtocolError), e:
             raise hgutil.Abort(_("git remote error: ") + str(e))
 
