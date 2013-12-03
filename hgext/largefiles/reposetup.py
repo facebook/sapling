@@ -445,8 +445,8 @@ def reposetup(ui, repo):
                              for f in files
                              if lfutil.isstandin(f) and f in ctx]))
                 lfcommands.uploadlfiles(ui, self, remote, toupload)
-            return super(lfilesrepo, self).push(remote, force, revs,
-                newbranch)
+            return super(lfilesrepo, self).push(remote, force=force, revs=revs,
+                newbranch=newbranch)
 
         def _subdirlfs(self, files, lfiles):
             '''
