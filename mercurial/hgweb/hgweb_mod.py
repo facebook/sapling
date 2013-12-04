@@ -59,15 +59,16 @@ class hgweb(object):
                 u = baseui.copy()
             else:
                 u = ui.ui()
-            self.repo = hg.repository(u, repo)
+            r = hg.repository(u, repo)
         else:
-            self.repo = repo
+            r = repo
 
-        self.repo = self._getview(self.repo)
-        self.repo.ui.setconfig('ui', 'report_untrusted', 'off')
-        self.repo.baseui.setconfig('ui', 'report_untrusted', 'off')
-        self.repo.ui.setconfig('ui', 'nontty', 'true')
-        self.repo.baseui.setconfig('ui', 'nontty', 'true')
+        r = self._getview(r)
+        r.ui.setconfig('ui', 'report_untrusted', 'off')
+        r.baseui.setconfig('ui', 'report_untrusted', 'off')
+        r.ui.setconfig('ui', 'nontty', 'true')
+        r.baseui.setconfig('ui', 'nontty', 'true')
+        self.repo = r
         hook.redirect(True)
         self.mtime = -1
         self.size = -1
@@ -94,7 +95,8 @@ class hgweb(object):
                                        untrusted=untrusted)
 
     def _getview(self, repo):
-        viewconfig = self.config('web', 'view', 'served')
+        viewconfig = repo.ui.config('web', 'view', 'served',
+                                    untrusted=True)
         if viewconfig == 'all':
             return repo.unfiltered()
         elif viewconfig in repoview.filtertable:
