@@ -14,6 +14,8 @@
 
 #include "util.h"
 
+static char *versionerrortext = "Python minor version mismatch";
+
 static int8_t hextable[256] = {
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
 	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -1911,6 +1913,16 @@ void dirs_module_init(PyObject *mod);
 
 static void module_init(PyObject *mod)
 {
+	/* This module constant has two purposes.  First, it lets us unit test
+	 * the ImportError raised without hard-coding any error text.  This
+	 * means we can change the text in the future without breaking tests,
+	 * even across changesets without a recompile.  Second, its presence
+	 * can be used to determine whether the version-checking logic is
+	 * present, which also helps in testing across changesets without a
+	 * recompile.  Note that this means the pure-Python version of parsers
+	 * should not have this module constant. */
+	PyModule_AddStringConstant(mod, "versionerrortext", versionerrortext);
+
 	dirs_module_init(mod);
 
 	indexType.tp_new = PyType_GenericNew;
@@ -1928,6 +1940,24 @@ static void module_init(PyObject *mod)
 	dirstate_unset = Py_BuildValue("ciii", 'n', 0, -1, -1);
 }
 
+static int check_python_version(void)
+{
+	PyObject *sys = PyImport_ImportModule("sys");
+	long hexversion = PyInt_AsLong(PyObject_GetAttrString(sys, "hexversion"));
+	/* sys.hexversion is a 32-bit number by default, so the -1 case
+	 * should only occur in unusual circumstances (e.g. if sys.hexversion
+	 * is manually set to an invalid value). */
+	if ((hexversion == -1) || (hexversion >> 16 != PY_VERSION_HEX >> 16)) {
+		PyErr_Format(PyExc_ImportError, "%s: The Mercurial extension "
+			"modules were compiled with Python " PY_VERSION ", but "
+			"Mercurial is currently using Python with sys.hexversion=%ld: "
+			"Python %s\n at: %s", versionerrortext, hexversion,
+			Py_GetVersion(), Py_GetProgramFullPath());
+		return -1;
+	}
+	return 0;
+}
+
 #ifdef IS_PY3K
 static struct PyModuleDef parsers_module = {
 	PyModuleDef_HEAD_INIT,
@@ -1939,6 +1969,8 @@ static struct PyModuleDef parsers_module = {
 
 PyMODINIT_FUNC PyInit_parsers(void)
 {
+	if (check_python_version() == -1)
+		return;
 	PyObject *mod = PyModule_Create(&parsers_module);
 	module_init(mod);
 	return mod;
@@ -1946,6 +1978,8 @@ PyMODINIT_FUNC PyInit_parsers(void)
 #else
 PyMODINIT_FUNC initparsers(void)
 {
+	if (check_python_version() == -1)
+		return;
 	PyObject *mod = Py_InitModule3("parsers", methods, parsers_doc);
 	module_init(mod);
 }

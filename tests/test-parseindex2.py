@@ -1,8 +1,13 @@
-"""This unit test tests parsers.parse_index2()."""
+"""This unit test primarily tests parsers.parse_index2().
+
+It also checks certain aspects of the parsers module as a whole.
+"""
 
 from mercurial import parsers
 from mercurial.node import nullid, nullrev
 import struct
+import subprocess
+import sys
 
 # original python implementation
 def gettype(q):
@@ -95,7 +100,70 @@ def parse_index2(data, inline):
     index, chunkcache = parsers.parse_index2(data, inline)
     return list(index), chunkcache
 
+def importparsers(hexversion):
+    """Import mercurial.parsers with the given sys.hexversion."""
+    # The file parsers.c inspects sys.hexversion to determine the version
+    # of the currently-running Python interpreter, so we monkey-patch
+    # sys.hexversion to simulate using different versions.
+    code = ("import sys; sys.hexversion=%s; "
+            "import mercurial.parsers" % hexversion)
+    cmd = "python -c \"%s\"" % code
+    # We need to do these tests inside a subprocess because parser.c's
+    # version-checking code happens inside the module init function, and
+    # when using reload() to reimport an extension module, "The init function
+    # of extension modules is not called a second time"
+    # (from http://docs.python.org/2/library/functions.html?#reload).
+    p = subprocess.Popen(cmd, shell=True,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return p.communicate()  # returns stdout, stderr
+
+def printhexfail(testnumber, hexversion, stdout, expected):
+    try:
+        hexstring = hex(hexversion)
+    except TypeError:
+        hexstring = None
+    print ("FAILED: version test #%s with Python %s and patched "
+           "sys.hexversion %r (%r):\n Expected %s but got:\n-->'%s'\n" %
+           (testnumber, sys.version_info, hexversion, hexstring, expected,
+            stdout))
+
+def testversionokay(testnumber, hexversion):
+    stdout, stderr = importparsers(hexversion)
+    if stdout:
+        printhexfail(testnumber, hexversion, stdout, expected="no stdout")
+
+def testversionfail(testnumber, hexversion):
+    stdout, stderr = importparsers(hexversion)
+    # We include versionerrortext to distinguish from other ImportErrors.
+    errtext = "ImportError: %s" % parsers.versionerrortext
+    if errtext not in stdout:
+        printhexfail(testnumber, hexversion, stdout,
+                     expected="stdout to contain %r" % errtext)
+
+def makehex(major, minor, micro):
+    return int("%x%02x%02x00" % (major, minor, micro), 16)
+
+def runversiontests():
+    """Check the version-detection logic when importing parsers."""
+    info = sys.version_info
+    major, minor, micro = info[0], info[1], info[2]
+    # Test same major-minor versions.
+    testversionokay(1, makehex(major, minor, micro))
+    testversionokay(2, makehex(major, minor, micro + 1))
+    # Test different major-minor versions.
+    testversionfail(3, makehex(major + 1, minor, micro))
+    testversionfail(4, makehex(major, minor + 1, micro))
+    testversionfail(5, "'foo'")
+
 def runtest() :
+    # Only test the version-detection logic if it is present.
+    try:
+        parsers.versionerrortext
+    except AttributeError:
+        pass
+    else:
+        runversiontests()
+
     # Check that parse_index2() raises TypeError on bad arguments.
     try:
         parse_index2(0, True)
