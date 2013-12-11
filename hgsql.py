@@ -29,7 +29,7 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
-import MySQLdb, struct, time, Queue, threading
+import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 
 cmdtable = {}
@@ -40,19 +40,19 @@ bookmarklock = 'bookmark_lock'
 commitlock = 'commit_lock'
 
 maxrecordsize = 1024 * 1024
+disableinitialsync = False
 
 class CorruptionException(Exception):
     pass
 
 def uisetup(ui):
     wrapcommand(commands.table, 'pull', pull)
+    wrapfunction(wireproto, 'unbundle', unbundle)
+    wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
 
     wrapfunction(revlog.revlog, '_addrevision', addrevision)
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
     wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
-
-    wrapfunction(wireproto, 'unbundle', unbundle)
-    wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
 
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
@@ -61,12 +61,16 @@ def reposetup(ui, repo):
 
         wraprepo(repo)
 
-        if not hasattr(ui, 'disableinitialsync') or not ui.disableinitialsync:
+        if not disableinitialsync:
             repo.sqlconnect()
             try:
                 repo.syncdb()
             finally:
-                repo.sqlclose()
+                try:
+                    repo.sqlclose()
+                except _mysql_exceptions.ProgrammingError, ex:
+                    # ignore sql exceptions, so real exceptions propagate up
+                    pass
 
 # Handle incoming commits
 def unbundle(orig, repo, proto, heads):
@@ -104,7 +108,7 @@ def wraprepo(repo):
                 raise Exception("SQL connection already open")
             if self.sqlcursor:
                 raise Exception("SQL cursor already open without connection")
-            self.sqlconn = MySQLdb.connect(**dbargs)
+            self.sqlconn = MySQLdb.connect(**self.sqlargs)
             self.sqlconn.autocommit(False)
             self.sqlconn.query("SET SESSION wait_timeout=300;")
             self.sqlcursor = self.sqlconn.cursor()
@@ -144,7 +148,9 @@ def wraprepo(repo):
             return tr
 
         def needsync(self):
-            # Check latest db rev number
+            """Returns True if the local repo is not in sync with the database.
+            If it returns False, the heads and bookmarks match the database.
+            """
             self.sqlcursor.execute("SELECT * FROM headsbookmarks")
             sqlheads = set()
             sqlbookmarks = {}
@@ -179,57 +185,69 @@ def wraprepo(repo):
             ui = self.ui
             ui.debug("syncing with mysql\n")
 
-            lock = None
+            lock = self.lock()
             try:
-                lock = self.lock(wait=False)
-            except error.LockHeld:
-                # If the lock is held, someone else is doing the pull for us.
-                # Wait until they are done.
-                # TODO: I don't think this is actually true...
-                lock = self.lock()
-                lock.release()
-                return
 
-            transaction = self.transaction("syncdb")
+                # someone else may have synced us while we were waiting
+                if not self.needsync():
+                    return
 
-            try:
-                # Refresh the changelog now that we have the lock
-                fetchstart = len(self.changelog)
+                transaction = self.transaction("syncdb")
 
-                queue = Queue.Queue()
-                abort = threading.Event()
-
-                t = threading.Thread(target=self.fetchthread, args=(queue, abort, fetchstart))
-                t.setDaemon(True)
                 try:
-                    t.start()
-                    addentries(self, queue, transaction)
+                    # Inspect the changelog now that we have the lock
+                    fetchstart = len(self.changelog)
+
+                    queue = Queue.Queue()
+                    abort = threading.Event()
+
+                    t = threading.Thread(target=self.fetchthread,
+                        args=(queue, abort, fetchstart))
+                    t.setDaemon(True)
+                    try:
+                        t.start()
+                        addentries(self, queue, transaction)
+                    finally:
+                        abort.set()
+
+                    phases.advanceboundary(self, phases.public, self.heads())
+
+                    transaction.close()
                 finally:
-                    abort.set()
+                    transaction.release()
+                    lock.release()
 
-                phases.advanceboundary(self, phases.public, self.heads())
+                # We circumvent the changelog and manifest when we add entries to
+                # the revlogs. So clear all the caches.
+                self.invalidate()
+                self.invalidatedirstate()
+                self.invalidatevolatilesets()
 
-                transaction.close()
+                # lock.release(), above, assumes the changelog/manifest inmemory
+                # data structures are up to date (which in this case they aren't)
+                # and automatically updates the timestamps in the filecache.
+                # Therefore we need to manually clear the filecache.
+                unfiltered = self.unfiltered()
+                for k in self._filecache.iterkeys():
+                    if k in unfiltered.__dict__:
+                        del unfiltered.__dict__[k]
+                self._filecache.clear()
+
+                self.disablesync = True
+                try:
+                    bm = self._bookmarks
+                    bm.clear()
+                    self.sqlcursor.execute("SELECT * FROM headsbookmarks " +
+                        "WHERE name IS NOT NULL")
+                    for _, node, name in self.sqlcursor:
+                        node = bin(node)
+                        if node in self:
+                            bm[name] = node
+                    bm.write()
+                finally:
+                    self.disablesync = False
             finally:
-                transaction.release()
                 lock.release()
-
-            self.invalidate()
-            self.invalidatedirstate()
-            self._filecache.clear()
-
-            self.disablesync = True
-            try:
-                self.sqlcursor.execute("SELECT * FROM headsbookmarks WHERE name IS NOT NULL")
-                bm = self._bookmarks
-                bm.clear()
-                for _, node, name in self.sqlcursor:
-                    node = bin(node)
-                    if node in self:
-                        bm[name] = node
-                bm.write()
-            finally:
-                self.disablesync = False
 
         def fetchthread(self, queue, abort, fetchstart):
             ui = self.ui
@@ -279,6 +297,18 @@ def wraprepo(repo):
 
             queue.put(False)
 
+    ui = repo.ui
+    sqlargs = {}
+    sqlargs['host'] = ui.config("hgsql", "host")
+    sqlargs['db'] = ui.config("hgsql", "database")
+    sqlargs['user'] = ui.config("hgsql", "user")
+    sqlargs['port'] = ui.config("hgsql", "port")
+    password = ui.config("hgsql", "password", "")
+    if password:
+        sqlargs['passwd'] = password
+    sqlargs['cursorclass'] = cursors.SSCursor
+
+    repo.sqlargs = sqlargs
     repo.sqlconn = None
     repo.sqlcursor = None
     repo.disablesync = False
@@ -292,18 +322,15 @@ class bufferedopener(object):
         self.mode = mode
         self.buffer = []
         self.closed = False
-        self.lock = threading.Lock()
 
     def write(self, value):
-        self.lock.acquire()
+        if self.closed:
+            raise Exception("")
         self.buffer.append(value)
-        self.lock.release()
 
     def flush(self):
-        self.lock.acquire()
         buffer = self.buffer
         self.buffer = []
-        self.lock.release()
         
         if buffer:
             fp = self.opener(self.path, self.mode)
@@ -338,12 +365,10 @@ def addentries(repo, queue, transaction):
         revlog.dirty = True
 
     clrev = len(repo)
-    startclrev = clrev
-    start = time.time()
-    last = start
-    estimatedtotal = 600000
     leftover = None
     exit = False
+
+    # Read one linkrev at a time from the queue 
     while not exit:
         currentlinkrev = -1
 
@@ -352,6 +377,7 @@ def addentries(repo, queue, transaction):
             revisions.append(leftover)
             leftover = None
 
+        # Read everything from the current linkrev
         while True:
             revdata = queue.get()
             if not revdata:
@@ -373,49 +399,33 @@ def addentries(repo, queue, transaction):
         if not revisions:
             continue
 
-        # Write filelogs first, then manifests, then changelogs,
-        # just like Mercurial does normally.
-        changelog = []
-        manifest = []
         for revdata in revisions:
-            name = revdata[1]
-            if name == "00changelog.i":
-                changelog.append(revdata)
-            elif name == "00manifest.i":
-                manifest.append(revdata)
-            else:
-                writeentry(revdata)
-
-        for revdata in manifest:
-            writeentry(revdata)
-
-        for revdata in changelog:
             writeentry(revdata)
 
         clrev += 1
 
-        if clrev % 5000 == 0:
-            duration = time.time() - start
-            perrev = (time.time() - last) / 5000
-            estimate = perrev * (estimatedtotal - clrev)
-            last = time.time()
-            print "Added %s (%s revlogs open - estimated remaining %0.0f:%02.0f - %0.0f:%02.0f)" % (clrev, len(revlogs), estimate / 60, estimate % 60, duration / 60, duration % 60)
+    # Flush filelogs, then manifest, then changelog
+    changelog = revlogs.pop("00changelog.i", None)
+    manifest = revlogs.pop("00manifest.i", None)
 
-    total = len(revlogs)
-    count = 0
-    for revlog in revlogs.itervalues():
+    def flushrevlog(revlog):
         if not revlog.ifh.closed:
             revlog.ifh.flush()
         if revlog.dfh and not revlog.dfh.closed:
             revlog.dfh.flush()
-        count += 1
-        if count % 5000 == 0:
-            print "Flushed %0.0f" % (float(count) / float(total) * 100)
+
+    for filelog in revlogs.itervalues():
+        flushrevlog(filelog)
+
+    if manifest:
+        flushrevlog(manifest)
+    if changelog:
+        flushrevlog(changelog)
 
 class EntryRevlog(revlog.revlog):
     def addentry(self, transaction, ifh, dfh, entry, data0, data1):
         curr = len(self)
-        offset = self.end(curr)
+        offset = self.end(curr - 1)
 
         e = struct.unpack(revlog.indexformatng, entry)
         offsettype, datalen, textlen, base, link, p1r, p2r, node = e
@@ -433,11 +443,10 @@ class EntryRevlog(revlog.revlog):
             raise CorruptionException("base revision is not in revlog: %s" % self.indexfile)
 
         expectedoffset = revlog.getoffset(offsettype)
-        actualoffset = self.end(curr - 1)
-        if expectedoffset != 0 and expectedoffset != actualoffset:
+        if expectedoffset != 0 and expectedoffset != offset:
             raise CorruptionException("revision offset doesn't match prior length " +
                 "(%s offset vs %s length): %s" %
-                (expectedoffset, actualoffset, self.indexfile))
+                (expectedoffset, offset, self.indexfile))
 
         if node not in self.nodemap:
             self.index.insert(-1, e)
@@ -728,7 +737,8 @@ def sqlrecover(ui, *args, **opts):
     server.
     """
 
-    ui.disableinitialsync = True
+    global disableinitialsync
+    disableinitialsync = True
     repo = hg.repository(ui, ui.environ['PWD'])
     repo.disablesync = True
 
@@ -739,7 +749,7 @@ def sqlrecover(ui, *args, **opts):
         repo.sqlconnect()
         try:
             repo.syncdb()
-        except CorruptionException:
+        except:
             return True
         finally:
             repo.sqlclose()
