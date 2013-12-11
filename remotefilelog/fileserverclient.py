@@ -89,7 +89,6 @@ class fileserverclient(object):
         fallbackrepo = repo.ui.config("remotefilelog", "fallbackrepo",
                          repo.ui.config("paths", "default"))
 
-        remote = None
         missed = []
         count = 0
         while True:
@@ -108,8 +107,17 @@ class fileserverclient(object):
 
             missed.append(missingid)
 
-            # fetch from the master
-            if not remote:
+        global fetchmisses
+        fetchmisses += len(missed)
+
+        count = total - len(missed)
+        self.ui.progress(_downloading, count, total=total)
+
+        uid = os.getuid()
+        oldumask = os.umask(0o002)
+        try:
+            # receive cache misses from master
+            if missed:
                 verbose = self.ui.verbose
                 try:
                     # When verbose is true, sshpeer prints 'running ssh...'
@@ -122,50 +130,25 @@ class fileserverclient(object):
                 finally:
                     self.ui.verbose = verbose
 
-            id = missingid[-40:]
-            file = idmap[missingid]
-            sshrequest = "%s%s\n" % (id, file)
-            remote.pipeo.write(sshrequest)
-            remote.pipeo.flush()
+                previousid = None
+                for missingid in missed:
+                    # issue new request
+                    versionid = missingid[-40:]
+                    file = idmap[missingid]
+                    sshrequest = "%s%s\n" % (versionid, file)
+                    remote.pipeo.write(sshrequest)
+                    remote.pipeo.flush()
 
+                    # receive previous request
+                    if previousid:
+                        self.receivemissing(remote.pipei, previousid, uid)
+                        count += 1
+                        self.ui.progress(_downloading, count, total=total)
 
-        count = total - len(missed)
-        self.ui.progress(_downloading, count, total=total)
+                    previousid = missingid
 
-        uid = os.getuid()
-        oldumask = os.umask(0o002)
-        try:
-            # receive cache misses from master
-            if missed:
-                global fetchmisses
-                fetchmisses += len(missed)
-                # process remote
-                pipei = remote.pipei
-                for id in missed:
-                    line = pipei.readline()[:-1]
-                    if not line:
-                        raise error.ResponseError(_("error downloading file " +
-                            "contents: connection closed early\n"))
-                    size = int(line)
-                    data = pipei.read(size)
-
-                    count += 1
-                    self.ui.progress(_downloading, count, total=total)
-
-                    idcachepath = os.path.join(self.cachepath, id)
-                    dirpath = os.path.dirname(idcachepath)
-                    if not os.path.exists(dirpath):
-                        makedirs(self.cachepath, dirpath, uid)
-                    f = open(idcachepath, "w")
-                    try:
-                        f.write(lz4.decompress(data))
-                    finally:
-                        f.close()
-
-
-                    stat = os.stat(idcachepath)
-                    if stat.st_uid == uid:
-                        os.chmod(idcachepath, 0o0664)
+                # receive final request
+                self.receivemissing(remote.pipei, missingid, uid)
 
                 remote.cleanup()
                 remote = None
@@ -191,6 +174,28 @@ class fileserverclient(object):
             os.umask(oldumask)
 
         return missing
+
+    def receivemissing(self, pipe, missingid, uid):
+        line = pipe.readline()[:-1]
+        if not line:
+            raise error.ResponseError(_("error downloading file " +
+                "contents: connection closed early\n"))
+        size = int(line)
+        data = pipe.read(size)
+
+        idcachepath = os.path.join(self.cachepath, missingid)
+        dirpath = os.path.dirname(idcachepath)
+        if not os.path.exists(dirpath):
+            makedirs(self.cachepath, dirpath, uid)
+        f = open(idcachepath, "w")
+        try:
+            f.write(lz4.decompress(data))
+        finally:
+            f.close()
+
+        stat = os.stat(idcachepath)
+        if stat.st_uid == uid:
+            os.chmod(idcachepath, 0o0664)
 
     def connect(self):
         if self.cacheprocess:
