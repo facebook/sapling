@@ -1277,5 +1277,25 @@ Ignore win32text deprecation warning for now:
    c
   +d
   
+Test --user when ui.username not set
+  $ unset HGUSER
+  $ echo e >> subdir/f1
+  $ hg record  --config ui.username= -d '8 0' --user xyz -m "user flag" <<EOF
+  > y
+  > y
+  > EOF
+  diff --git a/subdir/f1 b/subdir/f1
+  1 hunks, 1 lines changed
+  examine changes to 'subdir/f1'? [Ynesfdaq?] 
+  @@ -4,3 +4,4 @@
+   b
+   c
+   d
+  +e
+  record this change to 'subdir/f1'? [Ynesfdaq?] 
+  $ hg log --template '{author}\n' -l 1
+  xyz
+  $ HGUSER="test"
+  $ export HGUSER
 
   $ cd ..

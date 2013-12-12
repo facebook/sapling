@@ -502,7 +502,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
                          cmdsuggest)
 
     # make sure username is set before going interactive
-    ui.username()
+    if not opts.get('user'):
+        ui.username() # raise exception, username not provided
 
     def recordfunc(ui, repo, message, match, opts):
         """This is generic record driver.
