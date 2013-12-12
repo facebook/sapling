@@ -155,10 +155,10 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 {
 	PyObject *dmap, *cmap, *parents = NULL, *ret = NULL;
 	PyObject *fname = NULL, *cname = NULL, *entry = NULL;
-	char state, *str, *cur, *end, *cpos;
+	char state, *cur, *str, *cpos;
 	int mode, size, mtime;
 	unsigned int flen;
-	int len;
+	int len, pos = 40;
 
 	if (!PyArg_ParseTuple(args, "O!O!s#:parse_dirstate",
 			      &PyDict_Type, &dmap,
@@ -175,18 +175,17 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		goto quit;
 
 	/* read filenames */
-	cur = str + 40;
-	end = str + len;
-
-	while (cur < end - 17) {
+	while (pos >= 40 && pos < len) {
+		cur = str + pos;
 		/* unpack header */
 		state = *cur;
 		mode = getbe32(cur + 1);
 		size = getbe32(cur + 5);
 		mtime = getbe32(cur + 9);
 		flen = getbe32(cur + 13);
+		pos += 17;
 		cur += 17;
-		if (cur + flen > end || cur + flen < cur) {
+		if (flen > len - pos || flen < 0) {
 			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
 			goto quit;
 		}
@@ -212,10 +211,10 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 			    PyDict_SetItem(dmap, fname, entry) == -1)
 				goto quit;
 		}
-		cur += flen;
 		Py_DECREF(fname);
 		Py_DECREF(entry);
 		fname = cname = entry = NULL;
+		pos += flen;
 	}
 
 	ret = parents;
@@ -1678,28 +1677,23 @@ static int index_assign_subscript(indexObject *self, PyObject *item,
 static long inline_scan(indexObject *self, const char **offsets)
 {
 	const char *data = PyString_AS_STRING(self->data);
-	const char *end = data + PyString_GET_SIZE(self->data);
+	Py_ssize_t pos = 0;
+	Py_ssize_t end = PyString_GET_SIZE(self->data);
 	long incr = v1_hdrsize;
 	Py_ssize_t len = 0;
 
-	while (data + v1_hdrsize <= end) {
+	while (pos + v1_hdrsize <= end && pos >= 0) {
 		uint32_t comp_len;
-		const char *old_data;
 		/* 3rd element of header is length of compressed inline data */
-		comp_len = getbe32(data + 8);
+		comp_len = getbe32(data + pos + 8);
 		incr = v1_hdrsize + comp_len;
-		if (incr < v1_hdrsize)
-			break;
 		if (offsets)
-			offsets[len] = data;
+			offsets[len] = data + pos;
 		len++;
-		old_data = data;
-		data += incr;
-		if (data <= old_data)
-			break;
+		pos += incr;
 	}
 
-	if (data != end && data + v1_hdrsize != end) {
+	if (pos != end) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(PyExc_ValueError, "corrupt index file");
 		return -1;
