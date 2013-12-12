@@ -62,7 +62,7 @@ def wraprepo(repo):
 
             if hasattr(remote, '_callstream'):
                 wrapfunction(remote, '_callstream', remotecallstream)
-            else:
+            elif hasattr(remote, 'getbundle'):
                 wrapfunction(remote, 'getbundle', localgetbundle)
 
             return super(shallowrepository, self).pull(remote, *args, **kwargs)
