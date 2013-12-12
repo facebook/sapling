@@ -28,6 +28,8 @@ from mercurial import util as hgutil
 
 from hgsubversion import util as svnutil
 
+import os
+import signal
 import json
 import re
 import subprocess
@@ -52,7 +54,7 @@ def getdiff(diffid):
 
     try:
         proc = subprocess.Popen(['arc', 'call-conduit', 'differential.getdiff'],
-                     stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
         input = json.dumps({'revision_id': diffid})
         proc.stdin.write(input)
@@ -100,7 +102,7 @@ def forksearch(repo, diffid):
         rev = finddiff(repo, diffid, proc)
 
         repo.ui.debug('[diffrev] Parallel log walk completed with %s\n' % rev)
-        proc.kill()  # search completed succesfully, stop arc call
+        os.killpg(proc.pid, signal.SIGTERM)
 
         if rev is None:
             # walked the entire repo and couldn't find the diff
