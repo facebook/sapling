@@ -278,7 +278,7 @@ class GitHandler(object):
         remote_name = self.remote_name(remote)
 
         if remote_name and new_refs:
-            for ref, new_sha in new_refs.iteritems():
+            for ref, new_sha in sorted(new_refs.iteritems()):
                 old_sha = old_refs.get(ref)
                 if old_sha is None:
                     if self.ui.verbose:
