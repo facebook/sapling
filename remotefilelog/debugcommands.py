@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import util, filelog, revlog
-from mercurial.node import bin, hex, nullid, nullrev
+from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
 import shallowrepo
 import os, lz4
