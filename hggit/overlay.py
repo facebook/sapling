@@ -10,6 +10,11 @@ from mercurial import context
 from mercurial.node import bin, hex, nullid
 from mercurial import localrepo
 
+def _maybehex(n):
+    if len(n) == 20:
+        return hex(n)
+    return n
+
 class overlaymanifest(object):
     def __init__(self, repo, sha):
         self.repo = repo
@@ -103,7 +108,7 @@ class overlayfilectx(object):
         return self.fileid
 
     def data(self):
-        blob = self.repo.handler.git.get_object(self.fileid)
+        blob = self.repo.handler.git.get_object(_maybehex(self.fileid))
         return blob.data
 
 class overlaychangectx(context.changectx):
@@ -111,7 +116,7 @@ class overlaychangectx(context.changectx):
         self.repo = repo
         if not isinstance(sha, basestring):
           sha = sha.hex()
-        self.commit = repo.handler.git.get_object(sha)
+        self.commit = repo.handler.git.get_object(_maybehex(sha))
         self._overlay = getattr(repo, 'gitoverlay', repo)
         self._rev = self._overlay.rev(bin(self.commit.id))
 
@@ -185,7 +190,7 @@ class overlayrevlog(object):
         if not gitrev:
             # we've reached a revision we have
             return self.base.parents(n)
-        commit = self.repo.handler.git.get_object(n)
+        commit = self.repo.handler.git.get_object(_maybehex(n))
 
         def gitorhg(n):
             hn = self.repo.handler.map_hg_get(hex(n))
