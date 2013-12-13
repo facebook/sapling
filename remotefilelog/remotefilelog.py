@@ -317,7 +317,8 @@ class remotefilelog(object):
             alternates = sorted(alternates, key=lambda x: int(x[40:]))
 
             for alternate in alternates:
-                mapping = self._ancestormap(node, alternate, relativeto)
+                alternatepath = os.path.join(directory, alternate)
+                mapping = self._ancestormap(node, alternatepath, relativeto)
                 if mapping:
                     return mapping
 
