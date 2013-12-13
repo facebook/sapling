@@ -18,8 +18,8 @@ Load commonly used test logic
   > # Date 1337962044 25201
   > # Node ID 1111111111111111111111111111111111111111
   > # Parent  0000000000000000000000000000000000000000
+  > 
   > Patch with sub-minute time zone
-  >
   > diff --git a/alpha b/alpha
   > new file mode 100644
   > --- /dev/null
