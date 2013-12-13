@@ -73,7 +73,7 @@ hg status shall NOT report .hgsub and .hgsubstate as untracked - either ignored 
   pushing to $TESTTMP/gitrepo1
   searching for changes
   adding objects
-  added 1 commits with 2 trees and 2 blobs
+  added 1 commits with 2 trees and 1 blobs
   updating reference refs/heads/master
   $ cd ..
   $ cd gitrepo1

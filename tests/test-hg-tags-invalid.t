@@ -25,9 +25,9 @@ Load commonly used test logic
   Skipping export of tag bet*a because it has invalid name as a git refname.
   searching for changes
   adding objects
-  added 2 commits with 2 trees and 3 blobs
-  adding reference refs/tags/alph#a
+  added 2 commits with 2 trees and 2 blobs
   updating reference refs/heads/master
+  adding reference refs/tags/alph#a
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   2:e72bdd9ef5c0

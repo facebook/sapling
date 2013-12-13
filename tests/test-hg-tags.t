@@ -23,9 +23,9 @@ Load commonly used test logic
   pushing to $TESTTMP/gitrepo
   searching for changes
   adding objects
-  added 1 commits with 1 trees and 2 blobs
-  adding reference refs/tags/alpha
+  added 1 commits with 1 trees and 1 blobs
   updating reference refs/heads/master
+  adding reference refs/tags/alpha
 
   $ hg log --graph | egrep -v ': *(not-master|master)'
   @  changeset:   1:d529e9229f6d
