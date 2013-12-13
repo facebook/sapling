@@ -202,7 +202,7 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 {
 	struct flist *l;
 	struct frag *lt;
-	const char *data = bin + 12, *end = bin + len;
+	int pos = 0;
 
 	/* assume worst case size, we won't have many of these lists */
 	l = lalloc(len / 12);
@@ -211,21 +211,18 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 
 	lt = l->tail;
 
-	while (data <= end) {
-		lt->start = getbe32(bin);
-		lt->end = getbe32(bin + 4);
-		lt->len = getbe32(bin + 8);
+	while (pos >= 0 && pos < len) {
+		lt->start = getbe32(bin + pos);
+		lt->end = getbe32(bin + pos + 4);
+		lt->len = getbe32(bin + pos + 8);
 		if (lt->start > lt->end)
 			break; /* sanity check */
-		bin = data + lt->len;
-		if (bin < data)
-			break; /* big data + big (bogus) len can wrap around */
-		lt->data = data;
-		data = bin + 12;
+		lt->data = bin + pos + 12;
+		pos += 12 + lt->len;
 		lt++;
 	}
 
-	if (bin != end) {
+	if (pos != len) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
 		lfree(l);
@@ -355,32 +352,26 @@ cleanup:
 static PyObject *
 patchedsize(PyObject *self, PyObject *args)
 {
-	long orig, start, end, len, outlen = 0, last = 0;
+	long orig, start, end, len, outlen = 0, last = 0, pos = 0;
 	Py_ssize_t patchlen;
-	char *bin, *binend, *data;
+	char *bin;
 
 	if (!PyArg_ParseTuple(args, "ls#", &orig, &bin, &patchlen))
 		return NULL;
 
-	binend = bin + patchlen;
-	data = bin + 12;
-
-	while (data <= binend) {
-		start = getbe32(bin);
-		end = getbe32(bin + 4);
-		len = getbe32(bin + 8);
+	while (pos >= 0 && pos < patchlen) {
+		start = getbe32(bin + pos);
+		end = getbe32(bin + pos + 4);
+		len = getbe32(bin + pos + 8);
 		if (start > end)
 			break; /* sanity check */
-		bin = data + len;
-		if (bin < data)
-			break; /* big data + big (bogus) len can wrap around */
-		data = bin + 12;
+		pos += 12 + len;
 		outlen += start - last;
 		last = end;
 		outlen += len;
 	}
 
-	if (bin != binend) {
+	if (pos != patchlen) {
 		if (!PyErr_Occurred())
 			PyErr_SetString(mpatch_Error, "patch cannot be decoded");
 		return NULL;
