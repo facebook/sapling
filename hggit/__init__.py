@@ -41,7 +41,7 @@ demandimport.ignore.extend([
     'collections',
     ])
 
-import gitrepo, hgrepo, gitdirstate
+import gitrepo, hgrepo
 from git_handler import GitHandler
 
 testedwith = '1.9.3 2.0.2 2.1.2 2.2.3 2.3.1'
@@ -130,9 +130,15 @@ def gclear(ui, repo):
     repo.ui.status(_("clearing out the git cache data\n"))
     git = GitHandler(repo, ui)
     git.clear()
-    
-extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
-dirstate.dirstate = gitdirstate.gitdirstate
+
+from mercurial import dirstate
+from mercurial import ignore
+if (getattr(dirstate, 'rootcache', False) and
+    getattr(ignore, 'readpats', False)):
+    # only install our dirstate wrapper if it has a hope of working
+    import gitdirstate
+    extensions.wrapfunction(ignore, 'ignore', gitdirstate.gignore)
+    dirstate.dirstate = gitdirstate.gitdirstate
 
 def git_cleanup(ui, repo):
     new_map = []
