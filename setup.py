@@ -11,7 +11,7 @@ except ImportError:
 
 setup(
     name='hg-git',
-    version='0.4.0',
+    version='0.5.0',
     author='Scott Chacon',
     maintainer='Augie Fackler',
     maintainer_email='durin42@gmail.com',
