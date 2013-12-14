@@ -310,17 +310,21 @@ class remotefilelog(object):
                 return mapping
 
             # past versions may contain valid linknodes
-            filename = os.path.basename(localpath)
-            directory = os.path.dirname(localpath)
-            alternates = [f for f in os.listdir(directory) if
-                     len(f) == 41 and f.startswith(filename)]
-            alternates = sorted(alternates, key=lambda x: int(x[40:]))
+            try:
+                filename = os.path.basename(localpath)
+                directory = os.path.dirname(localpath)
+                alternates = [f for f in os.listdir(directory) if
+                         len(f) == 41 and f.startswith(filename)]
+                alternates = sorted(alternates, key=lambda x: int(x[40:]))
 
-            for alternate in alternates:
-                alternatepath = os.path.join(directory, alternate)
-                mapping = self._ancestormap(node, alternatepath, relativeto)
-                if mapping:
-                    return mapping
+                for alternate in alternates:
+                    alternatepath = os.path.join(directory, alternate)
+                    mapping = self._ancestormap(node, alternatepath, relativeto)
+                    if mapping:
+                        return mapping
+            except OSError:
+                # Directory doesn't exist. Oh well
+                pass
 
             # Fallback to the server cache
             fileserverclient.client.prefetch(self.repo,
