@@ -977,8 +977,9 @@ class GitHandler(object):
                     # we already have the annotated tag.
                     pass
                 else:
-                    raise hgutil.Abort("%s changed on the server, please pull "
-                                       "and merge before pushing" % ref)
+                    raise hgutil.Abort(
+                        "branch '%s' changed on the server, "
+                        "please pull and merge before pushing" % ref)
 
         return new_refs
 
