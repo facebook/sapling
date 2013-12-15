@@ -91,7 +91,7 @@ Check state of refs after outgoing
 this will fail # maybe we should try to make it work
   $ hg outgoing
   comparing with */gitrepo (glob)
-  abort: refs/heads/master changed on the server, please pull and merge before pushing
+  abort: branch 'refs/heads/master' changed on the server, please pull and merge before pushing
   [255]
 let's pull and try again
   $ hg pull 2>&1 | grep -v 'divergent bookmark'

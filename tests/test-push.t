@@ -58,14 +58,14 @@ this should fail
   $ hg push -r master
   pushing to $TESTTMP/gitrepo
   searching for changes
-  abort: refs/heads/master changed on the server, please pull and merge before pushing
+  abort: branch 'refs/heads/master' changed on the server, please pull and merge before pushing
   [255]
 
 ... even with -f
   $ hg push -fr master
   pushing to $TESTTMP/gitrepo
   searching for changes
-  abort: refs/heads/master changed on the server, please pull and merge before pushing
+  abort: branch 'refs/heads/master' changed on the server, please pull and merge before pushing
   [255]
 
   $ hg pull 2>&1 | grep -v 'divergent bookmark'
