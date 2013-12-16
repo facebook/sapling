@@ -105,4 +105,4 @@ Some sample command line templates:
 
 - Display the contents of the 'extra' field, one per line::
 
-  $ hg log -r 0 --template "{join(extras, '\n')}\n"
+   $ hg log -r 0 --template "{join(extras, '\n')}\n"
