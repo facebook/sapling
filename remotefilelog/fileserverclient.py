@@ -130,25 +130,25 @@ class fileserverclient(object):
                 finally:
                     self.ui.verbose = verbose
 
-                previousid = None
-                for missingid in missed:
-                    # issue new request
-                    versionid = missingid[-40:]
-                    file = idmap[missingid]
-                    sshrequest = "%s%s\n" % (versionid, file)
-                    remote.pipeo.write(sshrequest)
+                i = 0
+                while i < len(missed):
+                    # issue a batch of requests
+                    start = i
+                    end = min(len(missed), start + 10000)
+                    i = end
+                    for missingid in missed[start:end]:
+                        # issue new request
+                        versionid = missingid[-40:]
+                        file = idmap[missingid]
+                        sshrequest = "%s%s\n" % (versionid, file)
+                        remote.pipeo.write(sshrequest)
                     remote.pipeo.flush()
 
-                    # receive previous request
-                    if previousid:
-                        self.receivemissing(remote.pipei, previousid, uid)
+                    # receive batch results
+                    for j in range(start, end):
+                        self.receivemissing(remote.pipei, missed[j], uid)
                         count += 1
                         self.ui.progress(_downloading, count, total=total)
-
-                    previousid = missingid
-
-                # receive final request
-                self.receivemissing(remote.pipei, missingid, uid)
 
                 remote.cleanup()
                 remote = None
