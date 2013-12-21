@@ -78,7 +78,9 @@ def tokenize(program):
         pos += 1
     yield ('end', None, pos)
 
-parse = parser.parser(tokenize, elements).parse
+def parse(expr):
+    p = parser.parser(tokenize, elements)
+    return p.parse(expr)
 
 def getstring(x, err):
     if x and (x[0] == 'string' or x[0] == 'symbol'):

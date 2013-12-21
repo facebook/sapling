@@ -1880,7 +1880,9 @@ def findaliases(ui, tree):
         aliases[alias.name] = alias
     return _expandaliases(aliases, tree, [], {})
 
-parse = parser.parser(tokenize, elements).parse
+def parse(spec):
+    p = parser.parser(tokenize, elements)
+    return p.parse(spec)
 
 def match(ui, spec):
     if not spec:
