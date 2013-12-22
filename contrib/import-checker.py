@@ -48,11 +48,14 @@ def list_stdlib_modules():
     for m in 'ctypes', 'email':
         yield m
     yield 'builtins' # python3 only
+    stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
     for libpath in sys.path:
-        # We want to walk everything in sys.path that starts with
-        # either sys.prefix or sys.exec_prefix.
-        if not (libpath.startswith(sys.prefix)
-                or libpath.startswith(sys.exec_prefix)):
+        # We want to walk everything in sys.path that starts with something
+        # in stdlib_prefixes.
+        for prefix in stdlib_prefixes:
+            if libpath.startswith(prefix):
+                break
+        else:
             continue
         if 'site-packages' in libpath:
             continue
