@@ -2,6 +2,12 @@ import ast
 import os
 import sys
 
+# Import a minimal set of stdlib modules needed for list_stdlib_modules()
+# to work when run from a virtualenv.  The modules were chosen empirically
+# so that the return value matches the return value without virtualenv.
+import BaseHTTPServer
+import zlib
+
 def dotted_name_of_path(path):
     """Given a relative path to a source file, return its dotted module name.
 
@@ -49,6 +55,21 @@ def list_stdlib_modules():
         yield m
     yield 'builtins' # python3 only
     stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
+    # We need to supplement the list of prefixes for the search to work
+    # when run from within a virtualenv.
+    for mod in (BaseHTTPServer, zlib):
+        try:
+            # Not all module objects have a __file__ attribute.
+            filename = mod.__file__
+        except AttributeError:
+            continue
+        dirname = os.path.dirname(filename)
+        for prefix in stdlib_prefixes:
+            if dirname.startswith(prefix):
+                # Then this directory is redundant.
+                break
+        else:
+            stdlib_prefixes.add(dirname)
     for libpath in sys.path:
         # We want to walk everything in sys.path that starts with something
         # in stdlib_prefixes.
