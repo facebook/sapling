@@ -117,7 +117,8 @@ def getlatesttags(repo, ctx, cache):
         if rev in latesttags:
             continue
         ctx = repo[rev]
-        tags = [t for t in ctx.tags() if repo.tagtype(t) == 'global']
+        tags = [t for t in ctx.tags()
+                if (repo.tagtype(t) and repo.tagtype(t) != 'local')]
         if tags:
             latesttags[rev] = ctx.date()[0], 0, ':'.join(sorted(tags))
             continue
