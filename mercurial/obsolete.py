@@ -456,6 +456,28 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
                     seen.add(suc)
                     remaining.add(suc)
 
+def allprecursors(obsstore, nodes, ignoreflags=0):
+    """Yield node for every precursors of <nodes>.
+
+    Some precursors may be unknown locally.
+
+    This is a linear yield unsuited to detecting folded changesets. It includes
+    initial nodes too."""
+
+    remaining = set(nodes)
+    seen = set(remaining)
+    while remaining:
+        current = remaining.pop()
+        yield current
+        for mark in obsstore.precursors.get(current, ()):
+            # ignore marker flagged with specified flag
+            if mark[2] & ignoreflags:
+                continue
+            suc = mark[0]
+            if suc not in seen:
+                seen.add(suc)
+                remaining.add(suc)
+
 def foreground(repo, nodes):
     """return all nodes in the "foreground" of other node
 
