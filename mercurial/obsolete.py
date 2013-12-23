@@ -440,7 +440,8 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
 
     Some successors may be unknown locally.
 
-    This is a linear yield unsuited to detecting split changesets."""
+    This is a linear yield unsuited to detecting split changesets. It includes
+    initial nodes too."""
     remaining = set(nodes)
     seen = set(remaining)
     while remaining:
