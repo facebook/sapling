@@ -447,7 +447,7 @@ def allsuccessors(obsstore, nodes, ignoreflags=0):
         current = remaining.pop()
         yield current
         for mark in obsstore.successors.get(current, ()):
-            # ignore marker flagged with with specified flag
+            # ignore marker flagged with specified flag
             if mark[2] & ignoreflags:
                 continue
             for suc in mark[1]:
