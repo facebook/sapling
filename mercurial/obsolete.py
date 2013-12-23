@@ -84,6 +84,7 @@ The header is followed by the markers. Each marker is made of:
 """
 import struct
 import util, base85, node
+import phases
 from i18n import _
 
 _pack = struct.pack
@@ -786,14 +787,26 @@ def _computeextinctset(repo):
 @cachefor('bumped')
 def _computebumpedset(repo):
     """the set of revs trying to obsolete public revisions"""
-    # get all possible bumped changesets
-    tonode = repo.changelog.node
-    publicnodes = (tonode(r) for r in repo.revs('public()'))
-    successors = allsuccessors(repo.obsstore, publicnodes,
-                               ignoreflags=bumpedfix)
-    # revision public or already obsolete don't count as bumped
-    query = '%ld - obsolete() - public()'
-    return set(repo.revs(query, _knownrevs(repo, successors)))
+    bumped = set()
+    # utils function (avoid attribut lookup in the loop)
+    phase = repo._phasecache.phase # would be faster to grab the full list
+    public = phases.public
+    cl = repo.changelog
+    torev = cl.nodemap.get
+    obs = getrevs(repo, 'obsolete')
+    for rev in repo:
+        # We only evaluate mutable, non-obsolete revision
+        if (public < phase(repo, rev)) and (rev not in obs):
+            node = cl.node(rev)
+            # (future) A cache of precursors may worth if split is very common
+            for pnode in allprecursors(repo.obsstore, [node],
+                                       ignoreflags=bumpedfix):
+                prev = torev(pnode) # unfiltered! but so is phasecache
+                if (prev is not None) and (phase(repo, prev) <= public):
+                    # we have a public precursors
+                    bumped.add(rev)
+                    break # Next draft!
+    return bumped
 
 @cachefor('divergent')
 def _computedivergentset(repo):
