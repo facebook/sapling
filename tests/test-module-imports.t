@@ -2,13 +2,6 @@ This code uses the ast module, which was new in 2.6, so we'll skip
 this test on anything earlier.
   $ python -c 'import sys ; assert sys.version_info >= (2, 6)' || exit 80
 
-Virtualenv has a habit of leaving BaseHTTPServer and other modules in
-a place where the import checker is confused about their nature as
-part of the stdlib. Skip the test if BaseHTTPServer's path isn't a
-subpath of sys.prefix.
-
-  $ python -c 'import sys, BaseHTTPServer; assert BaseHTTPServer.__file__.startswith(sys.prefix)' || exit 80
-
   $ import_checker="$TESTDIR"/../contrib/import-checker.py
 Run the doctests from the import checker, and make sure
 it's working correctly.
