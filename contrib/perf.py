@@ -361,7 +361,7 @@ def perfvolatilesets(ui, repo, *names):
     def getfiltered(name):
         def d():
             repo.invalidatevolatilesets()
-            repoview.filteredrevs(repo, name)
+            repoview.filterrevs(repo, name)
         return d
 
     allfilter = sorted(repoview.filtertable)
