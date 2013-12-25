@@ -73,10 +73,7 @@ def list_stdlib_modules():
     for libpath in sys.path:
         # We want to walk everything in sys.path that starts with something
         # in stdlib_prefixes.
-        for prefix in stdlib_prefixes:
-            if libpath.startswith(prefix):
-                break
-        else:
+        if not any(libpath.startswith(p) for p in stdlib_prefixes):
             continue
         if 'site-packages' in libpath:
             continue
