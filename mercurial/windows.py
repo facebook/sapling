@@ -133,15 +133,6 @@ def normpath(path):
 def normcase(path):
     return encoding.upper(path)
 
-def realpath(path):
-    '''
-    Returns the true, canonical file system path equivalent to the given
-    path.
-    '''
-    # TODO: There may be a more clever way to do this that also handles other,
-    # less common file systems.
-    return os.path.normpath(normcase(os.path.realpath(path)))
-
 def samestat(s1, s2):
     return False
 

@@ -52,7 +52,6 @@ pconvert = platform.pconvert
 popen = platform.popen
 posixfile = platform.posixfile
 quotecommand = platform.quotecommand
-realpath = platform.realpath
 rename = platform.rename
 samedevice = platform.samedevice
 samefile = platform.samefile
