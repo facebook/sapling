@@ -9,6 +9,7 @@ from node import hex, bin, nullid, nullrev, short
 from lock import release
 from i18n import _
 import os, re, difflib, time, tempfile, errno
+import sys
 import hg, scmutil, util, revlog, copies, error, bookmarks
 import patch, help, encoding, templatekw, discovery
 import archival, changegroup, cmdutil, hbisect
@@ -2159,7 +2160,10 @@ def debuginstall(ui):
         ui.write(_(" (check that your locale is properly set)\n"))
         problems += 1
 
-    # Python lib
+    # Python
+    ui.status(_("showing Python executable (%s)\n") % sys.executable)
+    ui.status(_("showing Python version (%s)\n")
+              % ("%s.%s.%s" % sys.version_info[:3]))
     ui.status(_("checking Python lib (%s)...\n")
               % os.path.dirname(os.__file__))
 
