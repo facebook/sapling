@@ -71,9 +71,11 @@ def list_stdlib_modules():
         else:
             stdlib_prefixes.add(dirname)
     for libpath in sys.path:
-        # We want to walk everything in sys.path that starts with something
-        # in stdlib_prefixes.
-        if not any(libpath.startswith(p) for p in stdlib_prefixes):
+        # We want to walk everything in sys.path that starts with
+        # something in stdlib_prefixes. check-code suppressed because
+        # the ast module used by this script implies the availability
+        # of any().
+        if not any(libpath.startswith(p) for p in stdlib_prefixes): # no-check-code
             continue
         if 'site-packages' in libpath:
             continue
