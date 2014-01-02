@@ -63,50 +63,47 @@ def uisetup(ui):
 
 def reposetup(ui, repo):
     if repo.ui.configbool("hgsql", "enabled"):
-        ui.setconfig("hooks", "pretxnchangegroup.remotefilelog", pretxnchangegroup)
-        ui.setconfig("hooks", "pretxncommit.remotefilelog", pretxnchangegroup)
-
         wraprepo(repo)
 
         if not disableinitialsync:
-            repo.sqlconnect()
-            try:
-                repo.syncdb()
-            finally:
-                try:
-                    repo.sqlclose()
-                except _mysql_exceptions.ProgrammingError, ex:
-                    # ignore sql exceptions, so real exceptions propagate up
-                    pass
+            # Use a noop to force a sync
+            def noop():
+                pass
+            executewithsql(repo, noop)
 
 # Handle incoming commits
-def unbundle(orig, repo, proto, heads):
+def unbundle(orig, *args, **kwargs):
+    repo = args[0]
+    return executewithsql(repo, orig, commitlock, *args, **kwargs)
+
+def pull(orig, *args, **kwargs):
+    repo = args[1]
+    return executewithsql(repo, orig, commitlock, *args, **kwargs)
+
+def executewithsql(repo, action, lock=None, *args, **kwargs):
     repo.sqlconnect()
-    repo.sqllock(commitlock)
+    if lock:
+        repo.sqllock(lock)
+
+    result = None
+    success = False
     try:
         repo.syncdb()
-        return orig(repo, proto, heads)
+        result = action(*args, **kwargs)
+        success = True
     finally:
         try:
-            repo.sqlunlock(commitlock)
+            if lock:
+                repo.sqlunlock(lock)
             repo.sqlclose()
         except _mysql_exceptions.ProgrammingError, ex:
-            # ignore sql exceptions, so real exceptions propagate up
+            if success:
+                raise
+            # if the action caused an exception, hide sql cleanup exceptions,
+            # so the real exception is propagated up
             pass
 
-def pull(orig, ui, repo, source="default", **opts):
-    repo.sqlconnect()
-    repo.sqllock(commitlock)
-    try:
-        repo.syncdb()
-        return orig(ui, repo, source, **opts)
-    finally:
-        try:
-            repo.sqlunlock(commitlock)
-            repo.sqlclose()
-        except _mysql_exceptions.ProgrammingError, ex:
-            # ignore sql exceptions, so real exceptions propagate up
-            pass
+    return result
 
 def wraprepo(repo):
     class sqllocalrepo(repo.__class__):
@@ -144,12 +141,16 @@ def wraprepo(repo):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
 
             def transactionclose(orig):
-                result = orig()
-                if tr.count == 0:
+                if tr.count == 1:
+                    self.committodb()
                     del self.pendingrevs[:]
-                return result
+                return orig()
 
-            wrapfunction(tr, "_abort", transactionclose)
+            def transactionabort(orig):
+                del self.pendingrevs[:]
+                return orig()
+
+            wrapfunction(tr, "_abort", transactionabort)
             wrapfunction(tr, "close", transactionclose)
             tr.repo = self
             return tr
@@ -171,20 +172,7 @@ def wraprepo(repo):
             heads = set(self.heads())
             bookmarks = self._bookmarks
 
-            if (not sqlheads or len(heads) != len(sqlheads) or
-                len(bookmarks) != len(sqlbookmarks)):
-                return True
-
-            for head in sqlheads:
-                if head not in heads:
-                    return True
-
-            for bookmark in sqlbookmarks:
-                if (not bookmark in bookmarks or
-                    bookmarks[bookmark] != sqlbookmarks[bookmark]):
-                    return True
-
-            return False
+            return heads != sqlheads or bookmarks != sqlbookmarks
 
         def syncdb(self):
             if not self.needsync():
@@ -223,7 +211,6 @@ def wraprepo(repo):
                     transaction.close()
                 finally:
                     transaction.release()
-                    lock.release()
 
                 # We circumvent the changelog and manifest when we add entries to
                 # the revlogs. So clear all the caches.
@@ -231,10 +218,7 @@ def wraprepo(repo):
                 self.invalidatedirstate()
                 self.invalidatevolatilesets()
 
-                # lock.release(), above, assumes the changelog/manifest inmemory
-                # data structures are up to date (which in this case they aren't)
-                # and automatically updates the timestamps in the filecache.
-                # Therefore we need to manually clear the filecache.
+                # Manually clear the filecache.
                 unfiltered = self.unfiltered()
                 for k in self._filecache.iterkeys():
                     if k in unfiltered.__dict__:
@@ -307,6 +291,49 @@ def wraprepo(repo):
                     ui.debug("Queued %s\n" % (clrev))
 
             queue.put(False)
+
+        def committodb(self):
+            if self.sqlconn == None:
+                raise Exception("invalid repo change - only hg push and pull are allowed")
+
+            # Commit to db
+            try:
+                reponame = self.sqlreponame
+                cursor = self.sqlcursor
+                for revision in self.pendingrevs:
+                    _, path, linkrev, entry, data0, data1 = revision
+
+                    start = 0
+                    chunk = 0
+                    datalen = len(data1)
+                    chunkcount = datalen / maxrecordsize
+                    if datalen % maxrecordsize != 0 or datalen == 0:
+                        chunkcount += 1
+                    while chunk == 0 or start < len(data1):
+                        end = min(len(data1), start + maxrecordsize)
+                        datachunk = data1[start:end]
+                        cursor.execute("""INSERT INTO revisions(repo, path, chunk,
+                            chunkcount, linkrev, entry, data0, data1, createdtime)
+                            VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                            (reponame, path, chunk, chunkcount, linkrev,
+                             entry, data0, datachunk, time.strftime('%Y-%m-%d %H:%M:%S')))
+                        chunk += 1
+                        start = end
+
+                cursor.execute("""DELETE FROM pushkeys WHERE repo = %s
+                               AND namespace = 'heads'""", (reponame))
+
+                for head in self.heads():
+                    cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
+                                   VALUES(%s, 'heads', %s)""",
+                                   (reponame, hex(head)))
+
+                self.sqlconn.commit()
+            except:
+                self.sqlconn.rollback()
+                raise
+            finally:
+                del self.pendingrevs[:]
 
     ui = repo.ui
     sqlargs = {}
@@ -677,72 +704,28 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
 
     return content
 
-def pretxnchangegroup(ui, repo, *args, **kwargs):
-    if repo.sqlconn == None:
-        raise Exception("invalid repo change - only hg push and pull are allowed")
-
-    # Commit to db
-    try:
-        cursor = repo.sqlcursor
-        for revision in repo.pendingrevs:
-            _, path, linkrev, entry, data0, data1 = revision
-
-            start = 0
-            chunk = 0
-            datalen = len(data1)
-            chunkcount = datalen / maxrecordsize
-            if datalen % maxrecordsize != 0 or datalen == 0:
-                chunkcount += 1
-            while chunk == 0 or start < len(data1):
-                end = min(len(data1), start + maxrecordsize)
-                datachunk = data1[start:end]
-                cursor.execute("""INSERT INTO revisions(repo, path, chunk,
-                    chunkcount, linkrev, entry, data0, data1, createdtime)
-                    VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (repo.sqlreponame, path, chunk, chunkcount, linkrev,
-                     entry, data0, datachunk, time.strftime('%Y-%m-%d %H:%M:%S')))
-                chunk += 1
-                start = end
-
-        cursor.execute("""DELETE FROM pushkeys WHERE repo = %s
-                       AND namespace = 'heads'""", (repo.sqlreponame))
-
-        for head in repo.heads():
-            cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
-                           VALUES(%s, 'heads', %s)""",
-                           (repo.sqlreponame, hex(head)))
-
-        repo.sqlconn.commit()
-    except:
-        repo.sqlconn.rollback()
-        raise
-    finally:
-        del repo.pendingrevs[:]
-
 def bookmarkwrite(orig, self):
     repo = self._repo
     if repo.disablesync:
         return orig(self)
 
-    repo.sqlconnect()
-    repo.sqllock(bookmarklock)
-    try:
-        cursor = repo.sqlcursor
-        cursor.execute("""DELETE FROM pushkeys WHERE repo = %s AND
-                       namespace = 'bookmarks'""", (repo.sqlreponame))
+    def commitbookmarks():
+        try:
+            cursor = repo.sqlcursor
+            cursor.execute("""DELETE FROM pushkeys WHERE repo = %s AND
+                           namespace = 'bookmarks'""", (repo.sqlreponame))
 
-        for k, v in self.iteritems():
-            cursor.execute("""INSERT INTO pushkeys(repo, namespace, name, value)
-                           VALUES(%s, 'bookmarks', %s, %s)""",
-                           (repo.sqlreponame, k, hex(v)))
-        repo.sqlconn.commit()
-        return orig(self)
-    except:
-        repo.sqlconn.rollback()
-        raise
-    finally:
-        repo.sqlunlock(bookmarklock)
-        repo.sqlclose()
+            for k, v in self.iteritems():
+                cursor.execute("""INSERT INTO pushkeys(repo, namespace, name, value)
+                               VALUES(%s, 'bookmarks', %s, %s)""",
+                               (repo.sqlreponame, k, hex(v)))
+            repo.sqlconn.commit()
+            return orig(self)
+        except:
+            repo.sqlconn.rollback()
+            raise
+
+    executewithsql(repo, commitbookmarks, bookmarklock)
 
 # recover must be a norepo command because loading the repo fails
 commands.norepo += " sqlrecover"
