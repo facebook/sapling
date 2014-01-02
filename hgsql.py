@@ -1,28 +1,35 @@
-# db.py
+# hgsql.py
 #
 # Copyright 2013 Facebook, Inc.
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-#CREATE TABLE revs(
-#id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-#path VARCHAR(256) NOT NULL,
-#chunk INT UNSIGNED NOT NULL,
-#chunkcount INT UNSIGNED NOT NULL,
-#linkrev INT UNSIGNED NOT NULL,
-#entry BINARY(64) NOT NULL,
-#data0 CHAR(1) NOT NULL,
-#data1 LONGBLOB NOT NULL,
-#createdtime DATETIME NOT NULL,
-#INDEX linkrev_index (linkrev)
-#);
+"""
+CREATE TABLE revisions(
+repo CHAR(32) NOT NULL,
+autoid INT UNSIGNED NOT NULL AUTO_INCREMENT,
+path VARCHAR(256) NOT NULL,
+chunk INT UNSIGNED NOT NULL,
+chunkcount INT UNSIGNED NOT NULL,
+linkrev INT UNSIGNED NOT NULL,
+entry BINARY(64) NOT NULL,
+data0 CHAR(1) NOT NULL,
+data1 LONGBLOB NOT NULL,
+createdtime DATETIME NOT NULL,
+INDEX autoid_index (autoid),
+PRIMARY KEY (repo, linkrev, autoid)
+);
 
-#CREATE TABLE headsbookmarks(
-#id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-#node char(40) NOT NULL,
-#name VARCHAR(256) UNIQUE
-#);
+CREATE TABLE pushkeys(
+autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+repo CHAR(32) NOT NULL,
+namespace CHAR(32) NOT NULL,
+name VARCHAR(256),
+value char(40) NOT NULL,
+UNIQUE KEY bookmarkindex (repo, namespace, name)
+);
+"""
 
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
@@ -120,7 +127,7 @@ def wraprepo(repo):
             self.sqlconn = None
 
         def sqllock(self, name, timeout=60):
-            name = self.sqlconn.escape_string(name)
+            name = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
             # cast to int to prevent passing bad sql data
             timeout = int(timeout)
             self.sqlconn.query("SELECT GET_LOCK('%s', %s)" % (name, timeout))
@@ -129,7 +136,7 @@ def wraprepo(repo):
                 raise Exception("unable to obtain %s lock" % name)
 
         def sqlunlock(self, name):
-            name = self.sqlconn.escape_string(name)
+            name = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
             self.sqlconn.query("SELECT RELEASE_LOCK('%s')" % (name,))
             self.sqlconn.store_result().fetch_row()
 
@@ -151,16 +158,17 @@ def wraprepo(repo):
             """Returns True if the local repo is not in sync with the database.
             If it returns False, the heads and bookmarks match the database.
             """
-            self.sqlcursor.execute("SELECT * FROM headsbookmarks")
+            self.sqlcursor.execute("""SELECT namespace, name, value
+                FROM pushkeys WHERE repo = %s""", (self.sqlreponame))
             sqlheads = set()
             sqlbookmarks = {}
-            for _, node, name in self.sqlcursor:
-                if not name:
+            for namespace, name, node in self.sqlcursor:
+                if namespace == "heads":
                     sqlheads.add(bin(node))
-                else:
+                elif namespace == "bookmarks":
                     sqlbookmarks[name] = bin(node)
 
-            heads = self.heads()
+            heads = set(self.heads())
             bookmarks = self._bookmarks
 
             if (not sqlheads or len(heads) != len(sqlheads) or
@@ -237,9 +245,10 @@ def wraprepo(repo):
                 try:
                     bm = self._bookmarks
                     bm.clear()
-                    self.sqlcursor.execute("SELECT * FROM headsbookmarks " +
-                        "WHERE name IS NOT NULL")
-                    for _, node, name in self.sqlcursor:
+                    self.sqlcursor.execute("""SELECT name, value FROM pushkeys
+                        WHERE namespace = 'bookmarks' AND repo = %s""",
+                        (self.sqlreponame))
+                    for name, node in self.sqlcursor:
                         node = bin(node)
                         if node in self:
                             bm[name] = node
@@ -257,15 +266,17 @@ def wraprepo(repo):
                 if abort.isSet():
                     break
 
-                self.sqlcursor.execute("""SELECT * FROM revs WHERE linkrev > %s AND
-                    linkrev < %s ORDER BY linkrev ASC""", (clrev - 1, clrev + chunksize))
+                self.sqlcursor.execute("""SELECT path, chunk, chunkcount,
+                    linkrev, entry, data0, data1 FROM revisions WHERE repo = %s
+                    AND linkrev > %s AND linkrev < %s ORDER BY linkrev ASC""",
+                    (self.sqlreponame, clrev - 1, clrev + chunksize))
 
                 # put split chunks back together
                 groupedrevdata = {}
                 for revdata in self.sqlcursor:
-                    name = revdata[1]
-                    chunk = revdata[2]
-                    linkrev = revdata[4]
+                    name = revdata[0]
+                    chunk = revdata[1]
+                    linkrev = revdata[3]
                     groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
 
                 if not groupedrevdata:
@@ -273,21 +284,21 @@ def wraprepo(repo):
 
                 fullrevisions = []
                 for chunks in groupedrevdata.itervalues():
-                    chunkcount = chunks[0][3]
+                    chunkcount = chunks[0][2]
                     if chunkcount == 1:
                         fullrevisions.append(chunks[0])
                     elif chunkcount == len(chunks):
                         fullchunk = list(chunks[0])
                         data1 = ""
                         for i in range(0, chunkcount):
-                            data1 += chunks[i][7]
+                            data1 += chunks[i][6]
                         fullchunk[7] = data1
                         fullrevisions.append(tuple(fullchunk))
                     else:
                         raise Exception("missing revision chunk - expected %s got %s" %
                             (chunkcount, len(chunks)))
 
-                fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[4])
+                fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[3])
                 for revdata in fullrevisions:
                     queue.put(revdata)
 
@@ -302,12 +313,15 @@ def wraprepo(repo):
     sqlargs['host'] = ui.config("hgsql", "host")
     sqlargs['db'] = ui.config("hgsql", "database")
     sqlargs['user'] = ui.config("hgsql", "user")
-    sqlargs['port'] = ui.config("hgsql", "port")
+    sqlargs['port'] = ui.configint("hgsql", "port")
     password = ui.config("hgsql", "password", "")
     if password:
         sqlargs['passwd'] = password
     sqlargs['cursorclass'] = cursors.SSCursor
 
+    repo.sqlreponame = ui.config("hgsql", "reponame")
+    if not repo.sqlreponame:
+        raise Exception("missing hgsql.reponame")
     repo.sqlargs = sqlargs
     repo.sqlconn = None
     repo.sqlcursor = None
@@ -346,7 +360,7 @@ def addentries(repo, queue, transaction):
 
     revlogs = {}
     def writeentry(revdata):
-        _, path, chunk, chunkcount, link, entry, data0, data1, createdtime = revdata
+        path, chunk, chunkcount, link, entry, data0, data1 = revdata
         revlog = revlogs.get(path)
         if not revlog:
             revlog = EntryRevlog(opener, path)
@@ -384,7 +398,7 @@ def addentries(repo, queue, transaction):
                 exit = True
                 break
 
-            linkrev = revdata[4]
+            linkrev = revdata[3]
             if currentlinkrev == -1:
                 currentlinkrev = linkrev
             if linkrev == currentlinkrev:
@@ -682,18 +696,21 @@ def pretxnchangegroup(ui, repo, *args, **kwargs):
             while chunk == 0 or start < len(data1):
                 end = min(len(data1), start + maxrecordsize)
                 datachunk = data1[start:end]
-                cursor.execute("""INSERT INTO revs(path, chunk, chunkcount, linkrev, entry, data0,
-                    data1, createdtime) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (path, chunk, chunkcount, linkrev, entry, data0, datachunk,
-                     time.strftime('%Y-%m-%d %H:%M:%S')))
+                cursor.execute("""INSERT INTO revisions(repo, path, chunk,
+                    chunkcount, linkrev, entry, data0, data1, createdtime)
+                    VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (repo.sqlreponame, path, chunk, chunkcount, linkrev,
+                     entry, data0, datachunk, time.strftime('%Y-%m-%d %H:%M:%S')))
                 chunk += 1
                 start = end
 
-        cursor.execute("""DELETE FROM headsbookmarks WHERE name IS NULL""")
+        cursor.execute("""DELETE FROM pushkeys WHERE repo = %s
+                       AND namespace = 'heads'""", (repo.sqlreponame))
 
         for head in repo.heads():
-            cursor.execute("""INSERT INTO headsbookmarks(node) VALUES(%s)""",
-                (hex(head)))
+            cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
+                           VALUES(%s, 'heads', %s)""",
+                           (repo.sqlreponame, hex(head)))
 
         repo.sqlconn.commit()
     except:
@@ -711,11 +728,13 @@ def bookmarkwrite(orig, self):
     repo.sqllock(bookmarklock)
     try:
         cursor = repo.sqlcursor
-        cursor.execute("""DELETE FROM headsbookmarks WHERE name IS NOT NULL""")
+        cursor.execute("""DELETE FROM pushkeys WHERE repo = %s AND
+                       namespace = 'bookmarks'""", (repo.sqlreponame))
 
         for k, v in self.iteritems():
-            cursor.execute("""INSERT INTO headsbookmarks(node, name) VALUES(%s, %s)""",
-                (hex(v), k))
+            cursor.execute("""INSERT INTO pushkeys(repo, namespace, name, value)
+                           VALUES(%s, 'bookmarks', %s, %s)""",
+                           (repo.sqlreponame, k, hex(v)))
         repo.sqlconn.commit()
         return orig(self)
     except:
