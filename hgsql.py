@@ -144,6 +144,8 @@ def wraprepo(repo):
 
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
+            if tr.count > 1:
+                return tr
 
             def transactionclose(orig):
                 if tr.count == 1:
@@ -177,10 +179,11 @@ def wraprepo(repo):
             heads = set(self.heads())
             bookmarks = self._bookmarks
 
-            return heads != sqlheads or bookmarks != sqlbookmarks
+            outofsync = heads != sqlheads or bookmarks != sqlbookmarks
+            return outofsync, sqlheads, sqlbookmarks
 
         def syncdb(self):
-            if not self.needsync():
+            if not self.needsync()[0]:
                 return
 
             ui = self.ui
@@ -190,7 +193,8 @@ def wraprepo(repo):
             try:
 
                 # someone else may have synced us while we were waiting
-                if not self.needsync():
+                outofsync, sqlheads, sqlbookmarks = self.needsync()
+                if not outofsync:
                     return
 
                 transaction = self.transaction("syncdb")
@@ -220,15 +224,11 @@ def wraprepo(repo):
                 # We circumvent the changelog and manifest when we add entries to
                 # the revlogs. So clear all the caches.
                 self.invalidate()
-                self.invalidatedirstate()
-                self.invalidatevolatilesets()
 
-                # Manually clear the filecache.
-                unfiltered = self.unfiltered()
-                for k in self._filecache.iterkeys():
-                    if k in unfiltered.__dict__:
-                        del unfiltered.__dict__[k]
-                self._filecache.clear()
+                heads = set(self.heads())
+                heads.discard(nullid)
+                if heads != sqlheads:
+                    raise CorruptionException("heads don't match after sync")
 
                 self.disablesync = True
                 try:
@@ -244,6 +244,9 @@ def wraprepo(repo):
                     bm.write()
                 finally:
                     self.disablesync = False
+
+                if bm != sqlbookmarks:
+                    raise CorruptionException("bookmarks don't match after sync")
             finally:
                 lock.release()
 
@@ -301,10 +304,22 @@ def wraprepo(repo):
             if self.sqlconn == None:
                 raise Exception("invalid repo change - only hg push and pull are allowed")
 
+            if not self.pendingrevs:
+                return
+
+            reponame = self.sqlreponame
+            cursor = self.sqlcursor
+
+            cursor.execute("""SELECT max(linkrev) FROM revisions WHERE repo = %s""",
+                reponame)
+            maxlinkrev = cursor.fetchall()[0][0]
+            minlinkrev = min(self.pendingrevs, key= lambda x: x[2])
+            if maxlinkrev != None and maxlinkrev != minlinkrev[2] - 1:
+                raise CorruptionException("attempting to write non-sequential " +
+                    "linkrev %s, expected %s" % (minlinkrev[2], maxlinkrev + 1))
+
             # Commit to db
             try:
-                reponame = self.sqlreponame
-                cursor = self.sqlcursor
                 for revision in self.pendingrevs:
                     _, path, linkrev, entry, data0, data1 = revision
 
