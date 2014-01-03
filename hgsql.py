@@ -57,7 +57,12 @@ def uisetup(ui):
     wrapfunction(wireproto, 'unbundle', unbundle)
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
 
-    wrapfunction(revlog.revlog, '_addrevision', addrevision)
+    def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
+        transaction.repo.pendingrevs.append((-1, self.indexfile, link,
+            entry, data[0] if data[0] else '', data[1]))
+        return orig(self, transaction, ifh, dfh, entry, data, link, offset)
+    wrapfunction(revlog.revlog, '_writeentry', writeentry)
+
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
     wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
 
@@ -507,58 +512,6 @@ class EntryRevlog(revlog.revlog):
             ifh.write(data0)
             ifh.write(data1)
             self.checkinlinesize(transaction, ifh)
-
-class interceptopener(object):
-    def __init__(self, fp, onwrite):
-        object.__setattr__(self, 'fp', fp)
-        object.__setattr__(self, 'onwrite', onwrite)
-
-    def write(self, data):
-        self.fp.write(data)
-        self.onwrite(data)
-
-    def __getattr__(self, attr):
-        return getattr(self.fp, attr)
-
-    def __setattr__(self, attr, value):
-        return setattr(self.fp, attr, value)
-
-    def __delattr__(self, attr):
-        return delattr(self.fp, attr)
-
-def addrevision(orig, self, node, text, transaction, link, p1, p2,
-                cachedelta, ifh, dfh):
-    entry = []
-    data0 = []
-    data1 = []
-    def iwrite(data):
-        if not entry:
-            # sometimes data0 is skipped
-            if data0 and not data1:
-                data1.append(data0[0])
-                del data0[:]
-            entry.append(data)
-        elif not data0:
-            data0.append(data)
-        elif not data1:
-            data1.append(data)
-
-    def dwrite(data):
-        if not data0:
-            data0.append(data)
-        elif not data1:
-            data1.append(data)
-
-    iopener = interceptopener(ifh, iwrite)
-    dopener = interceptopener(dfh, dwrite) if dfh else None
-
-    result = orig(self, node, text, transaction, link, p1, p2, cachedelta,
-                  iopener, dopener)
-
-    transaction.repo.pendingrevs.append((-1, self.indexfile, link,
-        entry[0], data0[0] if data0 else '', data1[0]))
-
-    return result
 
 def addgroup(orig, self, bundle, linkmapper, transaction):
     """
