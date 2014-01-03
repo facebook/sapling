@@ -2,7 +2,6 @@ import os.path
 import pickle
 
 import base
-import hgsubversion.util as util
 
 class StandardLayout(base.BaseLayout):
     """The standard trunk, branches, tags layout"""
@@ -57,6 +56,9 @@ class StandardLayout(base.BaseLayout):
         return '%s/%s' % (subdir or '', branchpath)
 
     def taglocations(self, meta_data_dir):
+        # import late to avoid trouble when running the test suite
+        from hgext_hgsubversion import util
+
         if self._tag_locations is None:
 
             tag_locations_file = os.path.join(meta_data_dir, 'tag_locations')

@@ -10,8 +10,6 @@ import os.path
 
 from mercurial import util as hgutil
 
-from hgsubversion import svnwrap
-
 import __init__ as layouts
 
 def layout_from_subversion(svn, revision=None, ui=None):
@@ -26,6 +24,8 @@ def layout_from_subversion(svn, revision=None, ui=None):
     passed, if any.
 
     """
+    # import late to avoid trouble when running the test suite
+    from hgext_hgsubversion import svnwrap
 
     try:
         rootlist = svn.list_dir('', revision=revision)

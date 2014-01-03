@@ -434,6 +434,8 @@ class TestBase(unittest.TestCase):
 
     def setUp(self):
         _verify_our_modules()
+        if 'hgsubversion' in sys.modules:
+            sys.modules['hgext_hgsubversion'] = sys.modules['hgsubversion']
 
         # the Python 2.7 default of 640 is obnoxiously low
         self.maxDiff = 4096
