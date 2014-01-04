@@ -268,8 +268,7 @@ class branchcache(dict):
                 latest = iterrevs.pop()
                 if latest not in bheadrevs:
                     continue
-                ancestors = set(cl.ancestors([latest],
-                                                         bheadrevs[0]))
+                ancestors = set(cl.ancestors([latest], bheadrevs[0]))
                 if ancestors:
                     bheadrevs = [b for b in bheadrevs if b not in ancestors]
             self[branch] = [cl.node(rev) for rev in bheadrevs]
