@@ -230,17 +230,15 @@ class branchcache(dict):
         getbranchinfo = cl.branchinfo
         for r in revgen:
             branch, closesbranch = getbranchinfo(r)
-            node = cl.node(r)
-            newbranches.setdefault(branch, []).append(node)
+            newbranches.setdefault(branch, []).append(r)
             if closesbranch:
-                self._closednodes.add(node)
+                self._closednodes.add(cl.node(r))
         # if older branchheads are reachable from new ones, they aren't
         # really branchheads. Note checking parents is insufficient:
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
-        for branch, newnodes in newbranches.iteritems():
+        for branch, newheadrevs in newbranches.iteritems():
             bheads = self.setdefault(branch, [])
             bheadrevs = [cl.rev(node) for node in bheads]
-            newheadrevs = [cl.rev(node) for node in newnodes]
             ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
             # Remove duplicates - nodes that are in newheadrevs and are already
             # in bheadrevs.  This can happen if you strip a node whose parent
