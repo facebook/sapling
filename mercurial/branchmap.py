@@ -238,25 +238,24 @@ class branchcache(dict):
         # 1 (branch a) -> 2 (branch b) -> 3 (branch a)
         for branch, newheadrevs in newbranches.iteritems():
             bheads = self.setdefault(branch, [])
-            bheadrevs = [cl.rev(node) for node in bheads]
+            bheadset = set(cl.rev(node) for node in bheads)
 
             # This have been tested True on all internal usage of this function.
             # run it again in case of doubt
             # assert not (set(bheadrevs) & set(newheadrevs))
             newheadrevs.sort()
-            bheadrevs.extend(newheadrevs)
-            bheadrevs.sort()
+            bheadset.update(newheadrevs)
 
             # This loop prunes out two kinds of heads - heads that are
             # superseded by a head in newheadrevs, and newheadrevs that are not
             # heads because an existing head is their descendant.
             while newheadrevs:
                 latest = newheadrevs.pop()
-                if latest not in bheadrevs:
+                if latest not in bheadset:
                     continue
-                ancestors = set(cl.ancestors([latest], bheadrevs[0]))
-                if ancestors:
-                    bheadrevs = [b for b in bheadrevs if b not in ancestors]
+                ancestors = set(cl.ancestors([latest], min(bheadset)))
+                bheadset -= ancestors
+            bheadrevs = sorted(bheadset)
             self[branch] = [cl.node(rev) for rev in bheadrevs]
             tiprev = bheadrevs[-1]
             if tiprev > self.tiprev:
