@@ -221,7 +221,7 @@ class branchcache(dict):
 
     def update(self, repo, revgen):
         """Given a branchhead cache, self, that may have extra nodes or be
-        missing heads, and a generator of nodes that are at least a superset of
+        missing heads, and a generator of nodes that are strictly a superset of
         heads missing, this function updates self to be correct.
         """
         cl = repo.changelog
@@ -239,32 +239,26 @@ class branchcache(dict):
         for branch, newheadrevs in newbranches.iteritems():
             bheads = self.setdefault(branch, [])
             bheadrevs = [cl.rev(node) for node in bheads]
-            ctxisnew = bheadrevs and min(newheadrevs) > max(bheadrevs)
-            # Remove duplicates - nodes that are in newheadrevs and are already
-            # in bheadrevs.  This can happen if you strip a node whose parent
-            # was already a head (because they're on different branches).
-            bheadrevs = sorted(set(bheadrevs).union(newheadrevs))
 
-            # Starting from tip means fewer passes over reachable.  If we know
-            # the new candidates are not ancestors of existing heads, we don't
-            # have to examine ancestors of existing heads
-            if ctxisnew:
-                iterrevs = sorted(newheadrevs)
-            else:
-                iterrevs = list(bheadrevs)
+            # This have been tested True on all internal usage of this function.
+            # run it again in case of doubt
+            # assert not (set(bheadrevs) & set(newheadrevs))
+            newheadrevs.sort()
+            bheadrevs.extend(newheadrevs)
+            bheadrevs.sort()
 
             # This loop prunes out two kinds of heads - heads that are
             # superseded by a head in newheadrevs, and newheadrevs that are not
             # heads because an existing head is their descendant.
-            while iterrevs:
-                latest = iterrevs.pop()
+            while newheadrevs:
+                latest = newheadrevs.pop()
                 if latest not in bheadrevs:
                     continue
                 ancestors = set(cl.ancestors([latest], bheadrevs[0]))
                 if ancestors:
                     bheadrevs = [b for b in bheadrevs if b not in ancestors]
             self[branch] = [cl.node(rev) for rev in bheadrevs]
-            tiprev = max(bheadrevs)
+            tiprev = bheadrevs[-1]
             if tiprev > self.tiprev:
                 self.tipnode = cl.node(tiprev)
                 self.tiprev = tiprev
