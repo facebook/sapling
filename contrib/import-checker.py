@@ -75,7 +75,7 @@ def list_stdlib_modules():
         # something in stdlib_prefixes. check-code suppressed because
         # the ast module used by this script implies the availability
         # of any().
-        if not any(libpath.startswith(p) for p in stdlib_prefixes): # no-check-code
+        if not any(libpath.startswith(p) for p in stdlib_prefixes): # no-py24
             continue
         if 'site-packages' in libpath:
             continue
