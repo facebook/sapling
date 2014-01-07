@@ -495,6 +495,9 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                 l = prelines[n]
 
                 if ignore and re.search(ignore, l, re.MULTILINE):
+                    if debug:
+                        print "Skipping %s for %s:%s (ignore pattern)" % (
+                            name, f, n)
                     continue
                 bd = ""
                 if blame:
