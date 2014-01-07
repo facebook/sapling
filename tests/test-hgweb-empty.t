@@ -361,7 +361,7 @@ Some tests for hgweb in an empty repository
   
   <script type="text/javascript">
       ajaxScrollInit(
-              '/graph/-1?revcount=%next%',
+              '/graph/-1?revcount=%next%&style=paper',
               60+60,
               function (htmlText, previousVal) { return previousVal + 60; },
               '#wrapper',

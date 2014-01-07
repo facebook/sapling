@@ -373,6 +373,7 @@ class hgweb(object):
                                              "motd": motd,
                                              "sessionvars": sessionvars,
                                              "pathdef": makebreadcrumb(req.url),
+                                             "style": style,
                                             })
         return tmpl
 

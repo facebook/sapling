@@ -73,7 +73,7 @@
 
 <script type="text/javascript">
     ajaxScrollInit(
-            '{url|urlescape}shortlog/%next%',
+            '{url|urlescape}shortlog/%next%{sessionvars%urlparameter}',
             '{nextentry%"{node}"}', <!-- NEXTHASH
             function (htmlText, previousVal) \{
                 var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);

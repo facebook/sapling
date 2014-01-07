@@ -124,7 +124,7 @@ graph.render(data);
 
 <script type="text/javascript">
     ajaxScrollInit(
-            '{url|urlescape}graph/{rev}?revcount=%next%',
+            '{url|urlescape}graph/{rev}?revcount=%next%&style={style}',
             {revcount}+60,
             function (htmlText, previousVal) \{ return previousVal + 60; },
             '#wrapper',

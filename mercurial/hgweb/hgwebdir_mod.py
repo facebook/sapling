@@ -448,7 +448,9 @@ class hgwebdir(object):
                                              "logourl": logourl,
                                              "logoimg": logoimg,
                                              "staticurl": staticurl,
-                                             "sessionvars": sessionvars})
+                                             "sessionvars": sessionvars,
+                                             "style": style,
+                                             })
         return tmpl
 
     def updatereqenv(self, env):
