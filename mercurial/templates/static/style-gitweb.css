@@ -167,3 +167,27 @@ ul#graphnodes li .info {
 .block {
     border-top: 1px solid #d9d8d1;
 }
+
+.scroll-loading {
+  -webkit-animation: change_color 1s linear 0s infinite alternate;
+  -moz-animation: change_color 1s linear 0s infinite alternate;
+  -o-animation: change_color 1s linear 0s infinite alternate;
+  animation: change_color 1s linear 0s infinite alternate;
+}
+
+@-webkit-keyframes change_color {
+  from { background-color: #A0CEFF; } to {  }
+}
+@-moz-keyframes change_color {
+  from { background-color: #A0CEFF; } to {  }
+}
+@-o-keyframes change_color {
+  from { background-color: #A0CEFF; } to {  }
+}
+@keyframes change_color {
+  from { background-color: #A0CEFF; } to {  }
+}
+
+.scroll-loading-error {
+    background-color: #FFCCCC !important;
+}
