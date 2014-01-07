@@ -7,6 +7,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+"""style and portability checker for Mercurial
+
+when a rule triggers wrong, do one of the following (prefer one from top):
+ * do the work-around the rule suggests
+ * doublecheck that it is a false match
+ * improve the rule pattern
+ * add an ignore pattern to the rule (3rd arg) which matches your good line
+   (you can append a short comment and match this, like: #re-raises, # no-py24)
+ * change the pattern to a warning and list the exception in test-check-code-hg
+ * ONLY use no--check-code for skipping entire files from external sources
+"""
+
 import re, glob, os, sys
 import keyword
 import optparse
