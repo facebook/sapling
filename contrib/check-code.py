@@ -441,10 +441,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         pre = post = fp.read()
         fp.close()
         if "no-" "check-code" in pre:
-            if debug:
-                print "Skipping %s for %s it has no-" "check-code" % (
-                       name, f)
-            break
+            print "Skipping %s it has no-" "check-code" % f
+            return "Skip" # skip checking this file
         for p, r in filters:
             post = re.sub(p, r, post)
         nerrs = len(pats[0]) # nerr elements are errors
