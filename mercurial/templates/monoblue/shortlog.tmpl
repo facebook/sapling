@@ -33,12 +33,27 @@
 
     <h2 class="no-link no-border">shortlog</h2>
 
-    <table>
+    <table class="shortlogtable">
 {entries%shortlogentry}
     </table>
 
     <div class="page-path">
     {changenav%navshort}
     </div>
+
+    <script type="text/javascript">
+    ajaxScrollInit(
+            '{url|urlescape}shortlog/%next%{sessionvars%urlparameter}',
+            '{nextentry%"{node}"}', <!-- NEXTHASH
+            function (htmlText, previousVal) \{
+                var m = htmlText.match(/'(\w+)', <!-- NEXTHASH/);
+                return m ? m[1] : null;
+            },
+            '.shortlogtable > tbody:nth-of-type(1)',
+            '<tr class="%class%">\
+            <td colspan="4" style="text-align: center;">%text%</td>\
+            </tr>'
+    );
+    </script>
 
 {footer}
