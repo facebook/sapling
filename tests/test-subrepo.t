@@ -468,11 +468,6 @@ backout calls revert internally with minimal opts, which should not raise
 KeyError
 
   $ hg backout ".^"
-  reverting .hgsubstate
-  reverting subrepo s
-  reverting s/a (glob)
-  reverting subrepo ss
-  reverting subrepo t
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg up -C # discard changes

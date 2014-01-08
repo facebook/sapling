@@ -461,16 +461,23 @@ def backout(ui, repo, node=None, rev=None, **opts):
     try:
         branch = repo.dirstate.branch()
         bheads = repo.branchheads(branch)
-        hg.clean(repo, node, show_stats=False)
-        repo.dirstate.setbranch(branch)
         rctx = scmutil.revsingle(repo, hex(parent))
-        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
         if not opts.get('merge') and op1 != node:
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                return hg.update(repo, op1)
+                stats = mergemod.update(repo, parent, True, True, False, node, False)
+                repo.setparents(op1, op2)
+                hg._showstats(repo, stats)
+                if stats[3]:
+                    repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
+                return stats[3] > 0
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
+        else:
+            hg.clean(repo, node, show_stats=False)
+            repo.dirstate.setbranch(branch)
+            cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
+
 
         e = cmdutil.commiteditor
         if not opts['message'] and not opts['logfile']:
