@@ -6362,7 +6362,7 @@ msgstr "Angeforderer Binärriese %s ist nicht im Zwischenspeicher"
 #: mercurial/sshpeer.py:128 mercurial/wireproto.py:251
 #: mercurial/wireproto.py:319
 msgid "remote: "
-msgstr "Entfernt: "
+msgstr "Gegenseite: "
 
 #: hgext/largefiles/proto.py:98
 #, python-format
@@ -11710,7 +11710,7 @@ msgstr "Spezifiziert den zu nutzenden SSH-Befehl"
 
 #: mercurial/commands.py:62
 msgid "specify hg command to run on the remote side"
-msgstr "Spezifiziert den hg-Befehl, der entfernt ausgeführt wird"
+msgstr "Spezifiziert den hg-Befehl, der auf der Gegenseite ausgeführt wird"
 
 #: mercurial/commands.py:64
 msgid "do not verify server certificate (ignoring web.cacerts config)"
@@ -13000,7 +13000,7 @@ msgid ""
 msgstr ""
 "    Nur lokale Pfade und ``ssh://``-URLs werden als Ziele unterstützt.\n"
 "    Für ``ssh://``-Ziele wird kein Arbeitsverzeichnis und keine\n"
-"    ``.hg/hgrc``-Datei auf der entfernten Seite erstellt."
+"    ``.hg/hgrc``-Datei auf der Gegenseite erstellt."
 
 #: mercurial/commands.py:1192
 msgid ""
@@ -15128,7 +15128,7 @@ msgstr "Kann --bundle und --subrepos nicht kombinieren"
 
 #: mercurial/commands.py:3865 mercurial/commands.py:4335
 msgid "remote doesn't support bookmarks\n"
-msgstr "Quellarchiv unterstützt keine Lesezeichen\n"
+msgstr "Gegenseite unterstützt keine Lesezeichen\n"
 
 #: mercurial/commands.py:3877
 msgid "[-e CMD] [--remotecmd CMD] [DEST]"
@@ -15856,7 +15856,7 @@ msgstr ""
 #: mercurial/commands.py:4587
 #, python-format
 msgid "remote bookmark %s not found!"
-msgstr "Entferntes Lesezeichen %s wurde nicht gefunden!"
+msgstr "Lesezeichen %s existiert auf der Gegenseite nicht!"
 
 #: mercurial/commands.py:4614
 #, python-format
@@ -16952,12 +16952,12 @@ msgstr "%d ausgehende Lesezeichen"
 #: mercurial/commands.py:5569
 #, python-format
 msgid "remote: %s\n"
-msgstr "Entfernt: %s\n"
+msgstr "Gegenseite: %s\n"
 
 #. i18n: column positioning for "hg summary"
 #: mercurial/commands.py:5572
 msgid "remote: (synced)\n"
-msgstr "Entfernt: (synchonisiert)\n"
+msgstr "Gegenseite: (synchonisiert)\n"
 
 #: mercurial/commands.py:5575
 msgid "force tag"
@@ -17607,7 +17607,7 @@ msgstr ""
 
 #: mercurial/dispatch.py:137
 msgid "abort: remote error:\n"
-msgstr "Abbruch: Entfernter Fehler:\n"
+msgstr "Abbruch: Fehler auf der Gegenseite:\n"
 
 #: mercurial/dispatch.py:140 mercurial/dispatch.py:152
 #: mercurial/dispatch.py:171
@@ -24422,7 +24422,7 @@ msgid ""
 "revisions`."
 msgstr ""
 "Ein optionaler Bezeichner nach # verweist auf einen bestimmten Zweig,\n"
-"Tag oder Änderungssatz des anderen Projektarchivs. Siehe auch :hg:\n"
+"Tag oder Änderungssatz des entfernten Projektarchivs. Siehe auch :hg:\n"
 "`help revisions`."
 
 #: mercurial/help/urls.txt:17
@@ -25568,7 +25568,7 @@ msgstr ""
 #: mercurial/phases.py:373
 #, python-format
 msgid "ignoring unexpected root from remote: %i %s\n"
-msgstr "Ignorieren einer unerwarteten Wurzel von entfernt: %i %s\n"
+msgstr "Ignorieren einer unerwarteten Wurzel von der Gegenseite: %i %s\n"
 
 #: mercurial/phases.py:403
 #, python-format
