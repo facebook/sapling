@@ -189,6 +189,7 @@ backout should not back out subsequent changesets
 without --merge
   $ hg backout -d '3 0' 1 --tool=true
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  changeset 22bca4c721e5 backed out, don't forget to commit.
   $ hg locate b
   b
   $ hg update -C tip
@@ -324,6 +325,7 @@ named branches
 without --merge
   $ hg backout -r 1 --tool=true
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  changeset bf1602f437f3 backed out, don't forget to commit.
   $ hg branch
   branch2
   $ hg status -A

@@ -469,6 +469,7 @@ KeyError
 
   $ hg backout ".^"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  changeset c373c8102e68 backed out, don't forget to commit.
 
   $ hg up -C # discard changes
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

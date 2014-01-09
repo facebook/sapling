@@ -465,11 +465,17 @@ def backout(ui, repo, node=None, rev=None, **opts):
         if not opts.get('merge') and op1 != node:
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''))
-                stats = mergemod.update(repo, parent, True, True, False, node, False)
+                stats = mergemod.update(repo, parent, True, True, False,
+                                        node, False)
                 repo.setparents(op1, op2)
                 hg._showstats(repo, stats)
                 if stats[3]:
-                    repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
+                    repo.ui.status(_("use 'hg resolve' to retry unresolved "
+                                     "file merges\n"))
+                else:
+                    msg = _("changeset %s backed out, "
+                            "don't forget to commit.\n")
+                    ui.status(msg % short(node))
                 return stats[3] > 0
             finally:
                 ui.setconfig('ui', 'forcemerge', '')
