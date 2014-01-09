@@ -23,6 +23,12 @@ basic operation
   changeset 2:2929462c3dff backs out changeset 1:a820f4f40a57
   $ cat a
   a
+  $ hg summary
+  parent: 2:2929462c3dff tip
+   Backed out changeset a820f4f40a57
+  branch: default
+  commit: (clean)
+  update: (current)
 
 file that was removed is recreated
 
@@ -42,6 +48,12 @@ file that was removed is recreated
   changeset 2:de31bdc76c0d backs out changeset 1:76862dcce372
   $ cat a
   content
+  $ hg summary
+  parent: 2:de31bdc76c0d tip
+   Backed out changeset 76862dcce372
+  branch: default
+  commit: (clean)
+  update: (current)
 
 backout of backout is as if nothing happened
 
@@ -50,6 +62,12 @@ backout of backout is as if nothing happened
   changeset 3:7f6d0f120113 backs out changeset 2:de31bdc76c0d
   $ test -f a
   [1]
+  $ hg summary
+  parent: 3:7f6d0f120113 tip
+   Backed out changeset de31bdc76c0d
+  branch: default
+  commit: (clean)
+  update: (current)
 
 across branch
 
@@ -64,6 +82,12 @@ across branch
   adding b
   $ hg co -C 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg summary
+  parent: 0:f7b1eb17ad24 
+   0
+  branch: default
+  commit: (clean)
+  update: 1 new changesets (update)
 
 should fail
 
@@ -74,12 +98,24 @@ should fail
   $ hg ci -Am2
   adding c
   created new head
+  $ hg summary
+  parent: 2:db815d6d32e6 tip
+   2
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
 
 should fail
 
   $ hg backout 1
   abort: cannot backout change on a different branch
   [255]
+  $ hg summary
+  parent: 2:db815d6d32e6 tip
+   2
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
 
 backout with merge
 
@@ -91,6 +127,12 @@ backout with merge
   $ echo line 2 >> a
   $ hg commit -d '0 0' -A -m a
   adding a
+  $ hg summary
+  parent: 0:59395513a13a tip
+   a
+  branch: default
+  commit: (clean)
+  update: (current)
 
 remove line 1
 
@@ -109,6 +151,12 @@ remove line 1
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -m d
+  $ hg summary
+  parent: 4:c7df5e0b9c09 tip
+   d
+  branch: default
+  commit: (clean)
+  update: (current)
 
 check line 1 is back
 
@@ -131,6 +179,12 @@ backout should not back out subsequent changesets
   $ echo 1 > b
   $ hg commit -d '2 0' -A -m c
   adding b
+  $ hg summary
+  parent: 2:882396649954 tip
+   c
+  branch: default
+  commit: (clean)
+  update: (current)
 
 without --merge
   $ hg backout -d '3 0' 1 --tool=true
@@ -142,6 +196,12 @@ without --merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg locate b
   b
+  $ hg summary
+  parent: 2:882396649954 tip
+   c
+  branch: default
+  commit: (clean)
+  update: (current)
 
 with --merge
   $ hg backout --merge -d '3 0' 1 --tool=true
@@ -180,6 +240,12 @@ with --merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -d '4 0' -A -m d
+  $ hg summary
+  parent: 4:b2f3bb92043e tip
+   d
+  branch: default
+  commit: (clean)
+  update: (current)
 
 backout of merge should fail
 
@@ -204,16 +270,34 @@ backout with valid parent should be ok
   $ hg backout -d '5 0' --parent 2 4 --tool=true
   removing d
   changeset 5:10e5328c8435 backs out changeset 4:b2f3bb92043e
+  $ hg summary
+  parent: 5:10e5328c8435 tip
+   Backed out changeset b2f3bb92043e
+  branch: default
+  commit: (clean)
+  update: (current)
 
   $ hg rollback
   repository tip rolled back to revision 4 (undo commit)
   working directory now based on revision 4
   $ hg update -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg summary
+  parent: 4:b2f3bb92043e tip
+   d
+  branch: default
+  commit: (clean)
+  update: (current)
 
   $ hg backout -d '6 0' --parent 3 4 --tool=true
   removing c
   changeset 5:033590168430 backs out changeset 4:b2f3bb92043e
+  $ hg summary
+  parent: 5:033590168430 tip
+   Backed out changeset b2f3bb92043e
+  branch: default
+  commit: (clean)
+  update: (current)
 
   $ cd ..
 
@@ -248,6 +332,12 @@ without --merge
   R file1
   C default
   C file2
+  $ hg summary
+  parent: 2:45bbcd363bf0 tip
+   file2
+  branch: branch2
+  commit: 1 removed
+  update: (current)
 
 with --merge
   $ hg update -qC
@@ -258,6 +348,14 @@ with --merge
   merging with changeset 3:d4e8f6db59fb
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ hg summary
+  parent: 2:45bbcd363bf0 
+   file2
+  parent: 3:d4e8f6db59fb tip
+   backout on branch1
+  branch: branch2
+  commit: 1 removed (merge)
+  update: (current)
   $ hg update -q -C 2
 
 on branch2 with branch1 not merged, so file1 should still exist:
@@ -268,6 +366,12 @@ on branch2 with branch1 not merged, so file1 should still exist:
   C default
   C file1
   C file2
+  $ hg summary
+  parent: 2:45bbcd363bf0 
+   file2
+  branch: branch2
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
 
 on branch2 with branch1 merged, so file1 should be gone:
 
@@ -280,6 +384,12 @@ on branch2 with branch1 merged, so file1 should be gone:
   $ hg st -A
   C default
   C file2
+  $ hg summary
+  parent: 4:22149cdde76d tip
+   merge backout of branch1
+  branch: branch2
+  commit: (clean)
+  update: (current)
 
 on branch1, so no file1 and file2:
 
@@ -290,5 +400,11 @@ on branch1, so no file1 and file2:
   $ hg st -A
   C default
   C file1
+  $ hg summary
+  parent: 1:bf1602f437f3 
+   file1
+  branch: branch1
+  commit: (clean)
+  update: (current)
 
   $ cd ..
