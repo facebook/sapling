@@ -36,6 +36,57 @@ def getlocalkey(file, id):
     pathhash = util.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
 
+class cacheconnection(object):
+    """The connection for communicating with the remote cache. Performs
+    gets and sets by communicating with an external process that has the
+    cache-specific implementation.
+    """
+    def __init__(self):
+        self.pipeo = self.pipei = self.pipee = None
+        self.subprocess = None
+        self.connected = False
+
+    def connect(self, cachecommand):
+        if self.pipeo:
+            raise util.Abort(_("cache connection already open"))
+        self.pipei, self.pipeo, self.pipee, self.subprocess = \
+            util.popen4(cachecommand)
+        self.connected = True
+
+    def close(self):
+        self.connected = False
+        # if the process is still open, close the pipes
+        if self.pipeo:
+            if self.subprocess and self.subprocess.poll() == None:
+                self.pipei.write("exit\n")
+                self.pipei.close()
+                self.pipeo.close()
+                self.pipee.close()
+                self.subprocess.wait()
+            self.subprocess = None
+            self.pipeo = self.pipei = self.pipee = None
+
+    def request(self, request, flush=True):
+        if self.connected:
+            try:
+                self.pipei.write(request)
+                if flush:
+                    self.pipei.flush()
+            except IOError:
+                self.close()
+
+    def receiveline(self):
+        if not self.connected:
+            return None
+        try:
+            result = self.pipeo.readline()[:-1]
+            if not result:
+                self.close()
+        except IOError:
+            self.close()
+
+        return result
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -45,7 +96,7 @@ class fileserverclient(object):
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
-        self.pipeo = self.pipei = self.pipee = None
+        self.remotecache = cacheconnection()
 
         if not os.path.exists(self.cachepath):
             oldumask = os.umask(0o002)
@@ -67,8 +118,9 @@ class fileserverclient(object):
         A list of nodes that the server couldn't find is returned.
         If the connection fails, an exception is raised.
         """
-        if not self.pipeo:
+        if not self.remotecache.connected:
             self.connect()
+        cache = self.remotecache
 
         count = len(fileids)
         request = "get\n%d\n" % count
@@ -79,8 +131,7 @@ class fileserverclient(object):
             request += fullid + "\n"
             idmap[fullid] = file
 
-        self.pipei.write(request)
-        self.pipei.flush()
+        cache.request(request)
 
         missing = []
         total = count
@@ -92,10 +143,15 @@ class fileserverclient(object):
         missed = []
         count = 0
         while True:
-            missingid = self.pipeo.readline()[:-1]
+            missingid = cache.receiveline()
             if not missingid:
-                raise error.ResponseError(_("error downloading cached file:" +
-                    " connection closed early\n"))
+                missedset = set(missed)
+                for missingid in idmap.iterkeys():
+                    if not missingid in missedset:
+                        missed.append(missingid)
+                self.ui.warn(_("warning: cache connection closed early - " +
+                    "falling back to server\n"))
+                break
             if missingid == "0":
                 break
             if missingid.startswith("_hits_"):
@@ -156,9 +212,7 @@ class fileserverclient(object):
                 # send to memcache
                 count = len(missed)
                 request = "set\n%d\n%s\n" % (count, "\n".join(missed))
-
-                self.pipei.write(request)
-                self.pipei.flush()
+                cache.request(request)
 
             self.ui.progress(_downloading, None)
 
@@ -200,40 +254,33 @@ class fileserverclient(object):
     def connect(self):
         if self.cacheprocess:
             cmd = "%s %s" % (self.cacheprocess, self.cachepath)
-            self.pipei, self.pipeo, self.pipee, self.subprocess = \
-                util.popen4(cmd)
+            self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
             # returns cache misses.  This enables tests to run easily
             # and may eventually allow us to be a drop in replacement
             # for the largefiles extension.
-            class simplepipe(object):
+            class simplecache(object):
                 def __init__(self):
-                    self.data = ""
                     self.missingids = []
-                def flush(self):
-                    lines = self.data.split("\n")
-                    if lines[0] == "get":
-                        for line in lines[2:-1]:
-                            self.missingids.append(line)
-                        self.missingids.append('0')
-                    self.data = ""
+                    self.connected = True
+
                 def close(self):
                     pass
-                def readline(self):
-                    return self.missingids.pop(0) + "\n"
-                def write(self, data):
-                    self.data += data
-            self.pipei = simplepipe()
-            self.pipeo = self.pipei
-            self.pipee = simplepipe()
 
-            class simpleprocess(object):
-                def poll(self):
+                def request(self, value, flush=True):
+                    lines = value.split("\n")
+                    if lines[0] != "get":
+                        return
+                    self.missingids = lines[2:-1]
+                    self.missingids.append('0')
+
+                def receiveline(self):
+                    if len(self.missingids) > 0:
+                        return self.missingids.pop(0)
                     return None
-                def wait(self):
-                    return
-            self.subprocess = simpleprocess()
+
+            self.remotecache = simplecache()
 
     def close(self):
         if fetches and self.debugoutput:
@@ -245,17 +292,8 @@ class fileserverclient(object):
                     float(fetched - fetchmisses) / float(fetched) * 100.0,
                     fetchcost))
 
-        # if the process is still open, close the pipes
-        if self.pipeo and self.subprocess.poll() == None:
-            self.pipei.write("exit\n")
-            self.pipei.close()
-            self.pipeo.close()
-            self.pipee.close()
-            self.subprocess.wait()
-            del self.subprocess
-            self.pipeo = None
-            self.pipei = None
-            self.pipee = None
+        if self.remotecache.connected:
+            self.remotecache.close()
 
     def prefetch(self, repo, fileids, force=False):
         """downloads the given file versions to the cache
