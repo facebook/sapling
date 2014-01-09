@@ -314,7 +314,7 @@ class remotefilelog(object):
                 filename = os.path.basename(localpath)
                 directory = os.path.dirname(localpath)
                 alternates = [f for f in os.listdir(directory) if
-                         len(f) == 41 and f.startswith(filename)]
+                         len(f) > 40 and f.startswith(filename)]
                 alternates = sorted(alternates, key=lambda x: int(x[40:]))
 
                 for alternate in alternates:
