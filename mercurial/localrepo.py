@@ -1694,7 +1694,6 @@ class localrepository(object):
                 # we use unfiltered changelog here because hidden revision must
                 # be taken in account for phase synchronization. They may
                 # becomes public and becomes visible again.
-                cl = self.unfiltered().changelog
                 result = self.addchangegroup(cg, 'pull', remote.url())
 
             # compute target subset
