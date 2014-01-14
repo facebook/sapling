@@ -410,6 +410,15 @@ class changectx(basectx):
         # for dirstate.walk, files=['.'] means "walk the whole tree".
         # follow that here, too
         fset.discard('.')
+
+        # avoid the entire walk if we're only looking for specific files
+        if fset and not match.anypats():
+            if util.all([fn in self for fn in fset]):
+                for fn in sorted(fset):
+                    if match(fn):
+                        yield fn
+                raise StopIteration
+
         for fn in self:
             if fn in fset:
                 # specified pattern is the exact name
