@@ -192,13 +192,12 @@ def update(repo, parents, node):
         return False
 
     if marks[cur] in parents:
-        old = repo[marks[cur]]
         new = repo[node]
         divs = [repo[b] for b in marks
                 if b.split('@', 1)[0] == cur.split('@', 1)[0]]
         anc = repo.changelog.ancestors([new.rev()])
         deletefrom = [b.node() for b in divs if b.rev() in anc or b == new]
-        if old.descendant(new):
+        if validdest(repo, repo[marks[cur]], new):
             marks[cur] = new.node()
             update = True
 
