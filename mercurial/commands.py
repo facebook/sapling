@@ -847,12 +847,10 @@ def bookmark(ui, repo, *names, **opts):
                     bookmarks.deletedivergent(repo, [target], mark)
                     return
 
-                # consider successor changesets as well
-                foreground = obsolete.foreground(repo, [marks[mark]])
                 deletefrom = [b for b in divs
                               if repo[b].rev() in anc or b == target]
                 bookmarks.deletedivergent(repo, deletefrom, mark)
-                if bmctx.rev() in anc or target in foreground:
+                if bookmarks.validdest(repo, bmctx, repo[target]):
                     ui.status(_("moving bookmark '%s' forward from %s\n") %
                               (mark, short(bmctx.node())))
                     return
