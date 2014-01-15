@@ -579,3 +579,52 @@ commands.norepo += " verifyremotefilelog"
     ], _('hg verifyremotefilelogs <directory>'))
 def verifyremotefilelog(ui, *args, **opts):
     return debugcommands.verifyremotefilelog(ui, *args, **opts)
+
+@command('^prefetch', [
+    ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
+    ] + commands.walkopts, _('hg prefetch [OPTIONS] [FILE...]'))
+def prefetch(ui, repo, *pats, **opts):
+    """prefetch file revisions from the server
+
+    Prefetchs file revisions for the specified revs and stores them in the
+    local remotefilelog cache.  If no rev is specified, it uses your current
+    commit. File names or patterns can be used to limit which files are
+    downloaded.
+
+    Return 0 on success.
+    """
+    if not shallowrepo.requirement in repo.requirements:
+        raise util.Abort(_("repo is not shallow"))
+
+    if not opts.get('rev'):
+        opts['rev'] = '.'
+
+    m = scmutil.matchall(repo)
+    revs = scmutil.revrange(repo, opts.get('rev'))
+
+    files = set()
+    visited = set()
+    visited.add(nullrev)
+    for rev in sorted(revs):
+        ctx = repo[rev]
+        if pats:
+            m = scmutil.match(ctx, pats, opts)
+
+        mf = repo.manifest
+        mfnode = ctx.manifestnode()
+
+        # Decompressing manifests is expensive.
+        # When possible, only read the deltas.
+        p1, p2 = mf.parentrevs(rev)
+        if p1 in visited and p2 in visited:
+            mfdict = mf.readfast(mfnode)
+        else:
+            mfdict = mf.read(mfnode)
+
+        for path, fnode in mfdict.iteritems():
+            if not pats or m(path):
+                files.add((path, hex(fnode)))
+
+        visited.add(rev)
+
+    fileserverclient.client.prefetch(repo, files)
