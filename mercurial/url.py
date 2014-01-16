@@ -32,10 +32,14 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
                 user, passwd = auth.get('username'), auth.get('password')
                 self.ui.debug("using auth.%s.* for authentication\n" % group)
         if not user or not passwd:
+            u = util.url(authuri)
+            u.query = None
             if not self.ui.interactive():
-                raise util.Abort(_('http authorization required'))
+                raise util.Abort(_('http authorization required for %s') %
+                                 util.hidepassword(str(u)))
 
-            self.ui.write(_("http authorization required\n"))
+            self.ui.write(_("http authorization required for %s\n") %
+                          util.hidepassword(str(u)))
             self.ui.write(_("realm: %s\n") % realm)
             if user:
                 self.ui.write(_("user: %s\n") % user)

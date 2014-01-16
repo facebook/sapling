@@ -156,12 +156,24 @@ test http authentication
   >    --config server.preferuncompressed=True
   $ cat pid >> $DAEMON_PIDS
 
+  $ cat << EOF > get_pass.py
+  > import getpass
+  > def newgetpass(arg):
+  >   return "pass"
+  > getpass.getpass = newgetpass
+  > EOF
+
   $ hg id http://localhost:$HGPORT2/
-  abort: http authorization required
+  abort: http authorization required for http://localhost:$HGPORT2/
   [255]
-  $ hg id http://user@localhost:$HGPORT2/
-  abort: http authorization required
+  $ hg id http://localhost:$HGPORT2/
+  abort: http authorization required for http://localhost:$HGPORT2/
   [255]
+  $ hg id --config ui.interactive=true --config extensions.getpass=get_pass.py http://user@localhost:$HGPORT2/
+  http authorization required for http://localhost:$HGPORT2/
+  realm: mercurial
+  user: user
+  password: 5fed3813f7f5
   $ hg id http://user:pass@localhost:$HGPORT2/
   5fed3813f7f5
   $ echo '[auth]' >> .hg/hgrc
@@ -183,7 +195,7 @@ test http authentication
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg id http://user2@localhost:$HGPORT2/
-  abort: http authorization required
+  abort: http authorization required for http://localhost:$HGPORT2/
   [255]
   $ hg id http://user:pass2@localhost:$HGPORT2/
   abort: HTTP Error 403: no
