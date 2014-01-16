@@ -45,9 +45,7 @@ def wintests():
 
     direct matching, glob unnecessary
         >>> lm('g/b (glob)\n', 'g/b\n')
-        <BLANKLINE>
-        Info, unnecessary glob: g/b (glob)
-        True
+        'special: -glob'
 
     missing glob
         >>> lm('/g/c/d/fg\n', '\\g\\c\\d/fg\n')

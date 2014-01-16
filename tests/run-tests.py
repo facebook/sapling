@@ -606,7 +606,7 @@ def globmatch(el, l):
     if el + '\n' == l:
         if os.altsep:
             # matching on "/" is not needed for this line
-            log("\nInfo, unnecessary glob: %s (glob)" % el)
+            return '-glob'
         return True
     i, n = 0, len(el)
     res = ''
@@ -797,7 +797,14 @@ def tsttest(test, wd, options, replacements, env):
             if isinstance(r, str):
                 if r == '+glob':
                     lout = el[:-1] + ' (glob)\n'
-                r = False
+                    r = False
+                elif r == '-glob':
+                    log('\ninfo, unnecessary glob in %s (after line %d):'
+                        ' %s (glob)\n' % (test, pos, el[-1]))
+                    r = True # pass on unnecessary glob
+                else:
+                    log('\ninfo, unknown linematch result: %r\n' % r)
+                    r = False
             if r:
                 postout.append("  " + el)
             else:
