@@ -634,9 +634,10 @@ def linematch(el, l):
             el = el[:-7].decode('string-escape') + '\n'
         if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
             return True
-        if (el.endswith(" (re)\n") and rematch(el[:-6], l) or
-            el.endswith(" (glob)\n") and globmatch(el[:-8], l)):
-            return True
+        if el.endswith(" (re)\n"):
+            return rematch(el[:-6], l)
+        if el.endswith(" (glob)\n"):
+            return globmatch(el[:-8], l)
     return False
 
 def tsttest(test, wd, options, replacements, env):
