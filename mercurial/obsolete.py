@@ -509,29 +509,41 @@ def foreground(repo, nodes):
 def successorssets(repo, initialnode, cache=None):
     """Return all set of successors of initial nodes
 
-    Successors set of changeset A are a group of revision that succeed A. It
-    succeed A as a consistent whole, each revision being only partial
-    replacement.  Successors set contains non-obsolete changeset only.
+    The successors set of a changeset A are a group of revisions that succeed
+    A. It succeeds A as a consistent whole, each revision being only a partial
+    replacement. The successors set contains non-obsolete changesets only.
 
-    In most cases a changeset A have zero (changeset pruned) or a single
-    successors set that contains a single successor (changeset A replaced by
-    A')
+    This function returns the full list of successor sets which is why it
+    returns a list of tuples and not just a single tuple. Each tuple is a valid
+    successors set. Not that (A,) may be a valid successors set for changeset A
+    (see below).
 
-    When changeset is split, it results successors set containing more than
-    a single element. Divergent rewriting will result in multiple successors
-    sets.
+    In most cases, a changeset A will have a single element (e.g. the changeset
+    A is replaced by A') in its successors set. Though, it is also common for a
+    changeset A to have no elements in its successor set (e.g. the changeset
+    has been pruned). Therefore, the returned list of successors sets will be
+    [(A',)] or [], respectively.
 
-    They are returned as a list of tuples containing all valid successors sets.
+    When a changeset A is split into A' and B', however, it will result in a
+    successors set containing more than a single element, i.e. [(A',B')].
+    Divergent changesets will result in multiple successors sets, i.e. [(A',),
+    (A'')].
 
-    Final successors unknown locally are considered plain prune (obsoleted
-    without successors).
+    If a changeset A is not obsolete, then it will conceptually have no
+    successors set. To distinguish this from a pruned changeset, the successor
+    set will only contain itself, i.e. [(A,)].
 
-    The optional `cache` parameter is a dictionary that may contains
-    precomputed successors sets. It is meant to reuse the computation of
-    previous call to `successorssets` when multiple calls are made at the same
-    time. The cache dictionary is updated in place. The caller is responsible
-    for its live spawn. Code that makes multiple calls to `successorssets`
-    *must* use this cache mechanism or suffer terrible performances."""
+    Finally, successors unknown locally are considered to be pruned (obsoleted
+    without any successors).
+
+    The optional `cache` parameter is a dictionary that may contain precomputed
+    successors sets. It is meant to reuse the computation of a previous call to
+    `successorssets` when multiple calls are made at the same time. The cache
+    dictionary is updated in place. The caller is responsible for its live
+    spawn. Code that makes multiple calls to `successorssets` *must* use this
+    cache mechanism or suffer terrible performances.
+
+    """
 
     succmarkers = repo.obsstore.successors
 
