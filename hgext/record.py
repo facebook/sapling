@@ -515,11 +515,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, *pats, **opts):
                                '(use "hg commit" instead)'))
 
         changes = repo.status(match=match)[:3]
-        diffopts = patch.diffopts(ui, opts=dict(
-            git=True, nodates=True,
-            ignorews=opts.get('ignore_all_space'),
-            ignorewsamount=opts.get('ignore_space_change'),
-            ignoreblanklines=opts.get('ignore_blank_lines')))
+        diffopts = opts.copy()
+        diffopts['nodates'] = True
+        diffopts['git'] = True
+        diffopts = patch.diffopts(ui, opts=diffopts)
         chunks = patch.diff(repo, changes=changes, opts=diffopts)
         fp = cStringIO.StringIO()
         fp.write(''.join(chunks))
