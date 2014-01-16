@@ -10,7 +10,6 @@ rebase=
 mq=
 [ui]
 ssh=python "$TESTDIR/dummyssh"
-remotecmd=$TESTDIR/../../hg/hg
 [server]
 preferuncompressed=True
 EOF
