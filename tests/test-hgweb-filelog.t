@@ -604,7 +604,7 @@ should show base link, use spartan because it shows it
   $ ("$TESTDIR/get-with-headers.py" localhost:$HGPORT 'log/tip/c?style=spartan')
   200 Script output follows
   
-  <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+  <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
   <html>
   <head>
   <link rel="icon" href="/static/hgicon.png" type="image/png">

@@ -314,7 +314,7 @@ static file
 
   $ "$TESTDIR/get-with-headers.py" --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 4607
+  content-length: 5262
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; }
@@ -485,6 +485,30 @@ static file
   
   .block {
       border-top: 1px solid #d9d8d1;
+  }
+  
+  .scroll-loading {
+    -webkit-animation: change_color 1s linear 0s infinite alternate;
+    -moz-animation: change_color 1s linear 0s infinite alternate;
+    -o-animation: change_color 1s linear 0s infinite alternate;
+    animation: change_color 1s linear 0s infinite alternate;
+  }
+  
+  @-webkit-keyframes change_color {
+    from { background-color: #A0CEFF; } to {  }
+  }
+  @-moz-keyframes change_color {
+    from { background-color: #A0CEFF; } to {  }
+  }
+  @-o-keyframes change_color {
+    from { background-color: #A0CEFF; } to {  }
+  }
+  @keyframes change_color {
+    from { background-color: #A0CEFF; } to {  }
+  }
+  
+  .scroll-loading-error {
+      background-color: #FFCCCC !important;
   }
   304 Not Modified
   
