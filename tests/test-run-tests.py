@@ -27,7 +27,10 @@ def lm(expected, output):
     assert not re.search(r'[^ \w\\/\r\n()*?]', expected + output), \
            'single backslash or unknown char'
     match = run_tests.linematch(expected, output)
-    return bool(match)
+    if isinstance(match, str):
+        return 'special: ' + match
+    else:
+        return bool(match) # do not return match object
 
 def wintests():
     r"""test matching like running on windows
@@ -48,7 +51,7 @@ def wintests():
 
     missing glob
         >>> lm('/g/c/d/fg\n', '\\g\\c\\d/fg\n')
-        False
+        'special: +glob'
 
     restore os.altsep
         >>> os.altsep = _osaltsep

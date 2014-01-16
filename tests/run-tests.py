@@ -638,6 +638,8 @@ def linematch(el, l):
             return rematch(el[:-6], l)
         if el.endswith(" (glob)\n"):
             return globmatch(el[:-8], l)
+        if os.altsep and l.replace('\\', '/') == el:
+            return '+glob'
     return False
 
 def tsttest(test, wd, options, replacements, env):
@@ -791,7 +793,12 @@ def tsttest(test, wd, options, replacements, env):
             if pos in expected and expected[pos]:
                 el = expected[pos].pop(0)
 
-            if linematch(el, lout):
+            r = linematch(el, lout)
+            if isinstance(r, str):
+                if r == '+glob':
+                    lout = el[:-1] + ' (glob)\n'
+                r = False
+            if r:
                 postout.append("  " + el)
             else:
                 if needescape(lout):
