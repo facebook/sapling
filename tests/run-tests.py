@@ -1077,6 +1077,9 @@ def scheduletests(options, tests):
             done.put(runone(options, test, count))
         except KeyboardInterrupt:
             pass
+        except: # re-raises
+            done.put(('!', test, 'run-test raised an error, see traceback'))
+            raise
 
     try:
         while tests or running:
