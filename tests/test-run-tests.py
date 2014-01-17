@@ -4,8 +4,11 @@ run-test.t only checks positive matches and can not see warnings
 (both by design)
 """
 
-
-import doctest, os, re
+import os, re
+# this is hack to make sure no escape characters are inserted into the output
+if 'TERM' in os.environ:
+    del os.environ['TERM']
+import doctest
 run_tests = __import__('run-tests')
 
 def lm(expected, output):
@@ -54,7 +57,7 @@ def wintests():
     restore os.altsep
         >>> os.altsep = _osaltsep
     """
-    os.altsep # for pyflakes, because it does not see os in the doctest
+    pass
 
 def otherostests():
     r"""test matching like running on non-windows os
