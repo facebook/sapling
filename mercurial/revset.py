@@ -528,13 +528,13 @@ def contains(repo, subset, x):
     """
     # i18n: "contains" is a keyword
     pat = getstring(x, _("contains requires a pattern"))
-    m = None
     s = []
     if not matchmod.patkind(pat):
         for r in subset:
             if pat in repo[r]:
                 s.append(r)
     else:
+        m = None
         for r in subset:
             c = repo[r]
             if not m or matchmod.patkind(pat) == 'set':
