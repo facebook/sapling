@@ -25,7 +25,10 @@ def layout_from_subversion(svn, revision=None, ui=None):
 
     """
     # import late to avoid trouble when running the test suite
-    from hgext_hgsubversion import svnwrap
+    try:
+        from hgext_hgsubversion import svnwrap
+    except ImportError:
+        from hgsubversion import svnwrap
 
     try:
         rootlist = svn.list_dir('', revision=revision)
