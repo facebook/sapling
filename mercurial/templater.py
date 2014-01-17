@@ -328,6 +328,45 @@ def rstdoc(context, mapping, args):
 
     return minirst.format(text, style=style, keep=['verbose'])
 
+def shortest(context, mapping, args):
+    """usage: shortest(node, minlength=4)
+    """
+    if not (1 <= len(args) <= 2):
+        raise error.ParseError(_("shortest() expects one or two arguments"))
+
+    node = stringify(args[0][0](context, mapping, args[0][1]))
+
+    minlength = 4
+    if len(args) > 1:
+        minlength = int(args[1][1])
+
+    cl = mapping['ctx']._repo.changelog
+    def isvalid(test):
+        try:
+            cl.index.partialmatch(test)
+            try:
+                int(test)
+                return False
+            except ValueError:
+                return True
+        except error.RevlogError:
+            return False
+
+    shortest = node
+    startlength = max(6, minlength)
+    length = startlength
+    while True:
+        test = node[:length]
+        if isvalid(test):
+            shortest = test
+            if length == minlength or length > startlength:
+                return shortest
+            length -= 1
+        else:
+            length += 1
+            if len(shortest) <= length:
+                return shortest
+
 def strip(context, mapping, args):
     if not (1 <= len(args) <= 2):
         raise error.ParseError(_("strip expects one or two arguments"))
@@ -369,6 +408,7 @@ funcs = {
     "join": join,
     "label": label,
     "rstdoc": rstdoc,
+    "shortest": shortest,
     "strip": strip,
     "sub": sub,
 }
