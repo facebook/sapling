@@ -722,10 +722,10 @@ def filelog(repo, subset, x):
     s = set()
 
     if not matchmod.patkind(pat):
-        for f in m.files():
-            fl = repo.file(f)
-            for fr in fl:
-                s.add(fl.linkrev(fr))
+        f = m.files()[0]
+        fl = repo.file(f)
+        for fr in fl:
+            s.add(fl.linkrev(fr))
     else:
         for f in repo[None]:
             if m(f):
