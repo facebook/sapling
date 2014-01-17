@@ -12,6 +12,7 @@ import match as matchmod
 from i18n import _
 import encoding
 import obsolete as obsmod
+import pathutil
 import repoview
 
 def _revancestors(repo, revs, followfirst):
@@ -530,6 +531,7 @@ def contains(repo, subset, x):
     pat = getstring(x, _("contains requires a pattern"))
     s = []
     if not matchmod.patkind(pat):
+        pat = pathutil.canonpath(repo.root, repo.getcwd(), pat)
         for r in subset:
             if pat in repo[r]:
                 s.append(r)

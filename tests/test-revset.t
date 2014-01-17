@@ -273,6 +273,11 @@ ancestor can accept 0 or more arguments
   1
   3
   5
+  $ log 'contains("../repo/a")'
+  0
+  1
+  3
+  5
   $ log 'desc(B)'
   5
   $ log 'descendants(2 or 3)'
