@@ -15,14 +15,28 @@ if os.name =='nt':
     def kill(pid, logfn, tryhard=True):
         logfn('# Killing daemon process %d' % pid)
         PROCESS_TERMINATE = 1
+        SYNCHRONIZE = 0x00100000L
+        WAIT_OBJECT_0 = 0
+        WAIT_TIMEOUT = 258
         handle = ctypes.windll.kernel32.OpenProcess(
-                PROCESS_TERMINATE, False, pid)
+                PROCESS_TERMINATE|SYNCHRONIZE, False, pid)
         if handle == 0:
             # TODO: call _check(0, expected) to check if "process not found"
             return # process not found, already finished
         try:
             _check(ctypes.windll.kernel32.TerminateProcess(handle, -1), 5)
             #      windows error 5 when process does not exist or no access TODO
+
+            # TODO?: forcefully kill when timeout
+            #        and ?shorter waiting time? when tryhard==True
+            r = ctypes.windll.kernel32.WaitForSingleObject(handle, 100)
+                                                       # timeout = 100 ms
+            if r == WAIT_OBJECT_0:
+                pass # process is terminated
+            elif r == WAIT_TIMEOUT:
+                logfn('# Daemon process %d is stuck')
+            else:
+                check(r) # any error
         except: #re-raises
             ctypes.windll.kernel32.CloseHandle(handle) # no _check, keep error
             raise
