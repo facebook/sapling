@@ -29,6 +29,11 @@ The latter expects null delimited patterns while the former expects line
 feeds. Each string read from the file is itself treated as a file
 pattern.
 
+All patterns, except for ``glob:`` specified in command line (not for
+``-I`` or ``-X`` options) or ``.hgignore`` file, can match also
+against directories: files under matched directories are treated as
+matched.
+
 Plain examples::
 
   path:foo/bar   a name bar in a directory named foo in the root
