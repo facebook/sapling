@@ -1637,3 +1637,17 @@ Test shortest(node) function:
   $ hg log --template '{shortest(node, 10)}\n'
   d97c383ae3
   f7769ec2ab
+
+Test pad function
+
+  $ hg log --template '{pad(rev, 20)} {author|user}\n'
+  1                    test
+  0                    test
+
+  $ hg log --template '{pad(rev, 20, " ", True)} {author|user}\n'
+                     1 test
+                     0 test
+
+  $ hg log --template '{pad(rev, 20, "-", False)} {author|user}\n'
+  1------------------- test
+  0------------------- test

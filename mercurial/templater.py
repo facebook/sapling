@@ -245,6 +245,31 @@ def fill(context, mapping, args):
 
     return templatefilters.fill(text, width, initindent, hangindent)
 
+def pad(context, mapping, args):
+    """usage: pad(text, width, fillchar=' ', right=False)
+    """
+    if not (2 <= len(args) <= 4):
+        raise error.ParseError(_("pad() expects two to four arguments"))
+
+    width = int(args[1][1])
+
+    text = stringify(args[0][0](context, mapping, args[0][1]))
+    if args[0][0] == runstring:
+        text = stringify(runtemplate(context, mapping,
+            compiletemplate(text, context)))
+
+    right = False
+    fillchar = ' '
+    if len(args) > 2:
+        fillchar = stringify(args[2][0](context, mapping, args[2][1]))
+    if len(args) > 3:
+        right = util.parsebool(args[3][1])
+
+    if right:
+        return text.rjust(width, fillchar)
+    else:
+        return text.ljust(width, fillchar)
+
 def get(context, mapping, args):
     if len(args) != 2:
         # i18n: "get" is a keyword
@@ -407,6 +432,7 @@ funcs = {
     "ifeq": ifeq,
     "join": join,
     "label": label,
+    "pad": pad,
     "rstdoc": rstdoc,
     "shortest": shortest,
     "strip": strip,
