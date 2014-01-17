@@ -292,6 +292,12 @@ ancestor can accept 0 or more arguments
   $ log 'file("b*")'
   1
   4
+  $ log 'filelog("b")'
+  1
+  4
+  $ log 'filelog("../repo/b")'
+  1
+  4
   $ log 'follow()'
   0
   1

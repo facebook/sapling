@@ -717,16 +717,15 @@ def filelog(repo, subset, x):
 
     # i18n: "filelog" is a keyword
     pat = getstring(x, _("filelog requires a pattern"))
-    m = matchmod.match(repo.root, repo.getcwd(), [pat], default='relpath',
-                       ctx=repo[None])
     s = set()
 
     if not matchmod.patkind(pat):
-        f = m.files()[0]
+        f = pathutil.canonpath(repo.root, repo.getcwd(), pat)
         fl = repo.file(f)
         for fr in fl:
             s.add(fl.linkrev(fr))
     else:
+        m = matchmod.match(repo.root, repo.getcwd(), [pat], ctx=repo[None])
         for f in repo[None]:
             if m(f):
                 fl = repo.file(f)
