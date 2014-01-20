@@ -31,4 +31,7 @@ the main hg working dir
   $ "$TESTDIR/md5sum.py" "$TESTDIR/gpg/trustdb.gpg"
   f6b9c78c65fa9536e7512bb2ceb338ae  */gpg/trustdb.gpg (glob)
 
+don't leak any state to next test run
+  $ rm -f "$TESTDIR/gpg/random_seed"
+
   $ cd ..
