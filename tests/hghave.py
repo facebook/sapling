@@ -272,7 +272,12 @@ def has_serve():
     return os.name != 'nt' # gross approximation
 
 def has_tic():
-    return matchoutput('test -x "`which tic`"', '')
+    try:
+        import curses
+        curses.COLOR_BLUE
+        return matchoutput('test -x "`which tic`"', '')
+    except ImportError:
+        return False
 
 def has_msys():
     return os.getenv('MSYSTEM')
@@ -324,7 +329,7 @@ checks = {
     "svn-bindings": (has_svn_bindings, "subversion python bindings"),
     "symlink": (has_symlink, "symbolic links"),
     "system-sh": (has_system_sh, "system() uses sh"),
-    "tic": (has_tic, "terminfo compiler"),
+    "tic": (has_tic, "terminfo compiler and curses module"),
     "tla": (has_tla, "GNU Arch tla client"),
     "unix-permissions": (has_unix_permissions, "unix-style permissions"),
     "windows": (has_windows, "Windows"),
