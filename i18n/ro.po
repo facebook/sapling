@@ -7289,7 +7289,7 @@ msgid ""
 msgstr ""
 "    În unele cazuri, puteți clona depozitele și directorul de lucru "
 "utilizând\n"
-"    link-uri hard complete cu:"
+"    link-uri hard complete cu ::"
 
 msgid "      $ cp -al REPO REPOCLONE"
 msgstr "      $ cp -al DEP CLONA_DEP"
@@ -8190,7 +8190,7 @@ msgstr ""
 
 #, python-format
 msgid "shell alias for::"
-msgstr "alias de shell pentru:"
+msgstr "alias de shell pentru::"
 
 #, python-format
 msgid "    %s"

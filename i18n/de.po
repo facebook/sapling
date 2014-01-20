@@ -12935,7 +12935,7 @@ msgstr ""
 "    Die Ausgabe kann in eine Datei erfolgen. In diesem Fall wird der Name\n"
 "    der Datei mit einem Formatstring vorgegeben. Die Formatierungsregeln "
 "sind\n"
-"    dem 'export'-Befehl analog, mit folgenden Ergänzungen::"
+"    dem 'export'-Befehl analog, mit folgenden Ergänzungen:"
 
 #: mercurial/commands.py:1147
 msgid ""
@@ -20668,7 +20668,7 @@ msgstr ""
 
 #: mercurial/help/config.txt:1272
 msgid "The full set of options is:"
-msgstr "Eine vollständige Liste der Optionen ist::"
+msgstr "Eine vollständige Liste der Optionen ist:"
 
 #: mercurial/help/config.txt:1274
 msgid ""
