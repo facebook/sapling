@@ -9510,7 +9510,7 @@ msgstr ""
 "- log, revert, update: 由時間來選擇修定版(s)"
 
 msgid "Many date formats are valid. Here are some examples:"
-msgstr "支援許多的時間格式,這邊有一些範例::"
+msgstr "支援許多的時間格式,這邊有一些範例:"
 
 msgid ""
 "- ``Wed Dec 6 13:18:29 2006`` (local timezone assumed)\n"
@@ -9529,7 +9529,7 @@ msgid ""
 msgstr ""
 
 msgid "Lastly, there is Mercurial's internal format:"
-msgstr "最後,是Mercurial 的內部格式::"
+msgstr "最後,是Mercurial 的內部格式:"
 
 msgid "- ``1165432709 0`` (Wed Dec 6 13:18:29 2006 UTC)"
 msgstr ""
@@ -9542,7 +9542,7 @@ msgid ""
 msgstr ""
 
 msgid "The log command also accepts date ranges:"
-msgstr "log 命令也接收 時間區間::"
+msgstr "log 命令也接收 時間區間:"
 
 msgid ""
 "- ``<{datetime}`` - at or before a given date/time\n"

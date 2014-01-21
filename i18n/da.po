@@ -7768,7 +7768,7 @@ msgid ""
 msgstr ""
 
 msgid "      Some examples:"
-msgstr "      Nogle eksempler::"
+msgstr "      Nogle eksempler:"
 
 msgid ""
 "      - start a bisection with known bad revision 12, and good revision 34::"
