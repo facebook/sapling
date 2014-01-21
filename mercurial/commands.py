@@ -2558,7 +2558,7 @@ def debugrevspec(ui, repo, expr):
         if newtree != tree:
             ui.note(revset.prettyformat(newtree), "\n")
     func = revset.match(ui, expr)
-    for c in func(repo, range(len(repo))):
+    for c in func(repo, revset.baseset(range(len(repo)))):
         ui.write("%s\n" % c)
 
 @command('debugsetparents', [], _('REV1 [REV2]'))

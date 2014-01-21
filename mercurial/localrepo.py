@@ -428,7 +428,7 @@ class localrepository(object):
         '''Return a list of revisions matching the given revset'''
         expr = revset.formatspec(expr, *args)
         m = revset.match(None, expr)
-        return [r for r in m(self, list(self))]
+        return revset.baseset([r for r in m(self, revset.baseset(self))])
 
     def set(self, expr, *args):
         '''

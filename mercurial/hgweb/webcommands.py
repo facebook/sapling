@@ -187,7 +187,7 @@ def _search(web, req, tmpl):
 
         mfunc = revset.match(web.repo.ui, revdef)
         try:
-            revs = mfunc(web.repo, list(web.repo))
+            revs = mfunc(web.repo, revset.baseset(web.repo))
             return MODE_REVSET, revs
             # ParseError: wrongly placed tokens, wrongs arguments, etc
             # RepoLookupError: no such revision, e.g. in 'revision:'
