@@ -454,13 +454,13 @@ class svn_source(converter_source):
         del self.commits[rev]
         return commit
 
-    def checkrevformat(self, revstr):
+    def checkrevformat(self, revstr, mapname='splicemap'):
         """ fails if revision format does not match the correct format"""
         if not re.match(r'svn:[0-9a-f]{8,8}-[0-9a-f]{4,4}-'
                               '[0-9a-f]{4,4}-[0-9a-f]{4,4}-[0-9a-f]'
                               '{12,12}(.*)\@[0-9]+$',revstr):
-            raise util.Abort(_('splicemap entry %s is not a valid revision'
-                               ' identifier') % revstr)
+            raise util.Abort(_('%s entry %s is not a valid revision'
+                               ' identifier') % (mapname, revstr))
 
     def gettags(self):
         tags = {}

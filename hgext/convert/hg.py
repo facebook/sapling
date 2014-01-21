@@ -423,6 +423,6 @@ class mercurial_source(converter_source):
     def getbookmarks(self):
         return bookmarks.listbookmarks(self.repo)
 
-    def checkrevformat(self, revstr):
+    def checkrevformat(self, revstr, mapname='splicemap'):
         """ Mercurial, revision string is a 40 byte hex """
-        self.checkhexformat(revstr)
+        self.checkhexformat(revstr, mapname)
