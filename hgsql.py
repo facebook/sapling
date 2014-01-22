@@ -91,21 +91,26 @@ def pull(orig, *args, **kwargs):
     return executewithsql(repo, orig, commitlock, *args, **kwargs)
 
 def executewithsql(repo, action, lock=None, *args, **kwargs):
-    repo.sqlconnect()
+    connected = False
+    if not repo.sqlconn:
+        repo.sqlconnect()
+        connected = True
     if lock:
         repo.sqllock(lock)
 
     result = None
     success = False
     try:
-        repo.syncdb()
+        if connected:
+            repo.syncdb()
         result = action(*args, **kwargs)
         success = True
     finally:
         try:
             if lock:
                 repo.sqlunlock(lock)
-            repo.sqlclose()
+            if connected:
+                repo.sqlclose()
         except _mysql_exceptions.ProgrammingError, ex:
             if success:
                 raise
