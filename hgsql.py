@@ -312,7 +312,8 @@ def wraprepo(repo):
 
         def committodb(self):
             if self.sqlconn == None:
-                raise Exception("invalid repo change - only hg push and pull are allowed")
+                raise Exception("invalid repo change - only hg push and pull" +
+                    " are allowed")
 
             if not self.pendingrevs:
                 return
@@ -320,13 +321,7 @@ def wraprepo(repo):
             reponame = self.sqlreponame
             cursor = self.sqlcursor
 
-            cursor.execute("""SELECT max(linkrev) FROM revisions WHERE repo = %s""",
-                reponame)
-            maxlinkrev = cursor.fetchall()[0][0]
-            minlinkrev = min(self.pendingrevs, key= lambda x: x[2])
-            if maxlinkrev != None and maxlinkrev != minlinkrev[2] - 1:
-                raise CorruptionException("attempting to write non-sequential " +
-                    "linkrev %s, expected %s" % (minlinkrev[2], maxlinkrev + 1))
+            self._validatependingrevs()
 
             # Commit to db
             try:
@@ -365,6 +360,70 @@ def wraprepo(repo):
                 raise
             finally:
                 del self.pendingrevs[:]
+
+        def _validatependingrevs(self):
+            """validates that the current pending revs will be valid when
+            written to the database.
+            """
+            reponame = self.sqlreponame
+            cursor = self.sqlcursor
+
+            # Validate that we are appending to the correct linkrev
+            cursor.execute("""SELECT max(linkrev) FROM revisions WHERE repo = %s""",
+                reponame)
+            maxlinkrev = cursor.fetchall()[0][0]
+            minlinkrev = min(self.pendingrevs, key= lambda x: x[1])
+            if maxlinkrev != None and maxlinkrev != minlinkrev[1] - 1:
+                raise CorruptionException("attempting to write non-sequential " +
+                    "linkrev %s, expected %s" % (minlinkrev[1], maxlinkrev + 1))
+
+            # Validate that all rev dependencies (base, p1, p2) have the same
+            # node in the database
+            pending = set([(path, rev) for path, _, rev, _, _, _, _ in self.pendingrevs])
+            expectedrevs = set()
+            for revision in self.pendingrevs:
+                path, linkrev, rev, node, entry, data0, data1 = revision
+                e = struct.unpack(revlog.indexformatng, entry)
+                _, _, _, base, _, p1r, p2r, _ = e
+
+                if p1r != nullrev and not (path, p1r) in pending:
+                    expectedrevs.add((path, p1r))
+                if p2r != nullrev and not (path, p2r) in pending:
+                    expectedrevs.add((path, p2r))
+                if (base != nullrev and base != rev and
+                    not (path, base) in pending):
+                    expectedrevs.add((path, base))
+
+            if not expectedrevs:
+                return
+
+            expectedwhere = ["('%s','%s',0)" %
+                (self.sqlconn.escape_string(path), rev) for path, rev
+                in expectedrevs]
+            expectedwhere = ','.join(expectedwhere)
+
+            cursor.execute("""SELECT path, rev, node FROM revisions WHERE
+                repo = %s AND (path, rev, chunk) IN (""" + expectedwhere + ")",
+                (reponame,))
+
+            for path, rev, node in cursor:
+                rev = int(rev)
+                expectedrevs.remove((path, rev))
+                rl = None
+                if path == '00changelog.i':
+                    rl = self.changelog
+                elif path == '00manifest.i':
+                    rl = self.manifest
+                else:
+                    rl = revlog.revlog(self.sopener, path)
+                localnode = hex(rl.node(rev))
+                if localnode != node:
+                    raise CorruptionException("expected node %s at rev %d of " +
+                    "%s but found %s" % (node, rev, path, localnode))
+
+            if len(expectedrevs) > 0:
+                raise CorruptionException(("unable to verify %d dependent " +
+                    "revisions before adding a commit") % (len(expectedrevs)))
 
     ui = repo.ui
     sqlargs = {}
@@ -745,7 +804,7 @@ def sqlrecover(ui, *args, **opts):
             ui.warn("unable to fix repo after stripping 10000 commits (use -f to strip more)")
         striprev = max(0, len(repo) - stripsize)
         nodelist = [repo[striprev].node()]
-        repair.strip(ui, repo, nodelist, backup="none", topic="sqlrecover")
+        repair.strip(ui, repo, nodelist, backup="all", topic="sqlrecover")
         stripsize *= 5
 
     if len(repo) == 0:
