@@ -7,26 +7,27 @@
 
 """
 CREATE TABLE revisions(
-repo CHAR(32) NOT NULL,
-autoid INT UNSIGNED NOT NULL AUTO_INCREMENT,
-path VARCHAR(256) NOT NULL,
+repo CHAR(32) BINARY NOT NULL,
+path VARCHAR(256) BINARY NOT NULL,
 chunk INT UNSIGNED NOT NULL,
 chunkcount INT UNSIGNED NOT NULL,
 linkrev INT UNSIGNED NOT NULL,
+rev INT UNSIGNED NOT NULL,
+node CHAR(40) BINARY NOT NULL,
 entry BINARY(64) NOT NULL,
 data0 CHAR(1) NOT NULL,
 data1 LONGBLOB NOT NULL,
 createdtime DATETIME NOT NULL,
-INDEX autoid_index (autoid),
-PRIMARY KEY (repo, linkrev, autoid)
+INDEX linkrevs (repo, linkrev),
+PRIMARY KEY (repo, path, rev, chunk)
 );
 
 CREATE TABLE pushkeys(
 autoid INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-repo CHAR(32) NOT NULL,
-namespace CHAR(32) NOT NULL,
-name VARCHAR(256),
-value char(40) NOT NULL,
+repo CHAR(32) BINARY NOT NULL,
+namespace CHAR(32) BINARY NOT NULL,
+name VARCHAR(256) BINARY,
+value char(40) BINARY NOT NULL,
 UNIQUE KEY bookmarkindex (repo, namespace, name)
 );
 """
@@ -58,8 +59,12 @@ def uisetup(ui):
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
 
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
-        transaction.repo.pendingrevs.append((-1, self.indexfile, link,
-            entry, data[0] if data[0] else '', data[1]))
+        """records each revlog write to the repo's pendingrev list"""
+        e = struct.unpack(revlog.indexformatng, entry)
+        node = hex(e[7])
+        data0 = data[0] or ''
+        transaction.repo.pendingrevs.append((self.indexfile, link,
+            len(self) - 1, node, entry, data0, data[1]))
         return orig(self, transaction, ifh, dfh, entry, data, link, offset)
     wrapfunction(revlog.revlog, '_writeentry', writeentry)
 
@@ -284,7 +289,7 @@ def wraprepo(repo):
                         data1 = ""
                         for i in range(0, chunkcount):
                             data1 += chunks[i][6]
-                        fullchunk[7] = data1
+                        fullchunk[6] = data1
                         fullrevisions.append(tuple(fullchunk))
                     else:
                         raise Exception("missing revision chunk - expected %s got %s" %
@@ -321,7 +326,7 @@ def wraprepo(repo):
             # Commit to db
             try:
                 for revision in self.pendingrevs:
-                    _, path, linkrev, entry, data0, data1 = revision
+                    path, linkrev, rev, node, entry, data0, data1 = revision
 
                     start = 0
                     chunk = 0
@@ -333,10 +338,11 @@ def wraprepo(repo):
                         end = min(len(data1), start + maxrecordsize)
                         datachunk = data1[start:end]
                         cursor.execute("""INSERT INTO revisions(repo, path, chunk,
-                            chunkcount, linkrev, entry, data0, data1, createdtime)
-                            VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                            (reponame, path, chunk, chunkcount, linkrev,
-                             entry, data0, datachunk, time.strftime('%Y-%m-%d %H:%M:%S')))
+                            chunkcount, linkrev, rev, node, entry, data0, data1, createdtime)
+                            VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                            (reponame, path, chunk, chunkcount, linkrev, rev,
+                             node, entry, data0, datachunk,
+                             time.strftime('%Y-%m-%d %H:%M:%S')))
                         chunk += 1
                         start = end
 
