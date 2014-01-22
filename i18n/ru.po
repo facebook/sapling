@@ -4302,7 +4302,7 @@ msgid ""
 msgstr ""
 "Операция ``message`` позволит вам исправить сообщение фиксации без\n"
 "изменения содержимого ревизии. Это сокращенный вариант выполнения\n"
-"операции ``edit`` с последующим `hg histedit --continue``."
+"операции ``edit`` с последующим ``hg histedit --continue``."
 
 msgid ""
 "If ``histedit`` encounters a conflict when moving a revision (while\n"

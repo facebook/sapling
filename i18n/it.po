@@ -8474,7 +8474,7 @@ msgid ""
 msgstr ""
 "    Di default i log del server vengono inviati allo stdout e gli\n"
 "    errori allo stderr. Usare le opzion -A/--accesslog e \n"
-"    -E/--errorlog\" per effettuare il log su file."
+"    -E/--errorlog per effettuare il log su file."
 
 msgid ""
 "    To have the server choose a free port number to listen on, specify\n"
