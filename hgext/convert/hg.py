@@ -120,7 +120,7 @@ class mercurial_sink(converter_sink):
                 self.repo.pull(prepo, [prepo.lookup(h) for h in heads])
             self.before()
 
-    def _rewritetags(self, source, revmap, data):
+    def _rewritetags(self, source, revmap, tagmap, data):
         fp = cStringIO.StringIO()
         for line in data.splitlines():
             s = line.split(' ', 1)
@@ -129,17 +129,18 @@ class mercurial_sink(converter_sink):
             revid = revmap.get(source.lookuprev(s[0]))
             if not revid:
                 continue
-            fp.write('%s %s\n' % (revid, s[1]))
+            fp.write('%s %s\n' % (revid, tagmap.get(s[1], s[1])))
         return fp.getvalue()
 
-    def putcommit(self, files, copies, parents, commit, source, revmap):
+    def putcommit(self, files, copies, parents, commit, source,
+                  revmap, tagmap):
 
         files = dict(files)
         def getfilectx(repo, memctx, f):
             v = files[f]
             data, mode = source.getfile(f, v)
             if f == '.hgtags':
-                data = self._rewritetags(source, revmap, data)
+                data = self._rewritetags(source, revmap, tagmap, data)
             return context.memfilectx(f, data, 'l' in mode, 'x' in mode,
                                       copies.get(f))
 

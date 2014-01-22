@@ -121,6 +121,7 @@ class converter(object):
         self.splicemap = self.parsesplicemap(opts.get('splicemap'))
         self.branchmap = mapfile(ui, opts.get('branchmap'))
         self.closemap = self.parseclosemap(opts.get('closemap'))
+        self.tagmap = mapfile(ui, opts.get('tagmap'))
 
     def parseclosemap(self, path):
         """ check and validate the closemap format and
@@ -448,7 +449,7 @@ class converter(object):
             commit.extra['close'] = 1
 
         newnode = self.dest.putcommit(files, copies, parents, commit,
-                                      source, self.map)
+                                      source, self.map, self.tagmap)
         source.close()
         self.source.converted(rev, newnode)
         self.map[rev] = newnode
@@ -484,6 +485,9 @@ class converter(object):
             self.ui.progress(_('converting'), None)
 
             tags = self.source.gettags()
+            tags = dict((self.tagmap.get(k, k), v)
+                        for k, v in tags.iteritems())
+
             ctags = {}
             for k in tags:
                 v = tags[k]

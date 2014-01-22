@@ -1183,7 +1183,8 @@ class svn_sink(converter_sink, commandline):
     def revid(self, rev):
         return u"svn:%s@%s" % (self.uuid, rev)
 
-    def putcommit(self, files, copies, parents, commit, source, revmap):
+    def putcommit(self, files, copies, parents, commit, source,
+                  revmap, tagmap):
         for parent in parents:
             try:
                 return self.revid(self.childmap[parent])
