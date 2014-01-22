@@ -2326,8 +2326,8 @@ msgid ""
 "    This finds all changes from the repository at the specified path\n"
 "    or URL and adds them to the local repository."
 msgstr ""
-"   Găsește toate modificările din depozit la calea sau URL-ul\n"
-"   specificat și le adaugă la depozitul local."
+"    Găsește toate modificările din depozit la calea sau URL-ul\n"
+"    specificat și le adaugă la depozitul local."
 
 msgid ""
 "    If the pulled changes add a new branch head, the head is\n"
@@ -6862,8 +6862,8 @@ msgid ""
 "    As a shortcut, you can also use the revision argument to mark a\n"
 "    revision as good or bad without checking it out first."
 msgstr ""
-"   Ca scurtătură, puteți folosi argumentul reviziei pentru a marca o    "
-"revizie ca bună sau rea, fără a o actualiza în prealabil."
+"    Ca scurtătură, puteți folosi argumentul reviziei pentru a marca o\n"
+"    revizie ca bună sau rea, fără a o actualiza în prealabil."
 
 msgid ""
 "    If you supply a command, it will be used for automatic bisection.\n"
@@ -8066,7 +8066,7 @@ msgid "show active branchheads only (DEPRECATED)"
 msgstr "afișează doar capetele de ramură active [ÎNVECHIT]"
 
 msgid "show normal and closed branch heads"
-msgstr " afișează capetele de ramură normale și închise"
+msgstr "afișează capetele de ramură normale și închise"
 
 msgid "[-ac] [-r STARTREV] [REV]..."
 msgstr "[-ac] [-r REV] [REVSTART]..."
@@ -14566,7 +14566,7 @@ msgstr ""
 
 #, python-format
 msgid " (%+d heads)"
-msgstr "(%+d capete)"
+msgstr " (%+d capete)"
 
 #, python-format
 msgid "added %d changesets with %d changes to %d files%s\n"

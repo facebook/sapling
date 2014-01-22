@@ -23654,7 +23654,7 @@ msgstr "(arquivo binário %s, hash: %s)"
 
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
-msgstr "%d arquivos modificados, %d inserções(+), %d remoções(-)\n"
+msgstr " %d arquivos modificados, %d inserções(+), %d remoções(-)\n"
 
 #, python-format
 msgid "calling hook %s: %s\n"

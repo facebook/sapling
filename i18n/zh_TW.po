@@ -19,7 +19,7 @@ msgstr ""
 
 #, python-format
 msgid " (default: %s)"
-msgstr "(內定: %s)"
+msgstr " (內定: %s)"
 
 msgid "Options"
 msgstr "選項"
@@ -40,7 +40,7 @@ msgstr "選項:"
 
 #, python-format
 msgid "    aliases: %s"
-msgstr "\t別名:%s"
+msgstr "    別名:%s"
 
 msgid "hooks for controlling repository access"
 msgstr ""
@@ -6745,7 +6745,7 @@ msgid " unexpected patch output!\n"
 msgstr ""
 
 msgid " patch test failed!\n"
-msgstr "路徑測試失敗!\n"
+msgstr " 路徑測試失敗!\n"
 
 msgid ""
 " (Current patch tool may be incompatible with patch, or misconfigured. "
@@ -6761,20 +6761,20 @@ msgid "Checking commit editor...\n"
 msgstr "檢查提交訊息編輯器...\n"
 
 msgid " No commit editor set and can't find vi in PATH\n"
-msgstr "沒有設定提交訊息編輯器,然後在PATH中也沒有vi\n"
+msgstr " 沒有設定提交訊息編輯器,然後在PATH中也沒有vi\n"
 
 msgid " (specify a commit editor in your configuration file)\n"
-msgstr "(在你的設定檔指明一個用來編輯提交訊息的編輯器)\n"
+msgstr " (在你的設定檔指明一個用來編輯提交訊息的編輯器)\n"
 
 #, python-format
 msgid " Can't find editor '%s' in PATH\n"
-msgstr "在PATH中找不到編輯器 '%s'\n"
+msgstr " 在PATH中找不到編輯器 '%s'\n"
 
 msgid "Checking username...\n"
 msgstr "檢查使用者名稱...\n"
 
 msgid " (specify a username in your configuration file)\n"
-msgstr "(在你的設定檔指明一個使用者名稱)\n"
+msgstr " (在你的設定檔指明一個使用者名稱)\n"
 
 msgid "No problems detected\n"
 msgstr "查不到問題\n"
@@ -6988,7 +6988,7 @@ msgstr ""
 
 #, python-format
 msgid " (started at %s)"
-msgstr "(開始在: %s)"
+msgstr " (開始在: %s)"
 
 msgid "show help for a given topic or a help overview"
 msgstr "顯示特定主題的 help 說明或是 help overview"
@@ -7446,7 +7446,7 @@ msgid ""
 msgstr ""
 
 msgid "    See :hg:`help urls` for more information."
-msgstr "\tSee 'hg help urls' for more information."
+msgstr "    See 'hg help urls' for more information."
 
 msgid "not found!\n"
 msgstr "沒有找到！\n"
@@ -7820,7 +7820,7 @@ msgid "print the root (top) of the current working directory"
 msgstr "顯示目前工作目錄的 root(top)"
 
 msgid "    Print the root directory of the current repository."
-msgstr "顯示目前儲存庫的 root 目錄"
+msgstr "    顯示目前儲存庫的 root 目錄"
 
 msgid "start stand-alone webserver"
 msgstr "啟動常駐web伺服器"
@@ -7923,7 +7923,7 @@ msgid "parent: %d:%s "
 msgstr "母系:\t\t%d:%s"
 
 msgid " (empty repository)"
-msgstr "(空白的儲存庫)"
+msgstr " (空白的儲存庫)"
 
 msgid " (no revision checked out)"
 msgstr ""
@@ -7973,10 +7973,10 @@ msgid "%d subrepos"
 msgstr ""
 
 msgid " (merge)"
-msgstr "(合併)"
+msgstr " (合併)"
 
 msgid " (new branch)"
-msgstr "(新分支)"
+msgstr " (新分支)"
 
 msgid " (head closed)"
 msgstr ""
@@ -7985,7 +7985,7 @@ msgid " (clean)"
 msgstr ""
 
 msgid " (new branch head)"
-msgstr "(新分支標頭)"
+msgstr " (新分支標頭)"
 
 #, python-format
 msgid "commit: %s\n"
@@ -9182,7 +9182,7 @@ msgid "abort: %s"
 msgstr "中止: %s"
 
 msgid " empty string\n"
-msgstr "空字串\n"
+msgstr " 空字串\n"
 
 msgid "killed!\n"
 msgstr ""
@@ -11958,7 +11958,7 @@ msgstr ""
 
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
-msgstr "%d 修改,%d 插入(+),%d 刪除(-)\n"
+msgstr " %d 修改,%d 插入(+),%d 刪除(-)\n"
 
 #, python-format
 msgid "exited with status %d"

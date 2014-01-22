@@ -934,7 +934,7 @@ msgid "      source author = destination author"
 msgstr "      autore sorgente = autore destinatario"
 
 msgid "    Empty lines and lines starting with a ``#`` are ignored."
-msgstr "     Linee vuote e linee che iniziano con un ``#`` vengono ignorate."
+msgstr "    Linee vuote e linee che iniziano con un ``#`` vengono ignorate."
 
 msgid ""
 "    The filemap is a file that allows filtering and remapping of files\n"
@@ -2090,7 +2090,7 @@ msgstr ""
 
 msgid "    See :hg:`help dates` for a list of formats valid for -d/--date."
 msgstr ""
-"   Vedere :hg:`help dates` per l'elenco dei formati validi per -d/--date."
+"    Vedere :hg:`help dates` per l'elenco dei formati validi per -d/--date."
 
 msgid ""
 "    Returns 0 on success.\n"
@@ -3445,7 +3445,7 @@ msgid "    Returns 0 on success."
 msgstr "    Restituisce 0 in caso di successo."
 
 msgid "only one patch applied\n"
-msgstr " stata applicata solo una patch\n"
+msgstr "stata applicata solo una patch\n"
 
 msgid "print the patches not yet applied"
 msgstr "stampa le patch non ancora applicate"
@@ -7157,7 +7157,7 @@ msgid "Checking commit editor...\n"
 msgstr "Sto controllando l'editor per il commit...\n"
 
 msgid " No commit editor set and can't find vi in PATH\n"
-msgstr "Nessun editor per il commit trovato e non trovo vi in PATH\n"
+msgstr " Nessun editor per il commit trovato e non trovo vi in PATH\n"
 
 msgid " (specify a commit editor in your configuration file)\n"
 msgstr ""
@@ -7165,7 +7165,7 @@ msgstr ""
 
 #, python-format
 msgid " Can't find editor '%s' in PATH\n"
-msgstr "Editor '%s' non trovato in PATH\n"
+msgstr " Editor '%s' non trovato in PATH\n"
 
 msgid "Checking username...\n"
 msgstr "Sto controllando lo username...\n"
@@ -9926,7 +9926,7 @@ msgid "abort: %s"
 msgstr "abortito: %s"
 
 msgid " empty string\n"
-msgstr "stringa vuota\n"
+msgstr " stringa vuota\n"
 
 msgid "killed!\n"
 msgstr "ucciso!\n"
@@ -12791,7 +12791,7 @@ msgstr "fallita l'applicazione della patch"
 
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
-msgstr "%d file modificati, %d inserimenti(+), %d cancellazioni(-)\n"
+msgstr " %d file modificati, %d inserimenti(+), %d cancellazioni(-)\n"
 
 #, python-format
 msgid "exited with status %d"
@@ -13729,7 +13729,7 @@ msgstr "rev %d punta al changeset inatteso %d"
 
 #, python-format
 msgid " (expected %s)"
-msgstr "(atteso %s)"
+msgstr " (atteso %s)"
 
 #, python-format
 msgid "unknown parent 1 %s of %s"

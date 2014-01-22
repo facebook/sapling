@@ -10998,10 +10998,10 @@ msgid "parent: %d:%s "
 msgstr "forælder: %d:%s "
 
 msgid " (empty repository)"
-msgstr "(tomt depot)"
+msgstr " (tomt depot)"
 
 msgid " (no revision checked out)"
-msgstr "(ingen revision hentet frem)"
+msgstr " (ingen revision hentet frem)"
 
 #, python-format
 msgid "branch: %s\n"
@@ -16103,7 +16103,7 @@ msgstr "kan ikke starte server på '%s:%d': %s"
 
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
-msgstr "%d filer ændret, %d indsættelser(+), %d sletninger(-)\n"
+msgstr " %d filer ændret, %d indsættelser(+), %d sletninger(-)\n"
 
 #, python-format
 msgid "calling hook %s: %s\n"

@@ -15756,6 +15756,8 @@ msgid ""
 "    ancestor. See also: 'Descendant'."
 msgstr ""
 
+#, fuzzy
+# fuzzy because the title may not be apropriate
 msgid ""
 "Bookmark\n"
 "    Bookmarks are pointers to certain commits that move when\n"
@@ -15764,6 +15766,7 @@ msgid ""
 "    ID, e.g., with :hg:`update`. Unlike tags, bookmarks move along\n"
 "    when you make a commit."
 msgstr ""
+"Bokmärken\n"
 "    Bokmärken är pekare till utvalda arkiveringar som flyttar vid\n"
 "    arkivering. De liknar märken på det sättet att du kan använda\n"
 "    bokmärkesnamn på alla platser där Mercurial förväntar sig ett\n"
@@ -17685,7 +17688,7 @@ msgstr "(binär fil %s, hash: %s)"
 
 #, python-format
 msgid " %d files changed, %d insertions(+), %d deletions(-)\n"
-msgstr "%d filer ändrade, %d tillägg(+), %d raderingar(-)\n"
+msgstr " %d filer ändrade, %d tillägg(+), %d raderingar(-)\n"
 
 #, python-format
 msgid "calling hook %s: %s\n"

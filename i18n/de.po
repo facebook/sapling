@@ -13730,7 +13730,7 @@ msgstr "Prüfe Vorlagen (%s)...\n"
 
 #: mercurial/commands.py:2084
 msgid " (templates seem to have been installed incorrectly)\n"
-msgstr "(Vorlagen scheinen falsch installiert worden zu sein)\n"
+msgstr " (Vorlagen scheinen falsch installiert worden zu sein)\n"
 
 #: mercurial/commands.py:2088
 #, fuzzy
@@ -16887,11 +16887,11 @@ msgstr "unterbrochen"
 
 #: mercurial/commands.py:5488
 msgid " (merge)"
-msgstr "(Zusammenführung)"
+msgstr " (Zusammenführung)"
 
 #: mercurial/commands.py:5490
 msgid " (new branch)"
-msgstr "(neuer Zeig)"
+msgstr " (neuer Zeig)"
 
 #: mercurial/commands.py:5493
 msgid " (head closed)"
@@ -21186,10 +21186,10 @@ msgid ""
 "- ``DATE to DATE`` - a date range, inclusive\n"
 "- ``-DAYS`` - within a given number of days of today\n"
 msgstr ""
-"  ``<DATUM`` - an oder vor einem/r angegebenen Datum/Uhrzeit\n"
-"  ``>DATUM`` - zu oder nach einem/r angegebenen Datum/Uhrzeit\n"
-"  ``DATUM to DATUM`` - ein Datumsbereich, inklusive\n"
-"  ``-TAGE`` - innerhalb der angegebenen Anzahl von Tagen vor heute\n"
+"- ``<DATUM`` - an oder vor einem/r angegebenen Datum/Uhrzeit\n"
+"- ``>DATUM`` - zu oder nach einem/r angegebenen Datum/Uhrzeit\n"
+"- ``DATUM to DATUM`` - ein Datumsbereich, inklusive\n"
+"- ``-TAGE`` - innerhalb der angegebenen Anzahl von Tagen vor heute\n"
 
 #: mercurial/help/diffs.txt:1
 msgid ""
@@ -21372,7 +21372,7 @@ msgstr ""
 
 #: mercurial/help/environment.txt:47
 msgid "    For each element in HGRCPATH:"
-msgstr "   Für jedes Element in HGRCPATH gilt:"
+msgstr "    Für jedes Element in HGRCPATH gilt:"
 
 #: mercurial/help/environment.txt:49
 msgid ""
