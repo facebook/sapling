@@ -235,13 +235,13 @@ def rangeset(repo, subset, x, y):
         r = range(m, n + 1)
     else:
         r = range(m, n - 1, -1)
-    s = set(subset)
+    s = subset.set()
     return baseset([x for x in r if x in s])
 
 def dagrange(repo, subset, x, y):
     r = baseset(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
-    s = set(subset)
+    s = subset.set()
     return baseset([r for r in xs if r in s])
 
 def andset(repo, subset, x, y):
@@ -249,12 +249,12 @@ def andset(repo, subset, x, y):
 
 def orset(repo, subset, x, y):
     xl = getset(repo, subset, x)
-    s = set(xl)
-    yl = getset(repo, [r for r in subset if r not in s], y)
+    s = xl.set()
+    yl = getset(repo, baseset([r for r in subset if r not in s]), y)
     return baseset(xl + yl)
 
 def notset(repo, subset, x):
-    s = set(getset(repo, subset, x))
+    s = getset(repo, subset, x).set()
     return baseset([r for r in subset if r not in s])
 
 def listset(repo, subset, a, b):
@@ -312,7 +312,8 @@ def _ancestors(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = set(_revancestors(repo, args, followfirst)) | set(args)
-    return baseset([r for r in subset if r in s])
+    ss = subset.set()
+    return baseset([r for r in ss if r in s])
 
 def ancestors(repo, subset, x):
     """``ancestors(set)``
@@ -340,7 +341,8 @@ def ancestorspec(repo, subset, x, n):
         for i in range(n):
             r = cl.parentrevs(r)[0]
         ps.add(r)
-    return baseset([r for r in subset if r in ps])
+    s = subset.set()
+    return baseset([r for r in s if r in ps])
 
 def author(repo, subset, x):
     """``author(string)``
@@ -367,7 +369,8 @@ def bisect(repo, subset, x):
     # i18n: "bisect" is a keyword
     status = getstring(x, _("bisect requires a string")).lower()
     state = set(hbisect.get(repo, status))
-    return baseset([r for r in subset if r in state])
+    s = subset.set()
+    return baseset([r for r in s if r in state])
 
 # Backward-compatibility
 # - no help entry so that we do not advertise it any more
@@ -406,11 +409,13 @@ def bookmark(repo, subset, x):
             bmrevs = set()
             for bmrev in matchrevs:
                 bmrevs.add(repo[bmrev].rev())
-            return baseset([r for r in subset if r in bmrevs])
+            s = subset.set()
+            return baseset([r for r in s if r in bmrevs])
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
-    return baseset([r for r in subset if r in bms])
+    s = subset.set()
+    return baseset([r for r in s if r in bms])
 
 def branch(repo, subset, x):
     """``branch(string or set)``
@@ -440,7 +445,7 @@ def branch(repo, subset, x):
     b = set()
     for r in s:
         b.add(repo[r].branch())
-    s = set(s)
+    s = s.set()
     return baseset([r for r in subset if r in s or repo[r].branch() in b])
 
 def bumped(repo, subset, x):
@@ -515,7 +520,7 @@ def children(repo, subset, x):
     """``children(set)``
     Child changesets of changesets in set.
     """
-    s = set(getset(repo, baseset(repo), x))
+    s = getset(repo, baseset(repo), x).set()
     cs = _children(repo, subset, s)
     return baseset([r for r in subset if r in cs])
 
@@ -605,7 +610,8 @@ def _descendants(repo, subset, x, followfirst=False):
     if not args:
         return baseset([])
     s = set(_revdescendants(repo, args, followfirst)) | set(args)
-    return baseset([r for r in subset if r in s])
+    ss = subset.set()
+    return baseset([r for r in ss if r in s])
 
 def descendants(repo, subset, x):
     """``descendants(set)``
@@ -625,9 +631,9 @@ def destination(repo, subset, x):
     is the same as passing all().
     """
     if x is not None:
-        args = set(getset(repo, baseset(repo), x))
+        args = getset(repo, baseset(repo), x).set()
     else:
-        args = set(getall(repo, baseset(repo), x))
+        args = getall(repo, baseset(repo), x).set()
 
     dests = set()
 
@@ -745,7 +751,8 @@ def filelog(repo, subset, x):
                 for fr in fl:
                     s.add(fl.linkrev(fr))
 
-    return baseset([r for r in subset if r in s])
+    ss = subset.set()
+    return baseset([r for r in ss if r in s])
 
 def first(repo, subset, x):
     """``first(set, [n])``
@@ -768,7 +775,8 @@ def _follow(repo, subset, x, name, followfirst=False):
     else:
         s = set(_revancestors(repo, [c.rev()], followfirst)) | set([c.rev()])
 
-    return baseset([r for r in subset if r in s])
+    ss = subset.set()
+    return baseset([r for r in ss if r in s])
 
 def follow(repo, subset, x):
     """``follow([file])``
@@ -897,14 +905,15 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
-    return baseset([r for r in subset if r in hs])
+    s = subset.set()
+    return baseset([r for r in s if r in hs])
 
 def heads(repo, subset, x):
     """``heads(set)``
     Members of set with no children in set.
     """
-    s = getset(repo, subset, x)
-    ps = set(parents(repo, subset, x))
+    s = getset(repo, subset, x).set()
+    ps = parents(repo, subset, x).set()
     return baseset([r for r in s if r not in ps])
 
 def hidden(repo, subset, x):
@@ -945,7 +954,7 @@ def limit(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
-    ss = set(subset)
+    ss = subset.set()
     os = getset(repo, baseset(repo), l[0])[:lim]
     return baseset([r for r in os if r in ss])
 
@@ -963,7 +972,7 @@ def last(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
-    ss = set(subset)
+    ss = subset.set()
     os = getset(repo, baseset(repo), l[0])[-lim:]
     return baseset([r for r in os if r in ss])
 
@@ -1062,9 +1071,9 @@ def origin(repo, subset, x):
     for the first operation is selected.
     """
     if x is not None:
-        args = set(getset(repo, baseset(repo), x))
+        args = getset(repo, baseset(repo), x).set()
     else:
-        args = set(getall(repo, baseset(repo), x))
+        args = getall(repo, baseset(repo), x).set()
 
     def _firstsrc(rev):
         src = _getrevsource(repo, rev)
@@ -1079,7 +1088,8 @@ def origin(repo, subset, x):
             src = prev
 
     o = set([_firstsrc(r) for r in args])
-    return baseset([r for r in subset if r in o])
+    s = subset.set()
+    return baseset([r for r in s if r in o])
 
 def outgoing(repo, subset, x):
     """``outgoing([path])``
@@ -1102,7 +1112,8 @@ def outgoing(repo, subset, x):
     repo.ui.popbuffer()
     cl = repo.changelog
     o = set([cl.rev(r) for r in outgoing.missing])
-    return baseset([r for r in subset if r in o])
+    s = subset.set()
+    return baseset([r for r in s if r in o])
 
 def p1(repo, subset, x):
     """``p1([set])``
@@ -1116,7 +1127,8 @@ def p1(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.add(cl.parentrevs(r)[0])
-    return baseset([r for r in subset if r in ps])
+    s = subset.set()
+    return baseset([r for r in s if r in ps])
 
 def p2(repo, subset, x):
     """``p2([set])``
@@ -1134,7 +1146,8 @@ def p2(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.add(cl.parentrevs(r)[1])
-    return baseset([r for r in subset if r in ps])
+    s = subset.set()
+    return baseset([r for r in s if r in ps])
 
 def parents(repo, subset, x):
     """``parents([set])``
@@ -1148,7 +1161,8 @@ def parents(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.update(cl.parentrevs(r))
-    return baseset([r for r in subset if r in ps])
+    s = subset.set()
+    return baseset([r for r in s if r in ps])
 
 def parentspec(repo, subset, x, n):
     """``set^0``
@@ -1173,7 +1187,8 @@ def parentspec(repo, subset, x, n):
             parents = cl.parentrevs(r)
             if len(parents) > 1:
                 ps.add(parents[1])
-    return baseset([r for r in subset if r in ps])
+    s = subset.set()
+    return baseset([r for r in s if r in ps])
 
 def present(repo, subset, x):
     """``present(set)``
@@ -1375,8 +1390,6 @@ def reverse(repo, subset, x):
     Reverse order of set.
     """
     l = getset(repo, subset, x)
-    if not isinstance(l, list):
-        l = baseset(l)
     l.reverse()
     return l
 
@@ -1384,7 +1397,7 @@ def roots(repo, subset, x):
     """``roots(set)``
     Changesets in set with no parent changeset in set.
     """
-    s = set(getset(repo, baseset(repo.changelog), x))
+    s = getset(repo, baseset(repo.changelog), x).set()
     subset = baseset([r for r in subset if r in s])
     cs = _children(repo, subset, s)
     return baseset([r for r in subset if r not in cs])
@@ -1550,10 +1563,9 @@ def _list(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset([])
-    if not isinstance(subset, set):
-        subset = set(subset)
     ls = [repo[r].rev() for r in s.split('\0')]
-    return baseset([r for r in ls if r in subset])
+    s = subset.set()
+    return baseset([r for r in ls if r in s])
 
 symbols = {
     "adds": adds,
@@ -2048,7 +2060,14 @@ def funcsused(tree):
         return funcs
 
 class baseset(list):
-    pass
+    def __init__(self, data):
+        super(baseset, self).__init__(data)
+        self._set = None
+
+    def set(self):
+        if not self._set:
+            self._set = set(self)
+        return self._set
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
