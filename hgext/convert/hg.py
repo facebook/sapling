@@ -212,6 +212,25 @@ class mercurial_sink(converter_sink):
         newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
         if newlines == oldlines:
             return None, None
+
+        # if the old and new tags match, then there is nothing to update
+        oldtags = set()
+        newtags = set()
+        for line in oldlines:
+            s = line.strip().split(' ', 1)
+            if len(s) != 2:
+                continue
+            oldtags.add(s[1])
+        for line in newlines:
+            s = line.strip().split(' ', 1)
+            if len(s) != 2:
+                continue
+            if s[1] not in oldtags:
+                newtags.add(s[1].strip())
+
+        if not newtags:
+            return None, None
+
         data = "".join(newlines)
         def getfilectx(repo, memctx, f):
             return context.memfilectx(f, data, False, False, None)
