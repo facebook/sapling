@@ -201,10 +201,13 @@ class mercurial_sink(converter_sink):
             parentctx = None
             tagparent = nullid
 
-        try:
-            oldlines = sorted(parentctx['.hgtags'].data().splitlines(True))
-        except Exception:
-            oldlines = []
+        oldlines = set()
+        for branch, heads in self.repo.branchmap().iteritems():
+            for h in heads:
+                if '.hgtags' in self.repo[h]:
+                    oldlines.update(
+                        set(self.repo[h]['.hgtags'].data().splitlines(True)))
+        oldlines = sorted(list(oldlines))
 
         newlines = sorted([("%s %s\n" % (tags[tag], tag)) for tag in tags])
         if newlines == oldlines:
