@@ -19,8 +19,8 @@ COMPILER=
 help:
 	@echo 'Commonly used make targets:'
 	@echo '  all          - build program and documentation'
-	@echo '  install      - install program and man pages to PREFIX ($(PREFIX))'
-	@echo '  install-home - install with setup.py install --home=HOME ($(HOME))'
+	@echo '  install      - install program and man pages to $$PREFIX ($(PREFIX))'
+	@echo '  install-home - install with setup.py install --home=$$HOME ($(HOME))'
 	@echo '  local        - build for inplace usage'
 	@echo '  tests        - run all tests in the automatic test suite'
 	@echo '  test-foo     - run only specified tests (e.g. test-merge1.t)'
