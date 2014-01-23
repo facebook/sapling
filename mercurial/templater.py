@@ -447,8 +447,10 @@ class engine(object):
 engines = {'default': engine}
 
 def stylelist():
-    path = templatepath()[0]
-    dirlist =  os.listdir(path)
+    paths = templatepath()
+    if not paths:
+        return _('no templates found, try `hg debuginstall` for more info')
+    dirlist =  os.listdir(paths[0])
     stylelist = []
     for file in dirlist:
         split = file.split(".")
