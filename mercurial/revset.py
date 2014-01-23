@@ -249,13 +249,11 @@ def andset(repo, subset, x, y):
 
 def orset(repo, subset, x, y):
     xl = getset(repo, subset, x)
-    s = xl.set()
-    yl = getset(repo, baseset([r for r in subset if r not in s]), y)
+    yl = getset(repo, subset - xl, y)
     return baseset(xl + yl)
 
 def notset(repo, subset, x):
-    s = getset(repo, subset, x).set()
-    return baseset([r for r in subset if r not in s])
+    return subset - getset(repo, subset, x)
 
 def listset(repo, subset, a, b):
     raise error.ParseError(_("can't use a list in this context"))
@@ -912,9 +910,9 @@ def heads(repo, subset, x):
     """``heads(set)``
     Members of set with no children in set.
     """
-    s = getset(repo, subset, x).set()
-    ps = parents(repo, subset, x).set()
-    return baseset([r for r in s if r not in ps])
+    s = getset(repo, subset, x)
+    ps = parents(repo, subset, x)
+    return s - ps
 
 def hidden(repo, subset, x):
     """``hidden()``
@@ -1400,7 +1398,7 @@ def roots(repo, subset, x):
     s = getset(repo, baseset(repo.changelog), x).set()
     subset = baseset([r for r in subset if r in s])
     cs = _children(repo, subset, s)
-    return baseset([r for r in subset if r not in cs])
+    return subset - cs
 
 def secret(repo, subset, x):
     """``secret()``
@@ -2068,6 +2066,13 @@ class baseset(list):
         if not self._set:
             self._set = set(self)
         return self._set
+
+    def __sub__(self, x):
+        if isinstance(x, baseset):
+            s = x.set()
+        else:
+            s = set(x)
+        return baseset(self.set() - s)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
