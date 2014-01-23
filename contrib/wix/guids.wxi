@@ -24,16 +24,16 @@
   <?define i18nFolder.guid = {1BF8026D-CF7C-4174-AEE6-D6B7BF119248} ?>
 
   <!-- templates.wxs -->
-  <?define templates.root.guid = {8DF97574-33E9-412F-8414-65B48BB18783} ?>
-  <?define templates.atom.guid = {AB5D2908-BC95-44BE-9D79-069EF43D93E2} ?>
+  <?define templates.root.guid = {437FD55C-7756-4EA0-87E5-FDBE75DC8595} ?>
+  <?define templates.atom.guid = {D30E14A5-8AF0-4268-8B00-00BEE9E09E39} ?>
   <?define templates.coal.guid = {B63CCAAB-4EAF-43b4-901E-4BD13F5B78FC} ?>
   <?define templates.gitweb.guid = {827334AF-1EFD-421B-962C-5660A068F612} ?>
   <?define templates.monoblue.guid = {8060A1E4-BD4C-453E-92CB-9536DC44A9E3} ?>
   <?define templates.paper.guid = {61AB1DE9-645F-46ED-8AF8-0CF02267FFBB} ?>
-  <?define templates.raw.guid = {3F88E9B6-EA3C-41EB-8D8A-3F12E7DE9933} ?>
-  <?define templates.rss.guid = {36069748-1E2A-472B-A212-506CB656A9C1} ?>
+  <?define templates.raw.guid = {834DF8D7-9784-43A6-851D-A96CE1B3575B} ?>
+  <?define templates.rss.guid = {9338FA09-E128-4B1C-B723-1142DBD09E14} ?>
   <?define templates.spartan.guid = {80222625-FA8F-44b1-86CE-1781EF375D09} ?>
-  <?define templates.static.guid = {B27D7311-050A-4A96-9971-B674A0EA21D0} ?>
+  <?define templates.static.guid = {6B3D7C24-98DA-4B67-9F18-35F77357B0B4} ?>
 
   <!-- mercurial.wxs -->
   <?define ProductUpgradeCode = {A1CC6134-E945-4399-BE36-EB0017FDF7CF} ?>

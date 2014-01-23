@@ -33,6 +33,7 @@
           <File Name="map-cmdline.default" />
           <File Name="map-cmdline.bisect" />
           <File Name="map-cmdline.xml" />
+          <File Name="map-cmdline.phases" />
         </Component>
 
         <Directory Id="templates.atomdir" Name="atom">
@@ -45,6 +46,8 @@
             <File Id="atom.map"                 Name="map" />
             <File Id="atom.tagentry.tmpl"       Name="tagentry.tmpl" />
             <File Id="atom.tags.tmpl"           Name="tags.tmpl" />
+            <File Id="atom.branchentry.tmpl"    Name="branchentry.tmpl" />
+            <File Id="atom.branches.tmpl"       Name="branches.tmpl" />
             <File Id="atom.bookmarks.tmpl"      Name="bookmarks.tmpl" />
             <File Id="atom.bookmarkentry.tmpl"  Name="bookmarkentry.tmpl" />
           </Component>
@@ -157,6 +160,9 @@
             <File Id="raw.manifest.tmpl"     Name="manifest.tmpl" />
             <File Id="raw.map"               Name="map" />
             <File Id="raw.notfound.tmpl"     Name="notfound.tmpl" />
+            <File Id="raw.search.tmpl"       Name="search.tmpl" />
+            <File Id="raw.logentry.tmpl"     Name="logentry.tmpl" />
+            <File Id="raw.changelog.tmpl"    Name="changelog.tmpl" />
           </Component>
         </Directory>
 
@@ -173,6 +179,8 @@
             <File Id="rss.tags.tmpl"           Name="tags.tmpl" />
             <File Id="rss.bookmarks.tmpl"      Name="bookmarks.tmpl" />
             <File Id="rss.bookmarkentry.tmpl"  Name="bookmarkentry.tmpl" />
+            <File Id="rss.branchentry.tmpl"    Name="branchentry.tmpl" />
+            <File Id="rss.branches.tmpl"       Name="branches.tmpl" />
           </Component>
         </Directory>
 
@@ -216,6 +224,7 @@
             <File Id="static.style.monoblue.css" Name="style-monoblue.css" />
             <File Id="static.style.paper.css"    Name="style-paper.css" />
             <File Id="static.style.css"          Name="style.css" />
+            <File Id="static.feed.icon"          Name="feed-icon-14x14.png" />
           </Component>
         </Directory>
 
