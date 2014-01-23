@@ -185,7 +185,7 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 		flen = getbe32(cur + 13);
 		pos += 17;
 		cur += 17;
-		if (flen > len - pos || flen < 0) {
+		if (flen > len - pos) {
 			PyErr_SetString(PyExc_ValueError, "overflow in dirstate");
 			goto quit;
 		}
