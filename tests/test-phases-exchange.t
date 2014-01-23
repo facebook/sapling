@@ -753,6 +753,69 @@ Pushing to Publish=True (common changeset from publish=False)
   
 
 
+Bare push with next changeset and common changeset needing sync (issue3575)
+
+(reset some stat on remot repo to not confused other test)
+
+  $ hg -R ../alpha --config extensions.strip= strip --no-backup 967b449fbc94
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg phase --force --draft b740e3e5c05d 967b449fbc94
+  $ hg push -fv ../alpha
+  pushing to ../alpha
+  searching for changes
+  1 changesets found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  $ hgph
+  o  9 public a-H - 967b449fbc94
+  |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  | o  4 public a-D - b555f63b6063
+  | |
+  | o  3 public a-C - 54acac6f23ab
+  | |
+  o |  2 public b-A - f54f1bb90ff3
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
+
+  $ hg -R ../alpha update 967b449fbc94 #for latter test consistency
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hgph -R ../alpha
+  @  10 public a-H - 967b449fbc94
+  |
+  | o  9 draft a-G - 3e27b6f1eee1
+  | |
+  | o  8 public a-F - b740e3e5c05d
+  | |
+  | o  7 public a-E - e9f537e46dea
+  | |
+  +---o  6 public n-B - 145e75495359
+  | |
+  o |  5 public n-A - d6bcb4f74035
+  | |
+  o |  4 public b-A - f54f1bb90ff3
+  | |
+  | o  3 public a-D - b555f63b6063
+  | |
+  | o  2 public a-C - 54acac6f23ab
+  |/
+  o  1 public a-B - 548a3d25dbf0
+  |
+  o  0 public a-A - 054250a37db4
+  
+
 Discovery locally secret changeset on a remote repository:
 
 - should make it non-secret
