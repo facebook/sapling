@@ -193,7 +193,7 @@ def rebase(ui, repo, **opts):
                     return 0
                 else:
                     msg = _('cannot continue inconsistent rebase')
-                    hint = _('use "hg rebase --abort" to clear borken state')
+                    hint = _('use "hg rebase --abort" to clear broken state')
                     raise util.Abort(msg, hint=hint)
             if abortf:
                 return abort(repo, originalwd, target, state)
