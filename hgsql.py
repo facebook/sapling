@@ -180,17 +180,20 @@ def wraprepo(repo):
                 FROM pushkeys WHERE repo = %s""", (self.sqlreponame))
             sqlheads = set()
             sqlbookmarks = {}
-            for namespace, name, node in self.sqlcursor:
+            tip = -1
+            for namespace, name, value in self.sqlcursor:
                 if namespace == "heads":
-                    sqlheads.add(bin(node))
+                    sqlheads.add(bin(value))
                 elif namespace == "bookmarks":
-                    sqlbookmarks[name] = bin(node)
+                    sqlbookmarks[name] = bin(value)
+                elif namespace == "tip":
+                    tip = int(value)
 
             heads = set(self.heads())
             bookmarks = self._bookmarks
 
-            outofsync = heads != sqlheads or bookmarks != sqlbookmarks
-            return outofsync, sqlheads, sqlbookmarks
+            outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
+            return outofsync, sqlheads, sqlbookmarks, tip
 
         def syncdb(self):
             if not self.needsync()[0]:
@@ -203,7 +206,7 @@ def wraprepo(repo):
             try:
 
                 # someone else may have synced us while we were waiting
-                outofsync, sqlheads, sqlbookmarks = self.needsync()
+                outofsync, sqlheads, sqlbookmarks, fetchend = self.needsync()
                 if not outofsync:
                     return
 
@@ -217,7 +220,7 @@ def wraprepo(repo):
                     abort = threading.Event()
 
                     t = threading.Thread(target=self.fetchthread,
-                        args=(queue, abort, fetchstart))
+                        args=(queue, abort, fetchstart, fetchend))
                     t.setDaemon(True)
                     try:
                         t.start()
@@ -240,6 +243,9 @@ def wraprepo(repo):
                 if heads != sqlheads:
                     raise CorruptionException("heads don't match after sync")
 
+                if len(self) - 1 != fetchend:
+                    raise CorruptionException("tip doesn't match after sync")
+
                 self.disablesync = True
                 try:
                     bm = self._bookmarks
@@ -260,7 +266,7 @@ def wraprepo(repo):
             finally:
                 lock.release()
 
-        def fetchthread(self, queue, abort, fetchstart):
+        def fetchthread(self, queue, abort, fetchstart, fetchend):
             ui = self.ui
             clrev = fetchstart
             chunksize = 1000
@@ -268,10 +274,11 @@ def wraprepo(repo):
                 if abort.isSet():
                     break
 
+                maxrev = min(clrev + chunksize, fetchend + 1)
                 self.sqlcursor.execute("""SELECT path, chunk, chunkcount,
                     linkrev, entry, data0, data1 FROM revisions WHERE repo = %s
                     AND linkrev > %s AND linkrev < %s ORDER BY linkrev ASC""",
-                    (self.sqlreponame, clrev - 1, clrev + chunksize))
+                    (self.sqlreponame, clrev - 1, maxrev))
 
                 # put split chunks back together
                 groupedrevdata = {}
@@ -320,8 +327,11 @@ def wraprepo(repo):
 
             reponame = self.sqlreponame
             cursor = self.sqlcursor
+            maxcommitsize = self.maxcommitsize
 
             self._validatependingrevs()
+
+            datasize = 0
 
             # Commit to db
             try:
@@ -346,13 +356,25 @@ def wraprepo(repo):
                         chunk += 1
                         start = end
 
+                        # MySQL transactions can only reach a certain size, so we commit
+                        # every so often.  As long as we don't update the tip pushkey,
+                        # this is ok.
+                        datasize += len(datachunk)
+                        if datasize > maxcommitsize:
+                            self.sqlconn.commit()
+                            datasize = 0
+
                 cursor.execute("""DELETE FROM pushkeys WHERE repo = %s
-                               AND namespace = 'heads'""", (reponame))
+                               AND namespace IN ('heads', 'tip')""", (reponame))
 
                 for head in self.heads():
                     cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
                                    VALUES(%s, 'heads', %s)""",
                                    (reponame, hex(head)))
+
+                cursor.execute("""INSERT INTO pushkeys(repo, namespace, value)
+                               VALUES(%s, 'tip', %s)""",
+                               (reponame, len(self) - 1))
 
                 self.sqlconn.commit()
             except:
@@ -369,13 +391,29 @@ def wraprepo(repo):
             cursor = self.sqlcursor
 
             # Validate that we are appending to the correct linkrev
-            cursor.execute("""SELECT max(linkrev) FROM revisions WHERE repo = %s""",
-                reponame)
-            maxlinkrev = cursor.fetchall()[0][0]
-            minlinkrev = min(self.pendingrevs, key= lambda x: x[1])
-            if maxlinkrev != None and maxlinkrev != minlinkrev[1] - 1:
+            cursor.execute("""SELECT value FROM pushkeys WHERE repo = %s AND
+                namespace = 'tip'""", reponame)
+            tipresults = cursor.fetchall()
+            if len(tipresults) == 0:
+                maxlinkrev = -1
+            elif len(tipresults) == 1:
+                maxlinkrev = int(tipresults[0][0])
+            else:
+                raise CorruptionException(("multiple tips for %s in " +
+                    " the database") % reponame)
+
+            minlinkrev = min(self.pendingrevs, key= lambda x: x[1])[1]
+            if maxlinkrev == None or maxlinkrev != minlinkrev - 1:
                 raise CorruptionException("attempting to write non-sequential " +
-                    "linkrev %s, expected %s" % (minlinkrev[1], maxlinkrev + 1))
+                    "linkrev %s, expected %s" % (minlinkrev, maxlinkrev + 1))
+
+            # Clean up excess revisions left from interrupted commits.
+            # Since MySQL can only hold so much data in a transaction, we allow
+            # committing across multiple db transactions. That means if
+            # the commit is interrupted, the next transaction needs to clean
+            # up, which we do here.
+            cursor.execute("""DELETE FROM revisions WHERE repo = %s AND
+                linkrev > %s""", (reponame, maxlinkrev))
 
             # Validate that all rev dependencies (base, p1, p2) have the same
             # node in the database
@@ -444,6 +482,8 @@ def wraprepo(repo):
     repo.sqlcursor = None
     repo.disablesync = False
     repo.pendingrevs = []
+
+    repo.maxcommitsize = ui.configbytes("hgsql", "maxcommitsize", 52428800)
     repo.__class__ = sqllocalrepo
 
 class bufferedopener(object):
