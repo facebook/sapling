@@ -407,8 +407,7 @@ def bookmark(repo, subset, x):
             bmrevs = set()
             for bmrev in matchrevs:
                 bmrevs.add(repo[bmrev].rev())
-            s = subset.set()
-            return baseset([r for r in s if r in bmrevs])
+            return subset & bmrevs
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
@@ -455,7 +454,7 @@ def bumped(repo, subset, x):
     # i18n: "bumped" is a keyword
     getargs(x, 0, 0, _("bumped takes no arguments"))
     bumped = obsmod.getrevs(repo, 'bumped')
-    return baseset([r for r in subset if r in bumped])
+    return subset & bumped
 
 def bundle(repo, subset, x):
     """``bundle()``
@@ -467,7 +466,7 @@ def bundle(repo, subset, x):
         bundlerevs = repo.changelog.bundlerevs
     except AttributeError:
         raise util.Abort(_("no bundle provided - specify with -R"))
-    return baseset([r for r in subset if r in bundlerevs])
+    return subset & bundlerevs
 
 def checkstatus(repo, subset, pat, field):
     m = None
@@ -520,7 +519,7 @@ def children(repo, subset, x):
     """
     s = getset(repo, baseset(repo), x).set()
     cs = _children(repo, subset, s)
-    return baseset([r for r in subset if r in cs])
+    return subset & cs
 
 def closed(repo, subset, x):
     """``closed()``
@@ -690,7 +689,7 @@ def extinct(repo, subset, x):
     # i18n: "extinct" is a keyword
     getargs(x, 0, 0, _("extinct takes no arguments"))
     extincts = obsmod.getrevs(repo, 'extinct')
-    return baseset([r for r in subset if r in extincts])
+    return subset & extincts
 
 def extra(repo, subset, x):
     """``extra(label, [value])``
@@ -921,7 +920,7 @@ def hidden(repo, subset, x):
     # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
     hiddenrevs = repoview.filterrevs(repo, 'visible')
-    return baseset([r for r in subset if r in hiddenrevs])
+    return subset & hiddenrevs
 
 def keyword(repo, subset, x):
     """``keyword(string)``
@@ -1058,7 +1057,7 @@ def obsolete(repo, subset, x):
     # i18n: "obsolete" is a keyword
     getargs(x, 0, 0, _("obsolete takes no arguments"))
     obsoletes = obsmod.getrevs(repo, 'obsolete')
-    return baseset([r for r in subset if r in obsoletes])
+    return subset & obsoletes
 
 def origin(repo, subset, x):
     """``origin([set])``
@@ -1125,8 +1124,7 @@ def p1(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.add(cl.parentrevs(r)[0])
-    s = subset.set()
-    return baseset([r for r in s if r in ps])
+    return subset & ps
 
 def p2(repo, subset, x):
     """``p2([set])``
@@ -1144,8 +1142,7 @@ def p2(repo, subset, x):
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.add(cl.parentrevs(r)[1])
-    s = subset.set()
-    return baseset([r for r in s if r in ps])
+    return subset & ps
 
 def parents(repo, subset, x):
     """``parents([set])``
@@ -1153,14 +1150,13 @@ def parents(repo, subset, x):
     """
     if x is None:
         ps = tuple(p.rev() for p in repo[x].parents())
-        return baseset([r for r in subset if r in ps])
+        return subset & ps
 
     ps = set()
     cl = repo.changelog
     for r in getset(repo, baseset(repo), x):
         ps.update(cl.parentrevs(r))
-    s = subset.set()
-    return baseset([r for r in s if r in ps])
+    return subset & ps
 
 def parentspec(repo, subset, x, n):
     """``set^0``
@@ -1185,8 +1181,7 @@ def parentspec(repo, subset, x, n):
             parents = cl.parentrevs(r)
             if len(parents) > 1:
                 ps.add(parents[1])
-    s = subset.set()
-    return baseset([r for r in s if r in ps])
+    return subset & ps
 
 def present(repo, subset, x):
     """``present(set)``
@@ -1531,7 +1526,7 @@ def tag(repo, subset, x):
             s = set([cl.rev(n) for t, n in repo.tagslist() if matcher(t)])
     else:
         s = set([cl.rev(n) for t, n in repo.tagslist() if t != 'tip'])
-    return baseset([r for r in subset if r in s])
+    return subset & s
 
 def tagged(repo, subset, x):
     return tag(repo, subset, x)
@@ -1543,7 +1538,7 @@ def unstable(repo, subset, x):
     # i18n: "unstable" is a keyword
     getargs(x, 0, 0, _("unstable takes no arguments"))
     unstables = obsmod.getrevs(repo, 'unstable')
-    return baseset([r for r in subset if r in unstables])
+    return subset & unstables
 
 
 def user(repo, subset, x):
@@ -2073,6 +2068,12 @@ class baseset(list):
         else:
             s = set(x)
         return baseset(self.set() - s)
+
+    def __and__(self, x):
+        s = self.set()
+        if isinstance(x, baseset):
+            x = x.set()
+        return baseset([y for y in s if y in x])
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
