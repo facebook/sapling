@@ -165,6 +165,8 @@ utestpats = [
     (r'^  moving \S+/.*[^)]$', winglobmsg),
     (r'^  no changes made to subrepo since.*/.*[^)]$', winglobmsg),
     (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$', winglobmsg),
+    (r'^  .*file://\$TESTTMP',
+     'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
   ],
   # warnings
   [
