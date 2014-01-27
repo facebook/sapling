@@ -2107,10 +2107,21 @@ def debuginstall(ui):
     import templater
     p = templater.templatepath()
     ui.status(_("checking templates (%s)...\n") % ' '.join(p))
-    try:
-        templater.templater(templater.templatepath("map-cmdline.default"))
-    except Exception, inst:
-        ui.write(" %s\n" % inst)
+    if p:
+        m = templater.templatepath("map-cmdline.default")
+        if m:
+            # template found, check if it is working
+            try:
+                templater.templater(m)
+            except Exception, inst:
+                ui.write(" %s\n" % inst)
+                p = None
+        else:
+            ui.write(_(" template 'default' not found\n"))
+            p = None
+    else:
+        ui.write(_(" no template directories found\n"))
+    if not p:
         ui.write(_(" (templates seem to have been installed incorrectly)\n"))
         problems += 1
 
