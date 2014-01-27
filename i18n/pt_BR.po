@@ -31,19 +31,20 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2013-10-19 11:01-0300\n"
-"PO-Revision-Date: 2011-06-28 09:55+0200\n"
-"Last-Translator: Wagner Bruna <wbruna@yahoo.com>\n"
+"POT-Creation-Date: 2014-01-24 22:49-0200\n"
+"PO-Revision-Date: 2014-01-25 23:15-0200\n"
+"Last-Translator: Leonardo Bueno Postacchini <notivago@gmail.com>\n"
 "Language-Team: Brazilian Portuguese\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
-"Language: \n"
+"Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: KBabel 1.11.4\n"
-"X-Poedit-Country: BRAZIL\n"
-"X-Poedit-Language: Portuguese\n"
+"X-Generator: Poedit 1.6.3\n"
+
+msgid "VALUE"
+msgstr "VALOR"
 
 #, python-format
 msgid " (default: %s)"
@@ -51,6 +52,13 @@ msgstr " (padrão: %s)"
 
 msgid "Options"
 msgstr "Opções"
+
+msgid ""
+"\n"
+"[+] marked option can be specified multiple times\n"
+msgstr ""
+"\n"
+"opções marcadas com [+] podem ser especificadas múltiplas vezes\n"
 
 msgid "Commands"
 msgstr "Comandos"
@@ -3619,8 +3627,16 @@ msgstr ""
 msgid "unknown signature version"
 msgstr "versão de assinatura desconhecida"
 
-msgid "command to view revision graphs from a shell"
-msgstr "comando para exibir grafos de revisão em terminais modo texto"
+msgid "command to view revision graphs from a shell (DEPRECATED)"
+msgstr ""
+"comando para exibir grafos de revisão em terminais modo texto (OBSOLETO)"
+
+msgid ""
+"The functionality of this extension has been include in core Mercurial\n"
+"since version 2.3."
+msgstr ""
+"A funcionalidade desta extensão foi incluída no Mercurial\n"
+"a partir da versão 2.3."
 
 msgid ""
 "This extension adds a --graph option to the incoming, outgoing and log\n"
@@ -5483,20 +5499,16 @@ msgstr ""
 "manter como (l)argefile ou usar um arquivo (n)ormal?$$ &Largefile $$ Arquivo &Normal"
 
 #, python-format
-msgid "merging %s and %s to %s\n"
-msgstr "mesclando %s e %s para %s\n"
-
-#, python-format
-msgid "merging %s\n"
-msgstr "mesclando %s\n"
-
-#, python-format
 msgid ""
 "largefile %s has a merge conflict\n"
-"keep (l)ocal or take (o)ther?$$ &Local $$ &Other"
+"ancestor was %s\n"
+"keep (l)ocal %s or\n"
+"take (o)ther %s?$$ &Local $$ &Other"
 msgstr ""
 "largefile %s tem um conflito de mesclagem\n"
-"manter (l)ocal ou usar (o)utro?$$ &Local $$ &Outro"
+"o ancestral era %s\n"
+"manter o (l)ocal %s ou\n"
+"usar o (o)utro %s?$$ &Local $$ &Outro"
 
 msgid "no files to copy"
 msgstr "nenhum arquivo para copiar"
@@ -8437,7 +8449,7 @@ msgstr ""
 msgid "cannot continue inconsistent rebase"
 msgstr "não é possível continuar um rebaseamento inconsistente"
 
-msgid "use \"hg rebase --abort\" to clear borken state"
+msgid "use \"hg rebase --abort\" to clear broken state"
 msgstr "use \"hg rebase --abort\" para limpar o estado quebrado"
 
 msgid "cannot specify both a source and a base"
@@ -8448,6 +8460,41 @@ msgstr "não se pode especificar ao mesmo tempo uma revisão e uma base"
 
 msgid "cannot specify both a revision and a source"
 msgstr "não se pode especificar ao mesmo tempo uma revisão e uma origem"
+
+msgid "empty \"rev\" revision set - nothing to rebase"
+msgstr "conjunto de revisões \"rev\" vazio - nada para rebasear"
+
+msgid "empty \"source\" revision set - nothing to rebase"
+msgstr "conjunto de revisões \"fonte\" vazio - nada para rebasear"
+
+msgid "empty \"base\" revision set - can't compute rebase set"
+msgstr ""
+"conjunto de revisões \"base\" vazio - não é possível calcular o conjunto de "
+"rebaseamento"
+
+#, python-format
+msgid "nothing to rebase - %s is both \"base\" and destination\n"
+msgstr "nada para rebasear - %s é tanto \"base\" como destino\n"
+
+msgid "nothing to rebase - working directory parent is also destination\n"
+msgstr ""
+"nada para rebasear - o pai do diretório de trabalho também é o destino.\n"
+
+#, python-format
+msgid "nothing to rebase - \"base\" %s is already an ancestor of destination %s\n"
+msgstr "nada para rebasear - a \"base\" %s já é um ancestral do destino %s\n"
+
+#, python-format
+msgid ""
+"nothing to rebase - working directory parent is already an ancestor of "
+"destination %s\n"
+msgstr ""
+"nada para rebasear - o pai do diretório de trabalho já é um ancestral do "
+"destino %s\n"
+
+#, python-format
+msgid "nothing to rebase from %s to %s\n"
+msgstr "nada para rebasear de %s para %s\n"
 
 msgid "can't remove original changesets with unrebased descendants"
 msgstr ""
@@ -8571,15 +8618,6 @@ msgid "commands to interactively select changes for commit/qrefresh"
 msgstr ""
 "comandos para selecionar interativamente mudanças em um commit ou qrefresh"
 
-msgid "ignore white space when comparing lines"
-msgstr "ignora espaços em branco ao comparar linhas"
-
-msgid "ignore changes in the amount of white space"
-msgstr "ignora mudanças na quantidade de espaços em branco"
-
-msgid "ignore changes whose lines are all blank"
-msgstr "ignora mudanças cujas linhas sejam todas brancas"
-
 msgid "this modifies a binary file (all or nothing)\n"
 msgstr "isto modifica um arquivo binário (tudo ou nada)\n"
 
@@ -8591,16 +8629,18 @@ msgid "%d hunks, %d lines changed\n"
 msgstr "%d trechos, %d linhas modificadas\n"
 
 msgid ""
-"[Ynesfdaq?]$$ &Yes, record this change$$ &No, skip this change$$ &Edit the "
+"[Ynesfdaq?]$$ &Yes, record this change$$ &No, skip this change$$ &Edit this "
 "change manually$$ &Skip remaining changes to this file$$ Record remaining "
 "changes to this &file$$ &Done, skip remaining changes and files$$ Record "
-"&all changes to all remaining files$$ &Quit, recording no changes$$ &?"
+"&all changes to all remaining files$$ &Quit, recording no changes$$ &? "
+"(display help)"
 msgstr ""
 "[Ynesfdaq?]$$ (&Y) sim, grave esta mudança$$ &Não, descarte esta mudança$$ "
-"&Edite a mudança manualmente$$ De&Scarte as mudanças restantes neste "
+"&Edite esta mudança manualmente$$ De&Scarte as mudanças restantes neste "
 "arquivo$$ (&F) grave as mudanças restantes deste arquivo$$ Termina&Do, "
 "descarte as mudanças e arquivos restantes$$ Grave tod&As as mudanças de "
-"todos os arquivos restantes$$ (&Q) encerra, sem gravar nenhuma mudança$$ &?"
+"todos os arquivos restantes$$ (&Q) encerra, sem gravar nenhuma mudança$$ &? "
+"(exibe a ajuda)"
 
 msgid "cannot edit patch for whole file"
 msgstr "não é possível editar um patch para o arquivo inteiro"
@@ -8813,6 +8853,9 @@ msgstr "restaurando hardlinks de %s para %s\n"
 msgid "there is nothing to relink\n"
 msgstr "não há nenhum hardlink a ser restaurado\n"
 
+msgid "source and destination are on different devices"
+msgstr "arquivos de origem e destino estão em dispositivos diferentes"
+
 #, python-format
 msgid "tip has %d files, estimated total number of files: %s\n"
 msgstr "a tip tem %d arquivos, estimado número total de arquivos: %s\n"
@@ -8826,9 +8869,6 @@ msgstr "arquivos"
 #, python-format
 msgid "collected %d candidate storage files\n"
 msgstr "coletados %d arquivos candidatos nos repositórios\n"
-
-msgid "source and destination are on different devices"
-msgstr "arquivos de origem e destino estão em dispositivos diferentes"
 
 msgid "pruning"
 msgstr "podando"
@@ -9466,27 +9506,14 @@ msgid "filter corrupted changeset (no user or date)"
 msgstr "filtra revisões corrompidas (sem usuário ou data)"
 
 msgid ""
-"y: transplant this changeset\n"
-"n: skip this changeset\n"
-"m: merge at this changeset\n"
-"p: show patch\n"
-"c: commit selected changesets\n"
-"q: cancel transplant\n"
-"?: show this help\n"
+"apply changeset? [ynmpcq?]:$$ &yes, transplant this changeset$$ &no, skip "
+"this changeset$$ &merge at this changeset$$ show &patch$$ &commit selected "
+"changesets$$ &quit and cancel transplant$$ &? (show this help)"
 msgstr ""
-"y: transplante esta revisão\n"
-"n: pula esta revisão\n"
-"m: mescla nesta revisão\n"
-"p: mostra o patch\n"
-"c: consolida revisões selecionadas\n"
-"q: cancela o transplante\n"
-"?: exibe esta ajuda\n"
-
-msgid "apply changeset? [ynmpcq?]:"
-msgstr "aplicar revisão? [ynmpcq?]:"
-
-msgid "no such option\n"
-msgstr "não existe tal opção\n"
+"aplicar revisão? [ynmpcq?]:$$ &y sim, transplante esta revisão$$ &não, omite"
+" esta revisão$$ &mescle nesta revisão$$ mostre o &patch$$ &consolide "
+"revisões selecionadas$$ &q encerre e cancele o transplante$$ &? (exibe esta "
+"ajuda)"
 
 msgid "transplant changesets from REPO"
 msgstr "transplanta revisões de REPO"
@@ -9959,12 +9986,28 @@ msgid "updating to active bookmark %s\n"
 msgstr "atualizando para o marcador ativo %s\n"
 
 #, python-format
+msgid "adding remote bookmark %s\n"
+msgstr "adicionando marcador remoto %s\n"
+
+#, python-format
 msgid "divergent bookmark %s stored as %s\n"
 msgstr "marcador divergente %s guardado como %s\n"
 
 #, python-format
-msgid "adding remote bookmark %s\n"
-msgstr "adicionando marcador remoto %s\n"
+msgid "updating bookmark %s failed!\n"
+msgstr "a atualização do marcador %s falhou!\n"
+
+#, python-format
+msgid "bookmark %s does not exist on the local or remote repository!\n"
+msgstr "o marcador %s não existe nem no repositório local nem no remoto!\n"
+
+#, python-format
+msgid "exporting bookmark %s\n"
+msgstr "exportando marcador %s\n"
+
+#, python-format
+msgid "deleting remote bookmark %s\n"
+msgstr "apagando marcador remoto %s\n"
 
 msgid "searching for changed bookmarks\n"
 msgstr "procurando por marcadores modificados\n"
@@ -10463,6 +10506,15 @@ msgstr "trata todos os arquivos como texto"
 msgid "omit dates from diff headers"
 msgstr "omite datas dos cabeçalhos de diff"
 
+msgid "ignore white space when comparing lines"
+msgstr "ignora espaços em branco ao comparar linhas"
+
+msgid "ignore changes in the amount of white space"
+msgstr "ignora mudanças na quantidade de espaços em branco"
+
+msgid "ignore changes whose lines are all blank"
+msgstr "ignora mudanças cujas linhas sejam todas brancas"
+
 msgid "show which function each change is in"
 msgstr "mostra em qual função está cada mudança"
 
@@ -10831,6 +10883,13 @@ msgstr "não se pode anular revisões de mesclagem"
 
 msgid "cannot use --parent on non-merge changeset"
 msgstr "não se pode usar --parent numa revisão que não seja uma mesclagem"
+
+msgid "use 'hg resolve' to retry unresolved file merges\n"
+msgstr "use 'hg resolve' para mesclar novamente arquivos não resolvidos\n"
+
+#, python-format
+msgid "changeset %s backed out, don't forget to commit.\n"
+msgstr "revisão %s anulada, não se esqueça de consolidar.\n"
 
 #, python-format
 msgid "changeset %s backs out changeset %s\n"
@@ -14055,22 +14114,6 @@ msgstr ""
 msgid "pushing to %s\n"
 msgstr "enviando revisões para %s\n"
 
-#, python-format
-msgid "exporting bookmark %s\n"
-msgstr "exportando marcador %s\n"
-
-#, python-format
-msgid "deleting remote bookmark %s\n"
-msgstr "apagando marcador remoto %s\n"
-
-#, python-format
-msgid "bookmark %s does not exist on the local or remote repository!\n"
-msgstr "o marcador %s não existe nem no repositório local nem no remoto!\n"
-
-#, python-format
-msgid "updating bookmark %s failed!\n"
-msgstr "a atualização do marcador %s falhou!\n"
-
 msgid "roll back an interrupted transaction"
 msgstr "desfaz uma transação interrompida"
 
@@ -15243,11 +15286,11 @@ msgid "(see http://mercurial.selenic.com for more information)"
 msgstr "(veja http://mercurial.selenic.com para mais informações)"
 
 msgid ""
-"Copyright (C) 2005-2013 Matt Mackall and others\n"
+"Copyright (C) 2005-2014 Matt Mackall and others\n"
 "This is free software; see the source for copying conditions. There is NO\n"
 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
 msgstr ""
-"Copyright (C) 2005-2013 Matt Mackall e outros\n"
+"Copyright (C) 2005-2014 Matt Mackall e outros\n"
 "Este software é livre; veja os fontes para condições de cópia. Não\n"
 "há garantias, nem mesmo de adequação para qualquer propósito em\n"
 "particular.\n"
@@ -15380,8 +15423,8 @@ msgid "use 'hg push --new-branch' to create new remote branches"
 msgstr "use 'hg push --new-branch' para criar novos ramos remotos"
 
 #, python-format
-msgid "push creates multiple headed new branch '%s'"
-msgstr "push cria um ramo '%s' de múltiplas cabeças"
+msgid "push creates new branch '%s' with multiple heads"
+msgstr "push cria um novo ramo '%s' com múltiplas cabeças"
 
 msgid "merge or see \"hg help push\" for details about pushing new heads"
 msgstr ""
@@ -15401,13 +15444,12 @@ msgstr ""
 "use \"hg pull\" e \"hg merge\" ou veja \"hg help push\" para detalhes sobre "
 "como enviar novas cabeças"
 
-#, python-format
-msgid "new remote heads on branch '%s'\n"
-msgstr "novas cabeças remotas no ramo '%s'\n"
+msgid "new remote heads:\n"
+msgstr "novas cabeças remotas:\n"
 
 #, python-format
-msgid "new remote head %s\n"
-msgstr "nova cabeça remota %s\n"
+msgid "new remote heads on branch '%s':\n"
+msgstr "novas cabeças remotas no ramo '%s':\n"
 
 msgid "note: unsynced remote changes!\n"
 msgstr "aviso: mudanças remotas não sincronizadas!\n"
@@ -15760,6 +15802,14 @@ msgid "merging %s failed!\n"
 msgstr "mesclagem de %s falhou!\n"
 
 #, python-format
+msgid "merging %s and %s to %s\n"
+msgstr "mesclando %s e %s para %s\n"
+
+#, python-format
+msgid "merging %s\n"
+msgstr "mesclando %s\n"
+
+#, python-format
 msgid "was merge of '%s' successful (yn)?$$ &Yes $$ &No"
 msgstr "a mesclagem de '%s' teve sucesso (yn)?$$ (&Y) sim $$ &Não"
 
@@ -16079,18 +16129,8 @@ msgstr "extensões habilitadas:"
 msgid "disabled extensions:"
 msgstr "extensões desabilitadas:"
 
-msgid "VALUE"
-msgstr "VALOR"
-
 msgid "DEPRECATED"
 msgstr "OBSOLETO"
-
-msgid ""
-"\n"
-"[+] marked option can be specified multiple times\n"
-msgstr ""
-"\n"
-"opções marcadas com [+] podem ser especificadas múltiplas vezes\n"
 
 msgid "Configuration Files"
 msgstr "Arquivos de Configuração"
@@ -18370,6 +18410,26 @@ msgstr ""
 "``new-commit``\n"
 "    Fase de revisões criadas usando commit.\n"
 "    Padrão: draft (rascunho)"
+
+msgid "``checksubrepos``"
+msgstr "``checksubrepos``"
+
+msgid ""
+"    Check phase of state in each subrepositories, allowed values are\n"
+"    \"ignore\", \"follow\" or \"abort\". For settings other than \"ignore\",\n"
+"    the phase of each subrepository commit is checked before committing\n"
+"    in the parent repository. If there is any greater phase than the parent\n"
+"    (\"secret\" vs \"draft\", for example), the commit is either aborted\n"
+"    with \"abort\" or the higher phase is used with \"follow\". Default: \"follow\"."
+msgstr ""
+"    Verifica a fase do estado de cada sub-repositório. Os valores\n"
+"    possíveis são \"ignore\", \"follow\" ou \"abort\". Para valores\n"
+"    diferentes de \"ignore\", a fase da consolidação de cada\n"
+"    sub-repositório será verificada antes da consolidação no repositório\n"
+"    pai. Se houver qualquer fase maior que a do pai (\"secret\" versus\n"
+"    \"draft\", por exemplo), o valor \"abort\" faz com que a consolidação\n"
+"    seja abortada, e \"follow\" faz com que seja usada a fase mais\n"
+"    alta. O valor padrão é: \"follow\"."
 
 msgid ""
 "``profiling``\n"
@@ -21454,13 +21514,13 @@ msgstr "Lista de discussão: http://selenic.com/mailman/listinfo/mercurial"
 msgid ""
 "Copying\n"
 "\"\"\"\"\"\"\"\n"
-"Copyright (C) 2005-2013 Matt Mackall.\n"
+"Copyright (C) 2005-2014 Matt Mackall.\n"
 "Free use of this software is granted under the terms of the GNU General\n"
 "Public License version 2 or any later version."
 msgstr ""
 "Cópia\n"
 "\"\"\"\"\"\n"
-"Copyright (C) 2005-2013 Matt Mackall.\n"
+"Copyright (C) 2005-2014 Matt Mackall.\n"
 "Garante-se livre uso deste software nos termos da licença\n"
 "GNU General Public License, versão 2 ou qualquer versão posterior."
 
@@ -21524,14 +21584,14 @@ msgid ""
 "Copying\n"
 "=======\n"
 "This manual page is copyright 2006 Vadim Gelfer.\n"
-"Mercurial is copyright 2005-2013 Matt Mackall.\n"
+"Mercurial is copyright 2005-2014 Matt Mackall.\n"
 "Free use of this software is granted under the terms of the GNU General\n"
 "Public License version 2 or any later version."
 msgstr ""
 "Cópia\n"
 "=====\n"
 "Esta página de manual: copyright 2006 Vadim Gelfer.\n"
-"Mercurial: copyright 2005-2013 Matt Mackall.\n"
+"Mercurial: copyright 2005-2014 Matt Mackall.\n"
 "Garante-se livre uso deste software nos termos da licença\n"
 "GNU General Public License, versão 2 ou qualquer versão posterior."
 
@@ -21803,14 +21863,14 @@ msgid ""
 "Copying\n"
 "=======\n"
 "This manual page is copyright 2005 Bryan O'Sullivan.\n"
-"Mercurial is copyright 2005-2013 Matt Mackall.\n"
+"Mercurial is copyright 2005-2014 Matt Mackall.\n"
 "Free use of this software is granted under the terms of the GNU General\n"
 "Public License version 2 or any later version."
 msgstr ""
 "Cópia\n"
 "=====\n"
 "Esta página de manual: copyright 2005 Bryan O'Sullivan.\n"
-"Mercurial: copyright 2005-2013 Matt Mackall.\n"
+"Mercurial: copyright 2005-2014 Matt Mackall.\n"
 "Garante-se livre uso deste software nos termos da licença\n"
 "GNU General Public License, versão 2 ou qualquer versão posterior."
 
@@ -22235,6 +22295,17 @@ msgstr ""
 "linha; o segundo, por caracteres null. Cada string lida do\n"
 "arquivo também é tratada como um padrão de arquivos."
 
+msgid ""
+"All patterns, except for ``glob:`` specified in command line (not for\n"
+"``-I`` or ``-X`` options) or ``.hgignore`` file, can match also\n"
+"against directories: files under matched directories are treated as\n"
+"matched."
+msgstr ""
+"Todos os padrões, exceto ``glob:`` especificado na linha de comando (não para\n"
+"opções ``-I`` ou ``-X``) ou arquivo ``.hgignore``, podem casar também\n"
+"com diretórios: arquivos sob diretórios casados são tratados como\n"
+"casados."
+
 msgid "Plain examples::"
 msgstr "Exemplos de caminhos simples::"
 
@@ -22428,9 +22499,25 @@ msgstr ""
 "  considerados como de publicação."
 
 msgid ""
+".. note::\n"
+"   Changesets in secret phase are not exchanged with the server. This\n"
+"   applies to their content: file names, file contents, and changeset\n"
+"   metadata. For technical reasons, the identifier (e.g. d825e4025e39)\n"
+"   of the secret changeset may be communicated to the server."
+msgstr ""
+".. note::\n"
+"   Revisões em fase secreta não são trocadas com o servidor. Isto\n"
+"   se aplica ao seu conteúdo: nomes dos arquivos, conteúdos dos\n"
+"   arquivos e metadados de revisão. Por razões técnicas, o\n"
+"   identificador (ex.: d825e4025e39) da revisão secreta pode ser\n"
+"   comunicado ao servidor."
+
+msgid ""
+"\n"
 "Examples\n"
 "========"
 msgstr ""
+"\n"
 "Exemplos\n"
 "========"
 
@@ -22511,22 +22598,22 @@ msgstr ""
 msgid ""
 "Any other string is treated as a bookmark, tag, or branch name. A\n"
 "bookmark is a movable pointer to a revision. A tag is a permanent name\n"
-"associated with a revision. A branch name denotes the tipmost revision\n"
-"of that branch. Bookmark, tag, and branch names must not contain the \":\"\n"
-"character."
+"associated with a revision. A branch name denotes the tipmost open branch head\n"
+"of that branch - or if they are all closed, the tipmost closed head of the\n"
+"branch. Bookmark, tag, and branch names must not contain the \":\" character."
 msgstr ""
 "Qualquer outra string é tratada como um nome de marcador, etiqueta\n"
-"ou ramo.\n"
+"ou nome de ramo.\n"
 "Um marcador (bookmark) é um apontador móvel para uma revisão.\n"
-"Uma etiqueta (tag) é um nome simbólico permanente associado a uma\n"
-"revisão.\n"
-"Um nome de ramo denota a revisão mais recente de tal ramo.\n"
-"Nomes de marcadores, etiquetas e ramos não podem conter o caractere \":\"."
+"Uma etiqueta (tag) é um nome permanente associado a uma revisão.\n"
+"Um nome de ramo denota a cabeça de ramo aberta mais recente desse\n"
+"ramo - ou, se estiverem todas fechadas, a cabeça fechada mais\n"
+"recente desse ramo.\n"
+"Nomes de marcadores, etiquetas e ramos não podem conter o\n"
+"caractere \":\"."
 
 msgid "The reserved name \"tip\" always identifies the most recent revision."
-msgstr ""
-"O nome reservado \"tip\" sempre\n"
-"identifica a revisão mais recente."
+msgstr "O nome reservado \"tip\" sempre identifica a revisão mais recente."
 
 msgid ""
 "The reserved name \"null\" indicates the null revision. This is the\n"
@@ -23300,8 +23387,14 @@ msgstr "   $ hg log -r 0 --template \"{label('changeset.{phase}', node|short)}\\
 msgid "- Invert the firstline filter, i.e. everything but the first line::"
 msgstr "- Inverter o filtro firstline, ou seja, tudo menos a primeira linha::"
 
-msgid "   $ hg log -r 0 --template \"{sub(r'^.*\\n?\\n?', '', desc)}\\n\"\n"
-msgstr "   $ hg log -r 0 --template \"{sub(r'^.*\\n?\\n?', '', desc)}\\n\"\n"
+msgid "   $ hg log -r 0 --template \"{sub(r'^.*\\n?\\n?', '', desc)}\\n\""
+msgstr "   $ hg log -r 0 --template \"{sub(r'^.*\\n?\\n?', '', desc)}\\n\""
+
+msgid "- Display the contents of the 'extra' field, one per line::"
+msgstr "- Exibe o conteúdo do campo 'extra', um em cada linha::"
+
+msgid "   $ hg log -r 0 --template \"{join(extras, '\\n')}\\n\"\n"
+msgstr "   $ hg log -r 0 --template \"{join(extras, '\\n')}\\n\"\n"
 
 msgid "Valid URLs are of the form::"
 msgstr "URLs válidas são da forma::"
@@ -23514,9 +23607,6 @@ msgid ""
 msgstr ""
 "%d arquivos atualizados, %d arquivos mesclados, %d arquivos removidos, %d "
 "arquivos não resolvidos\n"
-
-msgid "use 'hg resolve' to retry unresolved file merges\n"
-msgstr "use 'hg resolve' para mesclar novamente arquivos não resolvidos\n"
 
 msgid ""
 "use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to "
@@ -24224,6 +24314,9 @@ msgstr "arquivos de origem e destino não definidos"
 msgid "failed to synchronize metadata for \"%s\""
 msgstr "falha ao sincronizar metadados para \"%s\""
 
+msgid "unexpected delta opcode 0"
+msgstr "delta opcode 0 inesperado"
+
 #, python-format
 msgid "cannot create %s: destination already exists"
 msgstr "impossível criar %s: destino já existe"
@@ -24242,6 +24335,26 @@ msgstr "tipo de quebra de linha não suportado: %s"
 
 msgid "patch failed to apply"
 msgstr "aplicação do patch falhou"
+
+#, python-format
+msgid "path ends in directory separator: %s"
+msgstr "o caminho termina em um separador de diretório: %s"
+
+#, python-format
+msgid "path contains illegal component: %s"
+msgstr "o caminho contém um componente ilegal: %s"
+
+#, python-format
+msgid "path '%s' is inside nested repo %r"
+msgstr "o caminho '%s' está dentro do repositório aninhado %r"
+
+#, python-format
+msgid "path %r traverses symbolic link %r"
+msgstr "o caminho %r percorre o link simbólico %r"
+
+#, python-format
+msgid "%s not under root '%s'"
+msgstr "%s não está sob a raiz '%s'"
 
 #, python-format
 msgid "cannot %s; remote repository does not support the %r capability"
@@ -24304,6 +24417,14 @@ msgid "index entry flags need RevlogNG"
 msgstr "flags de entrada de índice exigem RevlogNG"
 
 #, python-format
+msgid "revlog chunk cache size %r is not greater than 0"
+msgstr "tamanho do cache %r de trecho do revlog não maior do que 0"
+
+#, python-format
+msgid "revlog chunk cache size %r is not a power of 2"
+msgstr "tamanho do cache %r de trecho do revlog não é potência de 2"
+
+#, python-format
 msgid "index %s unknown flags %#04x for format v0"
 msgstr "índice %s marcadores desconhecidos %#04x para o formato v0"
 
@@ -24351,6 +24472,14 @@ msgid ""
 msgstr ""
 "``adds(padrão)``\n"
 "    Revisões que adicionam arquivos correspondentes ao padrão."
+
+msgid ""
+"    The pattern without explicit kind like ``glob:`` is expected to be\n"
+"    relative to the current directory and match against a file or a\n"
+"    directory."
+msgstr ""
+"    É esperado que padrões sem tipo específico como ``glob:`` sejam\n"
+"    relativos ao diretório atual e casem com o arquivo ou diretório."
 
 #. i18n: "adds" is a keyword
 msgid "adds requires a pattern"
@@ -24521,6 +24650,15 @@ msgstr ""
 "``contains(padrão)``\n"
 "    Revisões que contenham um arquivo que combine com o padrão. Veja\n"
 "    :hg:`help patterns` para informações sobre padrões de arquivo."
+
+msgid ""
+"    The pattern without explicit kind like ``glob:`` is expected to be\n"
+"    relative to the current directory and match against a file exactly\n"
+"    for efficiency."
+msgstr ""
+"    É esperado que padrões sem tipo específico como ``glob:`` sejam\n"
+"    relativos ao diretório atual e por eficiência casem arquivos \n"
+"    exatamente."
 
 #. i18n: "contains" is a keyword
 msgid "contains requires a pattern"
@@ -24758,6 +24896,11 @@ msgid ""
 msgstr ""
 "    Para um resultado mais rápido mas menos preciso, considere usar\n"
 "    ``filelog()``."
+
+msgid "    This predicate uses ``glob:`` as the default kind of pattern."
+msgstr ""
+"    Se nada especificado, este predicado assume ``glob:`` como tipo de "
+"padrão."
 
 #. i18n: "file" is a keyword
 msgid "file requires a pattern"
@@ -25275,28 +25418,8 @@ msgid "possible case-folding collision for %s"
 msgstr "possível colisão de maiúsculas e minúsculas para %s"
 
 #, python-format
-msgid "path ends in directory separator: %s"
-msgstr "o caminho termina em um separador de diretório: %s"
-
-#, python-format
-msgid "path contains illegal component: %s"
-msgstr "o caminho contém um componente ilegal: %s"
-
-#, python-format
-msgid "path '%s' is inside nested repo %r"
-msgstr "o caminho '%s' está dentro do repositório aninhado %r"
-
-#, python-format
-msgid "path %r traverses symbolic link %r"
-msgstr "o caminho %r percorre o link simbólico %r"
-
-#, python-format
 msgid "could not symlink to %r: %s"
 msgstr "impossível criar link simbólico para %r: %s"
-
-#, python-format
-msgid "%s not under root '%s'"
-msgstr "%s não está sob a raiz '%s'"
 
 msgid "empty revision range"
 msgstr "faixa de revisões vazia"
@@ -25560,6 +25683,17 @@ msgstr "aviso: removendo .hg/hgrc potencialmente hostil em '%s'"
 msgid "unknown subrepo type %s"
 msgstr "tipo de sub-repositório %s desconhecido"
 
+msgid "invalid phases.checksubrepos configuration: %s"
+msgstr "configuração phases.checksubrepos inválida: %s"
+
+msgid "can't commit in %s phase conflicting %s from subrepository %s"
+msgstr ""
+"não é possível consolidar na fase \"%s\" com a fase conflitante \"%s\" no "
+"sub-repositório %s"
+
+msgid "warning: changes are committed in %s phase from subrepository %s\n"
+msgstr "aviso: mudanças consolidadas na fase \"%s\" do sub-repositório %s\n"
+
 #, python-format
 msgid "archiving (%s)"
 msgstr "empacotando (%s)"
@@ -25579,6 +25713,9 @@ msgstr "clonando sub-repositório %s de %s\n"
 #, python-format
 msgid "pulling subrepo %s from %s\n"
 msgstr "trazendo sub-repositório %s de %s\n"
+
+msgid "revision %s in subrepo %s is hidden\n"
+msgstr "a revisão %s no sub-repositório %s é oculta\n"
 
 #, python-format
 msgid "no changes made to subrepo %s since last push to %s\n"
@@ -25915,14 +26052,6 @@ msgid ""
 msgstr ":branch: String. O nome do ramo no qual a revisão foi consolidada."
 
 msgid ""
-":branches: List of strings. The name of the branch on which the\n"
-"    changeset was committed. Will be empty if the branch name was\n"
-"    default."
-msgstr ""
-":branches: Lista de strings. O nome do ramo no qual a revisão foi\n"
-"    consolidada. Será vazio se o nome do ramo for default."
-
-msgid ""
 ":bookmarks: List of strings. Any bookmarks associated with the\n"
 "    changeset."
 msgstr ""
@@ -25943,6 +26072,13 @@ msgid ""
 msgstr ""
 ":diffstat: String. Estatísticas de mudanças no seguinte\n"
 "    formato: \"modified files: +added/-removed lines\""
+
+msgid ""
+":extras: List of dicts with key, value entries of the 'extras'\n"
+"    field of this changeset."
+msgstr ""
+":extras: Lista de dicionários com entradas chave, valor dos campos\n"
+"    'extras' desta revisão."
 
 msgid ":file_adds: List of strings. Files added by this changeset."
 msgstr ":file_adds: Lista de strings. Arquivos adicionados por esta revisão."
@@ -26109,6 +26245,10 @@ msgstr "sub espera três argumentos"
 msgid "unmatched quotes"
 msgstr "aspas não combinam"
 
+msgid "no templates found, try `hg debuginstall` for more info"
+msgstr ""
+"nenhum modelo encontrado, tente `hg debuginstall` para mais informação"
+
 #, python-format
 msgid "style '%s' not found"
 msgstr "estilo '%s' não encontrado"
@@ -26198,11 +26338,11 @@ msgstr "senha: "
 msgid "cannot create new union repository"
 msgstr "não é possível criar novo repositório de união"
 
-msgid "http authorization required"
-msgstr "autorização http requerida"
+msgid "http authorization required for %s"
+msgstr "autorização http requerida para %s"
 
-msgid "http authorization required\n"
-msgstr "autorização http requerida\n"
+msgid "http authorization required for %s\n"
+msgstr "autorização http requerida para %s\n"
 
 #, python-format
 msgid "realm: %s\n"
