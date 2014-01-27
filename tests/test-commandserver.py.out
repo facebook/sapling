@@ -191,3 +191,34 @@ o  0:eff892de26ec
 5: public
  runcommand branches
 default                        1:731265503d86
+
+testing obsolete:
+
+ runcommand up null
+0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+ runcommand phase -df tip
+ runcommand log --hidden
+changeset:   1:731265503d86
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     .
+
+changeset:   0:eff892de26ec
+bookmark:    bm1
+bookmark:    bm2
+bookmark:    bm3
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     1
+
+ runcommand log
+changeset:   0:eff892de26ec
+bookmark:    bm1
+bookmark:    bm2
+bookmark:    bm3
+tag:         tip
+user:        test
+date:        Thu Jan 01 00:00:00 1970 +0000
+summary:     1
+

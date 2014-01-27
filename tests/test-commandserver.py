@@ -262,6 +262,15 @@ def phasecacheafterstrip(server):
     # shouldn't raise "7966c8e3734d: no node!"
     runcommand(server, ['branches'])
 
+def obsolete(server):
+    readchannel(server)
+
+    runcommand(server, ['up', 'null'])
+    runcommand(server, ['phase', '-df', 'tip'])
+    os.system('hg debugobsolete `hg log -r tip --template {node}`')
+    runcommand(server, ['log', '--hidden'])
+    runcommand(server, ['log'])
+
 if __name__ == '__main__':
     os.system('hg init')
 
@@ -285,3 +294,10 @@ if __name__ == '__main__':
     check(branch)
     check(hgignore)
     check(phasecacheafterstrip)
+    obs = open('obs.py', 'w')
+    obs.write('import mercurial.obsolete\nmercurial.obsolete._enabled = True\n')
+    obs.close()
+    hgrc = open('.hg/hgrc', 'a')
+    hgrc.write('[extensions]\nobs=obs.py\n')
+    hgrc.close()
+    check(obsolete)
