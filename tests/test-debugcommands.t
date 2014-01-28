@@ -33,15 +33,16 @@ Test internal debugstacktrace command
   >     dst('hello world')
   > def g():
   >     f()
+  >     sys.stderr.flush()
   >     debugstacktrace(skip=-5, f=sys.stdout)
   > g()
   > EOF
   $ python debugstacktrace.py
   hello world at:
-   debugstacktrace.py:7 in * (glob)
+   debugstacktrace.py:8 in * (glob)
    debugstacktrace.py:5 in g
    debugstacktrace.py:3 in f
   stacktrace at:
-   debugstacktrace.py:7 *in * (glob)
-   debugstacktrace.py:6 *in g (glob)
+   debugstacktrace.py:8 *in * (glob)
+   debugstacktrace.py:7 *in g (glob)
    */util.py:* in debugstacktrace (glob)
