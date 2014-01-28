@@ -699,6 +699,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
         lastlinkrev = -1
         reorder = False
 
+        # Read all of the data from the stream
         chain = None
         while True:
             chunkdata = bundle.deltachunk(chain)
@@ -715,6 +716,8 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
             chunkmap[node] = chunkdata
             chain = node
 
+        # If we noticed a incoming rev was not in linkrev order
+        # we reorder all the revs appropriately.
         if reorder:
             chunkdatas = sorted(chunkdatas)
 
@@ -772,6 +775,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction):
                 prevnode = node
                 visited.add(node)
 
+        # Apply the reordered revs to the revlog
         for link, chunkdata in chunkdatas:
             node = chunkdata['node']
             p1 = chunkdata['p1']
