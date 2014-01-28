@@ -195,7 +195,7 @@ def getargs(x, min, max, err):
 def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
-    return baseset(methods[x[0]](repo, subset, *x[1:]))
+    return methods[x[0]](repo, subset, *x[1:])
 
 def _getrevsource(repo, r):
     extra = repo[r].extra()
