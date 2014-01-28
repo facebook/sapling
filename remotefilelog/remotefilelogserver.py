@@ -188,17 +188,16 @@ def getfiles(repo, proto):
                     dirname = os.path.dirname(filecachepath)
                     if not os.path.exists(dirname):
                         os.makedirs(dirname)
-                    f = open(filecachepath, "w")
                     try:
-                        f.write(text)
-                    finally:
-                        f.close()
-
-                f = open(filecachepath, "r")
-                try:
-                    text = f.read()
-                finally:
-                    f.close()
+                        with open(filecachepath, "w") as f:
+                            f.write(text)
+                    except IOError:
+                        # Don't abort if the user only has permission to read,
+                        # and not write.
+                        pass
+                else:
+                    with open(filecachepath, "r") as f:
+                        text = f.read()
 
                 yield '%d\n%s' % (len(text), text)
 
