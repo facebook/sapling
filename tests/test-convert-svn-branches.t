@@ -96,3 +96,35 @@ Test hg failing to call itself
 
   $ HG=foobar hg convert svn-repo B-hg 2>&1 | grep abort
   abort: Mercurial failed to run itself, check hg executable is in PATH
+
+Convert 'trunk' to branch other than 'default'
+
+  $ cat > branchmap <<EOF
+  > None hgtrunk
+  > 
+  > 
+  > EOF
+  $ hg convert --branchmap=branchmap --datesort -r 10 svn-repo C-hg
+  initializing destination C-hg repository
+  scanning source...
+  sorting...
+  converting...
+  10 init projA
+  9 hello
+  8 branch trunk, remove c and dir
+  7 change a
+  6 change b
+  5 move and update c
+  4 move and update c
+  3 change b again
+  2 move to old2
+  1 move back to old
+  0 last change to a
+
+  $ cd C-hg
+  $ hg branches
+  hgtrunk                       10:745f063703b4
+  old                            9:aa50d7b8d922
+  old2                           8:c85a22267b6e (inactive)
+  $ cd ..
+

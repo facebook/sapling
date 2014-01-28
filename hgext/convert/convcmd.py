@@ -371,7 +371,12 @@ class converter(object):
     def cachecommit(self, rev):
         commit = self.source.getcommit(rev)
         commit.author = self.authors.get(commit.author, commit.author)
-        commit.branch = self.branchmap.get(commit.branch, commit.branch)
+        # If commit.branch is None, this commit is coming from the source
+        # repository's default branch and destined for the default branch in the
+        # destination repository. For such commits, passing a literal "None"
+        # string to branchmap.get() below allows the user to map "None" to an
+        # alternate default branch in the destination repository.
+        commit.branch = self.branchmap.get(str(commit.branch), commit.branch)
         self.commitcache[rev] = commit
         return commit
 
