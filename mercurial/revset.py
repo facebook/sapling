@@ -944,8 +944,17 @@ def limit(repo, subset, x):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
     ss = subset.set()
-    os = getset(repo, baseset(repo), l[0])[:lim]
-    return baseset([r for r in os if r in ss])
+    os = getset(repo, baseset(repo), l[0])
+    bs = baseset([])
+    it = iter(os)
+    for x in xrange(lim):
+        try:
+            y = it.next()
+            if y in ss:
+                bs.append(y)
+        except (StopIteration):
+            break
+    return bs
 
 def last(repo, subset, x):
     """``last(set, [n])``
