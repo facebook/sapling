@@ -391,7 +391,7 @@ def bookmark(repo, subset, x):
             if not bmrev:
                 raise util.Abort(_("bookmark '%s' does not exist") % bm)
             bmrev = repo[bmrev].rev()
-            return baseset([r for r in subset if r == bmrev])
+            return lazyset(subset, lambda r: r == bmrev)
         else:
             matchrevs = set()
             for name, bmrev in repo._bookmarks.iteritems():
@@ -407,7 +407,7 @@ def bookmark(repo, subset, x):
 
     bms = set([repo[r].rev()
                for r in repo._bookmarks.values()])
-    return baseset([r for r in subset if r in bms])
+    return lazyset(subset, lambda r: r in bms)
 
 def branch(repo, subset, x):
     """``branch(string or set)``
