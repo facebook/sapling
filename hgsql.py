@@ -37,6 +37,7 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
+from mercurial import util
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 
@@ -44,7 +45,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
-bookmarklock = 'bookmark_lock'
+bookmarklock = 'bookmarks_lock'
 commitlock = 'commit_lock'
 
 disableinitialsync = False
@@ -54,8 +55,12 @@ class CorruptionException(Exception):
 
 def uisetup(ui):
     wrapcommand(commands.table, 'pull', pull)
+
     wrapfunction(wireproto, 'unbundle', unbundle)
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
+
+    wrapfunction(wireproto, 'pushkey', pushkey)
+    wireproto.commands['pushkey'] = (wireproto.pushkey, 'namespace key old new')
 
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
         """records each revlog write to the repo's pendingrev list"""
@@ -104,8 +109,10 @@ def executewithsql(repo, action, lock=None, *args, **kwargs):
         repo.sqlconnect()
         connected = True
 
-    if lock:
+    locked = False
+    if lock and not lock in repo.heldlocks:
         repo.sqllock(lock)
+        locked = True
 
     result = None
     success = False
@@ -116,7 +123,7 @@ def executewithsql(repo, action, lock=None, *args, **kwargs):
         success = True
     finally:
         try:
-            if lock:
+            if locked:
                 repo.sqlunlock(lock)
             if connected:
                 repo.sqlclose()
@@ -148,18 +155,20 @@ def wraprepo(repo):
             self.sqlconn = None
 
         def sqllock(self, name, timeout=60):
-            name = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
+            escapedname = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
             # cast to int to prevent passing bad sql data
             timeout = int(timeout)
-            self.sqlconn.query("SELECT GET_LOCK('%s', %s)" % (name, timeout))
+            self.sqlconn.query("SELECT GET_LOCK('%s', %s)" % (escapedname, timeout))
             result = self.sqlconn.store_result().fetch_row()[0][0]
             if result != 1:
-                raise Exception("unable to obtain %s lock" % name)
+                raise Exception("unable to obtain %s lock" % escapedname)
+            self.heldlocks.add(name)
 
         def sqlunlock(self, name):
-            name = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
-            self.sqlconn.query("SELECT RELEASE_LOCK('%s')" % (name,))
+            escapedname = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
+            self.sqlconn.query("SELECT RELEASE_LOCK('%s')" % (escapedname,))
             self.sqlconn.store_result().fetch_row()
+            self.heldlocks.discard(name)
 
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
@@ -332,7 +341,7 @@ def wraprepo(repo):
             """Commits all pending revisions to the database
             """
             if self.sqlconn == None:
-                raise Exception("invalid repo change - only hg push and pull" +
+                raise util.Abort("invalid repo change - only hg push and pull" +
                     " are allowed")
 
             if not self.pendingrevs:
@@ -501,6 +510,7 @@ def wraprepo(repo):
     repo.sqlcursor = None
     repo.disablesync = False
     repo.pendingrevs = []
+    repo.heldlocks = set()
 
     repo.__class__ = sqllocalrepo
 
@@ -837,7 +847,14 @@ def bookmarkwrite(orig, self):
             repo.sqlconn.rollback()
             raise
 
-    executewithsql(repo, commitbookmarks, bookmarklock)
+    return executewithsql(repo, commitbookmarks, bookmarklock)
+
+def pushkey(orig, repo, proto, namespace, key, old, new):
+    def commitpushkey():
+        return orig(repo, proto, namespace, key, old, new)
+
+    lock = "%s_lock" % namespace
+    return executewithsql(repo, commitpushkey, lock)
 
 # recover must be a norepo command because loading the repo fails
 commands.norepo += " sqlrecover"
