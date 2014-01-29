@@ -635,8 +635,7 @@ def _checkshellalias(lui, ui, args):
 
     cmd = args[0]
     try:
-        aliases, entry = cmdutil.findcmd(cmd, cmdtable,
-                                         lui.configbool("ui", "strict"))
+        aliases, entry = cmdutil.findcmd(cmd, cmdtable)
     except (error.AmbiguousCommand, error.UnknownCommand):
         restorecommands()
         return

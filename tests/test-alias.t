@@ -324,6 +324,21 @@ shell aliases with escaped $ chars
   $ hg escaped4 test
   $0 $@
 
+abbreviated name, which matches against both shell alias and the
+command provided extension, should be aborted.
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > hgext.rebase =
+  > [alias]
+  > rebate = !echo this is rebate
+  > EOF
+  $ hg reba
+  hg: command 'reba' is ambiguous:
+      rebase rebate
+  [255]
+  $ hg rebat
+  this is rebate
 
 invalid arguments
 
