@@ -946,13 +946,16 @@ information about working with phases.
     Default: draft
 
 ``checksubrepos``
+    Check the phase of the current revision of each subrepository. Allowed
+    values are "ignore", "follow" and "abort". For settings other than
+    "ignore", the phase of the current revision of each subrepository is
+    checked before committing the parent repository. If any of those phases is
+    greater than the phase of the parent repository (e.g. if a subrepo is in a
+    "secret" phase while the parent repo is in "draft" phase), the commit is
+    either aborted (if checksubrepos is set to "abort") or the higher phase is
+    used for the parent repository commit (if set to "follow").
+    Default: "follow"
 
-    Check phase of state in each subrepositories, allowed values are
-    "ignore", "follow" or "abort". For settings other than "ignore",
-    the phase of each subrepository commit is checked before committing
-    in the parent repository. If there is any greater phase than the parent
-    ("secret" vs "draft", for example), the commit is either aborted
-    with "abort" or the higher phase is used with "follow". Default: "follow".
 
 ``profiling``
 -------------
