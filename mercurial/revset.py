@@ -347,8 +347,7 @@ def author(repo, subset, x):
     # i18n: "author" is a keyword
     n = encoding.lower(getstring(x, _("author requires a string")))
     kind, pattern, matcher = _substringmatcher(n)
-    return baseset([r for r in subset if
-        matcher(encoding.lower(repo[r].user()))])
+    return lazyset(subset, lambda x: matcher(encoding.lower(repo[x].user())))
 
 def bisect(repo, subset, x):
     """``bisect(string)``
