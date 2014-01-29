@@ -20,7 +20,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2014-01-25 17:51+0100\n"
+"POT-Creation-Date: 2014-01-29 16:47+0100\n"
 "PO-Revision-Date: 2013-09-30 20:52+0100\n"
 "Last-Translator: Simon Heimberg <simohe@besonet.ch>\n"
 "Language-Team: \n"
@@ -2928,6 +2928,7 @@ msgstr ""
 "  [repository]\n"
 "  native = LF"
 
+#. do not translate: .. note::
 msgid ".. note::"
 msgstr ""
 
@@ -5029,6 +5030,7 @@ msgstr ""
 "    Siehe Hilfe zu 'paths' zu Pfad-Kurznamen und 'urls' für erlaubte\n"
 "    Formate für die Quellangabe."
 
+#. do not translate: .. container::
 msgid "    .. container:: verbose"
 msgstr ""
 
@@ -6548,6 +6550,7 @@ msgstr ""
 "    Ohne Argumente werden die aktuell aktiven Wächter ausgegeben.\n"
 "    Mit einem Argument wird der aktuelle Wächter gesetzt."
 
+#. do not translate: .. note::
 msgid "    .. note::"
 msgstr ""
 
@@ -15694,6 +15697,7 @@ msgid ""
 "    order until one or more configuration files are detected."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: The registry key ``HKEY_LOCAL_MACHINE\\SOFTWARE\\Wow6432Node"
 "\\Mercurial``\n"
@@ -15873,6 +15877,7 @@ msgstr ""
 msgid "    stable5 = latest -b stable"
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: It is possible to create aliases with the same names as\n"
 "   existing commands, which will then override the original\n"
@@ -15918,6 +15923,7 @@ msgid ""
 "echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: Some global configuration options such as ``-R`` are\n"
 "   processed before shell aliases and will thus not be passed to\n"
@@ -16101,6 +16107,7 @@ msgid ""
 "the command."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: The tempfile mechanism is recommended for Windows systems,\n"
 "   where the standard shell I/O redirection operators often have\n"
@@ -16572,6 +16579,7 @@ msgid ""
 "  update failed (e.g. because conflicts not resolved), ``$HG_ERROR=1``."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: It is generally better to use standard hooks rather than the\n"
 "   generic pre- and post- command hooks as they are guaranteed to be\n"
@@ -16580,6 +16588,7 @@ msgid ""
 "   generate a commit (e.g. tag) and not just the commit command."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note:: Environment variables with empty values may not be passed to\n"
 "   hooks on platforms such as Windows. As an example, ``$HG_PARENT2``\n"
@@ -18967,6 +18976,7 @@ msgid ""
 ":Manual group:   Mercurial Manual"
 msgstr ""
 
+#. do not translate: .. contents::
 msgid ""
 ".. contents::\n"
 "   :backlinks: top\n"
@@ -19017,6 +19027,7 @@ msgid ""
 "    repository."
 msgstr ""
 
+#. do not translate: .. include::
 msgid ".. include:: hg.1.gendoc.txt"
 msgstr ""
 
@@ -19121,6 +19132,7 @@ msgid ""
 "Public License version 2 or any later version."
 msgstr ""
 
+#. do not translate: .. include::
 msgid ".. include:: common.txt\n"
 msgstr ""
 
@@ -19143,6 +19155,7 @@ msgid ""
 ":Manual group:   Mercurial Manual"
 msgstr ""
 
+#. do not translate: .. include::
 msgid ".. include:: hgignore.5.gendoc.txt"
 msgstr ""
 
@@ -19170,6 +19183,7 @@ msgid ""
 "Public License version 2 or any later version."
 msgstr ""
 
+#. do not translate: .. include::
 msgid ".. include:: common.txt"
 msgstr ""
 
@@ -19281,6 +19295,7 @@ msgid ""
 "regexp pattern, start it with ``^``."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "  Patterns specified in other than ``.hgignore`` are always rooted.\n"
@@ -19333,6 +19348,7 @@ msgid ""
 ":Manual group:   Mercurial Manual"
 msgstr ""
 
+#. do not translate: .. contents::
 msgid ""
 ".. contents::\n"
 "   :backlinks: top\n"
@@ -19348,6 +19364,7 @@ msgstr ""
 "Beschreibung\n"
 "============"
 
+#. do not translate: .. include::
 msgid ".. include:: hgrc.5.gendoc.txt"
 msgstr ""
 
@@ -19564,6 +19581,7 @@ msgstr ""
 msgid "8. The merge of the file fails and must be resolved before commit."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "   After selecting a merge program, Mercurial will by default attempt\n"
@@ -19633,6 +19651,7 @@ msgstr ""
 msgid "Alternate pattern notations must be specified explicitly."
 msgstr "Andere Schreibweisen von Mustern müssen explizit angegeben werden."
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "  Patterns specified in ``.hgignore`` are not rooted.\n"
@@ -19804,6 +19823,7 @@ msgstr ""
 msgid " - secret changesets are neither pushed, pulled, or cloned"
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "  Pulling a draft changeset from a publishing server does not mark it\n"
@@ -19823,12 +19843,14 @@ msgstr ""
 "  [phases]\n"
 "  publish = False"
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "  Servers running older versions of Mercurial are treated as\n"
 "  publishing."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 ".. note::\n"
 "   Changesets in secret phase are not exchanged with the server. This\n"
@@ -20216,6 +20238,7 @@ msgid ""
 "   repositories states when committing in the parent repository."
 msgstr ""
 
+#. do not translate: .. note::
 msgid ""
 "   .. note::\n"
 "      The ``.hgsubstate`` file should not be edited manually."
