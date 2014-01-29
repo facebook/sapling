@@ -921,13 +921,13 @@ def keyword(repo, subset, x):
     """
     # i18n: "keyword" is a keyword
     kw = encoding.lower(getstring(x, _("keyword requires a string")))
-    l = []
-    for r in subset:
+
+    def matches(r):
         c = repo[r]
-        if util.any(kw in encoding.lower(t)
-                    for t in c.files() + [c.user(), c.description()]):
-            l.append(r)
-    return baseset(l)
+        return util.any(kw in encoding.lower(t) for t in c.files() + [c.user(),
+            c.description()])
+
+    return lazyset(subset, matches)
 
 def limit(repo, subset, x):
     """``limit(set, [n])``
