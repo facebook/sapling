@@ -658,6 +658,7 @@ def clearstatus(repo):
 def restorestatus(repo):
     'Restore a previously stored status'
     try:
+        keepbranches = None
         target = None
         collapse = False
         external = nullrev
@@ -687,6 +688,10 @@ def restorestatus(repo):
                     state[repo[oldrev].rev()] = int(newrev)
                 else:
                     state[repo[oldrev].rev()] = repo[newrev].rev()
+
+        if keepbranches is None:
+            raise util.Abort(_('.hg/rebasestate is incomplete'))
+
         skipped = set()
         # recompute the set of skipped revs
         if not collapse:

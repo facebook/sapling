@@ -13,6 +13,16 @@
   $ hg init a
   $ cd a
 
+  $ touch .hg/rebasestate
+  $ hg sum
+  parent: -1:000000000000 tip (empty repository)
+  branch: default
+  commit: (clean)
+  update: (current)
+  abort: .hg/rebasestate is incomplete
+  [255]
+  $ rm .hg/rebasestate
+
   $ echo c1 > common
   $ hg add common
   $ hg ci -m C1
