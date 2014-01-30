@@ -692,7 +692,13 @@ class localrepository(object):
         return self
 
     def cancopy(self):
-        return self.local() # so statichttprepo's override of local() works
+        # so statichttprepo's override of local() works
+        if not self.local():
+            return False
+        if not self.ui.configbool('phases', 'publish', True):
+            return True
+        # if publishing we can't copy if there is filtered content
+        return not self.filtered('visible').changelog.filteredrevs
 
     def join(self, f):
         return os.path.join(self.path, f)

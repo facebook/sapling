@@ -507,3 +507,46 @@ test complete failure
   [1]
 
   $ cd ..
+
+test hidden changeset are not cloned as public (issue3935)
+
+  $ cd initialrepo
+
+(enabling evolution)
+  $ cat > ../obs.py << EOF
+  > import mercurial.obsolete
+  > mercurial.obsolete._enabled = True
+  > EOF
+  $ echo '[extensions]' >> $HGRCPATH
+  $ echo "obs=${TESTTMP}/obs.py" >> $HGRCPATH
+
+(making a changeset hidden; H in that case)
+  $ hg debugobsolete `hg id --debug -r 5`
+
+  $ cd ..
+  $ hg clone initialrepo clonewithobs
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 7 changesets with 6 changes to 6 files
+  updating to branch default
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd clonewithobs
+  $ hg log -G --template "{rev} {phase} {desc}\n"
+  @    6 public merge B' and E
+  |\
+  | o  5 public B'
+  | |
+  o |  4 public E
+  | |
+  o |  3 public D
+  | |
+  o |  2 public C
+  |/
+  o  1 public B
+  |
+  o  0 public A
+  
+
+
