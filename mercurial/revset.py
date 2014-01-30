@@ -590,12 +590,12 @@ def desc(repo, subset, x):
     """
     # i18n: "desc" is a keyword
     ds = encoding.lower(getstring(x, _("desc requires a string")))
-    l = []
-    for r in subset:
-        c = repo[r]
-        if ds in encoding.lower(c.description()):
-            l.append(r)
-    return baseset(l)
+
+    def matches(x):
+        c = repo[x]
+        return ds in encoding.lower(c.description())
+
+    return lazyset(subset, matches)
 
 def _descendants(repo, subset, x, followfirst=False):
     args = getset(repo, baseset(repo), x)
