@@ -173,80 +173,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                     pushop.ret = pushop.remote.addchangegroup(cg, 'push',
                                                               pushop.repo.url())
 
-            if pushop.ret:
-                # push succeed, synchronize target of the push
-                cheads = pushop.outgoing.missingheads
-            elif pushop.revs is None:
-                # All out push fails. synchronize all common
-                cheads = pushop.outgoing.commonheads
-            else:
-                # I want cheads = heads(::missingheads and ::commonheads)
-                # (missingheads is revs with secret changeset filtered out)
-                #
-                # This can be expressed as:
-                #     cheads = ( (missingheads and ::commonheads)
-                #              + (commonheads and ::missingheads))"
-                #              )
-                #
-                # while trying to push we already computed the following:
-                #     common = (::commonheads)
-                #     missing = ((commonheads::missingheads) - commonheads)
-                #
-                # We can pick:
-                # * missingheads part of common (::commonheads)
-                common = set(pushop.outgoing.common)
-                nm = pushop.repo.changelog.nodemap
-                cheads = [node for node in pushop.revs if nm[node] in common]
-                # and
-                # * commonheads parents on missing
-                revset = unfi.set('%ln and parents(roots(%ln))',
-                                 pushop.outgoing.commonheads,
-                                 pushop.outgoing.missing)
-                cheads.extend(c.node() for c in revset)
-            # even when we don't push, exchanging phase data is useful
-            remotephases = pushop.remote.listkeys('phases')
-            if (pushop.ui.configbool('ui', '_usedassubrepo', False)
-                and remotephases    # server supports phases
-                and pushop.ret is None # nothing was pushed
-                and remotephases.get('publishing', False)):
-                # When:
-                # - this is a subrepo push
-                # - and remote support phase
-                # - and no changeset was pushed
-                # - and remote is publishing
-                # We may be in issue 3871 case!
-                # We drop the possible phase synchronisation done by
-                # courtesy to publish changesets possibly locally draft
-                # on the remote.
-                remotephases = {'publishing': 'True'}
-            if not remotephases: # old server or public only rer
-                _localphasemove(pushop, cheads)
-                # don't push any phase data as there is nothing to push
-            else:
-                ana = phases.analyzeremotephases(pushop.repo, cheads,
-                                                 remotephases)
-                pheads, droots = ana
-                ### Apply remote phase on local
-                if remotephases.get('publishing', False):
-                    _localphasemove(pushop, cheads)
-                else: # publish = False
-                    _localphasemove(pushop, pheads)
-                    _localphasemove(pushop, cheads, phases.draft)
-                ### Apply local phase on remote
-
-                # Get the list of all revs draft on remote by public here.
-                # XXX Beware that revset break if droots is not strictly
-                # XXX root we may want to ensure it is but it is costly
-                outdated =  unfi.set('heads((%ln::%ln) and public())',
-                                     droots, cheads)
-                for newremotehead in outdated:
-                    r = pushop.remote.pushkey('phases',
-                                              newremotehead.hex(),
-                                              str(phases.draft),
-                                              str(phases.public))
-                    if not r:
-                        pushop.ui.warn(_('updating %s to public failed!\n')
-                                       % newremotehead)
+            _pushsyncphase(pushop)
             _pushobsolete(pushop)
         finally:
             if lock is not None:
@@ -257,6 +184,84 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
 
     _pushbookmark(pushop)
     return pushop.ret
+
+def _pushsyncphase(pushop):
+    """synchronise phase information locally and remotly"""
+    unfi = pushop.repo.unfiltered()
+    if pushop.ret:
+        # push succeed, synchronize target of the push
+        cheads = pushop.outgoing.missingheads
+    elif pushop.revs is None:
+        # All out push fails. synchronize all common
+        cheads = pushop.outgoing.commonheads
+    else:
+        # I want cheads = heads(::missingheads and ::commonheads)
+        # (missingheads is revs with secret changeset filtered out)
+        #
+        # This can be expressed as:
+        #     cheads = ( (missingheads and ::commonheads)
+        #              + (commonheads and ::missingheads))"
+        #              )
+        #
+        # while trying to push we already computed the following:
+        #     common = (::commonheads)
+        #     missing = ((commonheads::missingheads) - commonheads)
+        #
+        # We can pick:
+        # * missingheads part of common (::commonheads)
+        common = set(pushop.outgoing.common)
+        nm = pushop.repo.changelog.nodemap
+        cheads = [node for node in pushop.revs if nm[node] in common]
+        # and
+        # * commonheads parents on missing
+        revset = unfi.set('%ln and parents(roots(%ln))',
+                         pushop.outgoing.commonheads,
+                         pushop.outgoing.missing)
+        cheads.extend(c.node() for c in revset)
+    # even when we don't push, exchanging phase data is useful
+    remotephases = pushop.remote.listkeys('phases')
+    if (pushop.ui.configbool('ui', '_usedassubrepo', False)
+        and remotephases    # server supports phases
+        and pushop.ret is None # nothing was pushed
+        and remotephases.get('publishing', False)):
+        # When:
+        # - this is a subrepo push
+        # - and remote support phase
+        # - and no changeset was pushed
+        # - and remote is publishing
+        # We may be in issue 3871 case!
+        # We drop the possible phase synchronisation done by
+        # courtesy to publish changesets possibly locally draft
+        # on the remote.
+        remotephases = {'publishing': 'True'}
+    if not remotephases: # old server or public only rer
+        _localphasemove(pushop, cheads)
+        # don't push any phase data as there is nothing to push
+    else:
+        ana = phases.analyzeremotephases(pushop.repo, cheads,
+                                         remotephases)
+        pheads, droots = ana
+        ### Apply remote phase on local
+        if remotephases.get('publishing', False):
+            _localphasemove(pushop, cheads)
+        else: # publish = False
+            _localphasemove(pushop, pheads)
+            _localphasemove(pushop, cheads, phases.draft)
+        ### Apply local phase on remote
+
+        # Get the list of all revs draft on remote by public here.
+        # XXX Beware that revset break if droots is not strictly
+        # XXX root we may want to ensure it is but it is costly
+        outdated =  unfi.set('heads((%ln::%ln) and public())',
+                             droots, cheads)
+        for newremotehead in outdated:
+            r = pushop.remote.pushkey('phases',
+                                      newremotehead.hex(),
+                                      str(phases.draft),
+                                      str(phases.public))
+            if not r:
+                pushop.ui.warn(_('updating %s to public failed!\n')
+                                       % newremotehead)
 
 def _localphasemove(pushop, nodes, phase=phases.public):
     """move <nodes> to <phase> in the local source repo"""
