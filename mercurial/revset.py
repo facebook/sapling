@@ -800,14 +800,15 @@ def grep(repo, subset, x):
         gr = re.compile(getstring(x, _("grep requires a string")))
     except re.error, e:
         raise error.ParseError(_('invalid match pattern: %s') % e)
-    l = []
-    for r in subset:
-        c = repo[r]
+
+    def matches(x):
+        c = repo[x]
         for e in c.files() + [c.user(), c.description()]:
             if gr.search(e):
-                l.append(r)
-                break
-    return baseset(l)
+                return True
+        return False
+
+    return lazyset(subset, matches)
 
 def _matchfiles(repo, subset, x):
     # _matchfiles takes a revset list of prefixed arguments:
