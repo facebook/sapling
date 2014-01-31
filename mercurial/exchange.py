@@ -21,7 +21,7 @@ class pushoperation(object):
     afterward.
     """
 
-    def __init__(self, repo, remote, force=False):
+    def __init__(self, repo, remote, force=False, revs=None):
         # repo we push from
         self.repo = repo
         self.ui = repo.ui
@@ -29,6 +29,8 @@ class pushoperation(object):
         self.remote = remote
         # force option provided
         self.force = force
+        # revs to be pushed (None is "all")
+        self.revs = revs
 
 def push(repo, remote, force=False, revs=None, newbranch=False):
     '''Push outgoing changesets (limited by revs) from a local
@@ -39,7 +41,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo, remote, force)
+    pushop = pushoperation(repo, remote, force, revs)
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
@@ -86,7 +88,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         msg = 'cannot lock source repository: %s\n' % err
         pushop.ui.debug(msg)
     try:
-        pushop.repo.checkpush(pushop.force, revs)
+        pushop.repo.checkpush(pushop.force, pushop.revs)
         lock = None
         unbundle = pushop.remote.capable('unbundle')
         if not unbundle:
@@ -97,7 +99,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             commoninc = fci(unfi, pushop.remote, force=pushop.force)
             common, inc, remoteheads = commoninc
             fco = discovery.findcommonoutgoing
-            outgoing = fco(unfi, pushop.remote, onlyheads=revs,
+            outgoing = fco(unfi, pushop.remote, onlyheads=pushop.revs,
                            commoninc=commoninc, force=pushop.force)
 
 
@@ -138,7 +140,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 # TODO: get bundlecaps from remote
                 bundlecaps = None
                 # create a changegroup from local
-                if revs is None and not (outgoing.excluded
+                if pushop.revs is None and not (outgoing.excluded
                                         or pushop.repo.changelog.filteredrevs):
                     # push everything,
                     # use the fast path, no race possible on push
@@ -171,7 +173,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
             if ret:
                 # push succeed, synchronize target of the push
                 cheads = outgoing.missingheads
-            elif revs is None:
+            elif pushop.revs is None:
                 # All out push fails. synchronize all common
                 cheads = outgoing.commonheads
             else:
@@ -191,7 +193,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
                 # * missingheads part of common (::commonheads)
                 common = set(outgoing.common)
                 nm = pushop.repo.changelog.nodemap
-                cheads = [node for node in revs if nm[node] in common]
+                cheads = [node for node in pushop.revs if nm[node] in common]
                 # and
                 # * commonheads parents on missing
                 revset = unfi.set('%ln and parents(roots(%ln))',
@@ -251,5 +253,5 @@ def push(repo, remote, force=False, revs=None, newbranch=False):
         if locallock is not None:
             locallock.release()
 
-    bookmarks.updateremote(pushop.ui, unfi, pushop.remote, revs)
+    bookmarks.updateremote(pushop.ui, unfi, pushop.remote, pushop.revs)
     return ret
